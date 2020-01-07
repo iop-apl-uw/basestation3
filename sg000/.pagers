@@ -1,0 +1,54 @@
+## .pagers file 
+#
+# This file controls the sending of short email messages from the basestation
+# that alert users (pilots, field teams, etc.) of changes in status of the glider
+#
+# Each line of this file is of the format
+# smtp_mail_address[,gps[dd|ddmm|ddmmss]|alerts|recov|comp]*
+#
+# where:
+# smtp_mail_address - a valid smtp mail address - gliderpilot@apl.washington.edu
+#                     for example
+#
+# gps        - GPS position notification 
+#              Short message - suitable for mail to SMS gateways
+#              GPS fix formatted in DDMM.MM format
+#
+# recov      - Notification of the glider in recovery (whatever the reason) 
+#              Short message - suitable for mail to SMS gateways
+#              GPS fix formatted in DDMM.MM format
+# 
+# critical   - Notification of the glider:
+#              - Is in a non-quit recovery
+#              - Has rebooted
+#              - Has uploaded capture file with one or more critical errors
+#              Short message - suitable for mail to SMS gateways
+#              GPS fix formatted in DDMM.MM format
+#
+# gpsdd|recovdd|criticaldd             - same as above but GPS fix formated in DD.DDDD format
+# gpsddmm|recovddmm|criticalddmm       - same as above but GPS fix formated in DD MM.MM format
+# gpsddmmss|recovddmmss|criticalddmmss - same as above but GPS fix formated in DD MM SS.SS format
+#
+# Any of the above forms of gps, recov and critical may have a _divenum appended to augment which adds
+# the dive number, call cycle and calls made counts to the subject line and message body
+#
+#
+# alerts     - Notifications of
+#              -- Any problems or issues that occurred during basestation processing
+#              -- Non-critical, but important conditions the glider has encounted, such as a $WARN message
+#                   in the Seaglider logfile.
+#              -- Notification of capture files that contain critical errors
+#              Pilots should always subscribe to the level, as it is the primary way for
+#              basestation to issue errors
+
+#
+# comp       - Notification of completion of processing and a list of files resulting from 
+#              processing
+#
+## Examples:
+#
+## Send me everything
+#someone@mydomain.edu,gps,alerts,recov,comp
+#
+## Setting up a field phone for gps updates only
+#fieldphone@mobile.att.net,gps

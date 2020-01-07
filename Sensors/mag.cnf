@@ -1,0 +1,5 @@
+name=Magnetometer
+prefix=mag
+column=x
+column=y
+column=z

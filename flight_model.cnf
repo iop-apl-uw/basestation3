@@ -1,0 +1,18 @@
+# This file provides override values for FlightModel processing.
+# -  Edit this file in the basestation directory to apply overrides to all deployments
+# -  Make a copy of this file in a deployment directory and edit to override elements 
+#    for that deployment only.
+
+# Comments follow # or ;
+# attributes are followed by :
+# Some are commented out; uncomment them to provide an override value
+# Continuation lines for values must provide a prefix of at least one blank space
+[FlightModel] # Do NOT remove this line
+
+# How to scale computed lift and drag values in the absence of velocimeter data
+# These values should be in a deployment (hence vehicle) specific flight_model.cnf
+# predicted_hd_a_scale: 0.6
+# predicted_hd_b_scale: 1.2
+
+# Disable reprocessing of dives
+# enable_reprocessing_dives: False

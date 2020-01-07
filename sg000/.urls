@@ -1,0 +1,18 @@
+## These are URLs to GET for each processed dive
+##
+## The urls are called twice during processing - the first time, after all the per-dive files have been 
+## processed - in which case Base.py adds the arguments 
+##
+## 'instrument_name=sg<xxx>&dive=<dive>&files=perdive'
+##
+## The second time is at the end of processing, after  all the whole mission files have been generated, 
+## in which case Base.py add the arguments:
+##
+## 'instrument_name=sg<xxx>&dive=<dive>&files=all'
+##
+## First entry on the line is the timeout to wait for a response to the GET
+## It is separated by a whitespace from the URL
+## Comments in the file are indicated by '#'
+##
+## Example
+#1   http://mydomain.edu/~glider/cgi-bin/update.cgi

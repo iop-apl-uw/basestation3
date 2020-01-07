@@ -1,0 +1,18 @@
+name=ocr504i
+prefix = ocr504i               
+#format = %s %00 %01 %02 %03
+#driver = standard        
+#baud = 57600             
+#terminator = 10
+#warmup = 0
+#timeout = 3000   
+#skip = 0
+#('eng_ocr504i_chan1', [True, 'd', {'units': 'uW/cm^2/nm', 'description':'412nm', '_FillValue':nc_nan}, nc_scalar])
+#('eng_ocr504i_chan2', [True, 'd', {'units': 'uW/cm^2/nm', 'description':'444nm', '_FillValue':nc_nan}, nc_scalar])
+#('eng_ocr504i_chan3', [True, 'd', {'units': 'uW/cm^2/nm', 'description':'554nm', '_FillValue':nc_nan}, nc_scalar])
+#('eng_ocr504i_chan4', [True, 'd', {'units': 'umol/m^2/sec', 'description':'PAR', '_FillValue':nc_nan}, nc_scalar])
+column = chan1(10000,0)            
+column = chan2(10000,0)                    
+column = chan3(10000,0)
+column = chan4(10000,0)
+meta = %[SAT]%[%n]%$03%[$]%1s%1h%1o%1w%1 %1a%1l%1l%1%r%1%n%[$]

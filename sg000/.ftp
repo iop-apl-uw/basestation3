@@ -1,0 +1,34 @@
+## .ftp file 
+#
+# This file controls the sending of data products created during basestation 
+# processing via ftp.  
+#
+# Each line of this file is of the format
+# # Lines are of the form
+# [user[:password]@]host[:port]/path[,[eng| log| pro| bpo| csv| asc| cap| comm| dn_kkyy| up_kkyy| nc| mission_ts| mission_pro]+] | ,all
+# where:
+# user - user name on the ftp server
+# password - password on the ftp server
+# host - ftp server address
+# port - optional override to ftp port on the host
+# path - path to the place the products in (must be / at a minimum)
+#
+# The user and password may be optionally stored in a .netrc file.  To use this feature, do not specify a username
+# password in the line above.
+# These files are of a standard format:
+# machine <host> login <user> password <password>
+# See the .netrc man page for more details.
+#
+# eng, log, pro, bpo, csv, asc, cap , dn_kkyy, up_kkyy, nc - send any newly created files of the specified extension
+# comm - send the comm.log file
+# mission_ts, mission_pro - send the mission timeseries or mission profile, if they have been updated on the processing
+# all - send all the newly created or updated files
+#
+## Examples
+#
+## Push NAVO kkyy files, user and password in .netrc
+#navoftpserver.navy.mil/,dn_kkyy,up_kkyy
+#
+## Push out the typical per-dive files 
+#someone:passwd@someserver.apl.washington.edu/sg000/data,log,eng,cap,nc,comm
+#

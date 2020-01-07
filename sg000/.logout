@@ -1,0 +1,5 @@
+# Any options that are specific to this glider processing can be specified in the GLIDER_OPTIONS environment
+# variable.  For example, to generate kkyy files for this glider only:
+#
+#set GLIDER_OPTIONS="--make_dive_kkyy"  
+source /usr/local/basestation/glider_logout

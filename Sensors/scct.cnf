@@ -1,0 +1,13 @@
+name=SciConCT
+prefix=scct
+timeout=3000
+baud=57600
+warmup=2000
+voltage=10
+current=0.03
+format="%d %d %00 %01"
+query="%F%r%[>]freq 5 2 255 1%r"
+prompt=>
+flow=0
+column=condFreq(1000,0)
+column=tempFreq(1000,0)

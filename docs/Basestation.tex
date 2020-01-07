@@ -1,0 +1,843 @@
+\documentclass[12pt,english,twoside]{book}
+\usepackage[T1]{fontenc}
+\usepackage[latin1]{inputenc}
+\usepackage{geometry}
+\geometry{verbose,letterpaper,tmargin=1.25in,bmargin=1.25in,lmargin=1in,rmargin=1in}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+\usepackage{array}
+\usepackage{float}
+\usepackage{amsmath}
+
+\makeatletter
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% LyX specific LaTeX commands.
+%% Bold symbol macro for standard LaTeX users
+\providecommand{\boldsymbol}[1]{\mbox{\boldmath $#1$}}
+
+%% Because html converters don't know tabularnewline
+\providecommand{\tabularnewline}{\\}
+
+\usepackage{babel}
+\makeatother
+\begin{document}
+
+\title{Basestation Documentation}
+
+
+\author{APPLIED PHYSICS LABORATORY \\
+ UNIVERSITY OF WASHINGTON}
+
+
+\date{v2.00 Revised: April 18, 2007}
+
+\maketitle
+\tableofcontents{}
+
+\chapter{Introduction}
+
+This document describes the installation, operation and file formats that are
+directly related to the Seaglider Basestation code.  There are both reference
+and user manual components contained within this document.  Readers should be
+familiar with the code Seaglider documentation set.
+
+\chapter{Basestation Overview}
+
+\chapter{Basestation Output Files}
+
+\section{Introduction}
+
+One of the main functions of the Seaglider basestation is to convert
+the files received from the Seaglider to formats that are readable
+and useful to the user. The current basestation software takes the
+compressed Seaglider dive data and log files as described above, and
+does the requisite processing to produce files with the following
+naming convention.
+
+\begin{quote}
+\textbf{p instrument\_id dive\_number . {[}log, asc, eng, pvt]}
+\end{quote}
+This processing includes uncompressing and reassembling the transmitted
+file chunks, and detection and correction of common transmission-induced
+content errors. The basestation also handles an automated notification
+system. The file processing and notification systems are invoked when
+the Seaglider logs out, by the \textbf{.logout} facility of the shell.
+
+
+\subsection{LOG file}
+
+The format and contents of this file are the same as the log file on the
+Seaglider compact flash as described in \textbf{Seaglider File Formats}
+reference manual.
+
+
+\subsection{ASC file}
+
+The ASC, or ASCII, files are created on the basestation. They are essentially
+the reconstituted (uncompressed, reassembled, and differentially summed)
+versions of the data (DAT) files created on the Seaglider, and described in
+\textbf{Seaglider File Formats} reference manual.
+
+
+\subsubsection{Name}
+
+The basestation calls this file
+
+\textbf{p instrument\_id dive\_number . asc}.
+
+
+\subsubsection{Format}
+
+The file is divided into a \textit{header} section and a \textit{data}
+section. The header consists of a series of lines of the format: \[
+\textbf{tag}:\textbf{value}\textit{newline}\]
+ Where \textbf{tag} is one of the tag values defined below and the
+value is the tags value. The value field is interpreted based on the
+tag. There may be leading whitespace between the : separator and the
+actual value.
+
+The header section terminates with the \textbf{data} tag. The balance
+of the file is the data recorded during the dive.
+
+
+\subsubsection{Header Tags}
+
+
+\subsubsection{version tag}
+
+This tag contains the version of the software glider that generated
+this data file. The format for the version is \textbf{MAJOR}.\textbf{MINOR},
+where MAJOR and MINOR are two digit integers.
+
+
+\subsubsection{glider tag}
+
+This tag contains the seagliders individual id value. The value is
+between 1 and 999, with no leading zeros.
+
+
+\subsubsection{mission tag}
+
+This tag contains the mission id this glider was on when this file
+was generated. The value maybe any positive integer, with no leading
+zeros.
+
+
+\subsubsection{dive tag}
+
+This tag contains the specific dive the glider was on when it collected
+the data. The value may be any positive integer, with no leading zeros.
+
+
+\subsubsection{start tag}
+
+This tag contains the starting time stamp for the dive specified above,
+expressed in UTC. The format or the value is:
+
+\begin{quote}
+\textbf{mon}\space\textbf{day} \textbf{year} \textbf{hour} \textbf{min}
+\textbf{sec} 
+\end{quote}
+The definitions for the the elements of this group are in Table \ref{StartTag}.
+
+%
+\begin{table}
+\begin{centering}\begin{tabular}{|l|p{4.5in}|}
+\hline 
+\textbf{mon} &
+Two digit number representing the month (JAN = 1) \tabularnewline
+\hline 
+\textbf{day} &
+Two digit number representing day of the month \tabularnewline
+\hline 
+\textbf{year} &
+Two or three digit number representing the year. For years 2000 or
+earlier, the two digits are the last two digits of the year. For years
+2001 to 2099, the leading digit is 1, and the next two digits are
+the last two digits of the year. \tabularnewline
+\hline 
+\textbf{hour} &
+Two digit number representing the hours (starting with 0) \tabularnewline
+\hline 
+\textbf{min} &
+Two digit number representing the minutes (starting with zero) \tabularnewline
+\hline 
+\textbf{sec} &
+Two digit number representing the seconds (starting with zero) \tabularnewline
+\hline
+\end{tabular}\par\end{centering}
+
+
+\caption{Start tag format}
+
+\label{StartTag} 
+\end{table}
+
+
+\textit{Note: no leading zeros in any of the above values}
+
+
+\subsubsection{columns tag}
+
+The value field for this tag contains a comma delimited list of strings
+that indicate by their position what values are recorded in each of
+the columns in the data section of the file. The first 10 columns
+are alway in a fix order for any glider (Table \ref{FixedOrderColumns}.
+The remaining columns (Table \ref{SensorColumns}) are determined
+by what sensors are installed in what ports on the actual glider.
+
+%
+\begin{table}
+\begin{centering}\begin{tabular}{|l|p{4.5in}|}
+\hline 
+\textbf{Header Tag} &
+\textbf{Description} \tabularnewline
+\hline 
+\textbf{rec} &
+Record number of the individual sample \tabularnewline
+\hline 
+\textbf{elaps\_t} &
+Time since the start of the dive \tabularnewline
+\hline 
+\textbf{depth} &
+Depth (cm) at the start of the sample \tabularnewline
+\hline 
+\textbf{heading} &
+Vehicle heading at the start of the sample (degress Magnetic x 10) \tabularnewline
+\hline 
+\textbf{pitch} &
+Vehicle pitch angle at the start of the sample (degress x 10, positve
+upward) \tabularnewline
+\hline 
+\textbf{roll} &
+Vehicle roll at the start of the sample (degress x 10, positive starbord
+wing down \tabularnewline
+\hline 
+\textbf{AD\_pitch} &
+Pitch mass position (A/D counts) \tabularnewline
+\hline 
+\textbf{AD\_roll} &
+Roll mass position (A/D counts) \tabularnewline
+\hline 
+\textbf{AD\_vbd} &
+VBD position (A/D counts) \tabularnewline
+\hline 
+\textbf{GC\_phase} &
+Encoded GC Phase (see Table \ref{GCEncoding}) \tabularnewline
+\hline
+\end{tabular}\par\end{centering}
+
+
+\caption{Fixed Order Columns}
+
+\label{FixedOrderColumns} 
+\end{table}
+
+
+%
+\begin{table}
+\begin{centering}\begin{tabular}{|l|c|}
+\hline 
+\textbf{GC Encoding} &
+\textbf{Description} \tabularnewline
+\hline 
+1 &
+Pitch change \tabularnewline
+\hline 
+2 &
+VBD change \tabularnewline
+\hline 
+3 &
+Roll \tabularnewline
+\hline 
+4 &
+Turning \tabularnewline
+\hline 
+5 &
+Roll back (to center) \tabularnewline
+\hline 
+6 &
+Passive mode \tabularnewline
+\hline
+\end{tabular}\par\end{centering}
+
+
+\caption{GC Encodings}
+
+\label{GCEncoding} 
+\end{table}
+
+
+%
+\begin{table}
+\begin{centering}\begin{tabular}{|l|p{4.5in}|}
+\hline 
+\textbf{Header Tag} &
+\textbf{Description} \tabularnewline
+\hline 
+\textbf{TempFreq} &
+Temperature (cycle counts of 4MHz in 255 cycles of signal frequency) \tabularnewline
+\hline 
+\textbf{CondFreq} &
+Conductivity (cycle counts of 4MHz in 255 cycles of signal frequency) \tabularnewline
+\hline 
+\textbf{O2Freq} &
+Oxygen concentration (cycle counts of 4Mhz in 255 cycles of signal
+frequency)\tabularnewline
+\hline 
+\textbf{redRef} &
+Red reference (A/D counts)\tabularnewline
+\hline 
+\textbf{redCount} &
+Red backscatter (A/D counts)\tabularnewline
+\hline 
+\textbf{blueRef} &
+Blue reference (A/D counts)\tabularnewline
+\hline 
+\textbf{blueCount} &
+Blue backscatter (A/D counts)\tabularnewline
+\hline 
+\textbf{fluorCount} &
+Fluorometer (A/D counts)\tabularnewline
+\hline 
+\textbf{VFtemp} &
+BB2F temperature\tabularnewline
+\hline 
+\textbf{O2} &
+Optional Aanderaa optode oxygen concentration\tabularnewline
+\hline 
+\textbf{temp} &
+Optional Aanderaa optode temperature\tabularnewline
+\hline 
+\textbf{dphase} &
+Optional Aanderaa optode dphase\tabularnewline
+\hline
+\end{tabular}\par\end{centering}
+
+
+\caption{Sensor Columns}
+
+\label{SensorColumns} 
+\end{table}
+
+
+
+\subsubsection{data tag}
+
+The data tag has no value associated - it simple exists as a delimiter
+between the header section and data.
+
+
+\subsection{Data}
+
+Data follows with one line per sample, terminated by a <newline>.
+Empty fields, which indicate no sample was returned for that sensor,
+are indicated by NaN. This could be because a sensor was not installed
+for that deployment, or that the sensor was not enabled for that particular
+sample, as controlled by the \textbf{science} file.
+
+
+\subsection{Example}
+
+\begin{quotation}
+\noindent {\scriptsize version: 66.00}{\scriptsize \par}
+
+\noindent {\scriptsize glider: 107}{\scriptsize \par}
+
+\noindent {\scriptsize mission: 1}{\scriptsize \par}
+
+\noindent {\scriptsize dive: 3}{\scriptsize \par}
+
+\noindent {\scriptsize start: 5 10 106 20 59 20}{\scriptsize \par}
+
+\noindent {\scriptsize columns: rec,elaps\_t,depth,heading,pitch,roll,AD\_pitch,AD\_roll,AD\_vbd,GC\_phase,TempFreq,CondFreq,O2Freq,redRef,redCount,}{\scriptsize \par}
+
+\noindent {\scriptsize blueRef,blueCount,fluorCount,VFtemp,}{\scriptsize \par}
+
+\noindent {\scriptsize data:}{\scriptsize \par}
+
+\noindent {\scriptsize 0 19 76 3426 -721 -69 366 2028 1076 2 257049
+179336 NaN NaN NaN NaN NaN NaN NaN }{\scriptsize \par}
+
+\noindent {\scriptsize 1 24 83 3423 -727 -65 366 2028 1231 2 256853
+179404 NaN NaN NaN NaN NaN NaN NaN }{\scriptsize \par}
+
+\noindent {\scriptsize 2 29 77 3443 -732 -72 366 2028 1377 2 256640
+179492 NaN NaN NaN NaN NaN NaN NaN }{\scriptsize \par}
+
+\noindent {\scriptsize $\vdots$}{\scriptsize \par}
+\end{quotation}
+
+\section{ENG file}
+
+The ENG, or engineering, files are created on the basestation. They
+restate data contained in the ASC and LOG files, but with the Seaglider
+control state and attitude observations converted into engineering
+units.
+
+
+\subsection{Name}
+
+The basestation calls this file
+
+\textbf{p instrument\_id dive\_number . eng}.
+
+
+\subsection{Format}
+
+The file is divided into a \textit{header} section and a \textit{data}
+section. The header consists of a series of lines of the format: \[
+\textbf{\% tag}:\textbf{value}\textit{newline}\]
+ Where \textbf{tag} is one of the tag values defined below and the
+value is the tags value. The value field is interpreted based on the
+tag. There may be leading whitespace between the : separator and the
+actual value.
+
+The header section terminates with the \textbf{data} tag. The balance
+of the file is the data recorded during the dive.
+
+
+\subsection{Header Tags}
+
+
+\subsubsection{version tag}
+
+This tag contains the version of the software glider that generated
+this data file. The format for the version is \textbf{MAJOR}.\textbf{MINOR},
+where MAJOR and MINOR are two digit integers.
+
+
+\subsubsection{glider tag}
+
+This tag contains the seagliders individual id value. The value is
+between 1 and 999, with no leading zeros.
+
+
+\subsubsection{mission tag}
+
+This tag contains the mission id this glider was on when this file
+was generated. The value maybe any positive integer, with no leading
+zeros.
+
+
+\subsubsection{dive tag}
+
+This tag contains the specific dive the glider was on when it collected
+the data. The value may be any positive integer, with no leading zeros.
+
+
+\subsubsection{start tag}
+
+This tag contains the starting time stamp for the dive specified above,
+expressed in UTC. The format or the value is:
+
+\begin{quote}
+\textbf{mon}\space\textbf{day} \textbf{year} \textbf{hour} \textbf{min}
+\textbf{sec} 
+\end{quote}
+The definitions for the the elements of this group are in Table \ref{StartTag}.
+
+%
+\begin{table}
+\begin{centering}\begin{tabular}{|l|p{4.5in}|}
+\hline 
+\textbf{mon} &
+Two digit number representing the month (JAN = 1) \tabularnewline
+\hline 
+\textbf{day} &
+Two digit number representing day of the month \tabularnewline
+\hline 
+\textbf{year} &
+Two or three digit number representing the year. For years 2000 or
+earlier, the two digits are the last two digits of the year. For years
+2001 to 2099, the leading digit is 1, and the next two digits are
+the last two digits of the year. \tabularnewline
+\hline 
+\textbf{hour} &
+Two digit number representing the hours (starting with 0) \tabularnewline
+\hline 
+\textbf{min} &
+Two digit number representing the minutes (starting with zero) \tabularnewline
+\hline 
+\textbf{sec} &
+Two digit number representing the seconds (starting with zero) \tabularnewline
+\hline
+\end{tabular}\par\end{centering}
+
+
+\caption{Start tag format}
+
+\label{StartTag} 
+\end{table}
+
+
+\textit{Note: no leading zeros in any of the above values}
+
+
+\subsubsection{columns tag}
+
+The value field for this tag contains a comma delimited list of strings
+that indicate by their position what values are recorded in each of
+the columns in the data section of the file. The first 11 columns
+are alway in a fix order for any glider (Table \ref{FixedOrderColumns}.
+The remaining columns (Table \ref{SensorColumns}) are determined
+by what sensors are installed in what ports on the actual glider.
+
+%
+\begin{table}
+\begin{centering}\begin{tabular}{|l|p{4.5in}|}
+\hline 
+\textbf{Header Tag} &
+\textbf{Description} \tabularnewline
+\hline 
+\textbf{elaps\_t\_0000}&
+Time (s) since 0000UTC of the current day\tabularnewline
+\hline 
+\textbf{elaps\_t} &
+Time (s) since the start of the dive \tabularnewline
+\hline 
+\textbf{condFreq}&
+Conductivity frequency\tabularnewline
+\hline 
+\textbf{tempFreq}&
+Temperature frequency\tabularnewline
+\hline 
+\textbf{depth} &
+Depth (cm) at the start of the sample \tabularnewline
+\hline 
+\textbf{head}&
+Vehicle heading at the start of the sample (degrees Magnetic) \tabularnewline
+\hline 
+\textbf{pitchAng}&
+Vehicle pitch angle at the start of the sample (degrees positve upward) \tabularnewline
+\hline 
+\textbf{rollAng}&
+Vehicle roll at the start of the sample (degrees, positive starboard
+wing down) \tabularnewline
+\hline 
+\textbf{pitchCtl}&
+Pitch mass position (cm relative to \textbf{\$C\_PITCH}, positive
+nose up) \tabularnewline
+\hline 
+\textbf{rollCtl}&
+Roll mass position (degrees relative to \textbf{\$C\_ROLL\_DIVE} or
+\textbf{\$C\_ROLL\_CLIMB}, positive starboard wing down) \tabularnewline
+\hline 
+\textbf{vbcCC}&
+VBD value (cc relative to \textbf{\$C\_VBD}, positive buoyant) \tabularnewline
+\end{tabular}\par\end{centering}
+
+
+\caption{Fixed Order Columns}
+
+\label{FixedOrderColumns} 
+\end{table}
+
+
+
+
+%
+\begin{table}
+\begin{centering}\begin{tabular}{|l|p{4.5in}|}
+\hline 
+\textbf{Header Tag} &
+\textbf{Description} \tabularnewline
+\hline 
+\textbf{O2Freq} &
+Oxygen concentration (cycle counts of 4Mhz in 255 cycles of signal
+frequency)\tabularnewline
+\hline 
+\textbf{redRef} &
+Red reference (A/D counts)\tabularnewline
+\hline 
+\textbf{redCount} &
+Red backscatter (A/D counts)\tabularnewline
+\hline 
+\textbf{blueRef} &
+Blue reference (A/D counts)\tabularnewline
+\hline 
+\textbf{blueCount} &
+Blue backscatter (A/D counts)\tabularnewline
+\hline 
+\textbf{fluorCount} &
+Fluorometer (A/D counts)\tabularnewline
+\hline 
+\textbf{VFtemp} &
+BB2F temperature\tabularnewline
+\hline 
+\textbf{O2} &
+Optional Aanderaa optode oxygen concentration\tabularnewline
+\hline 
+\textbf{temp} &
+Optional Aanderaa optode temperature\tabularnewline
+\hline 
+\textbf{dphase} &
+Optional Aanderaa optode dphase\tabularnewline
+\hline
+\end{tabular}\par\end{centering}
+
+
+\caption{Sensor Columns}
+
+\label{SensorColumns} 
+\end{table}
+
+
+
+\subsubsection{data tag}
+
+The data tag has no value associated - it simple exists as a delimiter
+between the header section and data.
+
+
+\subsection{Data}
+
+Data follows with one line per sample, terminated by a <newline>.
+Empty fields, which indicate no sample was returned for that sensor,
+are indicated by NaN. This could be because a sensor was not installed
+for that deployment, or that the sensor was not enabled for that particular
+sample, as controlled by the \textbf{science} file.\newpage{}
+
+
+\subsection{Example}
+
+\begin{quotation}
+{\tiny \%version:65.03}{\tiny \par}
+
+{\tiny \%glider:107}{\tiny \par}
+
+{\tiny \%mission:1}{\tiny \par}
+
+{\tiny \%dive:2}{\tiny \par}
+
+{\tiny \%start:5 10 106 20 6 7}{\tiny \par}
+
+{\tiny \%columns:elaps\_t\_0000,elaps\_t,condFreq,tempFreq,depth,head,pitchAng,rollAng,pitchCtl,rollCtl,vbdCC,o2\_freq,redRef,redCount,}{\tiny \par}
+
+{\tiny blueRef,blueCount,fluorCount,VFTemp}{\tiny \par}
+
+{\tiny \%data: }{\tiny \par}
+
+{\tiny 72386.0 19.0 5745.249 3966.217 79.000 344.5 -74.3 -2.8 -12.066
+-0.17 476.6 NaN NaN NaN NaN NaN NaN NaN }{\tiny \par}
+
+{\tiny 72391.0 24.0 5741.788 3957.093 76.000 344.9 -73.4 -5.7 -12.066
+-0.17 438.4 NaN NaN NaN NaN NaN NaN NaN }{\tiny \par}
+
+{\tiny 72396.0 29.0 5743.373 3957.354 64.000 343.0 -73.6 -6.9 -12.066
+-0.17 402.0 NaN NaN NaN NaN NaN NaN NaN }{\tiny \par}
+
+{\tiny $\vdots$}{\tiny \par}
+\end{quotation}
+
+\section{PVT files}
+
+PVT, or private, files are created on the basestation. They contain
+data that was originally in the logfile that could pose a security
+problem if propagated off the basestation (as the logfile may well
+be). Thus, the data is stripped from the log file and placed in the
+matched pvt file.
+
+
+\subsection{Format}
+
+The PVT is very similar to a Logfile in format - it starts with a header that is
+identical in layout to the one described in Section LogFile in the
+\textbf{Seaglider File Formats} reference manual. Following the header is a
+single section of parameters, as listed in Table \ref{PVTParameters}.
+
+%
+\begin{table}
+\begin{centering}\begin{tabular}{|l|c|}
+\hline 
+\textbf{Parameter} &
+\textbf{Description} \tabularnewline
+\hline 
+\textbf{\$PASSWD} &
+See Parameter Reference\tabularnewline
+\hline 
+\textbf{\$TEL\_PREFIX} &
+See Parameter Reference\tabularnewline
+\hline 
+\textbf{\$TEL\_NUM} &
+See Parameter Reference\tabularnewline
+\hline 
+\textbf{\$ALT\_TEL\_PREFIX} &
+See Parameter Reference\tabularnewline
+\hline 
+\textbf{\$ALT\_TEL\_NUM} &
+See Parameter Reference\tabularnewline
+\hline
+\end{tabular}\par\end{centering}
+
+
+\caption{PVT file parameters}
+
+\label{PVTParameters} 
+\end{table}
+
+
+
+\section{comm.log}
+
+The \textbf{comm.log} file is a log of all the communications sessions
+by a particular Seaglider on a given deployment. It is appended during
+each communications session. It is a plain-text file that resides
+in the particular Seaglider's home directory. It captures the communications
+session details and is useful as a monitoring and debugging tool.
+It is useful to run \emph{tail -f comm.log} in the Seaglider's home
+directory during (or while waiting for) communication sessions.
+
+
+\section{convert.log}
+
+The \textbf{convert.log} file logs the output from the \emph{convert.pl}
+script that performs the data conversion and notification functions
+of the basestation. It is appended during each invocation. This file
+is the first place to look when debugging problems with the data conversion. 
+
+\chapter{Basestation Input Files}
+
+\section{Introduction}
+The Basestation's operation is primarily controlled by configuration files that
+are read each time the conversion processed is started.  
+
+\section{.pagers file}
+
+The \textbf{.pagers} file controls the automatic notification system.
+It allows any of three types of messages to be sent to any valid email
+address. This service is run by the data conversion script, which
+is invoked by a glider logout or disconnection.
+
+\subsection{Format}
+
+The \textbf{.pagers} file is a line-oriented format. Comment lines
+are indicated by a leading \textbf{\#}. The lines are of the following
+format.
+
+\begin{quote}
+\textbf{email\_address,<service>{[}, service]{[},service] }
+\end{quote}
+where email\_address is any valid email address (user@mailhost), and
+service may be any or all of the services shown in Table .
+
+%
+\begin{table}[H]
+
+\caption{.pagers file services}
+
+\begin{tabular}{|c|c|}
+\hline 
+\textbf{Service}&
+\textbf{Description}\tabularnewline
+\hline
+\hline 
+\textbf{gps}&
+Most recent GPS position, and recovery code if in recovery\tabularnewline
+\hline 
+\textbf{alerts}&
+Basestation data conversion alerts (see \textbf{convert.log})\tabularnewline
+\hline 
+\textbf{recov}&
+Only if Seaglider in recovery, includes most recent GPS position and
+recovery code\tabularnewline
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Example}
+\begin{quotation}
+
+\#Seaglider pilot
+
+5555551234@mmode.com,gps,recov
+
+chief\_pilot@seaglider.com,recov,alerts
+
+\#Iridium Phone
+
+881655512345@msg.iridium.com,gps
+\end{quotation}
+
+\section{.urls file}
+
+The \textbf{.urls} file specifies URLs on which to run GET for each
+processed dive. This can be used for any supported httpd function,
+and is mainly used to poll for data transfers to support visualization
+servers.
+
+\subsection{Format}
+
+The \textbf{.urls} file is a line-oriented format. Comments are indicated
+by leading \textbf{\#}'s. The first entry on the line is the timeout
+(in seconds) to wait for a response to the GET. The basestation script
+\emph{convert.pl} adds arguments 'instrument\_name=sg<nnn>\&dive=<dive>'
+with the proper separator.
+
+
+\subsection{Example}
+\begin{quotation}
+\# These are URLs to GET for each processed dive
+
+10 http://www.seaglider.com/\textasciitilde{}glider/cgi-bin/update.cgi
+\end{quotation}
+
+\section{.mailer file}
+
+The \textbf{.mailer} file controls the automatic data delivery system via email.
+It allows any or all of the output files that the Basestation creates during
+processing to be sent as email attachments to any email address. This service is
+run by the data conversion script, which is invoked by a glider logout or
+disconnection.
+
+\subsection{Format}
+
+The \textbf{.mailer} file is a line-oriented format. Comment lines
+are indicated by a leading \textbf{\#}. The lines are of the following
+format.
+
+\begin{quote}
+\textbf{email\_address,{[}format,]all|<filetype>{[}{[},filetype],...]}
+\end{quote}
+where \textbf{email\_address} is any valid SMTP email address (user@mailhost),
+\textbf{format} may be not specified, in which case, each file is sent as a
+unique attachment, or is \textbf{gzip}, in which case all files are placed in a
+gziped tar file attachment, \textbf{all}, indicating all file types should be
+sent and \textbf{filetype} may be any or all of the services shown in Table .
+
+%
+\begin{table}[H]
+
+\caption{.mailer file types}
+
+\begin{tabular}{|l|p{3.5in}|}
+\hline 
+\textbf{Filetype}&
+\textbf{Description}\tabularnewline
+\hline
+\hline 
+\textbf{comm}&
+Send the comm.log file.  Note: this file is always compressed using gzip, 
+regardless of the format setting.\tabularnewline
+\hline 
+\textbf{eng|log| pro|bpo|csv|asc|cap|nc}&
+Send files whose extension match those specified.
+\tabularnewline
+\hline
+\end{tabular}
+\end{table}
+
+\subsection{Example}
+\begin{quotation}
+\#Field team on board ship
+
+science@shipboard.org,gzip,log,eng
+
+\#Pilot working remotely
+
+pilot@u.washington.edu,all
+
+\end{quotation}
+\end{document}

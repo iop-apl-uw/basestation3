@@ -1,0 +1,173 @@
+Submitting deployment profile data to the National Ocean Data Center (NODC)
+---------------------------------------------------------------------------
+
+The basestation code allows you to easily deposit glider profile data from a
+deployment for archival and general oceanographic use to NODC
+(www.nodc.noaa.gov).  This document describes how to perform a deposit for
+either a completed and an on-going deployment.
+
+When data is deposited to NODC it is given an accession number.  The basestation's
+NODC deposit process is designed to ensure that a single accession number is
+assigned to each glider deployment so all deployment profiles can be downloaded in
+a single request by interested parties for their use and citation convenience.
+
+For experiments involving several coordinated glider deployments, each
+deployment will generate a separate accession number.  There is no mechanism at
+NODC for combining the deployments from a multi-glider experiment.  We suggest
+using common title language in the mission titles to help oceanographers search
+for the related deployments.
+
+IMPORTANT: Before submitting data for the first time to NODC they request that
+you contact them at NODC.DataOfficer@noaa.gov indicating that you would like to
+submit data to NODC using the UW basestation software.  They will want to know
+your institution and a rough idea of how much data you'll be submitting
+(approximate number of profiles and deployments).  They will let you know when
+they are ready to process your deposits.  Once they know about you and your
+institution you should be able to submit new profile and deployment data without
+further interaction.
+
+Submitting a completed deployment:
+----------------------------------
+
+Once a glider deployment is completed and no further profiles will be received, the
+pilot and scientist should review and reprocess the profiles for various quality
+control issues, marking bad points and other issues using the sg_directives.txt
+mechanism and setting appropriate globals in sg_calib_constants.m file (for
+example, proper hydrodynamic parameters for more accurate depth-average current
+estimations and thermal-inerita corrections, etc.) as discussed in the
+Seaglider Quality Control Manual.
+
+Once the profiles have been reviewed, prepare an NODC.cnf file in the deployment
+directory by copying, as pilot, the version of NODC.cnf in the basestation
+directory to the deployment directory:
+
+>> su pilot
+>> cd <deployment_directory>
+>> cp /usr/local/basestation/NODC.cnf .
+
+The NODC.cnf files in the deployment directory *and* in the basestation's
+directory control the submission process.  The data in the deployment
+directory's cnf file has priority over the data in the basestation directory's
+cnf file.  If you are going to make deposits of several different deployments
+you should make common cnf declarations in the basestation cnf file so the
+deployment cnf file contains only the updated and overriding data for that
+deployment.
+
+
+There are comments and examples in the cnf that help guide how you should fill
+out each field.  The critical thing to remember is that for data like
+"institution", etc. that might require several lines, the continuation line
+*must* begin with a space.  As a rule you will want to update the following
+fields:
+
+institution: -- your institution's name and location
+creator_name: -- the name of the PI(s)
+creator_email: -- an email address of the PI (where the accession number is sent)
+
+sea_name: -- where the deployment occurred (or at least started); 
+		  	 see the approved list of sea names at the NODC web site
+
+project:  -- a description of the overall scientific project; 
+		  	 this might cover several deployments
+
+
+Do *not* modify the text in the license: field; it is required for deposit to
+NODC.  You can add additional notes in the disclaimer: field.
+
+There are several optional fields for contributors:, acknowledgments:, and
+references:.  You can also add general comments about the overall deployment
+here but we recommend adding profile-specific comments using a 'comment'
+sg_directive for individual profiles.  See the Seaglider Quality Control Manual
+for instructions on how to do that.
+
+
+There are two 'sections' to the cnf file. The first section, called [NODC],
+contains the declarations outlined above.  As mentioned above, data in a field
+in the deployment cnf file will override any data in the basestation cnf file.
+The final data will be written to global data of each NetCDF (nc) file sent to
+NODC.  The basestation automatically prepares additional required global data
+from the deployment data itself, such as the start time and the geographic
+bounding box of the deployment, etc.
+
+The second section, called [NODC_controls], controls whether and how the data is
+actually submitted to NODC.  The main control is ftp_files_to_nodc: and it is
+set to No by default--do not send data to NODC.  This permits you to experiment
+with the submission process on your basestation, examine the resultant nc files,
+modify and improve any cnf data, and finally submit it when everything appears
+correct.
+
+To prepare a submission file (and possibly submit it), run the following (as user
+'pilot' on the basestation):
+
+>> su pilot
+>> cd <deployment_directory>
+>> python /usr/local/basestation/NODC.py --mission_dir .
+
+This will copy and rewrite globals in *all* the profile nc files into an
+acceptable form for NODC, using all the cnf data you have provided.  It adds
+these files to a gzipped tar file and includes a 'manifest' file that documents
+the contents of the submission.  You can extract an example file from the tar
+file and use ncdump -h on the file to see how the information from the two cnf
+files have been combined and incorporated into the nc file.
+
+When you are ready to submit, change the ftp_files_to_nodc: value in the
+deployment cnf file to Yes and rerun the command above.  The package will be
+rebuilt and ftp'd to NODC.  An email will be sent to a special email address at
+NODC, cc'ing the PI (using the create_email: addresss), informing them of the
+deposit and requesting an accession number.  Depending on the processing
+schedule at NODC this 'ingestion' could take several days to acknowledge and to
+return the accession number; be patient.
+
+You can add more email addresses to the initial request for an accession number
+using the nodc_cc_email: field in the [NODC_controls] section.  Multiple email
+addresses should be comma-separated.  They will all be alerted about the
+accession number when it becomes available.  The accession number is also
+accompanied by a URL to access the data via their website.  It is a good idea to
+check that the deposit has been indexed correctly and that all the profiles are
+available.
+
+If later processing of the data reveals improvements or problems in one or more
+profiles, you must resubmit *all* the deployment's profile data using the
+command above and the contents of the NODC accession will be updated to reflect
+the changed profiles.  Please try to keep resubmissions to a minimum by batching
+changes.
+
+Supporting on-going deployments
+-------------------------------
+
+It is possible start an accession at the beginning of a deployment and update it
+during operations.  You need to wait until you have the first few profiles and
+then just use the command above to resubmit *all* the profiles available with
+each deposit.  This will ensure the accession, once created, gets updated with
+the latest profiles (and any latest reprocessed profiles because of changes to
+sg_calib_constants.m, etc.).
+
+Submitting a subset of profiles, which is possible, is *not* recommended.
+Unless there is some overlap with the previous accession a new accession will be
+created and it will not be linked with the prior accession.  Worse, if you later
+resubmit all the profiles, they will be split and placed into these different,
+original accessions.
+
+
+WMO ids
+-------
+
+NODC does not require, but recommends, assigning a WMO (World Metereological
+Organization) identifier to the deployment.  Because gliders are reusable and
+redeployable platforms, WMO identifiers must be issued for *each* deployment.
+You can request a WMO id from your national focal point WMO representative; see
+http://www.jcomm.info/index.php?option=com_oe&task=viewGroupRecord&groupID=155. They
+are likely to ask you what ocean basin the deployment occured in; use their
+table to specify where the deployment *started*.  Rules about the format of WMO
+codes can be found at http://www.wmo.int/pages/prog/amp/mmop/wmo-number-rules.html.
+
+Once you have received your deployment's WMO id you can incorporate it into the
+nc files by assigning the number *as a string* to the 'wmo_id' variable in
+your sg_calib_constants.m file, e.g.,
+
+wmo_id = '289901234'; % example WMO id
+
+Reprocessing the files will add the WMO id information to the attributes of
+the platform variable and to a global value, as required.
+
+

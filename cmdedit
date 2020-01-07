@@ -1,0 +1,268 @@
+#!/usr/bin/python
+
+## 
+## Copyright (c) 2006, 2007, 2008, 2011 by University of Washington.  All rights reserved.
+##
+## This file contains proprietary information and remains the 
+## unpublished property of the University of Washington. Use, disclosure,
+## or reproduction is prohibited except as permitted by express written
+## license agreement with the University of Washington.
+##
+## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+## POSSIBILITY OF SUCH DAMAGE.
+##
+
+import getopt
+import glob
+import os
+import sys
+import re
+import tempfile
+import shutil
+import subprocess
+import zlib
+from time import strftime, time, gmtime
+from os.path import basename
+
+help_message = """
+usage: cmdedit [options]
+
+When called as cmdedit with no options the script copies the existing
+cmdfile to a temporary file and opens an editor. When editing is 
+complete the temporary file is validated and you are prompted whether
+you would like to accept the changes.  On acceptance the temporary file
+overwrite the existing cmdfile.  Edits are attributed, time stamped, and
+logged to cmdedit.log
+
+When called as sciedit or targedit, will perform the same actions
+as above for the science and targets file, respectively.
+
+available options:
+    -h              Print this help message.
+    -a              always validate the resulting file, even if there
+                    are no apparent differences from the existing version
+    -d directory    Specify the working directory (a glider home 
+                    directory usually). Defaults to current directory.
+    -f filename     Specify the name of the working file to be edited
+                    and validated. This file will not be deleted at
+                    the completion of the script. A filename of - indicates
+                    that the working copy should be read from stdin.
+                    If -f is not specified then a temporary file will
+                    be created (and deleted at script completion).
+    -q              Run quietly (non-interactively).  The editor will
+                    not be started and you will not be prompted. Changes
+                    will be accepted automatically if the validation
+                    stage is clean. 
+                 
+    You cannot run interactively and take file input from stdin;
+    specify '-q' if you use '-f -'.  Likewise, you must run interactively
+    if you do not specify an input file with -f; never use -q without -f.
+"""
+    
+
+progname = basename(sys.argv[0])
+
+try:
+    opts, args = getopt.getopt(sys.argv[1:], "hqaf:d:")
+except getopt.GetoptError:
+    print "usage: %s [-f file] [-q] [-d directory]" % progname
+    sys.exit(1)
+
+interactive = True
+input_file = ""
+wd = os.getcwd()
+validator = "/usr/local/bin/validate"
+always_validate = False
+
+for o,a in opts:
+    if o == "-h":
+        print help_message
+        sys.exit(0)
+    elif o == "-q":
+        interactive = False
+    elif o == "-a":
+        always_validate = True
+    elif o == "-f":
+        input_file = a
+    elif o == "-d":
+        wd = a
+
+if input_file == "-" and interactive:
+    print "cannot run interactively with input from stdin, must use -q with -f -"
+    sys.exit(1)
+
+if input_file == "" and interactive == False:
+    print "cannot run quietly with no input file specified, must use -f with -q"
+    sys.exit(1)
+
+glider = basename(wd)[2:]
+
+# Get the full path of the control file and check for write permission.
+# If it already exists I can check if I have write permission.
+
+if progname == "cmdedit":
+    filename = "cmdfile"
+elif progname == "sciedit":
+    filename = "science"
+elif progname == "targedit":
+    filename = "targets"
+
+ctrlfile = wd + "/" + filename
+if os.path.isfile(ctrlfile) and os.access(ctrlfile, os.W_OK) == False:
+    print "%s access denied" % filename
+    sys.exit(2)
+
+# scan the comm.log to figure out what the latest dive is
+
+try:
+    comm = open(wd + "/comm.log", "r")
+except IOError:
+    print "could not open comm.log in working directory"
+    sys.exit(2)
+
+p = re.compile('^[0-9].*:.*:.* GPS')
+for s in comm:
+    if p.match(s):
+        latest = int(s.split(":")[0])
+
+comm.close()
+
+# determine the name of the most recent (in a dive number sense) logfile
+
+logfile = "-"
+
+n = latest
+while n >= 1:
+    logfile = "%s/p%s%04d.log" % (wd, glider, n)
+    if os.access(logfile, os.R_OK):
+        break
+
+    n = n - 1
+
+# If no input file was specified then copy the current control file (if it
+# exists) to a temp file and edit that.  If the input file was 
+# named "-" (stdin) then send stdin to a temp file but don't edit it.
+# If an actual named file was given just proceed.
+
+tempfile.tempdir = wd
+newfile = tempfile.mktemp()
+newfile_is_temp = True
+
+if input_file == "":
+    if os.access(ctrlfile, os.R_OK):
+        shutil.copyfile(ctrlfile, newfile)
+    else:
+        files = glob.glob(ctrlfile + '.*')
+        if len(files) > 0:
+            files.sort(lambda x,y:cmp(os.path.getmtime(x),os.path.getmtime(y)))
+            print "using %s, override with -f" % files[-1]
+            shutil.copyfile(files[-1], newfile)
+
+elif input_file == "-":
+    try:
+        file(newfile, "w").write(sys.stdin.read())
+    except:
+        print "could not copy input from stdin to temporary file"
+        sys.exit(2)
+else:
+    newfile = input_file
+    # BUG shouldn't we delete newfile at this point?
+    newfile_is_temp = False
+
+done_editing = 0
+while done_editing == 0:
+
+    if interactive:
+        if 'EDITOR' in os.environ.keys():
+            editor = os.environ['EDITOR']
+        else:
+            editor = "/bin/vi"
+
+        os.system(editor + " " + newfile)
+
+    # if there is an existing control file, diff it against our new file
+
+    if os.access(ctrlfile, os.R_OK):
+        p = subprocess.Popen(["/usr/bin/diff", "-q", ctrlfile, newfile], 
+                             stdin = subprocess.PIPE, 
+                             stdout = subprocess.PIPE,     
+                             stderr = subprocess.PIPE, close_fds = True)
+
+        diff_output, diff_stderr = p.communicate()
+        if diff_output == "":
+            if always_validate:
+                print "new file is identical to existing %s" % filename
+            else:
+                print "new file is identical to existing %s - nothing to do" % filename
+                if newfile_is_temp:
+                    os.remove(newfile)
+                sys.exit(0)
+
+# validate the proposed new control file, using state from the best available
+# logfile (or none if logfile is "-")
+
+    p = subprocess.Popen([validator, logfile, "-" + filename[0], newfile], 
+                         stdin = subprocess.PIPE, stdout = subprocess.PIPE, 
+                         stderr = subprocess.PIPE, close_fds = True)
+    validate_output, validate_stderr = p.communicate()
+
+    print validate_output
+
+    done_editing = 1
+    if interactive:
+        if p.returncode > 0:
+            answer = raw_input("Errors detected, keep changes anyway (yes/no/edit)? ")
+            if answer == "edit":
+                done_editing = 0
+        else:
+            answer = raw_input("New file check ok, accept it (yes/no)? ")
+    else:
+        if p.returncode > 0:
+            answer = "no"
+        else:
+            answer = "yes"
+
+if answer == "yes":
+    shutil.copyfile(newfile, ctrlfile)
+    print "Changes accepted, %s has been modified" % filename
+else:
+    print "Ignoring changes, original %s has not been changed" % filename
+    if newfile_is_temp:
+        os.remove(newfile)
+        os.remove(newfile + "~") # delete possible emacs backup file
+
+    sys.exit(2)
+
+if newfile_is_temp:
+    os.remove(newfile)
+    os.remove(newfile + "~") # delete possible emacs backup file
+
+if "USER" in os.environ.keys():
+    pilot = os.environ['USER']
+else:
+    pilot = "unknown"
+
+date = strftime("%m/%d/%y %H:%M:%S", gmtime(time()))
+
+ctrlfile_text = file(ctrlfile, 'r').read()
+
+sum = zlib.crc32(ctrlfile_text)
+size = os.path.getsize(ctrlfile)
+
+log = open(wd + "/" + progname + ".log", 'a')
+log.write("### %s %s\n" % (pilot, date))
+log.write("+++ %s (%d bytes, %d checksum)\n" % (filename, size, sum))
+log.write(ctrlfile_text)
+log.write("--- validation against %s (latest dive is %d)\n" % (logfile, latest))
+log.write(validate_output)
+
+sys.exit(0)

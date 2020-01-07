@@ -1,0 +1,14 @@
+name=irrad
+prefix=ocr504i
+timeout=3000
+baud=57600
+warmup=0
+voltage=10
+headerlines=0
+current=0.02
+format="%s %00 %01 %02 %03"
+column=chan1(10000,0)
+column=chan2(10000,0)
+column=chan3(10000,0)
+column=chan4(10000,0)
+cycles=0

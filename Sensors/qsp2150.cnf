@@ -1,0 +1,12 @@
+name=QSP2150
+prefix=qsp
+timeout=250
+baud=9600
+warmup=100
+voltage=10
+current=0.00438
+format="%00"
+flow=0
+column=PARuV(1000000,0)
+
+

@@ -1,0 +1,34 @@
+## .mailer file 
+#
+# This file controls the sending of data products created during basestation 
+# processing via email.  Mail is formatted as a MIME document and sent via SMTP
+#
+# Each line of this file is of the format
+# smtp_mail_address[,body|msgperfile|kkyy_subject|gzip] [,[fnmatch_*| eng| log| pro| bpo| csv| asc| cap| comm| dn_kkyy| up_kkyy| nc| mission_ts| mission_pro]+] | ,all
+# where:
+# smtp_mail_address - a valid smtp mail address - gliderpilot@apl.washington.edu
+#           for example
+# body - send files in the body of the message, instead as attachments (default).  
+#              Incompatible with gzip, nc, mission_ts and mission_pro
+# msgperfile - send each file in its own message, instead of sending all files that have been
+#                          newly created in a single message (default)
+# kkyy_subject - Use the navy specified 'XBTDATA' subject line, instead of a more 
+#                            informative subject (default)
+# gzip - compress all files before sending
+# fnmatch_* - everthing following fnmatch_ is used as the match criteria to fnmatch.  Note: all matches are case insensitive
+# eng, log, pro, bpo, csv, asc, cap , dn_kkyy, up_kkyy, nc - send any newly created files of the specified extension
+# comm - send the comm.log file
+# mission_ts, mission_pro - send the mission timeseries or mission profile, if they have been updated on the processing
+# all - send all the newly created or updated files
+#
+## Examples
+#
+## Send NAVO kkyy files
+#insitudata@navo.navy.mil,msgperfile,body,kkyy_subject,dn_kkyy,up_kkyy
+#
+## Send out the typical per-dive files 
+#someone@apl.washington.edu,gzip,log,eng,cap,nc,comm
+#
+## Send a collaborator the update mission profile (be careful, this can be a big file)
+#someone@u.washington.edu,gzip,mission_pro
+#

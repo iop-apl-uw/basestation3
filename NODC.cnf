@@ -1,0 +1,105 @@
+# This file provides values for netCDF global attributes required and recommended
+# for deposition of Seaglider data to the National Oceanographic Data Center (NODC)
+# It also controls whether and how to send files to NODC.
+
+# -  Edit this file in the basestation directory to apply overrides to all deployments
+# -  Make a copy of this file in a deployment directory and edit to override elements 
+#    for that deployment only.
+
+# Comments follow # or ;
+# attributes are followed by :
+# Some are commented out; uncomment them to include a value in each nc file
+# Continuation lines for values must provide a prefix of at least one blank space (see institution example below)
+
+[NODC]  # Do NOT remove this line
+
+### About the institution and scientists
+### ------------------------------------
+
+# The following globals are REQUIRED for deposit at NODC:
+
+# This is the institution running the glider and processing the data
+# Default: -- see below --
+institution: Applied Physics Lab
+ University of Washington
+ Seattle, WA
+
+# The name of the principal investigator
+# Default: None
+# creator_name: EXAMPLE - Craig Lee
+
+# The email address of the principal investigator
+# Default: None
+# creator_email: EXAMPLE -  craig@apl.washington.edu
+
+# An optional URL to the operations site
+# Default: None
+# creator_url: EXAMPLE - http://iop.apl.washington.edu/seaglider/index.php
+
+# An optional list of contributor(s) to the dataset
+# Default: None
+# contributor_name: A list of people's names
+
+# An optional list of contributor roles, in order of contributor
+# Default: None
+# contributor_role: A list of people's contributions
+
+# Any license or restrictions about the use or distribution of the data
+# NOTE: NODC does not accept data that is not immediately available to the public without restriction.
+# Default: -- see below --
+license: These data may be redistributed and used without restriction.
+
+# Sea names visited during deployment from http://www.nodc.noaa.gov/General/NODC-Archive/seanamelist.txt
+# comma-separated phrases without id numbers
+# NOTE: NODC requires the sea_name field for proper titling, indexing, and deposit
+# Default: None
+# sea_name:  EXAMPLE - Labrador Sea, Davis Strait
+
+# The following global is RECOMMENDED for deposit at NODC:
+
+# Any disclaimer about the data or its processing
+# Default: None
+# disclaimer: EXAMPLE - Data has not been reviewed and is provided AS-IS.
+
+
+### About the mission(s) and deployment(s)
+### --------------------------------------
+
+# Name of the overall project or mission this deployment is a part of
+# Default: Created from the mission string in sg_calib_constants
+# project: EXAMPLE - Atlantic Meridional Overturning Circulation Survey, 2012
+
+# Title of the deployment
+# Default: Created based on data attributes, glider id, mission title and sea_name below
+# NOTE: NODC requires that the title respect the following format for indexing purposes
+# title: EXAMPLE - Physical, chemical, and biological data collected by SGXXX during Northen Coastal Section in the North Pacific on 2010-04-15
+
+# Brief summary of the deployment and its goals
+# Default: Created from glider name and mission string in sg_calib_constants
+# summary: EXAMPLE - SGXXX Mesoscale mixing on meridional overturning circulation
+
+# Keywords from http://gcmdservices.gsfc.nasa.gov/static/kms/sciencekeywords/sciencekeywords.csv
+# List only the most specific keywords under Earth Sciences/Oceans, comma-separated and without id numbers.
+# For wlbb2 use Fluorescence
+# For optode/sbe43 use Oxygen
+# We do a sound velocity computation so could add Acoustic Velocity
+# Default: -- see below --
+keywords: Water Temperature, Conductivity, Salinity, Density, Potential Density, Potential Temperature
+
+# Acknowledgment of funding sources and assistance
+# Default: None
+# acknowledgment: EXAMPLE - NSF Grant 1234-5678
+
+# Any comment about the deployment, especially problems or special processing requirements
+# Default: None
+# comment: EXAMPLE - O2 sensor failed after dive 270
+
+# Any references to publications or URLs describing the mission
+# Default: None
+# references: EXAMPLE - 
+
+[NODC_controls] # Do NOT remove this line
+
+# FTP files to NODC? [Yes/No]
+# Default: No
+ftp_files_to_nodc: No

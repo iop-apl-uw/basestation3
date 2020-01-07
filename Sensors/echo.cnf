@@ -1,0 +1,41 @@
+#('log_ES_DL_HEADERSKIP', [False, 'd', {'units': 'bytes', 'description':'Number of bytes to skip before starting to grab data'}, nc_scalar])
+#('log_ES_POWER', [False, 'd', {'units': 'mW', 'description':'Reported power consumption in echosounder mode'}, nc_scalar])
+#('log_ES_POWER1', [False, 'd', {'units': 'mW', 'description':'Reported power consumption in echosounder+velocity mode'}, nc_scalar])
+#('log_ES_FREE', [False, 'd', {'units':'bytes', 'description':'Free diskspace on ES'}, nc_scalar])
+name=echo
+prefix=es
+timeout=15000
+baud=38400
+warmup=400
+voltage=15
+current=0.01
+wakeup=%F@@@@@%(200)@@@@@%(200)K1W%%!Q%(400)K1W%%!Q%(1000)%r%nMC%r%n%[OK]%F
+cmdprefix=$ES_
+powerup-timeout=0
+prompt=OK
+datatype=u
+start=%X
+stop=%FMC%r%n%[OK]
+profiles-download=separate
+download="SG%g_%d_%a_es.ad2cp"
+downloader=ad2cp
+metadata=
+selftest=%FMC%r%n%[OK]GETALL%r%n%[OK]
+clock-set=%FMC%r%n%[OK]SETCLOCK,YEAR=20%{%y,MONTH=%m,DAY=%d,HOUR=%H,MINUTE=%M,SECOND=%S}%r%n%[OK]
+clock-read=%FMC%r%n%[OK]GETCLOCK%r%n%[OK]
+clock-sync=gps2
+post-clock=off
+post-transfer=off
+post-stop=off
+script-x=ES_GO
+log-cmd-0=%FMC%r%n%[OK]RECSTAT,FC%r%n%[OK]
+log-resp-0=%00
+log-param-0=FREE
+log-cmd-1=%FMC%r%n%[OK]GETPWR%r%n%[OK]
+log-resp-1=%01,%f,%f,%02,%f,%f,%f
+log-param-1=POWER
+log-param-2=POWER1
+param-w=DL_HEADERSKIP
+param-x=DL_RECORDLENGTH
+param-y=DL_NRECORD
+param-z=DL_RECORDCOUNT
