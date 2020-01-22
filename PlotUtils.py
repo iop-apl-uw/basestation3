@@ -26,9 +26,10 @@ import time
 
 # Plotting configuration
 make_plot_section = 'makeplot'
-make_plot_default_dict = {'plot_raw': [0, 0, 1],
-                          'save_svg': [0, 0, 1],
-                          'full_html': [0, 0, 1],
+make_plot_default_dict = {'plot_raw' : [0, 0, 1],
+                          'save_svg' : [0, 0, 1],
+                          'full_html' : [0, 0, 1],
+                          'plot_directory' : [None, None, None]
 }
 
 #
