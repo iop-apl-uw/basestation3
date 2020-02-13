@@ -31,7 +31,6 @@ import cProfile
 import pstats
 import glob
 import os
-from stat import *
 import sys
 import time
 import tarfile
@@ -56,7 +55,7 @@ import signal
 import pprint
 
 import BaseOpts
-from BaseLog import *
+from BaseLog import log_critical, log_error, log_warning, log_info, log_debug, log_conversion_alert, log_conversion_alerts, log_alert, log_alerts, BaseLogger
 import CommLog
 import Utils
 import Strip1A
@@ -68,11 +67,17 @@ import MakeDiveProfiles
 import Ver65
 import Sensors
 import BaseNetCDF
-from CalibConst import getSGCalibrationConstants
+import CalibConst
 import FlightModel
-from FileMgr import *
+import FileMgr
 import Daemon
 
+# TODO list
+# 1) Largest issue is to remove mismash of globals and globals passed as arguments.
+#    Creation of a "global_state" class the contians the various lists and objects and that
+#    is to be passed to everything along with base_opts
+# 2) Enforce that all functions have input and return documentation
+# 3) Add type hints to all functions
 
 # Globals
 file_trans_received = "r"
@@ -82,8 +87,12 @@ known_mailer_tags = ['eng', 'log', 'pro', 'bpo', 'asc', 'cap', 'comm', 'dn_kkyy'
 known_ftp_tags = known_mailer_tags
 skip_mission_processing = False    # Set by signal handler to skip the time consuming processing of the whole mission data
 base_lockfile_name = '.conversion_lock'
-pagers_ext = {'html' : lambda *args: send_email(*args, html_format=True)}
+#pagers_ext = {'html' : lambda *args: send_email(*args, html_format=True)}
+pagers_ext = {'html' : lambda base_opts, instrument_id, email_addr, subject_line, message_body: \
+              send_email(base_opts, instrument_id, email_addr, subject_line, message_body, html_format=True)}
 logger_eng_readers = {}  # Mapping from logger prefix to eng_file readers
+
+comm_log = None
 
 # inReach message sender
 try:
@@ -95,6 +104,10 @@ else:
 
 # AES support
 def decrypt_file(in_file_name, out_file_name, mission_dir):
+    """
+    Stub function for decryption
+    """
+    # pylint: disable=W0613
     return 0
 
 # Configuration
@@ -105,6 +118,10 @@ previous_conversion_time_out = 20  # Time to wait for previous conversion to com
 
 # urllib override to prevent username/passwd prompting on stdin
 def my_prompt_user_passwd(self, host, realm):
+    """
+    Stub function for user password
+    """
+    # pylint: disable=W0613
     return None, None
 
 urllib.request.FancyURLopener.prompt_user_passwd = my_prompt_user_passwd
@@ -137,7 +154,7 @@ def read_processed_files(glider_dir):
 
         raw_parts = raw_line.split(",")
 
-        fc = FileCode(raw_parts[0], instrument_id)
+        fc = FileMgr.FileCode(raw_parts[0], instrument_id)
         if fc.is_pdos_log():
             try:
                 processed_pdos_logfiles_dict[raw_parts[0]] = time.mktime(time.strptime(raw_parts[1].lstrip(), '%H:%M:%S %d %b %Y %Z'))
@@ -204,18 +221,16 @@ def group_dive_files(dive_files):
     files (no extensions or leading dirs) and the item as a list of
     file fragments
     """
-    last_base_name = ""
-    this_base_name = ""
     file_group = {}
     for i in dive_files:
-        fc = FileCode(i, instrument_id)
+        fc = FileMgr.FileCode(i, instrument_id)
         if fc.base_name() not in file_group:
             file_group[fc.base_name()] = []
         file_group[fc.base_name()].append(i)
 
     return file_group
 
-def process_dive_selftest(glider_dir, dive_files, dive_num, fragment_size, calib_consts):
+def process_dive_selftest(dive_files, dive_num, fragment_size, calib_consts):
     """Given a list of files belonging to a single dive, process them
 
     Returns:
@@ -224,7 +239,7 @@ def process_dive_selftest(glider_dir, dive_files, dive_num, fragment_size, calib
     1 for successful processing
 
     """
-    retval = 0
+    ret_val = 0
     force_data_processing = False
 
     log_debug("process_dive_selftest file list %s" % pprint.pformat(dive_files))
@@ -247,18 +262,18 @@ def process_dive_selftest(glider_dir, dive_files, dive_num, fragment_size, calib
     for base, file_group in list(dive_files_dict.items()):
         # Process the file only if it hasn't been processed yet
         if check_process_file_group(base, file_group):
-            fc = FileCode(base, instrument_id)
+            fc = FileMgr.FileCode(base, instrument_id)
             if(fc.is_log() and (fc.is_seaglider() or fc.is_seaglider_selftest())):
                 try:
                     #TODO - get the file fragment size back
                     pfg_retval = process_file_group(file_group, fragment_size, 0, calib_consts)
                 except:
                     log_error("Could not process %s - skipping" % fc.base_name(), 'exc')
-                    retval = -1
+                    ret_val = -1
                 else:
                     if pfg_retval:
                         log_error("Could not process %s - skipping" % fc.base_name())
-                        retval = -1
+                        ret_val = -1
                     else:
                         #complete_files.append(base)
                         complete_files_dict[base] = time.time()
@@ -267,13 +282,13 @@ def process_dive_selftest(glider_dir, dive_files, dive_num, fragment_size, calib
                         # is in the list
                         if fc.make_data() in dive_files_dict:
                             force_data_processing = True
-                        if retval == 0:
-                            retval = 1
+                        if ret_val == 0:
+                            ret_val = 1
 
     # Process what's left remainder
     for base, file_group in list(dive_files_dict.items()):
         #if(complete_files.count(base) == 0):
-        fc = FileCode(base, instrument_id)
+        fc = FileMgr.FileCode(base, instrument_id)
         if(check_process_file_group(base, file_group) or (fc.is_data() and force_data_processing)):
             if((fc.is_seaglider() or fc.is_seaglider_selftest()) and fc.is_pdos_log()):
                 # This is covered way before we get here.
@@ -283,20 +298,20 @@ def process_dive_selftest(glider_dir, dive_files, dive_num, fragment_size, calib
                 pfg_retval = process_file_group(file_group, fragment_size, 0, calib_consts)
             except:
                 log_error("Could not process %s - skipping" % fc.base_name(), 'exc')
-                retval = -1
+                ret_val = -1
             else:
                 if pfg_retval:
                     log_error("Could not process %s - skipping" % fc.base_name())
-                    retval = -1
+                    ret_val = -1
                 else:
                     #complete_files.append(base)
                     complete_files_dict[base] = time.time()
                     del dive_files_dict[base] # All processed
-                    if retval == 0:
-                        retval = 1
+                    if ret_val == 0:
+                        ret_val = 1
 
-    log_debug("process_dive_selftest(%d) = %d" % (dive_num, retval))
-    return retval
+    log_debug("process_dive_selftest(%d) = %d" % (dive_num, ret_val))
+    return ret_val
 
 def select_fragments(file_group):
     """Given a sorted list of fragments, possibly containing PARTIAL files,
@@ -309,13 +324,13 @@ def select_fragments(file_group):
     for fragment in file_group:
         if current_frag is None:
             current_frag = fragment
-        if get_non_partial_filename(current_frag) != get_non_partial_filename(fragment):
+        if FileMgr.get_non_partial_filename(current_frag) != FileMgr.get_non_partial_filename(fragment):
             new_file_group.append(current_frag)
         current_frag = fragment
     new_file_group.append(current_frag)
     for fragment in new_file_group:
-        if fragment != get_non_partial_filename(fragment):
-            root, ext = os.path.splitext(get_non_partial_filename(fragment))
+        if fragment != FileMgr.get_non_partial_filename(fragment):
+            root, _ = os.path.splitext(FileMgr.get_non_partial_filename(fragment))
             defrag_file_name = root + "." + file_trans_received
             log_conversion_alert(defrag_file_name, "File %s is a PARTIAL file - consider %s" % (fragment, generate_resend(fragment)))
 
@@ -324,7 +339,7 @@ def select_fragments(file_group):
 def generate_resend(fragment_name):
     """Given a fragment name, return the appropriate resend dive message
     """
-    fragment_fc = FileCode(fragment_name, instrument_id)
+    fragment_fc = FileMgr.FileCode(fragment_name, instrument_id)
     ret_val = ""
     if(fragment_fc.is_seaglider() or fragment_fc.is_seaglider_selftest()):
         if fragment_fc.is_log():
@@ -360,11 +375,12 @@ def check_process_file_group(base, file_group):
     """
     if base not in complete_files_dict:
         return True
-    else:
-        for file_name in file_group:
-            # Get the file stamp of the fragment and compare against the most recent conversion
-            if os.path.getmtime(file_name) > complete_files_dict[base]:
-                return True
+
+    for file_name in file_group:
+        # Get the file stamp of the fragment and compare against the most recent conversion
+        if os.path.getmtime(file_name) > complete_files_dict[base]:
+            return True
+
     return False
 
 def process_file_group(file_group, fragment_size, total_size, calib_consts):
@@ -381,17 +397,17 @@ def process_file_group(file_group, fragment_size, total_size, calib_consts):
     Raises:
       Any exceptions raised are considered critical errors and not expected
     """
-    global comm_log
+    # pylint: disable=R0914
 
     ret_val = 0
 
     log_debug("process_file_group dictionary = %s" % pprint.pformat(file_group))
-    root, ext = os.path.splitext(get_non_partial_filename(file_group[0]))
+    root, ext = os.path.splitext(FileMgr.get_non_partial_filename(file_group[0]))
     defrag_file_name = root + "." + file_trans_received
 
     log_info("Processing %s" % root)
 
-    file_group.sort(key=functools.cmp_to_key(sort_fragments))
+    file_group.sort(key=functools.cmp_to_key(FileMgr.sort_fragments))
 
     file_group = select_fragments(file_group)
 
@@ -413,7 +429,7 @@ def process_file_group(file_group, fragment_size, total_size, calib_consts):
                 log_error("Couldn't Bogue %s, got %s - skipping dive processing." % bogue_file)
                 return 1
 
-    fc = FileCode(defrag_file_name, instrument_id)
+    fc = FileMgr.FileCode(defrag_file_name, instrument_id)
 
     # Strip1A all the files
     fragments_1a = []
@@ -433,14 +449,13 @@ def process_file_group(file_group, fragment_size, total_size, calib_consts):
         fragment_1a = root + ".1a" + ext
         # Ignore any size issues for logger payload files
         if(fragment is last_fragment or fc.is_logger_payload()):
-            ret_val = Strip1a.strip1a(fragment, fragment_1a)
+            ret_val = Strip1A.strip1A(fragment, fragment_1a)
         else:
-            ret_val = Strip1a.strip1a(fragment, fragment_1a, fragment_size)
+            ret_val = Strip1A.strip1A(fragment, fragment_1a, fragment_size)
         if(ret_val and not fc.is_logger_payload()):
             log_error("Couldn't strip1a %s. Skipping dive processing" % fragment_1a)
             return 1
-        else:
-            fragments_1a.append(fragment_1a)
+        fragments_1a.append(fragment_1a)
 
     if not fc.is_logger_payload():
         # At this point, the fragments should be of the correct size, so now we can check them
@@ -602,7 +617,7 @@ def process_file_group(file_group, fragment_size, total_size, calib_consts):
 
     # Do this as a list of files
     for in_file_name in file_list:
-        fc = FileCode(in_file_name, instrument_id)
+        fc = FileMgr.FileCode(in_file_name, instrument_id)
         log_debug("Content specific processing of %s" % in_file_name)
         if(fc.is_seaglider() or fc.is_seaglider_selftest()):
             if fc.is_parm_file():
@@ -628,7 +643,7 @@ def process_file_group(file_group, fragment_size, total_size, calib_consts):
                     sg_data_file.dat_to_asc()
                     fo = open(fc.mk_base_ascfile_name(), "w")
                     sg_data_file.dump(fo)
-                    fo.close
+                    fo.close()
                     processed_other_files.append(fc.mk_base_ascfile_name())
                     # Convert to the eng file
                     sg_log_file = LogFile.parse_log_file(fc.mk_base_logfile_name(), base_opts.mission_dir)
@@ -723,7 +738,7 @@ def check_file_fragments(defrag_file_name, fragment_list, fragment_size, total_s
     for fragment in fragment_list:
         log_info("Checking fragment %s" % fragment)
 
-        while fragment_cntr < get_counter(fragment):
+        while fragment_cntr < FileMgr.get_counter(fragment):
             msg = "Fragment %d for file %s is missing" % \
                   (fragment_cntr, defrag_file_name)
             log_warning(msg)
@@ -756,7 +771,7 @@ def check_file_fragments(defrag_file_name, fragment_list, fragment_size, total_s
 
             elif current_fragment_size > fragment_size:
                 size_from_fragments += current_fragment_size
-                fc = FileCode(fragment, instrument_id)
+                fc = FileMgr.FileCode(fragment, instrument_id)
                 if(fc.is_fragment() and not (fc.is_seaglider_selftest() and fc.is_capture())):
                     # This message only applies if the file is actually a fragment
                     msg = "Final fragment %s size (%d) is too big, expected less than or equal to %d." % \
@@ -779,20 +794,19 @@ def process_pdoscmd_log(mission_dir, pdos_logfile_name):
     """
     log_info("Processing %s" % pdos_logfile_name)
 
-    if decrypt_file(pdos_logfile_name, pdos_logfile_name, base_opts.mission_dir):
+    if decrypt_file(pdos_logfile_name, pdos_logfile_name, mission_dir):
         return 1
 
     # N.B. No fragment checking done here - it is assumed that this file is less
     # then a fragment in size
 
-    fc = FileCode(pdos_logfile_name, instrument_id)
+    fc = FileMgr.FileCode(pdos_logfile_name, instrument_id)
     if(fc.is_seaglider() or fc.is_seaglider_selftest()):
         root, ext = os.path.splitext(pdos_logfile_name)
         pdos_logfile_1a_name = root + ".1a" + ext
-        if Strip1a.strip1a(pdos_logfile_name, pdos_logfile_1a_name):
+        if Strip1A.strip1A(pdos_logfile_name, pdos_logfile_1a_name):
             log_error("Couldn't strip1a %s. Skipping dive processing" % pdos_logfile_1a_name)
             return 1
-
         if fc.is_gzip():
             pdos_uc_logfile_name = fc.mk_base_pdos_logfile_name()
             if BaseGZip.decompress(pdos_logfile_1a_name, pdos_uc_logfile_name) > 0:
@@ -800,7 +814,7 @@ def process_pdoscmd_log(mission_dir, pdos_logfile_name):
                 return 1
         else:
             shutil.copyfile(pdos_logfile_1a_name, fc.mk_base_pdos_logfile_name())
-            return 0
+        return 0
     else:
         log_error("Don't know how to deal with a non-seaglider pdos file")
         return 1
@@ -827,12 +841,12 @@ def expunge_secrets(logfile_name):
     private_keys_found = False
 
     for s in pub:
-        if s == "" or s == "\n":
+        if s in ("", "\n"):
             continue
 
         if header:
             try:
-                key, value = s.split(":")
+                key, _ = s.split(":")
             except ValueError:
                 log_error("trying to split header line " + s)
                 return 1
@@ -843,7 +857,7 @@ def expunge_secrets(logfile_name):
                 header = False
         else:
             try:
-                key, value = s.split(',', 1)
+                key, _ = s.split(',', 1)
             except ValueError:
                 try:
                     key, value = s.split('=', 1)
@@ -860,7 +874,7 @@ def expunge_secrets(logfile_name):
     pub.close()
 
     if private_keys_found:
-        base, ext = os.path.splitext(logfile_name)
+        base, _ = os.path.splitext(logfile_name)
         try:
             pvt = open(base + ".pvt", "w")
         except IOError:
@@ -931,8 +945,8 @@ def expunge_secrets_st(selftest_name):
         pub.write(public_lines)
         pvt.write(private_lines)
 
-        pub.close
-        pvt.close
+        pub.close()
+        pvt.close()
 
         os.chmod(pvt_name, 0o660)
     else:
@@ -962,6 +976,7 @@ def send_email(base_opts, instrument_id, email_addr, subject_line, message_body,
 def process_ftp(processed_file_names, mission_timeseries_name, mission_profile_name):
     """ Process the .ftp file and push the data to a ftp server
     """
+    ret_val = 0
     ftp_file_name = os.path.join(base_opts.mission_dir, ".ftp")
     if not os.path.exists(ftp_file_name):
         log_info("No .ftp file found - skipping .ftp processing")
@@ -972,6 +987,7 @@ def process_ftp(processed_file_names, mission_timeseries_name, mission_profile_n
         ftp_file = open(ftp_file_name, "r")
     except IOError as exception:
         log_error("Could not open %s (%s) - no mail sent" % (ftp_file_name, exception.args))
+        ret_val = 1
     else:
         for ftp_line in ftp_file:
             try:
@@ -979,6 +995,7 @@ def process_ftp(processed_file_names, mission_timeseries_name, mission_profile_n
             except:
                 log_error("Could not process %s - skipping" % ftp_line, 'exc')
     log_info("Finished processing on .ftp")
+    return ret_val
 
 def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, session=None, pagers_convert_msg=None,
                    processed_files_message=None, msg_prefix=None, crit_other_message=None, warn_message=None):
@@ -1173,7 +1190,7 @@ def run_extension_script(script_name, script_args):
                 cmdline = '%s %s ' % (cmdline, i)
         log_debug("Running (%s)" % cmdline)
         try:
-            (sts, fo) = Utils.run_cmd_shell(cmdline)
+            (_, fo) = Utils.run_cmd_shell(cmdline)
         except:
             log_error("Error running %s" % cmdline, 'exc')
         else:
@@ -1186,6 +1203,7 @@ def run_extension_script(script_name, script_args):
 def signal_handler_defer(signum, frame):
     """Handles SIGUSR1 signal during per-dive processing
     """
+    #pylint: disable=unused-argument
     global skip_mission_processing
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - will skip whole mission processing")
@@ -1194,6 +1212,7 @@ def signal_handler_defer(signum, frame):
 def signal_handler_defer_end(signum, frame):
     """Handles SIGUSR1 signal during after whole mission processing
     """
+    #pylint: disable=unused-argument
     global skip_mission_processing
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - will end processing soon")
@@ -1202,6 +1221,7 @@ def signal_handler_defer_end(signum, frame):
 def signal_handler_abort_processing(signum, frame):
     """Handles SIGUSR1 during whole mission processing
     """
+    #pylint: disable=unused-argument
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - bailing out of further processing")
         raise AbortProcessingException
@@ -1400,7 +1420,7 @@ def main():
 
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
-    calib_consts = getSGCalibrationConstants(sg_calib_file_name)
+    calib_consts = CalibConst.getSGCalibrationConstants(sg_calib_file_name)
     if not calib_consts:
         log_warning("Could not process %s" % sg_calib_file_name)
 
@@ -1411,7 +1431,7 @@ def main():
         log_warning("Sensor initialization failed")
 
     # Initialize the FileMgr with data on the installed loggers
-    logger_init(init_dict)
+    FileMgr.logger_init(init_dict)
 
     # Initialze the netCDF tables
     BaseNetCDF.init_tables(init_dict)
@@ -1567,7 +1587,7 @@ def main():
         if os.path.exists(parms_zipped_file_name):
             root, ext = os.path.splitext(parms_zipped_file_name)
             parms_zipped_file_name_1a = root + ".1a" + ext
-            if Strip1a.strip1a(parms_zipped_file_name, parms_zipped_file_name_1a):
+            if Strip1a.strip1A(parms_zipped_file_name, parms_zipped_file_name_1a):
                 log_error("Couldn't strip1a %s. Skipping processing" % parms_zipped_file_name_1a)
                 # Proceed anyway
             else:
@@ -1602,7 +1622,7 @@ def main():
         software_revision = None
 
     # Collect all files to be processed - be sure to include all files, including the flash files
-    file_collector = FileCollector(base_opts.mission_dir, instrument_id)
+    file_collector = FileMgr.FileCollector(base_opts.mission_dir, instrument_id)
 
     # Ensure that all pre-processed files are readable by all
     pre_proc_files = file_collector.get_pre_proc_files()
@@ -1636,7 +1656,7 @@ def main():
         else:
             fragment_size = 8192
             log_warning("No fragment size found for %s - using %d as default" % (i, fragment_size))
-        selftest_processed = process_dive_selftest(base_opts.mission_dir, selftest_files, i, fragment_size, calib_consts)
+        selftest_processed = process_dive_selftest(selftest_files, i, fragment_size, calib_consts)
         if selftest_processed > 0:
             new_selftests_processed.append(i)
         elif selftest_processed < 0:
@@ -1683,7 +1703,7 @@ def main():
         else:
             fragment_size = 8192
             log_warning("No fragment size found for %s - using %d as default" % (i, fragment_size))
-        dive_processed = process_dive_selftest(base_opts.mission_dir, dive_files, i, fragment_size, calib_consts)
+        dive_processed = process_dive_selftest(dive_files, i, fragment_size, calib_consts)
         if dive_processed > 0:
             new_dives_processed.append(i)
         elif dive_processed < 0:
@@ -1733,7 +1753,7 @@ def main():
                 dives_to_profile.append(seaglider_log_file_name)
 
         # Find any associated logger eng files for each dive in dives_to_profile
-        logger_eng_files = find_dive_logger_eng_files(dives_to_profile, base_opts, instrument_id, init_dict)
+        logger_eng_files = FileMgr.find_dive_logger_eng_files(dives_to_profile, base_opts, instrument_id, init_dict)
 
         # Now, walk the list and create the profiles
         for dive_to_profile in dives_to_profile:
@@ -1761,7 +1781,7 @@ def main():
                 kkyy_down_file_name = None
 
             retval = None
-            dive_num = get_dive(eng_file_name)
+            dive_num = FileMgr.get_dive(eng_file_name)
 
             #log_info("logger_eng_files = %s" % logger_eng_files[dive_to_profile])
 
@@ -2027,11 +2047,11 @@ def main():
                 if alert_msg_file:
                     alert_msg_file.write("<div class=\"%s\">\n<p>File %s was not processed completely\n"
                                          % (os.path.basename(incomplete_file_name), incomplete_file_name))
-                    fc = FileCode(incomplete_file_name, instrument_id)
+                    fc = FileMgr.FileCode(incomplete_file_name, instrument_id)
                     if fc.is_seaglider_selftest():
-                        alert_msg_file.write("<!--selftest=%d-->\n" % get_dive(incomplete_file_name))
+                        alert_msg_file.write("<!--selftest=%d-->\n" % FileMgr.get_dive(incomplete_file_name))
                     else:
-                        alert_msg_file.write("<!--diveno=%d-->\n" % get_dive(incomplete_file_name))
+                        alert_msg_file.write("<!--diveno=%d-->\n" % FileMgr.get_dive(incomplete_file_name))
                 if i in conversion_alerts_d:
                     alert_msg_file.write("<<ul>\n")
                     prev_j = "" # format the text of the alert
@@ -2303,7 +2323,7 @@ def main():
                             mailer_gzip_file = False
                         else:
                             mailer_tags.remove('gzip')
-                            if mailer_file_in_body == True:
+                            if mailer_file_in_body:
                                 log_error("Options body and gzip incompatibile - skipping gzip")
                                 mailer_gzip_file = False
                             else:
@@ -2334,7 +2354,7 @@ def main():
                             else:
                                 if mailer_tag == 'comm':
                                     mailer_file_names_to_send.append(os.path.join(base_opts.mission_dir, "comm.log"))
-                                elif((mailer_tag == 'nc' or mailer_tag == 'mission_ts' or mailer_tag == 'mission_pro') and mailer_file_in_body):
+                                elif mailer_tag in ('nc', 'mission_ts', 'mission_pro') and mailer_file_in_body:
                                     log_error("Sending netCDF files in the message body not supported")
                                     continue
                                 else:
@@ -2480,14 +2500,14 @@ def main():
     # Optionally: Clean up intermediate (working) files here
     if base_opts.clean:
         # get updated list of intermediate files in the mission directory
-        fc = FileCollector(base_opts.mission_dir, instrument_id)
+        fc = FileMgr.FileCollector(base_opts.mission_dir, instrument_id)
         try:
             for file in fc.get_intermediate_files():
                 if os.path.isfile(file):
                     os.remove(file)
                     log_info("Deleted intermediate file: " + os.path.basename(file))
         except Exception:
-            log_debug("Error (%s) when deleting intermediate files: \n%s" %   (sys.exec_info(), repr(fc.get_intermediate_files())))
+            log_debug("Error (%s) when deleting intermediate files: \n%s" %   (sys.exc_info(), repr(fc.get_intermediate_files())))
 
     Utils.cleanup_lock_file(base_opts, base_lockfile_name)
 

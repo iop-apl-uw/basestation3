@@ -2961,10 +2961,14 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         have_scicon_ct = False
         
         if(sg_ct_type == 4):
+            #
+            # UnPumped RBR Legato data
+            #
+
+            # CONSIDER - force use_auxpressure and use_auxcompass to be zero here?
+            
             perform_thermal_inertia_correction = False
-            ## UnPumped RBR Legato data
             try:
-                # the timestamps can be off between the glider and the GPCTD by ~1s tops.  Ignore it.
                 ctd_epoch_time_s_v = results_d['legato_time']
                 ctd_press_v = results_d['legato_pressure']
                 ctd_temp_v = results_d['legato_temp']
@@ -2972,7 +2976,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             except KeyError:
                 raise RuntimeError(True, "No Legato CT data found")
 
-            # CONSIDER: should we support kistler cnf files in this branch?
+            # CONSIDER: should we support kistler cnf files in case?
             sg_press_v = (eng_f.get_col('depth')*cm2m - calib_consts['depth_bias']) * psi_per_meter;
             sg_press_v *= dbar_per_psi # convert to dbar
             sg_depth_m_v = depth(sg_press_v, latitude)
@@ -2982,38 +2986,20 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             ctd_salin_v = salt(ctd_cond_v/c3515, ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
             ctd_depth_m_v = depth(ctd_press_v, latitude) # initial depth estimate
 
-
             # GPCTD dumps invalid values at the end of each record; use qc_checks() to discover them...
             # but disable spike detection (using QC_NO_CHANGE)
+
+            # CONSIDER - this should probably be dropped for the Legato
             ctd_temp_qc_v, ctd_cond_qc_v, ctd_salin_qc_v = qc_checks(ctd_temp_v, initialize_qc(ctd_np, QC_GOOD),
-                                                                   ctd_cond_v, initialize_qc(ctd_np, QC_GOOD),
-                                                                   ctd_salin_v, initialize_qc(ctd_np, QC_GOOD),
-                                                                   ctd_depth_m_v, calib_consts,
-                                                                   QC_BAD, QC_NO_CHANGE, 'raw legato ')
+                                                                     ctd_cond_v, initialize_qc(ctd_np, QC_GOOD),
+                                                                     ctd_salin_v, initialize_qc(ctd_np, QC_GOOD),
+                                                                     ctd_depth_m_v, calib_consts,
+                                                                     QC_BAD, QC_NO_CHANGE, 'raw legato ')
 
-            if False:
-                # Carried forward from the GPCTD code below.  
-                bad_gpctd_i_v = [i for i in range(ctd_np) if (ctd_press_v[i] == 0.0) or (ctd_press_v[i] > 10000.0)]
-                # The timestamps should be off between the glider and the GPCTD by ~1s tops if they respond to the logger commands properly.
-                # Trust but verify?
-
-                bad_gpctd_i_v.extend(bad_qc(ctd_temp_qc_v))
-                bad_gpctd_i_v.extend(bad_qc(ctd_cond_qc_v))
-                bad_gpctd_i_v.extend(bad_qc(ctd_salin_qc_v))
-                # Turns out the gpctd can be left running a while after the glider takes it last data point (during surfacing); remove those points
-                bad_gpctd_i_v.extend([i for i in range(ctd_np) if (ctd_epoch_time_s_v[i] < sg_epoch_time_s_v[0]) or (ctd_epoch_time_s_v[i] > sg_epoch_time_s_v[-1])])
-                valid_gpctd_i_v = Utils.setdiff(list(range(ctd_np)), bad_gpctd_i_v);
-
-                # Reduce the data
-                ctd_epoch_time_s_v = ctd_epoch_time_s_v[valid_gpctd_i_v]
-                temp_raw_v = ctd_temp_v[valid_gpctd_i_v]
-                cond_raw_v = ctd_cond_v[valid_gpctd_i_v]
-                ctd_press_v = ctd_press_v[valid_gpctd_i_v]
-            else:
-                ctd_epoch_time_s_v = ctd_epoch_time_s_v.copy()
-                temp_raw_v = ctd_temp_v.copy()
-                cond_raw_v = ctd_cond_v.copy()
-                ctd_press_v = ctd_press_v.copy()
+            ctd_epoch_time_s_v = ctd_epoch_time_s_v.copy()
+            temp_raw_v = ctd_temp_v.copy()
+            cond_raw_v = ctd_cond_v.copy()
+            ctd_press_v = ctd_press_v.copy()
 
             # For Legato we don't correct their pressure sensor so we just take it as is
             # and assume the pressure/depth is wrt thermistor already. So no zTP correction here
@@ -3060,21 +3046,6 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 condFreq_v = results_d['sbect_condFreq']
                 have_scicon_ct = True
                 # CONSIDER use scicon 'depth_depth', converted to 'sbect_time' as the ctd_depth??
-
-                # HACK! Add deciminated scicon sbect data to NC file for IOP website
-                # masquarading as 'eng_' data.  This is tricky: If we looked for eng file cond and temp
-                # freq data first we'd use it the next time we processed this dive rather than
-                # the full set of data.  Hence we look for scicon data first.
-                # And we also need to remove any old deposits on the eng_f structure
-                # so we don't write the same var to the nc file twice, once from eng_f
-                # and once from result_d.  Sheesh.
-                # GBS - No longer needed
-                if False: 
-                    eng_f.remove_col('sbect_tempFreq') # if any
-                    eng_f.remove_col('sbect_condFreq') # if any
-                    ctd2sg_i_v, _ = Utils.nearest_indices(sg_epoch_time_s_v, ctd_epoch_time_s_v)
-                    results_d['eng_sbect_tempFreq'] = tempFreq_v[ctd2sg_i_v]
-                    results_d['eng_sbect_condFreq'] = condFreq_v[ctd2sg_i_v]
 
                 ctd_results_dim = nc_mdp_data_info[nc_sbect_data_info]
             except KeyError:
@@ -3249,6 +3220,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             
             # TestData/Sg187_NANOOS_Jun15 dives 182:788
 
+            # TODO - hoist this out from here
             # Always create auxPressure_press and auxPressure_depth vectors
             if(auxpressure_present):
                 auxPress_counts_v = results_d['auxCompass_pressureCounts']
@@ -3680,6 +3652,10 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
         # Perform basic QC checks on raw data
         # NOTE mark spikes as QC_PROBABLY_BAD
+
+        # CONSIDER: For Legato - is this the correct thing?
+        #  1) Should perform_scicon_noise_filter=True be passed? (No I think)
+        #  2) Should spike detection be enabled?
         (temp_raw_qc_v, cond_raw_qc_v, salin_raw_qc_v) = qc_checks(temp_raw_v, temp_raw_qc_v,
                                                                  cond_raw_v, cond_raw_qc_v,
                                                                  salin_raw_v, initialize_qc(ctd_np, QC_GOOD),
@@ -3761,6 +3737,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # Find times of *all* GCs and linearly interpolate temperatures over those regions
         # Do this before removing bad samples in order to avoid edge conditions of possible partial GC records at start and finish of filtered data
         # Excessive thermistor noise or bad instrument (as with SG105 June 2009 offshore the Faroes) must be dealt with manually
+        
+        # CONSIDER - this should probably not applied to the Legato?
         if (interpolate_gc_temperatures):
             interpolate_GC_temp_i = [];
             # find temperature records just before gc start and just after end times (or the beginning/end of the time series)
@@ -3808,6 +3786,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # for both systems mark the second part of GC bad until we are moving at speed (see flare logic)
         speedthreshold = 10.	# PARAMETER [cm/s] vehicle is finally moving
         slow_apogee_pump_i_v = []
+        #CONSIDER: Legato?
         if (sbect_unpumped):
             slow_apogee_pump_i_v = apogee_pump_i_v; # original (covers first pump)
 
@@ -3977,6 +3956,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             raise RuntimeError(True, "Glider never started flying?")
 
         flare_i = 0 # where flare depth achieved
+        #CONSIDER - probably not correct for Legato
         if (sbect_unpumped):
             # Ensure the glider is moving, the CT is under water, we are clear of bubbles
             # (see above 'good_anomlies') and after flare depth
