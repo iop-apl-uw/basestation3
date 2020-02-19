@@ -974,3 +974,8 @@ class BaseOptions:
         formatter.indent()
         x = self._op.format_help(formatter)
         return x
+
+    def get_args(self):
+        """ Returns a copy of the list of arguments
+        """
+        return self._args.copy()

@@ -22,62 +22,61 @@
 ##
 
 """
-Base.py: Cleans up and converts raw data files & organizes files associated
-with dive.
+Base.py: Main entry point for Seaglider basestation.  
 
-    ** Not intended to be called from another module. **
+Cleans up and converts raw data files & organizes files associated
+with dive.
 """
 import cProfile
-import pstats
-import glob
-import os
-import sys
-import time
-import tarfile
-import shutil
-import stat
-import urllib.request
-import urllib.parse
-import urllib.error
-import struct
-import math
 import fnmatch
-import re
 import functools
+import glob
+import math
+import os
+import pprint
+import pstats
+import re
+import shutil
+import signal
 import smtplib
+import stat
+import struct
+import sys
+import tarfile
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.multipart import MIMEBase
 from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email.utils import COMMASPACE, formatdate
 from email import encoders
-import signal
-import pprint
 
-import BaseOpts
-from BaseLog import log_critical, log_error, log_warning, log_info, log_debug, log_conversion_alert, log_conversion_alerts, log_alert, log_alerts, BaseLogger
-import CommLog
-import Utils
-import Strip1A
-import Bogue
-import DataFiles
 import BaseGZip
+import BaseOpts
+import BaseNetCDF
+import Bogue
+import CalibConst
+import CommLog
+import Daemon
+import DataFiles
+import FileMgr
+import FlightModel
 import LogFile
 import MakeDiveProfiles
-import Ver65
 import Sensors
-import BaseNetCDF
-import CalibConst
-import FlightModel
-import FileMgr
-import Daemon
+import Strip1A
+import Utils
+import Ver65
+from BaseLog import log_critical, log_error, log_warning, log_info, log_debug, log_conversion_alert, log_conversion_alerts, log_alert, log_alerts, BaseLogger
 
-# TODO list
+# TODOCC
 # 1) Largest issue is to remove mismash of globals and globals passed as arguments.
 #    Creation of a "global_state" class the contians the various lists and objects and that
 #    is to be passed to everything along with base_opts
-# 2) Enforce that all functions have input and return documentation
-# 3) Add type hints to all functions
 
 # Globals
 file_trans_received = "r"
