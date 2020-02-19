@@ -1,0 +1,4 @@
+CodeCleanup.html
+*.cprof
+*.prof
+htmlcov
