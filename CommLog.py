@@ -578,6 +578,8 @@ def crack_connect_line(input_line):
     log_debug("connect_string = (%s)" % connect_ts_string)
     # Split out the timezone
     cts_parts = connect_ts_string.split()
+    if len(cts_parts) < 6:
+        return (None, None)
     connect_ts_notz_string = "%s %s %s %s %s" % (cts_parts[0], cts_parts[1], cts_parts[2], cts_parts[3], cts_parts[5])
     time_zone = cts_parts[4]
     #connect_ts_tstruc = time.strptime(connect_ts_notz_string, "%a %b %d %H:%M:%S %Y")
@@ -854,6 +856,8 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                     log_warning("Found Connected with no previous Disconnect: file %s, lineno %d"
                                      % (comm_log_file_name, line_count))
                 connect_ts, time_zone = crack_connect_line(raw_line)
+                if connect_ts is None:
+                    continue
                 session = ConnectSession(connect_ts, time_zone)
                 # Try to deduce the glider id from the housing directory
                 # This will be updated during the call if any files are transferred
@@ -873,6 +877,8 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                 continue
             elif(raw_strs[0] == "Reconnected"):
                 reconnect_ts, time_zone = crack_connect_line(raw_line)
+                if reconnect_ts is None:
+                    continue
                 raw_file_lines[-1][0] = time.mktime(reconnect_ts)
                 #TODO - need to handle multiple reconnects
                 if(session):
@@ -885,6 +891,8 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                 continue
             elif(raw_strs[0] == "Disconnected"):
                 disconnect_ts, time_zone = crack_connect_line(raw_line)
+                if disconnect_ts is None:
+                    continue
                 raw_file_lines[-1][0] = time.mktime(disconnect_ts)
                 
                 if(session):
@@ -1233,8 +1241,8 @@ def merge_lists_with_ts(list1, list2):
         else:
             list2[i][0] = last_time
         new_list.append((list2[i][0], list2[i][1]))
-
-    new_list.sort(key=functools.cmp_to_key(lambda x,y:cmp(x[0],y[0])))
+    
+    new_list.sort(key=functools.cmp_to_key(lambda x,y:x[0] < y[0]))
 
     return new_list
 
