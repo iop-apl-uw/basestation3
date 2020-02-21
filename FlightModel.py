@@ -24,6 +24,7 @@
 
 ## An attempt to turn 'experimental' regress_vbd.m into a Maytag washer, an automatic reliable appliance
 
+import cProfile
 import sys
 import os
 from numpy import *
@@ -2814,33 +2815,25 @@ def process_directory(base_opts):
         return 1
 
 if __name__ == "__main__":
-    import hotshot, hotshot.stats, time, sys, os.path, warnings
-
     retval = 1
 
     # Force to be in UTC
     os.environ['TZ'] = 'UTC'
     time.tzset()
 
-    #warnings.filterwarnings("error")
-
     try:
-        if(("--profile" in sys.argv) or ("--PROFILE" in sys.argv)):
-            profile_file_name = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + '_' + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())).replace(' ', '_') + ".prof"
+        if "--profile" in sys.argv:
+            sys.argv.remove('--profile')
+            profile_file_name = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + '_' \
+                + Utils.ensure_basename(time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))) + ".cprof"
             # Generate line timings
-            prof = hotshot.Profile(profile_file_name, 1, 1)
-            retval = prof.runcall(cmdline_main)
-            prof.close()
-            stats = hotshot.stats.load(profile_file_name)
-            stats.strip_dirs()
+            retval = cProfile.run("main()", filename=profile_file_name)
+            stats = pstats.Stats(profile_file_name)
             stats.sort_stats('time', 'calls')
-            stats.sort_stats('cumulative')
             stats.print_stats()
         else:
-            retval = cmdline_main()
+            retval = main()
     except Exception:
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)
-
-
