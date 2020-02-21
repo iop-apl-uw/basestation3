@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2015, 2016 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2015, 2016, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -26,6 +26,7 @@
 
 import sys
 import os
+import time
 import collections
 
 import BaseOpts
@@ -110,19 +111,9 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     return ret_val
 
 if __name__ == "__main__":
-    import hotshot, hotshot.stats, time, sys, os.path
-
-    retval = 1
-
-    # Force to be in UTC
     os.environ['TZ'] = 'UTC'
     time.tzset()
 
-    try:
-        retval = main()
-    except Exception:
-        log_critical("Unhandled exception in main -- exiting")
-
+    retval = main()
     sys.exit(retval)
-
-
+    

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2018, 2019 by University of Washington.  All rights reserved.
+## Copyright (c) 2018, 2019, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -64,23 +64,25 @@ def get_mission_dive(dive_nc_file):
 def get_mission_str(dive_nc_file):
     """ Gets common information for all plot headers
     """
-    log_dive = 0
+    log_id = None
     mission_title = ''
     if('log_ID' in dive_nc_file.variables):
         log_id = dive_nc_file.variables['log_ID'].getValue()
     if('sg_cal_mission_title' in dive_nc_file.variables):
         mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring()
-    return "SG%03d %s" % (log_id, mission_title)
+    return "SG%s %s" % ('%03d' % (log_id if log_id else '???', ), mission_title)
 
 def get_mission_str_comm_log(comm_log, calib_constants):
     """ Gets common information for all plot headers
     """
-    log_dive = 0
     log_id = None
+    mission_title = ''
+    if('sg_cal_mission_title' in dive_nc_file.variables):
+        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring()
     for s in comm_log.sessions:
         if(s._sg_id is not None):
             log_id = s._sg_id
             break
-    return "SG%s %s" % ('%03d' % log_id if log_id else '???', calib_constants['mission_title'])
+    return "SG%s %s" % ('%03d' % log_id if log_id else '???', mission_title)
 
     

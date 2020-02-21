@@ -1,5 +1,5 @@
 ## 
-## Copyright (c) 2006, 2007, 2008, 2011, 2012, 2013 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2011, 2012, 2013, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -24,6 +24,13 @@
 # Ensure we have a comm.log file
 touch comm.log
 
+if(! $?BASESTATION_PATH ) then
+    set BASESTATION_PATH = "/usr/local/basestation"
+endif
+
+set BASELOG = glider_early_gps_`date +%y%m%d%H%M%S`
+python $BASESTATION_PATH/GliderEarlyGPS.py --daemon --mission_dir `pwd` --verbose --base_log $BASELOG  >>&!  glider_early_gps.log
+
 if (-f .connected) then
     echo Reconnected at `date` >> comm.log
 else
@@ -38,7 +45,7 @@ set autologout=3
 
 # Signal the glider what files are waiting for upload
 set BASELOG = baselog_login_`date +%y%m%d%H%M%S`
-python /usr/local/basestation/BaseLogin.py --mission_dir `pwd` --verbose --base_log $BASELOG  >>&!  baselog.log
+python $BASESTATION_PATH/BaseLogin.py --mission_dir `pwd` --verbose --base_log $BASELOG  >>&!  baselog.log
 if ( -f upload_files ) then
    source upload_files
    rm -f upload_files

@@ -1597,11 +1597,12 @@ def create_nc_var(nc_file, var_name, var_dims, profile, value=None, additional_m
             log_error("Unable to determine type for %s -- unable to create NC variable" % var_name)
             return None # nothing to do...
 
-        if isinstance(value, IntType):
+        if isinstance(value, int):
             nc_data_type = 'i'
-        elif isinstance(value, FloatType):
+        elif isinstance(value, float):
             nc_data_type = 'd'
-        elif isinstance(value, StringType):
+        #TODO: GBS 2020/02/21 - the type here *might* be better as bytes....
+        elif isinstance(value, str):
             nc_data_type = 'c'
         else:
             if (len(var_dims) == 1 and var_dims[0] == nc_dim_sg_data_point):
