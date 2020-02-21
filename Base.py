@@ -1899,7 +1899,10 @@ def main():
 
     # Run FlightModel here and before mission processing so combined data reflects best flight model results
     # Run before alert processing occurs so FM complaints are reported to the pilot
-    FlightModel.main(base_opts=base_opts, sg_calib_file_name=sg_calib_file_name)
+    try:
+        FlightModel.main(base_opts=base_opts, sg_calib_file_name=sg_calib_file_name)
+    except:
+        log_critical("FlightModel failed", 'exc')
 
     # Run extension scripts for any new logger files
     #TODO GBS - combine ALL logger lists and invoke the extension with the complete list
