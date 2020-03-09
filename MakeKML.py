@@ -614,7 +614,7 @@ def printDive(dive_nc_file_name, subsurface_track, surface_track, instrument_id,
         dog = cog = None
     
     try:
-        latlong = nc.variables['log_TGT_LATLONG'][:].tostring()
+        latlong = nc.variables['log_TGT_LATLONG'][:].tostring().decode('utf-8')
         tgt_lat, tgt_lon = latlong.split(",")
         tgt_lat = Utils.ddmm2dd(float(tgt_lat))
         tgt_lon = Utils.ddmm2dd(float(tgt_lon))

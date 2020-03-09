@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 
-## 
+##
 ## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2016, 2017, 2019, 2020 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -21,13 +21,19 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
+"""
+Minimum package versions and common class definitions
+"""
+
+from enum import Enum
+
 # These document file format versions
 # All recorded as globals.file_version in their respective files
 mission_profile_nc_fileversion = '2.71'
 mission_timeseries_nc_fileversion = '2.71'
 mission_per_dive_nc_fileversion = '2.71'
 # These document level of functionality
-basestation_version = '2.12'
+basestation_version = '3.1'
 quality_control_version = '1.12'
 
 # The oldest format version this code supports
@@ -43,3 +49,12 @@ required_scipy_version = '0.13.3'
 recommended_scipy_version = '0.13.3'
 # need at least 0.11.0 for proper sparse matrix support (scipy.sparse.diags)
 required_scipy_sparse_version = '0.11.0'
+
+#pylint: disable=E0239
+class WhichHalf(Enum):
+    """ Used for various profile processing routines
+    """
+    down = 1
+    up = 2
+    both = 3
+    combine = 4

@@ -403,13 +403,6 @@ def write_nc_globals(nc_file, globals_d, base_opts):
 
     update_globals_from_nodc(base_opts, globals_d, {})
 
-    # These are deprecated...See NODC.cnf
-    if False:
-        if base_opts.institution:
-            globals_d['institution'] = base_opts.institution # DEAD
-        if base_opts.disclaimer:
-            globals_d['disclaimer'] = base_opts.disclaimer # DEAD
-
     for key, value in list(globals_d.items()):
         try:
             merge_fns = nc_global_variables[key]
@@ -1604,6 +1597,11 @@ def create_nc_var(nc_file, var_name, var_dims, profile, value=None, additional_m
         #TODO: GBS 2020/02/21 - the type here *might* be better as bytes....
         elif isinstance(value, str):
             nc_data_type = 'c'
+        #TODO: GBS 2020/02/21 - This might be a good ultimate backstop.
+        #elif isinstance(value, bytes):
+        #    nc_data_type = 'c'
+        #    value = value.decode('utf-8')
+        #    log_warning("NC type for %s was bytes - converted to str" % (var_name, ))
         else:
             if (len(var_dims) == 1 and var_dims[0] == nc_dim_sg_data_point):
                 nc_data_type = 'd'

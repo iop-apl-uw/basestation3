@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 
-## 
+##
 ## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -38,6 +38,7 @@
 """
 
 import cProfile
+import functools
 import os
 import sys
 import string
@@ -65,7 +66,6 @@ from QC import *
 import pdb
 from types import *
 import Navy
-from Enum import *
 import glob
 from Globals import *
 import Sensors
@@ -88,7 +88,7 @@ L2cc = 1000.0 # cc per liter
 cm2m = 0.01
 m2cm = 100.0
 f0 = 1000.0 # Base frequency [hz] for conductivity conversion
-    
+
 m_per_deg = 111319.9 # at the equator
 m_per_nm = 1852.
 seconds_per_day = 86400.0
@@ -120,7 +120,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
         obs_bin - number of observations for each bin
         depth_m_bin - depth in m, binned
         data_columns_bin - data colums binned
-    
+
     """
 
     if(not include_empty_bins and which_half == WhichHalf.combine):
@@ -136,7 +136,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
         if(depth_m_v[i] > max_depth):
             max_depth = depth_m_v[i]
             max_depth_sample_index = i
-    
+
     bin_index = zeros(num_rows, int32)
     num_data_cols = len(data_columns)
 
@@ -192,7 +192,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
                         data_cols_bin[d][j] = average(temp_data_col[where(isfinite(temp_data_col))])
                     except (ZeroDivisionError, FloatingPointError) as e:
                         data_cols_up_bin[d][j] = nc_nan
-                            
+
         return(obs_bin, depth_bin, data_cols_bin)
 
     else:
@@ -255,7 +255,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
             bin_up_index[max_depth_sample_index+1:num_rows] = bin_index[max_depth_sample_index+1:num_rows]
             #print 'Bin up index'
             #print bin_up_index
-            
+
             # Bin the up profile
             #for j in xrange(bin_index[max_depth_sample_index] + 1):
             for j in range(bin_index[max_depth_sample_index]):
@@ -273,7 +273,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
                             data_cols_up_bin[d][j] = average(temp_data_col[where(isfinite(temp_data_col))])
                         except (ZeroDivisionError, FloatingPointError) as e:
                             data_cols_up_bin[d][j] = nc_nan
-                                                
+
                 #msg = "index=%d obs = %d depth=%.2f" % (j, num_obs_bin, depth_up_bin[j])
                 #for d in xrange(num_data_cols):
                 #    msg = msg + " dc[%d]=%f" % (d, data_cols_up_bin[d][j])
@@ -337,7 +337,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
 
 
 def average_position(gps_a_lat, gps_a_lon, gps_b_lat, gps_b_lon):
-    """Given two gps positions in D.D format, 
+    """Given two gps positions in D.D format,
     calculate the mean position between them, based on the great cicle route
     """
     gps_a_lat_rad = math.radians(gps_a_lat)
@@ -358,7 +358,7 @@ ARGO_sample_interval_m = 25 # [m] 1000m/40 samples, or 2000m/70 samples  (28.57m
 
 flight_variables = ['volmax', 'vbdbias',
                     'hd_a', 'hd_b', 'hd_c', 'hd_s',
-                    'abs_compress', 
+                    'abs_compress',
                     'therm_expan', 'temp_ref',
                     'glider_length', 'rho0',
                     ]
@@ -385,7 +385,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
 
     # the set of default configuration constants for different versions of
     # the Seaglider and Deepglider
-    
+
     # First, an overall configuration parameter is set from which a cascade of
     # definitions can flow by default.  These definitions are broken into
     # various sections, each with their own grouping parameter.  This permits
@@ -520,7 +520,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
         3: # unpumped Seabird SAILCT
         {'sbect_unpumped': 1, # assume we have an unpumped SBE41
         },
-    
+
         4: # unpumped RBR Legatto
         {'sbect_unpumped': 1,
         },
@@ -570,12 +570,12 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
         # Schmid, C, et al. 'The Real-Time Data Management System for Argo Profiling Float Observations', JAOT v24 1608ff Sept 2007
         'QC_temp_min': -2.5, # [degC] Carnes, compare global Schmid -2.5 (labsea?) MDP -4.0
         'QC_temp_max': 43.0, # [degC] Carnes, compare global Schmid 40.0
-        
+
         'QC_temp_spike_depth': 500.0, # [m] Carnes, ditto Schmid (db)
         #  permit faster temperature changes in the upper 500m due to thermoclines (world-wide)
         'QC_temp_spike_shallow': 0.05, # 1.25/ARGO_sample_interval_m, # [degC/m] Carnes 2.0 (0.08), Schmid 6.0 (0.24)
         'QC_temp_spike_deep': 0.01, # 0.25/ARGO_sample_interval_m, # [degC/m] Carnes 1.0 (0.04), Schmid 2.0 (0.08)
-        
+
         # ARGO has no conductivity tests
         'QC_cond_min': 0.0, # [S/ml]
         'QC_cond_max': 10.0, # [S/ml] - was 40
@@ -584,10 +584,10 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
         # conductivity anomaly theory tells us the value should be 10x lower than temp bounds from Schmid
         'QC_cond_spike_shallow': 0.006, # 0.15/ARGO_sample_interval_m, # [S/ml/m] Carnes 0.02
         'QC_cond_spike_deep': 0.001, # 0.025/ARGO_sample_interval_m, # [S/ml/m] Carnes 0.01
-        
+
         'QC_salin_min': 19.0, # [PSU] was 2.0 per Carnes; ditto Schmid but we can't fly in waters that fresh
         'QC_salin_max': 45.0, # [PSU] Carnes, compare global Schmid 41.0
-        
+
         'QC_overall_ctd_percentage': .3, # Carnes 30%
         'QC_overall_speed_percentage': .2, # Must have at least 80% of good speeds to trust hdm speeds as good
         'QC_high_freq_noise': 15, # number of samples; variable defined in Sensors/scicon_ext.py
@@ -599,7 +599,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
 
         # CONSIDER add tau_i, the unsteady delay [s] used by TSV (default 20, 0 for IOP)
         }
-    
+
     # CT type (sg_ct_type) and construction (sg_ct_geometry)
     if (sbect_unpumped):
         config.update({
@@ -635,7 +635,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
             'sbect_x_w': 0.0386,	# length of wide portion of cell [m]
             'sbect_r_w': 0.0035,	# radius of wide portion of cell [m]
             'sbect_r_n': sbect_r_n, # radius of narrow portion of cell [m]
-            
+
             'sbect_x_T':  0.0, # cell mouth to thermistor x offset[m] (they are inline)
             'sbect_z_T': -0.020, # cell mouth to thermistor z offset[m] (from intake to thermistor 20mm)
             'sbect_C_d0': 1.2, # cell mouth drag coefficient
@@ -655,7 +655,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
          'glider_interstitial_length': 0.2, #[m]
          'glider_interstitial_volume': 12e-3, #[m3] 12 liters
          'glider_r_en': 0.00635, # entry radius [m]
-         
+
          'glider_wake_entry_thickness': 0.0, # wake entry region thickness [m]
          'glider_vol_wake': 18e-3, # attached wake volume [m^3] 18 liters
          'glider_r_fair': 0.3, # fairing radius [m]
@@ -663,12 +663,12 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
 
         1: # 'std' DG
         {'mass_comp': 0.0, # mass of compressess [kg]
-         
+
          # DG has no flow-through volume to speak of...
          'glider_interstitial_length': 0.0, #[m]
          'glider_interstitial_volume': 0, #[m3]
          'glider_r_en': 0.00635, # entry radius [m]
-         
+
          'glider_wake_entry_thickness': 0.0, # wake entry region thickness [m]
          'glider_vol_wake': 18e-3, # attached wake volume [m^3]
          'glider_r_fair': 0.3, # fairing radius [m]
@@ -676,19 +676,19 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
 
         2: # 'std' Oculus
         {'mass_comp': 0.0, # mass of compressess [kg]
-         
+
          # DG has no flow-through volume to speak of...
          'glider_interstitial_length': 0.0, #[m]
          'glider_interstitial_volume': 0, #[m3]
          'glider_r_en': 0.00635, # entry radius [m]
-         
+
          'glider_wake_entry_thickness': 0.0, # wake entry region thickness [m]
          'glider_vol_wake': 18e-3, # attached wake volume [m^3]
          'glider_r_fair': 0.3, # fairing radius [m]
          }
         }[sg_vehicle_geometry])
-    
-    
+
+
     # TODO these values need to be set for the GPCTD in final configuration
     # TODO add a new sg_sensor_geometry for GPCTD on SG, esp w/ ogive aft fairing...
     # vehicle sensor geometry (sg_sensor_geometry)
@@ -720,7 +720,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
          'glider_zP': -0.0000, # glider z coord of pressure gauge [m]
          # for 40++ the pressure sensor port location changes see below
         },
-        
+
         3: # stock SG with pumped GPCTD
         # We use the GPCTD pressure sensor, not the vehicle sensor
         # Use locaton of pressure sensor as 0
@@ -815,7 +815,7 @@ def cond_anomaly(cond_v, cond_qc_v, temp_v, temp_qc_v, elapsed_time_s_v, ct_dept
     # points.  And near the surface we might see the start of an
     # anomaly but never sample when it clears until the start of the
     # next dive.
-    
+
     # If you get snot near the surface on a climb, it could not clear,
     # like a bubble.  No problem for that dive under the current alg.
     # However, if it has not cleared by the time the next dive starts,
@@ -853,7 +853,7 @@ def cond_anomaly(cond_v, cond_qc_v, temp_v, temp_qc_v, elapsed_time_s_v, ct_dept
     #     avg = mean(delta_v);
     #     scale = 1/avg;
     #     scales_v = [scales_v ; scale];
-    #     maxd = max(maxd,scale*(max(delta_v) - avg)); % the max variance 
+    #     maxd = max(maxd,scale*(max(delta_v) - avg)); % the max variance
     #     mind = min(mind,scale*(min(delta_v) - avg)); % the min variance
     #   end
     #   scale = mean(scales_v); % the average scale for this temp over a range of P and S
@@ -941,7 +941,7 @@ def cond_anomaly(cond_v, cond_qc_v, temp_v, temp_qc_v, elapsed_time_s_v, ct_dept
     cond_v = cond_v[valid_i_v]
     elapsed_time_s_v = elapsed_time_s_v[valid_i_v]
     # do not reduce ct_depth_m; we map points to valid entries below...
-    
+
     # the conductivity anomaly detector only cares about relative change of temp and conductivity, not rate
     temp_diff_v = zeros(sg_np)
     temp_diff_v[1:] = diff(temp_v)
@@ -952,12 +952,12 @@ def cond_anomaly(cond_v, cond_qc_v, temp_v, temp_qc_v, elapsed_time_s_v, ct_dept
     too_cold_i = [i for i in range(sg_np) if itemp_v[i] < min_sf_temp]
     if (len(too_cold_i)):
         log_warning("Missing conductivity anomaly scale factors for cold temperatures: %s"  % Utils.unique(itemp_v[too_cold_i]))
-        itemp_v[too_cold_i] = min_sf_temp; # cap it 
+        itemp_v[too_cold_i] = min_sf_temp; # cap it
 
     too_hot_i = [i for i in range(sg_np) if itemp_v[i] > max_sf_temp]
     if (len(too_hot_i)):
         log_warning("Missing conductivity anomaly scale factors for warm temperatures: %s"  % Utils.unique(itemp_v[too_hot_i]))
-        itemp_v[too_hot_i] = max_sf_temp; # cap it 
+        itemp_v[too_hot_i] = max_sf_temp; # cap it
 
     scale_factors_v = [dc_scale_factors[t] for t in itemp_v]
     cond_diff_v = zeros(sg_np);
@@ -1076,7 +1076,7 @@ def cond_anomaly(cond_v, cond_qc_v, temp_v, temp_qc_v, elapsed_time_s_v, ct_dept
                     log_warning("Unresolved strong conductivity anomaly skipped: %s" % a)
 
     return good_anomalies_v, suspect_anomalies_v
-    
+
 class Anomaly(object):
     def __init__(self):
         self.anomaly_v = []; # the current working anomaly points
@@ -1116,10 +1116,10 @@ class Anomaly(object):
 
     def extent(self):
         return self.extent_m
-    
+
     def max_excursion(self):
         return max(self.anomaly_positive_sum, abs(self.anomaly_negative_sum))
-        
+
     def collecting(self):
         return len(self.anomaly_v) > 0
 
@@ -1131,7 +1131,7 @@ class Anomaly(object):
 
     def points(self):
         return self.points_i_v
-    
+
     def add_anomaly_point(self, i, anomaly):
          # i should be valid indices only, not reduced
         a_v = self.anomaly_v
@@ -1172,7 +1172,7 @@ def compressee_density(temperature, pressure, fit):
     for i in range(T):
         last = last*temperature
         Tx.append(last)
-        
+
     last = ones(len(pressure))
     Px = [last] # the zeroth entry
     for i in range(P+1):
@@ -1200,7 +1200,7 @@ def compute_displacements(tag, horizontal_speed_cm_s_v, delta_time_s_v, total_di
     delta_time_s_v - time between estimates (could be zero if stationary)
     total_dive_time_s - total flight time
     head_polar_rad_v - headings in radians
-    
+
     Returns:
     east_displacement_m_v, north_displacement_m_v -- individual displacements
     east_displacement_m, north_displacement_m -- integrated (total) displacements
@@ -1240,7 +1240,7 @@ def compute_displacements(tag, horizontal_speed_cm_s_v, delta_time_s_v, total_di
         log_debug("%s: average_horizontal_speed_m_s = %f" % (tag, average_horizontal_speed_m_s))
         # return these? average_horizontal_speed_m_s, average_horizontal_bearing_deg
 
-    return (east_displacement_m_v, north_displacement_m_v, east_displacement_m, north_displacement_m, east_average_speed_m_s, north_average_speed_m_s)  
+    return (east_displacement_m_v, north_displacement_m_v, east_displacement_m, north_displacement_m, east_average_speed_m_s, north_average_speed_m_s)
 
 def compute_dac(north_displacement_m_v, east_displacement_m_v,
                 north_displacement_m, east_displacement_m,
@@ -1249,7 +1249,7 @@ def compute_dac(north_displacement_m_v, east_displacement_m_v,
     # We assume a local co-ordinate system with the origin GPS2
     # Then calculate the diff between GPS_last lat/lon (in m) and model east/north (in m)
     # depth-averaged current is this displacment divided by the dive time
-        
+
     dac_north_displacement_m = dive_delta_GPS_lat_m - north_displacement_m
     dac_east_displacement_m  = dive_delta_GPS_lon_m - east_displacement_m
     dac_north_speed_m_s = dac_north_displacement_m / total_flight_and_SM_time_s
@@ -1280,11 +1280,11 @@ def compute_lat_lon(dac_east_speed_m_s, dac_north_speed_m_s,
                     east_displacement_m_v, north_displacement_m_v,
                     delta_time_s_v, dive_mean_lon_fac):
     # Calculate the lat/lon for each sample
-    
-    # Convert the DAC to polar co-ords to get the magntitude and direction 
+
+    # Convert the DAC to polar co-ords to get the magntitude and direction
     # For each sample point, add the model displacement and the DAC displacement to get the adjusted displacement
     # Then run through the updated displacements and produce the lat/lon, with a running current position - final value should be GPS last
-    
+
     north_corr_displacement_m_v = north_displacement_m_v + (dac_north_speed_m_s * delta_time_s_v)
     east_corr_displacement_m_v  = east_displacement_m_v  + (dac_east_speed_m_s  * delta_time_s_v)
     # Use incremental trapezoidal integration of displacements to compute lat/lon dive positions from base location
@@ -1334,7 +1334,7 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
             kistler_cnf['counts_per_mVpV'] = counts_per_mVpV # cache it
         except KeyError:
             raise RuntimeError("Unable to compute counts per mV for Kistler conversion")
-        
+
     x = counts_v/counts_per_mVpV # mV
     x2 = x*x
     temp_diff = temp_v - kistler_cnf['cal_temperature']
@@ -1354,7 +1354,7 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
             press_v = press_linear_psi + press_quad_psi; # psi
         except KeyError:
             raise RuntimeError("Unable to find conversion parameters for Kistler conversion")
-    
+
     # deliberately NOT adding PRESSURE_YINT
     return press_v # [psi]
 
@@ -1394,8 +1394,8 @@ def correct_heading(compass_name, globals_d, magcal_filename, magcal_variable, m
     # Search for a recently uploaded version?
     if(magcal_filename is not None and magcal_filename.lower() == "search"):
         magcal_filename = Utils.find_recent_basestation_file(mission_dir, magcalfile_root_name, True)
-        
-    # correction requested - override 
+
+    # correction requested - override
     if(magcal_filename is not None): # they want to supply or override any contents
         if(not os.path.exists(magcal_filename)):
             log_warning("MagCalFile %s does not exist" % magcal_filename, alert="MAGCAL")
@@ -1450,7 +1450,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                            nc_dive_file_name, eng_file_name=None, log_file_name=None, sg_calib_file_name=None, logger_eng_files=None,
                            apply_sg_config_constants=True):
     '''Load most-recent data from the appropriate sounrces, if possible
-    
+
     Input:
     base_opts - the base options structure
     ignore_existing_netcdf - if the netCDF file exists, its contents will be ignored
@@ -1471,7 +1471,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
     directives - an instance of ProfileDirectives appropriate for this dive
     nc_info_d - information on dimension names and sizes
     instruments_d - information on instruments used for each vector variable, if any
-    
+
     Raises:
     None
     '''
@@ -1530,7 +1530,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
     _, log_file_exists, log_file_time, _, _ = file_table['log']
     _, sgc_file_exists, sgc_file_time, _, _ = file_table['sgc']
     _, ncf_file_exists, ncf_file_time, _, _ = file_table['ncf']
-    
+
     try: # RuntimeError
         load_from_nc = True
         if(ignore_existing_netcdf):
@@ -1615,6 +1615,9 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                             globals_d[global_var] = getattr(dive_nc_file, global_var)
                         except:
                             pass # optional variable
+                        else:
+                            if isinstance(globals_d[global_var], bytes):
+                                globals_d[global_var] = globals_d[global_var].decode('utf-8')
 
                     # Reconstitute the header information from globals
                     # these globals are always available on later versions
@@ -1696,18 +1699,18 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                                 # This works for scalars only...
                                 nc_var_convert = None
                                 if (len(mdp_dim_info) == 0): # scalar?
-                                    if (nc_typecode == 'c' and nc_data_type in ['d', 'i']): # convert string to single scalar 
+                                    if (nc_typecode == 'c' and nc_data_type in ['d', 'i']): # convert string to single scalar
                                         try:
                                             nc_dims = mdp_dim_info
                                             nc_var_convert = dive_nc_file.createVariable(dive_nc_varname, nc_data_type, nc_dims)
                                             convert_f = float if nc_data_type == 'd' else int
                                             # this can fail if you have a string like '1234,5678,9012' etc.
-                                            nc_var_convert.assignValue(convert_f(nc_var[:].tostring()))
+                                            nc_var_convert.assignValue(convert_f(nc_var[:].tostring().decode('utf-8')))
                                             log_debug("Converted %s from '%s' to '%s'" % (dive_nc_varname, nc_typecode, nc_data_type))
                                         except:
                                             log_error("Failed to convert %s from string '%s' to type '%s'" % (dive_nc_varname, nc_var[:].to_string(), nc_data_type))
                                             nc_var_convert = None # oh well...
-                                            
+
                                     elif (nc_typecode in ['d', 'i'] and nc_data_type == 'c'): # convert a scalar to a string
                                         try:
                                             value_string = '%g' % nc_var.getValue()
@@ -1761,13 +1764,13 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                             if nc_data_type not in ['c', 'Q']: # ignore strings
                                 log_error("Expecting a scalar for %s but got %s -- skipping" % (dive_nc_varname, nc_dims))
                                 continue # drop it
-                                     
+
                         if (sgc_var.search(dive_nc_varname)):
                             prefix, variable = sgc_var.split(dive_nc_varname)
                             if nc_is_scalar:
                                 calib_consts[variable] = nc_var.getValue()
                             else: # nc_string
-                                calib_consts[variable] = nc_var[:].tostring() # string comments
+                                calib_consts[variable] = nc_var[:].tostring().decode('utf-8') # string comments
 
                         elif (log_var.search(dive_nc_varname)):
                             if (dive_nc_varname in ['log_gps_lat', 'log_gps_lon', 'log_gps_time', 'log_gps_first_fix_time',
@@ -1803,7 +1806,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                             eng_cols.append(col_name)
                             eng_data.append(nc_var[:].copy()) # always an array
                             try:
-                                instruments_d[dive_nc_varname] = getattr(nc_var, 'instrument')
+                                instruments_d[dive_nc_varname] = getattr(nc_var, 'instrument').decode('utf-8')
                             except:
                                 pass
 
@@ -1817,21 +1820,21 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                                 continue # move on...
 
                             if (dive_nc_varname == 'directives'):
-                                directives.parse_string(nc_var[:].tostring())
+                                directives.parse_string(nc_var[:].tostring().decode('utf-8'))
                                 continue
-                            
+
                             if (nc_data_type == 'c' or nc_string):
-                                results_d[dive_nc_varname] = nc_var[:].tostring()
+                                results_d[dive_nc_varname] = nc_var[:].tostring().decode('utf-8')
                             elif nc_is_scalar:
                                 results_d[dive_nc_varname] = nc_var.getValue()
                             else:
                                 results_d[dive_nc_varname] = nc_var[:].copy()
                                 try:
-                                    instruments_d[dive_nc_varname] = getattr(nc_var, 'instrument')
+                                    instruments_d[dive_nc_varname] = getattr(nc_var, 'instrument').decode('utf-8')
                                 except:
                                     pass
 
-                                
+
                     dive_nc_file.close()
                     # finalize the data structures
                     num_rows = len(eng_data)
@@ -1888,7 +1891,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
             raise RuntimeError("Could not determine log info for %s" % nc_dive_file_name)
 
         # At this point calib_consts[] contains just the explicitly set/stored variables from (past) sg_calib_constants.m files
-        # Do this patch for old files and then see if we want to add the default values. 
+        # Do this patch for old files and then see if we want to add the default values.
         try:
             # Older versions of the SBE43 corrections used PCor == 0 to signal the use of newer style correction
             # Don't bother using or reporting this variable to netcdf file.
@@ -1932,15 +1935,15 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
             # We know eng file data only have a single dimension
             if mdp_dim_info[0] not in nc_info_d:
                 assign_dim_info_size(nc_info_d, mdp_dim_info[0], sg_np)
-        
-                    
+
+
         if (drv_file_exists and drv_file_time > ncf_file_time):
             if ncf_file_time:
                 log_debug("Updating directives from %s" % drv_file_name)
             directives = ProfileDirectives(base_opts.mission_dir, dive_num) # reset!! don't append here
             directives.parse_file(drv_file_name)
             status = 2 # directives changed; results need updating
-                    
+
         eng_file_start_time = time.mktime(eng_f.start_ts) # secs since the epoch
         for file_type, file_info in list(file_table.items()):
             file_names, file_exists, file_time, eng_file_reader, required_for_reload = file_info
@@ -1960,7 +1963,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                 for var, nc_entry in list(nc_data.items()):
                     if (var not in nc_var_metadata):
                         nc_var_metadata[var] = nc_entry
-                
+
                 for data_entry in eng_data:
                     var_name, values = data_entry
                     if values is not None: # could be None, in which case, skip
@@ -1971,9 +1974,9 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                             continue
                         include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
                         log_debug("var_name =%s md = (%s)" % (var_name, md))
-                        # BUG: For scicon, assuming you have the Nixon-era bug, doing the time correction 
-                        # here rather than in the scicon reader means that the b cast times, which are post-apogee, 
-                        # don't reflect the restart time after apogee.  
+                        # BUG: For scicon, assuming you have the Nixon-era bug, doing the time correction
+                        # here rather than in the scicon reader means that the b cast times, which are post-apogee,
+                        # don't reflect the restart time after apogee.
                         # Thus the climb points are offset earlier by often several minutes.
                         if var_name in list(nc_mdp_time_vars.values()):
                             try:
@@ -1995,7 +1998,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                                 results_d[var_name] = values
                             else:
                                 log_error("Scalar nc variable %s from logger file type %s expecting %s but got %s -- skipping " % (var_name, file_type, nc_data_type, type(values)))
-                        
+
                 status = 2 # reloaded some logger data; results need updating
 
         return (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d)
@@ -2110,7 +2113,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
     log_debug("Eng file = %s, Log file = %s, sg_calib_file_name = %s, nc_dive_file_name = %s, " %
               (str(eng_file_name), str(log_file_name), str(sg_calib_file_name), str(nc_dive_file_name)))
     log_debug("logger_eng_files = %s" % logger_eng_files)
-    
+
     config_file = base_opts.config_file_name
 
     processing_history = '' # nothing yet
@@ -2120,11 +2123,11 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
     (status, globals_d, log_f, eng_f, explicit_calib_consts, results_d, directives, nc_info_d, instruments_d) = \
          load_dive_profile_data(base_opts,
-                                ignore_existing_netcdf, 
+                                ignore_existing_netcdf,
                                 nc_dive_file_name,
                                 eng_file_name, log_file_name, sg_calib_file_name, logger_eng_files,
                                 apply_sg_config_constants=False)
-    
+
     if (status == 0):
         log_error("Unable to load data; nothing done")
         return (1, None)
@@ -2164,7 +2167,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
     if True: # DEBUG
         for fv in flight_variables:
             log_info('FM: %s=%g' % (fv, calib_consts[fv]))
-        
+
     auxcompass_present = auxpressure_present = False
 
     if('auxCompass_pressureCounts' in results_d):
@@ -2193,12 +2196,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             log_info("Assuming this is a deck dive")
             if not '$SIM_PITCH' in log_f.data:
                 log_f.data['$SIM_PITCH'] = 15
-        
+
     except KeyError:
         pass
 
     aux_pressure_slope = aux_pressure_offset = None
-    
+
     # Test for bad auxPressure
     if(auxpressure_present):
         auxPress_counts_v = results_d['auxCompass_pressureCounts']
@@ -2220,7 +2223,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 use_auxpressure = use_auxcompass = False
 
     log_info("%s auxcompass %s auxPressure" % ("Using" if use_auxcompass else "Not using", "Using" if use_auxpressure else "Not using"))
-    
+
     # keep any vector (no scalars) in results that are raw data
     for var in list(results_d.keys()):
         try:
@@ -2272,7 +2275,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         if report:
             log_info('Directive: %s'% (function if state else 'no_%s' % function))
         return state
-    
+
     directives.reviewed = 0 # not reviewed until they specifically say so... (could be a default rule '* no_reviewed' since first-come first-served)
     directives.reviewed = reviewed = eval_directive('reviewed', report=False)
     directives.correct_thermal_inertia_effects = perform_thermal_inertia_correction = eval_directive('correct_thermal_inertia_effects')
@@ -2280,7 +2283,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
     directives.interp_gc_temperatures = interpolate_gc_temperatures = eval_directive('interp_gc_temperatures')
     directives.interp_suspect_thermal_inertia_salinities = interpolate_extreme_tmc_points = eval_directive('interp_suspect_thermal_inertia_salinities')
     # RBR TODO - Reset these based on the sb_ct_type
-                                          
+
     # Don't use True and False here -- written to nc file as integers
     processing_error = 0 # assume all is well
     skipped_profile = 0 # assume not skipped
@@ -2322,7 +2325,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # (pressure actually), temperature frequency, conductivity
         # frequency, and observed vehicle pitch angle.
 
-        # The order of battle is as follows.  
+        # The order of battle is as follows.
 
         # First, compute location of vehicle and the times of various events
         # (flare, apogee, start of climb, etc.) using GC records.
@@ -2353,7 +2356,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # We maintain parallel quality-control (QC) arrays that mark the
         # corresponding data points good, bad, interpolated, etc. During
         # the computations described above, we maintain full-length arrays
-        # (but see TempSalinityVelocity()).  
+        # (but see TempSalinityVelocity()).
 
 
         CTD_qc = QC_GOOD # assume we got good CTD data
@@ -2513,7 +2516,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         except:
             dflare = 3 # meters
             log_warning("$D_FLARE missing from log; assuming %d meters" % dflare)
-            
+
         # look for bubbles below dsurf
         try:
             dsurf = log_f.data['$D_SURF'] # [m]
@@ -2536,7 +2539,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             pass
         except KeyError:
             pass
-        
+
         # Determine when various events occured during the dive and climb using the GC record
         gc_st_secs  = array(log_f.gc_data['st_secs'])
         gc_end_secs = array(log_f.gc_data['end_secs'])
@@ -2613,8 +2616,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     else:
                         # For DG - interpolate onto the compass time grid
                         pitchAD = fix(pitch_ctl*log_f.data['$PITCH_CNV'] + log_f.data['$C_PITCH'])
-                        pitchAD_interp = Utils.interp1d(sg_epoch_time_s_v, pitchAD, results_d['auxCompass_time'], kind='linear')                    
-                    
+                        pitchAD_interp = Utils.interp1d(sg_epoch_time_s_v, pitchAD, results_d['auxCompass_time'], kind='linear')
+
                         new_head = correct_heading('Aux compass', globals_d, base_opts.auxmagcalfile, 'auxmagcalfile_contents', "scicon.tcm", base_opts.mission_dir, Mx, My, Mz, head, pitch, roll, pitchAD_interp)
                         if new_head is not None:
                             results_d['auxCompass_hdg'] = new_head
@@ -2632,7 +2635,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             vehicle_pitch_degrees_v = results_d['auxCompass_pit']
             vehicle_roll_degrees_v = results_d['auxCompass_rol']
             bad_i_v = [i for i in range(len(vehicle_pitch_degrees_v)) if isnan(vehicle_pitch_degrees_v[i])]
-            if (len(bad_i_v)):            
+            if (len(bad_i_v)):
                 log_warning("auxcompass invalid out for %d of %d points - interpolating bad points" % (len(bad_i_v), len(vehicle_pitch_degrees_v)))
                 nans, x = Utils.nan_helper(vehicle_heading_mag_degrees_v)
                 vehicle_heading_mag_degrees_v[nans]= interp(x(nans), x(~nans), vehicle_heading_mag_degrees_v[~nans])
@@ -2655,10 +2658,10 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 log_warning("Compass invalid out for %d of %d points - interpolating bad points" % (len(bad_i_v), sg_np))
                 nans, x = Utils.nan_helper(vehicle_heading_mag_degrees_v)
                 vehicle_heading_mag_degrees_v[nans]= interp(x(nans), x(~nans), vehicle_heading_mag_degrees_v[~nans])
-            
+
                 nans, x = Utils.nan_helper(vehicle_pitch_degrees_v)
                 vehicle_pitch_degrees_v[nans]= interp(x(nans), x(~nans), vehicle_pitch_degrees_v[~nans])
-            
+
                 nans, x = Utils.nan_helper(vehicle_roll_degrees_v)
                 vehicle_roll_degrees_v[nans]= interp(x(nans), x(~nans), vehicle_roll_degrees_v[~nans])
 
@@ -2725,7 +2728,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                         vehicle_heading_mag_degrees_v = new_head
                         head_index = eng_f.columns.index('head')
                         eng_f.data[:, head_index] = new_head # Update heading with the improved version of heading
-                    
+
         vbdCC_v = eng_f.get_col('vbdCC')
         if(vbdCC_v is None):
             # For version 67.00 and later, the vbdCC needs to be derived from the gc table in the log file
@@ -2743,7 +2746,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # You might think that a nearest interpolation is fast and good enough but, well, not quite.
             # A 1% error is ~8cc, we'd like ~1+/-0cc for buoyancy and speed calculationss.
             # Ignoring the first bleed, sg189 sep12 SPURS dives:
-            #   - simple nearest interpolation yields 2+/-10cc 
+            #   - simple nearest interpolation yields 2+/-10cc
             #   - the following code yields ~0.1+/-1.5cc.
 
             # These values depend completely on how many VBD moves there are
@@ -2784,7 +2787,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 # compute VBD move start and end; don't trust gc_vbd_ad as ending point
                 if vbd_lp_ignore == 0:
                     gc_start_vbd_ad_v = (array(log_f.gc_data['vbd_pot1_ad_start']) + array(log_f.gc_data['vbd_pot2_ad_start']))/2
-                    gc_vbd_ad = (array(log_f.gc_data['vbd_pot1_ad']) + array(log_f.gc_data['vbd_pot2_ad']))/2 
+                    gc_vbd_ad = (array(log_f.gc_data['vbd_pot1_ad']) + array(log_f.gc_data['vbd_pot2_ad']))/2
                 elif vbd_lp_ignore == 1: # ignore pot1?
                     gc_start_vbd_ad_v = array(log_f.gc_data['vbd_pot2_ad_start'])
                     gc_vbd_ad = array(log_f.gc_data['vbd_pot2_ad'])
@@ -2815,7 +2818,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     rollback = False
                     if gc_roll_secs[gc] > 0: # We rolled during this GC...was it back?
                         # An alternative to this calculation is a toggling flag that starts at rollback=False at start of dive
-                        # and toggles ON EACH ROLL.  And then reset at the first pump, assumed apogee, 
+                        # and toggles ON EACH ROLL.  And then reset at the first pump, assumed apogee,
                         # where rollback is forced without recording any gc_roll_secs
                         # This code has the virtue of only looking for rollbacks where we bleed and pump
                         if gc_st_secs[gc] - i_eng_file_start_time < start_of_climb_time:
@@ -2877,7 +2880,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     if sg_epoch_time_s_v[i] > gc_vbd_times_v[en_i]:
                         break # found all the sg points during this segment
                     sg_i_v.append(i)
-                
+
                 if len(sg_i_v): # anything to interpolate?
                     coefficents = polyfit(gc_vbd_times_v[st_i:en_i+1], gc_vbdcc_v[st_i:en_i+1], 1) # linear fit
                     vbdCC_v[sg_i_v] = polyval(coefficents, sg_epoch_time_s_v[sg_i_v])
@@ -2960,14 +2963,14 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         log_info("ct_type:%s" % sb_ct_type_map[sg_ct_type])
         sbect_unpumped = calib_consts['sbect_unpumped']
         have_scicon_ct = False
-        
+
         if(sg_ct_type == 4):
             #
             # UnPumped RBR Legato data
             #
 
             # CONSIDER - force use_auxpressure and use_auxcompass to be zero here?
-            
+
             perform_thermal_inertia_correction = False
             try:
                 ctd_epoch_time_s_v = results_d['legato_time']
@@ -3036,7 +3039,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     results_d.update({'auxCompass_press' : auxCompass_pressure_v,
                                       'auxCompass_depth' : auxCompass_depth_v})
             ## End Legatto
-             
+
         elif(sbect_unpumped):
             # First - see if we have scicon data...
             # Why not eng file first you ask?  Read and weep below...
@@ -3061,7 +3064,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # MDP automatically asserts instrument when writing
             # DEAD results_d['sbe41'] = 'unpumped Seabird SBE41' # record the instrument used for CTD
             ctd_np = len(ctd_epoch_time_s_v)
-            
+
             # Initially all is well...
             temp_raw_qc_v  = initialize_qc(ctd_np, QC_GOOD)
             cond_raw_qc_v  = initialize_qc(ctd_np, QC_GOOD)
@@ -3095,7 +3098,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # Convert temperature and conductivity frequenceies to initial temperatures and conductivities
             # before applying first-order lag and thermal-inertia corrections below
             # Compute temperature first so we can compute pressure properly before computing conductivity
-            
+
             t_g, t_h, t_i, t_j, vars_used = SBECT_coefficents('temperature',
                                                           calib_consts, log_f,
                                                           ['t_g', 't_h', 't_i', 't_j'],
@@ -3117,7 +3120,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
             # eng.depth is psuedo-depth in meters, as computed onboard by SG
             # using pressure gauge and linear conversion.  These values
-            # were used for control purposes.  
+            # were used for control purposes.
 
             # The glider code misrepresents depth for a number of reasons related to
             # oversimplification of the hydrostatic relationship, principally because,
@@ -3162,7 +3165,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     shoe_to_pressure_sensor = 1.5 # [m] approximate distance from antenna shoe for all vehicles
                     bleed_time = 60 # takes roughly a minute to bleed and leave the surface
                     # TODO should ensure it is before time of flare
-                    sfc_i = [i for i in range(sg_np) if elapsed_time_s_v[i] <= bleed_time] 
+                    sfc_i = [i for i in range(sg_np) if elapsed_time_s_v[i] <= bleed_time]
                     computed_yint = mean(sg_press_v[sfc_i]) - shoe_to_pressure_sensor*sin(mean(abs(vehicle_pitch_rad_v[sfc_i])))*psi_per_meter
                     sg_press_v -= computed_yint
                 else:
@@ -3179,7 +3182,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
             sg_press_v *= dbar_per_psi # convert to dbar
             # Done with these variables
-            press_counts_v = None 
+            press_counts_v = None
             sg_temp_raw_v = None
             # DEBUG ONLY
             try:
@@ -3195,7 +3198,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # They have a sg_press_qc_v and mark QC_BAD any data points that reverse direction
             # Any bad points propagate to T/C/S
             # but since we can stall and even fly down if we want, we avoid this QC test
-            
+
             # This is the latitude corrected depth given the measure pressure
             # The force of gravity varies by latitude given the oblate spheroid shape and unequal mass distributions in the Earth
             sg_depth_m_v = depth(sg_press_v, latitude)
@@ -3209,7 +3212,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # used by the truck.  In fact, it is an exact copy (well, subset) of
             # truck depth recorded in the depth.dat file just slightly later,
             # using the scicon clock.  Thus, we use sg_depth_m in preference.
-            
+
             # The second comes from the (optional) so-called 'auxCompass' board
             # attached to the scicon.  This auxillary board can support an
             # auxillary compass and can sample the glider's pressure sensor
@@ -3218,7 +3221,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # truck.  For CT processing we use this auxillary pressure (and
             # derived depth, hence ctd_depth), if available, in preference to
             # the truck depth.
-            
+
             # TestData/Sg187_NANOOS_Jun15 dives 182:788
 
             # TODO - hoist this out from here
@@ -3238,9 +3241,9 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     else:
                         aux_temp_v = Utils.interp1d(ctd_epoch_time_s_v, temp_raw_v, aux_epoch_time_s_v, kind='linear')
                         auxPress_v = compute_kistler_pressure(kistler_cnf, log_f, auxPress_counts_v, aux_temp_v) # [psi]
-                        
+
                     # Why not simply + log_f.data['$PRESSURE_YINT'] to get final pressure?
-                    # Because while we trust the conversion slope of the sensor to be independent of sampling scheme, 
+                    # Because while we trust the conversion slope of the sensor to be independent of sampling scheme,
                     # the log value of yint encodes information about the AD7714, etc.  We need to see how the
                     # aux AD is offset from that and compute an implied yint. So...
                     # Convert glider pressure to PSI and interpolate to aux time grid
@@ -3258,13 +3261,13 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 if False:
                     # This hack is to handle bad truck pressure, but to auxcompass pressure
                     log_warning("Re-writing truck pressure and depth from auxCompass pressure")
-                    sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')                    
+                    sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')
                     sg_depth_m_v = depth(sg_press_v, latitude)
 
                 auxCompass_depth_v = depth(auxCompass_pressure_v, latitude)
                 results_d.update({'auxCompass_press' : auxCompass_pressure_v,
                                   'auxCompass_depth' : auxCompass_depth_v})
-                
+
             if use_auxpressure:
                 ctd_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, ctd_epoch_time_s_v, kind='linear') # [dbar]
                 # Map pressure and depth signals to thermistor location
@@ -3306,7 +3309,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             if calib_consts['sbe_cond_freq_offset']:
                 CondFreqHz_v = CondFreqHz_v + calib_consts['sbe_cond_freq_offset']
                 ctd_ancillary_variables = ctd_ancillary_variables + ' sg_cal_sbe_cond_freq_offset'
-                
+
             # Correct conductivity at the ctd_press_v, where the data was taken
             cond_raw_v = ((c_g + (c_h + (c_i + c_j*CondFreqHz_v)*CondFreqHz_v)*CondFreqHz_v*CondFreqHz_v)/(10.0*(1.0 + ctcor*temp_raw_v + cpcor*ctd_press_v)))
             ctd_metadata_d = fetch_instrument_metadata(nc_sbect_data_info)
@@ -3343,7 +3346,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                                                                    QC_BAD, QC_NO_CHANGE, 'raw gpctd ')
             # Find the valid GPCTD data
             # The last several points in each profile are junk. Pressures are typically 0 or 'full-scale', which likely varies with instrument.
-            # Geoff reports: Due to the way their firmware works, the last N samples of each cast are garbage.  
+            # Geoff reports: Due to the way their firmware works, the last N samples of each cast are garbage.
             # We can bound the limit of bad points - 18 when you have CTP and O2, 22 when you have CTP.
             # The number of points are independent of timing.  They basically are dumping data in units of a buffer, and the tail of the buffer contains garbage.
             bad_gpctd_i_v = [i for i in range(ctd_np) if (ctd_press_v[i] == 0.0) or (ctd_press_v[i] > 10000.0)]
@@ -3402,9 +3405,9 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # NOTYET ctd_metadata_d = fetch_instrument_metadata(nc_gpctd_data_info)
             # No ancillary_variables to add yet (all internal to the GPCTD unit)
             ## End GPDCTD
- 
+
         zTP = None # Done with this variable
-            
+
         # At this point we have:
         # temp_raw_v, cond_raw_v plus qc vectors
         # ctd_press and ctd_depth_m
@@ -3470,7 +3473,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             ctd_vbd_cc_v = vbdCC_v
             ctd_sg_press_v = sg_press_v
             ctd_sg_depth_m_v = sg_depth_m_v # for weed_hacker support only
-                
+
         assign_dim_info_dim_name(nc_info_d, nc_ctd_results_info, ctd_results_dim)
         assign_dim_info_size(nc_info_d, nc_ctd_results_info, ctd_np)
 
@@ -3484,7 +3487,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         results_d.update({
             nc_sg_time_var: sg_epoch_time_s_v,
             'pressure': sg_press_v,
-            'depth': sg_depth_m_v, 
+            'depth': sg_depth_m_v,
             })
 
         globals_d['time_coverage_start'] = nc_ISO8601_date(min(sg_epoch_time_s_v))
@@ -3493,14 +3496,14 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # TODO some instruments have much better resolution than 1 secs and
         # even the glider doesn't have resolution finer than 2.5 secs nominally...so what is this saying?
         globals_d['time_coverage_resolution'] = 'PT1S' # ISO 8601 duration: Period Time 1 second
-        
+
         globals_d['geospatial_vertical_min'] = min(sg_depth_m_v)
         globals_d['geospatial_vertical_max'] = max(sg_depth_m_v)
         globals_d['geospatial_vertical_units'] = 'meter'
         # see discussion in BaseNetCDF about resolution vs accuracy
         globals_d['geospatial_vertical_resolution'] = 'centimeter' # TODO for MMP this should be 'N meter binned'
         globals_d['geospatial_vertical_positive'] = 'no'
-        
+
         # compute time increments for DAC use below
         delta_time_s_v =  zeros(sg_np, float64)
         delta_time_s_v[1:] = diff(sg_epoch_time_s_v) # time increments
@@ -3569,7 +3572,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         directives.depth = ctd_depth_m_v
         directives.glider_depth = sg_depth_m_v
         directives.time = elapsed_time_s_v
-        
+
         # Compute vehicle measured vertical velocity w_cm_s_v, which is used to estimate initial speed and glide angle.
         # Compute w = dz/dt using depth from pressure and latitude
         w_cm_s_v = Utils.ctr_1st_diff(-sg_depth_m_v*m2cm, elapsed_time_s_v)
@@ -3633,7 +3636,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # Alternatively it could be hysteresis on the sensor itself over the mission
             # or really really rough weather...
             # wa/jan04 sg002 dive 1
-            # faroes/jun09/sg105 dives 3,5,6,...lots (broaching) 
+            # faroes/jun09/sg105 dives 3,5,6,...lots (broaching)
             out_i_v = Utils.intersect(out_of_the_water_i_v, list(range(max_ctd_depth_i)))
             if (len(out_i_v)):
                 log_warning("CTD out of the water before dive (%.3fm)" % max(abs(ctd_depth_m_v[out_i_v])))
@@ -3671,7 +3674,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # We do this after qc_checks() because we don't want spikes looking like (suspect) anomalies
             # which can happen during high-frequency sampling on the CT
             # On the other hand, quite often bubbles look like spikes as she goes in an out of the water
-            # so we nail parts of the bubble in qc_checks() and any remaining excursions are filled in 
+            # so we nail parts of the bubble in qc_checks() and any remaining excursions are filled in
             # with the bubble logic in CA
             good_anomalies_v, suspect_anomalies_v = \
                 cond_anomaly(cond_raw_v, cond_raw_qc_v,
@@ -3738,7 +3741,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # Find times of *all* GCs and linearly interpolate temperatures over those regions
         # Do this before removing bad samples in order to avoid edge conditions of possible partial GC records at start and finish of filtered data
         # Excessive thermistor noise or bad instrument (as with SG105 June 2009 offshore the Faroes) must be dealt with manually
-        
+
         # CONSIDER - this should probably not applied to the Legato?
         if (interpolate_gc_temperatures):
             interpolate_GC_temp_i = [];
@@ -3755,7 +3758,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                         # TODO possible that GC times (indices) would overlap (see p1440003 from Jun 08)
                     pre_index = max(pre_index - 1, 0)
                     post_index = min(post_index + 1, ctd_np - 1)
-                    
+
                     temp_pre = temp_raw_v[pre_index]
                     time_pre = ctd_elapsed_time_s_v[pre_index]
                     temp_post = temp_raw_v[post_index]
@@ -3782,7 +3785,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # First, extend apogee if needed until the vehicle is flying again (original faroes cases)
         # Then look at dive for places where pitch is up (and are likely stalled). Mark as BAD
         # through those locations until flying again.
-        
+
         # So: for unpumped systems mark first part of GC bad
         # for both systems mark the second part of GC bad until we are moving at speed (see flare logic)
         speedthreshold = 10.	# PARAMETER [cm/s] vehicle is finally moving
@@ -3804,13 +3807,13 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 calib_consts['mass'] = mass = mass/kg2g
             mass = mass*kg2g # [g]
             if (abs(mass - log_f.data['$MASS']) > 1): # [g]
-                log_warning("Mass of vehicle in sg_calib_constants (%.1f) does not match $MASS in log file (%.1f); using sg_calib_constants" % 
+                log_warning("Mass of vehicle in sg_calib_constants (%.1f) does not match $MASS in log file (%.1f); using sg_calib_constants" %
                             (mass, log_f.data['$MASS']), alert='MASS_MISMATCH')
         except KeyError:
             pass
-        
+
         # if mass_comp not present, the default constant is 0 for SG, 10 for DG
-        # but if it is suppled in the log file and different WARN 
+        # but if it is suppled in the log file and different WARN
         mass_comp = calib_consts['mass_comp']; # [kg] ensured to be present
         if mass_comp > 20: # typically no more that 12kg but could be more with dodecamethylpentasiloxane
             log_warning("Correcting compressee mass of vehicle from sg_calib_constants (%.1f) to kg" % mass_comp)
@@ -3819,7 +3822,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         try:
             # Yes, it is grams aboard and kg in sg_calib_constants.
             if (abs(mass_comp - log_f.data['$MASS_COMP']) > 1): # [g]
-                log_warning("Mass of compressee in sg_calib_constants (%.1fg) does not match $MASS_COMP in log file (%.1fg); using sg_calib_constants" % 
+                log_warning("Mass of compressee in sg_calib_constants (%.1fg) does not match $MASS_COMP in log file (%.1fg); using sg_calib_constants" %
                             (mass_comp, log_f.data['$MASS_COMP']))
         except KeyError:
             pass
@@ -3860,12 +3863,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                         # If we were going to find the points, we need to do something like cond_anomaly above:
                         # track start and stop of major changes in temperature to the warm and then back again
                         # in between the temp can look 'stable' (at a warmer temp) so all the intervening points have to be nailed.
-                        directives.suggest('bad_temperature data_points between %d %d %% possible wafting warm water on dive at %d points' % 
+                        directives.suggest('bad_temperature data_points between %d %d %% possible wafting warm water on dive at %d points' %
                                            (pre_index, post_index, len(warmer_points_i_v))) # Utils.succinct_elts(warmer_points_i_v) too chatty
                         # TOO AGGRESSIVE: assert_qc(QC_BAD,temp_cor_qc_v,warmer_points_i_v,'possible wafting warm water on dive')
                     last_i = break_i # move along
 
-        assert_qc(QC_BAD, cond_cor_qc_v, slow_apogee_pump_i_v, 'slow apogee CT flow') 
+        assert_qc(QC_BAD, cond_cor_qc_v, slow_apogee_pump_i_v, 'slow apogee CT flow')
         #DEAD apogee_pump_i_v = None # done with this intermediate (but not slow_apogee_i_v)
 
         # look for points where we might have been stuck on the bottom
@@ -3921,8 +3924,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             bad_dTdt_i_v = None # done with this intermediate
 
             temp_cor_v += calib_consts['sbect_tau_T']*dTemp_dt_v # correct for 1st order time lag
-            
-        ## mark bad temperature points 
+
+        ## mark bad temperature points
         bad_temp_i_v = manual_qc(directives, 'bad_temperature', 'temp_QC_BAD', QC_BAD, temp_cor_qc_v, 'temperature')
         bad_temp_i_v = bad_qc(temp_cor_qc_v)
         temp_cor_v[bad_temp_i_v] = nc_nan # MARK BAD
@@ -3948,7 +3951,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # we aren"t moving fast enough (stalled) so thermal inertia corrections aren't good
         # however, the tube has been sitting in the water and equilibriated during drift
         # so unless there is strong mixing it is likely to be an ok reading.
-        # CONSIDER retaining points below 2m or so 
+        # CONSIDER retaining points below 2m or so
         # but discard through flare and then if flying fast enough
         flying_i_v = [i for i in dive_i_v if ctd_gsm_speed_cm_s_v[i] >= speedthreshold]
         if (len(flying_i_v)):
@@ -3973,8 +3976,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # is a thermocline. See Port_Susan_ADCP/sg577_gpctd
 
             # In this case the speedthreshold (10cm/s) should take care of this
-            # problem. 
-            
+            # problem.
+
             flare_i_v = [i for i in dive_i_v if ctd_depth_m_v[i] >= dflare]
             if (len(flare_i_v)):
                 flare_i = flare_i_v[0]
@@ -4012,7 +4015,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # find points after apogee pump end that are shallower than climb_dsurf_depth
         # We have already marked points above ctd_depth_threshold as bad so don't need to use this here
         climb_dsurf_i_v = [i for i in climb_i_v if ctd_elapsed_time_s_v[i] > start_of_climb_time and ctd_depth_m_v[i] < climb_dsurf_depth]
-        climb_end_i = ctd_np_i + 1 # initialize 
+        climb_end_i = ctd_np_i + 1 # initialize
         if (len(climb_dsurf_i_v)): # do we have a climb tail?
             if (sbect_unpumped): # when unpumped we care about bobbling around...
                 # Now try to find where the dive ended and remove those points, if any
@@ -4056,11 +4059,11 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     # in the top climb_dsurf_depth m to catch her flipping from pitch up to down (so all we see is down)
                     # In this case we should only complain if any points are below actual D_SURF
                     # We already know all the points in climb_dsurf_i_v are pitched down; any below D_SURF?
-                    pend_i_v = [i for i in climb_dsurf_i_v if ctd_depth_m_v[i] > dsurf] 
+                    pend_i_v = [i for i in climb_dsurf_i_v if ctd_depth_m_v[i] > dsurf]
                     if (len(pend_i_v)):
                         log_warning("Pitched down during climb below %.2f meters? - continuing but skipping DAC computation" % dsurf)
                         DAC_qc = QC_BAD # bad flight....
-                    
+
                 # Done with these intermediate arrays
                 pitch_end_v = None
                 pend_i_v = None
@@ -4086,7 +4089,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             climb_end_i = ctd_np_i # fo rebuilding climb_i_v below
 
         # order makes a differnce here!!
-        ## mark bad conductivity points 
+        ## mark bad conductivity points
         bad_cond_i_v = manual_qc(directives, 'bad_conductivity', 'cond_QC_BAD', QC_BAD, cond_cor_qc_v, 'conductivity')
         bad_cond_i_v = bad_qc(cond_cor_qc_v)
         cond_cor_v[bad_cond_i_v] = nc_nan # MARK BAD
@@ -4109,7 +4112,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         tc_bad_i_v = Utils.sort_i(Utils.union(bad_temp_i_v, bad_cond_i_v)) # order for assert output
         salin_cor_v[tc_bad_i_v] = nc_nan
         assert_qc(QC_BAD, salin_cor_qc_v, tc_bad_i_v, 'bad corrected temperature and conductivity suggests bad salinity')
-        
+
         # rebuild dive_i_v and climb_i_v; DO NOT reset directives
         dive_i_v =  list(range(dive_start_i, start_of_climb_i))  # up to but not including the dive end
         climb_i_v = list(range(start_of_climb_i, climb_end_i+1))
@@ -4140,9 +4143,9 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # this is what the glider used
 
         vbd_min_cnts = log_f.data['$VBD_MIN']
-        vbd_cnts_per_cc = 1.0/log_f.data['$VBD_CNV'] 
+        vbd_cnts_per_cc = 1.0/log_f.data['$VBD_CNV']
         c_vbd = log_f.data['$C_VBD']
-        vbd0 = volmax + (c_vbd - vbd_min_cnts)/vbd_cnts_per_cc  # [cc] Minimum displaced volume achievable by Seaglider 
+        vbd0 = volmax + (c_vbd - vbd_min_cnts)/vbd_cnts_per_cc  # [cc] Minimum displaced volume achievable by Seaglider
         displaced_volume_v = vbd0 + ctd_vbd_cc_v # [cc] measured displaced volume of glider as it varies by VBD adjustments
 
         therm_expan = calib_consts['therm_expan']
@@ -4190,8 +4193,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # The abs_compress and therm_expan numbers are very small.  Even with DG at 6Km, the exp term is small (~1e-3)
         # so the exp term is approximately linear, i.e., 1+<term>.
         volume_v = volume_hull_v*exp(-abs_compress*ctd_sg_press_v + therm_expan*(temp_cor_v - temp_ref))
-        volume_v = volume_v + vol_comp_v 
-        trace_array("vol", volume_v)        
+        volume_v = volume_v + vol_comp_v
+        trace_array("vol", volume_v)
         if False:
             log_info("displaced_volume_v min:%f, max:%f, mean:%f" % (nanmin(displaced_volume_v), nanmax(displaced_volume_v), nanmean(displaced_volume_v)))
             log_info("volume_v min:%f, max:%f, mean:%f" % (nanmin(volume_v), nanmax(volume_v), nanmean(volume_v)))
@@ -4209,7 +4212,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 log_info("Using %d-mode thermal-inertia correction." % modes)
             else:
                 log_info("Not performing thermal-inertia correction.")
-            
+
         load_thermal_inertia_modes(base_opts, num_modes=modes)
         # TODO migrate these changes to sg_config_constants after verifying with CCE
         if False:
@@ -4218,7 +4221,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 calib_consts['sbect_C_d0'] = 5.0 # TODO move to sg_config_constants()
             else: # GPCTD and original
                 calib_consts['sbect_C_d0'] = 1.2 # TODO move to sg_config_constants()
-                    
+
         # Compute consistent lag corrected temperature, salinity and flight speeds assuming still water
         # We bind some of the results to tmc_ vars in case we need to call TSV_f again
         # We don't want to make the second call with the bad results from the first
@@ -4271,7 +4274,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # TODO? ARGO implements a density inversion QC check
         # They look for monotonically increasing (and then decreasing) densities over the profile
         # Any reversals are marked QC_BAD in temperature and salinity
-        # We would supply a density_qc_v and use it for all derived products 
+        # We would supply a density_qc_v and use it for all derived products
 
         bad_salin_i_v = manual_qc(directives, 'bad_salinity', 'salin_QC_BAD', QC_BAD, salin_cor_qc_v, 'salinity')
         bad_salin_i_v = bad_qc(salin_cor_qc_v)
@@ -4312,8 +4315,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             if (fraction_bad > calib_consts['QC_overall_speed_percentage']):
                 log_warning("Declaring overall speed qc as QC_BAD!")
                 hdm_qc = QC_BAD
-                
-            
+
+
 
         # DEAD? just in case temperature was interpolated
         inherit_qc(temp_cor_qc_v, speed_qc_v, 'corrected temp', 'speed')
@@ -4374,7 +4377,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             'density': density_v, # CF: (potential) sea_water_density g/L
             'density_insitu': density_insitu_v, # insitu sea_water_density g/L
             'sigma_theta': sigma_theta_v, # CF: sea_water_sigma_theta g/L
-            'sound_velocity': sound_vel_v,  
+            'sound_velocity': sound_vel_v,
             'dissolved_oxygen_sat': oxygen_sat_seawater_v, # oxygen solubility in seawater (uM/kg)
             })
         try:
@@ -4390,7 +4393,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
         #
         # Displacement calculations - common calculations
-        # 
+        #
 
         # Basic conversions and quantities for displacement calculations
 
@@ -4417,7 +4420,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # We report that separately
         total_flight_and_SM_time_s = flight_time_v[-1] + SM_time_s # final elapsed time flying and drifting
         log_info("Estimated total flight and drift time: %.1fs (SM: %.1fs)" % (total_flight_and_SM_time_s, SM_time_s))
-        
+
         if (DAC_qc != QC_BAD):
             if (total_flight_and_SM_time_s <= 0):
                 log_warning("No flight and surface maneuver time! - possible corrupted log file?")
@@ -4438,7 +4441,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 log_warning("Substantial unmodeled flight time (%.1f%% of total time); DAC is bad." % (untrusted_fraction*100))
                 # TODO or should this be QC_PROBABLY_BAD?
                 DAC_qc = QC_BAD
-                
+
             # In addition to bottom time (see above), CCE recalls on later faroes
             # missions that there were dives where substantial upwelling just balanced
             # the downward flight of the glider so obs w was zero even though the
@@ -4482,7 +4485,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             avg_displacement_m = sum(z_hdm_horizontal_speed_cm_s_v*ctd_delta_time_s_v)/m2cm
             trace_array('avg_hspd', z_hdm_horizontal_speed_cm_s_v);
             trace_comment("avg_displacement = %f" % avg_displacement_m);
-            
+
             percent_error = (1.0 - z_displacement_m/avg_displacement_m)*100.0
             if (percent_error > 10): # PARAMETER more than 10% error?
                 log_warning("Displacements under-estimate likely positions by %.1f%%; DAC suspect" % percent_error)
@@ -4520,7 +4523,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # given polar (not compass) angle cos() gets the east (U) component; sin() get the north (V) component of drift speed
             surface_curr_east  = surface_current_drift_cm_s * cos(math.radians(surface_current_set_deg))
             surface_curr_north = surface_current_drift_cm_s * sin(math.radians(surface_current_set_deg))
-            
+
             log_debug("surface_current_drift_cm_s = %f, polar surface_current_set_deg = %f" % (surface_current_drift_cm_s, surface_current_set_deg))
             del surface_current_set_deg # unused below
             surface_curr_error   = (GPS1.error + GPS2.error)/gps_drift_time_s # [m/s]
@@ -4551,7 +4554,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             'east_displacement_gsm': gsm_east_displacement_m_v,
             'north_displacement_gsm': gsm_north_displacement_m_v,
             })
-        # Compute the vehicle displacement through the water, based on the hydrodynamic model 
+        # Compute the vehicle displacement through the water, based on the hydrodynamic model
         hdm_east_displacement_m_v, hdm_north_displacement_m_v, hdm_east_displacement_m, hdm_north_displacement_m, hdm_east_average_speed_m_s, hdm_north_average_speed_m_s = \
                                    compute_displacements('hdm', hdm_horizontal_speed_cm_s_v, ctd_delta_time_s_v, total_flight_and_SM_time_s, head_polar_rad_v)
         results_d.update({
@@ -4566,13 +4569,13 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
         # Estimate depth-averaged current from the difference between the
         # estimated (model-based) displacement and the actual (GPS-difference) displacement.
-                
+
         # gbs suggests computing DAC even if hdm fails to converge (assuming GPS2_ok of course)
         # This may make sense now that we have so many other QC checks to get rid of the obvious places
         # where hdm would have failed so now the likely reason is that your abc's are off.
         # Under these assumptions, we move from the conservative don't-bother to the liberal what-the-hell model
         # Check for under-ice or irridium fixes
-        
+
         compute_DAC = GPS2E_ok and GPS2E_gpsfix and hdm_qc != QC_BAD and DAC_qc != QC_BAD # conservative
         compute_DAC = GPS2E_ok and GPS2E_gpsfix # liberal
         if DAC_qc != QC_GOOD:
@@ -4710,14 +4713,14 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         except:
             pass # Old mission
             #log_warning("Failed to calc TEOS-10 variables", 'exc')
-            
+
 
         ## Correct other instruments after we know salinity, etc.
         # Call the sensor extensions for sensor specific processing after DAC etc computations
         log_info("Starting sensor extensions data processing")
         Sensors.process_sensor_extensions('sensor_data_processing', locals(), eng_f, calib_consts)
         log_info("Finished sensor extensions data processing")
-        
+
     except RuntimeError as exception:
         if (exception.args[0]): # True argument
             processing_error = 1 # Had an error of some sort
@@ -4752,7 +4755,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
     if reviewed:
         # update the issued date
         globals_d['date_issued'] = nc_ISO8601_date(time.time())
-        
+
     globals_d['dive_number'] = int(dive_num) # AKA eng_f.dive
     globals_d['glider'] = eng_f.glider
     globals_d['mission'] = eng_f.mission
@@ -4762,7 +4765,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
     globals_d['start_time'] = float64(eng_file_start_time) # epoch time
     if ('geospatial_lat_min' in globals_d):
         globals_d['geospatial_lat_units'] = 'degrees' # degrees_north
-        globals_d['geospatial_lat_resolution'] = 'seconds' # better than this...            
+        globals_d['geospatial_lat_resolution'] = 'seconds' # better than this...
         globals_d['geospatial_lon_units'] = 'degrees' # degrees_east
         globals_d['geospatial_lon_resolution'] = 'seconds' # better than this...
 
@@ -4811,7 +4814,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             nc_dive_file.createDimension('qc_test_dim', len(qc_values))
             nc_var = nc_dive_file.createVariable('qc_test_var', nc_data_type, ('qc_test_dim',))
             nc_var[:] = qc_values;
-            
+
         nodc_globals_d = {}
         update_globals_from_nodc(base_opts, nodc_globals_d, {})
 
@@ -4824,13 +4827,13 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         #
         # Add the log file
         #
-        
+
         # Header
         create_nc_var(nc_dive_file, nc_sg_log_prefix + "version", nc_scalar, False, log_f.version)
         create_nc_var(nc_dive_file, nc_sg_log_prefix + "glider", nc_scalar, False, log_f.glider)
         create_nc_var(nc_dive_file, nc_sg_log_prefix + "mission", nc_scalar, False, log_f.mission)
-        create_nc_var(nc_dive_file, nc_sg_log_prefix + "dive", nc_scalar, False, log_f.dive)                 
-        create_nc_var(nc_dive_file, nc_sg_log_prefix + "start", nc_scalar, False, time.mktime(log_f.start_ts)) 
+        create_nc_var(nc_dive_file, nc_sg_log_prefix + "dive", nc_scalar, False, log_f.dive)
+        create_nc_var(nc_dive_file, nc_sg_log_prefix + "start", nc_scalar, False, time.mktime(log_f.start_ts))
 
         # Data
         for key, value in list(log_f.data.items()):
@@ -4850,7 +4853,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 continue
             nc_var_name = nc_sg_log_prefix + key.lstrip('$')
             create_nc_var(nc_dive_file, nc_var_name, nc_scalar, False, value) # dump the value
-                    
+
         # Handle GC arrays
         # Create the GC dimension
         for (gc_var, gc_values) in list(log_f.gc_data.items()):
@@ -4858,7 +4861,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # Create GC state, if any
         if len(log_f.gc_state_data['secs']) > 0:
             for (gc_state_var, gc_state_values) in list(log_f.gc_state_data.items()):
-                create_nc_var(nc_dive_file, nc_gc_state_prefix + gc_state_var, (nc_dim_gc_state,), False, gc_state_values)       
+                create_nc_var(nc_dive_file, nc_gc_state_prefix + gc_state_var, (nc_dim_gc_state,), False, gc_state_values)
 
         # First record the actual GPS lines for future processing
         for gps_string in ['$GPS1', '$GPS2', '$GPS']:
@@ -4878,7 +4881,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         gps_driftheading = []
         gps_n_satellites = []
         gps_hpe = []
-        
+
         for gps_name in ['$GPS1', '$GPS2', '$GPS']:
             gps_fix = log_f.data[gps_name]
             gps_time.append(time.mktime(gps_fix.datetime))
@@ -4894,7 +4897,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             gps_hpe.append(gps_fix.HPE)
 
         log_gps_qc_v = array((GPS1.ok, GPS2.ok, GPSE.ok), int)
-        
+
         create_nc_var(nc_dive_file, nc_sg_log_prefix + 'gps_time', (nc_dim_gps_info,), False, array(gps_time, float64))
         create_nc_var(nc_dive_file, nc_sg_log_prefix + 'gps_lat',  (nc_dim_gps_info,), False, array(gps_lat, float64))
         create_nc_var(nc_dive_file, nc_sg_log_prefix + 'gps_lon',  (nc_dim_gps_info,), False, array(gps_lon, float64))
@@ -4906,12 +4909,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         create_nc_var(nc_dive_file, nc_sg_log_prefix + 'gps_driftheading',  (nc_dim_gps_info,), False, array(gps_driftheading, float64))
         create_nc_var(nc_dive_file, nc_sg_log_prefix + 'gps_n_satellites',  (nc_dim_gps_info,), False, array(gps_n_satellites, float64))
         create_nc_var(nc_dive_file, nc_sg_log_prefix + 'gps_hpe',  (nc_dim_gps_info,), False, array(gps_hpe, float64))
-        create_nc_var(nc_dive_file, nc_sg_log_prefix + 'gps_qc',  (nc_dim_gps_info,), False, log_gps_qc_v)                        
+        create_nc_var(nc_dive_file, nc_sg_log_prefix + 'gps_qc',  (nc_dim_gps_info,), False, log_gps_qc_v)
 
         #
         # Add engineering data (dimensioned)
         #
-        
+
         # Add in the Eng file contents (always sg_dat_point long)
         for column in eng_f.columns:
             if (eng_f.removed_col(column)):
@@ -4955,7 +4958,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                             instruments_d[nc_var] = instrument_var
                             instrument_info.update({'instrument': instrument_var}) # implicitly declared instrument
                 log_debug("result_d: %s%s (%s)" % (nc_var, dim_names, shape(value) if dim_names else value))
-                #nc_dive_file.sync()                
+                #nc_dive_file.sync()
                 create_nc_var(nc_dive_file, nc_var, dim_names, False, value, instrument_info)
             except KeyError:
                 log_error("Unknown result variable %s -- dropped" % nc_var)
@@ -4963,7 +4966,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # add the trajectory variable (array of length 1)
         # avoid adding platform or instruments
         create_nc_var(nc_dive_file, 'trajectory', (nc_dim_trajectory_info,), False, [int(dive_num)])
-        
+
         # add the platform variable
         platform_d = {'call_sign': platform_id, 'long_name':platform_type.lower()}
         try:
@@ -4988,7 +4991,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         create_nc_var(nc_dive_file, platform_var, nc_scalar, False, vessel_description, platform_d)
 
         # add all the instrument variables used by any data variables and declare them in the instrument globals
-        instrument_vars = Utils.unique(list(instruments_d.values())) 
+        instrument_vars = Utils.unique(list(instruments_d.values()))
         for instrument_var in instrument_vars:
              create_nc_var(nc_dive_file, instrument_var, nc_scalar, False, instrument_var)
         # NOTE: used to add platform_var here but NODC does not want the glider as an instrument
@@ -5025,7 +5028,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     os.remove(nc_dive_file_name_gz)
                 except:
                     log_error("Couldn't remove %s" % nc_dive_filename_gc)
-            
+
     return (processing_error, nc_dive_file_name)
 
 # A note on the (non-) use of exec in Python 2.6ff (but not 3.0?):
@@ -5064,7 +5067,6 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
     """
     # set up logging
     ret_val = 0
-    disclaimer = base_opts.disclaimer
     bin_width = base_opts.bin_width
 
     if (profile_file_name or binned_profile_file_name or kkyy_up_file_name or kkyy_down_file_name): # BREAK
@@ -5080,7 +5082,7 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
             sg_epoch_time_s_v = results_d[nc_sg_time_var]
             sg_press_v = results_d['pressure']
             sg_depth_m_v = results_d['depth']
-            
+
             ctd_epoch_time_s_v = results_d[nc_ctd_time_var]
             eng_file_start_time = time.mktime(eng_f.start_ts) # secs since the epoch
             elapsed_time_s_v = ctd_epoch_time_s_v - eng_file_start_time
@@ -5105,7 +5107,7 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
             gps_lat = results_d['log_gps_lat']
             gps_lon = results_d['log_gps_lon']
             gps_time = results_d['log_gps_time']
-            
+
             gps_drift_time_s = gps_time[GPS2] - gps_time[GPS1]
             total_flight_and_SM_time_s = gps_time[GPSE] - gps_time[GPS2]  # BUG this is a lie...
 
@@ -5122,7 +5124,7 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
             # Need these variables at CTD times
             sg_press_v = Utils.interp1d(sg_epoch_time_s_v, sg_press_v, ctd_epoch_time_s_v, kind='linear')
             sg_depth_m_v = Utils.interp1d(sg_epoch_time_s_v, sg_depth_m_v, ctd_epoch_time_s_v, kind='linear')
-            
+
         # These routines, plus kkyy below, assume that the relevant
         # variables have all 'bad_samples' actually removed uniformly to eliminate
         # the NaN values from the following products.
@@ -5137,7 +5139,7 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
         reduction_percentage = 100.0*(float(num_bad_samples)/float(ctd_np))
         log_info("Dive %d: Data set size for profile, binned and kkyy files reduced by %d points, a %.2f%% reduction" % (dive_num, num_bad_samples, reduction_percentage))
         good_i_v = Utils.setdiff(list(range(ctd_np)), bad_i_v)
-        r_ctd_np = len(good_i_v) 
+        r_ctd_np = len(good_i_v)
         # TODO do we care about the number of points being too small here? and if so, did we fail when we wrote the netcdf file?
 
         if (False): # BUG: using exec() fails here...
@@ -5158,7 +5160,7 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
             r_sigma_t_v = sigma_t_v[good_i_v]
             r_dive_pos_lat_dd_v = dive_pos_lat_dd_v[good_i_v]
             r_dive_pos_lon_dd_v = dive_pos_lon_dd_v[good_i_v]
-            
+
 
             if (profile_file_name):
                 try:
@@ -5208,13 +5210,11 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
             if(profile_file):
                 profile_file.write("%comment: Temperature corrected for first-order lag\n")
                 profile_file.write("%%comment: Salinity %scorrected for thermal-inertia effects\n" % ("" if perform_thermal_inertia_correction else "NOT "))
-                if(disclaimer):
-                    profile_file.write("%%comment: %s\n" % disclaimer)
 
                 write_reduced_profile = False
-                    
+
                 if(write_reduced_profile):
-                    profile_file.write("%%comment: Eliminated samples %s due to out of bounds cond or temp readings\n" % str(bad_i_v))                    
+                    profile_file.write("%%comment: Eliminated samples %s due to out of bounds cond or temp readings\n" % str(bad_i_v))
                     # Pull in columns needed for output of profile
                     # New policy: name columns according to nc vars and hence the documentation
                     profile_columns = ['elapsed_time', 'pressure', 'depth', 'temperature', 'conductivity', 'salinity',  'sigma_t',  'latitude', 'longitude']
@@ -5243,7 +5243,7 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
                             fmt = "%f,"
                         profile_file.write(fmt % (locals()[profile_vars[i]][j]))
                     profile_file.write("%f\n" % (locals()[profile_vars[-1]][j]))
-                    
+
 
                 profile_file.close()
 
@@ -5264,13 +5264,11 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
                 binned_profile_file.write("%%comment: Salinity %scorrected for thermal-inertia effects\n" % ("" if perform_thermal_inertia_correction else "NOT "))
                 binned_profile_file.write("%%comment: Bin width = %0.1f meters\n" % bin_width)
                 binned_profile_file.write("%%comment: First and last observation are actual, all others are binned\n")
-                if(disclaimer):
-                    profile_file.write("%%comment: %s\n" % disclaimer)
 
                 # New policy: name columns according to nc vars and hence the documentation
                 profile_columns = ['elapsed_time', 'pressure', 'depth', 'temperature', 'conductivity', 'salinity',  'sigma_t']
                 profile_vars = ['r_elapsed_time_s_v', 'r_sg_depth_m_v', 'r_temp_cor_v', 'r_cond_cor_v', 'r_salin_cor_v', 'r_sigma_t_v']
-                binned_profile_columns = ['obs_bin', 'elapsed_t_bin', 'depth_bin', 'temperature_bin', 'conductivity_bin', 'salinity_bin', 'sigma_t_bin']        
+                binned_profile_columns = ['obs_bin', 'elapsed_t_bin', 'depth_bin', 'temperature_bin', 'conductivity_bin', 'salinity_bin', 'sigma_t_bin']
                 binned_profile_vars = ['obs_bin', 'elapsed_t_bin', 'depth_m_bin', 'temp_cor_bin', 'cond_cor_bin', 'salinity_bin', 'sigma_t_bin']
 
                 binned_profile_file.write("%columns:")
@@ -5284,7 +5282,7 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
                 for i in range(len(profile_columns) - 1):
                     binned_profile_file.write("%f," % (locals()[profile_vars[i]][0]))
                 binned_profile_file.write("%f\n" % (locals()[profile_vars[-1]][0]))
-                    
+
                 # Write out the binned observations
                 for j in range(len(depth_m_bin)):
                     for i in range(len(binned_profile_columns) - 1):
@@ -5362,9 +5360,9 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
 
 # Note that we don't add any qc variables here (see declarations in BaseNetCDF).  This is mostly
 # because we don't have a clear story in how to bin QC values in a bin.  One thought is to drop
-# all bad points and mean the remaining good points, NaN if no points available.  (In which case 
+# all bad points and mean the remaining good points, NaN if no points available.  (In which case
 # we don't actually need to include any QC variable for the results since all are QC_GOOD).  But
-# different vectors will have different QC flags and hence a different number of obs_bin, so a 
+# different vectors will have different QC flags and hence a different number of obs_bin, so a
 # common obs_bin is probably right out.  In any case, we need to know which QC variable goes with
 # which data vector, which we need to declare in BaseNetCDF (and perhaps even in the nc file
 # as an 'auxillary_variable').
@@ -5392,14 +5390,11 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     reset_nc_char_dims()
 
     bin_width = base_opts.bin_width
-    if(bin_width <= 0.0): 
+    if(bin_width <= 0.0):
         log_error("bin_width must be greater the 0.0 (%f) - bailing out" % bin_width)
         return (1, mission_profile_name)
 
     which_half = base_opts.which_half
-    if(which_half > WhichHalf.combine):
-        log_error("Unknown which_half (%d) - bailing out" % which_half)
-        return (1, mission_profile_name)
 
     if(which_half == WhichHalf.down):
         wh_file = "down"
@@ -5428,13 +5423,13 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     reviewed = True # assume the best
 
     # Sort the list of netcdf files per the dive number
-    dive_nc_profile_names.sort(sort_dive) 
+    dive_nc_profile_names.sort(key=functools.cmp_to_key(sort_dive))
 
     # Walk through each netcdf file, open it up and extract the columns needed,
     # adding to lists as we go
     mission_nc_dive_d = {} # Data of 'divenum' dimension - assembled from other pieces of nc files and calculated from bin
     included_binned_vars = set() # all the binned vector variables we'll include the final nc file
-    included_scalar_vars = set() 
+    included_scalar_vars = set()
     unknown_vars = {}
     first_profile_name = None
     for dive_nc_profile_name in dive_nc_profile_names:
@@ -5455,8 +5450,8 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 dive_num = globals_d['dive_number']
             except KeyError:
                 raise RuntimeError("No dive_number attribute in %s" % dive_nc_profile_name)
-            
-            if not mission_profile_name: 
+
+            if not mission_profile_name:
                 # calib_consts is set; figure out filename, etc.
                 try:
                     instrument_id = int(calib_consts['id_str'])
@@ -5471,7 +5466,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 mission_title = Utils.ensure_basename(calib_consts['mission_title'])
                 mission_profile_name = os.path.join(base_opts.mission_dir, "sg%03d_%s_%1.1fm_%s_profile.nc" % (instrument_id, mission_title, bin_width, wh_file))
                 log_info("Making mission profile %s from files found in %s" % (mission_profile_name, base_opts.mission_dir))
-            
+
             # process the file
             # See if this dive was skipped, had an error, or is missing variables we require
             try:
@@ -5547,7 +5542,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             for column in eng_f.columns:
                 column_v = eng_f.get_col(column)
                 results_d[nc_sg_eng_prefix + column] = column_v
-                
+
             dive_nc_varnames = list(results_d.keys())
             temp_dive_vars = {}
             for dive_nc_varname in dive_nc_varnames:
@@ -5565,7 +5560,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
                 if(include_in_mission_profile):
                     # Variable is tagged for adding to the mission profile
-                    # 
+                    #
                     if mdp_dim_info == nc_scalar:
                         try:
                             value = results_d[dive_nc_varname]
@@ -5579,7 +5574,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                             # this is where we'd have to put them aside
                             pass
                         else:
-                            # log_info("Including %s (%d)" % (dive_nc_varname, len(results_d[dive_nc_varname])))                            
+                            # log_info("Including %s (%d)" % (dive_nc_varname, len(results_d[dive_nc_varname])))
                             temp_dive_vars[dive_nc_varname] = results_d[dive_nc_varname]
 
                             # Look up the matching _QC vector and if applicable, apply the only_good
@@ -5685,7 +5680,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                     if(nc_data_type == 'd'):
                         mission_nc_dive_d[dive_num]['profiles'][i]['data_cols'][temp_dive_var_names[j]] = array(data_cols_bin[j], float64)
                     elif(nc_data_type == 'i'):
-                        mission_nc_dive_d[dive_num]['profiles'][i]['data_cols'][temp_dive_var_names[j]] = array(data_cols_bin[j], int32)                        
+                        mission_nc_dive_d[dive_num]['profiles'][i]['data_cols'][temp_dive_var_names[j]] = array(data_cols_bin[j], int32)
                     else:
                         log_error("Unknown NC type %s for %s - trying float" % (nc_data_type, var))
                         mission_nc_dive_d[dive_num]['profiles'][i]['data_cols'][temp_dive_var_names[j]] = array(data_cols_bin[j], float64)
@@ -5722,7 +5717,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     if reviewed:
         # update the issued date
         master_globals_d['date_issued'] = now_date
-        
+
     try:
         mission_profile_file = Utils.open_netcdf_file(mission_profile_name, 'w')
     except:
@@ -5757,7 +5752,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
 
     # Now that the deepest profile is known
     mission_profile_file.createDimension(nc_dim_depth, max_depth_len)
-    
+
     aux_attrs = None
     if False: # DEAD
         # override the nc_coordinates declaration (NO!)
@@ -5817,14 +5812,14 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     # If we don't add to instrument_vars above this is DEAD
     for instrument_var in Utils.unique(instrument_vars):
         create_nc_var(mission_profile_file, instrument_var, nc_scalar, False, instrument_var)
-        
+
     # handle scalar variables in two steps: first create arrays to hold the concatenated values, then creatte the nc variable with possible coercion applied to values
     for scalar_var in included_scalar_vars:
         md = nc_var_metadata[scalar_var]
         include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
         scalar_type = 'i' if nc_data_type == 'Q' else nc_data_type
         mission_nc_var_d[scalar_var] = zeros(num_profiles, dtype=(float64 if scalar_type == 'd' else int32))
-            
+
     # Now map over accumulated, binned data and rearrange it from our dive_num, data_col
     # centric dicts into the profile-based nc file format according to the
     # different types of profiles desired
@@ -5833,14 +5828,14 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         for i in range(len(mission_nc_dive_d[dive_num]['profiles'])):
             mission_nc_var_d['dive_number'][nc_profile] = dive_num
             mission_nc_var_d['trajectory'][nc_profile] = dive_num # an alias
-            
-            
+
+
             # Add to the data_point based vectors
             if(which_half == WhichHalf.down or (which_half == WhichHalf.both and i == 0)):
                 mission_nc_var_d['longitude'][nc_profile] = mission_nc_dive_d[dive_num]['dive_profile_mean_lon']
                 mission_nc_var_d['latitude'][nc_profile] = mission_nc_dive_d[dive_num]['dive_profile_mean_lat']
                 profile_time = mission_nc_dive_d[dive_num]['dive_profile_mean_time']
-                
+
                 mission_nc_var_d['start_time'][nc_profile] = mission_nc_dive_d[dive_num]['GPS2_time']
                 mission_nc_var_d['start_latitude'][nc_profile] = mission_nc_dive_d[dive_num]['GPS2_lat']
                 mission_nc_var_d['start_longitude'][nc_profile] = mission_nc_dive_d[dive_num]['GPS2_lon']
@@ -5861,7 +5856,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 mission_nc_var_d['end_time'][nc_profile] = mission_nc_dive_d[dive_num]['GPSEND_time']
                 mission_nc_var_d['end_latitude'][nc_profile] = mission_nc_dive_d[dive_num]['GPSEND_lat']
                 mission_nc_var_d['end_longitude'][nc_profile] = mission_nc_dive_d[dive_num]['GPSEND_lon']
-                
+
             elif(which_half == WhichHalf.combine):
                 mission_nc_var_d['longitude'][nc_profile] = mission_nc_dive_d[dive_num]['profile_mean_lon']
                 mission_nc_var_d['latitude'][nc_profile] = mission_nc_dive_d[dive_num]['profile_mean_lat']
@@ -5878,11 +5873,11 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             # Concatenate the scalars, which apply to all halves
             for scalar_var in included_scalar_vars:
                 mission_nc_var_d[scalar_var][nc_profile] = mission_nc_dive_d[dive_num][scalar_var]
-    
-            
+
+
             mission_nc_var_d[nc_sg_time_var][nc_profile] = profile_time
             profile_t = time.gmtime(profile_time)
-            
+
             mission_nc_var_d['year'][nc_profile] = profile_t.tm_year
             mission_nc_var_d['month'][nc_profile] = profile_t.tm_mon
             mission_nc_var_d['date'][nc_profile] = profile_t.tm_mday
@@ -5899,7 +5894,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 except KeyError:
                     # var not present in this nc_profile
                     data_len = 0
-                    
+
                 md = nc_var_metadata[dive_varname]
                 include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
 
@@ -5947,7 +5942,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
 
     return (0, mission_profile_name)
 
-    
+
 # NOTE this is the closest to a ARGO trajectory data set, a set of dives (cycles)
 # with the data presented as 1-D arrays of each measurement concatentated together
 # and a parallel array indicating cycle for each measurement and A/D (used as a mask)
@@ -5978,11 +5973,11 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 'conductivity', 'ctd_depth', 'latitude_gsm', 'conductivity_qc', 'salinity_raw', \
                 'temperature_qc', 'conductivity_raw', 'temperature', 'temperature_raw', 'conductivity_raw_qc', \
                 'longitude', 'longitude_gsm', 'ctd_pressure', 'salinity_raw_qc', 'salinity', 'pressure', 'depth', 'time')
-    
+
     rename_ctd_dim = False
     new_ctd_data_point = "new_ctd_data_point"
     new_ctd_data_info = "new_ctd_data_info"
-    
+
     ret_val = 0
     if(dive_nc_profile_names is None or dive_nc_profile_names == []):
         log_error("No dive profile names provided to make_mission_timeseries - bailing out")
@@ -5994,10 +5989,10 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
     master_instruments_d = {}
     platform_var = 'Seaglider'
     reviewed = True # assume the best
-    
+
     # Here's the algorithm:
     # 1) Sort the list of netcdf files per the dive number
-    dive_nc_profile_names.sort(sort_dive) 
+    dive_nc_profile_names.sort(key=functools.cmp_to_key(sort_dive))
 
     # 2) Walk through each netcdf file, open it up and extract the columns needed,
     #    adding to lists as we go
@@ -6008,7 +6003,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                  'mean_time', 'mean_latitude', 'mean_longitude',
                  'start_time', 'end_time',
                  'start_latitude', 'end_latitude',
-                 'start_longitude', 'end_longitude', 
+                 'start_longitude', 'end_longitude',
                  ]
     mission_nc_dive_d = {} # Data of nc_dim_dive dimension - scalars assembled from different pieces of nc files
 
@@ -6035,8 +6030,8 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 dive_num = globals_d['dive_number']
             except KeyError:
                 raise RuntimeError("No dive_number attribute in %s" % dive_nc_profile_name)
-            
-            if not mission_timeseries_name: 
+
+            if not mission_timeseries_name:
                 # calib_consts is set; figure out filename, etc.
                 try:
                     instrument_id = int(calib_consts['id_str'])
@@ -6051,7 +6046,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 mission_title = Utils.ensure_basename(calib_consts['mission_title'])
                 mission_timeseries_name = os.path.join(base_opts.mission_dir, "sg%03d_%s_timeseries.nc" % (instrument_id, mission_title))
                 log_info("Making mission timeseries %s from files found in %s" % (mission_timeseries_name, base_opts.mission_dir))
-            
+
             # process the file
             # See if this dive was skipped, had an error, or is missing variables we require
             try:
@@ -6128,7 +6123,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             for column in eng_f.columns:
                 column_v = eng_f.get_col(column)
                 results_d[nc_sg_eng_prefix + column] = column_v
-                
+
             dive_nc_varnames = list(results_d.keys())
             temp_dive_vars = {}
             extended_dim_names = [] # since infos can share dims, only extend once
@@ -6162,7 +6157,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                             old_dim_name = master_nc_info_d[mdp_dim_info]
                             if old_dim_name != dim_name:
                                 # An instrumment has changed dimensions - normally this represents a situation where there are
-                                # netcdf files from two different missions (or something equally bad).  Howerver, 
+                                # netcdf files from two different missions (or something equally bad).  Howerver,
                                 # for gliders where the CTD has been moved from scicon to the truck (or back) via the new tailboards,
                                 # a new set of vectors must be constructed, with a new dimension that is different
                                 # then the others
@@ -6215,7 +6210,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         except RuntimeError as exception:
             log_error("%s - skipping" % (exception.args[0]))
             continue
-            
+
     if not mission_timeseries_name:
         log_error("Unable to determine timeseries file name - bailing out")
         return (1, mission_timeseries_name)
@@ -6245,12 +6240,12 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             #log_info("%s:%s" % (var, nc_var_metadata[var]))
         for vv in dropped_vars:
             mission_nc_var_d.pop(vv)
-            
+
     #for k,v in master_nc_info_d.iteritems():
     #    log_info("%s:%s" % (k,v))
 
     # update globals for this file
-    
+
     # Timeseries_SG005_20041024_20041105
     master_globals_d['id'] = "Timeseries_SG%03d_%s_%s" % (instrument_id, start_t, end_t)
     master_globals_d['file_version'] = mission_timeseries_nc_fileversion
@@ -6357,7 +6352,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 os.remove(mission_timeseries_name_gz)
             except:
                 log_error("Couldn't remove %s" % nc_dive_filename_gc)
-            
+
     return (ret_val, mission_timeseries_name)
 
 
@@ -6369,7 +6364,7 @@ def collect_nc_perdive_files(base_opts):
     Returns: list of fully qualified files
     """
     dive_nc_file_names = []
-    
+
     glob_expr  = "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc"
     for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
         for f in dive_nc_file_names:
@@ -6388,7 +6383,7 @@ def collect_nc_perdive_files(base_opts):
 
     dive_nc_file_names.sort()
     return dive_nc_file_names
-    
+
 def main():
     """Command line driver for creating per-dive netCDF files
 
@@ -6396,7 +6391,7 @@ def main():
     where (one required):
         basefile        - The fully qualified path to a seaglider dive without extension, e.g., /home/sg194/p1940010
         --mission_dir   - The name of a directory, in which case all eng/log files in that directory are processed
-                                       
+
     The following standard options are supported:
         --version             show program's version number and exit
         -h, --help            show this help message and exit
@@ -6417,7 +6412,7 @@ def main():
         --make_dive_bpo       Create the dive binned profile in text format
         --make_dive_netCDF    Create the dive netCDF output file
         --make_dive_kkyy      Create the dive kkyy output files
-              
+
     Note:
         sg_calib_constants must be in the same directory as the file(s) being processed
 
@@ -6427,7 +6422,7 @@ def main():
     """
     base_opts = BaseOpts.BaseOptions(sys.argv, 'd',
                                      usage="%prog [Options] [basefile]")
-    
+
     BaseLogger("MakeDiveProfiles", base_opts) # initializes BaseLog
 
     Utils.check_versions()
@@ -6446,7 +6441,7 @@ def main():
         return 1
 
     ret_val = 0
-    
+
     log_info("Started processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
 
     if(base_opts.mission_dir):
@@ -6488,13 +6483,13 @@ def main():
         base_path = os.path.join(base_opts.mission_dir, base_name)
         log_info("Making profile for: %s" % base_path)
         dive_list.append(base_path)
-        
+
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
     calib_consts = getSGCalibrationConstants(sg_calib_file_name)
     if(not calib_consts):
         log_warning("Could not process %s" % sg_calib_file_name)
         return 1
-    
+
     try:
         instrument_id = int(calib_consts['id_str'])
     except:
@@ -6560,7 +6555,7 @@ def main():
         sg_calib_file_name, tmp = os.path.split(os.path.abspath(dive_path))
         sg_calib_file_name = os.path.join(sg_calib_file_name, "sg_calib_constants.m")
         dive_num = get_dive(eng_file_name)
-        
+
         log_info("Dive number = %d" % dive_num)
 
         log_debug("logger_eng_files = %s" % logger_eng_files[dive_path])
@@ -6576,13 +6571,13 @@ def main():
         except:
             log_error("Error processing dive %d - skipping" % dive_num, 'exc')
             temp_ret_val = True
-            
+
         if (not temp_ret_val):
             # no problem writting the nc file, try for the others
             temp_ret_val = write_auxillary_files(base_opts, nc_dive_file_name,
                                                  profile_file_name, binned_profile_file_name,
                                                  kkyy_up_file_name, kkyy_down_file_name)
-            
+
         trace_results_stop() # Just in case we bailed out...no harm if closed
         qc_log_stop()
         if(temp_ret_val == 1):
@@ -6598,7 +6593,7 @@ def main():
     log_info("Dives processed = %s" % dives_processed)
     log_info("Dives failed to process = %s" % dives_not_processed)
     return ret_val
-                             
+
 
 if __name__ == "__main__":
     retval = 1

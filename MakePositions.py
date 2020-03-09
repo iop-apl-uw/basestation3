@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -39,7 +39,6 @@ from CalibConst import getSGCalibrationConstants
 import MakeDiveProfiles
 import BaseGZip
 import Utils
-from Enum import *
 import PlotUtils
 import string
 

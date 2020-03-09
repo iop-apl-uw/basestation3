@@ -52,7 +52,7 @@ def get_mission_dive(dive_nc_file):
     if('log_DIVE' in dive_nc_file.variables):
         log_dive = dive_nc_file.variables['log_DIVE'].getValue()
     if('sg_cal_mission_title' in dive_nc_file.variables):
-        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring()
+        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring().decode('utf-8')
 
     if hasattr(dive_nc_file, 'start_time'):
         start_time = time.strftime("%d-%b-%Y %H:%M:%S ", time.gmtime(dive_nc_file.start_time))
@@ -69,7 +69,7 @@ def get_mission_str(dive_nc_file):
     if('log_ID' in dive_nc_file.variables):
         log_id = dive_nc_file.variables['log_ID'].getValue()
     if('sg_cal_mission_title' in dive_nc_file.variables):
-        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring()
+        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring().decode('utf-8')
     return "SG%s %s" % ('%03d' % (log_id if log_id else '???', ), mission_title)
 
 def get_mission_str_comm_log(comm_log, calib_constants):
@@ -78,7 +78,7 @@ def get_mission_str_comm_log(comm_log, calib_constants):
     log_id = None
     mission_title = ''
     if('sg_cal_mission_title' in dive_nc_file.variables):
-        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring()
+        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring().decode('utf-8')
     for s in comm_log.sessions:
         if(s._sg_id is not None):
             log_id = s._sg_id

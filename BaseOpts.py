@@ -21,25 +21,27 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-# Common set of pathnames and constants for basestation code:
-# Default values supplemented by option processing, both config file and command line
+# TODOCC
+# 1) Convert from optparse to argparse
+# 2) argv in the constructor - needed? Reconcile with the sys.argv[0] to setup the basestation directory
+
+"""
+  Common set of pathnames and constants for basestation code:
+  Default values supplemented by option processing, both config file and command line
+"""
 
 import configparser
 import optparse
+import os
+import os.path
+import sys
 import traceback
 
-import sys
-import os.path
-import os
-
-from Globals import *
+from Globals import WhichHalf, basestation_version
 
 #
 # Default values supplemented by option processing, both config file and command line
 #
-
-def DEPRECATED(option, opt_str, value, parser):
-    sys.stderr.write("WARNING: Option %s is no longer supported and is ignored; please see documentation for work-arounds, if any.\n" % opt_str)
 
 class BaseOptions:
 
@@ -65,10 +67,8 @@ class BaseOptions:
     magcalfile = None
     auxmagcalfile = None
     delete_upload_files = False
-    institution = None # DEAD See NODC.cnf
-    disclaimer = None # DEAD See NODC.cnf
     bin_width = 5.0
-    which_half = 3
+    which_half = WhichHalf(3) #pylint: disable=E1120
     interval = 0
     reply_addr = None
     domain_name = None
@@ -87,16 +87,6 @@ class BaseOptions:
     gzip_netcdf = False
     profile = False
     ignore_lock = False
-    # While DEPRECATED keep these declarations and the use in the call to RowConfParser
-    # so there is some value but drop other code; eventually drop all of these
-    dive_data_kkyy_weed_hacker = 0.0 # DEAD
-    climb_data_kkyy_weed_hacker = 0.0 # DEAD
-    dive_data_weed_hacker = 0.0 # DEAD
-    climb_data_weed_hacker = 0.0 # DEAD
-    temp_offset = 0.0 # DEAD
-    cond_offset = 0.0 # DEAD
-    temp_freq_offset = 0.0 # DEAD
-    cond_freq_offset = 0.0 # DEAD
     home_dir = None
     glider_password = None
     glider_group = None
@@ -139,12 +129,11 @@ class BaseOptions:
                     z - BaseGZip.py
             usage - use string
         """
-        basestation_directory, tail = os.path.split(os.path.abspath(os.path.expanduser(sys.argv[0])))
+        basestation_directory, _ = os.path.split(os.path.abspath(os.path.expanduser(sys.argv[0])))
         BaseOptions.basestation_directory = basestation_directory # make avaiable
         sys.path.append(basestation_directory) # add path to load common basestation modules from subdirectories
 
-        if (BaseOptions.is_initialized == False):
-
+        if not BaseOptions.is_initialized:
             # default values for config parser: only used if called with "-c"
             cp = configparser.RawConfigParser({
                 "debug": str(self.debug),
@@ -160,8 +149,6 @@ class BaseOptions:
                 "magcalfile": self.magcalfile,
                 "auxmagcalfile": self.magcalfile,
                 "delete_upload_files": self.delete_upload_files,
-                "institution": self.institution, # DEAD
-                "disclaimer": self.disclaimer, # DEAD
                 "base_log": self.base_log,
                 "instrument_id": self.instrument_id,
                 "make_dive_profiles": str(self.make_dive_profiles),
@@ -176,14 +163,6 @@ class BaseOptions:
                 "gzip_netcdf": self.gzip_netcdf,
                 "profile": self.profile,
                 "ignore_lock": self.ignore_lock,
-                "dive_data_kkyy_weed_hacker": self.dive_data_kkyy_weed_hacker, # DEAD
-                "climb_data_kkyy_weed_hacker": self.climb_data_kkyy_weed_hacker, # DEAD
-                "dive_data_weed_hacker": self.dive_data_weed_hacker, # DEAD
-                "climb_data_weed_hacker": self.climb_data_weed_hacker, # DEAD
-                "temp_offset": self.temp_offset, # DEAD
-                "cond_offset": self.cond_offset, # DEAD
-                "temp_freq_offset": self.temp_freq_offset, # DEAD
-                "cond_freq_offset": self.cond_freq_offset, # DEAD
                 "bin_width": self.bin_width,
                 "which_half": self.which_half,
                 "interval": self.interval,
@@ -206,20 +185,19 @@ class BaseOptions:
                           help="processing priority level (niceness)")
 
 
-            if(src in 'abdeghijkmnvpqt'):
+            if src in 'abdeghijkmnvpqt':
                 op.add_option("-m", "--mission_dir", dest="mission_dir",
                               help="dive directory")
                 op.add_option("--delete_upload_files", dest="delete_upload_files", action='store_true',
                               help="Delete any successfully uploaded input files")
-                                
 
-            if(src in 'abdeghijkmnvpqt'):
+            if src in 'abdeghijkmnvpqt':
                 op.add_option("--magcalfile", dest="magcalfile",
                               help="compass cal file or search to use most recent version of tcm2mat.cal")
                 op.add_option("--auxmagcalfile", dest="auxmagcalfile",
                               help="auxcompass cal file or search to use most recent version of scicon.tcm")
 
-            if(src in 'abcdfeghijklmnopqrstuz'):
+            if src in 'abcdfeghijklmnopqrstuz':
                 op.add_option("-v", "--verbose", dest="verbose",
                               action="store_true",
                               help="print status messages to stdout")
@@ -230,13 +208,7 @@ class BaseOptions:
                               action="store_true",
                               help="log/display debug messages")
 
-            if(src in 'bdpqt'):
-                op.add_option("--institution", dest="institution",
-                              action="callback", callback=DEPRECATED,
-                              help="Institution field for the netCDF files")
-                op.add_option("--disclaimer", dest="disclaimer",
-                              action="callback", callback=DEPRECATED,
-                              help="Disclaimer field for the netCDF files")
+            if src in 'bdpqt':
                 op.add_option("-i", "--instrument_id", dest="instrument_id",
                               help="force instrument (glider) id")
                 op.add_option("--gzip_netcdf",
@@ -244,20 +216,20 @@ class BaseOptions:
                               action="store_true",
                               help="gzip netcdf files")
 
-            if(src in 'bdkpt'):
+            if src in 'bdkpt':
                 op.add_option("--profile",
                               dest="profile",
                               action="store_true",
                               help="Profiles time to process")
 
 
-            if(src in 'bm'):
+            if src in 'bm':
                 op.add_option("--ver_65",
                               dest="ver_65",
                               action="store_true",
                               help="Processes Version 65 glider format")
 
-            if(src in 'bp'):
+            if src in 'bp':
                 op.add_option("--bin_width",
                               dest="bin_width",
                               help="Width of bins")
@@ -265,15 +237,15 @@ class BaseOptions:
                               dest="which_half",
                               help="Which half of the profile to use - 1 down, 2 up, 3 both, 4 combine down and up")
 
-            if(src in 'i'):
+            if src in 'i':
                 op.add_option("--interval",
                               dest="interval",
                               help="Interval in seconds between checks")
 
-            if(src in 'bd'):
+            if src in 'bd':
                 pass # was --dac_src
 
-            if(src in 'bij'):
+            if src in 'bij':
                 op.add_option("--daemon", dest="daemon",
                               action="store_true",
                               help="Launch conversion as a daemon process")
@@ -281,7 +253,7 @@ class BaseOptions:
                               dest="ignore_lock",
                               action="store_true",
                               help="Ignore the lock file, if present")
-            if(src in 'b'):
+            if src in 'b':
                 op.add_option("--divetarballs", dest="divetarballs",
                               #action="store_true",
                               help="Creates per-dive tarballs of processed files - 0 don't create, -1 create, > create fragments of specified size")
@@ -302,48 +274,15 @@ class BaseOptions:
                               dest="web_file_location",
                               help="Optional location to prefix file locations in comp email messages")
 
-            if(src in 'bd'):
+            if src in 'bd':
                 op.add_option("-f", "--force", dest="force",
                               action="store_true",
                               help="Forces conversion of all dives")
                 op.add_option("--reprocess", dest="reprocess",
                               action="store_true",
-                              help="Forces re-running of MakeDiveProfiles, regardless of file time stamps (generally used for debugging - normally --force is the right option)")
-                # all DEAD eventually
-                op.add_option("--dive_data_kkyy_weed_hacker",
-                              action="callback", callback=DEPRECATED,
-                              dest="dive_data_kkyy_weed_hacker",
-                              help="Data shallower then this setting is eliminated from the dive kkyy files (implies --make_dive_kkyy)")
-                op.add_option("--climb_data_kkyy_weed_hacker",
-                              action="callback", callback=DEPRECATED,
-                              dest="climb_data_kkyy_weed_hacker",
-                              help="Data shallower then this setting is eliminated from the climb kkyy files  (implies --make_dive_kkyy)")
-                op.add_option("--dive_data_weed_hacker",
-                              action="callback", callback=DEPRECATED,
-                              dest="dive_data_weed_hacker",
-                              help="Dive data shallower then this setting is eliminated from the profile files")
-                op.add_option("--climb_data_weed_hacker",
-                              action="callback", callback=DEPRECATED,
-                              dest="climb_data_weed_hacker",
-                              help="Climb data shallower then this setting is eliminated from the profile files")
-                op.add_option("--temp_offset",
-                              action="callback", callback=DEPRECATED,
-                              dest="temp_offset",
-                              help="Amount to adjust first order lag corrected Temp")
-                op.add_option("--cond_offset",
-                              action="callback", callback=DEPRECATED,
-                              dest="cond_offset",
-                              help="Amount to adjust first order lag corrected Conductivity")
-                op.add_option("--temp_freq_offset",
-                              action="callback", callback=DEPRECATED,
-                              dest="temp_freq_offset",
-                              help="Amount to adjust Temp frequency")
-                op.add_option("--cond_freq_offset",
-                              action="callback", callback=DEPRECATED,
-                              dest="cond_freq_offset",
-                              help="Amount to adjust Conductivity frequency")
-
-            if(src in 'bd'):
+                              help="Forces re-running of MakeDiveProfiles, regardless of file time stamps (generally used for debugging " \
+                              "- normally --force is the right option)")
+            if src in 'bd':
                 op.add_option("--make_dive_profiles",
                               dest="make_dive_profiles",
                               action="store_true",
@@ -372,7 +311,7 @@ class BaseOptions:
                               dest="make_dive_kkyy",
                               action="store_true",
                               help="Create the dive kkyy output files")
-            if(src in 'd'):
+            if src in 'd':
                 op.add_option("--reprocess_plots",
                               dest="reprocess_plots",
                               action="store_true",
@@ -381,8 +320,8 @@ class BaseOptions:
                               dest="reprocess_flight",
                               action="store_true",
                               help="Force reprocessing of flight model data (Reprocess.py only)")
-                
-            if(src in 'c'):
+
+            if src in 'c':
                 op.add_option("--home_dir", dest="home_dir",
                               help="home directory base, used by Commission.py")
                 op.add_option("--glider_password", dest="glider_password",
@@ -392,13 +331,13 @@ class BaseOptions:
                 op.add_option("--home_dir_group", dest="home_dir_group",
                               help="group owner for glider home directory, used by Commission.py")
 
-            if(src in 'm'):
+            if src in 'm':
                 op.add_option("-t", "--target_dir", dest="target_dir",
-                          help="target directory, used by MoveData.py")
+                              help="target directory, used by MoveData.py")
 
-            if(src in 'h'):
+            if src in 'h':
                 op.add_option("-e", "--encrypt", dest="encrypt", action="store_true",
-                          help="encrypt the file")
+                              help="encrypt the file")
 
             self._op = op
 
@@ -408,7 +347,7 @@ class BaseOptions:
 
             BaseOptions.make_dive_kkyy = False
 
-            if (o.config is not None):
+            if o.config is not None:
                 BaseOptions.config_file_name = os.path.abspath(os.path.expanduser(o.config))
                 try:
                     cp.read(BaseOptions.config_file_name)
@@ -465,8 +404,8 @@ class BaseOptions:
 
                     try:
                         BaseOptions.target_dir = cp.get("DEFAULT", "target_dir")
-                        if(BaseOptions.target_dir is not None):
-                            if (BaseOptions.target_dir[-1] != "/"):
+                        if BaseOptions.target_dir is not None:
+                            if BaseOptions.target_dir[-1] != "/":
                                 BaseOptions.target_dir = BaseOptions.target_dir + "/"
                             BaseOptions.target_dir = os.path.expanduser(BaseOptions.target_dir)
                     except:
@@ -474,9 +413,9 @@ class BaseOptions:
 
                     try:
                         BaseOptions.mission_dir = cp.get("DEFAULT", "mission_dir")
-                        if(BaseOptions.mission_dir is not None):
+                        if BaseOptions.mission_dir is not None:
                             BaseOptions.mission_dir = os.path.abspath(os.path.expanduser(BaseOptions.mission_dir))
-                            if (BaseOptions.mission_dir[-1] != "/"):
+                            if BaseOptions.mission_dir[-1] != "/":
                                 BaseOptions.mission_dir = BaseOptions.mission_dir + "/"
                     except:
                         pass
@@ -485,7 +424,7 @@ class BaseOptions:
                         BaseOptions.magcalfile = cp.get("DEFAULT", "magcalfile")
                     except:
                         pass
-                    
+
                     try:
                         BaseOptions.auxmagcalfile = cp.get("DEFAULT", "auxmagcalfile")
                     except:
@@ -493,16 +432,6 @@ class BaseOptions:
 
                     try:
                         BaseOptions.delete_upload_files = cp.get("DEFAULT", "delete_upload_files")
-                    except:
-                        pass
-
-                    try: # DEAD
-                        BaseOptions.institution = cp.get("DEFAULT", "institution")
-                    except:
-                        pass
-
-                    try: # DEAD
-                        BaseOptions.disclaimer = cp.get("DEFAULT", "disclaimer")
                     except:
                         pass
 
@@ -578,13 +507,13 @@ class BaseOptions:
 
                     try:
                         make_mission_timeseries = cp.get("DEFAULT", "make_mission_timeseries")
-                        BaseOptions.make_mission_timeseries = (make_mission_profile.lower() == "true")
+                        BaseOptions.make_mission_timeseries = (make_mission_timeseries.lower() == "true")
                     except:
                         pass
 
                     try:
                         make_dive_kkyy = cp.get("DEFAULT", "make_dive_kkyy")
-                        if(make_dive_kkyy.lower() == "true"):
+                        if make_dive_kkyy.lower() == "true":
                             BaseOptions.make_dive_kkyy = True
                     except:
                         pass
@@ -619,57 +548,13 @@ class BaseOptions:
                     except:
                         pass
 
-                    try: # DEAD
-                        BaseOptions.dive_data_kkyy_weed_hacker = cp.getfloat("DEFAULT", "dive_data_kkyy_weed_hacker")
-                    except ValueError:
-                        pass
-                    else:
-                        BaseOptions.make_dive_kkyy = True
-
-                    try: # DEAD
-                        BaseOptions.climb_data_kkyy_weed_hacker = cp.getfloat("DEFAULT", "climb_data_kkyy_weed_hacker")
-                    except ValueError:
-                        pass
-                    else:
-                        BaseOptions.make_dive_kkyy = True
-
-                    try: # DEAD
-                        BaseOptions.dive_data_weed_hacker = cp.getfloat("DEFAULT", "dive_data_weed_hacker")
-                    except ValueError:
-                        pass
-
-                    try: # DEAD
-                        BaseOptions.climb_data_weed_hacker = cp.getfloat("DEFAULT", "climb_data_weed_hacker")
-                    except ValueError:
-                        pass
-
-                    try: # DEAD
-                        BaseOptions.temp_offset = cp.getfloat("DEFAULT", "temp_offset")
-                    except ValueError:
-                        pass
-
-                    try: # DEAD
-                        BaseOptions.cond_offset = cp.getfloat("DEFAULT", "cond_offset")
-                    except ValueError:
-                        pass
-
-                    try: # DEAD
-                        BaseOptions.temp_freq_offset = cp.getfloat("DEFAULT", "temp_freq_offset")
-                    except ValueError:
-                        pass
-
-                    try: # DEAD
-                        BaseOptions.cond_freq_offset = cp.getfloat("DEFAULT", "cond_freq_offset")
-                    except ValueError:
-                        pass
-
                     try:
                         BaseOptions.bin_width = cp.getfloat("DEFAULT", "bin_width")
                     except ValueError:
                         pass
 
                     try:
-                        BaseOptions.which_half = cp.getint("DEFAULT", "which_half")
+                        BaseOptions.which_half = WhichHalf(cp.getint("DEFAULT", "which_half")) #pylint: disable=E1120
                     except ValueError:
                         pass
 
@@ -679,7 +564,7 @@ class BaseOptions:
                         pass
 
                     try:
-                        nice = cp.getint("DEFAULT", "nice")
+                        BaseOptions.nice = cp.getint("DEFAULT", "nice")
                     except ValueError:
                         pass
 
@@ -703,8 +588,6 @@ class BaseOptions:
                     #print "verbose from config file: " + str(BaseOptions.verbose) # DEBUG
                     #print "target_dir from config file: " + str(BaseOptions.target_dir) # DEBUG
                     #print "mission_dir from config file: " + str(BaseOptions.mission_dir) # DEBUG
-                    #print "institution from config file: " + str(BaseOptions.institution) # DEBUG
-                    #print "disclaimer from config file: " + str(BaseOptions.disclaimer) # DEBUG
                     #print "base_log from config file: " + str(BaseOptions.base_log) # DEBUG
                     #print "instrument_id from config file: " + str(BaseOptions.instrument_id) # DEBUG
                     #print "make_dive_profiles from config file: " + str(BaseOptions.make_dive_profiles) # DEBUG
@@ -713,23 +596,23 @@ class BaseOptions:
                     #print "clean from config file: " + str(BaseOptions.clean) # DEBUG
                     #print "profile from config file: " + str(BaseOptions.profile) # DEBUG
                     #print "ignore_locki from config file: " + str(BaseOptions.ignore_lock) # DEBUG
-            if (getattr(o, 'debug', None) is not None):
+            if  getattr(o, 'debug', None) is not None:
                 BaseOptions.debug = o.debug
                 #print "debug from cmd-line options: " + str(o.debug) # DEBUG
 
-            if (getattr(o, 'verbose', None) is not None):
+            if getattr(o, 'verbose', None) is not None:
                 BaseOptions.verbose = o.verbose
                 #print "verbose from cmd-line options: " + str(o.verbose) # DEBUG
 
-            if (getattr(o, 'force', None) is not None):
+            if getattr(o, 'force', None) is not None:
                 BaseOptions.force = o.force
                 #print "force from cmd-line options: " + str(o.force) # DEBUG
 
-            if (getattr(o, 'reprocess', None) is not None):
+            if getattr(o, 'reprocess', None) is not None:
                 BaseOptions.reprocess = o.reprocess
                 #print "reprocess from cmd-line options: " + str(o.reprocess) # DEBUG
 
-            if (getattr(o, 'divetarballs', None) is not None):
+            if getattr(o, 'divetarballs', None) is not None:
                 try:
                     BaseOptions.divetarballs = int(o.divetarballs)
                 except:
@@ -737,202 +620,127 @@ class BaseOptions:
                     BaseOptions.divetarballs = 0
                 #print "divetarballs from cmd-line options: " + str(o.divetarballs) # DEBUG
 
-            if (getattr(o, 'local', None) is not None):
+            if getattr(o, 'local', None) is not None:
                 BaseOptions.local = o.local
                 #print "local from cmd-line options: " + str(o.local) # DEBUG
 
-            if (getattr(o, 'daemon', None) is not None):
+            if getattr(o, 'daemon', None) is not None:
                 BaseOptions.daemon = o.daemon
                 #print "daemon from cmd-line options: " + str(o.daemon) # DEBUG
 
-            if (getattr(o, 'encrypt', None) is not None):
+            if getattr(o, 'encrypt', None) is not None:
                 BaseOptions.encrypt = o.encrypt
                 #print "encrypt from cmd-line options: " + str(o.encrypt) # DEBUG
 
-            if (getattr(o, 'target_dir', None) is not None):
+            if getattr(o, 'target_dir', None) is not None:
                 BaseOptions.target_dir = o.target_dir
-                if(BaseOptions.target_dir[-1] != "/"):
+                if BaseOptions.target_dir[-1] != "/":
                     BaseOptions.target_dir = BaseOptions.target_dir + "/"
                 BaseOptions.target_dir = os.path.expanduser(BaseOptions.target_dir)
                 #print "target_dir from cmd-line options: " + str(o.target_dir) # DEBUG
 
-            if (getattr(o, 'mission_dir', None) is not None):
+            if getattr(o, 'mission_dir', None) is not None:
                 BaseOptions.mission_dir = os.path.abspath(os.path.expanduser(o.mission_dir))
-                if(BaseOptions.mission_dir[-1] != "/"):
+                if BaseOptions.mission_dir[-1] != "/":
                     BaseOptions.mission_dir = BaseOptions.mission_dir + "/"
                 #print "mission_dir from cmd-line options: " + str(o.mission_dir) # DEBUG
 
-            if (getattr(o, 'magcalfile', None) is not None):
+            if getattr(o, 'magcalfile', None) is not None:
                 BaseOptions.magcalfile = o.magcalfile
                 #print "magcalfle from cmd-line options: " + str(o.magcalfile) # DEBUG
 
-            if (getattr(o, 'auxmagcalfile', None) is not None):
+            if getattr(o, 'auxmagcalfile', None) is not None:
                 BaseOptions.auxmagcalfile = o.auxmagcalfile
                 #print "auxmagcalfle from cmd-line options: " + str(o.auxmagcalfile) # DEBUG
 
-            if (getattr(o, 'delete_upload_files', None) is not None):
+            if getattr(o, 'delete_upload_files', None) is not None:
                 BaseOptions.delete_upload_files = o.delete_upload_files
                 #print "delete_upload_files from cmd-line options: " + str(o.delete_upload_files) # DEBUG
 
-            if (getattr(o, 'institution', None) is not None): # DEAD
-                BaseOptions.institution = o.institution
-
-            if (getattr(o, 'disclaimer', None) is not None): # DEAD
-                BaseOptions.disclaimer = o.disclaimer
-
-            if (getattr(o, 'reply_addr', None) is not None):
+            if getattr(o, 'reply_addr', None) is not None:
                 BaseOptions.reply_addr = o.reply_addr
 
-            if (getattr(o, 'domain_name', None) is not None):
+            if getattr(o, 'domain_name', None) is not None:
                 BaseOptions.domain_name = o.domain_name
 
-            if (getattr(o, 'web_file_location', None) is not None):
+            if getattr(o, 'web_file_location', None) is not None:
                 BaseOptions.web_file_location = o.web_file_location
 
-            if (getattr(o, 'home_dir', None) is not None):
+            if getattr(o, 'home_dir', None) is not None:
                 BaseOptions.home_dir = o.home_dir
-            if (getattr(o, 'glider_password', None) is not None):
+            if getattr(o, 'glider_password', None) is not None:
                 BaseOptions.glider_password = o.glider_password
-            if (getattr(o, 'glider_group', None) is not None):
+            if getattr(o, 'glider_group', None) is not None:
                 BaseOptions.glider_group = o.glider_group
-            if (getattr(o, 'home_dir_group', None) is not None):
+            if getattr(o, 'home_dir_group', None) is not None:
                 BaseOptions.home_dir_group = o.home_dir_group
 
-            if (getattr(o, 'base_log', None) is not None):
+            if getattr(o, 'base_log', None) is not None:
                 BaseOptions.base_log = o.base_log
                 #print "base_log from cmd-line options: " + str(o.base_log) # DEBUG
 
-            if (getattr(o, 'instrument_id', None) is not None):
+            if getattr(o, 'instrument_id', None) is not None:
                 BaseOptions.instrument_id = o.instrument_id
                 #print "instrument_id from cmd-line options: " + str(o.instrument_id) # DEBUG
 
-            if (getattr(o, 'make_dive_profiles', None) is not None):
+            if getattr(o, 'make_dive_profiles', None) is not None:
                 BaseOptions.make_dive_profiles = o.make_dive_profiles
                 BaseOptions.make_dive_netCDF = True
                 #print "make_dive_profiles from cmd-line options: " + str(o.make_dive_profiles) # DEBUG
 
-            if (getattr(o, 'reprocess_plots', None) is not None):
-                BaseOptions.reprocess_plots  = o.reprocess_plots
+            if getattr(o, 'reprocess_plots', None) is not None:
+                BaseOptions.reprocess_plots = o.reprocess_plots
                 #print "reprocess_plots from cmd-line options: " + str(o.reprocess_plots) # DEBUG
 
-            if (getattr(o, 'reprocess_flight', None) is not None):
-                BaseOptions.reprocess_flight  = o.reprocess_flight
+            if getattr(o, 'reprocess_flight', None) is not None:
+                BaseOptions.reprocess_flight = o.reprocess_flight
                 #print "reprocess_flight from cmd-line options: " + str(o.reprocess_flight) # DEBUG
 
-            if (getattr(o, 'make_dive_pro', None) is not None):
+            if getattr(o, 'make_dive_pro', None) is not None:
                 BaseOptions.make_dive_pro = o.make_dive_pro
                 #print "make_pro from cmd-line options: " + str(o.make_pro) # DEBUG
 
-            if (getattr(o, 'make_dive_bpo', None) is not None):
+            if getattr(o, 'make_dive_bpo', None) is not None:
                 BaseOptions.make_dive_bpo = o.make_dive_bpo
                 #print "make_bpo from cmd-line options: " + str(o.make_bpo) # DEBUG
 
-            if (getattr(o, 'make_dive_netCDF', None) is not None):
+            if getattr(o, 'make_dive_netCDF', None) is not None:
                 BaseOptions.make_dive_netCDF = o.make_dive_netCDF
                 #print "make_dive_netCDF from cmd-line options: " + str(o.make_netCDF) # DEBUG
 
-            if (getattr(o, 'make_mission_profile', None) is not None):
+            if getattr(o, 'make_mission_profile', None) is not None:
                 BaseOptions.make_mission_profile = o.make_mission_profile
                 #print "make_mission_profile from cmd-line options: " + str(o.make_netCDF) # DEBUG
 
-            if (getattr(o, 'make_mission_timeseries', None) is not None):
+            if getattr(o, 'make_mission_timeseries', None) is not None:
                 BaseOptions.make_mission_timeseries = o.make_mission_timeseries
                 #print "make_mission_timeseries from cmd-line options: " + str(o.make_netCDF) # DEBUG
 
-            if (getattr(o, 'make_dive_kkyy', None) is not None):
+            if getattr(o, 'make_dive_kkyy', None) is not None:
                 BaseOptions.make_dive_kkyy = o.make_dive_kkyy
                 #print "make_kkyy from cmd-line options: " + str(o.make_dive_kkyy) # DEBUG
 
-            if (getattr(o, 'ver_65', None) is not None):
+            if getattr(o, 'ver_65', None) is not None:
                 BaseOptions.ver_65 = o.ver_65
                 #print "ver_65 from cmd-line options: " + str(o.ver_65) # DEBUG
 
-            if (getattr(o, 'clean', None) is not None):
+            if getattr(o, 'clean', None) is not None:
                 BaseOptions.clean = o.clean
                 #print "clean from cmd-line options: " + str(o.clean) # DEBUG
 
-            if (getattr(o, 'gzip_netcdf', None) is not None):
+            if getattr(o, 'gzip_netcdf', None) is not None:
                 BaseOptions.gzip_netcdf = o.gzip_netcdf
                 #print "gzip_netcdf from cmd-line options: " + str(o.no_gzip_netcdf) # DEBUG
 
-            if (getattr(o, 'profile', None) is not None):
+            if getattr(o, 'profile', None) is not None:
                 BaseOptions.profile = o.profile
                 #print "profile from cmd-line options: " + str(o.profile) # DEBUG
 
-            if (getattr(o, 'ignore_lock', None) is not None):
+            if getattr(o, 'ignore_lock', None) is not None:
                 BaseOptions.ignore_lock = o.ignore_lock
                 #print "ignore_lock from cmd-line options: " + str(o.ignore_lock) # DEBUG
 
-            if (getattr(o, 'dive_data_kkyy_weed_hacker', None) is not None): # DEAD
-                try:
-                    BaseOptions.dive_data_kkyy_weed_hacker = float(o.dive_data_kkyy_weed_hacker)
-                except:
-                    sys.stderr.write("dive_data_kkyy_weed_hacker must be a float (%s)\n" % o.dive_data_kkyy_weed_hacker)
-                    BaseOptions.dive_data_kkyy_weed_hacker = 0.0
-                else:
-                    BaseOptions.make_dive_kkyy = True
-                #print "dive_data_kkyy_weed_hacker from cmd-line options: %f" % BaseOptions.dive_data_kkyy_weed_hacker # DEBUG
-
-            if (getattr(o, 'climb_data_kkyy_weed_hacker', None) is not None): # DEAD
-                try:
-                    BaseOptions.climb_data_kkyy_weed_hacker = float(o.climb_data_kkyy_weed_hacker)
-                except:
-                    sys.stderr.write("climb_data_kkyy_weed_hacker must be a float (%s)\n" % o.climb_data_kkyy_weed_hacker)
-                    BaseOptions.climb_data_kkyy_weed_hacker = 0.0
-                else:
-                    BaseOptions.make_dive_kkyy = True
-
-            if (getattr(o, 'dive_data_weed_hacker', None) is not None): # DEAD
-                try:
-                    BaseOptions.dive_data_weed_hacker = float(o.dive_data_weed_hacker)
-                except:
-                    sys.stderr.write("dive_data_weed_hacker must be a float (%s)\n" % o.dive_data_weed_hacker)
-                    BaseOptions.dive_data_weed_hacker = 0.0
-                #print "dive_data_weed_hacker from cmd-line options: %f" % BaseOptions.dive_data_weed_hacker # DEBUG
-
-            if (getattr(o, 'climb_data_weed_hacker', None) is not None): # DEAD
-                try:
-                    BaseOptions.climb_data_weed_hacker = float(o.climb_data_weed_hacker)
-                except:
-                    sys.stderr.write("climb_data_weed_hacker must be a float (%s)\n" % o.climb_data_weed_hacker)
-                    BaseOptions.climb_data_weed_hacker = 0.0
-
-                #print "climb_data_weed_hacker from cmd-line options: %f" % BaseOptions.climb_data_weed_hacker # DEBUG
-            if (getattr(o, 'temp_offset', None) is not None): # DEAD
-                try:
-                    BaseOptions.temp_offset = float(o.temp_offset)
-                except:
-                    sys.stderr.write("temp_offset must be a float (%s)\n" % o.temp_offset)
-                    BaseOptions.temp_offset = 0.0
-
-                #print "temp_offset from cmd-line options: %f" % BaseOptions.temp_offset # DEBUG
-
-            if (getattr(o, 'cond_offset', None) is not None): # DEAD
-                try:
-                    BaseOptions.cond_offset = float(o.cond_offset)
-                except:
-                    sys.stderr.write("cond_offset must be a float (%s)\n" % o.cond_offset)
-                    BaseOptions.cond_offset = 0.0
-
-                #print "cond_offset from cmd-line options: %f" % BaseOptions.cond_offset # DEBUG
-
-            if (getattr(o, 'temp_freq_offset', None) is not None): # DEAD
-                try:
-                    BaseOptions.temp_freq_offset = float(o.temp_freq_offset)
-                except:
-                    sys.stderr.write("temp_freq_offset must be a float (%s)\n" % o.temp_freq_offset)
-                    BaseOptions.temp_freq_offset = 0.0
-                #print "temp_freq_offset from cmd-line options: %f" % BaseOptions.temp_freq_offset # DEBUG
-
-            if (getattr(o, 'cond_freq_offset', None) is not None): # DEAD
-                try:
-                    BaseOptions.cond_freq_offset = float(o.cond_freq_offset)
-                except:
-                    sys.stderr.write("cond_freq_offset must be a float (%s)\n" % o.cond_freq_offset)
-                    BaseOptions.cond_freq_offset = 0.0
-                #print "cond_freq_offset from cmd-line options: %f" % BaseOptions.cond_freq_offset # DEBUG
-
-            if (getattr(o, 'bin_width', None) is not None):
+            if getattr(o, 'bin_width', None) is not None:
                 try:
                     BaseOptions.bin_width = float(o.bin_width)
                 except:
@@ -940,15 +748,17 @@ class BaseOptions:
                     BaseOptions.bin_width = 0.0
                 #print "bin_width from cmd-line options: %f" % BaseOptions.bin_width # DEBUG
 
-            if (getattr(o, 'which_half', None) is not None):
+            if getattr(o, 'which_half', None) is not None:
                 try:
-                    BaseOptions.which_half = int(o.which_half)
+                    #pylint:disable:no-value-for-parameter
+                    BaseOptions.which_half = WhichHalf(o.which_half) #pylint: disable=E1120
                 except:
                     sys.stderr.write("which_half must be a int (%s)\n" % o.which_half)
-                    BaseOptions.which_half = 3
+                    #pylint:disable:no-value-for-parameter
+                    BaseOptions.which_half = WhichHalf(3) #pylint: disable=E1120
                 #print "which_half from cmd-line options: %d" % BaseOptions.which_half # DEBUG
 
-            if (getattr(o, 'interval', None) is not None):
+            if getattr(o, 'interval', None) is not None:
                 try:
                     BaseOptions.interval = int(o.interval)
                 except:
@@ -956,7 +766,7 @@ class BaseOptions:
                     BaseOptions.interval = 0
                 #print "interval from cmd-line options: %d" % BaseOptions.interval # DEBUG
 
-            if (getattr(o, 'nice', None) is not None):
+            if getattr(o, 'nice', None) is not None:
                 try:
                     BaseOptions.nice = int(o.nice)
                 except:
@@ -970,6 +780,8 @@ class BaseOptions:
             BaseOptions.is_initialized = True
 
     def format_help(self):
+        """ Returns help as a formatted string
+        """
         formatter = optparse.IndentedHelpFormatter(indent_increment=4)
         formatter.indent()
         x = self._op.format_help(formatter)

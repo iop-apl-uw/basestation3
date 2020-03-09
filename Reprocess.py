@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -60,7 +60,6 @@ from Utils import *
 import pdb
 import Sensors
 from BaseNetCDF import *
-from Enum import *
 from FileMgr import *
 import glob
 import MakeDiveProfiles
@@ -102,10 +101,6 @@ def main():
         -v, --verbose         print status messages to stdout
         -q, --quiet           don't print status messages to stdout
         --debug               log/display debug messages
-        --institution=INSTITUTION
-                              Institution field for the netCDF files
-        --disclaimer=DISCLAIMER
-                              Disclaimer field for the netCDF files
         -i INSTRUMENT_ID, --instrument_id=INSTRUMENT_ID
                               force instrument (glider) id
         --magcalfile=CALFILE  Reprocess compass headings using calfile (tcm2mat format)

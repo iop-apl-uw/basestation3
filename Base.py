@@ -1253,10 +1253,6 @@ def main():
       -v, --verbose         print status messages to stdout
       -q, --quiet           don't print status messages to stdout
       --debug               log/display debug messages
-      --institution=INSTITUTION
-                            Institution field for the netCDF files
-      --disclaimer=DISCLAIMER
-                            Disclaimer field for the netCDF files
       -i INSTRUMENT_ID, --instrument_id=INSTRUMENT_ID
                             force instrument (glider) id
       --gzip_netcdf      Do not gzip netcdf files

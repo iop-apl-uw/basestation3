@@ -34,6 +34,7 @@ import BaseOpts
 from BaseLog import *
 from BaseNetCDF import *
 from Const import *
+import Utils
 
 
 def getSGCalibrationConstants(calib_filename, suppress_required_error=False) :
@@ -161,14 +162,14 @@ def dump(in_filename, fo):
     
     calib_consts = getSGCalibrationConstants(in_filename)
 
-    for key, value in calib_consts.items():
-        print("%s = %s" % (key, value), file=fo)
-
+    if calib_consts:
+        for key, value in calib_consts.items():
+            print("%s = %s (%s)" % (key, value, type(value)), file=fo)
 
 if __name__ == "__main__":
     base_opts = BaseOpts.BaseOptions(sys.argv, 'a') # 'a' is temporary
     BaseLogger("CalibConst", base_opts) # initializes BaseLog
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opts.get_args()
 
     if (len(args)>0):
         dump(args[0], sys.stdout)

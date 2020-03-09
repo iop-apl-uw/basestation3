@@ -40,7 +40,6 @@ import pdb
 import MakeDiveProfiles
 import Sensors
 from BaseNetCDF import *
-from Enum import *
 
 def main():
     """Command line driver for creating mission profiles from single dive netCDF files
