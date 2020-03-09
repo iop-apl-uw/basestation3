@@ -134,7 +134,7 @@ def main():
     BaseLogger("Reprocess", base_opts) # initializes BaseLog
 
     Utils.check_versions()
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opts.get_args() # positional arguments
 
     if len(args) < 1 and not base_opts.mission_dir:
         print((main.__doc__))

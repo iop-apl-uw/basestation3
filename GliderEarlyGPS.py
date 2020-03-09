@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2009, 2010, 2012, 2013, 2015, 2017, 2018, 2019 by University of Washington.  All rights reserved.
+## Copyright (c) 2009, 2010, 2012, 2013, 2015, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -228,7 +228,7 @@ def main():
                                      usage="%prog [Options] --mission_dir MISSION_DIR")
     
     BaseLogger("GliderEarlyGPS", base_opts, include_time=True) # initializes BaseLog
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opts.get_args() # positional arguments
 
     log_info("Started processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
 

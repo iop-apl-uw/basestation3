@@ -1297,7 +1297,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(sys.argv, 'o')
     BaseLogger("CommLog", base_opts) # initializes BaseLog
 
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opts.get_args() # positional arguments
 
     if len(args) < 1:
         print("usage: CommLog.py logfile [latlong data file] [options]")

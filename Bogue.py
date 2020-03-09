@@ -213,7 +213,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(sys.argv, 'u',
                                      usage="%prog [Options] file [size]")
     BaseLogger("Bogue", base_opts) # initializes BaseLog
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opt.get_args() # positional arguments
 
     if (len(args)>1):
         Bogue(os.path.expanduser(args[0]), size=int(args[1]))

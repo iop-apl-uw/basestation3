@@ -60,8 +60,6 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
                                          usage="%prog [Options] ")
     BaseLogger("MakePositions", base_opts) # initializes BaseLog
 
-    args = BaseOpts.BaseOptions._args # positional arguments
-
     if(not base_opts.mission_dir):
         print((main.__doc__))
         return 1

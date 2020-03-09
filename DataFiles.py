@@ -521,7 +521,7 @@ def main():
                                      )
     BaseLogger("DataFiles", base_opts) # initializes BaseLog
     
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opt.get_args() # positional arguments
     
     if len(args) < 1:
         print((main.__doc__))

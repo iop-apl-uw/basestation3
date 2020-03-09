@@ -220,7 +220,6 @@ if __name__ == "__main__":
 
     base_opts = BaseOpts.BaseOptions(sys.argv)
     BaseLogger("BaseTime", base_opts) # initializes BaseLog
-    args = BaseOpts.BaseOptions._args # positional arguments
 
     ts_string = "Mon Jan 4 12:59:13 2007"
     time_zone = 'FOO'

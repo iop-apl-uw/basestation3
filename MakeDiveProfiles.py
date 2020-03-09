@@ -6434,7 +6434,7 @@ def main():
         except:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opts.get_args() # positional arguments
 
     if len(args) < 1 and not base_opts.mission_dir:
         print((main.__doc__))

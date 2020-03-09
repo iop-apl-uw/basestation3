@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2012, 2013, 2015 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2012, 2013, 2015, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -97,7 +97,7 @@ def main():
                                      usage="%prog [Options] <glider_id>"
                                      )
     BaseLogger("Commission", base_opts) # initializes BaseLog
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opts.get_args() # positional arguments
 
     if(len(args) < 1 or not args[0].isdigit()):
         print(main.__doc__)

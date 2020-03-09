@@ -137,7 +137,6 @@ def main():
     """
     base_opts = BaseOpts.BaseOptions(sys.argv)
     BaseLogger("Ver65Conv", base_opts) # initializes BaseLog
-    args = BaseOpts.BaseOptions._args # positional arguments
 
     file_names = get_ver_65_conv_file_names(base_opts.mission_dir)
     if(file_names):

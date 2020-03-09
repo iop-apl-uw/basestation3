@@ -115,7 +115,7 @@ if __name__ == "__main__":
                                      usage="%prog [Options] src_file, dst_file [size]")
 
     BaseLogger("Strip1A", base_opts) # initializes BaseLog
-    args = BaseOpts.BaseOptions._args # positional arguments
+    args = base_opts.get_args() # positional arguments
 
     if (len(args)>2):
         strip1A(args[0], args[1], args[2])
