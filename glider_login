@@ -28,6 +28,9 @@ if(! $?BASESTATION_PATH ) then
     set BASESTATION_PATH = "/usr/local/basestation"
 endif
 
+echo >>! glider_early_gps.log
+echo >>! glider_early_gps.log
+
 set BASELOG = glider_early_gps_`date +%y%m%d%H%M%S`
 python $BASESTATION_PATH/GliderEarlyGPS.py --daemon --mission_dir `pwd` --verbose --base_log $BASELOG  >>&!  glider_early_gps.log
 

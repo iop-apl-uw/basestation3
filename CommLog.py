@@ -307,6 +307,10 @@ class CommLog:
                     fixes += 1
                     if fixes >= n_fixes:
                         break
+                except ZeroDivisionError:
+                    drift_message = "Time delta zero - cannot calculate drift"
+                    log_error(drift_message)
+                    return drift_message
                 except:
                     drift_message = "Error calculating drift"
                     log_error(drift_message, 'exc')
@@ -1162,6 +1166,10 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
 
                     if(len(tmp) > 3):
                         session.launch_time = time.mktime(time.strptime(tmp[3].split('=')[1], '%d%m%y:%H%M%S'))
+
+                    if(call_back and 'ver' in call_back.callbacks):
+                        call_back.callbacks['ver'](session)
+
                     continue
 
                 if(raw_strs[0] == 'logged' and raw_strs[1] == 'in'):

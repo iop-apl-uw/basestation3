@@ -33,6 +33,7 @@ import Utils
 import _thread
 import Utils
 import Daemon
+import Base
 import signal
 import threading
 from stat import *
@@ -40,6 +41,9 @@ from math import *
 
 """ Runs a monitor of the comm log traffic for the duration of the call - quits on disconnect or reconnect
 """
+
+# Early process for gps - call back for ver= line in comm.log - at that point, recovery condition has been seen
+# Form up the GPS line and call proceess .pagers
 
 gliderearlygps_lockfile_name = '.gliderearlygps_lockfile'
 
@@ -119,16 +123,13 @@ class GliderEarlyGPSClient:
         """
         Called to process the comm log
         
-        returns
-            a tuple (show, status)
+        Returns
+            None
         """
         (comm_log, self._start_pos, self._commlog_session, self._commlog_linecount) = CommLog.process_comm_log(self.__comm_log_file_name, self.__base_opts, start_pos=self._start_pos, call_back=self, session=self._commlog_session, scan_back=self._first_time)
         if(comm_log is not None):
             self._last_update = time.time()
-        #if(self._recovery_msg):
-        #    self.broadcast(self._recovery_msg)
-        #self._recovery_msg = None
-        return
+        return None
 
     # CommLog callbacks
     def callback_connected(self, connect_ts):
@@ -182,6 +183,18 @@ class GliderEarlyGPSClient:
                 log_warning("counter_line callback called with empty session")
             else:
                 process_counter_line(session)
+
+    def callback_ver(self, session):
+        if not self._first_time:
+            if session is None:
+                log_warning("ver callback called with empty session")
+            else:
+                Base.process_pagers(self.__base_opts,
+                                    # Breaking encapsulation here, but okay as an initial value is set
+                                    # per the gliders home directory in CommLog.py right after the Connected
+                                    # line is seen
+                                    session._sg_id,
+                                    ('earlygps',), session=session, msg_prefix="Via GldierEarlyGPS: ")
 
 
 def process_counter_line(session, testing=False):

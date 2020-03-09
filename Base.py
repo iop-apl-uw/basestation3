@@ -22,7 +22,7 @@
 ##
 
 """
-Base.py: Main entry point for Seaglider basestation.  
+Base.py: Main entry point for Seaglider basestation.
 
 Cleans up and converts raw data files & organizes files associated
 with dive.
@@ -1000,6 +1000,7 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
                    processed_files_message=None, msg_prefix=None, crit_other_message=None, warn_message=None):
     """Processes the .pagers file for the tags specified
     """
+
     pagers_file_name = os.path.join(base_opts.mission_dir, ".pagers")
     if not os.path.exists(pagers_file_name):
         log_info("No .pagers file found - skipping .pagers processing")
@@ -1032,92 +1033,104 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
                         send_func = send_email
                         pagers_elts = pagers_elts[1:]
 
+                    tags_with_fmt = ['earlygps', 'gps', 'recov', 'critical']
+                    known_tags = ['earlygps', 'gps', 'recov', 'critical', 'drift', 'divetar', 'comp', 'alerts']
+
+                    fmt_dict = {}
                     for pagers_tag in pagers_elts:
-                        pagers_tag = pagers_tag.rstrip()
-                        if pagers_tag.lower()[0:5] == 'drift':
-                            if 'drift' in tags_to_process:
-                                if comm_log:
-                                    fmt = pagers_tag.lower()[5:]
-                                    drift_message = comm_log.predict_drift(fmt)
-                                    subject_line = "Drift"
-                                    log_info("Sending %s (%s) to %s" % (subject_line, drift_message, email_addr))
-                                    send_func(base_opts, instrument_id, email_addr, subject_line, drift_message)
-                                else:
-                                    log_warning("Internal error - no comm log - skipping drift predictions for (%s)" % email_addr)
+                        pagers_tag = pagers_tag.lstrip().rstrip().lower()
 
-                        elif pagers_tag.lower()[0:3] == 'gps' or pagers_tag.lower()[0:5] == 'recov' or pagers_tag.lower()[0:8] == 'critical':
-                            if 'gps' in tags_to_process or 'recov' in tags_to_process or 'critical' in tags_to_process:
-                                if pagers_tag.lower()[0:3] == 'gps':
-                                    fmt = pagers_tag.lower()[3:]
-                                    pagers_tag = 'gps'
-                                elif pagers_tag.lower()[0:5] == 'recov':
-                                    fmt = pagers_tag.lower()[5:]
-                                    pagers_tag = 'recov'
-                                else:
-                                    fmt = pagers_tag.lower()[8:]
-                                    pagers_tag = 'critical'
-                                fmts = fmt.split('_')
-                                dive_prefix = False
-                                if len(fmts) > 1:
-                                    if fmts[1].lower()[0:7] == 'divenum':
-                                        dive_prefix = True
-                                    fmt = fmts[0]
+                        # Strip off the format first
+                        fmt = ''
+                        for tag in tags_with_fmt:
+                            if pagers_tag.startswith(tag):
+                                fmt = pagers_tag[len(tag):]
+                                pagers_tag = tag
+                                break
 
-                                if comm_log:
-                                    gps_message, recov_code, escape_reason, prefix_str = comm_log.last_GPS_lat_lon_and_recov(fmt, dive_prefix)
-                                    reboot_msg = comm_log.has_glider_rebooted()
-                                elif session:
-                                    gps_message, recov_code, escape_reason, prefix_str = CommLog.GPS_lat_lon_and_recov(fmt, dive_prefix, session)
-                                    if msg_prefix:
-                                        gps_message = "%s%s" % (msg_prefix, gps_message)
-                                    reboot_msg = None
-                                else:
-                                    log_warning("Internal error - no comm log, session or critical message supplied - skipping (%s)" % email_addr)
-                                    continue
-
-                                if reboot_msg:
-                                    gps_message = "%s\n%s" % (gps_message, reboot_msg)
-
-                                if prefix_str:
-                                    prefix_str = " SG%03d %s" % (instrument_id, prefix_str)
-
-                                if pagers_tag.lower() == "gps":
-                                    subject_line = "GPS%s" % prefix_str
-                                elif (pagers_tag.lower() == "critical" or pagers_tag.lower() == "recov") and reboot_msg:
-                                    subject_line = "REBOOTED%s" % prefix_str
-                                elif pagers_tag.lower() == "critical" and recov_code and recov_code != 'QUIT_COMMAND':
-                                    subject_line = "IN NON-QUIT RECOVERY%s" % prefix_str
-                                elif pagers_tag.lower() == "recov" and recov_code:
-                                    subject_line = "IN RECOVERY%s" % prefix_str
-                                elif pagers_tag.lower() == "recov" and escape_reason:
-                                    subject_line = "IN ESCAPE%s" % prefix_str
-                                else:
-                                    subject_line = None
-
-                                if subject_line is not None:
-                                    log_info("Sending %s (%s) to %s" % (subject_line, gps_message, email_addr))
-                                    send_func(base_opts, instrument_id, email_addr, subject_line, gps_message)
-
-                        elif pagers_tag.lower() == 'alerts':
-                            if 'alerts' in tags_to_process:
-                                if pagers_convert_msg and pagers_convert_msg != "":
-                                    send_func(base_opts, instrument_id, email_addr, "CONVERSION PROBLEMS", pagers_convert_msg)
-                                if crit_other_message and crit_other_message != "":
-                                    send_func(base_opts, instrument_id, email_addr, "CRITICAL ERROR IN CAPTURE", crit_other_message)
-                                if warn_message and warn_message != "":
-                                    send_func(base_opts, instrument_id, email_addr, "ALERTS FROM PROCESSING", warn_message)
-
-                        elif pagers_tag.lower() == 'comp':
-                            if 'comp' in tags_to_process:
-                                if processed_files_message and processed_files_message != "":
-                                    send_func(base_opts, instrument_id, email_addr, "Processing Complete", processed_files_message)
-
-                        elif pagers_tag.lower() == 'divetar':
-                            if 'divetar' in tags_to_process:
-                                if processed_files_message and processed_files_message != "":
-                                    send_func(base_opts, instrument_id, email_addr, "New Dive Tarball(s)", processed_files_message)
-                        else:
+                        if pagers_tag not in known_tags:
                             log_error("Unknown tag (%s) on line (%s) in %s - skipping" % (pagers_tag, pagers_line, pagers_file_name))
+                            continue
+
+                        log_debug("pagers_tag:%s fmt:%s" % (pagers_tag, fmt))
+
+                        if 'drift' in tags_to_process and pagers_tag == 'drift':
+                            if comm_log:
+                                drift_message = comm_log.predict_drift(fmt)
+                                subject_line = "Drift"
+                                log_info("Sending %s (%s) to %s" % (subject_line, drift_message, email_addr))
+                                send_func(base_opts, instrument_id, email_addr, subject_line, drift_message)
+                            else:
+                                log_warning("Internal error - no comm log - skipping drift predictions for (%s)" % email_addr)
+
+                        elif pagers_tag in ('gps', 'recov', 'critical', 'earlygps') and  pagers_tag in tags_to_process:
+                            fmts = fmt.split('_')
+                            dive_prefix = False
+                            if len(fmts) > 1:
+                                if fmts[1].lower()[0:7] == 'divenum':
+                                    dive_prefix = True
+                                fmt = fmts[0]
+
+                            if comm_log:
+                                gps_message, recov_code, escape_reason, prefix_str = comm_log.last_GPS_lat_lon_and_recov(fmt, dive_prefix)
+                                reboot_msg = comm_log.has_glider_rebooted()
+                            elif session:
+                                gps_message, recov_code, escape_reason, prefix_str = CommLog.GPS_lat_lon_and_recov(fmt, dive_prefix, session)
+                                if msg_prefix:
+                                    gps_message = "%s%s" % (msg_prefix, gps_message)
+                                reboot_msg = None
+                            else:
+                                log_warning("Internal error - no comm log, session or critical message supplied - skipping (%s)" % email_addr)
+                                continue
+
+                            if reboot_msg:
+                                gps_message = "%s\n%s" % (gps_message, reboot_msg)
+
+                            if prefix_str:
+                                prefix_str = " SG%03d %s" % (instrument_id, prefix_str)
+
+                            if pagers_tag in ("gps", "earlygps"):
+                                subject_line = "GPS%s" % prefix_str
+                            elif pagers_tag in ("critical", "recov") and reboot_msg:
+                                subject_line = "REBOOTED%s" % prefix_str
+                            elif pagers_tag == "critical" and recov_code and recov_code != 'QUIT_COMMAND':
+                                subject_line = "IN NON-QUIT RECOVERY%s" % prefix_str
+                            elif pagers_tag == "recov" and recov_code:
+                                subject_line = "IN RECOVERY%s" % prefix_str
+                            elif pagers_tag == "recov" and escape_reason:
+                                subject_line = "IN ESCAPE%s" % prefix_str
+                            else:
+                                subject_line = None
+
+                            if subject_line is not None:
+                                log_info("Sending %s (%s) to %s" % (subject_line, gps_message, email_addr))
+                                send_func(base_opts, instrument_id, email_addr, subject_line, gps_message)
+
+                        elif pagers_tag == 'alerts' and 'alerts' in tags_to_process:
+                            if pagers_convert_msg and pagers_convert_msg != "":
+                                subject_line = "CONVERSION PROBLEMS"
+                                log_info("Sending %s to %s" % (subject_line, email_addr))
+                                send_func(base_opts, instrument_id, email_addr, subject_line, pagers_convert_msg)
+                            if crit_other_message and crit_other_message != "":
+                                subject_line = "CRITICAL ERROR IN CAPTURE"
+                                log_info("Sending %s to %s" % (subject_line, email_addr))
+                                send_func(base_opts, instrument_id, email_addr, subject_line, crit_other_message)
+                            if warn_message and warn_message != "":
+                                subject_line = "CRITICAL ERROR IN CAPTURE"
+                                log_info("Sending %s to %s" % (subject_line, email_addr))
+                                send_func(base_opts, instrument_id, email_addr, subject_line, warn_message)
+
+                        elif pagers_tag == 'comp' and 'comp' in tags_to_process:
+                            if processed_files_message and processed_files_message != "":
+                                subject_line = "Processing Complete"
+                                log_info("Sending %s to %s" % (subject_line, email_addr))
+                                send_func(base_opts, instrument_id, email_addr, subject_line, processed_files_message)
+
+                        elif pagers_tag == 'divetar' and 'divetar' in tags_to_process:
+                            if processed_files_message and processed_files_message != "":
+                                subject_line = "New Dive Tarball(s)"
+                                log_info("Sending %s to %s" % (subject_line, email_addr))
+                                send_func(base_opts, instrument_id, email_addr, subject_line, processed_files_message)
 
         log_info("Finished processing on .pagers")
 
