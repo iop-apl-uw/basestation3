@@ -1560,7 +1560,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
         # Verify we really haven't seen it and we have the time data we need
         if new_dive_num in flight_dive_nums or new_dive_num not in list(updated_dives_d.keys()):
             log_error('HOW CAN THIS BE?')
-            return
+            return 1
         dive_data = flight_data(new_dive_num)
         abs_compress = flight_dive_data_d['abs_compress'] # assume prevailing (default or mean) value
         if len(flight_dive_nums):
@@ -1568,7 +1568,12 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
             d_n_i = where(aflight_dive_nums < new_dive_num)[0]
             restart_from_dive_num = flight_dive_nums[d_n_i[-1]]
             # restore predicted ab and trust from restart_from_dive_num
-            mr_dives_pitches, mr_index, mr_n_inserted, last_W_misfit_RMS_dive_num, last_ab_committed_dive_num, predicted_hd_a, predicted_hd_b, predicted_hd_ab_trusted  = restart_cache_d[restart_from_dive_num]
+            log_info(restart_cache_d.keys())
+            if restart_from_dive_num in restart_cache_d.keys(): 
+                mr_dives_pitches, mr_index, mr_n_inserted, last_W_misfit_RMS_dive_num, last_ab_committed_dive_num, predicted_hd_a, predicted_hd_b, predicted_hd_ab_trusted  = restart_cache_d[restart_from_dive_num]
+            else:
+                log_error("Internal error - dive %d not in restart_cache_d - skipping FM" % restart_from_dive_num)
+                return 1
         else:
             # No dives yet so start with the defaults on this initial dive
             restart_from_dive_num = 0 # for debug below
@@ -2375,6 +2380,8 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
     #DEBUG pfdd(True) # DEBUG
     log_debug("Finished FM processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
 
+    return 0
+
 # Called as an extension or via cmdline_main() below
 def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_file_names=None, nc_files_created=None,
          processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None):
@@ -2727,17 +2734,20 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         alert_dive_num = dive_num
 
     # simulate adding one dive at a time to the FDD as if this were a deployment
+    ret_val = 0
     for new_dive_num in new_dive_nums:
         if force_alerts: # for debugging alerts
             alert_dive_num = new_dive_num
-        process_dive(base_opts, new_dive_num, updated_dives_d, alert_dive_num)
+        ret_val =  process_dive(base_opts, new_dive_num, updated_dives_d, alert_dive_num)
+        if ret_val:
+            break
     # recompute the keys() in case the process_dive() calls removed them by side-effect
     if len(list(updated_dives_d.keys())) > 0: # any residual updated files
         # in case there are no new dives but some dives were updated (via external reprocessing)
-        process_dive(base_opts, None, updated_dives_d, alert_dive_num)
+        ret_val = process_dive(base_opts, None, updated_dives_d, alert_dive_num)
 
     save_flight_database() # save any updated history, ab_grid_cache, and dive_data values
-    return 0
+    return ret_val
 
 
 def cmdline_main():
