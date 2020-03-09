@@ -72,13 +72,10 @@ def get_mission_str(dive_nc_file):
         mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring().decode('utf-8')
     return "SG%s %s" % ('%03d' % (log_id if log_id else '???', ), mission_title)
 
-def get_mission_str_comm_log(comm_log, calib_constants):
+def get_mission_str_comm_log(comm_log, mission_title):
     """ Gets common information for all plot headers
     """
     log_id = None
-    mission_title = ''
-    if('sg_cal_mission_title' in dive_nc_file.variables):
-        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring().decode('utf-8')
     for s in comm_log.sessions:
         if(s._sg_id is not None):
             log_id = s._sg_id
