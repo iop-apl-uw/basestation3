@@ -25,7 +25,7 @@
 Minimum package versions and common class definitions
 """
 
-from enum import Enum
+from enum import IntEnum
 
 # These document file format versions
 # All recorded as globals.file_version in their respective files
@@ -51,7 +51,7 @@ recommended_scipy_version = '0.13.3'
 required_scipy_sparse_version = '0.11.0'
 
 #pylint: disable=E0239
-class WhichHalf(Enum):
+class WhichHalf(IntEnum):
     """ Used for various profile processing routines
     """
     down = 1

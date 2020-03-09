@@ -130,7 +130,7 @@ class BaseOptions:
             usage - use string
         """
         if argv:
-            basestation_directory, _ = os.path.split(os.path.abspath(os.path.expanduser(argv)))
+            basestation_directory, _ = os.path.split(os.path.abspath(os.path.expanduser(argv[0])))
             BaseOptions.basestation_directory = basestation_directory # make avaiable
             sys.path.append(basestation_directory) # add path to load common basestation modules from subdirectories
 
@@ -173,6 +173,7 @@ class BaseOptions:
                 "reprocess_plots": self.reprocess_plots,
                 "reprocess_flight": self.reprocess_flight,
                 "nice": self.nice,
+                "which_half": self.which_half,
                 })
 
             op = optparse.OptionParser(usage=usage, version="%prog" + " %s" % basestation_version)
