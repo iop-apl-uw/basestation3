@@ -23,7 +23,6 @@
 
 # TODOCC
 # 1) Convert from optparse to argparse
-# 2) argv in the constructor - needed? Reconcile with the sys.argv[0] to setup the basestation directory
 
 """
   Common set of pathnames and constants for basestation code:
