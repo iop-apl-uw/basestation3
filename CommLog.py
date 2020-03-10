@@ -175,8 +175,8 @@ class CommLog:
                None if no ID found
         """
         for i in reversed(range(len(self.sessions))):
-            if(self.sessions[i]._sg_id):
-                return self.sessions[i]._sg_id
+            if(self.sessions[i].sg_id):
+                return self.sessions[i].sg_id
         return None
 
     def get_last_dive_num_and_call_counter(self):
@@ -205,8 +205,8 @@ class CommLog:
                 glider id as int, -1 for failure
         """
         for s in comm_log.sessions:
-            if(s._sg_id is not None):
-                return s._sg_id
+            if(s.sg_id is not None):
+                return s.sg_id
         return -1
 
     def last_surfacing(self):
@@ -489,7 +489,7 @@ class ConnectSession:
         self.recov_code = None
         self.escape_reason = None
         self.escape_started = None
-        self._sg_id = None
+        self.sg_id = None
         self.software_version = None
         self.software_revision = None
         self.fragment_size = None
@@ -505,7 +505,7 @@ class ConnectSession:
     def dump_contents(self, fo):
         """Dumps out the session contents, used when called manually
         """
-        print("_sg_id %s" % self._sg_id, file=fo)
+        print("_sg_id %s" % self.sg_id, file=fo)
         print("connect_ts %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.connect_ts), file=fo)
         print("disconnect_ts %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.disconnect_ts), file=fo)
         if(self.reconnect_ts):
@@ -872,7 +872,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                 except:
                     pass
                 else:
-                    session._sg_id = sg_id
+                    session.sg_id = sg_id
 
                 raw_file_lines[-1][0] = time.mktime(session.connect_ts)
 
@@ -998,7 +998,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                     #raw_file_lines[-1][0] = time.mktime(time.strptime(ts_string, "%a %b %d %H:%M:%S %Y"))
                     raw_file_lines[-1][0] = time.mktime(BaseTime.convert_commline_to_utc(ts_string, session.time_zone))
 
-                    session._sg_id = int(sg_id_tmp[0])
+                    session.sg_id = int(sg_id_tmp[0])
 
                     # RAW files uploaded to the glider
                     #Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile

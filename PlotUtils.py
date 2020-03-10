@@ -77,8 +77,8 @@ def get_mission_str_comm_log(comm_log, mission_title):
     """
     log_id = None
     for s in comm_log.sessions:
-        if(s._sg_id is not None):
-            log_id = s._sg_id
+        if(s.sg_id is not None):
+            log_id = s.sg_id
             break
     return "SG%s %s" % ('%03d' % log_id if log_id else '???', mission_title)
 
