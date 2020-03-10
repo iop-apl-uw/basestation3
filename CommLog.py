@@ -877,7 +877,10 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                 raw_file_lines[-1][0] = time.mktime(session.connect_ts)
 
                 if(call_back and 'connected' in call_back.callbacks):
-                    call_back.callbacks['connected'](connect_ts)
+                    try:
+                        call_back.callbacks['connected'](connect_ts)
+                    except:
+                        log_error("Connected callback failed", 'exc')
                 continue
             elif(raw_strs[0] == "Reconnected"):
                 reconnect_ts, time_zone = crack_connect_line(raw_line)
@@ -891,7 +894,10 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                     log_warning("Found ReConnected outside Connected: file %s, lineno %d "
                                      % (comm_log_file_name, line_count))
                 if(call_back and 'reconnected' in call_back.callbacks):
-                    call_back.callbacks['reconnected'](reconnect_ts)
+                    try:
+                        call_back.callbacks['reconnected'](reconnect_ts)
+                    except:
+                        log_error("Reconnected callback failed", 'exc')
                 continue
             elif(raw_strs[0] == "Disconnected"):
                 disconnect_ts, time_zone = crack_connect_line(raw_line)
@@ -907,14 +913,19 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                                      % (comm_log_file_name, line_count))
 
                 if(call_back and 'disconnected' in call_back.callbacks):
-                    call_back.callbacks['disconnected'](session)
-
+                    try:
+                        call_back.callbacks['disconnected'](session)
+                    except:
+                        log_error("Disconnected callback failed", 'exc')
                 session = None
                 continue
             elif(session):
                 if(crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_count, raw_line)):
                     if(call_back and 'counter_line' in call_back.callbacks):
-                        call_back.callbacks['counter_line'](session)
+                        try:
+                            call_back.callbacks['counter_line'](session)
+                        except:
+                            log_error("counter_line callback failed", 'exc')
                     continue
 
                 # Check for recovery
@@ -929,11 +940,17 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                             msg = "%s:%s" % (session.recov_code, session.eop_code)
                         else:
                             msg = parse_strs[1]
-                        call_back.callbacks['recovery'](msg)
+                        try:
+                            call_back.callbacks['recovery'](msg)
+                        except:
+                            log_error("recovery callback failed", 'exc')
                     continue
                 else:
                     if(call_back and 'recovery' in call_back.callbacks):
-                        call_back.callbacks['recovery'](None)
+                        try:
+                            call_back.callbacks['recovery'](None)
+                        except:
+                            log_error("recovery callback failed", 'exc')
                 if(parse_strs[0] == "ESCAPE_REASON"):
                     session.escape_reason = parse_strs[1]
                     continue
@@ -985,7 +1002,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                                 try:
                                     call_back.callbacks['received'](filename, filesize)
                                 except:
-                                    pass
+                                    log_error("received callback failed", 'exc')
                     continue
 
                 # Look for the [sg(id)] tag -- marks file transfer info
@@ -1018,7 +1035,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                                 try:
                                     call_back.callbacks['received'](raw_strs[10], int(raw_strs[7]))
                                 except:
-                                    pass
+                                    log_error("received callback failed", 'exc')
                             continue
 
                     # RAW files downloaded from the glider
@@ -1042,7 +1059,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                                 try:
                                     call_back.callbacks['transfered'](raw_strs[10], int(raw_strs[7]))
                                 except:
-                                    pass
+                                    log_error("transfered callback failed", 'exc')
 
                             continue
 
@@ -1082,7 +1099,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                                     try:
                                         call_back.callbacks[k](filename, transfersize)
                                     except:
-                                        pass
+                                        log_error("%s callback failed" % k, 'exc')
                         continue
 
                     if(raw_line.find("got error") > -1):
@@ -1168,8 +1185,10 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=['cmdfil
                         session.launch_time = time.mktime(time.strptime(tmp[3].split('=')[1], '%d%m%y:%H%M%S'))
 
                     if(call_back and 'ver' in call_back.callbacks):
-                        call_back.callbacks['ver'](session)
-
+                        try:
+                            call_back.callbacks['ver'](session)
+                        except:
+                            log_error("ver callback failed", 'exc')
                     continue
 
                 if(raw_strs[0] == 'logged' and raw_strs[1] == 'in'):

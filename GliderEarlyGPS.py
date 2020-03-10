@@ -43,19 +43,7 @@ from BaseLog import BaseLogger, log_info, log_warning, log_error, log_critical
 # Early process for gps - call back for ver= line in comm.log - at that point, recovery condition has been seen
 # Form up the GPS line and call proceess .pagers
 
-#TODOCC
-# 1) Try removing process_counter_finished and just catch any exceptions (needs testing on a real basestation)
-
 gliderearlygps_lockfile_name = '.gliderearlygps_lockfile'
-
-class process_counter_finished(Exception):
-    # Constructor or Initializer
-    def __init__(self, value):
-        self.value = value
-
-    # __str__ is to print() the value
-    def __str__(self):
-        return repr(self.value)
 
 class GliderEarlyGPSClient:
     """ Client to handle connection to jabber server and comm callbacks
@@ -203,7 +191,7 @@ class GliderEarlyGPSClient:
             if session is None:
                 log_warning("counter_line callback called with empty session")
             else:
-                process_counter_line(session)
+                self.process_counter_line(session)
 
     def callback_ver(self, session):
         """ Calback for comm.log ver= line
@@ -216,37 +204,35 @@ class GliderEarlyGPSClient:
                                     session.sg_id,
                                     ('earlygps',), session=session, msg_prefix="Via GldierEarlyGPS: ")
 
+    def process_counter_line(self, session, testing=False):
+        """
+        Returns True for success, False for failure
+        """
+        ret_val = None
+        if session.gps_fix is None:
+            ret_val = "No GPS fix in most recent counter line - skipping"
+        elif session.dive_num is None:
+            ret_val = "No dive number in most recent counter line - skipping"
+        elif session.logout_seen is True and testing is False:
+            #ret_val = "Logout seen - must be second counter line - skipping"
+            # Ignore second counter line
+            pass
+        else:
+            try:
+                gliderLat = Utils.ddmm2dd(session.gps_fix.lat)
+                gliderLon = Utils.ddmm2dd(session.gps_fix.lon)
+                gliderTime = time.mktime(session.gps_fix.datetime)
 
-def process_counter_line(session, testing=False):
-    """
-    Returns True for success, False for failure
-    """
+                send_str = "\"%s %s %s\"" % (Utils.format_lat_lon_dd(gliderLat, "ddmm", True),
+                                             Utils.format_lat_lon_dd(gliderLon, "ddmm", False),
+                                             time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(gliderTime)))
 
-    ret_val = None
-    if session.gps_fix is None:
-        ret_val = "No GPS fix in most recent counter line - skipping"
-    elif session.dive_num is None:
-        ret_val = "No dive number in most recent counter line - skipping"
-    elif session.logout_seen is True and testing is False:
-        #ret_val = "Logout seen - must be second counter line - skipping"
-        # Ignore second counter line
-        pass
-    else:
-        try:
-            gliderLat = Utils.ddmm2dd(session.gps_fix.lat)
-            gliderLon = Utils.ddmm2dd(session.gps_fix.lon)
-            gliderTime = time.mktime(session.gps_fix.datetime)
+                Utils.process_urls(self.__base_opts, send_str, session.sg_id, session.dive_num)
+            except:
+                ret_val = "Failed to process gps position (%s)" % traceback.format_exc()
 
-            send_str = "\"%s %s %s\"" % (Utils.format_lat_lon_dd(gliderLat, "ddmm", True),
-                                         Utils.format_lat_lon_dd(gliderLon, "ddmm", False),
-                                         time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(gliderTime)))
-
-            Utils.process_urls(base_opts, send_str, session.sg_id, session.dive_num)
-        except:
-            ret_val = "Failed to process gps position (%s)" % traceback.format_exc()
-
-    if ret_val is not None:
-        log_error(ret_val)
+        if ret_val is not None:
+            log_error(ret_val)
 
 def main():
     """ Entry point for processor
@@ -272,11 +258,10 @@ def main():
                 return 1
             base_opts.mission_dir, _ = os.path.split(comm_log_filename)
             try:
-                process_counter_line(comm_log.sessions[-1], testing=True)
-            except process_counter_finished as error:
-                if error.value != "Success":
-                    log_error("Failed to process counter line (%s)" % error.value)
-                    return 1
+                comm_log.process_counter_line(comm_log.sessions[-1], testing=True)
+            except:
+                log_error("Problem in process_counter_line", 'exc')
+                return 1
             return 0
         else:
             print((main.__doc__))
@@ -313,11 +298,9 @@ def main():
     try:
         log_info("Starting the GliderEarlyGPS client....")
         glider_client.run()
-    except process_counter_finished as error:
-        if error.value != "Success":
-            log_error("Failed to process counter line (%s)" % error.value)
     except:
         log_error("GliderEarlyGPS failed", 'exc')
+        return 1
 
     # Normally, we never get here
     Utils.cleanup_lock_file(base_opts, gliderearlygps_lockfile_name)
