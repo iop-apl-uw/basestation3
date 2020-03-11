@@ -46,12 +46,12 @@ def strip1A(in_filename, out_filename, size=0):
     """
     
     try:
-        in_file = open(in_filename, 'r')
+        in_file = open(in_filename, 'rb')
     except IOError as exception:
         log_error("Could not open %s for reading" % in_filename)
         return 1
     try:
-        out_file = open(out_filename, 'w')
+        out_file = open(out_filename, 'wb')
     except IOError as exception:
         log_error("Could not open %s for writing" % out_filename)
         return 1
@@ -69,7 +69,7 @@ def strip1A(in_filename, out_filename, size=0):
     if size != 0:
         tail_size = len(data) - size;
         if (tail_size > 0):
-            tail_padding_i_v = [i for i in range(size, len(data)) if data[i] == '\x1A']
+            tail_padding_i_v = [i for i in range(size, len(data)) if data[i] == 26]
             lost_data_size = tail_size - len(tail_padding_i_v)
             if (lost_data_size > 0): # if it isn't all padding, warn
                 log_warning('Removing %d non-padding bytes from truncated %d-byte tail of %s' % (lost_data_size, tail_size, in_filename))
@@ -87,7 +87,7 @@ def strip1A(in_filename, out_filename, size=0):
         # This prevents stripping valid singleton 0x1a chars in data blocks
         # which, yes, do happen with surprising regularity
         for i in range(0, len(data) - 1):
-            if(data[i] == '\x1A' and data[i+1] == '\x1A'):
+            if(data[i] == 26 and data[i+1] == 26):
                 if(strip1a_bytes < 0):
                     # Record the high water mark
                     strip1a_bytes = i

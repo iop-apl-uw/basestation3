@@ -75,7 +75,8 @@ def Bogue(in_filename, size=0):
 
     found_duplicates = []
     found_padding = []
-    padding = "\x1a\x1a\x1a\x1a\x1a\x1a\x1a\x1a" # 8 ^Zs
+    #padding = "\x1a\x1a\x1a\x1a\x1a\x1a\x1a\x1a" # 8 ^Zs
+    padding = bytes((26, 26, 26, 26, 26, 26, 26, 26)) # 8 ^Zs
     padding_block = padding * 16 # 128 ^Zs
 
     in_file = None
