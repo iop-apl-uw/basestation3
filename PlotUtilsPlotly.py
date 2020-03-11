@@ -149,7 +149,7 @@ def write_output_files(plot_conf, base_file_name, fig):
             #log_info("Done")
             os.remove(json_file_name)
             if ret_code:
-                log_error("%s returned %d")
+                log_error("%s returned %d" % (cmd_line, ret_code))
                 return None
             else:
                 return output_name
