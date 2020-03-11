@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2013 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -50,7 +50,6 @@ def init_logger(module_name, init_dict=None):
     register_sensor_dim_info(nc_gpctd_data_info, 'gpctd_data_point', 'gpctd_time', True, 'gpctd')
     # results are computed in MDP
     init_dict[module_name] = {'logger_prefix' : 'pc',
-                              'is_profile_ct' : True,
                               'eng_file_reader' : eng_file_reader,
                               'netcdf_metadata_adds' : {
                                   'gpctd' : [False, 'c', {'long_name':'underway thermosalinograph','nodc_name':'thermosalinograph','make_model':'pumped Seabird SBE41 (and optional pumped SBE43)'}, nc_scalar], # always scalar

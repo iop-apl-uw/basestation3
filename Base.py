@@ -439,14 +439,20 @@ def process_file_group(file_group, fragment_size, total_size, calib_consts):
         # Even if raw, logger payload files have often been moved
         # from logger to glider by xmodem, so they may well have trailing
         # 1as
-        log_debug("fragment:%s transfer:%s logger:%s" % (t, comm_log.find_fragment_transfer_method(t), fc.is_logger_payload()))
-        if(comm_log.find_fragment_transfer_method(t) == "raw" and not fc.is_logger_payload()):
+
+        # GBS 2020/03/10 - The above logic applies also to scicon/tmico/pmar files,
+        # so they all get the strip1a treatment for the last fragment only
+        log_debug("fragment:%s transfer:%s logger:%s strip_files:%s"
+                  % (t, comm_log.find_fragment_transfer_method(t), fc.is_logger_payload(), fc.is_logger_strip_files()))
+        if comm_log.find_fragment_transfer_method(t) == "raw" \
+           and not fc.is_logger_payload() \
+           and not (fc.is_logger_strip_files() and fragment == last_fragment):
             fragments_1a.append(fragment)
             continue
 
         root, ext = os.path.splitext(fragment)
         fragment_1a = root + ".1a" + ext
-        # Ignore any size issues for logger payload files
+        # Ignore any size issues for the last fragment or logger payload files
         if(fragment is last_fragment or fc.is_logger_payload()):
             ret_val = Strip1A.strip1A(fragment, fragment_1a)
         else:
@@ -1906,12 +1912,13 @@ def main():
                             else:
                                 log_info("%s was uploaded and deleted" % known_file)
 
-    # Run FlightModel here and before mission processing so combined data reflects best flight model results
-    # Run before alert processing occurs so FM complaints are reported to the pilot
-    try:
-        FlightModel.main(base_opts=base_opts, sg_calib_file_name=sg_calib_file_name)
-    except:
-        log_critical("FlightModel failed", 'exc')
+    if base_opts.make_dive_netCDF:
+        # Run FlightModel here and before mission processing so combined data reflects best flight model results
+        # Run before alert processing occurs so FM complaints are reported to the pilot
+        try:
+            FlightModel.main(base_opts=base_opts, sg_calib_file_name=sg_calib_file_name)
+        except:
+            log_critical("FlightModel failed", 'exc')
 
     # Run extension scripts for any new logger files
     #TODO GBS - combine ALL logger lists and invoke the extension with the complete list

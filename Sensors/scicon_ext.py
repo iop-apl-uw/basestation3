@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -124,7 +124,7 @@ def init_logger(module_name, init_dict=None):
     register_sensor_dim_info(nc_ad2cp_cell_info, nc_ad2cp_cell_dim, None, True, None)
     
     init_dict[module_name] = {'logger_prefix' : scicon_prefix,
-                              'is_profile_ct' : True,
+                              'strip_files' : True,
                               'eng_file_reader' : eng_file_reader,
                               'known_files' : ['scicon.sch', 'scicon.ins', 'scicon.att', 'scicon.tcm'],
                               'netcdf_metadata_adds' : {

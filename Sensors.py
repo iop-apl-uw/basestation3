@@ -38,7 +38,7 @@ import Utils
 
 import traceback
 
-known_logger_dict_keys = ('logger_prefix', 'netcdf_metadata_adds', 'known_files', 'known_mailer_tags', 'known_ftp_tags', 'eng_file_reader')
+known_logger_dict_keys = ('logger_prefix', 'netcdf_metadata_adds', 'known_files', 'known_mailer_tags', 'known_ftp_tags', 'eng_file_reader', 'strip_files')
 known_sensor_dict_keys = ('logger_prefix', 'netcdf_metadata_adds')
 
 def loadmodule(pathname):

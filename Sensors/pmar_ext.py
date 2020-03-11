@@ -75,7 +75,7 @@ def init_logger(module_name, init_dict=None):
         return -1
 
     init_dict[module_name] = {'logger_prefix' : pmar_prefix,
-                              'is_profile_ct' : True,
+                              'strip_files' : True,
                               'eng_file_reader' : eng_file_reader,
                               'known_files' : ['pmar.cnf', 'pmar.tgz'],
                               'netcdf_metadata_adds' : {

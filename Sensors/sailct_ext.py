@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2010, 2011, 2012 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -44,9 +44,7 @@ def init_logger(module_name, init_dict=None):
         log_error("No datafile supplied for init_loggers - version mismatch?")
         return -1
 
-    # The is_profile_ct - does this logger create a seperate eng file that contains
-    # CT data for MakeDiveProfiles.py processing
-    init_dict[module_name] = {'logger_prefix' : 'ct', 'is_profile_ct' : False}
+    init_dict[module_name] = {'logger_prefix' : 'ct'}
 
     return 1
 

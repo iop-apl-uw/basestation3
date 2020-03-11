@@ -65,6 +65,8 @@ post_proc_glob_list = ["p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].??", # .nc NetCDF f
 # These lists are built from the installed loggers
 logger_prefixes = []
 
+logger_strip_files = []
+
 def logger_init(init_dict):
     """Updates global structures based on configured loggers
 
@@ -76,6 +78,8 @@ def logger_init(init_dict):
         if('logger_prefix' in d):
             log_debug("%s prefix is %s" % (key, d['logger_prefix']))
             logger_prefixes.append(d['logger_prefix'])
+            if 'strip_files' in d and d['strip_files']:
+                logger_strip_files.append(d['logger_prefix'])
             pre_proc_glob_list.append("%s[0-9][0-9][0-9][0-9]??.???" % d['logger_prefix']) # looks for X00, etc.
             pre_proc_glob_list.append("%s[0-9][0-9][0-9][0-9]??.x" % d['logger_prefix'])
             pre_proc_glob_list.append("%s[0-9][0-9][0-9][0-9]??.PARTIAL.[0-9]" % d['logger_prefix'])
@@ -388,6 +392,11 @@ class FileCode:
         else:
             return False
 
+    def is_logger_strip_files(self):
+        if(self._filename[0:2] in logger_strip_files):
+            return True
+        else:
+            return False
         
     # File packing/compression
     def is_uncompressed(self):
