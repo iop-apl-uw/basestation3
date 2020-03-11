@@ -2779,7 +2779,7 @@ def cmdline_main():
                                      usage="%prog [Options] [basefile]")
     
     BaseLogger("FlightModel", base_opts) # initializes BaseLog
-    args = base_opt.get_args() # positional arguments
+    args = base_opts.get_args() # positional arguments
     if len(args) < 1 and not base_opts.mission_dir:
         print((cmdline_main.__doc__))
         return 1
@@ -2840,7 +2840,7 @@ if __name__ == "__main__":
             stats.sort_stats('time', 'calls')
             stats.print_stats()
         else:
-            retval = main()
+            retval = cmdline_main()
     except Exception:
         log_critical("Unhandled exception in main -- exiting")
 
