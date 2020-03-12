@@ -1542,7 +1542,7 @@ def main():
     history_logfile_name = os.path.join(base_opts.mission_dir, "history.log")
     if os.path.exists(history_logfile_name):
         try:
-            command_list_with_ts = CommLog.process_history_log(history_logfile_name, base_opts)
+            command_list_with_ts = CommLog.process_history_log(history_logfile_name)
         except:
             log_error("History file processing threw an exception - no merged file produced")
         else:
