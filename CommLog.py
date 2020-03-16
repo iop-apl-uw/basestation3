@@ -812,7 +812,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
             return (None, None, None, None)
 
         log_debug("process_comm_log starting")
-        if statinfo.st_size > start_pos:
+        if start_pos >= 0 and statinfo.st_size > start_pos:
             #print "Resetting to file pos %d" % start_pos
             comm_log_file.seek(start_pos, 0)
 
