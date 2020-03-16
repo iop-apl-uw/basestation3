@@ -82,7 +82,7 @@ from BaseLog import log_critical, log_error, log_warning, log_info, log_debug, l
 file_trans_received = "r"
 processed_files_cache = "processed_files.cache"
 known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal"]
-known_mailer_tags = ['eng', 'log', 'pro', 'bpo', 'asc', 'cap', 'comm', 'dn_kkyy', 'up_kkyy', 'nc', 'ncf', 'mission_ts', 'mission_pro']
+known_mailer_tags = ['eng', 'log', 'pro', 'bpo', 'asc', 'cap', 'comm', 'dn_kkyy', 'up_kkyy', 'nc', 'ncf', 'mission_ts', 'mission_pro', 'bz2']
 known_ftp_tags = known_mailer_tags
 skip_mission_processing = False    # Set by signal handler to skip the time consuming processing of the whole mission data
 base_lockfile_name = '.conversion_lock'
@@ -1122,7 +1122,7 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
                                 log_info("Sending %s to %s" % (subject_line, email_addr))
                                 send_func(base_opts, instrument_id, email_addr, subject_line, crit_other_message)
                             if warn_message and warn_message != "":
-                                subject_line = "CRITICAL ERROR IN CAPTURE"
+                                subject_line = "ALERTS FROM PROCESSING"
                                 log_info("Sending %s to %s" % (subject_line, email_addr))
                                 send_func(base_opts, instrument_id, email_addr, subject_line, warn_message)
 
@@ -2138,6 +2138,9 @@ def main():
     processed_file_names.append(processed_logger_other_files)
     processed_file_names = Utils.flatten(processed_file_names)
 
+    # Remove anything that is None
+    processed_file_names = [item for item in processed_file_names if item] 
+
     processed_files_msg = "Processing complete as of %s\n" % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
 
     if processed_file_names:
@@ -2208,7 +2211,7 @@ def main():
 
                 if base_opts.divetarballs > 0:
                     try:
-                        fi = open(tar_name, "r")
+                        fi = open(tar_name, "rb")
                         buff = fi.read()
                         fi.close()
                     except:
@@ -2222,7 +2225,7 @@ def main():
                                                      "p%s%03d%04d_%02d.tar.bz2" % (st, instrument_id, dive_num, ii))
 
                         try:
-                            fo = open(tar_frag_name, "w")
+                            fo = open(tar_frag_name, "wb")
                             fo.write(buff[ii * base_opts.divetarballs:
                                           (ii + 1) * base_opts.divetarballs if (ii + 1) * base_opts.divetarballs < len(buff) else len(buff)])
                             fo.close()
@@ -2388,6 +2391,11 @@ def main():
                                             if tail.lstrip('.') == mailer_tag.lower():
                                                 mailer_file_names_to_send.append(processed_file_name)
 
+                        if mailer_file_names_to_send:
+                            log_info("Sending %s" % mailer_file_names_to_send)
+                        else:
+                            log_info("No files found to send")
+
                         # Set up messsage here if there is only one message per recipient
                         if not mailer_msg_per_file:
                             if not mailer_file_in_body:
@@ -2441,35 +2449,40 @@ def main():
                                     log_error("Unable to include %s in mailer message - skipping" % mailer_file_name_to_send, 'exc')
                                     log_info("Continuing processing...")
                             else:
-                                # Message as attachment
-                                head, tail = os.path.splitext(mailer_file_name_to_send)
-                                if mailer_gzip_file:
-                                    if tail.lstrip('.').lower() != 'gz':
-                                        mailer_gzip_file_name_to_send = mailer_file_name_to_send + '.gz'
-                                        gzip_ret_val = BaseGZip.compress(mailer_file_name_to_send, mailer_gzip_file_name_to_send)
-                                        if gzip_ret_val > 0:
-                                            log_error("Problem compressing %s - skipping" % mailer_file_name_to_send)
-                                    else:
-                                        gzip_ret_val = 0
+                                try:
+                                    # Message as attachment
+                                    head, tail = os.path.splitext(mailer_file_name_to_send)
+                                    if mailer_gzip_file:
+                                        if tail.lstrip('.').lower() != 'gz':
+                                            mailer_gzip_file_name_to_send = mailer_file_name_to_send + '.gz'
+                                            gzip_ret_val = BaseGZip.compress(mailer_file_name_to_send, mailer_gzip_file_name_to_send)
+                                            if gzip_ret_val > 0:
+                                                log_error("Problem compressing %s - skipping" % mailer_file_name_to_send)
+                                        else:
+                                            gzip_ret_val = 0
 
-                                    if gzip_ret_val <= 0:
-                                        mailer_part = MIMEBase('application', 'octet-stream')
-                                        mailer_part.set_payload(open(mailer_gzip_file_name_to_send, 'rb').read())
+                                        if gzip_ret_val <= 0:
+                                            mailer_part = MIMEBase('application', 'octet-stream')
+                                            mailer_part.set_payload(open(mailer_gzip_file_name_to_send, 'rb').read())
+                                            encoders.encode_base64(mailer_part)
+                                            mailer_part.add_header('Content-Disposition', 'attachment; filename="%s"'
+                                                                   % os.path.basename(mailer_gzip_file_name_to_send))
+                                            mailer_msg.attach(mailer_part)
+                                    else:
+                                        if tail.lstrip('.').lower() == 'nc' or tail.lstrip('.').lower() == 'gz' \
+                                           or tail.lstrip('.').lower() == 'bz2':
+                                            mailer_part = MIMEBase('application', 'octet-stream')
+                                            mailer_part.set_payload(open(mailer_file_name_to_send, 'rb').read())
+                                        else:
+                                            mailer_part = MIMEBase('text', 'plain')
+                                            mailer_part.set_payload(open(mailer_file_name_to_send, 'r').read())
                                         encoders.encode_base64(mailer_part)
                                         mailer_part.add_header('Content-Disposition', 'attachment; filename="%s"'
-                                                               % os.path.basename(mailer_gzip_file_name_to_send))
+                                                               % os.path.basename(mailer_file_name_to_send))
                                         mailer_msg.attach(mailer_part)
-                                else:
-                                    if tail.lstrip('.').lower() == 'nc' or tail.lstrip('.').lower() == 'gz':
-                                        mailer_part = MIMEBase('application', 'octet-stream')
-                                        mailer_part.set_payload(open(mailer_file_name_to_send, 'rb').read())
-                                    else:
-                                        mailer_part = MIMEBase('text', 'plain')
-                                        mailer_part.set_payload(open(mailer_file_name_to_send, 'r').read())
-                                    encoders.encode_base64(mailer_part)
-                                    mailer_part.add_header('Content-Disposition', 'attachment; filename="%s"'
-                                                           % os.path.basename(mailer_file_name_to_send))
-                                    mailer_msg.attach(mailer_part)
+                                except:
+                                    log_error("Error processing %s" % mailer_file_name_to_send, 'exc')
+                                    continue
 
                             if mailer_msg_per_file:
                                 # For multiple messages per recipient, send out message here
@@ -2500,6 +2513,7 @@ def main():
                                     mailer_send_from = "sg%03d@%s" % (instrument_id, base_opts.domain_name)
                                 else:
                                     mailer_send_from = "sg%03d" % (instrument_id)
+                                log_info("Sending from %s" % mailer_send_from)
                                 try:
                                     smtp = smtplib.SMTP(mail_server)
                                     smtp.sendmail(mailer_send_from, mailer_send_to, mailer_msg.as_string())
