@@ -43,6 +43,7 @@ process_PLOTS = False
 process_NODC = False # avoid sending to NODC
 process_FLIGHT = False
 
+import cProfile
 import os
 import sys
 import traceback
@@ -421,31 +422,25 @@ def main():
                              
 
 if __name__ == "__main__":
-    import hotshot, hotshot.stats, sys, os.path
-
-
     retval = 1
-    
+
     # Force to be in UTC
     os.environ['TZ'] = 'UTC'
     time.tzset()
 
     try:
-        if(("--profile" in sys.argv) or ("--PROFILE" in sys.argv)):
-            profile_file_name = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + '_' + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())).replace(' ', '_') + ".prof"
+        if "--profile" in sys.argv:
+            sys.argv.remove('--profile')
+            profile_file_name = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + '_' \
+                + Utils.ensure_basename(time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))) + ".cprof"
             # Generate line timings
-            prof = hotshot.Profile(profile_file_name, 1, 1)
-            retval = prof.runcall(main)
-            prof.close()
-            stats = hotshot.stats.load(profile_file_name)
-            stats.strip_dirs()
+            retval = cProfile.run("main()", filename=profile_file_name)
+            stats = pstats.Stats(profile_file_name)
             stats.sort_stats('time', 'calls')
-            stats.sort_stats('cumulative')
             stats.print_stats()
         else:
             retval = main()
     except Exception:
-        log_critical("Unhandled exception in main -- exiting: %s" % traceback.format_exc()) # deliberately duplicate the exc for reuse
-       
+        log_critical("Unhandled exception in main -- exiting")
+
     sys.exit(retval)
-    
