@@ -246,7 +246,6 @@ def main():
 
     # Check for required "options"
     if base_opts.mission_dir is None:
-        #pylint: disable=R1705
         if len(args) > 0:
             # For testing, go to the last session and
             comm_log_filename = os.path.expanduser(args[0])
