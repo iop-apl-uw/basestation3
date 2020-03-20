@@ -356,7 +356,9 @@ def generate_resend(fragment_name):
         if fragment_fc.is_fragment():
             # fragments are in hex but glider code uses atoi(), which expects a decimal integer
             try:
-                tmp = int(fragment_fc.get_fragment_counter(), 16)
+                frag = fragment_fc.get_fragment_counter()
+                frag = frag.replace('k','c') # the glider encodes 'c' as 'k' to avoid modem issues
+                tmp = int(frag,16)
             except ValueError:
                 log_warning("Invalid fragment counter (%s)" % fragment_name, 'exc')
             else:

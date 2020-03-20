@@ -109,7 +109,7 @@ def trump_qc(qc):
         trump_qc_v = [QC_PROBABLY_BAD, QC_BAD, QC_UNSAMPLED]
     elif (qc == QC_PROBABLY_BAD):
         trump_qc_v = [QC_BAD, QC_UNSAMPLED]
-    elif (qc in [QC_GOOD, QC_BAD, QC_UNSAMPLED]):
+    elif (qc in [QC_GOOD, QC_PROBABLY_GOOD, QC_BAD, QC_UNSAMPLED]):
         pass # these QC values always override
     elif (qc == QC_NO_CHANGE):
         trump_qc_v = list(qc_name_d.keys()) # all values trump NO_CHANGE
