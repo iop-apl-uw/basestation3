@@ -49,7 +49,7 @@ def calc_center_freqs(rate, nfft, logmap):
         return None
     rate = float(rate)
     nfft = float(nfft)
-    nfreqs = nfft/2.0
+    nfreqs = int(nfft/2.)
     freqs = linspace(rate/nfft, rate/2.0, num=nfreqs)
     buckets = logmap.split(',')
     center_freqs = zeros(len(buckets), float64)

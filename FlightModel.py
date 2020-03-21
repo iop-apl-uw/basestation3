@@ -87,6 +87,7 @@ force_alerts = False # CONTROL test alert code for each 'new' dive
 # What should be tested, if velo is available, IN ADDITION to w vs. w_stdy (hdm_speed*sin(glide_angle))
 compare_velo = 3 # CONTROL 0 - ignore, even if present (default); 1 - use it and test velo vs. hdm_speed; 2 - use it and test w vs. velo*sin(glide_angle) 3 - method 1 and 2 combined
 acceptable_w_rms = 5 # PARAMETER w_rms (cm/s) must be less than this to accept solution 
+grid_dive_sets = [] # special sets of dives to solve a/b grids (for debugging and other analysis; see rva_solve_ab.m)
 # Analysis of velocometer data suggests that the w-only solutions under-estimate hd_b by 20%
 # This parameter can be used to scale the solved predicted_hd_b just before it is delivered to MDP
 # We do it this way for several reasons:
@@ -215,6 +216,7 @@ flight_directory = None
 plots_directory = None
 flight_dive_data_filename = None
 flight_dive_data_d = None # eventually a dict: dive -> <flight_data>, 'mass', etc. assumptions
+mission_directory = None
 nc_path_format = None # set once in main()
 compress_cnf = None
 flight_consts_d = {} # an updated copy of prevailing flight constants from flight_dive_data_d, etc. required by hydro_model()
@@ -609,6 +611,8 @@ def get_flight_parameters(dive_num, base_opts, sg_calib_constants_d):
         
         return # we have no vehicle specific data (yet)
     flight_dive_nums = flight_dive_data_d['dives']
+    log_debug("flight_dive_nums : %s" % flight_dive_nums)
+
     # Find the dive_data that is most-recent to the given dive_num (since this might be a new dive)
     d_n = None
     if len(flight_dive_nums):
@@ -736,7 +740,7 @@ def dump_fm_values(dive_data):
 # Given a dive_data instance, open the nc file and load the vectors and other data we need for regression processing
 # make if data is ok and avoid loading again if known bad
 def load_dive_data(dive_data):
-    global nc_path_format, angles, compare_velo
+    global nc_path_format, angles, compare_velo, mission_directory
     data_d = None
     if dive_data.dive_data_ok is False:
         # tried this before and it failed
@@ -854,9 +858,24 @@ def load_dive_data(dive_data):
         # Cannot be salinity_raw_qc because apogee, surface, are not removed
         salinity_qc = decode_qc(dive_nc_file.variables['salinity_qc'])
         n_velo = 0
+        correct_aoa_velo = True # whether speed needs angle of attack correction
         if compare_velo:
-            velo_speed = dive_nc_file.variables['velo_speed'][:]
-            n_velo = len(where(isfinite(velo_speed))[0]) # will be nonzero only when compare_velo and data was recorded
+            try:
+                velo_speed = dive_nc_file.variables['velo_speed'][:]
+                n_velo = len(where(isfinite(velo_speed))[0]) # will be nonzero only when compare_velo and data was recorded
+            except KeyError:
+                # no velo data in the nc file (from onboard data
+                # see of there is a velo mat file (from tracking range)
+                velo_pathname = os.path.join(mission_directory,'velo_%d.mat' % dive_num)
+                try:
+                    velo_data_d = sio.loadmat(velo_pathname);
+                    velo_speed = velo_data_d['velo_speed']
+                    velo_speed = reshape(velo_speed,np,1)
+                    correct_aoa_velo = False # externally measured
+                except:
+                    pass
+                else:
+                    n_velo = len(where(isfinite(velo_speed))[0]) # will be nonzero only when compare_velo and data was recorded
 
 
         # if we have a mis-estimate of the flight model parameters, notably volmax/vbdbias, etc
@@ -949,8 +968,13 @@ def load_dive_data(dive_data):
             dive_data.bottom_rho0 = max(density_insitu)
             eng_vbd_cc = eng_vbd_cc[valid_i]
             if compare_velo:
-                data_d['n_velo'] = n_velo # really only n_valid points
-                data_d['velo_speed'] = velo_speed[valid_i]
+                if n_velo:
+                    n_velo = len(valid_i)
+                    data_d['velo_speed'] = velo_speed[valid_i]
+                else:
+                    data_d['velo_speed'] = array([])
+                data_d['n_velo'] = n_velo
+                data_d['correct_aoa_velo'] = correct_aoa_velo
                 
             vbd0 = volmax + vbd_neutral  # [cc] volume when at neutral
             # deliberately no vbdbias here!! see calls to w_rms_func() and updates in solve_ab_grid()
@@ -1057,8 +1081,9 @@ def w_rms_func(vbdbias,a,b,abs_compress, # these variables can be varied by vari
             # velo_speed_measured = velo_speed_true*cos(aoa), so velo_speed_true = velo_speed_measured/cos(aoa)
             # aoa is typicaly 2-3 degrees so 1/cos(aoa) ~ 1.0008 increase
             velo_speed = copy.copy(dive_data_d['velo_speed']) # don't update velo speed data
-            aoa_radians_v = hdm_glide_angle_rad_v[valid_i] - radians(pitch[valid_i])
-            velo_speed[valid_i] *= 1/cos(aoa_radians_v)
+            if dive_data_d['correct_aoa_velo']:
+                aoa_radians_v = hdm_glide_angle_rad_v[valid_i] - radians(pitch[valid_i])
+                velo_speed[valid_i] *= 1/cos(aoa_radians_v)
             if compare_velo == 1 or compare_velo == 3:
                 # The velocometer operates like an ADCP with 3 sensors that integrate directional water speeds so no off axis issue
                 v_rms = rms(velo_speed[valid_i] - hdm_speed_cm_s_v[valid_i])
@@ -1223,12 +1248,20 @@ def solve_ab_grid(dive_set,reprocess_count,dive_num=None):
     for vector_name in dive_data_vector_names:
         combined_data_d[vector_name] = []
     n_velo = True
+    correct_aoa_velo = False
     for dive_set_num in dive_set:
         dd = flight_dive_data_d[dive_set_num]
         # NOTE we used to cache this data in a dive_cache_d but not really worth it?
         dive_data_d = load_dive_data(dd) # load data
+        if dd.dive_data_ok is False:
+            log_error("Dive %d is marked as not okay - skipping grid solution!" % dive_set_num, alert=True)
+            return (None, None, None)
+        if not dive_data_d:
+            log_error("Failed to load dive %d data - skipping grid solution!" % dive_set_num, alert=True)
+            return (None, None, None)
         if compare_velo and not dive_data_d['n_velo']:
-            n_velo = False
+            n_velo = False # a dive is missing velo points
+            correct_aoa_velo = dive_data_d['correct_aoa_velo']
         abs_compress = concatenate((abs_compress, dd.abs_compress*ones(dd.n_valid)))
         for vector_name in dive_data_vector_names:
             data_vector = copy.copy(dive_data_d[vector_name])
@@ -1236,6 +1269,7 @@ def solve_ab_grid(dive_set,reprocess_count,dive_num=None):
                 data_vector -= dd.vbdbias # apply per-dive vbdbias to copy so any cache is not poisoned
             combined_data_d[vector_name].extend(data_vector) 
     combined_data_d['n_velo'] = n_velo # A boolean about whether velo data is available for all valid points for all dives
+    combined_data_d['correct_aoa_velo'] = correct_aoa_velo # A boolean about whether velo data needs aoa correction for all dives
     
     # convert to numpy arrays
     for vector_name in dive_data_vector_names:
@@ -1387,8 +1421,8 @@ def solve_ab_DAC(dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
     # load_dive_data_DAC() ensures these are present
     ctd_delta_time_s_v = dive_data_d['delta_time_s']
     head_polar_rad_v  = dive_data_d['polar_heading']
-    dive_delta_GPS_lat_m = dive_data_d['GPS_east_displacement_m']
-    dive_delta_GPS_lon_m = dive_data_d['GPS_north_displacement_m']
+    dive_delta_GPS_lat_m = dive_data_d['GPS_north_displacement_m']
+    dive_delta_GPS_lon_m = dive_data_d['GPS_east_displacement_m']
     total_flight_and_SM_time_s = dive_data_d['total_flight_time_s']
 
     na = len(hd_a_grid)
@@ -1528,9 +1562,10 @@ glider_mission_string = None
 # if you loop over other dives use d_n as the iterator variable
 def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
-    global flight_dive_data_d, flight_directory, nc_path_format, flight_consts_d, angles, HIST, enable_reprocessing_dives
+    global flight_dive_data_d, flight_directory, mission_directory, nc_path_format, flight_consts_d, angles,HIST, enable_reprocessing_dives
     global glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, ab_grid_cache_d, restart_cache_d
     global font, HD_A, HD_B, w_misfit_rms_levels, prev_w_misfit_rms_levels, glider_mission_string, generate_figures, show_implied_c_vbd
+
     # unpack some operational constants
     ac_min_press = flight_dive_data_d['ac_min_press']
     mass_comp = flight_dive_data_d['mass_comp']
@@ -1595,6 +1630,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
         flight_dive_data_d[new_dive_num] = dive_data
         flight_dive_nums.append(new_dive_num)
         flight_dive_nums.sort() # in place update
+        #log_info("updated flight_dive_nums:%s" % flight_dive_nums)
         aflight_dive_nums = array(flight_dive_nums) # update aflight_dive_nums for this call (append not seen by array)
     else:
         if len(flight_dive_nums) == 0:
@@ -1609,7 +1645,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
     while dives_reprocessed:
         reprocess_count += 1
-        if reprocess_count > 3: # HACK in case we don't get the termination conditions stable
+        if reprocess_count > 6: # HACK in case we don't get the termination conditions stable
             log_error("Potential infinite loop?")
             # map over any dives in flight_dive_nums that have an entry in updated_dives_d
             # and update their updated time and remove from updated without processing
@@ -1628,7 +1664,14 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
         log_debug("Started FM processing %d at %s" %(reprocess_count, time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))))
 
+        log_info("updated_dives:%s" % updated_dives_d.keys())
+        log_info("flight_dive_nums:%s" % flight_dive_nums)
         dives_to_update = sorted(intersect1d(list(updated_dives_d.keys()), flight_dive_nums))
+        dives_to_update.sort() # ensure in order
+        log_info("dives_to_update:%s" % dives_to_update)
+        if not dives_to_update:
+            log_error("No dives_to_update - bailing out of process_dive")
+            return 1
         first_dive_to_update = dives_to_update[0]
         d_n_i = where(aflight_dive_nums < first_dive_to_update)[0]
         if len(d_n_i): # there was a dive before the earliest dive to update
@@ -1897,6 +1940,9 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                 # Now we have a set of dives to run 'regress_vbd' on over a fixed grid for cross-group and mission comparison 
                 # compute a new ab grid solution
                 W_misfit_RMS, ia, ib = solve_ab_grid(dive_set, reprocess_count, dive_num)
+                if W_misfit_RMS is None:
+                    log_warning('Grid solution failed - ignoring!')
+                    continue
                 min_misfit = W_misfit_RMS[ib, ia]
                 if min_misfit > acceptable_w_rms:
                     # This could happen if we have some poisoned dive (bad CT, etc.) that stalls all solutions, for example
@@ -2347,13 +2393,15 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                 # time.strftime("%d%b%Y_%H%M%S", time.gmtime(time.time()))
                 Utils.run_cmd_shell('python %s --force -v --mission_dir %s %s  > %s 2>&1' %
                                     (os.path.join(base_opts.basestation_directory, 'Reprocess.py'),
-                                     base_opts.mission_dir, dives,
-                                     os.path.join(flight_directory, 'Reprocess_%04d.log' % max(flight_dive_nums))))
+                                     mission_directory, dives,
+                                     os.path.join(flight_directory, 'Reprocess_%04d_%.f.log' % (max(flight_dive_nums), time.time()))))
 
+                log_info("Back from Reprocess.py")
                 # update updated_dives_d with any new times for the next FM cycle
                 for d_n in reprocess_dives:
                     dd = flight_dive_data_d[d_n]
                     dive_nc_file_name = nc_path_format % d_n
+                    reprocess_error = None
                     if os.path.exists(dive_nc_file_name):
                         nc_time = os.path.getmtime(dive_nc_file_name)
                         if nc_time > dd.last_updated:
@@ -2361,14 +2409,17 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                             # force both reprocessing and scanning of this dive again
                             dives_reprocessed = True 
                             updated_dives_d[d_n] = nc_time
+                            log_info('Dive %s sucesfully processed' % d_n)
                         else:
-                            log_warning('Dive %d reprocessed but nc file was not updated?' % d_n)
-                            enable_reprocessing_dives = False
-                            dd.dive_data_ok = False
+                            reprocess_error = 'Dive %d reprocessed but nc file was not updated?'
                     else:
-                        log_warning('Dive %d reprocessed but nc file now missing?' % d_n)
-                        enable_reprocessing_dives = False
-                        dd.dive_data_ok = False
+                        reprocess_error = 'Dive %d reprocessed but nc file now missing?'
+
+                    if reprocess_error is not None:
+                        log_error(reprocess_error % d_n)
+                        enable_reprocessing_dives = False # don't do this again...
+                        dd.dive_data_ok = False # skip this dive until it is reprocessed by someone else
+                save_flight_database(dump_mat=False) # save any updated data after reprocessing
 
 
     # BREAK done with reprocessing dives
@@ -2395,9 +2446,9 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    global flight_dive_data_d, flight_directory, plots_directory, nc_path_format, flight_consts_d, compress_cnf, enable_reprocessing_dives
+    global flight_dive_data_d, flight_directory, mission_directory, plots_directory, nc_path_format, flight_consts_d, compress_cnf, enable_reprocessing_dives
     global dump_fm_files, old_basestation, glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, sg_hd_s, hd_s_assumed_q
-    global ab_grid_cache_d, restart_cache_d, angles, grid_spacing_keys
+    global ab_grid_cache_d, restart_cache_d, angles, grid_spacing_keys, grid_dive_sets, dump_checkpoint_data_matfiles
     
     if(base_opts is None):
         base_opts = BaseOpts.BaseOptions(sys.argv, 'g',
@@ -2405,6 +2456,14 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     BaseLogger("FlightModel", base_opts) # initializes BaseLog
 
     Utils.check_versions()
+
+    if not mission_directory:
+        mission_directory = base_opts.mission_dir
+
+    if not mission_directory:
+        log_error("mission directory not set - bailing out")
+        return 1
+
     # DEBUG log_info("Matplotlib version %s" % matplotlib.__version__)
     if True:
         # update global variables from cnf file(s)
@@ -2417,29 +2476,30 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         cp = configparser.RawConfigParser({})
         try:
             files = cp.read([os.path.join(base_opts.basestation_directory, cnf_file),
-                             os.path.join(base_opts.mission_dir, cnf_file)])
+                             os.path.join(mission_directory, cnf_file)])
         except:
             # One way to get here is to have continuation lines on an entry 
             # that are not indented by a single space AND have a colon somewhere in the line
             # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
             # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
             log_warning('Problems reading information from %s' % cnf_file) # problems...
+        else:
+            globs = globals() # we will update globals() as a side effect below
+            for pair in cp.items('FlightModel'):
+                name,value = pair
+                try:
+                    ovalue = globs[name]
+                except KeyError:
+                    log_error('Unknown parameter %s' % name)
+                    continue
+                try:
+                    evalue = eval(value) # can't use = in expressions to eval
+                except:
+                    log_error(' Unable to interpret %s as a value for %s' % (value,name)) 
+                    continue
+                log_info(' Updating %s from %s to %s' % (name,ovalue,evalue)) # echo to log file
+                globs[name] = evalue
 
-        globs = globals() # we will update globals() as a side effect below
-        for pair in cp.items('FlightModel'):
-            name, value = pair
-            try:
-                ovalue = globs[name]
-            except KeyError:
-                log_error('Unknown parameter %s' % name)
-                continue
-            try:
-                evalue = eval(value) # can't use = in expressions to eval
-            except:
-                log_error(' Unable to interpret %s as a value for %s' % (value, name)) 
-                continue
-            log_info(' Updating %s from %s to %s' % (name, ovalue, evalue)) # echo to log file
-            globs[name] = evalue
 
     # At this point all global parameters are updated so derive things from them
     grid_spacing_keys = sorted(list(grid_spacing_d.keys()))
@@ -2472,7 +2532,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     # In case there is non-zero mass_comp
     if compress_cnf is None:
         if not old_basestation:
-            compress_cnf, _ = Utils.read_cnf_file('compress.cnf', mission_dir=base_opts.mission_dir, encode_list=False, lower=False)
+            compress_cnf,_ = Utils.read_cnf_file('compress.cnf',mission_dir=mission_directory,encode_list=False,lower=False)
         if compress_cnf:
             # T and P are already floats; convert A and B strings to lists of floats
             for tag in ['A', 'B']:
@@ -2492,11 +2552,11 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
 
     # We need to supply missing defaults to sg_calib_constants_d, which depend on the type of vehicle, etc.
     # we use either stored assumptions from a past analysis or discover them from the first 1
-    nc_path_format = os.path.join(base_opts.mission_dir, 'p%03d%%04d.nc' % int(sg_calib_constants_d['id_str']))
+    nc_path_format = os.path.join(mission_directory, 'p%03d%%04d.nc' % int(sg_calib_constants_d['id_str']))
     load_flight_database(base_opts, sg_calib_constants_d, verify=False, create_db=False) # load the db, if any
 
     if generate_figures and copy_figures_to_plots:
-        plots_directory = os.path.join(base_opts.mission_dir, 'plots')
+        plots_directory = os.path.join(mission_directory, 'plots')
         if not os.path.exists(plots_directory):
             plots_directory = None
 
@@ -2538,8 +2598,10 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         if sim_w:
             deck_dives = True
         has_gpctd = False # for the moment, since they are rare
-        if not 'velo_speed' in dive_nc_file.variables:
-            # if it is present then use default CONTROL value in main globals declaration
+        if compare_velo < 0:
+            compare_velo = abs(compare_velo) # trust but don't verify
+        elif compare_velo and not 'velo_speed' in dive_nc_file.variables:
+            # if data is present then use default CONTROL value in main globals declaration
             # otherwise disable velo comparison
             compare_velo = 0
         try:
@@ -2701,6 +2763,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     hd_a_grid = flight_dive_data_d['hd_a_grid']
     hd_b_grid = flight_dive_data_d['hd_b_grid']
     flight_dive_nums = flight_dive_data_d['dives'] # updated by side-effect
+    log_debug("flight_dive_nums : %s" % flight_dive_nums)
 
     if reinitialized:
         log_info('Flight model version: %.2f; glider_type=%d' % (fm_version, glider_type))
@@ -2735,20 +2798,34 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
 
     # simulate adding one dive at a time to the FDD as if this were a deployment
     ret_val = 0
+    log_debug("Starting main loop")
     for new_dive_num in new_dive_nums:
+        log_info("Main loop dive %d" % new_dive_num)
         if force_alerts: # for debugging alerts
             alert_dive_num = new_dive_num
         ret_val =  process_dive(base_opts, new_dive_num, updated_dives_d, alert_dive_num)
         if ret_val:
+            log_error("process_dive returned %d - bailing out" % ret_val)
             break
-    # recompute the keys() in case the process_dive() calls removed them by side-effect
-    if len(list(updated_dives_d.keys())) > 0: # any residual updated files
-        # in case there are no new dives but some dives were updated (via external reprocessing)
-        ret_val = process_dive(base_opts, None, updated_dives_d, alert_dive_num)
+    log_debug("Main loop ended")
+    if not ret_val:
+        # recompute the keys() in case the process_dive() calls removed them by side-effect
+        if len(list(updated_dives_d.keys())) > 0: # any residual updated files
+            # in case there are no new dives but some dives were updated (via external reprocessing)
+            log_debug("Processing remaining dives %s" % list(updated_dives_d.keys()))
+            ret_val = process_dive(base_opts, None, updated_dives_d, alert_dive_num)
+            log_debug("Done processing remaining dives")
 
     save_flight_database() # save any updated history, ab_grid_cache, and dive_data values
-    return ret_val
 
+    if not ret_val and len(grid_dive_sets):
+        # now that everything is buttoned up try solving these grids the user is interested in
+        dump_checkpoint_data_matfiles = True
+        for dive_set in grid_dive_sets:
+            if all(map(lambda d: d in flight_dive_data_d, dive_set)):
+                log_info('Solving a/b grid for %s' % dive_set)
+                solve_ab_grid(dive_set,99)
+    return ret_val
 
 def cmdline_main():
     """Command line driver for updateing flight model data
@@ -2775,6 +2852,7 @@ def cmdline_main():
         0 - success
         1 - failure
     """
+    global mission_directory
     base_opts = BaseOpts.BaseOptions(sys.argv, 'd',
                                      usage="%prog [Options] [basefile]")
     
@@ -2785,10 +2863,10 @@ def cmdline_main():
         return 1
 
     if(base_opts.mission_dir):
-        mission_dir = os.path.expanduser(base_opts.mission_dir)
-        base_opts.mission_dir = mission_dir
-        if (not os.path.isdir(mission_dir)):
-            log_error("Directory %s does not exist -- exiting" % mission_dir)
+        mission_directory = os.path.expanduser(base_opts.mission_dir)
+        base_opts.mission_dir = mission_directory
+        if (not os.path.isdir(mission_directory)):
+            log_error("Directory %s does not exist -- exiting" % mission_directory)
             return 1
     else:
         log_error("No --mission_dir specified")

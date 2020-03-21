@@ -223,9 +223,9 @@ def main():
 
             for dive_num in expanded_dive_nums:
                 # Include only valid dive files
-                glob_expr = ("p*%04d.log" % dive_num,
-                             "p*%04d.eng" % dive_num,
-                             "p*%04d.nc"  % dive_num,
+                glob_expr = ("p[0-9][0-9][0-9]%04d.log" % dive_num,
+                             "p[0-9][0-9][0-9]%04d.eng" % dive_num,
+                             "p[0-9][0-9][0-9]%04d.nc"  % dive_num,
                              # "p*%s.nc.gz" % dive_num,
                              )
                 for g in glob_expr:
@@ -235,6 +235,7 @@ def main():
                         head, tail = os.path.splitext(os.path.abspath(match))
                         dive_list.append(head)
                 dive_list = sorted(Utils.unique(dive_list))
+            log_info("Reprocessing dives %s" % dive_list) 
         else:
             log_info("Making profiles for all dives in %s" % base_path)
             dive_list = full_dive_list

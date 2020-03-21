@@ -547,6 +547,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
 
 
         # various biases, offsets, and control parameters
+        'apogee_speed': 0.0, # [cm/s] typically 8.0 cm/s
         'vbdbias': 0.0, # [cc]
         'sbe_temp_freq_offset': 0, # temp frequency offset
         'temp_bias': 0, #  [deg]
@@ -1278,7 +1279,7 @@ def compute_dac(north_displacement_m_v, east_displacement_m_v,
 def compute_lat_lon(dac_east_speed_m_s, dac_north_speed_m_s,
                     GPS2_lat_dd, GPS2_lon_dd,
                     east_displacement_m_v, north_displacement_m_v,
-                    delta_time_s_v, dive_mean_lon_fac):
+                    delta_time_s_v, dive_mean_lat_factor):
     # Calculate the lat/lon for each sample
 
     # Convert the DAC to polar co-ords to get the magntitude and direction
@@ -1292,7 +1293,7 @@ def compute_lat_lon(dac_east_speed_m_s, dac_north_speed_m_s,
     east_corr_displacement_m_v  = scipy.integrate.cumtrapz(east_corr_displacement_m_v, initial=0.0)
 
     dive_pos_lat_dd_v = GPS2_lat_dd + (north_corr_displacement_m_v / m_per_deg)
-    dive_pos_lon_dd_v = GPS2_lon_dd + (east_corr_displacement_m_v / (m_per_deg * dive_mean_lon_fac))
+    dive_pos_lon_dd_v = GPS2_lon_dd + (east_corr_displacement_m_v / (m_per_deg * dive_mean_lat_factor))
     lon_np = len(dive_pos_lon_dd_v)
     # Moving from western hemisphere to eastern hemisphere?
     hemi_i_v = [i for i in range(lon_np) if dive_pos_lon_dd_v[i] >  180.0]
@@ -1957,7 +1958,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                     continue
                 ###log_info("nc_info_d = %s" % nc_info_d)
                 if(nc_data is None):
-                    log_error("Could not process %s - not including in the profile" % file_type)
+                    log_error("Could not process %s - not including in the profile" % file_type, 'exc')
                     continue
 
                 for var, nc_entry in list(nc_data.items()):
@@ -2545,6 +2546,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         gc_end_secs = array(log_f.gc_data['end_secs'])
         gc_vbd_secs = array(log_f.gc_data['vbd_secs'])
         gc_vbd_ctl  = array(log_f.gc_data['vbd_ctl'])
+        gc_pitch_secs = array(log_f.gc_data['pitch_secs']) # How long any pitch ran
         num_gc_events = len(gc_st_secs)
 
         # BUG? do we want apogee_pump_start_time to be the nearest SAMPLE time or the actual time?
@@ -2768,10 +2770,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # Respecting all these observations, we actually get quite close
             # (<<1CC except for old dives during first bleed GC only).  Any thus
             # we can feel confident in providing the eng_vbdCC variable
-
             gc_roll_ad = array(log_f.gc_data['roll_ad']) # Where the roll system was at the end of a GC
             gc_roll_secs = array(log_f.gc_data['roll_secs']) # How long any roll ran
-            gc_pitch_secs = array(log_f.gc_data['pitch_secs']) # How long any pitch ran
 
             # Map over each GC and determine the starting and ending AD and the starting and ending time of the VBD move, if any
             n_gc = num_gc_events*2
@@ -2873,7 +2873,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             for st_i in range(0, n_gc-1):
                 en_i = st_i + 1
                 # Too expensive:
-                # DEAD sg_i_v = filter(lambda i:sg_epoch_time_s_v[i] >= gc_vbd_times_v[st_i] and sg_epoch_time_s_v[i] <= gc_vbd_times_v[en_i], xrange(last_gc_i,sg_np))
+                # DEAD sg_i_v = list(filter(lambda i:sg_epoch_time_s_v[i] >= gc_vbd_times_v[st_i] and sg_epoch_time_s_v[i] <= gc_vbd_times_v[en_i], xrange(last_gc_i,sg_np)))
                 # Open-code instead to make linear
                 sg_i_v = []
                 for i in range(last_gc_i, sg_np):
@@ -3869,7 +3869,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     last_i = break_i # move along
 
         assert_qc(QC_BAD, cond_cor_qc_v, slow_apogee_pump_i_v, 'slow apogee CT flow')
-        #DEAD apogee_pump_i_v = None # done with this intermediate (but not slow_apogee_i_v)
+        #DEAD apogee_pump_i_v = None # done with this intermediate (but not slow_apogee_pump_i_v)
 
         # look for points where we might have been stuck on the bottom
         stuck_i_v = []
@@ -4292,6 +4292,125 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             CTD_qc = QC_BAD
             hdm_qc = QC_BAD
 
+        apogee_speed = calib_consts['apogee_speed'] # m/s
+        if (hdm_qc == QC_GOOD) and apogee_speed > 0:
+            # CONSTANT ACCELERATION
+
+            # Do this after TSV since it only deals with steady flight and assumes these bits can be ignored.
+            # Here we fit accelerations to match those found speeds at the end of flare and the start of steady climb
+            # Stricly speaking the VBD system is running and the buoyancy forcing is changing linearly this so is the acceleration (F=ma)
+            # so velocity is actually increasing quadratically but it appears dampened so we approximate by constants
+
+            # TODO how should we treat salinity?  Do we do this before we call TSV and so let TSV solve for flare/apogee points?
+            # Probably not since TSV will see slow speeds and declare stalled soon enough with no gain
+            # so we'll have to 'patch' salinity and salinity_qc here--if acceleration model is on, patch things?
+
+            def constant_acceleration(interval_i_v,from_speed,to_speed,acceleration_type):
+                if len(interval_i) < 2:
+                    log_error('Unable to determine suitable interval for %s' % acceleration_type)
+                    return
+                start_i = interval_i[0]
+                end_i   = interval_i[-1]
+                a = np.polyfit([ctd_epoch_time_s_v[start_i],ctd_epoch_time_s_v[end_i]],[from_speed, to_speed],1)
+                a[1] = 0
+                # TODO what about updating gsm_speed_cm_s_v?  One problem is that the from/to speeds are sampled from hdm_speed_cm_s_v
+                # which would mix concerns.
+                hdm_speed_cm_s_v[interval_i] = np.polyval(a,ctd_epoch_time_s_v[interval_i] - ctd_epoch_time_s_v[start_i]) + from_speed
+                assert_qc(QC_PROBABLY_GOOD,speed_qc_v,interval_i,
+                          '%s (%.4f cm/s/s for %.1fs)' % (acceleration_type,a[0],(ctd_epoch_time_s_v[end_i] - ctd_epoch_time_s_v[start_i])))
+                hdm_glide_angle_rad_v[interval_i] = np.radians(ctd_vehicle_pitch_degrees_v[interval_i]) # an approximation
+
+
+            # Flare interval
+            # TODO the flare_onset_time and initial_pump_start factors are empirically derived for a Seaglider VBD engine
+            # since the DG VBD engine is slower must lengthen them; make available via sg_calib_constants?
+            flare_onset_time = 15 # PARAMTER about 10s before we go negative we nevertheless begin to settle in the water and start accelerating
+            flare_pitchup_angle = -40 # PARAMETER the pitch angle below which we 'trust' the HDM speed estimate
+            flare_below_sfc = 2.0 # PARAMETER when the vehicle has left the surface (assuming vehicle pressure is tared)
+
+            flare_gc_i = 0 # when we start the bleed but not when we start accelerating off the sfc
+            flare_pitch_gc_i = 1
+            went_negative_i = np.where(ctd_depth_m_v >= flare_below_sfc)[0][0]
+            st_flare_i = np.where(ctd_epoch_time_s_v >= (ctd_epoch_time_s_v[went_negative_i] - flare_onset_time))[0]
+            if len(st_flare_i):
+                st_flare_i = st_flare_i[0]
+            else:
+                st_flare_i = 0
+            flare_i = st_flare_i # start flare here for DAC
+            # BUG: Possible that she could pitch up prematurely before bleed is finished (2nd GC)
+            # if it looks like she got below D_FLARE before finishing first bleed (high seas)
+            ed_flare_i = list(filter(lambda t_i: ctd_vehicle_pitch_degrees_v[t_i] > flare_pitchup_angle and speed_qc_v[t_i] == QC_GOOD, range(ctd_np)))
+            ed_flare_i = ed_flare_i[0]
+            interval_i = range(st_flare_i,ed_flare_i+1)
+            # update the speed and an approximate glide angle (so we can compute a plausible horizontal displacement below)
+            constant_acceleration(interval_i,0.0,hdm_speed_cm_s_v[ed_flare_i],'flare acceleration')
+
+            two_step_appoximation = True
+            # Remove points from slow_apogee_pump_i_v from locations of accelerations since we are moving here, not stalled (for DAC)
+            # Doing this incrementally preserves QC_BAD points during LOITER
+            # Apogee interval
+            apo_loiter_s = log_f.data.get('$T_LOITER' ,0)
+            apo_pump_st_time = apogee_pump_start_time + i_eng_file_start_time # back to epoch time
+            # This is likely bad: what if we LOITER?
+            apo_pump_ed_time = start_of_climb_time    + i_eng_file_start_time - apo_loiter_s
+            # st_apo_i = np.where(ctd_epoch_time_s_v <= apo_pump_st_time)[0][-1]
+            st_apo_i = list(filter(lambda t_i: ctd_epoch_time_s_v[t_i] <= apo_pump_st_time and speed_qc_v[t_i] == QC_GOOD, range(ctd_np)))
+            if len(st_apo_i):
+                st_apo_i = st_apo_i[-1] # last good point
+                ed_apo_i = np.where(ctd_epoch_time_s_v >= apo_pump_ed_time)[0][0] # BUG actually use dz
+                apogee_start_speed = hdm_speed_cm_s_v[st_apo_i]
+                if two_step_appoximation:
+                    # The first deals with the pitch to APOGEE_PITCH and stablization
+                    # The second approximates the pump
+                    pitch_stabilization_time = 20 # 20s dampening empirical (22cc change)
+                    fraction_of_speed = 0.8 # empirical
+                    md_apo_i = np.where(ctd_epoch_time_s_v >= apo_pump_st_time + pitch_stabilization_time)[0][0] 
+                    interval_i = range(st_apo_i,md_apo_i+1)
+                    constant_acceleration(interval_i,apogee_start_speed,fraction_of_speed*apogee_start_speed,'apogee pitch deceleration')
+                    slow_apogee_pump_i_v = Utils.setdiff(slow_apogee_pump_i_v,interval_i)
+                    interval_i = range(md_apo_i,ed_apo_i+1)
+                    constant_acceleration(interval_i,fraction_of_speed*apogee_start_speed,apogee_speed,'apogee pump deceleration')
+                    slow_apogee_pump_i_v = Utils.setdiff(slow_apogee_pump_i_v,interval_i)
+                else:
+                    interval_i = range(st_apo_i,ed_apo_i+1)
+                    constant_acceleration(interval_i,apogee_start_speed,apogee_speed,'apogee deceleration')
+                    slow_apogee_pump_i_v = Utils.setdiff(slow_apogee_pump_i_v,interval_i)
+            else:
+                log_warning('Unable to compute acceleration during flare')
+
+            # Climb interval
+            # climb starts with first pump after apogee pump and LOITER (which could involve pumps and bleeds)
+            # the pitch is commanded so not in gc_pitch_secs
+            # Geoff suggests using STATE but that doesn't exist for early dives?
+            climb_gc_i = list(filter(lambda gc_i: gc_vbd_secs[gc_i] > 0 and gc_st_secs[gc_i] >= (apo_pump_ed_time + apo_loiter_s),
+                                range(num_gc_events)))
+            climb_gc_i = climb_gc_i[0]
+            climb_pump_st_time = gc_st_secs[climb_gc_i]
+            st_climb_pump_i = np.where(ctd_epoch_time_s_v >= climb_pump_st_time)[0][0]
+            # ed_climb_pump_i = np.where(ctd_epoch_time_s_v >= gc_end_secs[climb_gc_i] and speed_qc_v == QC_GOOD)[0][0]
+            ed_climb_pump_i = list(filter(lambda t_i: ctd_epoch_time_s_v[t_i] >= gc_end_secs[climb_gc_i] and speed_qc_v[t_i] == QC_GOOD, range(ctd_np)))
+            # could have a bad climb sg179_Shilshole_05Aug28_base2/p1790001 where something went wrong so speed_qc is bad
+            if len(ed_climb_pump_i):
+                ed_climb_pump_i = ed_climb_pump_i[0]
+                climb_pump_end_speed = hdm_speed_cm_s_v[ed_climb_pump_i]
+                if two_step_appoximation:
+                    # Takes a bit to get going but then takes off
+                    initial_pump_start = 60 # seconds to get going (55cc)
+                    fraction_of_speed = 1.2
+                    md_climb_pump_i = np.where(ctd_epoch_time_s_v >= climb_pump_st_time + initial_pump_start)[0][0]
+                    interval_i = range(st_climb_pump_i,md_climb_pump_i)
+                    constant_acceleration(interval_i,apogee_speed,fraction_of_speed*apogee_speed,'climb initial acceleration')
+                    slow_apogee_pump_i_v = Utils.setdiff(slow_apogee_pump_i_v,interval_i)
+                    interval_i = range(md_climb_pump_i,ed_climb_pump_i)
+                    constant_acceleration(interval_i,fraction_of_speed*apogee_speed,climb_pump_end_speed,'climb final acceleration')
+                    slow_apogee_pump_i_v = Utils.setdiff(slow_apogee_pump_i_v,interval_i)
+                else:
+                    interval_i = range(st_climb_pump_i,ed_climb_pump_i)
+                    constant_acceleration(interval_i,apogee_speed,hdm_speed_cm_s_v[ed_climb_pump_i],'climb acceleration')
+                    slow_apogee_pump_i_v = Utils.setdiff(slow_apogee_pump_i_v,interval_i)
+            else:
+                log_warning('Unable to compute acceleration during climb pump')
+
         if (hdm_qc == QC_GOOD):
             # check for stalled or stuck on bottom points
             # if there are a lot of them, then the overall hdm quality is bad
@@ -4324,7 +4443,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         hdm_horizontal_speed_cm_s_v = hdm_speed_cm_s_v*cos(hdm_glide_angle_rad_v)
         hdm_w_speed_cm_s_v = hdm_speed_cm_s_v*sin(hdm_glide_angle_rad_v)
         hdm_glide_angle_deg_v = degrees(hdm_glide_angle_rad_v)
-        if True: # DEAD?  informational only at present.  Add a result variable?
+        if False: # DEAD?  informational only at present.  Add a result variable?
             z_speed_cm_s = array(hdm_speed_cm_s_v) # copy
             z_speed_cm_s[bad_speed_i_v] = 0
             average_estimated_speed_cm_s = average(fabs(z_speed_cm_s))
@@ -4500,13 +4619,13 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             log_debug("gps_drift_time_s = %f" % gps_drift_time_s)
 
             surface_GPS_mean_lat_dd = (GPS1.lat_dd + GPS2.lat_dd)/2.0
-            surface_mean_lon_fac = math.cos(math.radians(surface_GPS_mean_lat_dd))
+            surface_mean_lat_factor = math.cos(math.radians(surface_GPS_mean_lat_dd))
 
             surface_delta_GPS_lat_dd = GPS2.lat_dd - GPS1.lat_dd
             surface_delta_GPS_lon_dd = GPS2.lon_dd - GPS1.lon_dd
 
             surface_delta_GPS_lat_m = surface_delta_GPS_lat_dd * m_per_deg
-            surface_delta_GPS_lon_m = surface_delta_GPS_lon_dd * m_per_deg * surface_mean_lon_fac
+            surface_delta_GPS_lon_m = surface_delta_GPS_lon_dd * m_per_deg * surface_mean_lat_factor
 
             log_debug("surface_delta_GPS_lat_m = %f, surface_delta_GPS_lon_m = %f" % (surface_delta_GPS_lat_m, surface_delta_GPS_lon_m))
 
@@ -4566,7 +4685,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             })
 
 
-        dive_mean_lon_fac = math.cos(math.radians(latitude))
+        dive_mean_lat_factor = math.cos(math.radians(latitude))
 
         # Estimate depth-averaged current from the difference between the
         # estimated (model-based) displacement and the actual (GPS-difference) displacement.
@@ -4606,14 +4725,14 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     dive_delta_GPS_lon_dd = -dive_delta_GPS_lon_dd
 
             dive_delta_GPS_lat_m = dive_delta_GPS_lat_dd * m_per_deg
-            dive_delta_GPS_lon_m = dive_delta_GPS_lon_dd * m_per_deg * dive_mean_lon_fac
+            dive_delta_GPS_lon_m = dive_delta_GPS_lon_dd * m_per_deg * dive_mean_lat_factor
 
             # Save intermediate calculations that went into displacement and DAC calculations
             results_d.update({
                 'delta_time_s': ctd_delta_time_s_v,
                 'polar_heading': head_polar_rad_v,
-                'GPS_east_displacement_m': dive_delta_GPS_lat_m,
-                'GPS_north_displacement_m': dive_delta_GPS_lon_m,
+                'GPS_north_displacement_m' : dive_delta_GPS_lat_m,
+                'GPS_east_displacement_m' : dive_delta_GPS_lon_m,
                 'total_flight_time_s': total_flight_and_SM_time_s,
                 })
 
@@ -4638,7 +4757,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             if dac_magnitude < depth_avg_curr_error:
                 log_warning("Estimated DAC magnitude %.1fcm/s below resolution of %.1fcm/s" % (dac_magnitude*m2cm, depth_avg_curr_error*m2cm))
                 DAC_qc = update_qc(QC_PROBABLY_BAD, DAC_qc)
-
+            log_info('DAC east: %.2f cm/s DAC north: %.2f cm/s' % (hdm_dac_east_speed_m_s*100, hdm_dac_north_speed_m_s*100))
             results_d.update({
                 'depth_avg_curr_east': hdm_dac_east_speed_m_s,
                 'depth_avg_curr_north': hdm_dac_north_speed_m_s,
@@ -4664,26 +4783,44 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             hdm_dac_north_speed_m_s = 0
 
         results_d.update({'depth_avg_curr_qc': DAC_qc,})
+        # TODO nowhere do we calculate and save the speed that includes DAC
+        # or the adjusted displacements (just the lat/lon)
 
         # We think the lat/longs are good if we have good GPS2 and DAC is plausible
         latlong_qc = QC_GOOD if GPS2.ok else QC_BAD
         latlong_qc = update_qc(DAC_qc, latlong_qc)
 
+        # There is a time lag between GPS2 time and ctd_time and a lag between the last ctd_time and GPSE time
+        # where we are 'drifting'. We assume the vehicle is under the influence of DAC.  The initial drift must be
+        # accounted for in the appropriate displacements for lat/lon (critical only in short dives).
+        # The final drift is already accounted for because it is the GPSE lat/lon.
+        initial_drift_s = 0 # assume, like we did before, that no delay happened between GPS2 and the first data point
+        if GPS2.ok:
+            initial_drift_s = ctd_epoch_time_s_v[0] - GPS2.time_s
+        # Update the initial displacement only!!
+        # This updates the vectors directly so the adjusted values are written as displacements from GPS2 not 0,0
+        gsm_east_displacement_m_v[0]  += initial_drift_s*gsm_dac_east_speed_m_s
+        gsm_north_displacement_m_v[0] += initial_drift_s*gsm_dac_north_speed_m_s
+
         gsm_lat_dd_v, gsm_lon_dd_v = \
             compute_lat_lon(gsm_dac_east_speed_m_s, gsm_dac_north_speed_m_s,
                             GPS2.lat_dd, GPS2.lon_dd,
                             gsm_east_displacement_m_v, gsm_north_displacement_m_v,
-                            ctd_delta_time_s_v, dive_mean_lon_fac)
+                            ctd_delta_time_s_v, dive_mean_lat_factor)
         results_d.update({
             'latitude_gsm': gsm_lat_dd_v,
             'longitude_gsm': gsm_lon_dd_v,
             })
 
+        # This updates the vectors directly so the adjusted values are written as displacements from GPS2 not 0,0
+        hdm_east_displacement_m_v[0]  += initial_drift_s*hdm_dac_east_speed_m_s
+        hdm_north_displacement_m_v[0] += initial_drift_s*hdm_dac_north_speed_m_s
+
         hdm_lat_dd_v, hdm_lon_dd_v = \
             compute_lat_lon(hdm_dac_east_speed_m_s, hdm_dac_north_speed_m_s,
                             GPS2.lat_dd, GPS2.lon_dd,
                             hdm_east_displacement_m_v, hdm_north_displacement_m_v,
-                            ctd_delta_time_s_v, dive_mean_lon_fac)
+                            ctd_delta_time_s_v, dive_mean_lat_factor)
         results_d.update({
             'latitude': hdm_lat_dd_v,
             'longitude': hdm_lon_dd_v,
