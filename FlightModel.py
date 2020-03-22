@@ -1946,7 +1946,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                 min_misfit = W_misfit_RMS[ib, ia]
                 if min_misfit > acceptable_w_rms:
                     # This could happen if we have some poisoned dive (bad CT, etc.) that stalls all solutions, for example
-                    log_warning('Ignoring bad grid solution!')
+                    log_warning('Ignoring bad grid solution over %s!' % dive_set)
                     continue
                 W_misfit_RMS = W_misfit_RMS - min_misfit
                 # cache to avoid this expensive calculation next time
