@@ -4584,6 +4584,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # Same thing for T_SLOITER on the surface.
             # If the combined time is > 10% of the dive time, consider it suspect
             loiter_time_s =  apo_loiter_s + sfc_loiter_s
+            #TODO - need to check the state gc table to see if the glider actually is loitering
             if (loiter_time_s > abs(total_flight_and_SM_time_s)/10):
                 log_warning("Glider loitered for %d seconds; DAC suspect." % loiter_time_s)
                 DAC_qc = update_qc(QC_PROBABLY_BAD, DAC_qc) # can't really trust the result
