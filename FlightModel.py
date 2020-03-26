@@ -104,7 +104,7 @@ show_implied_c_vbd = 0 # PARAMETER what the pilot declared is a good C_VBD at th
 fig_markersize = 7 # PARAMETER size of the markers in the eng plots
 show_previous_ab_solution = True # CONTROL show previous 0.2 cm/s and minimum ab solution contour if available
 copy_figures_to_plots = True # CONTROL add our figures to the plots subdir so IOP can see them
-generate_DAC_figures = False # CONTROL show impact of different a/b values on DAC for a dive (expensive)
+generate_dac_figures = False # CONTROL show impact of different a/b values on DAC for a dive (expensive)
 
 checkpoint_flight_dive_data = False # CONTROL incrementally checkpoint the flight db (and mat file) per processed dive
 dump_checkpoint_data_matfiles = False # CONTROL dump matlab readable checkpoint files for debugging
@@ -138,6 +138,8 @@ flush_ab_grid_cache_entries = [] # DEBUG which dives to flush and force recomput
 # At the minimum we could wait 0 dives since vbdbias is adjusted wrt to whatever value we set
 # however we should skip the first actual dive since bubbles and like need to be eliminated
 # Thus the minimum adjustment is 1 (so we if we start at 1 we'll adjust using dive 2)
+
+# NOTE: if you expect to set/override these parameters in a cnf file they must be all lower-case!!
 early_volmax_adjust = 4 # PARAMETER number of dives: adjust volmax and re-tare vbdbias values over the 'first' N dives (was 10)
 FM_default_rho0 = 1027.5 # assume constant for all missions; the scales velocity in hydro_model().  Matches MDP
 
@@ -177,7 +179,8 @@ w_rms_func_bad = 1000 # tried inf but that failed
 # PARAMETERS used to filter which data are used in regressions
 required_fraction_good = 0.5 # PARAMETER how many of the dive's original points do we require?
 non_stalled_percent = 0.8 # PARAMETER
-missing_CT_threshold = 0.5 # PARAMETER what fraction of missing CT data indicates a suspect CT record
+missing_ct_threshold = 0.5 # PARAMETER what fraction of missing CT data (nans) indicates a suspect CT record (higher permits worse records)
+ignore_salinity_qc = False # PARAMETER whether to ignore salinity qc results in nc file
 # if 0, use all original valid points else limit the points to just the 'still water' with acceleration <dw/dt>)n_dives_grid_spacing less than value cm/s2
 limit_to_still_water = 0.01 # PARAMETER 
 # Avoid acceleration because of pumping and bleeding and big rolls
@@ -284,7 +287,7 @@ def write_figure(basename,delete=False):
 
 # The memory burden of the various caches can grow large, especially when we were caching results from load_dive_data()
 # This function, which knows about the types we typically use in the program
-# returns the deep memory burden, in bytes, of an object d avoiding double counting
+# returns the deep memory burden, in bytes, of an object d, while avoiding double counting
 def deep_getsizeof(d,ids=set()):
     id_d = id(d)
     if id_d in ids:
@@ -740,7 +743,7 @@ def dump_fm_values(dive_data):
 # Given a dive_data instance, open the nc file and load the vectors and other data we need for regression processing
 # make if data is ok and avoid loading again if known bad
 def load_dive_data(dive_data):
-    global nc_path_format, angles, compare_velo, mission_directory
+    global nc_path_format, angles, compare_velo, mission_directory, missing_ct_threshold, ignore_salinity_qc
     data_d = None
     if dive_data.dive_data_ok is False:
         # tried this before and it failed
@@ -833,9 +836,12 @@ def load_dive_data(dive_data):
         # Thus we look for both quiet locations and actively expunge anti-quiet locations
         temperature_raw = dive_nc_file.variables['temperature_raw'][:]
         salinity_raw = dive_nc_file.variables['salinity_raw'][:]
-        if (float(len(where(isnan(temperature_raw))[0]))/np > missing_CT_threshold or # in case T channel is bad
-            float(len(where(isnan(salinity_raw))[0]))/np > missing_CT_threshold): # in case C channel is bad
-            log_warning("Dive %d is missing sufficient CT data" % dive_num)
+        tnan = float(len(where(isnan(temperature_raw))[0]))/np
+        snan = float(len(where(isnan(salinity_raw))[0]))/np
+        if (tnan > missing_ct_threshold or # in case T channel is bad
+            snan > missing_ct_threshold):  # in case C channel is bad
+            # report the fraction of bad points in T and S (generally they are the same)
+            log_warning("Dive %d is missing sufficient CT data (T:%.2f, S:%.2f)" % (dive_num,tnan,snan))
             raise RuntimeError
         
         density_insitu = dens(salinity_raw, temperature_raw, press)
@@ -855,8 +861,6 @@ def load_dive_data(dive_data):
         # ALTERNATIVE: just rely on w, a measured quantify, below for 'motion'
         ignore_speed_gsm = True # Originally False
         speed_gsm = dive_nc_file.variables['speed_gsm'][:]
-        # Cannot be salinity_raw_qc because apogee, surface, are not removed
-        salinity_qc = decode_qc(dive_nc_file.variables['salinity_qc'])
         n_velo = 0
         correct_aoa_velo = True # whether speed needs angle of attack correction
         if compare_velo:
@@ -877,21 +881,27 @@ def load_dive_data(dive_data):
                 else:
                     n_velo = len(where(isfinite(velo_speed))[0]) # will be nonzero only when compare_velo and data was recorded
 
-
-        # if we have a mis-estimate of the flight model parameters, notably volmax/vbdbias, etc
-        # then we will have stalled speed_hdm solutions and hence QC_PROBABLY_BAD marks in salinity_qc
-        # avoid those in the hope our searches find a better set of parameters
-        good_qc_i_v = [i for i in range(np) if salinity_qc[i] not in [QC_BAD, QC_UNSAMPLED]]
-        
         # TODO real(density_insitu)
         # Find where data was apparently good
         good_pts = zeros(np)
-        good_pts_i_v = [i for i in range(np) if isfinite(temperature_raw[i]) and
+        good_pts_i_v = list(filter(lambda i:
+                              isfinite(temperature_raw[i]) and
                               isfinite(salinity_raw[i]) and
                               (pressmin <= press[i] <= pressmax) and
                               (not n_velo or isfinite(velo_speed[i])) and
-                              mdwdt[i] <= limit_to_still_water]
-        good_pts_i_v = intersect1d(good_pts_i_v, good_qc_i_v)
+                              mdwdt[i] <= limit_to_still_water, # strictly <= so zero forces True
+                              range(np)))
+
+        npts = len(good_pts_i_v)
+        if not ignore_salinity_qc:
+            # if we have a mis-estimate of the flight model parameters, notably volmax/vbdbias, etc
+            # then we will have stalled speed_hdm solutions and hence QC_PROBABLY_BAD marks in salinity_qc
+            # avoid those in the hope our searches find a better set of parameters
+            # Cannot be salinity_raw_qc because apogee, surface, are not removed
+            salinity_qc = decode_qc(dive_nc_file.variables['salinity_qc'])
+            good_qc_i_v = list(filter(lambda i: salinity_qc[i] not in [QC_BAD,QC_UNSAMPLED],range(np)))
+            good_pts_i_v = intersect1d(good_pts_i_v,good_qc_i_v)
+
         # TODO?
         # directives = ProfileDirectives(base_opts.mission_dir,dive_num)
         # indicies_v_i = directives.eval_function('flight_model_restriction')
@@ -1562,7 +1572,7 @@ glider_mission_string = None
 # if you loop over other dives use d_n as the iterator variable
 def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
-    global flight_dive_data_d, flight_directory, mission_directory, nc_path_format, flight_consts_d, angles,HIST, enable_reprocessing_dives
+    global flight_dive_data_d, flight_directory, mission_directory, nc_path_format, flight_consts_d, angles,HIST, enable_reprocessing_dives, generate_dac_figures
     global glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, ab_grid_cache_d, restart_cache_d
     global font, HD_A, HD_B, w_misfit_rms_levels, prev_w_misfit_rms_levels, glider_mission_string, generate_figures, show_implied_c_vbd
 
@@ -1581,7 +1591,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                                               flight_dive_data_d['mission_title'])
 
     log_info("Started FM cycle %s" % new_dive_num)
-    if True: # DEBUG
+    if False: # DEBUG
         log_info("memory: fdd=%d restart=%d, grid=%d" % (deep_getsizeof(flight_dive_data_d, set()),
                                                          deep_getsizeof(restart_cache_d, set()),
                                                          deep_getsizeof(ab_grid_cache_d, set())))
@@ -1603,7 +1613,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
             d_n_i = where(aflight_dive_nums < new_dive_num)[0]
             restart_from_dive_num = flight_dive_nums[d_n_i[-1]]
             # restore predicted ab and trust from restart_from_dive_num
-            log_info(restart_cache_d.keys())
+            log_debug(restart_cache_d.keys())
             if restart_from_dive_num in restart_cache_d.keys(): 
                 mr_dives_pitches, mr_index, mr_n_inserted, last_W_misfit_RMS_dive_num, last_ab_committed_dive_num, predicted_hd_a, predicted_hd_b, predicted_hd_ab_trusted  = restart_cache_d[restart_from_dive_num]
             else:
@@ -1664,8 +1674,8 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
         log_debug("Started FM processing %d at %s" %(reprocess_count, time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))))
 
-        log_info("updated_dives:%s" % updated_dives_d.keys())
-        log_info("flight_dive_nums:%s" % flight_dive_nums)
+        log_debug("updated_dives:%s" % updated_dives_d.keys())
+        log_debug("flight_dive_nums:%s" % flight_dive_nums)
         dives_to_update = sorted(intersect1d(list(updated_dives_d.keys()), flight_dive_nums))
         dives_to_update.sort() # ensure in order
         log_info("dives_to_update:%s" % dives_to_update)
@@ -2023,7 +2033,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
                 # BUG: we compute DAC for dives in the dive set under the assumption that the current ia/ib will be their minimum
                 # but this could be false if we assign the dive to the previous min a/b below
-                if generate_DAC_figures: # implicitly generate_figures and compute_ab_grid
+                if generate_dac_figures: # implicitly generate_figures and compute_ab_grid
                     for d_n in dive_set:
                         solve_ab_DAC(d_n, W_misfit_RMS, ia, ib, min_misfit)
             
@@ -2446,7 +2456,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    global flight_dive_data_d, flight_directory, mission_directory, plots_directory, nc_path_format, flight_consts_d, compress_cnf, enable_reprocessing_dives
+    global flight_dive_data_d, flight_directory, mission_directory, plots_directory, nc_path_format, flight_consts_d, compress_cnf, enable_reprocessing_dives, generate_dac_figures
     global dump_fm_files, old_basestation, glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, sg_hd_s, hd_s_assumed_q
     global ab_grid_cache_d, restart_cache_d, angles, grid_spacing_keys, grid_dive_sets, dump_checkpoint_data_matfiles
     
@@ -2485,7 +2495,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             log_warning('Problems reading information from %s' % cnf_file) # problems...
         else:
             globs = globals() # we will update globals() as a side effect below
-            for pair in cp.items('FlightModel'):
+            for pair in cp.items('FlightModel'): # keys are stored as lowercase!!
                 name,value = pair
                 try:
                     ovalue = globs[name]
@@ -2517,7 +2527,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         return 1
 
     if not enable_reprocessing_dives:
-        generate_DAC_figures = False # need DAC input data from updated FM variables saved by v2.12
+        generate_dac_figures = False # need DAC input data from updated FM variables saved by v2.12
         
     # Collect up all the possible files and process from scatch against our dive db
     # we deliberately ignore dive_nc_filenames and nc_files_created that we are passed
@@ -2800,7 +2810,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     ret_val = 0
     log_debug("Starting main loop")
     for new_dive_num in new_dive_nums:
-        log_info("Main loop dive %d" % new_dive_num)
+        log_debug("Main loop dive %d" % new_dive_num)
         if force_alerts: # for debugging alerts
             alert_dive_num = new_dive_num
         ret_val =  process_dive(base_opts, new_dive_num, updated_dives_d, alert_dive_num)
