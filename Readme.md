@@ -1,8 +1,7 @@
-Seaglider Basestation README
-Last updated - 01/12/2011
+Seaglider Basestation Readme
 
-Operation of the basestation:
------------------------------
+# Operation of the basestation
+
 The basestation operation is designed around the following philosophy:
 
 Each Seaglider has its own logon id (see "Commissioning a new glider", below).
@@ -38,11 +37,12 @@ perform additional dive processing and also to validate various glider command
 files.  Each command line tool has a plain text documentation file in the docs
 subdirectory that provides a Unix man style doc format.
 
-Preparation of the basestation:
--------------------------------
+# Preparation of the basestation
+
 The description below assumes you are running some Linux variant as the
-basestation OS. This code has been tested on Ubuntu 12.04 (server).
-The basestation code will not work on Windows.
+basestation OS. This code has been tested on Ubuntu 18.04 (server).  It is
+possible to run the basestation code on OS X to reprocess Seaglider data.  No
+installation instructions are provided. The basestation code will not work on Windows.  
 
 The basestation depends on csh being installed on the system.  On
 Ubuntu, 'sudo apt-get install tcsh".
@@ -61,39 +61,93 @@ On Ubuntu, use "sudo dpkg-reconfigure tzdata" to set UTC as the time zone.
 
 See the release notes at the bottom for more version specific details.
 
-This version of the code has been written to python 2.7 and will not work
-with earlier versions of Python. No testing has been done against 3.X 
-(doubtful that it works).
+This version of the code has been written to and tested against python 3.7.7.
 
 See the relevant sections in the install steps on notes on packages versions.
 
-Notes on basestation code distribution:
----------------------------------------
+# Notes on basestation code distribution
 
 Depending on what terms you have received the basestation code under, you will have up
 to 2 packages:
-- Base-2.12.tgz (core basestation)
+- Base-3.01.tgz (core basestation)
 - packages.tgz (third-party code, referenced from the basestation),
 
-Installation steps
-------------------
+# Installation steps
 
-To install the basestation code, follow these steps as root:
+## Installing python
 
-1) If you have an existing installation of the basestation in /usr/local/basestation,
+It is recommended that version 3.7.7 of python be installed along the a specific set of 
+python support libraries.  The process is as follows:
+
+1. Install preliminaries
+
+```
+sudo apt-get install -y build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev \
+libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev zlib1g-dev openssl libffi-dev \
+python3-dev python3-setuptools wget
+
+```
+2. Prepare to build
+
+``` 
+mkdir /tmp/Python37
+cd /tmp/Python37
+```
+
+3. Download python source distribution and build.  Depending on your machine, this can take a while
+
+```
+wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tar.xz
+tar xvf Python-3.7.7.tar.xz
+cd /tmp/Python37/Python-3.7.7
+./configure --enable-optimizations
+make 
+sudo make altinstall
+```
+
+4. Check build and install 
+
+``` bash
+python3.7 --version
+```
+
+## Install the basestation code and python packages
+
+1. If you have an existing installation of the basestation in /usr/local/basestation,
    you should back the contents up
-2) Copy the tarball Base-2.12.tgz to /usr/local
-3) Unpack the tarball using the command "sudo tar xvzf Base-2.12.tgz"
-4) Copy the support packages tarball - packages.tgz to the /usr/local/Base-2.12 directory, and unpack,
-   using the command "sudo tar xvzf packages.tgz"
-5) In /usr/local/Base-2.12, run "sudo ./install_base.sh" to install the basestation code into /usr/local/basestation
+2. Copy the tarball Base-3.01.tgz to /usr/local
+3. Unpack the tarball using the command "sudo tar xvzf Base-3.01.tgz"
+4. Install the required python libraries
 
-6) In /usr/local/Base-2.12 run "sudo ./setup_users.sh" to setup the pilot and sg000 accounts
+```
+cd /usr/local/Base-3.01
+pip3.7 install -r requirements.txt
+```
+
+5. Install additional plotting libs
+
+```
+sudo apt-get install libgeos-dev
+pip3.7 install git+https://github.com/matplotlib/basemap.git
+```
+
+6. Installseawater routines for python (in packages tarball)
+
+	In /usr/local/Base-3.01/packages, "sudo tar xvzf seawater-1.1.tgz"
+	In /usr/local/Base-3.01/packages/seawater-1.1 run 'sudo python setup.py install'
+    Tested with version 1.1
+
+
+6. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
+   using the command "sudo tar xvzf packages.tgz"
+7. In /usr/local/Base-3.01, run "sudo ./install_base.sh" to install the basestation code into /usr/local/basestation
+
+8. In /usr/local/Base-3.01 run "sudo ./setup_users.sh" to setup the pilot and sg000 accounts
 
 -- OR --
 
-6a) As root, create a user group called gliders
-6b) Create the following users and make /bin/csh their login shell:
+8a. As root, create a user group called gliders
+8b. Create the following users and make /bin/csh their login shell:
 
 	pilot
 		- write access to all gliders directories
@@ -102,66 +156,48 @@ To install the basestation code, follow these steps as root:
 		- location of commissioning files for new gliders
 		- put into gliders group
 
-7) In /usr/local/Base-2.12 run "sudo ./copy_sg000.sh"
-8) Make sure you have Python installed.  See notes above for Python version issues.  
+9. In /usr/local/Base-3.01 run "sudo ./copy_sg000.sh"
+10) Make sure you have Python installed.  See notes above for Python version issues.  
 Use 'python --version' to determine the version.
 
 There are several additional packages you will need that are not distributed with
 the basestation:
 
-9a) numpy and scipy for python
-	On Ubuntu 16.04:
-        'sudo apt-get install python-numpy python-scipy'
-
-9b) seawater routines for python (in packages tarball)
-	In /usr/local/Base-2.12/packages, "sudo tar xvzf seawater-1.1.tgz"
-	In /usr/local/Base-2.12/packages/seawater-1.1 run 'sudo python setup.py install'
-    Tested with version 1.1
 
 
-To install lrzsz
-----------------
+## Install lrzsz
 To maintain a log of xmodem communications progress ('comm.log') you must install
 modified versions of lrz and lsz in /usr/local/bin.
 
 (Note: You may need to install make on your server machine - 'sudo apt-get install make')
 
-In /usr/local/Base-2.12/packages/lrzsz-0.12.20:
+In /usr/local/Base-3.01/packages/lrzsz-0.12.20:
 10a) Run "sudo ./build.sh"
 10b) Run "sudo make install"
 10c) Ensure that /usr/local/bin is at the head of the path for the glider accounts
 
-To install optional raw send and raw recieve
---------------------------------------------
-11a) In /usr/local/Base-2.12/packages unpack rawxfr.tgz by "sudo tar xvzf rawxfer.tgz"
-11b) In /usr/local/Base-2.12/packages/rawxfer build the binaries "sudo make"
+## Install optional raw send and raw recieve
+11a) In /usr/local/Base-3.01/packages unpack rawxfr.tgz by "sudo tar xvzf rawxfer.tgz"
+11b) In /usr/local/Base-3.01/packages/rawxfer build the binaries "sudo make"
 11c) Copy the binaries to /usr/local/bin "sudo cp rawrcv rawsend /usr/local/bin"
 
-To install the optional cmdfile, science and targets validator
---------------------------------------------------------------
-12a) In /usr/local/Base-2.12/Validate-66.13 run 'sudo make -f Makefile.validate' to build validate binary
-12b) In /usr/local/Base-2.12 run "sudo ./install_validate.sh"
+## Install the optional cmdfile, science and targets validator
+12a) In /usr/local/Base-3.01/Validate-66.13 run 'sudo make -f Makefile.validate' to build validate binary
+12b) In /usr/local/Base-3.01 run "sudo ./install_validate.sh"
 12c) Confirm that validate, cmdedit, targedit and sciedit are installed in /usr/local/bin
 12d) As pilot, run cmdedit from a glider's home directory to confirm all is working
 
-To install the optional gliderzip
----------------------------------
+## Install the optional gliderzip
 If you plan to upload gzipped files to the glider, install this special version of gzip. See Upload.py.
 
-13a) In /usr/local/Base-2.12/gliderzip_src build the binaries "sudo make -f Makefile.gliderzip"
+13a) In /usr/local/Base-3.01/gliderzip_src build the binaries "sudo make -f Makefile.gliderzip"
 13b) Copy gliderzip to /usr/local/basestation
 
-To install optional RUDICS support
-----------------------------------
-14a) cd /usr/local/Base-2.12 and unpack via "sudo tar xvzf rudics.tgz"
+## Install optional RUDICS support
+14a) cd /usr/local/Base-3.01 and unpack via "sudo tar xvzf rudics.tgz"
 14b) Follow the instructions provided in packages/rudics/ReadMe
 
--------------------
-End of installation
--------------------
-
-Commissioning a new glider:
----------------------------
+# Commissioning a new glider
 As root, run:
 
    	python /usr/local/basestation/Commission.py XXX
@@ -180,8 +216,8 @@ password 515791.
 You are free to establish another password policy - just be sure your glider and
 basestation agree on what the password is.
 
-To test the new glider account
-------------------------------
+# To test the new glider account
+
 Log into the glider account via the su command:
 
 su - sg001
@@ -194,8 +230,7 @@ Log out, then examine the home directory for sg001.  You should see a
 file of the form baselog_YYMMDDHHMMSS.  Check for any python
 errors (missing package XXXX) - install anything missing.
 
-Direct modem support using mgetty
----------------------------------
+# Direct modem support using mgetty
 Hook up your modem to the appropriate serial port and ensure that
 there an mgetty servicing that port.  
 
@@ -211,6 +246,7 @@ Create a systemd conf file.
 Create a systemd conf file. For example, if your modem is in /dev/ttyS0, 
 create the file "/etc/systemd/system/ttyS0.service" with the following contents:
 
+```
 [Unit]
 Description=ttyS0 agetty
 Documentation=man:agetty(8)
@@ -225,7 +261,7 @@ PIDFile=/var/run/agetty.pid.ttyS0
 
 [Install]
 WantedBy=multi-user.target
-
+```
 Enable the service with "sudo systemctl enable ttyS0.service"
 
 Start the event by issuing a "sudo systemctl start ttyS0.service" and confirm the
@@ -246,7 +282,7 @@ can be highly dependent on local network management practice.
 Version specific release notes
 ------------------------------
 
-Version 2.12
+Version 3.01
 ------------
 The basestation now uses the FlightModel system to continiously evaluate the glider's volume
 and hydrodynamic model parameters.  Many of the tuning parameters in sg_calib_constants.m are 
@@ -257,82 +293,3 @@ N.B. The glider's user account must have write permissions to sg_calib_constants
 
 See FlightModel.pdf in the docs directory for further details.
 
-Version 2.07
-------------
-The basestation now uses language and library features from python 2.7 and will not run 
-against earlier versions of python.  
-
-Version 2.05
-------------
-
-RUDICS support has been moved back to supported ONLY when used in conjunction 
-with Seaglider software version 66.07 or later.  Please note that there
-have been further changes in lrzsz to improve RUDICS support, so it is 
-important those pieces be installed.
-
-CSV file creation has been removed from the basestation.  
-
-The ability to push files to a FTP server has been added - see sg000/.ftp file for
-details.
-
-Version 2.04
-------------
-
-Sensor processing has been internally reorganized.  Specifically,
-source code now resides in a "Sensors" sub-directory under the main
-basestation code - be sure to include this directory and its contents
-if performing an upgrade from a previous version.
-
-Support for the new Seaglider naming scheme (appearing in Seaglider
-build 66.05 and later) is now supported - see the Seaglider File
-Format document for further details.
-
-The validator for version 65.03 is no longer shipped.  If you need the
-version 65.03 validator, use the version shipped in 2.03.
-
-RUDICS support is now marked as EXPERIMENTAL.  After extensive field
-testing, we have found our RUDICS support to be less reliable then
-traditional PSTN modem connections for Iridium traffic.  We are
-planning on improving the RUDICS support in an upcoming release of the
-glider and basestation software, but for now we recommend no using
-Rudics.
-
-If you are currently using RUDICS and it is meeting your needs,
-there is no need to change.  This release of the basestation contains
-no changes in RUDICS support over 2.03.
-
-Version 2.03
-------------
-
-RUDICS support has been added.  See the RUDICS section above for
-details on how to install RUDICS support on the basestation.
-
-Version 2.02
-------------
-
-There have been changes to lrzsz and glider_logout, so be sure to
-rebuild and install those.
-
-The validator for version 66 is from glider version 66.03.
-
-The semantics of the logout have changed with this version.
-Previously, the basestation processing ran synchronously with the
-glider login process.  The practical effect of this coupling was that
-until the basestation processing completed, the modem could not be
-answered.  With more data processing occurring on the basestation, it
-was observed that gliders were not able to get a second or subsequent
-call in during certain conditions.  In this version, the --daemon
-option is added to allow the basestation processing to occur
-asynchronously and set by default in glider_logout.  It is now
-possible to have multiple basestation processes active at the same
-time - the processes use signals to avoid contention.
-
-The point in the processing when the .pagers, .urls and .mailer files
-are processed have changed.  .pagers is now processed once at the very
-start of processing for the gps tag, and then at the end of processing
-to handle alerts, recov and comp tags See the sg000/.pagers for
-details.  .urls is processed twice - once after all the per-dive data
-has been processed (.eng, .log and per-dive .netCDF files) and again
-when all processing has been completed.  See sg000/.urls for details.
-.mailer is processed after all processing has been completed - see
-sg000/.mailer for details.
