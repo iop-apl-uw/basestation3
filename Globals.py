@@ -40,15 +40,15 @@ quality_control_version = '1.12'
 required_nc_fileversion = '2.7' #  (August, 2011)
 
 # Version stamps for various packages
-required_python_version = (3, 7, 0)
-recommended_python_version = (3, 7, 0)
-required_numpy_version = '1.5.1'
-recommended_numpy_version = '1.5.1'
+required_python_version = (3, 7, 7)
+recommended_python_version = (3, 7, 7)
+required_numpy_version = '1.18.1'
+recommended_numpy_version = '1.18.1'
 
-required_scipy_version = '0.13.3'
-recommended_scipy_version = '0.13.3'
+required_scipy_version = '1.4.1'
+recommended_scipy_version = '1.4.1'
 # need at least 0.11.0 for proper sparse matrix support (scipy.sparse.diags)
-required_scipy_sparse_version = '0.11.0'
+required_scipy_sparse_version = '1.4.1'
 
 #pylint: disable=E0239
 class WhichHalf(IntEnum):
