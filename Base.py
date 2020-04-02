@@ -101,6 +101,14 @@ except ImportError:
 else:
     pagers_ext['inreach'] = InReachSend.send_inreach
 
+# slack post
+try:
+    import SlackPost
+except ImportError:
+    print("Failed slack import")
+else:
+    pagers_ext['slack'] = SlackPost.post_slack
+
 # AES support
 def decrypt_file(in_file_name, out_file_name, mission_dir):
     """
@@ -1017,6 +1025,7 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
         for t in tags_to_process:
             tags = "%s %s" % (tags, t)
         log_info("Starting processing on .pagers for %s" % tags)
+        log_debug("pagers_ext = %s" % pagers_ext)
         try:
             pagers_file = open(pagers_file_name, "r")
         except IOError as exception:
@@ -1032,7 +1041,6 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
                     pagers_elts = pagers_line.split(',')
                     email_addr = pagers_elts[0]
                     # Look for alternate sending functions
-                    log_debug("pagers_ext = %s" % pagers_ext)
                     if(len(pagers_elts) > 1 and (pagers_elts[1] in list(pagers_ext.keys()))):
                         log_info("Using sending function %s" % pagers_elts[1])
                         send_func = pagers_ext[pagers_elts[1]]
