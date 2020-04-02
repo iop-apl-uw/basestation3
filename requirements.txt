@@ -1,3 +1,4 @@
+matplotlib==3.1.3
 #basemap==1.2.1
 # Basemap no longer in pip.  To install:
 # Linux
@@ -6,17 +7,11 @@
 # OSX
 # brew install geos
 # pip install git+https://github.com/matplotlib/basemap.git
-cycler==0.10.0
-kiwisolver==1.1.0
-matplotlib==3.1.3
 numpy==1.18.1
+# For MakePlot4 
 plotly==4.5.1
-pyparsing==2.4.6
-pyproj==2.4.2.post1
-pyshp==2.1.0
-python-dateutil==2.8.1
-retrying==1.3.3
 scipy==1.4.1
+# For SlackPost and InReachSend
+requests==2.23.0
 #seawater==1.1
 # Must be installed from local package packages/seawater-1.1
-six==1.14.0
