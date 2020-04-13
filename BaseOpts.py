@@ -66,7 +66,7 @@ class BaseOptions:
     magcalfile = None
     auxmagcalfile = None
     delete_upload_files = False
-    bin_width = 5.0
+    bin_width = 1.0
     which_half = WhichHalf(3) #pylint: disable=E1120
     interval = 0
     reply_addr = None
