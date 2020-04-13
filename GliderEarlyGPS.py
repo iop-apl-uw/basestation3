@@ -200,7 +200,7 @@ class GliderEarlyGPSClient:
             else:
                 Base.process_pagers(self.__base_opts,
                                     session.sg_id,
-                                    ('earlygps',), session=session, msg_prefix="Via GldierEarlyGPS: ")
+                                    ('gps',), session=session)
 
     def process_counter_line(self, session, testing=False):
         """

@@ -101,6 +101,14 @@ except ImportError:
 else:
     pagers_ext['inreach'] = InReachSend.send_inreach
 
+# slack post
+try:
+    import SlackPost
+except ImportError:
+    print("Failed slack import")
+else:
+    pagers_ext['slack'] = SlackPost.post_slack
+
 # AES support
 def decrypt_file(in_file_name, out_file_name, mission_dir):
     """
@@ -1017,6 +1025,7 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
         for t in tags_to_process:
             tags = "%s %s" % (tags, t)
         log_info("Starting processing on .pagers for %s" % tags)
+        log_debug("pagers_ext = %s" % pagers_ext)
         try:
             pagers_file = open(pagers_file_name, "r")
         except IOError as exception:
@@ -1032,7 +1041,6 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
                     pagers_elts = pagers_line.split(',')
                     email_addr = pagers_elts[0]
                     # Look for alternate sending functions
-                    log_debug("pagers_ext = %s" % pagers_ext)
                     if(len(pagers_elts) > 1 and (pagers_elts[1] in list(pagers_ext.keys()))):
                         log_info("Using sending function %s" % pagers_elts[1])
                         send_func = pagers_ext[pagers_elts[1]]
@@ -1041,8 +1049,8 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
                         send_func = send_email
                         pagers_elts = pagers_elts[1:]
 
-                    tags_with_fmt = ['earlygps', 'gps', 'recov', 'critical']
-                    known_tags = ['earlygps', 'gps', 'recov', 'critical', 'drift', 'divetar', 'comp', 'alerts']
+                    tags_with_fmt = ['lategps', 'gps', 'recov', 'critical']
+                    known_tags = ['lategps', 'gps', 'recov', 'critical', 'drift', 'divetar', 'comp', 'alerts']
 
                     fmt_dict = {}
                     for pagers_tag in pagers_elts:
@@ -1071,7 +1079,7 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
                             else:
                                 log_warning("Internal error - no comm log - skipping drift predictions for (%s)" % email_addr)
 
-                        elif pagers_tag in ('gps', 'recov', 'critical', 'earlygps') and  pagers_tag in tags_to_process:
+                        elif pagers_tag in ('gps', 'recov', 'critical', 'lategps') and  pagers_tag in tags_to_process:
                             fmts = fmt.split('_')
                             dive_prefix = False
                             if len(fmts) > 1:
@@ -1097,7 +1105,7 @@ def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, ses
                             if prefix_str:
                                 prefix_str = " SG%03d %s" % (instrument_id, prefix_str)
 
-                            if pagers_tag in ("gps", "earlygps"):
+                            if pagers_tag in ("gps", "lategps"):
                                 subject_line = "GPS%s" % prefix_str
                             elif pagers_tag in ("critical", "recov") and reboot_msg:
                                 subject_line = "REBOOTED%s" % prefix_str
@@ -1538,7 +1546,7 @@ def main():
     Utils.create_lock_file(base_opts, base_lockfile_name)
 
     if not base_opts.local:
-        process_pagers(base_opts, instrument_id, ('gps', 'recov', 'critical', 'drift'), comm_log=comm_log)
+        process_pagers(base_opts, instrument_id, ('lategps', 'recov', 'critical', 'drift'), comm_log=comm_log)
 
     log_info("Processing comm_merged.log")
     history_logfile_name = os.path.join(base_opts.mission_dir, "history.log")
