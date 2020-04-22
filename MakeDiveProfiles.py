@@ -530,7 +530,8 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
     # modes = 1 # similar to but much better than original code and pretty close to mode=3/5 in results
     # modes = 0 # disable but really should disable via the following directive in sg_directives.txt:
     #  * no_correct_thermal_inertia_effects
-    config.update({'sbect_modes': 5})
+    # Post analysis of by Luc Rainville: mode of 1 sufficient and fast for most purposes
+    config.update({'sbect_modes': 1})
     # install default sbect_unpumped, etc.
     update_calib_consts(config)
     sbect_unpumped = calib_consts['sbect_unpumped']

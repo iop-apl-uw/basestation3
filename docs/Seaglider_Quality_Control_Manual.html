@@ -356,9 +356,9 @@ function formatFootnotes(contID,noteID)
 	and<br>
 	APPLIED PHYSICS LABORATORY<br>
 	UNIVERSITY OF WASHINGTON<br>
-	Copyright (c)  2011-2017 by University of Washington.  All rights reserved.<br>
-	Version 1.14 March 2017<br>
-	Corresponding to Seaglider basestation version 2.10<br>
+	Copyright (c)  2011-2020 by University of Washington.  All rights reserved.<br>
+	Version 1.15 April 2020<br>
+	Corresponding to Seaglider basestation version 2.12<br>
 </p>
 <div id="QC_Manual"> <!-- for footnotes -->
 
@@ -392,7 +392,7 @@ function formatFootnotes(contID,noteID)
 <tr><td class="left">03/31/2015</td>
   <td class="right">Remove references to salinity spike calculations that are not performed.</td></tr>
 <tr><td class="left">07/06/2015</td>
-  <td class="right">Introduce optode calibration drift correction of Johnson et al., forthcoming.</td></tr>
+  <td class="right">Introduce optode calibration drift correction of Johnson <i>et al.</i>, forthcoming.</td></tr>
 <tr><td class="left">03/02/2016</td>
   <td class="right">Add copyright; update basestation version number</td></tr>
 <tr><td class="left">03/15/2017</td>
@@ -401,6 +401,8 @@ function formatFootnotes(contID,noteID)
   <td class="right">Clarify optode processing and update Johnson reference.</td></tr>
 <tr><td class="left">09/27/2018</td>
   <td class="right">Document new QC_high_freq_noise control variable.</td></tr>
+<tr><td class="left">04/21/2020</td>
+  <td class="right">Reference FMS and update flight model discussion; document sbect_modes.</td></tr>
 </table>
 <br>
 
@@ -592,7 +594,6 @@ dive or decreasing on the climb.</p><br>
 
 <p class="chapterSection">Computing initial vehicle velocity and glide angle</p><br>
 
-
 <p> An initial estimate of vehicle velocity and glide angle is determined using
 the glide-slope model ('gsm'), a version of the glider's hydrodynamic flight
 equations discussed in Eriksen, <i>et al</i>, 2001.  Speed and glide angle are
@@ -602,14 +603,14 @@ density (<span class="quote">rho0</span>).  The gsm estimate does not account
 for vehicle buoyancy forcing; see the full hydrodynamic speed calculation
 ('hdm') discussion below.  </p><br>
 
-<p> Generally, the vehicle compass is calibrated prior to deployment such that
-heading and pitch measurements are accurate to within +/-1.2 degrees.  Compass
-inaccuracies are typically due either to the installation of an incorrect
-calibration file or to a change to the vehicle hard or soft iron signature after
-the calibration; both of these conditions can be addressed by changing the
-calibration file during deployment, which should annotated using a manual
-directive.  The compass calibrations have been tested at latitudes between 70
-degrees North and 76 degrees South.</p><br>
+<p> Generally, the vehicle compass is calibrated prior to or early during the
+deployment such that heading and pitch measurements are accurate to within
++/-1.2 degrees.  Compass inaccuracies are typically due either to the
+installation of an incorrect calibration file or to a change to the vehicle hard
+or soft iron signature after the calibration; both of these conditions can be
+addressed by changing the calibration file during deployment, which should
+annotated using a manual comment directive.  The compass calibrations have been
+tested at latitudes between 70 degrees North and 76 degrees South.</p><br>
 
 <p class="chapterSection">Computing temperature, conductivity and
 salinity</p><br>
@@ -828,15 +829,17 @@ requires knowing the in-situ density, hence salinity of the seawater.  An
 iterative scheme is employed to find a mutually-consistent solution of corrected
 salinity and vehicle speed, if possible.  The speed and glide angle of the
 vehicle are determined using the full hydrodynamic equations in Eriksen, <i>et
-al</i>, 2001 and are based on the measured pitch and computed buoyancy of the
+al.</i>, 2001 and are based on the measured pitch and computed buoyancy of the
 vehicle.  Vehicle buoyancy is based on the maximum volume of the vehicle, its
 measured mass, the state of the variable buoyancy device (VBD), thermal and
 pressure effects on the hull, interstitial seawater, and any compressee, and the
-in-situ corrected density of the water.  The final, converged, speed and glide
-angle results are referred to as the hydrodynamic model results or 'hdm'.  As
-with the gsm, speeds and glide angles during stalls are set to zero but marked
-QC_GOOD. Speeds and glide angles are marked QC_BAD and set to NaN (unknown)
-where bouyancy cannot be determined because salinity is QC_BAD.  </p><br>
+in-situ corrected density of the water.  FMS (Bennett, <i>et al.</i>, 2019) accurately
+determines these parameters automatically on a per-dive basis.  The final,
+converged, speed and glide angle results are referred to as the hydrodynamic
+model results or 'hdm'.  As with the gsm, speeds and glide angles during stalls
+are set to zero but marked QC_GOOD. Speeds and glide angles are marked QC_BAD
+and set to NaN (unknown) where bouyancy cannot be determined because salinity is
+QC_BAD.  </p><br>
 
 <p> In the case of restarting flow after stalls or during steep thermoclines
 that are insufficiently sampled, the thermal-inertia estimates may not
@@ -1167,10 +1170,11 @@ Setting a variable applies that value to all the profiles in a deployment.
 </p><br>
 
 <p>
-Vehicle parameters:  All but <span class"quote">sg_configuration</span> are required.
+Vehicle parameters:  With the use of FMS, only <span class"quote">mass</span> is required.
 </p><br>
 <table class="tag">
-<tr><td class="left">sg_configuration</td><td class="right">The general configuration of the glider
+<tr><td class="left">mass</td><td class="right">Mass of the glider [kg]</td></tr>
+<tr><td class="left">sg_configuration</td><td class="right">The general configuration of the glider:
   <ol start=0>
     <li>Seaglider with original SBE41 CT</li>
     <li>Seaglider with gun-style SBE41 CT</li>
@@ -1180,10 +1184,9 @@ Vehicle parameters:  All but <span class"quote">sg_configuration</span> are requ
 </td></tr>
 <tr><td class="left">hd_a</td><td class="right">Hydrodynamic lift factor for given hull shape [1/&deg; of attack angle]</td></tr>
 <tr><td class="left">hd_b</td><td class="right">Hydrodynamic drag factor for given hull shape [Pa<sup>-1/4</sup>]</td></tr>
-<tr><td class="left">hd_c</td><td class="right">Hydrodynamic induced drag factor for given hull shape [1/radians<sup>2</sup> of attack angle]</td></tr>
+<tr><td class="left">hd_c</td><td class="right">Hydrodynamic induced drag factor for given hull shape [1/(&deg;<sup>2</sup>) of attack angle]</td></tr>
 <tr><td class="left">rho0</td><td class="right">Typical expected density of seawater for this deployment [kg/m<sup>3</sup>]</td></tr>
 <tr><td class="left">volmax</td><td class="right">Maximum displaced volume of the glider [m<sup>3</sup>]</td></tr>
-<tr><td class="left">mass</td><td class="right">Mass of the glider [kg]</td></tr>
 </table>
 
 <p>
@@ -1208,6 +1211,7 @@ General CTD parameters: All are optional.  Default bias values are 0.
 <tr><td class="left">sbe_cond_freq_max</td><td class="right">SBE41 maximum permitted conductivity frequency [Hz]</td></tr>
 <tr><td class="left">sbe_cond_freq_offset</td><td class="right">Conductivity frequency offset [Hz]</td></tr>
 <tr><td class="left">cond_bias</td><td class="right">Conductivity bias [mS/cm]</td></tr>
+<tr><td class="left">sbect_modes</td><td class="right">Number of correction modes to apply for unpumped thermal-inertia correction. Permitted values are 1, 3, or 5; default is 1. See Eriksen, forthcoming.</td></tr>
 </table>
 
 <p>
@@ -1425,10 +1429,14 @@ Dissolved oxygen from various instruments, if present.  For Aanderaa optodes, <i
 </p><br>
 
 <p>
-Bennett, J & Stahr, F., 2014: "GPS positional accuracy for Seagliders", University of Washington, School of Oceanography.
+Bennett, J & Stahr, F., 2014: "GPS positional accuracy for Seagliders", University of Washington, School of Oceanography. http://hdl.handle.net/1773/15928
 </p><br>
 
 <p>
+Bennett, J. S., Stahr, F., Eriksen, C. C., 2019: "Determining Seaglider Velocities Automatically", University of Washington, School of Oceanography. http://hdl.handle.net/1773/44948
+</p><br>
+
+  <p>
 Carnes, M. R., 2008: "LAGER Manual, version 1.0", Naval Research Laboratory.
 </p><br>
 
