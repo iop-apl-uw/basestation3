@@ -58,3 +58,9 @@ class WhichHalf(IntEnum):
     up = 2
     both = 3
     combine = 4
+
+required_seawater_version = "3.3.4"
+required_gsw_version = "3.3.1"
+
+# Global flag to control which seawater toolkit - just for short term testing
+f_use_seawater = False

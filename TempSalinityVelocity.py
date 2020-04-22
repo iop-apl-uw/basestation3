@@ -32,7 +32,8 @@ import scipy.signal # for convolve
 import Globals
 
 from HydroModel import hydro_model
-from seawater import *
+import seawater
+import gsw
 from QC import *
 import Utils 
 from TraceArray import * # REMOVE use only if we are tracing...
@@ -287,7 +288,8 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
                   # how to make the calculations
                   perform_thermal_inertia_correction, interpolate_extreme_tmc_points, use_averaged_speeds,
                   # initial guess about flight
-                  gsm_speed_cm_s_v, gsm_glide_angle_deg_v
+                  gsm_speed_cm_s_v, gsm_glide_angle_deg_v,
+                  longitude, latitude
                  ):
     """Compute and return corrected salinity (and possibly temperature) and glider speed consistent with
     the buoyancy the corrected salinity implies.
@@ -949,8 +951,11 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
             # but we want the salinity of the water outside at the thermistor
             # so we need to map it to measurement time below
             # M: salin_c = sw_salt(cond/c3515, temp_c, press);
-            # salinity_v = array(map(lambda i: salt(r_cond_cor_v[i]/c3515, temp_c_v[i], r_pressure_v[i]), xrange(r_sg_np))) # aka salin_c
-            salin_c_v = salt(r_cond_cor_v/c3515, temp_c_v, r_pressure_v) # aka salin_c
+            # salinity_v = array(map(lambda i: seawater.salt(r_cond_cor_v[i]/c3515, temp_c_v[i], r_pressure_v[i]), xrange(r_sg_np))) # aka salin_c
+            if Globals.f_use_seawater:
+                salin_c_v = seawater.salt(r_cond_cor_v/c3515, temp_c_v, r_pressure_v) # aka salin_c
+            else:
+                salin_c_v = gsw.SP_from_C(r_cond_cor_v * 10., temp_c_v, r_pressure_v) # aka salin_c
             trace_array('salin_salt_%d' % loop, salin_c_v);
             # Here is where we back calculate the salinity at the thermistor
             # M: find salinity at tip of thermistor salin (corresponds to corrected temperature temp)
@@ -982,7 +987,10 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
 
 
         else: # no thermal_inertia correction
-            r_salin_cor_v = salt(r_cond_cor_v/c3515, r_temp_cor_v, r_pressure_v) # aka salin_c
+            if Globals.f_use_seawater:
+                r_salin_cor_v = seawater.salt(r_cond_cor_v/c3515, r_temp_cor_v, r_pressure_v) # aka salin_c
+            else:
+                r_salin_cor_v = gsw.SP_from_C(r_cond_cor_v * 10., r_temp_cor_v, r_pressure_v) # aka salin_c
             r_extrapolated_i_v = []
             
         trace_array('salin_pre_interp_%d' % loop, r_salin_cor_v);
@@ -1011,11 +1019,19 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
         # NOTE: sw_dens0 is sw_dens with pressure (P) = 0
         # NOTE: Under matlab if r_salin_cor_v is negative dens (sw_dens0) returns an imaginary result but under Python it returns NaN.
         # This is also our potential density...we  use this to compute sigma_t below
-        density_v = dens(r_salin_cor_v, r_temp_cor_v, P=0.0)  # Note that because of the isopycnal hull, we compute density as if pressure = 0
+
+        # Note that because of the isopycnal hull, we compute density as if pressure = 0
+        if Globals.f_use_seawater:
+            density_v = seawater.dens(r_salin_cor_v, r_temp_cor_v, zeros(r_salin_cor_v.size))  
+        else:
+            density_v = Utils.density(r_salin_cor_v, r_temp_cor_v, zeros(r_salin_cor_v.size), longitude, latitude)
         trace_array('density_%d' % loop, density_v);
         # density_insitu = sw_dens(salin_TS, temp, press);
         # TODO should we return density_insitu_v instead of density_v?
-        density_insitu_v = dens(r_salin_cor_v, r_temp_cor_v, r_pressure_v)
+        if Globals.f_use_seawater:
+            density_insitu_v = seawater.dens(r_salin_cor_v, r_temp_cor_v, r_pressure_v)
+        else:
+            density_insitu_v = Utils.density(r_salin_cor_v, r_temp_cor_v, r_pressure_v, longitude, latitude)
         trace_array('density_insitu_%d' % loop, density_insitu_v);
         final_density_v[valid_i_v] = density_v 
         final_density_insitu_v[valid_i_v] = density_insitu_v
@@ -1193,7 +1209,8 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
                              # how to make the calculations
                              False, False, use_averaged_speeds,
                              # initial guess about flight
-                             gsm_speed_cm_s_v, gsm_glide_angle_deg_v)
+                             gsm_speed_cm_s_v, gsm_glide_angle_deg_v,
+                             longitude, latitude)
 
     if len(r_extrapolated_i_v):
         assert_qc(QC_PROBABLY_BAD, salin_cor_qc_v,  array(valid_i_v)[r_extrapolated_i_v], 'TS bad extrapolation')

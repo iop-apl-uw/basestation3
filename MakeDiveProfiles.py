@@ -59,7 +59,6 @@ from CalibConst import getSGCalibrationConstants
 import BaseOpts
 from BaseLog import *
 import GPS
-from seawater import *
 from HydroModel import glide_slope
 from TempSalinityVelocity import TSV_iterative, TSV_use_sparse, load_thermal_inertia_modes
 from QC import *
@@ -68,6 +67,7 @@ from types import *
 import Navy
 import glob
 from Globals import *
+import Globals
 import Sensors
 from FileMgr import *
 import pprint
@@ -75,13 +75,10 @@ import BaseGZip
 import BaseMagCal
 import QC
 from TraceArray import * # REMOVE use this only only if we are tracing/comparing computations w/ matlab
-try:
-    # from http://github.com/TEOS-10/python-gsw
-    import gsw
-    gsw_available = True
-except ImportError:
-    gsw_available = False
 import FlightModel
+
+import gsw
+import seawater
 
 kg2g = 1000.0
 L2cc = 1000.0 # cc per liter
@@ -2474,6 +2471,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # if USE_ICE then GPS hdop is 99 and we should use something else in the RAFOS category?
         if GPS2E_ok and GPS2E_gpsfix: # during the dive
             latitude = (GPS2.lat_dd + GPSE.lat_dd) / 2.0
+            longitude = (GPS2.lon_dd + GPSE.lon_dd) / 2.0
             # This is a good initial guess in case we can't do DAC below
             globals_d['geospatial_lat_min'] = min(GPS2.lat_dd, GPSE.lat_dd)
             globals_d['geospatial_lat_max'] = max(GPS2.lat_dd, GPSE.lat_dd)
@@ -2484,10 +2482,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             if GPS12_ok: # during the drift?
                 log_warning("Determining average latitude using GPS1 and GPS2")
                 latitude = (GPS1.lat_dd + GPS2.lat_dd) / 2.0
+                longitude = (GPS1.lon_dd + GPS2.lon_dd) / 2.0
             else:
                 # could have a bum GPS unit or yoyo dive
                 # in these cases assume a plausible latitude was latched
                 latitude = (GPS2.lat_dd + GPSE.lat_dd) / 2.0
+                longitude = (GPS2.lon_dd + GPSE.lon_dd) / 2.0
                 log_warning("No trustworthy GPS values; assuming average latitude of %.1f degrees" % latitude)
 
         # the headings in the 'head' column of the *.eng file are magnetic.
@@ -2983,12 +2983,19 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # CONSIDER: should we support kistler cnf files in case?
             sg_press_v = (eng_f.get_col('depth')*cm2m - calib_consts['depth_bias']) * psi_per_meter;
             sg_press_v *= dbar_per_psi # convert to dbar
-            sg_depth_m_v = depth(sg_press_v, latitude)
+            if Globals.f_use_seawater:
+                sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+            else:
+                sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
 
             # MDP automatically asserts instrument when writing
             ctd_np = len(ctd_epoch_time_s_v)
-            ctd_salin_v = salt(ctd_cond_v/c3515, ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
-            ctd_depth_m_v = depth(ctd_press_v, latitude) # initial depth estimate
+            if Globals.f_use_seawater:
+                ctd_salin_v = seawater.salt(ctd_cond_v/c3515, ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
+                ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) # initial depth estimate
+            else:
+                ctd_salin_v = gsw.SP_from_C(ctd_cond_v * 10., ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
+                ctd_depth_m_v = -1. * gsw.z_from_p(ctd_press_v, latitude, 0., 0.) # initial depth estimate
 
             # GPCTD dumps invalid values at the end of each record; use qc_checks() to discover them...
             # but disable spike detection (using QC_NO_CHANGE)
@@ -3035,7 +3042,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
                     log_info("auxCompass_pressure_offset = %f, auxCompass_pressure_slope = %f" %
                              (aux_pressure_offset, aux_pressure_slope))
-                    auxCompass_depth_v = depth(auxCompass_pressure_v, latitude)
+                    #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
+                    auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
                     results_d.update({'auxCompass_press' : auxCompass_pressure_v,
                                       'auxCompass_depth' : auxCompass_depth_v})
             ## End Legatto
@@ -3201,7 +3209,10 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
             # This is the latitude corrected depth given the measure pressure
             # The force of gravity varies by latitude given the oblate spheroid shape and unequal mass distributions in the Earth
-            sg_depth_m_v = depth(sg_press_v, latitude)
+            if Globals.f_use_seawater:
+                sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+            else:
+                sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
 
             # There are two other possible 'depth' measurements from scicon
             # Both are based on the same pressure sensor used by the glider.
@@ -3262,9 +3273,13 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     # This hack is to handle bad truck pressure, but to auxcompass pressure
                     log_warning("Re-writing truck pressure and depth from auxCompass pressure")
                     sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')
-                    sg_depth_m_v = depth(sg_press_v, latitude)
+                    if Globals.f_use_seawater:
+                        sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+                    else:
+                        sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
 
-                auxCompass_depth_v = depth(auxCompass_pressure_v, latitude)
+                #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
+                auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
                 results_d.update({'auxCompass_press' : auxCompass_pressure_v,
                                   'auxCompass_depth' : auxCompass_depth_v})
 
@@ -3277,7 +3292,10 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 # This might be close though...
                 # Negative because the CT sail is above the pressure sensor so is shallower
                 ctd_press_v = ctd_press_v  - zTP * psi_per_meter * dbar_per_psi # [dbar]
-                ctd_depth_m_v = depth(ctd_press_v, latitude) - zTP # [m]
+                if Globals.f_use_seawater:
+                    ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) - zTP # [m]
+                else:
+                    ctd_depth_m_v = -1.0 * gsw.z_from_p(ctd_press_v, latitude, 0., 0.) - zTP # [m]
 
             else:
                 # Truck pressure and depth
@@ -3328,14 +3346,19 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # CONSIDER: should we support kistler cnf files in this branch?
             sg_press_v = (eng_f.get_col('depth')*cm2m - calib_consts['depth_bias']) * psi_per_meter;
             sg_press_v *= dbar_per_psi # convert to dbar
-            sg_depth_m_v = depth(sg_press_v, latitude)
+            if Globals.f_use_seawater:
+                sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+            else:
+                sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
 
             # MDP automatically asserts instrument when writing
             # DEAD results_d['gpctd'] = 'pumped Seabird SBE41 (gpctd)' # record the instrument used for CTD
             ctd_np = len(ctd_epoch_time_s_v)
-            ctd_salin_v = salt(ctd_cond_v/c3515, ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
-            ctd_depth_m_v = depth(ctd_press_v, latitude) # initial depth estimate
-
+            ctd_salin_v = sewater.salt(ctd_cond_v/c3515, ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
+            if Globals.f_use_seawater:
+                ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) # initial depth estimate
+            else:
+                ctd_depth_m_v = -1. * gsw.z_from_p(ctd_press_v, latitude, 0., 0.) # initial depth estimate
 
             # GPCTD dumps invalid values at the end of each record; use qc_checks() to discover them...
             # but disable spike detection (using QC_NO_CHANGE)
@@ -3481,7 +3504,10 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         temp_raw_v -= calib_consts['temp_bias'] # remove bias [degC]
         cond_raw_v -= calib_consts['cond_bias'] # remove bias [S/m]
         # Compute salinity based on raw data, w/o modification
-        salin_raw_v = salt(cond_raw_v/c3515, temp_raw_v, ctd_press_v)
+        if Globals.f_use_seawater:
+            salin_raw_v = seawater.salt(cond_raw_v/c3515, temp_raw_v, ctd_press_v)
+        else:
+            salin_raw_v = gsw.SP_from_C(cond_raw_v * 10., temp_raw_v, ctd_press_v)
 
         # elapsed time is recorded as eng_elaps_t
         results_d.update({
@@ -4107,7 +4133,10 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                                     a.first_point()+1, a.last_point()+1, a.descr()))
 
         # Now estimate an initial adjusted salinity based on adjusted temp and cond
-        salin_cor_v = salt(cond_cor_v/c3515, temp_cor_v, ctd_press_v)
+        if Globals.f_use_seawater:
+            salin_cor_v = seawater.salt(cond_cor_v/c3515, temp_cor_v, ctd_press_v)
+        else:
+            salin_cor_v = gsw.SP_from_C(cond_cor_v * 10., temp_cor_v, ctd_press_v)
         salin_cor_qc_v = initialize_qc(ctd_np, QC_GOOD)
         tc_bad_i_v = Utils.sort_i(Utils.union(bad_temp_i_v, bad_cond_i_v)) # order for assert output
         salin_cor_v[tc_bad_i_v] = nc_nan
@@ -4234,7 +4263,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                          ctd_press_v, ctd_vehicle_pitch_degrees_v,
                          calib_consts, directives, volume_v,
                          perform_thermal_inertia_correction, interpolate_extreme_tmc_points, use_averaged_speeds,
-                         ctd_gsm_speed_cm_s_v, ctd_gsm_glide_angle_deg_v) # BREAK
+                         ctd_gsm_speed_cm_s_v, ctd_gsm_glide_angle_deg_v,
+                         longitude, latitude ) # BREAK
         if (not converged and not use_averaged_speeds):
             # Sometimes averaging the velocities converges....
             converged, tmc_temp_cor_v, tmc_temp_cor_qc_v, tmc_salin_cor_v, tmc_salin_cor_qc_v, density_v, density_insitu_v, buoyancy_v, \
@@ -4246,7 +4276,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                              ctd_press_v, ctd_vehicle_pitch_degrees_v,
                              calib_consts, directives, volume_v,
                              perform_thermal_inertia_correction, interpolate_extreme_tmc_points, True, # force averaging and hope
-                             ctd_gsm_speed_cm_s_v, ctd_gsm_glide_angle_deg_v)
+                             ctd_gsm_speed_cm_s_v, ctd_gsm_glide_angle_deg_v,
+                             longitude, latitude)
 
             if converged:
                 log_info("TSV correction converged using averaged speeds")
@@ -4484,11 +4515,18 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         report_qc("salin_cor_qc", salin_cor_qc_v)
         report_qc("speed_qc", speed_qc_v)
 
-        # sigma_t_v AKA density_v - 1000
-        sigma_t_v = sigma(salin_cor_v, temp_cor_v) # Use Pressure=0
-        temp_cor_pot_v = temppot(salin_cor_v, temp_cor_v, ctd_sg_press_v, Pref=0.0)
-        sigma_theta_v = dens(salin_cor_v, temp_cor_pot_v, P=0.0) - 1000 # defn: (potential density at P=0) - 1000
-        sound_vel_v = soundvel(salin_cor_v, temp_cor_v, ctd_sg_press_v)
+        if Globals.f_use_seawater:
+            # sigma_t_v AKA density_v - 1000
+            sigma_t_v = seawater.dens(salin_cor_v, temp_cor_v, zeros(salin_cor_v.size)) - 1000.
+            temp_cor_pot_v = seawater.ptmp(salin_cor_v, temp_cor_v, ctd_sg_press_v, pr=0.0)
+            sigma_theta_v = seawater.dens(salin_cor_v, temp_cor_pot_v, np.zeros(salin_cor_v.size)) - 1000. # defn: (potential density at P=0) - 1000
+            sound_vel_v = seawater.svel(salin_cor_v, temp_cor_v, ctd_sg_press_v)
+        else:
+            sigma_t_v = Utils.density(salin_cor_v, temp_cor_v, zeros(salin_cor_v.size), longitude, latitude) - 1000.
+            temp_cor_pot_v = Utils.ptemp(salin_cor_v, temp_cor_v, ctd_sg_press_v, longitude, latitude, pref=0.0)
+            sigma_theta_v = Utils.density(salin_cor_v, temp_cor_pot_v, np.zeros(salin_cor_v.size), longitude, latitude) - 1000. # defn: (potential density at P=0) - 1000
+            sound_vel_v = Utils.svel(salin_cor_v, temp_cor_v, ctd_sg_press_v, longitude, latitude)
+        
         [oxygen_sat_seawater_v, ignore, ignore] = Utils.compute_oxygen_saturation(temp_cor_v, salin_cor_v)
         results_d.update({
             'sigma_t': sigma_t_v, # CF sea_water_sigma_t g/L
@@ -4502,8 +4540,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         try:
             if (log_f.data['$DEEPGLIDER'] == 1):
                 # regardless of depth achieved since we might add to MMT, etc.
-                sigma_theta3_v = dens(salin_cor_v, temp_cor_pot_v, P=3000.0) - 1000 # defn: (potential density at P=3000m) - 1000
-                sigma_theta4_v = dens(salin_cor_v, temp_cor_pot_v, P=4000.0) - 1000 # defn: (potential density at P=4000m) - 1000
+                if Globals.f_use_seawater:
+                    sigma_theta3_v = seawater.dens(salin_cor_v, temp_cor_pot_v, np.zeros(salin_cor_v.size) + 3000.0) - 1000 # defn: (potential density at P=3000m) - 1000
+                    sigma_theta4_v = seawater.dens(salin_cor_v, temp_cor_pot_v, np.zeros(salin_cor_v.size) + 4000.0) - 1000 # defn: (potential density at P=4000m) - 1000
+                else:
+                    sigma_theta3_v = Utils.density(salin_cor_v, temp_cor_pot_v, np.zeros(salin_cor_v.size) + 3000.0, longitude, latitude) - 1000. # defn: (potential density at P=3000m) - 1000
+                    sigma_theta4_v = Utils.density(salin_cor_v, temp_cor_pot_v, np.zeros(salin_cor_v.size) + 4000.0, longitude, latitude) - 1000. # defn: (potential density at P=4000m) - 1000
                 results_d.update({'sigma3': sigma_theta3_v,
                                   'sigma4': sigma_theta4_v,
                                   })
@@ -4833,24 +4875,22 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         globals_d['geospatial_lon_min'] = min(hdm_lon_dd_v);
         globals_d['geospatial_lon_max'] = max(hdm_lon_dd_v);
         try:
-            if gsw_available and (log_f.data['$DEEPGLIDER'] == 1):
-                # for convenience, compute these two fundamental values from the new TEOS-10 standard
-                absolute_salinity_v = gsw.SA_from_SP(salin_cor_v, ctd_press_v, hdm_lon_dd_v, hdm_lat_dd_v)
-                conservative_temperature_v = gsw.CT_from_t(absolute_salinity_v, temp_cor_v, ctd_press_v)
-                # regardless of depth achieved since we might add to MMT, etc.
-                sigma_theta0_v = gsw.sigma0(absolute_salinity_v, conservative_temperature_v)
-                sigma_theta3_v = gsw.sigma3(absolute_salinity_v, conservative_temperature_v)
-                sigma_theta4_v = gsw.sigma4(absolute_salinity_v, conservative_temperature_v)
-                results_d.update({
-                    'conservative_temperature': conservative_temperature_v,
-                    'absolute_salinity': absolute_salinity_v,
-                    'gsw_sigma0': sigma_theta0_v,
-                    'gsw_sigma3': sigma_theta3_v,
-                    'gsw_sigma4': sigma_theta4_v,
-                })
+            # for convenience, compute these two fundamental values from the new TEOS-10 standard
+            absolute_salinity_v = gsw.SA_from_SP(salin_cor_v, ctd_press_v, hdm_lon_dd_v, hdm_lat_dd_v)
+            conservative_temperature_v = gsw.CT_from_t(absolute_salinity_v, temp_cor_v, ctd_press_v)
+            # regardless of depth achieved since we might add to MMT, etc.
+            sigma_theta0_v = gsw.sigma0(absolute_salinity_v, conservative_temperature_v)
+            sigma_theta3_v = gsw.sigma3(absolute_salinity_v, conservative_temperature_v)
+            sigma_theta4_v = gsw.sigma4(absolute_salinity_v, conservative_temperature_v)
+            results_d.update({
+                'conservative_temperature': conservative_temperature_v,
+                'absolute_salinity': absolute_salinity_v,
+                'gsw_sigma0': sigma_theta0_v,
+                'gsw_sigma3': sigma_theta3_v,
+                'gsw_sigma4': sigma_theta4_v,
+            })
         except:
-            pass # Old mission
-            #log_warning("Failed to calc TEOS-10 variables", 'exc')
+            log_warning("Failed to calc TEOS-10 variables", 'exc')
 
 
         ## Correct other instruments after we know salinity, etc.

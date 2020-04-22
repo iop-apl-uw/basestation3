@@ -28,7 +28,6 @@ import sys
 import os
 from scipy.io import netcdf
 from numpy import *
-import seawater
 import time
 import glob
 import BaseOpts

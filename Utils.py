@@ -30,8 +30,11 @@ import bz2
 import subprocess
 import signal
 from numpy import *
+import numpy
 import re
 import functools
+import seawater
+import gsw
 
 from BaseLog import *
 # cnf files could declare meta data for additional variable names that refer to nc_nan or nc_scalar in various fields
@@ -895,6 +898,25 @@ def check_versions():
     if normalize_version(scipy.__version__) < normalize_version(Globals.recommended_scipy_version):
         log_warning("SciPy %s or greater recomemnded" % Globals.recommended_scipy_version)
 
+    # Check seawater version
+    if hasattr(seawater, "__version__"):
+        seawater_version = seawater.__version__
+    else:
+        seawater_version = "1.1.0"
+
+    log_info("seawater version %s" % seawater_version)
+    if normalize_version(seawater_version) < normalize_version(Globals.required_seawater_version):
+        msg = "Seawater version %s or greater required" % Globals.required_seawater_version
+        log_critical(msg)
+        raise RuntimeError(msg)
+
+    # Check GSW Toolkit Version
+    log_info("gsw version %s" % gsw.__version__)
+    if normalize_version(gsw.__version__) < normalize_version(Globals.required_gsw_version):
+        msg = "gsw version %s or greater required" % Globals.required_gsw_version
+        log_critical(msg)
+        raise RuntimeError(msg)
+
 def normalize_version(v):
     if not isinstance(v, str) :
         v = str(v) # very old versions of base_station_version for example were stored as floats
@@ -1484,3 +1506,23 @@ def fix_gps_rollover(struct_time):
         struct_time = time.gmtime(tmp)
         del tmp
     return struct_time
+
+def density(salinity, temperature, pressure, longitude, latitude):
+    salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
+    dens = gsw.rho_t_exact(salinity_absolute, temperature, numpy.zeros(salinity.size))
+    return dens
+
+def ptemp(salinity, temperature, pressure, longitude, latitude, pref=0.0):
+    salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
+    ptemp = gsw.pt_from_t(salinity_absolute, temperature, pressure, pref)
+    return ptemp
+
+def svel(salinity, temperature, pressure, longitude, latitude):
+    salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
+    svel = gsw.sound_speed(salinity_absolute, temperature, pressure)
+    return svel
+
+def fp(salinity, pressure, longitude, latitude):
+    salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
+    freeze_pt = gsw.t_freezing(SA, p, 0.0)
+    return freeze_pt

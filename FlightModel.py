@@ -42,7 +42,8 @@ import Globals # versions, esp basestation_version
 from QC import * # QC_BAD,QC_UNSAMPLED
 import scipy.optimize # fminbound
 from HydroModel import hydro_model
-from seawater import * # dens()
+import seawater
+import gsw
 from flight_data import *
 import copy # must be after numpy (and flight_data) import, since numpy has its own 'copy'
 import stat
@@ -844,7 +845,10 @@ def load_dive_data(dive_data):
             log_warning("Dive %d is missing sufficient CT data (T:%.2f, S:%.2f)" % (dive_num,tnan,snan))
             raise RuntimeError
         
-        density_insitu = dens(salinity_raw, temperature_raw, press)
+        if Globals.f_use_seawater:
+            density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
+        else:
+            density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
         
         # use the values in the log file, not the pilot's fiction in sg_calib_constants.h
         # this is what the glider used
@@ -1369,7 +1373,10 @@ def load_dive_data_DAC(dive_data):
 
         temperature_raw = dive_nc_file.variables['temperature_raw'][:]
         salinity_raw = dive_nc_file.variables['salinity_raw'][:]
-        density_insitu = dens(salinity_raw, temperature_raw, press)
+        if Globals.f_use_seawater:
+            density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
+        else:
+            density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
         
         # use the values in the log file, not the pilot's fiction in sg_calib_constants.h
         # this is what the glider used

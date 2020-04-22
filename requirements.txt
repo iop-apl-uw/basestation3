@@ -13,5 +13,5 @@ plotly==4.5.1
 scipy==1.4.1
 # For SlackPost and InReachSend
 requests==2.23.0
-#seawater==1.1
-# Must be installed from local package packages/seawater-1.1
+gsw==3.3.1
+seawater==3.3.4
