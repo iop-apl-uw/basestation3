@@ -1217,6 +1217,7 @@ nc_var_metadata = {
 
     'magnetic_variation': [False, 'd', {'description':'The magnetic variance from true north (degrees)'}, nc_scalar],
     'avg_latitude': [False, 'd', {'units':'degrees_north', 'description':'The average latitude of the dive'}, nc_scalar],
+    'avg_longitude': [False, 'd', {'units':'degrees_east', 'description':'The average longitude of the dive'}, nc_scalar],
     nc_sg_time_var: [True, 'd', {'standard_name':'time', 'axis':'T', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Time of the [P] in GMT epoch format'}, (nc_sg_data_info,)],
     'pressure': [True, 'd', {'units':'dbar', 'description':'Uncorrected sea-water pressure at pressure sensor'}, (nc_sg_data_info,)],
     'depth': [True, 'd', {'standard_name':'depth', 'axis':'Z', 'units':'meters', 'positive':'down', 'description':'Depth below the surface, corrected for average latitude'}, (nc_sg_data_info,)],

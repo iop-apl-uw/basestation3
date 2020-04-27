@@ -2468,12 +2468,21 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         log_debug("GPS2 lat = %f, lon = %f" % (GPS2.lat_dd, GPS2.lon_dd))
         log_debug("GPSE lat = %f, lon = %f" % (GPSE.lat_dd, GPSE.lon_dd))
 
+        def avg_longitude(lon1, lon2):
+            """ Assumes the fixes are close
+            """
+            if math.fabs(lon1) > 179. or math.fabs(lon2) > 179.:
+                avg_lon = ((lon1 % 360.) + (lon2 % 360.0)) / 2.0
+                return ((avg_lon + 180.) % 360.) - 180.
+            else:
+                return (lon1 + lon2) / 2.0
+
         # Compute average latitude for the dive for various pressure corrections
         # Latitude will be the mean of the start and end latitude of the dive, in decimal degrees
         # if USE_ICE then GPS hdop is 99 and we should use something else in the RAFOS category?
         if GPS2E_ok and GPS2E_gpsfix: # during the dive
             latitude = (GPS2.lat_dd + GPSE.lat_dd) / 2.0
-            longitude = (GPS2.lon_dd + GPSE.lon_dd) / 2.0
+            longitude = avg_longitude(GPS2.lon_dd, GPSE.lon_dd)
             # This is a good initial guess in case we can't do DAC below
             globals_d['geospatial_lat_min'] = min(GPS2.lat_dd, GPSE.lat_dd)
             globals_d['geospatial_lat_max'] = max(GPS2.lat_dd, GPSE.lat_dd)
@@ -2484,12 +2493,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             if GPS12_ok: # during the drift?
                 log_warning("Determining average latitude using GPS1 and GPS2")
                 latitude = (GPS1.lat_dd + GPS2.lat_dd) / 2.0
-                longitude = (GPS1.lon_dd + GPS2.lon_dd) / 2.0
+                longitude = avg_longitude(GPS1.lon_dd + GPS2.lon_dd)
             else:
                 # could have a bum GPS unit or yoyo dive
                 # in these cases assume a plausible latitude was latched
                 latitude = (GPS2.lat_dd + GPSE.lat_dd) / 2.0
-                longitude = (GPS2.lon_dd + GPSE.lon_dd) / 2.0
+                longitude = avg_longitude(GPS2.lon_dd + GPSE.lon_dd)
                 log_warning("No trustworthy GPS values; assuming average latitude of %.1f degrees" % latitude)
 
         # the headings in the 'head' column of the *.eng file are magnetic.
@@ -2505,6 +2514,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             'GPS2_qc': GPS2.qc,
             'GPSE_qc': GPSE.qc,
             'avg_latitude': latitude,
+            'avg_longitude': longitude,
             'magnetic_variation': mag_var_deg,
             })
 
@@ -2550,6 +2560,15 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         gc_vbd_ctl  = array(log_f.gc_data['vbd_ctl'])
         gc_pitch_secs = array(log_f.gc_data['pitch_secs']) # How long any pitch ran
         num_gc_events = len(gc_st_secs)
+
+        # For RevE, look through the start and ending pot positions to determine if the VBD move was a bleed,
+        # and if so, make the vbd_secs negative like the RevB code
+        if log_f.version >= 67.:
+            vbd_ad_start = array(log_f.gc_data['vbd_ad_start'])
+            vbd_ad_end = array(log_f.gc_data['vbd_ad'])
+            for ii in range(num_gc_events):
+                if gc_vbd_secs[ii] > 0 and vbd_ad_end[ii] > vbd_ad_start[ii]:
+                    gc_vbd_secs[ii] *= -1.
 
         # Find various apogee and climb pump times and the total time spend
         # between apogee pump and the end of the climb pump.  These points
