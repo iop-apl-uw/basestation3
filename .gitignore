@@ -3,3 +3,6 @@ CodeCleanup.html
 *.prof
 htmlcov
 __pycache__
+.coverage
+.coverage_func
+.mypy_cache

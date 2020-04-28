@@ -426,7 +426,9 @@ def main():
         print("usage: LogFiles.py datafile (asc or eng - dat coming soon) [options]")
         return 1
 
-    file_name = os.path.expanduser(args[0])
+    file_name = os.path.abspath(os.path.expanduser(args[0]))
+
+    mission_dir,_ = os.path.split(file_name)
 
     log_info("Processing file: %s" % file_name)
 
