@@ -2,3 +2,4 @@ CodeCleanup.html
 *.cprof
 *.prof
 htmlcov
+__pycache__
