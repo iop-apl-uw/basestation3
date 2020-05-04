@@ -1,9 +1,9 @@
 #! /usr/bin/env python
 
-## 
+##
 ## Copyright (c) 2018, 2019, 2020 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -21,15 +21,18 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-from numpy import *
+""" Utility functions for plotting routines
+"""
+
 import time
 
 # Plotting configuration
-make_plot_section = 'makeplot'
-make_plot_default_dict = {'plot_raw' : [0, 0, 1],
-                          'save_svg' : [0, 0, 1],
-                          'full_html' : [0, 0, 1],
-                          'plot_directory' : [None, None, None]
+make_plot_section = "makeplot"
+make_plot_default_dict = {
+    "plot_raw": [0, 0, 1],
+    "save_svg": [0, 0, 1],
+    "full_html": [0, 0, 1],
+    "plot_directory": [None, None, None],
 }
 
 #
@@ -41,45 +44,51 @@ def get_mission_dive(dive_nc_file):
     Input:
          dive_nc_file - netcdf file object
 
-    Returns: 
+    Returns:
          String containing the mission title
     """
     log_id = 0
     log_dive = 0
-    mission_title = ''
-    if('log_ID' in dive_nc_file.variables):
-        log_id = dive_nc_file.variables['log_ID'].getValue()
-    if('log_DIVE' in dive_nc_file.variables):
-        log_dive = dive_nc_file.variables['log_DIVE'].getValue()
-    if('sg_cal_mission_title' in dive_nc_file.variables):
-        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring().decode('utf-8')
+    mission_title = ""
+    if "log_ID" in dive_nc_file.variables:
+        log_id = dive_nc_file.variables["log_ID"].getValue()
+    if "log_DIVE" in dive_nc_file.variables:
+        log_dive = dive_nc_file.variables["log_DIVE"].getValue()
+    if "sg_cal_mission_title" in dive_nc_file.variables:
+        mission_title = (
+            dive_nc_file.variables["sg_cal_mission_title"][:].tostring().decode("utf-8")
+        )
 
-    if hasattr(dive_nc_file, 'start_time'):
-        start_time = time.strftime("%d-%b-%Y %H:%M:%S ", time.gmtime(dive_nc_file.start_time))
+    if hasattr(dive_nc_file, "start_time"):
+        start_time = time.strftime(
+            "%d-%b-%Y %H:%M:%S ", time.gmtime(dive_nc_file.start_time)
+        )
     else:
-        start_time = '(No start time found)'
+        start_time = "(No start time found)"
 
-    return "SG%03d %s Dive %d Started %s" % (log_id, mission_title, log_dive, start_time)
+    return f"SG{log_id:03d} {mission_title} Dive {log_dive:d} Started {start_time}"
+
 
 def get_mission_str(dive_nc_file):
     """ Gets common information for all plot headers
     """
     log_id = None
-    mission_title = ''
-    if('log_ID' in dive_nc_file.variables):
-        log_id = dive_nc_file.variables['log_ID'].getValue()
-    if('sg_cal_mission_title' in dive_nc_file.variables):
-        mission_title = dive_nc_file.variables['sg_cal_mission_title'][:].tostring().decode('utf-8')
-    return "SG%s %s" % ('%03d' % (log_id if log_id else '???', ), mission_title)
+    mission_title = ""
+    if "log_ID" in dive_nc_file.variables:
+        log_id = int(dive_nc_file.variables["log_ID"].getValue())
+    if "sg_cal_mission_title" in dive_nc_file.variables:
+        mission_title = (
+            dive_nc_file.variables["sg_cal_mission_title"][:].tostring().decode("utf-8")
+        )
+    return f"SG{'%03d' % (log_id if log_id else 0,)} {mission_title}"
+
 
 def get_mission_str_comm_log(comm_log, mission_title):
     """ Gets common information for all plot headers
     """
     log_id = None
     for s in comm_log.sessions:
-        if(s.sg_id is not None):
+        if s.sg_id is not None:
             log_id = s.sg_id
             break
-    return "SG%s %s" % ('%03d' % log_id if log_id else '???', mission_title)
-
-    
+    return f"SG{'%03d' % log_id if log_id else 0} {mission_title}"
