@@ -703,6 +703,7 @@ nc_var_metadata = {
     'sg_cal_hd_b': [False, 'd', {'description':'Hydrodynamic drag factor for given hull shape (Pa^(-1/4))'}, nc_scalar],
     'sg_cal_hd_c': [False, 'd', {'description':'Hydrodynamic induced drag factor for given hull shape (1/radians^2 of attack angle)'}, nc_scalar],
     'sg_cal_hd_s': [False, 'd', {'units' : 'fraction', 'description':'How the drag scales by shape (-1/4 for SG per Eriksen, et al.)'}, nc_scalar],
+    'sg_cal_solve_flare_apogee_speed' : [False, 'i', {'description':'Whether to solve for accelerated speeds during flare and apogee'}, nc_scalar],
 
     # Sparton compass pitch and roll coeffients, used to invert correction if desired
     'sg_cal_sparton_pitch0': [False, 'd', {}, nc_scalar],

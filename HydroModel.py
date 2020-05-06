@@ -218,19 +218,18 @@ def glide_slope(w_cm_s_v, vehicle_pitch_rad_v, calib_consts):
 def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
     """Compute vehicle speed and glide angle from buoyancy and observed pitch
 
-    Usage: [speed glide_angle] = hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts)
-           where [speed glide_angle] is a 2 x n_pts matrix
+    Usage: converged,umag,theta,stalled_i_v = hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts)
  
     Input:               
         buoyancy_v - n_pts vector (grams, positive is upward)
         vehicle_pitch_degrees_v - observed vehicle pitch (degrees (! not radians), positive nose up)
         calib_consts - that contain
-    			hd_a, hd_b, hd_c - hydrodynamic parameters for lift, drag, and induced drag
-                        hd_s - how drag scales by shape
-                        rho - density of deep water (maximum density encountered)
-                        glider_length - the length of the vehicle
+           hd_a, hd_b, hd_c - hydrodynamic parameters for lift, drag, and induced drag
+           hd_s - how drag scales by shape
+           rho - density of deep water (maximum density encountered)
+           glider_length - the length of the vehicle
 
-    Output:
+    Returns:
         converged - whether the iterative solution converged
         theta - glide angle in radians, positive nose up
         umag - total vehicle speed through the water (cm/s)

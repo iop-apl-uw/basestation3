@@ -60,7 +60,7 @@ from CalibConst import getSGCalibrationConstants
 import BaseOpts
 from BaseLog import *
 import GPS
-from HydroModel import glide_slope
+from HydroModel import glide_slope, hydro_model
 from TempSalinityVelocity import TSV_iterative, TSV_use_sparse, load_thermal_inertia_modes
 from QC import *
 import pdb
@@ -546,7 +546,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
 
 
         # various biases, offsets, and control parameters
-        'apogee_speed': 0.0, # [cm/s] typically 8.0 cm/s
+        'solve_flare_apogee_speed': 0, # whether to solve unsteady flight during flare and apogee/climb pump
         'vbdbias': 0.0, # [cc]
         'sbe_temp_freq_offset': 0, # temp frequency offset
         'temp_bias': 0, #  [deg]
@@ -4281,8 +4281,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # Sometimes averaging the velocities converges....
             converged, tmc_temp_cor_v, tmc_temp_cor_qc_v, tmc_salin_cor_v, tmc_salin_cor_qc_v, density_v, density_insitu_v, buoyancy_v, \
                        hdm_speed_cm_s_v, hdm_glide_angle_rad_v, speed_qc_v = \
-                       TSV_f(ctd_elapsed_time_s_v,
-                             start_of_climb_i,
+                       TSV_f(ctd_elapsed_time_s_v, start_of_climb_i,
                              temp_cor_v, temp_cor_qc_v,
                              cond_cor_v, cond_cor_qc_v,
                              salin_cor_v, salin_cor_qc_v,
@@ -4336,72 +4335,53 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             CTD_qc = QC_BAD
             hdm_qc = QC_BAD
 
-        apogee_speed = calib_consts['apogee_speed'] # m/s
         sfc_drift_interval_i = None
-        if (hdm_qc == QC_GOOD) and apogee_speed > 0:
-            # LINEAR ACCELERATION approximation
+        if calib_consts['solve_flare_apogee_speed'] and (hdm_qc == QC_GOOD):
+            # Unsteady flight
 
-            # During pumps and bleeds the VBD system on all vehicles is moving linearly so the buoyancy forcing,
-            # hence acceleration, is also changing linearly.  Thus the speed is changing quardatically.  However,
-            # all this is attenuated by the vehicle drag and its changing pitch which is both commanded but also
-            # because of pitch-vbd-shift torque.  Nevertheless it is still overall quadratic.
+            # During pumps and bleeds the VBD system on all vehicles is moving
+            # linearly so the buoyancy forcing is changing linearly,
+            # accelerating the vehicle.  The more-general momentum balance
+            # equations of the flight model apply to unsteady flight in this
+            # regime.  We solve them for U and W numerically via integration
+            # from estimated starting velocities.
 
-            # I used acoustic tracking range data from SG653's Dabob Bay deployment to fit a mean quadratic to the flare, apogee, and climb pump
-            # phases. This characterizes that vehicle with its drag and operational parameters (APOGEE_PITCH, pre-flare angle, 
-            # ADCP and pinger exposed, etc. etc.) and its VBD engine speed.  But we assume that this rough quadratic 'shape' sufficies for
-            # all SG-class vehicles (including DG and OG). I encode that quadratic 'shape' by determining the point at which
-            # the maximum distance from a linear fit occurs between the end points. (See map_vbd_accelerations.)
-            # The ratio of the time to that point vs the total time and the velocity difference vs the total velocity difference
-            # at that point characterize two constants, m1 and m2, respectively. These can be used with new start and end points
-            # to estimate a third point and hence fit a dive-specific quadratic estimation of speeds during these phases. 
+            # Perform these fits after TSV since that only deals with steady
+            # flight and assumes the accelerations can be ignored.  Perhaps we
+            # should adjust salinity using these speeds and trust the initial
+            # speeds anyway but that is for later.  However TSV will see slow
+            # speeds and declare stalled soon enough with no gain so we'll have
+            # to 'patch' salinity and salinity_qc here--if acceleration model is
+            # on, patch things? At the moment, just ignore it.
 
-            # Do these fits after TSV since that only deals with steady flight and assumes these bits can be ignored.
-            # Still should we adjust salinity?  Do we do this before we call TSV and so let TSV solve for flare/apogee points?            
-            # Here we fit accelerations to match those found speeds at the end of flare and the start of steady climb
-
-            # Probably not since TSV will see slow speeds and declare stalled soon enough with no gain
-            # so we'll have to 'patch' salinity and salinity_qc here--if acceleration model is on, patch things? Nah, just ignore it.
+            # Unpack these once in this scope
+            hd_a = calib_consts['hd_a']
+            hd_b = calib_consts['hd_b']
+            hd_c = calib_consts['hd_c']
+            hd_s = calib_consts['hd_s']
+            rho0 = calib_consts['rho0']
+            glider_length = calib_consts['glider_length']
+            mass_kg = calib_consts['mass'] # critical to have this in kg
+            gravity = 9.82 # m/s2
+            rhoxl2_2m = (rho0*glider_length*glider_length)/(2*mass_kg)
+            dens_raw_v = seawater.dens(salin_raw_v, temp_raw_v, ctd_press_v)
+            buoy_v = kg2g*(dens_raw_v*volume_v*1e-6 - mass_kg) # [g]
 
             # Flare interval
-            # Flare is complicated. There are two parts we care about.  The first is when the vehicle is just starting to bleed
-            # and pitched down but only slowly settling in the water.  There it is a spar bouy and drifting.  Then, at some point
-            # the vehicle goes negative and we start the accelerated motion.  We can't trust vbdCC_v to indicate neutral since
-            # early we don't know if C_VBD is tuned (and to the surface water density).  For Oculus sometimes we flare immediately
-            # to pitch desired (since the pitch motor is so slow slow that we can rocket through thermoclines, etc.)
-            # and hence we 'wallow' a bit; so we can't trust pitch.
-            # Here we approximate the whole mess but assuming the first (and perhaps second gc) have bleeds and pitches in some order.
-            # To estimate the drift end we look for w_cm_s_v greater than 7 cm/s (empirical) (and back up a point?).  
-            # Then we choose the first trusted steady flight speed after the elapsed pitch/bleed time as the end of flare.
-            # We assert 0 speed for the initial part (later updated with GPS sfc drift below) and a quadratic for the second part.
-            # Note that the quadratic was developed from a vehicle with a typical pitch down of 50-70 degrees.  Oculus often pitches
-            # immediately to pitch desired so the departure speed off the surface is driven by the huge throw of the VBD engine.
-            # Anyway, what a hack.
-
-            flare_w_below_sfc = -7.0 # PARAMETER downward vertical motion more than 7cm/s indicates left the sfc with some impetus
-            flare_gc_i = [0] # when we start the bleed but not when we start accelerating off the sfc
-            if num_gc_events > 1 and  abs(gc_vbd_secs[1]) > 0:
-                flare_gc_i.append(1)
-
-            st_flare_i = np.where(w_cm_s_v <= flare_w_below_sfc)[0]
-            if len(st_flare_i):
-                st_flare_i = st_flare_i[0]
-            else:
-                st_flare_i = 0
-            flare_i = st_flare_i # start flare here for DAC
-            end_flare_s = gc_st_secs[0] + sum(gc_pitch_secs[flare_gc_i]) + sum(abs(gc_vbd_secs[flare_gc_i])) # epoch_secs
+            flare_gc_i = 1 # the flare GC is always the 2nd GC
+            pitch_oscillation_s = 30 # PARAMETER typically 30s to dampen after the flare pitch up
+            end_flare_s = gc_st_secs[flare_gc_i] + gc_pitch_secs[flare_gc_i] + abs(gc_vbd_secs[flare_gc_i]) + pitch_oscillation_s # epoch_secs
             ed_flare_i = list(filter(lambda t_i: ctd_epoch_time_s_v[t_i] >= end_flare_s and speed_qc_v[t_i] == QC_GOOD, range(ctd_np)))
             ed_flare_i = ed_flare_i[0]
-            sfc_drift_interval_i = xrange(0,st_flare_i+1)
-            # Remove points from slow_apogee_climb_pump_i_v from locations of accelerations since we are moving here, not stalled (for DAC)
-            # Doing this incrementally preserves QC_BAD points during LOITER
-            # Apogee interval
+            underwater_i = np.where(buoy_v <= 0)[0][0]
+            flare_i = underwater_i # start flare here for DAC
+            sfc_drift_interval_i = range(0,underwater_i+1)
+            # See how much of apogee and climb we can find
             apogee_ok = False
             if apo_gc_i is not None:
-                # Well strictly this should just cover the pump time not include the pitch but that is generally fast
-                # oh, except perhaps for OG.
                 apo_pump_st_time = apogee_pump_start_time + i_eng_file_start_time # back to epoch time
                 apo_pump_ed_time = apo_pump_st_time + gc_pitch_secs[apo_gc_i] + gc_vbd_secs[apo_gc_i]
-                st_apo_i = filter(lambda t_i: ctd_epoch_time_s_v[t_i] <= apo_pump_st_time and speed_qc_v[t_i] == QC_GOOD, xrange(ctd_np))
+                st_apo_i = filter(lambda t_i: ctd_epoch_time_s_v[t_i] <= apo_pump_st_time and speed_qc_v[t_i] == QC_GOOD, range(ctd_np))
                 if len(st_apo_i):
                     st_apo_i = st_apo_i[-1] # last good point
                     ed_apo_i = np.where(ctd_epoch_time_s_v >= apo_pump_ed_time)[0][0]
@@ -4427,45 +4407,89 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 else:
                     log_warning('Unable to compute acceleration during climb pump')
 
-            def polyfit_acceleration(interval_i_v,from_speed,to_speed,acceleration_type,m1,m2):
-                if len(interval_i_v) < 2:
+            def fit_unsteady_flight(interval_i_v,acceleration_type,buoyancy_threshold=0):
+                interval_i_v = np.array(interval_i_v)
+                n_pts = len(interval_i_v)
+                if n_pts < 2:
                     log_warning("No detectable %s?" % acceleration_type)
                     return # unable to do anything
-                etime = ctd_epoch_time_s_v[interval_i]
-                etime = etime - etime[0]
-                t1 = etime[0] # 0
-                t2 = etime[-1]
-                # fit a quadratic using the empirical ratios for elapsed time and relative speed difference
-                # from the mean measured empirical fit of SG653 during each phase
-                p2 = np.polyfit([t1, m1*(t2 - t1)+t1,t2],[from_speed, m2*(to_speed - from_speed) + from_speed, to_speed],2)
-                speed = np.polyval(p2,etime)
-                hdm_speed_cm_s_v[interval_i] = speed # splice
-                assert_qc(QC_PROBABLY_GOOD,speed_qc_v,interval_i,
-                          '%s (avg: %.4f cm/s/s for %.1fs)' % (acceleration_type,p2[1],t2)) # assume dominated by linear term
-                hdm_glide_angle_rad_v[interval_i] = np.radians(ctd_vehicle_pitch_degrees_v[interval_i]) # an approximation
+                # Find where we will start the integration and map the results back to on the original time grid
+                us_flying_i = np.where(buoy_v[interval_i_v] <= buoyancy_threshold)[0][0]
+                under_interval_i_v = interval_i_v[us_flying_i:] # original grid indices
 
-            # update the speed and an approximate glide angle (so we can compute a plausible horizontal displacement below)
-            interval_i = xrange(st_flare_i,ed_flare_i+1)
-            polyfit_acceleration(interval_i,0.0,hdm_speed_cm_s_v[ed_flare_i],'flare acceleration',0.490196, 0.408879)
+                # Now form a finer time grid for the integration
+                etime = ctd_elapsed_time_s_v[interval_i_v]
+                # interpolate (valid) buoyancy and pitch in the interval to a new time grid
+                dt = min(int(mean(diff(etime))),5) # PARAMETER 5 secs is good..some vbd motion
+                et = np.arange(etime[0],etime[-1]+1,dt)
+                n_pts = len(et) # length of new grid
 
+                valid_i_v = filter(lambda i: not isnan(buoy_v[i]),interval_i)
+                bu  = Utils.interp1d(ctd_elapsed_time_s_v[valid_i_v],buoy_v[valid_i_v],et)
+                phd = Utils.interp1d(etime, vehicle_pitch_degrees_v[interval_i_v],et)
+
+                # Find the starting speeds for the integration on the fine grid
+                # Here is the rub: we need good starting speeds for W and U so we use the hydro_model
+                # to find the speeds where buoyancy/pitch is good (here 'underwater_i')
+                # This works for the start of flare (after buoyancy goes negative) and apogee (where it is negative)
+                # but if we thought to split apogee and climb because there is a long loiter then we don't know the
+                # starting speeds to assume on the pump.  At the moment we inegrate across the loiter with whatever
+                # densities were recorded (if really long, e.g., sg128_NASCAR_Jan18_loiter/p1280620, then
+                # frequenty there is NO data taken while asleep)
+                converged,umag,th,stalled_i_v = hydro_model(bu,phd,calib_consts) # hydro takes buoyancy in [g]
+                # find where to start the integration in the fine grid
+                us_flying_i = np.where(bu <= buoyancy_threshold)[0][0]
+                Us,Ws = Utils.pol2cart(th[us_flying_i],umag[us_flying_i]/m2cm)
+                bu *= gravity/kg2g # Convert bu from [g] to [N] for use in unsteady_flight()
+
+                # function to compute the derivates of U and W that solve_ivp integrates
+                def unsteady_flight(t,u):
+                    st_i = np.where(et <= t)[0][-1] # always succeeds
+                    ed_i = np.where(et >= t)[0]
+                    ed_i = st_i if len(ed_i) == 0 else ed_i[0]
+                    if st_i != ed_i:
+                        B    = Utils.interp1d([et[st_i],et[ed_i]],[ bu[st_i], bu[ed_i]],[t])[0]
+                        phdi = Utils.interp1d([et[st_i],et[ed_i]],[phd[st_i],phd[ed_i]],[t])[0]
+                    else:
+                        B    = bu [st_i]
+                        phdi = phd[st_i]
+                    U = u[0]
+                    W = u[1]
+                    th, V = Utils.cart2pol(U, W)
+                    thd = math.degrees(th)
+                    ald = phdi - thd
+                    q = 0.5*rho0*V*V
+                    # From lift drag momentum balance equations given our typical quadratic flight model in q
+                    dUdt =             rhoxl2_2m*( -hd_a*ald*W*V - (hd_b*q**hd_s + hd_c*ald*ald)*U*V )
+                    dWdt = B/mass_kg + rhoxl2_2m*(  hd_a*ald*U*V - (hd_b*q**hd_s + hd_c*ald*ald)*W*V )
+                    return [dUdt, dWdt]
+
+
+                sol = scipy.integrate.solve_ivp(unsteady_flight,[et[us_flying_i],et[-1]],[Us,Ws],'RK45')
+                # map back to original times and indices (even if no valid densities?)
+                th,vv = Utils.cart2pol(Utils.interp1d(sol.t,sol.y[0,:],ctd_elapsed_time_s_v[under_interval_i_v]),
+                                       Utils.interp1d(sol.t,sol.y[1,:],ctd_elapsed_time_s_v[under_interval_i_v]))
+                hdm_speed_cm_s_v[under_interval_i_v] = vv*m2cm
+                hdm_glide_angle_rad_v[under_interval_i_v] = th
+                assert_qc(QC_PROBABLY_GOOD,speed_qc_v,under_interval_i_v,acceleration_type)
+
+
+            # Compute flare accelerations
+            interval_i = range(0,ed_flare_i+1)
+            fit_unsteady_flight(interval_i,'flare acceleration')
+
+            # We compute apogee/loiter/climb pump in one long integration
+            ed_i = None
             if apogee_ok:
-                interval_i = xrange(st_apo_i,ed_apo_i+1)
-                polyfit_acceleration(interval_i,apogee_start_speed,apogee_speed,'apogee deceleration',0.5, 0.745402)
-                apogee_speed = hdm_speed_cm_s_v[interval_i[-1]] # where we computed we ended up (so climb pump starts here)
-                # not going slow here when computing DAC etc.
-                slow_apogee_climb_pump_i_v = Utils.setdiff(slow_apogee_climb_pump_i_v,interval_i)
-
-            # Deal with any loiter or delay
-            # apogee_speed = 0
-            hdm_speed_cm_s_v[loiter_i_v] = apogee_speed
-            hdm_glide_angle_rad_v[loiter_i_v] = np.radians(ctd_vehicle_pitch_degrees_v[loiter_i_v]) # an approximation
-            # slow_apogee_climb_pump_i_v = Utils.setdiff(slow_apogee_climb_pump_i_v,loiter_i_v)
+                ed_i = ed_apo_i
 
             if climb_pump_ok:
-                interval_i = xrange(st_climb_pump_i,ed_climb_pump_i)
-                polyfit_acceleration(interval_i,apogee_speed,hdm_speed_cm_s_v[ed_climb_pump_i],'climb acceleration',0.496296, 0.247877)
-                # not going slow here when computing DAC etc.
-                slow_apogee_climb_pump_i_v = Utils.setdiff(slow_apogee_climb_pump_i_v,interval_i)
+                ed_i = ed_climb_pump_i
+            if ed_i:
+                interval_i = range(st_apo_i,ed_i+1)
+                fit_unsteady_flight(interval_i,'apogee deceleration and climb acceleration')
+                # not going slow here when computing DAC etc. but consider loiter suspect
+                slow_apogee_climb_pump_i_v = Utils.setdiff(slow_apogee_climb_pump_i_v,Utils.setdiff(interval_i,loiter_i_v))
 
         if (hdm_qc == QC_GOOD):
             # check for stalled or stuck on bottom points
@@ -4551,7 +4575,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             temp_cor_pot_v = Utils.ptemp(salin_cor_v, temp_cor_v, ctd_sg_press_v, longitude, latitude, pref=0.0)
             sigma_theta_v = Utils.density(salin_cor_v, temp_cor_pot_v, np.zeros(salin_cor_v.size), longitude, latitude) - 1000. # defn: (potential density at P=0) - 1000
             sound_vel_v = Utils.svel(salin_cor_v, temp_cor_v, ctd_sg_press_v, longitude, latitude)
-        
+
         [oxygen_sat_seawater_v, ignore, ignore] = Utils.compute_oxygen_saturation(temp_cor_v, salin_cor_v)
         results_d.update({
             'sigma_t': sigma_t_v, # CF sea_water_sigma_t g/L
