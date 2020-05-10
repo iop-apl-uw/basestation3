@@ -806,7 +806,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                 # Start pos is the same as filesize - nothing to do
                 return (None, start_pos, session, line_count)
         try:
-            comm_log_file = open(comm_log_file_name, "r")
+            comm_log_file = open(comm_log_file_name, "rb")
         except IOError:
             log_error("Could not open %s for reading." %  comm_log_file_name)
             return (None, None, None, None)
@@ -826,8 +826,14 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
         file_transfer_method = {}
 
         for raw_line in comm_log_file:
-            raw_line = raw_line.rstrip()
             line_count = line_count + 1
+            try:
+                raw_line = raw_line.decode('utf-8')
+            except UnicodeDecodeError:
+                log_warning(f"Could not decode line number {line_count} - skipping")
+                continue
+            raw_line = raw_line.rstrip()
+
             if raw_line == "":
                 continue
 
