@@ -284,3 +284,18 @@ N.B. The glider's user account must have write permissions to sg_calib_constants
 
 See FlightModel.pdf in the docs directory for further details.
 
+-------------------
+Temp Notes - some of this is changing rapidly
+
+MakePlot4 plotting extension setup:
+
+Install xvfb:
+    sudo apt install xvfb
+
+Download orca app image (tested against 1.2.1) from https://github.com/plotly/orca/releases
+
+Create an orca app in /usr/local/bin/orca
+    #!/bin/bash                                                                                         
+    xvfb-run -a /usr/local/bin/orca-1.2.1-x86_64.AppImage "$@"
+
+sudo chmod +x /usr/local/bin/orca
