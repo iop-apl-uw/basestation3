@@ -130,7 +130,7 @@ class LogFile:
             else:
                 print("%s,%s" % (key, item), file=fo)
 
-def parse_log_file(in_filename, mission_dir):
+def parse_log_file(in_filename, mission_dir, issue_warn=False):
     """Parses a Seaglider log file
 
     Returns a logile object or None for an error
@@ -249,8 +249,9 @@ def parse_log_file(in_filename, mission_dir):
             elif(parm_name == "$INTR"): # interrupt details
                 pass # drop for now
             elif(parm_name == "$WARN"): # various warnings (PPS, flight parms, etc.)
-                log_file.warn.append(value)
-                log_warning("WARN:(%s) in %s" % (value, in_filename), alert='LOGFILE_WARN')
+                if issue_warn:
+                    log_file.warn.append(value)
+                    log_warning("WARN:(%s) in %s" % (value, in_filename), alert='LOGFILE_WARN')
             elif(parm_name == "MODEM"): # Handle like RAFOS
                 pass
             elif(parm_name == "MODEM_MSG"):
