@@ -131,13 +131,6 @@ sudo apt-get install libgeos-dev
 pip3.7 install git+https://github.com/matplotlib/basemap.git
 ```
 
-6. Installseawater routines for python (in packages tarball)
-
-	In /usr/local/Base-3.01/packages, "sudo tar xvzf seawater-1.1.tgz"
-	In /usr/local/Base-3.01/packages/seawater-1.1 run 'sudo python setup.py install'
-    Tested with version 1.1
-
-
 6. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
    using the command "sudo tar xvzf packages.tgz"
 7. In /usr/local/Base-3.01, run "sudo ./install_base.sh" to install the basestation code into /usr/local/basestation
@@ -162,8 +155,6 @@ Use 'python --version' to determine the version.
 
 There are several additional packages you will need that are not distributed with
 the basestation:
-
-
 
 ## Install lrzsz
 To maintain a log of xmodem communications progress ('comm.log') you must install
@@ -293,3 +284,18 @@ N.B. The glider's user account must have write permissions to sg_calib_constants
 
 See FlightModel.pdf in the docs directory for further details.
 
+-------------------
+Temp Notes - some of this is changing rapidly
+
+MakePlot4 plotting extension setup:
+
+Install xvfb:
+    sudo apt install xvfb
+
+Download orca app image (tested against 1.2.1) from https://github.com/plotly/orca/releases
+
+Create an orca app in /usr/local/bin/orca
+    #!/bin/bash                                                                                         
+    xvfb-run -a /usr/local/bin/orca-1.2.1-x86_64.AppImage "$@"
+
+sudo chmod +x /usr/local/bin/orca
