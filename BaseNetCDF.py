@@ -973,6 +973,7 @@ nc_var_metadata = {
     'log_MISSION': [False, 'i', {}, nc_scalar],
     'log_MOTHERBOARD': [False, 'i', {}, nc_scalar],
     'log_NAV_MODE': [False, 'i', {}, nc_scalar],
+    'log_NETWORK_DEVICE': [False, 'c', {}, nc_scalar],
     'log_N_FILEKB': [False, 'i', {}, nc_scalar],
     'log_N_GPS': [False, 'i', {}, nc_scalar],
     'log_N_NOCOMM': [False, 'i', {}, nc_scalar],
@@ -994,6 +995,7 @@ nc_var_metadata = {
     'log_PITCH_VBD_SHIFT': [False, 'd', {}, nc_scalar],
     'log_PITCH_W_DBAND': [False, 'd', {}, nc_scalar],
     'log_PITCH_W_GAIN': [False, 'd', {}, nc_scalar],
+    'log_PRESSURE_DEVICE': [False, 'c', {}, nc_scalar],
     'log_PRESSURE_SLOPE': [False, 'd', {}, nc_scalar],
     'log_PRESSURE_YINT': [False, 'd', {}, nc_scalar],
     'log_PROTOCOL': [False, 'i', {}, nc_scalar],
@@ -1097,7 +1099,9 @@ nc_var_metadata = {
     'log_W_ADJ_DBAND': [False, 'd', {}, nc_scalar],
     'log_XPDR_DEVICE': [False, 'd', {}, nc_scalar],
     'log_XPDR_INHIBIT': [False, 'd', {}, nc_scalar],
+    'log_XPDR_INT': [False, 'd', {}, nc_scalar],
     'log_XPDR_PINGS': [False, 'd', {}, nc_scalar],
+    'log_XPDR_REP': [False, 'd', {}, nc_scalar],
     'log_XPDR_VALID': [False, 'd', {}, nc_scalar],
     'log__CALLS': [False, 'd', {}, nc_scalar],
     'log__SM_ANGLEo': [False, 'd', {}, nc_scalar],
@@ -1120,7 +1124,7 @@ nc_var_metadata = {
     'log_LOITER_N_DIVE': [False, 'd', {}, nc_scalar],
     'log_ALTIM_PING_FIT': [False, 'd', {}, nc_scalar],
     'log_PING': [False, 'c', {}, nc_scalar],
-    
+
     # $STATE line entries (gc_state)
     'gc_state_secs': [True, 'd', {'units':'seconds since 1970-1-1 00:00:00','description':'Start of STAGE time in GMT epoch format'}, (nc_gc_state_info,)],
     'gc_state_state': [True, 'i', {'description':'Name of the GC state'}, (nc_gc_state_info,)],
