@@ -141,8 +141,10 @@ def init_logger(module_name, init_dict=None):
                                   'depth_depth': [False, 'd', {'standard_name':'depth', 'positive':'down', 'units':'cm', 'description':'Measured vertical distance below the surface'}, (nc_depth_data_info,)],
                                   'depth_ontime_a': [False, 'd', {'description':'depth total time turned on dive', 'units' : 'secs'}, nc_scalar],
                                   'depth_samples_a': [False, 'i', {'description':'depth total number of samples taken dive'}, nc_scalar],
+                                  'depth_timeouts_a': [False, 'i', {'description':'depth total number of timeouts on dive'}, nc_scalar],
                                   'depth_ontime_b': [False, 'd', {'description':'depth total time turned on climb', 'units' : 'secs'}, nc_scalar],
                                   'depth_samples_b': [False, 'i', {'description':'depth total number of samples taken climb'}, nc_scalar],
+                                  'depth_timeouts_b': [False, 'i', {'description':'depth total number of timeouts on climb'}, nc_scalar],
 
                                   # Aux compass/pressure sensor
                                   'auxCompass_hdg': [True, 'd', {'standard_name':'heading', 'units':'degrees', 'description':' '}, (nc_auxcompass_data_info,)],
