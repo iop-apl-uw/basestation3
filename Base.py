@@ -1726,7 +1726,7 @@ def main():
             fragment_size = fragment_dict[i]
         else:
             fragment_size = 8192
-            log_warning("No fragment size found for %s - using %d as default" % (i, fragment_size))
+            log_warning("No fragment size found for dive %s - using %d as default" % (i, fragment_size))
         dive_processed = process_dive_selftest(dive_files, i, fragment_size, calib_consts)
         if dive_processed > 0:
             new_dives_processed.append(i)
