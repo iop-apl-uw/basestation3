@@ -827,7 +827,7 @@ nc_var_metadata = {
     'sg_cal_GPS_position_error': [False, 'd', {'units':'meters','description':'Assumed error of GPS fixes'}, nc_scalar],
     'sg_cal_use_auxpressure': [False, 'i', {'description':'Whether to use aux pressure sensor data'}, nc_scalar],
     'sg_cal_use_auxcompass': [False, 'i', {'description':'Whether to use aux compass sensor data'}, nc_scalar],
-    'sg_cal_sbe_cond_freq_C0': [False, 'i', {'description':'Conductivity zero frequency'}, nc_scalar],
+    'sg_cal_sbe_cond_freq_C0': [False, 'd', {'description':'Conductivity zero frequency'}, nc_scalar],
 
     # log file header values
     'log_version': [False, 'd', {'description':'Version of glider software'}, nc_scalar],
