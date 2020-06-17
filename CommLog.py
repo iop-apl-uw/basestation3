@@ -1233,7 +1233,7 @@ def process_history_log(history_log_file_name):
     Returns an array of epoch times and commands
     """
     try:
-        history_log_file = open(history_log_file_name, "r")
+        history_log_file = open(history_log_file_name, "rb")
     except IOError:
         log_critical("Could not open %s for reading." % history_log_file_name)
         return None
@@ -1242,6 +1242,13 @@ def process_history_log(history_log_file_name):
     command_history = []
 
     for raw_line in history_log_file:
+        try:
+            raw_line_tmp = raw_line.decode('utf-8')
+        except UnicodeDecodeError:
+            log_debug(f"Could not decode {raw_line} - skipping")
+            continue
+        raw_line = raw_line_tmp
+
         raw_line = raw_line.rstrip()
         line_count = line_count + 1
         if raw_line == "":
