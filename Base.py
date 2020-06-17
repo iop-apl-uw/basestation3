@@ -661,7 +661,7 @@ def process_file_group(file_group, fragment_size, total_size, calib_consts):
                     fo.close()
                     processed_other_files.append(fc.mk_base_ascfile_name())
                     # Convert to the eng file
-                    sg_log_file = LogFile.parse_log_file(fc.mk_base_logfile_name(), base_opts.mission_dir)
+                    sg_log_file = LogFile.parse_log_file(fc.mk_base_logfile_name(), base_opts.mission_dir, issue_warn=True)
                     if not sg_log_file:
                         log_error("Could not parse %s, skipping eng file creation" % fc.mk_base_logfile_name())
                         #Don't add defrag_file_name to the incomplete_files list on account of this
@@ -1726,7 +1726,7 @@ def main():
             fragment_size = fragment_dict[i]
         else:
             fragment_size = 8192
-            log_warning("No fragment size found for %s - using %d as default" % (i, fragment_size))
+            log_warning("No fragment size found for dive %s - using %d as default" % (i, fragment_size))
         dive_processed = process_dive_selftest(dive_files, i, fragment_size, calib_consts)
         if dive_processed > 0:
             new_dives_processed.append(i)

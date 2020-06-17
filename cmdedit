@@ -1,9 +1,9 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 
-## 
-## Copyright (c) 2006, 2007, 2008, 2011 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## Copyright (c) 2006, 2007, 2008, 2011, 2020 by University of Washington.  All rights reserved.
+##
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -24,12 +24,13 @@
 import getopt
 import glob
 import os
-import sys
 import re
-import tempfile
 import shutil
 import subprocess
+import sys
+import tempfile
 import zlib
+
 from time import strftime, time, gmtime
 from os.path import basename
 
@@ -67,14 +68,14 @@ available options:
     specify '-q' if you use '-f -'.  Likewise, you must run interactively
     if you do not specify an input file with -f; never use -q without -f.
 """
-    
+
 
 progname = basename(sys.argv[0])
 
 try:
     opts, args = getopt.getopt(sys.argv[1:], "hqaf:d:")
 except getopt.GetoptError:
-    print "usage: %s [-f file] [-q] [-d directory]" % progname
+    print(f"usage: {progname} [-f file] [-q] [-d directory]")
     sys.exit(1)
 
 interactive = True
@@ -83,9 +84,9 @@ wd = os.getcwd()
 validator = "/usr/local/bin/validate"
 always_validate = False
 
-for o,a in opts:
+for o, a in opts:
     if o == "-h":
-        print help_message
+        print(help_message)
         sys.exit(0)
     elif o == "-q":
         interactive = False
@@ -97,11 +98,11 @@ for o,a in opts:
         wd = a
 
 if input_file == "-" and interactive:
-    print "cannot run interactively with input from stdin, must use -q with -f -"
+    print("cannot run interactively with input from stdin, must use -q with -f -")
     sys.exit(1)
 
-if input_file == "" and interactive == False:
-    print "cannot run quietly with no input file specified, must use -f with -q"
+if input_file == "" and not interactive:
+    print("cannot run quietly with no input file specified, must use -f with -q")
     sys.exit(1)
 
 glider = basename(wd)[2:]
@@ -117,8 +118,8 @@ elif progname == "targedit":
     filename = "targets"
 
 ctrlfile = wd + "/" + filename
-if os.path.isfile(ctrlfile) and os.access(ctrlfile, os.W_OK) == False:
-    print "%s access denied" % filename
+if os.path.isfile(ctrlfile) and not os.access(ctrlfile, os.W_OK):
+    print(f"{filename} access denied")
     sys.exit(2)
 
 # scan the comm.log to figure out what the latest dive is
@@ -126,10 +127,10 @@ if os.path.isfile(ctrlfile) and os.access(ctrlfile, os.W_OK) == False:
 try:
     comm = open(wd + "/comm.log", "r")
 except IOError:
-    print "could not open comm.log in working directory"
+    print("could not open comm.log in working directory")
     sys.exit(2)
 
-p = re.compile('^[0-9].*:.*:.* GPS')
+p = re.compile("^[0-9].*:.*:.* GPS")
 for s in comm:
     if p.match(s):
         latest = int(s.split(":")[0])
@@ -142,14 +143,14 @@ logfile = "-"
 
 n = latest
 while n >= 1:
-    logfile = "%s/p%s%04d.log" % (wd, glider, n)
+    logfile = f"{wd}/p{glider}{n:04d}.log"
     if os.access(logfile, os.R_OK):
         break
 
     n = n - 1
 
 # If no input file was specified then copy the current control file (if it
-# exists) to a temp file and edit that.  If the input file was 
+# exists) to a temp file and edit that.  If the input file was
 # named "-" (stdin) then send stdin to a temp file but don't edit it.
 # If an actual named file was given just proceed.
 
@@ -161,17 +162,18 @@ if input_file == "":
     if os.access(ctrlfile, os.R_OK):
         shutil.copyfile(ctrlfile, newfile)
     else:
-        files = glob.glob(ctrlfile + '.*')
+        files = glob.glob(ctrlfile + ".*")
         if len(files) > 0:
-            files.sort(lambda x,y:cmp(os.path.getmtime(x),os.path.getmtime(y)))
-            print "using %s, override with -f" % files[-1]
+            #files.sort(lambda x, y: cmp(os.path.getmtime(x), os.path.getmtime(y)))
+            files.sort(key=os.path.getmtime)
+            print(f"using {files[-1]}, override with -f")
             shutil.copyfile(files[-1], newfile)
 
 elif input_file == "-":
     try:
-        file(newfile, "w").write(sys.stdin.read())
+        open(newfile, "w").write(sys.stdin.read())
     except:
-        print "could not copy input from stdin to temporary file"
+        print("could not copy input from stdin to temporary file")
         sys.exit(2)
 else:
     newfile = input_file
@@ -182,8 +184,8 @@ done_editing = 0
 while done_editing == 0:
 
     if interactive:
-        if 'EDITOR' in os.environ.keys():
-            editor = os.environ['EDITOR']
+        if "EDITOR" in list(os.environ.keys()):
+            editor = os.environ["EDITOR"]
         else:
             editor = "/bin/vi"
 
@@ -192,39 +194,47 @@ while done_editing == 0:
     # if there is an existing control file, diff it against our new file
 
     if os.access(ctrlfile, os.R_OK):
-        p = subprocess.Popen(["/usr/bin/diff", "-q", ctrlfile, newfile], 
-                             stdin = subprocess.PIPE, 
-                             stdout = subprocess.PIPE,     
-                             stderr = subprocess.PIPE, close_fds = True)
+        p = subprocess.Popen(
+            ["/usr/bin/diff", "-q", ctrlfile, newfile],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            close_fds=True,
+        )
 
         diff_output, diff_stderr = p.communicate()
         if diff_output == "":
             if always_validate:
-                print "new file is identical to existing %s" % filename
+                print(f"new file is identical to existing {filename}")
             else:
-                print "new file is identical to existing %s - nothing to do" % filename
+                print(f"new file is identical to existing {filename} - nothing to do")
                 if newfile_is_temp:
                     os.remove(newfile)
                 sys.exit(0)
 
-# validate the proposed new control file, using state from the best available
-# logfile (or none if logfile is "-")
+    # validate the proposed new control file, using state from the best available
+    # logfile (or none if logfile is "-")
 
-    p = subprocess.Popen([validator, logfile, "-" + filename[0], newfile], 
-                         stdin = subprocess.PIPE, stdout = subprocess.PIPE, 
-                         stderr = subprocess.PIPE, close_fds = True)
+    p = subprocess.Popen(
+        [validator, logfile, "-" + filename[0], newfile],
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        close_fds=True,
+    )
     validate_output, validate_stderr = p.communicate()
+    validate_output = validate_output.decode('utf-8')
 
-    print validate_output
+    print(validate_output)
 
     done_editing = 1
     if interactive:
         if p.returncode > 0:
-            answer = raw_input("Errors detected, keep changes anyway (yes/no/edit)? ")
+            answer = input("Errors detected, keep changes anyway (yes/no/edit)? ")
             if answer == "edit":
                 done_editing = 0
         else:
-            answer = raw_input("New file check ok, accept it (yes/no)? ")
+            answer = input("New file check ok, accept it (yes/no)? ")
     else:
         if p.returncode > 0:
             answer = "no"
@@ -233,36 +243,40 @@ while done_editing == 0:
 
 if answer == "yes":
     shutil.copyfile(newfile, ctrlfile)
-    print "Changes accepted, %s has been modified" % filename
+    print(f"Changes accepted, {filename} has been modified")
 else:
-    print "Ignoring changes, original %s has not been changed" % filename
+    print(f"Ignoring changes, original {filename} has not been changed")
     if newfile_is_temp:
         os.remove(newfile)
-        os.remove(newfile + "~") # delete possible emacs backup file
+        backup_file = newfile + "~"
+        if os.path.exists(backup_file):
+            os.remove(backup_file)  # delete possible emacs backup file
 
     sys.exit(2)
 
 if newfile_is_temp:
     os.remove(newfile)
-    os.remove(newfile + "~") # delete possible emacs backup file
+    backup_file = newfile + "~"
+    if os.path.exists(backup_file):
+        os.remove(backup_file)  # delete possible emacs backup file
 
-if "USER" in os.environ.keys():
-    pilot = os.environ['USER']
+if "USER" in list(os.environ.keys()):
+    pilot = os.environ["USER"]
 else:
     pilot = "unknown"
 
 date = strftime("%m/%d/%y %H:%M:%S", gmtime(time()))
 
-ctrlfile_text = file(ctrlfile, 'r').read()
+ctrlfile_text = open(ctrlfile, "rb").read()
 
-sum = zlib.crc32(ctrlfile_text)
+checksum = zlib.crc32(ctrlfile_text)
 size = os.path.getsize(ctrlfile)
 
-log = open(wd + "/" + progname + ".log", 'a')
-log.write("### %s %s\n" % (pilot, date))
-log.write("+++ %s (%d bytes, %d checksum)\n" % (filename, size, sum))
-log.write(ctrlfile_text)
-log.write("--- validation against %s (latest dive is %d)\n" % (logfile, latest))
+log = open(wd + "/" + progname + ".log", "a")
+log.write(f"### {pilot} {date}\n")
+log.write(f"+++ {filename} ({size:d} bytes, {checksum:d} checksum)\n")
+log.write(ctrlfile_text.decode('utf-8'))
+log.write(f"--- validation against {logfile} (latest dive is {latest:d})\n")
 log.write(validate_output)
 
 sys.exit(0)
