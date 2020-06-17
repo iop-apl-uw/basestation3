@@ -2493,12 +2493,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             if GPS12_ok: # during the drift?
                 log_warning("Determining average latitude using GPS1 and GPS2")
                 latitude = (GPS1.lat_dd + GPS2.lat_dd) / 2.0
-                longitude = avg_longitude(GPS1.lon_dd + GPS2.lon_dd)
+                longitude = avg_longitude(GPS1.lon_dd,  GPS2.lon_dd)
             else:
                 # could have a bum GPS unit or yoyo dive
                 # in these cases assume a plausible latitude was latched
                 latitude = (GPS2.lat_dd + GPSE.lat_dd) / 2.0
-                longitude = avg_longitude(GPS2.lon_dd + GPSE.lon_dd)
+                longitude = avg_longitude(GPS2.lon_dd, GPSE.lon_dd)
                 log_warning("No trustworthy GPS values; assuming average latitude of %.1f degrees" % latitude)
 
         # the headings in the 'head' column of the *.eng file are magnetic.
