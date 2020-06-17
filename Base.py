@@ -1554,7 +1554,7 @@ def main():
         try:
             command_list_with_ts = CommLog.process_history_log(history_logfile_name)
         except:
-            log_error("History file processing threw an exception - no merged file produced")
+            log_error("History file processing threw an exception - no merged file produced", 'exc')
         else:
             new_list_with_ts = CommLog.merge_lists_with_ts(comm_log.raw_lines_with_ts, command_list_with_ts)
             comm_log_merged_name = os.path.join(base_opts.mission_dir, "comm_merged.log")
