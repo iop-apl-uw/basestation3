@@ -922,7 +922,7 @@ def expunge_secrets_st(selftest_name):
     private = ('password = ', 'telnum = ', 'altnum = ')
 
     try:
-        pub = open(selftest_name, "r")
+        pub = open(selftest_name, "rb")
     except IOError:
         log_error("could not open %s for reading - skipping secret expunge" % selftest_name)
         return 1
@@ -936,6 +936,12 @@ def expunge_secrets_st(selftest_name):
     private_keys_found = False
 
     for s in pub:
+        try:
+            s = s.decode('utf-8')
+        except UnicodeDecodeError:
+            log_warning(f"Could not decode line {s} - skipping")
+            continue
+
         if any(k in s for k in private):
             private_lines = private_lines + s
             private_keys_found = True
@@ -2029,7 +2035,7 @@ def main():
 
         # Construct the pagers_convert_msg and alter_msg_file
         pagers_convert_msg = ""
-        if(base_opts.base_log is not None and base_opts.base_log is not ""):
+        if(base_opts.base_log is not None and base_opts.base_log != ""):
             conversion_log = base_opts.base_log
         else:
             conversion_log = "the conversion log"
