@@ -2408,7 +2408,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                 # so os.waitpid does not hang.  Even using Popen.communicate() would have this problem
                 # plus we want to have a record of the output...which we save to the flight subdirectory
                 # time.strftime("%d%b%Y_%H%M%S", time.gmtime(time.time()))
-                Utils.run_cmd_shell('python %s --force -v --mission_dir %s %s  > %s 2>&1' %
+                Utils.run_cmd_shell('python3.7 %s --force -v --mission_dir %s %s  > %s 2>&1' %
                                     (os.path.join(base_opts.basestation_directory, 'Reprocess.py'),
                                      mission_directory, dives,
                                      os.path.join(flight_directory, 'Reprocess_%04d_%.f.log' % (max(flight_dive_nums), time.time()))))
