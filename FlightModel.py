@@ -2408,12 +2408,12 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                 # so os.waitpid does not hang.  Even using Popen.communicate() would have this problem
                 # plus we want to have a record of the output...which we save to the flight subdirectory
                 # time.strftime("%d%b%Y_%H%M%S", time.gmtime(time.time()))
+                reprocess_log = os.path.join(flight_directory, 'Reprocess_%04d_%.f.log' % (max(flight_dive_nums), time.time()))
                 Utils.run_cmd_shell('python3.7 %s --force -v --mission_dir %s %s  > %s 2>&1' %
                                     (os.path.join(base_opts.basestation_directory, 'Reprocess.py'),
-                                     mission_directory, dives,
-                                     os.path.join(flight_directory, 'Reprocess_%04d_%.f.log' % (max(flight_dive_nums), time.time()))))
+                                     mission_directory, dives, reprocess_log))
 
-                log_info("Back from Reprocess.py")
+                log_info(f"Back from Reprocess.py - see {reprocess_log} for details")
                 # update updated_dives_d with any new times for the next FM cycle
                 for d_n in reprocess_dives:
                     dd = flight_dive_data_d[d_n]
@@ -2434,6 +2434,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
                     if reprocess_error is not None:
                         log_error(reprocess_error % d_n)
+                        log_error(f"Consult {reprocess_log} for futher details")
                         enable_reprocessing_dives = False # don't do this again...
                         dd.dive_data_ok = False # skip this dive until it is reprocessed by someone else
                 save_flight_database(dump_mat=False) # save any updated data after reprocessing
