@@ -30,6 +30,7 @@ import signal
 import sys
 import time
 import traceback
+from urllib.parse import urlencode
 
 import Base
 import BaseOpts
@@ -154,7 +155,7 @@ class GliderEarlyGPSClient:
                 msg = "Disconnected:%s %s" %  (time.strftime("%a %b %d %H:%M:%S %Z %Y", session.disconnect_ts), logout_msg)
                 log_info(msg)
 
-                send_str = "status=\"disconnected - logout%s seen\"" % ("" if session.logout_seen else " not")
+                send_str = urlencode({"status" : "disconnected - logout%s seen" % ("" if session.logout_seen else " not")})
                 log_info(send_str)
                 Utils.process_urls(self.__base_opts, send_str, session.sg_id, session.dive_num)
 

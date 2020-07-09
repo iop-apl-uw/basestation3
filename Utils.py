@@ -64,6 +64,7 @@ from scipy.io import netcdf
 import glob
 import socket
 from urllib.request import urlopen
+from urllib.parse import urlencode
 import pickle
 import collections
 
@@ -1203,8 +1204,9 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
                         url_line = "%s?instrument_name=SG%03d&%s" \
                                     % (urls_elts[1], int(instrument_id), pass_num_or_gps)                        
                     elif(isinstance(pass_num_or_gps, str)):
-                        url_line = "%s?instrument_name=SG%03d&dive=%d&gpsstr=%s" \
-                                   % (urls_elts[1], int(instrument_id), int(dive_num), pass_num_or_gps)
+                        url_line = "%s?instrument_name=SG%03d&dive=%d&%s" \
+                                   % (urls_elts[1], int(instrument_id), int(dive_num),
+                                      urlencode({"gpsstr" :  pass_num_or_gps}))
                     else:
                         log_error("Unknown pass(%s) - skipping processing" % str(pass_num_or_gps))
                         continue
