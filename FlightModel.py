@@ -318,7 +318,7 @@ def pfdd(verbose=False):
     if verbose:
         print(('Flight database as of %s:' % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))))
     for fv in header_variables:
-        if fv is 'history':
+        if fv == 'history':
             continue
         print(("%s: %s" % (fv, str(flight_dive_data_d[fv]))))
     for fv in assumption_variables:
@@ -1279,7 +1279,7 @@ def solve_ab_grid(dive_set,reprocess_count,dive_num=None):
         abs_compress = concatenate((abs_compress, dd.abs_compress*ones(dd.n_valid)))
         for vector_name in dive_data_vector_names:
             data_vector = copy.copy(dive_data_d[vector_name])
-            if vector_name is 'displaced_volume':
+            if vector_name == 'displaced_volume':
                 data_vector -= dd.vbdbias # apply per-dive vbdbias to copy so any cache is not poisoned
             combined_data_d[vector_name].extend(data_vector) 
     combined_data_d['n_velo'] = n_velo # A boolean about whether velo data is available for all valid points for all dives
