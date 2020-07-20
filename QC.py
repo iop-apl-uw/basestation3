@@ -258,7 +258,7 @@ def find_qc(qc_v, qc_values, mask=False):
     '''
     #indices = (map if mask else filter )(lambda i: qc_v[i] in qc_values, list(range(len(qc_v))))
     if mask:
-        indices_v = list(map(lambda i: qc_v[i] in qc_values, list(range(len(qc_v))))
+        indices_v = list(map(lambda i: qc_v[i] in qc_values, list(range(len(qc_v)))))
     else:
         # In Python3 filter is a generator - this will screw up downstream consumers
         # who expect the return of this function to look like an array
