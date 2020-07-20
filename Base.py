@@ -2267,7 +2267,7 @@ def main():
         _, tail = os.path.splitext(p)
         if tail == ".cap":
             try:
-                fi = open(p, "r")
+                fi = open(p, "rb")
             except:
                 log_error("Unable to open %s (%s) - skipping" % p, 'exc')
             else:
@@ -2275,7 +2275,18 @@ def main():
                 fi.close()
                 if cap_text is None:
                     continue
-                crits = prog.findall(cap_text)
+                line_count = 1
+                cap_lines = []
+                for ll in cap_text.splitlines():
+                    try:
+                        ll = ll.decode('utf-8')
+                    except:
+                        log_warning(f"Could not decode line number {line_count} in {p} - skipping")
+                    else:
+                        cap_lines.append(ll)
+                    line_count += 1
+                new_cap_text = '\n'.join(cap_lines)
+                crits = prog.findall(new_cap_text)
                 num_crits = len(crits)
                 if num_crits > 0:
                     if critical_msg == "":
