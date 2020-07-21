@@ -746,7 +746,7 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
 
             # Correct average temp_a_v for cell wall heating/cooling to get the final corrected temperature temp_c_v
             import time #DEBUG
-            start_time = time.clock() #DEBUG
+            start_time = time.process_time() #DEBUG
             # TODO check with CCE on length, radius measurements for gun vs original CT
             # TODO things take a really long time with more points
             # in particular they scale as O(modes*mp_fine/1e4) seconds with uniform grid
@@ -832,7 +832,7 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
             Bo = [(Bem_max if Bn > Bem_max else (Bem_min if Bn < Bem_min else Bn)) for Bn in Bo]
 
             temp_modes_v = zeros(mp_fine) # sum of modal contributions
-            start_loop_time = time.clock() #DEBUG
+            start_loop_time = time.process_time() #DEBUG
             for mode in range(modes): # get the contributions from each mode
                 # interp2 using Bo and Bi
                 # Can't just call the closures once on the Bi,Bo arrays
@@ -942,7 +942,7 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
             temp_c_v = temp_a_v + (temp_w_v - temp_a_v)*bl_weight
             trace_array('temp_c_%d' % loop, temp_c_v); # temperature at cond cell
 
-            end_time = time.clock() # DEBUG
+            end_time = time.process_time() # DEBUG
             max_temp_c_diff = max(abs(temp_c_v - temp_a_v))
             log_debug("%d: max temp_c diff: %.2fC TI time: %.3fs loop: %.3fs" % (loop, max_temp_c_diff, (end_time-start_time), (end_time-start_loop_time))) #DEBUG
             
