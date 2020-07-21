@@ -362,15 +362,9 @@ def generate_resend(fragment_name):
             ret_val = ret_val + "resend"
 
         if fragment_fc.is_fragment():
-            # fragments are in hex but glider code uses atoi(), which expects a decimal integer
-            try:
-                frag = fragment_fc.get_fragment_counter()
-                frag = frag.replace('k','c') # the glider encodes 'c' as 'k' to avoid modem issues
-                tmp = int(frag,16)
-            except ValueError:
-                log_warning("Invalid fragment counter (%s)" % fragment_name, 'exc')
-            else:
-                ret_val = ret_val + " %d" % tmp
+            frag_num = fragment_fc.get_fragment_counter()
+            if frag_num >= 0:
+                ret_val = ret_val + " %d" % frag_num
         else:
             ret_val = ret_val + "recommend resend the entire file"
 

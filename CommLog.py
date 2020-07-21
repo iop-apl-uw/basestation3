@@ -432,7 +432,9 @@ class CommLog:
                                     if fragment_fc.is_fragment():
                                         try:
                                             # fragments are in hex but glider code uses atoi(), which expects a decimal integer
-                                            ret_val = ret_val + " %d" % int(fragment_fc.get_fragment_counter(), 16)
+                                            frag_num = fragment_fc.get_fragment_counter()
+                                            if frag_num >= 0:
+                                                ret_val = ret_val + " %d" % frag_num
                                         except ValueError:
                                             log_warning("Invalid fragment counter (%s)" % file_name, 'exc')
                                 else:

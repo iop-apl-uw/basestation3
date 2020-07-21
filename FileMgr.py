@@ -529,9 +529,12 @@ class FileCode:
             return True
 
     def get_fragment_counter(self):
+        if len(self._filename) < 12:
+            # No counter present
+            return -1
         try:
-            counter = self._filename[10:12]
-        except:
+            counter = int(self._filename[10:12], base=16)
+        except ValueError:
             return -1
         else:
             return counter
