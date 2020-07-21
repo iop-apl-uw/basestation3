@@ -4258,7 +4258,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # TODO migrate these changes to sg_config_constants after verifying with CCE
         if False:
             sg_ct_type = calib_consts['sg_ct_type']; # always available from sg_config_constants
-            if (sg_ct_type is 1): # Gun style
+            if (sg_ct_type == 1): # Gun style
                 calib_consts['sbect_C_d0'] = 5.0 # TODO move to sg_config_constants()
             else: # GPCTD and original
                 calib_consts['sbect_C_d0'] = 1.2 # TODO move to sg_config_constants()
