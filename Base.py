@@ -28,7 +28,6 @@ Cleans up and converts raw data files & organizes files associated
 with dive.
 """
 import cProfile
-import fnmatch
 import functools
 import glob
 import math
@@ -38,7 +37,6 @@ import pstats
 import re
 import shutil
 import signal
-import smtplib
 import stat
 import struct
 import sys
@@ -47,13 +45,6 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
-
-from email.mime.multipart import MIMEMultipart
-from email.mime.multipart import MIMEBase
-from email.mime.nonmultipart import MIMENonMultipart
-from email.mime.text import MIMEText
-from email.utils import COMMASPACE, formatdate
-from email import encoders
 
 import BaseGZip
 import BaseOpts
@@ -72,6 +63,7 @@ import Strip1A
 import Utils
 import Ver65
 from BaseLog import log_critical, log_error, log_warning, log_info, log_debug, log_conversion_alert, log_conversion_alerts, log_alert, log_alerts, BaseLogger
+import BaseDotFiles
 
 # TODOCC
 # 1) Largest issue is to remove mismash of globals and globals passed as arguments.
@@ -86,28 +78,10 @@ known_mailer_tags = ['eng', 'log', 'pro', 'bpo', 'asc', 'cap', 'comm', 'dn_kkyy'
 known_ftp_tags = known_mailer_tags
 skip_mission_processing = False    # Set by signal handler to skip the time consuming processing of the whole mission data
 base_lockfile_name = '.conversion_lock'
-#pagers_ext = {'html' : lambda *args: send_email(*args, html_format=True)}
-pagers_ext = {'html' : lambda base_opts, instrument_id, email_addr, subject_line, message_body: \
-              send_email(base_opts, instrument_id, email_addr, subject_line, message_body, html_format=True)}
+
 logger_eng_readers = {}  # Mapping from logger prefix to eng_file readers
 
 comm_log = None
-
-# inReach message sender
-try:
-    import InReachSend
-except ImportError:
-    pass
-else:
-    pagers_ext['inreach'] = InReachSend.send_inreach
-
-# slack post
-try:
-    import SlackPost
-except ImportError:
-    print("Failed slack import")
-else:
-    pagers_ext['slack'] = SlackPost.post_slack
 
 # AES support
 def decrypt_file(in_file_name, out_file_name, mission_dir):
@@ -118,7 +92,6 @@ def decrypt_file(in_file_name, out_file_name, mission_dir):
     return 0
 
 # Configuration
-mail_server = 'localhost'
 previous_conversion_time_out = 20  # Time to wait for previous conversion to complete
 
 # Utility functions
@@ -869,7 +842,7 @@ def expunge_secrets(logfile_name):
                 key, _ = s.split(',', 1)
             except ValueError:
                 try:
-                    key, value = s.split('=', 1)
+                    key, _ = s.split('=', 1)
                 except ValueError:
                     log_error("trying to split data line " + s)
                     return 1
@@ -968,242 +941,8 @@ def expunge_secrets_st(selftest_name):
         log_info("No private keys found in %s" % selftest_name)
     return 0
 
-def send_email(base_opts, instrument_id, email_addr, subject_line, message_body, html_format=False):
-    """Sends out email from glider
 
-    Input
-        instrument_id - id of glider
-        email_addr - string for the email address (one address only)
-        subject_line - subject line for message
-        message_body - contents of message
 
-    Returns
-        0 - success
-        1 - failure
-    """
-    if base_opts.domain_name:
-        email_send_from = "sg%03d@%s" % (instrument_id, base_opts.domain_name)
-    else:
-        email_send_from = "sg%03d" % (instrument_id)
-    from_line = "Seaglider %d <%s>" % (instrument_id, email_send_from)
-    return Utils.send_email_text(base_opts, email_send_from, email_addr, from_line, subject_line, message_body, html_format=html_format)
-
-def process_ftp(processed_file_names, mission_timeseries_name, mission_profile_name):
-    """ Process the .ftp file and push the data to a ftp server
-    """
-    ret_val = 0
-    ftp_file_name = os.path.join(base_opts.mission_dir, ".ftp")
-    if not os.path.exists(ftp_file_name):
-        log_info("No .ftp file found - skipping .ftp processing")
-        return 0
-
-    log_info("Starting processing on .ftp")
-    try:
-        ftp_file = open(ftp_file_name, "r")
-    except IOError as exception:
-        log_error("Could not open %s (%s) - no mail sent" % (ftp_file_name, exception.args))
-        ret_val = 1
-    else:
-        for ftp_line in ftp_file:
-            try:
-                Utils.process_ftp_line(base_opts, processed_file_names, mission_timeseries_name, mission_profile_name, ftp_line, known_ftp_tags)
-            except:
-                log_error("Could not process %s - skipping" % ftp_line, 'exc')
-    log_info("Finished processing on .ftp")
-    return ret_val
-
-def process_pagers(base_opts, instrument_id, tags_to_process, comm_log=None, session=None, pagers_convert_msg=None,
-                   processed_files_message=None, msg_prefix=None, crit_other_message=None, warn_message=None):
-    """Processes the .pagers file for the tags specified
-    """
-
-    pagers_file_name = os.path.join(base_opts.mission_dir, ".pagers")
-    if not os.path.exists(pagers_file_name):
-        log_info("No .pagers file found - skipping .pagers processing")
-    else:
-        tags = ""
-        for t in tags_to_process:
-            tags = "%s %s" % (tags, t)
-        log_info("Starting processing on .pagers for %s" % tags)
-        log_debug("pagers_ext = %s" % pagers_ext)
-        try:
-            pagers_file = open(pagers_file_name, "r")
-        except IOError as exception:
-            log_error("Could not open %s (%s) - no mail sent" % (pagers_file_name, exception.args))
-        else:
-            for pagers_line in pagers_file:
-                pagers_line = pagers_line.rstrip()
-                log_debug("pagers line = (%s)" % pagers_line)
-                if pagers_line == "":
-                    continue
-                if pagers_line[0] != '#':
-                    log_info("Processing .pagers line (%s)" % pagers_line)
-                    pagers_elts = pagers_line.split(',')
-                    email_addr = pagers_elts[0]
-                    # Look for alternate sending functions
-                    if(len(pagers_elts) > 1 and (pagers_elts[1] in list(pagers_ext.keys()))):
-                        log_info("Using sending function %s" % pagers_elts[1])
-                        send_func = pagers_ext[pagers_elts[1]]
-                        pagers_elts = pagers_elts[2:]
-                    else:
-                        send_func = send_email
-                        pagers_elts = pagers_elts[1:]
-
-                    tags_with_fmt = ['lategps', 'gps', 'recov', 'critical']
-                    known_tags = ['lategps', 'gps', 'recov', 'critical', 'drift', 'divetar', 'comp', 'alerts']
-
-                    fmt_dict = {}
-                    for pagers_tag in pagers_elts:
-                        pagers_tag = pagers_tag.lstrip().rstrip().lower()
-
-                        # Strip off the format first
-                        fmt = ''
-                        for tag in tags_with_fmt:
-                            if pagers_tag.startswith(tag):
-                                fmt = pagers_tag[len(tag):]
-                                pagers_tag = tag
-                                break
-
-                        if pagers_tag not in known_tags:
-                            log_error("Unknown tag (%s) on line (%s) in %s - skipping" % (pagers_tag, pagers_line, pagers_file_name))
-                            continue
-
-                        log_debug("pagers_tag:%s fmt:%s" % (pagers_tag, fmt))
-
-                        if 'drift' in tags_to_process and pagers_tag == 'drift':
-                            if comm_log:
-                                drift_message = comm_log.predict_drift(fmt)
-                                subject_line = "Drift"
-                                log_info("Sending %s (%s) to %s" % (subject_line, drift_message, email_addr))
-                                send_func(base_opts, instrument_id, email_addr, subject_line, drift_message)
-                            else:
-                                log_warning("Internal error - no comm log - skipping drift predictions for (%s)" % email_addr)
-
-                        elif pagers_tag in ('gps', 'recov', 'critical', 'lategps') and  pagers_tag in tags_to_process:
-                            fmts = fmt.split('_')
-                            dive_prefix = False
-                            if len(fmts) > 1:
-                                if fmts[1].lower()[0:7] == 'divenum':
-                                    dive_prefix = True
-                                fmt = fmts[0]
-
-                            if comm_log:
-                                gps_message, recov_code, escape_reason, prefix_str = comm_log.last_GPS_lat_lon_and_recov(fmt, dive_prefix)
-                                reboot_msg = comm_log.has_glider_rebooted()
-                            elif session:
-                                gps_message, recov_code, escape_reason, prefix_str = CommLog.GPS_lat_lon_and_recov(fmt, dive_prefix, session)
-                                if msg_prefix:
-                                    gps_message = "%s%s" % (msg_prefix, gps_message)
-                                reboot_msg = None
-                            else:
-                                log_warning("Internal error - no comm log, session or critical message supplied - skipping (%s)" % email_addr)
-                                continue
-
-                            if reboot_msg:
-                                gps_message = "%s\n%s" % (gps_message, reboot_msg)
-
-                            if prefix_str:
-                                prefix_str = " SG%03d %s" % (instrument_id, prefix_str)
-
-                            if pagers_tag in ("gps", "lategps"):
-                                subject_line = "GPS%s" % prefix_str
-                            elif pagers_tag in ("critical", "recov") and reboot_msg:
-                                subject_line = "REBOOTED%s" % prefix_str
-                            elif pagers_tag == "critical" and recov_code and recov_code != 'QUIT_COMMAND':
-                                subject_line = "IN NON-QUIT RECOVERY%s" % prefix_str
-                            elif pagers_tag == "recov" and recov_code:
-                                subject_line = "IN RECOVERY%s" % prefix_str
-                            elif pagers_tag == "recov" and escape_reason:
-                                subject_line = "IN ESCAPE%s" % prefix_str
-                            else:
-                                subject_line = None
-
-                            if subject_line is not None:
-                                log_info("Sending %s (%s) to %s" % (subject_line, gps_message, email_addr))
-                                send_func(base_opts, instrument_id, email_addr, subject_line, gps_message)
-
-                        elif pagers_tag == 'alerts' and 'alerts' in tags_to_process:
-                            if pagers_convert_msg and pagers_convert_msg != "":
-                                subject_line = "CONVERSION PROBLEMS"
-                                log_info("Sending %s to %s" % (subject_line, email_addr))
-                                send_func(base_opts, instrument_id, email_addr, subject_line, pagers_convert_msg)
-                            if crit_other_message and crit_other_message != "":
-                                subject_line = "CRITICAL ERROR IN CAPTURE"
-                                log_info("Sending %s to %s" % (subject_line, email_addr))
-                                send_func(base_opts, instrument_id, email_addr, subject_line, crit_other_message)
-                            if warn_message and warn_message != "":
-                                subject_line = "ALERTS FROM PROCESSING"
-                                log_info("Sending %s to %s" % (subject_line, email_addr))
-                                send_func(base_opts, instrument_id, email_addr, subject_line, warn_message)
-
-                        elif pagers_tag == 'comp' and 'comp' in tags_to_process:
-                            if processed_files_message and processed_files_message != "":
-                                subject_line = "Processing Complete"
-                                log_info("Sending %s to %s" % (subject_line, email_addr))
-                                send_func(base_opts, instrument_id, email_addr, subject_line, processed_files_message)
-
-                        elif pagers_tag == 'divetar' and 'divetar' in tags_to_process:
-                            if processed_files_message and processed_files_message != "":
-                                subject_line = "New Dive Tarball(s)"
-                                log_info("Sending %s to %s" % (subject_line, email_addr))
-                                send_func(base_opts, instrument_id, email_addr, subject_line, processed_files_message)
-
-        log_info("Finished processing on .pagers")
-
-def process_extensions(extension_file_name, base_opts, sg_calib_file_name, dive_nc_file_names, nc_files_created,
-                       processed_other_files, known_mailer_tags, known_ftp_tags):
-    """Processes the extensions file, running each extension
-
-    Returns:
-        0 - success
-        1 - failure
-    """
-    ret_val = 0
-    extension_directory = base_opts.basestation_directory
-    extensions_file_name = os.path.join(base_opts.mission_dir, extension_file_name)
-    if not os.path.exists(extensions_file_name):
-        log_info("No %s file found - skipping %s processing" % (extension_file_name, extension_file_name))
-        return 0
-    else:
-        log_info("Starting processing on %s" % extension_file_name)
-        try:
-            extensions_file = open(extensions_file_name, "r")
-        except IOError as exception:
-            log_error("Could not open %s (%s) - skipping %s processing"
-                      % (extensions_file_name, extension_file_name, exception.args))
-            ret_val = 1
-        else:
-            for extension_line in extensions_file:
-                extension_line = extension_line.rstrip()
-                log_debug("extension file line = (%s)" % extension_line)
-                if extension_line == "":
-                    continue
-                if extension_line[0] != '#':
-                    log_info("Processing %s line (%s)" % (extension_file_name, extension_line))
-                    extension_elts = extension_line.split(' ')
-                    # First element - extension name, with .py file extension
-                    extension_module_name = os.path.join(extension_directory, extension_elts[0])
-                    extension_module = Sensors.loadmodule(extension_module_name)
-                    if extension_module is None:
-                        log_error("Error loading %s - skipping" % extension_module_name)
-                        ret_val = 1
-                    else:
-                        try:
-                            # Invoke the extension
-                            extension_ret_val = extension_module.main(base_opts=base_opts, sg_calib_file_name=sg_calib_file_name,
-                                                                      dive_nc_file_names=dive_nc_file_names, nc_files_created=nc_files_created,
-                                                                      processed_other_files=processed_other_files,
-                                                                      known_mailer_tags=known_mailer_tags, known_ftp_tags=known_ftp_tags)
-                        except:
-                            log_error("Extension %s raised an exception" % extension_module_name, 'exc')
-                            extension_ret_val = 1
-                        if extension_ret_val:
-                            log_error("Error running %s - return %d" % (extension_module_name, extension_ret_val))
-                            ret_val = 1
-
-        log_info("Finished processing on %s" % extension_file_name)
-
-    return ret_val
 
 def run_extension_script(script_name, script_args):
     """Attempts to execute a script named under a shell context
@@ -1232,6 +971,7 @@ def signal_handler_defer(signum, frame):
     """Handles SIGUSR1 signal during per-dive processing
     """
     #pylint: disable=unused-argument
+    #pylint: disable=global-statement
     global skip_mission_processing
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - will skip whole mission processing")
@@ -1241,6 +981,7 @@ def signal_handler_defer_end(signum, frame):
     """Handles SIGUSR1 signal during after whole mission processing
     """
     #pylint: disable=unused-argument
+    #pylint: disable=global-statement
     global skip_mission_processing
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - will end processing soon")
@@ -1535,7 +1276,7 @@ def main():
             lock_file_msg = "Process pid:%d did not respond to sighup after %d seconds - bailing out" % (lock_file_pid, previous_conversion_time_out)
             log_error(lock_file_msg)
             if not base_opts.local:
-                process_pagers(base_opts, instrument_id, ('alerts',), pagers_convert_msg=lock_file_msg)
+                BaseDotFiles.process_pagers(base_opts, instrument_id, ('alerts',), pagers_convert_msg=lock_file_msg)
             return 1
         else:
             log_info("Previous conversion process (pid:%d) apparently received the signal - proceeding" % lock_file_pid)
@@ -1546,7 +1287,7 @@ def main():
     Utils.create_lock_file(base_opts, base_lockfile_name)
 
     if not base_opts.local:
-        process_pagers(base_opts, instrument_id, ('lategps', 'recov', 'critical', 'drift'), comm_log=comm_log)
+        BaseDotFiles.process_pagers(base_opts, instrument_id, ('lategps', 'recov', 'critical', 'drift'), comm_log=comm_log)
 
     log_info("Processing comm_merged.log")
     history_logfile_name = os.path.join(base_opts.mission_dir, "history.log")
@@ -1944,7 +1685,7 @@ def main():
     (dive_num, call_counter) = comm_log.get_last_dive_num_and_call_counter()
     # Process the urls file for the first pass (before mission profile, timeseries, etc).
     if not base_opts.local:
-        Utils.process_urls(base_opts, 1, instrument_id, dive_num)
+        BaseDotFiles.process_urls(base_opts, 1, instrument_id, dive_num)
 
     # Check for sighup here
     if skip_mission_processing:
@@ -1986,7 +1727,7 @@ def main():
                         data_product_file_names.append(mission_timeseries_name)
 
             # Invoke extensions, if any
-            process_extensions('.extensions', base_opts, sg_calib_file_name, dive_nc_file_names, nc_files_created,
+            BaseDotFiles.process_extensions('.extensions', base_opts, sg_calib_file_name, dive_nc_file_names, nc_files_created,
                                processed_other_files, known_mailer_tags, known_ftp_tags)
 
         except AbortProcessingException:
@@ -2149,7 +1890,7 @@ def main():
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Remove anything that is None
-    processed_file_names = [item for item in processed_file_names if item] 
+    processed_file_names = [item for item in processed_file_names if item]
 
     processed_files_msg = "Processing complete as of %s\n" % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
 
@@ -2250,7 +1991,7 @@ def main():
             tarball_str = "New tarballs "
             for d in dive_tarballs:
                 tarball_str += "%s " % d
-            process_pagers(base_opts, instrument_id, ('divetar', ), processed_files_message=tarball_str)
+            BaseDotFiles.process_pagers(base_opts, instrument_id, ('divetar', ), processed_files_message=tarball_str)
 
     # Look for capture file with critical errors
     critical_msg = ""
@@ -2294,264 +2035,29 @@ def main():
 
     # Process pagers
     if not base_opts.local:
-        process_pagers(base_opts, instrument_id, ('alerts', ), crit_other_message=critical_msg)
+        BaseDotFiles.process_pagers(base_opts, instrument_id, ('alerts', ), crit_other_message=critical_msg)
 
-        process_pagers(base_opts, instrument_id, ('alerts', ), warn_message=alert_warning_msg)
+        BaseDotFiles.process_pagers(base_opts, instrument_id, ('alerts', ), warn_message=alert_warning_msg)
 
-        process_pagers(base_opts, instrument_id, ('alerts', 'comp'), comm_log=comm_log, pagers_convert_msg=pagers_convert_msg,
+        BaseDotFiles.process_pagers(base_opts, instrument_id, ('alerts', 'comp'), comm_log=comm_log, pagers_convert_msg=pagers_convert_msg,
                        processed_files_message=processed_files_msg)
 
-        process_ftp(processed_file_names, mission_timeseries_name, mission_profile_name)
+        BaseDotFiles.process_ftp(base_opts, processed_file_names, mission_timeseries_name, mission_profile_name, known_ftp_tags)
 
-        mailer_file_name = os.path.join(base_opts.mission_dir, ".mailer")
-        if not os.path.exists(mailer_file_name):
-            log_info("No .mailer file found - skipping .mailer processing")
-        else:
-            log_info("Starting processing on .mailer")
-            try:
-                mailer_file = open(mailer_file_name, "r")
-            except IOError as exception:
-                log_error("Could not open %s (%s) - no mail sent" % (mailer_file_name, exception.args))
-            else:
-                mailer_conversion_time = time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-                for mailer_line in mailer_file:
-                    mailer_line = mailer_line.rstrip()
-                    log_debug("mailer line = (%s)" % mailer_line)
-                    if mailer_line == "":
-                        continue
-                    if mailer_line[0] != '#':
-                        log_info("Processing .mailer line (%s)" % mailer_line)
-                        mailer_tags = mailer_line.split(',')
-                        mailer_send_to = mailer_tags[0]
-                        mailer_tags = mailer_tags[1:]
-                        mailer_send_to_list = []
-                        mailer_send_to_list.append(mailer_send_to)
-
-                        temp_tags = mailer_tags
-                        for i in range(len(temp_tags)):
-                            mailer_tags[i] = temp_tags[i].lower().rstrip().lstrip()
-
-                        # Remove the body tag, if present
-                        try:
-                            mailer_tags.index('body')
-                        except:
-                            mailer_file_in_body = False
-                        else:
-                            mailer_tags.remove('body')
-                            mailer_file_in_body = True
-
-                        # Check for msgperfile
-                        try:
-                            mailer_tags.index('msgperfile')
-                        except:
-                            mailer_msg_per_file = False
-                        else:
-                            mailer_tags.remove('msgperfile')
-                            mailer_msg_per_file = True
-
-                        # Remove the Navy header tag, if present,
-                        try:
-                            mailer_tags.index('kkyy_subject')
-                        except:
-                            mailer_subject = "SG%03d files" % (instrument_id)
-                        else:
-                            mailer_tags.remove('kkyy_subject')
-                            mailer_subject = 'XBTDATA'
-
-                        # Remove the gzip tag, if present
-                        try:
-                            mailer_tags.index('gzip')
-                        except:
-                            mailer_gzip_file = False
-                        else:
-                            mailer_tags.remove('gzip')
-                            if mailer_file_in_body:
-                                log_error("Options body and gzip incompatibile - skipping gzip")
-                                mailer_gzip_file = False
-                            else:
-                                mailer_gzip_file = True
-
-                        # Check for what file type
-                        try:
-                            mailer_tags.index('all')
-                        except:
-                            pass
-                        else:
-                            mailer_tags = known_mailer_tags
-
-                        # Collect file to send into a list
-                        mailer_file_names_to_send = []
-
-                        for mailer_tag in mailer_tags:
-                            if mailer_tag.startswith("fnmatch_"):
-                                _, m = mailer_tag.split("_", 1)
-                                log_info("Match criteria (%s)" % m)
-                                for processed_file_name in processed_file_names:
-                                    # Case insenitive match since tags were already lowercased
-                                    if fnmatch.fnmatchcase(processed_file_name.lower(), m):
-                                        mailer_file_names_to_send.append(processed_file_name)
-                                        log_info("Matched %s" % processed_file_name)
-                            elif not mailer_tag in known_mailer_tags:
-                                log_error("Unknown tag (%s) on line (%s) in %s - skipping" % (mailer_tag, mailer_line, mailer_file_name))
-                            else:
-                                if mailer_tag == 'comm':
-                                    mailer_file_names_to_send.append(os.path.join(base_opts.mission_dir, "comm.log"))
-                                elif mailer_tag in ('nc', 'mission_ts', 'mission_pro') and mailer_file_in_body:
-                                    log_error("Sending netCDF files in the message body not supported")
-                                    continue
-                                else:
-                                    for processed_file_name in processed_file_names:
-                                        if processed_file_name == mission_timeseries_name:
-                                            if mailer_tag == 'mission_ts':
-                                                mailer_file_names_to_send.append(processed_file_name)
-                                        elif processed_file_name == mission_profile_name:
-                                            if mailer_tag == 'mission_pro':
-                                                mailer_file_names_to_send.append(processed_file_name)
-                                        else:
-                                            head, tail = os.path.splitext(processed_file_name)
-                                            if tail.lstrip('.') == mailer_tag.lower():
-                                                mailer_file_names_to_send.append(processed_file_name)
-
-                        if mailer_file_names_to_send:
-                            log_info("Sending %s" % mailer_file_names_to_send)
-                        else:
-                            log_info("No files found to send")
-
-                        # Set up messsage here if there is only one message per recipient
-                        if not mailer_msg_per_file:
-                            if not mailer_file_in_body:
-                                mailer_msg = MIMEMultipart()
-                            else:
-                                mailer_msg = MIMENonMultipart('text', 'plain')
-
-                            #mailer_msg['From'] = "SG%03d" % (instrument_id)
-                            if base_opts.domain_name:
-                                mailer_msg['From'] = "Seaglider %d <sg%03d@%s>" % (instrument_id, instrument_id, base_opts.domain_name)
-                            else:
-                                mailer_msg['From'] = "Seaglider %d <sg%03d>" % (instrument_id, instrument_id)
-                            mailer_msg['To'] = COMMASPACE.join(list(mailer_send_to_list))
-                            mailer_msg['Date'] = formatdate(localtime=True)
-                            mailer_msg['Subject'] = mailer_subject
-                            if base_opts.reply_addr:
-                                mailer_msg['Reply-To'] = base_opts.reply_addr
-
-                            if not mailer_file_in_body:
-                                mailer_msg.attach(MIMEText("New/Updated files as of %s conversion\n" % mailer_conversion_time))
-                            mailer_text = ""
-
-                        for mailer_file_name_to_send in mailer_file_names_to_send:
-                            if mailer_msg_per_file:
-                                # Set up message here if there are multiple messages per recipient
-                                if not mailer_file_in_body:
-                                    mailer_msg = MIMEMultipart()
-                                else:
-                                    mailer_msg = MIMENonMultipart('text', 'plain')
-                                #mailer_msg['From'] = "SG%03d" % (instrument_id)
-                                if base_opts.domain_name:
-                                    mailer_msg['From'] = "Seaglider %d <sg%03d@%s>" % (instrument_id, instrument_id, base_opts.domain_name)
-                                else:
-                                    mailer_msg['From'] = "Seaglider %d <sg%03d>" % (instrument_id, instrument_id)
-                                mailer_msg['To'] = COMMASPACE.join(list(mailer_send_to_list))
-                                mailer_msg['Date'] = formatdate(localtime=True)
-                                mailer_msg['Subject'] = mailer_subject
-                                if base_opts.reply_addr:
-                                    mailer_msg['Reply-To'] = base_opts.reply_addr
-
-                                if not mailer_file_in_body:
-                                    mailer_msg.attach(MIMEText("File %s as of %s conversion\n" % (mailer_file_name_to_send, mailer_conversion_time)))
-                                mailer_text = ""
-
-                            if mailer_file_in_body:
-                                try:
-                                    fi = open(mailer_file_name_to_send, 'r')
-                                    mailer_text = mailer_text + fi.read()
-                                    fi.close()
-                                except:
-                                    log_error("Unable to include %s in mailer message - skipping" % mailer_file_name_to_send, 'exc')
-                                    log_info("Continuing processing...")
-                            else:
-                                try:
-                                    # Message as attachment
-                                    head, tail = os.path.splitext(mailer_file_name_to_send)
-                                    if mailer_gzip_file:
-                                        if tail.lstrip('.').lower() != 'gz':
-                                            mailer_gzip_file_name_to_send = mailer_file_name_to_send + '.gz'
-                                            gzip_ret_val = BaseGZip.compress(mailer_file_name_to_send, mailer_gzip_file_name_to_send)
-                                            if gzip_ret_val > 0:
-                                                log_error("Problem compressing %s - skipping" % mailer_file_name_to_send)
-                                        else:
-                                            gzip_ret_val = 0
-
-                                        if gzip_ret_val <= 0:
-                                            mailer_part = MIMEBase('application', 'octet-stream')
-                                            mailer_part.set_payload(open(mailer_gzip_file_name_to_send, 'rb').read())
-                                            encoders.encode_base64(mailer_part)
-                                            mailer_part.add_header('Content-Disposition', 'attachment; filename="%s"'
-                                                                   % os.path.basename(mailer_gzip_file_name_to_send))
-                                            mailer_msg.attach(mailer_part)
-                                    else:
-                                        if tail.lstrip('.').lower() == 'nc' or tail.lstrip('.').lower() == 'gz' \
-                                           or tail.lstrip('.').lower() == 'bz2':
-                                            mailer_part = MIMEBase('application', 'octet-stream')
-                                            mailer_part.set_payload(open(mailer_file_name_to_send, 'rb').read())
-                                        else:
-                                            mailer_part = MIMEBase('text', 'plain')
-                                            mailer_part.set_payload(open(mailer_file_name_to_send, 'r').read())
-                                        encoders.encode_base64(mailer_part)
-                                        mailer_part.add_header('Content-Disposition', 'attachment; filename="%s"'
-                                                               % os.path.basename(mailer_file_name_to_send))
-                                        mailer_msg.attach(mailer_part)
-                                except:
-                                    log_error("Error processing %s" % mailer_file_name_to_send, 'exc')
-                                    continue
-
-                            if mailer_msg_per_file:
-                                # For multiple messages per recipient, send out message here
-                                if mailer_file_in_body:
-                                    mailer_msg.set_payload(mailer_text)
-                                # Send it out
-                                if len(mailer_file_names_to_send):
-                                    if base_opts.domain_name:
-                                        mailer_send_from = "sg%03d@%s" % (instrument_id, base_opts.domain_name)
-                                    else:
-                                        mailer_send_from = "sg%03d" % (instrument_id)
-                                    try:
-                                        smtp = smtplib.SMTP(mail_server)
-                                        smtp.sendmail(mailer_send_from, mailer_send_to, mailer_msg.as_string())
-                                        smtp.close()
-                                    except:
-                                        log_error("Unable to send message [%s] skipping" % mailer_line, 'exc')
-                                        log_info("Continuing processing...")
-                                mailer_msg = None
-
-                        if not mailer_msg_per_file:
-                            # For single messages per recipient, send out message here
-                            if mailer_file_in_body:
-                                mailer_msg.set_payload(mailer_text)
-                            # Send it out
-                            if len(mailer_file_names_to_send):
-                                if base_opts.domain_name:
-                                    mailer_send_from = "sg%03d@%s" % (instrument_id, base_opts.domain_name)
-                                else:
-                                    mailer_send_from = "sg%03d" % (instrument_id)
-                                log_info("Sending from %s" % mailer_send_from)
-                                try:
-                                    smtp = smtplib.SMTP(mail_server)
-                                    smtp.sendmail(mailer_send_from, mailer_send_to, mailer_msg.as_string())
-                                    smtp.close()
-                                except:
-                                    log_error("Unable to send message [%s] skipping" % mailer_line, 'exc')
-                                    log_info("Continuing processing...")
-                            mailer_msg = None
-
-            log_info("Finished processing on .mailer")
+        BaseDotFiles.process_mailer(
+            base_opts,
+            instrument_id,
+            known_mailer_tags,
+            processed_file_names,
+            mission_timeseries_name,
+            mission_profile_name,
+        )
 
         # Process the urls file for the second time
         if not base_opts.local:
-            Utils.process_urls(base_opts, 2, instrument_id, dive_num)
+            BaseDotFiles.process_urls(base_opts, 2, instrument_id, dive_num)
 
-    # Optionally: Clean up intermediate (working) files here
-    if base_opts.clean:
+        if base_opts.clean:
         # get updated list of intermediate files in the mission directory
         fc = FileMgr.FileCollector(base_opts.mission_dir, instrument_id)
         try:
