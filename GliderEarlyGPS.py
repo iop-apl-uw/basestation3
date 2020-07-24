@@ -32,11 +32,12 @@ import time
 import traceback
 from urllib.parse import urlencode
 
-import Base
+import BaseDotFiles
 import BaseOpts
 import CommLog
 import Daemon
 import Utils
+import BaseDotFiles
 from BaseLog import BaseLogger, log_info, log_warning, log_error, log_critical
 
 # Early process for gps - call back for ver= line in comm.log - at that point, recovery condition has been seen
@@ -157,7 +158,7 @@ class GliderEarlyGPSClient:
 
                 send_str = urlencode({"status" : "disconnected - logout%s seen" % ("" if session.logout_seen else " not")})
                 log_info(send_str)
-                Utils.process_urls(self.__base_opts, send_str, session.sg_id, session.dive_num)
+                BaseDotFiles.process_urls(self.__base_opts, send_str, session.sg_id, session.dive_num)
 
                 self.cleanup_shutdown()
 
@@ -199,9 +200,9 @@ class GliderEarlyGPSClient:
             if session is None:
                 log_warning("ver callback called with empty session")
             else:
-                Base.process_pagers(self.__base_opts,
-                                    session.sg_id,
-                                    ('gps',), session=session)
+                BaseDotFiles.process_pagers(self.__base_opts,
+                                            session.sg_id,
+                                            ('gps',), session=session)
 
     def process_counter_line(self, session, testing=False):
         """
@@ -226,7 +227,7 @@ class GliderEarlyGPSClient:
                                              Utils.format_lat_lon_dd(gliderLon, "ddmm", False),
                                              time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(gliderTime)))
 
-                Utils.process_urls(self.__base_opts, send_str, session.sg_id, session.dive_num)
+                BaseDotFiles.process_urls(self.__base_opts, send_str, session.sg_id, session.dive_num)
             except:
                 ret_val = "Failed to process gps position (%s)" % traceback.format_exc()
 

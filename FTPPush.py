@@ -29,6 +29,7 @@ import os
 import time
 import glob
 import Utils
+import BaseDotFiles
 import BaseOpts
 from BaseLog import *
 from Base import known_ftp_tags
@@ -49,7 +50,7 @@ def process_ftp(base_opts, processed_file_names, mission_timeseries_name=None, m
     else:
         for ftp_line in ftp_file:
             try:
-                Utils.process_ftp_line(base_opts, processed_file_names, mission_timeseries_name, mission_profile_name, ftp_line, known_ftp_tags)
+                BaseDotFiles.process_ftp_line(base_opts, processed_file_names, mission_timeseries_name, mission_profile_name, ftp_line, known_ftp_tags)
             except:
                 log_error("Could not process %s - skipping" % ftp_line, 'exc')
     log_info("Finished processing on .ftp")
