@@ -45,7 +45,7 @@ possible to run the basestation code on OS X to reprocess Seaglider data.  No
 installation instructions are provided. The basestation code will not work on Windows.  
 
 The basestation depends on csh being installed on the system.  On
-Ubuntu, 'sudo apt-get install tcsh".
+Ubuntu, "sudo apt-get install tcsh"
 
 It is strongly advised to set the basestation timezone to UTC as opposed to
 local time. The basestation software internally operates on UTC time - as does
@@ -61,7 +61,7 @@ On Ubuntu, use "sudo dpkg-reconfigure tzdata" to set UTC as the time zone.
 
 See the release notes at the bottom for more version specific details.
 
-This version of the code has been written to and tested against python 3.7.7.
+This version of the code has been written to and tested against python 3.8.5.
 
 See the relevant sections in the install steps on notes on packages versions.
 
@@ -76,7 +76,7 @@ to 2 packages:
 
 ## Installing python
 
-It is recommended that version 3.7.7 of python be installed along the a specific set of 
+It is recommended that version 3.8.5 of python be installed along the a specific set of 
 python support libraries.  The process is as follows:
 
 1. Install preliminaries
@@ -84,22 +84,22 @@ python support libraries.  The process is as follows:
 ```
 sudo apt-get install -y build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev \
 libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev zlib1g-dev openssl libffi-dev \
-python3-dev python3-setuptools wget
+python3-dev python3-setuptools wget libgdbm-compat-dev uuid-dev
 
 ```
 2. Prepare to build
 
 ``` 
-mkdir /tmp/Python37
-cd /tmp/Python37
+mkdir /tmp/Python38
+cd /tmp/Python38
 ```
 
 3. Download python source distribution and build.  Depending on your machine, this can take a while
 
 ```
-wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tar.xz
-tar xvf Python-3.7.7.tar.xz
-cd /tmp/Python37/Python-3.7.7
+wget https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tar.xz
+tar xvf Python-3.8.5.tar.xz
+cd /tmp/Python38/Python-3.8.5
 ./configure --enable-optimizations
 make 
 sudo make altinstall
@@ -108,7 +108,7 @@ sudo make altinstall
 4. Check build and install 
 
 ``` bash
-python3.7 --version
+python3.8 --version
 ```
 
 ## Install the basestation code and python packages
@@ -121,14 +121,14 @@ python3.7 --version
 
 ```
 cd /usr/local/Base-3.01
-pip3.7 install -r requirements.txt
+pip3.8 install -r requirements.txt
 ```
 
 5. Install additional plotting libs
 
 ```
 sudo apt-get install libgeos-dev
-pip3.7 install git+https://github.com/matplotlib/basemap.git
+pip3.8 install git+https://github.com/matplotlib/basemap.git
 ```
 
 6. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
