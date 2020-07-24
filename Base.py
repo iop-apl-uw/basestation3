@@ -2057,7 +2057,8 @@ def main():
         if not base_opts.local:
             BaseDotFiles.process_urls(base_opts, 2, instrument_id, dive_num)
 
-        if base_opts.clean:
+    # Optionally: Clean up intermediate (working) files here
+    if base_opts.clean:
         # get updated list of intermediate files in the mission directory
         fc = FileMgr.FileCollector(base_opts.mission_dir, instrument_id)
         try:

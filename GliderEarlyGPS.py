@@ -32,7 +32,7 @@ import time
 import traceback
 from urllib.parse import urlencode
 
-import Base
+import BaseDotFiles
 import BaseOpts
 import CommLog
 import Daemon
@@ -200,9 +200,9 @@ class GliderEarlyGPSClient:
             if session is None:
                 log_warning("ver callback called with empty session")
             else:
-                Base.process_pagers(self.__base_opts,
-                                    session.sg_id,
-                                    ('gps',), session=session)
+                BaseDotFiles.process_pagers(self.__base_opts,
+                                            session.sg_id,
+                                            ('gps',), session=session)
 
     def process_counter_line(self, session, testing=False):
         """
