@@ -27,6 +27,7 @@ from numpy import *
 import math
 import Utils
 from BaseLog import *
+import warnings
 
 # from TraceArray import * # REMOVE use this only only if we are tracing/comparing computations w/ matlab
 # physical constants
@@ -317,7 +318,10 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
         # If q_prev has a negative value somewhere we generate a RuntimeWarning.
         # This typically due to alpha being greater than vehicle_pitch_degrees_v at some point below
         # invert the sign here because we'll use it inverted below
-        scaled_drag = power(q_prev, -hd_s) # # RuntimeWarning: invalid value encountered in power occurs because q_prev has a negative value somewhere
+        with warnings.catch_warnings():
+            # RuntimeWarning: invalid value encountered in power occurs because q_prev has a negative value somewhere
+            warnings.simplefilter("ignore")
+            scaled_drag = power(q_prev, -hd_s) 
         tth_v = tan(theta) # compute once
         discriminant_inv_v = hd_a2*tth_v*tth_v*scaled_drag/hd_bc4
         # NOTE: Beware when comparing this version with flightvec(2).m
@@ -326,7 +330,10 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
 
         # valid solutions exist only for discriminant_inv > 1 (zero or complex otherwise)
         # also only consider points where flight is valid
-        flying_i = nonzero(buoyancy_pitch_ok_v*discriminant_inv_v > 1.0)[0] # RuntimeWarning: invalid value encountered in greater because discriminant_inv_v has a nan somewhere
+        with warnings.catch_warnings():
+            # RuntimeWarning: invalid value encountered in greater because discriminant_inv_v has a nan somewhere
+            warnings.simplefilter("ignore")
+            flying_i = nonzero(buoyancy_pitch_ok_v*discriminant_inv_v > 1.0)[0] 
         q[:] = 0.0 # assume the worst..stalled, no dynamic pressure or glide angle
         if len(flying_i) == 0:
             # CT reported nonsensical salinities, hence buoyancy is poor
