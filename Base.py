@@ -617,7 +617,7 @@ def process_file_group(file_group, fragment_size, total_size, calib_consts):
             elif fc.is_data():
                 shutil.copyfile(in_file_name, fc.mk_base_datfile_name())
                 sg_data_file = DataFiles.process_data_file(in_file_name, "dat", calib_consts)
-                if not sg_data_file:
+                if not sg_data_file or sg_data_file.data is None or len(sg_data_file.data) == 0:
                     log_error("Could not process %s, skipping eng file creation" % in_file_name)
                     ret_val = 1
                 else:
@@ -906,7 +906,7 @@ def expunge_secrets_st(selftest_name):
         try:
             s = s.decode('utf-8')
         except UnicodeDecodeError:
-            log_warning(f"Could not decode line {s} - skipping")
+            log_warning(f"Could not decode line {s} in {selftest_name} - skipping")
             continue
 
         if any(k in s for k in private):
