@@ -33,7 +33,7 @@ import BaseOpts
 import Sensors
 from BaseLog import *
 from Base import run_extension_script
-from Base import process_extensions
+from BaseDotFiles import process_extensions
 
 def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_file_names=None):
     """Basestation script invoked at glider login time
