@@ -104,6 +104,62 @@ def process_adcp_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_e
     processed_logger_other_files.append(matfile)
     return 0
 
+def process_camfb_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_eng_files, processed_logger_other_files):
+    """Processes camfb data files
+    Input:
+        base_opts - options object
+
+        processed_logger_eng_files - list of eng files to add to
+        processed_logger_other_files - list of other processed files to add to
+
+    Returns:
+        0 - success
+        1 - failure
+    """
+
+    nemafile = scicon_eng_file.replace(".eng", ".nema")
+    fi = open(scicon_file, "r")
+    fo = open(nemafile, "w")
+    line_num = 0
+    for ll in fi.readlines():
+        line_num += 1
+        if len(ll) < 2:
+            continue
+        if ll.startswith("% start:"):
+            _, time_parts_str = ll.split(":", 1)
+            time_parts = time_parts_str.split()
+
+            if(int(time_parts[2]) - 100 < 0):
+                year_part = int(time_parts[2])
+            else:
+                year_part = int(time_parts[2]) - 100
+
+            sec_parts = time_parts[5].split('.')
+            sec_part = sec_parts[0]
+            if(len(sec_parts) == 2):
+                _, dec_sec_part = math.modf(float(time_parts[5]))
+            else:
+                dec_sec_part = 0.0
+
+            time_string = "%s %s %02d %s %s %s" % (time_parts[0], time_parts[1], year_part,
+                                                   time_parts[3], time_parts[4], sec_part)
+            start_time = time.mktime(Utils.fix_gps_rollover(time.strptime(time_string, "%m %d %y %H %M %S"))) + dec_sec_part
+            continue
+        elif ll.startswith("%"):
+            continue
+        else:
+            splits = ll.split(' ', 1)
+            try:
+                tt = start_time + float(splits[0].rstrip().lstrip()) / 1000.
+            except ValueError:
+                log_error(f"Could not process {scicon_file} line {line_num} {ll}")
+            else:
+                fo.write("%.3f %s\n" % (tt, splits[1].rstrip()))
+
+    processed_logger_other_files.append(nemafile)
+
+    return 0
+
 def init_logger(module_name, init_dict=None):
     """
     init_logger
@@ -232,6 +288,11 @@ def process_tar_members(base_opts, module_name, fc, scicon_file_list, processed_
             if(hhead == 'ad2cp'):
                 if(process_adcp_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_eng_files, processed_logger_other_files)):
                     log_error("Error converting %s to %s" % (scicon_file, scicon_eng_file))
+                    ret_val = 1
+                    break
+            elif hhead == "camfb":
+                if(process_camfb_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_eng_files, processed_logger_other_files)):
+                    log_error("Error processing %s" % scicon_file)
                     ret_val = 1
                     break
             else:
