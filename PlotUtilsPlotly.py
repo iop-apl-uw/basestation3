@@ -119,52 +119,54 @@ def write_output_files(plot_conf, base_file_name, fig):
     ret_list.append(output_name)
 
     def save_img_file(output_fmt):
-        #if sys.platform == 'darwin':
-        if 1:
-            # This path appears to be the most solid for OSX and linux (for now)
-            if 'linux' in sys.platform:
-                # orca - the app that creates the .png files, opens /tmp/orca-build with 775 for permissions:
-                # https://github.com/plotly/orca/issues/140
-                # this causes the orca app to merely hang on execution - very helpful indeed - so we check for the
-                # permissions and warn if it looks bad
-                orca_build_dir = "/tmp/orca-build"
-                if os.access(orca_build_dir, os.F_OK):
-                    if not os.access(orca_build_dir, os.W_OK):
-                        log_error("%s not writable - the call to orca to convert image will hang!!!! Bailing out" % orca_build_dir)
-                        return None
-                
-            json_file_name = base_file_name + '.json'
-            plotlyfig2json(fig, fpath = json_file_name)
-            output_name = base_file_name + '.' + output_fmt
-            head, tail = os.path.split(output_name)
-            if head == '' or head is None:
-                head = '.'
-            cmd_line = "orca graph %s --width %d --height %d --scale 1.0 -d %s -o %s --parallel-limit 0" \
-                       % (json_file_name, std_width, std_height, head, tail)
-            #log_info("Running %s" % cmd_line)
-            try:
-                ret_code = Utils.check_call(cmd_line, use_shell=True)
-            except:
-                log_info("Except in run", 'exc')
-            #log_info("Done")
-            os.remove(json_file_name)
-            if ret_code:
-                log_error("%s returned %d" % (cmd_line, ret_code))
-                return None
-            else:
-                return output_name
+        orca_path = Utils.which("orca")
+        if not orca_path:
+            log_warning("Executable \"orca\" not found on path - not generating image file")
+            return
+        # This path appears to be the most solid for OSX and linux (for now)
+        if 'linux' in sys.platform:
+            # orca - the app that creates the .png files, opens /tmp/orca-build with 775 for permissions:
+            # https://github.com/plotly/orca/issues/140
+            # this causes the orca app to merely hang on execution - very helpful indeed - so we check for the
+            # permissions and warn if it looks bad
+            orca_build_dir = "/tmp/orca-build"
+            if os.access(orca_build_dir, os.F_OK):
+                if not os.access(orca_build_dir, os.W_OK):
+                    log_error("%s not writable - the call to orca to convert image will hang!!!! Bailing out" % orca_build_dir)
+                    return None
+
+        json_file_name = base_file_name + '.json'
+        plotlyfig2json(fig, fpath = json_file_name)
+        output_name = base_file_name + '.' + output_fmt
+        head, tail = os.path.split(output_name)
+        if head == '' or head is None:
+            head = '.'
+        cmd_line = "orca graph %s --width %d --height %d --scale 1.0 -d %s -o %s --parallel-limit 0" \
+                   % (json_file_name, std_width, std_height, head, tail)
+        #log_info("Running %s" % cmd_line)
+        try:
+            ret_code = Utils.check_call(cmd_line, use_shell=True)
+        except:
+            log_info("Except in run", 'exc')
+        #log_info("Done")
+        os.remove(json_file_name)
+        if ret_code:
+            log_error("%s returned %d" % (cmd_line, ret_code))
+            return None
         else:
-            # 2020/01/02 GBS - this code path runs with a plotly and ploty_orca installed from
-            # anaconda (on rendezvous), but hangs here.  Note in both cases, xvfb was installed and
-            # #plotly.io.orca.config.use_xvfb = True
-            # was set.
-            output_name = base_file_name + '.' + output_fmt
-            fig.write_image(file = output_name, format = output_fmt, width = std_width, height = std_height, scale = std_scale, validate = True)
             return output_name
+
+        # 2020/01/02 GBS - this code path runs with a plotly and ploty_orca installed from
+        # anaconda (on rendezvous), but hangs here.  Note in both cases, xvfb was installed and
+        # #plotly.io.orca.config.use_xvfb = True
+        # was set.
+        #output_name = base_file_name + '.' + output_fmt
+        #fig.write_image(file = output_name, format = output_fmt, width = std_width, height = std_height, scale = std_scale, validate = True)
+        #return output_name
 
     ret_list.append(save_img_file('png'))
     
-    if plot_conf.save_svg:
-        ret_list.append(save_img_file('svg'))
+    #if plot_conf.save_svg:
+    #    ret_list.append(save_img_file('svg'))
     
     return ret_list
