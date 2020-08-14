@@ -356,7 +356,7 @@ def extract_file_metadata(inp_file_name, channel):
     Dictionary of meta data
     """
     try:
-        inp_file = open(inp_file_name, "r")
+        inp_file = open(inp_file_name, "rb")
     except:
         log_error("Unable to open %s" % inp_file_name)
         return None
@@ -367,7 +367,14 @@ def extract_file_metadata(inp_file_name, channel):
 
     ret_list = []
 
+    line_count = 0
     for raw_line in inp_file:
+        line_count += 1
+        try:
+            raw_line = raw_line.decode('utf-8')
+        except UnicodeDecodeError:
+            log_debug(f"Could not decode {inp_file_name} line {line_count} - skipping")
+            continue
         if(raw_line[0] == '%'):
             raw_strs = raw_line.split(":", 1)
             raw_strs[0] = raw_strs[0].replace('% ', '%')
@@ -470,7 +477,7 @@ def extract_file_data(inp_file_name):
     List of data vectors - success
     """
     try:
-        inp_file = open(inp_file_name, "r")
+        inp_file = open(inp_file_name, "rb")
     except:
         log_error("Unable to open %s" % inp_file_name)
         return None
@@ -495,11 +502,18 @@ def extract_file_data(inp_file_name):
     nlog = 0
     scaleoff = False
     columns = []
-    line_count = -1
+    line_count = 0
+
     # Process the data
     for inp_line in buffer.splitlines():
-        inp_line = inp_line.rstrip().rstrip()
         line_count += 1
+        try:
+            inp_line = inp_line.decode('utf-8')
+        except UnicodeDecodeError:
+            # Lots of reasons for this - mixed binary and text files a leading cause
+            log_debug(f"Could not decode {inp_file_name} line {line_count} - skipping")
+            continue
+        inp_line = inp_line.rstrip().rstrip()
         if(inp_line == ""):
             continue
         elif(inp_line[0] == '%'):
@@ -541,9 +555,9 @@ def extract_file_data(inp_file_name):
 
     # Handle the binary case
     if(binaryoutput):
-        data_start = buffer.find('%start')
-        data_start = buffer.find('\n', data_start) + 1
-        data_end = buffer.find('\n%stop')
+        data_start = buffer.find('%start'.encode('utf-8'))
+        data_start = buffer.find('\n'.encode('utf-8'), data_start) + 1
+        data_end = buffer.find('\n%stop'.encode('utf-8'))
 
         # How many cols?
         if(eng_file_class == 'base'):
@@ -559,14 +573,14 @@ def extract_file_data(inp_file_name):
 
         if(scaleoff):
             tmp = arr.array('B')
-            tmp.fromstring(buffer[data_start:data_end])
+            tmp.frombytes(buffer[data_start:data_end])
             data = arr.array('f')
-            data.fromlist(list(map(float, tmp)))
+            data.frombytes(list(map(float, tmp)))
         else:
             data = arr.array('f')
-            data.fromstring(buffer[data_start:data_end])
+            data.frombytes(buffer[data_start:data_end])
 
-        rows = len(data) / cols
+        rows = len(data) // cols
 
         data = reshape(data, (rows, cols), order='C')
 
