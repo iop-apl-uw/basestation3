@@ -349,7 +349,8 @@ def extract_file_metadata(inp_file_name):
         try:
             raw_line = raw_line.decode('utf-8')
         except UnicodeDecodeError:
-            log_warning(f"Could not decode line number {line_count} - skipping")
+            # Lots of reasons for this - mixed binary and text files a leading cause
+            log_debug(f"Could not decode {inp_file_name} line {line_count} - skipping")
             continue
 
         if(raw_line[0] == '%'):
