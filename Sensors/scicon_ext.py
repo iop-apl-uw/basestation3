@@ -178,7 +178,7 @@ def init_logger(module_name, init_dict=None):
 
     register_sensor_dim_info(nc_ad2cp_data_info, nc_ad2cp_data_dim, None, True, None)
     register_sensor_dim_info(nc_ad2cp_cell_info, nc_ad2cp_cell_dim, None, True, None)
-    
+
     init_dict[module_name] = {'logger_prefix' : scicon_prefix,
                               'strip_files' : True,
                               'eng_file_reader' : eng_file_reader,
@@ -225,10 +225,10 @@ def init_logger(module_name, init_dict=None):
                                   'auxCompass_ontime_a': [False, 'd', {'description':'auxCompass total time turned on dive', 'units' : 'secs'}, nc_scalar],
                                   'auxCompass_samples_a': [False, 'i', {'description':'auxCompass total number of samples taken dive'}, nc_scalar],
                                   'auxCompass_timeouts_a': [False, 'i', {'description':'auxCompass total time turned samples timedout on dive', 'units' : 'secs'}, nc_scalar],
-                                  
+
                                   'auxCompass_ontime_b': [False, 'd', {'description':'auxCompass total time turned on climb', 'units' : 'secs'}, nc_scalar],
                                   'auxCompass_samples_b': [False, 'i', {'description':'auxCompass total number of samples taken climb'}, nc_scalar],
-                                  'auxCompass_timeouts_b': [False, 'i', {'description':'auxCompass total time turned samples timedout on climb', 'units' : 'secs'}, nc_scalar],                                                                    
+                                  'auxCompass_timeouts_b': [False, 'i', {'description':'auxCompass total time turned samples timedout on climb', 'units' : 'secs'}, nc_scalar],
                                   'sg_cal_auxcompass_coeffhex': [False, 'c', {'description':'auxCompass coefficients'}, nc_scalar],
                                   'sg_cal_auxcompass_abc': [False, 'c', {'description':'auxCompass soft-iron correction'}, nc_scalar],
                                   'sg_cal_auxcompass_pqr': [False, 'c', {'description':'auxCompass hard-iron correction'}, nc_scalar],
@@ -268,6 +268,11 @@ def process_tar_members(base_opts, module_name, fc, scicon_file_list, processed_
             head, tail = os.path.split(scicon_file)
             base_name = "%s/p%s%03d%04d%s" % (head, scicon_prefix, fc._instrument_id, fc.dive_number(), fc.up_down_data())
             log_info("Processing data for %s" % base_name)
+
+        if 'ct_x3' in scicon_file:
+            log_info("Processing %s NYI" % scicon_file)
+            continue
+
         head, tail = os.path.splitext(scicon_file)
         if(tail.lower() == '.dat'):
             df_meta, _ = extract_file_metadata(scicon_file)
@@ -289,12 +294,12 @@ def process_tar_members(base_opts, module_name, fc, scicon_file_list, processed_
                 if(process_adcp_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_eng_files, processed_logger_other_files)):
                     log_error("Error converting %s to %s" % (scicon_file, scicon_eng_file))
                     ret_val = 1
-                    break
+                    continue
             elif hhead == "camfb":
                 if(process_camfb_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_eng_files, processed_logger_other_files)):
                     log_error("Error processing %s" % scicon_file)
                     ret_val = 1
-                    break
+                    continue
             else:
                 if(ConvertDatToEng(scicon_file, scicon_eng_file, df_meta, base_opts)):
                     log_error("Error converting %s to %s" % (scicon_file, scicon_eng_file))
@@ -479,7 +484,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
         legato_error_count = 0
     else:
         legato_error_count = None
-        
+
     if(df_meta.scale_off == None):
         log_error("No %%column seen in %s - unable to proceed" % inp_file_name)
         return 1
@@ -541,10 +546,10 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
     pressure_col_index = None
     if(df_meta.sealevel and  'pressure' in df_meta.columns.split()):
         pressure_col_index = df_meta.columns.split().index('pressure')
-                    
+
     for raw_line in inp_file:
         out_cols = None
-        
+
         if(raw_line[0] == '%'):
             # Header line
 
@@ -596,9 +601,9 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
             out_cols =[(df_meta.start_time + (((float(cols[0]) / df_meta.scale_off[0].scale) + df_meta.scale_off[0].offset)/1000.0))]
             for i in range(1, len(cols)):
                 if i == pressure_col_index:
-                    out_cols.append((((cols[i] - df_meta.sealevel)/ df_meta.scale_off[i].scale) + df_meta.scale_off[i].offset))                        
+                    out_cols.append((((cols[i] - df_meta.sealevel)/ df_meta.scale_off[i].scale) + df_meta.scale_off[i].offset))
                 else:
-                    out_cols.append(((cols[i] / df_meta.scale_off[i].scale) + df_meta.scale_off[i].offset))                        
+                    out_cols.append(((cols[i] / df_meta.scale_off[i].scale) + df_meta.scale_off[i].offset))
 
             if(auxcompass_accelcoeff is not None):
                 compass_output = []
@@ -636,7 +641,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
         log_warning("%d timeout(s) seen in %s" % (timeout_count, inp_file_name), alert='TIMEOUT')
     if legato_error_count is not None:
         out_file.write("%%errors: %d\n" % legato_error_count)
-        
+
     if(prev_err is not None):
         seterr(invalid=prev_err['invalid'])
 
@@ -692,7 +697,7 @@ def eng_file_reader(eng_files, nc_info_d):
             except:
                 log_error("Unable to load %s" % fn['file_name'], 'exc')
                 continue
-            
+
             for col_name in ad2cp_single_value:
                 data_cols[col_name] = float(mf[col_name][0][0])
 
@@ -715,7 +720,7 @@ def eng_file_reader(eng_files, nc_info_d):
         # Single value
         for col_name in ad2cp_single_value:
             ret_list.append(("%s_%s" % (ad2cp_base, col_name), data_cols[col_name]))
-                
+
         # Single dim
         for col_name in ad2cp_single_dim:
             ret_list.append(("%s_%s" % (ad2cp_base, col_name), data_cols[col_name]))
