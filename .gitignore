@@ -7,3 +7,4 @@ __pycache__
 .coverage_func
 .mypy_cache
 .sms_userid
+*.o
