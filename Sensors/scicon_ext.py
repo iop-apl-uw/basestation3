@@ -321,7 +321,7 @@ def extract_file_metadata(inp_file_name):
 
     """
     try:
-        inp_file = open(inp_file_name, "r")
+        inp_file = open(inp_file_name, "rb")
     except:
         log_error("Unable to open %s" % inp_file_name)
         return None, None
@@ -343,7 +343,15 @@ def extract_file_metadata(inp_file_name):
 
     ret_list = []
 
+    line_count = 0
     for raw_line in inp_file:
+        line_count += 1
+        try:
+            raw_line = raw_line.decode('utf-8')
+        except UnicodeDecodeError:
+            log_warning(f"Could not decode line number {line_count} - skipping")
+            continue
+
         if(raw_line[0] == '%'):
             raw_strs = raw_line.split(":", 1)
             raw_strs[0] = raw_strs[0].replace('% ', '%')
