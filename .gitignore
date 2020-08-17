@@ -8,3 +8,4 @@ __pycache__
 .mypy_cache
 .sms_userid
 *.o
+sc2mat
