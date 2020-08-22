@@ -164,9 +164,10 @@ def write_output_files(plot_conf, base_file_name, fig):
         #fig.write_image(file = output_name, format = output_fmt, width = std_width, height = std_height, scale = std_scale, validate = True)
         #return output_name
 
-    ret_list.append(save_img_file('png'))
+    if plot_conf.save_png:
+        ret_list.append(save_img_file('png'))
     
-    #if plot_conf.save_svg:
-    #    ret_list.append(save_img_file('svg'))
+    if plot_conf.save_svg:
+        ret_list.append(save_img_file('svg'))
     
     return ret_list

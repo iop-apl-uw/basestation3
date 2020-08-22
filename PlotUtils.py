@@ -25,13 +25,15 @@
 """
 
 import time
+import sys
 
 # Plotting configuration
 make_plot_section = "makeplot"
 make_plot_default_dict = {
     "plot_raw": [0, 0, 1],
     "save_svg": [0, 0, 1],
-    "full_html": [1, 0, 1],
+    "save_png": [0 if 'darwin' in sys.platform else 1, 0, 1],   # This is just for plotly saving to png
+    "full_html": [1 if 'darwin' in sys.platform else 0, 0, 1],
     "plot_directory": [None, None, None],
 }
 
@@ -56,7 +58,7 @@ def get_mission_dive(dive_nc_file):
         log_dive = dive_nc_file.variables["log_DIVE"].getValue()
     if "sg_cal_mission_title" in dive_nc_file.variables:
         mission_title = (
-            dive_nc_file.variables["sg_cal_mission_title"][:].tostring().decode("utf-8")
+            dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
         )
 
     if hasattr(dive_nc_file, "start_time"):
@@ -78,7 +80,7 @@ def get_mission_str(dive_nc_file):
         log_id = int(dive_nc_file.variables["log_ID"].getValue())
     if "sg_cal_mission_title" in dive_nc_file.variables:
         mission_title = (
-            dive_nc_file.variables["sg_cal_mission_title"][:].tostring().decode("utf-8")
+            dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
         )
     return f"SG{'%03d' % (log_id if log_id else 0,)} {mission_title}"
 
