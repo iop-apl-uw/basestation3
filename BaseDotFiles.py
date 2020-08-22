@@ -1136,6 +1136,7 @@ def process_extensions(
     processed_other_files,
     known_mailer_tags,
     known_ftp_tags,
+    processed_file_names,
 ):
     """Processes the extensions file, running each extension
 
@@ -1192,6 +1193,7 @@ def process_extensions(
                                 processed_other_files=processed_other_files,
                                 known_mailer_tags=known_mailer_tags,
                                 known_ftp_tags=known_ftp_tags,
+                                processed_file_names=processed_file_names,
                             )
                         except:
                             log_error(

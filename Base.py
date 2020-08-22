@@ -2131,6 +2131,16 @@ def main():
                     else:
                         data_product_file_names.append(mission_timeseries_name)
 
+
+            processed_file_names = []
+            processed_file_names.append(processed_eng_and_log_files)
+            processed_file_names.append(processed_selftest_eng_and_log_files)
+            #processed_file_names.append(processed_other_files)
+            processed_file_names.append(data_product_file_names)
+            processed_file_names.append(processed_logger_eng_files)
+            processed_file_names.append(processed_logger_other_files)
+            processed_file_names = Utils.flatten(processed_file_names)
+
             # Invoke extensions, if any
             BaseDotFiles.process_extensions(
                 ".extensions",
@@ -2138,10 +2148,12 @@ def main():
                 sg_calib_file_name,
                 dive_nc_file_names,
                 nc_files_created,
-                processed_other_files,
+                processed_other_files, # Output list for extension created files
                 known_mailer_tags,
                 known_ftp_tags,
+                processed_file_names,
             )
+            del processed_file_names
 
         except AbortProcessingException:
             # Issued the message in the handler

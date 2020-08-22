@@ -165,7 +165,6 @@ def process_ctx3_dat(base_opts, scicon_file, output_file, processed_logger_other
     Input:
         base_opts - options object
 
-        processed_logger_eng_files - list of eng files to add to
         processed_logger_other_files - list of other processed files to add to
 
     Returns:

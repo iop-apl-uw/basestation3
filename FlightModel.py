@@ -2453,7 +2453,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
 # Called as an extension or via cmdline_main() below
 def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_file_names=None, nc_files_created=None,
-         processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None):
+         processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None, processed_file_names=None):
     """Basestation extension for evaluating flight model parameters from dive data
 
     Returns:

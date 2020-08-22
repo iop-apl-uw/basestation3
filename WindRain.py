@@ -102,7 +102,7 @@ def add_variable(ncf, name, value, typecode, dimensions, meta_data):
 
 #pylint: disable=unused-argument
 def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_file_names=None, nc_files_created=None,
-         processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None):
+         processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None, processed_file_names=None):
     """Basestation extension for adding wind/rain estimates to netcdf files
 
     Returns:
