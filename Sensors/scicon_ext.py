@@ -160,6 +160,42 @@ def process_camfb_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_
 
     return 0
 
+def process_ctx3_dat(base_opts, scicon_file, output_file, processed_logger_other_files):
+    """Processes ctx3 compressed  data file
+    Input:
+        base_opts - options object
+
+        processed_logger_eng_files - list of eng files to add to
+        processed_logger_other_files - list of other processed files to add to
+
+    Returns:
+        0 - success
+        1 - failure
+    """
+
+    convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "x3decode_ts")
+    if not os.path.isfile(convertor):
+        log_error("Convertor %s does not exits - not processing %s" % (convertor, scicon_file))
+        return 1
+    if not os.access(convertor, os.X_OK):
+        log_error("Convertor (%s) is not marked as executable - not processing %s" % (convertor, scicon_file))
+        return 1
+
+    cmdline = "%s -i %s -o %s" % (convertor, scicon_file, output_file)
+    log_info("Running %s" % cmdline)
+    try:
+        (sts, fo) = Utils.run_cmd_shell(cmdline, timeout = 10)
+    except:
+        log_error("Error running %s" % cmdline, 'exc')
+        return 1
+
+    if sts is None:
+        log_error("Error running %s - timeout" % cmdline, 'exc', alert='CONVERSION_TIMEOUT')
+        return 1
+
+    processed_logger_other_files.append(output_file)
+    return 0
+
 def init_logger(module_name, init_dict=None):
     """
     init_logger
@@ -269,8 +305,13 @@ def process_tar_members(base_opts, module_name, fc, scicon_file_list, processed_
             base_name = "%s/p%s%03d%04d%s" % (head, scicon_prefix, fc._instrument_id, fc.dive_number(), fc.up_down_data())
             log_info("Processing data for %s" % base_name)
 
-        if 'ct_x3' in scicon_file:
-            log_info("Processing %s NYI" % scicon_file)
+        _, tail = os.path.split(scicon_file)
+        if tail == "ctx3.dat":
+            # If this ends up coming from a RBR, we'll need more data in the
+            # .dat file
+            if(process_ctx3_dat(base_opts, scicon_file, f"{base_name}_sbect_ts.profile", processed_logger_other_files)):
+                log_error("Error processing %s" % scicon_file)
+                ret_val = 1
             continue
 
         head, tail = os.path.splitext(scicon_file)
@@ -304,7 +345,7 @@ def process_tar_members(base_opts, module_name, fc, scicon_file_list, processed_
                 if(ConvertDatToEng(scicon_file, scicon_eng_file, df_meta, base_opts)):
                     log_error("Error converting %s to %s" % (scicon_file, scicon_eng_file))
                     ret_val = 1
-                    break
+                    continue
                 processed_logger_eng_files.append(scicon_eng_file)
 
     return ret_val
