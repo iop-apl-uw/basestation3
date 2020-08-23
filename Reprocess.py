@@ -332,7 +332,7 @@ def main():
     #
     # from Base import known_mailer_tags, known_ftp_tags
     # process_extensions('.extensions', base_opts, sg_calib_file_name, dive_nc_file_names,  \
-    #                    dive_nc_file_names, [], Base.known_mailer_tags, Base.known_ftp_tags)
+    #                    dive_nc_file_names, [], Base.known_mailer_tags, Base.known_ftp_tags, None)
     #
     # This would replace the explicit calls to MakePlots
 

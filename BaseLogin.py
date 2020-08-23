@@ -70,7 +70,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
 
     # Invoke extensions, if any
     process_extensions('.pre_extensions', base_opts,
-                       None, None, None, None, None, None)
+                       None, None, None, None, None, None, None)
 
     existing_files = '{'
     base_files = {'targets':'T','science':'S', 'pdoscmds.bat':'P', 'tcm2mat.cal':'M'}
