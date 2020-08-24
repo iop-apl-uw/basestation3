@@ -2838,7 +2838,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                         # and toggles ON EACH ROLL.  And then reset at the first pump, assumed apogee,
                         # where rollback is forced without recording any gc_roll_secs
                         # This code has the virtue of only looking for rollbacks where we bleed and pump
-                        if gc_st_secs[gc] - i_eng_file_start_time < start_of_climb_time:
+                        if start_of_climb_time is None or gc_st_secs[gc] - i_eng_file_start_time < start_of_climb_time:
                             roll_center = log_f.data['$C_ROLL_DIVE']
                         else:
                             roll_center = log_f.data['$C_ROLL_CLIMB']
