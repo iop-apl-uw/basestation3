@@ -409,7 +409,11 @@ def printTargetLine(from_name, from_lat, from_lon, to_name, to_lat, to_lon, esca
     fo.write('    </Placemark>\n')
 
 
-def printTargets(active_target, only_active_target, target_file_name, instrument_id, print_radius, fo):
+
+target_tuple = collections.namedtuple("target", ["lat", "lon", "radius", "finish_line", "depth_target", "goto_target", "escape_target"])
+
+def printTargets(active_target, only_active_target, target_file_name, instrument_id, print_radius, fo,
+                 tgt_lon = None, tgt_lat = None, tgt_radius = None):
     """Proceses a target file
     """
     try:
@@ -456,23 +460,36 @@ def printTargets(active_target, only_active_target, target_file_name, instrument
                 finish_line = float(value)
             elif(name == 'depth'):
                 depth_limit = float(value)
-        if(target_name == active_target):
-            printTarget(True, target_name, lat, lon, radius, finish_line, depth_target, instrument_id, print_radius, fo)
+        target_dict[target_name] = target_tuple(lat, lon, radius, finish_line, depth_target, goto_targ, escape_targ)
+
+    if tgt_lat is not None and tgt_lon is not None:
+        found_in_list = False
+        for t in target_dict.keys():
+            if target_dict[t].lat == tgt_lat and target_dict[t].lon == tgt_lon:
+                found_in_list = True
+
+        if not found_in_list and active_target:
+            curr = target_dict[active_target]
+            target_dict[active_target] = target_tuple(tgt_lat, tgt_lon, tgt_radius, curr.finish_line, curr.depth_target, curr.goto_target, curr.escape_target)
+
+    for targ  in target_dict.keys():
+        if(targ == active_target):
+            printTarget(True, targ, target_dict[targ].lat, target_dict[targ].lon, target_dict[targ].radius, target_dict[targ].finish_line, target_dict[targ].depth_target, instrument_id, print_radius, fo)
         elif(not only_active_target):
-            printTarget(False, target_name, lat, lon, radius, finish_line, depth_target, instrument_id, print_radius, fo)
-        target_dict[target_name] = [lat, lon, goto_targ, escape_targ]
+            printTarget(False, targ, target_dict[targ].lat, target_dict[targ].lon, target_dict[targ].radius, target_dict[targ].finish_line, target_dict[targ].depth_target, instrument_id, print_radius, fo)
+
     # Draw course between targets
     # TODO - special case the loop back case - same target source and dest
     if(not only_active_target):
         for targ in list(target_dict.keys()):
-            if(target_dict[targ][2] in list(target_dict.keys())):
-                printTargetLine(targ, target_dict[targ][0], target_dict[targ][1],
-                                target_dict[targ][2], target_dict[target_dict[targ][2]][0], target_dict[target_dict[targ][2]][1],
+            if(target_dict[targ].goto_target in list(target_dict.keys())):
+                printTargetLine(targ, target_dict[targ].lat, target_dict[targ].lon,
+                                target_dict[targ].goto_target, target_dict[target_dict[targ].goto_target].lat, target_dict[target_dict[targ].goto_target].lon,
                                 False, fo)
-            if(target_dict[targ][3] in list(target_dict.keys())):
-                log_info("Escape route %s to %s" % (targ, target_dict[targ][3]))
-                printTargetLine(targ, target_dict[targ][0], target_dict[targ][1],
-                                target_dict[targ][3], target_dict[target_dict[targ][3]][0], target_dict[target_dict[targ][3]][1],
+            if(target_dict[targ].escape_target in list(target_dict.keys())):
+                log_info("Escape route %s to %s" % (targ, target_dict[targ].escape_target))
+                printTargetLine(targ, target_dict[targ].lat, target_dict[targ].lon,
+                                target_dict[targ].escape_target, target_dict[target_dict[targ].escape_target].lat, target_dict[target_dict[targ].escape_target].lon,
                                 True, fo)
     fo.write('</Folder>\n')
         
@@ -1135,8 +1152,14 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             log_file = LogFile.parse_log_file(logfiles[-1], base_opts.mission_dir)
             try:
                 tgt_name = log_file.data['$TGT_NAME']
+
+                latlong = log_file.data['$TGT_LATLONG']
+                tgt_lat, tgt_lon = latlong.split(",")
+                tgt_lat = Utils.ddmm2dd(float(tgt_lat))
+                tgt_lon = Utils.ddmm2dd(float(tgt_lon))
+                tgt_radius = float(log_file.data['$TGT_RADIUS'])
             except:
-                tgt_name = None
+                tgt_name = tgt_lat = tgt_lon = tgt_radius = None
 
         # Display targets
         targets = []
@@ -1148,11 +1171,11 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         if(targets != []):
             targets = Utils.unique(targets)
             targets = sorted(targets, key=functools.cmp_to_key(cmp_function))
-            printTargets(tgt_name, make_kml_conf.targets == 'current', targets[0], instrument_id, make_kml_conf.target_radius, fo)
+            printTargets(tgt_name, make_kml_conf.targets == 'current', targets[0], instrument_id, make_kml_conf.target_radius, fo, tgt_lon = tgt_lon, tgt_lat = tgt_lat, tgt_radius = tgt_radius)
         else:
             target_file_name = os.path.join(base_opts.mission_dir, 'targets')
             if(os.path.exists(target_file_name)):
-                printTargets(tgt_name, make_kml_conf.targets == 'current', target_file_name, instrument_id, make_kml_conf.target_radius, fo)
+                printTargets(tgt_name, make_kml_conf.targets == 'current', target_file_name, instrument_id, make_kml_conf.target_radius, fo, tgt_lon = tgt_lon, tgt_lat = tgt_lat, tgt_radius = tgt_radius)
                 
     printFooter(fo)
 
