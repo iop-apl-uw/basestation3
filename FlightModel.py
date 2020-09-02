@@ -784,7 +784,7 @@ def load_dive_data(dive_data):
             log_warning("No data for dive %d" % dive_num)
             raise RuntimeError # close the file handle below
 
-        pitch_d = float(dive_nc_file.variables['log_MHEAD_RNG_PITCHd_Wd'][:].tostring().decode('utf-8').split(',')[2])
+        pitch_d = float(dive_nc_file.variables['log_MHEAD_RNG_PITCHd_Wd'][:].tobytes().decode('utf-8').split(',')[2])
         dive_data.pitch_d = abs(int(pitch_d)) # update pitch_d to nearest degree
 
         # These values *might* have come from sg_calib_constants but they could also have come from FlightModel
