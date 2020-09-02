@@ -141,6 +141,14 @@ def write_output_files(plot_conf, base_file_name, fig):
         head, tail = os.path.split(output_name)
         if head == '' or head is None:
             head = '.'
+        # 2020/09/02 For reasons not yet understood, on linux at times the orca app doesn't exit, leaving a FUSE
+        # mounted appimage and a process still runing.  The process only responds to -9 signal.  The fuse system
+        # is mounted in /tmp/.mount_orca_*  To unmount, user "sudo fusermount -u /tmp/.mount_orca_*".  If enough of these
+        # are left around, the limit for FUSE mounts is it (default 1000), and .png files can no longer be created.
+        #
+        # The problem is not trivially reproduceable from the command line, so it may have something to do with running the
+        # basestation processing as a daemon, disconnected from any terminal.
+        #
         cmd_line = "orca graph %s --width %d --height %d --scale 1.0 -d %s -o %s --parallel-limit 0" \
                    % (json_file_name, std_width, std_height, head, tail)
         #log_info("Running %s" % cmd_line)
