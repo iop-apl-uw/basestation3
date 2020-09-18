@@ -1705,7 +1705,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                                             nc_var_convert = dive_nc_file.createVariable(dive_nc_varname, nc_data_type, nc_dims)
                                             convert_f = float if nc_data_type == 'd' else int
                                             # this can fail if you have a string like '1234,5678,9012' etc.
-                                            nc_var_convert.assignValue(convert_f(nc_var[:].tostring().decode('utf-8')))
+                                            nc_var_convert.assignValue(convert_f(nc_var[:].tobytes().decode('utf-8')))
                                             log_debug("Converted %s from '%s' to '%s'" % (dive_nc_varname, nc_typecode, nc_data_type))
                                         except:
                                             log_error("Failed to convert %s from string '%s' to type '%s'" % (dive_nc_varname, nc_var[:].to_string(), nc_data_type))
@@ -1770,7 +1770,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                             if nc_is_scalar:
                                 calib_consts[variable] = nc_var.getValue()
                             else: # nc_string
-                                calib_consts[variable] = nc_var[:].tostring().decode('utf-8') # string comments
+                                calib_consts[variable] = nc_var[:].tobytes().decode('utf-8') # string comments
 
                         elif (log_var.search(dive_nc_varname)):
                             if (dive_nc_varname in ['log_gps_lat', 'log_gps_lon', 'log_gps_time', 'log_gps_first_fix_time',
@@ -1783,7 +1783,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                             variable = '$' + variable # restore leading parameter character
                             # log_info(variable) # DEBUG when unknown variables fail to load
                             if (nc_data_type == 'c' or nc_string):
-                                value = nc_var[:].tostring().decode('utf-8')
+                                value = nc_var[:].tobytes().decode('utf-8')
                                 # deal w/ GPS strings
                                 if (variable in ['$GPS1', '$GPS2', '$GPS']):
                                     value = GPS.GPSFix(value, base_opts.mission_dir, start_date_str=time.strftime("%m %d %y", eng_f.start_ts))
@@ -1820,11 +1820,11 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                                 continue # move on...
 
                             if (dive_nc_varname == 'directives'):
-                                directives.parse_string(nc_var[:].tostring().decode('utf-8'))
+                                directives.parse_string(nc_var[:].tobytes().decode('utf-8'))
                                 continue
 
                             if (nc_data_type == 'c' or nc_string):
-                                results_d[dive_nc_varname] = nc_var[:].tostring().decode('utf-8')
+                                results_d[dive_nc_varname] = nc_var[:].tobytes().decode('utf-8')
                             elif nc_is_scalar:
                                 results_d[dive_nc_varname] = nc_var.getValue()
                             else:
