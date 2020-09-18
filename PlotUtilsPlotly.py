@@ -141,15 +141,15 @@ def write_output_files(plot_conf, base_file_name, fig):
         head, tail = os.path.split(output_name)
         if head == '' or head is None:
             head = '.'
-        cmd_line = "orca graph %s --width %d --height %d --scale 1.0 -d %s -o %s --parallel-limit 0" \
+        cmd_line = "orca graph %s --width %d --height %d --scale 1.0 -d %s -o %s --disable-gpu" \
                    % (json_file_name, std_width, std_height, head, tail)
-        #log_info("Running %s" % cmd_line)
+        log_info("Running %s" % cmd_line)
         try:
             ret_code = Utils.check_call(cmd_line, use_shell=True)
         except:
             log_info("Except in run", 'exc')
         #log_info("Done")
-        os.remove(json_file_name)
+        #os.remove(json_file_name)
         if ret_code:
             log_error("%s returned %d" % (cmd_line, ret_code))
             return None

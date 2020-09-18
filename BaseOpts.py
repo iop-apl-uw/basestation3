@@ -246,7 +246,7 @@ class BaseOptions:
             if src in 'bd':
                 pass # was --dac_src
 
-            if src in 'bij':
+            if src in 'bgij':
                 op.add_option("--daemon", dest="daemon",
                               action="store_true",
                               help="Launch conversion as a daemon process")
