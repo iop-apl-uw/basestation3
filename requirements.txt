@@ -1,3 +1,5 @@
+# For Plotly persistence
+kaleido==0.0.3.post1
 matplotlib==3.2.0
 #basemap==1.2.1
 # Basemap no longer in pip.  To install:
@@ -8,8 +10,8 @@ matplotlib==3.2.0
 # brew install geos
 # pip install git+https://github.com/matplotlib/basemap.git
 numpy==1.19.1
-# For MakePlot4 
-plotly==4.9.0
+# For MakePlot2 and MakePlot4
+plotly>=4.9.0
 scipy==1.5.2
 # For SlackPost and InReachSend
 requests==2.24.0

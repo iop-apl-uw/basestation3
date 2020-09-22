@@ -58,12 +58,13 @@ def plotlyfig2json(fig, fpath=None):
     redata = json.loads(json.dumps(fig.data, cls=plotly.utils.PlotlyJSONEncoder))
     relayout = json.loads(json.dumps(fig.layout, cls=plotly.utils.PlotlyJSONEncoder))
 
-    fig_json=json.dumps({'data': redata,'layout': relayout})
+    fig_json = json.dumps({"data": redata, "layout": relayout})
 
     if fpath:
-        with open(fpath, 'w') as f:
+        with open(fpath, "w") as f:
             f.write(fig_json)
     return fig_json
+
 
 def plotlyfromjson(fpath):
     """Render a plotly figure from a json file
@@ -74,12 +75,13 @@ def plotlyfromjson(fpath):
     Returns:
         plotly figure object
     """
-    with open(fpath, 'r') as f:
+    with open(fpath, "r") as f:
         v = json.loads(f.read())
 
-    fig = plotly.graph_objects.Figure(data=v['data'], layout=v['layout'])
-    #fig.show()
+    fig = plotly.graph_objects.Figure(data=v["data"], layout=v["layout"])
+    # fig.show()
     return fig
+
 
 def write_output_files(plot_conf, base_file_name, fig):
     """
@@ -93,89 +95,62 @@ def write_output_files(plot_conf, base_file_name, fig):
     Returns:
         List of fully qualified filenames that have been generated.
     """
-    std_config_dict = {'modeBarButtonsToRemove': ['lasso2d', 'select2d'],
-                       'scrollZoom': True,
+    std_config_dict = {
+        "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+        "scrollZoom": True,
     }
-    
+
     if plot_conf.plot_directory is None:
         log_warning("plot_directory not specified - bailing out")
         return []
-    
+
     base_file_name = os.path.join(plot_conf.plot_directory, base_file_name)
 
     ret_list = []
-    
+
     if plot_conf.full_html:
         # if plot_opts full_html
-        output_name = base_file_name + '.html'
-        fig.write_html(file = output_name, include_plotlyjs = 'cdn', full_html = True, auto_open = False, validate = True,
-                       config = std_config_dict)
+        output_name = base_file_name + ".html"
+        fig.write_html(
+            file=output_name,
+            include_plotlyjs="cdn",
+            full_html=True,
+            auto_open=False,
+            validate=True,
+            config=std_config_dict,
+        )
         ret_list.append(output_name)
 
     # For IOP site - raw div
-    output_name = base_file_name + '.div'
-    fig.write_html(file = output_name, include_plotlyjs = False, full_html = False, auto_open = False, validate = True,
-                   config = std_config_dict)
+    output_name = base_file_name + ".div"
+    fig.write_html(
+        file=output_name,
+        include_plotlyjs=False,
+        full_html=False,
+        auto_open=False,
+        validate=True,
+        config=std_config_dict,
+    )
     ret_list.append(output_name)
 
     def save_img_file(output_fmt):
-        orca_path = Utils.which("orca")
-        if not orca_path:
-            log_warning("Executable \"orca\" not found on path - not generating image file")
-            return
-        # This path appears to be the most solid for OSX and linux (for now)
-        if 'linux' in sys.platform:
-            # orca - the app that creates the .png files, opens /tmp/orca-build with 775 for permissions:
-            # https://github.com/plotly/orca/issues/140
-            # this causes the orca app to merely hang on execution - very helpful indeed - so we check for the
-            # permissions and warn if it looks bad
-            orca_build_dir = "/tmp/orca-build"
-            if os.access(orca_build_dir, os.F_OK):
-                if not os.access(orca_build_dir, os.W_OK):
-                    log_error("%s not writable - the call to orca to convert image will hang!!!! Bailing out" % orca_build_dir)
-                    return None
-
-        json_file_name = base_file_name + '.json'
-        plotlyfig2json(fig, fpath = json_file_name)
-        output_name = base_file_name + '.' + output_fmt
-        head, tail = os.path.split(output_name)
-        if head == '' or head is None:
-            head = '.'
-        # 2020/09/02 For reasons not yet understood, on linux at times the orca app doesn't exit, leaving a FUSE
-        # mounted appimage and a process still runing.  The process only responds to -9 signal.  The fuse system
-        # is mounted in /tmp/.mount_orca_*  To unmount, user "sudo fusermount -u /tmp/.mount_orca_*".  If enough of these
-        # are left around, the limit for FUSE mounts is it (default 1000), and .png files can no longer be created.
-        #
-        # The problem is not trivially reproduceable from the command line, so it may have something to do with running the
-        # basestation processing as a daemon, disconnected from any terminal.
-        #
-        cmd_line = "orca graph %s --width %d --height %d --scale 1.0 -d %s -o %s --disble-gpu" \
-                   % (json_file_name, std_width, std_height, head, tail)
-        log_info("Running %s" % cmd_line)
-        try:
-            ret_code = Utils.check_call(cmd_line, use_shell=True)
-        except:
-            log_info("Except in run", 'exc')
-        #log_info("Done")
-        #os.remove(json_file_name)
-        if ret_code:
-            log_error("%s returned %d" % (cmd_line, ret_code))
-            return None
-        else:
-            return output_name
-
-        # 2020/01/02 GBS - this code path runs with a plotly and ploty_orca installed from
-        # anaconda (on rendezvous), but hangs here.  Note in both cases, xvfb was installed and
-        # #plotly.io.orca.config.use_xvfb = True
-        # was set.
-        #output_name = base_file_name + '.' + output_fmt
-        #fig.write_image(file = output_name, format = output_fmt, width = std_width, height = std_height, scale = std_scale, validate = True)
-        #return output_name
+        output_name = base_file_name + "." + output_fmt
+        # No return code
+        fig.write_image(
+            output_name,
+            format=output_fmt,
+            width=std_width,
+            height=std_height,
+            scale=std_scale,
+            validate=True,
+            engine="kaleido",
+        )
+        return output_name
 
     if plot_conf.save_png:
-        ret_list.append(save_img_file('png'))
-    
+        ret_list.append(save_img_file("png"))
+
     if plot_conf.save_svg:
-        ret_list.append(save_img_file('svg'))
-    
+        ret_list.append(save_img_file("svg"))
+
     return ret_list
