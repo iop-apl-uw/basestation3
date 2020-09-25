@@ -2050,12 +2050,15 @@ def main():
                                 log_info(f"{known_file} was uploaded and deleted")
 
     if base_opts.make_dive_netCDF:
-        # Run FlightModel here and before mission processing so combined data reflects best flight model results
-        # Run before alert processing occurs so FM complaints are reported to the pilot
-        try:
-            FlightModel.main(base_opts=base_opts, sg_calib_file_name=sg_calib_file_name)
-        except:
-            log_critical("FlightModel failed", "exc")
+        if base_opts.skip_flight_model:
+            log_info("Skipping flight model processing per directive")
+        else:
+            # Run FlightModel here and before mission processing so combined data reflects best flight model results
+            # Run before alert processing occurs so FM complaints are reported to the pilot
+            try:
+                FlightModel.main(base_opts=base_opts, sg_calib_file_name=sg_calib_file_name)
+            except:
+                log_critical("FlightModel failed", "exc")
 
     # Run extension scripts for any new logger files
     # TODO GBS - combine ALL logger lists and invoke the extension with the complete list
