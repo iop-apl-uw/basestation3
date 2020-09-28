@@ -35,6 +35,7 @@ make_plot_default_dict = {
     "save_png": [0 if 'darwin' in sys.platform else 1, 0, 1],   # This is just for plotly saving to png
     "full_html": [1 if 'darwin' in sys.platform else 0, 0, 1],
     "plot_directory": [None, None, None],
+    "plot_freeze_pt": [0, 0, 1],
 }
 
 #
