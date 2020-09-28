@@ -32,7 +32,7 @@ make_plot_section = "makeplot"
 make_plot_default_dict = {
     "plot_raw": [0, 0, 1],
     "save_svg": [0, 0, 1],
-    "save_png": [0 if 'darwin' in sys.platform else 1, 0, 1],   # This is just for plotly saving to png
+    "save_png": [1, 0, 1],
     "full_html": [1 if 'darwin' in sys.platform else 0, 0, 1],
     "plot_directory": [None, None, None],
 }
