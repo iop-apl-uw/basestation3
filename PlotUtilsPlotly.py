@@ -109,13 +109,13 @@ def write_output_files(plot_conf, base_file_name, fig):
         # if plot_opts full_html
         output_name = base_file_name + '.html'
         fig.write_html(file = output_name, include_plotlyjs = 'cdn', full_html = True, auto_open = False, validate = True,
-                       config = std_config_dict)
+                       config = std_config_dict, include_mathjax = 'cdn')
         ret_list.append(output_name)
 
     # For IOP site - raw div
     output_name = base_file_name + '.div'
     fig.write_html(file = output_name, include_plotlyjs = False, full_html = False, auto_open = False, validate = True,
-                   config = std_config_dict)
+                   config = std_config_dict, include_mathjax = 'cdn')
     ret_list.append(output_name)
 
     def save_img_file(output_fmt):
