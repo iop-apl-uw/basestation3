@@ -92,6 +92,7 @@ class BaseOptions:
     home_dir_group = None
     reprocess_plots = False
     reprocess_flight = False
+    skip_flight_model = False
     nice = 0
 
     # statics, valid after initialization
@@ -171,6 +172,7 @@ class BaseOptions:
                 "web_file_locaion": self.web_file_location,
                 "reprocess_plots": self.reprocess_plots,
                 "reprocess_flight": self.reprocess_flight,
+                "skip_flight_model": self.skip_flight_model,
                 "nice": self.nice,
                 "which_half": self.which_half,
                 })
@@ -246,7 +248,7 @@ class BaseOptions:
             if src in 'bd':
                 pass # was --dac_src
 
-            if src in 'bij':
+            if src in 'bgij':
                 op.add_option("--daemon", dest="daemon",
                               action="store_true",
                               help="Launch conversion as a daemon process")
@@ -312,6 +314,11 @@ class BaseOptions:
                               dest="make_dive_kkyy",
                               action="store_true",
                               help="Create the dive kkyy output files")
+                op.add_option("--skip_flight_model",
+                              dest="skip_flight_model",
+                              action="store_true",
+                              help="Skip flight model")
+                
             if src in 'd':
                 op.add_option("--reprocess_plots",
                               dest="reprocess_plots",
@@ -478,6 +485,12 @@ class BaseOptions:
                     try:
                         reprocess_flight = cp.get("DEFAULT", "reprocess_flight")
                         BaseOptions.reprocess_flight = (reprocess_flight.lower() == "true")
+                    except:
+                        pass
+
+                    try:
+                        skip_flight_model = cp.get("DEFAULT", "skip_flight_model")
+                        BaseOptions.skip_flight_model = (skip_flight_model.lower() == "true")
                     except:
                         pass
 
@@ -696,7 +709,11 @@ class BaseOptions:
             if getattr(o, 'reprocess_flight', None) is not None:
                 BaseOptions.reprocess_flight = o.reprocess_flight
                 #print "reprocess_flight from cmd-line options: " + str(o.reprocess_flight) # DEBUG
-
+ 
+            if getattr(o, 'skip_flight_model', None) is not None:
+                BaseOptions.skip_flight_model = o.skip_flight_model
+                #print "skip_flight_model from cmd-line options: " + str(o.skip_flight_model) # DEBUG
+ 
             if getattr(o, 'make_dive_pro', None) is not None:
                 BaseOptions.make_dive_pro = o.make_dive_pro
                 #print "make_pro from cmd-line options: " + str(o.make_pro) # DEBUG
