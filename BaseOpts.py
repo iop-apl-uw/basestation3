@@ -60,6 +60,7 @@ class BaseOptions:
     divetarballs = 0
     local = False
     daemon = False
+    csh_pid = 0
     target_dir = None
     encrypt = None
     mission_dir = None
@@ -144,6 +145,7 @@ class BaseOptions:
                 "divetarballs":  self.divetarballs,
                 "local":  str(self.local),
                 "daemon":  str(self.daemon),
+                "csh_pid": self.csh_pid,
                 "target_dir": self.target_dir,
                 "encrypt": self.encrypt,
                 "mission_dir": self.mission_dir,
@@ -252,6 +254,8 @@ class BaseOptions:
                 op.add_option("--daemon", dest="daemon",
                               action="store_true",
                               help="Launch conversion as a daemon process")
+                op.add_option("--csh_pid", dest="csh_pid",
+                              help="PID of the login shell")
                 op.add_option("--ignore_lock",
                               dest="ignore_lock",
                               action="store_true",
@@ -318,7 +322,7 @@ class BaseOptions:
                               dest="skip_flight_model",
                               action="store_true",
                               help="Skip flight model")
-                
+
             if src in 'd':
                 op.add_option("--reprocess_plots",
                               dest="reprocess_plots",
@@ -401,6 +405,11 @@ class BaseOptions:
                     try:
                         daemon = cp.get("DEFAULT", "daemon")
                         BaseOptions.daemon = (daemon.lower() == "true")
+                    except:
+                        pass
+
+                    try:
+                        BaseOptions.csh_pid = cp.getint("DEFAULT", "csh_pid")
                     except:
                         pass
 
@@ -642,6 +651,13 @@ class BaseOptions:
                 BaseOptions.daemon = o.daemon
                 #print "daemon from cmd-line options: " + str(o.daemon) # DEBUG
 
+            if getattr(o, 'csh_pid', None) is not None:
+                try:
+                    BaseOptions.csh_pid = int(o.csh_pid)
+                except:
+                    sys.stderr.write("csh_pid must be a int (%s)\n" % o.csh_pid)
+                    BaseOptions.csh_pid = 0
+
             if getattr(o, 'encrypt', None) is not None:
                 BaseOptions.encrypt = o.encrypt
                 #print "encrypt from cmd-line options: " + str(o.encrypt) # DEBUG
@@ -709,11 +725,11 @@ class BaseOptions:
             if getattr(o, 'reprocess_flight', None) is not None:
                 BaseOptions.reprocess_flight = o.reprocess_flight
                 #print "reprocess_flight from cmd-line options: " + str(o.reprocess_flight) # DEBUG
- 
+
             if getattr(o, 'skip_flight_model', None) is not None:
                 BaseOptions.skip_flight_model = o.skip_flight_model
                 #print "skip_flight_model from cmd-line options: " + str(o.skip_flight_model) # DEBUG
- 
+
             if getattr(o, 'make_dive_pro', None) is not None:
                 BaseOptions.make_dive_pro = o.make_dive_pro
                 #print "make_pro from cmd-line options: " + str(o.make_pro) # DEBUG
