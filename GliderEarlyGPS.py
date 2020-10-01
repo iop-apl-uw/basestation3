@@ -84,6 +84,7 @@ class GliderEarlyGPSClient:
                  True - connection terminated  by operator
 
         """
+        shell_missing_count = 0
         while True:
             try:
                 self.process_comm_log()
@@ -92,9 +93,12 @@ class GliderEarlyGPSClient:
                 self._first_time = False
                 if self.__base_opts.csh_pid:
                     if not Utils.check_for_pid(self.__base_opts.csh_pid):
-                        log_info("login shell has gone away")
-                        self.closeout_commlog()
-                        #self.cleanup_shutdown()
+                        shell_missing_count += 1
+                        log_info(f"login shell has gone away ({shell_missing_count})")
+                        # Wait 4 seconds before doing anything
+                        if shell_missing_count == 4:
+                            self.closeout_commlog()
+                        # Let the normal disconnect code will handle the rest of closeout and shutdown
                 time.sleep(1)
 
             except KeyboardInterrupt:
@@ -307,6 +311,7 @@ def main():
             return 1
 
     log_info("PID:%d" % os.getpid())
+    log_info("login_shell PID:%d" % base_opts.csh_pid)
 
     lock_file_pid = Utils.check_lock_file(base_opts, gliderearlygps_lockfile_name)
     if lock_file_pid < 0:
