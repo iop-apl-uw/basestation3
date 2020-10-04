@@ -1424,7 +1424,7 @@ def correct_heading(compass_name, globals_d, magcal_filename, magcal_variable, m
     # In case this is a DG, get the pitchAD info
     new_head = zeros(np)
     for ii in range(np):
-        new_head[ii] = BaseMagCal.compassTransform(abc, pqrc, pitchAD[ii] if pitchAD else None, roll[ii], pitch[ii], (Mx[ii], My[ii], Mz[ii]))
+        new_head[ii] = BaseMagCal.compassTransform(abc, pqrc, pitchAD[ii] if pitchAD is not None else None, roll[ii], pitch[ii], (Mx[ii], My[ii], Mz[ii]))
         #sys.stdout.write("%.2f %.2f\n" % (heading[i], new_head[i]))
     if (new_contents is not None):
         # report RMS value only when the cal data changed
