@@ -566,16 +566,28 @@ def printTargets(
                 found_in_list = True
 
         if not found_in_list and active_target:
-            curr = target_dict[active_target]
-            target_dict[active_target] = target_tuple(
-                tgt_lat,
-                tgt_lon,
-                tgt_radius,
-                curr.finish_line,
-                curr.depth_target,
-                curr.goto_target,
-                curr.escape_target,
-            )
+            if active_target in target_dict.keys():
+                curr = target_dict[active_target]
+                target_dict[active_target] = target_tuple(
+                    tgt_lat,
+                    tgt_lon,
+                    tgt_radius,
+                    curr.finish_line,
+                    curr.depth_target,
+                    curr.goto_target,
+                    curr.escape_target,
+                )
+            else:
+                target_dict[active_target] = target_tuple(
+                    tgt_lat,
+                    tgt_lon,
+                    tgt_radius,
+                    None,
+                    None,
+                    None,
+                    None,
+                )
+
 
     for targ in target_dict.keys():
         if targ == active_target:
