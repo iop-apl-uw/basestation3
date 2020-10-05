@@ -36,6 +36,8 @@ make_plot_default_dict = {
     "full_html": [1 if 'darwin' in sys.platform else 0, 0, 1],
     "plot_directory": [None, None, None],
     "plot_freeze_pt": [0, 0, 1],
+    "pmar_logavg_max": [1e2, 0.0, 1e10],
+    "pmar_logavg_min": [1e-4, 0.0, 1e10],
 }
 
 #
