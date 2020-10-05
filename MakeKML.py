@@ -103,6 +103,8 @@ make_kml_default_dict = {
     "plot_dives": [1, 0, 1],
     "skip_points": [10, 1, 100],
     "simplified": [0, 0, 1],
+    "use_glider_target": [0, 0, 1],  # Use the glider's TGT_LAT/TGT_LON/TGT_RADIUS
+                                     # as the current targets location
 }
 
 
@@ -1713,12 +1715,17 @@ def main(
 
     # Find the current target
     if make_kml_conf.targets != "none":
+
+        tgt_name = tgt_lat = tgt_lon = tgt_radius = None
+
+        # TODO - this needs to be replaced with processing the .nc files
         logfiles = []
         glob_expr = "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log"
         for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
             logfiles.append(match)
 
         tgt_name = None
+
         if logfiles != []:
             logfiles = Utils.unique(logfiles)
             logfiles = sorted(logfiles)
@@ -1726,11 +1733,12 @@ def main(
             try:
                 tgt_name = log_file.data["$TGT_NAME"]
 
-                latlong = log_file.data["$TGT_LATLONG"]
-                tgt_lat, tgt_lon = latlong.split(",")
-                tgt_lat = Utils.ddmm2dd(float(tgt_lat))
-                tgt_lon = Utils.ddmm2dd(float(tgt_lon))
-                tgt_radius = float(log_file.data["$TGT_RADIUS"])
+                if make_kml_conf.use_glider_target:
+                    latlong = log_file.data["$TGT_LATLONG"]
+                    tgt_lat, tgt_lon = latlong.split(",")
+                    tgt_lat = Utils.ddmm2dd(float(tgt_lat))
+                    tgt_lon = Utils.ddmm2dd(float(tgt_lon))
+                    tgt_radius = float(log_file.data["$TGT_RADIUS"])
             except:
                 tgt_name = tgt_lat = tgt_lon = tgt_radius = None
 
