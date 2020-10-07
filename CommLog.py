@@ -90,17 +90,19 @@ def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
     # Removed the prefix from the body of the message to save space in the message payload
 
     if gps_fix:
-        if fmt.lower() == "nmea":
-            latlon = "$GPRMC,%s,A,%s,%s,%s,%s,%s,0.0,E" % (time.strftime("%H%M%S", gps_fix.datetime),
-                                                           Utils.format_lat_lon(gps_fix.lat, fmt, True),
-                                                           Utils.format_lat_lon(gps_fix.lon, fmt, False),
-                                                           gps_fix.drift_speed,
-                                                           gps_fix.drift_heading,
-                                                           time.strftime("%d%m%y", gps_fix.datetime))
-        else:
-            latlon = "%s %s %s UTC" % (Utils.format_lat_lon(gps_fix.lat, fmt, True),
-                                       Utils.format_lat_lon(gps_fix.lon, fmt, False),
-                                       time.strftime("%m/%d/%y %H:%M:%S", gps_fix.datetime))
+        latlon = None
+        if fmt:
+            if fmt.lower() == "nmea":
+                latlon = "$GPRMC,%s,A,%s,%s,%s,%s,%s,0.0,E" % (time.strftime("%H%M%S", gps_fix.datetime),
+                                                               Utils.format_lat_lon(gps_fix.lat, fmt, True),
+                                                               Utils.format_lat_lon(gps_fix.lon, fmt, False),
+                                                               gps_fix.drift_speed,
+                                                               gps_fix.drift_heading,
+                                                               time.strftime("%d%m%y", gps_fix.datetime))
+            else:
+                latlon = "%s %s %s UTC" % (Utils.format_lat_lon(gps_fix.lat, fmt, True),
+                                           Utils.format_lat_lon(gps_fix.lon, fmt, False),
+                                           time.strftime("%m/%d/%y %H:%M:%S", gps_fix.datetime))
         if recov_code:
             return ("%s %s" % (latlon, recov_code), recov_code, None, prefix)
         elif escape_reason:
@@ -207,7 +209,7 @@ class CommLog:
         try:
             return GPS_lat_lon_and_recov(fmt, dive_prefix, self.sessions[-1])
         except:
-            log_error("Failed GPS_lat_lon_and_recov")
+            log_error("Failed GPS_lat_lon_and_recov", 'exc')
             return ("No GPS fix available for this call", None, None, '')
 
     def has_glider_rebooted(self):

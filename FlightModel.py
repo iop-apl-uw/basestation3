@@ -1577,7 +1577,7 @@ glider_mission_string = None
 # WARNING: In the following there is a main loop that maps over *all* known dives
 # the local variable dive_num MUST be maintained as the prevailing dive number
 # if you loop over other dives use d_n as the iterator variable
-def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
+def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exit_event=None):
 
     global flight_dive_data_d, flight_directory, mission_directory, nc_path_format, flight_consts_d, angles,HIST, enable_reprocessing_dives, generate_dac_figures
     global glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, ab_grid_cache_d, restart_cache_d
@@ -1741,6 +1741,10 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
         # (which is typically the most recent but not always, esepcially after we reprocess dives)
         # we have restored the search state from restart_cache from the die just before the first updated dive
         for dive_num in update_flight_dive_nums:
+            if exit_event and exit_event.is_set():
+                log_info("Exit requested")
+                break
+
             dive_data = flight_dive_data_d[dive_num]
 
             bx_keys = [k for k in grid_spacing_keys if k <= dive_num]
@@ -1950,6 +1954,10 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                 compute_ab_grid = not (dive_set == prev_dive_set) # different dives with the same max dive_num forces recomputation
             except KeyError:
                 compute_ab_grid = True
+
+            if exit_event and exit_event.is_set():
+                log_info("Exit requested")
+                compute_ab_grid = False
 
             if compute_ab_grid:
                 trusted_ab = trusted_drag(pitch_diff)
@@ -2364,6 +2372,11 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
                        abs(dd_vbdbias - dd.nc_vbdbias) > vbdbias_tolerance,
                        abs(1.0 - (abs_compress / dd.nc_abs_compress)) > abs_compress_tolerance, # try a 5% change
                        )
+
+            if exit_event and exit_event.is_set():
+                log_info("Exit requested")
+                compare = False
+
             if dd.dive_data_ok and any(compare):
                 log_info(' Reprocess dive %d: %s' % (d_n, compare))
                 log_info('  v: %.2f [%.2f %.2f] ac: %.3f [%g %g]' % (abs(dd_vbdbias - dd.nc_vbdbias), dd_vbdbias, dd.nc_vbdbias,
@@ -2453,7 +2466,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None):
 
 # Called as an extension or via cmdline_main() below
 def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_file_names=None, nc_files_created=None,
-         processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None, processed_file_names=None):
+         processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None, processed_file_names=None, exit_event=None):
     """Basestation extension for evaluating flight model parameters from dive data
 
     Returns:
@@ -2474,6 +2487,9 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     BaseLogger("FlightModel", base_opts) # initializes BaseLog
 
     Utils.check_versions()
+
+    if exit_event:
+        log_info("Exit is %s" % exit_event.is_set())
 
     if not mission_directory:
         mission_directory = base_opts.mission_dir
@@ -2818,10 +2834,14 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     ret_val = 0
     log_debug("Starting main loop")
     for new_dive_num in new_dive_nums:
+        if exit_event and exit_event.is_set():
+            log_info("Exit requested")
+            ret_val = 1
+            break
         log_debug("Main loop dive %d" % new_dive_num)
         if force_alerts: # for debugging alerts
             alert_dive_num = new_dive_num
-        ret_val =  process_dive(base_opts, new_dive_num, updated_dives_d, alert_dive_num)
+        ret_val =  process_dive(base_opts, new_dive_num, updated_dives_d, alert_dive_num, exit_event=exit_event)
         if ret_val:
             log_error("process_dive returned %d - bailing out" % ret_val)
             break
@@ -2831,7 +2851,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         if len(list(updated_dives_d.keys())) > 0: # any residual updated files
             # in case there are no new dives but some dives were updated (via external reprocessing)
             log_debug("Processing remaining dives %s" % list(updated_dives_d.keys()))
-            ret_val = process_dive(base_opts, None, updated_dives_d, alert_dive_num)
+            ret_val = process_dive(base_opts, None, updated_dives_d, alert_dive_num, exit_event=exit_event)
             log_debug("Done processing remaining dives")
 
     save_flight_database() # save any updated history, ab_grid_cache, and dive_data values
