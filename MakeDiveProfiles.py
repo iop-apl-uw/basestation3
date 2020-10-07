@@ -396,7 +396,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
                 previous_value = calib_consts[var] # override?
                 if var not in flight_variables and var not in ['mass_comp']: # We report these separately below
                     if previous_value != default_value:
-                        log_info("Overriding %s=%s (default: %s)" % (var, previous_value, default_value))
+                        log_info("Overriding %s=%s (default: %s)" % (var, previous_value, default_value), max_count=5)
                 default_value = previous_value # in case we are asserting below
             except KeyError:
                 calib_consts[var] = default_value

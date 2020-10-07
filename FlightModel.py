@@ -675,7 +675,7 @@ def get_FM_defaults(glider_type,consts_d={}):
         consts_d['abs_compress'] =  4.1e-6 # m^3/dbar (slightly less than the compressibility of SW)
         if consts_d['mass'] > SGX_MASS:
             # An SGX, which are massive vehicles
-            log_info('Assuming this is an SGX vehicle')
+            log_info('Assuming this is an SGX vehicle', max_count=5)
             consts_d['hd_a']    =   0.003548133892336
             consts_d['hd_b']    =   0.015848931924611 # a little more drag than even DGs
             consts_d['hd_s']    =   0.0 # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
