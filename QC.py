@@ -26,9 +26,11 @@ import sys
 import re
 import math
 import pickle
+from scipy.interpolate import interp1d
 from types import *
 from BaseLog import *
 from numpy import *
+import numpy as np
 import Utils
 from TraceArray import * # REMOVE use only if we are tracing...
 
@@ -933,3 +935,57 @@ def qc_log(value):
     if f_qclog:
         pickle.dump(value, f_qclog)
     return
+
+def smooth_legato_pressure(legato_pressure, legato_time, n_stddevs=2.0, max_dz_dt=0.5):
+    """ Detects cases where the pressure signal spikes and
+    replaces them with an interpolated value
+
+    Returns:
+        interpolated_pressure
+        indexes of interpolated points - possiblly empty
+
+    Note:
+        Some good points maybe be interplated out
+    """
+    # Compute dz/dt
+    dzdt = np.diff(legato_pressure) / np.diff(legato_time)
+    if max_dz_dt:
+        dzdt_bad_pts = np.nonzero(np.abs(dzdt) > max_dz_dt)[0]
+    else:
+        dzdt_std_dev = np.std(dzdt)
+        dzdt_bad_pts = np.nonzero(np.abs(dzdt) > dzdt_std_dev * n_stddevs)[0]
+
+    if dzdt_bad_pts.size == 0:
+        return (legato_pressure.copy(), np.array([], dtype=np.int64))
+
+    # Mark points +-3 of the detected dz/dt spike as bad
+    bad_points = []
+    for pp in dzdt_bad_pts:
+        for dd in range(-3, 3):
+            if pp + dd >= 0 and pp + dd < len(legato_pressure):
+                bad_points.append(pp + dd)
+    bad_points = sorted(list(set(bad_points)))
+    bad_points_reduced = list(bad_points)
+
+    press = np.delete(legato_pressure.copy(), bad_points)
+    lg_time = np.delete(legato_time.copy(), bad_points)
+    f = interp1d(lg_time, press, bounds_error=False, fill_value="extrapolate",)
+
+    smoothed_press = legato_pressure.copy()
+    final_bad_points = []
+
+    # Since the spikes are "big", we now filter out anything that is less then 2.0 dbar
+    # difference between the interpolated value and the observed value
+    for pp in bad_points:
+        if np.abs(smoothed_press[pp] - f(legato_time[pp])) > 2.0:
+            smoothed_press[pp] = f(legato_time[pp])
+            final_bad_points.append(pp)
+        else:
+            # Remove the now good point, and regenerate the interp function
+            # This has a small improvement in resulting interpolation
+            bad_points_reduced.remove(pp)
+            press = np.delete(legato_pressure.copy(), bad_points_reduced)
+            lg_time = np.delete(legato_time.copy(), bad_points_reduced)
+            f = interp1d(lg_time, press, bounds_error=False, fill_value="extrapolate",)
+
+    return (smoothed_press, np.array(final_bad_points, dtype=np.int64))
