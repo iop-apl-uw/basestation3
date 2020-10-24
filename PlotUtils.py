@@ -38,6 +38,14 @@ make_plot_default_dict = {
     "plot_freeze_pt": [0, 0, 1],
     "pmar_logavg_max": [1e2, 0.0, 1e10],
     "pmar_logavg_min": [1e-4, 0.0, 1e10],
+    # MakePlot3 related
+
+    # Legato debug plot
+    "plot_legato": [0, 0, 1],
+    # For the legato debug plot, use the glider's pressure signal instead of the sensors
+    "plot_legato_use_glider_pressure": [0, 0, 1],
+    # Legato raw vs smoothed pressure compare
+    "plot_legato_compare": [0, 0, 1],
 }
 
 #
