@@ -366,7 +366,7 @@ sb_ct_type_map = {
     1: "gun-style Seabird unpumped CTD",
     2: "pumped Seabird GPCTD",
     3: "gun-style Seabird unpumped SAILCT",
-    4: "unpumped RBR Legatto"
+    4: "unpumped RBR Legato"
 }
 
 def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
@@ -2991,11 +2991,20 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             perform_thermal_inertia_correction = False
             try:
                 ctd_epoch_time_s_v = results_d['legato_time']
-                ctd_press_v = results_d['legato_pressure']
+                tmp_press_v = results_d['legato_pressure']
                 ctd_temp_v = results_d['legato_temp']
                 ctd_cond_v = results_d['legato_conduc'] / 10.
             except KeyError:
                 raise RuntimeError(True, "No Legato CT data found")
+
+            ctd_np = len(ctd_epoch_time_s_v)
+
+            # Handle pressure spikes
+            ctd_press_v, bad_points = QC.smooth_legato_pressure(tmp_press_v, ctd_epoch_time_s_v)
+
+            ctd_press_qc_v = initialize_qc(ctd_np, QC_GOOD)
+            assert_qc(QC_INTERPOLATED, ctd_press_qc_v, bad_points, 'despiked pressure')
+            results_d.update({'ctd_pressure_qc' : ctd_press_qc_v})
 
             # CONSIDER: should we support kistler cnf files in case?
             sg_press_v = (eng_f.get_col('depth')*cm2m - calib_consts['depth_bias']) * psi_per_meter;
@@ -3006,7 +3015,6 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
 
             # MDP automatically asserts instrument when writing
-            ctd_np = len(ctd_epoch_time_s_v)
             if Globals.f_use_seawater:
                 ctd_salin_v = seawater.salt(ctd_cond_v/c3515, ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
                 ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) # initial depth estimate

@@ -1237,6 +1237,7 @@ nc_var_metadata = {
     nc_ctd_time_var: [True, 'd', {'standard_name':'time', 'axis':'T', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Time of CTD [P] in GMT epoch format'}, (nc_ctd_results_info,)],
     'ctd_depth': [True, 'd', {'standard_name':'depth', 'axis':'Z', 'units':'meters', 'positive':'down', 'description':'CTD thermistor depth corrected for average latitude'}, (nc_ctd_results_info,)],
     'ctd_pressure': [True, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Pressure at CTD thermistor'}, (nc_ctd_results_info,)],
+    'ctd_pressure_qc': [True, nc_qc_type, {'units':'qc_flag', 'description':'Whether to trust pressure - legato only'}, (nc_ctd_results_info,)],
     # TODO: parse the field and test in MMP and MMT if all are included...
     'temperature_raw': [True, 'd', {'units':'degrees_Celsius', 'description':'Uncorrected temperature (in situ)'}, (nc_ctd_results_info,)],
     'conductivity_raw': [True, 'd', {'units':'S/m', 'description':'Uncorrected conductivity'}, (nc_ctd_results_info,)],
