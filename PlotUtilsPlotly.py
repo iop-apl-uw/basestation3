@@ -118,6 +118,7 @@ def write_output_files(plot_conf, base_file_name, fig):
             auto_open=False,
             validate=True,
             config=std_config_dict,
+            include_mathjax = 'cdn',
         )
         ret_list.append(output_name)
 
@@ -130,6 +131,7 @@ def write_output_files(plot_conf, base_file_name, fig):
         auto_open=False,
         validate=True,
         config=std_config_dict,
+        include_mathjax = 'cdn'
     )
     ret_list.append(output_name)
 

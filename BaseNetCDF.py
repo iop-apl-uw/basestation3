@@ -1100,7 +1100,7 @@ nc_var_metadata = {
     'log_XPDR_DEVICE': [False, 'd', {}, nc_scalar],
     'log_XPDR_INHIBIT': [False, 'd', {}, nc_scalar],
     'log_XPDR_INT': [False, 'd', {}, nc_scalar],
-    'log_XPDR_PINGS': [False, 'd', {}, nc_scalar],
+    'log_XPDR_PINGS': [False, 'c', {}, nc_scalar],
     'log_XPDR_REP': [False, 'd', {}, nc_scalar],
     'log_XPDR_VALID': [False, 'd', {}, nc_scalar],
     'log__CALLS': [False, 'd', {}, nc_scalar],

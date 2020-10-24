@@ -516,7 +516,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
     Converts a data file to a eng file
     """
     try:
-        inp_file = open(inp_file_name, "r")
+        inp_file = open(inp_file_name, "rb")
     except:
         log_error("Unable to open %s" % inp_file_name)
         return 1
@@ -596,7 +596,16 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
     if(df_meta.sealevel and  'pressure' in df_meta.columns.split()):
         pressure_col_index = df_meta.columns.split().index('pressure')
 
+    line_count = 0
     for raw_line in inp_file:
+        line_count += 1
+        try:
+            raw_line = raw_line.decode('utf-8')
+        except UnicodeDecodeError:
+            # Lots of reasons for this - mixed binary and text files a leading cause
+            log_debug(f"Could not decode {inp_file_name} line {line_count} - skipping")
+            continue
+
         out_cols = None
 
         if(raw_line[0] == '%'):

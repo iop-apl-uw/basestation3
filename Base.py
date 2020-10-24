@@ -41,6 +41,7 @@ import stat
 import struct
 import sys
 import tarfile
+import threading
 import time
 import urllib.error
 import urllib.parse
@@ -103,7 +104,8 @@ known_mailer_tags = [
     "bz2",
 ]
 known_ftp_tags = known_mailer_tags
-skip_mission_processing = False  # Set by signal handler to skip the time consuming processing of the whole mission data
+# Set by signal handler to skip the time consuming processing of the whole mission data
+skip_mission_processing_event = threading.Event()
 base_lockfile_name = ".conversion_lock"
 
 logger_eng_readers = {}  # Mapping from logger prefix to eng_file readers
@@ -136,7 +138,7 @@ def decrypt_file(in_file_name, out_file_name, mission_dir):
 
 
 # Configuration
-previous_conversion_time_out = 20  # Time to wait for previous conversion to complete
+previous_conversion_time_out = 30  # Time to wait for previous conversion to complete
 
 # Utility functions
 
@@ -1232,10 +1234,10 @@ def signal_handler_defer(signum, frame):
     """
     # pylint: disable=unused-argument
     # pylint: disable=global-statement
-    global skip_mission_processing
+    # global skip_mission_processing
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - will skip whole mission processing")
-        skip_mission_processing = True
+        skip_mission_processing_event.set()
 
 
 def signal_handler_defer_end(signum, frame):
@@ -1243,10 +1245,10 @@ def signal_handler_defer_end(signum, frame):
     """
     # pylint: disable=unused-argument
     # pylint: disable=global-statement
-    global skip_mission_processing
+    # global skip_mission_processing
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - will end processing soon")
-        skip_mission_processing = True
+        skip_mission_processing_event.set()
 
 
 def signal_handler_abort_processing(signum, frame):
@@ -2049,14 +2051,24 @@ def main():
                             else:
                                 log_info(f"{known_file} was uploaded and deleted")
 
+    (_, recov_code, _, _) = comm_log.last_GPS_lat_lon_and_recov(None, None)
+
     if base_opts.make_dive_netCDF:
         if base_opts.skip_flight_model:
             log_info("Skipping flight model processing per directive")
+        elif recov_code:
+            log_info(f"Skipping flight model due to recovery {recov_code}")
+        elif skip_mission_processing_event.is_set():
+            log_warning("Caught SIGUSR1 perviously - skipping FlightModel")
         else:
             # Run FlightModel here and before mission processing so combined data reflects best flight model results
             # Run before alert processing occurs so FM complaints are reported to the pilot
             try:
-                FlightModel.main(base_opts=base_opts, sg_calib_file_name=sg_calib_file_name)
+                FlightModel.main(
+                    base_opts=base_opts,
+                    sg_calib_file_name=sg_calib_file_name,
+                    exit_event=skip_mission_processing_event,
+                )
             except:
                 log_critical("FlightModel failed", "exc")
 
@@ -2080,7 +2092,7 @@ def main():
         BaseDotFiles.process_urls(base_opts, 1, instrument_id, dive_num)
 
     # Check for sighup here
-    if skip_mission_processing:
+    if skip_mission_processing_event.is_set():
         log_warning("Caught SIGUSR1 perviously - skipping whole mission processing")
     else:
         dive_nc_file_names = []
@@ -2134,11 +2146,10 @@ def main():
                     else:
                         data_product_file_names.append(mission_timeseries_name)
 
-
             processed_file_names = []
             processed_file_names.append(processed_eng_and_log_files)
             processed_file_names.append(processed_selftest_eng_and_log_files)
-            #processed_file_names.append(processed_other_files)
+            # processed_file_names.append(processed_other_files)
             processed_file_names.append(data_product_file_names)
             processed_file_names.append(processed_logger_eng_files)
             processed_file_names.append(processed_logger_other_files)
@@ -2151,7 +2162,7 @@ def main():
                 sg_calib_file_name,
                 dive_nc_file_names,
                 nc_files_created,
-                processed_other_files, # Output list for extension created files
+                processed_other_files,  # Output list for extension created files
                 known_mailer_tags,
                 known_ftp_tags,
                 processed_file_names,

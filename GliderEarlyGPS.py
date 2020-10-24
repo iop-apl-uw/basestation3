@@ -84,12 +84,21 @@ class GliderEarlyGPSClient:
                  True - connection terminated  by operator
 
         """
+        shell_missing_count = 0
         while True:
             try:
                 self.process_comm_log()
                 if self._first_time:
                     log_info("First time finished - start_pos:%d" % self._start_pos)
                 self._first_time = False
+                if self.__base_opts.csh_pid:
+                    if not Utils.check_for_pid(self.__base_opts.csh_pid):
+                        shell_missing_count += 1
+                        log_info(f"login shell has gone away ({shell_missing_count})")
+                        # Wait 4 seconds before doing anything
+                        if shell_missing_count == 4:
+                            self.closeout_commlog()
+                        # Let the normal disconnect code will handle the rest of closeout and shutdown
                 time.sleep(1)
 
             except KeyboardInterrupt:
@@ -114,6 +123,33 @@ class GliderEarlyGPSClient:
                                                                                                                session=self._commlog_session, scan_back=self._first_time)
         if comm_log is not None:
             self._last_update = time.time()
+
+    def closeout_commlog(self):
+        """
+        Closes out the comm.log and removes the .connected file
+        """
+        connected_file = os.path.join(self.__base_opts.mission_dir, ".connected")
+        try:
+            os.remove(connected_file)
+        except:
+            log_error(f"Unable to remove {connected_file} -- permissions?", "exc")
+
+        try:
+            (_, fo) = Utils.run_cmd_shell("date")
+        except:
+            log_error(f"Error running date", "exc")
+        else:
+            ts = fo.readline().decode().rstrip()
+            log_info(ts)
+            fo.close()
+
+            comm_log = os.path.join(self.__base_opts.mission_dir, "comm.log")
+            try:
+                with open(comm_log, "a") as fo:
+                    fo.write(f"Disconnected at {ts} (shell_disappeared)\n\n\n")
+            except:
+                log_error("Could not update {commlog}")
+
 
     def cleanup_shutdown(self):
         """
@@ -158,6 +194,8 @@ class GliderEarlyGPSClient:
 
                 send_str = urlencode({"status" : "disconnected - logout%s seen" % ("" if session.logout_seen else " not")})
                 log_info(send_str)
+                if session.dive_num is None:
+                    session.dive_num = -1
                 BaseDotFiles.process_urls(self.__base_opts, send_str, session.sg_id, session.dive_num)
 
                 self.cleanup_shutdown()
@@ -273,6 +311,7 @@ def main():
             return 1
 
     log_info("PID:%d" % os.getpid())
+    log_info("login_shell PID:%d" % base_opts.csh_pid)
 
     lock_file_pid = Utils.check_lock_file(base_opts, gliderearlygps_lockfile_name)
     if lock_file_pid < 0:

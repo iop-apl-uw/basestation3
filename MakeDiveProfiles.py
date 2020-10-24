@@ -396,7 +396,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
                 previous_value = calib_consts[var] # override?
                 if var not in flight_variables and var not in ['mass_comp']: # We report these separately below
                     if previous_value != default_value:
-                        log_info("Overriding %s=%s (default: %s)" % (var, previous_value, default_value))
+                        log_info("Overriding %s=%s (default: %s)" % (var, previous_value, default_value), max_count=5)
                 default_value = previous_value # in case we are asserting below
             except KeyError:
                 calib_consts[var] = default_value
@@ -1424,7 +1424,7 @@ def correct_heading(compass_name, globals_d, magcal_filename, magcal_variable, m
     # In case this is a DG, get the pitchAD info
     new_head = zeros(np)
     for ii in range(np):
-        new_head[ii] = BaseMagCal.compassTransform(abc, pqrc, pitchAD[ii], roll[ii], pitch[ii], (Mx[ii], My[ii], Mz[ii]))
+        new_head[ii] = BaseMagCal.compassTransform(abc, pqrc, pitchAD[ii] if pitchAD is not None else None, roll[ii], pitch[ii], (Mx[ii], My[ii], Mz[ii]))
         #sys.stdout.write("%.2f %.2f\n" % (heading[i], new_head[i]))
     if (new_contents is not None):
         # report RMS value only when the cal data changed
@@ -2630,16 +2630,16 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 else:
                     pitch_ctl = eng_f.get_col('pitchCtl')
                     if pitch_ctl is None:
+                        # TODO For RevE and DG - this column will need to be created
                         pitchAD_interp = None
-                        log_warning("DG style corrections NYI for RevE")
                     else:
                         # For DG - interpolate onto the compass time grid
                         pitchAD = fix(pitch_ctl*log_f.data['$PITCH_CNV'] + log_f.data['$C_PITCH'])
                         pitchAD_interp = Utils.interp1d(sg_epoch_time_s_v, pitchAD, results_d['auxCompass_time'], kind='linear')
 
-                        new_head = correct_heading('Aux compass', globals_d, base_opts.auxmagcalfile, 'auxmagcalfile_contents', "scicon.tcm", base_opts.mission_dir, Mx, My, Mz, head, pitch, roll, pitchAD_interp)
-                        if new_head is not None:
-                            results_d['auxCompass_hdg'] = new_head
+                    new_head = correct_heading('Aux compass', globals_d, base_opts.auxmagcalfile, 'auxmagcalfile_contents', "scicon.tcm", base_opts.mission_dir, Mx, My, Mz, head, pitch, roll, pitchAD_interp)
+                    if new_head is not None:
+                        results_d['auxCompass_hdg'] = new_head
 
         # Assumptions on auxCompass and auxPressure
         #
@@ -2737,16 +2737,16 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 pitch_ctl = eng_f.get_col('pitchCtl')
                 if pitch_ctl is None:
                     pitchAD = None
-                    log_warning("DG style corrections NYI for RevE")
                 else:
                     pitchAD = fix(pitch_ctl*log_f.data['$PITCH_CNV'] + log_f.data['$C_PITCH'])
-                    new_head = correct_heading("Truck compass", globals_d, base_opts.magcalfile, 'magcalfile_contents', "tcm2mat.cal", base_opts.mission_dir,
-                                               Mx, My, Mz,
-                                               vehicle_heading_mag_degrees_v, vehicle_pitch_degrees_v, vehicle_roll_degrees_v, pitchAD)
-                    if new_head is not None:
-                        vehicle_heading_mag_degrees_v = new_head
-                        head_index = eng_f.columns.index('head')
-                        eng_f.data[:, head_index] = new_head # Update heading with the improved version of heading
+
+                new_head = correct_heading("Truck compass", globals_d, base_opts.magcalfile, 'magcalfile_contents', "tcm2mat.cal", base_opts.mission_dir,
+                                           Mx, My, Mz,
+                                           vehicle_heading_mag_degrees_v, vehicle_pitch_degrees_v, vehicle_roll_degrees_v, pitchAD)
+                if new_head is not None:
+                    vehicle_heading_mag_degrees_v = new_head
+                    head_index = eng_f.columns.index('head')
+                    eng_f.data[:, head_index] = new_head # Update heading with the improved version of heading
 
         vbdCC_v = eng_f.get_col('vbdCC')
         if(vbdCC_v is None):

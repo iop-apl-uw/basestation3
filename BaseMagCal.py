@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2013, 2014, 2017, 2018 by University of Washington.  All rights reserved.
+## Copyright (c) 2013, 2014, 2017, 2018, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -68,7 +68,8 @@ def parseMagCal(contents):
         
         # DG correction has five lines exactly.  SG with second compass
         # has a second compass definition right after the first
-        if len(lines) == 5 and len(lines[4]) > 2: 
+        if len(lines) == 5 and len(lines[4]) > 2 and lines[4] != '\'':
+            log_info("Assuming DG compass cal file")
             try:
                 dg = lines[4].split()
                 if (len(dg) != 10):
@@ -116,6 +117,10 @@ def compassTransform(abc, pqrc, pitchAD, roll_deg, pitch_deg, mag):
     m[2] = -mag[2];
 
     # pqrc passed in is a closure that generates a pqr given pitchAD
+
+    # If this call is failing, likely that this is a DG style compass cal file
+    # on a RevE glider with no pitch_ctl column - fix should go in MakeDiveProfiles
+    # see calls to correct_heading
     pqr = pqrc(pitchAD)
     for j in range(3):
         m_pqr[j] = m[j] - pqr[j]

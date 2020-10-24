@@ -32,7 +32,7 @@ import sys
 import os
 import shutil
 import subprocess
-import md5
+import hashlib
 import getopt
 import gzip
 
@@ -45,7 +45,7 @@ def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pd
     """
     # Gzip original file
     base_upload_file_name = os.path.basename(upload_file_name)
-    base_upload_md5 = md5.new()
+    base_upload_md5 = hashlib.md5()
     fi = open(base_upload_file_name, "rb")
     base_upload_md5.update(fi.read())
     fi.close
@@ -65,7 +65,7 @@ def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pd
             print(("Error %d executing %s (%s)- bailing out" % (status, cmd, output)))
         
     # md5 hash the gzipped file original
-    gzip_upload_md5 = md5.new()
+    gzip_upload_md5 = hashlib.md5()
     fi = open(gzip_upload_file_name, "rb")
     gzip_upload_md5.update(fi.read())
     fi.close
@@ -95,7 +95,7 @@ def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pd
         fo.close()
         fo = open(chunk_file_name, "rb")
         # Calculate the md5 hash
-        chunk_md5 = md5.new()
+        chunk_md5 = hashlib.md5()
         chunk_md5.update(fo.read())
         fo.close()
         # Write out pdos contribution
