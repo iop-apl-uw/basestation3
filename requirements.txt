@@ -1,5 +1,5 @@
 # For Plotly persistence
-kaleido==0.0.3.post1
+kaleido==0.0.3.post1 ; platform_machine != 'armv7l'
 matplotlib==3.2.0
 #basemap==1.2.1
 # Basemap no longer in pip.  To install:
