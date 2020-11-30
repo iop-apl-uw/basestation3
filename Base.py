@@ -2650,7 +2650,7 @@ if __name__ == "__main__":
             stats.sort_stats("time", "calls")
             stats.print_stats()
         else:
-            retturn_val = main()
+            return_val = main()
     except Exception:
         log_critical("Unhandled exception in main -- exiting")
 
