@@ -21,7 +21,7 @@
 ##
 
 """
-CommLog.py: Contains all routines for extracting data from a glider's comm logfile.
+Commlog.py: Contains all routines for extracting data from a glider's comm logfile.
 
     Intended to be called from another module (Base.py) OR stand-alone (to generate glider tracking data info).
 """
@@ -43,11 +43,26 @@ import FileMgr
 import GPS
 import Utils
 import Ver65
-from BaseLog import BaseLogger, log_debug, log_info, log_warning, log_error, log_critical
+from BaseLog import (
+    BaseLogger,
+    log_debug,
+    log_info,
+    log_warning,
+    log_error,
+    log_critical,
+)
 
 # Named tuples
-file_transfered_nt = collections.namedtuple('file_transfered_nt', ['sector_num', 'block_len'])
-file_stats_nt = collections.namedtuple('file_stats_nt', ['transfersize', 'filesize', 'bps'])
+file_transfered_nt = collections.namedtuple(
+    "file_transfered_nt", ["sector_num", "block_len"]
+)
+file_stats_nt = collections.namedtuple(
+    "file_stats_nt", ["expectedsize", "transfersize", "receivedsize", "bps"]
+)
+file_expected_actual_nt = collections.namedtuple(
+    "file_expected_actual_nt", ["expectedsize", "receivedsize"]
+)
+
 
 def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
     """Returns the lat/lon for the last GPS fix and reocvery code (if any) as a string, along
@@ -58,13 +73,17 @@ def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
     recov_code = session.recov_code
     escape_reason = session.escape_reason
 
-    #log_info("GPS_lat_lon_and_recov dive_prefix:%s dive_num:%s calls_made:%s call_cycle:%s" %
-    #(str(dive_prefix), str(session.dive_num), str(session.calls_made), str(session.call_cycle)))
+    # log_info("GPS_lat_lon_and_recov dive_prefix:%s dive_num:%s calls_made:%s call_cycle:%s" %
+    # (str(dive_prefix), str(session.dive_num), str(session.calls_made), str(session.call_cycle)))
 
     if dive_prefix is not None:
-        prefix = "dive:%s calls_made:%s call_cycle:%s " % (str(session.dive_num), str(session.calls_made), str(session.call_cycle))
+        prefix = "dive:%s calls_made:%s call_cycle:%s " % (
+            str(session.dive_num),
+            str(session.calls_made),
+            str(session.call_cycle),
+        )
     else:
-        prefix = ''
+        prefix = ""
 
     log_info("prefix:%s" % prefix)
 
@@ -93,16 +112,20 @@ def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
         latlon = None
         if fmt:
             if fmt.lower() == "nmea":
-                latlon = "$GPRMC,%s,A,%s,%s,%s,%s,%s,0.0,E" % (time.strftime("%H%M%S", gps_fix.datetime),
-                                                               Utils.format_lat_lon(gps_fix.lat, fmt, True),
-                                                               Utils.format_lat_lon(gps_fix.lon, fmt, False),
-                                                               gps_fix.drift_speed,
-                                                               gps_fix.drift_heading,
-                                                               time.strftime("%d%m%y", gps_fix.datetime))
+                latlon = "$GPRMC,%s,A,%s,%s,%s,%s,%s,0.0,E" % (
+                    time.strftime("%H%M%S", gps_fix.datetime),
+                    Utils.format_lat_lon(gps_fix.lat, fmt, True),
+                    Utils.format_lat_lon(gps_fix.lon, fmt, False),
+                    gps_fix.drift_speed,
+                    gps_fix.drift_heading,
+                    time.strftime("%d%m%y", gps_fix.datetime),
+                )
             else:
-                latlon = "%s %s %s UTC" % (Utils.format_lat_lon(gps_fix.lat, fmt, True),
-                                           Utils.format_lat_lon(gps_fix.lon, fmt, False),
-                                           time.strftime("%m/%d/%y %H:%M:%S", gps_fix.datetime))
+                latlon = "%s %s %s UTC" % (
+                    Utils.format_lat_lon(gps_fix.lat, fmt, True),
+                    Utils.format_lat_lon(gps_fix.lon, fmt, False),
+                    time.strftime("%m/%d/%y %H:%M:%S", gps_fix.datetime),
+                )
         if recov_code:
             return ("%s %s" % (latlon, recov_code), recov_code, None, prefix)
         elif escape_reason:
@@ -112,13 +135,17 @@ def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
     else:
         return ("No GPS fix available for this call", None, None, None)
 
+
 class CommLog:
     """Object representing a seagliders comm log
     """
-    def __init__(self, sessions, raw_lines_with_ts, files_transfered, file_transfer_method):
+
+    def __init__(
+        self, sessions, raw_lines_with_ts, files_transfered, file_transfer_method
+    ):
         self.sessions = sessions
-        self.file_stats = {} # empty dictionary
-        self.file_transfer_method = file_transfer_method # Dictionay of the most recently used trasnfer mehcanism for each fragment
+        self.file_stats = {}
+        self.file_transfer_method = file_transfer_method  # Dictionay of the most recently used trasnfer mehcanism for each fragment
         self.raw_lines_with_ts = raw_lines_with_ts
         self.files_transfered = files_transfered
 
@@ -136,16 +163,59 @@ class CommLog:
         """
         fragment_dict = {}
         for i in range(len(self.sessions)):
-            if(self.sessions[i].disconnect_ts and self.sessions[i].fragment_size is not None):
-                fragment_dict[self.sessions[i].dive_num] = self.sessions[i].fragment_size
+            if (
+                self.sessions[i].disconnect_ts
+                and self.sessions[i].fragment_size is not None
+            ):
+                fragment_dict[self.sessions[i].dive_num] = self.sessions[
+                    i
+                ].fragment_size
         return fragment_dict
+
+    def get_fragment_size_dict(self):
+        """ Returns a dictionary that maps a fragment name to a tuple of
+        expected size and received size
+
+        For RAW files, the recieved size is reported by the protocol for both up and down
+        For XMODEM files, the recieved size is reported by the protocol for up only, so this map
+        is not useful for determining errors in transmission.
+
+        If the expected size is not known, then fragment size for enclosing session is used or 8192
+        none is specified
+        """
+        # This covers the cases where there are files in the directory, but no
+        # entries in the comm.log
+        fragment_size_dict = collections.defaultdict(
+            lambda: file_expected_actual_nt(8192, -1)
+        )
+        for ii in range(len(self.sessions)):
+            for k in self.sessions[ii].file_stats.keys():
+                if len(k) >= 8 and FileMgr.FileCode(k, 0).get_fragment_counter() >= 0:
+                    fs_stats = self.sessions[ii].file_stats[k]
+                    if fs_stats.expectedsize >= 0:
+                        expected_size = fs_stats.expectedsize
+                    elif (
+                        expected_size < 0
+                        and self.sessions[ii].fragment_size is not None
+                    ):
+                        expected_size = self.sessions[ii].fragment_size
+                    else:
+                        expected_size = 8192
+
+                    fragment_size_dict[k] = file_expected_actual_nt(
+                        expected_size, fs_stats.receivedsize
+                    )
+        return fragment_size_dict
 
     def last_fragment_size(self):
         """Searches through the complete surfacings in reverse order and returns the last
         valid fragment_size
         """
         for i in reversed(range(len(self.sessions))):
-            if(self.sessions[i].disconnect_ts and self.sessions[i].fragment_size is not None):
+            if (
+                self.sessions[i].disconnect_ts
+                and self.sessions[i].fragment_size is not None
+            ):
                 return self.sessions[i].fragment_size
         return None
 
@@ -154,14 +224,20 @@ class CommLog:
         valid software version and software revision
         """
         for i in reversed(range(len(self.sessions))):
-            if(self.sessions[i].disconnect_ts and self.sessions[i].software_version is not None):
-                return (self.sessions[i].software_version, self.sessions[i].software_revision)
+            if (
+                self.sessions[i].disconnect_ts
+                and self.sessions[i].software_version is not None
+            ):
+                return (
+                    self.sessions[i].software_version,
+                    self.sessions[i].software_revision,
+                )
         return (None, None)
 
     def last_complete_surfacing(self):
         """Returns the session for the last completed surfacing
         """
-        #for i in range(-1,-len(self.sessions) + 1, -1):
+        # for i in range(-1,-len(self.sessions) + 1, -1):
         for i in reversed(range(len(self.sessions))):
             if self.sessions[i].disconnect_ts:
                 return self.sessions[i]
@@ -209,8 +285,8 @@ class CommLog:
         try:
             return GPS_lat_lon_and_recov(fmt, dive_prefix, self.sessions[-1])
         except:
-            log_error("Failed GPS_lat_lon_and_recov", 'exc')
-            return ("No GPS fix available for this call", None, None, '')
+            log_error("Failed GPS_lat_lon_and_recov", "exc")
+            return ("No GPS fix available for this call", None, None, "")
 
     def has_glider_rebooted(self):
         """Compares the last two sessions with GPS fixes (regardless of session completeness) to determine if the glider has re
@@ -233,28 +309,56 @@ class CommLog:
                 else:
                     break
 
-        if last_session is None or last_session.reboot_count is None \
-           or previous_session is None or last_session.reboot_count is None:
+        if (
+            last_session is None
+            or last_session.reboot_count is None
+            or previous_session is None
+            or last_session.reboot_count is None
+        ):
             return None
 
         if last_session.reboot_count <= previous_session.reboot_count:
             return None
 
-        msg = "Reboot occured between %s:%s:%s:%s:%s:%s and %s:%s:%s:%s:%s:%s" \
-            % (str(previous_session.dive_num) if previous_session.dive_num is not None else "Unknown",
-               str(previous_session.call_cycle) if previous_session.call_cycle is not None else "Unknown",
-               str(previous_session.calls_made) if previous_session.calls_made is not None else "Unknown",
-               str(previous_session.no_comm) if previous_session.no_comm is not None else "Unknown",
-               str(previous_session.mission_num) if previous_session.mission_num is not None else "Unknown",
-               str(previous_session.reboot_count) if previous_session.reboot_count is not None else "Unknown",
-               str(last_session.dive_num) if last_session.dive_num is not None else "Unknown",
-               str(last_session.call_cycle) if last_session.call_cycle is not None else "Unknown",
-               str(last_session.calls_made) if last_session.calls_made is not None else "Unknown",
-               str(last_session.no_comm) if last_session.no_comm is not None else "Unknown",
-               str(last_session.mission_num) if last_session.mission_num is not None else "Unknown",
-               str(last_session.reboot_count) if last_session.reboot_count is not None else "Unknown")
+        msg = "Reboot occured between %s:%s:%s:%s:%s:%s and %s:%s:%s:%s:%s:%s" % (
+            str(previous_session.dive_num)
+            if previous_session.dive_num is not None
+            else "Unknown",
+            str(previous_session.call_cycle)
+            if previous_session.call_cycle is not None
+            else "Unknown",
+            str(previous_session.calls_made)
+            if previous_session.calls_made is not None
+            else "Unknown",
+            str(previous_session.no_comm)
+            if previous_session.no_comm is not None
+            else "Unknown",
+            str(previous_session.mission_num)
+            if previous_session.mission_num is not None
+            else "Unknown",
+            str(previous_session.reboot_count)
+            if previous_session.reboot_count is not None
+            else "Unknown",
+            str(last_session.dive_num)
+            if last_session.dive_num is not None
+            else "Unknown",
+            str(last_session.call_cycle)
+            if last_session.call_cycle is not None
+            else "Unknown",
+            str(last_session.calls_made)
+            if last_session.calls_made is not None
+            else "Unknown",
+            str(last_session.no_comm)
+            if last_session.no_comm is not None
+            else "Unknown",
+            str(last_session.mission_num)
+            if last_session.mission_num is not None
+            else "Unknown",
+            str(last_session.reboot_count)
+            if last_session.reboot_count is not None
+            else "Unknown",
+        )
         return msg
-
 
     def predict_drift(self, fmt, n_predictions=3, n_fixes=5):
         """Compute a drift prediction message based on the last N fixes in the comm log
@@ -262,34 +366,43 @@ class CommLog:
         """
         # Format is collapsed to fit on small displays
         secs_per_hour = 3600
-        time_fmt = "%H:%M:%SZ" # bag date; if you are using this it is today
-        if len(fmt) and fmt[0] in '23456789':
-            n_fixes = ord(fmt[0]) - ord('0')
+        time_fmt = "%H:%M:%SZ"  # bag date; if you are using this it is today
+        if len(fmt) and fmt[0] in "23456789":
+            n_fixes = ord(fmt[0]) - ord("0")
             fmt = fmt[1:]
-        log_info("Drift: %d predictions (%s) based on %d fixes" % (n_fixes, fmt, n_predictions))
+        log_info(
+            "Drift: %d predictions (%s) based on %d fixes"
+            % (n_fixes, fmt, n_predictions)
+        )
         last_fix = None
         most_recent_fix = None
-        dive_num = None # ensure the same dive number
+        dive_num = None  # ensure the same dive number
         fixes = 0
-        delta_lat = 0 # accumulators
+        delta_lat = 0  # accumulators
         delta_lon = 0
         for session in reversed(self.sessions):
             this_fix = session.gps_fix
             this_dive_num = session.dive_num
             if this_fix is None:
-                continue # no idea where we are
+                continue  # no idea where we are
             if last_fix:
                 try:
                     if this_dive_num != dive_num:
-                        break # from a previous dive
+                        break  # from a previous dive
                     last_lat = Utils.ddmm2dd(last_fix.lat)
                     last_lon = Utils.ddmm2dd(last_fix.lon)
                     this_lat = Utils.ddmm2dd(this_fix.lat)
                     this_lon = Utils.ddmm2dd(this_fix.lon)
-                    surface_mean_lon_fac = math.cos(math.radians((last_lat + this_lat)/2))
-                    delta_time_h = (time.mktime(last_fix.datetime) - time.mktime(this_fix.datetime))/secs_per_hour
-                    delta_lat_d_h = (last_lat - this_lat)/delta_time_h
-                    delta_lon_d_h = ((last_lon - this_lon)*surface_mean_lon_fac)/delta_time_h
+                    surface_mean_lon_fac = math.cos(
+                        math.radians((last_lat + this_lat) / 2)
+                    )
+                    delta_time_h = (
+                        time.mktime(last_fix.datetime) - time.mktime(this_fix.datetime)
+                    ) / secs_per_hour
+                    delta_lat_d_h = (last_lat - this_lat) / delta_time_h
+                    delta_lon_d_h = (
+                        (last_lon - this_lon) * surface_mean_lon_fac
+                    ) / delta_time_h
                     delta_lat += delta_lat_d_h
                     delta_lon += delta_lon_d_h
                     fixes += 1
@@ -301,10 +414,10 @@ class CommLog:
                     return drift_message
                 except:
                     drift_message = "Error calculating drift"
-                    log_error(drift_message, 'exc')
+                    log_error(drift_message, "exc")
                     return drift_message
 
-            last_fix = this_fix # initialize/update
+            last_fix = this_fix  # initialize/update
             if most_recent_fix is None:
                 most_recent_fix = this_fix
                 dive_num = this_dive_num
@@ -313,8 +426,8 @@ class CommLog:
             log_info(drift_message)
             return drift_message
         # compute mean drift rates
-        delta_lat_d_h = delta_lat/fixes
-        delta_lon_d_h = delta_lon/fixes
+        delta_lat_d_h = delta_lat / fixes
+        delta_lon_d_h = delta_lon / fixes
         log_info("delta_lat:%f delta_lon:%f" % (delta_lat_d_h, delta_lon_d_h))
         # start location
         mrf_lat = Utils.ddmm2dd(most_recent_fix.lat)
@@ -322,16 +435,20 @@ class CommLog:
         mrf_time = most_recent_fix.datetime
         mrf_time_s = time.mktime(mrf_time)
 
-        hrs_since_mrf = (time.time() - mrf_time_s)/secs_per_hour
+        hrs_since_mrf = (time.time() - mrf_time_s) / secs_per_hour
         elapsed_hours = int(hrs_since_mrf)
-        drift_message = "%s %s @ %s" % (Utils.format_lat_lon(Utils.dd2ddmm(mrf_lat), fmt, True),
-                                        Utils.format_lat_lon(Utils.dd2ddmm(mrf_lon), fmt, False),
-                                        time.strftime(time_fmt, mrf_time))
+        drift_message = "%s %s @ %s" % (
+            Utils.format_lat_lon(Utils.dd2ddmm(mrf_lat), fmt, True),
+            Utils.format_lat_lon(Utils.dd2ddmm(mrf_lon), fmt, False),
+            time.strftime(time_fmt, mrf_time),
+        )
 
         # Compute drift bearing and direction
         try:
-            drift_bear_deg_true = 90.0 - math.degrees(math.atan2(delta_lat_d_h, delta_lon_d_h))
-        except ZeroDivisionError: # atan2
+            drift_bear_deg_true = 90.0 - math.degrees(
+                math.atan2(delta_lat_d_h, delta_lon_d_h)
+            )
+        except ZeroDivisionError:  # atan2
             drift_bear_deg_true = 0.0
         if drift_bear_deg_true < 0:
             drift_bear_deg_true = drift_bear_deg_true + 360
@@ -339,19 +456,27 @@ class CommLog:
         surface_mean_lon_fac = math.cos(math.radians(mrf_lat))
         m_per_deg = 111319.9
         nm_per_m = 0.000539957
-        drift_speed = math.sqrt(math.pow(delta_lat_d_h *  m_per_deg, 2) + math.pow(delta_lon_d_h *  surface_mean_lon_fac * m_per_deg, 2))
-        drift_message = drift_message + "\n%.0f deg true, %.2f knots" % (drift_bear_deg_true, drift_speed * nm_per_m)
-
+        drift_speed = math.sqrt(
+            math.pow(delta_lat_d_h * m_per_deg, 2)
+            + math.pow(delta_lon_d_h * surface_mean_lon_fac * m_per_deg, 2)
+        )
+        drift_message = drift_message + "\n%.0f deg true, %.2f knots" % (
+            drift_bear_deg_true,
+            drift_speed * nm_per_m,
+        )
 
         # drift_message = drift_message + "\nBased on last %d fixes:" % fixes
         # CONSIDER return a matrix of fix predictions [lat lon time] for use by caller, e.g., MakeKML
-        for hours in range(1, n_predictions+1): # predictions ahead from 'now'
+        for hours in range(1, n_predictions + 1):  # predictions ahead from 'now'
             offset_hours = elapsed_hours + hours
-            pred_lat = mrf_lat + offset_hours*delta_lat_d_h
-            pred_lon = mrf_lon + offset_hours*delta_lon_d_h
+            pred_lat = mrf_lat + offset_hours * delta_lat_d_h
+            pred_lon = mrf_lon + offset_hours * delta_lon_d_h
             # pred_time = time.gmtime(mrf_time_s + offset_hours*secs_per_hour)
-            pred_message = "\n%s %s +%dhr" % (Utils.format_lat_lon(Utils.dd2ddmm(pred_lat), fmt, True),
-                                              Utils.format_lat_lon(Utils.dd2ddmm(pred_lon), fmt, False), offset_hours)
+            pred_message = "\n%s %s +%dhr" % (
+                Utils.format_lat_lon(Utils.dd2ddmm(pred_lat), fmt, True),
+                Utils.format_lat_lon(Utils.dd2ddmm(pred_lon), fmt, False),
+                offset_hours,
+            )
             drift_message = drift_message + pred_message
         return drift_message
 
@@ -361,13 +486,15 @@ class CommLog:
         """
         try:
             out_filename = os.path.abspath(out_filename)
-            out_file = open(out_filename, 'w')
+            out_file = open(out_filename, "w")
         except IOError:
             log_critical("Could not open %s for writing." % out_filename)
             return
         for session in self.sessions:
             if session.gps_fix is not None:
-                out_file.write("%.4f %.4f\n" % (session.gps_fix.lon, session.gps_fix.lat))
+                out_file.write(
+                    "%.4f %.4f\n" % (session.gps_fix.lon, session.gps_fix.lat)
+                )
 
         out_file.close()
 
@@ -376,7 +503,10 @@ class CommLog:
         """
         if self.files_transfered:
             for file_name in list(self.files_transfered.keys()):
-                if(self.files_transfered[file_name] and self.files_transfered[file_name][-1][0] == 0):
+                if (
+                    self.files_transfered[file_name]
+                    and self.files_transfered[file_name][-1][0] == 0
+                ):
                     print("File %s is a partial file" % file_name)
                 else:
                     temp_sector = []
@@ -386,7 +516,9 @@ class CommLog:
                         except:
                             temp_sector.append(i[0])
                         else:
-                            print("File %s, sector_num %d is a repeat" % (file_name, i[0]))
+                            print(
+                                "File %s, sector_num %d is a repeat" % (file_name, i[0])
+                            )
 
     def check_multiple_sectors(self, incomplete_file_name, instrument_id):
         """Given an incompelte file, check if there are any repeated
@@ -401,8 +533,11 @@ class CommLog:
         incomplete_fc = FileMgr.FileCode(incomplete_file_name, instrument_id)
         if self.files_transfered:
             for file_name in list(self.files_transfered.keys()):
-                if(self.files_transfered[file_name] and self.files_transfered[file_name][-1][0] == 0):
-                    #Don't report partials - subsequent calls probably send those again
+                if (
+                    self.files_transfered[file_name]
+                    and self.files_transfered[file_name][-1][0] == 0
+                ):
+                    # Don't report partials - subsequent calls probably send those again
                     pass
                 else:
                     try:
@@ -418,33 +553,60 @@ class CommLog:
                             except:
                                 temp_sector.append(i[0])
                             else:
-                                ret_val = ret_val + "File %s, sector_num %d is a repeat - " % (file_name, i[0])
-                                if(fragment_fc.is_seaglider() or fragment_fc.is_seaglider_selftest()):
+                                ret_val = (
+                                    ret_val
+                                    + "File %s, sector_num %d is a repeat - "
+                                    % (file_name, i[0])
+                                )
+                                if (
+                                    fragment_fc.is_seaglider()
+                                    or fragment_fc.is_seaglider_selftest()
+                                ):
                                     if fragment_fc.is_log():
-                                        ret_val = ret_val + "recommend resend_dive /l %d" % fragment_fc.dive_number()
+                                        ret_val = (
+                                            ret_val
+                                            + "recommend resend_dive /l %d"
+                                            % fragment_fc.dive_number()
+                                        )
                                     elif fragment_fc.is_data():
-                                        ret_val = ret_val + "recommend resend_dive /d %d" % fragment_fc.dive_number()
+                                        ret_val = (
+                                            ret_val
+                                            + "recommend resend_dive /d %d"
+                                            % fragment_fc.dive_number()
+                                        )
                                     elif fragment_fc.is_capture():
-                                        ret_val = ret_val + "recommend resend_dive /c %d" % fragment_fc.dive_number()
+                                        ret_val = (
+                                            ret_val
+                                            + "recommend resend_dive /c %d"
+                                            % fragment_fc.dive_number()
+                                        )
                                     elif fragment_fc.is_tar():
-                                        ret_val = ret_val + "recommend resend_dive /t %d" % fragment_fc.dive_number()
+                                        ret_val = (
+                                            ret_val
+                                            + "recommend resend_dive /t %d"
+                                            % fragment_fc.dive_number()
+                                        )
                                     else:
-                                        #Don't know about this file type
+                                        # Don't know about this file type
                                         continue
-                                    if fragment_fc.is_fragment():
-                                        try:
-                                            # fragments are in hex but glider code uses atoi(), which expects a decimal integer
-                                            frag_num = fragment_fc.get_fragment_counter()
-                                            if frag_num >= 0:
-                                                ret_val = ret_val + " %d" % frag_num
-                                        except ValueError:
-                                            log_warning("Invalid fragment counter (%s)" % file_name, 'exc')
+                                    # fragments are in hex but glider code uses atoi(), which expects a decimal integer
+                                    frag_num = fragment_fc.get_fragment_counter()
+                                    if frag_num >= 0:
+                                        ret_val = ret_val + " %d" % frag_num
+                                    else:
+                                        log_warning(
+                                            "Invalid fragment counter (%s)" % file_name,
+                                            "exc",
+                                        )
                                 else:
-                                    ret_val = ret_val + "recommend resend the entire file"
+                                    ret_val = (
+                                        ret_val + "recommend resend the entire file"
+                                    )
         if len(ret_val):
             return ret_val
         else:
             return None
+
 
 def get_glider_id(comm_log):
     """ Finds glider id in comm.log
@@ -464,6 +626,7 @@ def get_glider_id(comm_log):
 class ConnectSession:
     """Contains the data on a seaglider connection session to the basestation
     """
+
     def __init__(self, connect_ts, time_zone):
         self.connect_ts = connect_ts
         self.time_zone = time_zone
@@ -507,17 +670,35 @@ class ConnectSession:
         self.transfered_size = {}
         self.crc_errors = {}
 
-
     def dump_contents(self, fo):
         """Dumps out the session contents, used when called manually
         """
         print("_sg_id %s" % self.sg_id, file=fo)
-        print("connect_ts %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.connect_ts), file=fo)
-        print("disconnect_ts %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.disconnect_ts), file=fo)
+        print(
+            "connect_ts %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.connect_ts),
+            file=fo,
+        )
+        print(
+            "disconnect_ts %s"
+            % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.disconnect_ts),
+            file=fo,
+        )
         if self.reconnect_ts:
-            print("reconnect_ts %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.reconnect_ts), file=fo)
+            print(
+                "reconnect_ts %s"
+                % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.reconnect_ts),
+                file=fo,
+            )
         if self.gps_fix:
-            print("gps_fix %s,%s,%s" % (self.gps_fix.lat, self.gps_fix.lon, time.strftime("%m/%d/%y %H:%M:%S", self.gps_fix.datetime)), file=fo)
+            print(
+                "gps_fix %s,%s,%s"
+                % (
+                    self.gps_fix.lat,
+                    self.gps_fix.lon,
+                    time.strftime("%m/%d/%y %H:%M:%S", self.gps_fix.datetime),
+                ),
+                file=fo,
+            )
         else:
             print("No GPS fix", file=fo)
         if self.phone_fix_lat:
@@ -531,9 +712,9 @@ class ConnectSession:
         if self.calls_made is not None:
             print("calls_made %d" % self.calls_made, file=fo)
         if self.no_comm is not None:
-            print("no_comm %d"  % self.no_comm, file=fo)
+            print("no_comm %d" % self.no_comm, file=fo)
         if self.mission_num is not None:
-            print("mission_num %d"  % self.mission_num, file=fo)
+            print("mission_num %d" % self.mission_num, file=fo)
         if self.reboot_count is not None:
             print("reboot_count %d" % self.reboot_count, file=fo)
         if self.last_call_error is not None:
@@ -559,14 +740,29 @@ class ConnectSession:
         if self.rh is not None:
             print("rh %f" % self.rh, file=fo)
         if self.launch_time is not None:
-            print("launch_time %s" % time.strftime('%d%m%y:%H%M%S', time.gmtime(self.launch_time)), file=fo)
+            print(
+                "launch_time %s"
+                % time.strftime("%d%m%y:%H%M%S", time.gmtime(self.launch_time)),
+                file=fo,
+            )
         if self.eop_code:
             print("eop_code %s" % self.eop_code, file=fo)
         if self.recov_code:
             print("recov_code %s" % self.recov_code, file=fo)
-        print("%d files downloaded %s" % (len(list(self.transfered_size.keys())), list(self.transfered_size.keys())), file=fo)
-        print("%d files with CRC errors %s" % (len(list(self.crc_errors.keys())), list(self.crc_errors.keys())), file=fo)
-        #for i in self.files_transfered.keys():
+        print(
+            "%d files transfered %s"
+            % (
+                len(list(self.transfered_size.keys())),
+                list(self.transfered_size.keys()),
+            ),
+            file=fo,
+        )
+        print(
+            "%d files with CRC errors %s"
+            % (len(list(self.crc_errors.keys())), list(self.crc_errors.keys())),
+            file=fo,
+        )
+        # for i in self.files_transfered.keys():
         #    tot_bytes = 0
         #    for j in self.files_transfered[i]:
         #        tot_bytes += j.
@@ -590,13 +786,24 @@ def crack_connect_line(input_line):
     cts_parts = connect_ts_string.split()
     if len(cts_parts) < 6:
         return (None, None)
-    connect_ts_notz_string = "%s %s %s %s %s" % (cts_parts[0], cts_parts[1], cts_parts[2], cts_parts[3], cts_parts[5])
+    connect_ts_notz_string = "%s %s %s %s %s" % (
+        cts_parts[0],
+        cts_parts[1],
+        cts_parts[2],
+        cts_parts[3],
+        cts_parts[5],
+    )
     time_zone = cts_parts[4]
-    #connect_ts_tstruc = time.strptime(connect_ts_notz_string, "%a %b %d %H:%M:%S %Y")
-    connect_ts_tstruct = BaseTime.convert_commline_to_utc(connect_ts_notz_string, time_zone)
+    # connect_ts_tstruc = time.strptime(connect_ts_notz_string, "%a %b %d %H:%M:%S %Y")
+    connect_ts_tstruct = BaseTime.convert_commline_to_utc(
+        connect_ts_notz_string, time_zone
+    )
     return (connect_ts_tstruct, time_zone)
 
-def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_count, raw_line):
+
+def crack_counter_line(
+    base_opts, session, raw_strs, comm_log_file_name, line_count, raw_line
+):
     """Determines if a line is a counter line and fills out the session object if it is
 
     Returns:
@@ -606,13 +813,12 @@ def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_co
     # Check for valid counter
     cnt_vals = raw_strs[0].split(":")
 
-    if(len(cnt_vals) >= 3 and len(cnt_vals) <= 16):
+    if len(cnt_vals) >= 3 and len(cnt_vals) <= 16:
         for i in range(len(cnt_vals)):
-            cnt_vals[i] = cnt_vals[i].lstrip('ABCDEFGHIJKLMNOPQRSTUVWXYZ')
+            cnt_vals[i] = cnt_vals[i].lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
-        #Looks like a counter line
-        if(cnt_vals[0].isdigit() and cnt_vals[1].isdigit()
-           and cnt_vals[2].isdigit()):
+        # Looks like a counter line
+        if cnt_vals[0].isdigit() and cnt_vals[1].isdigit() and cnt_vals[2].isdigit():
 
             # Differences in counter lines
             #
@@ -644,7 +850,7 @@ def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_co
             # 65.01 First and Final: dive_num, callsMade, cnt_NoComm
             # 65.00 First and Final: dive_num, callsMade, cnt_NoComm
 
-            if(len(cnt_vals) == 16 and Utils.is_float(cnt_vals[15])):
+            if len(cnt_vals) == 16 and Utils.is_float(cnt_vals[15]):
                 # Version 66.09 - 66.10 First counter
                 session.dive_num = int(cnt_vals[0])
                 session.call_cycle = int(cnt_vals[1])
@@ -662,7 +868,7 @@ def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_co
                 session.volt_24V = float(cnt_vals[13])
                 session.int_press = float(cnt_vals[14])
                 session.rh = float(cnt_vals[15])
-            elif(len(cnt_vals) == 10 and Utils.is_integer(cnt_vals[9])):
+            elif len(cnt_vals) == 10 and Utils.is_integer(cnt_vals[9]):
                 # Version 66.08 First counter
                 session.dive_num = int(cnt_vals[0])
                 session.call_cycle = int(cnt_vals[1])
@@ -674,7 +880,7 @@ def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_co
                 session.pitch_ad = int(cnt_vals[7])
                 session.roll_ad = int(cnt_vals[8])
                 session.vbd_ad = int(cnt_vals[9])
-            elif(len(cnt_vals) == 7 and Utils.is_integer(cnt_vals[6])):
+            elif len(cnt_vals) == 7 and Utils.is_integer(cnt_vals[6]):
                 # Version 66.08 - 66.10 Final counter
                 session.dive_num = int(cnt_vals[0])
                 session.call_cycle = int(cnt_vals[1])
@@ -683,7 +889,7 @@ def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_co
                 session.mission_num = int(cnt_vals[4])
                 session.reboot_count = int(cnt_vals[5])
                 session.this_call_error = int(cnt_vals[6])
-            elif(len(cnt_vals) == 6 and Utils.is_integer(cnt_vals[5])):
+            elif len(cnt_vals) == 6 and Utils.is_integer(cnt_vals[5]):
                 # Version 66.06 - 66.07 counter
                 session.dive_num = int(cnt_vals[0])
                 session.call_cycle = int(cnt_vals[1])
@@ -691,14 +897,14 @@ def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_co
                 session.no_comm = int(cnt_vals[3])
                 session.mission_num = int(cnt_vals[4])
                 session.reboot_count = int(cnt_vals[5])
-            elif(len(cnt_vals) == 5 and Utils.is_integer(cnt_vals[4])):
+            elif len(cnt_vals) == 5 and Utils.is_integer(cnt_vals[4]):
                 # Version 66.05 counter
                 session.dive_num = int(cnt_vals[0])
                 session.call_cycle = int(cnt_vals[1])
                 session.calls_made = int(cnt_vals[2])
                 session.no_comm = int(cnt_vals[3])
                 session.mission_num = int(cnt_vals[4])
-            elif(len(cnt_vals) == 4 and Utils.is_integer(cnt_vals[3])):
+            elif len(cnt_vals) == 4 and Utils.is_integer(cnt_vals[3]):
                 # Version 66.00 - 66.04
                 session.dive_num = int(cnt_vals[0])
                 session.call_cycle = int(cnt_vals[1])
@@ -711,7 +917,7 @@ def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_co
                 session.calls_made = int(cnt_vals[1])
                 session.no_comm = int(cnt_vals[2])
 
-            #if(session.calls_made == 0):
+            # if(session.calls_made == 0):
             #    print cnt_vals
             #    print raw_strs[0]
             #    print raw_strs[0].split(":")
@@ -721,55 +927,72 @@ def crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_co
             if len(raw_strs) > 1:
                 if raw_strs[1] == "logout":
                     session.logout_seen = True
-                elif (raw_strs[1].split('='))[0] == "ver":
+                elif (raw_strs[1].split("="))[0] == "ver":
                     # Found the details of the form "ver=66.00,rev=753M,frag=4" or
                     # ver=66.06,rev=1893:1900M,frag=4,launch=310709:035925
-                    tmp = raw_strs[1].split(',')
-                    #ver = tmp[0]
+                    tmp = raw_strs[1].split(",")
+                    # ver = tmp[0]
                     rev = tmp[1]
-                    if rev == 'rev=Unversioned':
+                    if rev == "rev=Unversioned":
                         # A version of software not yet checked in...'Unversioned directory'
-                        tmp2 = raw_strs[2].split(',')
-                        tmp.extend(tmp2[1:]) # drop directory, and add the rest to tmp
+                        tmp2 = raw_strs[2].split(",")
+                        tmp.extend(tmp2[1:])  # drop directory, and add the rest to tmp
                     frag = tmp[2]
-                    #TODO - Add parsing for launch time and add to session
-                    ver_tmp = tmp[0].split('=')[1]
+                    # TODO - Add parsing for launch time and add to session
+                    ver_tmp = tmp[0].split("=")[1]
                     try:
                         session.software_version = float(ver_tmp)
                     except ValueError:
                         # Might be an iRobot version - major.minor.rev1.rev2
-                        tmp2 = ver_tmp.rsplit('.', 2)[0]
+                        tmp2 = ver_tmp.rsplit(".", 2)[0]
                         try:
                             session.software_version = float(tmp2)
                         except ValueError:
                             log_error("Unknown version %s = assuming 66.00" % ver_tmp)
-                    session.software_revision = rev.split('=')[1]
-                    session.fragment_size = int(frag.split('=')[1])*1024 # Base.py expects this in bytes
+                    session.software_revision = rev.split("=")[1]
+                    session.fragment_size = (
+                        int(frag.split("=")[1]) * 1024
+                    )  # Base.py expects this in bytes
                 elif GPS.is_valid_gps_line(raw_strs[1]):
                     if session.reconnect_ts is not None:
                         start_time = time.strftime("%m %d %y", session.reconnect_ts)
                     else:
                         start_time = time.strftime("%m %d %y", session.connect_ts)
-                    session.gps_fix = GPS.GPSFix(raw_strs[1], base_opts.mission_dir, start_date_str=start_time)
+                    session.gps_fix = GPS.GPSFix(
+                        raw_strs[1], base_opts.mission_dir, start_date_str=start_time
+                    )
                 else:
-                    log_warning("Unknown line after counter: file %s, lineno %d, line %s"
-                                % (comm_log_file_name, line_count, raw_line))
+                    log_warning(
+                        "Unknown line after counter: file %s, lineno %d, line %s"
+                        % (comm_log_file_name, line_count, raw_line)
+                    )
             else:
-                log_warning("Counter line appears with no trailing data: file %s, lineno %d, line %s"
-                            % (comm_log_file_name, line_count, raw_line))
+                log_warning(
+                    "Counter line appears with no trailing data: file %s, lineno %d, line %s"
+                    % (comm_log_file_name, line_count, raw_line)
+                )
             return True
 
     return False
 
-def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
-                     start_pos=-1, call_back=None, session=None, line_count=0, scan_back=False):
+
+def process_comm_log(
+    comm_log_file_name,
+    base_opts,
+    known_commlog_files=None,
+    start_pos=-1,
+    call_back=None,
+    session=None,
+    line_count=0,
+    scan_back=False,
+):
     """Processes a Seagliders comm log
 
     Returns a CommLog object
     """
 
     if not known_commlog_files:
-        known_commlog_files = ['cmdfile', 'science', 'targets', 'pdoscmds.bat']
+        known_commlog_files = ["cmdfile", "science", "targets", "pdoscmds.bat"]
 
     try:
         # Look backward through the file for the last line starting with "Connected" as starting point
@@ -778,13 +1001,13 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
             try:
                 comm_log_file = open(comm_log_file_name, "rb")
             except IOError:
-                log_error("Could not open %s for reading." %  comm_log_file_name)
+                log_error("Could not open %s for reading." % comm_log_file_name)
                 return (None, None, None, None)
 
             try:
                 comm_log_file.seek(-2, os.SEEK_END)
                 while True:
-                    while comm_log_file.read(1) != b'\n':
+                    while comm_log_file.read(1) != b"\n":
                         comm_log_file.seek(-2, os.SEEK_CUR)
 
                     curr_pos = comm_log_file.tell()
@@ -795,7 +1018,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                         comm_log_file.close()
                         break
                     else:
-                        comm_log_file.seek(curr_pos-2, os.SEEK_SET)
+                        comm_log_file.seek(curr_pos - 2, os.SEEK_SET)
             except IOError:
                 # Didn't find a line starting with connected - fall through
                 comm_log_file.close()
@@ -804,7 +1027,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
             statinfo = os.stat(comm_log_file_name)
             if statinfo.st_size < start_pos:
                 # File got smaller - reparse
-                #print "Resetting starting position (%d,%d)" % (statinfo.st_size,start_pos)
+                # print "Resetting starting position (%d,%d)" % (statinfo.st_size,start_pos)
                 start_pos = 0
             elif statinfo.st_size == start_pos:
                 # Start pos is the same as filesize - nothing to do
@@ -812,12 +1035,12 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
         try:
             comm_log_file = open(comm_log_file_name, "rb")
         except IOError:
-            log_error("Could not open %s for reading." %  comm_log_file_name)
+            log_error("Could not open %s for reading." % comm_log_file_name)
             return (None, None, None, None)
 
         log_debug("process_comm_log starting")
         if start_pos >= 0 and statinfo.st_size > start_pos:
-            #print "Resetting to file pos %d" % start_pos
+            # print "Resetting to file pos %d" % start_pos
             comm_log_file.seek(start_pos, 0)
 
         sessions = []
@@ -832,7 +1055,7 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
         for raw_line in comm_log_file:
             line_count = line_count + 1
             try:
-                raw_line = raw_line.decode('utf-8')
+                raw_line = raw_line.decode("utf-8")
             except UnicodeDecodeError:
                 log_warning(f"Could not decode line number {line_count} - skipping")
                 continue
@@ -871,8 +1094,10 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
 
             if raw_strs[0] == "Connected":
                 if session:
-                    log_warning("Found Connected with no previous Disconnect: file %s, lineno %d"
-                                % (comm_log_file_name, line_count))
+                    log_warning(
+                        "Found Connected with no previous Disconnect: file %s, lineno %d"
+                        % (comm_log_file_name, line_count)
+                    )
                 connect_ts, time_zone = crack_connect_line(raw_line)
                 if connect_ts is None:
                     continue
@@ -890,11 +1115,11 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
 
                 raw_file_lines[-1][0] = time.mktime(session.connect_ts)
 
-                if(call_back and 'connected' in call_back.callbacks):
+                if call_back and "connected" in call_back.callbacks:
                     try:
-                        call_back.callbacks['connected'](connect_ts)
+                        call_back.callbacks["connected"](connect_ts)
                     except:
-                        log_error("Connected callback failed", 'exc')
+                        log_error("Connected callback failed", "exc")
                 continue
             elif raw_strs[0] == "Reconnected":
                 reconnect_ts, time_zone = crack_connect_line(raw_line)
@@ -905,13 +1130,15 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                 if session:
                     session.reconnect_ts = reconnect_ts
                 else:
-                    log_warning("Found ReConnected outside Connected: file %s, lineno %d "
-                                % (comm_log_file_name, line_count))
-                if call_back and 'reconnected' in call_back.callbacks:
+                    log_warning(
+                        "Found ReConnected outside Connected: file %s, lineno %d "
+                        % (comm_log_file_name, line_count)
+                    )
+                if call_back and "reconnected" in call_back.callbacks:
                     try:
-                        call_back.callbacks['reconnected'](reconnect_ts)
+                        call_back.callbacks["reconnected"](reconnect_ts)
                     except:
-                        log_error("Reconnected callback failed", 'exc')
+                        log_error("Reconnected callback failed", "exc")
                 continue
             elif raw_strs[0] == "Disconnected":
                 disconnect_ts, time_zone = crack_connect_line(raw_line)
@@ -923,23 +1150,32 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                     session.disconnect_ts = disconnect_ts
                     sessions.append(session)
                 else:
-                    log_warning("Found Disconnect with no previous Connected: file %s, lineno %d"
-                                % (comm_log_file_name, line_count))
+                    log_warning(
+                        "Found Disconnect with no previous Connected: file %s, lineno %d"
+                        % (comm_log_file_name, line_count)
+                    )
 
-                if(call_back and 'disconnected' in call_back.callbacks):
+                if call_back and "disconnected" in call_back.callbacks:
                     try:
-                        call_back.callbacks['disconnected'](session)
+                        call_back.callbacks["disconnected"](session)
                     except:
-                        log_error("Disconnected callback failed", 'exc')
+                        log_error("Disconnected callback failed", "exc")
                 session = None
                 continue
             elif session:
-                if crack_counter_line(base_opts, session, raw_strs, comm_log_file_name, line_count, raw_line):
-                    if(call_back and 'counter_line' in call_back.callbacks):
+                if crack_counter_line(
+                    base_opts,
+                    session,
+                    raw_strs,
+                    comm_log_file_name,
+                    line_count,
+                    raw_line,
+                ):
+                    if call_back and "counter_line" in call_back.callbacks:
                         try:
-                            call_back.callbacks['counter_line'](session)
+                            call_back.callbacks["counter_line"](session)
                         except:
-                            log_error("counter_line callback failed", 'exc')
+                            log_error("counter_line callback failed", "exc")
                     continue
 
                 # Check for recovery
@@ -949,22 +1185,22 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                     continue
                 if parse_strs[0] == "RECOV_CODE":
                     session.recov_code = parse_strs[1]
-                    if(call_back and 'recovery' in call_back.callbacks):
+                    if call_back and "recovery" in call_back.callbacks:
                         if session.eop_code:
                             msg = "%s:%s" % (session.recov_code, session.eop_code)
                         else:
                             msg = parse_strs[1]
                         try:
-                            call_back.callbacks['recovery'](msg)
+                            call_back.callbacks["recovery"](msg)
                         except:
-                            log_error("recovery callback failed", 'exc')
+                            log_error("recovery callback failed", "exc")
                     continue
                 else:
-                    if(call_back and 'recovery' in call_back.callbacks):
+                    if call_back and "recovery" in call_back.callbacks:
                         try:
-                            call_back.callbacks['recovery'](None)
+                            call_back.callbacks["recovery"](None)
                         except:
-                            log_error("recovery callback failed", 'exc')
+                            log_error("recovery callback failed", "exc")
                 if parse_strs[0] == "ESCAPE_REASON":
                     session.escape_reason = parse_strs[1]
                     continue
@@ -972,13 +1208,13 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                     session.escape_started = int(parse_strs[1])
                     continue
 
-                #Check for Iridium
+                # Check for Iridium
                 try:
                     iridium_strs = raw_line.split(":")
                     if iridium_strs[0] == "Iridium bars":
                         if len(iridium_strs) < 3:
                             continue
-                        lat_lon = iridium_strs[2].lstrip().split(',')
+                        lat_lon = iridium_strs[2].lstrip().split(",")
                         session.phone_fix_lat = lat_lon[0]
                         session.phone_fix_lon = lat_lon[1]
                         continue
@@ -1001,38 +1237,54 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                     if len(raw_strs) > 3:
                         try:
                             filename = raw_strs[1]
-                            filesize = int(raw_strs[2])
+                            receivedsize = int(raw_strs[2])
                             if filename in session.file_stats:
-                                transfersize, _, bps = session.file_stats[filename]
+                                expectedsize, transfersize, _, bps = session.file_stats[
+                                    filename
+                                ]
                             else:
-                                log_warning("Found Recieved for %s with out matching XMODEM line" % filename)
+                                log_warning(
+                                    "Found Recieved for %s with out matching XMODEM line"
+                                    % filename
+                                )
+                                expectedsize = -1
                                 transfersize = -1
                                 bps = -1
-                            session.file_stats[filename] = file_stats_nt(transfersize, filesize, bps)
+                            session.file_stats[filename] = file_stats_nt(
+                                expectedsize, transfersize, receivedsize, bps
+                            )
                         except:
-                            log_error("Could not process %s: lineno %d" % (raw_strs, line_count), 'exc')
+                            log_error(
+                                "Could not process %s: lineno %d"
+                                % (raw_strs, line_count),
+                                "exc",
+                            )
                         else:
-                            if(call_back and 'received' in call_back.callbacks):
+                            if call_back and "received" in call_back.callbacks:
                                 try:
-                                    call_back.callbacks['received'](filename, filesize)
+                                    call_back.callbacks["received"](
+                                        filename, receivedsize
+                                    )
                                 except:
-                                    log_error("received callback failed", 'exc')
+                                    log_error("received callback failed", "exc")
                     continue
 
                 # Look for the [sg(id)] tag -- marks file transfer info
-                sgid_re = re.compile(r'\[sg(\d+)\]')
+                sgid_re = re.compile(r"\[sg(\d+)\]")
                 sg_id_tmp = sgid_re.findall(raw_line)
                 if sg_id_tmp:
                     # Crack the leading date
-                    ts_line = raw_line.split('[')
+                    ts_line = raw_line.split("[")
                     ts_string = ts_line[0].lstrip().rstrip()
-                    #raw_file_lines[-1][0] = time.mktime(time.strptime(ts_string, "%a %b %d %H:%M:%S %Y"))
-                    raw_file_lines[-1][0] = time.mktime(BaseTime.convert_commline_to_utc(ts_string, session.time_zone))
+                    # raw_file_lines[-1][0] = time.mktime(time.strptime(ts_string, "%a %b %d %H:%M:%S %Y"))
+                    raw_file_lines[-1][0] = time.mktime(
+                        BaseTime.convert_commline_to_utc(ts_string, session.time_zone)
+                    )
 
                     session.sg_id = int(sg_id_tmp[0])
 
                     # RAW files uploaded to the glider
-                    #Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile
+                    # Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile
                     if len(raw_strs) > 10:
                         if raw_strs[6] == "Sent":
                             try:
@@ -1041,39 +1293,88 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                                 session.transfer_method[filename] = "raw"
                                 session.transfered_size[filename] = int(raw_strs[7])
                                 session.transfer_direction[filename] = "received"
-                                session.file_stats[filename] = file_stats_nt(int(raw_strs[7]), int(raw_strs[7]), -1)
+                                session.file_stats[filename] = file_stats_nt(
+                                    -1, int(raw_strs[7]), int(raw_strs[7]), -1
+                                )
                             except:
-                                log_error("Could not process %s: lineno %d" % (raw_strs, line_count), 'exc')
+                                log_error(
+                                    "Could not process %s: lineno %d"
+                                    % (raw_strs, line_count),
+                                    "exc",
+                                )
 
-                            if(call_back and 'received' in call_back.callbacks):
+                            if call_back and "received" in call_back.callbacks:
                                 try:
-                                    call_back.callbacks['received'](raw_strs[10], int(raw_strs[7]))
+                                    call_back.callbacks["received"](
+                                        raw_strs[10], int(raw_strs[7])
+                                    )
                                 except:
-                                    log_error("received callback failed", 'exc')
+                                    log_error("received callback failed", "exc")
                             continue
 
                     # RAW files downloaded from the glider
-                    # Thu Aug  4 19:49:42 2016 [sg203] Received 386 bytes of br0003lp.x03 (366.2 Bps)
-                    if len(raw_strs) > 10:
+                    if len(raw_strs) >= 11:
+                        # Tue Oct  6 07:37:38 2020 [sg236] Receiving 8192 bytes of sc0041bg.x02
+                        if raw_strs[6] == "Receiving":
+                            try:
+                                filename = raw_strs[10]
+                                session.file_stats[filename] = file_stats_nt(
+                                    int(raw_strs[7]), -1, -1, -1
+                                )
+                            except:
+                                log_error(
+                                    "Could not process %s: lineno %d"
+                                    % (raw_strs, line_count),
+                                    "exc",
+                                )
+                            continue
+
+                        # Thu Aug  4 19:49:42 2016 [sg203] Received 386 bytes of br0003lp.x03 (366.2 Bps)
                         if raw_strs[6] == "Received":
                             try:
                                 filename = raw_strs[10]
+                                if filename not in session.file_stats:
+                                    log_warning(
+                                        "Found Recieved for %s with out matching Receiving line"
+                                        % filename
+                                    )
+                                    expected_size = -1
+                                else:
+                                    expected_size = session.file_stats[
+                                        filename
+                                    ].expectedsize
                                 file_transfer_method[filename] = "raw"
                                 session.transfer_method[filename] = "raw"
                                 session.transfer_direction[filename] = "sent"
                                 session.transfered_size[filename] = int(raw_strs[7])
                                 if len(raw_strs) == 11:
-                                    session.file_stats[filename] = file_stats_nt(int(raw_strs[7]), int(raw_strs[7]), 0.0)
+                                    session.file_stats[filename] = file_stats_nt(
+                                        expected_size,
+                                        int(raw_strs[7]),
+                                        int(raw_strs[7]),
+                                        0.0,
+                                    )
                                 else:
-                                    session.file_stats[filename] = file_stats_nt(int(raw_strs[7]), int(raw_strs[7]), float(raw_strs[11].lstrip('(')))
+                                    session.file_stats[filename] = file_stats_nt(
+                                        expected_size,
+                                        int(raw_strs[7]),
+                                        int(raw_strs[7]),
+                                        float(raw_strs[11].lstrip("(")),
+                                    )
                             except:
-                                log_error("Could not process %s: lineno %d" % (raw_strs, line_count), 'exc')
+                                log_error(
+                                    "Could not process %s: lineno %d"
+                                    % (raw_strs, line_count),
+                                    "exc",
+                                )
 
-                            if(call_back and 'transfered' in call_back.callbacks):
+                            if call_back and "transfered" in call_back.callbacks:
                                 try:
-                                    call_back.callbacks['transfered'](raw_strs[10], int(raw_strs[7]))
+                                    call_back.callbacks["transfered"](
+                                        raw_strs[10], int(raw_strs[7])
+                                    )
                                 except:
-                                    log_error("transfered callback failed", 'exc')
+                                    log_error("transfered callback failed", "exc")
 
                             continue
 
@@ -1083,20 +1384,28 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                     if raw_line.find("Bytes") > -1:
                         # XMODEM transfer
                         front, end = raw_line.split("/XMODEM:")
-                        filename = front.split(" ")[-1].strip() # last string is filename
+                        filename = front.split(" ")[
+                            -1
+                        ].strip()  # last string is filename
                         if base_opts is not None and base_opts.ver_65:
                             tempname = Ver65.ver_65_to_ver_66_filename(filename)
                             if tempname is not None:
                                 filename = tempname
 
                         if filename is not None:
-                            transfersize = int(end.lstrip().split(" ")[0].strip()) # first string is transfer size
-                            bps = int(end.lstrip().split(" ")[2].strip()) # bytes per second thiid string
+                            transfersize = int(
+                                end.lstrip().split(" ")[0].strip()
+                            )  # first string is transfer size
+                            bps = int(
+                                end.lstrip().split(" ")[2].strip()
+                            )  # bytes per second thiid string
 
-                            session.file_stats[filename] = file_stats_nt(transfersize, -1, bps)
+                            session.file_stats[filename] = file_stats_nt(
+                                -1, transfersize, -1, bps
+                            )
                             files_transfered[filename] = file_transfered
                             session.transfered_size[filename] = file_transfered
-                            session.transfer_direction[filename] = 'xmodem'
+                            session.transfer_direction[filename] = "xmodem"
                             file_transfered = []
                             if file_crc_errors != []:
                                 session.crc_errors[filename] = file_crc_errors
@@ -1106,19 +1415,22 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
 
                             if known_commlog_files is not None:
                                 if filename in known_commlog_files:
-                                    k = 'received'
+                                    k = "received"
                                 else:
-                                    k = 'transfered'
-                                if(call_back and k in call_back.callbacks):
+                                    k = "transfered"
+                                if call_back and k in call_back.callbacks:
                                     try:
                                         call_back.callbacks[k](filename, transfersize)
                                     except:
-                                        log_error("%s callback failed" % k, 'exc')
+                                        log_error("%s callback failed" % k, "exc")
+
                         continue
 
                     if raw_line.find("got error") > -1:
                         front, end = raw_line.split("/XMODEM:")
-                        filename = front.split(" ")[-1].strip() # last string is filename
+                        filename = front.split(" ")[
+                            -1
+                        ].strip()  # last string is filename
                         if base_opts is not None and base_opts.ver_65:
                             tempname = Ver65.ver_65_to_ver_66_filename(filename)
                             if tempname is not None:
@@ -1137,17 +1449,25 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                         if "block length" in raw_line:
                             try:
                                 front, end = raw_line.split(", block length = ")
-                                sector_num = int(front.split('=')[1])
+                                sector_num = int(front.split("=")[1])
                             except:
-                                log_warning("Malformed line %d in comm.log (%s) - skipping" % (line_count, raw_line))
+                                log_warning(
+                                    "Malformed line %d in comm.log (%s) - skipping"
+                                    % (line_count, raw_line)
+                                )
                             else:
                                 block_len = int(end)
-                                file_transfered.append(file_transfered_nt(sector_num, block_len))
+                                file_transfered.append(
+                                    file_transfered_nt(sector_num, block_len)
+                                )
                         elif "CRC error" in raw_line:
                             try:
-                                sector_num = int(raw_line.split('=')[1])
+                                sector_num = int(raw_line.split("=")[1])
                             except:
-                                log_warning("Malformed line %d in comm.log (%s) - skipping" % (line_count, raw_line))
+                                log_warning(
+                                    "Malformed line %d in comm.log (%s) - skipping"
+                                    % (line_count, raw_line)
+                                )
                             else:
                                 block_len = int(sector_num)
                                 file_crc_errors.append(sector_num)
@@ -1157,15 +1477,15 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
                     # Assume that the XModem: got error processing above is enough to deal with partials
                     continue
 
-                if (raw_strs[0].split('='))[0] == "ver":
+                if (raw_strs[0].split("="))[0] == "ver":
                     # Found the details of the form "ver=66.00,rev=753M,frag=4"
-                    tmp = raw_strs[0].split(',')
-                    ver_tmp = tmp[0].split('=')[1]
+                    tmp = raw_strs[0].split(",")
+                    ver_tmp = tmp[0].split("=")[1]
                     try:
                         session.software_version = float(ver_tmp)
                     except ValueError:
                         # Might be an iRobot version - major.minor.rev1.rev2
-                        tmp2 = ver_tmp.rsplit('.', 2)[0]
+                        tmp2 = ver_tmp.rsplit(".", 2)[0]
                         try:
                             session.software_version = float(tmp2)
                         except ValueError:
@@ -1174,60 +1494,84 @@ def process_comm_log(comm_log_file_name, base_opts, known_commlog_files=None,
 
                     try:
                         # Base.py expects this in bytes
-                        session.fragment_size = int(tmp[2].split('=')[1])*1024
+                        session.fragment_size = int(tmp[2].split("=")[1]) * 1024
                     except:
-                        log_error("Could not parse fragment size out of %s - assuming 4 " % raw_strs[0])
+                        log_error(
+                            "Could not parse fragment size out of %s - assuming 4 "
+                            % raw_strs[0]
+                        )
                         session.fragment_size = 4
 
                     try:
-                        session.software_revision = tmp[1].split('=')[1]
-                        if session.software_revision == 'Unversioned':
+                        session.software_revision = tmp[1].split("=")[1]
+                        if session.software_revision == "Unversioned":
                             # A version of software not yet checked in...'Unversioned directory'
-                            tmp2 = raw_strs[1].split(',')
-                            tmp.extend(tmp2[1:]) # drop directory, and add the rest to tmp
+                            tmp2 = raw_strs[1].split(",")
+                            tmp.extend(
+                                tmp2[1:]
+                            )  # drop directory, and add the rest to tmp
                     except:
-                        log_error("Could not parse software revision out of %s - assuming 0 " % raw_strs[0])
+                        log_error(
+                            "Could not parse software revision out of %s - assuming 0 "
+                            % raw_strs[0]
+                        )
                         session.software_revision = 0
 
                     try:
-                        session.fragment_size = int(tmp[2].split('=')[1])*1024 # Base.py expects this in bytes
+                        session.fragment_size = (
+                            int(tmp[2].split("=")[1]) * 1024
+                        )  # Base.py expects this in bytes
                     except:
-                        log_error("Could not parse fragment size out of %s - assuming 4 " % raw_strs[0])
+                        log_error(
+                            "Could not parse fragment size out of %s - assuming 4 "
+                            % raw_strs[0]
+                        )
                         session.fragment_size = 4
 
                     if len(tmp) > 3:
-                        session.launch_time = time.mktime(time.strptime(tmp[3].split('=')[1], '%d%m%y:%H%M%S'))
+                        session.launch_time = time.mktime(
+                            time.strptime(tmp[3].split("=")[1], "%d%m%y:%H%M%S")
+                        )
 
-                    if(call_back and 'ver' in call_back.callbacks):
+                    if call_back and "ver" in call_back.callbacks:
                         try:
-                            call_back.callbacks['ver'](session)
+                            call_back.callbacks["ver"](session)
                         except:
-                            log_error("ver callback failed", 'exc')
+                            log_error("ver callback failed", "exc")
                     continue
 
-                if(raw_strs[0] == 'logged' and raw_strs[1] == 'in'):
+                if raw_strs[0] == "logged" and raw_strs[1] == "in":
                     continue
 
-                if(known_commlog_files is not None and raw_strs[0] in known_commlog_files):
+                if (
+                    known_commlog_files is not None
+                    and raw_strs[0] in known_commlog_files
+                ):
                     continue
 
-                if raw_strs[0] == 'Sent':
+                if raw_strs[0] == "Sent":
                     continue
 
                 # Insert code here to pick off the transmitted files
-                log_debug("Unknown line: file %s, lineno %d, line %s"
-                          % (comm_log_file_name, line_count, raw_line))
+                log_debug(
+                    "Unknown line: file %s, lineno %d, line %s"
+                    % (comm_log_file_name, line_count, raw_line)
+                )
             else:
-                log_debug("Line outside session: file %s, lineno %d, line %s"
-                          % (comm_log_file_name, line_count, raw_line))
+                log_debug(
+                    "Line outside session: file %s, lineno %d, line %s"
+                    % (comm_log_file_name, line_count, raw_line)
+                )
         start_pos = comm_log_file.tell()
         comm_log_file.close()
 
-        commlog = CommLog(sessions, raw_file_lines, files_transfered, file_transfer_method)
+        commlog = CommLog(
+            sessions, raw_file_lines, files_transfered, file_transfer_method
+        )
         log_debug("process_comm_log finished")
         return (commlog, start_pos, session, line_count)
     except:
-        log_error("process_comm_log failed with unexpected exception", 'exc')
+        log_error("process_comm_log failed with unexpected exception", "exc")
         return (None, None, session, line_count)
 
 
@@ -1247,7 +1591,7 @@ def process_history_log(history_log_file_name):
 
     for raw_line in history_log_file:
         try:
-            raw_line_tmp = raw_line.decode('utf-8')
+            raw_line_tmp = raw_line.decode("utf-8")
         except UnicodeDecodeError:
             log_debug(f"Could not decode {raw_line} - skipping")
             continue
@@ -1263,7 +1607,12 @@ def process_history_log(history_log_file_name):
             command_history.append([ts, None])
             continue
         # Next line is the command
-        command_history[-1][1] = "%s (%s)" % (time.strftime("%a %b %d %H:%M:%S %Y", time.localtime(command_history[-1][0])), raw_line)
+        command_history[-1][1] = "%s (%s)" % (
+            time.strftime(
+                "%a %b %d %H:%M:%S %Y", time.localtime(command_history[-1][0])
+            ),
+            raw_line,
+        )
 
     return command_history
 
@@ -1294,19 +1643,21 @@ def merge_lists_with_ts(list1, list2):
 
     return new_list
 
-class TestCommLogCallback():
+
+class TestCommLogCallback:
     """
     Called from the comm log parser
     """
-    cmd_prefix = 'callback_'
+
+    cmd_prefix = "callback_"
 
     def __init__(self):
         self.cmds = {}
         for (name, val) in inspect.getmembers(self):
             if inspect.ismethod(val) and name.startswith(self.cmd_prefix):
-                self.cmds[name[len(self.cmd_prefix):]] = val
+                self.cmds[name[len(self.cmd_prefix) :]] = val
 
-    #pylint: disable=R0201
+    # pylint: disable=R0201
     def callback_connected(self, connect_ts):
         """ connected test callback
         """
@@ -1322,7 +1673,9 @@ class TestCommLogCallback():
     def callback_reconnected(self, reconnect_ts):
         """ reconnected test callback
         """
-        msg = "Reconnected: %s\n" % time.strftime("%a %b %d %H:%M:%S %Z %Y", reconnect_ts)
+        msg = "Reconnected: %s\n" % time.strftime(
+            "%a %b %d %H:%M:%S %Z %Y", reconnect_ts
+        )
         sys.stdout.write(msg)
 
     def callback_disconnected(self, session):
@@ -1330,70 +1683,90 @@ class TestCommLogCallback():
         """
         if session:
             if session.logout_seen:
-                logout_msg = 'Logout received'
+                logout_msg = "Logout received"
             else:
-                logout_msg = 'Did not see a logout'
-            msg = "Disconnected: %s %s\n" %  (time.strftime("%a %b %d %H:%M:%S %Z %Y", session.disconnected_ts), logout_msg)
+                logout_msg = "Did not see a logout"
+            msg = "Disconnected: %s %s\n" % (
+                time.strftime("%a %b %d %H:%M:%S %Z %Y", session.disconnected_ts),
+                logout_msg,
+            )
             sys.stdout.write(msg)
         else:
             sys.stdout.write("dissconnect:no session\n")
 
-    def callback_transfered(self, filename, filesize):
+    def callback_transfered(self, filename, receivedsize):
         """ transfered test callback
         """
-        msg = "Transfered %d bytes of %s\n" % (filesize, filename)
+        msg = "Transfered %d bytes of %s\n" % (receivedsize, filename)
         sys.stdout.write(msg)
 
-    def callback_received(self, filename, filesize):
+    def callback_received(self, filename, receivedsize):
         """ received test callback
         """
-        msg = "Received file %s (%d bytes)\n" % (filename, filesize)
+        msg = "Received file %s (%d bytes)\n" % (filename, receivedsize)
         sys.stdout.write(msg)
-    #pylint: enable=R0201
+
+    # pylint: enable=R0201
+
 
 def main():
     """ main - main entry point
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv, 'o')
-    BaseLogger("CommLog", base_opts) # initializes BaseLog
+    base_opts = BaseOpts.BaseOptions(sys.argv, "o")
+    BaseLogger("CommLog", base_opts)  # initializes BaseLog
 
-    args = base_opts.get_args() # positional arguments
+    args = base_opts.get_args()  # positional arguments
 
     if len(args) < 1:
         print("usage: CommLog.py logfile [latlong data file] [options]")
         return 1
 
-    (comm_log, start_pos, _, line_count) = process_comm_log(os.path.expanduser(args[0]), base_opts, scan_back=False)
+    (comm_log, _, _, _) = process_comm_log(
+        os.path.expanduser(args[0]), base_opts, scan_back=False
+    )
+    fragment_size_dict = comm_log.get_fragment_size_dict()
+    for kk, vv in fragment_size_dict.items():
+        if vv.expectedsize != vv.receivedsize:
+            print(kk, vv)
 
-    if comm_log is None:
-        return 1
+    # (comm_log, start_pos, _, line_count) = process_comm_log(os.path.expanduser(args[0]), base_opts, scan_back=False)
 
-    #print comm_log.predict_drift('ddmm')
+    # if comm_log is None:
+    #    return 1
 
-    log_info("Number of sessions %s" % str(len(comm_log.sessions)))
-    log_info("Next start position %d" % start_pos)
-    log_info("Number of lines %d" % line_count)
-    for fn in list(comm_log.sessions[-1].file_stats.keys()):
-        log_info("%s:%s" % (fn, comm_log.sessions[-1].file_stats[fn]))
+    # print comm_log.predict_drift('ddmm')
+
+    # log_info("Number of sessions %s" % str(len(comm_log.sessions)))
+    # log_info("Next start position %d" % start_pos)
+    # log_info("Number of lines %d" % line_count)
+    # for fn in list(comm_log.sessions[-1].file_stats.keys()):
+    #    log_info("%s:%s" % (fn, comm_log.sessions[-1].file_stats[fn]))
 
     return 0
+
 
 if __name__ == "__main__":
     retval = 1
 
     # Force to be in UTC
-    os.environ['TZ'] = 'UTC'
+    os.environ["TZ"] = "UTC"
     time.tzset()
 
     try:
         if "--profile" in sys.argv:
-            sys.argv.remove('--profile')
-            profile_file_name = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + '_' \
-                + Utils.ensure_basename(time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))) + ".cprof"
+            sys.argv.remove("--profile")
+            profile_file_name = (
+                os.path.splitext(os.path.split(sys.argv[0])[1])[0]
+                + "_"
+                + Utils.ensure_basename(
+                    time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+                + ".cprof"
+            )
             # Generate line timings
             retval = cProfile.run("main()", filename=profile_file_name)
             stats = pstats.Stats(profile_file_name)
-            stats.sort_stats('time', 'calls')
+            stats.sort_stats("time", "calls")
             stats.print_stats()
         else:
             retval = main()

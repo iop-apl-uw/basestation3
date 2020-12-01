@@ -289,7 +289,7 @@ def process_dive_selftest(
     base_opts,
     dive_files,
     dive_num,
-    fragment_size,
+    fragment_size_dict,
     calib_consts,
     instrument_id,
     comm_log,
@@ -335,7 +335,7 @@ def process_dive_selftest(
                     pfg_retval = process_file_group(
                         base_opts,
                         file_group,
-                        fragment_size,
+                        fragment_size_dict,
                         0,
                         calib_consts,
                         instrument_id,
@@ -371,11 +371,11 @@ def process_dive_selftest(
                 # This is covered way before we get here.
                 continue
             try:
-                log_info(f"fragment_size = {fragment_size}")
+                # log_info(f"fragment_size = {fragment_size}")
                 pfg_retval = process_file_group(
                     base_opts,
                     file_group,
-                    fragment_size,
+                    fragment_size_dict,
                     0,
                     calib_consts,
                     instrument_id,
@@ -447,10 +447,9 @@ def generate_resend(fragment_name, instrument_id):
             # Don't know about this file type
             ret_val = ret_val + "resend"
 
-        if fragment_fc.is_fragment():
-            frag_num = fragment_fc.get_fragment_counter()
-            if frag_num >= 0:
-                ret_val = ret_val + " %d" % frag_num
+        frag_num = fragment_fc.get_fragment_counter()
+        if frag_num >= 0:
+            ret_val = ret_val + " %d" % frag_num
         else:
             ret_val = ret_val + "recommend resend the entire file"
 
@@ -477,7 +476,7 @@ def check_process_file_group(base, file_group, complete_files_dict):
 def process_file_group(
     base_opts,
     file_group,
-    fragment_size,
+    fragment_size_dict,
     total_size,
     calib_consts,
     instrument_id,
@@ -488,7 +487,7 @@ def process_file_group(
 
     Input:
         file_group - list of fragments
-        fragment_size - the size of the fragments (after all transmission artifacts have been removed)
+        fragment_size_dict - mapping of all fragments and expected sizes
         total_size - total size of the resulting file - 0 if not known
 
     Returns:
@@ -572,7 +571,9 @@ def process_file_group(
         if fragment is last_fragment or fc.is_logger_payload():
             ret_val = Strip1A.strip1A(fragment, fragment_1a)
         else:
-            ret_val = Strip1A.strip1A(fragment, fragment_1a, fragment_size)
+            ret_val = Strip1A.strip1A(
+                fragment, fragment_1a, fragment_size_dict[fragment]
+            )
         if ret_val and not fc.is_logger_payload():
             log_error(f"Couldn't strip1a {fragment_1a}. Skipping dive processing")
             return 1
@@ -581,7 +582,11 @@ def process_file_group(
     if not fc.is_logger_payload():
         # At this point, the fragments should be of the correct size, so now we can check them
         check_file_fragments(
-            defrag_file_name, fragments_1a, fragment_size, total_size, instrument_id
+            defrag_file_name,
+            fragments_1a,
+            fragment_size_dict,
+            total_size,
+            instrument_id,
         )
     else:
         # Generic payload from the logger - hand it off to the extension and
@@ -652,7 +657,9 @@ def process_file_group(
     # Raw processing lists
     file_list = []
 
+
     if fc.is_tar() or fc.is_tgz() or fc.is_tjz():
+        saved_defrag_file_name = defrag_file_name
         if fc.is_tgz():
             # Use our own unzip - more robust
             head, tail = os.path.split(defrag_file_name)
@@ -723,20 +730,31 @@ def process_file_group(
 
             # For loggers, hand off to logger extension
             if fc.is_logger():
-                if (
-                    Sensors.process_logger_func(
-                        fc.logger_prefix(),
-                        "process_tar_members",
-                        fc,
-                        logger_file_list,
-                        processed_logger_eng_files,
-                        processed_logger_other_files,
-                    )
-                    != 0
-                ):
+                try:
+                    if (
+                        Sensors.process_logger_func(
+                            fc.logger_prefix(),
+                            "process_tar_members",
+                            fc,
+                            logger_file_list,
+                            processed_logger_eng_files,
+                            processed_logger_other_files,
+                        )
+                        != 0
+                    ):
+                        log_error(
+                            f"Problems processing logger {defrag_file_name} tar data"
+                        )
+                        incomplete_files.append(saved_defrag_file_name)
+                        ret_val = 1
+
+                except:
                     log_error(
-                        f"Problems processing logger {fc.logger_prefix()} tar data"
+                        f"Problems processing logger {defrag_file_name} tar data",
+                        "exc",
                     )
+                    incomplete_files.append(saved_defrag_file_name)
+                    ret_val = 1
 
     elif fc.is_gzip():
         uc_file_name = fc.make_uncompressed()
@@ -889,7 +907,7 @@ def process_file_group(
 
 
 def check_file_fragments(
-    defrag_file_name, fragment_list, fragment_size, total_size, instrument_id
+    defrag_file_name, fragment_list, fragment_size_dict, total_size, instrument_id
 ):
     """Checks that the file fragments are of a reasonable size
 
@@ -902,11 +920,11 @@ def check_file_fragments(
     """
     ret_val = True
 
-    if fragment_size <= 0:
-        log_info(
-            f"Fragment size specified is {str(fragment_size)}, skipping file fragment check."
-        )
-        return True
+    # if fragment_size <= 0:
+    #    log_info(
+    #        f"Fragment size specified is {str(fragment_size)}, skipping file fragment check."
+    #    )
+    #    return True
 
     # Assume sorted
     # fragment_list.sort()  #In case this hasn't already been done
@@ -915,7 +933,14 @@ def check_file_fragments(
     number_of_fragments = len(fragment_list)
     last_frag_expected_size = 0
 
+    # This math assumes a constant fragment size, so we just use the first
+    # fragments expectedsize
     if total_size != 0:
+        fragment_size = fragment_size_dict[
+            FileMgr.get_non_1a_filename(
+                os.path.basename(fragment_list[-1])
+            ).expectedsize
+        ]
         number_expected_fragments = math.ceil(total_size / fragment_size)
         if total_size % fragment_size > 0:
             number_expected_fragments = number_expected_fragments + 1
@@ -938,6 +963,7 @@ def check_file_fragments(
                 "Too many fragments: total size logged was %d; got %d, expected %d."
                 % (total_size, number_of_fragments, number_expected_fragments)
             )
+        del fragment_size
 
     # check fragment sizes:
     fragment_cntr = 0
@@ -963,11 +989,14 @@ def check_file_fragments(
         current_fragment_size = os.stat(fragment).st_size
         # preceeding frags must be frag_size (may be padded with \1A chars)
         if fragment_list.index(fragment) != (number_of_fragments - 1):
-            if current_fragment_size != fragment_size:
+            expectedsize = fragment_size_dict[
+                FileMgr.get_non_1a_filename(os.path.basename(fragment))
+            ].expectedsize
+            if current_fragment_size != expectedsize:
                 msg = "Fragment %s file size (%d) not equal to expected size (%d)" % (
                     fragment,
                     current_fragment_size,
-                    fragment_size,
+                    expectedsize,
                 )
                 log_warning(msg)
                 log_conversion_alert(
@@ -980,9 +1009,28 @@ def check_file_fragments(
                     "Fragment %s size (%d) is expected."
                     % (fragment, current_fragment_size)
                 )
-        # if total_size is known, last frag size should be expected OR <= frag_size if total_size is unknown
         else:
-            if total_size != 0:
+            # First check if we have a known mismatch between the expected vs received size - this really
+            # is just applies to raw for the last fragment in the chain.  If that isn't the case,
+            # and the total_size is known, last frag size should be expected
+            # OR <= frag_size if total_size is unknown
+            expectedsize, receivedsize = fragment_size_dict[
+                FileMgr.get_non_1a_filename(os.path.basename(fragment))
+            ]
+            if receivedsize >= 0 and expectedsize != receivedsize:
+                msg = "Fragment %s file size (%d) not equal to expected size (%d)" % (
+                    fragment,
+                    receivedsize,
+                    expectedsize,
+                )
+                log_warning(msg)
+                log_conversion_alert(
+                    defrag_file_name,
+                    msg + f" - consider {generate_resend(fragment, instrument_id)}",
+                )
+                ret_val = False
+
+            elif total_size != 0:
                 if current_fragment_size != last_frag_expected_size:
                     msg = (
                         "Final fragment %s size (%d) is not expected (should be %d)."
@@ -995,16 +1043,16 @@ def check_file_fragments(
                         + f"- consider {generate_resend(fragment, instrument_id)}\n",
                     )
 
-            elif current_fragment_size > fragment_size:
+            elif current_fragment_size > expectedsize:
                 size_from_fragments += current_fragment_size
                 fc = FileMgr.FileCode(fragment, instrument_id)
-                if fc.is_fragment() and not (
+                if fc.get_fragment_counter() >= 0 and not (
                     fc.is_seaglider_selftest() and fc.is_capture()
                 ):
                     # This message only applies if the file is actually a fragment
                     msg = (
                         "Final fragment %s size (%d) is too big, expected less than or equal to %d."
-                        % (fragment, current_fragment_size, fragment_size)
+                        % (fragment, current_fragment_size, expectedsize)
                     )
                     log_warning(msg)
                     log_conversion_alert(
@@ -1377,7 +1425,6 @@ def main():
     incomplete_files = []
 
     instrument_id = None
-    fragment_size = None
     comm_log = None
 
     failed_mission_timeseries = False
@@ -1668,7 +1715,8 @@ def main():
     # if(fragment_size is None):
     #    log_error("No complete surfacings found in comm.log with valid fragment size - assuming 4K fragment size")
     #    fragment_size = 4096
-    fragment_dict = comm_log.get_fragment_dictionary()
+    # fragment_dict = comm_log.get_fragment_dictionary()
+    fragment_size_dict = comm_log.get_fragment_size_dict()
 
     # Collect all files to be processed - be sure to include all files, including the flash files
     file_collector = FileMgr.FileCollector(base_opts.mission_dir, instrument_id)
@@ -1704,19 +1752,19 @@ def main():
 
     for i in file_collector.all_selftests:
         selftest_files = file_collector.get_pre_proc_selftest_files(i)
-        if i in list(fragment_dict.keys()):
-            fragment_size = fragment_dict[i]
-        else:
-            fragment_size = 8192
-            log_warning(
-                "No fragment size found for %s - using %d as default"
-                % (i, fragment_size)
-            )
+        # if i in list(fragment_dict.keys()):
+        #     fragment_size = fragment_dict[i]
+        # else:
+        #     fragment_size = 8192
+        #     log_warning(
+        #         "No fragment size found for %s - using %d as default"
+        #         % (i, fragment_size)
+        #     )
         selftest_processed = process_dive_selftest(
             base_opts,
             selftest_files,
             i,
-            fragment_size,
+            fragment_size_dict,
             calib_consts,
             instrument_id,
             comm_log,
@@ -1767,19 +1815,19 @@ def main():
 
     for i in file_collector.all_dives:
         dive_files = file_collector.get_pre_proc_dive_files(i)
-        if i in list(fragment_dict.keys()):
-            fragment_size = fragment_dict[i]
-        else:
-            fragment_size = 8192
-            log_warning(
-                "No fragment size found for dive %s - using %d as default"
-                % (i, fragment_size)
-            )
+        # if i in list(fragment_dict.keys()):
+        #     fragment_size = fragment_dict[i]
+        # else:
+        #     fragment_size = 8192
+        #     log_warning(
+        #         "No fragment size found for dive %s - using %d as default"
+        #         % (i, fragment_size)
+        #     )
         dive_processed = process_dive_selftest(
             base_opts,
             dive_files,
             i,
-            fragment_size,
+            fragment_size_dict,
             calib_consts,
             instrument_id,
             comm_log,
@@ -2030,14 +2078,14 @@ def main():
                         > os.stat(known_file).st_mtime
                     ):
                         if (
-                            session.file_stats[known_files[ii]].filesize
+                            session.file_stats[known_files[ii]].receivedsize
                             != os.stat(known_file).st_size
                         ):
                             log_info(
                                 "File %s appear to be uploaded, but file size does not match (%d:%d) - not deleting"
                                 % (
                                     known_file,
-                                    session.file_stats[known_files[ii]].filesize,
+                                    session.file_stats[known_files[ii]].receivedsize,
                                     os.stat(known_file).st_size,
                                 )
                             )

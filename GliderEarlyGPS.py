@@ -200,18 +200,18 @@ class GliderEarlyGPSClient:
 
                 self.cleanup_shutdown()
 
-    def callback_transfered(self, filename, filesize):
+    def callback_transfered(self, filename, receivedsize):
         """ Callback for comm.log transfer line
         """
         if not self._first_time:
-            msg = "Transfered %d bytes of %s" % (filesize, filename)
+            msg = "Transfered %d bytes of %s" % (receivedsize, filename)
             log_info(msg)
 
-    def callback_received(self, filename, filesize):
+    def callback_received(self, filename, receivedsize):
         """ Callback for comm.log received line
         """
         if not self._first_time:
-            msg = "Received file %s (%d bytes)" % (filename, filesize)
+            msg = "Received file %s (%d bytes)" % (filename, receivedsize)
             log_info(msg)
 
     def callback_recovery(self, recovery_msg):

@@ -529,7 +529,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
     first_line = True
     timeout_count = 0
     if 'legato' in df_meta.instrument.instr_class.lower():
-        log_info("match")
+        #log_info("match")
         legato_error_count = 0
     else:
         legato_error_count = None
