@@ -53,6 +53,7 @@ import MakeDiveProfiles
 import MakeKML
 import MakePlot
 import MakePlot2
+import MakePlot4
 import QC
 import Sensors
 import TraceArray
@@ -421,6 +422,10 @@ def main():
             MakePlot2.main(
                 instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
             )
+            MakePlot4.main(
+                instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+            )
+
             log_info(
                 "Finished PLOT processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
