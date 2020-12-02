@@ -10,3 +10,4 @@ __pycache__
 *.o
 sc2mat
 x3decode_ts
+ETOPO2v2g_f4.nc
