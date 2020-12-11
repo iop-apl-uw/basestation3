@@ -1639,7 +1639,7 @@ def merge_lists_with_ts(list1, list2):
             list2[i][0] = last_time
         new_list.append((list2[i][0], list2[i][1]))
 
-    new_list.sort(key=functools.cmp_to_key(lambda x, y: x[0] < y[0]))
+    new_list.sort(key=lambda x: x[0])
 
     return new_list
 
