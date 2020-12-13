@@ -57,10 +57,20 @@ file_transfered_nt = collections.namedtuple(
     "file_transfered_nt", ["sector_num", "block_len"]
 )
 file_stats_nt = collections.namedtuple(
-    "file_stats_nt", ["expectedsize", "transfersize", "receivedsize", "bps"]
+    "file_stats_nt",
+    [
+        "expectedsize",  # Size advertised by protocol - Raw download
+        "transfersize",  # Size actually recieved - Raw download
+        "receivedsize",  # Bytes received - any protocol
+        "bps",  # XModem
+    ],
 )
 file_expected_actual_nt = collections.namedtuple(
-    "file_expected_actual_nt", ["expectedsize", "receivedsize"]
+    "file_expected_actual_nt",
+    [
+        "expectedsize",  # Size expected (or fragment size if xmodem)
+        "receivedsize",  # Number or bytes actually received
+    ],
 )
 
 

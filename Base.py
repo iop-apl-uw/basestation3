@@ -572,7 +572,7 @@ def process_file_group(
             ret_val = Strip1A.strip1A(fragment, fragment_1a)
         else:
             ret_val = Strip1A.strip1A(
-                fragment, fragment_1a, fragment_size_dict[fragment]
+                fragment, fragment_1a, fragment_size_dict[fragment].expectedsize
             )
         if ret_val and not fc.is_logger_payload():
             log_error(f"Couldn't strip1a {fragment_1a}. Skipping dive processing")
