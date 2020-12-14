@@ -31,6 +31,8 @@ import cProfile
 import zlib
 import sys
 import os
+import io
+import time
 
 import BaseOpts
 from BaseLog import *
@@ -124,7 +126,7 @@ def decompress (input_file_name, output_file_or_file_name):
         except IOError as exception:
             log_error("Could not open %s (%s)" % (output_file_or_file_name, exception.args))
             return 1
-    elif(isinstance(output_file_or_file_name, file)):
+    elif(isinstance(output_file_or_file_name, io.IOBase)):
         output_file = output_file_or_file_name
     else:
         log_error("Unknown type %s for output argument" % type(output_file_or_file_name))
@@ -201,7 +203,7 @@ def decompress (input_file_name, output_file_or_file_name):
     if((crc32 != U32(crcval)) and (isize != length)):
         input_file.seek(-1, 2)
         check_1a = input_file.read(1)
-        if(check_1a == "\x1a"):
+        if(check_1a == "\x1a".encode()):
             #Found a trailing 1a - try to re-calc the crc and filelen w/o this value
             log_info("Bad CRC and file len and %s has a trailing 1a - trying to recalc the crc and file length without it" % input_file_name)
             input_file.seek(-9, 2)
@@ -260,7 +262,7 @@ def main():
         return 1
 
     filename = os.path.expanduser(args[0])
-    decompress(filename, sys.stdout)
+    decompress(filename, f"{filename}.decomp")
     return 0
 
 if __name__ == '__main__':
