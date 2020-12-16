@@ -205,7 +205,7 @@ class CommLog:
                     if fs_stats.expectedsize >= 0:
                         expected_size = fs_stats.expectedsize
                     elif (
-                        expected_size < 0
+                        fs_stats.expectedsize < 0
                         and self.sessions[ii].fragment_size is not None
                     ):
                         expected_size = self.sessions[ii].fragment_size
