@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2020 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -131,17 +131,17 @@ def asc2eng(base_opts, module_name, datafile=None):
     # Old name(s)
     sbe43_o2_freq = datafile.remove_col('O2Freq')
 
-    if(sbe43_o2_freq == None):
+    if(sbe43_o2_freq is None):
         sbe43_o2_freq = datafile.remove_col('o2_freq')
 
-    if(sbe43_o2_freq == None):
+    if(sbe43_o2_freq is None):
         sbe43_o2_freq = datafile.remove_col('sbe43.o2_freq')
 
     # New name
-    if(sbe43_o2_freq == None):
+    if(sbe43_o2_freq is None):
         sbe43_o2_freq = datafile.remove_col('sbe43.O2Freq')
 
-    if(sbe43_o2_freq != None):
+    if(sbe43_o2_freq is not None):
         for i in range(len(sbe43_o2_freq)):
             if isfinite(sbe43_o2_freq[i]):
                 sbe43_o2_freq[i] = 4000000.0 / (sbe43_o2_freq[i] / 255.0)
