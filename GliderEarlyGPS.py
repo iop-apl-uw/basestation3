@@ -85,9 +85,14 @@ class GliderEarlyGPSClient:
 
         """
         shell_missing_count = 0
+        comm_log_error_count = 0
         while True:
             try:
-                self.process_comm_log()
+                if self.process_comm_log() is None:
+                    comm_log_error_count += 1
+                    if comm_log_error_count > 5:
+                        log_error(f"Error processing comm.log {comm_log_error_count} times - bailing out")
+                        self.cleanup_shutdown()
                 if self._first_time:
                     log_info("First time finished - start_pos:%d" % self._start_pos)
                 self._first_time = False
@@ -115,7 +120,7 @@ class GliderEarlyGPSClient:
         Called to process the comm log
 
         Returns
-            None
+            comm_log object
         """
         # pylint: disable=C0301
         (comm_log, self._start_pos, self._commlog_session, self._commlog_linecount) = CommLog.process_comm_log(self.__comm_log_file_name, self.__base_opts,
@@ -123,6 +128,7 @@ class GliderEarlyGPSClient:
                                                                                                                session=self._commlog_session, scan_back=self._first_time)
         if comm_log is not None:
             self._last_update = time.time()
+        return comm_log
 
     def closeout_commlog(self):
         """
