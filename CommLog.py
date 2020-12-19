@@ -32,10 +32,12 @@ import functools
 import inspect
 import math
 import os
+import pdb
 import pstats
 import re
 import sys
 import time
+import traceback
 
 import BaseOpts
 import BaseTime
@@ -51,6 +53,8 @@ from BaseLog import (
     log_error,
     log_critical,
 )
+
+DEBUG_PDB = False  # Set to True to enter debugger on exceptions
 
 # Named tuples
 file_transfered_nt = collections.namedtuple(
@@ -187,7 +191,7 @@ class CommLog:
         expected size and received size
 
         For RAW files, the recieved size is reported by the protocol for both up and down
-        For XMODEM files, the recieved size is reported by the protocol for up only, so this map
+        For X/Y MODEM files, the recieved size is reported by the protocol for up only, so this map
         is not useful for determining errors in transmission.
 
         If the expected size is not known, then fragment size for enclosing session is used or 8192
@@ -1241,7 +1245,7 @@ def process_comm_log(
                 except:
                     pass
 
-                # Files uploaded to the glider via XMODEM are of the form
+                # Files uploaded to the glider via X/Y MODEM are of the form
                 # Received cmdfile 322 bytes
                 if raw_strs[0] == "Received":
                     if len(raw_strs) > 3:
@@ -1254,7 +1258,7 @@ def process_comm_log(
                                 ]
                             else:
                                 log_warning(
-                                    "Found Recieved for %s with out matching XMODEM line"
+                                    "Found Recieved for %s with out matching X/Y MODEM line"
                                     % filename
                                 )
                                 expectedsize = -1
@@ -1388,12 +1392,14 @@ def process_comm_log(
 
                             continue
 
-                    # Files uploaded or Downloaded via XMODEM -
+                    # Files uploaded or Downloaded via X/Y MODEM -
                     # Fri Aug  5 17:17:48 2016 [sg075] cmdfile/XMODEM: 384 Bytes, 75 BPS
                     # Cannot tell the direction by the
                     if raw_line.find("Bytes") > -1:
-                        # XMODEM transfer
-                        front, end = raw_line.split("/XMODEM:")
+                        # X/Y MODEM transfer
+                        front, end = raw_line.split(
+                            "/XMODEM:" if "/XMODEM:" in raw_line else "/YMODEM:"
+                        )
                         filename = front.split(" ")[
                             -1
                         ].strip()  # last string is filename
@@ -1437,7 +1443,9 @@ def process_comm_log(
                         continue
 
                     if raw_line.find("got error") > -1:
-                        front, end = raw_line.split("/XMODEM:")
+                        front, end = raw_line.split(
+                            "/XMODEM:" if "/XMODEM:" in raw_line else "/YMODEM:"
+                        )
                         filename = front.split(" ")[
                             -1
                         ].strip()  # last string is filename
@@ -1581,6 +1589,11 @@ def process_comm_log(
         log_debug("process_comm_log finished")
         return (commlog, start_pos, session, line_count)
     except:
+        if DEBUG_PDB:
+            _, _, tb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(tb)
+
         log_error("process_comm_log failed with unexpected exception", "exc")
         return (None, None, session, line_count)
 
@@ -1734,6 +1747,7 @@ def main():
     (comm_log, _, _, _) = process_comm_log(
         os.path.expanduser(args[0]), base_opts, scan_back=False
     )
+
     fragment_size_dict = comm_log.get_fragment_size_dict()
     for kk, vv in fragment_size_dict.items():
         if vv.expectedsize != vv.receivedsize:
