@@ -525,7 +525,7 @@ class FileCode:
             # No counter present
             return -1
         try:
-            counter = int(self._filename[10:12], base=16)
+            counter = int(self._filename[10:12].lower().replace('k', 'c'), base=16)
         except ValueError:
             return -1
         else:
