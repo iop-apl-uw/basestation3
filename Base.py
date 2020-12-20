@@ -515,7 +515,10 @@ def process_file_group(
         # No Bogue for raw xfer
         _, t = os.path.split(bogue_file)
         log_debug(f"{t} = {comm_log.find_fragment_transfer_method(t)}")
-        if comm_log.find_fragment_transfer_method(t) == "raw":
+        if (
+            comm_log.find_fragment_transfer_method(t) == "raw"
+            or comm_log.find_fragment_transfer_method(t) == "ymodem"
+        ):
             continue
         try:
             i = file_group.index(bogue_file)
@@ -548,6 +551,11 @@ def process_file_group(
 
         # GBS 2020/03/10 - The above logic applies also to scicon/tmico/pmar files,
         # so they all get the strip1a treatment for the last fragment only
+
+        # GBS 2020/12/19 - With the replacement of ymodem for xmodem in the
+        # logger/glider transfer method, the need to strip files logger files.
+        # The check for fc.is_logger_strip_files() below can be removed once
+        # ymodem is in general use.
         log_debug(
             "fragment:%s transfer:%s logger:%s strip_files:%s"
             % (
@@ -558,7 +566,10 @@ def process_file_group(
             )
         )
         if (
-            comm_log.find_fragment_transfer_method(t) == "raw"
+            (
+                comm_log.find_fragment_transfer_method(t) == "raw"
+                or comm_log.find_fragment_transfer_method(t) == "ymodem"
+            )
             and not fc.is_logger_payload()
             and not (fc.is_logger_strip_files() and fragment == last_fragment)
         ):
@@ -656,7 +667,6 @@ def process_file_group(
 
     # Raw processing lists
     file_list = []
-
 
     if fc.is_tar() or fc.is_tgz() or fc.is_tjz():
         saved_defrag_file_name = defrag_file_name

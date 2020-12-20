@@ -165,7 +165,7 @@ class CommLog:
 
     def find_fragment_transfer_method(self, fragment_name):
         """ Returns what transfer protocol has used to transmit a fragment
-        "xmodem" or "raw" or "unknown"
+        "xmodem", "ymodem", "raw" or "unknown"
         """
         if fragment_name in list(self.file_transfer_method.keys()):
             return self.file_transfer_method[fragment_name]
@@ -1100,10 +1100,8 @@ def process_comm_log(
             if raw_line.startswith("Missing expected basestation prompt"):
                 continue
 
-            # Files send by XModem have not leading time stamp
             if raw_strs[0] == "Sent":
-                if len(raw_strs) > 1:
-                    file_transfer_method[raw_strs[1]] = "xmodem"
+                session.transfer_direction[raw_strs[1]] = "sent"
                 continue
 
             if raw_strs[0] == "Connected":
@@ -1252,6 +1250,7 @@ def process_comm_log(
                         try:
                             filename = raw_strs[1]
                             receivedsize = int(raw_strs[2])
+                            session.transfer_direction[raw_strs[1]] = "received"
                             if filename in session.file_stats:
                                 expectedsize, transfersize, _, bps = session.file_stats[
                                     filename
@@ -1421,13 +1420,16 @@ def process_comm_log(
                             )
                             files_transfered[filename] = file_transfered
                             session.transfered_size[filename] = file_transfered
-                            session.transfer_direction[filename] = "xmodem"
+                            if "/YMODEM:" in raw_line:
+                                session.transfer_method[filename] = "ymodem"
+                                file_transfer_method[filename] = "ymodem"
+                            else:
+                                session.transfer_method[filename] = "xmodem"
+                                file_transfer_method[filename] = "xmodem"
                             file_transfered = []
                             if file_crc_errors != []:
                                 session.crc_errors[filename] = file_crc_errors
                                 file_crc_errors = []
-
-                            session.transfer_method[filename] = "xmodem"
 
                             if known_commlog_files is not None:
                                 if filename in known_commlog_files:
@@ -1454,7 +1456,12 @@ def process_comm_log(
                             if tempname is not None:
                                 filename = tempname
                         # 0,0 indicates XModem error
-                        session.transfer_method[filename] = "xmodem"
+                        if "/YMODEM:" in raw_line:
+                            session.transfer_method[filename] = "ymodem"
+                            file_transfer_method[filename] = "ymodem"
+                        else:
+                            session.transfer_method[filename] = "xmodem"
+                            file_transfer_method[filename] = "xmodem"
                         file_transfered.append(file_transfered_nt(0, 0))
                         files_transfered[filename] = file_transfered
                         file_transfered = []
