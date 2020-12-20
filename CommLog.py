@@ -190,8 +190,8 @@ class CommLog:
         """ Returns a dictionary that maps a fragment name to a tuple of
         expected size and received size
 
-        For RAW files, the recieved size is reported by the protocol for both up and down
-        For X/Y MODEM files, the recieved size is reported by the protocol for up only, so this map
+        For RAW and YMODEM files, the recieved size is reported by the protocol for both up and down
+        For XMODEM files, the recieved size is reported by the protocol for up only, so this map
         is not useful for determining errors in transmission.
 
         If the expected size is not known, then fragment size for enclosing session is used or 8192
@@ -1252,6 +1252,8 @@ def process_comm_log(
                             receivedsize = int(raw_strs[2])
                             session.transfer_direction[raw_strs[1]] = "received"
                             if filename in session.file_stats:
+                                # The Received line alwasy follows a /XYMODEM line, so add in the
+                                # already collected stats
                                 expectedsize, transfersize, _, bps = session.file_stats[
                                     filename
                                 ]
@@ -1325,7 +1327,7 @@ def process_comm_log(
                                     log_error("received callback failed", "exc")
                             continue
 
-                    # RAW files downloaded from the glider
+                    # RAW or YMODEM files downloaded from the glider
                     if len(raw_strs) >= 11:
                         # Tue Oct  6 07:37:38 2020 [sg236] Receiving 8192 bytes of sc0041bg.x02
                         if raw_strs[6] == "Receiving":
@@ -1407,7 +1409,7 @@ def process_comm_log(
                             if tempname is not None:
                                 filename = tempname
 
-                        if filename is not None:
+                        if filename is not None: 
                             transfersize = int(
                                 end.lstrip().split(" ")[0].strip()
                             )  # first string is transfer size
@@ -1415,8 +1417,29 @@ def process_comm_log(
                                 end.lstrip().split(" ")[2].strip()
                             )  # bytes per second thiid string
 
+                            if "/YMODEM:" in raw_line:
+                                if filename not in session.file_stats:
+                                    # The /XYMODEM line follows a Receiving line for a download,
+                                    # but proceeds the Received line for an upload, so there may
+                                    # or may not be existing stats to add to
+                                    log_debug(
+                                        "Found Recieved for %s with out matching Receiving line"
+                                        % filename
+                                    )
+                                    expected_size = -1
+                                else:
+                                    expected_size = session.file_stats[
+                                        filename
+                                    ].expectedsize
+                                # Since there is no padding with YMODEM, the transfersize
+                                # is the receivedsize
+                                receivedsize = transfersize
+                            else:
+                                expectedsize = -1
+                                transfersize = -1
+
                             session.file_stats[filename] = file_stats_nt(
-                                -1, transfersize, -1, bps
+                                expected_size, transfersize, receivedsize, bps
                             )
                             files_transfered[filename] = file_transfered
                             session.transfered_size[filename] = file_transfered
@@ -1757,8 +1780,7 @@ def main():
 
     fragment_size_dict = comm_log.get_fragment_size_dict()
     for kk, vv in fragment_size_dict.items():
-        if vv.expectedsize != vv.receivedsize:
-            print(kk, vv)
+        print(kk, vv)
 
     # (comm_log, start_pos, _, line_count) = process_comm_log(os.path.expanduser(args[0]), base_opts, scan_back=False)
 
