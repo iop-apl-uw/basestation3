@@ -1100,6 +1100,7 @@ def process_comm_log(
             if raw_line.startswith("Missing expected basestation prompt"):
                 continue
 
+            # XMODEM to glider
             if raw_strs[0] == "Sent":
                 session.transfer_direction[raw_strs[1]] = "sent"
                 continue
@@ -1298,10 +1299,11 @@ def process_comm_log(
 
                     session.sg_id = int(sg_id_tmp[0])
 
-                    # RAW files uploaded to the glider
+                    # RAW or YMODEM files uploaded to the glider
                     # Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile
                     if len(raw_strs) > 10:
-                        if raw_strs[6] == "Sent":
+                        if raw_strs[6] == "Sent" and "/YMODEM" not in raw_line:
+                            # Raw send
                             try:
                                 filename = raw_strs[10]
                                 file_transfer_method[filename] = "raw"
@@ -1345,7 +1347,7 @@ def process_comm_log(
                             continue
 
                         # Thu Aug  4 19:49:42 2016 [sg203] Received 386 bytes of br0003lp.x03 (366.2 Bps)
-                        if raw_strs[6] == "Received":
+                        if raw_strs[6] == "Received" and "/YMODEM" not in raw_line:
                             try:
                                 filename = raw_strs[10]
                                 if filename not in session.file_stats:
@@ -1395,7 +1397,6 @@ def process_comm_log(
 
                     # Files uploaded or Downloaded via X/Y MODEM -
                     # Fri Aug  5 17:17:48 2016 [sg075] cmdfile/XMODEM: 384 Bytes, 75 BPS
-                    # Cannot tell the direction by the
                     if raw_line.find("Bytes") > -1:
                         # X/Y MODEM transfer
                         front, end = raw_line.split(
@@ -1415,7 +1416,7 @@ def process_comm_log(
                             )  # first string is transfer size
                             bps = int(
                                 end.lstrip().split(" ")[2].strip()
-                            )  # bytes per second thiid string
+                            )  # bytes per second third string
 
                             if "/YMODEM:" in raw_line:
                                 if filename not in session.file_stats:
@@ -1777,6 +1778,11 @@ def main():
     (comm_log, _, _, _) = process_comm_log(
         os.path.expanduser(args[0]), base_opts, scan_back=False
     )
+
+    for ii in range(len(comm_log.sessions)):
+        for k in comm_log.sessions[ii].file_stats.keys():
+            print(k, comm_log.sessions[ii].file_stats[k])
+
 
     fragment_size_dict = comm_log.get_fragment_size_dict()
     for kk, vv in fragment_size_dict.items():
