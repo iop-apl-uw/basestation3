@@ -43,8 +43,13 @@ endif
 rm -f .connected
 touch .connected
 
-# To catch hanging shells
-set autologout=3
+# If set in the .cshrc (basestation simulators), honor that value for autologout
+if( $?AUTOLOGOUT_GLIDER ) then
+     # To catch hanging shells
+     set autologout=$AUTOLOGOUT_GLIDER
+else
+     set autologout=3
+endif
 
 # Signal the glider what files are waiting for upload
 set BASELOG = baselog_login_`date +%y%m%d%H%M%S`
