@@ -1533,7 +1533,7 @@ def main():
     )
 
     # Parse comm log
-    (comm_log, _, _, _) = CommLog.process_comm_log(
+    (comm_log, _, _, _, _) = CommLog.process_comm_log(
         os.path.join(base_opts.mission_dir, "comm.log"),
         base_opts,
         known_commlog_files=known_files,

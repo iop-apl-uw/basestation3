@@ -207,7 +207,7 @@ def main():
        log_debug("base_opts.mission_dir: " + base_opts.mission_dir)
        log_debug("comm_log: " + comm_log)
 
-       (commlog, start_pos, _, _) = CommLog.process_comm_log(base_opts.mission_dir + comm_log, base_opts) # returns a CommLog object
+       (commlog, start_pos, _, _, _) = CommLog.process_comm_log(base_opts.mission_dir + comm_log, base_opts) # returns a CommLog object
        if (commlog is None):
           return 1
           

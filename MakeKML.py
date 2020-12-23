@@ -1251,7 +1251,7 @@ def main(
     if not dive_nc_file_names:
         dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
 
-    (comm_log, _, _, _) = CommLog.process_comm_log(
+    (comm_log, _, _, _, _) = CommLog.process_comm_log(
         os.path.join(base_opts.mission_dir, "comm.log"), base_opts
     )
     if comm_log is None:

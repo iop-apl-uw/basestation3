@@ -1016,7 +1016,7 @@ def process_comm_log(
                 comm_log_file = open(comm_log_file_name, "rb")
             except IOError:
                 log_error("Could not open %s for reading." % comm_log_file_name)
-                return (None, None, None, None)
+                return (None, None, None, None, 1)
 
             try:
                 comm_log_file.seek(-2, os.SEEK_END)
@@ -1045,12 +1045,12 @@ def process_comm_log(
                 start_pos = 0
             elif statinfo.st_size == start_pos:
                 # Start pos is the same as filesize - nothing to do
-                return (None, start_pos, session, line_count)
+                return (None, start_pos, session, line_count, 0)
         try:
             comm_log_file = open(comm_log_file_name, "rb")
         except IOError:
             log_error("Could not open %s for reading." % comm_log_file_name)
-            return (None, None, None, None)
+            return (None, None, None, None, 1)
 
         log_debug("process_comm_log starting")
         if start_pos >= 0 and statinfo.st_size > start_pos:
@@ -1618,7 +1618,7 @@ def process_comm_log(
             sessions, raw_file_lines, files_transfered, file_transfer_method
         )
         log_debug("process_comm_log finished")
-        return (commlog, start_pos, session, line_count)
+        return (commlog, start_pos, session, line_count, 0)
     except:
         if DEBUG_PDB:
             _, _, tb = sys.exc_info()
@@ -1626,7 +1626,7 @@ def process_comm_log(
             pdb.post_mortem(tb)
 
         log_error("process_comm_log failed with unexpected exception", "exc")
-        return (None, None, session, line_count)
+        return (None, None, session, line_count, 1)
 
 
 def process_history_log(history_log_file_name):

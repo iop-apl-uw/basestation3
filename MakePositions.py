@@ -75,7 +75,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         log_error("Could not process %s - skipping creation of txt file" % sg_calib_file_name)
         return 1
 
-    (comm_log, _, _, _) = CommLog.process_comm_log(os.path.join(base_opts.mission_dir, 'comm.log'), base_opts)
+    (comm_log, _, _, _, _) = CommLog.process_comm_log(os.path.join(base_opts.mission_dir, 'comm.log'), base_opts)
     if(comm_log is None):
         log_critical("Could not process comm.log -- bailing out")
         return 1
