@@ -1302,7 +1302,7 @@ def process_comm_log(
                     # RAW or YMODEM files uploaded to the glider
                     # Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile
                     if len(raw_strs) > 10:
-                        if raw_strs[6] == "Sent" and "/YMODEM" not in raw_line:
+                        if raw_strs[6] == "Sent" and "/YMODEM" not in raw_line and "/XMODEM" not in raw_line:
                             # Raw send
                             try:
                                 filename = raw_strs[10]
@@ -1436,8 +1436,9 @@ def process_comm_log(
                                 # is the receivedsize
                                 receivedsize = transfersize
                             else:
-                                expectedsize = -1
+                                expected_size = -1
                                 transfersize = -1
+                                receivedsize = -1
 
                             session.file_stats[filename] = file_stats_nt(
                                 expected_size, transfersize, receivedsize, bps
@@ -1775,9 +1776,9 @@ def main():
         print("usage: CommLog.py logfile [latlong data file] [options]")
         return 1
 
-    (comm_log, _, _, _) = process_comm_log(
+    comm_log= process_comm_log(
         os.path.expanduser(args[0]), base_opts, scan_back=False
-    )
+    )[0]
 
     for ii in range(len(comm_log.sessions)):
         for k in comm_log.sessions[ii].file_stats.keys():
