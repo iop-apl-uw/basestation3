@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 ##
-## Copyright (c) 2006-2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1302,6 +1302,20 @@ def process_comm_log(
                     # RAW or YMODEM files uploaded to the glider
                     # Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile
                     if len(raw_strs) > 10:
+                        if raw_strs[6] == "Sending":
+                            try:
+                                filename = raw_strs[10]
+                                session.file_stats[filename] = file_stats_nt(
+                                    int(raw_strs[7]), -1, -1, -1
+                                )
+                            except:
+                                log_error(
+                                    "Could not process %s: lineno %d"
+                                    % (raw_strs, line_count),
+                                    "exc",
+                                )
+                            continue
+
                         if raw_strs[6] == "Sent" and "/YMODEM" not in raw_line and "/XMODEM" not in raw_line:
                             # Raw send
                             try:
@@ -1410,17 +1424,22 @@ def process_comm_log(
                             if tempname is not None:
                                 filename = tempname
 
-                        if filename is not None: 
-                            transfersize = int(
-                                end.lstrip().split(" ")[0].strip()
-                            )  # first string is transfer size
-                            bps = int(
-                                end.lstrip().split(" ")[2].strip()
-                            )  # bytes per second third string
-
+                        if filename is not None:
                             if "/YMODEM:" in raw_line:
+                                try:
+                                    transfersize = int(
+                                        raw_strs[7].strip()
+                                    )
+                                    bps = int(
+                                        end.lstrip().split(" ")[2].strip()
+                                    )  # bytes per second third string
+                                except ValueError:
+                                    log_error("Error processing: lineno %d, line %s"
+                                              % (comm_log_file_name, line_count, raw_line), 'exc')
+                                    transfersize = bps = -1
+
                                 if filename not in session.file_stats:
-                                    # The /XYMODEM line follows a Receiving line for a download,
+                                    # The /YMODEM line follows a Receiving line for a download,
                                     # but proceeds the Received line for an upload, so there may
                                     # or may not be existing stats to add to
                                     log_debug(
@@ -1436,8 +1455,14 @@ def process_comm_log(
                                 # is the receivedsize
                                 receivedsize = transfersize
                             else:
+                                # XMODEM
+                                transfersize = int(
+                                    end.lstrip().split(" ")[0].strip()
+                                )  # first string is transfer size
+                                bps = int(
+                                    end.lstrip().split(" ")[2].strip()
+                                )  # bytes per second third string
                                 expected_size = -1
-                                transfersize = -1
                                 receivedsize = -1
 
                             session.file_stats[filename] = file_stats_nt(
