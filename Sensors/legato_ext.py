@@ -49,7 +49,7 @@ def init_sensor(module_name, init_dict=None):
 
             # legato via scicon
             'legato_time': [True, 'd', {'standard_name': 'time', 'units': 'seconds since 1970-1-1 00:00:00', 'description': 'sbe41 time in GMT epoch format',}, (nc_legato_data_info,)],
-            'legato_conduc': [True, 'd', {'standard_name':'sea_water_electrical_conductivity', 'units':'S/m', 'description':'Conductivity as reported by the instrument'}, (nc_legato_data_info,)],
+            'legato_conduc': [True, 'd', {'standard_name':'sea_water_electrical_conductivity', 'units':'mS/cm', 'description':'Conductivity as reported by the instrument'}, (nc_legato_data_info,)],
             'legato_temp': [True, 'd', {'standard_name':'sea_water_temperature', 'units':'degrees_Celsius', 'description':'Termperature (in situ) as reported by the instrument'}, (nc_legato_data_info,)],
             'legato_conducTemp': [False, 'd', {'units':'degrees_Celsius', 'description':'As reported by the instrument'}, (nc_legato_data_info,)],
             'legato_pressure': [True, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'CTD reported pressure'}, (nc_legato_data_info,)],
