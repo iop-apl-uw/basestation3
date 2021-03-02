@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -163,7 +163,7 @@ def init_logger(module_name, init_dict=None):
                                 }
                               }
 
-    for name in ('temp', 'shear', 'temp0', 'temp1'):
+    for name in ('temp', 'shear', 'temp0', 'temp1', 'ch0', 'ch1'):
         init_dict[module_name]['netcdf_metadata_adds']['tmicl_nfft_%s' % name] = [False, 'i', {'description':'Size of FFT'}, nc_scalar]
         init_dict[module_name]['netcdf_metadata_adds']['tmicl_navg_%s' % name] = [False, 'i', {'description':'Number of overlapping FFTs averaged'}, nc_scalar]
         init_dict[module_name]['netcdf_metadata_adds']['tmicl_osc_%s' % name] = [False, 'i', {'description':'Oscillator setting'}, nc_scalar]
@@ -677,6 +677,7 @@ def eng_file_reader(eng_files, nc_info_d):
             rate = None
             effectiverate = None
             logmap = None
+            columns = None
             for l in fi:
                 if(l.startswith("%columns:")):
                     columns = l.split()[1:]
@@ -716,7 +717,7 @@ def eng_file_reader(eng_files, nc_info_d):
             time_col = data[0,:]
             spectra = data[1:,:]
 
-            if(columns[1] == 'sigvar'):
+            if(columns and columns[1] == 'sigvar'):
                 sig_var = spectra[0,:]
                 spectra = spectra[1:,:]
                 #TODO - From here
