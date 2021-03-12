@@ -80,7 +80,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         log_critical("Could not process comm.log -- bailing out")
         return 1
 
-    txt_file_name = os.path.join(base_opts.mission_dir, "sg%s_positions.txt" % comm_log.get_instrument_id())
+    txt_file_name = os.path.join(base_opts.mission_dir, "SG_%s_pos.txt" % comm_log.get_instrument_id())
     
     try:
         fo = open(txt_file_name, "w")
@@ -114,14 +114,14 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         try:
             if predictedTime:
                 if predictedTime > time.mktime(this_fix.datetime):
-                    predicted_ts = time.strftime("%Y/%m/%dT%H:%M:%SZ", time.gmtime(predictedTime))
+                    predicted_ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(predictedTime))
                     fo.write("%s,%.7f,%.7f,1\n" % (predicted_ts, predictedLat, predictedLon))
             predictedTime = predictedLat = predictedLong = None
         except:
             log_error("Could not process predicted time", 'exc')
             
         try:
-            this_ts = time.strftime("%Y/%m/%dT%H:%M:%SZ", this_fix.datetime)
+            this_ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", this_fix.datetime)
             this_lat = Utils.ddmm2dd(this_fix.lat)
             this_lon = Utils.ddmm2dd(this_fix.lon)
             fo.write("%s,%.7f,%.7f,0\n" % (this_ts, this_lat, this_lon))
