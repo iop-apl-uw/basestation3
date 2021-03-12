@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -105,7 +105,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             log_error("Unable to read %s" % glider_predict_position_file, 'exc')
             glider_predict_position_file = None
 
-    fo.write("Fixtime\tLatitude\tLongitude\tIsEstimate\n")
+    fo.write("%Fixtime,Latitude,Longitude,IsEstimate\n")
 
     for session in reversed(comm_log.sessions):
         this_fix = session.gps_fix
@@ -114,17 +114,17 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         try:
             if predictedTime:
                 if predictedTime > time.mktime(this_fix.datetime):
-                    predicted_ts = time.strftime("%Y/%m/%d %H:%M:%S", time.gmtime(predictedTime))
-                    fo.write("%s UTC\t%.7f\t%.7f\t1\n" % (predicted_ts, predictedLat, predictedLon))
+                    predicted_ts = time.strftime("%Y/%m/%dT%H:%M:%SZ", time.gmtime(predictedTime))
+                    fo.write("%s,%.7f,%.7f,1\n" % (predicted_ts, predictedLat, predictedLon))
             predictedTime = predictedLat = predictedLong = None
         except:
             log_error("Could not process predicted time", 'exc')
             
         try:
-            this_ts = time.strftime("%Y/%m/%d %H:%M:%S", this_fix.datetime)
+            this_ts = time.strftime("%Y/%m/%dT%H:%M:%SZ", this_fix.datetime)
             this_lat = Utils.ddmm2dd(this_fix.lat)
             this_lon = Utils.ddmm2dd(this_fix.lon)
-            fo.write("%s UTC\t%.7f\t%.7f\t0\n" % (this_ts, this_lat, this_lon))
+            fo.write("%s,%.7f,%.7f,0\n" % (this_ts, this_lat, this_lon))
         except:
             log_error("Could not process session", 'exc')
             continue
