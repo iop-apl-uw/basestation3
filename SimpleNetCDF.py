@@ -58,6 +58,8 @@ var_metadata = collections.namedtuple(
 )
 
 nc_meta = {
+    "time": var_metadata(None, "time", "depth", "sg_data_point"),
+    "depth": var_metadata(None, "time", "depth", "sg_data_point"),
     "ctd_time": var_metadata(None, "ctd_time", "ctd_depth", "ctd_data_point"),
     "ctd_depth": var_metadata(None, "ctd_time", "ctd_depth", "ctd_data_point"),
     "temperature": var_metadata(
@@ -68,8 +70,8 @@ nc_meta = {
     "longitude": var_metadata(None, "ctd_time", "ctd_depth", "ctd_data_point"),
     # "aa4831_O2": var_metadata(None, "aa4841_time", None, "aa4831_data_point",),
     "aa4831_time": var_metadata(None, "aa4831_time", None, "aa4831_data_point"),
-    "aa4831_dissolved_oxygen": var_metadata(
-        "aa4831_dissolved_oxygen_qc", "aa4841_time", None, "aa4831_data_point",
+    "aanderaa4831_dissolved_oxygen": var_metadata(
+        "aanderaa4831_dissolved_oxygen_qc", "aa4831_time", None, "aa4831_data_point",
     ),
 }
 
@@ -111,7 +113,7 @@ new_nc_vars = {
             "positive": "down",
             "description": "Depth below the surface, corrected for average latitude",
         },
-        (depth_dimension_name,),
+        (profile_dimension_name, depth_dimension_name),
     ),
     "profile": nc_var_meta(
         # np.byte,
@@ -328,7 +330,10 @@ def main(
 
         netcdf_in_filename = dive_nc_file_name
         head = os.path.splitext(netcdf_in_filename)[0]
-        netcdf_out_filename = "%s.ncf" % (head)
+        if simp_cdf_conf.bin_width:
+            netcdf_out_filename = "%s.ncfb" % (head)
+        else:
+            netcdf_out_filename = "%s.ncf" % (head)
 
         log_info("Output file = %s" % netcdf_out_filename)
 
@@ -379,7 +384,8 @@ def main(
             nco.createDimension(depth_dimension_name, len(bin_centers))
             nco.createDimension(profile_dimension_name, 2)
             depth = create_nc_var(nco, "depth")
-            depth[:] = bin_centers
+            depth[0, :] = bin_centers
+            depth[1, :] = bin_centers
             profile = create_nc_var(nco, "profile")
             # profile[:] = np.array((ord("a"), ord("b")), np.byte)
             profile[:] = np.array((0, 1), np.int16)
@@ -414,7 +420,7 @@ def main(
                     # Reduce to float for data fields
                     vv[:] = data.astype(np.float32)
             else:
-                if "time" in var_name:
+                if "time" in var_name or "depth" in var_name:
                     continue
                 max_depth_i = np.argmax(depth)
                 binned_data_down, n_obs_down, *_ = bindata(
@@ -460,7 +466,8 @@ def main(
 
         # pylint: disable=protected-access
         for a in list(nci._attributes.keys()):
-            nco.__setattr__(a, nci._attributes[a])
+            if not (simp_cdf_conf.bin_width and a == "history"):
+                nco.__setattr__(a, nci._attributes[a])
         # pylint: enable=protected-access
 
         nci.close()

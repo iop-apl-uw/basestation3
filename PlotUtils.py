@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -33,13 +33,12 @@ make_plot_default_dict = {
     "plot_raw": [0, 0, 1],
     "save_svg": [0, 0, 1],
     "save_png": [1, 0, 1],
-    "full_html": [1 if 'darwin' in sys.platform else 0, 0, 1],
+    "full_html": [1 if "darwin" in sys.platform else 0, 0, 1],
     "plot_directory": [None, None, None],
     "plot_freeze_pt": [0, 0, 1],
     "pmar_logavg_max": [1e2, 0.0, 1e10],
     "pmar_logavg_min": [1e-4, 0.0, 1e10],
     # MakePlot3 related
-
     # Legato debug plot
     "plot_legato": [0, 0, 1],
     # For the legato debug plot, use the glider's pressure signal instead of the sensors
@@ -60,14 +59,20 @@ def get_mission_dive(dive_nc_file):
     Returns:
          String containing the mission title
     """
-    log_id = 0
-    log_dive = 0
+    glider_id = 0
+    dive_num = 0
     mission_title = ""
-    if "log_ID" in dive_nc_file.variables:
-        log_id = dive_nc_file.variables["log_ID"].getValue()
-    if "log_DIVE" in dive_nc_file.variables:
-        log_dive = dive_nc_file.variables["log_DIVE"].getValue()
-    if "sg_cal_mission_title" in dive_nc_file.variables:
+    if hasattr(dive_nc_file, "glider"):
+        glider_id = getattr(dive_nc_file, "glider")
+    elif "log_ID" in dive_nc_file.variables:
+        glider_id = dive_nc_file.variables["log_ID"].getValue()
+    if hasattr(dive_nc_file, "dive_number"):
+        dive_num = getattr(dive_nc_file, "dive_number")
+    elif "log_DIVE" in dive_nc_file.variables:
+        dive_num = dive_nc_file.variables["log_DIVE"].getValue()
+    if hasattr(dive_nc_file, "project"):
+        mission_title = getattr(dive_nc_file, "project").decode("utf-8")
+    elif "sg_cal_mission_title" in dive_nc_file.variables:
         mission_title = (
             dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
         )
@@ -79,7 +84,7 @@ def get_mission_dive(dive_nc_file):
     else:
         start_time = "(No start time found)"
 
-    return f"SG{log_id:03d} {mission_title} Dive {log_dive:d} Started {start_time}"
+    return f"SG{glider_id:03d} {mission_title} Dive {dive_num:d} Started {start_time}"
 
 
 def get_mission_str(dive_nc_file):
