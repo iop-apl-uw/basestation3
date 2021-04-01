@@ -80,7 +80,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         log_critical("Could not process comm.log -- bailing out")
         return 1
 
-    txt_file_name = os.path.join(base_opts.mission_dir, "SG_%s_pos.txt" % comm_log.get_instrument_id())
+    txt_file_name = os.path.join(base_opts.mission_dir, "SG_%s_positions.txt" % comm_log.get_instrument_id())
     
     try:
         fo = open(txt_file_name, "w")
