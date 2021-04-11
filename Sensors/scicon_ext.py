@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -43,10 +43,13 @@ import DataFiles
 import Sensors
 from scipy.io import loadmat
 
+import pdb
+
 # Globals
 scicon_prefix = "sc"
 nc_depth_data_info = 'depth_data_info' # scicon pressure data from the glider
 nc_auxcompass_data_info = 'auxCompass_data_info' # scicon
+nc_auxb_data_info = 'auxB_data_info' # scicon
 
 # adcp on the scicon
 ad2cp_base = "ad2cp"
@@ -208,81 +211,86 @@ def init_logger(module_name, init_dict=None):
         log_error("No datafile supplied for init_loggers - version mismatch?")
         return -1
 
-    register_sensor_dim_info(nc_depth_data_info, 'depth_data_point', 'depth_time', True, None)
-    register_sensor_dim_info(nc_auxcompass_data_info, 'auxCompass_data_point', 'auxCompass_time', True, None)
+    #register_sensor_dim_info(nc_depth_data_info, 'depth_data_point', 'depth_time', True, None)
 
+    register_sensor_dim_info(nc_auxb_data_info, 'auxB_data_point', 'auxB_time', True, None)
+    register_sensor_dim_info(nc_auxcompass_data_info, 'auxCompass_data_point', 'auxCompass_time', True, None)
+    
     register_sensor_dim_info(nc_ad2cp_data_info, nc_ad2cp_data_dim, None, True, None)
     register_sensor_dim_info(nc_ad2cp_cell_info, nc_ad2cp_cell_dim, None, True, None)
+
+    scicon_metadata_adds = {
+        'log_SC_RECORDABOVE': [False, 'd', {'description':'Depth above above which data is recorded', 'units':'meters'}, nc_scalar],
+        'log_SC_PROFILE': [False, 'd', {'description':'Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
+        'log_SC_XMITPROFILE': [False, 'd', {'description':'Which profile to transmit back to the basestation - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
+        'log_SC_FREEKB': [False, 'd', {'description':'Free diskspace on Scicon, in kBytes'}, nc_scalar],
+        'log_SC_NDIVE': [False, 'd', {'description':'Dive multiplier for Scicon'}, nc_scalar],
+        'sg_cal_QC_high_freq_noise': [False, 'i', {'description':'The smoothing window width (in samples) for QC noise on scicon'}, nc_scalar],
+
+        # scicon supplies it's own pressure sensor readings
+        # NOTE these are not presently included in MMT/MMP because their length isn't sg_np
+        'depth_time': [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Pressure sensor time in GMT epoch format'}, (nc_depth_data_info,)],
+        'depth_depth': [False, 'd', {'standard_name':'depth', 'positive':'down', 'units':'cm', 'description':'Measured vertical distance below the surface'}, (nc_depth_data_info,)],
+        'depth_ontime_a': [False, 'd', {'description':'depth total time turned on dive', 'units' : 'secs'}, nc_scalar],
+        'depth_samples_a': [False, 'i', {'description':'depth total number of samples taken dive'}, nc_scalar],
+        'depth_timeouts_a': [False, 'i', {'description':'depth total number of timeouts on dive'}, nc_scalar],
+        'depth_ontime_b': [False, 'd', {'description':'depth total time turned on climb', 'units' : 'secs'}, nc_scalar],
+        'depth_samples_b': [False, 'i', {'description':'depth total number of samples taken climb'}, nc_scalar],
+        'depth_timeouts_b': [False, 'i', {'description':'depth total number of timeouts on climb'}, nc_scalar],
+
+        # adcp on scicon
+        'ad2cp_pressure': [False, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Pressure as reported by the CP'}, (nc_ad2cp_data_info,)],
+        'ad2cp_heading': [False, 'd', {'standard_name':'heading', 'units':'degrees', 'description':' '}, (nc_ad2cp_data_info,)],
+        'ad2cp_pitch': [False, 'd', {'standard_name':'pitch', 'units':'degrees', 'description':' '}, (nc_ad2cp_data_info,)],
+        'ad2cp_roll': [False, 'd', {'standard_name':'roll', 'units':'degrees', 'description':' '}, (nc_ad2cp_data_info,)],
+        'ad2cp_temperature': [False, 'd', {'standard_name':'sea_water_temperature', 'units':'degrees_Celsius', 'description':'Termperature as reported by the CP'}, (nc_ad2cp_data_info,)],
+        'ad2cp_time': [False, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'CP time in GMT epoch format'}, (nc_ad2cp_data_info,)],
+        'ad2cp_battery': [False, 'd', {'standard_name':'voltage', 'units':'volts', 'description':'Obverved average battery volgate'}, (nc_ad2cp_data_info,)],
+        'ad2cp_velX': [False, 'd', {'units':'m/s', 'description':'Velocity along X-axis'}, (nc_ad2cp_data_info, nc_ad2cp_cell_info)],
+        'ad2cp_velY': [False, 'd', {'units':'m/s', 'description':'Velocity along Y-axis'}, (nc_ad2cp_data_info, nc_ad2cp_cell_info)],
+        'ad2cp_velZ': [False, 'd', {'units':'m/s', 'description':'Velocity along Z-azis'}, (nc_ad2cp_data_info, nc_ad2cp_cell_info)],
+        'ad2cp_blanking': [False, 'd', {'description':'Blanking distance', 'units':'cm'}, nc_scalar],
+        'ad2cp_cellSize': [False, 'd', {'description':'Size of cells', 'units':'mm'}, nc_scalar],
+        'ad2cp_soundspeed': [False, 'd', {'description':'Assumed sound speed', 'units':'m/s'}, nc_scalar],
+    }
+
+    # Aux compass/pressure sensor
+    for auxname, aux_data_info in (('auxCompass', nc_auxcompass_data_info), ('auxB', nc_auxb_data_info)):
+        scicon_metadata_adds[f'{auxname}_hdg'] = [True, 'd', {'standard_name':'heading', 'units':'degrees', 'description':' '}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_pit'] = [True, 'd', {'standard_name':'pitch', 'units':'degrees', 'description':' '}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_rol'] = [True, 'd', {'standard_name':'roll', 'units':'degrees', 'description':' '}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_Mx'] = [False, 'd', {'units':'counts', 'description':'Magnetometer X'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_My'] = [False, 'd', {'units':'counts', 'description':'Magnetometer Y'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_Mz'] = [False, 'd', {'units':'counts', 'description':'Magnetometer Z'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_Ax'] = [False, 'd', {'units':'counts', 'description':'Accelerometer X'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_Ay'] = [False, 'd', {'units':'counts', 'description':'Accelerometer Y'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_Az'] = [False, 'd', {'units':'counts', 'description':'Accelerometer Z'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_pressureCounts'] = [False, 'd', {'units':'counts', 'description':'Uncorrected sea-water pressure in instruments counts'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_press'] = [True, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Uncorrected sea-water pressure'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_depth'] = [True, 'd', {'standard_name':'depth', 'axis':'Z', 'units':'meters', 'positive':'down', 'description':'Depth below the surface, corrected for average latitude'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_time'] = [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Pressure sensor time in GMT epoch format'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_xform'] = [False, 'c', {'description':f'{auxname} Accelerometer scaling matrix and offset '}, nc_scalar]
+        scicon_metadata_adds[f'{auxname}_tcm2mat'] = [False, 'c', {'description':f'{auxname} Pitch/Roll coefficients, Magnetometer scaling matrix and offset'}, nc_scalar]
+        scicon_metadata_adds[f'{auxname}_pressure'] = [False, 'c', {'description':f'{auxname} sea-level slope (psi/AD) and offset (counts)'}, nc_scalar]
+        scicon_metadata_adds[f'{auxname}_pressureTemp'] = [False, 'c', {'description':f'{auxname} pressure sensor temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_internalTemp'] = [False, 'c', {'description':f'{auxname} interernal temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_temperature'] = [False, 'c', {'description':f'{auxname} interernal temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_ontime_a'] = [False, 'd', {'description':f'{auxname} total time turned on dive', 'units' : 'secs'}, nc_scalar]
+        scicon_metadata_adds[f'{auxname}_samples_a'] = [False, 'i', {'description':f'{auxname} total number of samples taken dive'}, nc_scalar]
+        scicon_metadata_adds[f'{auxname}_timeouts_a'] = [False, 'i', {'description':f'{auxname} total time turned samples timedout on dive', 'units' : 'secs'}, nc_scalar]
+        scicon_metadata_adds[f'{auxname}_ontime_b'] = [False, 'd', {'description':f'{auxname} total time turned on climb', 'units' : 'secs'}, nc_scalar]
+        scicon_metadata_adds[f'{auxname}_samples_b'] = [False, 'i', {'description':f'{auxname} total number of samples taken climb'}, nc_scalar]
+        scicon_metadata_adds[f'{auxname}_timeouts_b'] = [False, 'i', {'description':f'{auxname} total time turned samples timedout on climb', 'units' : 'secs'}, nc_scalar]
+        scicon_metadata_adds[f'sg_cal_{auxname}_coeffhex'] = [False, 'c', {'description':f'{auxname} coefficients'}, nc_scalar]
+        scicon_metadata_adds[f'sg_cal_{auxname}_abc'] = [False, 'c', {'description':f'{auxname} soft-iron correction'}, nc_scalar]
+        scicon_metadata_adds[f'sg_cal_{auxname}_pqr'] = [False, 'c', {'description':f'{auxname} hard-iron correction'}, nc_scalar]
+        
 
     init_dict[module_name] = {'logger_prefix' : scicon_prefix,
                               'strip_files' : True,
                               'eng_file_reader' : eng_file_reader,
                               'known_files' : ['scicon.sch', 'scicon.ins', 'scicon.att', 'scicon.tcm'],
-                              'netcdf_metadata_adds' : {
-                                  'log_SC_RECORDABOVE': [False, 'd', {'description':'Depth above above which data is recorded', 'units':'meters'}, nc_scalar],
-                                  'log_SC_PROFILE': [False, 'd', {'description':'Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
-                                  'log_SC_XMITPROFILE': [False, 'd', {'description':'Which profile to transmit back to the basestation - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
-                                  'log_SC_FREEKB': [False, 'd', {'description':'Free diskspace on Scicon, in kBytes'}, nc_scalar],
-                                  'log_SC_NDIVE': [False, 'd', {'description':'Dive multiplier for Scicon'}, nc_scalar],
-                                  'sg_cal_QC_high_freq_noise': [False, 'i', {'description':'The smoothing window width (in samples) for QC noise on scicon'}, nc_scalar],
-
-                                  # scicon supplies it's own pressure sensor readings
-                                  # NOTE these are not presently included in MMT/MMP because their length isn't sg_np
-                                  'depth_time': [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Pressure sensor time in GMT epoch format'}, (nc_depth_data_info,)],
-                                  'depth_depth': [False, 'd', {'standard_name':'depth', 'positive':'down', 'units':'cm', 'description':'Measured vertical distance below the surface'}, (nc_depth_data_info,)],
-                                  'depth_ontime_a': [False, 'd', {'description':'depth total time turned on dive', 'units' : 'secs'}, nc_scalar],
-                                  'depth_samples_a': [False, 'i', {'description':'depth total number of samples taken dive'}, nc_scalar],
-                                  'depth_timeouts_a': [False, 'i', {'description':'depth total number of timeouts on dive'}, nc_scalar],
-                                  'depth_ontime_b': [False, 'd', {'description':'depth total time turned on climb', 'units' : 'secs'}, nc_scalar],
-                                  'depth_samples_b': [False, 'i', {'description':'depth total number of samples taken climb'}, nc_scalar],
-                                  'depth_timeouts_b': [False, 'i', {'description':'depth total number of timeouts on climb'}, nc_scalar],
-
-                                  # Aux compass/pressure sensor
-                                  'auxCompass_hdg': [True, 'd', {'standard_name':'heading', 'units':'degrees', 'description':' '}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_pit': [True, 'd', {'standard_name':'pitch', 'units':'degrees', 'description':' '}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_rol': [True, 'd', {'standard_name':'roll', 'units':'degrees', 'description':' '}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_Mx': [False, 'd', {'units':'counts', 'description':'Magnetometer X'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_My': [False, 'd', {'units':'counts', 'description':'Magnetometer Y'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_Mz': [False, 'd', {'units':'counts', 'description':'Magnetometer Z'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_Ax': [False, 'd', {'units':'counts', 'description':'Accelerometer X'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_Ay': [False, 'd', {'units':'counts', 'description':'Accelerometer Y'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_Az': [False, 'd', {'units':'counts', 'description':'Accelerometer Z'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_pressureCounts': [False, 'd', {'units':'counts', 'description':'Uncorrected sea-water pressure in instruments counts'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_press': [True, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Uncorrected sea-water pressure'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_depth': [True, 'd', {'standard_name':'depth', 'axis':'Z', 'units':'meters', 'positive':'down', 'description':'Depth below the surface, corrected for average latitude'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_time': [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Pressure sensor time in GMT epoch format'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_xform': [False, 'c', {'description':'auxCompass Accelerometer scaling matrix and offset '}, nc_scalar],
-                                  'auxCompass_tcm2mat': [False, 'c', {'description':'auxCompass Pitch/Roll coefficients, Magnetometer scaling matrix and offset'}, nc_scalar],
-                                  'auxCompass_pressure': [False, 'c', {'description':'auxCompass sea-level slope (psi/AD) and offset (counts)'}, nc_scalar],
-                                  'auxCompass_pressureTemp': [False, 'c', {'description':'auxCompass pressure sensor temperature', 'units' : 'degrees_Celsius'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_internalTemp': [False, 'c', {'description':'auxCompass interernal temperature', 'units' : 'degrees_Celsius'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_temperature': [False, 'c', {'description':'auxCompass interernal temperature', 'units' : 'degrees_Celsius'}, (nc_auxcompass_data_info,)],
-                                  'auxCompass_ontime_a': [False, 'd', {'description':'auxCompass total time turned on dive', 'units' : 'secs'}, nc_scalar],
-                                  'auxCompass_samples_a': [False, 'i', {'description':'auxCompass total number of samples taken dive'}, nc_scalar],
-                                  'auxCompass_timeouts_a': [False, 'i', {'description':'auxCompass total time turned samples timedout on dive', 'units' : 'secs'}, nc_scalar],
-
-                                  'auxCompass_ontime_b': [False, 'd', {'description':'auxCompass total time turned on climb', 'units' : 'secs'}, nc_scalar],
-                                  'auxCompass_samples_b': [False, 'i', {'description':'auxCompass total number of samples taken climb'}, nc_scalar],
-                                  'auxCompass_timeouts_b': [False, 'i', {'description':'auxCompass total time turned samples timedout on climb', 'units' : 'secs'}, nc_scalar],
-                                  'sg_cal_auxcompass_coeffhex': [False, 'c', {'description':'auxCompass coefficients'}, nc_scalar],
-                                  'sg_cal_auxcompass_abc': [False, 'c', {'description':'auxCompass soft-iron correction'}, nc_scalar],
-                                  'sg_cal_auxcompass_pqr': [False, 'c', {'description':'auxCompass hard-iron correction'}, nc_scalar],
-
-                                  # adcp on scicon
-                                  'ad2cp_pressure': [False, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Pressure as reported by the CP'}, (nc_ad2cp_data_info,)],
-                                  'ad2cp_heading': [False, 'd', {'standard_name':'heading', 'units':'degrees', 'description':' '}, (nc_ad2cp_data_info,)],
-                                  'ad2cp_pitch': [False, 'd', {'standard_name':'pitch', 'units':'degrees', 'description':' '}, (nc_ad2cp_data_info,)],
-                                  'ad2cp_roll': [False, 'd', {'standard_name':'roll', 'units':'degrees', 'description':' '}, (nc_ad2cp_data_info,)],
-                                  'ad2cp_temperature': [False, 'd', {'standard_name':'sea_water_temperature', 'units':'degrees_Celsius', 'description':'Termperature as reported by the CP'}, (nc_ad2cp_data_info,)],
-                                  'ad2cp_time': [False, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'CP time in GMT epoch format'}, (nc_ad2cp_data_info,)],
-                                  'ad2cp_battery': [False, 'd', {'standard_name':'voltage', 'units':'volts', 'description':'Obverved average battery volgate'}, (nc_ad2cp_data_info,)],
-                                  'ad2cp_velX': [False, 'd', {'units':'m/s', 'description':'Velocity along X-axis'}, (nc_ad2cp_data_info, nc_ad2cp_cell_info)],
-                                  'ad2cp_velY': [False, 'd', {'units':'m/s', 'description':'Velocity along Y-axis'}, (nc_ad2cp_data_info, nc_ad2cp_cell_info)],
-                                  'ad2cp_velZ': [False, 'd', {'units':'m/s', 'description':'Velocity along Z-azis'}, (nc_ad2cp_data_info, nc_ad2cp_cell_info)],
-                                  'ad2cp_blanking': [False, 'd', {'description':'Blanking distance', 'units':'cm'}, nc_scalar],
-                                  'ad2cp_cellSize': [False, 'd', {'description':'Size of cells', 'units':'mm'}, nc_scalar],
-                                  'ad2cp_soundspeed': [False, 'd', {'description':'Assumed sound speed', 'units':'m/s'}, nc_scalar],
-                                  }
+                              'netcdf_metadata_adds' : scicon_metadata_adds,
                               }
 
     return 0
@@ -543,16 +551,21 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
 
     auxcompass_accelcoeff = auxcompass_abc = auxcompass_pqr = prev_err = aux_cols = None
     # Check for aux compass and compass correction data in sg_calib_constants.m file
-    if(df_meta.instrument.instr_class == "auxCompass"):
+    auxname = None
+    if df_meta.instrument.instr_class == "auxCompass":
+       auxname = "auxCompass"
+    if df_meta.instrument.instr_class == "auxB":
+        auxname = "auxB"
+    if auxname:
         aux_cols = df_meta.columns.split()
         from CalibConst import getSGCalibrationConstants
         sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
         calib_consts = getSGCalibrationConstants(sg_calib_file_name)
-        if(calib_consts and 'auxcompass_coeffhex' in calib_consts):
+        if(calib_consts and f'{auxname}_coeffhex' in calib_consts):
             try:
-                sg_auxcompass_coeffhex = calib_consts['auxcompass_coeffhex']
-                sg_auxcompass_abc = calib_consts['auxcompass_abc']
-                sg_auxcompass_pqr = calib_consts['auxcompass_pqr']
+                sg_auxcompass_coeffhex = calib_consts[f'{auxname}_coeffhex']
+                sg_auxcompass_abc = calib_consts[f'{auxname}_abc']
+                sg_auxcompass_pqr = calib_consts[f'{auxname}_pqr']
 
                 auxcompass_accelcoeff = []
                 splits = sg_auxcompass_coeffhex.split()
@@ -571,21 +584,21 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
                     auxcompass_pqr.append(float32(s))
 
             except:
-                log_error("Problems processing auxcompass calibration values", 'exc')
+                log_error(f"Problems processing {auxname} calibration values", 'exc')
                 auxcompass_accelcoeff = auxcompass_abc = auxcompass_pqr = None
             else:
-                log_info("Found auxcompass values in sg_calib_constants.m - using those to correct auxcompass")
-                t = "auxcompass_accelcoeff "
+                log_info(f"Found {auxname} values in sg_calib_constants.m - using those to correct auxcompass")
+                t = f"{auxname}_accelcoeff "
                 for c in auxcompass_accelcoeff:
                     t = "%s%g " % (t, c)
                 log_debug(t)
 
-                t = "auxcompass_abc "
+                t = f"{auxname}_abc "
                 for c in auxcompass_abc:
                     t = "%s%g " % (t, c)
                 log_debug(t)
 
-                t = "auxcompass_pqr "
+                t = f"{auxname}_pqr "
                 for c in auxcompass_pqr:
                     t = "%s%g " % (t, c)
                 prev_err = geterr()

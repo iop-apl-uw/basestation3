@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -2170,7 +2170,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
     auxcompass_present = auxpressure_present = False
 
-    if('auxCompass_pressureCounts' in results_d):
+    if 'auxCompass_pressureCounts' in results_d:
+        auxpressure_name = 'auxCompass'
+        auxpressure_present = True
+
+    if 'auxB_pressureCounts' in results_d:
+        auxpressure_name = 'auxB'
         auxpressure_present = True
 
     if('auxCompass_hdg' in results_d and "auxCompass_pit" in results_d and "auxCompass_rol" in results_d and 'auxCompass_time' in results_d):
@@ -2200,28 +2205,75 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
     except KeyError:
         pass
 
-    aux_pressure_slope = aux_pressure_offset = None
-
-    # Test for bad auxPressure
     if(auxpressure_present):
-        auxPress_counts_v = results_d['auxCompass_pressureCounts']
+        aux_pressure_slope = aux_pressure_offset = None
+        auxPress_counts_v = results_d[f"{auxpressure_name}_pressureCounts"]
+        aux_epoch_time_s_v = results_d[f'{auxpressure_name}_time']
+        # Test for bad auxPressure
         if(abs(mean(auxPress_counts_v)) < 10.):
-            log_error("dive%04d: auxCompass_pressureCounts has a mean value of %f - probably misconfigured - not using auxPressure or auxCompass data"
-                      % (dive_num, mean(auxPress_counts_v)), alert=True)
+            log_error("dive%04d: %s has a mean value of %f - probably misconfigured - not using auxPressure or auxCompass data"
+                      % (dive_num, f"{auxpressure_name}_pressureCounts", mean(auxPress_counts_v)), alert=True)
             use_auxpressure = use_auxcompass = False
 
-        # Look for pressure field in auxCompass header
-        # The assumption here is that if the pressure field is present, it must be used as the $PRESSURE_YINT
-        # for the gliders compass does no apply (new purple compass boards)
-        if 'auxCompass_pressure' in results_d:
+        if auxpressure_name == "auxB":
+            # AuxB is a serial read - same as the glider, so use the glider's slope and y-int to deal with the conversion
+            auxCompass_pressure_v = None
             try:
-                aux_pressure_slope, aux_pressure_offset = results_d['auxCompass_pressure'][:].split()
-                aux_pressure_slope = float(aux_pressure_slope)
-                aux_pressure_offset = float(aux_pressure_offset)
+                aux_pressure_slope = float(log_f.data['$PRESSURE_SLOPE'])
+                aux_pressure_offset = float(log_f.data['$PRESSURE_YINT'])
+                auxCompass_pressure_v = ((auxPress_counts_v * aux_pressure_slope) + aux_pressure_offset)  * dbar_per_psi
             except:
-                log_error("Poorly formed auxCompass_pressure - not using auxCompassor auxPressure data", 'exc', alert="AUXCOMPASS")
-                use_auxpressure = use_auxcompass = False
+                log_error("Could not create auxB_pressure", 'exc')
+        else:
+            # Look for pressure field in auxCompass header
+            # The assumption here is that if the pressure field is present, it must be used as the $PRESSURE_YINT
+            # for the gliders compass does no apply (new purple compass boards)
+            if 'auxCompass_pressure' in results_d:
+                try:
+                    aux_pressure_slope, aux_pressure_offset = results_d['auxCompass_pressure'][:].split()
+                    aux_pressure_slope = float(aux_pressure_slope)
+                    aux_pressure_offset = float(aux_pressure_offset)
+                except:
+                    log_error("Poorly formed auxCompass_pressure - not using auxCompassor auxPressure data", 'exc', alert="AUXCOMPASS")
+                    use_auxpressure = use_auxcompass = False
 
+            # Convert pressure counts to pressure
+            if aux_pressure_slope is not None and aux_pressure_offset is not None:
+                auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
+                log_info("auxCompass_pressure_offset = %f, auxCompass_pressure_slope = %f" %
+                         (aux_pressure_offset, aux_pressure_slope))
+            else:
+                if kistler_cnf is None:
+                    auxPress_v = auxPress_counts_v * log_f.data['$PRESSURE_SLOPE'] # [psi]
+                else:
+                    aux_temp_v = Utils.interp1d(ctd_epoch_time_s_v, temp_raw_v, aux_epoch_time_s_v, kind='linear')
+                    auxPress_v = compute_kistler_pressure(kistler_cnf, log_f, auxPress_counts_v, aux_temp_v) # [psi]
+
+                # Why not simply + log_f.data['$PRESSURE_YINT'] to get final pressure?
+                # Because while we trust the conversion slope of the sensor to be independent of sampling scheme,
+                # the log value of yint encodes information about the AD7714, etc.  We need to see how the
+                # aux AD is offset from that and compute an implied yint. So...
+                # Convert glider pressure to PSI and interpolate to aux time grid
+                glider_press_v = Utils.interp1d(sg_epoch_time_s_v, sg_press_v / dbar_per_psi, aux_epoch_time_s_v, kind='linear') # [psi]
+                # Adjust for yint based on truck values
+                # Note - this will go very wrong if you only have a half profile
+                auxPress_yint = -mean(auxPress_v - glider_press_v)
+                log_info("auxPress_yint = %f, $PRESSURE_YINT = %f (%f psi)" %
+                         (auxPress_yint, log_f.data['$PRESSURE_YINT'], (auxPress_yint - log_f.data['$PRESSURE_YINT'])))
+
+                auxCompass_pressure_v = (auxPress_v + auxPress_yint)*dbar_per_psi # [dbar]
+                aux_temp_v = None
+                auxPress_v = None
+
+            if False:
+                # This hack is to handle bad truck pressure, but to auxcompass pressure
+                log_warning("Re-writing truck pressure and depth from auxCompass pressure")
+                sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')
+                if Globals.f_use_seawater:
+                    sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+                else:
+                    sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
+           
     log_info("%s auxcompass %s auxPressure" % ("Using" if use_auxcompass else "Not using", "Using" if use_auxpressure else "Not using"))
 
     # keep any vector (no scalars) in results that are raw data
@@ -2517,6 +2569,16 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             'avg_longitude': longitude,
             'magnetic_variation': mag_var_deg,
             })
+
+        if auxpressure_present:
+            #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
+            if Globals.f_use_seawater:
+                auxCompass_depth_v = seawater.dpth(auxCompass_pressure_v, latitude)
+            else:
+                auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
+            results_d.update({f'{auxpressure_name}_press' : auxCompass_pressure_v,
+                              f'{auxpressure_name}_depth' : auxCompass_depth_v})
+
 
         if (directives.eval_function('skip_profile')):
             skipped_profile = 1
@@ -3056,21 +3118,22 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             ctd_salin_v = None
             ctd_salin_qc_v = None
 
-            # This is a shortened version of the full conversion below in the unpumped SBECT case
-            # moved to primarily to facilitate compass comparison plots
-            if(auxpressure_present):
-                auxPress_counts_v = results_d['auxCompass_pressureCounts']
-                aux_epoch_time_s_v = results_d['auxCompass_time']
-
-                # Convert pressure counts to pressure
-                if aux_pressure_slope is not None and  aux_pressure_offset is not None:
-                    auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
-                    log_info("auxCompass_pressure_offset = %f, auxCompass_pressure_slope = %f" %
-                             (aux_pressure_offset, aux_pressure_slope))
-                    #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
-                    auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
-                    results_d.update({'auxCompass_press' : auxCompass_pressure_v,
-                                      'auxCompass_depth' : auxCompass_depth_v})
+###            # This is a shortened version of the full conversion below in the unpumped SBECT case
+###            # moved to primarily to facilitate compass comparison plots
+###            if(auxpressure_present):
+###                auxPress_counts_v = results_d[f'{auxpressure_name}_pressureCounts']
+###                aux_epoch_time_s_v = results_d[f'{auxpressure_name}_time']
+###
+###                # Convert pressure counts to pressure
+###                if aux_pressure_slope is not None and  aux_pressure_offset is not None:
+###                    auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
+###                    #auxCompass_pressure_v = ((auxPress_counts_v * aux_pressure_slope) + aux_pressure_offset) * dbar_per_psi
+###                    log_info(f"{auxpressure_name}_pressure_offset = %f, {auxpressure_name}_pressure_slope = %f" %
+###                             (aux_pressure_offset, aux_pressure_slope))
+###                    #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
+###                    auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
+###                    results_d.update({f'{auxpressure_name}_press' : auxCompass_pressure_v,
+###                                      f'{auxpressure_name}_depth' : auxCompass_depth_v})
             ## End Legatto
 
         elif(sbect_unpumped):
@@ -3260,53 +3323,53 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
             # TestData/Sg187_NANOOS_Jun15 dives 182:788
 
-            # TODO - hoist this out from here
-            # Always create auxPressure_press and auxPressure_depth vectors
-            if(auxpressure_present):
-                auxPress_counts_v = results_d['auxCompass_pressureCounts']
-                aux_epoch_time_s_v = results_d['auxCompass_time']
-
-                # Convert pressure counts to pressure
-                if aux_pressure_slope is not None and  aux_pressure_offset is not None:
-                    auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
-                    log_info("auxCompass_pressure_offset = %f, auxCompass_pressure_slope = %f" %
-                             (aux_pressure_offset, aux_pressure_slope))
-                else:
-                    if kistler_cnf is None:
-                        auxPress_v = auxPress_counts_v * log_f.data['$PRESSURE_SLOPE'] # [psi]
-                    else:
-                        aux_temp_v = Utils.interp1d(ctd_epoch_time_s_v, temp_raw_v, aux_epoch_time_s_v, kind='linear')
-                        auxPress_v = compute_kistler_pressure(kistler_cnf, log_f, auxPress_counts_v, aux_temp_v) # [psi]
-
-                    # Why not simply + log_f.data['$PRESSURE_YINT'] to get final pressure?
-                    # Because while we trust the conversion slope of the sensor to be independent of sampling scheme,
-                    # the log value of yint encodes information about the AD7714, etc.  We need to see how the
-                    # aux AD is offset from that and compute an implied yint. So...
-                    # Convert glider pressure to PSI and interpolate to aux time grid
-                    glider_press_v = Utils.interp1d(sg_epoch_time_s_v, sg_press_v / dbar_per_psi, aux_epoch_time_s_v, kind='linear') # [psi]
-                    # Adjust for yint based on truck values
-                    # Note - this will go very wrong if you only have a half profile
-                    auxPress_yint = -mean(auxPress_v - glider_press_v)
-                    log_info("auxPress_yint = %f, $PRESSURE_YINT = %f (%f psi)" %
-                             (auxPress_yint, log_f.data['$PRESSURE_YINT'], (auxPress_yint - log_f.data['$PRESSURE_YINT'])))
-
-                    auxCompass_pressure_v = (auxPress_v + auxPress_yint)*dbar_per_psi # [dbar]
-                    aux_temp_v = None
-                    auxPress_v = None
-
-                if False:
-                    # This hack is to handle bad truck pressure, but to auxcompass pressure
-                    log_warning("Re-writing truck pressure and depth from auxCompass pressure")
-                    sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')
-                    if Globals.f_use_seawater:
-                        sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
-                    else:
-                        sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
-
-                #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
-                auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
-                results_d.update({'auxCompass_press' : auxCompass_pressure_v,
-                                  'auxCompass_depth' : auxCompass_depth_v})
+###            # TODO - hoist this out from here
+###            # Always create auxPressure_press and auxPressure_depth vectors
+###            if(auxpressure_present):
+###                auxPress_counts_v = results_d[f'{auxpressure_name}_pressureCounts']
+###                aux_epoch_time_s_v = results_d[f'{auxpressure_name}_time']
+###
+###                # Convert pressure counts to pressure
+###                if aux_pressure_slope is not None and  aux_pressure_offset is not None:
+###                    auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
+###                    log_info("auxCompass_pressure_offset = %f, auxCompass_pressure_slope = %f" %
+###                             (aux_pressure_offset, aux_pressure_slope))
+###                else:
+###                    if kistler_cnf is None:
+###                        auxPress_v = auxPress_counts_v * log_f.data['$PRESSURE_SLOPE'] # [psi]
+###                    else:
+###                        aux_temp_v = Utils.interp1d(ctd_epoch_time_s_v, temp_raw_v, aux_epoch_time_s_v, kind='linear')
+###                        auxPress_v = compute_kistler_pressure(kistler_cnf, log_f, auxPress_counts_v, aux_temp_v) # [psi]
+###
+###                    # Why not simply + log_f.data['$PRESSURE_YINT'] to get final pressure?
+###                    # Because while we trust the conversion slope of the sensor to be independent of sampling scheme,
+###                    # the log value of yint encodes information about the AD7714, etc.  We need to see how the
+###                    # aux AD is offset from that and compute an implied yint. So...
+###                    # Convert glider pressure to PSI and interpolate to aux time grid
+###                    glider_press_v = Utils.interp1d(sg_epoch_time_s_v, sg_press_v / dbar_per_psi, aux_epoch_time_s_v, kind='linear') # [psi]
+###                    # Adjust for yint based on truck values
+###                    # Note - this will go very wrong if you only have a half profile
+###                    auxPress_yint = -mean(auxPress_v - glider_press_v)
+###                    log_info("auxPress_yint = %f, $PRESSURE_YINT = %f (%f psi)" %
+###                             (auxPress_yint, log_f.data['$PRESSURE_YINT'], (auxPress_yint - log_f.data['$PRESSURE_YINT'])))
+###
+###                    auxCompass_pressure_v = (auxPress_v + auxPress_yint)*dbar_per_psi # [dbar]
+###                    aux_temp_v = None
+###                    auxPress_v = None
+###
+###                if False:
+###                    # This hack is to handle bad truck pressure, but to auxcompass pressure
+###                    log_warning("Re-writing truck pressure and depth from auxCompass pressure")
+###                    sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')
+###                    if Globals.f_use_seawater:
+###                        sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+###                    else:
+###                        sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
+###
+###                #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
+###                auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
+###                results_d.update({f'{auxpressure_name}_press' : auxCompass_pressure_v,
+###                                  f'{auxpressure_name}_depth' : auxCompass_depth_v})
 
             if use_auxpressure:
                 ctd_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, ctd_epoch_time_s_v, kind='linear') # [dbar]
