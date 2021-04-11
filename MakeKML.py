@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -30,6 +30,7 @@ import functools
 import glob
 import math
 import os
+import pdb
 import pstats
 import sys
 import time
@@ -97,7 +98,8 @@ make_kml_default_dict = {
     "surface_track": [1, 0, 1],
     "subsurface_track": [0, 0, 1],
     "drift_track": [1, 0, 1],
-    "targets": ["all", ("all", "current", "none")],
+    "targets": ["all", ("proposed", "all", "none")],
+    "proposed_targets": [0, 0, 1], # if 1, use the targets file
     "target_radius": [1, 0, 1],
     "compress_output": [1, 0, 1],
     "plot_dives": [1, 0, 1],
@@ -1753,7 +1755,7 @@ def main(
             for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
                 targets.append(match)
 
-        if targets != []:
+        if targets != [] and not make_kml_conf.proposed_targets:
             targets = Utils.unique(targets)
             targets = sorted(targets, key=functools.cmp_to_key(cmp_function))
             printTargets(
