@@ -211,7 +211,7 @@ def init_logger(module_name, init_dict=None):
         log_error("No datafile supplied for init_loggers - version mismatch?")
         return -1
 
-    #register_sensor_dim_info(nc_depth_data_info, 'depth_data_point', 'depth_time', True, None)
+    register_sensor_dim_info(nc_depth_data_info, 'depth_data_point', 'depth_time', True, None)
 
     register_sensor_dim_info(nc_auxb_data_info, 'auxB_data_point', 'auxB_time', True, None)
     register_sensor_dim_info(nc_auxcompass_data_info, 'auxCompass_data_point', 'auxCompass_time', True, None)
