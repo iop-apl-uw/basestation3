@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2009, 2010, 2012, 2013, 2015, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2009, 2010, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -155,7 +155,8 @@ class GliderEarlyGPSClient:
             log_error(f"Unable to remove {connected_file} -- permissions?", "exc")
 
         try:
-            (_, fo) = Utils.run_cmd_shell("date")
+            #(_, fo) = Utils.run_cmd_shell("date")
+            (_, fo) = Utils.run_cmd_shell("date +\"%a %b %d %R:%S %Z %Y\"")
         except:
             log_error(f"Error running date", "exc")
         else:

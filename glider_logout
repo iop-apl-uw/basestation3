@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2006, 2007, 2008, 2010, 2011, 2012, 2013, 2014, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2010, 2011, 2012, 2013, 2014, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -27,9 +27,10 @@ rm -f .connected
 if ( ! $?logout ) then
     setenv logout manual
 endif
-echo Disconnected at `date` \(${logout}\) >>! comm.log
-echo >>! comm.log
-echo >>! comm.log
+#echo Disconnected at `date` \(${logout}\) >>! comm.log
+echo Disconnected at `date +"%a %b %d %R:%S %Z %Y"` \(${logout}\) >>! comm.log
+printf "\n" >>! comm.log
+printf "\n" >>! comm.log
 
 if(! $?GLIDER_OPTIONS ) then
     set GLIDER_OPTIONS = ""
@@ -39,7 +40,7 @@ if(! $?BASESTATION_PATH ) then
     set BASESTATION_PATH = "/usr/local/basestation"
 endif
 
-echo >>! baselog.log
-echo >>! baselog.log
+printf "\n" >>! baselog.log
+printf "\n"  >>! baselog.log
 
 python3.8 $BASESTATION_PATH/Base.py --mission_dir `pwd` --verbose --make_dive_profiles --make_mission_profile --make_mission_timeseries --daemon --base_log baselog_`date +%y%m%d%H%M%S` $GLIDER_OPTIONS >>&!  baselog.log
