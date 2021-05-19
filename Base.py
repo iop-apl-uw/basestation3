@@ -1,7 +1,7 @@
 #! /usr/bin/env python
-
+# -*- python-fmt -*-
 ##
-## Copyright (c) 2006-2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1702,7 +1702,7 @@ def main():
                 parms_file_name = os.path.join(base_opts.mission_dir, "parms")
                 if BaseGZip.decompress(parms_zipped_file_name_1a, parms_file_name) > 0:
                     log_error(
-                        "Problem decompressing %s - skipping" % parms_zipped_file_name
+                        f"Problem decompressing {parms_zipped_file_name} - skipping"
                     )
                 else:
                     os.remove(parms_zipped_file_name_1a)
@@ -1747,8 +1747,7 @@ def main():
             )
         except IOError as exception:
             log_critical(
-                "Error opening processed dives conf file (%s) - exiting"
-                % (exception.args)
+                f"Error opening processed dives conf file ({exception.args}) - exiting"
             )
             Utils.cleanup_lock_file(base_opts, base_lockfile_name)
             return 1
@@ -2109,13 +2108,18 @@ def main():
                             else:
                                 log_info(f"{known_file} was uploaded and deleted")
 
-    (_, recov_code, _, _) = comm_log.last_GPS_lat_lon_and_recov(None, None)
-
     if base_opts.make_dive_netCDF:
+        last_session = comm_log.last_surfacing()
         if base_opts.skip_flight_model:
             log_info("Skipping flight model processing per directive")
-        elif recov_code:
-            log_info(f"Skipping flight model due to recovery {recov_code}")
+        elif last_session and last_session.recov_code:
+            log_info(f"Skipping flight model due to recovery {last_session.recov_code}")
+        elif (
+            last_session
+            and last_session.cmd_directive
+            and "QUIT" in last_session.cmd_directive
+        ):
+            log_info(f"Skipping flight model due to QUIT command")
         elif skip_mission_processing_event.is_set():
             log_warning("Caught SIGUSR1 perviously - skipping FlightModel")
         else:
