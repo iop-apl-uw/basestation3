@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2015, 2016, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2015, 2016, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -69,7 +69,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     run_extension_script(os.path.join(base_opts.mission_dir, ".pre_login"), None)
 
     # Invoke extensions, if any
-    process_extensions('.pre_extensions', base_opts,
+    process_extensions('.pre_extensions', ("global", ), base_opts,
                        None, None, None, None, None, None, None)
 
     existing_files = '{'

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -332,7 +332,7 @@ def main():
     # CONSIDER process .extensions here using something like:
     #
     # from Base import known_mailer_tags, known_ftp_tags
-    # process_extensions('.extensions', base_opts, sg_calib_file_name, dive_nc_file_names,  \
+    # process_extensions('.extensions', ["dive", "global", "mission"], base_opts, sg_calib_file_name, dive_nc_file_names,  \
     #                    dive_nc_file_names, [], Base.known_mailer_tags, Base.known_ftp_tags, None)
     #
     # This would replace the explicit calls to MakePlots

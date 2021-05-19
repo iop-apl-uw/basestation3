@@ -1,5 +1,6 @@
+# -*- python-fmt -*-
 ##
-## Copyright (c) 2006-2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -25,7 +26,9 @@ home directory (or other locations)
 
 """
 
+import configparser
 import fnmatch
+import itertools
 import netrc
 import os
 import smtplib
@@ -263,9 +266,7 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
                         log_error(f"Error opening {url_line}", "exc")
                         log_error("Continuing processing...")
                     else:
-                        log_info(
-                            f"url ({url_line}) responded with:{url_response}"
-                        )
+                        log_info(f"url ({url_line}) responded with:{url_response}")
 
         log_info(f"Finished processing on .urls pass({pass_num_or_gps})")
 
@@ -484,9 +485,7 @@ def process_pagers(
                         elif pagers_tag == "alerts" and "alerts" in tags_to_process:
                             if pagers_convert_msg and pagers_convert_msg != "":
                                 subject_line = "CONVERSION PROBLEMS"
-                                log_info(
-                                    f"Sending {subject_line} to {email_addr}"
-                                )
+                                log_info(f"Sending {subject_line} to {email_addr}")
                                 send_func(
                                     base_opts,
                                     instrument_id,
@@ -496,9 +495,7 @@ def process_pagers(
                                 )
                             if crit_other_message and crit_other_message != "":
                                 subject_line = "CRITICAL ERROR IN CAPTURE"
-                                log_info(
-                                    f"Sending {subject_line} to {email_addr}"
-                                )
+                                log_info(f"Sending {subject_line} to {email_addr}")
                                 send_func(
                                     base_opts,
                                     instrument_id,
@@ -508,9 +505,7 @@ def process_pagers(
                                 )
                             if warn_message and warn_message != "":
                                 subject_line = "ALERTS FROM PROCESSING"
-                                log_info(
-                                    f"Sending {subject_line} to {email_addr}"
-                                )
+                                log_info(f"Sending {subject_line} to {email_addr}")
                                 send_func(
                                     base_opts,
                                     instrument_id,
@@ -525,9 +520,7 @@ def process_pagers(
                                 and processed_files_message != ""
                             ):
                                 subject_line = "Processing Complete"
-                                log_info(
-                                    f"Sending {subject_line} to {email_addr}"
-                                )
+                                log_info(f"Sending {subject_line} to {email_addr}")
                                 send_func(
                                     base_opts,
                                     instrument_id,
@@ -542,9 +535,7 @@ def process_pagers(
                                 and processed_files_message != ""
                             ):
                                 subject_line = "New Dive Tarball(s)"
-                                log_info(
-                                    f"Sending {subject_line} to {email_addr}"
-                                )
+                                log_info(f"Sending {subject_line} to {email_addr}")
                                 send_func(
                                     base_opts,
                                     instrument_id,
@@ -740,9 +731,7 @@ def process_ftp(
     try:
         ftp_file = open(ftp_file_name, "r")
     except IOError as exception:
-        log_error(
-            f"Could not open {ftp_file_name} ({exception.args}) - no mail sent"
-        )
+        log_error(f"Could not open {ftp_file_name} ({exception.args}) - no mail sent")
         ret_val = 1
     else:
         for ftp_line in ftp_file:
@@ -1129,6 +1118,7 @@ def process_mailer(
 
 def process_extensions(
     extension_file_name,
+    sections,
     base_opts,
     sg_calib_file_name,
     dive_nc_file_names,
@@ -1154,60 +1144,68 @@ def process_extensions(
         )
         return 0
     else:
-        log_info(f"Starting processing on {extension_file_name}")
+        log_info(f"Starting processing on {extension_file_name} section(s):{sections}")
+        cp = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes="#")
+        cp.optionxform = str
         try:
-            extensions_file = open(extensions_file_name, "r")
-        except IOError as exception:
+            # Anything not inside a section tag is in [global] section
+            with open(extensions_file_name) as fi:
+                cp.read_file(
+                    itertools.chain(["[global]"], fi), source=extensions_file_name
+                )
+        except (IOError, PermissionError) as exception:
             log_error(
                 "Could not open %s (%s) - skipping %s processing"
                 % (extensions_file_name, extension_file_name, exception.args)
             )
             ret_val = 1
         else:
-            for extension_line in extensions_file:
-                extension_line = extension_line.rstrip()
-                log_debug(f"extension file line = ({extension_line})")
-                if extension_line == "":
-                    continue
-                if extension_line[0] != "#":
-                    log_info(
-                        f"Processing {extension_file_name} line ({extension_line})"
-                    )
-                    extension_elts = extension_line.split(" ")
-                    # First element - extension name, with .py file extension
-                    extension_module_name = os.path.join(
-                        extension_directory, extension_elts[0]
-                    )
-                    extension_module = Sensors.loadmodule(extension_module_name)
-                    if extension_module is None:
-                        log_error(f"Error loading {extension_module_name} - skipping")
-                        ret_val = 1
-                    else:
-                        try:
-                            # Invoke the extension
-                            extension_ret_val = extension_module.main(
-                                base_opts=base_opts,
-                                sg_calib_file_name=sg_calib_file_name,
-                                dive_nc_file_names=dive_nc_file_names,
-                                nc_files_created=nc_files_created,
-                                processed_other_files=processed_other_files,
-                                known_mailer_tags=known_mailer_tags,
-                                known_ftp_tags=known_ftp_tags,
-                                processed_file_names=processed_file_names,
-                            )
-                        except:
+            for section in sections:
+                if cp.has_section(section):
+                    for extension_line in cp[section]:
+                        extension_line.lstrip().rstrip()
+                        if len(extension_line) < 1:
+                            continue
+                        log_info(
+                            f"Processing:{extension_file_name} section:{section} line:{extension_line}"
+                        )
+                        extension_elts = extension_line.split(" ")
+                        # First element - extension name, with .py file extension
+                        extension_module_name = os.path.join(
+                            extension_directory, extension_elts[0]
+                        )
+                        extension_module = Sensors.loadmodule(extension_module_name)
+                        if extension_module is None:
                             log_error(
-                                "Extension %s raised an exception"
-                                % extension_module_name,
-                                "exc",
-                            )
-                            extension_ret_val = 1
-                        if extension_ret_val:
-                            log_error(
-                                "Error running %s - return %d"
-                                % (extension_module_name, extension_ret_val)
+                                f"Error loading {extension_module_name} - skipping"
                             )
                             ret_val = 1
+                        else:
+                            try:
+                                # Invoke the extension
+                                extension_ret_val = extension_module.main(
+                                    base_opts=base_opts,
+                                    sg_calib_file_name=sg_calib_file_name,
+                                    dive_nc_file_names=dive_nc_file_names,
+                                    nc_files_created=nc_files_created,
+                                    processed_other_files=processed_other_files,
+                                    known_mailer_tags=known_mailer_tags,
+                                    known_ftp_tags=known_ftp_tags,
+                                    processed_file_names=processed_file_names,
+                                )
+                            except:
+                                log_error(
+                                    "Extension %s raised an exception"
+                                    % extension_module_name,
+                                    "exc",
+                                )
+                                extension_ret_val = 1
+                            if extension_ret_val:
+                                log_error(
+                                    "Error running %s - return %d"
+                                    % (extension_module_name, extension_ret_val)
+                                )
+                                ret_val = 1
 
         log_info(f"Finished processing on {extension_file_name}")
 

@@ -2119,7 +2119,7 @@ def main():
             and last_session.cmd_directive
             and "QUIT" in last_session.cmd_directive
         ):
-            log_info(f"Skipping flight model due to QUIT command")
+            log_info("Skipping flight model due to QUIT command")
         elif skip_mission_processing_event.is_set():
             log_warning("Caught SIGUSR1 perviously - skipping FlightModel")
         else:
@@ -2148,6 +2148,36 @@ def main():
     # Run the post dive processing script
     run_extension_script(os.path.join(base_opts.mission_dir, ".post_dive"), None)
 
+    dive_nc_file_names = []
+    # Collect up the possible files
+    if base_opts.make_mission_profile or base_opts.make_mission_timeseries:
+        dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
+
+    # Run and dive extensions
+    processed_file_names = []
+    processed_file_names.append(processed_eng_and_log_files)
+    processed_file_names.append(processed_selftest_eng_and_log_files)
+    # processed_file_names.append(processed_other_files)
+    processed_file_names.append(data_product_file_names)
+    processed_file_names.append(processed_logger_eng_files)
+    processed_file_names.append(processed_logger_other_files)
+    processed_file_names = Utils.flatten(processed_file_names)
+
+    # Invoke extensions, if any
+    BaseDotFiles.process_extensions(
+        ".extensions",
+        ("dive",),
+        base_opts,
+        sg_calib_file_name,
+        dive_nc_file_names,
+        nc_files_created,
+        processed_other_files,  # Output list for extension created files
+        known_mailer_tags,
+        known_ftp_tags,
+        processed_file_names,
+    )
+    del processed_file_names
+
     (dive_num, _) = comm_log.get_last_dive_num_and_call_counter()
     # Process the urls file for the first pass (before mission profile, timeseries, etc).
     if not base_opts.local:
@@ -2157,16 +2187,9 @@ def main():
     if skip_mission_processing_event.is_set():
         log_warning("Caught SIGUSR1 perviously - skipping whole mission processing")
     else:
-        dive_nc_file_names = []
         signal.signal(signal.SIGUSR1, signal_handler_abort_processing)
         try:
             # Begin whole mission processing here
-
-            # Collect up the possible files
-            if base_opts.make_mission_profile or base_opts.make_mission_timeseries:
-                dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(
-                    base_opts
-                )
 
             #
             # Create the mission profile file
@@ -2220,6 +2243,7 @@ def main():
             # Invoke extensions, if any
             BaseDotFiles.process_extensions(
                 ".extensions",
+                ("global", "mission"),
                 base_opts,
                 sg_calib_file_name,
                 dive_nc_file_names,
