@@ -683,6 +683,7 @@ class ConnectSession:
         self.transfer_direction = {}
         self.transfered_size = {}
         self.crc_errors = {}
+        self.cmd_directive = None
 
     def dump_contents(self, fo):
         """Dumps out the session contents, used when called manually
@@ -776,6 +777,10 @@ class ConnectSession:
             % (len(list(self.crc_errors.keys())), list(self.crc_errors.keys())),
             file=fo,
         )
+        if self.cmd_directive:
+            print(f"cmdfile directive {self.cmd_directive}", file=fo)
+        else:
+            print(f"No cmdfile directive found", file=fo)
         # for i in self.files_transfered.keys():
         #    tot_bytes = 0
         #    for j in self.files_transfered[i]:
@@ -1099,6 +1104,9 @@ def process_comm_log(
                 continue
             if raw_line.startswith("Missing expected basestation prompt"):
                 continue
+
+            if raw_strs[0] == "Parsed" and raw_strs[2] == "from":
+                session.cmd_directive = raw_strs[1]
 
             # XMODEM to glider
             if raw_strs[0] == "Sent":
@@ -1805,14 +1813,16 @@ def main():
         os.path.expanduser(args[0]), base_opts, scan_back=False
     )[0]
 
-    for ii in range(len(comm_log.sessions)):
-        for k in comm_log.sessions[ii].file_stats.keys():
-            print(k, comm_log.sessions[ii].file_stats[k])
+    comm_log.sessions[-1].dump_contents(sys.stdout)
+
+    # for ii in range(len(comm_log.sessions)):
+    #     for k in comm_log.sessions[ii].file_stats.keys():
+    #         print(k, comm_log.sessions[ii].file_stats[k])
 
 
-    fragment_size_dict = comm_log.get_fragment_size_dict()
-    for kk, vv in fragment_size_dict.items():
-        print(kk, vv)
+    # fragment_size_dict = comm_log.get_fragment_size_dict()
+    # for kk, vv in fragment_size_dict.items():
+    #     print(kk, vv)
 
     # (comm_log, start_pos, _, line_count) = process_comm_log(os.path.expanduser(args[0]), base_opts, scan_back=False)
 
