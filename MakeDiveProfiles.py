@@ -1786,7 +1786,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                                 value = nc_var[:].tobytes().decode('utf-8')
                                 # deal w/ GPS strings
                                 if (variable in ['$GPS1', '$GPS2', '$GPS']):
-                                    value = GPS.GPSFix(value, base_opts.mission_dir, start_date_str=time.strftime("%m %d %y", eng_f.start_ts))
+                                    value = GPS.GPSFix(value, start_date_str=time.strftime("%m %d %y", eng_f.start_ts))
                             else: # 'd' or 'i'
                                 value = nc_var.getValue()
                             log_f.data[variable] = value

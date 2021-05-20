@@ -128,15 +128,6 @@ processed_logger_other_files = (
 )  # List of all non-eng files from all loggers - files on this list do not need to
 #    conform to basestation directory and filename convetions
 
-# AES support
-def decrypt_file(in_file_name, out_file_name, mission_dir):
-    """
-    Stub function for decryption
-    """
-    # pylint: disable=W0613
-    return 0
-
-
 # Configuration
 previous_conversion_time_out = 30  # Time to wait for previous conversion to complete
 
@@ -602,15 +593,6 @@ def process_file_group(
     else:
         # Generic payload from the logger - hand it off to the extension and
         # skip the rest of the processing
-        fragments_1a_tmp = fragments_1a
-        for fragment_name in fragments_1a_tmp:
-            # Returns an error only if it is a encrypted file, but there are problems in processing
-            if decrypt_file(fragment_name, fragment_name, base_opts.mission_dir):
-                # Pull out any fragments with problems
-                incomplete_files.append(fragment_name)
-                fragments_1a.remove(fragment_name)
-
-        del fragments_1a_tmp
 
         tmp_processed_logger_payload_files = []
         tmp_incomplete_other_files = []
@@ -654,11 +636,6 @@ def process_file_group(
         output_file.write(data)
 
     output_file.close()
-
-    # Returns an error only if it is a encrypted file, but there are problems in processing
-    if decrypt_file(defrag_file_name, defrag_file_name, base_opts.mission_dir):
-        incomplete_files.append(defrag_file_name)
-        return 1
 
     # Now process based on the specifics of the file
     log_info(f"Processing {defrag_file_name} in process_file_group")
@@ -1081,16 +1058,13 @@ def check_file_fragments(
     return ret_val
 
 
-def process_pdoscmd_log(mission_dir, pdos_logfile_name, instrument_id):
+def process_pdoscmd_log(pdos_logfile_name, instrument_id):
     """Processes a pdos_logfile.  These file names are outside the normal rules of
     file processing, so are handled in this different routine
 
     Return 0 for success, non-zero for failure
     """
     log_info(f"Processing {pdos_logfile_name}")
-
-    if decrypt_file(pdos_logfile_name, pdos_logfile_name, mission_dir):
-        return 1
 
     # N.B. No fragment checking done here - it is assumed that this file is less
     # then a fragment in size
@@ -1803,7 +1777,7 @@ def main():
             or os.path.getmtime(os.path.join(base_opts.mission_dir, i))
             > processed_pdos_logfiles_dict[os.path.basename(i)]
         ):
-            if not process_pdoscmd_log(base_opts.mission_dir, i, instrument_id):
+            if not process_pdoscmd_log(i, instrument_id):
                 new_pdos_logfiles_processed.append(os.path.basename(i))
 
     # PDos logs notification

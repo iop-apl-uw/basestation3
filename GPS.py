@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2008, 2010, 2011, 2012, 2013, 2014, 2015, 2017, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -34,12 +34,6 @@ from BaseLog import log_error, log_debug, log_info
 # Optional components
 #
 
-def decrypt_gps_line(gps_line, mission_dir):
-    """ Stub routine for AES decryption
-    """
-    # pylint: disable=W0613
-    return None
-
 def is_valid_gps_line(gps_line):
     """Determines is a line is a valid GPS line
 
@@ -62,7 +56,7 @@ class GPSFix:
     """A wrapper for a single GPS fix
     """
 
-    def __init__(self, gps_line, mission_dir, start_date_str='01 01 70'):
+    def __init__(self, gps_line, start_date_str='01 01 70'):
         """Requires a valid gps_line, from which we parse date and time.
 
         start_date_str, if provided and needed, should be of the form %m %d %y
@@ -77,14 +71,7 @@ class GPSFix:
 
         if is_valid_gps_line(gps_line):
             gps_fields = gps_line.split(",")
-            if len(gps_fields) == 2:
-                #pylint:disable=assignment-from-none
-                tmp = decrypt_gps_line(gps_fields[1], mission_dir)
-                if tmp is not None:
-                    gps_fields = tmp.split(",")
-                    self.raw_line = tmp
 
-            # pylint:disable=bad-whitespace
             self.isvalid         = True
             self.lat             = None
             self.lon             = None
@@ -97,7 +84,6 @@ class GPSFix:
             self.drift_heading = -1
             self.n_satellites  = -1
             self.HPE           = -1
-            # pylint:enable=bad-whitespace
 
             if(((gps_fields[0] == "GPS" or gps_fields[0] == "$GPS") and len(gps_fields) >= 6)
                or ((gps_fields[0] == "$GPS1" or gps_fields[0] == "$GPS2") and len(gps_fields) >= 9)):
@@ -125,7 +111,6 @@ class GPSFix:
                     # deliberately report in raw_line format so you can edit the log file if this was a tank dive...
                     log_info("No datetime for %s; assuming %s" % (gps_fields[0], time.strftime("%m%d%y,%H%M%S", self.datetime)))
                 try:
-                    # pylint:disable=bad-whitespace
                     if len(gps_fields) == 7:
                         # This is from a SMS message
                         self.lat             = float(gps_fields[3])
@@ -151,7 +136,6 @@ class GPSFix:
                             self.HPE           = float(gps_fields[12])
                         except (ValueError, IndexError):
                             pass # old GPS string
-                    # pylint:enable=bad-whitespace
                 except ValueError:
                     log_error("Invalid GPS line (%s) (%s)" % (gps_line, gps_fields), 'exc')
                     self.isvalid = False
@@ -160,7 +144,6 @@ class GPSFix:
                 log_debug("%s,%s,%s" % (gps_fields[0], gps_fields[1], start_date_str))
                 try:
                     self.datetime = Utils.fix_gps_rollover(time.strptime(gps_fields[1] + start_date_str, "%H%M%S%m %d %y"))
-                    # pylint:disable=bad-whitespace
                     self.lat             = float(gps_fields[2])
                     self.lon             = float(gps_fields[3])
                     self.first_fix_time  = int(gps_fields[4])
@@ -170,7 +153,6 @@ class GPSFix:
                         self.magvar      = float(gps_fields[7])
                     else:
                         self.magvar      = None
-                    # pylint:enable=bad-whitespace
                 except ValueError:
                     log_error("Invalid GPS line (%s) (%s)" % (gps_line, gps_fields), 'exc')
                     self.isvalid = False

@@ -978,7 +978,7 @@ def crack_counter_line(
                     else:
                         start_time = time.strftime("%m %d %y", session.connect_ts)
                     session.gps_fix = GPS.GPSFix(
-                        raw_strs[1], base_opts.mission_dir, start_date_str=start_time
+                        raw_strs[1], start_date_str=start_time
                     )
                 else:
                     log_warning(

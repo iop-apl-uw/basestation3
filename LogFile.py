@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2008, 2009, 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020 by the University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by the University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -235,7 +235,7 @@ def parse_log_file(in_filename, mission_dir, issue_warn=False):
             if(parm_name == "$GPS1" or parm_name == "$GPS2" or parm_name == "$GPS"):
                 # For old style GPS entries, pass log starting date since we only have HHMMSS in those records
                 # This is insufficient for dives that cross midnight but we have better conversion tools for that...
-                log_file.data[parm_name] = GPS.GPSFix(raw_line, mission_dir, start_date_str=time.strftime("%m %d %y", log_file.start_ts))
+                log_file.data[parm_name] = GPS.GPSFix(raw_line, start_date_str=time.strftime("%m %d %y", log_file.start_ts))
             elif(parm_name == '$GC'):
                 log_file.gc.append(value)
             elif(parm_name == "$FINISH"):
