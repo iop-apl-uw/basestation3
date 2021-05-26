@@ -350,11 +350,23 @@ def main(
             log_error("Could not load variables - skipping", "exc")
             continue
 
+        for var_name, var_meta in nc_meta.items():
+            if var_name not in nci.variables:
+                continue
+            new_dimension = var_meta.dimension
+            new_time = var_meta.time_name
+            if var_meta.dimension not in nci.dimensions:
+                new_dimension = "sg_data_point"
+            if var_meta.time_name not in nci.variables:
+                new_time = "time"
+            nc_meta[var_name] = var_metadata(var_meta.qc_name, new_time, var_meta.depth_name, new_dimension)
+
         nc_dims = set()
         nc_vars = set()
         for var_name, var_meta in nc_meta.items():
             if var_name not in nci.variables:
                 continue
+            
             nc_dims.add(var_meta.dimension)
             nc_vars.add(var_name)
             nc_vars.add(var_meta.time_name)
