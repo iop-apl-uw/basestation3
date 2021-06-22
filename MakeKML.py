@@ -1009,19 +1009,21 @@ def printDive(
         ballon_pairs.append(("DAC dir", f"{DAC_dir:.2f} degrees"))
         ballon_pairs.append(("DAC mag", f"{DAC_mag:.3f} m/s"))
 
-        surf_east = nc.variables["surface_curr_east"].getValue()
-        surf_north = nc.variables["surface_curr_north"].getValue()
-        surf_mag = np.sqrt((surf_east * surf_east) + (surf_north * surf_north)) / 100.0
-        try:
-            surf_polar_rad = math.atan2(surf_north, surf_east)
-            surf_dir = 90.0 - math.degrees(surf_polar_rad)
-        except ZeroDivisionError:  # atan2
-            surf_dir = 0.0
-        if surf_dir < 0.0:
-            surf_dir += 360.0
 
-        ballon_pairs.append(("Surface current dir", f"{surf_dir:.2f} degrees"))
-        ballon_pairs.append(("Surface current mag", f"{surf_mag:.3f} m/s"))
+        if "surface_curr_east" in nc.variables and "surface_curr_north" in nc.variables:
+            surf_east = nc.variables["surface_curr_east"].getValue()
+            surf_north = nc.variables["surface_curr_north"].getValue()
+            surf_mag = np.sqrt((surf_east * surf_east) + (surf_north * surf_north)) / 100.0
+            try:
+                surf_polar_rad = math.atan2(surf_north, surf_east)
+                surf_dir = 90.0 - math.degrees(surf_polar_rad)
+            except ZeroDivisionError:  # atan2
+                surf_dir = 0.0
+            if surf_dir < 0.0:
+                surf_dir += 360.0
+
+            ballon_pairs.append(("Surface current dir", f"{surf_dir:.2f} degrees"))
+            ballon_pairs.append(("Surface current mag", f"{surf_mag:.3f} m/s"))
 
     ballon_pairs.append(
         (
@@ -1268,9 +1270,9 @@ def main(
     if instrument_id is None:
         if comm_log is not None:
             instrument_id = comm_log.get_instrument_id()
-        if instrument_id < 0 and dive_nc_file_names and len(dive_nc_file_names) > 0:
+        if (instrument_id is None or instrument_id < 0) and dive_nc_file_names and len(dive_nc_file_names) > 0:
             instrument_id = FileMgr.get_instrument_id(dive_nc_file_names[0])
-        if instrument_id < 0:
+        if instrument_id is None or instrument_id < 0:
             log_error("Could not get instrument id - bailing out")
             return 1
 
