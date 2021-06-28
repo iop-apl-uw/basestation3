@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 ## 
-## Copyright (c) 2006 - 2017, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006 - 2017, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -84,7 +84,7 @@ def logger_init(init_dict):
             pre_proc_glob_list.append("%s[0-9][0-9][0-9][0-9]??.x" % d['logger_prefix'])
             pre_proc_glob_list.append("%s[0-9][0-9][0-9][0-9]??.PARTIAL.[0-9]" % d['logger_prefix'])
             int_or_postproc_glob_list.append(d['logger_prefix'])
-            post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9][ab].???" % d['logger_prefix'])
+            post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9][abcd].???" % d['logger_prefix'])
             post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log" % d['logger_prefix'])
             post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9].tar" % d['logger_prefix'])
             post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9].log" % d['logger_prefix'])
@@ -481,12 +481,28 @@ class FileCode:
             return True
         else:
             return False
+
+    def is_loiter_data(self):
+        if(self._filename[6:7] == "c"):
+            return True
+        else:
+            return False
+
+    def is_surf_loiter_data(self):
+        if(self._filename[6:7] == "c"):
+            return True
+        else:
+            return False
         
     def up_down_data(self):
         if(self.is_down_data()):
             return "a"
         elif(self.is_up_data()):
             return "b"
+        elif(self.is_loiter_data()):
+            return "c"
+        elif(self.is_surf_loiter_data()):
+            return "d"
         else:
             return ''
 

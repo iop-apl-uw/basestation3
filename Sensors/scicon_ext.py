@@ -456,7 +456,7 @@ def extract_file_metadata(inp_file_name):
                 if not Utils.is_float(raw_strs[1].strip()):
                     log_warning("Could not convert %s to float - skipping" % raw_strs[1].strip())
                 else:
-                    if container is not None and (container[-1] in ('a', 'b')):
+                    if container is not None and (container[-1] in ('a', 'b', 'c', 'd')):
                         instrument_name = [instrument.instr_class]
                         Sensors.process_sensor_extensions('remap_instrument_names', instrument_name)
                         ret_list.append(('%s_%s_%s' % (instrument_name[0], raw_strs[0][1:], container[-1]), float(raw_strs[1].strip()) / 1000.))
@@ -466,7 +466,7 @@ def extract_file_metadata(inp_file_name):
                 if not Utils.is_integer(raw_strs[1].strip()):
                     log_warning("Could not convert %s to int - skipping" % raw_strs[1].strip())
                 else:
-                    if container is not None and (container[-1] in ('a', 'b')):
+                    if container is not None and (container[-1] in ('a', 'b', 'c', 'd')):
                         instrument_name = [instrument.instr_class]
                         Sensors.process_sensor_extensions('remap_instrument_names', instrument_name)
                         ret_list.append(('%s_%s_%s' % (instrument_name[0], raw_strs[0][1:], container[-1]), int(raw_strs[1].strip())))

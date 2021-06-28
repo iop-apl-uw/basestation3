@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2015, 2016, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2015, 2016, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -330,7 +330,7 @@ def main():
 
     # Look for sub-directories created by loggers and move those
     for l in logger_prefixes:
-        g = "%s/%s[0-9][0-9][0-9][0-9][ab]" % (mission_dir, l)
+        g = "%s/%s[0-9][0-9][0-9][0-9][abcd]" % (mission_dir, l)
         for d in glob.glob(g):
             _, tmp = os.path.split(d)
             t = os.path.join(target_dir, tmp)
