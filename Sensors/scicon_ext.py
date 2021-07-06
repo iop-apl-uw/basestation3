@@ -41,6 +41,7 @@ from BaseLog import *
 from BaseNetCDF import *
 import DataFiles
 import Sensors
+import FileMgr
 from scipy.io import loadmat
 
 import pdb
@@ -66,6 +67,7 @@ ad2cp_single_value = ('blanking', 'cellSize', 'soundspeed')
 data_file_metadata =  collections.namedtuple('data_file_metadata', ['start_time', 'stop_time', 'samples', 'instrument', 'columns', 'scale_off', 'container', 'comment', 'sealevel'])
 instrument_type = collections.namedtuple('instrument_type', ['instr_instance', 'instr_class'])
 scale_off_type = collections.namedtuple('scale_off_type', ['scale', 'offset'])
+
 
 def process_adcp_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_eng_files, processed_logger_other_files):
     """Processes other files
@@ -231,12 +233,6 @@ def init_logger(module_name, init_dict=None):
         # NOTE these are not presently included in MMT/MMP because their length isn't sg_np
         'depth_time': [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Pressure sensor time in GMT epoch format'}, (nc_depth_data_info,)],
         'depth_depth': [False, 'd', {'standard_name':'depth', 'positive':'down', 'units':'cm', 'description':'Measured vertical distance below the surface'}, (nc_depth_data_info,)],
-        'depth_ontime_a': [False, 'd', {'description':'depth total time turned on dive', 'units' : 'secs'}, nc_scalar],
-        'depth_samples_a': [False, 'i', {'description':'depth total number of samples taken dive'}, nc_scalar],
-        'depth_timeouts_a': [False, 'i', {'description':'depth total number of timeouts on dive'}, nc_scalar],
-        'depth_ontime_b': [False, 'd', {'description':'depth total time turned on climb', 'units' : 'secs'}, nc_scalar],
-        'depth_samples_b': [False, 'i', {'description':'depth total number of samples taken climb'}, nc_scalar],
-        'depth_timeouts_b': [False, 'i', {'description':'depth total number of timeouts on climb'}, nc_scalar],
 
         # adcp on scicon
         'ad2cp_pressure': [False, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Pressure as reported by the CP'}, (nc_ad2cp_data_info,)],
@@ -253,6 +249,12 @@ def init_logger(module_name, init_dict=None):
         'ad2cp_cellSize': [False, 'd', {'description':'Size of cells', 'units':'mm'}, nc_scalar],
         'ad2cp_soundspeed': [False, 'd', {'description':'Assumed sound speed', 'units':'m/s'}, nc_scalar],
     }
+
+    for cast, descr in FileMgr.cast_descr:
+        scicon_metadata_adds[f'depth_ontime_{cast}'] = [False, 'd', {'description':f'depth total time turned on {descr}', 'units' : 'secs'}, nc_scalar]
+        scicon_metadata_adds[f'depth_samples_{cast}'] = [False, 'i', {'description':f'depth total number of samples taken {descr}'}, nc_scalar]
+        scicon_metadata_adds[f'depth_timeouts_{cast}'] = [False, 'i', {'description':f'depth total number of timeouts on {descr}'}, nc_scalar]
+    
 
     # Aux compass/pressure sensor
     for auxname, aux_data_info in (('auxCompass', nc_auxcompass_data_info), ('auxB', nc_auxb_data_info)):
@@ -275,12 +277,10 @@ def init_logger(module_name, init_dict=None):
         scicon_metadata_adds[f'{auxname}_pressureTemp'] = [False, 'c', {'description':f'{auxname} pressure sensor temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_internalTemp'] = [False, 'c', {'description':f'{auxname} interernal temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_temperature'] = [False, 'c', {'description':f'{auxname} interernal temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
-        scicon_metadata_adds[f'{auxname}_ontime_a'] = [False, 'd', {'description':f'{auxname} total time turned on dive', 'units' : 'secs'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_samples_a'] = [False, 'i', {'description':f'{auxname} total number of samples taken dive'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_timeouts_a'] = [False, 'i', {'description':f'{auxname} total time turned samples timedout on dive', 'units' : 'secs'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_ontime_b'] = [False, 'd', {'description':f'{auxname} total time turned on climb', 'units' : 'secs'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_samples_b'] = [False, 'i', {'description':f'{auxname} total number of samples taken climb'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_timeouts_b'] = [False, 'i', {'description':f'{auxname} total time turned samples timedout on climb', 'units' : 'secs'}, nc_scalar]
+        for cast, descr in FileMgr.cast_descr:
+            scicon_metadata_adds[f'{auxname}_ontime_{cast}'] = [False, 'd', {'description':f'{auxname} total time turned on {descr}', 'units' : 'secs'}, nc_scalar]
+            scicon_metadata_adds[f'{auxname}_samples_{cast}'] = [False, 'i', {'description':f'{auxname} total number of samples taken {descr}'}, nc_scalar]
+            scicon_metadata_adds[f'{auxname}_timeouts_{cast}'] = [False, 'i', {'description':f'{auxname} total time turned samples timedout on {descr}', 'units' : 'secs'}, nc_scalar]
         scicon_metadata_adds[f'sg_cal_{auxname}_coeffhex'] = [False, 'c', {'description':f'{auxname} coefficients'}, nc_scalar]
         scicon_metadata_adds[f'sg_cal_{auxname}_abc'] = [False, 'c', {'description':f'{auxname} soft-iron correction'}, nc_scalar]
         scicon_metadata_adds[f'sg_cal_{auxname}_pqr'] = [False, 'c', {'description':f'{auxname} hard-iron correction'}, nc_scalar]
@@ -809,7 +809,8 @@ def eng_file_reader(eng_files, nc_info_d):
             return None, None
 
     # Process non-adcp data
-    casts = sorted(df_meta.keys())
+    #casts = sorted(df_meta.keys())
+    casts = list(df_meta.keys())
 
     eng_f = DataFiles.DataFile('eng', None)
     # assume the column names are uniform between casts

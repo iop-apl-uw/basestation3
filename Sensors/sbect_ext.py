@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2013, 2015, 2019 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -26,6 +26,7 @@ sbect basestation sensor extension
 """
 from BaseLog import *
 from BaseNetCDF import *
+import FileMgr
 
 def init_sensor(module_name, init_dict=None):
     """
@@ -62,18 +63,19 @@ def init_sensor(module_name, init_dict=None):
         'sbect_condFreq': [False, 'd', {'description':'As reported by the instrument'}, (nc_sbect_data_info,)],
         'sbect_tempFreq': [False, 'd', {'description':'As reported by the instrument'}, (nc_sbect_data_info,)],
 
-        'sbect_ontime_a': [False, 'd', {'description':'sbect total time turned on dive', 'units' : 'secs'}, nc_scalar],
-        'sbect_samples_a': [False, 'i', {'description':'sbect total number of samples taken dive'}, nc_scalar],
-        'sbect_timeouts_a': [False, 'i', {'description':'sbect total number of samples time out on dive'}, nc_scalar],
-        'sbect_ontime_b': [False, 'd', {'description':'sbect total time turned on climb', 'units' : 'secs'}, nc_scalar],
-        'sbect_samples_b': [False, 'i', {'description':'sbect total number of samples taken climb'}, nc_scalar],
-        'sbect_timeouts_b': [False, 'i', {'description':'sbect total number of samples time out on climb'}, nc_scalar],            
-            
-
         # gpctd (pumped sbect) variables are declared in Sensors/payload_ext.py
         # derived results from CT are declared in BaseNetCDF.py
         }
+        
     }
+
+    for cast, descr in FileMgr.cast_descr:
+        init_dict[module_name]['netcdf_metadata_adds'][f'sbect_ontime_{cast}'] = [False, 'd', {'description':f'sbect total time turned on {descr}', 'units' : 'secs'}, nc_scalar]
+        init_dict[module_name]['netcdf_metadata_adds'][f'sbect_samples_{cast}'] = [False, 'i', {'description':f'sbect total number of samples taken {descr}'}, nc_scalar]
+        init_dict[module_name]['netcdf_metadata_adds'][f'sbect_timeouts_{cast}'] = [False, 'i', {'description':f'sbect total number of samples time out on {descr}'}, nc_scalar]
+            
+
+    
     return 0
 
 def asc2eng(base_opts, module_name, datafile=None):

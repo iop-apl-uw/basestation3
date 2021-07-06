@@ -62,6 +62,10 @@ post_proc_glob_list = ["p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].??", # .nc NetCDF f
                        "pt[0-9][0-9][0-9][0-9][0-9][0-9][0-9].???",
                        "pt[0-9][0-9][0-9][0-9][0-9][0-9][0-9].?????"] # This gets .pvtst files
 
+# Common tables for profile mappings
+cast_descr = (('a', 'dive'), ('b', 'climb'), ('c', 'loiter'), ('d', 'surface loiter'))
+cast_code = {0: '', 1 : 'a', 2 : 'b', 3 : 'c', 4 : 'd'}
+
 # These lists are built from the installed loggers
 logger_prefixes = []
 
@@ -107,8 +111,8 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
     log_debug("logger_eng_readers = %s" % logger_eng_readers)
 
     # How eng files are labeled by the logger interface for dive and climb, etc.
-    # order is critical here to get dive (a) files before climb (b)
-    c_list = ('', 'a', 'b')
+    # order is critical here to get dive (a) files before loiter (c) before climb (b) before surface loiter(d)
+    c_list = ('', 'a', 'c', 'b', 'd')
 
     # Patterns take a bit to compile so cache in addition to determining if they are needed
     logger_basename_pattern_d = {}
@@ -177,12 +181,16 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
                         except KeyError:
                             file_list = []
                             typed_files[sensor_type] = file_list
-                        if(c == ''):
-                            cast = 3
-                        elif(c == 'a'):
+                        if(c == 'a'):
                             cast = 1
-                        else:
+                        elif(c == 'b'):
                             cast = 2
+                        elif(c == 'c'):
+                            cast = 3
+                        elif(c == 'd'):
+                            cast = 4
+                        else:
+                            cast = 0
                         file_list.append({'cast' : cast, 'file_name' : logger_eng_filename})
 
             # One entry, per logger
@@ -190,7 +198,7 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
                 logger_eng_files[dive_path].append({'logger_prefix' : l,
                                                     'eng_files': typed_files,
                                                     'eng_file_reader' : logger_eng_readers[l]})
-    if False: # report the results for debugging
+    if True: # report the results for debugging
         log_info("Logger eng list")
         for k in list(logger_eng_files.keys()):
             log_info("%s:%s" % (k, logger_eng_files[k]))
