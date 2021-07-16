@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -47,6 +47,7 @@ import gsw
 from flight_data import *
 import copy # must be after numpy (and flight_data) import, since numpy has its own 'copy'
 import stat
+import pdb
 
 # If you change
 # - the format of the flight_data class (which see),
@@ -644,10 +645,21 @@ def get_flight_parameters(dive_num, base_opts, sg_calib_constants_d):
 
     # otherwise no specific dive data so let subsequent call get_FM_defaults() by MDP (in sg_config_constants()) fill in possible defaults
 
-def get_FM_defaults(glider_type,consts_d={}):
+def get_FM_defaults(consts_d={}):
     # TODO change parms.c to reflect new defaults
     # update/override variables in consts_d according to glider_type
     # Must supply a value for each of the flight_variables
+    try:
+        # MDP:sg_config_constants() calls with sg_configuration included
+        glider_type = {0: SEAGLIDER,
+                       1: SEAGLIDER,
+                       2: DEEPGLIDER,
+                       3: SEAGLIDER,
+                       4: OCULUS}[consts_d['sg_configuration']]
+    except KeyError:
+        pdb.set_trace()
+        raise RuntimeError("Unknown sg_configuration type %d!" % consts_d['sg_configuration'])
+
     consts_d['rho0'] = FM_default_rho0
     consts_d['vbdbias'] = 0.0
     try:
@@ -675,7 +687,7 @@ def get_FM_defaults(glider_type,consts_d={}):
         consts_d['abs_compress'] =  4.1e-6 # m^3/dbar (slightly less than the compressibility of SW)
         if consts_d['mass'] > SGX_MASS:
             # An SGX, which are massive vehicles
-            log_info('Assuming this is an SGX vehicle', max_count=5)
+            log_info('FM:Assuming this is an SGX vehicle', max_count=5)
             consts_d['hd_a']    =   0.003548133892336
             consts_d['hd_b']    =   0.015848931924611 # a little more drag than even DGs
             consts_d['hd_s']    =   0.0 # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
@@ -709,8 +721,7 @@ def get_FM_defaults(glider_type,consts_d={}):
         # We force a plausible 'constant' here since there will be little pressure effect over 200m, the Oculus max depth
         # and we avoid estimating abs_compress below
         consts_d['abs_compress'] =  2.45e-6 # m^3/dbar
-    else:
-        raise RuntimeError("Unknown glider type %d from $DEEPGLIDER!" % glider_type)
+    return glider_type
 
 def dump_fm_values(dive_data):
     # For anxious pilots who want to see the solutions for each dive, dump in a format they can abuse into sg_calib_constants.m if desired
@@ -2622,9 +2633,9 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             log_error("Unable to open %s to establish glider type" % dive_nc_file_name)
             return 1
         try:
-            glider_type = dive_nc_file.variables['log_DEEPGLIDER'].getValue()
+            log_deepglider = dive_nc_file.variables['log_DEEPGLIDER'].getValue()
         except KeyError:
-            glider_type = SEAGLIDER # assume SG
+            log_deepglider = SEAGLIDER # assume SG (0)
         try:
             sim_w = dive_nc_file.variables['log_SIM_W'].getValue()
         except KeyError:
@@ -2646,11 +2657,13 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             max_density = FM_default_rho0
         dive_nc_file.close()
 
-    if old_basestation:
-        MakeDiveProfiles.sg_config_constants(sg_calib_constants_d, None, {})
-        get_FM_defaults(glider_type, sg_calib_constants_d)
-    else:
-        MakeDiveProfiles.sg_config_constants(sg_calib_constants_d, glider_type, has_gpctd)
+        if old_basestation:
+            MakeDiveProfiles.sg_config_constants(sg_calib_constants_d,None,{})
+            glider_type = get_FM_defaults(sg_calib_constants_d)
+        else:
+            # the new sg_config_constants calls  get_FM_defaults recursively and returns glider_type
+            glider_type = MakeDiveProfiles.sg_config_constants(sg_calib_constants_d,log_deepglider,has_gpctd)
+        
     # (re)load or create the flight model db and ensure the assumptions of sg_calib_constants_d haven't changed
     flight_dive_data_d = None # reset and try loading again
     reinitialized = load_flight_database(base_opts, sg_calib_constants_d, verify=True, create_db=True)
@@ -2685,7 +2698,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         # Override whatever the pilot might have provided for FM parameters with our defaults
         # do this once when the db is being created and cache in flight_dive_data_d
         # but do this after loading the users sg_calib_constants (to get mass, id_str, etc.)
-        get_FM_defaults(glider_type, flight_dive_data_d)
+        get_FM_defaults(flight_dive_data_d)
         # Now Add additional defaults for the flight data base
 
         # Verify expected range of mass/mass_comp

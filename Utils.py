@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -645,6 +645,18 @@ def ctr_1st_diff(y, x):
     dydx[0] = (y[1] - y[0])/(x[1] - x[0])
     dydx[end] = (y[end] - y[end - 1])/(x[end] - x[end - 1])
     return dydx
+
+def pol2cart(theta,r):
+    """theta in radians
+    """
+    z = r*exp(1j*theta) # convert to complex
+    return real(z),imag(z)
+
+def cart2pol(x, y):
+    """returns theta (radians), r
+    """
+    z = x + 1j*y # convert to complex
+    return angle(z), abs(z)
 
 # http://staff.washington.edu/bdjwww/medfilt.py
 def medfilt1(x=None,L=None):

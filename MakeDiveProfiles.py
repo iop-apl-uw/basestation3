@@ -61,7 +61,7 @@ import BaseOpts
 from BaseLog import *
 import GPS
 from HydroModel import glide_slope, hydro_model
-from TempSalinityVelocity import TSV_iterative, TSV_use_sparse, load_thermal_inertia_modes
+from TempSalinityVelocity import TSV_iterative, load_thermal_inertia_modes
 from QC import *
 import pdb
 from types import *
@@ -369,12 +369,11 @@ sb_ct_type_map = {
     4: "unpumped RBR Legato"
 }
 
-def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
+def sg_config_constants(calib_consts,log_deepglider=0,has_gpctd=False):
     """Update, by side effect, critical calibration and control constants
     with default values if not supplied
     Input:
     calib_consts - the initial constants from an actual sg_calib_constants.m file
-    glider_type - from $DEEPGLIDER in a log file
     has_gpctd - whether there is a gpctd onboard
 
     Returns:
@@ -431,9 +430,9 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
             # all DGs use gun-style CTs
             # Assume stock Seaglider with new gun-style CT
             sg_configuration = 1
-        if (30 <= id < 50 or glider_type == 1):
+        if (30 <= id < 50 or log_deepglider == 1):
             sg_configuration = 2 # DG
-        if (id >= 400 or glider_type == 2):
+        if (id >= 400 or log_deepglider == 2):
             sg_configuration = 4 # Oculus
         if has_gpctd:
             sg_configuration = 3;
@@ -642,8 +641,8 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
             })
 
     # overall vehicle geometery (sg_vehicle_geometry)
-    fm_consts = {'mass': mass} # in case it is an SGX
-    FlightModel.get_FM_defaults(glider_type, fm_consts)
+    fm_consts = {'sg_configuration': sg_configuration, 'mass': mass} # mass in case it is an SGX
+    glider_type = FlightModel.get_FM_defaults(fm_consts)
     config.update(fm_consts)
 
     config.update({
@@ -741,7 +740,7 @@ def sg_config_constants(calib_consts,glider_type=0,has_gpctd=False):
 
     # install defaults unless already present in calib_consts
     update_calib_consts(config)
-
+    return glider_type
 
 # stuff for anomaly detection
 # coded this way so MATLAB transliteration is straightforward
@@ -2126,7 +2125,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                                 ignore_existing_netcdf,
                                 nc_dive_file_name,
                                 eng_file_name, log_file_name, sg_calib_file_name, logger_eng_files,
-                                apply_sg_config_constants=False)
+                                apply_sg_config_constants=True)
 
     if (status == 0):
         log_error("Unable to load data; nothing done")
@@ -2621,8 +2620,9 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         gc_vbd_secs = array(log_f.gc_data['vbd_secs'])
         gc_vbd_ctl  = array(log_f.gc_data['vbd_ctl'])
         gc_pitch_secs = array(log_f.gc_data['pitch_secs']) # How long any pitch ran
+        gc_roll_secs = array(log_f.gc_data['roll_secs']) # How long any roll ran
         num_gc_events = len(gc_st_secs)
-
+        
         # For RevE, look through the start and ending pot positions to determine if the VBD move was a bleed,
         # and if so, make the vbd_secs negative like the RevB code
         if log_f.version >= 67.:
@@ -2850,7 +2850,6 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # (<<1CC except for old dives during first bleed GC only).  Any thus
             # we can feel confident in providing the eng_vbdCC variable
             gc_roll_ad = array(log_f.gc_data['roll_ad']) # Where the roll system was at the end of a GC
-            gc_roll_secs = array(log_f.gc_data['roll_secs']) # How long any roll ran
 
             # Map over each GC and determine the starting and ending AD and the starting and ending time of the VBD move, if any
             n_gc = num_gc_events*2
@@ -3556,13 +3555,6 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # ak/nov03/p0100147 3083 data points
         # ak/nov03/p0100158 4130 data points
         # and most any scicon mission
-
-        # Originally we restated (raw) data but this is a mistake. And the spare support is now pretty standard
-        # so this can be retired.  But in the case it fails, we should turn off perform_thermal_inertia_correction
-        max_thermal_inertia_points = 2500 # PARAMETER max number of data points we can handle in non-sparse TSV_f
-        if ((not TSV_use_sparse) and perform_thermal_inertia_correction and ctd_np > max_thermal_inertia_points):
-            log_warning("Too many points to perform thermal-inertia correction without spare matrix support -- disabling the correction")
-            perform_thermal_inertia_correction = False
 
         if ctd_results_dim != nc_info_d[nc_sg_data_info]:
             # Note that Utils.interp1 handles the cases where the CTD starts after the start of or stops before the end of sg time grid
@@ -4438,6 +4430,40 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             dens_raw_v = seawater.dens(salin_raw_v, temp_raw_v, ctd_press_v)
             buoy_v = kg2g*(dens_raw_v*volume_v*1e-6 - mass_kg) # [g]
 
+            # The sampling grid is often not aligned with motor moves
+            # For the purposes of determining speeds we need to know when the motors move
+            # and whay the values of pitch and buoyancy were at the start and finish
+            # An expedient is to duplicate and adjust copies of the time grid of when samples were taken
+            # to align with the motor.  The sampled data thenselves are largely unchanged (see flare).
+            # These times and data are then interpolated onto a fine-grained time-grid for integration.
+            pitch_time_v = copy(ctd_elapsed_time_s_v)
+            buoy_time_v  = copy(ctd_elapsed_time_s_v)
+            def adjust_pitch_vbd_times(gc_i):
+                pitch_secs = gc_pitch_secs[gc_i]
+                roll_secs  = gc_roll_secs[gc_i]
+                vbd_secs   = abs(gc_vbd_secs[gc_i])
+                elapsed_st_secs = gc_st_secs[gc_i] - ctd_epoch_time_s_v[0]
+                # in all moves assume the sequence is pitch/roll/vbd
+                if pitch_secs:
+                    move_time = (elapsed_st_secs + 0)
+                    i = np.where(pitch_time_v <= move_time)[0][-1] # just before
+                    pitch_time_v[i] = move_time
+                    # log_debug('Pitch st %d: %d to %.2fs' % (gc_i,i,move_time))
+                    move_time = (elapsed_st_secs + pitch_secs)
+                    i = np.where(pitch_time_v >= move_time)[0][0] # just after
+                    pitch_time_v[i] = move_time
+                    # log_debug('Pitch ed %d: %d to %.2fs' % (gc_i,i,move_time))
+                if vbd_secs:
+                    move_time = (elapsed_st_secs + pitch_secs + roll_secs + 0)
+                    i = np.where(buoy_time_v <= move_time)[0][-1] # just before
+                    buoy_time_v[i] = move_time
+                    # log_debug('VBD st %d: %d to %.2fs' % (gc_i,i,move_time))
+                    move_time = (elapsed_st_secs + pitch_secs + roll_secs + vbd_secs)
+                    i = np.where(buoy_time_v >= move_time)[0][0] # just after
+                    buoy_time_v[i] = move_time
+                    # log_debug('VBD ed %d: %d to %.2fs' % (gc_i,i,move_time))
+
+
             # Flare interval
             flare_gc_i = 1 # the flare GC is always the 2nd GC
             pitch_oscillation_s = 30 # PARAMETER typically 30s to dampen after the flare pitch up
@@ -4463,9 +4489,9 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
             # Climb interval
             # climb starts with first pump after apogee pump and LOITER (which could involve pumps and bleeds)
-            # the pitch is commanded so not in gc_pitch_secs
             climb_pump_ok = False
             if climb_pump_gc_i is not None:
+                adjust_pitch_vbd_times(climb_pump_gc_i)
                 climb_pump_st_time = gc_st_secs[climb_pump_gc_i]
                 st_climb_pump_i = np.where(ctd_epoch_time_s_v >= climb_pump_st_time)[0][0]
                 # ed_climb_pump_i = np.where(ctd_epoch_time_s_v >= gc_end_secs[climb_gc_i] and speed_qc_v == QC_GOOD)[0][0]
@@ -4496,21 +4522,29 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 n_pts = len(et) # length of new grid
 
                 valid_i_v = filter(lambda i: not isnan(buoy_v[i]),interval_i)
-                bu  = Utils.interp1d(ctd_elapsed_time_s_v[valid_i_v],buoy_v[valid_i_v],et)
-                phd = Utils.interp1d(etime, vehicle_pitch_degrees_v[interval_i_v],et)
+                # Assume that pitch and buoyancy motion is linear between data points
+                bu  = Utils.interp1d(buoy_time_v[valid_i_v],buoy_v[valid_i_v],et)
+                phd = Utils.interp1d(pitch_time_v[interval_i],vehicle_pitch_degrees_v[interval_i_v],et)
+                if False: # DEBUG
+                    log_debug('%s time: %s' % (acceleration_type,et))
+                    log_debug('%s buoy: %s' % (acceleration_type,bu))
+                    log_debug('%s pitch: %s' % (acceleration_type,phd))
 
                 # Find the starting speeds for the integration on the fine grid
                 # Here is the rub: we need good starting speeds for W and U so we use the hydro_model
                 # to find the speeds where buoyancy/pitch is good (here 'underwater_i')
                 # This works for the start of flare (after buoyancy goes negative) and apogee (where it is negative)
                 # but if we thought to split apogee and climb because there is a long loiter then we don't know the
-                # starting speeds to assume on the pump.  At the moment we inegrate across the loiter with whatever
+                # starting speeds to assume on the pump.  At the moment we integrate across the loiter with whatever
                 # densities were recorded (if really long, e.g., sg128_NASCAR_Jan18_loiter/p1280620, then
                 # frequenty there is NO data taken while asleep)
                 converged,umag,th,stalled_i_v = hydro_model(bu,phd,calib_consts) # hydro takes buoyancy in [g]
                 # find where to start the integration in the fine grid
                 us_flying_i = np.where(bu <= buoyancy_threshold)[0][0]
-                Us,Ws = Utils.pol2cart(th[us_flying_i],umag[us_flying_i]/m2cm)
+                th_start = th[us_flying_i]
+                umag_start = umag[us_flying_i]
+                umag_start = max(umag_start,0.002) # avoid DBZ in unsteady_flight
+                Us,Ws = Utils.pol2cart(th_start,umag_start/m2cm)
                 bu *= gravity/kg2g # Convert bu from [g] to [N] for use in unsteady_flight()
 
                 # function to compute the derivates of U and W that solve_ivp integrates
@@ -4533,6 +4567,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     # From lift drag momentum balance equations given our typical quadratic flight model in q
                     dUdt =             rhoxl2_2m*( -hd_a*ald*W*V - (hd_b*q**hd_s + hd_c*ald*ald)*U*V )
                     dWdt = B/mass_kg + rhoxl2_2m*(  hd_a*ald*U*V - (hd_b*q**hd_s + hd_c*ald*ald)*W*V )
+                    # log_debug('UF: %.2f %s %.3f %.3f %.2f %.2f' %(t,u,dUdt,dWdt,B,phdi))
                     return [dUdt, dWdt]
 
 
