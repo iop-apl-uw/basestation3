@@ -4446,24 +4446,37 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 # in all moves assume the sequence is pitch/roll/vbd
                 if pitch_secs:
                     move_time = (elapsed_st_secs + 0)
-                    i = np.where(pitch_time_v <= move_time)[0][-1] # just before
-                    pitch_time_v[i] = move_time
-                    # log_debug('Pitch st %d: %d to %.2fs' % (gc_i,i,move_time))
+                    # DabobBayURIData p6530023 pitch data not recorded until 2nd GC started
+                    # in thee cases, no motion is possible or required
+                    try:
+                        i = np.where(pitch_time_v <= move_time)[0][-1] # just before
+                        pitch_time_v[i] = move_time
+                        # log_debug('Pitch st %d: %d to %.2fs' % (gc_i,i,move_time))
+                    except IndexError:
+                        pass
                     move_time = (elapsed_st_secs + pitch_secs)
-                    i = np.where(pitch_time_v >= move_time)[0][0] # just after
-                    pitch_time_v[i] = move_time
-                    # log_debug('Pitch ed %d: %d to %.2fs' % (gc_i,i,move_time))
+                    try:
+                        i = np.where(pitch_time_v >= move_time)[0][0] # just after
+                        pitch_time_v[i] = move_time
+                        # log_debug('Pitch ed %d: %d to %.2fs' % (gc_i,i,move_time))
+                    except IndexError:
+                        pass
                 if vbd_secs:
                     move_time = (elapsed_st_secs + pitch_secs + roll_secs + 0)
-                    i = np.where(buoy_time_v <= move_time)[0][-1] # just before
-                    buoy_time_v[i] = move_time
-                    # log_debug('VBD st %d: %d to %.2fs' % (gc_i,i,move_time))
+                    try:
+                        i = np.where(buoy_time_v <= move_time)[0][-1] # just before
+                        buoy_time_v[i] = move_time
+                        # log_debug('VBD st %d: %d to %.2fs' % (gc_i,i,move_time))
+                    except IndexError:
+                        pass
                     move_time = (elapsed_st_secs + pitch_secs + roll_secs + vbd_secs)
-                    i = np.where(buoy_time_v >= move_time)[0][0] # just after
-                    buoy_time_v[i] = move_time
-                    # log_debug('VBD ed %d: %d to %.2fs' % (gc_i,i,move_time))
-
-
+                    try:
+                        i = np.where(buoy_time_v >= move_time)[0][0] # just after
+                        buoy_time_v[i] = move_time
+                        # log_debug('VBD ed %d: %d to %.2fs' % (gc_i,i,move_time))
+                    except IndexError:
+                        pass
+                        
             # Flare interval
             flare_gc_i = 1 # the flare GC is always the 2nd GC
             pitch_oscillation_s = 30 # PARAMETER typically 30s to dampen after the flare pitch up
