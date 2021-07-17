@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -742,8 +742,8 @@ nc_var_metadata = {
     'sg_cal_rollbias': [False, 'd', {'units' : 'degrees', 'description':'Roll sensor bias'}, nc_scalar],
     'sg_cal_temp_bias': [False, 'd', {'units' : 'degrees_Celsius', 'description':'Temperature bias'}, nc_scalar],
     'sg_cal_vbdbias': [False, 'd', {'units' : 'cc', 'description':'VBD bias'}, nc_scalar],
-    'sg_min_stall_speed': [False, 'd', {'units' : 'cm/s', 'description':'Minimum likely speed for vehicle, else stalled'}, nc_scalar],
-    'sg_max_stall_speed': [False, 'd', {'units' : 'cm/s', 'description':'Maximum likely speed for vehicle, else stalled'}, nc_scalar],
+    'sg_cal_min_stall_speed' : [False, 'd', {'units' : 'cm/s', 'description':'Minimum likely speed for vehicle, else stalled'}, nc_scalar],
+    'sg_cal_max_stall_speed' : [False, 'd', {'units' : 'cm/s', 'description':'Maximum likely speed for vehicle, else stalled'}, nc_scalar],
     'sg_cal_min_stall_angle': [False, 'd', {'units' : 'degrees', 'description':'Minimum flight angle, else stalled'}, nc_scalar],
     
     'sg_cal_sg_configuration': [False, 'i', {'description':'The general configuration of the glider'}, nc_scalar],
@@ -824,6 +824,9 @@ nc_var_metadata = {
     'sg_cal_QC_salin_gradient_shallow': [False, 'd', {'units':'PSU/meter', 'description':'Allowable salinity gradient in shallow water (PSU/meter)'}, nc_scalar],
     'sg_cal_QC_overall_ctd_percentage': [False, 'd', {'description':'Maximum fraction of CTD data that can be QC_BAD'}, nc_scalar],
     'sg_cal_QC_overall_speed_percentage': [False, 'd', {'description':'Maximum fraction of CTD data that can be QC_BAD'}, nc_scalar],
+    'sg_cal_QC_bound_action' : [False, 'i', {'description':'What QC to assert when a bound is exceeded'}, nc_scalar],
+    'sg_cal_QC_spike_action' : [False, 'i', {'description':'What QC to assert when a spike is detected'}, nc_scalar],
+
     'sg_cal_GPS_position_error': [False, 'd', {'units':'meters','description':'Assumed error of GPS fixes'}, nc_scalar],
     'sg_cal_use_auxpressure': [False, 'i', {'description':'Whether to use aux pressure sensor data'}, nc_scalar],
     'sg_cal_use_auxcompass': [False, 'i', {'description':'Whether to use aux compass sensor data'}, nc_scalar],
