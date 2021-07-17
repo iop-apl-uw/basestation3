@@ -432,7 +432,7 @@ def sg_config_constants(calib_consts,log_deepglider=0,has_gpctd=False):
             sg_configuration = 1
         if (30 <= id < 50 or log_deepglider == 1):
             sg_configuration = 2 # DG
-        if (id >= 400 or log_deepglider == 2):
+        if (400 <= id < 500 or log_deepglider == 2):
             sg_configuration = 4 # Oculus
         if has_gpctd:
             sg_configuration = 3;
