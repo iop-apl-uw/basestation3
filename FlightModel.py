@@ -184,7 +184,8 @@ non_stalled_percent = 0.8 # PARAMETER
 missing_ct_threshold = 0.5 # PARAMETER what fraction of missing CT data (nans) indicates a suspect CT record (higher permits worse records)
 ignore_salinity_qc = False # PARAMETER whether to ignore salinity qc results in nc file
 # if 0, use all original valid points else limit the points to just the 'still water' with acceleration <dw/dt>)n_dives_grid_spacing less than value cm/s2
-limit_to_still_water = 0.01 # PARAMETER 
+limit_to_still_water = 0.01 # PARAMETER
+max_speed = 200 # cm/s (deal with pressure sensor spikes?)
 # Avoid acceleration because of pumping and bleeding and big rolls
 vbddiffmax = 0.5 # PARAMETRER cc/s 
 # We seem to be able to fit steep,low power dives experienced at target turns.  See PAPA Jun09
@@ -364,7 +365,10 @@ def load_flight_database(base_opts,sg_calib_constants_d,verify=False,create_db=F
     if flight_dive_data_d is not None: # prior version exists?
         rebuild = flight_dive_data_d['fm_version'] != fm_version
         if verify: # have we filled sg_calib_constants_d with defaults for the assumption_variables?
-            rebuild = rebuild or len([variable for variable in assumption_variables if flight_dive_data_d[variable] != sg_calib_constants_d[variable]]) > 0
+            rebuild = rebuild or len(filter(lambda variable: (getattr(sg_calib_constants_d,variable,False) and
+                                                              flight_dive_data_d[variable] != sg_calib_constants_d[variable]),
+                                            assumption_variables)) > 0
+            
         if rebuild:
             # assumptions differ somehow...
             log_warning("Assumptions changed; rebuilding flight data base.")
@@ -645,20 +649,25 @@ def get_flight_parameters(dive_num, base_opts, sg_calib_constants_d):
 
     # otherwise no specific dive data so let subsequent call get_FM_defaults() by MDP (in sg_config_constants()) fill in possible defaults
 
-def get_FM_defaults(consts_d={}):
+def get_FM_defaults(consts_d={},glider_type=None):
     # TODO change parms.c to reflect new defaults
     # update/override variables in consts_d according to glider_type
     # Must supply a value for each of the flight_variables
-    try:
-        # MDP:sg_config_constants() calls with sg_configuration included
-        glider_type = {0: SEAGLIDER,
-                       1: SEAGLIDER,
-                       2: DEEPGLIDER,
-                       3: SEAGLIDER,
-                       4: OCULUS}[consts_d['sg_configuration']]
-    except KeyError:
-        pdb.set_trace()
-        raise RuntimeError("Unknown sg_configuration type %d!" % consts_d['sg_configuration'])
+
+    if glider_type is None:
+        try:
+            if 'sg_configuration' not in consts_d:
+                raise RuntimeError("Internal Error - sg_configuration not specified")
+            
+            # MDP:sg_config_constants() calls with sg_configuration included
+            glider_type = {0: SEAGLIDER,
+                           1: SEAGLIDER,
+                           2: DEEPGLIDER,
+                           3: SEAGLIDER,
+                           4: OCULUS}[consts_d['sg_configuration']]
+        except KeyError:
+            raise RuntimeError("Unknown sg_configuration type %d!" % consts_d['sg_configuration'])
+    
 
     consts_d['rho0'] = FM_default_rho0
     consts_d['vbdbias'] = 0.0
@@ -669,6 +678,12 @@ def get_FM_defaults(consts_d={}):
     except KeyError:
         log_warning('How can mass be missing?')
         pass
+
+    try:
+        mass_comp = consts_d['mass_comp']
+    except KeyError:
+        consts_d['mass_comp'] = 0
+    
     # Set the 'constant' values for flight model searches per vehicle type
     consts_d['hd_c'] = 5.7e-6 # induced drag (constant for all vehicles)
     # BAD consts_d['hd_c'] = 5.0e-5 # induced drag (constant for all vehicles) CCE 1/2019 from PAPA Jun09 steep low-thrust dives
@@ -687,7 +702,7 @@ def get_FM_defaults(consts_d={}):
         consts_d['abs_compress'] =  4.1e-6 # m^3/dbar (slightly less than the compressibility of SW)
         if consts_d['mass'] > SGX_MASS:
             # An SGX, which are massive vehicles
-            log_info('FM:Assuming this is an SGX vehicle', max_count=5)
+            log_info('FM:Assuming this is an SGX vehicle', max_count=1)
             consts_d['hd_a']    =   0.003548133892336
             consts_d['hd_b']    =   0.015848931924611 # a little more drag than even DGs
             consts_d['hd_s']    =   0.0 # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
@@ -755,7 +770,7 @@ def dump_fm_values(dive_data):
 # Given a dive_data instance, open the nc file and load the vectors and other data we need for regression processing
 # make if data is ok and avoid loading again if known bad
 def load_dive_data(dive_data):
-    global nc_path_format, angles, compare_velo, mission_directory, missing_ct_threshold, ignore_salinity_qc
+    global nc_path_format, angles, compare_velo, mission_directory, missing_ct_threshold, ignore_salinity_qc, max_speed
     data_d = None
     if dive_data.dive_data_ok is False:
         # tried this before and it failed
@@ -838,6 +853,7 @@ def load_dive_data(dive_data):
 
         depth = dive_nc_file.variables['ctd_depth'][:]
         w = Utils.ctr_1st_diff(-depth * cm_per_m, ctd_time)
+        abs_w = abs(w)
         if limit_to_still_water:
             dwdt = Utils.ctr_1st_diff(w, ctd_time)
             mdwdt = Utils.medfilt1(dwdt, L=min(np, vbdbias_filter))
@@ -904,7 +920,8 @@ def load_dive_data(dive_data):
                               isfinite(salinity_raw[i]) and
                               (pressmin <= press[i] <= pressmax) and
                               (not n_velo or isfinite(velo_speed[i])) and
-                              mdwdt[i] <= limit_to_still_water, # strictly <= so zero forces True
+                              mdwdt[i] <= limit_to_still_water and
+                              abs_w[i] <= max_speed,
                               range(np)))
 
         npts = len(good_pts_i_v)
@@ -1985,6 +2002,25 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                     log_warning('Ignoring bad grid solution over %s!' % dive_set)
                     continue
                 W_misfit_RMS = W_misfit_RMS - min_misfit
+                if compare_velo == 0:
+                    # Unless compare_velo is non-zero (e.g., velocimeter) hd_a
+                    # is not well constrained even if trusted (really about b)
+                    # so most values of hd_a 'work' above 0.003.  However,
+                    # certain mixtures of dives might cause the solution set to
+                    # prefer an apparently high hd_a (0.01) even though there are
+                    # smaller values are equally acceptable. See SG236 NANOOS
+                    # Sep20 dives 27, 28 grid
+
+                    # Don't change too much away from existing a (typically the
+                    # default) except to move away from small values.
+                    # predicted_hd_a is prevailing value before adoptiong new grid value
+                    x_a_i = filter(lambda a: W_misfit_RMS[ib,a] <= ab_tolerance and hd_a_grid[a] >= predicted_hd_a,xrange(len(hd_a_grid)))
+                    if len(x_a_i):
+                        x_a_i = x_a_i[0]
+                        if x_a_i != ia:
+                            log_info('Assuming hd_a=%.4g rather than %.4g' % (hd_a_grid[x_a_i], hd_a_grid[ia]))
+                            ia = x_a_i
+
                 # cache to avoid this expensive calculation next time
                 ab_grid_cache_d[dive_num] = (W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff)
 
@@ -2698,7 +2734,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         # Override whatever the pilot might have provided for FM parameters with our defaults
         # do this once when the db is being created and cache in flight_dive_data_d
         # but do this after loading the users sg_calib_constants (to get mass, id_str, etc.)
-        get_FM_defaults(flight_dive_data_d)
+        get_FM_defaults(flight_dive_data_d,glider_type=glider_type)
         # Now Add additional defaults for the flight data base
 
         # Verify expected range of mass/mass_comp
