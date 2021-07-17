@@ -179,12 +179,18 @@ biofouling_scale = 1.5 # what factor of the default hd_b is required to warn of 
 w_rms_func_bad = nan # 'normal'
 w_rms_func_bad = 1000 # tried inf but that failed
 # PARAMETERS used to filter which data are used in regressions
-required_fraction_good = 0.5 # PARAMETER how many of the dive's original points do we require?
-non_stalled_percent = 0.8 # PARAMETER
-missing_ct_threshold = 0.5 # PARAMETER what fraction of missing CT data (nans) indicates a suspect CT record (higher permits worse records)
-ignore_salinity_qc = False # PARAMETER whether to ignore salinity qc results in nc file
+# for shallow 200m dives this is about 20 pts during the dive and climb
+data_density_max_depth = 9 # PARAMETER final 'good' points should not be separated by more that N meters (higher is more permissive)
+decimation = 0; # DEAD debugging code for data_density_max_depth
+# raw temp and salinity will have NaN for timeout and unsampled points
+# if we want to eliminate flare, apo, spike and anomoly points, etc, then we need to use corrected salinity qc (but NOT the salinity values)
+ignore_salinity_qc = False # DEAD? PARAMETER whether to ignore salinity qc results in nc file 
+
+required_fraction_good = 0.5 # PARAMETER how many of the dive's good points remain after eliminating extreme pumps, rolls and pitches?
+non_stalled_percent = 0.8 # PARAMETER after fitting with given parameters, what fraction of the good points predict good (non-stalled) velocities
+
 # if 0, use all original valid points else limit the points to just the 'still water' with acceleration <dw/dt>)n_dives_grid_spacing less than value cm/s2
-limit_to_still_water = 0.01 # PARAMETER
+limit_to_still_water = 0.01 # PARAMETER cm/s2 nominally 0.01 but higher if there is pressure sensor noise (TERIFIC) test mean(mdwdt) > limit_to_still_water
 max_speed = 200 # cm/s (deal with pressure sensor spikes?)
 # Avoid acceleration because of pumping and bleeding and big rolls
 vbddiffmax = 0.5 # PARAMETRER cc/s 
@@ -365,9 +371,9 @@ def load_flight_database(base_opts,sg_calib_constants_d,verify=False,create_db=F
     if flight_dive_data_d is not None: # prior version exists?
         rebuild = flight_dive_data_d['fm_version'] != fm_version
         if verify: # have we filled sg_calib_constants_d with defaults for the assumption_variables?
-            rebuild = rebuild or len(filter(lambda variable: (getattr(sg_calib_constants_d,variable,False) and
+            rebuild = rebuild or len(list(filter(lambda variable: (getattr(sg_calib_constants_d,variable,False) and
                                                               flight_dive_data_d[variable] != sg_calib_constants_d[variable]),
-                                            assumption_variables)) > 0
+                                                 assumption_variables))) > 0
             
         if rebuild:
             # assumptions differ somehow...
@@ -770,7 +776,8 @@ def dump_fm_values(dive_data):
 # Given a dive_data instance, open the nc file and load the vectors and other data we need for regression processing
 # make if data is ok and avoid loading again if known bad
 def load_dive_data(dive_data):
-    global nc_path_format, angles, compare_velo, mission_directory, missing_ct_threshold, ignore_salinity_qc, max_speed
+    global nc_path_format, angles, compare_velo, mission_directory, ignore_salinity_qc, max_speed
+    global decimation,data_density_max_depth
     data_d = None
     if dive_data.dive_data_ok is False:
         # tried this before and it failed
@@ -853,9 +860,11 @@ def load_dive_data(dive_data):
 
         depth = dive_nc_file.variables['ctd_depth'][:]
         w = Utils.ctr_1st_diff(-depth * cm_per_m, ctd_time)
+        # if the pressure sensor is noisy then we can get poor results when looking for still water
+        w = Utils.medfilt1(w,L=min(np,vbdbias_filter))
         abs_w = abs(w)
         if limit_to_still_water:
-            dwdt = Utils.ctr_1st_diff(w, ctd_time)
+            dwdt = abs(Utils.ctr_1st_diff(w, ctd_time))
             mdwdt = Utils.medfilt1(dwdt, L=min(np, vbdbias_filter))
         else:
             mdwdt = zeros(np, float64) # assert everywhere is still
@@ -864,13 +873,6 @@ def load_dive_data(dive_data):
         # Thus we look for both quiet locations and actively expunge anti-quiet locations
         temperature_raw = dive_nc_file.variables['temperature_raw'][:]
         salinity_raw = dive_nc_file.variables['salinity_raw'][:]
-        tnan = float(len(where(isnan(temperature_raw))[0]))/np
-        snan = float(len(where(isnan(salinity_raw))[0]))/np
-        if (tnan > missing_ct_threshold or # in case T channel is bad
-            snan > missing_ct_threshold):  # in case C channel is bad
-            # report the fraction of bad points in T and S (generally they are the same)
-            log_warning("Dive %d is missing sufficient CT data (T:%.2f, S:%.2f)" % (dive_num,tnan,snan))
-            raise RuntimeError
         
         if Globals.f_use_seawater:
             density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
@@ -923,13 +925,22 @@ def load_dive_data(dive_data):
                               mdwdt[i] <= limit_to_still_water and
                               abs_w[i] <= max_speed,
                               range(np)))
+        if len(good_pts_i_v) == 0:
+            log_warning("Dive %d has no good points; pressure sensor noise? (mean: %f min: %f)" % (dive_num,mean(mdwdt),min(mdwdt)))
+            return data_d
 
-        npts = len(good_pts_i_v)
         if not ignore_salinity_qc:
             # if we have a mis-estimate of the flight model parameters, notably volmax/vbdbias, etc
             # then we will have stalled speed_hdm solutions and hence QC_PROBABLY_BAD marks in salinity_qc
             # avoid those in the hope our searches find a better set of parameters
             # Cannot be salinity_raw_qc because apogee, surface, are not removed
+            # NOTE BUG: if solve_flare_apogee_speed is set in sg_calib_constants when flare/apogee/climb pump speeds
+            # are computed using the momentum balance eqns and the points we want to remove are set to QC_PROBABLY_GOOD
+            # and we include those accelerations in the good points. But the HDM code, which we rely upon, doesn't
+            # solve for those points well do we can get messed up.
+            # Need to mark those points separately in anpther vector showing accelerations? and use that here?
+            # Mark as VBD/pitch/roll flags per point.
+            # Have HDM solve during those points?
             salinity_qc = decode_qc(dive_nc_file.variables['salinity_qc'])
             good_qc_i_v = list(filter(lambda i: salinity_qc[i] not in [QC_BAD,QC_UNSAMPLED],range(np)))
             good_pts_i_v = intersect1d(good_pts_i_v,good_qc_i_v)
@@ -940,11 +951,24 @@ def load_dive_data(dive_data):
         # then intersect any indicies with good_pts
         # what about 'flight_model_force' to ensure points are added anyway?
         # Add these directives to QC.py:drv_functions and ensure data (depth, etc.) is asserted to directives for eval
+
         npts = len(good_pts_i_v)
+        if data_density_max_depth:
+            mdd = mean(abs(diff(depth[good_pts_i_v])))
+            if mdd > data_density_max_depth:
+                log_warning("Dive %d mean data density too sparse: %d pts %.1fm " % (dive_num,npts,mdd))
+                raise RuntimeError
+
         if npts == 0:
             n_valid = 0
             fraction_good = 0
         else:
+            if decimation: # DEBUG -- code to determine minimum data point density that yield good results
+                # experimentally reduce good points and see impact on results
+                good_pts_i_v = good_pts_i_v[range(0,npts,decimation)]
+                npts = len(good_pts_i_v)
+                log_info("Dive %d decimated %d/%d %.2fm " % (dive_num,decimation,npts,mean(abs(diff(depth[good_pts_i_v])))))
+                
             good_pts[good_pts_i_v] = 1
             # reduce to valid points and place in data_d = {} if good
             aroll = abs(eng_roll_ang)
@@ -2545,42 +2569,39 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         log_error("mission directory not set - bailing out")
         return 1
 
-    # DEBUG log_info("Matplotlib version %s" % matplotlib.__version__)
-    if True:
-        # update global variables from cnf file(s)
-        import configparser
-        cnf_file = 'flight_model.cnf'
-        # Important NOTE:
-        # all the names (but NOT the values) in the name,value pairs are coerced to lowercase!
-        # build from globals_d and declarations
-        files = [];
-        cp = configparser.RawConfigParser({})
-        try:
-            files = cp.read([os.path.join(base_opts.basestation_directory, cnf_file),
-                             os.path.join(mission_directory, cnf_file)])
-        except:
-            # One way to get here is to have continuation lines on an entry 
-            # that are not indented by a single space AND have a colon somewhere in the line
-            # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
-            # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
-            log_warning('Problems reading information from %s' % cnf_file) # problems...
-        else:
-            globs = globals() # we will update globals() as a side effect below
-            for pair in cp.items('FlightModel'): # keys are stored as lowercase!!
-                name,value = pair
-                try:
-                    ovalue = globs[name]
-                except KeyError:
-                    log_error('Unknown parameter %s' % name)
-                    continue
-                try:
-                    evalue = eval(value) # can't use = in expressions to eval
-                except:
-                    log_error(' Unable to interpret %s as a value for %s' % (value,name)) 
-                    continue
-                log_info(' Updating %s from %s to %s' % (name,ovalue,evalue)) # echo to log file
-                globs[name] = evalue
-
+    # update global variables from cnf file(s)
+    import configparser
+    cnf_file = 'flight_model.cnf'
+    # Important NOTE:
+    # all the names (but NOT the values) in the name,value pairs are coerced to lowercase!
+    # build from globals_d and declarations
+    files = [];
+    cp = configparser.RawConfigParser({})
+    try:
+        files = cp.read([os.path.join(base_opts.basestation_directory, cnf_file),
+                         os.path.join(mission_directory, cnf_file)])
+    except:
+        # One way to get here is to have continuation lines on an entry 
+        # that are not indented by a single space AND have a colon somewhere in the line
+        # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
+        # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
+        log_warning('Problems reading information from %s' % cnf_file) # problems...
+    else:
+        globs = globals() # we will update globals() as a side effect below
+        for pair in cp.items('FlightModel'): # keys are stored as lowercase!!
+            name,value = pair
+            try:
+                ovalue = globs[name]
+            except KeyError:
+                log_error('Unknown parameter %s' % name)
+                continue
+            try:
+                evalue = eval(value) # can't use = in expressions to eval
+            except:
+                log_error(' Unable to interpret %s as a value for %s' % (value,name)) 
+                continue
+            log_info(' Updating %s from %s to %s' % (name,ovalue,evalue)) # echo to log file
+            globs[name] = evalue
 
     # At this point all global parameters are updated so derive things from them
     grid_spacing_keys = sorted(list(grid_spacing_d.keys()))
