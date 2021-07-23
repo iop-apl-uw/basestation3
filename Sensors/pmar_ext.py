@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -35,6 +35,7 @@ import traceback
 import string, math
 import array as arr
 import Utils
+import FileMgr
 from BaseLog import *
 from BaseNetCDF import *
 # Globals
@@ -74,166 +75,94 @@ def init_logger(module_name, init_dict=None):
         log_error("No datafile supplied for init_loggers - version mismatch?")
         return -1
 
+    netcdf_metadata_adds = {
+        'log_PM_RECORDABOVE': [False, 'd', {'description':'Depth above above which data is recorded', 'units':'meters'}, nc_scalar],
+        'log_PM_PROFILE': [False, 'd', {'description':'Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
+        'log_PM_XMITPROFILE': [False, 'd', {'description':'Which profile to transmit back to the basestation - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
+        'log_PM_XMITRAW': [False, 'd', {'description':'Which part of the dive data to transmit - 0 none, 1 dive, 2 climb, 3 both.'}, nc_scalar],
+        'log_PM_FREEKB': [False, 'd', {'description':'Free diskspace on PMAR, in kBytes'}, nc_scalar],
+        'log_PM_ACTIVECARD': [False, 'd', {'description':'Currently active card'}, nc_scalar],
+        'log_PM_MOTORS': [False, 'd', {'description':'Send motor notifacations to PMAR'}, nc_scalar],
+        'log_PM_SENDDEPTH': [False, 'd', {'description':'Send depth notifacations to PMAR'}, nc_scalar],
+        'log_PM_NDIVE': [False, 'd', {'description':'Dive multiplier for PMAR'}, nc_scalar],
+    }
+    for dd in range(8):
+        netcdf_metadata_adds[f'log_PM_FREEKB_{dd:02d}'] =  [False, 'd', {'description':f'Free diskspace on PMAR disk {dd:02d}, in kBytes'}, nc_scalar]
+
+    for cast, descr in FileMgr.cast_descr:
+        for ch in ("", "_ch00", "_ch01"):
+            netcdf_metadata_adds[f'pmar_motordroppedblocks_{cast}{ch}']= [False, 'i', {'description':'Number of blocks dropped due to motor moves'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_clipdroppedblocks_{cast}{ch}']=  [False, 'i', {'description':'Number of blocks dropped due to clipping'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_goodblocks_{cast}{ch}']= [False, 'i', {'description':'Number of good blocks'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_totalclip_{cast}{ch}']= [False, 'i', {'description':'Total number of samples clipped'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_totaldespike_{cast}{ch}']= [False, 'i', {'description':'Total number of samples despiked'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_samplesprocessed_{cast}{ch}']= [False, 'i', {'description':'Total number of samples processed (always a multiple of nfft/2)'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_writeerrors_{cast}{ch}']= [False, 'i', {'description':'Total number of file write errors'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_bufferfull_{cast}{ch}']= [False, 'i', {'description':'Total number of samples dropped due to buffer overflow'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_datafiles_{cast}{ch}']= [False, 'i', {'description':'Total number of data files created'}, nc_scalar]
+            netcdf_metadata_adds[f'pmar_datafailedfiles_{cast}{ch}']= [False, 'i', {'description':'Total number of data files that failed'}, nc_scalar]
+
+
+    for ch in ("", "_ch00", "_ch01"):
+          netcdf_metadata_adds[f'pmar_nfft{ch}'] = [False, 'i', {'description':'Size of FFT'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_navg{ch}'] = [False, 'i', {'description':'Number of blocks per ensemble'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_samplerate{ch}'] = [False, 'd', {'description':'Actual sample rate'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_container{ch}'] = [False, 'c', {'description':'Name of the containing directory'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_comment{ch}'] = [False, 'c', {'description':'Comment field'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_serialnum{ch}'] = [False, 'c', {'description':'PMAR boards serial number'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_osc{ch}'] = [False, 'i', {'description':'Oscillator setting'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_datawindow{ch}'] = [False, 'd', {'description':'Size in seconds of the signal stats window'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_clipmin{ch}'] = [False, 'i', {'description':'Signal value below which a negative clip is counted'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_clipmax{ch}'] = [False, 'i', {'description':'Signal value above which a postivie clip is counted'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_maxclipcount{ch}'] = [False, 'i', {'description':'Max number of clips allowed in a block'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_minblocksensemble{ch}'] = [False, 'i', {'description':'Minimum number of blocks contained in an ensemble'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_num_blocks{ch}'] = [False, 'i', {'description':'Number of blocks included in the ensemble'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_logmap{ch}'] = [False, 'c', {'description':'Array describing the mapping from frequency to log averaged'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_gain{ch}'] = [False, 'd', {'description':'Gain setting for recording (0 - 4)'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_gain0{ch}'] = [False, 'd', {'description':'Setting gain stage 0 in dB'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_gain1{ch}'] = [False, 'd', {'description':'Setting gain stage 1 in dB'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_cutoff{ch}'] = [False, 'd', {'description':'Low pass frequency in Hz'}, nc_scalar]                                  
+          netcdf_metadata_adds[f'pmar_despikethreshold{ch}'] = [False, 'd', {'description':'Threshold for despiking in standard deviations'}, nc_scalar]
+          netcdf_metadata_adds[f'pmar_despikepasses{ch}'] = [False, 'd', {'description':'Number of times data depiker has been run'}, nc_scalar]
+
+
+
+    #       'pmar_nfft_ch01': [False, 'i', {'description':'Size of FFT'}, nc_scalar],
+    #       'pmar_navg_ch01': [False, 'i', {'description':'Number of blocks per ensemble'}, nc_scalar],
+    #       'pmar_samplerate_ch01': [False, 'd', {'description':'Actual sample rate'}, nc_scalar],
+    #       'pmar_container_ch01': [False, 'c', {'description':'Name of the containing directory'}, nc_scalar],
+    #       'pmar_comment_ch01': [False, 'c', {'description':'Comment field'}, nc_scalar],
+    #       'pmar_serialnum_ch01': [False, 'c', {'description':'PMAR boards serial number'}, nc_scalar],
+    #       'pmar_osc_ch01': [False, 'i', {'description':'Oscillator setting'}, nc_scalar],
+    #       'pmar_datawindow_ch01': [False, 'd', {'description':'Size in seconds of the signal stats window'}, nc_scalar],
+    #       'pmar_clipmin_ch01': [False, 'i', {'description':'Signal value below which a negative clip is counted'}, nc_scalar],
+    #       'pmar_clipmax_ch01': [False, 'i', {'description':'Signal value above which a postivie clip is counted'}, nc_scalar],
+    #       'pmar_maxclipcount_ch01': [False, 'i', {'description':'Max number of clips allowed in a block'}, nc_scalar],
+    #       'pmar_minblocksensemble_ch01': [False, 'i', {'description':'Minimum number of blocks contained in an ensemble'}, nc_scalar],
+    #       'pmar_num_blocks_ch01': [False, 'i', {'description':'Number of blocks included in the ensemble'}, nc_scalar],
+    #       'pmar_logmap_ch01': [False, 'c', {'description':'Array describing the mapping from frequency to log averaged'}, nc_scalar],
+    #       'pmar_gain_ch01': [False, 'd', {'description':'Gain setting for recording (0 - 4)'}, nc_scalar],
+    #       'pmar_gain0_ch01': [False, 'd', {'description':'Setting gain stage 0 in dB'}, nc_scalar],
+    #       'pmar_gain1_ch01': [False, 'd', {'description':'Setting gain stage 1 in dB'}, nc_scalar],
+    #       'pmar_cutoff_ch01': [False, 'd', {'description':'Low pass frequency in Hz'}, nc_scalar],
+
+    #       'pmar_despikethreshold_ch01': [False, 'd', {'description':'Threshold for despiking in standard deviations'}, nc_scalar],
+    #       'pmar_despikepasses_ch01': [False, 'd', {'description':'Number of times data depiker has been run'}, nc_scalar],
+
+    # }
+    
+
     init_dict[module_name] = {'logger_prefix' : pmar_prefix,
                               'strip_files' : True,
                               'eng_file_reader' : eng_file_reader,
                               'known_files' : ['pmar.cnf', 'pmar.tgz'],
-                              'netcdf_metadata_adds' : {
-                                  'log_PM_RECORDABOVE': [False, 'd', {'description':'Depth above above which data is recorded', 'units':'meters'}, nc_scalar],
-                                  'log_PM_PROFILE': [False, 'd', {'description':'Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
-                                  'log_PM_XMITPROFILE': [False, 'd', {'description':'Which profile to transmit back to the basestation - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
-                                  'log_PM_XMITRAW': [False, 'd', {'description':'Which part of the dive data to transmit - 0 none, 1 dive, 2 climb, 3 both.'}, nc_scalar],
-                                  'log_PM_FREEKB': [False, 'd', {'description':'Free diskspace on PMAR, in kBytes'}, nc_scalar],
-                                  'log_PM_FREEKB_00': [False, 'd', {'description':'Free diskspace on PMAR disk 00, in kBytes'}, nc_scalar],
-                                  'log_PM_FREEKB_01': [False, 'd', {'description':'Free diskspace on PMAR disk 01, in kBytes'}, nc_scalar],
-                                  'log_PM_FREEKB_02': [False, 'd', {'description':'Free diskspace on PMAR disk 02, in kBytes'}, nc_scalar],
-                                  'log_PM_FREEKB_03': [False, 'd', {'description':'Free diskspace on PMAR disk 03, in kBytes'}, nc_scalar],
-                                  'log_PM_FREEKB_04': [False, 'd', {'description':'Free diskspace on PMAR disk 04, in kBytes'}, nc_scalar],
-                                  'log_PM_FREEKB_05': [False, 'd', {'description':'Free diskspace on PMAR disk 05, in kBytes'}, nc_scalar],
-                                  'log_PM_FREEKB_06': [False, 'd', {'description':'Free diskspace on PMAR disk 06, in kBytes'}, nc_scalar],
-                                  'log_PM_FREEKB_07': [False, 'd', {'description':'Free diskspace on PMAR disk 07, in kBytes'}, nc_scalar],
-                                  'log_PM_ACTIVECARD': [False, 'd', {'description':'Currently active card'}, nc_scalar],
-                                  'log_PM_MOTORS': [False, 'd', {'description':'Send motor notifacations to PMAR'}, nc_scalar],
-                                  'log_PM_SENDDEPTH': [False, 'd', {'description':'Send depth notifacations to PMAR'}, nc_scalar],
-                                  'log_PM_NDIVE': [False, 'd', {'description':'Dive multiplier for PMAR'}, nc_scalar],
-                                  'pmar_nfft': [False, 'i', {'description':'Size of FFT'}, nc_scalar],
-                                  'pmar_navg': [False, 'i', {'description':'Number of blocks per ensemble'}, nc_scalar],
-                                  'pmar_samplerate': [False, 'd', {'description':'Actual sample rate'}, nc_scalar],
-                                  'pmar_container': [False, 'c', {'description':'Name of the containing directory'}, nc_scalar],
-                                  'pmar_comment': [False, 'c', {'description':'Comment field'}, nc_scalar],
-                                  'pmar_serialnum': [False, 'c', {'description':'PMAR boards serial number'}, nc_scalar],
-                                  'pmar_osc': [False, 'i', {'description':'Oscillator setting'}, nc_scalar],
-                                  'pmar_datawindow': [False, 'd', {'description':'Size in seconds of the signal stats window'}, nc_scalar],
-                                  'pmar_clipmin': [False, 'i', {'description':'Signal value below which a negative clip is counted'}, nc_scalar],
-                                  'pmar_clipmax': [False, 'i', {'description':'Signal value above which a postivie clip is counted'}, nc_scalar],
-                                  'pmar_maxclipcount': [False, 'i', {'description':'Max number of clips allowed in a block'}, nc_scalar],
-                                  'pmar_minblocksensemble': [False, 'i', {'description':'Minimum number of blocks contained in an ensemble'}, nc_scalar],
-                                  'pmar_num_blocks': [False, 'i', {'description':'Number of blocks included in the ensemble'}, nc_scalar],
-                                  'pmar_logmap': [False, 'c', {'description':'Array describing the mapping from frequency to log averaged'}, nc_scalar],
-                                  'pmar_gain': [False, 'd', {'description':'Gain setting for recording (0 - 4)'}, nc_scalar],
-                                  'pmar_despikethreshold': [False, 'd', {'description':'Threshold for despiking in standard deviations'}, nc_scalar],
-                                  'pmar_despikepasses': [False, 'd', {'description':'Number of times data depiker has been run'}, nc_scalar],
-                                  
-                                  'pmar_motordroppedblocks_a': [False, 'i', {'description':'Number of blocks dropped due to motor moves'}, nc_scalar],
-                                  'pmar_clipdroppedblocks_a': [False, 'i', {'description':'Number of blocks dropped due to clipping'}, nc_scalar],
-                                  'pmar_goodblocks_a': [False, 'i', {'description':'Number of good blocks'}, nc_scalar],
-                                  'pmar_totalclip_a': [False, 'i', {'description':'Total number of samples clipped'}, nc_scalar],
-                                  'pmar_totaldespike_a': [False, 'i', {'description':'Total number of samples despiked'}, nc_scalar],
-                                  'pmar_samplesprocessed_a': [False, 'i', {'description':'Total number of samples processed (always a multiple of nfft/2)'}, nc_scalar],
-                                  'pmar_writeerrors_a': [False, 'i', {'description':'Total number of file write errors'}, nc_scalar],
-                                  'pmar_bufferfull_a': [False, 'i', {'description':'Total number of samples dropped due to buffer overflow'}, nc_scalar],
-                                  'pmar_datafiles_a': [False, 'i', {'description':'Total number of data files created'}, nc_scalar],
-                                  'pmar_datafailedfiles_a': [False, 'i', {'description':'Total number of data files that failed'}, nc_scalar],
-
-                                  'pmar_motordroppedblocks_b': [False, 'i', {'description':'Number of blocks dropped due to motor moves'}, nc_scalar],
-                                  'pmar_clipdroppedblocks_b': [False, 'i', {'description':'Number of blocks dropped due to clipping'}, nc_scalar],
-                                  'pmar_goodblocks_b': [False, 'i', {'description':'Number of good blocks'}, nc_scalar],
-                                  'pmar_totalclip_b': [False, 'i', {'description':'Total number of samples clipped'}, nc_scalar],
-                                  'pmar_totaldespike_b': [False, 'i', {'description':'Total number of samples despiked'}, nc_scalar],
-                                  'pmar_samplesprocessed_b': [False, 'i', {'description':'Total number of samples processed (always a multiple of nfft/2)'}, nc_scalar],
-                                  'pmar_writeerrors_b': [False, 'i', {'description':'Total number of file write errors'}, nc_scalar],
-                                  'pmar_bufferfull_b': [False, 'i', {'description':'Total number of samples dropped due to buffer overflow'}, nc_scalar],
-                                  'pmar_datafiles_b': [False, 'i', {'description':'Total number of data files created'}, nc_scalar],
-                                  'pmar_datafailedfiles_b': [False, 'i', {'description':'Total number of data files that failed'}, nc_scalar],
-
-
-                                  'pmar_nfft_ch00': [False, 'i', {'description':'Size of FFT'}, nc_scalar],
-                                  'pmar_navg_ch00': [False, 'i', {'description':'Number of blocks per ensemble'}, nc_scalar],
-                                  'pmar_samplerate_ch00': [False, 'd', {'description':'Actual sample rate'}, nc_scalar],
-                                  'pmar_container_ch00': [False, 'c', {'description':'Name of the containing directory'}, nc_scalar],
-                                  'pmar_comment_ch00': [False, 'c', {'description':'Comment field'}, nc_scalar],
-                                  'pmar_serialnum_ch00': [False, 'c', {'description':'PMAR boards serial number'}, nc_scalar],
-                                  'pmar_osc_ch00': [False, 'i', {'description':'Oscillator setting'}, nc_scalar],
-                                  'pmar_datawindow_ch00': [False, 'd', {'description':'Size in seconds of the signal stats window'}, nc_scalar],
-                                  'pmar_clipmin_ch00': [False, 'i', {'description':'Signal value below which a negative clip is counted'}, nc_scalar],
-                                  'pmar_clipmax_ch00': [False, 'i', {'description':'Signal value above which a postivie clip is counted'}, nc_scalar],
-                                  'pmar_maxclipcount_ch00': [False, 'i', {'description':'Max number of clips allowed in a block'}, nc_scalar],
-                                  'pmar_minblocksensemble_ch00': [False, 'i', {'description':'Minimum number of blocks contained in an ensemble'}, nc_scalar],
-                                  'pmar_num_blocks_ch00': [False, 'i', {'description':'Number of blocks included in the ensemble'}, nc_scalar],
-                                  'pmar_logmap_ch00': [False, 'c', {'description':'Array describing the mapping from frequency to log averaged'}, nc_scalar],
-                                  'pmar_gain_ch00': [False, 'd', {'description':'Gain setting for recording (0 - 4)'}, nc_scalar],
-                                  'pmar_gain0_ch00': [False, 'd', {'description':'Setting gain stage 0 in dB'}, nc_scalar],
-                                  'pmar_gain1_ch00': [False, 'd', {'description':'Setting gain stage 1 in dB'}, nc_scalar],
-                                  'pmar_cutoff_ch00': [False, 'd', {'description':'Low pass frequency in Hz'}, nc_scalar],                                  
-                                  'pmar_despikethreshold_ch00': [False, 'd', {'description':'Threshold for despiking in standard deviations'}, nc_scalar],
-                                  'pmar_despikepasses_ch00': [False, 'd', {'description':'Number of times data depiker has been run'}, nc_scalar],
-                                  
-                                  'pmar_motordroppedblocks_a_ch00': [False, 'i', {'description':'Number of blocks dropped due to motor moves'}, nc_scalar],
-                                  'pmar_clipdroppedblocks_a_ch00': [False, 'i', {'description':'Number of blocks dropped due to clipping'}, nc_scalar],
-                                  'pmar_goodblocks_a_ch00': [False, 'i', {'description':'Number of good blocks'}, nc_scalar],
-                                  'pmar_totalclip_a_ch00': [False, 'i', {'description':'Total number of samples clipped'}, nc_scalar],
-                                  'pmar_totaldespike_a_ch00': [False, 'i', {'description':'Total number of samples despiked'}, nc_scalar],
-                                  'pmar_samplesprocessed_a_ch00': [False, 'i', {'description':'Total number of samples processed (always a multiple of nfft/2)'}, nc_scalar],
-                                  'pmar_writeerrors_a_ch00': [False, 'i', {'description':'Total number of file write errors'}, nc_scalar],
-                                  'pmar_bufferfull_a_ch00': [False, 'i', {'description':'Total number of samples dropped due to buffer overflow'}, nc_scalar],
-                                  'pmar_datafiles_a_ch00': [False, 'i', {'description':'Total number of data files created'}, nc_scalar],
-                                  'pmar_datafailedfiles_a_ch00': [False, 'i', {'description':'Total number of data files that failed'}, nc_scalar],
-
-
-                                  'pmar_motordroppedblocks_b_ch00': [False, 'i', {'description':'Number of blocks dropped due to motor moves'}, nc_scalar],
-                                  'pmar_clipdroppedblocks_b_ch00': [False, 'i', {'description':'Number of blocks dropped due to clipping'}, nc_scalar],
-                                  'pmar_goodblocks_b_ch00': [False, 'i', {'description':'Number of good blocks'}, nc_scalar],
-                                  'pmar_totalclip_b_ch00': [False, 'i', {'description':'Total number of samples clipped'}, nc_scalar],
-                                  'pmar_totaldespike_b_ch00': [False, 'i', {'description':'Total number of samples despiked'}, nc_scalar],
-                                  'pmar_samplesprocessed_b_ch00': [False, 'i', {'description':'Total number of samples processed (always a multiple of nfft/2)'}, nc_scalar],
-                                  'pmar_writeerrors_b_ch00': [False, 'i', {'description':'Total number of file write errors'}, nc_scalar],
-                                  'pmar_bufferfull_b_ch00': [False, 'i', {'description':'Total number of samples dropped due to buffer overflow'}, nc_scalar],
-                                  'pmar_datafiles_b_ch00': [False, 'i', {'description':'Total number of data files created'}, nc_scalar],
-                                  'pmar_datafailedfiles_b_ch00': [False, 'i', {'description':'Total number of data files that failed'}, nc_scalar],
-
-
-                                  'pmar_nfft_ch01': [False, 'i', {'description':'Size of FFT'}, nc_scalar],
-                                  'pmar_navg_ch01': [False, 'i', {'description':'Number of blocks per ensemble'}, nc_scalar],
-                                  'pmar_samplerate_ch01': [False, 'd', {'description':'Actual sample rate'}, nc_scalar],
-                                  'pmar_container_ch01': [False, 'c', {'description':'Name of the containing directory'}, nc_scalar],
-                                  'pmar_comment_ch01': [False, 'c', {'description':'Comment field'}, nc_scalar],
-                                  'pmar_serialnum_ch01': [False, 'c', {'description':'PMAR boards serial number'}, nc_scalar],
-                                  'pmar_osc_ch01': [False, 'i', {'description':'Oscillator setting'}, nc_scalar],
-                                  'pmar_datawindow_ch01': [False, 'd', {'description':'Size in seconds of the signal stats window'}, nc_scalar],
-                                  'pmar_clipmin_ch01': [False, 'i', {'description':'Signal value below which a negative clip is counted'}, nc_scalar],
-                                  'pmar_clipmax_ch01': [False, 'i', {'description':'Signal value above which a postivie clip is counted'}, nc_scalar],
-                                  'pmar_maxclipcount_ch01': [False, 'i', {'description':'Max number of clips allowed in a block'}, nc_scalar],
-                                  'pmar_minblocksensemble_ch01': [False, 'i', {'description':'Minimum number of blocks contained in an ensemble'}, nc_scalar],
-                                  'pmar_num_blocks_ch01': [False, 'i', {'description':'Number of blocks included in the ensemble'}, nc_scalar],
-                                  'pmar_logmap_ch01': [False, 'c', {'description':'Array describing the mapping from frequency to log averaged'}, nc_scalar],
-                                  'pmar_gain_ch01': [False, 'd', {'description':'Gain setting for recording (0 - 4)'}, nc_scalar],
-                                  'pmar_gain0_ch01': [False, 'd', {'description':'Setting gain stage 0 in dB'}, nc_scalar],
-                                  'pmar_gain1_ch01': [False, 'd', {'description':'Setting gain stage 1 in dB'}, nc_scalar],
-                                  'pmar_cutoff_ch01': [False, 'd', {'description':'Low pass frequency in Hz'}, nc_scalar],
-
-                                  'pmar_despikethreshold_ch01': [False, 'd', {'description':'Threshold for despiking in standard deviations'}, nc_scalar],
-                                  'pmar_despikepasses_ch01': [False, 'd', {'description':'Number of times data depiker has been run'}, nc_scalar],
-                                  
-                                  'pmar_motordroppedblocks_a_ch01': [False, 'i', {'description':'Number of blocks dropped due to motor moves'}, nc_scalar],
-                                  'pmar_clipdroppedblocks_a_ch01': [False, 'i', {'description':'Number of blocks dropped due to clipping'}, nc_scalar],
-                                  'pmar_goodblocks_a_ch01': [False, 'i', {'description':'Number of good blocks'}, nc_scalar],
-                                  'pmar_totalclip_a_ch01': [False, 'i', {'description':'Total number of samples clipped'}, nc_scalar],
-                                  'pmar_totaldespike_a_ch01': [False, 'i', {'description':'Total number of samples despiked'}, nc_scalar],
-                                  'pmar_samplesprocessed_a_ch01': [False, 'i', {'description':'Total number of samples processed (always a multiple of nfft/2)'}, nc_scalar],
-                                  'pmar_writeerrors_a_ch01': [False, 'i', {'description':'Total number of file write errors'}, nc_scalar],
-                                  'pmar_bufferfull_a_ch01': [False, 'i', {'description':'Total number of samples dropped due to buffer overflow'}, nc_scalar],
-                                  'pmar_datafiles_a_ch01': [False, 'i', {'description':'Total number of data files created'}, nc_scalar],
-                                  'pmar_datafailedfiles_a_ch01': [False, 'i', {'description':'Total number of data files that failed'}, nc_scalar],
-
-
-                                  'pmar_motordroppedblocks_b_ch01': [False, 'i', {'description':'Number of blocks dropped due to motor moves'}, nc_scalar],
-                                  'pmar_clipdroppedblocks_b_ch01': [False, 'i', {'description':'Number of blocks dropped due to clipping'}, nc_scalar],
-                                  'pmar_goodblocks_b_ch01': [False, 'i', {'description':'Number of good blocks'}, nc_scalar],
-                                  'pmar_totalclip_b_ch01': [False, 'i', {'description':'Total number of samples clipped'}, nc_scalar],
-                                  'pmar_totaldespike_b_ch01': [False, 'i', {'description':'Total number of samples despiked'}, nc_scalar],
-                                  'pmar_samplesprocessed_b_ch01': [False, 'i', {'description':'Total number of samples processed (always a multiple of nfft/2)'}, nc_scalar],
-                                  'pmar_writeerrors_b_ch01': [False, 'i', {'description':'Total number of file write errors'}, nc_scalar],
-                                  'pmar_bufferfull_b_ch01': [False, 'i', {'description':'Total number of samples dropped due to buffer overflow'}, nc_scalar],
-                                  'pmar_datafiles_b_ch01': [False, 'i', {'description':'Total number of data files created'}, nc_scalar],
-                                  'pmar_datafailedfiles_b_ch01': [False, 'i', {'description':'Total number of data files that failed'}, nc_scalar],
-
-                              }
+                              'netcdf_metadata_adds' : netcdf_metadata_adds
     }
     
 
     # Predeclare the possible dimensions for non-base files
     for ch_tag in ("", "_ch00", "_ch01"):
-        for cast in ('a', 'b'):
+        for cast, _ in FileMgr.cast_descr:
             row_dim = "pmar_logavg%s_%s_row" % (ch_tag, cast)
             row_info = "%s_info" % row_dim
             col_dim = "pmar_logavg%s_%s_col" % (ch_tag, cast)
@@ -611,7 +540,7 @@ def eng_file_reader(eng_files, nc_info_d):
 
         if(eng_file_class == 'base' or eng_file_class == 'logavg'):
             cast = fn['cast']
-            eng_file_meta, ef_ret_list = extract_file_metadata(filename, ("a" if cast == 1 else "b"), channel_tag)
+            eng_file_meta, ef_ret_list = extract_file_metadata(filename, FileMgr.cast_code[fn['cast']], channel_tag)
 
             if(eng_file_meta == None):
                 log_error("%s contains no metadata - not using in profile" % filename)
@@ -635,7 +564,7 @@ def eng_file_reader(eng_files, nc_info_d):
                 data_column_headers.append(column_name.replace(".", "_"))
 
             # Form the dimension and info for the data in this file
-            nc_eng_file_mdp_dim  = "pmar_%s%s_%s_data_point" % (eng_file_class, channel_tag, "a" if cast == 1 else "b")
+            nc_eng_file_mdp_dim  = "pmar_%s%s_%s_data_point" % (eng_file_class, channel_tag, FileMgr.cast_code[fn['cast']])
             log_debug("Creating dimension %s" % nc_eng_file_mdp_dim)
             nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
             if nc_eng_file_mdp_info not in nc_mdp_data_info:
@@ -653,7 +582,7 @@ def eng_file_reader(eng_files, nc_info_d):
 
             # Common for base and logavg
             for i in range(col_fixed_end):
-                nc_var_name = "pmar_%s_%s%s_%s" % (eng_file_class, data_column_headers[i], channel_tag, "a" if cast == 1 else "b")
+                nc_var_name = "pmar_%s_%s%s_%s" % (eng_file_class, data_column_headers[i], channel_tag, FileMgr.cast_code[fn['cast']])
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, data[i]))
                 try:
@@ -672,7 +601,7 @@ def eng_file_reader(eng_files, nc_info_d):
                 for cc in cfs:
                     center_freqs.append(float(cc.split('_')[1]))
                 center_freqs = array(center_freqs)
-                nc_var_name = "pmar_%s%s_%s_%s" % (eng_file_class, channel_tag, 'a' if fn['cast'] == 1 else 'b', 'center_freqs')
+                nc_var_name = "pmar_%s%s_%s_%s" % (eng_file_class, channel_tag, FileMgr.cast_code[fn['cast']], 'center_freqs')
                 ret_list.append((nc_var_name, center_freqs))
                 try:
                     md = nc_var_metadata[nc_var_name]
@@ -688,7 +617,7 @@ def eng_file_reader(eng_files, nc_info_d):
                 spectra = array(data)[col_fixed_end:,:]
                 spectra = spectra.transpose()
                 # The data part
-                nc_var_name = "pmar_%s%s_%s" % (eng_file_class, channel_tag, 'a' if fn['cast'] == 1 else 'b')
+                nc_var_name = "pmar_%s%s_%s" % (eng_file_class, channel_tag, FileMgr.cast_code[fn['cast']])
                 ret_list.append((nc_var_name, spectra))
 
                 # The nc metadata for nc_var_name was created in init_logger() above
@@ -743,7 +672,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         return -1
 
     for ch, ch_tag in ((None, ""), (0, "_ch00"), (1, "_ch01")):
-        for cast in ('a', 'b'):
+        for cast, _ in FileMgr.cast_descr:
             time_var_name = "pmar_logavg_time%s_%c" % (ch_tag, cast)
             if time_var_name in results_d and 'pmar_logavg%s_%c' % (ch_tag, cast) in results_d:
                 try:

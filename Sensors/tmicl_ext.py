@@ -38,6 +38,7 @@ import traceback
 import string, math
 import array as arr
 import Utils
+import FileMgr
 from BaseLog import *
 from BaseNetCDF import *
 import numpy
@@ -189,13 +190,13 @@ def init_logger(module_name, init_dict=None):
     # Predeclare the possible dimensions for non-base files
     for ec in ('logavg', 'dvdt', 'specavg'):
         for ch in ('ch0', 'ch1', 'temp', 'shear', 'temp0', 'temp1'):
-            for cast in ('a', 'b'):
+            for cast, descr in FileMgr.cast_descr:
                 row_dim = "tmicl_%s_%s_%s_row" % (ec, ch, cast)
                 row_info = "%s_info" % row_dim
                 col_dim = "tmicl_%s_%s_%s_col" % (ec, ch, cast)
                 col_info = "%s_info" % col_dim
                 var_dim = "tmicl_%s_%s_%s" % (ec, ch, cast)
-                description = "Tmicl %s %s %s" % (ec, ch, "down profile" if cast == 'a' else "up profile")
+                description = "Tmicl %s %s %s" % (ec, ch, f"{descr} profile")
                 register_sensor_dim_info(row_info, row_dim, None, True, None) # CONSIDER True -> 'microstructure'
                 register_sensor_dim_info(col_info, col_dim, None, True, None) # CONSIDER True -> 'microstructure'
                 init_dict[module_name]['netcdf_metadata_adds'][var_dim] = form_nc_metadata(None, False, 'd', {'description' : description}, (row_info, col_info,))
@@ -643,14 +644,14 @@ def eng_file_reader(eng_files, nc_info_d):
                 data_column_headers.append(column_name.replace(".", "_"))
 
             # Form the dimension and info for the data in this file
-            nc_eng_file_mdp_dim  = "tmicl_%s_%s_%s_data_point" % (eng_file_class, eng_file_channel, "a" if fn['cast'] == 1 else "b")
+            nc_eng_file_mdp_dim  = "tmicl_%s_%s_%s_data_point" % (eng_file_class, eng_file_channel, FileMgr.cast_code[fn['cast']])
             log_debug("Creating dimension %s" % nc_eng_file_mdp_dim)
             nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
             if nc_eng_file_mdp_info not in nc_mdp_data_info:
                 register_sensor_dim_info(nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None)
 
             for i in range(len(columns)):
-                nc_var_name = "tmicl_%s_%s_%s" % (data_column_headers[i], eng_file_channel, "a" if fn['cast'] == 1 else "b")
+                nc_var_name = "tmicl_%s_%s_%s" % (data_column_headers[i], eng_file_channel, FileMgr.cast_code[fn['cast']])
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, data[i]))
                 # Predeclare metadata for these variables in other sensor extension files when possible.
@@ -721,13 +722,13 @@ def eng_file_reader(eng_files, nc_info_d):
                 sig_var = spectra[0,:]
                 spectra = spectra[1:,:]
                 #TODO - From here
-                nc_eng_file_mdp_dim  = "tmicl_%s_%s_%s_data_point" % (eng_file_class, eng_file_channel, "a" if fn['cast'] == 1 else "b")
+                nc_eng_file_mdp_dim  = "tmicl_%s_%s_%s_data_point" % (eng_file_class, eng_file_channel, FileMgr.cast_code[fn['cast']])
                 log_debug("Creating dimension %s" % nc_eng_file_mdp_dim)
                 nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
                 if nc_eng_file_mdp_info not in nc_mdp_data_info:
                     register_sensor_dim_info(nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None)
 
-                nc_var_name = "tmicl_%s_%s_%s" % ('sigvar', eng_file_channel, "a" if fn['cast'] == 1 else "b")
+                nc_var_name = "tmicl_%s_%s_%s" % ('sigvar', eng_file_channel, FileMgr.cast_code[fn['cast']])
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, sig_var))
                 try:
@@ -738,7 +739,7 @@ def eng_file_reader(eng_files, nc_info_d):
                 #TODO - to here should be in a function
 
             # The time portion
-            nc_var_name = "tmicl_%s_%s_%s_%s" % (eng_file_class, eng_file_channel, 'a' if fn['cast'] == 1 else 'b', 'time')
+            nc_var_name = "tmicl_%s_%s_%s_%s" % (eng_file_class, eng_file_channel, FileMgr.cast_code[fn['cast']], 'time')
             ret_list.append((nc_var_name, time_col))
             try:
                 md = nc_var_metadata[nc_var_name]
@@ -757,7 +758,7 @@ def eng_file_reader(eng_files, nc_info_d):
                 if(len(center_freqs) != len(spectra[0,:])):
                     log_error("len(center_freqs) %d != len(logavg) %d" % (len(center_freqs), len(d[0,:])))
                 else:
-                    nc_var_name = "tmicl_%s_%s_%s_%s" % (eng_file_class, eng_file_channel, 'a' if fn['cast'] == 1 else 'b', 'center_freqs')
+                    nc_var_name = "tmicl_%s_%s_%s_%s" % (eng_file_class, eng_file_channel, FileMgr.cast_code[fn['cast']], 'center_freqs')
                     ret_list.append((nc_var_name, center_freqs))
                     try:
                         md = nc_var_metadata[nc_var_name]
@@ -769,7 +770,7 @@ def eng_file_reader(eng_files, nc_info_d):
                         netcdf_dict[nc_var_name] = form_nc_metadata(None, False, 'd', {}, (nc_eng_file_mdp_info,))
 
             # The data part
-            nc_var_name = "tmicl_%s_%s_%s" % (eng_file_class, eng_file_channel, 'a' if fn['cast'] == 1 else 'b')
+            nc_var_name = "tmicl_%s_%s_%s" % (eng_file_class, eng_file_channel, FileMgr.cast_code[fn['cast']])
             ret_list.append((nc_var_name, spectra))
 
             # The nc metadata for nc_var_name was created in init_logger() above
