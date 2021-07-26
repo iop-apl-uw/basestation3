@@ -3050,13 +3050,23 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # CONSIDER - force use_auxpressure and use_auxcompass to be zero here?
 
             perform_thermal_inertia_correction = False
-            try:
-                ctd_epoch_time_s_v = results_d['legato_time']
-                tmp_press_v = results_d['legato_pressure']
-                ctd_temp_v = results_d['legato_temp']
-                ctd_cond_v = results_d['legato_conduc'] / 10.
-            except KeyError:
-                raise RuntimeError(True, "No Legato CT data found")
+            if set(('legato_pressure', 'legato_temp', 'legato_conduc', 'legato_time')) <= set(results_d):
+                try:
+                    tmp_press_v = results_d['legato_pressure']
+                    ctd_temp_v = results_d['legato_temp']
+                    ctd_cond_v = results_d['legato_conduc'] / 10.
+                    ctd_epoch_time_s_v = results_d['legato_time']
+                except KeyError:
+                    raise RuntimeError(True, "Legato CT scicon data found, but had problems loading")
+            else:
+                tmp_press_v = eng_f.get_col('rbr_pressure')
+                ctd_temp_v = eng_f.get_col('rbr_temp')
+                ctd_cond_v = eng_f.get_col('rbr_conduc')
+                if ctd_cond_v is not None:
+                    ctd_cond_v /= 10.0
+                ctd_epoch_time_s_v = sg_epoch_time_s_v
+                if tmp_press_v is None or ctd_temp_v is None or ctd_cond_v is None or ctd_epoch_time_s_v is None:
+                    raise RuntimeError(True, "Legato CT data specified, but no data found for scicon or truck")
 
             ctd_np = len(ctd_epoch_time_s_v)
 
