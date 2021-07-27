@@ -2174,16 +2174,20 @@ def main():
                         "No dive netCDF file created - mission netCDF file will not be updated"
                     )
                 else:
-                    (
-                        mp_ret_val,
-                        mission_profile_name,
-                    ) = MakeDiveProfiles.make_mission_profile(
-                        dive_nc_file_names, base_opts
-                    )
-                    if mp_ret_val:
+                    try:
+                        (
+                            mp_ret_val,
+                            mission_profile_name,
+                        ) = MakeDiveProfiles.make_mission_profile(
+                            dive_nc_file_names, base_opts
+                        )
+                        if mp_ret_val:
+                            failed_mission_profile = True
+                        else:
+                            data_product_file_names.append(mission_profile_name)
+                    except:
+                        log_error("Failed to create mission profile","exc")
                         failed_mission_profile = True
-                    else:
-                        data_product_file_names.append(mission_profile_name)
             #
             # Create the mission timeseries file
             #
@@ -2193,17 +2197,20 @@ def main():
                         "No dive netCDF file created - mission timeseries file will not be updated"
                     )
                 else:
-                    # Create the timeseries file
-                    (
-                        mt_retval,
-                        mission_timeseries_name,
-                    ) = MakeDiveProfiles.make_mission_timeseries(
-                        dive_nc_file_names, base_opts
-                    )
-                    if mt_retval:
+                    try:
+                        (
+                            mt_retval,
+                            mission_timeseries_name,
+                        ) = MakeDiveProfiles.make_mission_timeseries(
+                            dive_nc_file_names, base_opts
+                        )
+                        if mt_retval:
+                            failed_mission_timeseries = True
+                        else:
+                            data_product_file_names.append(mission_timeseries_name)
+                    except:
+                        log_error("Failed to create mission timeseries","exc")
                         failed_mission_timeseries = True
-                    else:
-                        data_product_file_names.append(mission_timeseries_name)
 
             processed_file_names = []
             processed_file_names.append(processed_eng_and_log_files)
