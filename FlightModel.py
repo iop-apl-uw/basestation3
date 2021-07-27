@@ -48,6 +48,9 @@ from flight_data import *
 import copy # must be after numpy (and flight_data) import, since numpy has its own 'copy'
 import stat
 import pdb
+import traceback
+
+DEBUG_PDB = "darwin" in sys.platform
 
 # If you change
 # - the format of the flight_data class (which see),
@@ -2038,7 +2041,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                     # Don't change too much away from existing a (typically the
                     # default) except to move away from small values.
                     # predicted_hd_a is prevailing value before adoptiong new grid value
-                    x_a_i = filter(lambda a: W_misfit_RMS[ib,a] <= ab_tolerance and hd_a_grid[a] >= predicted_hd_a,xrange(len(hd_a_grid)))
+                    x_a_i = filter(lambda a: W_misfit_RMS[ib,a] <= ab_tolerance and hd_a_grid[a] >= predicted_hd_a,range(len(hd_a_grid)))
                     if len(x_a_i):
                         x_a_i = x_a_i[0]
                         if x_a_i != ia:
@@ -3028,6 +3031,11 @@ if __name__ == "__main__":
         else:
             retval = cmdline_main()
     except Exception:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)
