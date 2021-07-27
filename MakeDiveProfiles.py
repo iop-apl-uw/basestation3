@@ -63,6 +63,7 @@ import GPS
 from HydroModel import glide_slope, hydro_model
 from TempSalinityVelocity import TSV_iterative, load_thermal_inertia_modes
 from QC import *
+import traceback
 import pdb
 from types import *
 import Navy
@@ -102,7 +103,7 @@ GPS1 = 0 # $GPS1
 GPS2 = 1 # $GPS2
 GPSE = 2 # $GPS
 
-def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns):
+def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_columns):
     """ Bins data accorrding to the specified bin_width
 
     Note: deepest bin is included in the down profile
@@ -112,7 +113,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
         which_half - see WhichHalf for details
         include_empty_bins - Should the empty bins be included or eliminated?
         depth_m_v - vehicle depth (corrected for latitude), in meters
-        data_columns - list of data columns - each the same length as depth_m_v
+        inp_data_columns - list of data columns - each the same length as depth_m_v
 
     Output:
         obs_bin - number of observations for each bin
@@ -125,6 +126,22 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
         log_error("Combined profiles and stripping empty bins not currently supported")
         return None
 
+    try:
+        num_data_cols = len(inp_data_columns)
+        # Filter out NaNs from depth colunn
+        if len(np.nonzero(np.isnan(depth_m_v))[0]):
+            depth_filter_i = np.logical_not(np.isnan(depth_m_v))
+            depth_m_v = depth_m_v[depth_filter_i].copy()
+            data_columns = []
+            for d in range(num_data_cols):
+                data_columns.append(inp_data_columns[d][depth_filter_i])
+        else:
+            data_columns = inp_data_columns
+    except:
+        _, _, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+        
     # First, create an array of indices of the bins and find the largest such index
     # Find the sample index for the maximum depth
     max_depth_sample_index = 0
@@ -136,13 +153,18 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, data_columns)
             max_depth_sample_index = i
 
     bin_index = zeros(num_rows, int32)
-    num_data_cols = len(data_columns)
 
-    # Seed the bin_index mapping from index to depth bin
-    for i in range(num_rows):
-        #bin_index[i] = 1 + int((depth_m_v[i] + bin_width/2.0)/bin_width)
-        # Zero base indexing
-        bin_index[i] = int(round((depth_m_v[i] + bin_width/2.0)/bin_width)) - 1
+    try:
+        # Seed the bin_index mapping from index to depth bin
+        for i in range(num_rows):
+            #bin_index[i] = 1 + int((depth_m_v[i] + bin_width/2.0)/bin_width)
+            # Zero base indexing
+            bin_index[i] = int(round((depth_m_v[i] + bin_width/2.0)/bin_width)) - 1
+    except:
+        _, _, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
 
     #print len(bin_index)
     #print "bin_index"

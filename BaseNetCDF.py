@@ -943,10 +943,13 @@ nc_var_metadata = {
     'log_HUMID': [False, 'd', {}, nc_scalar],
     'log_ICE_FREEZE_MARGIN': [False, 'd', {}, nc_scalar],
     'log_ID': [False, 'i', {}, nc_scalar],
+    'log_IMPLIED_C_PITCH' : [False, 'c', {}, nc_scalar], # Multi-valued string
+    'log_IMPLIED_C_VBD' : [False, 'c', {}, nc_scalar], # Multi-valued string
     'log_INTERNAL_PRESSURE': [False, 'd', {}, nc_scalar],
     'log_INT_PRESSURE_SLOPE': [False, 'd', {}, nc_scalar],
     'log_INT_PRESSURE_YINT': [False, 'd', {}, nc_scalar],
     'log_IRIDIUM_FIX': [False, 'c', {}, nc_scalar], # Multi-valued string
+    'log_IRON' : [False, 'c', {}, nc_scalar], # Multi-valued string
     'log_KALMAN_ARGS': [False, 'c', {}, nc_scalar], # Multi-valued string
     'log_KALMAN_CONTROL': [False, 'c', {}, nc_scalar], # Multi-valued string
     'log_KALMAN_USE': [False, 'i', {}, nc_scalar],
@@ -970,6 +973,9 @@ nc_var_metadata = {
     'log_MAX_BUOY': [False, 'd', {}, nc_scalar],
     #'log_MEM' : [False, 'd', {}, nc_scalar],
     'log_MEM': [False, 'c', {}, nc_scalar], # Multi-valued string for version 67.00 and later
+    'log_MEM0': [False, 'c', {}, nc_scalar], # Multi-valued string for version 67.00 and later - glider only
+    'log_MEM1': [False, 'c', {}, nc_scalar], # Multi-valued string for version 67.00 and later - glider only
+    'log_MEM2': [False, 'c', {}, nc_scalar], # Multi-valued string for version 67.00 and later - glider only
     'log_MHEAD_RNG_PITCHd_Wd': [False, 'c', {}, nc_scalar], # Multi-valued string
     'log_MINV_10V': [False, 'd', {}, nc_scalar],
     'log_MINV_24V': [False, 'd', {}, nc_scalar],
