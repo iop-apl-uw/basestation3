@@ -49,6 +49,7 @@ import copy # must be after numpy (and flight_data) import, since numpy has its 
 import stat
 import pdb
 import traceback
+import numpy as np
 
 DEBUG_PDB = "darwin" in sys.platform
 
@@ -815,8 +816,8 @@ def load_dive_data(dive_data):
         # SG eng time base
         eng_time = (dive_nc_file.variables['time'][:] - start_time)
         ctd_time = (dive_nc_file.variables['ctd_time'][:] - start_time)
-        np = len(ctd_time)
-        if np == 0:
+        num_pts = len(ctd_time)
+        if num_pts == 0:
             log_warning("No data for dive %d" % dive_num)
             raise RuntimeError # close the file handle below
 
@@ -864,13 +865,13 @@ def load_dive_data(dive_data):
         depth = dive_nc_file.variables['ctd_depth'][:]
         w = Utils.ctr_1st_diff(-depth * cm_per_m, ctd_time)
         # if the pressure sensor is noisy then we can get poor results when looking for still water
-        w = Utils.medfilt1(w,L=min(np,vbdbias_filter))
+        w = Utils.medfilt1(w,L=min(num_pts,vbdbias_filter))
         abs_w = abs(w)
         if limit_to_still_water:
             dwdt = abs(Utils.ctr_1st_diff(w, ctd_time))
-            mdwdt = Utils.medfilt1(dwdt, L=min(np, vbdbias_filter))
+            mdwdt = Utils.medfilt1(dwdt, L=min(num_pts, vbdbias_filter))
         else:
-            mdwdt = zeros(np, float64) # assert everywhere is still
+            mdwdt = zeros(num_pts, float64) # assert everywhere is still
         # SG227 SODA Aug19 post dive 70 had intermittent pressure sensor issues so wildly bad w's
         # Consider adding tests to eliminate points that are driven by that noise (like limiting abs(dwdt) < 2cm/s^2
         # Thus we look for both quiet locations and actively expunge anti-quiet locations
@@ -910,7 +911,7 @@ def load_dive_data(dive_data):
                 try:
                     velo_data_d = sio.loadmat(velo_pathname);
                     velo_speed = velo_data_d['velo_speed']
-                    velo_speed = reshape(velo_speed,np,1)
+                    velo_speed = reshape(velo_speed,num_pts,1)
                     correct_aoa_velo = False # externally measured
                 except:
                     pass
@@ -919,7 +920,7 @@ def load_dive_data(dive_data):
 
         # TODO real(density_insitu)
         # Find where data was apparently good
-        good_pts = zeros(np)
+        good_pts = zeros(num_pts)
         good_pts_i_v = list(filter(lambda i:
                               isfinite(temperature_raw[i]) and
                               isfinite(salinity_raw[i]) and
@@ -927,7 +928,7 @@ def load_dive_data(dive_data):
                               (not n_velo or isfinite(velo_speed[i])) and
                               mdwdt[i] <= limit_to_still_water and
                               abs_w[i] <= max_speed,
-                              range(np)))
+                              range(num_pts)))
         if len(good_pts_i_v) == 0:
             log_warning("Dive %d has no good points; pressure sensor noise? (mean: %f min: %f)" % (dive_num,mean(mdwdt),min(mdwdt)))
             return data_d
@@ -945,7 +946,7 @@ def load_dive_data(dive_data):
             # Mark as VBD/pitch/roll flags per point.
             # Have HDM solve during those points?
             salinity_qc = decode_qc(dive_nc_file.variables['salinity_qc'])
-            good_qc_i_v = list(filter(lambda i: salinity_qc[i] not in [QC_BAD,QC_UNSAMPLED],range(np)))
+            good_qc_i_v = list(filter(lambda i: salinity_qc[i] not in [QC_BAD,QC_UNSAMPLED],range(num_pts)))
             good_pts_i_v = intersect1d(good_pts_i_v,good_qc_i_v)
 
         # TODO?
@@ -976,14 +977,14 @@ def load_dive_data(dive_data):
             # reduce to valid points and place in data_d = {} if good
             aroll = abs(eng_roll_ang)
             apitch = abs(eng_pitch_ang)
-            delta_t = zeros(np, float64)
-            delta_t[0:np-1] = ctd_time[1:np] - ctd_time[0:np-1]
+            delta_t = zeros(num_pts, float64)
+            delta_t[0:num_pts-1] = ctd_time[1:num_pts] - ctd_time[0:num_pts-1]
             delta_t[-1] = delta_t[-2]
-            vbddiff = zeros(np, float64)
-            vbddiff[1:np] = diff(eng_vbd_cc)/delta_t[1:np]
+            vbddiff = zeros(num_pts, float64)
+            vbddiff[1:num_pts] = diff(eng_vbd_cc)/delta_t[1:num_pts]
             avbddiff = abs(fix(vbddiff))
             # TODO replace this with intersect1d calls for speed
-            valid_i = [i for i in range(np) if ((ignore_speed_gsm or speed_gsm[i] > 0) and
+            valid_i = [i for i in range(num_pts) if ((ignore_speed_gsm or speed_gsm[i] > 0) and
                                         # isfinite(temperature_raw[i]) and isfinite(salinity_raw[i]) and (pressmin <= press[i] <= pressmax) and
                                         good_pts[i] and
                                         (avbddiff[i] < vbddiffmax) and
@@ -1122,7 +1123,9 @@ def w_rms_func(vbdbias,a,b,abs_compress, # these variables can be varied by vari
     flight_consts_d['hd_a'] = a
     flight_consts_d['hd_b'] = b
     buoyancy, pitch, w, vol = compute_buoyancy(vbdbias, abs_compress, dive_data_d)
-    hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
+    with np.errstate(divide="ignore",invalid="ignore"):
+        # hd_b can be set to zero, which causes hydro_model to warn about many issues
+        hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
     hdm_w_speed_cm_s_v = hdm_speed_cm_s_v*sin(hdm_glide_angle_rad_v) # could delay this until we see if enough valid points are around
     if dump_checkpoint_data_matfiles:  # DEBUG for dumping solve_ab mat files of combined data
         dive_data_d['vol'] = vol
@@ -1133,11 +1136,11 @@ def w_rms_func(vbdbias,a,b,abs_compress, # these variables can be varied by vari
         
     w_rms = w_rms_func_bad # assume stalled everywhere
     w_rms_components = []
-    np = len(w)
-    valid_i = Utils.setdiff(list(range(np)), fv_stalled_i_v)
+    num_pts = len(w)
+    valid_i = Utils.setdiff(list(range(num_pts)), fv_stalled_i_v)
     valid_pts = float(len(valid_i))
     # TODO really we should record dive and climb profile numbers and ensure so fraction of both for each dive number are solved
-    if hm_converged and valid_pts > 0 and valid_pts/np > non_stalled_percent:
+    if hm_converged and valid_pts > 0 and valid_pts/num_pts > non_stalled_percent:
         def rms(x):
             return sqrt(nanmean(x**2))
         
@@ -1510,7 +1513,9 @@ def solve_ab_DAC(dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
         for grid_b, ib in zip(hd_b_grid, list(range(nb))):
             flight_consts_d['hd_a'] = grid_a
             flight_consts_d['hd_b'] = grid_b
-            hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
+            with np.errstate(divide="ignore", invalid="ignore"):
+                # hd_b == 0.0 is part of the search grid, which will cause hydro_model throw many warnings
+                hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
             if not hm_converged:
                 pass # ignore ... this is the best we can do
             hdm_horizontal_speed_cm_s_v = hdm_speed_cm_s_v*cos(hdm_glide_angle_rad_v)
@@ -2041,7 +2046,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                     # Don't change too much away from existing a (typically the
                     # default) except to move away from small values.
                     # predicted_hd_a is prevailing value before adoptiong new grid value
-                    x_a_i = filter(lambda a: W_misfit_RMS[ib,a] <= ab_tolerance and hd_a_grid[a] >= predicted_hd_a,range(len(hd_a_grid)))
+                    x_a_i = list(filter(lambda a: W_misfit_RMS[ib,a] <= ab_tolerance and hd_a_grid[a] >= predicted_hd_a,range(len(hd_a_grid))))
                     if len(x_a_i):
                         x_a_i = x_a_i[0]
                         if x_a_i != ia:
@@ -3017,6 +3022,8 @@ if __name__ == "__main__":
     # Force to be in UTC
     os.environ['TZ'] = 'UTC'
     time.tzset()
+
+    np.seterr(divide='raise', invalid='raise')
 
     try:
         if "--profile" in sys.argv:
