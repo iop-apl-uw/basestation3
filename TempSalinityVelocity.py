@@ -805,7 +805,7 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
                 prior_temp_mode_v_i = 0 # Twaf[0]
                 prior_Ai_dTadt = Ai_v[0]*dTadt_v[0]
                 # Explicitly unroll the indexing loop using rotational variables for iterative solution
-                for ii in xrange(1,mp_fine):
+                for ii in range(1,mp_fine):
                     tau_v_i = tau_v[ii]
                     tau_v_2 = 2*tau_v_i
                     Ai_dTadt = Ai_v[ii]*dTadt_v[ii]
@@ -843,7 +843,7 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
             # but we want the salinity of the water outside at the thermistor
             # so we need to map it to measurement time below
             # M: salin_c = sw_salt(cond/c3515, temp_c, press);
-            # salinity_v = array(map(lambda i: seawater.salt(r_cond_cor_v[i]/c3515, temp_c_v[i], r_pressure_v[i]), xrange(r_sg_np))) # aka salin_c
+            # salinity_v = array(map(lambda i: seawater.salt(r_cond_cor_v[i]/c3515, temp_c_v[i], r_pressure_v[i]), range(r_sg_np))) # aka salin_c
             if Globals.f_use_seawater:
                 salin_c_v = seawater.salt(r_cond_cor_v/c3515, temp_c_v, r_pressure_v) # aka salin_c
             else:

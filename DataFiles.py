@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006 - 2016, 2018, 2019, 2020 by the University of Washington. All rights reserved.
+## Copyright (c) 2006 - 2016, 2018, 2019, 2020, 2021 by the University of Washington. All rights reserved.
 ## 
 ## This file contains proprietary information and remains the 
 ## unpublished property of the AUTHORS. Use, disclosure,
@@ -330,6 +330,11 @@ class DataFile:
             retval = None
 
         return retval
+    
+    def update_col(self, label, data):
+        """Updates the data in an existing column
+        """
+        self.data[:, self.columns.index(label)] = data
 
     def find_col(self, alternative_columns):
         """Find one of the alternative_column names and returns the column name and the values

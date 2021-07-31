@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1492,7 +1492,6 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
     directives - an instance of ProfileDirectives appropriate for this dive
     nc_info_d - information on dimension names and sizes
     instruments_d - information on instruments used for each vector variable, if any
-    rbr_good_press_i_v - for legato a pressure source on truck, boolean array of good pressure points, else None
 
     Raises:
     None
@@ -1503,8 +1502,6 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
               (nc_dive_file_name, ignore_existing_netcdf, eng_file_name, log_file_name, sg_calib_file_name, logger_eng_files))
 
     log_debug("Processing %s" % nc_dive_file_name)
-
-    rbr_good_press_i_v = None
 
     status = 0 # assume we have issues loading data
     drv_file_name = os.path.join(base_opts.mission_dir, 'sg_directives.txt')
@@ -1860,9 +1857,6 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
 
 
                     dive_nc_file.close()
-                    # finalize the data structures
-                    if 'rbr_pressure' in eng_cols:
-                        rbr_good_press_i_v = np.logical_not(np.isnan(eng_data[eng_cols.index('rbr_pressure')]))
                     num_rows = len(eng_data)
                     sg_np = len(eng_data[0])
                     data = zeros((sg_np, num_rows), float)
@@ -1873,9 +1867,7 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
                     eng_f.data = data
                     eng_f.columns = eng_cols
                     # all done with these vars
-                    data = None
-                    eng_cols = None
-                    eng_data = None
+                    del data, eng_cols, eng_data
                     # now see if we need to update the nc data from raw files
 
         # reload from original data or update nc data
@@ -1947,14 +1939,18 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
         # regardless of source, remap these column names
         eng_f.remap_engfile_columns()
         if sg_ct_type == 4 and eng_f.get_col('rbr_pressure') is not None:
-            # For a legato on the truck, using the legato for pressure, passive turns have no
-            # pressure signal, so those values needs to be filtered out
+
             rbr_good_press_i_v = np.logical_not(np.isnan(eng_f.get_col('rbr_pressure')))
-            # NOTE: In this case, what we propagate into the netcdf file is a subset of .eng file.  This is done
-            # due to a number of modified/synthesized columns in MDP.  See matching change at the end of MDP
-            sg_np = len(eng_f.get_col('rbr_pressure')[rbr_good_press_i_v])
-        else:
-            sg_np = len(eng_f.get_col(eng_f.columns[0]))
+            rbr_pressure =  Utils.interp1d(eng_f.get_col('elaps_t')[rbr_good_press_i_v],
+                                           eng_f.get_col('rbr_pressure')[rbr_good_press_i_v],
+                                           eng_f.get_col('elaps_t'), kind='linear')
+            eng_f.update_col('rbr_pressure', rbr_pressure)
+            sg_depth=  Utils.interp1d(eng_f.get_col('elaps_t')[rbr_good_press_i_v],
+                                      eng_f.get_col('depth')[rbr_good_press_i_v],
+                                      eng_f.get_col('elaps_t'), kind='linear')
+            eng_f.update_col('depth', sg_depth)
+            
+        sg_np = len(eng_f.get_col(eng_f.columns[0]))
         assign_dim_info_size(nc_info_d, nc_sg_data_info, sg_np)
         for column in eng_f.columns:
             nc_var_name = nc_sg_eng_prefix + column
@@ -2035,16 +2031,16 @@ def load_dive_profile_data(base_opts, ignore_existing_netcdf,
 
                 status = 2 # reloaded some logger data; results need updating
 
-        return (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d, rbr_good_press_i_v)
+        return (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d)
 
     except RuntimeError as exception:
         log_error(exception.args[0])
-        return (0, None, None, None, None, None, None, None, None, None)
+        return (0, None, None, None, None, None, None, None, None)
     except:
         # Typically because a reader died
         # Seen when reading old-style nc files where the format of a variable has changed from version to version
         log_critical("Exception when reading data files: %s" % sys.exc_info()[0])
-        return (0, None, None, None, None, None, None, None, None, None) # indicate we lost
+        return (0, None, None, None, None, None, None, None, None) # indicate we lost
 
 SBECT_mismatch_reported = {} # if we are reprocessing several profiles don't complain on subsequent profiles
 def SBECT_coefficents(type, calib_consts, log_f, sgc_vars, log_vars):
@@ -2155,7 +2151,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
     head, tail = os.path.splitext(log_file_name) # fully qualified name
     path, dive_tag = os.path.split(head)
 
-    (status, globals_d, log_f, eng_f, explicit_calib_consts, results_d, directives, nc_info_d, instruments_d, rbr_good_press_i_v) = \
+    (status, globals_d, log_f, eng_f, explicit_calib_consts, results_d, directives, nc_info_d, instruments_d) = \
          load_dive_profile_data(base_opts,
                                 ignore_existing_netcdf,
                                 nc_dive_file_name,
@@ -2385,8 +2381,6 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         eng_file_start_time = time.mktime(eng_f.start_ts) # secs since the epoch
         i_eng_file_start_time = int(eng_file_start_time) # integer version for GC work
         elapsed_time_s_v = eng_f.get_col('elaps_t') # When pressure sample was taken; other measurements occur sometime slightly later
-        if rbr_good_press_i_v is not None:
-            elapsed_time_s_v = elapsed_time_s_v[rbr_good_press_i_v]
         # ARGO computes JULD as fraction of days since a reference date (1950-01-01 00:00:00 UTC)
         # The value below is seconds since a reference date (1970-01-01 00:00:00 UTC)
         # The ARGO encoding is closer (but not the same as) the matlab serial date number
@@ -2732,8 +2726,6 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                         # TODO For RevE and DG - this column will need to be created
                         pitchAD_interp = None
                     else:
-                        if rbr_good_press_i_v is not None:
-                            pitch_ctl = pitch_ctl[rbr_good_press_i_v]
                         # For DG - interpolate onto the compass time grid
                         pitchAD = fix(pitch_ctl*log_f.data['$PITCH_CNV'] + log_f.data['$C_PITCH'])
                         pitchAD_interp = Utils.interp1d(sg_epoch_time_s_v, pitchAD, results_d['auxCompass_time'], kind='linear')
@@ -2773,10 +2765,6 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             vehicle_heading_mag_degrees_v = eng_f.get_col('head')
             vehicle_pitch_degrees_v = eng_f.get_col('pitchAng')
             vehicle_roll_degrees_v = eng_f.get_col('rollAng')
-            if rbr_good_press_i_v is not None:
-                vehicle_heading_mag_degrees_v = vehicle_heading_mag_degrees_v[rbr_good_press_i_v]
-                vehicle_pitch_degrees_v = vehicle_pitch_degrees_v[rbr_good_press_i_v]
-                vehicle_roll_degrees_v = vehicle_roll_degrees_v[rbr_good_press_i_v]
             bad_i_v = [i for i in range(sg_np) if isnan(vehicle_pitch_degrees_v[i])]
             if (len(bad_i_v)):
                 log_warning("Compass invalid out for %d of %d points - interpolating bad points" % (len(bad_i_v), sg_np))
@@ -2839,16 +2827,10 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             if(Mx is None or My is None or Mz is None):
                 log_error("Could not find magnetometer data - skipping heading corrections")
             else:
-                if rbr_good_press_i_v is not None:
-                    Mx = Mx[rbr_good_press_i_v]
-                    My = My[rbr_good_press_i_v]
-                    Mz = Mz[rbr_good_press_i_v]
                 pitch_ctl = eng_f.get_col('pitchCtl')
                 if pitch_ctl is None:
                     pitchAD = None
                 else:
-                    if rbr_good_press_i_v is not None:
-                        pitch_ctl = pitch_ctl[rbr_good_press_i_v]
                     pitchAD = fix(pitch_ctl*log_f.data['$PITCH_CNV'] + log_f.data['$C_PITCH'])
 
                 new_head = correct_heading("Truck compass", globals_d, base_opts.magcalfile, 'magcalfile_contents', "tcm2mat.cal", base_opts.mission_dir,
@@ -2860,10 +2842,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     eng_f.data[:, head_index] = new_head # Update heading with the improved version of heading
 
         vbdCC_v = eng_f.get_col('vbdCC')
-        if(vbdCC_v is not None):
-            if rbr_good_press_i_v is not None:
-                vbdCC_v = vbdCC_v[rbr_good_press_i_v]
-        else:
+        if(vbdCC_v is None):
             # For version 67.00 and later, the vbdCC needs to be derived from the gc table in the log file
 
             # A note on pitch and roll: If we ever decide to drop pitchCtl and
@@ -3024,9 +3003,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             results_d.update({'eng_vbdCC' : np.copy(vbdCC_v)}) # copy since we modify vbdCC_v below
 
             # Done with these intermediates
-            gc_vbdcc_v = None
-            gc_ad_v = None
-            gc_vbd_times_v = None
+            del gc_vbdcc_v, gc_ad_v, gc_vbd_times_v
 
         vbdCC_v -= calib_consts['vbdbias']
 
@@ -3094,15 +3071,13 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         sbect_unpumped = calib_consts['sbect_unpumped']
         have_scicon_ct = False
 
+        # Overritten by rbr on the truck, otherwise set below
+        salin_raw_qc_v = None 
+        salin_raw_v = None        
+
         if(sg_ct_type == 4):
-            #
-            # UnPumped RBR Legato data
-            #
-
-            # CONSIDER - force use_auxpressure and use_auxcompass to be zero here?
-
+            ## UnPumped RBR Legato data ##
             perform_thermal_inertia_correction = False
-            tmp_press_v = None
             if set(('legato_pressure', 'legato_temp', 'legato_conduc', 'legato_time')) <= set(results_d):
                 try:
                     tmp_press_v = results_d['legato_pressure']
@@ -3116,39 +3091,39 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 ctd_cond_v = eng_f.get_col('rbr_conduc')
                 if ctd_cond_v is not None:
                     ctd_cond_v /= 10.0
-                ctd_epoch_time_s_v = sg_epoch_time_s_v
+                ctd_epoch_time_s_v = sg_epoch_time_s_v.copy()
                 if ctd_temp_v is None or ctd_cond_v is None or ctd_epoch_time_s_v is None:
                     raise RuntimeError(True, "Legato CT data specified, but no data found for scicon or truck")
+                tmp_press_v = eng_f.get_col('rbr_pressure')
 
-                if rbr_good_press_i_v is not None:
-                    tmp_press_v = eng_f.get_col('rbr_pressure')[rbr_good_press_i_v]
-                    ctd_temp_v = ctd_temp_v[rbr_good_press_i_v]
-                    ctd_cond_v = ctd_cond_v[rbr_good_press_i_v]
-                    #ctd_epoch_time_s_v = ctd_epoch_time_s_v[rbr_good_press_i_v]
-
-            ctd_np = len(ctd_epoch_time_s_v)
+            ctd_np = len(ctd_epoch_time_s_v)                    
+            ctd_temp_qc = initialize_qc(ctd_np, QC_GOOD)
+            ctd_cond_qc = initialize_qc(ctd_np, QC_GOOD)
+            ctd_salin_qc = initialize_qc(ctd_np, QC_GOOD)
+            if eng_f.get_col('rbr_temp') is not None:
+                # Note: this assumes the rbr_pressure, if present, has been interpolated for missing points
+                unsampled_i = np.nonzero(np.isnan(ctd_temp_v))[0]
+                assert_qc(QC_UNSAMPLED, ctd_temp_qc, unsampled_i, "Legato unsampled")
+                assert_qc(QC_UNSAMPLED, ctd_cond_qc, unsampled_i, "Legato unsampled")
+                assert_qc(QC_UNSAMPLED, ctd_salin_qc, unsampled_i, "Legato unsampled")
 
             # CONSIDER: should we support kistler cnf files in case?
             sg_press_v = (eng_f.get_col('depth')*cm2m - calib_consts['depth_bias']) * psi_per_meter;
-            if rbr_good_press_i_v is not None:
-                sg_press_v = sg_press_v[rbr_good_press_i_v]
             sg_press_v *= dbar_per_psi # convert to dbar
             if Globals.f_use_seawater:
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
             
-            # Handle pressure spikes
+            # Handle pressure spikes in legato pressure signal
             if tmp_press_v is not None:
                 ctd_press_v, bad_points = QC.smooth_legato_pressure(tmp_press_v, ctd_epoch_time_s_v)
-
                 ctd_press_qc_v = initialize_qc(ctd_np, QC_GOOD)
                 assert_qc(QC_INTERPOLATED, ctd_press_qc_v, bad_points, 'despiked pressure')
                 results_d.update({'ctd_pressure_qc' : ctd_press_qc_v})
             else:
                 ctd_press_v = sg_press_v.copy()
                 
-            # MDP automatically asserts instrument when writing
             if Globals.f_use_seawater:
                 ctd_salin_v = seawater.salt(ctd_cond_v/c3515, ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
                 ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) # initial depth estimate
@@ -3156,59 +3131,30 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 ctd_salin_v = gsw.SP_from_C(ctd_cond_v * 10., ctd_temp_v, ctd_press_v) # temporary, not the real salinity raw
                 ctd_depth_m_v = -1. * gsw.z_from_p(ctd_press_v, latitude, 0., 0.) # initial depth estimate
 
-            # GPCTD dumps invalid values at the end of each record; use qc_checks() to discover them...
-            # but disable spike detection (using QC_NO_CHANGE)
-
-            # CONSIDER - this should probably be dropped for the Legato
-            ctd_temp_qc_v, ctd_cond_qc_v, ctd_salin_qc_v = qc_checks(ctd_temp_v, initialize_qc(ctd_np, QC_GOOD),
-                                                                     ctd_cond_v, initialize_qc(ctd_np, QC_GOOD),
-                                                                     ctd_salin_v, initialize_qc(ctd_np, QC_GOOD),
+            # CONSIDER - this may not be entirely correct for legato
+            temp_raw_qc_v, cond_raw_qc_v, salin_raw_qc_v = qc_checks(ctd_temp_v, ctd_temp_qc,
+                                                                     ctd_cond_v, ctd_cond_qc,
+                                                                     ctd_salin_v, ctd_salin_qc,
                                                                      ctd_depth_m_v, calib_consts,
                                                                      QC_BAD, QC_NO_CHANGE, 'raw legato ')
-
-            ctd_epoch_time_s_v = ctd_epoch_time_s_v.copy()
+            # Map to names used in rest of code
             temp_raw_v = ctd_temp_v.copy()
             cond_raw_v = ctd_cond_v.copy()
-            ctd_press_v = ctd_press_v.copy()
+            salin_raw_v = ctd_salin_v.copy()
+
+            ctd_results_dim = nc_mdp_data_info[nc_legato_data_info]
 
             # For Legato we don't correct their pressure sensor so we just take it as is
             # and assume the pressure/depth is wrt thermistor already. So no zTP correction here
 
-            ctd_results_dim = nc_mdp_data_info[nc_legato_data_info]
-            ctd_np = len(ctd_epoch_time_s_v)
-
-            # Initially all is well...
-            temp_raw_qc_v  = initialize_qc(ctd_np, QC_GOOD)
-            cond_raw_qc_v  = initialize_qc(ctd_np, QC_GOOD)
-
             # Done w/ these vars...
-            sg_temp_v = None
-            ctd_temp_v = None
-            ctd_temp_qc_v = None
-            ctd_cond_v = None
-            ctd_cond_qc_v = None
-            ctd_salin_v = None
-            ctd_salin_qc_v = None
-
-###            # This is a shortened version of the full conversion below in the unpumped SBECT case
-###            # moved to primarily to facilitate compass comparison plots
-###            if(auxpressure_present):
-###                auxPress_counts_v = results_d[f'{auxpressure_name}_pressureCounts']
-###                aux_epoch_time_s_v = results_d[f'{auxpressure_name}_time']
-###
-###                # Convert pressure counts to pressure
-###                if aux_pressure_slope is not None and  aux_pressure_offset is not None:
-###                    auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
-###                    #auxCompass_pressure_v = ((auxPress_counts_v * aux_pressure_slope) + aux_pressure_offset) * dbar_per_psi
-###                    log_info(f"{auxpressure_name}_pressure_offset = %f, {auxpressure_name}_pressure_slope = %f" %
-###                             (aux_pressure_offset, aux_pressure_slope))
-###                    #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
-###                    auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
-###                    results_d.update({f'{auxpressure_name}_press' : auxCompass_pressure_v,
-###                                      f'{auxpressure_name}_depth' : auxCompass_depth_v})
-            ## End Legatto
+            del ctd_temp_v, ctd_cond_v, ctd_salin_v
+            
+            ## End Legatto ##
 
         elif(sbect_unpumped):
+            ## Regular sbect sensor ##
+            
             # First - see if we have scicon data...
             # Why not eng file first you ask?  Read and weep below...
             try:
@@ -3350,8 +3296,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
 
             sg_press_v *= dbar_per_psi # convert to dbar
             # Done with these variables
-            press_counts_v = None
-            sg_temp_raw_v = None
+            del press_counts_v, sg_temp_raw_v
             # DEBUG ONLY
             try:
                 prev_sg_press_v = results_d['pressure']
@@ -3471,7 +3416,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                     ctd_press_v = Utils.interp1d(sg_epoch_time_s_v, ctd_press_v, ctd_epoch_time_s_v, kind='linear')
 
             # Done with this vector (if created)
-            auxCompass_pressure_v = None
+            # del auxCompass_pressure_v
 
             # Conductivity calculation from SBE4 data sheet
             # Open-coded version of water_properties.m
@@ -3577,19 +3522,13 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             cond_raw_qc_v  = initialize_qc(ctd_np, QC_GOOD)
 
             # Done w/ these vars...
-            sg_temp_v = None
-            ctd_temp_v = None
-            ctd_temp_qc_v = None
-            ctd_cond_v = None
-            ctd_cond_qc_v = None
-            ctd_salin_v = None
-            ctd_salin_qc_v = None
+            del sg_temp_v, ctd_temp_v, ctd_temp_qc_v, ctd_cond_v, ctd_cond_qc_v, ctd_salin_v, ctd_salin_qc_v
 
             # NOTYET ctd_metadata_d = fetch_instrument_metadata(nc_gpctd_data_info)
             # No ancillary_variables to add yet (all internal to the GPCTD unit)
             ## End GPDCTD
 
-        zTP = None # Done with this variable
+        del zTP # Done with this variable
 
         # At this point we have:
         # temp_raw_v, cond_raw_v plus qc vectors
@@ -3656,11 +3595,12 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         # Adjust these offsets regardless of CT source
         temp_raw_v -= calib_consts['temp_bias'] # remove bias [degC]
         cond_raw_v -= calib_consts['cond_bias'] # remove bias [S/m]
-        # Compute salinity based on raw data, w/o modification
-        if Globals.f_use_seawater:
-            salin_raw_v = seawater.salt(cond_raw_v/c3515, temp_raw_v, ctd_press_v)
-        else:
-            salin_raw_v = gsw.SP_from_C(cond_raw_v * 10., temp_raw_v, ctd_press_v)
+        if salin_raw_v is None:
+            # Compute salinity based on raw data, w/o modification
+            if Globals.f_use_seawater:
+                salin_raw_v = seawater.salt(cond_raw_v/c3515, temp_raw_v, ctd_press_v)
+            else:
+                salin_raw_v = gsw.SP_from_C(cond_raw_v * 10., temp_raw_v, ctd_press_v)
 
         # elapsed time is recorded as eng_elaps_t
         results_d.update({
@@ -3827,6 +3767,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         temp_cor_qc_v = array(temp_raw_qc_v)
         cond_cor_v    = array(cond_raw_v)
         cond_cor_qc_v = array(cond_raw_qc_v)
+        if salin_raw_qc_v is None:
+            salin_raw_qc_v = initialize_qc(ctd_np, QC_GOOD)
 
         # Perform basic QC checks on raw data
         # NOTE mark spikes as QC_PROBABLY_BAD
@@ -3835,11 +3777,11 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
         #  1) Should perform_scicon_noise_filter=True be passed? (No I think)
         #  2) Should spike detection be enabled?
         (temp_raw_qc_v, cond_raw_qc_v, salin_raw_qc_v) = qc_checks(temp_raw_v, temp_raw_qc_v,
-                                                                 cond_raw_v, cond_raw_qc_v,
-                                                                 salin_raw_v, initialize_qc(ctd_np, QC_GOOD),
-                                                                 ctd_depth_m_v, calib_consts,
-                                                                 QC_BAD, QC_PROBABLY_BAD,
-                                                                 'raw ', have_scicon_ct)
+                                                                   cond_raw_v, cond_raw_qc_v,
+                                                                   salin_raw_v, salin_raw_qc_v,
+                                                                   ctd_depth_m_v, calib_consts,
+                                                                   QC_BAD, QC_PROBABLY_BAD,
+                                                                   'raw ', have_scicon_ct)
         # Assume there are no anomalies
         good_anomalies_v = []
         suspect_anomalies_v = []
@@ -4095,7 +4037,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             # in that case the ctr1stdiffderiv will propagate NaNs adjacent locations in dTdt and hence into temp
             bad_dTdt_i_v = [i for i in range(ctd_np) if isnan(dTemp_dt_v[i])]
             dTemp_dt_v[bad_dTdt_i_v] = 0 #% no 1st order lag here
-            bad_dTdt_i_v = None # done with this intermediate
+            del bad_dTdt_i_v # done with this intermediate
 
             temp_cor_v += calib_consts['sbect_tau_T']*dTemp_dt_v # correct for 1st order time lag
 
@@ -4239,12 +4181,7 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                         DAC_qc = QC_BAD # bad flight....
 
                 # Done with these intermediate arrays
-                pitch_end_v = None
-                pend_i_v = None
-                diff_pend_i_v = None
-                idiend_v = None
-                press_end_v = None
-                climb_dsurf_i_v = None
+                del pitch_end_v, pend_i_v, diff_pend_i_v, press_end_v, climb_dsurf_i_v
         else:
             # If the data stops at pressures below climb_dsurf_depth, don't remove anything...
             # But see if we were truncated before we got near the surface
@@ -5347,8 +5284,6 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
             if (eng_f.removed_col(column)):
                 continue # skip this dropped column
             column_v = eng_f.get_col(column)
-            if rbr_good_press_i_v is not None:
-                column_v = column_v[rbr_good_press_i_v]
             # Move all eng data onto results_d so we process them uniformly
             # this permits eng file data to have different dim_infos (e.g., magnetometer)
             nc_var_name = nc_sg_eng_prefix + column
@@ -5500,7 +5435,7 @@ def write_auxillary_files(base_opts, nc_dive_file_name,
 
     if (profile_file_name or binned_profile_file_name or kkyy_up_file_name or kkyy_down_file_name): # BREAK
         # We ignore any results_d, since we effectively rebuild it below
-        (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d, rbr_good_press_i_v) = \
+        (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d) = \
                  load_dive_profile_data(base_opts, False, nc_dive_file_name, None, None, None, None)
         if (status == 0):
             log_error("Unable to load data from %s; no auxillary files written" % nc_dive_file_name)
@@ -5867,7 +5802,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             first_profile_name = dive_nc_profile_name
         try: # RuntimeError
             dive_num = 0 # impossible dive number
-            (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d, rbr_good_press_i_v) = \
+            (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d) = \
                  load_dive_profile_data(base_opts, False, dive_nc_profile_name, None, None, None, None)
             if status == 0:
                 raise RuntimeError("Unable to read %s" % dive_nc_profile_name)
@@ -6447,7 +6382,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         log_debug("Processing %s" % dive_nc_profile_name)
         try: # RuntimeError
             dive_num = 0 # impossible dive number
-            (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d, rbr_good_press_i_v) = \
+            (status, globals_d, log_f, eng_f, calib_consts, results_d, directives, nc_info_d, instruments_d) = \
                  load_dive_profile_data(base_opts, False, dive_nc_profile_name, None, None, None, None)
             if status == 0:
                 raise RuntimeError("Unable to read %s" % dive_nc_profile_name)
