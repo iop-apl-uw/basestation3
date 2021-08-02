@@ -209,11 +209,11 @@ def log_alerts():
 def log_conversion_alerts():
     return BaseLogger.conversion_alerts_d
 
-def log_conversion_alert(key, s):
+def log_conversion_alert(key, msg, resend):
     conversion_alerts_d = BaseLogger.conversion_alerts_d
     if key not in conversion_alerts_d:
         conversion_alerts_d[key] = []
-    conversion_alerts_d[key].append(s)
+    conversion_alerts_d[key].append((msg, resend))
 
 def log_alert(key, s):
     alerts_d = BaseLogger.alerts_d

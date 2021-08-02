@@ -148,10 +148,10 @@ urllib.request.FancyURLopener.prompt_user_passwd = my_prompt_user_passwd
 def read_processed_files(glider_dir, instrument_id):
     """Reads the processed file cache
 
-       Returns: list of processed dive files and a list of processed pdos logfiles
-                None for error opening the file
+    Returns: list of processed dive files and a list of processed pdos logfiles
+             None for error opening the file
 
-       Raises: IOError for file errors
+    Raises: IOError for file errors
     """
     log_debug("Enterting read_processed_files")
 
@@ -414,15 +414,15 @@ def select_fragments(file_group, instrument_id):
             defrag_file_name = root + "." + file_trans_received
             log_conversion_alert(
                 defrag_file_name,
-                f"File {fragment} is a PARTIAL file - consider {generate_resend(fragment, instrument_id)}",
+                f"File {fragment} is a PARTIAL file",
+                generate_resend(fragment, instrument_id),
             )
 
     return new_file_group
 
 
 def generate_resend(fragment_name, instrument_id):
-    """Given a fragment name, return the appropriate resend dive message
-    """
+    """Given a fragment name, return the appropriate resend dive message"""
     fragment_fc = FileMgr.FileCode(fragment_name, instrument_id)
     ret_val = ""
     if fragment_fc.is_seaglider() or fragment_fc.is_seaglider_selftest():
@@ -898,12 +898,12 @@ def check_file_fragments(
 ):
     """Checks that the file fragments are of a reasonable size
 
-       Note: this function will issue incorrect diagnostics if the size of fragment is
-       differnt then what is noted in the comm.log (that is, N_FILEKB has been changed)
+    Note: this function will issue incorrect diagnostics if the size of fragment is
+    differnt then what is noted in the comm.log (that is, N_FILEKB has been changed)
 
-       Returns:
-          TRUE for success
-          FALSE for a failure and issues a warning
+    Returns:
+       TRUE for success
+       FALSE for a failure and issues a warning
     """
     ret_val = True
 
@@ -965,7 +965,8 @@ def check_file_fragments(
             log_warning(msg)
             log_conversion_alert(
                 defrag_file_name,
-                msg + f" - consider {generate_resend(fragment, instrument_id)}",
+                msg,
+                generate_resend(fragment, instrument_id),
             )
             ret_val = False
             # See if there are more
@@ -988,7 +989,8 @@ def check_file_fragments(
                 log_warning(msg)
                 log_conversion_alert(
                     defrag_file_name,
-                    msg + f" - consider {generate_resend(fragment, instrument_id)}",
+                    msg,
+                    generate_resend(fragment, instrument_id),
                 )
                 ret_val = False
             else:
@@ -1013,7 +1015,8 @@ def check_file_fragments(
                 log_warning(msg)
                 log_conversion_alert(
                     defrag_file_name,
-                    msg + f" - consider {generate_resend(fragment, instrument_id)}",
+                    msg,
+                    generate_resend(fragment, instrument_id),
                 )
                 ret_val = False
 
@@ -1026,8 +1029,8 @@ def check_file_fragments(
                     log_warning(msg)
                     log_conversion_alert(
                         defrag_file_name,
-                        msg
-                        + f"- consider {generate_resend(fragment, instrument_id)}\n",
+                        msg,
+                        generate_resend(fragment, instrument_id),
                     )
 
             elif current_fragment_size > expectedsize:
@@ -1044,7 +1047,8 @@ def check_file_fragments(
                     log_warning(msg)
                     log_conversion_alert(
                         defrag_file_name,
-                        msg + f"consider {generate_resend(fragment, instrument_id)}\n",
+                        msg,
+                        generate_resend(fragment, instrument_id),
                     )
 
     if total_size != 0:
@@ -1240,7 +1244,7 @@ def expunge_secrets_st(selftest_name):
 def run_extension_script(script_name, script_args):
     """Attempts to execute a script named under a shell context
 
-       Output is recorded to the log, error code is ignored, no timeout enforced
+    Output is recorded to the log, error code is ignored, no timeout enforced
     """
     if os.path.exists(script_name):
         log_info(f"Processing {script_name}")
@@ -1262,8 +1266,7 @@ def run_extension_script(script_name, script_args):
 
 
 def signal_handler_defer(signum, frame):
-    """Handles SIGUSR1 signal during per-dive processing
-    """
+    """Handles SIGUSR1 signal during per-dive processing"""
     # pylint: disable=unused-argument
     # pylint: disable=global-statement
     # global skip_mission_processing
@@ -1273,8 +1276,7 @@ def signal_handler_defer(signum, frame):
 
 
 def signal_handler_defer_end(signum, frame):
-    """Handles SIGUSR1 signal during after whole mission processing
-    """
+    """Handles SIGUSR1 signal during after whole mission processing"""
     # pylint: disable=unused-argument
     # pylint: disable=global-statement
     # global skip_mission_processing
@@ -1284,8 +1286,7 @@ def signal_handler_defer_end(signum, frame):
 
 
 def signal_handler_abort_processing(signum, frame):
-    """Handles SIGUSR1 during whole mission processing
-    """
+    """Handles SIGUSR1 during whole mission processing"""
     # pylint: disable=unused-argument
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - bailing out of further processing")
@@ -1293,8 +1294,7 @@ def signal_handler_abort_processing(signum, frame):
 
 
 class AbortProcessingException(Exception):
-    """Internal nofication to stop mission processing
-    """
+    """Internal nofication to stop mission processing"""
 
     def __init__(self):
         pass
@@ -2186,7 +2186,7 @@ def main():
                         else:
                             data_product_file_names.append(mission_profile_name)
                     except:
-                        log_error("Failed to create mission profile","exc")
+                        log_error("Failed to create mission profile", "exc")
                         failed_mission_profile = True
             #
             # Create the mission timeseries file
@@ -2209,7 +2209,7 @@ def main():
                         else:
                             data_product_file_names.append(mission_timeseries_name)
                     except:
-                        log_error("Failed to create mission timeseries","exc")
+                        log_error("Failed to create mission timeseries", "exc")
                         failed_mission_timeseries = True
 
             processed_file_names = []
@@ -2292,6 +2292,19 @@ def main():
             if recomendation:
                 log_alert(incomplete_file, recomendation)
 
+        # For now, write out to a static file with the resends
+        # TODO - Full feature - check for a logout. If seen, then append to or create the
+        # new pdoscmds.bat file to issue the resends
+        if incomplete_files:
+            resend_file_name = os.path.join(
+                base_opts.mission_dir, "pdoscmds.bat.resend"
+            )
+            with open(resend_file_name, "w") as resend_file:
+                for file_name in incomplete_files:
+                    for msg, resend_cmd in conversion_alerts_d[file_name]:
+                        if resend_cmd:
+                            resend_file.write(f"{resend_cmd}\n")
+
         # Construct the pagers_convert_msg and alter_msg_file
         pagers_convert_msg = ""
         if base_opts.base_log is not None and base_opts.base_log != "":
@@ -2361,18 +2374,26 @@ def main():
                             "<!--diveno=%d-->\n"
                             % FileMgr.get_dive(incomplete_file_name)
                         )
-                if i in conversion_alerts_d:
+                if file_name in conversion_alerts_d:
                     alert_msg_file.write("<<ul>\n")
-                    prev_j = ""  # format the text of the alert
-                    for j in conversion_alerts_d[i]:
-                        if j != prev_j:
-                            pagers_convert_msg = pagers_convert_msg + f"        {j}\n"
+                    prev_full_msg = ""  # format the text of the alert
+                    for msg, resend_cmd in conversion_alerts_d[file_name]:
+                        full_msg = (
+                            f"{msg} - consider {resend_cmd}"
+                            if resend_cmd is not None
+                            else msg
+                        )
+                        if full_msg != prev_full_msg:
+                            pagers_convert_msg = (
+                                pagers_convert_msg + f"        {full_msg}\n"
+                            )
                             if alert_msg_file:
-                                alert_msg_file.write(f"<li>{j}</li>\n")
-                            prev_j = j
+                                alert_msg_file.write(f"<li>{full_msg}</li>\n")
+                            prev_full_msg = full_msg
                     del conversion_alerts_d[
-                        i
+                        file_name
                     ]  # clean up after ourselves - not clear this is needed anymore
+                    del file_name
                     alert_msg_file.write("</ul>\n")
                     pagers_convert_msg = pagers_convert_msg + "\n"
                 alert_msg_file.write("</p>\n")
