@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -79,7 +79,7 @@ class BaseLogger:
 
             # create a file handler if log filename is specified in opts
             if opts is not None:
-                if (opts.base_log is not None and opts.base_log is not ""):
+                if (opts.base_log is not None and opts.base_log != ""):
                     fh = logging.FileHandler(opts.base_log)
                     # fh.setLevel(logging.NOTSET) # messages of all levels will be recorded
                     self.setHandler(fh, opts, include_time)
