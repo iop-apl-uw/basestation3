@@ -162,40 +162,42 @@ def read_processed_files(glider_dir, instrument_id):
     if not os.path.exists(processed_dive_file_name):
         return (files_dict, pdos_logfiles_dict)
 
-    processed_dives_file = open(processed_dive_file_name, "r")
+    with open(processed_dive_file_name, "r") as processed_dives_file:
 
-    for raw_line in processed_dives_file:
-        raw_line = raw_line.rstrip()
-        if raw_line == "":
-            continue
-        if raw_line[0:1] == "#":
-            continue
+        for raw_line in processed_dives_file:
+            raw_line = raw_line.rstrip()
+            if raw_line == "":
+                continue
+            if raw_line[0:1] == "#":
+                continue
 
-        raw_parts = raw_line.split(",")
+            raw_parts = raw_line.split(",")
 
-        fc = FileMgr.FileCode(raw_parts[0], instrument_id)
-        if fc.is_pdos_log():
-            try:
-                pdos_logfiles_dict[raw_parts[0]] = time.mktime(
-                    time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
+            fc = FileMgr.FileCode(raw_parts[0], instrument_id)
+            if fc.is_pdos_log():
+                try:
+                    pdos_logfiles_dict[raw_parts[0]] = time.mktime(
+                        time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
+                    )
+                except (ValueError, IndexError):
+                    # Old way - assume the current time
+                    pdos_logfiles_dict[raw_parts[0]] = time.time()
+            elif fc.is_seaglider() or fc.is_seaglider_selftest() or fc.is_logger():
+                try:
+                    files_dict[raw_parts[0]] = time.mktime(
+                        time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
+                    )
+                except ValueError:
+                    # Old format - read it in w/o regard to timezone
+                    files_dict[raw_parts[0]] = time.mktime(
+                        time.strptime(raw_parts[1].lstrip())
+                    )
+            else:
+                log_error(
+                    f"Unknown entry {raw_line} in {processed_files_cache} - skipping"
                 )
-            except (ValueError, IndexError):
-                # Old way - assume the current time
-                pdos_logfiles_dict[raw_parts[0]] = time.time()
-        elif fc.is_seaglider() or fc.is_seaglider_selftest() or fc.is_logger():
-            try:
-                files_dict[raw_parts[0]] = time.mktime(
-                    time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
-                )
-            except ValueError:
-                # Old format - read it in w/o regard to timezone
-                files_dict[raw_parts[0]] = time.mktime(
-                    time.strptime(raw_parts[1].lstrip())
-                )
-        else:
-            log_error(f"Unknown entry {raw_line} in {processed_files_cache} - skipping")
 
-    processed_dives_file.close()
+    del processed_dives_file
     try:
         os.chmod(
             processed_dive_file_name,
@@ -227,35 +229,35 @@ def write_processed_dives(glider_dir, files_dict, pdos_logfiles_dict):
 
     items = sorted(files_dict.items())
 
-    processed_dive_file = open(processed_dive_file_name, "w")
+    with open(processed_dive_file_name, "w") as processed_dive_file:
 
-    processed_dive_file.write(
-        "# This file contains the dives that have been"
-        " processed and the times they were processed\n"
-    )
-    processed_dive_file.write(
-        "# To force a file to be re-processed, delete the"
-        " corresponding line from this file\n"
-    )
-    processed_dive_file.write(
-        "# Written %s\n"
-        % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-    )
-
-    # for i in processed_pdos_logfiles:
-    #    processed_dive_file.write("%s\n" % i)
-    for i, j in pdos_items:
         processed_dive_file.write(
-            f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
+            "# This file contains the dives that have been"
+            " processed and the times they were processed\n"
+        )
+        processed_dive_file.write(
+            "# To force a file to be re-processed, delete the"
+            " corresponding line from this file\n"
+        )
+        processed_dive_file.write(
+            "# Written %s\n"
+            % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
         )
 
-    for i, j in items:
-        # processed_dive_file.write("%s, %.2f\n" % (i, j))
-        processed_dive_file.write(
-            f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
-        )
+        # for i in processed_pdos_logfiles:
+        #    processed_dive_file.write("%s\n" % i)
+        for i, j in pdos_items:
+            processed_dive_file.write(
+                f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
+            )
 
-    processed_dive_file.close()
+        for i, j in items:
+            # processed_dive_file.write("%s, %.2f\n" % (i, j))
+            processed_dive_file.write(
+                f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
+            )
+
+    del processed_dive_file
 
     return 0
 
@@ -627,15 +629,11 @@ def process_file_group(
 
     # Cat the fragments together
     log_debug(f"About to open {defrag_file_name}")
-    output_file = open(defrag_file_name, "wb")
-
-    for i in fragments_1a:
-        fi = open(i, "rb")
-        data = fi.read()
-        fi.close()
-        output_file.write(data)
-
-    output_file.close()
+    with open(defrag_file_name, "wb") as output_file:
+        for i in fragments_1a:
+            with open(i, "rb") as fi:
+                data = fi.read()
+            output_file.write(data)
 
     # Now process based on the specifics of the file
     log_info(f"Processing {defrag_file_name} in process_file_group")
@@ -813,9 +811,9 @@ def process_file_group(
                 else:
                     # Save the asc file out for debugging
                     sg_data_file.dat_to_asc()
-                    fo = open(fc.mk_base_ascfile_name(), "w")
-                    sg_data_file.dump(fo)
-                    fo.close()
+                    with open(fc.mk_base_ascfile_name(), "w") as fo:
+                        sg_data_file.dump(fo)
+                    del fo
                     processed_other_files.append(fc.mk_base_ascfile_name())
                     # Convert to the eng file
                     sg_log_file = LogFile.parse_log_file(
@@ -836,9 +834,8 @@ def process_file_group(
                             )
                             ret_val = 1
                         else:
-                            fo = open(fc.mk_base_engfile_name(), "w")
-                            sg_data_file.dump(fo)
-                            fo.close()
+                            with open(fc.mk_base_engfile_name(), "w") as fo:
+                                sg_data_file.dump(fo)
 
                 # Add this to the list potential dives to be processed for
                 if not fc.is_seaglider_selftest():
@@ -2553,9 +2550,8 @@ def main():
 
                 if base_opts.divetarballs > 0:
                     try:
-                        fi = open(tar_name, "rb")
-                        buff = fi.read()
-                        fi.close()
+                        with open(tar_name, "rb") as fi:
+                            buff = fi.read()
                     except:
                         log_error(
                             f"Could not process {tar_name} for fragmentation - skipping",
@@ -2573,17 +2569,16 @@ def main():
                         )
 
                         try:
-                            fo = open(tar_frag_name, "wb")
-                            fo.write(
-                                buff[
-                                    ii
-                                    * base_opts.divetarballs : (ii + 1)
-                                    * base_opts.divetarballs
-                                    if (ii + 1) * base_opts.divetarballs < len(buff)
-                                    else len(buff)
-                                ]
-                            )
-                            fo.close()
+                            with open(tar_frag_name, "wb") as fo:
+                                fo.write(
+                                    buff[
+                                        ii
+                                        * base_opts.divetarballs : (ii + 1)
+                                        * base_opts.divetarballs
+                                        if (ii + 1) * base_opts.divetarballs < len(buff)
+                                        else len(buff)
+                                    ]
+                                )
                         except:
                             log_error(
                                 f"Could not process {tar_frag_name} for fragmentation - skipping",
