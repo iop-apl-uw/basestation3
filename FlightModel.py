@@ -2812,7 +2812,8 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
                 flight_dive_data_d['glider_type_string'] = 'SGX'
                 # Apparently substantially lower drag.
                 # NOTE this sets the drag grid directly, not log10hd_b_grid
-                hd_b_grid = linspace(0.0000, 0.030, 25)
+                # NOTE start the grid at 0.001 to avoid feeding a hd_b of zero into hydro_model
+                hd_b_grid = linspace(0.001, 0.030, 25)
             
         elif glider_type == DEEPGLIDER:
             flight_dive_data_d['glider_type_string'] = 'DG'
