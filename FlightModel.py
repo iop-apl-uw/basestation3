@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1123,9 +1123,7 @@ def w_rms_func(vbdbias,a,b,abs_compress, # these variables can be varied by vari
     flight_consts_d['hd_a'] = a
     flight_consts_d['hd_b'] = b
     buoyancy, pitch, w, vol = compute_buoyancy(vbdbias, abs_compress, dive_data_d)
-    with np.errstate(divide="ignore",invalid="ignore"):
-        # hd_b can be set to zero, which causes hydro_model to warn about many issues
-        hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
+    hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
     hdm_w_speed_cm_s_v = hdm_speed_cm_s_v*sin(hdm_glide_angle_rad_v) # could delay this until we see if enough valid points are around
     if dump_checkpoint_data_matfiles:  # DEBUG for dumping solve_ab mat files of combined data
         dive_data_d['vol'] = vol
@@ -1513,9 +1511,7 @@ def solve_ab_DAC(dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
         for grid_b, ib in zip(hd_b_grid, list(range(nb))):
             flight_consts_d['hd_a'] = grid_a
             flight_consts_d['hd_b'] = grid_b
-            with np.errstate(divide="ignore", invalid="ignore"):
-                # hd_b == 0.0 is part of the search grid, which will cause hydro_model throw many warnings
-                hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
+            hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
             if not hm_converged:
                 pass # ignore ... this is the best we can do
             hdm_horizontal_speed_cm_s_v = hdm_speed_cm_s_v*cos(hdm_glide_angle_rad_v)
@@ -2883,6 +2879,10 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         log_info('CONTROL: reprocessing=%s compare_velo=%d hd_a_scale=%.2f hd_b_scale=%.2f' %
                  (enable_reprocessing_dives, compare_velo, predicted_hd_a_scale, predicted_hd_b_scale))
 
+    # Ensure that the hd_b_grid contains no zero values - those cause
+    # the hydro model to blow up and slows down all processing for no useful purpose
+    hd_b_grid[hd_b_grid == 0.0] = 0.001
+        
     ## Main processing loop
     # Scan to see what files need to be worked on
     new_dive_nums = []
@@ -3010,6 +3010,11 @@ def process_directory(base_opts):
         # run like an extension
         return main(instrument_id=instrument_id, base_opts=base_opts, sg_calib_file_name=sg_calib_file_name, nc_files_created=nc_files_created)
     except KeyboardInterrupt:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+
         log_error("Keyboard interrupt - breaking out")
         return 1
     
@@ -3032,7 +3037,7 @@ if __name__ == "__main__":
             profile_file_name = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + '_' \
                 + Utils.ensure_basename(time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))) + ".cprof"
             # Generate line timings
-            retval = cProfile.run("main()", filename=profile_file_name)
+            retval = cProfile.run("cmdline_main()", filename=profile_file_name)
             stats = pstats.Stats(profile_file_name)
             stats.sort_stats('time', 'calls')
             stats.print_stats()
