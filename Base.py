@@ -961,9 +961,7 @@ def check_file_fragments(
             )
             log_warning(msg)
             log_conversion_alert(
-                defrag_file_name,
-                msg,
-                generate_resend(fragment, instrument_id),
+                defrag_file_name, msg, generate_resend(fragment, instrument_id),
             )
             ret_val = False
             # See if there are more
@@ -985,9 +983,7 @@ def check_file_fragments(
                 )
                 log_warning(msg)
                 log_conversion_alert(
-                    defrag_file_name,
-                    msg,
-                    generate_resend(fragment, instrument_id),
+                    defrag_file_name, msg, generate_resend(fragment, instrument_id),
                 )
                 ret_val = False
             else:
@@ -1011,9 +1007,7 @@ def check_file_fragments(
                 )
                 log_warning(msg)
                 log_conversion_alert(
-                    defrag_file_name,
-                    msg,
-                    generate_resend(fragment, instrument_id),
+                    defrag_file_name, msg, generate_resend(fragment, instrument_id),
                 )
                 ret_val = False
 
@@ -1025,9 +1019,7 @@ def check_file_fragments(
                     )
                     log_warning(msg)
                     log_conversion_alert(
-                        defrag_file_name,
-                        msg,
-                        generate_resend(fragment, instrument_id),
+                        defrag_file_name, msg, generate_resend(fragment, instrument_id),
                     )
 
             elif current_fragment_size > expectedsize:
@@ -1043,9 +1035,7 @@ def check_file_fragments(
                     )
                     log_warning(msg)
                     log_conversion_alert(
-                        defrag_file_name,
-                        msg,
-                        generate_resend(fragment, instrument_id),
+                        defrag_file_name, msg, generate_resend(fragment, instrument_id),
                     )
 
     if total_size != 0:
@@ -2115,6 +2105,7 @@ def main():
                 os.path.join(base_opts.mission_dir, f".{k}_ext"),
                 processed_logger_payload_files[k],
             )
+    del k
 
     # Run the post dive processing script
     run_extension_script(os.path.join(base_opts.mission_dir, ".post_dive"), None)
@@ -2301,6 +2292,7 @@ def main():
                     for msg, resend_cmd in conversion_alerts_d[file_name]:
                         if resend_cmd:
                             resend_file.write(f"{resend_cmd}\n")
+                del file_name
 
         # Construct the pagers_convert_msg and alter_msg_file
         pagers_convert_msg = ""
@@ -2348,9 +2340,9 @@ def main():
                 pagers_convert_msg
                 + "The following files were not processed completely:\n"
             )
-            for i in incomplete_files:
+            for file_name in incomplete_files:
                 incomplete_file_name = os.path.abspath(
-                    os.path.join(base_opts.mission_dir, i)
+                    os.path.join(base_opts.mission_dir, file_name)
                 )
                 pagers_convert_msg = (
                     pagers_convert_msg + f"    {incomplete_file_name}\n"
@@ -2390,7 +2382,6 @@ def main():
                     del conversion_alerts_d[
                         file_name
                     ]  # clean up after ourselves - not clear this is needed anymore
-                    del file_name
                     alert_msg_file.write("</ul>\n")
                     pagers_convert_msg = pagers_convert_msg + "\n"
                 alert_msg_file.write("</p>\n")
@@ -2404,6 +2395,7 @@ def main():
                             "<p>Glider logout not seen - retransmissions from glider possible</p>\n"
                         )
                     alert_msg_file.write("</div>\n")
+            del file_name
 
         if pagers_convert_msg:
             if comm_log.last_surfacing().logout_seen:
