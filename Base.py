@@ -2283,12 +2283,12 @@ def main():
         # For now, write out to a static file with the resends
         # TODO - Full feature - check for a logout. If seen, then append to or create the
         # new pdoscmds.bat file to issue the resends
-        if incomplete_files:
+        if conversion_alerts_d:
             resend_file_name = os.path.join(
                 base_opts.mission_dir, "pdoscmds.bat.resend"
             )
             with open(resend_file_name, "w") as resend_file:
-                for file_name in incomplete_files:
+                for file_name in conversion_alerts_d:
                     for msg, resend_cmd in conversion_alerts_d[file_name]:
                         if resend_cmd:
                             resend_file.write(f"{resend_cmd}\n")
