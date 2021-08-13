@@ -198,10 +198,9 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
                 logger_eng_files[dive_path].append({'logger_prefix' : l,
                                                     'eng_files': typed_files,
                                                     'eng_file_reader' : logger_eng_readers[l]})
-    if True: # report the results for debugging
-        log_info("Logger eng list")
-        for k in list(logger_eng_files.keys()):
-            log_info("%s:%s" % (k, logger_eng_files[k]))
+    log_debug("Logger eng list")
+    for k in list(logger_eng_files.keys()):
+        log_debug("%s:%s" % (k, logger_eng_files[k]))
 
     return logger_eng_files
 
@@ -362,6 +361,9 @@ class FileCode:
         self._filename = os.path.basename(filename)
         self._full_filename = filename
         self._instrument_id = instrument_id
+
+    def instrument_id(self):
+        return self._instrument_id
 
     def full_filename(self):
         return self._full_filename
