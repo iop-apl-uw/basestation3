@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -67,6 +67,7 @@ def init_logger(module_name, init_dict=None):
     init_dict[module_name] = {'logger_prefix' : cp_prefix,
                               'eng_file_reader' : eng_file_reader,
                               'known_files' : ['NCP_GO'],
+                              'known_mailer_tags' : ['mat'],
                               'netcdf_metadata_adds' : {
                                   'log_CP_RECORDABOVE': [False, 'd', {'description':'Depth above above which data is recorded', 'units':'meters'}, nc_scalar],
                                   'log_CP_PROFILE': [False, 'd', {'description':'Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
