@@ -1027,6 +1027,7 @@ def process_mailer(
                                         tail.lstrip(".").lower() == "nc"
                                         or tail.lstrip(".").lower() == "gz"
                                         or tail.lstrip(".").lower() == "bz2"
+                                        or tail.lstrip(".").lower() == "mat"
                                     ):
                                         mailer_part = MIMEBase(
                                             "application", "octet-stream"
