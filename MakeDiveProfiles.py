@@ -2273,11 +2273,18 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                 log_info("auxCompass_pressure_offset = %f, auxCompass_pressure_slope = %f" %
                          (aux_pressure_offset, aux_pressure_slope))
             else:
-                if kistler_cnf is None:
-                    auxPress_v = auxPress_counts_v * log_f.data['$PRESSURE_SLOPE'] # [psi]
-                else:
-                    aux_temp_v = Utils.interp1d(ctd_epoch_time_s_v, temp_raw_v, aux_epoch_time_s_v, kind='linear')
-                    auxPress_v = compute_kistler_pressure(kistler_cnf, log_f, auxPress_counts_v, aux_temp_v) # [psi]
+                auxPress_v = auxPress_counts_v * log_f.data['$PRESSURE_SLOPE'] # [psi]
+
+                # TODO - GBS 2021/08/16 Needs to be re-enabled after kistler_cnf is defined earlier in the processing
+
+                # if kistler_cnf is None:
+                #     auxPress_v = auxPress_counts_v * log_f.data['$PRESSURE_SLOPE'] # [psi]
+                # else:
+                #     aux_temp_v = Utils.interp1d(ctd_epoch_time_s_v, temp_raw_v, aux_epoch_time_s_v, kind='linear')
+                #     auxPress_v = compute_kistler_pressure(kistler_cnf, log_f, auxPress_counts_v, aux_temp_v) # [psi]
+
+                sg_epoch_time_s_v = time.mktime(eng_f.start_ts) + eng_f.get_col('elaps_t')
+                sg_press_v = (eng_f.get_col('depth')*cm2m - calib_consts['depth_bias']) * psi_per_meter * dbar_per_psi
 
                 # Why not simply + log_f.data['$PRESSURE_YINT'] to get final pressure?
                 # Because while we trust the conversion slope of the sensor to be independent of sampling scheme,
@@ -2292,8 +2299,8 @@ def make_dive_profile(ignore_existing_netcdf, dive_num, eng_file_name, log_file_
                          (auxPress_yint, log_f.data['$PRESSURE_YINT'], (auxPress_yint - log_f.data['$PRESSURE_YINT'])))
 
                 auxCompass_pressure_v = (auxPress_v + auxPress_yint)*dbar_per_psi # [dbar]
-                aux_temp_v = None
-                auxPress_v = None
+                del auxPress_v, sg_epoch_time_s_v, sg_press_v, glider_press_v
+
 
             if False:
                 # This hack is to handle bad truck pressure, but to auxcompass pressure
