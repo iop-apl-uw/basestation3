@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2006-2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -154,5 +154,22 @@ def write_output_files(plot_conf, base_file_name, fig):
 
     if plot_conf.save_svg:
         ret_list.append(save_img_file("svg"))
+
+    def isnotebook():
+        try:
+            shell = get_ipython().__class__.__name__
+            print(shell)
+            if shell == 'ZMQInteractiveShell':
+                return True   # Jupyter notebook or qtconsole
+            elif shell == 'TerminalInteractiveShell':
+                return False  # Terminal running IPython
+            else:
+                return False  # Other type (?)
+        except NameError:
+            return False      # Probably standard Python interpreter
+
+    if isnotebook():
+        fig.update_layout(width=std_width,height=std_height)
+        fig.show()
 
     return ret_list
