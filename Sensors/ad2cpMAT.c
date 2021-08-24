@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018 University of Washington.  All rights reserved.
+// Copyright (c) 2018, 2021 University of Washington.  All rights reserved.
 //
 // This file contains proprietary information and remains the 
 // unpublished property of the University of Washington. Use, disclosure,
@@ -255,7 +255,12 @@ WriteMatlab(char *fname, int ampIncluded, int corrIncluded )
 //   fprintf (stderr,"%02d:%02d:%02d.%02d on %02d/%02d/%04d\n",
 //            tm.tm_hour, tm.tm_min, tm.tm_sec, hsec, 
 //            tm.tm_mon + 1, tm.tm_mday, tm.tm_year + 1900);
-    if(verbose) fprintf(stdout, "%s: %d ensembles\n", fname, count);
+    if(verbose) {
+        fprintf(stdout, "%s: %d ensembles\n", fname, count);
+        fprintf(stdout, "ampIncluded:%d corrIncluded:%d num_beams:%d\n",
+                ampIncluded, corrIncluded, num_beams);
+    }
+    
 
     if (echo) {
         MatlabDoubleMatrix(echo, num_cells, count, "echo", out);   
@@ -263,20 +268,29 @@ WriteMatlab(char *fname, int ampIncluded, int corrIncluded )
         MatlabVector(power, count, "power", out, 0);
     }
     else {
-        MatlabDoubleMatrix(beamv[0], num_cells, count, "velX", out);   
-        MatlabDoubleMatrix(beamv[1], num_cells, count, "velY", out);   
-        MatlabDoubleMatrix(beamv[2], num_cells, count, "velZ", out);   
+        if (num_beams == 4) {
+            MatlabDoubleMatrix(beamv[0], num_cells, count, "vel1", out);   
+            MatlabDoubleMatrix(beamv[1], num_cells, count, "vel2", out);   
+            MatlabDoubleMatrix(beamv[2], num_cells, count, "vel3", out);
+            MatlabDoubleMatrix(beamv[3], num_cells, count, "vel4", out);
+        } else {
+            MatlabDoubleMatrix(beamv[0], num_cells, count, "velX", out);   
+            MatlabDoubleMatrix(beamv[1], num_cells, count, "velY", out);   
+            MatlabDoubleMatrix(beamv[2], num_cells, count, "velZ", out);
+        }
 
         if( corrIncluded ) {
             MatlabMatrix(corr[0], num_cells, count, "corr1", out);   
             MatlabMatrix(corr[1], num_cells, count, "corr2", out);   
             MatlabMatrix(corr[2], num_cells, count, "corr3", out);
+            if (num_beams == 4) MatlabMatrix(corr[3], num_cells, count, "corr4", out);
         }
 
         if( ampIncluded ) {
             MatlabMatrix(amp[0], num_cells, count, "amp1", out);   
             MatlabMatrix(amp[1], num_cells, count, "amp2", out);   
             MatlabMatrix(amp[2], num_cells, count, "amp3", out);
+            if (num_beams == 4) MatlabMatrix(amp[3], num_cells, count, "amp4", out);
         }
     }
     MatlabDoubleVector(pressure, count, "pressure", out);
@@ -624,26 +638,36 @@ main(int argc, char *argv[])
                     if(verbose) printf("Using beam_234 transformation\n");
                     T = &beam_234[0][0];
                 } else {
-                    fprintf(stderr, "WARNING - unknown beam configuration %d:%d:%d:%d - using identity matrix\n",
-                            ptr -> DataSetDescription4bit.beamData1, ptr -> DataSetDescription4bit.beamData2,
-                            ptr -> DataSetDescription4bit.beamData3, ptr -> DataSetDescription4bit.beamData4 );
-                    T = &beam_ident[0][0];
+                    if (num_beams == 3) {
+                        fprintf(stderr, "WARNING - unknown beam configuration %d:%d:%d:%d - using identity matrix\n",
+                                ptr -> DataSetDescription4bit.beamData1, ptr -> DataSetDescription4bit.beamData2,
+                                ptr -> DataSetDescription4bit.beamData3, ptr -> DataSetDescription4bit.beamData4 );
+                        T = &beam_ident[0][0];
+                    } else {
+                        if(verbose) printf("num_beams:%d - no transformations being applied\n", num_beams);
+                    }
                 }
                 if (id == 0x15 || id == 0x16) {
                     hVel = (short *) ptr -> data;
                     cAmp = ptr -> data + 2*ptr -> beams_cy_cells.numCells*ptr -> beams_cy_cells.numBeams;
                     cCorr = cAmp + ptr -> beams_cy_cells.numCells*ptr -> beams_cy_cells.numBeams;
                     for (i = 0 ; i < ptr -> beams_cy_cells.numCells ; i ++) {
-                        for (j = 0 ; j < ptr -> beams_cy_cells.numBeams ; j ++) {
-                            V123[j] = scale*hVel[j*ptr -> beams_cy_cells.numCells + i];
-                        } 
-                        for (j = 0 ; j < ptr -> beams_cy_cells.numBeams ; j ++) {
-                            Vxyz[j] = 0;
-                            for (k = 0 ; k < ptr -> beams_cy_cells.numBeams ; k ++) {
-                                //Vxyz[j] += T[j][k]*V123[k];
-                                Vxyz[j] += *(T + j * 3 + k) * V123[k];
+                        if (ptr -> beams_cy_cells.numBeams != 3) {
+                            for (j = 0 ; j < ptr -> beams_cy_cells.numBeams ; j ++) {
+                                beamv[j][i][count] = hVel[j*ptr -> beams_cy_cells.numCells + i];
                             }
-                            beamv[j][i][count] = Vxyz[j];
+                        } else {
+                            for (j = 0 ; j < ptr -> beams_cy_cells.numBeams ; j ++) {
+                                V123[j] = scale*hVel[j*ptr -> beams_cy_cells.numCells + i];
+                            }
+                            for (j = 0 ; j < ptr -> beams_cy_cells.numBeams ; j ++) {
+                                Vxyz[j] = 0;
+                                for (k = 0 ; k < ptr -> beams_cy_cells.numBeams ; k ++) {
+                                    //Vxyz[j] += T[j][k]*V123[k];
+                                    Vxyz[j] += *(T + j * 3 + k) * V123[k];
+                                }
+                                beamv[j][i][count] = Vxyz[j];
+                            }
                         }
                         for (j = 0 ; j < ptr -> beams_cy_cells.numBeams ; j ++) {
                             amp[j][i][count] = cAmp[j*ptr -> beams_cy_cells.numCells + i];
