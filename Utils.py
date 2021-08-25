@@ -1253,3 +1253,58 @@ def fp(salinity, pressure, longitude, latitude):
     salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
     freeze_pt = gsw.t_freezing(SA, p, 0.0)
     return freeze_pt
+
+def parse_time(ts, f_gps_rollover=False):
+    """ Parse a standard time stamp from file header, returning time in epoch seconds
+    """
+    time_parts = ts.split()
+    if int(time_parts[2]) - 100 < 0:
+        year_part = int(time_parts[2])
+    else:
+        year_part = int(time_parts[2]) - 100
+
+    if len(time_parts) >= 7:
+        sec_part = time_parts[5]
+        dec_sec_part = time_parts[6]
+    else:
+        sec_parts = time_parts[5].split('.')
+        sec_part = sec_parts[0]
+        if(len(sec_parts) == 2):
+            _, dec_sec_part = math.modf(float(time_parts[5]))
+        else:
+            dec_sec_part = 0.0
+
+    time_string = "%s %s %02d %s %s %s" % (
+        time_parts[0],
+        time_parts[1],
+        year_part,
+        time_parts[3],
+        time_parts[4],
+        sec_part
+    )
+    time_struct = time.strptime(time_string, "%m %d %y %H %M %S")
+    if f_gps_rollover:
+        time_struct = fix_gps_rollover(time_struct)
+    return time.mktime(time_struct) + (
+        float(dec_sec_part) / 1000.0
+    )
+
+
+def format_time(t):
+    """ Formats time for output files
+    """
+    milli, sec = math.modf(t)
+    st = time.localtime(sec)
+
+    # year_part = st.tm_year - 1900
+
+    time_string = "%d %d %d %d %d %d %d" % (
+        st.tm_mon,
+        st.tm_mday,
+        st.tm_year - 1900,
+        st.tm_hour,
+        st.tm_min,
+        st.tm_sec,
+        milli * 1000.0,
+    )
+    return time_string

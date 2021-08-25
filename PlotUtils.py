@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
 ##
 ## Copyright (c) 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.

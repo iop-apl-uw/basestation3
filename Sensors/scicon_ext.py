@@ -131,24 +131,7 @@ def process_camfb_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_
         if len(ll) < 2:
             continue
         if ll.startswith("% start:"):
-            _, time_parts_str = ll.split(":", 1)
-            time_parts = time_parts_str.split()
-
-            if(int(time_parts[2]) - 100 < 0):
-                year_part = int(time_parts[2])
-            else:
-                year_part = int(time_parts[2]) - 100
-
-            sec_parts = time_parts[5].split('.')
-            sec_part = sec_parts[0]
-            if(len(sec_parts) == 2):
-                _, dec_sec_part = math.modf(float(time_parts[5]))
-            else:
-                dec_sec_part = 0.0
-
-            time_string = "%s %s %02d %s %s %s" % (time_parts[0], time_parts[1], year_part,
-                                                   time_parts[3], time_parts[4], sec_part)
-            start_time = time.mktime(Utils.fix_gps_rollover(time.strptime(time_string, "%m %d %y %H %M %S"))) + dec_sec_part
+            start_time = Utils.parse_time(ll.split(":", 1)[1], f_gps_rollover=True)
             continue
         elif ll.startswith("%"):
             continue
@@ -432,26 +415,10 @@ def extract_file_metadata(inp_file_name):
             if(raw_strs[0] == '%xform' or raw_strs[0] == '%tcm2mat' or raw_strs[0] == '%pressure'):
                 ret_list.append(('auxCompass_%s' % raw_strs[0][1:], raw_strs[1].strip()))
             elif(raw_strs[0] == "%start" or raw_strs[0] == "%stop"):
-                time_parts = raw_strs[1].split()
-                if(int(time_parts[2]) - 100 < 0):
-                    year_part = int(time_parts[2])
-                else:
-                    year_part = int(time_parts[2]) - 100
-
-                sec_parts = time_parts[5].split('.')
-                sec_part = sec_parts[0]
-                if(len(sec_parts) == 2):
-                    _, dec_sec_part = math.modf(float(time_parts[5]))
-                else:
-                    dec_sec_part = 0.0
-
-                time_string = "%s %s %02d %s %s %s" % (time_parts[0], time_parts[1], year_part,
-                                                       time_parts[3], time_parts[4], sec_part)
-
                 if(raw_strs[0] == "%start"):
-                    start_time = time.mktime(Utils.fix_gps_rollover(time.strptime(time_string, "%m %d %y %H %M %S"))) + dec_sec_part
+                    start_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
                 else:
-                    stop_time = time.mktime(Utils.fix_gps_rollover(time.strptime(time_string, "%m %d %y %H %M %S"))) + dec_sec_part
+                    stop_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
             elif raw_strs[0] == '%ontime':
                 if not Utils.is_float(raw_strs[1].strip()):
                     log_warning("Could not convert %s to float - skipping" % raw_strs[1].strip())
