@@ -28,9 +28,7 @@ PMAR basestation sensor extension
 
 import array as arr
 import collections
-import math
 import os
-import time
 import traceback
 
 import numpy as np
@@ -46,51 +44,10 @@ from BaseNetCDF import (
 )
 import FileMgr
 import QC
+import Utils
 
 # Globals
 pmar_prefix = "pm"
-
-
-def parse_time(ts):
-    """ Parse a standard time stamp from file header, returning time in epoch seconds
-    """
-    time_parts = ts.split()
-    if int(time_parts[2]) - 100 < 0:
-        year_part = int(time_parts[2])
-    else:
-        year_part = int(time_parts[2]) - 100
-
-    time_string = "%s %s %02d %s %s %s" % (
-        time_parts[0],
-        time_parts[1],
-        year_part,
-        time_parts[3],
-        time_parts[4],
-        time_parts[5],
-    )
-    return time.mktime(time.strptime(time_string, "%m %d %y %H %M %S")) + (
-        float(time_parts[6]) / 1000.0
-    )
-
-
-def format_time(t):
-    """ Formats time for output files
-    """
-    milli, sec = math.modf(t)
-    st = time.localtime(sec)
-
-    # year_part = st.tm_year - 1900
-
-    time_string = "%d %d %d %d %d %d %d" % (
-        st.tm_mon,
-        st.tm_mday,
-        st.tm_year - 1900,
-        st.tm_hour,
-        st.tm_min,
-        st.tm_sec,
-        milli * 1000.0,
-    )
-    return time_string
 
 
 def init_logger(module_name, init_dict=None):
@@ -424,7 +381,10 @@ def init_logger(module_name, init_dict=None):
                 False,
                 "d",
                 {"description": description, "units": "units of variance/Hertz"},
-                (row_info, col_info,),
+                (
+                    row_info,
+                    col_info,
+                ),
             )
             init_dict[module_name]["netcdf_metadata_adds"][
                 var_name_qc
@@ -647,11 +607,11 @@ def extract_file_metadata(inp_file_name, cast, channel):
                 ret_list.append(("pmar_logmap%s" % channel, eng_file_meta["logmap"]))
                 continue
             elif raw_strs[0] == "%start":
-                eng_file_meta["start"] = parse_time(raw_strs[1])
+                eng_file_meta["start"] = Utils.parse_time(raw_strs[1])
                 ##ret_list.append(('pmar_start' % i, eng_file_meta[i]))
                 continue
             elif raw_strs[0] == "%stop":
-                eng_file_meta["stop"] = parse_time(raw_strs[1])
+                eng_file_meta["stop"] = Utils.parse_time(raw_strs[1])
                 continue
             else:
                 # string values
@@ -727,28 +687,26 @@ def extract_file_metadata(inp_file_name, cast, channel):
 
 
 def write_file_header(ef, fo):
-    """ Writes out the .eng file header information
-    """
+    """Writes out the .eng file header information"""
     for i in list(ef.keys()):
         if i == "start":
             break
         fo.write("%%%s: %s\n" % (i, ef[i]))
 
     if "start" in ef:
-        fo.write("%%start: %s\n" % format_time(ef["start"]))
+        fo.write("%%start: %s\n" % Utils.format_time(ef["start"]))
 
     return None
 
 
 def write_file_footer(ef, fo):
-    """ Writes out the .eng file footer information
-    """
+    """Writes out the .eng file footer information"""
     # Find the tail
     in_footer = False
     for i in list(ef.keys()):
         if i == "stop":
             in_footer = True
-            fo.write("%%stop: %s\n" % format_time(ef["stop"]))
+            fo.write("%%stop: %s\n" % Utils.format_time(ef["stop"]))
             continue
         if in_footer:
             fo.write("%%%s: %s\n" % (i, ef[i]))
@@ -836,7 +794,7 @@ def extract_file_data(inp_file_name):
 
 
 def eng_file_reader(eng_files, nc_info_d):
-    """ Reads the eng files for pmar instruments
+    """Reads the eng files for pmar instruments
 
     eng_files - list of eng_file that contain one class of file
 
@@ -1127,7 +1085,9 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                         "ensembles overlap with motor on time",
                     )
                     results_d.update(
-                        {"pmar_logavg%s_%c_qc" % (ch_tag, cast): logavg_qc_v,}
+                        {
+                            "pmar_logavg%s_%c_qc" % (ch_tag, cast): logavg_qc_v,
+                        }
                     )
                 else:
                     log_warning("Did not find the climb pump")
