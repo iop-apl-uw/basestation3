@@ -67,7 +67,7 @@ def init_logger(module_name, init_dict=None):
     init_dict[module_name] = {'logger_prefix' : cp_prefix,
                               'eng_file_reader' : eng_file_reader,
                               'known_files' : ['NCP_GO'],
-                              'known_mailer_tags' : ['mat'],
+                              'known_mailer_tags' : ['mat', "ad2cp"],
                               'netcdf_metadata_adds' : {
                                   'log_CP_RECORDABOVE': [False, 'd', {'description':'Depth above above which data is recorded', 'units':'meters'}, nc_scalar],
                                   'log_CP_PROFILE': [False, 'd', {'description':'Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
@@ -109,7 +109,13 @@ def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, p
 
     log_info("Processing %s to %s" % (fc.full_filename(), fc.mk_base_engfile_name()))
     if(fc.is_down_data() or fc.is_up_data()):
-        # Run the convertor
+        # The uploaded file in this case is an actual Nortek file.
+        # Copy to the correct extension
+        ad2cpfile = fc.mk_base_engfile_name().replace(".eng", ".ad2cp")
+        shutil.copy(fc.full_filename(), ad2cpfile)
+        processed_logger_other_files.append(ad2cpfile)
+
+        # Run the convertor to create a .mat file
         convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "ad2cpMAT")
         if not os.path.isfile(convertor):
             log_error("Convertor %s does not exits - not processing %s" % (convertor, fc.full_filename()))
@@ -119,6 +125,7 @@ def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, p
             return 1
             
         matfile = fc.mk_base_engfile_name().replace(".eng", ".mat")
+        
         cmdline = "%s %s %s" % (convertor, fc.full_filename(), matfile)
         log_info("Running %s" % cmdline)
         try:

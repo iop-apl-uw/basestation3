@@ -193,8 +193,7 @@ def send_email_text(
 
 
 def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
-    """Process the urls file - supplying different arguments for the first and second pass
-    """
+    """Process the urls file - supplying different arguments for the first and second pass"""
     # Process urls
     urls_file_name = os.path.join(base_opts.mission_dir, ".urls")
     if not os.path.exists(urls_file_name):
@@ -314,8 +313,7 @@ def process_pagers(
     crit_other_message=None,
     warn_message=None,
 ):
-    """Processes the .pagers file for the tags specified
-    """
+    """Processes the .pagers file for the tags specified"""
 
     pagers_file_name = os.path.join(base_opts.mission_dir, ".pagers")
     if not os.path.exists(pagers_file_name):
@@ -719,8 +717,7 @@ def process_ftp(
     mission_profile_name,
     known_ftp_tags,
 ):
-    """ Process the .ftp file and push the data to a ftp server
-    """
+    """Process the .ftp file and push the data to a ftp server"""
     ret_val = 0
     ftp_file_name = os.path.join(base_opts.mission_dir, ".ftp")
     if not os.path.exists(ftp_file_name):
@@ -758,8 +755,7 @@ def process_mailer(
     mission_timeseries_name,
     mission_profile_name,
 ):
-    """ Process the .mailer file and send out email
-    """
+    """Process the .mailer file and send out email"""
     mailer_file_name = os.path.join(base_opts.mission_dir, ".mailer")
     if not os.path.exists(mailer_file_name):
         log_info("No .mailer file found - skipping .mailer processing")
@@ -1028,6 +1024,7 @@ def process_mailer(
                                         or tail.lstrip(".").lower() == "gz"
                                         or tail.lstrip(".").lower() == "bz2"
                                         or tail.lstrip(".").lower() == "mat"
+                                        or tail.lstrip(".").lower() == "ad2cp"
                                     ):
                                         mailer_part = MIMEBase(
                                             "application", "octet-stream"
