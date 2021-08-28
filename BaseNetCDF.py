@@ -667,8 +667,9 @@ def fetch_instrument_metadata(dim_info):
     if dim_info in nc_mdp_instrument_vars:
         instrument_var = nc_mdp_instrument_vars[dim_info]
         try:
-            meta_data_d = nc_var_metadata[instrument_var]
+            # md = nc_var_metadata[instrument_var]
             # include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
+            _, _, meta_data_d, _ = nc_var_metadata[instrument_var]
             return meta_data_d
         except KeyError:
             return None
