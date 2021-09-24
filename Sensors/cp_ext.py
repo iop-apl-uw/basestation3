@@ -139,14 +139,17 @@ def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, p
         processed_logger_other_files.append(matfile)
     return 0
 
-def eng_file_reader(eng_files, nc_info_d):
-    """ Reads the eng files for pmar instruments
+def eng_file_reader(eng_files, nc_info_d, calib_consts):
+    """ Reads the eng files for adcp instruments
 
-    eng_files - list of eng_file that contain one class of file
+    Input:
+        eng_files - list of eng_file that contain one class of file
+        nc_info_d - netcdf dictionary
+        calib_consts - calib conts dictionary
 
-    Returns
-    ret_list - list of (variable,data) tuples
-    netcdf_dict - dictionary of optional netcdf variable additions
+    Returns:
+        ret_list - list of (variable,data) tuples
+        netcdf_dict - dictionary of optional netcdf variable additions
 
     """
     netcdf_dict = {}

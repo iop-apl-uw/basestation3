@@ -685,13 +685,17 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
 
     return 0
 
-def eng_file_reader(eng_files, nc_info_d):
-    """ Reads the eng files for scicon instruments
+def eng_file_reader(eng_files, nc_info_d, calib_consts):
+    """ Reads the eng files for scicon instruments 
 
-    eng_files - list of eng_file
+    Input:
+        eng_files - list of eng_file that contain one class of file
+        nc_info_d - netcdf dictionary
+        calib_consts - calib conts dictionary
 
-    Returns
-    None,None - error
+    Returns:
+        ret_list - list of (variable,data) tuples
+        netcdf_dict - dictionary of optional netcdf variable additions
 
     """
     log_debug("%s" % eng_files)
@@ -779,7 +783,7 @@ def eng_file_reader(eng_files, nc_info_d):
     #casts = sorted(df_meta.keys())
     casts = list(df_meta.keys())
 
-    eng_f = DataFiles.DataFile('eng', None)
+    eng_f = DataFiles.DataFile('eng', calib_consts)
     # assume the column names are uniform between casts
     eng_f.columns = df_meta[casts[0]].columns.split()
     eng_f.remap_engfile_columns()

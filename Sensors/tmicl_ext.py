@@ -1051,6 +1051,16 @@ def extract_file_data(inp_file_name):
 def eng_file_reader(eng_files, nc_info_d):
     """Reads the eng files for tmicl instruments
 
+    Input:
+        eng_files - list of eng_file that contain one class of file
+        nc_info_d - netcdf dictionary
+        calib_consts - calib conts dictionary
+
+    Returns:
+        ret_list - list of (variable,data) tuples
+        netcdf_dict - dictionary of optional netcdf variable additions
+
+    """
     eng_files - list of eng_file that contain one class of file but over several channels
 
     Returns

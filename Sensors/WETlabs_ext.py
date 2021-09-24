@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -323,7 +323,6 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_consts=None, column_na
     0 - match found and processed
     1 - no match found
     """
-
     if(column_names is None):
         log_error("Missing arguments for WETlabs remap_engfile_columns_netcdf - version mismatch?")
         return -1

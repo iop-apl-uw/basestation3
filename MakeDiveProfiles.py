@@ -2475,7 +2475,7 @@ def load_dive_profile_data(
                 if ncf_file_time:
                     log_info("Updating logger data from %s" % file_type)
                 try:
-                    eng_data, nc_data = eng_file_reader(file_names, nc_info_d)
+                    eng_data, nc_data = eng_file_reader(file_names, nc_info_d, calib_consts)
                 except:
                     log_error(
                         "Could not process %s - not including in the profile"

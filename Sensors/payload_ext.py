@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2013, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -166,10 +166,19 @@ def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, p
         log_error("Don't know how to deal with payload CTD file (%s)" % fc.full_filename())
         return 1
 
-def eng_file_reader(eng_files, nc_info_d):
-    """ Reads the eng files and returns four vectors - epoch time, pressure, temp and cond
-    """
+def eng_file_reader(eng_files, nc_info_d, calib_consts):
+    """ Reads the eng files for payload ctd instruments
 
+    Input:
+        eng_files - list of eng_file that contain one class of file
+        nc_info_d - netcdf dictionary
+        calib_consts - calib conts dictionary
+
+    Returns:
+        ret_list - list of (variable,data) tuples
+        netcdf_dict - dictionary of optional netcdf variable additions
+
+    """
     cast_pattern = r"%cast\s*(?P<cast>[0-9]*)\s(?P<starttime>.*)\ssamples\s(?P<start>\d*?)\sto\s(?P<end>\d*?),\sint\s=\s(?P<interval>\d*?),"
     upload_pattern = r"%S>UC(?P<cast>[0-9]*)"
     # NOTE - order of this list meaningful (gpctd.Time must be first)

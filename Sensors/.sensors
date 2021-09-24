@@ -3,7 +3,7 @@ sbect_ext.py,init_sensor,asc2eng
 legato_ext.py,init_sensor,asc2eng,remap_engfile_columns_netcdf,remap_instrument_names
 sbe43_ext.py,init_sensor,asc2eng,remap_engfile_columns_netcdf,sensor_data_processing
 aa3830_ext.py,init_sensor,asc2eng,remap_engfile_columns_netcdf,sensor_data_processing
-aa4330_ext.py,init_sensor,asc2eng,sensor_data_processing
+aa4330_ext.py,init_sensor,asc2eng,sensor_data_processing,remap_engfile_columns_netcdf
 WETlabs_ext.py,init_sensor,asc2eng,remap_engfile_columns_netcdf,sensor_data_processing,remap_instrument_names
 payload_ext.py,init_logger,process_data_files
 # Non-licensed sensors below 

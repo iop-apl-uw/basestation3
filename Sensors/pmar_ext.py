@@ -381,10 +381,7 @@ def init_logger(module_name, init_dict=None):
                 False,
                 "d",
                 {"description": description, "units": "units of variance/Hertz"},
-                (
-                    row_info,
-                    col_info,
-                ),
+                (row_info, col_info,),
             )
             init_dict[module_name]["netcdf_metadata_adds"][
                 var_name_qc
@@ -793,16 +790,20 @@ def extract_file_data(inp_file_name):
         return data
 
 
-def eng_file_reader(eng_files, nc_info_d):
-    """Reads the eng files for pmar instruments
+def eng_file_reader(eng_files, nc_info_d, calib_consts):
+    """ Reads the eng files for pmar instruments
 
-    eng_files - list of eng_file that contain one class of file
+    Input:
+        eng_files - list of eng_file that contain one class of file
+        nc_info_d - netcdf dictionary
+        calib_consts - calib conts dictionary
 
-    Returns
-    ret_list - list of (variable,data) tuples
-    netcdf_dict - dictionary of optional netcdf variable additions
+    Returns:
+        ret_list - list of (variable,data) tuples
+        netcdf_dict - dictionary of optional netcdf variable additions
 
     """
+
     netcdf_dict = {}
     ret_list = []
 
@@ -1085,9 +1086,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                         "ensembles overlap with motor on time",
                     )
                     results_d.update(
-                        {
-                            "pmar_logavg%s_%c_qc" % (ch_tag, cast): logavg_qc_v,
-                        }
+                        {"pmar_logavg%s_%c_qc" % (ch_tag, cast): logavg_qc_v,}
                     )
                 else:
                     log_warning("Did not find the climb pump")

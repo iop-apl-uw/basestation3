@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -361,7 +361,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         # only A0 and A1 are used and called PhaseCoef0 and PhaseCoef1.
         # Thus Dphase and CalPhase are the 'same'
         CalPhase_coef.reverse()
-        calphase_v = polyval(CalPhase_coef, optode_tcphase_v)
+        calphase_v = np.polyval(CalPhase_coef, optode_tcphase_v)
 
         # JSB It comes from the factory with these concentration scale changes set to [0 1] (e.g., no change)
         # I think they are for people like Argo who recalibrate locally and determine linear changes to output in case of drift etc.
@@ -536,7 +536,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         optode_oxygen_qc_v = initialize_qc(optode_np, QC_GOOD)
         # TODO we have seen timed out optode; can/should we distinguish it as QC_MISSING?
         # Test unsampled (nan) before asserting nan on bad points
-        assert_qc(QC_UNSAMPLED, optode_oxygen_qc_v, [i for i in range(optode_np) if isnan(optode_tcphase_v[i])], 'unsampled optode oyxgen')
+        assert_qc(QC_UNSAMPLED, optode_oxygen_qc_v, [i for i in range(optode_np) if np.isnan(optode_tcphase_v[i])], 'unsampled optode oyxgen')
         # Sometimes the airsat and instrument O2 values are large offscale and other data is negative
         # See SG189 dive 37 in SPURS_Sep12, recorded on scicon.  Typically the first and/or last point in the dive or climb file
         bad_i = [i for i in range(optode_np) if optode_tcphase_v[i] < 0]
@@ -574,12 +574,12 @@ def optode_oxygen_foil(calphase_v, temp_v, oxygen_sat_sea_water_um_kg_v, conc_co
         vector of oxygen concentration (uM/l)
     """
     
-    C0 = polyval(C0_coef, temp_v)
-    C1 = polyval(C1_coef, temp_v)
-    C2 = polyval(C2_coef, temp_v)
-    C3 = polyval(C3_coef, temp_v)
-    C4 = polyval(C4_coef, temp_v)
-    C5 = polyval(C5_coef, temp_v)    
+    C0 = np.polyval(C0_coef, temp_v)
+    C1 = np.polyval(C1_coef, temp_v)
+    C2 = np.polyval(C2_coef, temp_v)
+    C3 = np.polyval(C3_coef, temp_v)
+    C4 = np.polyval(C4_coef, temp_v)
+    C5 = np.polyval(C5_coef, temp_v)    
     # compute partial pressure of O2 in water (~200hPa near surface, that is, ~20% of 1013.25 hPa of air)
     partial_pressure_o2_v = C0 + calphase_v*(C1 + calphase_v*(C2 + calphase_v*(C3 + calphase_v*(C4 + calphase_v*C5)))); # hPa
 
@@ -592,7 +592,7 @@ def optode_oxygen_foil(calphase_v, temp_v, oxygen_sat_sea_water_um_kg_v, conc_co
     AirSaturation_v = partial_pressure_o2_v/((1013.25 - p_vapor_v)*0.20946) # percent (hPa/(hPa - hPa)*%)
     oxygen_v = oxygen_sat_sea_water_um_kg_v * AirSaturation_v
     # Apply any linear correction that was logged on the instrument (typically none)
-    oxygen_v = polyval(conc_coef, oxygen_v)
+    oxygen_v = np.polyval(conc_coef, oxygen_v)
     return oxygen_v # [uM/L]
 
 def optode_oxygen_SVU(calphase_v, temp_cor_v, oxygen_sat_salinity_adjustment_v, conc_coef, SVUCoef0, SVUCoef1, SVUCoef2, SVUCoef3, SVUCoef4, SVUCoef5, SVUCoef6):
@@ -616,7 +616,7 @@ def optode_oxygen_SVU(calphase_v, temp_cor_v, oxygen_sat_salinity_adjustment_v, 
     # Uchida and Aandera state these units are uM/L so density is needed to convert to uM/kg in optode_correct_oxygen()
     optode_calphase_oxygen_v = (P0_v/PC_v - 1)/K_sv_v; # [uM/L]
     # Apply any linear correction that was logged on the instrument (typically none)
-    optode_calphase_oxygen_v = polyval(conc_coef, optode_calphase_oxygen_v) # [uM/L]
+    optode_calphase_oxygen_v = np.polyval(conc_coef, optode_calphase_oxygen_v) # [uM/L]
     # Correct for salinity using just the Garcia and Gordon salinity term
     optode_calphase_oxygen_v *= oxygen_sat_salinity_adjustment_v
     return optode_calphase_oxygen_v # [uM/L]
@@ -651,3 +651,30 @@ def optode_correct_oxygen(time_v, oxygen_v, pressure_v, density_v, drift_gain):
     oxygen_v = oxygen_v/(density_v/1000.0) # (uM/L)/(g/L/g/kg) == (uM/L)/(kg/L)== uM/kg
     oxygen_v *= drift_gain
     return oxygen_v
+
+def remap_engfile_columns_netcdf(base_opts, module, calib_consts=None, column_names=None):
+    """
+    Called from MakeDiveProfiles.py to remap column headers from older .eng files to
+    current naming standards for netCDF output
+
+    Returns:
+    0 - match found and processed
+    1 - no match found
+    """
+    if(column_names is None):
+        log_error("Missing arguments for WETlabs remap_engfile_columns_netcdf - version mismatch?")
+        return -1
+
+    ret_val = 0
+
+    if(calib_consts is None):
+        # This happens when reading scicon collected WETlabs data
+        # unable to specify sg_calib_constants remapping variable
+        log_debug("No calib_consts provided - optode remap_engfile_columns_netcdf will skip reading the sg_calib_constants.m file")
+    else:
+        # Check for any remapping specified in sg_calib_constants.m
+        calib_remap_d = Utils.remap_dict_from_sg_calib(calib_consts, 'remap_optode_eng_cols')
+        if calib_remap_d:
+            ret_val = Utils.remap_column_names(calib_remap_d, column_names)
+
+    return ret_val
