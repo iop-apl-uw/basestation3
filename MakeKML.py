@@ -100,14 +100,14 @@ make_kml_default_dict = {
     "subsurface_track": [0, 0, 1],
     "drift_track": [1, 0, 1],
     "targets": ["all", ("proposed", "all", "none")],
-    "proposed_targets": [0, 0, 1], # if 1, use the targets file
+    "proposed_targets": [0, 0, 1],  # if 1, use the targets file
     "target_radius": [1, 0, 1],
     "compress_output": [1, 0, 1],
     "plot_dives": [1, 0, 1],
     "skip_points": [10, 1, 100],
     "simplified": [0, 0, 1],
     "use_glider_target": [0, 0, 1],  # Use the glider's TGT_LAT/TGT_LON/TGT_RADIUS
-                                     # as the current targets location
+    # as the current targets location
 }
 
 
@@ -584,15 +584,8 @@ def printTargets(
                 )
             else:
                 target_dict[active_target] = target_tuple(
-                    tgt_lat,
-                    tgt_lon,
-                    tgt_radius,
-                    None,
-                    None,
-                    None,
-                    None,
+                    tgt_lat, tgt_lon, tgt_radius, None, None, None, None,
                 )
-
 
     for targ in target_dict.keys():
         if targ == active_target:
@@ -1010,11 +1003,12 @@ def printDive(
         ballon_pairs.append(("DAC dir", f"{DAC_dir:.2f} degrees"))
         ballon_pairs.append(("DAC mag", f"{DAC_mag:.3f} m/s"))
 
-
         if "surface_curr_east" in nc.variables and "surface_curr_north" in nc.variables:
             surf_east = nc.variables["surface_curr_east"].getValue()
             surf_north = nc.variables["surface_curr_north"].getValue()
-            surf_mag = np.sqrt((surf_east * surf_east) + (surf_north * surf_north)) / 100.0
+            surf_mag = (
+                np.sqrt((surf_east * surf_east) + (surf_north * surf_north)) / 100.0
+            )
             try:
                 surf_polar_rad = math.atan2(surf_north, surf_east)
                 surf_dir = 90.0 - math.degrees(surf_polar_rad)
@@ -1200,7 +1194,7 @@ def main(
 
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(sys.argv, "k", usage="%prog [Options] ")
-    BaseLogger("MakeKML", base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)  # initializes BaseLog
 
     if not base_opts.mission_dir:
         print((main.__doc__))
@@ -1271,7 +1265,11 @@ def main(
     if instrument_id is None:
         if comm_log is not None:
             instrument_id = comm_log.get_instrument_id()
-        if (instrument_id is None or instrument_id < 0) and dive_nc_file_names and len(dive_nc_file_names) > 0:
+        if (
+            (instrument_id is None or instrument_id < 0)
+            and dive_nc_file_names
+            and len(dive_nc_file_names) > 0
+        ):
             instrument_id = FileMgr.get_instrument_id(dive_nc_file_names[0])
         if instrument_id is None or instrument_id < 0:
             log_error("Could not get instrument id - bailing out")
@@ -1734,7 +1732,7 @@ def main(
         if logfiles != []:
             logfiles = Utils.unique(logfiles)
             logfiles = sorted(logfiles)
-            log_file = LogFile.parse_log_file(logfiles[-1], base_opts.mission_dir)
+            log_file = LogFile.parse_log_file(logfiles[-1])
             try:
                 tgt_name = log_file.data["$TGT_NAME"]
 

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     base_opts = BaseOpts.BaseOptions(sys.argv, 's',
                                      usage="%prog [Options] src_file, dst_file [size]")
 
-    BaseLogger("Strip1A", base_opts) # initializes BaseLog
+    BaseLogger(base_opts) # initializes BaseLog
     args = base_opts.get_args() # positional arguments
 
     if (len(args)>2):

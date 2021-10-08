@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
 ##
 ## Copyright (c) 2006-2021 by the University of Washington.  All rights reserved.
@@ -28,77 +29,95 @@
 # MODEM_MSG, EKF, FINISH, RAFOS, FREEZE INTR WARN
 
 import os
+import pdb
 import sys
-import string
 import time
-import re
-from BaseNetCDF import * # for metadata
-import Utils
+import traceback
+
+import BaseNetCDF
 import BaseOpts
-from BaseLog import *
+import FileMgr
 import GPS
-from FileMgr import *
+import Utils
+from BaseLog import (
+    BaseLogger,
+    log_debug,
+    log_info,
+    log_error,
+    log_warning,
+)
+
+DEBUG_PDB = "darwin" in sys.platform
+
 
 def map_state_code(state_str):
+    """Converts a state string to a state code
+    """
     state_strs = [
-        'begin dive',
-        'end dive',
-        'begin climb',
-        'end climb',        
-        'begin apogee',
-        'end apogee',
-        'begin loiter',
-        'end loiter',
-        'begin surface coast',
-        'end surface coast',
-        'begin subsurface finish',
-        'end subsurface finish',
-        'begin recovery',
-        'end recovery',        
-        'begin surface',
-        'end surface'
-        ]
+        "begin dive",
+        "end dive",
+        "begin climb",
+        "end climb",
+        "begin apogee",
+        "end apogee",
+        "begin loiter",
+        "end loiter",
+        "begin surface coast",
+        "end surface coast",
+        "begin subsurface finish",
+        "end subsurface finish",
+        "begin recovery",
+        "end recovery",
+        "begin surface",
+        "end surface",
+    ]
 
     for ii in range(len(state_strs)):
-        if(state_str in state_strs[ii]):
+        if state_str in state_strs[ii]:
             return ii
     return -1
+
 
 def map_eop_code(eop_str):
+    """ Converts an end of phase string to a code
+    """
     # Copied from glider constant.h - order is very important
     eop_strs = [
-        'CONTROL_FINISHED_OK',
-        'TARGET_DEPTH_EXCEEDED',
-        'SURFACE_DEPTH_REACHED',
-        'FINISH_DEPTH_REACHED',
-        'ABORT_DEPTH_EXCEEDED',
-        'FLARE_DEPTH_REACHED',
-        'NO_VERTICAL_VELOCITY',
-        'HALF_MISSION_TIME_EXCEEDED',
-        'UNCOMMANDED_BLEED_DETECTED',
-        'MOTOR_MAX_ERRORS_EXCEEDED',
-        'CF8_MAX_ERRORS_EXCEEDED',
-        'BOTTOM_OBSTACLE_DETECTED',
-        'SURFACE_OBSTACLE_DETECTED',
-        'ABORT_TIME_EXCEEDED',
-        'LOITER_COMPLETE',
-        'POWER_ERROR_DETECTED',
-        'SENSOR_ERROR_DETECTED',
-        'LOGGER_MESSAGE_DELIMITER',
-        'LOGGER_WANTS_CLIMB',
-        'LOGGER_WANTS_RECOVERY',
-        'LOGGER_WANTS_SURFACE',
-        'LOGGER_WANTS_LOITER',
-        'LOGGER_WANTS_FINISH']
+        "CONTROL_FINISHED_OK",
+        "TARGET_DEPTH_EXCEEDED",
+        "SURFACE_DEPTH_REACHED",
+        "FINISH_DEPTH_REACHED",
+        "ABORT_DEPTH_EXCEEDED",
+        "FLARE_DEPTH_REACHED",
+        "NO_VERTICAL_VELOCITY",
+        "HALF_MISSION_TIME_EXCEEDED",
+        "UNCOMMANDED_BLEED_DETECTED",
+        "MOTOR_MAX_ERRORS_EXCEEDED",
+        "CF8_MAX_ERRORS_EXCEEDED",
+        "BOTTOM_OBSTACLE_DETECTED",
+        "SURFACE_OBSTACLE_DETECTED",
+        "ABORT_TIME_EXCEEDED",
+        "LOITER_COMPLETE",
+        "POWER_ERROR_DETECTED",
+        "SENSOR_ERROR_DETECTED",
+        "LOGGER_MESSAGE_DELIMITER",
+        "LOGGER_WANTS_CLIMB",
+        "LOGGER_WANTS_RECOVERY",
+        "LOGGER_WANTS_SURFACE",
+        "LOGGER_WANTS_LOITER",
+        "LOGGER_WANTS_FINISH",
+    ]
 
     for ii in range(len(eop_strs)):
-        if(eop_str in eop_strs[ii]):
+        if eop_str in eop_strs[ii]:
             return ii
     return -1
+
 
 class LogFile:
     """Object representing a seaglider log file
     """
+
     def __init__(self):
         self.version = None
         self.glider = None
@@ -107,6 +126,8 @@ class LogFile:
         self.start_ts = None
         self.columns = []
         self.data = None
+        self.gc_data = None
+        self.gc_state_data = None
         self.gc = []
         self.state = []
         self.warn = []
@@ -114,37 +135,47 @@ class LogFile:
     def dump(self, fo=sys.stdout):
         """Dumps out the logfile
         """
-        print("version: %2.2f" % ( self.version), file=fo)
-        print("glider: %d" % ( self.glider), file=fo)
-        print("mission: %d" % ( self.dive), file=fo)
-        print("dive: %d" % ( self.dive), file=fo)
+        print("version: %2.2f" % (self.version), file=fo)
+        print("glider: %d" % (self.glider), file=fo)
+        print("mission: %d" % (self.dive), file=fo)
+        print("dive: %d" % (self.dive), file=fo)
         time_string = time.strftime("%m %d %y %H %M %S", self.start_ts)
         time_parts = time_string.split()
-        print("start: %s %s %3d %s %s %s" % ( time_parts[0], time_parts[1], int(time_parts[2]) + 100,
-                                             time_parts[3], time_parts[4], time_parts[5]), file=fo)
+        print(
+            "start: %s %s %3d %s %s %s"
+            % (
+                time_parts[0],
+                time_parts[1],
+                int(time_parts[2]) + 100,
+                time_parts[3],
+                time_parts[4],
+                time_parts[5],
+            ),
+            file=fo,
+        )
         print("data:", file=fo)
         for key, item in list(self.data.items()):
-            if(key == "$GPS" or key == "$GPS1" or key == "$GPS2"):
+            if key in ("$GPS", "$GPS1", "$GPS2"):
                 print("%s" % key, file=fo)
                 item.dump(fo)
             else:
                 print("%s,%s" % (key, item), file=fo)
 
-def parse_log_file(in_filename, mission_dir, issue_warn=False):
+
+def parse_log_file(in_filename, issue_warn=False):
     """Parses a Seaglider log file
 
     Returns a logile object or None for an error
     TODO: bubble up exceptions
     """
 
-    in_file = None
-    out_file = None
-
     # Check filetype before processing
-    fc = FileCode(in_filename, 0) # instrument_id = 0 b/c we don't care about it here
-    if (fc.is_seaglider() and fc.is_log()):
+    fc = FileMgr.FileCode(
+        in_filename, 0
+    )  # instrument_id = 0 b/c we don't care about it here
+    if fc.is_seaglider() and fc.is_log():
         log_debug("Input file is a raw seaglider log file: %s" % (in_filename))
-    elif (fc.is_processed_seaglider_log() or fc.is_processed_seaglider_selftest_log()):
+    elif fc.is_processed_seaglider_log() or fc.is_processed_seaglider_selftest_log():
         log_debug("Input file is a processed seaglider log file: %s" % (in_filename))
     else:
         log_error("Invalid seaglider logfile: %s" % (in_filename))
@@ -158,7 +189,6 @@ def parse_log_file(in_filename, mission_dir, issue_warn=False):
         return None
 
     line_count = 0
-    rows = []
     # Process the header
     while True:
         raw_line = raw_log_file.readline().rstrip()
@@ -169,53 +199,77 @@ def parse_log_file(in_filename, mission_dir, issue_warn=False):
 
         raw_strs = raw_line.split(":")
 
-        if(line_count == 1):
-            if(raw_strs[0] == "version" or raw_strs[0] == "%version"):
+        if line_count == 1:
+            if raw_strs[0] == "version" or raw_strs[0] == "%version":
                 log_file = LogFile()
                 try:
                     log_file.version = float(raw_strs[1])
                 except ValueError:
                     # Might be an iRobot version - major.minor.rev1.rev2
-                    tmp2 = raw_strs[1].rsplit('.', 2)[0]
+                    tmp2 = raw_strs[1].rsplit(".", 2)[0]
                     try:
                         log_file.version = float(tmp2)
                     except ValueError:
                         log_error("Unknown version %s = assuming 66.00" % raw_strs[1])
-                        log_file._version = 66.00
+                        log_file.version = 66.00
                 continue
             else:
                 log_error("first line did not contain an version string %s" % raw_line)
                 return None
 
-        if(raw_strs[0] == "glider" or raw_strs[0] == "%glider"):
+        if raw_strs[0] == "glider" or raw_strs[0] == "%glider":
             log_file.glider = int(raw_strs[1])
             continue
-        elif(raw_strs[0] == "mission" or raw_strs[0] == "%mission"):
+        elif raw_strs[0] == "mission" or raw_strs[0] == "%mission":
             log_file.mission = int(raw_strs[1])
             continue
-        elif(raw_strs[0] == "dive" or raw_strs[0] == "%dive"):
+        elif raw_strs[0] == "dive" or raw_strs[0] == "%dive":
             log_file.dive = int(raw_strs[1])
             continue
-        elif(raw_strs[0] == "start" or raw_strs[0] == "%start"):
+        elif raw_strs[0] == "start" or raw_strs[0] == "%start":
             time_parts = raw_strs[1].split()
-            if(int(time_parts[2]) - 100 < 0):
+            if int(time_parts[2]) - 100 < 0:
                 year_part = int(time_parts[2])
             else:
                 year_part = int(time_parts[2]) - 100
 
-            time_string = "%s %s %02d %s %s %s" % (time_parts[0], time_parts[1], year_part,
-                                                 time_parts[3], time_parts[4], time_parts[5])
-            log_file.start_ts = Utils.fix_gps_rollover(time.strptime(time_string, "%m %d %y %H %M %S"))
+            time_string = "%s %s %02d %s %s %s" % (
+                time_parts[0],
+                time_parts[1],
+                year_part,
+                time_parts[3],
+                time_parts[4],
+                time_parts[5],
+            )
+            log_file.start_ts = Utils.fix_gps_rollover(
+                time.strptime(time_string, "%m %d %y %H %M %S")
+            )
 
-            log_debug("%s %s %s" % (log_file.start_ts.tm_mon, log_file.start_ts.tm_mday, log_file.start_ts.tm_year))
-            log_debug("%s %s %s" % (log_file.start_ts.tm_hour, log_file.start_ts.tm_min, log_file.start_ts.tm_sec))
+            log_debug(
+                "%s %s %s"
+                % (
+                    log_file.start_ts.tm_mon,
+                    log_file.start_ts.tm_mday,
+                    log_file.start_ts.tm_year,
+                )
+            )
+            log_debug(
+                "%s %s %s"
+                % (
+                    log_file.start_ts.tm_hour,
+                    log_file.start_ts.tm_min,
+                    log_file.start_ts.tm_sec,
+                )
+            )
 
-        elif(raw_strs[0] == "columns" or raw_strs[0] == "%columns"): # REALLY in a logfile?
+        elif (
+            raw_strs[0] == "columns" or raw_strs[0] == "%columns"
+        ):  # REALLY in a logfile?
             for i in raw_strs[1].rstrip().split(","):
-                if(len(i)):
+                if len(i):
                     log_file.columns.append(i)
             continue
-        elif(raw_strs[0] == "data" or raw_strs[0] == "%data"):
+        elif raw_strs[0] == "data" or raw_strs[0] == "%data":
             break
 
     # Process the paramters
@@ -224,131 +278,205 @@ def parse_log_file(in_filename, mission_dir, issue_warn=False):
         raw_line = raw_log_file.readline().rstrip()
         line_count = line_count + 1
         if raw_line == "":
-            break # done with the file? BUG continue?
+            break  # done with the file? BUG continue?
 
-        raw_strs = raw_line.split(',', 1)
-        if(len(raw_strs) != 2): # we expect $PARM,value[,value]+
-            log_error("Could not parse line %d %s in %s" % (line_count, raw_line, in_filename))
+        raw_strs = raw_line.split(",", 1)
+        if len(raw_strs) != 2:  # we expect $PARM,value[,value]+
+            log_error(
+                "Could not parse line %d %s in %s" % (line_count, raw_line, in_filename)
+            )
         else:
             parm_name = raw_strs[0]
             value = raw_strs[1]
-            if(parm_name == "$GPS1" or parm_name == "$GPS2" or parm_name == "$GPS"):
+            if parm_name in ("$GPS1", "$GPS2", "$GPS"):
                 # For old style GPS entries, pass log starting date since we only have HHMMSS in those records
                 # This is insufficient for dives that cross midnight but we have better conversion tools for that...
-                log_file.data[parm_name] = GPS.GPSFix(raw_line, start_date_str=time.strftime("%m %d %y", log_file.start_ts))
-            elif(parm_name == '$GC'):
+                log_file.data[parm_name] = GPS.GPSFix(
+                    raw_line,
+                    start_date_str=time.strftime("%m %d %y", log_file.start_ts),
+                )
+            elif parm_name == "$GC":
                 log_file.gc.append(value)
-            elif(parm_name == "$FINISH"):
-                pass # drop for now
-            elif(parm_name == "$STATE"):
+            elif parm_name == "$FINISH":
+                pass  # drop for now
+            elif parm_name == "$STATE":
                 log_file.state.append(value)
-            elif(parm_name == "$RAFOS"):
-                pass # drop for now
-            elif(parm_name == "$FREEZE"):
-                pass # drop for now
-            elif(parm_name == "$INTR"): # interrupt details
-                pass # drop for now
-            elif(parm_name == "$WARN"): # various warnings (PPS, flight parms, etc.)
+            elif parm_name == "$RAFOS":
+                pass  # drop for now
+            elif parm_name == "$FREEZE":
+                pass  # drop for now
+            elif parm_name == "$INTR":  # interrupt details
+                pass  # drop for now
+            elif parm_name == "$WARN":  # various warnings (PPS, flight parms, etc.)
                 if issue_warn:
                     log_file.warn.append(value)
-                    log_warning("WARN:(%s) in %s" % (value, in_filename), alert='LOGFILE_WARN')
-            elif(parm_name == "MODEM"): # Handle like RAFOS
+                    log_warning(
+                        "WARN:(%s) in %s" % (value, in_filename), alert="LOGFILE_WARN"
+                    )
+            elif parm_name == "MODEM":  # Handle like RAFOS
                 pass
-            elif(parm_name == "MODEM_MSG"):
+            elif parm_name == "MODEM_MSG":
                 pass
-            elif(parm_name == "EKF"):
+            elif parm_name == "EKF":
                 pass
             else:
                 # parse the value
-                nc_var_name = nc_sg_log_prefix + parm_name.lstrip('$')
+                nc_var_name = BaseNetCDF.nc_sg_log_prefix + parm_name.lstrip("$")
                 try:
-                    md = nc_var_metadata[nc_var_name]
+                    md = BaseNetCDF.nc_var_metadata[nc_var_name]
                 except:
                     log_error("Missing metadata for log entry %s" % parm_name)
-                    md = form_nc_metadata(nc_var_name, nc_data_type = 'c') # default metadata: treat as scalar string
-                include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
-                if(nc_data_type == 'd'):
+                    md = BaseNetCDF.form_nc_metadata(
+                        nc_var_name, nc_data_type="c"
+                    )  # default metadata: treat as scalar string
+                _, nc_data_type, _, _ = md
+                if nc_data_type == "d":
                     try:
                         value = float(value)
                     except ValueError:
-                        log_error("Improperly formatted floating point log entry %s = %s" %  (parm_name, value))
+                        log_error(
+                            "Improperly formatted floating point log entry %s = %s"
+                            % (parm_name, value)
+                        )
                         value = None
-                elif (nc_data_type == 'i'):
+                elif nc_data_type == "i":
                     try:
                         value = int(round(float(value)))
                     except ValueError:
-                        log_error("Improperly formatted integer log entry (%s = %s)" % (parm_name, value))
+                        log_error(
+                            "Improperly formatted integer log entry (%s = %s)"
+                            % (parm_name, value)
+                        )
                         value = None
                 # else: it is a string, fall through
                 log_file.data[parm_name] = value
 
     # If GPS2 is earlier the GPS1, midnight happend between these times - correct GPS1
-    if('$GPS1' in log_file.data and '$GPS2' in log_file.data):
-        if(time.mktime(log_file.data['$GPS2'].datetime) < time.mktime(log_file.data['$GPS1'].datetime)):
-            log_info("%s: GPS2 = %f (%s) less then GPS1 = %f (%s), subtracting a day from GPS1 (midnight rollover between GPS1 and GPS2)"
-                     % (in_filename, time.mktime(log_file.data['$GPS2'].datetime), log_file.data['$GPS2'].datetime,
-                        time.mktime(log_file.data['$GPS1'].datetime), log_file.data['$GPS1'].datetime))
-            log_file.data['$GPS1'].datetime = time.gmtime(time.mktime(log_file.data['$GPS1'].datetime) - 86400)
-            log_info("New GPS1 = %f (%s)" % (time.mktime(log_file.data['$GPS1'].datetime), log_file.data['$GPS1'].datetime))
+    if "$GPS1" in log_file.data and "$GPS2" in log_file.data:
+        if time.mktime(log_file.data["$GPS2"].datetime) < time.mktime(
+            log_file.data["$GPS1"].datetime
+        ):
+            log_info(
+                "%s: GPS2 = %f (%s) less then GPS1 = %f (%s), subtracting a day from GPS1 (midnight rollover between GPS1 and GPS2)"
+                % (
+                    in_filename,
+                    time.mktime(log_file.data["$GPS2"].datetime),
+                    log_file.data["$GPS2"].datetime,
+                    time.mktime(log_file.data["$GPS1"].datetime),
+                    log_file.data["$GPS1"].datetime,
+                )
+            )
+            log_file.data["$GPS1"].datetime = time.gmtime(
+                time.mktime(log_file.data["$GPS1"].datetime) - 86400
+            )
+            log_info(
+                "New GPS1 = %f (%s)"
+                % (
+                    time.mktime(log_file.data["$GPS1"].datetime),
+                    log_file.data["$GPS1"].datetime,
+                )
+            )
 
     # There is a slight chance that the midnight roll over happened between the GPS2 and the logfile start time - in which case,
     # the two readings need to be set back a day.  Detect based on the both GPS1 and GPS2 being later then GPS
-    if('$GPS' in log_file.data and '$GPS1' in log_file.data):
-        if(time.mktime(log_file.data['$GPS'].datetime) < time.mktime(log_file.data['$GPS1'].datetime)):
-            log_info("%s: GPS = %f (%s) less then GPS1 = %f (%s), subtracting a day from GPS1 (midnight rollover between GPS2 and log start - very rare)"
-                     % (in_filename, time.mktime(log_file.data['$GPS'].datetime), log_file.data['$GPS'].datetime,
-                        time.mktime(log_file.data['$GPS1'].datetime), log_file.data['$GPS1'].datetime))
-            log_file.data['$GPS1'].datetime = time.gmtime(time.mktime(log_file.data['$GPS1'].datetime) - 86400)
-            log_info("New GPS1 = %f (%s)" % (time.mktime(log_file.data['$GPS1'].datetime), log_file.data['$GPS1'].datetime))
+    if "$GPS" in log_file.data and "$GPS1" in log_file.data:
+        if time.mktime(log_file.data["$GPS"].datetime) < time.mktime(
+            log_file.data["$GPS1"].datetime
+        ):
+            log_info(
+                "%s: GPS = %f (%s) less then GPS1 = %f (%s), subtracting a day from GPS1 (midnight rollover between GPS2 and log start - very rare)"
+                % (
+                    in_filename,
+                    time.mktime(log_file.data["$GPS"].datetime),
+                    log_file.data["$GPS"].datetime,
+                    time.mktime(log_file.data["$GPS1"].datetime),
+                    log_file.data["$GPS1"].datetime,
+                )
+            )
+            log_file.data["$GPS1"].datetime = time.gmtime(
+                time.mktime(log_file.data["$GPS1"].datetime) - 86400
+            )
+            log_info(
+                "New GPS1 = %f (%s)"
+                % (
+                    time.mktime(log_file.data["$GPS1"].datetime),
+                    log_file.data["$GPS1"].datetime,
+                )
+            )
 
-    if('$GPS' in log_file.data and '$GPS2' in log_file.data):
-        if(time.mktime(log_file.data['$GPS'].datetime) < time.mktime(log_file.data['$GPS2'].datetime)):
-            log_info("%s: GPS = %f (%s) less then GPS2 = %f (%s), subtracting a day from GPS2 (midnight rollover between GPS2 and log start - very rare)"
-                          % (in_filename, time.mktime(log_file.data['$GPS'].datetime), log_file.data['$GPS'].datetime,
-                             time.mktime(log_file.data['$GPS2'].datetime), log_file.data['$GPS2'].datetime))
-            log_file.data['$GPS2'].datetime = time.gmtime(time.mktime(log_file.data['$GPS2'].datetime) - 86400)
-            log_info("New GPS2 = %f (%s)" % (time.mktime(log_file.data['$GPS2'].datetime), log_file.data['$GPS2'].datetime))
+    if "$GPS" in log_file.data and "$GPS2" in log_file.data:
+        if time.mktime(log_file.data["$GPS"].datetime) < time.mktime(
+            log_file.data["$GPS2"].datetime
+        ):
+            log_info(
+                "%s: GPS = %f (%s) less then GPS2 = %f (%s), subtracting a day from GPS2 (midnight rollover between GPS2 and log start - very rare)"
+                % (
+                    in_filename,
+                    time.mktime(log_file.data["$GPS"].datetime),
+                    log_file.data["$GPS"].datetime,
+                    time.mktime(log_file.data["$GPS2"].datetime),
+                    log_file.data["$GPS2"].datetime,
+                )
+            )
+            log_file.data["$GPS2"].datetime = time.gmtime(
+                time.mktime(log_file.data["$GPS2"].datetime) - 86400
+            )
+            log_info(
+                "New GPS2 = %f (%s)"
+                % (
+                    time.mktime(log_file.data["$GPS2"].datetime),
+                    log_file.data["$GPS2"].datetime,
+                )
+            )
 
     gc_data = {}
-    log_file_start_time = int(time.mktime(log_file.start_ts)) # make st_secs and end_secs 'i'
+    log_file_start_time = int(
+        time.mktime(log_file.start_ts)
+    )  # make st_secs and end_secs 'i'
     try:
-        gc_header_parts = log_file.data['$GCHEAD'].split(',')
+        gc_header_parts = log_file.data["$GCHEAD"].split(",")
     except:
         # pre-version 65 columns or no gc section (i.e. dive 0)
-        log_warning('Missing $GCHEAD in %s - assuming old version' % in_filename);
+        log_warning("Missing $GCHEAD in %s - assuming old version" % in_filename)
         #
         ##                   1       2          3       4    5        6        7        8          9         10       11    12      13      14     15       16      17
         # gc_header_parts = 'st_secs,pitch_ctl,vbd_ctl,depth,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase' # subset pre v65
         # gc_header_parts = 'st_secs,pitch_ctl,vbd_ctl,depth,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase,pitch_i,roll_i,pitch_ad,roll_ad,vbd_ad'.split(',');
-        gc_header_parts   = 'st_secs,pitch_ctl,vbd_ctl,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase,pitch_i,roll_i,pitch_ad,roll_ad,vbd_ad'.split(',');
+        gc_header_parts = "st_secs,pitch_ctl,vbd_ctl,ob_vertv,data_pts,end_secs,pitch_secs,roll_secs,vbd_secs,vbd_i,gcphase,pitch_i,roll_i,pitch_ad,roll_ad,vbd_ad".split(
+            ","
+        )
 
     # We could have a bolluxed logfile with truncated lines because of transmission issues (labrador/apr05/sg016 dive 416)
     # or we could have an older file where we guessed about the header but the number of entries is actually different
     # In the former case we want to drop the bad line(s); in the later case we want to preserve the data we think we trust
     # as long as the number of entries are consistent
-    indices = list(range(len(gc_header_parts))) # assume the best
+    indices = list(range(len(gc_header_parts)))  # assume the best
     indices_tmp = None
-    for gc_line in log_file.gc: # these are the string data lines, in an array
-        gc_line_parts = gc_line.split(',')
-        if(indices_tmp is None):
-            if(len(gc_line_parts) < len(gc_header_parts)):
-                log_warning("GC line (%s) contains fewer columns then header calls for - only processing the first %d columns"
-                            % (gc_line, len(gc_line_parts)))
+    for gc_line in log_file.gc:  # these are the string data lines, in an array
+        gc_line_parts = gc_line.split(",")
+        if indices_tmp is None:
+            if len(gc_line_parts) < len(gc_header_parts):
+                log_warning(
+                    "GC line (%s) contains fewer columns then header calls for - only processing the first %d columns"
+                    % (gc_line, len(gc_line_parts))
+                )
                 indices_tmp = list(range(len(gc_line_parts)))
             else:
                 # BUG what if there are more entries than header items? -- the code below drops them all
-                indices_tmp = indices # expect a full line
-        elif(len(gc_line_parts) != len(indices_tmp)):
-            log_warning("GC line (%s) contains a different number of columns (%d) then expected (%d) -- skipping"
-                             % (gc_line, len(gc_line_parts), len(indices_tmp)))
-            continue # bolluxed file
+                indices_tmp = indices  # expect a full line
+        elif len(gc_line_parts) != len(indices_tmp):
+            log_warning(
+                "GC line (%s) contains a different number of columns (%d) then expected (%d) -- skipping"
+                % (gc_line, len(gc_line_parts), len(indices_tmp))
+            )
+            continue  # bolluxed file
 
         for index in indices_tmp:
             column_name = gc_header_parts[index]
             try:
                 values = gc_data[column_name]
             except KeyError:
-                values = [] # initialize
+                values = []  # initialize
                 gc_data[column_name] = values
             try:
                 value = gc_line_parts[index]
@@ -357,83 +485,100 @@ def parse_log_file(in_filename, mission_dir, issue_warn=False):
                 value = None
 
             try:
-                md = nc_var_metadata[nc_gc_prefix + column_name]
+                md = BaseNetCDF.nc_var_metadata[BaseNetCDF.nc_gc_prefix + column_name]
             except:
                 log_error("Missing metadata for GC column (%s)" % column_name)
                 value = None
             else:
-                include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
-                if(nc_data_type == 'd'):
+                _, nc_data_type, _, _, = md
+                if nc_data_type == "d":
                     try:
                         value = float(value)
                     except ValueError:
-                        log_error("Improperly formatted floating point entry (%s = %s) found in $GC line (%s)" %  (column_name, value, gc_line))
+                        log_error(
+                            "Improperly formatted floating point entry (%s = %s) found in $GC line (%s)"
+                            % (column_name, value, gc_line)
+                        )
                         value = None
                     except TypeError:
-                        log_error("Improperly formatted floating point entry (%s = %s) found in $GC line (%s)" %  (column_name, value, gc_line))
+                        log_error(
+                            "Improperly formatted floating point entry (%s = %s) found in $GC line (%s)"
+                            % (column_name, value, gc_line)
+                        )
                         value = None
 
-                else: ## Must be integer
+                else:  ## Must be integer
                     try:
                         value = int(value)
                     except ValueError:
-                        log_error("Improperly formatted integer entry (%s = %s) found in $GC line" % (column_name, value))
+                        log_error(
+                            "Improperly formatted integer entry (%s = %s) found in $GC line"
+                            % (column_name, value)
+                        )
                         value = None
-            if (column_name in ['st_secs', 'end_secs']):
-                value += log_file_start_time  # adjust st_secs and end_secs to be epoch times
+            if column_name in ["st_secs", "end_secs"]:
+                value += (
+                    log_file_start_time  # adjust st_secs and end_secs to be epoch times
+                )
             values.append(value)
 
     log_file.gc_data = gc_data
 
-    state_data = { 'secs' : [], 'state' : [], 'eop_code' : [] }
+    state_data = {"secs": [], "state": [], "eop_code": []}
     # State
-    for state_line in log_file.state: # these are the string data lines, in an array
-        state_line_parts = state_line.split(',')
+    for state_line in log_file.state:  # these are the string data lines, in an array
+        state_line_parts = state_line.split(",")
         try:
             t = float(state_line_parts[0])
             s = state_line_parts[1].rstrip().lstrip()
 
-            if(len(state_line_parts) > 2):
+            if len(state_line_parts) > 2:
                 e = state_line_parts[2].rstrip().lstrip()
 
             else:
-                e = ''
+                e = ""
         except:
             pass
 
         s_code = map_state_code(s)
-        if(s_code < 0):
+        if s_code < 0:
             log_warning("Unknown gc state %s - skipping" % s)
             continue
         eop_code = map_eop_code(e)
-        
-        state_data['secs'].append(t + log_file_start_time)  # adjust st_secs and end_secs to be epoch times)
-        state_data['state'].append(s_code)
-        state_data['eop_code'].append(eop_code)
+
+        state_data["secs"].append(
+            t + log_file_start_time
+        )  # adjust st_secs and end_secs to be epoch times)
+        state_data["state"].append(s_code)
+        state_data["eop_code"].append(eop_code)
 
     log_file.gc_state_data = state_data
-    
+
     return log_file
+
 
 def main():
     """ main - main entry point
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv, 'l')
-    BaseLogger("LogFile", base_opts) # initializes BaseLog
+    base_opts = BaseOpts.BaseOptions(
+        additional_arguments={
+            "log_file": BaseOpts.options_t(
+                None,
+                ("LogFile",),
+                ("log_file",),
+                str,
+                {
+                    "help": "Seaglider logfile to process",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+        }
+    )
+    BaseLogger(base_opts)  # initializes BaseLog
 
-    args = base_opts.get_args() # positional arguments
+    log_info("Processing file: %s" % base_opts.log_file)
 
-    if len(args) < 1:
-        print("usage: LogFiles.py datafile (asc or eng - dat coming soon) [options]")
-        return 1
-
-    file_name = os.path.abspath(os.path.expanduser(args[0]))
-
-    mission_dir,_ = os.path.split(file_name)
-
-    log_info("Processing file: %s" % file_name)
-
-    log_file = parse_log_file(file_name, mission_dir)
+    log_file = parse_log_file(base_opts.log_file)
     # You can dump the whole processed object using this method
 
     if log_file is not None:
@@ -441,15 +586,25 @@ def main():
 
     # Each row in the data is a dictionary, so you index it via the column header name
     # For example, to show the depth:
-    #for i in data_file.data:
+    # for i in data_file.data:
     #    print i['depth']
 
     return 0
 
+
 if __name__ == "__main__":
     # Force time and date to be in UTC
-    os.environ['TZ'] = 'UTC'
+    os.environ["TZ"] = "UTC"
     time.tzset()
 
-    retval = main()
+    try:
+        retval = main()
+    except SystemExit:
+        pass
+    except:
+        if DEBUG_PDB:
+            _, _, tb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(tb)
+
     sys.exit(retval)

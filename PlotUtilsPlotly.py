@@ -83,13 +83,13 @@ def plotlyfromjson(fpath):
     return fig
 
 
-def write_output_files(plot_conf, base_file_name, fig):
+def write_output_files(base_opts, base_file_name, fig):
     """
     Helper routine to output various file formats - .png and .div all the time
     and standalone .html and .svg based on conf file settings
 
     Input:
-        plot_conf - configuration object
+        base_opts - all options 
         base_file_name - file name base for the output file names (i.e. no extension)
         fig - plotly figure object
     Returns:
@@ -100,15 +100,15 @@ def write_output_files(plot_conf, base_file_name, fig):
         "scrollZoom": True,
     }
 
-    if plot_conf.plot_directory is None:
+    if base_opts.plot_directory is None:
         log_warning("plot_directory not specified - bailing out")
         return []
 
-    base_file_name = os.path.join(plot_conf.plot_directory, base_file_name)
+    base_file_name = os.path.join(base_opts.plot_directory, base_file_name)
 
     ret_list = []
 
-    if plot_conf.full_html:
+    if base_opts.full_html:
         # if plot_opts full_html
         output_name = base_file_name + ".html"
         fig.write_html(
@@ -149,10 +149,10 @@ def write_output_files(plot_conf, base_file_name, fig):
         )
         return output_name
 
-    if plot_conf.save_png:
+    if base_opts.save_png:
         ret_list.append(save_img_file("png"))
 
-    if plot_conf.save_svg:
+    if base_opts.save_svg:
         ret_list.append(save_img_file("svg"))
 
     def isnotebook():

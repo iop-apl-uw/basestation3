@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2008, 2011, 2012, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2011, 2012, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -136,7 +136,7 @@ def main():
     """ main - main entry point
     """
     base_opts = BaseOpts.BaseOptions(sys.argv)
-    BaseLogger("Ver65Conv", base_opts) # initializes BaseLog
+    BaseLogger(base_opts) # initializes BaseLog
 
     file_names = get_ver_65_conv_file_names(base_opts.mission_dir)
     if(file_names):

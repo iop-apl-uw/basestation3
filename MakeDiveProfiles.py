@@ -2363,7 +2363,7 @@ def load_dive_profile_data(
         if log_file_exists and log_file_time > ncf_file_time:
             if ncf_file_time:
                 log_debug("Updating data from %s" % log_file_name)
-            log_f = LogFile.parse_log_file(log_file_name, base_opts.mission_dir)
+            log_f = LogFile.parse_log_file(log_file_name)
             if not log_f:
                 raise RuntimeError("Could not parse %s" % log_file_name)
             assign_dim_info_size(
@@ -9387,9 +9387,22 @@ def main():
         0 - success
         1 - failure
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv, "d", usage="%prog [Options] [basefile]")
+    base_opts = BaseOpts.BaseOptions(
+        additional_arguments={
+            "basename": BaseOpts.options_t(
+                None,
+                ("MakeDiveProfiles",),
+                ("basename",),
+                str,
+                {"help": "Basename for netcdf file to process/create (pXXXYYYY where XXX is sd_id, YYYY is dive number)",
+                 "action": BaseOpts.FullPathAction,
+                 "nargs":"?"
+                },
+            ),
+        }
+    )
 
-    BaseLogger("MakeDiveProfiles", base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)  # initializes BaseLog
 
     Utils.check_versions()
 
@@ -9400,11 +9413,6 @@ def main():
         except:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
-    args = base_opts.get_args()  # positional arguments
-
-    if len(args) < 1 and not base_opts.mission_dir:
-        print((main.__doc__))
-        return 1
 
     ret_val = 0
 
@@ -9414,14 +9422,15 @@ def main():
     )
 
     if base_opts.mission_dir:
-        base_path = os.path.abspath(os.path.expanduser(base_opts.mission_dir))
-    else:
+        base_path = base_opts.mission_dir
+    elif base_opts.basename:
         # they gave us a basename, e.g., p5400003 so expand it assuming current (code?) directory
         # make it look like it came via --mission_dir
-        base_path = (
-            os.path.abspath(os.path.expanduser(args[0])) + "/"
-        )  # ensure trailing '/'
+        base_path = base_opts.basename + "/"  # ensure trailing '/'
         base_opts.mission_dir = base_path
+    else:
+        log_error("Neither mission_dir or basename provided")
+        return 1
 
     dive_list = []
     if os.path.isdir(base_path):

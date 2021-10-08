@@ -2557,9 +2557,8 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     global ab_grid_cache_d, restart_cache_d, angles, grid_spacing_keys, grid_dive_sets, dump_checkpoint_data_matfiles
     
     if(base_opts is None):
-        base_opts = BaseOpts.BaseOptions(sys.argv, 'g',
-                                         usage="%prog [Options] ")
-    BaseLogger("FlightModel", base_opts) # initializes BaseLog
+        base_opts = BaseOpts.BaseOptions()
+    BaseLogger(base_opts) # initializes BaseLog
 
     Utils.check_versions()
 
@@ -2970,21 +2969,12 @@ def cmdline_main():
         1 - failure
     """
     global mission_directory
-    base_opts = BaseOpts.BaseOptions(sys.argv, 'd',
-                                     usage="%prog [Options] [basefile]")
+    base_opts = BaseOpts.BaseOptions()
     
-    BaseLogger("FlightModel", base_opts) # initializes BaseLog
-    args = base_opts.get_args() # positional arguments
-    if len(args) < 1 and not base_opts.mission_dir:
-        print((cmdline_main.__doc__))
-        return 1
-
+    BaseLogger(base_opts) # initializes BaseLog
+    
     if(base_opts.mission_dir):
-        mission_directory = os.path.expanduser(base_opts.mission_dir)
-        base_opts.mission_dir = mission_directory
-        if (not os.path.isdir(mission_directory)):
-            log_error("Directory %s does not exist -- exiting" % mission_directory)
-            return 1
+        mission_directory = base_opts.mission_dir
     else:
         log_error("No --mission_dir specified")
         return 1

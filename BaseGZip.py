@@ -273,18 +273,6 @@ def decompress(input_file_name, output_file_or_file_name):
 def main():
     """Decompresses files from the glider to stdout
 
-    Usage: BaseGZip.py [Options] filename
-
-    Options:
-        --version             show program's version number and exit
-        -h, --help            show this help message and exit
-        -c CONFIG, --config=CONFIG
-                              script configuration file
-        --base_log=BASE_LOG   basestation log file, records all levels of notifications
-        -v, --verbose         print status messages to stdout
-        -q, --quiet           don't print status messages to stdout
-        --debug               log/display debug messages
-
     Returns:
         0 for success (although there may have been individual errors in
             file processing).
@@ -293,18 +281,21 @@ def main():
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv, "z", usage="%prog [Options] <filename>")
+    base_opts = BaseOpts.BaseOptions(
+        additional_arguments={
+            "compressed_file": BaseOpts.options_t(
+                None,
+                ("BaseGZip",),
+                ("compressed_file",),
+                str,
+                {"help": "File to decompress", "action": BaseOpts.FullPathAction,},
+            ),
+        }
+    )
 
-    BaseLogger("BaseGZip", base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)  # initializes BaseLog
 
-    args = base_opts.get_args()  # positional arguments
-
-    if len(args) < 1:
-        print((main.__doc__))
-        return 1
-
-    filename = os.path.expanduser(args[0])
-    decompress(filename, f"{filename}.decomp")
+    decompress(base_opts.compressed_file, f"{base_opts.compressed_file}.decomp")
     return 0
 
 

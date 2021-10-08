@@ -30,7 +30,6 @@ Commlog.py: Contains all routines for extracting data from a glider's comm logfi
 
 import cProfile
 import collections
-import functools
 import inspect
 import math
 import os
@@ -782,7 +781,7 @@ class ConnectSession:
         if self.cmd_directive:
             print(f"cmdfile directive {self.cmd_directive}", file=fo)
         else:
-            print(f"No cmdfile directive found", file=fo)
+            print("No cmdfile directive found", file=fo)
         # for i in self.files_transfered.keys():
         #    tot_bytes = 0
         #    for j in self.files_transfered[i]:
@@ -979,9 +978,7 @@ def crack_counter_line(
                         start_time = time.strftime("%m %d %y", session.reconnect_ts)
                     else:
                         start_time = time.strftime("%m %d %y", session.connect_ts)
-                    session.gps_fix = GPS.GPSFix(
-                        raw_strs[1], start_date_str=start_time
-                    )
+                    session.gps_fix = GPS.GPSFix(raw_strs[1], start_date_str=start_time)
                 else:
                     log_warning(
                         "Unknown line after counter: file %s, lineno %d, line %s"
@@ -1326,7 +1323,11 @@ def process_comm_log(
                                 )
                             continue
 
-                        if raw_strs[6] == "Sent" and "/YMODEM" not in raw_line and "/XMODEM" not in raw_line:
+                        if (
+                            raw_strs[6] == "Sent"
+                            and "/YMODEM" not in raw_line
+                            and "/XMODEM" not in raw_line
+                        ):
                             # Raw send
                             try:
                                 filename = raw_strs[10]
@@ -1437,15 +1438,16 @@ def process_comm_log(
                         if filename is not None:
                             if "/YMODEM:" in raw_line:
                                 try:
-                                    transfersize = int(
-                                        raw_strs[7].strip()
-                                    )
+                                    transfersize = int(raw_strs[7].strip())
                                     bps = int(
                                         end.lstrip().split(" ")[2].strip()
                                     )  # bytes per second third string
                                 except ValueError:
-                                    log_error("Error processing: lineno %d, line %s"
-                                              % (comm_log_file_name, line_count, raw_line), 'exc')
+                                    log_error(
+                                        "Error processing: %s lineno %d, line %s"
+                                        % (comm_log_file_name, line_count, raw_line),
+                                        "exc",
+                                    )
                                     transfersize = bps = -1
 
                                 if filename not in session.file_stats:
@@ -1802,25 +1804,32 @@ class TestCommLogCallback:
 def main():
     """ main - main entry point
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv, "o")
-    BaseLogger("CommLog", base_opts)  # initializes BaseLog
+    base_opts = BaseOpts.BaseOptions(
+        additional_arguments={
+            "comm_log": BaseOpts.options_t(
+                None,
+                ("CommLog",),
+                ("comm_log",),
+                str,
+                {
+                    "help": "comm.log file to process",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+        }
+    )
+    BaseLogger(base_opts)  # initializes BaseLog
 
-    args = base_opts.get_args()  # positional arguments
-
-    if len(args) < 1:
-        print("usage: CommLog.py logfile [latlong data file] [options]")
+    if base_opts.comm_log is None:
         return 1
 
-    comm_log= process_comm_log(
-        os.path.expanduser(args[0]), base_opts, scan_back=False
-    )[0]
+    comm_log = process_comm_log(base_opts.comm_log, base_opts, scan_back=False)[0]
 
     comm_log.sessions[-1].dump_contents(sys.stdout)
 
     # for ii in range(len(comm_log.sessions)):
     #     for k in comm_log.sessions[ii].file_stats.keys():
     #         print(k, comm_log.sessions[ii].file_stats[k])
-
 
     # fragment_size_dict = comm_log.get_fragment_size_dict()
     # for kk, vv in fragment_size_dict.items():

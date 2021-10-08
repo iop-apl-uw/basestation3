@@ -142,7 +142,7 @@ def main():
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(sys.argv, 'm',
                                          usage="%prog --mission_dir MISSION_DIR -t TARGET_DIR")
-    BaseLogger("MoveData", base_opts) # initializes BaseLog
+    BaseLogger(base_opts) # initializes BaseLog
 
     #
     # Get directory to move data from

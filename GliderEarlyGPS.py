@@ -38,7 +38,6 @@ import BaseOpts
 import CommLog
 import Daemon
 import Utils
-import BaseDotFiles
 from BaseLog import BaseLogger, log_info, log_warning, log_error, log_critical
 
 # Early process for gps - call back for ver= line in comm.log - at that point, recovery condition has been seen
@@ -51,11 +50,8 @@ class GliderEarlyGPSClient:
     """ Client to handle connection to jabber server and comm callbacks
     """
 
-    def __init__(self, comm_log_file_name, base_opts, res=None):
-        self.__res = res or self.__class__.__name__
-        self.__conn = None
+    def __init__(self, comm_log_file_name, base_opts):
         self.__comm_log_file_name = comm_log_file_name
-        self.__cmdfile_name = os.path.join(base_opts.mission_dir, "cmdfile")
         self.__base_opts = base_opts
         self._start_pos = 0
         self._commlog_session = None
@@ -156,10 +152,10 @@ class GliderEarlyGPSClient:
             log_error(f"Unable to remove {connected_file} -- permissions?", "exc")
 
         try:
-            #(_, fo) = Utils.run_cmd_shell("date")
-            (_, fo) = Utils.run_cmd_shell("date +\"%a %b %d %R:%S %Z %Y\"")
+            # (_, fo) = Utils.run_cmd_shell("date")
+            (_, fo) = Utils.run_cmd_shell('date +"%a %b %d %R:%S %Z %Y"')
         except:
-            log_error(f"Error running date", "exc")
+            log_error("Error running date", "exc")
         else:
             ts = fo.readline().decode().rstrip()
             log_info(ts)
@@ -318,11 +314,22 @@ def main():
     """
     # Set up the call back here
     base_opts = BaseOpts.BaseOptions(
-        sys.argv, "j", usage="%prog [Options] --mission_dir MISSION_DIR"
+        additional_arguments={
+            "comm_log": BaseOpts.options_t(
+                None,
+                ("GliderEarlyGPS",),
+                ("comm_log",),
+                str,
+                {
+                    "help": "comm.log file (for testing only)",
+                    "nargs": "?",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+        }
     )
 
-    BaseLogger("GliderEarlyGPS", base_opts, include_time=True)  # initializes BaseLog
-    args = base_opts.get_args()  # positional arguments
+    BaseLogger(base_opts, include_time=True)  # initializes BaseLog
 
     log_info(
         "Started processing "
@@ -330,27 +337,16 @@ def main():
     )
 
     # Check for required "options"
-    if base_opts.mission_dir is None:
-        if len(args) > 0:
-            # For testing, go to the last session and
-            comm_log_filename = os.path.expanduser(args[0])
-            (comm_log, _, _, _) = CommLog.process_comm_log(comm_log_filename, base_opts)
-            if comm_log is None:
-                log_error("Could not process %s - bailing out" % comm_log_filename)
-                return 1
-            base_opts.mission_dir, _ = os.path.split(comm_log_filename)
-            try:
-                comm_log.process_counter_line(comm_log.sessions[-1], testing=True)
-            except:
-                log_error("Problem in process_counter_line", "exc")
-                return 1
-            return 0
-        else:
-            print((main.__doc__))
-            log_critical(
-                "Dive directory must be supplied or path to comm.log. See GliderEarlyGPS.py -h"
-            )
-            return 1
+    if base_opts.mission_dir:
+        comm_log_filename = os.path.join(base_opts.mission_dir, "comm.log")
+        testing = False
+    elif base_opts.comm_log:
+        comm_log_filename = base_opts.comm_log
+        base_opts.mission_dir, _ = os.path.split(base_opts.comm_log)
+        testing = True
+    else:
+        log_critical("Dive directory must be supplied or path to comm.log.")
+        return 1
 
     if base_opts.daemon:
         if Daemon.createDaemon(base_opts.mission_dir, False):
@@ -388,9 +384,20 @@ def main():
     Utils.create_lock_file(base_opts, gliderearlygps_lockfile_name)
 
     # Start up the bot
-    glider_client = GliderEarlyGPSClient(
-        os.path.join(base_opts.mission_dir, "comm.log"), base_opts
-    )
+    glider_client = GliderEarlyGPSClient(comm_log_filename, base_opts)
+    if testing:
+        # For testing, go to the last session and process that
+        (comm_log, _, _, _, _) = CommLog.process_comm_log(base_opts.comm_log, base_opts)
+        if comm_log is None:
+            log_error("Could not process %s - bailing out" % base_opts.comm_log)
+            return 1
+        try:
+            glider_client.process_counter_line(comm_log.sessions[-1], testing=True)
+        except:
+            log_error("Problem in process_counter_line", "exc")
+            return 1
+        return 0
+
     try:
         log_info("Starting the GliderEarlyGPS client....")
         glider_client.run()

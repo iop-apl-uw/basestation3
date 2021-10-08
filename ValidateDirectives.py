@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2012, 2013, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2012, 2013, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -37,7 +37,7 @@ if __name__ == "__main__":
     usage_string = "usage: %s [-v] --mission_dir <path_to_directives>"
     base_opts = BaseOpts.BaseOptions([], '', usage="%prog")
     base_opts.verbose = True # force -v
-    BaseLogger("ValidateDirectives", base_opts)
+    BaseLogger(base_opts)
 
     directives = ProfileDirectives(base_opts.mission_dir, '*') 
     drv_file_name = os.path.join(base_opts.mission_dir, 'sg_directives.txt')

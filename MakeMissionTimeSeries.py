@@ -1,9 +1,10 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
-## 
-## Copyright (c) 2006-2012, 2016, 2019, 2020 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## Copyright (c) 2006-2012, 2016, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+##
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -27,21 +28,16 @@
 import cProfile
 import os
 import sys
-import string
 import time
-import re
-from numpy import *
-import math
-import Utils
+import pstats
+
 import BaseOpts
-from BaseLog import *
-import GPS
-from CalibConst import getSGCalibrationConstants
+from BaseLog import BaseLogger, log_info, log_warning, log_critical, log_error
 import Utils
-import pdb
 import MakeDiveProfiles
 import Sensors
-from BaseNetCDF import *
+import BaseNetCDF
+
 
 def main():
     """Command line driver for creating mission timeseries from single dive netCDF files
@@ -84,66 +80,68 @@ def main():
         None - all exceptions are caught and logged
 
     """
-    global sensor_extensions
+    base_opts = BaseOpts.BaseOptions()
 
-    sensor_extensions = None
-
-    base_opts = BaseOpts.BaseOptions(sys.argv, 't',
-                                     usage="%prog [Options] --mission_dir MISSION_DIR [outputfile]"
-                                     )
-    
-    BaseLogger("MissionTimeSeries", base_opts) # initializes BaseLog
+    BaseLogger(base_opts)  # initializes BaseLog
 
     # Reset priority
-    if(base_opts.nice):
+    if base_opts.nice:
         try:
             os.nice(base_opts.nice)
         except:
             log_error("Setting nice to %d failed" % base_opts.nice)
-        
-    args = base_opts.get_args() # positional arguments
 
-    if not base_opts.mission_dir:
-        print((main.__doc__))
-        return 1
-
-    log_info("Started processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
+    log_info(
+        "Started processing "
+        + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+    )
 
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
-    if(init_ret_val > 0):
+    if init_ret_val > 0:
         log_warning("Sensor initialization failed")
 
     # Initialize the FileMgr with data on the installed loggers
-    #logger_init(init_dict)
+    # logger_init(init_dict)
 
     # Initialze the netCDF tables
-    init_tables(init_dict)
+    BaseNetCDF.init_tables(init_dict)
 
     # Collect up the possible files
     dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
 
-    (ret_val, mission_timeseries_file_name) =  MakeDiveProfiles.make_mission_timeseries(dive_nc_file_names, base_opts)
-    log_info("Finished processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
+    (ret_val, _) = MakeDiveProfiles.make_mission_timeseries(
+        dive_nc_file_names, base_opts
+    )
+    log_info(
+        "Finished processing "
+        + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+    )
     return ret_val
-    
+
 
 if __name__ == "__main__":
     retval = 1
 
     # Force to be in UTC
-    os.environ['TZ'] = 'UTC'
+    os.environ["TZ"] = "UTC"
     time.tzset()
 
     try:
         if "--profile" in sys.argv:
-            sys.argv.remove('--profile')
-            profile_file_name = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + '_' \
-                + Utils.ensure_basename(time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))) + ".cprof"
+            sys.argv.remove("--profile")
+            profile_file_name = (
+                os.path.splitext(os.path.split(sys.argv[0])[1])[0]
+                + "_"
+                + Utils.ensure_basename(
+                    time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+                + ".cprof"
+            )
             # Generate line timings
             retval = cProfile.run("main()", filename=profile_file_name)
             stats = pstats.Stats(profile_file_name)
-            stats.sort_stats('time', 'calls')
+            stats.sort_stats("time", "calls")
             stats.print_stats()
         else:
             retval = main()

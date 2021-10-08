@@ -1,7 +1,8 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -24,10 +25,7 @@
 """Routines for analysis based plots from netCDF data
 """
 
-import cProfile
-import pstats
 import os
-import re
 import stat
 import sys
 import time
@@ -37,28 +35,20 @@ import numpy as np
 
 from BaseLog import (
     BaseLogger,
-    log_warning,
     log_error,
     log_info,
     log_debug,
     log_critical,
 )
-from BaseNetCDF import nc_sg_cal_prefix
 import BaseOpts
-from MakeDiveProfiles import sg_config_constants
-import HydroModel
-
-import MakeDiveProfiles
 import Utils
-import PlotUtils
 import PlotUtilsPlotly
-import Conf
 
 #
 # Plots/Analysis
 #
-def plot_ts_profile(profile_file, dive_num, plot_conf):
-
+def plot_ts_profile(profile_file, dive_num, base_opts):
+    """Plot a reduced TS profile"""
     with open(profile_file, "r") as fi:
         for ll in fi.readlines():
             if ll.startswith("%first_bin_depth"):
@@ -121,7 +111,10 @@ def plot_ts_profile(profile_file, dive_num, plot_conf):
             "yaxis": {
                 "title": "Depth (m)",
                 #'autorange' : 'reversed',
-                "range": [depth.max(), 0,],
+                "range": [
+                    depth.max(),
+                    0,
+                ],
             },
             "xaxis2": {
                 "title": "Temperature (C)",
@@ -136,7 +129,10 @@ def plot_ts_profile(profile_file, dive_num, plot_conf):
                 "overlaying": "y1",
                 "side": "right",
                 #'autorange' : 'reversed',
-                "range": [max(depth), 0,],
+                "range": [
+                    max(depth),
+                    0,
+                ],
             },
             "title": {
                 "text": title_text,
@@ -145,17 +141,22 @@ def plot_ts_profile(profile_file, dive_num, plot_conf):
                 "x": 0.5,
                 "y": 0.95,
             },
-            "margin": {"t": 150,},
+            "margin": {
+                "t": 150,
+            },
         }
     )
 
-    return PlotUtilsPlotly.write_output_files(
-        plot_conf, "dv%04d_ts_profile" % (dive_num,), fig,
-    )
+    return [
+        PlotUtilsPlotly.write_output_files(
+            base_opts,
+            "dv%04d_ts_profile" % (dive_num,),
+            fig,
+        )
+    ]
 
-    return ret_list
 
-
+# pylint: disable=unused-argument
 def main(
     instrument_id=None,
     base_opts=None,
@@ -179,65 +180,62 @@ def main(
     """
 
     if base_opts is None:
-        base_opts = BaseOpts.BaseOptions(sys.argv, "g", usage="%prog [Options] ")
-    BaseLogger("MakePlot2", base_opts)  # initializes BaseLog
-
-    args = base_opts.get_args()  # positional argument
+        base_opts = BaseOpts.BaseOptions(
+            additional_arguments={
+                "profile_filename": BaseOpts.options_t(
+                    None,
+                    ("MakePlotTSProfile",),
+                    ("profile_filename",),
+                    str,
+                    {
+                        "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
+                        "action": BaseOpts.FullPathAction,
+                    },
+                ),
+            }
+        )
+    BaseLogger(base_opts)  # initializes BaseLog
 
     log_info(
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    log_info(f"other_files {processed_file_names}")
+    log_debug(f"processed_other_files {processed_file_names}")
     Utils.check_versions()
 
-    plot_conf = Conf.conf(PlotUtils.make_plot_section, PlotUtils.make_plot_default_dict)
-    if plot_conf.parse_conf_file(base_opts.config_file_name) > 2:
-        log_error(
-            f"Count not process {base_opts.config_file_name} - continuing with defaults"
-        )
-    plot_conf.dump_conf_vars()
-
-    if plot_conf.plot_directory is None and base_opts.mission_dir is not None:
-        plot_conf.plot_directory = os.path.join(base_opts.mission_dir, "plots")
-
-    if sg_calib_file_name is None and base_opts.mission_dir is not None:
-        sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
-
     profile_file_names = []
-    if not base_opts.mission_dir and len(args) == 1:
-        profile_file_names = [os.path.expanduser(args[0])]
-        if plot_conf.plot_directory is None:
-            plot_conf.plot_directory = os.path.split(
-                os.path.split(profile_file_names[0])[0]
-            )[0]
-        if sg_calib_file_name is None:
-            sg_calib_file_name = os.path.join(
-                plot_conf.plot_directory, "sg_calib_constants.m"
-            )
+    if base_opts.profile_filename:
+        profile_file_names = [base_opts.profile_filename]
     elif processed_file_names is not None:
         for ff in processed_file_names:
             if ff.endswith(".profile"):
                 # Only the down casts are good at the moment
                 if os.path.split(ff)[1][10:11] == "a":
                     profile_file_names.append(ff)
+    else:
+        log_info("No profiles specified to plot")
+        return 0
 
     if profile_file_names:
-        if not os.path.exists(plot_conf.plot_directory):
+        if base_opts.plot_directory is None:
+            base_opts.plot_directory = os.path.split(
+                os.path.split(profile_file_names[0])[0]
+            )[0]
+        if not os.path.exists(base_opts.plot_directory):
             try:
-                os.mkdir(plot_conf.plot_directory)
+                os.mkdir(base_opts.plot_directory)
             except:
-                log_error(f"Could not create {plot_conf.plot_directory}", "exc")
+                log_error(f"Could not create {base_opts.plot_directory}", "exc")
                 log_info("Bailing out")
                 return 1
 
-        if not os.path.exists(plot_conf.plot_directory):
+        if not os.path.exists(base_opts.plot_directory):
             try:
-                os.mkdir(plot_conf.plot_directory)
+                os.mkdir(base_opts.plot_directory)
                 # Ensure that MoveData can move it as pilot if not run as the glider account
                 os.chmod(
-                    plot_conf.plot_directory,
+                    base_opts.plot_directory,
                     stat.S_IRUSR
                     | stat.S_IWUSR
                     | stat.S_IXUSR
@@ -248,7 +246,7 @@ def main(
                     | stat.S_IXOTH,
                 )
             except:
-                log_error(f"Could not create {plot_conf.plot_directory}", "exc")
+                log_error(f"Could not create {base_opts.plot_directory}", "exc")
                 log_info("Bailing out")
                 return 1
 
@@ -256,7 +254,7 @@ def main(
             log_info(f"Processing {profile_file_name}")
             dive_num = int(os.path.split(profile_file_name)[1][6:10])
             try:
-                plots = plot_ts_profile(profile_file_name, dive_num, plot_conf)
+                plots = plot_ts_profile(profile_file_name, dive_num, base_opts)
                 if processed_other_files is not None and plots is not None:
                     for p in plots:
                         processed_other_files.append(p)
@@ -286,23 +284,9 @@ if __name__ == "__main__":
     time.tzset()
 
     try:
-        if "--profile" in sys.argv:
-            sys.argv.remove("--profile")
-            profile_file_name = (
-                os.path.splitext(os.path.split(sys.argv[0])[1])[0]
-                + "_"
-                + Utils.ensure_basename(
-                    time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-                )
-                + ".cprof"
-            )
-            # Generate line timings
-            retval = cProfile.run("main()", filename=profile_file_name)
-            stats = pstats.Stats(profile_file_name)
-            stats.sort_stats("time", "calls")
-            stats.print_stats()
-        else:
-            retval = main()
+        retval = main()
+    except SystemExit:
+        pass
     except Exception:
         log_critical("Unhandled exception in main -- exiting")
 

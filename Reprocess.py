@@ -43,8 +43,15 @@ import shutil
 import sys
 import time
 
-#import NODC
-from BaseLog import BaseLogger, log_debug, log_info, log_error, log_warning, log_critical
+# import NODC
+from BaseLog import (
+    BaseLogger,
+    log_debug,
+    log_info,
+    log_error,
+    log_warning,
+    log_critical,
+)
 from CalibConst import getSGCalibrationConstants
 import BaseNetCDF
 import BaseOpts
@@ -59,6 +66,7 @@ import QC
 import Sensors
 import TraceArray
 import Utils
+
 
 def main():
     """Command line driver for reprocessing per-dive and other nc files
@@ -96,7 +104,7 @@ def main():
     """
     base_opts = BaseOpts.BaseOptions(sys.argv, "d", usage="%prog [Options] [basefile]")
 
-    BaseLogger("Reprocess", base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)  # initializes BaseLog
 
     Utils.check_versions()
     args = base_opts.get_args()  # positional arguments
@@ -299,7 +307,11 @@ def main():
         if not temp_ret_val:
             # no problem writting the nc file, try for the others
             dive_nc_file_names.append(nc_dive_file_name)
-            if base_opts.make_dive_kkyy or base_opts.make_dive_pro or base_opts.make_dive_bpo:
+            if (
+                base_opts.make_dive_kkyy
+                or base_opts.make_dive_pro
+                or base_opts.make_dive_bpo
+            ):
                 MakeDiveProfiles.write_auxillary_files(
                     base_opts,
                     nc_dive_file_name,
@@ -381,9 +393,7 @@ def main():
                 "Started MMT processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
             )
-            MakeDiveProfiles.make_mission_timeseries(
-                all_dive_nc_file_names, base_opts
-            )
+            MakeDiveProfiles.make_mission_timeseries(all_dive_nc_file_names, base_opts)
             log_info(
                 "Finished MMT processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))

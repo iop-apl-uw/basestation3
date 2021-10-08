@@ -557,10 +557,7 @@ def init_logger(module_name, init_dict=None):
                     False,
                     "d",
                     {"description": description},
-                    (
-                        row_info,
-                        col_info,
-                    ),
+                    (row_info, col_info,),
                 )
     return 0
 
@@ -1048,7 +1045,7 @@ def extract_file_data(inp_file_name):
         return data
 
 
-def eng_file_reader(eng_files, nc_info_d):
+def eng_file_reader(eng_files, nc_info_d, calib_consts):
     """Reads the eng files for tmicl instruments
 
     Input:
@@ -1059,13 +1056,6 @@ def eng_file_reader(eng_files, nc_info_d):
     Returns:
         ret_list - list of (variable,data) tuples
         netcdf_dict - dictionary of optional netcdf variable additions
-
-    """
-    eng_files - list of eng_file that contain one class of file but over several channels
-
-    Returns
-    ret_list - list of (variable,data) tuples
-    netcdf_dict - dictionary of optional netcdf variable additions
 
     """
     netcdf_dict = {}

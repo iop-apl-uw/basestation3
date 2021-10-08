@@ -817,9 +817,7 @@ def process_file_group(
                     processed_other_files.append(fc.mk_base_ascfile_name())
                     # Convert to the eng file
                     sg_log_file = LogFile.parse_log_file(
-                        fc.mk_base_logfile_name(),
-                        base_opts.mission_dir,
-                        issue_warn=True,
+                        fc.mk_base_logfile_name(), issue_warn=True,
                     )
                     if not sg_log_file:
                         log_error(
@@ -1409,7 +1407,7 @@ def main():
         sys.argv, "b", usage="%prog [Options] --mission_dir MISSION_DIR"
     )
     # Initialize log
-    BaseLogger("Base", base_opts)
+    BaseLogger(base_opts)
 
     Utils.check_versions()
 

@@ -295,7 +295,7 @@ def main(
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(sys.argv, "g", usage="%prog [Options] ")
 
-    BaseLogger("SimpleNetCDF", base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)  # initializes BaseLog
 
     args = base_opts.get_args()  # positional arguments
 

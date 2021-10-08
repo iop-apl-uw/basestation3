@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     time.tzset()
     
     base_opts = BaseOpts.BaseOptions(sys.argv, 'o')
-    BaseLogger("SlackPost", base_opts) # initializes BaseLog
+    BaseLogger(base_opts) # initializes BaseLog
 
     args = base_opts.get_args() # positional arguments
 
