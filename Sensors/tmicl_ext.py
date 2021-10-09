@@ -1061,13 +1061,6 @@ def eng_file_reader(eng_files, nc_info_d):
         netcdf_dict - dictionary of optional netcdf variable additions
 
     """
-    eng_files - list of eng_file that contain one class of file but over several channels
-
-    Returns
-    ret_list - list of (variable,data) tuples
-    netcdf_dict - dictionary of optional netcdf variable additions
-
-    """
     netcdf_dict = {}
     ret_list = []
 
