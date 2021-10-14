@@ -152,7 +152,7 @@ def parse_log_file(in_filename, mission_dir, issue_warn=False):
     # TODO: Add handling for .asc and .eng files
 
     try:
-        raw_log_file = open(in_filename, "r")
+        raw_log_file = open(in_filename, "rb")
     except IOError:
         log_error("Could not open " + in_filename + " for reading")
         return None
@@ -161,8 +161,13 @@ def parse_log_file(in_filename, mission_dir, issue_warn=False):
     rows = []
     # Process the header
     while True:
-        raw_line = raw_log_file.readline().rstrip()
         line_count = line_count + 1
+        try:
+            raw_line = raw_log_file.readline().decode()
+        except UnicodeDecodeError:
+            log_error("Could not process line %d of %s" % (line_count, in_filename))
+            continue
+        raw_line = raw_line.rstrip()
         if raw_line == "":
             log_error("no valid header found")
             return None
@@ -221,8 +226,13 @@ def parse_log_file(in_filename, mission_dir, issue_warn=False):
     # Process the paramters
     log_file.data = {}
     while True:
-        raw_line = raw_log_file.readline().rstrip()
         line_count = line_count + 1
+        try:
+            raw_line = raw_log_file.readline().decode().rstrip()
+        except UnicodeDecodeError:
+            log_error("Could not process line %d of %s" % (line_count, in_filename))
+            continue
+            
         if raw_line == "":
             break # done with the file? BUG continue?
 
