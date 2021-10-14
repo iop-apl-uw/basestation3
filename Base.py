@@ -786,7 +786,10 @@ def process_file_group(
             elif fc.is_log():
                 shutil.move(in_file_name, fc.mk_base_logfile_name())
                 log_info(f"Removing secrets from {fc.mk_base_logfile_name()}")
-                expunge_secrets(fc.mk_base_logfile_name())
+                try:
+                    expunge_secrets(fc.mk_base_logfile_name())
+                except:
+                    log_error(f"Could not expunge secrets for {in_file_name}", "exc")
                 if not fc.is_seaglider_selftest():
                     processed_eng_and_log_files.append(fc.mk_base_logfile_name())
                 else:
@@ -1092,7 +1095,7 @@ def expunge_secrets(logfile_name):
     private = ["$PASSWD", "$TEL_NUM", "$TEL_PREFIX", "$ALT_TEL_NUM", "$ALT_TEL_PREFIX"]
 
     try:
-        pub = open(logfile_name, "r")
+        pub = open(logfile_name, "rb")
     except IOError:
         log_error(
             f"could not open {logfile_name} for reading - skipping secret expunge"
@@ -1106,6 +1109,12 @@ def expunge_secrets(logfile_name):
     private_keys_found = False
 
     for s in pub:
+        try:
+            s = s.decode("utf-8")
+        except UnicodeDecodeError:
+            log_warning(f"Could not decode line {s} in {selftest_name} - skipping")
+            continue
+        
         if s in ("", "\n"):
             continue
 
