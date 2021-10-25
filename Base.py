@@ -1114,7 +1114,7 @@ def expunge_secrets(logfile_name):
         except UnicodeDecodeError:
             log_warning(f"Could not decode line {s} in {selftest_name} - skipping")
             continue
-        
+
         if s in ("", "\n"):
             continue
 
@@ -1189,38 +1189,40 @@ def expunge_secrets_st(selftest_name):
         )
         return 1
 
-    public_lines = ""
-    private_lines = ""
+    public_lines = "".encode("utf-8")
+    private_lines = "".encode("utf-8")
 
     base, _ = os.path.splitext(selftest_name)
     pvt_name = base + ".pvtst"
 
     private_keys_found = False
 
-    for s in pub:
+    for raw_line in pub:
         try:
-            s = s.decode("utf-8")
+            s = raw_line.decode("utf-8")
         except UnicodeDecodeError:
-            log_warning(f"Could not decode line {s} in {selftest_name} - skipping")
-            continue
-
-        if any(k in s for k in private):
-            private_lines = private_lines + s
-            private_keys_found = True
+            log_warning(
+                f"Could not decode line {s} in {selftest_name} - assuming no secret"
+            )
+            public_lines = public_lines + raw_line
         else:
-            public_lines = public_lines + s
+            if any(k in s for k in private):
+                private_lines = private_lines + raw_line
+                private_keys_found = True
+            else:
+                public_lines = public_lines + raw_line
 
     pub.close()
 
     if private_keys_found:
 
         try:
-            pvt = open(pvt_name, "w")
+            pvt = open(pvt_name, "wb")
         except IOError:
             log_error("could not open " + pvt_name + " for writing")
             return 1
         try:
-            pub = open(selftest_name, "w")
+            pub = open(selftest_name, "wb")
         except IOError:
             log_error("could not open " + selftest_name + " for writing")
             return 1
