@@ -182,18 +182,6 @@ def main(
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for plotting X3 compressed TS profiles",
-            additional_arguments={
-                "profile_filename": BaseOpts.options_t(
-                    None,
-                    ("MakePlotTSProfile",),
-                    ("profile_filename",),
-                    str,
-                    {
-                        "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-            },
         )
     BaseLogger(base_opts)  # initializes BaseLog
 

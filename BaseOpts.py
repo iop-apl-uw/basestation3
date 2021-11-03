@@ -1045,6 +1045,17 @@ global_options_dict = {
             "option_group": "kml generation",
         },
     ),
+    "profile_filename": options_t(
+        None,
+        ("Base", "MakePlotTSProfile",),
+        ("profile_filename",),
+        str,
+        {
+            "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
+            "nargs": "?",
+            "action": FullPathAction,
+        },
+    ),
 }
 
 # Note: All option_group kwargs listed above must have an entry in this dictionary
