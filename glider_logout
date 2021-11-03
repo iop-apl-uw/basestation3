@@ -19,6 +19,7 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
+set PYTHON_BINARY = python3.9
 
 # A glider just logged out properly
 history -T -h >>! history.log
@@ -43,4 +44,4 @@ endif
 printf "\n" >>! baselog.log
 printf "\n"  >>! baselog.log
 
-python3.8 $BASESTATION_PATH/Base.py --mission_dir `pwd` --verbose --make_dive_profiles --make_mission_profile --make_mission_timeseries --daemon --base_log baselog_`date +%y%m%d%H%M%S` $GLIDER_OPTIONS >>&!  baselog.log
+$PYTHON_BINARY $BASESTATION_PATH/Base.py --mission_dir `pwd` --verbose --make_dive_profiles --make_mission_profile --make_mission_timeseries --daemon --base_log baselog_`date +%y%m%d%H%M%S` $GLIDER_OPTIONS >>&!  baselog.log

@@ -32,7 +32,9 @@ printf "\n" >>! glider_early_gps.log
 printf "\n" >>! glider_early_gps.log
 
 set BASELOG = glider_early_gps_`date +%y%m%d%H%M%S`
-python3.8 $BASESTATION_PATH/GliderEarlyGPS.py --daemon --mission_dir `pwd` --verbose --base_log $BASELOG --csh_pid $$  >>&!  glider_early_gps.log
+set PYTHON_BINARY = python3.9
+
+$PYTHON_BINARY $BASESTATION_PATH/GliderEarlyGPS.py --daemon --mission_dir `pwd` --verbose --base_log $BASELOG --csh_pid $$  >>&!  glider_early_gps.log
 
 if (-f .connected) then
 #    echo Reconnected at `date` >> comm.log
@@ -55,7 +57,7 @@ endif
 
 # Signal the glider what files are waiting for upload
 set BASELOG = baselog_login_`date +%y%m%d%H%M%S`
-python3.8 $BASESTATION_PATH/BaseLogin.py --mission_dir `pwd` --verbose --base_log $BASELOG  >>&!  baselog.log
+$PYTHON_BINARY $BASESTATION_PATH/BaseLogin.py --mission_dir `pwd` --verbose --base_log $BASELOG  >>&!  baselog.log
 if ( -f upload_files ) then
    source upload_files
    rm -f upload_files

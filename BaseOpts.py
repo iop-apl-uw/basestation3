@@ -101,6 +101,9 @@ class FullPathTrailingSlashAction(argparse.Action):
 #
 # range:list - two element list of the min and max allowed for an argument (inclusive).
 # section:str - name of the section where the argument is loaded in the config file
+# option_group:str - name of the option group to include the option in (for help)
+# required:list of str - modules names for which thie option is required.  Also implies the option
+#                        group "required"
 #
 options_t = collections.namedtuple(
     "options_t", ("default_val", "group", "args", "var_type", "kwargs")
