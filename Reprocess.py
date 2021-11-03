@@ -109,7 +109,7 @@ def main():
                 None,
                 ("Reprocess",),
                 ("dive_specs",),
-                int,
+                str,
                 {
                     "help": "dive numbers to reprocess - either single dive nums or a range in the form X:Y",
                     "nargs": "*",
