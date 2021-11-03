@@ -5402,7 +5402,10 @@ def make_dive_profile(
                         DAC_qc = QC_BAD  # bad flight....
 
                 # Done with these intermediate arrays
-                del pitch_end_v, pend_i_v, diff_pend_i_v, press_end_v, climb_dsurf_i_v
+                #del pitch_end_v, pend_i_v, diff_pend_i_v, press_end_v, climb_dsurf_i_v
+                for vv in ("pitch_end_v", "pend_i_v", "diff_pend_i_v", "press_end_v", "climb_dsurf_i_v"):
+                    if vv in locals():
+                        del locals()[vv]
         else:
             # If the data stops at pressures below climb_dsurf_depth, don't remove anything...
             # But see if we were truncated before we got near the surface
