@@ -80,7 +80,9 @@ def main():
         None - all exceptions are caught and logged
 
     """
-    base_opts = BaseOpts.BaseOptions()
+    base_opts = BaseOpts.BaseOptions(
+        "Command line driver for creating mission timeseries from single dive netCDF files"
+    )
 
     BaseLogger(base_opts)  # initializes BaseLog
 

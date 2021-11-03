@@ -51,8 +51,7 @@ DEBUG_PDB = "darwin" in sys.platform
 
 
 def map_state_code(state_str):
-    """Converts a state string to a state code
-    """
+    """Converts a state string to a state code"""
     state_strs = [
         "begin dive",
         "end dive",
@@ -79,8 +78,7 @@ def map_state_code(state_str):
 
 
 def map_eop_code(eop_str):
-    """ Converts an end of phase string to a code
-    """
+    """Converts an end of phase string to a code"""
     # Copied from glider constant.h - order is very important
     eop_strs = [
         "CONTROL_FINISHED_OK",
@@ -115,8 +113,7 @@ def map_eop_code(eop_str):
 
 
 class LogFile:
-    """Object representing a seaglider log file
-    """
+    """Object representing a seaglider log file"""
 
     def __init__(self):
         self.version = None
@@ -133,8 +130,7 @@ class LogFile:
         self.warn = []
 
     def dump(self, fo=sys.stdout):
-        """Dumps out the logfile
-        """
+        """Dumps out the logfile"""
         print("version: %2.2f" % (self.version), file=fo)
         print("glider: %d" % (self.glider), file=fo)
         print("mission: %d" % (self.dive), file=fo)
@@ -490,7 +486,12 @@ def parse_log_file(in_filename, issue_warn=False):
                 log_error("Missing metadata for GC column (%s)" % column_name)
                 value = None
             else:
-                _, nc_data_type, _, _, = md
+                (
+                    _,
+                    nc_data_type,
+                    _,
+                    _,
+                ) = md
                 if nc_data_type == "d":
                     try:
                         value = float(value)
@@ -558,9 +559,9 @@ def parse_log_file(in_filename, issue_warn=False):
 
 
 def main():
-    """ main - main entry point
-    """
+    """Test entry point for logfile processing"""
     base_opts = BaseOpts.BaseOptions(
+        "Test entry point for logfile processing",
         additional_arguments={
             "log_file": BaseOpts.options_t(
                 None,
@@ -572,7 +573,7 @@ def main():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-        }
+        },
     )
     BaseLogger(base_opts)  # initializes BaseLog
 
@@ -597,6 +598,7 @@ if __name__ == "__main__":
     os.environ["TZ"] = "UTC"
     time.tzset()
 
+    retval = 0
     try:
         retval = main()
     except SystemExit:

@@ -64,8 +64,10 @@ def main():
 
     Raises:
         None - all exceptions are caught and logged
-   """
-    base_opts = BaseOpts.BaseOptions()
+    """
+    base_opts = BaseOpts.BaseOptions(
+        "Command line driver for creating mission profiles from single dive netCDF files"
+    )
     BaseLogger(base_opts)  # initializes BaseLog
 
     # Reset priority

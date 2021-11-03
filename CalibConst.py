@@ -36,14 +36,14 @@ from BaseNetCDF import nc_sg_cal_prefix, nc_var_metadata
 
 
 def getSGCalibrationConstants(calib_filename, suppress_required_error=False):
-    """ Parses a matlab .m file for name = value pairs
+    """Parses a matlab .m file for name = value pairs
     Returns a dictionary of the constant names and values
     """
 
     # helpers
 
     def rangeCheck(key, value):
-        """ Checks to see whether value lies in min/max range for given key.
+        """Checks to see whether value lies in min/max range for given key.
         Ranges are hardcoded.
         Returns given key, value pair if within check; key value=None otherwise.
 
@@ -121,7 +121,12 @@ def getSGCalibrationConstants(calib_filename, suppress_required_error=False):
                 nc_var_name = nc_sg_cal_prefix + key
                 try:
                     md = nc_var_metadata[nc_var_name]
-                    (_, nc_data_type, _, _,) = md
+                    (
+                        _,
+                        nc_data_type,
+                        _,
+                        _,
+                    ) = md
                 except KeyError:
                     # Unknown variable but be silent here; complain when writing
                     nc_data_type = None
@@ -164,8 +169,7 @@ def getSGCalibrationConstants(calib_filename, suppress_required_error=False):
 
 
 def dump(in_filename, fo):
-    """Dumps out the calib_consts dictionary constructed from a calibration constants matlab file
-    """
+    """Dumps out the calib_consts dictionary constructed from a calibration constants matlab file"""
     print("Calibration constants extracted from: %s" % (in_filename), file=fo)
 
     calib_consts = getSGCalibrationConstants(in_filename)
@@ -177,15 +181,19 @@ def dump(in_filename, fo):
 
 if __name__ == "__main__":
     base_opts = BaseOpts.BaseOptions(
+        "Test entry for sg_calib_constants.m processing",
         additional_arguments={
             "calib_const_file": BaseOpts.options_t(
                 None,
                 ("CalibConst",),
                 ("calib_const_file",),
                 str,
-                {"help": "File to process", "action": BaseOpts.FullPathAction,},
+                {
+                    "help": "File to process",
+                    "action": BaseOpts.FullPathAction,
+                },
             ),
-        }
+        },
     )
     BaseLogger(base_opts)  # initializes BaseLog
 

@@ -64,8 +64,7 @@ removed_re = re.compile("^%s" % removed_tag)
 
 
 class DataFile:
-    """Object representing a seaglider data file
-    """
+    """Object representing a seaglider data file"""
 
     def __init__(self, file_type, calib_consts):
         if file_type in ("dat", "asc", "eng"):
@@ -88,8 +87,7 @@ class DataFile:
         self.calib_consts = calib_consts
 
     def dat_to_asc(self):
-        """Converts a data file to a an ASC file
-        """
+        """Converts a data file to a an ASC file"""
         if self.file_type == "asc":
             return
 
@@ -320,7 +318,9 @@ class DataFile:
             )
         )
         if not header_only:
-            fo.write("%scolumns: " % (prefix),)
+            fo.write(
+                "%scolumns: " % (prefix),
+            )
             for i in range(len(self.columns) - 1):
                 # print >>fo, "%s," % i.lstrip().rstrip(),
                 fo.write("%s," % self.columns[i].lstrip().rstrip())
@@ -346,7 +346,7 @@ class DataFile:
 
     def remove_col(self, label):
         """Fetches the column of data matching the label
-           If successful, removes the column label from the colums list
+        If successful, removes the column label from the colums list
         """
         try:
             ret_val = np.array(self.data[:, self.columns.index(label)], float)
@@ -360,7 +360,7 @@ class DataFile:
 
     def remove_col_regex(self, regex):
         """Fetches the first column of data matching the label regex
-           If successful, removes the column label from the colums list
+        If successful, removes the column label from the colums list
         """
         for c in self.columns:
             if re.match(regex, c):
@@ -370,13 +370,12 @@ class DataFile:
 
     def removed_col(self, label):
         """Tests whether the label refers to a removed column,
-           which really isn't removed, just labeled as such.
+        which really isn't removed, just labeled as such.
         """
         return removed_re.search(label)
 
     def get_col(self, label):
-        """Fetches the column of data matching the label
-        """
+        """Fetches the column of data matching the label"""
         try:
             ret_val = np.array(self.data[:, self.columns.index(label)], float)
         except ValueError:
@@ -385,13 +384,11 @@ class DataFile:
         return ret_val
 
     def update_col(self, label, data):
-        """Updates the data in an existing column
-        """
+        """Updates the data in an existing column"""
         self.data[:, self.columns.index(label)] = data
 
     def find_col(self, alternative_columns):
-        """Find one of the alternative_column names and returns the column name and the values
-        """
+        """Find one of the alternative_column names and returns the column name and the values"""
         for column_name in alternative_columns:
             values_v = self.get_col(column_name)
             if values_v is not None:
@@ -422,8 +419,7 @@ class DataFile:
         return None
 
     def eliminate_rows(self, bad_rows):
-        """Removes the listed rows from the data set
-        """
+        """Removes the listed rows from the data set"""
         # (row,col) = self.data.shape
         # temp = array ()
         pass
@@ -567,7 +563,7 @@ def process_data_file(in_filename, file_type, calib_consts):
 
 
 def main():
-    """ Processes seaglider data files from dat to asc
+    """Processes seaglider data files from dat to asc
 
     returns:
         0 for success
@@ -579,6 +575,7 @@ def main():
     """
     # Get options
     base_opts = BaseOpts.BaseOptions(
+        "Processes seaglider data files from dat to asc",
         additional_arguments={
             "data_file": BaseOpts.options_t(
                 None,
@@ -601,7 +598,7 @@ def main():
                     "nargs": "?",
                 },
             ),
-        }
+        },
     )
     BaseLogger(base_opts)  # initializes BaseLog
 
@@ -646,7 +643,9 @@ def main():
                             "Error - %s is not a seaglider log filename" % logfile_name
                         )
                         return 1
-                    log_file = LogFile.parse_log_file(logfile_name,)
+                    log_file = LogFile.parse_log_file(
+                        logfile_name,
+                    )
                     if data_file.asc_to_eng(log_file):
                         log_error(
                             "%s failed in conversion from asc to eng" % datafile_name

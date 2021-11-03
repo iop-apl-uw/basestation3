@@ -206,18 +206,6 @@ def Bogue(in_filename):
 def main():
     """Processes gliders files for Bogue syndrome
 
-    Usage: Bogue.py [Options] filename
-
-    Options:
-        --version             show program's version number and exit
-        -h, --help            show this help message and exit
-        -c CONFIG, --config=CONFIG
-                              script configuration file
-        --base_log=BASE_LOG   basestation log file, records all levels of notifications
-        -v, --verbose         print status messages to stdout
-        -q, --quiet           don't print status messages to stdout
-        --debug               log/display debug messages
-
     Returns:
         0 for success (although there may have been individual errors in
             file processing).
@@ -227,6 +215,7 @@ def main():
         Any exceptions raised are considered critical errors and not expected
     """
     base_opts = BaseOpts.BaseOptions(
+        "Processes gliders files for Bogue syndrome",
         additional_arguments={
             "input_file": BaseOpts.options_t(
                 None,
@@ -238,7 +227,7 @@ def main():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-        }
+        },
     )
     BaseLogger(base_opts)  # initializes BaseLog
 

@@ -135,7 +135,7 @@ def conv_ver_65_files(destdir, file_names):
 def main():
     """ main - main entry point
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv)
+    base_opts = BaseOpts.BaseOptions("Test entry for version 65 conversion routines")
     BaseLogger(base_opts) # initializes BaseLog
 
     file_names = get_ver_65_conv_file_names(base_opts.mission_dir)

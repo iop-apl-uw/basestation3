@@ -37,7 +37,6 @@ import numpy as np
 import Utils
 import BaseOpts
 import MakeDiveProfiles
-import Conf
 import CalibConst
 import QC
 from BaseLog import log_critical, log_error, log_info, log_debug, BaseLogger
@@ -48,11 +47,6 @@ from windrain.rain import pmar_v2019_fun_SPL5kHz2rain
 # import matplotlib
 # matplotlib.use('MacOSX')
 # import matplotlib.pyplot as plt
-
-wind_rain_section = "windrain"
-wind_rain_default_dict = {
-    "new_netcdf_file": [1, 0, 1]
-}  # 1 to create a new netcdf file, 0 to update existing file
 
 # Mapping of variables to be updated
 name_pairs = collections.namedtuple("name_pairs", ["name", "meta", "qc"])
@@ -121,7 +115,7 @@ param_defaults = {
 
 
 def add_variable(ncf, name, value, typecode, dimensions, meta_data):
-    """ Adds a new variable to a netcdf files
+    """Adds a new variable to a netcdf files
     Input:
         ncf - open for writing netcdf file
         name - new varible name
@@ -159,22 +153,29 @@ def main(
         Any exceptions raised are considered critical errors and not expected
     """
     if base_opts is None:
-        base_opts = BaseOpts.BaseOptions(sys.argv, "g", usage="%prog [Options] ")
-    BaseLogger(base_opts)  # initializes BaseLog
-
-    args = base_opts.get_args()  # positional arguments
+        base_opts = BaseOpts.BaseOptions(
+            "Basestation extension for adding wind/rain estimates to netcdf files",
+            additional_arguments={
+                "new_netcdf_file": BaseOpts.options_t(
+                    None,
+                    ("WindRain",),
+                    ("--new_netcdf_file",),
+                    bool,
+                    {
+                        "help": "Create a new netcdf file with update wind_rain",
+                        "action": "store_true",
+                    },
+                ),
+            },
+        )
+    BaseLogger(base_opts)
 
     log_info(
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    if not base_opts.mission_dir and len(args) == 1:
-        dive_nc_file_names = [os.path.expanduser(args[0])]
-        mission_dir, _ = os.path.split(dive_nc_file_names[0])
-        if sg_calib_file_name is None:
-            sg_calib_file_name = os.path.join(mission_dir, "sg_calib_constants.m")
-    else:
+    if base_opts.mission_dir:
         if nc_files_created is not None:
             dive_nc_file_names = nc_files_created
         elif not dive_nc_file_names:
@@ -184,6 +185,14 @@ def main(
             sg_calib_file_name = os.path.join(
                 base_opts.mission_dir, "sg_calib_constants.m"
             )
+    elif base_opts.netcdf_file:
+        dive_nc_file_names = [base_opts.netcdf_file]
+        mission_dir, _ = os.path.split(dive_nc_file_names[0])
+        if sg_calib_file_name is None:
+            sg_calib_file_name = os.path.join(mission_dir, "sg_calib_constants.m")
+    else:
+        log_error("Either mission_dir or netcdf_file must be specified")
+        return 1
 
     # Get processing parameters
     calib_consts = CalibConst.getSGCalibrationConstants(sg_calib_file_name)
@@ -200,14 +209,6 @@ def main(
             return 1
         else:
             params[p] = param_defaults[p]
-
-    wind_rain_conf = Conf.conf(wind_rain_section, wind_rain_default_dict)
-    if wind_rain_conf.parse_conf_file(base_opts.config_file_name) > 2:
-        log_error(
-            "Count not process %s - continuing with defaults"
-            % base_opts.config_file_name
-        )
-    wind_rain_conf.dump_conf_vars()
 
     for dive_nc_file_name in dive_nc_file_names:
         log_info("Processing %s" % dive_nc_file_name)
@@ -235,7 +236,7 @@ def main(
                 hphone_sens_db = nci.variables["pmar_hphone_sens_ch00"].getValue()
             except KeyError:
                 log_error(
-                    "pmar_hphone_sens_ch00 not found in netcdf for sg_calib_constants.m  - skipping"
+                    f"pmar_hphone_sens_ch00 not found in netcdf or sg_calib_constants.m  - skipping {dive_nc_file_name}"
                 )
                 break
         try:
@@ -249,11 +250,7 @@ def main(
 
         log_info(
             "Output file = %s"
-            % (
-                netcdf_out_filename
-                if wind_rain_conf.new_netcdf_file
-                else netcdf_in_filename
-            )
+            % (netcdf_out_filename if base_opts.new_netcdf_file else netcdf_in_filename)
         )
 
         nco = Utils.open_netcdf_file(netcdf_out_filename, "w", False)
@@ -451,11 +448,11 @@ def main(
         nco.sync()
         nco.close()
 
-        if not wind_rain_conf.new_netcdf_file:
+        if not base_opts.new_netcdf_file:
             shutil.move(netcdf_out_filename, netcdf_in_filename)
 
         if processed_other_files is not None:
-            if wind_rain_conf.new_netcdf_file:
+            if base_opts.new_netcdf_file:
                 processed_other_files.append(netcdf_out_filename)
             else:
                 if netcdf_in_filename not in processed_other_files:

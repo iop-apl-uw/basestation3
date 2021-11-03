@@ -34,8 +34,7 @@ if __name__ == "__main__":
     # Force to be in UTC
     os.environ['TZ'] = 'UTC'
     time.tzset()
-    usage_string = "usage: %s [-v] --mission_dir <path_to_directives>"
-    base_opts = BaseOpts.BaseOptions([], '', usage="%prog")
+    base_opts = BaseOpts.BaseOptions("Validation of processing directives")
     base_opts.verbose = True # force -v
     BaseLogger(base_opts)
 

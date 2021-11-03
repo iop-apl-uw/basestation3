@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
 ##
 ## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2018, 2020, 2021 by University of Washington.  All rights reserved.
@@ -38,7 +39,6 @@ import scipy.interpolate
 from scipy.stats import binned_statistic
 
 import BaseOpts
-import Conf
 import MakeDiveProfiles
 import QC
 import Utils
@@ -48,13 +48,14 @@ from BaseLog import BaseLogger, log_info, log_warning, log_error, log_debug
 # Local config
 DEBUG_PDB = True
 
-simp_cdf_conf_default_dict = {
-    "bin_width": [0.0, 0.0, 1000.0],
-    "compress_output": [0, 0, 1],
-}
-
 var_metadata = collections.namedtuple(
-    "var_metadata", ["qc_name", "time_name", "depth_name", "dimension",],
+    "var_metadata",
+    [
+        "qc_name",
+        "time_name",
+        "depth_name",
+        "dimension",
+    ],
 )
 
 nc_meta = {
@@ -71,7 +72,10 @@ nc_meta = {
     # "aa4831_O2": var_metadata(None, "aa4841_time", None, "aa4831_data_point",),
     "aa4831_time": var_metadata(None, "aa4831_time", None, "aa4831_data_point"),
     "aanderaa4831_dissolved_oxygen": var_metadata(
-        "aanderaa4831_dissolved_oxygen_qc", "aa4831_time", None, "aa4831_data_point",
+        "aanderaa4831_dissolved_oxygen_qc",
+        "aa4831_time",
+        None,
+        "aa4831_data_point",
     ),
 }
 
@@ -101,7 +105,14 @@ single_vars = [
 depth_dimension_name = "depth_data_point"
 profile_dimension_name = "profile_data_point"
 
-nc_var_meta = collections.namedtuple("nc_vars_meta", ["dtype", "attrs", "dimensions",],)
+nc_var_meta = collections.namedtuple(
+    "nc_vars_meta",
+    [
+        "dtype",
+        "attrs",
+        "dimensions",
+    ],
+)
 
 new_nc_vars = {
     "depth": nc_var_meta(
@@ -136,7 +147,7 @@ new_nc_vars = {
 
 # Util functions
 def create_nc_var(ncf, var_name):
-    """ Creates a nc varable and sets meta data
+    """Creates a nc varable and sets meta data
     Returns:
         nc_var
     """
@@ -149,7 +160,11 @@ def create_nc_var(ncf, var_name):
 
 
 def load_var(
-    ncf, var_name, var_meta, master_time_name, master_depth_name,
+    ncf,
+    var_name,
+    var_meta,
+    master_time_name,
+    master_depth_name,
 ):
     """
     Input:
@@ -192,7 +207,7 @@ def load_var(
 
 
 def cp_attrs(in_var, out_var):
-    """ Copies the netcdf attributes from the in_var
+    """Copies the netcdf attributes from the in_var
     to the out_var
     """
     # pylint: disable=protected-access
@@ -202,7 +217,7 @@ def cp_attrs(in_var, out_var):
 
 
 def interp1_extend(t1, data, t2):
-    """ Interpolates t1/data onto t2, extending t1/data to cover the range
+    """Interpolates t1/data onto t2, extending t1/data to cover the range
     of t2
     """
     # add 'nearest' data item to the ends of data and t1
@@ -293,19 +308,33 @@ def main(
     """
     # pylint: disable=unused-argument
     if base_opts is None:
-        base_opts = BaseOpts.BaseOptions(sys.argv, "g", usage="%prog [Options] ")
+        base_opts = BaseOpts.BaseOptions(
+            "Basestation extension for creating simplified netCDF files",
+            additional_arguments={
+                "simplencf_bin_width": BaseOpts.options_t(
+                    None,
+                    ("SimpleNetCDF",),
+                    ("--simplencf_bin_width",),
+                    float,
+                    {
+                        "help": "Bin SimpleNetCDF output to this size",
+                        "section": "simplenetcdf",
+                    },
+                ),
+                "simplencf_compress_output": BaseOpts.options_t(
+                    None,
+                    ("SimpleNetCDF",),
+                    ("--simplencf_compress_output",),
+                    bool,
+                    {
+                        "help": "Compress the simple netcdf file",
+                        "action": "store_true",
+                    },
+                ),
+            },
+        )
 
     BaseLogger(base_opts)  # initializes BaseLog
-
-    args = base_opts.get_args()  # positional arguments
-
-    simp_cdf_conf = Conf.conf("simplenetcdf", simp_cdf_conf_default_dict)
-    if simp_cdf_conf.parse_conf_file(base_opts.config_file_name) > 2:
-        log_error(
-            "Count not process %s - continuing with defaults"
-            % base_opts.config_file_name
-        )
-    simp_cdf_conf.dump_conf_vars()
 
     # These may need to be configurable, but for most cases, they should be constant
     master_time_name = "ctd_time"
@@ -316,21 +345,24 @@ def main(
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    if not base_opts.mission_dir and len(args) == 1:
-        dive_nc_file_names = [os.path.expanduser(args[0])]
-    else:
+    if base_opts.netcdf_filename:
+        dive_nc_file_names = [base_opts.netcdf_filename]
+    elif base_opts.mission_dir:
         if nc_files_created is not None:
             dive_nc_file_names = nc_files_created
         elif not dive_nc_file_names:
             # Collect up the possible files
             dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
+    else:
+        log_error("Either mission_dir or netcdf_file must be specified")
+        return 1
 
     for dive_nc_file_name in dive_nc_file_names:
         log_info("Processing %s" % dive_nc_file_name)
 
         netcdf_in_filename = dive_nc_file_name
         head = os.path.splitext(netcdf_in_filename)[0]
-        if simp_cdf_conf.bin_width:
+        if base_opts.bin_width:
             netcdf_out_filename = "%s.ncfb" % (head)
         else:
             netcdf_out_filename = "%s.ncf" % (head)
@@ -359,19 +391,21 @@ def main(
                 new_dimension = "sg_data_point"
             if var_meta.time_name not in nci.variables:
                 new_time = "time"
-            nc_meta[var_name] = var_metadata(var_meta.qc_name, new_time, var_meta.depth_name, new_dimension)
+            nc_meta[var_name] = var_metadata(
+                var_meta.qc_name, new_time, var_meta.depth_name, new_dimension
+            )
 
         nc_dims = set()
         nc_vars = set()
         for var_name, var_meta in nc_meta.items():
             if var_name not in nci.variables:
                 continue
-            
+
             nc_dims.add(var_meta.dimension)
             nc_vars.add(var_name)
             nc_vars.add(var_meta.time_name)
 
-        if not simp_cdf_conf.bin_width:
+        if not base_opts.bin_width:
             # If not binning, copy over dimensions and variables,
             # converting the doubles to floats
             for d in nc_dims:
@@ -381,12 +415,12 @@ def main(
         else:
             master_depth = nci.variables[master_depth_name][:]
             max_depth = np.floor(np.nanmax(master_depth))
-            bin_centers = np.arange(0.0, max_depth + 0.01, simp_cdf_conf.bin_width)
+            bin_centers = np.arange(0.0, max_depth + 0.01, base_opts.bin_width)
             # This is actually bin edges, so one more point then actual bins
             bin_edges = np.arange(
-                -simp_cdf_conf.bin_width / 2.0,
-                max_depth + simp_cdf_conf.bin_width / 2.0 + 0.01,
-                simp_cdf_conf.bin_width,
+                -base_opts.bin_width / 2.0,
+                max_depth + base_opts.bin_width / 2.0 + 0.01,
+                base_opts.bin_width,
             )
             # Do this to ensure everything is caught in the binned statistic
             bin_edges[0] = -20.0
@@ -419,9 +453,13 @@ def main(
             var_meta = nc_meta[var_name]
             log_debug(f"Adding variable {var_name}")
             data, depth = load_var(
-                nci, var_name, var_meta, master_time_name, master_depth_name,
+                nci,
+                var_name,
+                var_meta,
+                master_time_name,
+                master_depth_name,
             )
-            if not simp_cdf_conf.bin_width:
+            if not base_opts.bin_width:
                 vv = nco.createVariable(
                     var_name, np.float32, nci.variables[var_name].dimensions
                 )
@@ -478,7 +516,7 @@ def main(
 
         # pylint: disable=protected-access
         for a in list(nci._attributes.keys()):
-            if not (simp_cdf_conf.bin_width and a == "history"):
+            if not (base_opts.bin_width and a == "history"):
                 nco.__setattr__(a, nci._attributes[a])
         # pylint: enable=protected-access
 
@@ -489,7 +527,7 @@ def main(
         if processed_other_files is not None:
             processed_other_files.append(netcdf_out_filename)
 
-        if simp_cdf_conf.compress_output:
+        if base_opts.compress_output:
             netcdf_out_filename_bzip = netcdf_out_filename + ".bz2"
             try:
                 with open(netcdf_out_filename, "rb") as fi, bz2.open(
@@ -510,8 +548,11 @@ def main(
 
 
 if __name__ == "__main__":
+    retval = 0
     try:
         retval = main()
+    except SystemExit:
+        pass
     except:
         if DEBUG_PDB:
             extype, value, tb = sys.exc_info()

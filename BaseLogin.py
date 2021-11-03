@@ -1,9 +1,10 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
-## 
+##
 ## Copyright (c) 2011, 2012, 2015, 2016, 2020, 2021 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -27,15 +28,15 @@
 import sys
 import os
 import time
-import collections
 
 import BaseOpts
 import Sensors
-from BaseLog import *
+from BaseLog import BaseLogger, log_warning, log_info, log_error
 from Base import run_extension_script
 from BaseDotFiles import process_extensions
 
-def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_file_names=None):
+
+def main():
     """Basestation script invoked at glider login time
 
     Returns:
@@ -49,49 +50,57 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
 
     ret_val = 0
 
-    if(base_opts is None):
-        base_opts = BaseOpts.BaseOptions(sys.argv, 'n',
-                                         usage="%prog [Options] ")
-    BaseLogger(base_opts) # initializes BaseLog
+    base_opts = BaseOpts.BaseOptions("Basestation script invoked at glider login time")
+    BaseLogger(base_opts)  # initializes BaseLog
 
-    if(not base_opts.mission_dir):
-        print((main.__doc__))
-        return 1
-
-    #log_info("Started processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
+    # log_info("Started processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
 
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
-    if(init_ret_val > 0):
+    if init_ret_val > 0:
         log_warning("Sensor initialization failed")
 
     # Run early enough to get into the upload list
     run_extension_script(os.path.join(base_opts.mission_dir, ".pre_login"), None)
 
     # Invoke extensions, if any
-    process_extensions('.pre_extensions', ("global", ), base_opts,
-                       None, None, None, None, None, None, None)
+    process_extensions(
+        ".pre_extensions",
+        ("global",),
+        base_opts,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+        None,
+    )
 
-    existing_files = '{'
-    base_files = {'targets':'T','science':'S', 'pdoscmds.bat':'P', 'tcm2mat.cal':'M'}
+    existing_files = "{"
+    base_files = {
+        "targets": "T",
+        "science": "S",
+        "pdoscmds.bat": "P",
+        "tcm2mat.cal": "M",
+    }
     for f in list(base_files.keys()):
-        if(os.path.exists(os.path.join(base_opts.mission_dir, f))):
+        if os.path.exists(os.path.join(base_opts.mission_dir, f)):
             existing_files = "%s%s" % (existing_files, base_files[f])
 
     # Now, the loggers
     for key in list(init_dict.keys()):
         d = init_dict[key]
-        if('known_files' in d):
-            for b in d['known_files']:
-                if(os.path.exists(os.path.join(base_opts.mission_dir, b))):
+        if "known_files" in d:
+            for b in d["known_files"]:
+                if os.path.exists(os.path.join(base_opts.mission_dir, b)):
                     existing_files = "%s,%s" % (existing_files, b)
-                    
+
     existing_files = "%s}" % existing_files
 
     log_info("Existing files = %s" % existing_files)
 
-    upload_files_name = os.path.join(base_opts.mission_dir, 'upload_files')
-
+    upload_files_name = os.path.join(base_opts.mission_dir, "upload_files")
 
     try:
         fo = open(upload_files_name, "w")
@@ -99,19 +108,17 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         log_error("Unable to open %s for write" % upload_files_name)
         ret_val = 1
     else:
-        fo.write("echo \"%s\"\n" % existing_files)
+        fo.write('echo "%s"\n' % existing_files)
         fo.close()
 
-    #log_info("Finished processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
-
-
+    # log_info("Finished processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
 
     return ret_val
 
+
 if __name__ == "__main__":
-    os.environ['TZ'] = 'UTC'
+    os.environ["TZ"] = "UTC"
     time.tzset()
 
     retval = main()
     sys.exit(retval)
-    

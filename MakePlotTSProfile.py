@@ -168,7 +168,7 @@ def main(
     known_ftp_tags=None,
     processed_file_names=None,
 ):
-    """Basestation extension for running analysis and creating associated plots
+    """Basestation extension for plotting X3 compressed TS profiles
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -181,6 +181,7 @@ def main(
 
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(
+            "Basestation extension for plotting X3 compressed TS profiles",
             additional_arguments={
                 "profile_filename": BaseOpts.options_t(
                     None,
@@ -192,7 +193,7 @@ def main(
                         "action": BaseOpts.FullPathAction,
                     },
                 ),
-            }
+            },
         )
     BaseLogger(base_opts)  # initializes BaseLog
 

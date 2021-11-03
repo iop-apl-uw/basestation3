@@ -282,15 +282,19 @@ def main():
         Any exceptions raised are considered critical errors and not expected
     """
     base_opts = BaseOpts.BaseOptions(
+        "Decompresses files from the glider to stdout",
         additional_arguments={
             "compressed_file": BaseOpts.options_t(
                 None,
                 ("BaseGZip",),
                 ("compressed_file",),
                 str,
-                {"help": "File to decompress", "action": BaseOpts.FullPathAction,},
+                {
+                    "help": "File to decompress",
+                    "action": BaseOpts.FullPathAction,
+                },
             ),
-        }
+        },
     )
 
     BaseLogger(base_opts)  # initializes BaseLog

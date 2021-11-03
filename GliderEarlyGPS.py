@@ -47,8 +47,7 @@ gliderearlygps_lockfile_name = ".gliderearlygps_lockfile"
 
 
 class GliderEarlyGPSClient:
-    """ Client to handle connection to jabber server and comm callbacks
-    """
+    """Client to handle connection to jabber server and comm callbacks"""
 
     def __init__(self, comm_log_file_name, base_opts):
         self.__comm_log_file_name = comm_log_file_name
@@ -184,15 +183,13 @@ class GliderEarlyGPSClient:
 
     # CommLog callbacks
     def callback_connected(self, connect_ts):
-        """ Callback for a comm.log Connected line
-        """
+        """Callback for a comm.log Connected line"""
         if not self._first_time:
             msg = "Connected: %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", connect_ts)
             log_info(msg)
 
     def callback_reconnected(self, reconnect_ts):
-        """ Callback for a comm.log ReConnected line
-        """
+        """Callback for a comm.log ReConnected line"""
         if not self._first_time:
             msg = "Reconnected: %s" % time.strftime(
                 "%a %b %d %H:%M:%S %Z %Y", reconnect_ts
@@ -200,8 +197,7 @@ class GliderEarlyGPSClient:
             log_info(msg)
 
     def callback_disconnected(self, session):
-        """ Callback for a comm.log Disconnected line
-        """
+        """Callback for a comm.log Disconnected line"""
         if not self._first_time:
             if session is None:
                 log_warning("disconnected callback called with empty session")
@@ -233,30 +229,26 @@ class GliderEarlyGPSClient:
                 self.cleanup_shutdown()
 
     def callback_transfered(self, filename, receivedsize):
-        """ Callback for comm.log transfer line
-        """
+        """Callback for comm.log transfer line"""
         if not self._first_time:
             msg = "Transfered %d bytes of %s" % (receivedsize, filename)
             log_info(msg)
 
     def callback_received(self, filename, receivedsize):
-        """ Callback for comm.log received line
-        """
+        """Callback for comm.log received line"""
         if not self._first_time:
             msg = "Received file %s (%d bytes)" % (filename, receivedsize)
             log_info(msg)
 
     def callback_recovery(self, recovery_msg):
-        """ Callback for a comm.log In Recovery line
-        """
+        """Callback for a comm.log In Recovery line"""
         if not self._first_time:
             if recovery_msg is not None:
                 msg = "In Recovery: %s" % recovery_msg
                 log_info(msg)
 
     def callback_counter_line(self, session):
-        """ Callback for comm.log counter line (begining and end of session)
-        """
+        """Callback for comm.log counter line (begining and end of session)"""
         if not self._first_time:
             if session is None:
                 log_warning("counter_line callback called with empty session")
@@ -264,8 +256,7 @@ class GliderEarlyGPSClient:
                 self.process_counter_line(session)
 
     def callback_ver(self, session):
-        """ Calback for comm.log ver= line
-        """
+        """Calback for comm.log ver= line"""
         if not self._first_time:
             if session is None:
                 log_warning("ver callback called with empty session")
@@ -310,10 +301,10 @@ class GliderEarlyGPSClient:
 
 
 def main():
-    """ Entry point for processor
-    """
+    """comm.log processor launched as soon as the glider connects"""
     # Set up the call back here
     base_opts = BaseOpts.BaseOptions(
+        "comm.log processor launched as soon as the glider connects",
         additional_arguments={
             "comm_log": BaseOpts.options_t(
                 None,
@@ -326,7 +317,7 @@ def main():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-        }
+        },
     )
 
     BaseLogger(base_opts, include_time=True)  # initializes BaseLog

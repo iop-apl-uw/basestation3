@@ -9388,13 +9388,14 @@ def main():
         1 - failure
     """
     base_opts = BaseOpts.BaseOptions(
+        "Command line driver for creating per-dive netCDF files",
         additional_arguments={
             "basename": BaseOpts.options_t(
                 None,
                 ("MakeDiveProfiles",),
                 ("basename",),
                 str,
-                {"help": "Basename for netcdf file to process/create (pXXXYYYY where XXX is sd_id, YYYY is dive number)",
+                {"help": "Basename for netcdf file to process/create (pXXXYYYY where XXX is sd_id, YYYY is dive number) Use this or --mission-dir",
                  "action": BaseOpts.FullPathAction,
                  "nargs":"?"
                 },

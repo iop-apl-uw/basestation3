@@ -218,7 +218,7 @@ if __name__ == "__main__":
     os.environ['TZ'] = 'UTC'
     time.tzset()
 
-    base_opts = BaseOpts.BaseOptions(sys.argv)
+    base_opts = BaseOpts.BaseOptions("Testing for timezone handling")
     BaseLogger(base_opts) # initializes BaseLog
 
     ts_string = "Mon Jan 4 12:59:13 2007"

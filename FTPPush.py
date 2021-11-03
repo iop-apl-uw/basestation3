@@ -42,8 +42,7 @@ def process_ftp(
     mission_timeseries_name=None,
     mission_profile_name=None,
 ):
-    """ Process the .ftp file and push the data to a ftp server
-    """
+    """Process the .ftp file and push the data to a ftp server"""
     ftp_file_name = os.path.join(base_opts.mission_dir, ".ftp")
     if not os.path.exists(ftp_file_name):
         log_info("No .ftp file found - skipping .ftp processing")
@@ -84,15 +83,18 @@ def main():
         Any exceptions raised are considered critical errors and not expected
     """
     base_opts = BaseOpts.BaseOptions(
+        "Basestation helper for pushing files",
         additional_arguments={
             "file_spec": BaseOpts.options_t(
                 None,
                 ("FTPPush",),
                 ("file_spec",),
                 str,
-                {"help": "Unix-style glob spec for files to push",},
+                {
+                    "help": "Unix-style glob spec for files to push",
+                },
             ),
-        }
+        },
     )
     BaseLogger(base_opts)  # initializes BaseLog
 

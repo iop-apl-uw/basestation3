@@ -27,7 +27,12 @@
   Default values supplemented by option processing, both config file and command line
 """
 
+# TODO Review help strings - mark all extensions as extensions not command line
+# TODO Review option_t.group for all options (make sure there are module names in them)
 # TODO Final pass - remove all command-line help from docstrings, check that all base_opts.members are covered, any required arguments are marked as sch
+# TODO Compare Base.py help vs help output
+# TODO Write a script to generate all the help output into files in help directory
+# TODO Figure out how to show defaults in option help (https://stackoverflow.com/questions/12151306/argparse-way-to-include-default-values-in-help)
 
 import argparse
 import collections
@@ -101,8 +106,7 @@ options_t = collections.namedtuple(
     "options_t", ("default_val", "group", "args", "var_type", "kwargs")
 )
 
-# TODO: change when we move to 3.9 or later for all booleans
-# "action": argparse.BooleanOptionalAction,
+# TODO: convert all booleans - "action": argparse.BooleanOptionalAction,
 
 global_options_dict = {
     "config_file_name": options_t(
@@ -159,17 +163,26 @@ global_options_dict = {
         None,
         (
             "Base",
+            "BaseLogin",
+            "BaseSMS",
             "FTPPush",
             "FlightModel",
             "GliderEarlyGPS",
-            "MakeDveProfiles",
+            "MakeDiveProfiles",
+            "MakeKML",
+            "MakeMissionEngPlots",
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
+            "MakePositions",
             "MakePlot",
             "MakePlot2",
             "MakePlot3",
             "MakePlot4",
             "MoveData",
+            "Reprocess",
+            "ValidateDirectives",
+            "Ver65",
+            "WindRain",
         ),
         (
             "-m",
@@ -181,12 +194,19 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
             "required": (
                 "Base",
+                "BaseSMS",
+                "BaseLogin",
                 "FTPPush",
                 "FlightModel",
-                "GliderEarlyGPS",
+                "MakeKML",
+                "MakeMissionEngPlots",
                 "MakeMissionProfile",
                 "MakeMissionTimeSeries",
+                "MakePositions",
                 "MoveData",
+                "Reprocess",
+                "ValidateDirectives",
+                "Ver65",
             ),
         },
     ),
@@ -203,7 +223,11 @@ global_options_dict = {
     #
     "magcalfile": options_t(
         None,
-        ("Base", "MakeDiveProfiles"),
+        (
+            "Base",
+            "MakeDiveProfiles",
+            "Reprocess",
+        ),
         ("--magcalfile",),
         FullPath,
         {
@@ -246,6 +270,7 @@ global_options_dict = {
             "MakeDiveProfiles",
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
+            "Reprocess",
         ),
         ("--nice",),
         int,
@@ -258,6 +283,7 @@ global_options_dict = {
             "MakeDiveProfiles",
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
+            "Reprocess",
         ),
         ("--gzip_netcdf",),
         bool,
@@ -287,7 +313,12 @@ global_options_dict = {
     ),
     "bin_width": options_t(
         1.0,
-        ("Base", "MakeDiveProfiles", "MakeMissionProfile"),
+        (
+            "Base",
+            "MakeDiveProfiles",
+            "MakeMissionProfile",
+            "SimpleNetCDF",
+        ),
         ("--bin_width",),
         float,
         {
@@ -340,7 +371,7 @@ global_options_dict = {
     ),
     "divetarballs": options_t(
         None,
-        "b",
+        ("Base",),
         ("--divetarballs",),
         int,
         {
@@ -349,7 +380,7 @@ global_options_dict = {
     ),
     "local": options_t(
         None,
-        "b",
+        ("Base",),
         ("--local",),
         bool,
         {
@@ -359,7 +390,7 @@ global_options_dict = {
     ),
     "clean": options_t(
         None,
-        "b",
+        ("Base",),
         ("--clean",),
         bool,
         {
@@ -369,7 +400,7 @@ global_options_dict = {
     ),
     "reply_addr": options_t(
         None,
-        "b",
+        ("Base",),
         ("--reply_addr",),
         str,
         {
@@ -378,7 +409,7 @@ global_options_dict = {
     ),
     "domain_name": options_t(
         None,
-        "b",
+        ("Base",),
         ("--domain_name",),
         str,
         {
@@ -387,7 +418,7 @@ global_options_dict = {
     ),
     "web_file_location": options_t(
         None,
-        "b",
+        ("Base",),
         ("--web_file_location",),
         str,
         {
@@ -400,6 +431,7 @@ global_options_dict = {
         (
             "Base",
             "MakeDiveProfiles",
+            "Reprocess",
         ),
         ("--force",),
         bool,
@@ -437,6 +469,7 @@ global_options_dict = {
         (
             "Base",
             "MakeDiveProfiles",
+            "Reprocess",
         ),
         ("--make_dive_pro",),
         bool,
@@ -450,6 +483,7 @@ global_options_dict = {
         (
             "Base",
             "MakeDiveProfiles",
+            "Reprocess",
         ),
         ("--make_dive_bpo",),
         bool,
@@ -473,7 +507,10 @@ global_options_dict = {
     ),
     "make_mission_profile": options_t(
         None,
-        ("Base",),
+        (
+            "Base",
+            "Reprocess",
+        ),
         ("--make_mission_profile",),
         bool,
         {
@@ -483,7 +520,7 @@ global_options_dict = {
     ),
     "make_mission_timeseries": options_t(
         None,
-        ("Base", "MakeMissionTimeSeries"),
+        ("Base", "Reprocess"),
         ("--make_mission_timeseries",),
         bool,
         {
@@ -580,12 +617,14 @@ global_options_dict = {
         str,
         {
             "help": "target directory, used by MoveData.py",
+            "action": FullPathAction,
+            "required": ("MoveData",),
         },
     ),
     #
     "encrypt": options_t(
         None,
-        "h",
+        ("Base",),
         ("--encrypt",),
         bool,
         {
@@ -593,9 +632,22 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    # This is an option, but is now handled in code in each extension
+    # Note - converting to this requires careful review to see how this would interfere
+    # with other groups used to help command line help output
+    # group = parser.add_mutually_exclusive_group(required=True)
+    # group.add_argument('--mission_dir', )
     "netcdf_filename": options_t(
         None,
-        ("MakePlot", "MakePlot2", "MakePlot3", "MakePlot4"),
+        (
+            "MakePlot",
+            "MakePlot2",
+            "MakePlot3",
+            "MakePlot4",
+            "SimpleNetCDF",
+            "StripNetCDF",
+            "WindRain",
+        ),
         ("netcdf_filename",),
         str,
         {
@@ -607,18 +659,23 @@ global_options_dict = {
     # Plotting related
     "plot_raw": options_t(
         False,
-        ("MakePlot",),
+        (
+            "Base",
+            "MakePlot",
+        ),
         ("--plot_raw",),
         bool,
         {
             "help": "Plot raw tmicl and pmar data,if available",
             "action": "store_true",
             "section": "makeplot",
+            "option_group": "plotting",
         },
     ),
     "save_svg": options_t(
         False,
         (
+            "Base",
             "MakePlot",
             "MakePlot2",
             "MakeMissionEngPlot",
@@ -629,11 +686,13 @@ global_options_dict = {
             "help": "Save SVG versions of plots (matplotlib output only)",
             "section": "makeplot",
             "action": "store_true",
+            "option_group": "plotting",
         },
     ),
     "save_png": options_t(
         True,
         (
+            "Base",
             "MakePlot3",
             "MakePlot4",
         ),
@@ -642,14 +701,14 @@ global_options_dict = {
         {
             "help": "Save PNG versions of plots (plotly output only)",
             "section": "makeplot",
-            # TODO: change when we move to 3.9 or later
-            # "action": argparse.BooleanOptionalAction,
-            "action": "store_true",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "plotting",
         },
     ),
     "full_html": options_t(
         "darwin" in sys.platform,
         (
+            "Base",
             "MakePlot3",
             "MakePlot4",
         ),
@@ -659,11 +718,13 @@ global_options_dict = {
             "help": "Save stand alone html files (plotly output only)",
             "section": "makeplot",
             "action": "store_true",
+            "option_group": "plotting",
         },
     ),
     "plot_freeze_pt": options_t(
         False,
         (
+            "Base",
             "MakePlot",
             "MakePlot4",
         ),
@@ -672,75 +733,322 @@ global_options_dict = {
         {
             "help": "Plot the freezing point in TS diagrams",
             "section": "makeplot",
+            "option_group": "plotting",
             "action": "store_true",
         },
     ),
     "plot_legato": options_t(
         False,
-        ("MakePlot3",),
+        (
+            "Base",
+            "MakePlot3",
+        ),
         ("--plot_legato",),
         bool,
         {
             "help": "Plot raw legato output",
             "section": "makeplot",
             "action": "store_true",
+            "option_group": "plotting",
         },
     ),
     "plot_legato_use_glider_pressure": options_t(
         False,
-        ("MakePlot3",),
+        (
+            "Base",
+            "MakePlot3",
+        ),
         ("--plot_legato_use_glider_pressure",),
         bool,
         {
             "help": "Use glider pressure for legato debug plots",
             "section": "makeplot",
             "action": "store_true",
+            "option_group": "plotting",
         },
     ),
     "plot_legato_compare": options_t(
         False,
-        ("MakePlot3",),
+        (
+            "Base",
+            "MakePlot3",
+        ),
         ("--plot_legato_compare",),
         bool,
         {
             "help": "Legato raw vs smoothed pressure compare",
             "section": "makeplot",
             "action": "store_true",
+            "option_group": "plotting",
         },
     ),
     "plot_directory": options_t(
         None,
-        ("MakePlot3",),
+        (
+            "Base",
+            "MakePlot",
+            "MakePlot2",
+            "MakePlot3",
+            "MakePlot4",
+            "MakeMissionEngPlots",
+        ),
         ("--plot_directory",),
         str,
         {
             "help": "Override default plot directory location",
             "section": "makeplot",
             "action": FullPathAction,
+            "option_group": "plotting",
         },
     ),
     "pmar_logavg_max": options_t(
         1e2,
-        ("MakePlot", "MakePlot4"),
+        ("Base", "MakePlot", "MakePlot4"),
         ("--pmar_logavg_max",),
         float,
         {
             "help": "Maximum value for pmar logavg plots y-range",
             "section": "makeplot",
             "range": [0.0, 1e10],
+            "option_group": "plotting",
         },
     ),
     "pmar_logavg_min": options_t(
         1e-4,
-        ("MakePlot", "MakePlot4"),
+        ("Base", "MakePlot", "MakePlot4"),
         ("--pmar_logavg_min",),
         float,
         {
             "help": "Minimum value for pmar logavg plots y-range",
             "section": "makeplot",
             "range": [0.0, 1e10],
+            "option_group": "plotting",
         },
     ),
+    "strip_list": options_t(
+        None,
+        ("StripNetCDF",),
+        ("--strip_list",),
+        str,
+        {"help": "Prefixes of dimensions and variables to strip", "nargs": "+"},
+    ),
+    # KML related
+    "pamm_data_directory": options_t(
+        None,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--pamm_data_directory",),
+        FullPath,
+        {
+            "help": "Directory with PAAM whale detections",
+            "action": FullPathAction,
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "pamm_ici_percentage": options_t(
+        0.25,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--pamm_ici_percentage",),
+        float,
+        {
+            "help": "Threshold for displaying a detection in paam data",
+            "range": [0.0, 1.0],
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "skip_points": options_t(
+        10,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--skip_points",),
+        float,
+        {
+            "help": "Number of points to skip from gliders through the water track",
+            "range": [0, 100],
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "color": options_t(
+        "00ffff",
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--color",),
+        str,
+        {
+            "help": "KML color string for color track",
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "targets": options_t(
+        "all",
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--targets",),
+        str,
+        {
+            "help": "What targets to plot",
+            "choices": ["all", "current", "none"],
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "surface_track": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--surface_track",),
+        bool,
+        {
+            "help": "Plot the gliders course as a surface track",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "subsurface_track": options_t(
+        False,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--subsurface_track",),
+        bool,
+        {
+            "help": "Plot the gliders course as a subsurface track",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "drift_track": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--drift_track",),
+        bool,
+        {
+            "help": "Plot the gliders drift track",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "proposed_targets": options_t(
+        False,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--proposed_targets",),
+        bool,
+        {
+            "help": "Use the targets file instead of searching for the latest backup targets file",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "target_radius": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--target_radius",),
+        bool,
+        {
+            "help": "Plot radius circle around targets",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "compress_output": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--compress_output",),
+        bool,
+        {
+            "help": "Create KMZ output",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "plot_dives": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--plot_dives",),
+        bool,
+        {
+            "help": "Plot data from per-dive netcdf files",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "simplified": options_t(
+        False,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--simplified",),
+        bool,
+        {
+            "help": "Produces a slightly simplified version of the dive track",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "use_glider_target": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--use_glider_target",),
+        bool,
+        {
+            "help": "Use the glider's TGT_LAT/TGT_LON/TGT_RADIUS",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+}
+
+# Note: All option_group kwargs listed above must have an entry in this dictionary
+option_group_description = {
+    "required named arguments": None,
+    "plotting": "Basestation plotting extension options",
+    "kml generation": "Basestation KML extension options",
 }
 
 
@@ -752,34 +1060,11 @@ class BaseOptions:
        config file options are trumped by command-line arguments.
     """
 
-    def __init__(self, additional_arguments=None):
+    def __init__(self, description, additional_arguments=None):
         """
         Input:
-            argv - raw argument string
-            src - source program:
-                    a - BattGuage.py
-                    b - Base.py
-                    c - Commission.py
-                    d - MakeDiveProfiles.py
-                    e - CommStats.py
-                    f - DataFiles.py
-                    g - MakePlot.py
-                    h - BaseAES.py
-                    i - BaseSMS.py
-                    j - GliderJabber.py
-                    k - MakeKML.py
-                    l - LogFile.py
-                    m - MoveData.py
-                    n - BaseLogin.py
-                    o - CommLog.py
-                    r - Cap.py
-                    p - MakeMissionProfile.py
-                    q - Aquadopp.py
-                    s - Strip1A.py
-                    t - MakeMissionTimeSeries.py
-                    u - Bogue.py
-                    z - BaseGZip.py
-            usage - use string
+            additional_arguments - dictionay of additional arguments - sepcific
+                                   to a single module
         """
 
         self._opts = None  # Retained for debugging
@@ -789,9 +1074,9 @@ class BaseOptions:
             os.path.split(inspect.stack()[1].filename)[1]
         )[0]
 
-        # Note: for python3.9, options_dict = options_dict | additional_arguments
         if additional_arguments is not None:
-            options_dict = {**global_options_dict, **additional_arguments}
+            # pre python 3.9    options_dict = {**global_options_dict, **additional_arguments}
+            options_dict = global_options_dict | additional_arguments
         else:
             options_dict = global_options_dict
 
@@ -810,7 +1095,26 @@ class BaseOptions:
 
         cp = configparser.RawConfigParser(cp_default)
 
-        ap = argparse.ArgumentParser()
+        ap = argparse.ArgumentParser(description=description)
+
+        # Build up group dictionary
+        option_group_set = set()
+        for k, v in options_dict.items():
+            if v.group is None or calling_module in v.group:
+                if "option_group" in v.kwargs.keys():
+                    option_group_set.add(v.kwargs["option_group"])
+                if (
+                    "required" in v.kwargs.keys()
+                    and isinstance(v.kwargs["required"], tuple)
+                    and calling_module in v.kwargs["required"]
+                ):
+                    option_group_set.add("required named arguments")
+
+        option_group_dict = {}
+        for gg in option_group_set:
+            option_group_dict[gg] = ap.add_argument_group(
+                gg, option_group_description[gg]
+            )
 
         # Loop over potential arguments and add what is approriate
         for k, v in options_dict.items():
@@ -839,7 +1143,16 @@ class BaseOptions:
                     kwargs["metavar"] = f"{{{min_val}..{max_val}}}"
 
                 arg_list = v.args
-                ap.add_argument(*arg_list, **kwargs)
+                if "option_group" in kwargs.keys():
+                    og = kwargs["option_group"]
+                    del kwargs["option_group"]
+                    option_group_dict[og].add_argument(*arg_list, **kwargs)
+                elif "required" in kwargs and kwargs["required"]:
+                    option_group_dict["required named arguments"].add_argument(
+                        *arg_list, **kwargs
+                    )
+                else:
+                    ap.add_argument(*arg_list, **kwargs)
 
         self._ap = ap
 
@@ -911,7 +1224,7 @@ if __name__ == "__main__":
         additional_args = {
             # "netcdf_filename": options_t(
             #     None,
-            #     "bd",
+            #     ("BaseOpts",),
             #     ("netcdf_filename",),
             #     str,
             #     {
@@ -921,13 +1234,15 @@ if __name__ == "__main__":
             # ),
             "port": options_t(
                 1234,
-                "bd",
+                ("BaseOpts",),
                 ("port",),
                 int,
                 {"help": "Network Port", "nargs": "?", "range": [0, 6000]},
             ),
         }
-        base_opts = BaseOptions(additional_arguments=additional_args)
+        base_opts = BaseOptions(
+            "Basestation Options Test", additional_arguments=additional_args
+        )
     except SystemExit:
         pass
     except:

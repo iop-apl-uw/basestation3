@@ -40,8 +40,7 @@ from BaseLog import BaseLogger, log_critical
 
 
 def syscall(command):
-    """ Exectute a command in a sub-process
-    """
+    """Exectute a command in a sub-process"""
     print("Executing %s" % command)
     try:
         retcode = subprocess.call(command, shell=True)
@@ -57,8 +56,7 @@ def syscall(command):
 
 
 def generate_password(glider_id):
-    """ Generate the standard glider password
-    """
+    """Generate the standard glider password"""
     if glider_id % 2:
         pwd_template = "135791"
     else:
@@ -85,15 +83,18 @@ def main():
 
     # Get options
     base_opts = BaseOpts.BaseOptions(
+        "Creates the user accounts and populates home directories for new gliders (Run as root)",
         additional_arguments={
             "glider_id": BaseOpts.options_t(
                 None,
                 ("Commission",),
                 ("glider_id",),
                 int,
-                {"help": "serial number of glider to commission (no leading sg)",},
+                {
+                    "help": "serial number of glider to commission (no leading sg)",
+                },
             ),
-        }
+        },
     )
     BaseLogger(base_opts)  # initializes BaseLog
 

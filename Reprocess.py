@@ -102,16 +102,25 @@ def main():
         0 - success
         1 - failure
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv, "d", usage="%prog [Options] [basefile]")
+    base_opts = BaseOpts.BaseOptions(
+        "Command line driver for reprocessing per-dive and other nc files",
+        additional_arguments={
+            "dive_specs": BaseOpts.options_t(
+                None,
+                ("Reprocess",),
+                ("dive_specs",),
+                int,
+                {
+                    "help": "dive numbers to reprocess - either single dive nums or a range in the form X:Y",
+                    "nargs": "*",
+                },
+            ),
+        },
+    )
 
     BaseLogger(base_opts)  # initializes BaseLog
 
     Utils.check_versions()
-    args = base_opts.get_args()  # positional arguments
-
-    if not base_opts.mission_dir:
-        print((main.__doc__))
-        return 1
 
     # Reset priority
     if base_opts.nice:
@@ -158,9 +167,9 @@ def main():
 
             full_dive_list = sorted(Utils.unique(full_dive_list))
 
-        if len(args):
+        if len(base_opts.dive_specs):
             expanded_dive_nums = []
-            for dive_num in args:
+            for dive_num in base_opts.dive_specs:
                 strs = dive_num.split(":", 1)
                 if len(strs) == 2:
                     expanded_dive_nums.extend(

@@ -31,7 +31,6 @@ import functools
 import glob
 import math
 import os
-import pdb
 import pstats
 import sys
 import time
@@ -55,7 +54,6 @@ import MakeDiveProfiles
 
 import CommLog
 import Utils
-import Conf
 import LogFile
 
 make_kml_conf = None
@@ -90,43 +88,16 @@ m_per_deg = 111120.0
 # - How do you convert HDOP to fix radius?
 # - How to do playback/route tracing?  (Have dives and fixes show up as they occur)
 
-# Setup the config file section and contents
-make_kml_section = "makekml"
-make_kml_default_dict = {
-    "paam_data_directory": ["", None],
-    "paam_ici_percentage": [0.25, 0, 1],
-    "color": ["00ffff", None],
-    "surface_track": [1, 0, 1],
-    "subsurface_track": [0, 0, 1],
-    "drift_track": [1, 0, 1],
-    "targets": ["all", ("proposed", "all", "none")],
-    "proposed_targets": [0, 0, 1],  # if 1, use the targets file
-    "target_radius": [1, 0, 1],
-    "compress_output": [1, 0, 1],
-    "plot_dives": [1, 0, 1],
-    "skip_points": [10, 1, 100],
-    "simplified": [0, 0, 1],
-    "use_glider_target": [0, 0, 1],  # Use the glider's TGT_LAT/TGT_LON/TGT_RADIUS
-    # as the current targets location
-}
-
 
 def cmp_function(a, b):
-    """Compares two archived targets files, sorting in reverse chronilogical order (most recent one first)
-    """
+    """Compares two archived targets files, sorting in reverse chronilogical order (most recent one first)"""
     a_dive = None
     b_dive = None
     a_counter = None
     b_counter = None
-    if ".plain" in a:
-        a_is_plain = True
-    else:
-        a_is_plain = False
+    a_is_plain = ".plain" in a
     _, a_base = os.path.split(a.replace(".plain", ""))
-    if ".plain" in b:
-        b_is_plain = True
-    else:
-        b_is_plain = False
+    b_is_plain = ".plain" in b
     _, b_base = os.path.split(b.replace(".plain", ""))
     a_split = a_base.split(".")
     b_split = b_base.split(".")
@@ -162,7 +133,7 @@ def cmp_function(a, b):
 
 
 def bearing(lat0, lon0, lat1, lon1):
-    """ Returns the bearing, in degress true from the current_pos
+    """Returns the bearing, in degress true from the current_pos
     to the target_pos
     """
     # from math import *
@@ -196,8 +167,7 @@ def bearing(lat0, lon0, lat1, lon1):
 
 
 def printHeader(name, description, glider_color, fo):
-    """Prints out the KML header format and global styles
-    """
+    """Prints out the KML header format and global styles"""
     fo.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     fo.write('<kml xmlns="http://earth.google.com/kml/2.1">\n')
     fo.write("<Document>\n")
@@ -337,8 +307,7 @@ def printHeader(name, description, glider_color, fo):
 
 
 def printDivePlacemark(name, description, lon, lat, depth, fo, hide_label, pairs=None):
-    """ Places a seaglider marker on the map
-    """
+    """Places a seaglider marker on the map"""
     # Start dive place mark
     fo.write("    <Placemark>\n")
     fo.write(f"        <name>{name}</name>\n")
@@ -378,8 +347,7 @@ def printTarget(
     print_radius,
     fo,
 ):
-    """Prints out a target
-    """
+    """Prints out a target"""
 
     if lat is None or lon is None:
         log_warning(f"Bad target: {name} {lat} {lon}")
@@ -451,8 +419,7 @@ def printTarget(
 
 
 def printTargetLine(from_name, from_lat, from_lon, to_name, to_lat, to_lon, escape, fo):
-    """Draws the line between to two targets
-    """
+    """Draws the line between to two targets"""
     fo.write("    <Placemark>\n")
     fo.write(f"        <name>{from_name} to {to_name}</name>\n")
     if escape:
@@ -507,8 +474,7 @@ def printTargets(
     tgt_lat=None,
     tgt_radius=None,
 ):
-    """Proceses a target file
-    """
+    """Proceses a target file"""
     try:
         target_file = open(target_file_name, "r")
     except:
@@ -566,8 +532,8 @@ def printTargets(
 
     if tgt_lat is not None and tgt_lon is not None:
         found_in_list = False
-        for t in target_dict.keys():
-            if target_dict[t].lat == tgt_lat and target_dict[t].lon == tgt_lon:
+        for _, v in target_dict.items():
+            if v.lat == tgt_lat and v.lon == tgt_lon:
                 found_in_list = True
 
         if not found_in_list and active_target:
@@ -584,7 +550,13 @@ def printTargets(
                 )
             else:
                 target_dict[active_target] = target_tuple(
-                    tgt_lat, tgt_lon, tgt_radius, None, None, None, None,
+                    tgt_lat,
+                    tgt_lon,
+                    tgt_radius,
+                    None,
+                    None,
+                    None,
+                    None,
                 )
 
     for targ in target_dict.keys():
@@ -647,16 +619,15 @@ def printTargets(
 
 
 def printDive(
+    base_opts,
     dive_nc_file_name,
-    subsurface_track,
-    surface_track,
     instrument_id,
     dive_num,
     last_dive,
     paam_dict,
     fo,
 ):
-    """ Processes a dive
+    """Processes a dive
     Returns:
 
     Tuple
@@ -768,7 +739,7 @@ def printDive(
     # ballon_pairs.append(('Lon', "%.4f" % gps_lon_start))
     # printDivePlacemark("SG%03d dive %03d start" % (instrument_id, dive_num),
 
-    if surface_track:
+    if base_opts.surface_track:
         fo.write("    <Placemark>\n")
         fo.write(
             "        <name>SG%03d Dive %03d Surface Track</name>\n"
@@ -784,7 +755,7 @@ def printDive(
         fo.write("            <extrude>0</extrude>\n")
         fo.write("            <altitudeMode>absolute</altitudeMode>\n")
         fo.write("            <coordinates>\n")
-        if make_kml_conf.simplified:
+        if base_opts.simplified:
             fo.write(
                 "                %f,%f,%f \n"
                 % (float(gps_lon_start), float(gps_lat_start), 0.0)
@@ -802,8 +773,8 @@ def printDive(
                     and lon[i] >= -180.0
                     and lon[i] <= 180.0
                 ):
-                    if (i % make_kml_conf.skip_points) == 0 or i == 0:
-                        if surface_track:
+                    if (i % base_opts.skip_points) == 0 or i == 0:
+                        if base_opts.surface_track:
                             fo.write(
                                 "                %f,%f,%f \n"
                                 % (float(lon[i]), float(lat[i]), 0.0)
@@ -822,7 +793,7 @@ def printDive(
         fo.write("    </Placemark>\n")
 
     # Now deal with the regular dive
-    if subsurface_track:
+    if base_opts.subsurface_track:
         fo.write("    <Placemark>\n")
         fo.write(
             "        <name>SG%03d Dive %03d Subsurface Track</name>\n"
@@ -845,7 +816,7 @@ def printDive(
                 and lon[i] >= -180.0
                 and lon[i] <= 180.0
             ):
-                if (i % make_kml_conf.skip_points) == 0 or i == 0:
+                if (i % base_opts.skip_points) == 0 or i == 0:
                     fo.write(
                         "                %f,%f,%f \n"
                         % (float(lon[i]), float(lat[i]), -float(depth[i]))
@@ -943,7 +914,7 @@ def printDive(
     # Add: batt volts, kj % cap, errors, retries
 
     ballon_pairs = []
-    if make_kml_conf.simplified:
+    if base_opts.simplified:
         ballon_pairs.append(("Serial Number", "Seaglider SG%03d" % instrument_id))
     else:
         ballon_pairs.append(("Seaglider", "SG%03d" % instrument_id))
@@ -967,7 +938,7 @@ def printDive(
     )
     ballon_pairs.append(("Depth achieved", "%d meters" % round(max(abs(depth)))))
 
-    if not make_kml_conf.simplified:
+    if not base_opts.simplified:
         ballon_pairs.append(
             (
                 "Depth target",
@@ -1055,15 +1026,13 @@ def printDive(
 
 
 def printFooter(fo):
-    """ Prints out the KML footer data
-    """
+    """Prints out the KML footer data"""
     fo.write("</Document>\n")
     fo.write("</kml>\n")
 
 
 def writeNetworkKML(fo, name, url):
-    """ Wries out the net work kml file (pointer to the main file)
-    """
+    """Wries out the net work kml file (pointer to the main file)"""
     fo.write('<?xml version="1.0" encoding="UTF-8"?>\n')
     fo.write('<kml xmlns="http://earth.google.com/kml/2.2">\n')
     fo.write("    <NetworkLink>\n")
@@ -1078,8 +1047,7 @@ def writeNetworkKML(fo, name, url):
 
 
 def process_paam_data(paam_data_directory, percent_ici):
-    """ Collect data from PAAM stats files
-    """
+    """Collect data from PAAM stats files"""
     paam_compare_dict = {}
     if os.path.exists(paam_data_directory):
         for g in ("%s/data?/dive???/compare.stats", "%s/dive???/compare.stats"):
@@ -1125,7 +1093,7 @@ def process_paam_data(paam_data_directory, percent_ici):
 
 
 def extractGPSPositions(dive_nc_file_name, dive_num):
-    """ A hack - printDive does this and reads many more variables.  This needs to be expanded and
+    """A hack - printDive does this and reads many more variables.  This needs to be expanded and
     printDive needs to work off the data structure this feeds OR it needs to be determined that we can have
     many (1000) netCDF files opened at once.
     """
@@ -1169,6 +1137,7 @@ def extractGPSPositions(dive_nc_file_name, dive_num):
     )
 
 
+# pylint: disable=unused-argument
 def main(
     instrument_id=None,
     base_opts=None,
@@ -1190,15 +1159,9 @@ def main(
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    global make_kml_conf
-
     if base_opts is None:
-        base_opts = BaseOpts.BaseOptions(sys.argv, "k", usage="%prog [Options] ")
+        base_opts = BaseOpts.BaseOptions("Command line app for creating kml/kmz files")
     BaseLogger(base_opts)  # initializes BaseLog
-
-    if not base_opts.mission_dir:
-        print((main.__doc__))
-        return 1
 
     if known_mailer_tags is not None:
         known_mailer_tags.append("kml")
@@ -1219,24 +1182,18 @@ def main(
         sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
     paam_compare_dict = {}
-    make_kml_conf = Conf.conf(make_kml_section, make_kml_default_dict)
-    if make_kml_conf.parse_conf_file(base_opts.config_file_name) > 2:
-        log_error(
-            f"Count not process {base_opts.config_file_name} - continuing with defaults"
-        )
-    make_kml_conf.dump_conf_vars()
 
     # Collect the paam data, if available
-    if make_kml_conf.paam_data_directory:
+    if base_opts.paam_data_directory:
         log_info("Processing PAAM data")
-        make_kml_conf.paam_data_directory = os.path.abspath(
-            os.path.expanduser(make_kml_conf.paam_data_directory)
+        base_opts.paam_data_directory = os.path.abspath(
+            os.path.expanduser(base_opts.paam_data_directory)
         )
         paam_compare_dict = process_paam_data(
-            make_kml_conf.paam_data_directory, make_kml_conf.paam_ici_percentage
+            base_opts.paam_data_directory, base_opts.paam_ici_percentage
         )
 
-    zip_kml = make_kml_conf.compress_output
+    zip_kml = base_opts.compress_output
 
     # Read sg_calib_constants file
     calib_consts = getSGCalibrationConstants(sg_calib_file_name)
@@ -1297,7 +1254,7 @@ def main(
     printHeader(
         "SG%03d %s" % (instrument_id, mission_title_raw),
         "SG%03d %s" % (instrument_id, mission_title_raw),
-        make_kml_conf.color,
+        base_opts.color,
         fo,
     )
 
@@ -1427,7 +1384,7 @@ def main(
     # Remove any dive 0 related positions and resort
     surface_positions = [i for i in surface_positions if i.dive_num != 0]
 
-    if dive_nc_file_names and len(dive_nc_file_names) > 0 and make_kml_conf.plot_dives:
+    if dive_nc_file_names and len(dive_nc_file_names) > 0 and base_opts.plot_dives:
         dive_nc_file_names.sort()
 
         # Regular dives
@@ -1455,9 +1412,8 @@ def main(
             # To get the old behaviour, replace True with last_dive
             # dive_gps_positions[dive_num]
             printDive(
+                base_opts,
                 dive_nc_file_name,
-                make_kml_conf.subsurface_track,
-                make_kml_conf.surface_track,
                 instrument_id,
                 dive_num,
                 False,
@@ -1602,7 +1558,7 @@ def main(
             non_processed_dives = []
             # Build collection of dives
             for i in surface_positions:
-                if not (i.dive_num in non_processed_dives):
+                if i.dive_num not in non_processed_dives:
                     non_processed_dives.append(i.dive_num)
 
             for dive_num in non_processed_dives:
@@ -1694,7 +1650,8 @@ def main(
                 )
                 ballon_pairs.append(("Lat", f"{last_surface_position.gps_fix_lat:.4f}"))
                 ballon_pairs.append(("Lon", f"{last_surface_position.gps_fix_lon:.4f}"))
-                # printDivePlacemark("Last reported position SG%03d %d:%d" % (instrument_id, last_surface_position.dive_num, last_surface_position.call_cycle),
+                # printDivePlacemark("Last reported position SG%03d %d:%d"
+                #                   % (instrument_id, last_surface_position.dive_num, last_surface_position.call_cycle),
                 printDivePlacemark(
                     "SG%03d" % (instrument_id),
                     "Last GPS fix at %s"
@@ -1717,7 +1674,7 @@ def main(
     # Targets file processing
 
     # Find the current target
-    if make_kml_conf.targets != "none":
+    if base_opts.targets != "none":
 
         tgt_name = tgt_lat = tgt_lon = tgt_radius = None
 
@@ -1736,7 +1693,7 @@ def main(
             try:
                 tgt_name = log_file.data["$TGT_NAME"]
 
-                if make_kml_conf.use_glider_target:
+                if base_opts.use_glider_target:
                     latlong = log_file.data["$TGT_LATLONG"]
                     tgt_lat, tgt_lon = latlong.split(",")
                     tgt_lat = Utils.ddmm2dd(float(tgt_lat))
@@ -1756,15 +1713,15 @@ def main(
             for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
                 targets.append(match)
 
-        if targets != [] and not make_kml_conf.proposed_targets:
+        if targets != [] and not base_opts.proposed_targets:
             targets = Utils.unique(targets)
             targets = sorted(targets, key=functools.cmp_to_key(cmp_function))
             printTargets(
                 tgt_name,
-                make_kml_conf.targets == "current",
+                base_opts.targets == "current",
                 targets[0],
                 instrument_id,
-                make_kml_conf.target_radius,
+                base_opts.target_radius,
                 fo,
                 tgt_lon=tgt_lon,
                 tgt_lat=tgt_lat,
@@ -1775,10 +1732,10 @@ def main(
             if os.path.exists(target_file_name):
                 printTargets(
                     tgt_name,
-                    make_kml_conf.targets == "current",
+                    base_opts.targets == "current",
                     target_file_name,
                     instrument_id,
-                    make_kml_conf.target_radius,
+                    base_opts.target_radius,
                     fo,
                     tgt_lon=tgt_lon,
                     tgt_lat=tgt_lat,
@@ -1865,6 +1822,8 @@ if __name__ == "__main__":
             stats.print_stats()
         else:
             retval = main()
+    except SystemExit:
+        pass
     except Exception:
         log_critical("Unhandled exception in main -- exiting")
 
