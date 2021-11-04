@@ -24,6 +24,7 @@
 Optode aa4XXX basestation sensor extension
 """
 
+import numpy as np
 import sys
 from QC import *
 from BaseNetCDF import *
@@ -586,7 +587,7 @@ def optode_oxygen_foil(calphase_v, temp_v, oxygen_sat_sea_water_um_kg_v, conc_co
     Kelvin_offset = 273.15 # for 0 deg C
     temp_K_v = temp_v + Kelvin_offset
     # vapour pressure of water in standard air at a given temperature (10s hPa)
-    p_vapor_v = exp(52.57 - (6690.9/(temp_K_v)) - 4.681*log(temp_K_v)) # hPa
+    p_vapor_v = np.exp(52.57 - (6690.9/(temp_K_v)) - 4.681*np.log(temp_K_v)) # hPa
     # air saturation of oxygen given partial pressure of oxygen
     # 1013.25 hPa is nominal air pressure, 0.20946 is fraction of air that is oxygen (e.g, 21%)
     AirSaturation_v = partial_pressure_o2_v/((1013.25 - p_vapor_v)*0.20946) # percent (hPa/(hPa - hPa)*%)

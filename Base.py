@@ -821,7 +821,6 @@ def process_file_group(
                     # Convert to the eng file
                     sg_log_file = LogFile.parse_log_file(
                         fc.mk_base_logfile_name(),
-                        base_opts.mission_dir,
                         issue_warn=True,
                     )
                     if not sg_log_file:
@@ -964,7 +963,9 @@ def check_file_fragments(
             )
             log_warning(msg)
             log_conversion_alert(
-                defrag_file_name, msg, generate_resend(fragment, instrument_id),
+                defrag_file_name,
+                msg,
+                generate_resend(fragment, instrument_id),
             )
             ret_val = False
             # See if there are more
@@ -986,7 +987,9 @@ def check_file_fragments(
                 )
                 log_warning(msg)
                 log_conversion_alert(
-                    defrag_file_name, msg, generate_resend(fragment, instrument_id),
+                    defrag_file_name,
+                    msg,
+                    generate_resend(fragment, instrument_id),
                 )
                 ret_val = False
             else:
@@ -1010,7 +1013,9 @@ def check_file_fragments(
                 )
                 log_warning(msg)
                 log_conversion_alert(
-                    defrag_file_name, msg, generate_resend(fragment, instrument_id),
+                    defrag_file_name,
+                    msg,
+                    generate_resend(fragment, instrument_id),
                 )
                 ret_val = False
 
@@ -1022,7 +1027,9 @@ def check_file_fragments(
                     )
                     log_warning(msg)
                     log_conversion_alert(
-                        defrag_file_name, msg, generate_resend(fragment, instrument_id),
+                        defrag_file_name,
+                        msg,
+                        generate_resend(fragment, instrument_id),
                     )
 
             elif current_fragment_size > expectedsize:
@@ -1038,7 +1045,9 @@ def check_file_fragments(
                     )
                     log_warning(msg)
                     log_conversion_alert(
-                        defrag_file_name, msg, generate_resend(fragment, instrument_id),
+                        defrag_file_name,
+                        msg,
+                        generate_resend(fragment, instrument_id),
                     )
 
     if total_size != 0:
@@ -1417,10 +1426,10 @@ def main():
 
     # Get options
     base_opts = BaseOpts.BaseOptions(
-        sys.argv, "b", usage="%prog [Options] --mission_dir MISSION_DIR"
+        "Command line driver for the all basestation processing."
     )
     # Initialize log
-    BaseLogger("Base", base_opts)
+    BaseLogger(base_opts)
 
     Utils.check_versions()
 

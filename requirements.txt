@@ -1,19 +1,11 @@
 # For Plotly persistence
 kaleido>=0.0.3.post1 ; platform_machine != 'armv7l'
 matplotlib==3.2.0
-#basemap==1.2.1
-# Basemap no longer in pip.  To install:
-# Linux
-# sudo apt-get install libgeos-dev
-# pip install git+https://github.com/matplotlib/basemap.git
-# OSX
-# brew install geos
-# pip install git+https://github.com/matplotlib/basemap.git
 numpy>=1.19.1
-# For MakePlot2 and MakePlot4
+gsw==3.3.1
+seawater==3.3.4
+# For MakePlot2, 3 and 4
 plotly>=4.9.0
 scipy>=1.5.2
 # For SlackPost and InReachSend
 requests==2.24.0
-gsw==3.3.1
-seawater==3.3.4

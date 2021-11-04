@@ -2496,8 +2496,10 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 # so os.waitpid does not hang.  Even using Popen.communicate() would have this problem
                 # plus we want to have a record of the output...which we save to the flight subdirectory
                 # time.strftime("%d%b%Y_%H%M%S", time.gmtime(time.time()))
+                
+                #TODO - need to evaluate the merit of a launch vs direct invokation
                 reprocess_log = os.path.join(flight_directory, 'Reprocess_%04d_%.f.log' % (max(flight_dive_nums), time.time()))
-                Utils.run_cmd_shell('python3.8 %s --force -v --mission_dir %s %s  > %s 2>&1' %
+                Utils.run_cmd_shell('python3.9 %s --force -v --mission_dir %s %s  > %s 2>&1' %
                                     (os.path.join(base_opts.basestation_directory, 'Reprocess.py'),
                                      mission_directory, dives, reprocess_log))
 
@@ -2542,7 +2544,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
 # Called as an extension or via cmdline_main() below
 def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_file_names=None, nc_files_created=None,
          processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None, processed_file_names=None, exit_event=None):
-    """Basestation extension for evaluating flight model parameters from dive data
+    """Basestation support for evaluating flight model parameters from dive data
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -2557,9 +2559,8 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     global ab_grid_cache_d, restart_cache_d, angles, grid_spacing_keys, grid_dive_sets, dump_checkpoint_data_matfiles
     
     if(base_opts is None):
-        base_opts = BaseOpts.BaseOptions(sys.argv, 'g',
-                                         usage="%prog [Options] ")
-    BaseLogger("FlightModel", base_opts) # initializes BaseLog
+        base_opts = BaseOpts.BaseOptions("Basestation support for evaluating flight model parameters from dive data")
+    BaseLogger(base_opts) # initializes BaseLog
 
     Utils.check_versions()
 
@@ -2970,24 +2971,12 @@ def cmdline_main():
         1 - failure
     """
     global mission_directory
-    base_opts = BaseOpts.BaseOptions(sys.argv, 'd',
-                                     usage="%prog [Options] [basefile]")
+    base_opts = BaseOpts.BaseOptions("Command line driver for updateing flight model data")
     
-    BaseLogger("FlightModel", base_opts) # initializes BaseLog
-    args = base_opts.get_args() # positional arguments
-    if len(args) < 1 and not base_opts.mission_dir:
-        print((cmdline_main.__doc__))
-        return 1
+    BaseLogger(base_opts) # initializes BaseLog
+    
+    mission_directory = base_opts.mission_dir
 
-    if(base_opts.mission_dir):
-        mission_directory = os.path.expanduser(base_opts.mission_dir)
-        base_opts.mission_dir = mission_directory
-        if (not os.path.isdir(mission_directory)):
-            log_error("Directory %s does not exist -- exiting" % mission_directory)
-            return 1
-    else:
-        log_error("No --mission_dir specified")
-        return 1
     return process_directory(base_opts)
 
 # can be called from multiprocessing scheme
@@ -3043,6 +3032,8 @@ if __name__ == "__main__":
             stats.print_stats()
         else:
             retval = cmdline_main()
+    except SystemExit:
+        pass
     except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()

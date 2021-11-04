@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -218,8 +218,8 @@ if __name__ == "__main__":
     os.environ['TZ'] = 'UTC'
     time.tzset()
 
-    base_opts = BaseOpts.BaseOptions(sys.argv)
-    BaseLogger("BaseTime", base_opts) # initializes BaseLog
+    base_opts = BaseOpts.BaseOptions("Testing for timezone handling")
+    BaseLogger(base_opts) # initializes BaseLog
 
     ts_string = "Mon Jan 4 12:59:13 2007"
     time_zone = 'FOO'

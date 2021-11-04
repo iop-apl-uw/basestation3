@@ -1,7 +1,8 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -21,807 +22,1252 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-# TODOCC
-# 1) Convert from optparse to argparse
-
 """
-  Common set of pathnames and constants for basestation code:
+  Common set of options for all basestation processing
   Default values supplemented by option processing, both config file and command line
 """
 
+# TODO Review help strings - mark all extensions as extensions not command line
+# TODO Review option_t.group for all options (make sure there are module names in them)
+# TODO Final pass - remove all command-line help from docstrings, check that all base_opts.members are covered, any required arguments are marked as sch
+# TODO Compare Base.py help vs help output
+# TODO Write a script to generate all the help output into files in help directory
+# TODO Figure out how to show defaults in option help (https://stackoverflow.com/questions/12151306/argparse-way-to-include-default-values-in-help)
+
+import argparse
+import collections
+import copy
 import configparser
-import optparse
+import inspect
 import os
-import os.path
+import pdb
 import sys
+import time
 import traceback
 
-from Globals import WhichHalf, basestation_version
+from Globals import WhichHalf  # basestation_version
 
+
+def generate_range_action(arg, min_val, max_val):
+    """Creates an range checking action for argparse"""
+
+    class RangeAction(argparse.Action):
+        """Range checking action"""
+
+        def __call__(self, parser, namespace, values, option_string=None):
+            if not min_val <= values <= max_val:
+                raise argparse.ArgumentError(
+                    self, f"{values} not in range for argument [{arg}]"
+                )
+            setattr(namespace, self.dest, values)
+
+    return RangeAction
+
+
+def FullPath(x):
+    """Expand user- and relative-paths"""
+    return os.path.abspath(os.path.expanduser(x))
+
+
+def FullPathTrailingSlash(x):
+    """Expand user- and relative-paths and include the trailing slash"""
+    return FullPath(x) + "/"
+
+
+class FullPathAction(argparse.Action):
+    """Expand user- and relative-paths"""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is not None:
+            setattr(namespace, self.dest, FullPath(values))
+        else:
+            setattr(namespace, self.dest, values)
+
+
+class FullPathTrailingSlashAction(argparse.Action):
+    """Expand user- and relative-paths and include the trailing slash"""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is not None:
+            setattr(
+                namespace, self.dest, os.path.abspath(os.path.expanduser(values)) + "/"
+            )
+        else:
+            setattr(namespace, self.dest, values)
+
+
+# The kwargs in this type is overloaded.  Everything that is legit for argparse is allowed.
+# Additionally, there is:
 #
-# Default values supplemented by option processing, both config file and command line
+# range:list - two element list of the min and max allowed for an argument (inclusive).
+# section:str - name of the section where the argument is loaded in the config file
+# option_group:str - name of the option group to include the option in (for help)
+# required:list of str - modules names for which thie option is required.  Also implies the option
+#                        group "required"
 #
+options_t = collections.namedtuple(
+    "options_t", ("default_val", "group", "args", "var_type", "kwargs")
+)
+
+# TODO: convert all booleans - "action": argparse.BooleanOptionalAction,
+
+global_options_dict = {
+    "config_file_name": options_t(
+        None,
+        None,
+        ("--config", "-c"),
+        FullPath,
+        {"help": "script configuration file", "action": FullPathAction},
+    ),
+    "base_log": options_t(
+        None,
+        None,
+        ("--base_log",),
+        str,
+        {
+            "help": "basestation log file, records all levels of notifications",
+        },
+    ),
+    "debug": options_t(
+        False,
+        None,
+        ("--debug",),
+        bool,
+        {
+            "action": "store_true",
+            "help": "log/display debug messages",
+        },
+    ),
+    "verbose": options_t(
+        False,
+        None,
+        (
+            "--verbose",
+            "-v",
+        ),
+        bool,
+        {
+            "action": "store_true",
+            "help": "print status messages to stdout",
+        },
+    ),
+    "quiet": options_t(
+        False,
+        None,
+        (
+            "--quiet",
+            "-q",
+        ),
+        bool,
+        {"action": "store_false", "help": "don't print status messages to stdout"},
+    ),
+    #
+    "mission_dir": options_t(
+        None,
+        (
+            "Base",
+            "BaseLogin",
+            "BaseSMS",
+            "FTPPush",
+            "FlightModel",
+            "GliderEarlyGPS",
+            "MakeDiveProfiles",
+            "MakeKML",
+            "MakeMissionEngPlots",
+            "MakeMissionProfile",
+            "MakeMissionTimeSeries",
+            "MakePositions",
+            "MakePlot",
+            "MakePlot2",
+            "MakePlot3",
+            "MakePlot4",
+            "MoveData",
+            "Reprocess",
+            "ValidateDirectives",
+            "Ver65",
+            "WindRain",
+        ),
+        (
+            "-m",
+            "--mission_dir",
+        ),
+        FullPathTrailingSlash,
+        {
+            "help": "glider mission directory",
+            "action": FullPathTrailingSlashAction,
+            "required": (
+                "Base",
+                "BaseSMS",
+                "BaseLogin",
+                "FTPPush",
+                "FlightModel",
+                "MakeKML",
+                "MakeMissionEngPlots",
+                "MakeMissionProfile",
+                "MakeMissionTimeSeries",
+                "MakePositions",
+                "MoveData",
+                "Reprocess",
+                "ValidateDirectives",
+                "Ver65",
+            ),
+        },
+    ),
+    "delete_upload_files": options_t(
+        False,
+        ("Base",),
+        ("--delete_upload_files",),
+        bool,
+        {
+            "action": "store_true",
+            "help": "Delete any successfully uploaded input files",
+        },
+    ),
+    #
+    "magcalfile": options_t(
+        None,
+        (
+            "Base",
+            "MakeDiveProfiles",
+            "Reprocess",
+        ),
+        ("--magcalfile",),
+        FullPath,
+        {
+            "action": FullPathAction,
+            "help": "compass cal file or search to use most recent version of tcm2mat.cal",
+        },
+    ),
+    "auxmagcalfile": options_t(
+        None,
+        ("Base", "MakeDiveProfiles"),
+        ("--auxmagcalfile",),
+        FullPath,
+        {
+            "action": FullPathAction,
+            "help": "compass cal file or search to use most recent version of scicon.tcm",
+        },
+    ),
+    #
+    "instrument_id": options_t(
+        0,
+        (
+            "Base",
+            "FligthModel",
+            "MakeDiveProfiles",
+            "MakeMissionProfile",
+            "MakeMissionTimeSeries",
+        ),
+        (
+            "-i",
+            "--instrument_id",
+        ),
+        int,
+        {"help": "force instrument (glider) id"},
+    ),
+    "nice": options_t(
+        0,
+        (
+            "Base",
+            "FligthModel",
+            "MakeDiveProfiles",
+            "MakeMissionProfile",
+            "MakeMissionTimeSeries",
+            "Reprocess",
+        ),
+        ("--nice",),
+        int,
+        {"help": "processing priority level (niceness)"},
+    ),
+    "gzip_netcdf": options_t(
+        False,
+        (
+            "Base",
+            "MakeDiveProfiles",
+            "MakeMissionProfile",
+            "MakeMissionTimeSeries",
+            "Reprocess",
+        ),
+        ("--gzip_netcdf",),
+        bool,
+        {
+            "action": "store_true",
+            "help": "gzip netcdf files",
+        },
+    ),
+    #
+    "profile": options_t(
+        False,
+        "bdkpt",
+        ("--profile",),
+        bool,
+        {"action": "store_true", "help": "Profiles time to process"},
+    ),
+    #
+    "ver_65": options_t(
+        False,
+        "bm",
+        ("--ver_65",),
+        bool,
+        {
+            "action": "store_true",
+            "help": "Processes Version 65 glider format",
+        },
+    ),
+    "bin_width": options_t(
+        1.0,
+        (
+            "Base",
+            "MakeDiveProfiles",
+            "MakeMissionProfile",
+            "SimpleNetCDF",
+        ),
+        ("--bin_width",),
+        float,
+        {
+            "help": "Width of bins",
+        },
+    ),
+    "which_half": options_t(
+        WhichHalf(3),
+        ("Base", "MakeDiveProfiles", "MakeMissionProfile"),
+        ("--which_half",),
+        WhichHalf,
+        {
+            "help": "Which half of the profile to use - 1 down, 2 up, 3 both, 4 combine down and up",
+        },
+    ),
+    "interval": options_t(
+        0,
+        "i",
+        ("--interval",),
+        int,
+        {
+            "help": "Interval in seconds between checks",
+        },
+    ),
+    "daemon": options_t(
+        None,
+        ("Base", "GliderEarlyGPS"),
+        ("--daemon",),
+        bool,
+        {"help": "Launch conversion as a daemon process", "action": "store_true"},
+    ),
+    "csh_pid": options_t(
+        0,
+        ("GliderEarlyGPS",),
+        ("--csh_pid",),
+        int,
+        {
+            "help": "PID of the login shell",
+        },
+    ),
+    "ignore_lock": options_t(
+        None,
+        "bgij",
+        ("--ignore_lock",),
+        bool,
+        {
+            "help": "Ignore the lock file, if present",
+            "action": "store_true",
+        },
+    ),
+    "divetarballs": options_t(
+        0,
+        ("Base",),
+        ("--divetarballs",),
+        int,
+        {
+            "help": "Creates per-dive tarballs of processed files - 0 don't create, -1 create, > create fragments of specified size",
+        },
+    ),
+    "local": options_t(
+        None,
+        ("Base",),
+        ("--local",),
+        bool,
+        {
+            "help": "Performs no remote operations (no .urls, .pagers, .mailer, etc.)",
+            "action": "store_true",
+        },
+    ),
+    "clean": options_t(
+        None,
+        ("Base",),
+        ("--clean",),
+        bool,
+        {
+            "help": "Clean up (delete) intermediate files from working (mission) directory after processing.",
+            "action": "store_true",
+        },
+    ),
+    "reply_addr": options_t(
+        None,
+        ("Base",),
+        ("--reply_addr",),
+        str,
+        {
+            "help": "Optional email address to be inserted into the reply to field email messages",
+        },
+    ),
+    "domain_name": options_t(
+        None,
+        ("Base",),
+        ("--domain_name",),
+        str,
+        {
+            "help": "Optional domain name to use for email messages",
+        },
+    ),
+    "web_file_location": options_t(
+        None,
+        ("Base",),
+        ("--web_file_location",),
+        str,
+        {
+            "help": "Optional location to prefix file locations in comp email messages",
+        },
+    ),
+    #
+    "force": options_t(
+        None,
+        (
+            "Base",
+            "MakeDiveProfiles",
+            "Reprocess",
+        ),
+        ("--force",),
+        bool,
+        {
+            "help": "Forces conversion of all dives",
+            "action": "store_true",
+        },
+    ),
+    "reprocess": options_t(
+        None,
+        (
+            "Base",
+            "MakeDiveProfiles",
+        ),
+        ("--reprocess",),
+        bool,
+        {
+            "help": "Forces re-running of MakeDiveProfiles, regardless of file time stamps (generally used for debugging "
+            "- normally --force is the right option)",
+            "action": "store_true",
+        },
+    ),
+    "make_dive_profiles": options_t(
+        None,
+        ("Base",),
+        ("--make_dive_profiles",),
+        bool,
+        {
+            "help": "Create the common profile data products",
+            "action": "store_true",
+        },
+    ),
+    "make_dive_pro": options_t(
+        None,
+        (
+            "Base",
+            "MakeDiveProfiles",
+            "Reprocess",
+        ),
+        ("--make_dive_pro",),
+        bool,
+        {
+            "help": "Create the dive profile in text format",
+            "action": "store_true",
+        },
+    ),
+    "make_dive_bpo": options_t(
+        None,
+        (
+            "Base",
+            "MakeDiveProfiles",
+            "Reprocess",
+        ),
+        ("--make_dive_bpo",),
+        bool,
+        {
+            "help": "Create the dive binned profile in text format",
+            "action": "store_true",
+        },
+    ),
+    "make_dive_netCDF": options_t(
+        None,
+        (
+            "Base",
+            "MakeDiveProfiles",
+        ),
+        ("--make_dive_netCDF",),
+        bool,
+        {
+            "help": "Create the dive netCDF output file",
+            "action": "store_true",
+        },
+    ),
+    "make_mission_profile": options_t(
+        None,
+        (
+            "Base",
+            "Reprocess",
+        ),
+        ("--make_mission_profile",),
+        bool,
+        {
+            "help": "Create mission profile output file",
+            "action": "store_true",
+        },
+    ),
+    "make_mission_timeseries": options_t(
+        None,
+        ("Base", "Reprocess"),
+        ("--make_mission_timeseries",),
+        bool,
+        {
+            "help": "Create mission timeseries output file",
+            "action": "store_true",
+        },
+    ),
+    "make_dive_kkyy": options_t(
+        None,
+        (
+            "Base",
+            "MakeDiveProfiles",
+        ),
+        ("--make_dive_kkyy",),
+        bool,
+        {
+            "help": "Create the dive kkyy output files",
+            "action": "store_true",
+        },
+    ),
+    "skip_flight_model": options_t(
+        None,
+        ("Base",),
+        ("--skip_flight_model",),
+        bool,
+        {
+            "help": "Skip running flight model system (FMS)",
+            "action": "store_true",
+        },
+    ),
+    #
+    "reprocess_plots": options_t(
+        None,
+        ("Reprocess",),
+        ("--reprocess_plots",),
+        bool,
+        {
+            "help": "Force reprocessing of plots (Reprocess.py only)",
+            "action": "store_true",
+        },
+    ),
+    "reprocess_flight": options_t(
+        None,
+        ("Reprocess",),
+        ("--reprocess_flight",),
+        bool,
+        {
+            "help": "Force reprocessing of flight (Reprocess.py only)",
+            "action": "store_true",
+        },
+    ),
+    #
+    "home_dir": options_t(
+        None,
+        ("Commission",),
+        ("--home_dir",),
+        str,
+        {
+            "help": "home directory base, used by Commission.py",
+        },
+    ),
+    "glider_password": options_t(
+        None,
+        ("Commission",),
+        ("--glider_password",),
+        str,
+        {
+            "help": "glider password, used by Commission.py",
+        },
+    ),
+    "glider_group": options_t(
+        None,
+        ("Commission",),
+        ("--glider_group",),
+        str,
+        {
+            "help": "glider group, used by Commission.py",
+        },
+    ),
+    "glider_home_dir_group": options_t(
+        None,
+        ("Commission",),
+        ("--glider_home_dir_group",),
+        str,
+        {
+            "help": "home dir group, used by Commission.py",
+        },
+    ),
+    #
+    "target_dir": options_t(
+        None,
+        ("MoveData",),
+        ("--target_dir", "-t"),
+        str,
+        {
+            "help": "target directory, used by MoveData.py",
+            "action": FullPathAction,
+            "required": ("MoveData",),
+        },
+    ),
+    #
+    "encrypt": options_t(
+        None,
+        ("Base",),
+        ("--encrypt",),
+        bool,
+        {
+            "help": "encrypt the file",
+            "action": "store_true",
+        },
+    ),
+    # This is an option, but is now handled in code in each extension
+    # Note - converting to this requires careful review to see how this would interfere
+    # with other groups used to help command line help output
+    # group = parser.add_mutually_exclusive_group(required=True)
+    # group.add_argument('--mission_dir', )
+    "netcdf_filename": options_t(
+        None,
+        (
+            "MakePlot",
+            "MakePlot2",
+            "MakePlot3",
+            "MakePlot4",
+            "SimpleNetCDF",
+            "StripNetCDF",
+            "WindRain",
+        ),
+        ("netcdf_filename",),
+        str,
+        {
+            "help": "Name of netCDF file to process (only honored when --mission_dir is not specified)",
+            "nargs": "?",
+            "action": FullPathAction,
+        },
+    ),
+    # Plotting related
+    "plot_raw": options_t(
+        False,
+        (
+            "Base",
+            "MakePlot",
+        ),
+        ("--plot_raw",),
+        bool,
+        {
+            "help": "Plot raw tmicl and pmar data,if available",
+            "action": "store_true",
+            "section": "makeplot",
+            "option_group": "plotting",
+        },
+    ),
+    "save_svg": options_t(
+        False,
+        (
+            "Base",
+            "MakePlot",
+            "MakePlot2",
+            "MakeMissionEngPlot",
+        ),
+        ("--save_svg",),
+        bool,
+        {
+            "help": "Save SVG versions of plots (matplotlib output only)",
+            "section": "makeplot",
+            "action": "store_true",
+            "option_group": "plotting",
+        },
+    ),
+    "save_png": options_t(
+        True,
+        (
+            "Base",
+            "MakePlot3",
+            "MakePlot4",
+        ),
+        ("--save_png",),
+        bool,
+        {
+            "help": "Save PNG versions of plots (plotly output only)",
+            "section": "makeplot",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "plotting",
+        },
+    ),
+    "full_html": options_t(
+        "darwin" in sys.platform,
+        (
+            "Base",
+            "MakePlot3",
+            "MakePlot4",
+        ),
+        ("--full_html",),
+        bool,
+        {
+            "help": "Save stand alone html files (plotly output only)",
+            "section": "makeplot",
+            "action": "store_true",
+            "option_group": "plotting",
+        },
+    ),
+    "plot_freeze_pt": options_t(
+        False,
+        (
+            "Base",
+            "MakePlot",
+            "MakePlot4",
+        ),
+        ("--plot_freeze_pt",),
+        bool,
+        {
+            "help": "Plot the freezing point in TS diagrams",
+            "section": "makeplot",
+            "option_group": "plotting",
+            "action": "store_true",
+        },
+    ),
+    "plot_legato": options_t(
+        False,
+        (
+            "Base",
+            "MakePlot3",
+        ),
+        ("--plot_legato",),
+        bool,
+        {
+            "help": "Plot raw legato output",
+            "section": "makeplot",
+            "action": "store_true",
+            "option_group": "plotting",
+        },
+    ),
+    "plot_legato_use_glider_pressure": options_t(
+        False,
+        (
+            "Base",
+            "MakePlot3",
+        ),
+        ("--plot_legato_use_glider_pressure",),
+        bool,
+        {
+            "help": "Use glider pressure for legato debug plots",
+            "section": "makeplot",
+            "action": "store_true",
+            "option_group": "plotting",
+        },
+    ),
+    "plot_legato_compare": options_t(
+        False,
+        (
+            "Base",
+            "MakePlot3",
+        ),
+        ("--plot_legato_compare",),
+        bool,
+        {
+            "help": "Legato raw vs smoothed pressure compare",
+            "section": "makeplot",
+            "action": "store_true",
+            "option_group": "plotting",
+        },
+    ),
+    "plot_directory": options_t(
+        None,
+        (
+            "Base",
+            "MakePlot",
+            "MakePlot2",
+            "MakePlot3",
+            "MakePlot4",
+            "MakeMissionEngPlots",
+        ),
+        ("--plot_directory",),
+        str,
+        {
+            "help": "Override default plot directory location",
+            "section": "makeplot",
+            "action": FullPathAction,
+            "option_group": "plotting",
+        },
+    ),
+    "pmar_logavg_max": options_t(
+        1e2,
+        ("Base", "MakePlot", "MakePlot4"),
+        ("--pmar_logavg_max",),
+        float,
+        {
+            "help": "Maximum value for pmar logavg plots y-range",
+            "section": "makeplot",
+            "range": [0.0, 1e10],
+            "option_group": "plotting",
+        },
+    ),
+    "pmar_logavg_min": options_t(
+        1e-4,
+        ("Base", "MakePlot", "MakePlot4"),
+        ("--pmar_logavg_min",),
+        float,
+        {
+            "help": "Minimum value for pmar logavg plots y-range",
+            "section": "makeplot",
+            "range": [0.0, 1e10],
+            "option_group": "plotting",
+        },
+    ),
+    "strip_list": options_t(
+        None,
+        ("StripNetCDF",),
+        ("--strip_list",),
+        str,
+        {"help": "Prefixes of dimensions and variables to strip", "nargs": "+"},
+    ),
+    # KML related
+    "pamm_data_directory": options_t(
+        None,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--pamm_data_directory",),
+        FullPath,
+        {
+            "help": "Directory with PAAM whale detections",
+            "action": FullPathAction,
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "pamm_ici_percentage": options_t(
+        0.25,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--pamm_ici_percentage",),
+        float,
+        {
+            "help": "Threshold for displaying a detection in paam data",
+            "range": [0.0, 1.0],
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "skip_points": options_t(
+        10,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--skip_points",),
+        float,
+        {
+            "help": "Number of points to skip from gliders through the water track",
+            "range": [0, 100],
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "color": options_t(
+        "00ffff",
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--color",),
+        str,
+        {
+            "help": "KML color string for color track",
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "targets": options_t(
+        "all",
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--targets",),
+        str,
+        {
+            "help": "What targets to plot",
+            "choices": ["all", "current", "none"],
+            "section": "makekml",
+            "option_group": "kml generation",
+        },
+    ),
+    "surface_track": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--surface_track",),
+        bool,
+        {
+            "help": "Plot the gliders course as a surface track",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "subsurface_track": options_t(
+        False,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--subsurface_track",),
+        bool,
+        {
+            "help": "Plot the gliders course as a subsurface track",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "drift_track": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--drift_track",),
+        bool,
+        {
+            "help": "Plot the gliders drift track",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "proposed_targets": options_t(
+        False,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--proposed_targets",),
+        bool,
+        {
+            "help": "Use the targets file instead of searching for the latest backup targets file",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "target_radius": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--target_radius",),
+        bool,
+        {
+            "help": "Plot radius circle around targets",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "compress_output": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--compress_output",),
+        bool,
+        {
+            "help": "Create KMZ output",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "plot_dives": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--plot_dives",),
+        bool,
+        {
+            "help": "Plot data from per-dive netcdf files",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "simplified": options_t(
+        False,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--simplified",),
+        bool,
+        {
+            "help": "Produces a slightly simplified version of the dive track",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "use_glider_target": options_t(
+        True,
+        (
+            "Base",
+            "MakeKML",
+        ),
+        ("--use_glider_target",),
+        bool,
+        {
+            "help": "Use the glider's TGT_LAT/TGT_LON/TGT_RADIUS",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    "profile_filename": options_t(
+        None,
+        (
+            "Base",
+            "MakePlotTSProfile",
+        ),
+        ("profile_filename",),
+        str,
+        {
+            "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
+            "nargs": "?",
+            "action": FullPathAction,
+        },
+    ),
+}
+
+# Note: All option_group kwargs listed above must have an entry in this dictionary
+option_group_description = {
+    "required named arguments": None,
+    "plotting": "Basestation plotting extension options",
+    "kml generation": "Basestation KML extension options",
+}
+
 
 class BaseOptions:
 
     """
     BaseOptions: for use by all basestation code and utilities.
-       Default options in code are trumped by options listed in configuration file;
+       Defaults are trumped by options listed in configuration file;
        config file options are trumped by command-line arguments.
     """
-    is_initialized = False
 
-    # default values
-    config_file_name = None
-    debug = False
-    verbose = False
-    force = False
-    reprocess = False
-    divetarballs = 0
-    local = False
-    daemon = False
-    csh_pid = 0
-    target_dir = None
-    encrypt = None
-    mission_dir = None
-    magcalfile = None
-    auxmagcalfile = None
-    delete_upload_files = False
-    bin_width = 1.0
-    which_half = WhichHalf(3) #pylint: disable=E1120
-    interval = 0
-    reply_addr = None
-    domain_name = None
-    web_file_location = None
-    base_log = None # base_log file name
-    instrument_id = 0
-    make_dive_profiles = False
-    make_dive_pro = False
-    make_dive_bpo = False
-    make_dive_netCDF = False
-    make_mission_profile = False
-    make_mission_timeseries = False
-    make_dive_kkyy = False
-    ver_65 = False
-    clean = False
-    gzip_netcdf = False
-    profile = False
-    ignore_lock = False
-    home_dir = None
-    glider_password = None
-    glider_group = None
-    home_dir_group = None
-    reprocess_plots = False
-    reprocess_flight = False
-    skip_flight_model = False
-    nice = 0
-
-    # statics, valid after initialization
-    _opts = None
-    _args = None
-    _op = None
-
-    def __init__(self, argv, src, usage=None):
+    def __init__(self, description, additional_arguments=None):
         """
         Input:
-            argv - raw argument string
-            src - source program:
-                    a - BattGuage.py
-                    b - Base.py
-                    c - Commission.py
-                    d - MakeDiveProfiles.py
-                    e - CommStats.py
-                    f - DataFiles.py
-                    g - MakePlot.py
-                    h - BaseAES.py
-                    i - BaseSMS.py
-                    j - GliderJabber.py
-                    k - MakeKML.py
-                    l - LogFile.py
-                    m - MoveData.py
-                    n - BaseLogin.py
-                    o - CommLog.py
-                    r - Cap.py
-                    p - MakeMissionProfile.py
-                    q - Aquadopp.py
-                    s - Strip1A.py
-                    t - MakeMissionTimeSeries.py
-                    u - Bogue.py
-                    z - BaseGZip.py
-            usage - use string
+            additional_arguments - dictionay of additional arguments - sepcific
+                                   to a single module
         """
-        if argv:
-            basestation_directory, _ = os.path.split(os.path.abspath(os.path.expanduser(argv[0])))
-            BaseOptions.basestation_directory = basestation_directory # make avaiable
-            sys.path.append(basestation_directory) # add path to load common basestation modules from subdirectories
 
-        if not BaseOptions.is_initialized:
-            # default values for config parser: only used if called with "-c"
-            cp = configparser.RawConfigParser({
-                "debug": str(self.debug),
-                "verbose":  str(self.verbose),
-                "force":  str(self.force),
-                "reprocess":  str(self.reprocess),
-                "divetarballs":  self.divetarballs,
-                "local":  str(self.local),
-                "daemon":  str(self.daemon),
-                "csh_pid": self.csh_pid,
-                "target_dir": self.target_dir,
-                "encrypt": self.encrypt,
-                "mission_dir": self.mission_dir,
-                "magcalfile": self.magcalfile,
-                "auxmagcalfile": self.magcalfile,
-                "delete_upload_files": self.delete_upload_files,
-                "base_log": self.base_log,
-                "instrument_id": self.instrument_id,
-                "make_dive_profiles": str(self.make_dive_profiles),
-                "make_dive_pro": str(self.make_dive_pro),
-                "make_dive_bpo": str(self.make_dive_bpo),
-                "make_dive_netCDF": str(self.make_dive_netCDF),
-                "make_mission_profile": str(self.make_mission_profile),
-                "make_mission_timeseries": str(self.make_mission_timeseries),
-                "make_dive_kkyy": str(self.make_dive_kkyy),
-                "ver_65": self.ver_65,
-                "clean": self.clean,
-                "gzip_netcdf": self.gzip_netcdf,
-                "profile": self.profile,
-                "ignore_lock": self.ignore_lock,
-                "bin_width": self.bin_width,
-                "which_half": self.which_half,
-                "interval": self.interval,
-                "reply_addr": self.reply_addr,
-                "domain_name": self.domain_name,
-                "web_file_locaion": self.web_file_location,
-                "reprocess_plots": self.reprocess_plots,
-                "reprocess_flight": self.reprocess_flight,
-                "skip_flight_model": self.skip_flight_model,
-                "nice": self.nice,
-                "which_half": self.which_half,
-                })
+        self._opts = None  # Retained for debugging
+        self._ap = None  # Retailed for debugging
 
-            op = optparse.OptionParser(usage=usage, version="%prog" + " %s" % basestation_version)
+        calling_module = os.path.splitext(
+            os.path.split(inspect.stack()[1].filename)[1]
+        )[0]
 
-            # Common
-            op.add_option("-c", "--config", dest="config",
-                          help="script configuration file")
-            op.add_option("--base_log", dest="base_log",
-                          help="basestation log file, records all levels of notifications")
-            op.add_option("--nice", dest="nice",
-                          help="processing priority level (niceness)")
+        if additional_arguments is not None:
+            # pre python 3.9    options_dict = {**global_options_dict, **additional_arguments}
+            options_dict = global_options_dict | additional_arguments
+        else:
+            options_dict = global_options_dict
 
+        cp_default = {}
+        for k, v in options_dict.items():
+            setattr(self, k, v.default_val)  # Set the default for the object
+            # cp_default[k] = v.default_val
+            cp_default[k] = None
 
-            if src in 'abdeghijkmnvpqt':
-                op.add_option("-m", "--mission_dir", dest="mission_dir",
-                              help="dive directory")
-                op.add_option("--delete_upload_files", dest="delete_upload_files", action='store_true',
-                              help="Delete any successfully uploaded input files")
+        basestation_directory, _ = os.path.split(
+            os.path.abspath(os.path.expanduser(sys.argv[0]))
+        )
+        self.basestation_directory = basestation_directory  # make avaiable
+        # add path to load common basestation modules from subdirectories
+        sys.path.append(basestation_directory)
 
-            if src in 'abdeghijkmnvpqt':
-                op.add_option("--magcalfile", dest="magcalfile",
-                              help="compass cal file or search to use most recent version of tcm2mat.cal")
-                op.add_option("--auxmagcalfile", dest="auxmagcalfile",
-                              help="auxcompass cal file or search to use most recent version of scicon.tcm")
+        cp = configparser.RawConfigParser(cp_default)
 
-            if src in 'abcdfeghijklmnopqrstuz':
-                op.add_option("-v", "--verbose", dest="verbose",
-                              action="store_true",
-                              help="print status messages to stdout")
-                op.add_option("-q", "--quiet", dest="verbose",
-                              action="store_false",
-                              help="don't print status messages to stdout")
-                op.add_option("--debug", dest="debug",
-                              action="store_true",
-                              help="log/display debug messages")
+        ap = argparse.ArgumentParser(description=description)
 
-            if src in 'bdpqt':
-                op.add_option("-i", "--instrument_id", dest="instrument_id",
-                              help="force instrument (glider) id")
-                op.add_option("--gzip_netcdf",
-                              dest="gzip_netcdf",
-                              action="store_true",
-                              help="gzip netcdf files")
+        # Build up group dictionary
+        option_group_set = set()
+        for k, v in options_dict.items():
+            if v.group is None or calling_module in v.group:
+                if "option_group" in v.kwargs.keys():
+                    option_group_set.add(v.kwargs["option_group"])
+                if (
+                    "required" in v.kwargs.keys()
+                    and isinstance(v.kwargs["required"], tuple)
+                    and calling_module in v.kwargs["required"]
+                ):
+                    option_group_set.add("required named arguments")
 
-            if src in 'bdkpt':
-                op.add_option("--profile",
-                              dest="profile",
-                              action="store_true",
-                              help="Profiles time to process")
+        option_group_dict = {}
+        for gg in option_group_set:
+            option_group_dict[gg] = ap.add_argument_group(
+                gg, option_group_description[gg]
+            )
 
+        # Loop over potential arguments and add what is approriate
+        for k, v in options_dict.items():
+            if v.group is None or calling_module in v.group:
+                kwargs = copy.deepcopy(v.kwargs)
+                if not (v.var_type == bool and "action" in v.kwargs.keys()):
+                    kwargs["type"] = v.var_type
+                if v.args and v.args[0].startswith("-"):
+                    kwargs["dest"] = k
+                kwargs["default"] = None
+                if "section" in kwargs.keys():
+                    del kwargs["section"]
+                if "required" in kwargs.keys() and isinstance(
+                    kwargs["required"], tuple
+                ):
+                    kwargs["required"] = calling_module in kwargs["required"]
+                if (
+                    "range" in kwargs.keys()
+                    and isinstance(kwargs["range"], list)
+                    and len(kwargs["range"]) == 2
+                ):
+                    min_val = kwargs["range"][0]
+                    max_val = kwargs["range"][1]
+                    kwargs["action"] = generate_range_action(k, min_val, max_val)
+                    del kwargs["range"]
+                    kwargs["metavar"] = f"{{{min_val}..{max_val}}}"
 
-            if src in 'bm':
-                op.add_option("--ver_65",
-                              dest="ver_65",
-                              action="store_true",
-                              help="Processes Version 65 glider format")
-
-            if src in 'bp':
-                op.add_option("--bin_width",
-                              dest="bin_width",
-                              help="Width of bins")
-                op.add_option("--which_half",
-                              dest="which_half",
-                              help="Which half of the profile to use - 1 down, 2 up, 3 both, 4 combine down and up")
-
-            if src in 'i':
-                op.add_option("--interval",
-                              dest="interval",
-                              help="Interval in seconds between checks")
-
-            if src in 'bd':
-                pass # was --dac_src
-
-            if src in 'bgij':
-                op.add_option("--daemon", dest="daemon",
-                              action="store_true",
-                              help="Launch conversion as a daemon process")
-                op.add_option("--csh_pid", dest="csh_pid",
-                              help="PID of the login shell")
-                op.add_option("--ignore_lock",
-                              dest="ignore_lock",
-                              action="store_true",
-                              help="Ignore the lock file, if present")
-            if src in 'b':
-                op.add_option("--divetarballs", dest="divetarballs",
-                              #action="store_true",
-                              help="Creates per-dive tarballs of processed files - 0 don't create, -1 create, > create fragments of specified size")
-                op.add_option("--local", dest="local",
-                              action="store_true",
-                              help="Performs no remote operations (no .urls, .pagers, .mailer, etc.)")
-                op.add_option("--clean",
-                              dest="clean",
-                              action="store_true",
-                              help="Clean up (delete) intermediate files from working (mission) directory after processing.")
-                op.add_option("--reply_addr",
-                              dest="reply_addr",
-                              help="Optional email address to be inserted into the reply to field email messages")
-                op.add_option("--domain_name",
-                              dest="domain_name",
-                              help="Optional domain name to use for email messages")
-                op.add_option("--web_file_location",
-                              dest="web_file_location",
-                              help="Optional location to prefix file locations in comp email messages")
-
-            if src in 'bd':
-                op.add_option("-f", "--force", dest="force",
-                              action="store_true",
-                              help="Forces conversion of all dives")
-                op.add_option("--reprocess", dest="reprocess",
-                              action="store_true",
-                              help="Forces re-running of MakeDiveProfiles, regardless of file time stamps (generally used for debugging " \
-                              "- normally --force is the right option)")
-            if src in 'bd':
-                op.add_option("--make_dive_profiles",
-                              dest="make_dive_profiles",
-                              action="store_true",
-                              help="Create the common profile data products")
-                op.add_option("--make_dive_pro",
-                              dest="make_dive_pro",
-                              action="store_true",
-                              help="Create the dive profile in text format")
-                op.add_option("--make_dive_bpo",
-                              dest="make_dive_bpo",
-                              action="store_true",
-                              help="Create the dive binned profile in text format")
-                op.add_option("--make_dive_netCDF",
-                              dest="make_dive_netCDF",
-                              action="store_true",
-                              help="Create the dive netCDF output file")
-                op.add_option("--make_mission_profile",
-                              dest="make_mission_profile",
-                              action="store_true",
-                              help="Create mission profile output file")
-                op.add_option("--make_mission_timeseries",
-                              dest="make_mission_timeseries",
-                              action="store_true",
-                              help="Create mission timeseries output file")
-                op.add_option("--make_dive_kkyy",
-                              dest="make_dive_kkyy",
-                              action="store_true",
-                              help="Create the dive kkyy output files")
-                op.add_option("--skip_flight_model",
-                              dest="skip_flight_model",
-                              action="store_true",
-                              help="Skip flight model")
-
-            if src in 'd':
-                op.add_option("--reprocess_plots",
-                              dest="reprocess_plots",
-                              action="store_true",
-                              help="Force reprocessing of plots (Reprocess.py only)")
-                op.add_option("--reprocess_flight",
-                              dest="reprocess_flight",
-                              action="store_true",
-                              help="Force reprocessing of flight model data (Reprocess.py only)")
-
-            if src in 'c':
-                op.add_option("--home_dir", dest="home_dir",
-                              help="home directory base, used by Commission.py")
-                op.add_option("--glider_password", dest="glider_password",
-                              help="glider password, used by Commission.py")
-                op.add_option("--glider_group", dest="glider_group",
-                              help="glider group, used by Commission.py")
-                op.add_option("--home_dir_group", dest="home_dir_group",
-                              help="group owner for glider home directory, used by Commission.py")
-
-            if src in 'm':
-                op.add_option("-t", "--target_dir", dest="target_dir",
-                              help="target directory, used by MoveData.py")
-
-            if src in 'h':
-                op.add_option("-e", "--encrypt", dest="encrypt", action="store_true",
-                              help="encrypt the file")
-
-            self._op = op
-
-            (o, a) = op.parse_args()
-
-            # handle the config file first, then see if any args trump them
-
-            BaseOptions.make_dive_kkyy = False
-
-            if o.config is not None:
-                BaseOptions.config_file_name = os.path.abspath(os.path.expanduser(o.config))
-                try:
-                    cp.read(BaseOptions.config_file_name)
-                except:
-                    sys.stderr.write("ERROR parsing %s (%s)  - skipping..\n" % (BaseOptions.config_file_name, traceback.format_exc()))
-                    BaseOptions.config_file_name = None
+                arg_list = v.args
+                if "option_group" in kwargs.keys():
+                    og = kwargs["option_group"]
+                    del kwargs["option_group"]
+                    option_group_dict[og].add_argument(*arg_list, **kwargs)
+                elif "required" in kwargs and kwargs["required"]:
+                    option_group_dict["required named arguments"].add_argument(
+                        *arg_list, **kwargs
+                    )
                 else:
-                    try:
-                        debug = cp.get("DEFAULT", "debug")
-                        BaseOptions.debug = (debug.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        verbose = cp.get("DEFAULT", "verbose")
-                        BaseOptions.verbose = (verbose.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        force = cp.get("DEFAULT", "force")
-                        BaseOptions.force = (force.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        reprocess = cp.get("DEFAULT", "reprocess")
-                        BaseOptions.reprocess = (reprocess.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        local = cp.get("DEFAULT", "local")
-                        BaseOptions.local = (local.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.divetarballs = cp.getint("DEFAULT", "divetarballs")
-                    except:
-                        pass
-
-                    try:
-                        daemon = cp.get("DEFAULT", "daemon")
-                        BaseOptions.daemon = (daemon.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.csh_pid = cp.getint("DEFAULT", "csh_pid")
-                    except:
-                        pass
-
-                    try:
-                        encrypt = cp.get("DEFAULT", "encrypt")
-                        BaseOptions.encrypt = (encrypt.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.target_dir = cp.get("DEFAULT", "target_dir")
-                        if BaseOptions.target_dir is not None:
-                            if BaseOptions.target_dir[-1] != "/":
-                                BaseOptions.target_dir = BaseOptions.target_dir + "/"
-                            BaseOptions.target_dir = os.path.expanduser(BaseOptions.target_dir)
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.mission_dir = cp.get("DEFAULT", "mission_dir")
-                        if BaseOptions.mission_dir is not None:
-                            BaseOptions.mission_dir = os.path.abspath(os.path.expanduser(BaseOptions.mission_dir))
-                            if BaseOptions.mission_dir[-1] != "/":
-                                BaseOptions.mission_dir = BaseOptions.mission_dir + "/"
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.magcalfile = cp.get("DEFAULT", "magcalfile")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.auxmagcalfile = cp.get("DEFAULT", "auxmagcalfile")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.delete_upload_files = cp.get("DEFAULT", "delete_upload_files")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.home_dir = cp.get("DEFAULT", "home_dir")
-                    except:
-                        pass
-                    try:
-                        BaseOptions.glider_password = cp.get("DEFAULT", "glider_password")
-                    except:
-                        pass
-                    try:
-                        BaseOptions.glider_group = cp.get("DEFAULT", "glider_group")
-                    except:
-                        pass
-                    try:
-                        BaseOptions.home_dir_group = cp.get("DEFAULT", "home_dir_group")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.base_log = cp.get("DEFAULT", "base_log")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.instrument_id = cp.get("DEFAULT", "instrument_id")
-                    except:
-                        pass
-
-                    try:
-                        make_dive_profiles = cp.get("DEFAULT", "make_dive_profiles")
-                        BaseOptions.make_dive_profiles = (make_dive_profiles.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        reprocess_plots = cp.get("DEFAULT", "reprocess_plots")
-                        BaseOptions.reprocess_plots = (reprocess_plots.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        reprocess_flight = cp.get("DEFAULT", "reprocess_flight")
-                        BaseOptions.reprocess_flight = (reprocess_flight.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        skip_flight_model = cp.get("DEFAULT", "skip_flight_model")
-                        BaseOptions.skip_flight_model = (skip_flight_model.lower() == "true")
-                    except:
-                        pass
-
-
-                    try:
-                        make_dive_pro = cp.get("DEFAULT", "make_dive_pro")
-                        BaseOptions.make_dive_pro = (make_dive_pro.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        make_dive_bpo = cp.get("DEFAULT", "make_dive_bpo")
-                        BaseOptions.make_dive_bpo = (make_dive_bpo.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        make_dive_netCDF = cp.get("DEFAULT", "make_dive_netCDF")
-                        BaseOptions.make_dive_netCDF = (make_dive_netCDF.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        make_mission_profile = cp.get("DEFAULT", "make_mission_profile")
-                        BaseOptions.make_mission_netCDF = (make_mission_profile.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        make_mission_timeseries = cp.get("DEFAULT", "make_mission_timeseries")
-                        BaseOptions.make_mission_timeseries = (make_mission_timeseries.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        make_dive_kkyy = cp.get("DEFAULT", "make_dive_kkyy")
-                        if make_dive_kkyy.lower() == "true":
-                            BaseOptions.make_dive_kkyy = True
-                    except:
-                        pass
-
-                    try:
-                        ver_65 = cp.get("DEFAULT", "ver_65")
-                        BaseOptions.ver_65 = (ver_65.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        clean = cp.get("DEFAULT", "clean")
-                        BaseOptions.clean = (clean.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        gzip_netcdf = cp.get("DEFAULT", "gzip_netcdf")
-                        BaseOptions.gzip_netcdf = (gzip_netcdf.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        profile = cp.get("DEFAULT", "profile")
-                        BaseOptions.profile = (profile.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        ignore_lock = cp.get("DEFAULT", "ignore_lock")
-                        BaseOptions.igrore_lock = (ignore_lock.lower() == "true")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.bin_width = cp.getfloat("DEFAULT", "bin_width")
-                    except ValueError:
-                        pass
-
-                    try:
-                        BaseOptions.which_half = WhichHalf(cp.getint("DEFAULT", "which_half")) #pylint: disable=E1120
-                    except ValueError:
-                        pass
-
-                    try:
-                        BaseOptions.interval = cp.getint("DEFAULT", "interval")
-                    except ValueError:
-                        pass
-
-                    try:
-                        BaseOptions.nice = cp.getint("DEFAULT", "nice")
-                    except ValueError:
-                        pass
-
-                    try:
-                        BaseOptions.reply_addr = cp.get("DEFAULT", "reply_addr")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.domain_name = cp.get("DEFAULT", "domain_name")
-                    except:
-                        pass
-
-                    try:
-                        BaseOptions.web_file_location = cp.get("DEFAULT", "web_file_location")
-                    except:
-                        pass
-
-
-                    #print "debug from config file: " + str(BaseOptions.debug) # DEBUG
-                    #print "verbose from config file: " + str(BaseOptions.verbose) # DEBUG
-                    #print "target_dir from config file: " + str(BaseOptions.target_dir) # DEBUG
-                    #print "mission_dir from config file: " + str(BaseOptions.mission_dir) # DEBUG
-                    #print "base_log from config file: " + str(BaseOptions.base_log) # DEBUG
-                    #print "instrument_id from config file: " + str(BaseOptions.instrument_id) # DEBUG
-                    #print "make_dive_profiles from config file: " + str(BaseOptions.make_dive_profiles) # DEBUG
-                    #print "make_netCDF from config file: " + str(BaseOptions.make_netCDF) # DEBUG
-                    #print "ver_65 from config file: " + str(BaseOptions.ver_65) # DEBUG
-                    #print "clean from config file: " + str(BaseOptions.clean) # DEBUG
-                    #print "profile from config file: " + str(BaseOptions.profile) # DEBUG
-                    #print "ignore_locki from config file: " + str(BaseOptions.ignore_lock) # DEBUG
-            if  getattr(o, 'debug', None) is not None:
-                BaseOptions.debug = o.debug
-                #print "debug from cmd-line options: " + str(o.debug) # DEBUG
-
-            if getattr(o, 'verbose', None) is not None:
-                BaseOptions.verbose = o.verbose
-                #print "verbose from cmd-line options: " + str(o.verbose) # DEBUG
-
-            if getattr(o, 'force', None) is not None:
-                BaseOptions.force = o.force
-                #print "force from cmd-line options: " + str(o.force) # DEBUG
-
-            if getattr(o, 'reprocess', None) is not None:
-                BaseOptions.reprocess = o.reprocess
-                #print "reprocess from cmd-line options: " + str(o.reprocess) # DEBUG
-
-            if getattr(o, 'divetarballs', None) is not None:
-                try:
-                    BaseOptions.divetarballs = int(o.divetarballs)
-                except:
-                    sys.stderr.write("divetarballs must be a int (%s)\n" % o.divetarballs)
-                    BaseOptions.divetarballs = 0
-                #print "divetarballs from cmd-line options: " + str(o.divetarballs) # DEBUG
-
-            if getattr(o, 'local', None) is not None:
-                BaseOptions.local = o.local
-                #print "local from cmd-line options: " + str(o.local) # DEBUG
-
-            if getattr(o, 'daemon', None) is not None:
-                BaseOptions.daemon = o.daemon
-                #print "daemon from cmd-line options: " + str(o.daemon) # DEBUG
-
-            if getattr(o, 'csh_pid', None) is not None:
-                try:
-                    BaseOptions.csh_pid = int(o.csh_pid)
-                except:
-                    sys.stderr.write("csh_pid must be a int (%s)\n" % o.csh_pid)
-                    BaseOptions.csh_pid = 0
-
-            if getattr(o, 'encrypt', None) is not None:
-                BaseOptions.encrypt = o.encrypt
-                #print "encrypt from cmd-line options: " + str(o.encrypt) # DEBUG
-
-            if getattr(o, 'target_dir', None) is not None:
-                BaseOptions.target_dir = o.target_dir
-                if BaseOptions.target_dir[-1] != "/":
-                    BaseOptions.target_dir = BaseOptions.target_dir + "/"
-                BaseOptions.target_dir = os.path.expanduser(BaseOptions.target_dir)
-                #print "target_dir from cmd-line options: " + str(o.target_dir) # DEBUG
-
-            if getattr(o, 'mission_dir', None) is not None:
-                BaseOptions.mission_dir = os.path.abspath(os.path.expanduser(o.mission_dir))
-                if BaseOptions.mission_dir[-1] != "/":
-                    BaseOptions.mission_dir = BaseOptions.mission_dir + "/"
-                #print "mission_dir from cmd-line options: " + str(o.mission_dir) # DEBUG
-
-            if getattr(o, 'magcalfile', None) is not None:
-                BaseOptions.magcalfile = o.magcalfile
-                #print "magcalfle from cmd-line options: " + str(o.magcalfile) # DEBUG
-
-            if getattr(o, 'auxmagcalfile', None) is not None:
-                BaseOptions.auxmagcalfile = o.auxmagcalfile
-                #print "auxmagcalfle from cmd-line options: " + str(o.auxmagcalfile) # DEBUG
-
-            if getattr(o, 'delete_upload_files', None) is not None:
-                BaseOptions.delete_upload_files = o.delete_upload_files
-                #print "delete_upload_files from cmd-line options: " + str(o.delete_upload_files) # DEBUG
-
-            if getattr(o, 'reply_addr', None) is not None:
-                BaseOptions.reply_addr = o.reply_addr
-
-            if getattr(o, 'domain_name', None) is not None:
-                BaseOptions.domain_name = o.domain_name
-
-            if getattr(o, 'web_file_location', None) is not None:
-                BaseOptions.web_file_location = o.web_file_location
-
-            if getattr(o, 'home_dir', None) is not None:
-                BaseOptions.home_dir = o.home_dir
-            if getattr(o, 'glider_password', None) is not None:
-                BaseOptions.glider_password = o.glider_password
-            if getattr(o, 'glider_group', None) is not None:
-                BaseOptions.glider_group = o.glider_group
-            if getattr(o, 'home_dir_group', None) is not None:
-                BaseOptions.home_dir_group = o.home_dir_group
-
-            if getattr(o, 'base_log', None) is not None:
-                BaseOptions.base_log = o.base_log
-                #print "base_log from cmd-line options: " + str(o.base_log) # DEBUG
-
-            if getattr(o, 'instrument_id', None) is not None:
-                BaseOptions.instrument_id = o.instrument_id
-                #print "instrument_id from cmd-line options: " + str(o.instrument_id) # DEBUG
-
-            if getattr(o, 'make_dive_profiles', None) is not None:
-                BaseOptions.make_dive_profiles = o.make_dive_profiles
-                BaseOptions.make_dive_netCDF = True
-                #print "make_dive_profiles from cmd-line options: " + str(o.make_dive_profiles) # DEBUG
-
-            if getattr(o, 'reprocess_plots', None) is not None:
-                BaseOptions.reprocess_plots = o.reprocess_plots
-                #print "reprocess_plots from cmd-line options: " + str(o.reprocess_plots) # DEBUG
-
-            if getattr(o, 'reprocess_flight', None) is not None:
-                BaseOptions.reprocess_flight = o.reprocess_flight
-                #print "reprocess_flight from cmd-line options: " + str(o.reprocess_flight) # DEBUG
-
-            if getattr(o, 'skip_flight_model', None) is not None:
-                BaseOptions.skip_flight_model = o.skip_flight_model
-                #print "skip_flight_model from cmd-line options: " + str(o.skip_flight_model) # DEBUG
-
-            if getattr(o, 'make_dive_pro', None) is not None:
-                BaseOptions.make_dive_pro = o.make_dive_pro
-                #print "make_pro from cmd-line options: " + str(o.make_pro) # DEBUG
-
-            if getattr(o, 'make_dive_bpo', None) is not None:
-                BaseOptions.make_dive_bpo = o.make_dive_bpo
-                #print "make_bpo from cmd-line options: " + str(o.make_bpo) # DEBUG
-
-            if getattr(o, 'make_dive_netCDF', None) is not None:
-                BaseOptions.make_dive_netCDF = o.make_dive_netCDF
-                #print "make_dive_netCDF from cmd-line options: " + str(o.make_netCDF) # DEBUG
-
-            if getattr(o, 'make_mission_profile', None) is not None:
-                BaseOptions.make_mission_profile = o.make_mission_profile
-                #print "make_mission_profile from cmd-line options: " + str(o.make_netCDF) # DEBUG
-
-            if getattr(o, 'make_mission_timeseries', None) is not None:
-                BaseOptions.make_mission_timeseries = o.make_mission_timeseries
-                #print "make_mission_timeseries from cmd-line options: " + str(o.make_netCDF) # DEBUG
-
-            if getattr(o, 'make_dive_kkyy', None) is not None:
-                BaseOptions.make_dive_kkyy = o.make_dive_kkyy
-                #print "make_kkyy from cmd-line options: " + str(o.make_dive_kkyy) # DEBUG
-
-            if getattr(o, 'ver_65', None) is not None:
-                BaseOptions.ver_65 = o.ver_65
-                #print "ver_65 from cmd-line options: " + str(o.ver_65) # DEBUG
-
-            if getattr(o, 'clean', None) is not None:
-                BaseOptions.clean = o.clean
-                #print "clean from cmd-line options: " + str(o.clean) # DEBUG
-
-            if getattr(o, 'gzip_netcdf', None) is not None:
-                BaseOptions.gzip_netcdf = o.gzip_netcdf
-                #print "gzip_netcdf from cmd-line options: " + str(o.no_gzip_netcdf) # DEBUG
-
-            if getattr(o, 'profile', None) is not None:
-                BaseOptions.profile = o.profile
-                #print "profile from cmd-line options: " + str(o.profile) # DEBUG
-
-            if getattr(o, 'ignore_lock', None) is not None:
-                BaseOptions.ignore_lock = o.ignore_lock
-                #print "ignore_lock from cmd-line options: " + str(o.ignore_lock) # DEBUG
-
-            if getattr(o, 'bin_width', None) is not None:
-                try:
-                    BaseOptions.bin_width = float(o.bin_width)
-                except:
-                    sys.stderr.write("bin_width must be a float (%s)\n" % o.bin_width)
-                    BaseOptions.bin_width = 0.0
-                #print "bin_width from cmd-line options: %f" % BaseOptions.bin_width # DEBUG
-
-            if getattr(o, 'which_half', None) is not None:
-                try:
-                    #pylint:disable:no-value-for-parameter
-                    BaseOptions.which_half = WhichHalf(o.which_half) #pylint: disable=E1120
-                except:
-                    sys.stderr.write("which_half must be a int (%s)\n" % o.which_half)
-                    #pylint:disable:no-value-for-parameter
-                    BaseOptions.which_half = WhichHalf(3) #pylint: disable=E1120
-                #print "which_half from cmd-line options: %d" % BaseOptions.which_half # DEBUG
-
-            if getattr(o, 'interval', None) is not None:
-                try:
-                    BaseOptions.interval = int(o.interval)
-                except:
-                    sys.stderr.write("interval must be a int (%s)\n" % o.interval)
-                    BaseOptions.interval = 0
-                #print "interval from cmd-line options: %d" % BaseOptions.interval # DEBUG
-
-            if getattr(o, 'nice', None) is not None:
-                try:
-                    BaseOptions.nice = int(o.nice)
-                except:
-                    sys.stderr.write("nice must be a int (%s)\n" % o.nice)
-                    BaseOptions.nice = 0
-                #print "nice from cmd-line options: %d" % BaseOptions.nice # DEBUG
-
-            BaseOptions._opts = o
-            BaseOptions._args = a
-
-            BaseOptions.is_initialized = True
-
-    def format_help(self):
-        """ Returns help as a formatted string
-        """
-        formatter = optparse.IndentedHelpFormatter(indent_increment=4)
-        formatter.indent()
-        x = self._op.format_help(formatter)
-        return x
-
-    def get_args(self):
-        """ Returns a copy of the list of arguments
-        """
-        return self._args.copy()
+                    ap.add_argument(*arg_list, **kwargs)
+
+        self._ap = ap
+
+        # self._opts, self._args = ap.parse_known_args()
+        self._opts = ap.parse_args()
+
+        # handle the config file first, then see if any args trump them
+        if self._opts.config_file_name is not None:
+            try:
+                cp.read(self._opts.config_file_name)
+            except Exception as exc:
+                raise RuntimeError(
+                    f"ERROR parsing {self._opts.config_file_name}"
+                ) from exc
+            else:
+                for k, v in options_dict.items():
+                    if k == "config_file_name":
+                        continue
+                    if v.group is None or calling_module in v.group:
+                        try:
+                            if "section" in v.kwargs:
+                                section_name = v.kwargs["section"]
+                            else:
+                                section_name = "base"
+                            value = cp.get(section_name, k)
+                            # if value == v.default_val:
+                            if value is None:
+                                continue
+                        except:
+                            pass
+                        else:
+                            try:
+                                val = v.var_type(value)
+                            except ValueError as exc:
+                                raise "Could not convert %s from %s to requested type" % (
+                                    k,
+                                    self.config_file_name,
+                                ) from exc
+                            else:
+                                if (
+                                    "range" in kwargs.keys()
+                                    and isinstance(kwargs["range"], list)
+                                    and len(kwargs["range"]) == 2
+                                ):
+                                    min_val = kwargs["range"][0]
+                                    max_val = kwargs["range"][1]
+                                    if not min_val <= val <= max_val:
+                                        raise f"{val} outside of range {min_val} {max_val}"
+
+                                setattr(self, k, val)
+
+        # Anything set on the command line trumps
+        for opt in dir(self._opts):
+            if opt in options_dict.keys() and getattr(self._opts, opt) is not None:
+                setattr(self, opt, getattr(self._opts, opt))
+
+        # A bit of a hack
+        if self.make_dive_profiles:
+            self.make_dive_netCDF = True
+
+
+if __name__ == "__main__":
+    return_val = 1
+
+    # Force to be in UTC
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+    try:
+        additional_args = {
+            # "netcdf_filename": options_t(
+            #     None,
+            #     ("BaseOpts",),
+            #     ("netcdf_filename",),
+            #     str,
+            #     {
+            #         "help": "Name of netCDF file to process (only used if --mission_dir is not specified)",
+            #         "nargs": "?",
+            #     },
+            # ),
+            "port": options_t(
+                1234,
+                ("BaseOpts",),
+                ("port",),
+                int,
+                {"help": "Network Port", "nargs": "?", "range": [0, 6000]},
+            ),
+        }
+        base_opts = BaseOptions(
+            "Basestation Options Test", additional_arguments=additional_args
+        )
+    except SystemExit:
+        pass
+    except:
+        _, _, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+    else:
+        print("Quiet value ", base_opts.quiet)
+        print("Verbose value ", base_opts.verbose)
+        # print("netcdf_filename ", base_opts.netcdf_filename)
+        print("port", base_opts.port)

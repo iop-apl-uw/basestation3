@@ -2363,7 +2363,7 @@ def load_dive_profile_data(
         if log_file_exists and log_file_time > ncf_file_time:
             if ncf_file_time:
                 log_debug("Updating data from %s" % log_file_name)
-            log_f = LogFile.parse_log_file(log_file_name, base_opts.mission_dir)
+            log_f = LogFile.parse_log_file(log_file_name)
             if not log_f:
                 raise RuntimeError("Could not parse %s" % log_file_name)
             assign_dim_info_size(
@@ -4103,6 +4103,26 @@ def make_dive_profile(
                     * LogTempFreqScaled_v
                 )
             ) - Kelvin_offset
+
+            # Hack to pull in the optode temperature - used for sg562
+            # on the NorEMSO_Iceland 2021 deployment.  Note - assumes
+            # optode and CTD are on the truck
+            if False:
+            #if id_str == "562":
+                from scipy.interpolate import InterpolatedUnivariateSpline
+                temp_raw_v = eng_f.get_col("aa4330_Temp")
+                if False:
+                    #sg_depth = eng_f.get_col("depth")
+                    #temp_raw_v = InterpolatedUnivariateSpline(sg_depth, optode_temp)
+                    elapsed_t = eng_f.get_col("elaps_t")
+                    good_i_v = [i for i in range(ctd_np) if not isnan(temp_raw_v[i])]
+                    f = InterpolatedUnivariateSpline(elapsed_t[good_i_v], temp_raw_v[good_i_v])
+                    bad_i_v = [i for i in range(ctd_np) if isnan(temp_raw_v[i])]
+                    temp_raw_v[bad_i_v] = f(elapsed_t[bad_i_v])
+
+                temp_raw_qc_v = initialize_qc(ctd_np, QC_GOOD)
+                bad_i_v = [i for i in range(ctd_np) if isnan(temp_raw_v[i])]
+                assert_qc(QC_UNSAMPLED, temp_raw_qc_v, bad_i_v, "unsampled temperature")
 
             # The Kistler pressure sensor, used on DGs and some SGs, responds quadratically in pressure and temperature
             # The glider code encodes depth (counts) using a linear transformation.  If we have the proper fit in sgc
@@ -9390,9 +9410,23 @@ def main():
         0 - success
         1 - failure
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv, "d", usage="%prog [Options] [basefile]")
+    base_opts = BaseOpts.BaseOptions(
+        "Command line driver for creating per-dive netCDF files",
+        additional_arguments={
+            "basename": BaseOpts.options_t(
+                None,
+                ("MakeDiveProfiles",),
+                ("basename",),
+                str,
+                {"help": "Basename for netcdf file to process/create (pXXXYYYY where XXX is sd_id, YYYY is dive number) Use this or --mission-dir",
+                 "action": BaseOpts.FullPathAction,
+                 "nargs":"?"
+                },
+            ),
+        }
+    )
 
-    BaseLogger("MakeDiveProfiles", base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)  # initializes BaseLog
 
     Utils.check_versions()
 
@@ -9403,11 +9437,6 @@ def main():
         except:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
-    args = base_opts.get_args()  # positional arguments
-
-    if len(args) < 1 and not base_opts.mission_dir:
-        print((main.__doc__))
-        return 1
 
     ret_val = 0
 
@@ -9417,14 +9446,15 @@ def main():
     )
 
     if base_opts.mission_dir:
-        base_path = os.path.abspath(os.path.expanduser(base_opts.mission_dir))
-    else:
+        base_path = base_opts.mission_dir
+    elif base_opts.basename:
         # they gave us a basename, e.g., p5400003 so expand it assuming current (code?) directory
         # make it look like it came via --mission_dir
-        base_path = (
-            os.path.abspath(os.path.expanduser(args[0])) + "/"
-        )  # ensure trailing '/'
+        base_path = base_opts.basename + "/"  # ensure trailing '/'
         base_opts.mission_dir = base_path
+    else:
+        log_error("Neither mission_dir or basename provided")
+        return 1
 
     dive_list = []
     if os.path.isdir(base_path):

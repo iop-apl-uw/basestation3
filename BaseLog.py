@@ -27,6 +27,7 @@ import logging
 import collections
 import BaseOpts
 from io import StringIO
+import inspect
 
 # CONSIDER make adding code location an option for debugging
 # e.g., BaseLogger.opts.log_code_location
@@ -64,7 +65,7 @@ class BaseLogger:
     alerts_d = {}
     conversion_alerts_d = {}
 
-    def __init__(self, name, opts=None, include_time=False):
+    def __init__(self, opts, include_time=False):
         """
         Initializes a logging.Logger object, according to options (opts).
         """
@@ -73,8 +74,12 @@ class BaseLogger:
             BaseLogger.self = self
             BaseLogger.opts = opts
 
+            calling_module = os.path.splitext(
+                os.path.split(inspect.stack()[1].filename)[1]
+            )[0]
+
             #create logger
-            BaseLogger.log = logging.getLogger(name)
+            BaseLogger.log = logging.getLogger(calling_module)
             BaseLogger.log.setLevel(logging.DEBUG)
 
             # create a file handler if log filename is specified in opts

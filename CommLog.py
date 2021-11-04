@@ -30,7 +30,6 @@ Commlog.py: Contains all routines for extracting data from a glider's comm logfi
 
 import cProfile
 import collections
-import functools
 import inspect
 import math
 import os
@@ -153,8 +152,7 @@ def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
 
 
 class CommLog:
-    """Object representing a seagliders comm log
-    """
+    """Object representing a seagliders comm log"""
 
     def __init__(
         self, sessions, raw_lines_with_ts, files_transfered, file_transfer_method
@@ -166,7 +164,7 @@ class CommLog:
         self.files_transfered = files_transfered
 
     def find_fragment_transfer_method(self, fragment_name):
-        """ Returns what transfer protocol has used to transmit a fragment
+        """Returns what transfer protocol has used to transmit a fragment
         "xmodem", "ymodem", "raw" or "unknown"
         """
         if fragment_name in list(self.file_transfer_method.keys()):
@@ -175,8 +173,7 @@ class CommLog:
             return "unknown"
 
     def get_fragment_dictionary(self):
-        """ Returns a dictionary that maps a dive num to a fragment size
-        """
+        """Returns a dictionary that maps a dive num to a fragment size"""
         fragment_dict = {}
         for i in range(len(self.sessions)):
             if (
@@ -189,7 +186,7 @@ class CommLog:
         return fragment_dict
 
     def get_fragment_size_dict(self):
-        """ Returns a dictionary that maps a fragment name to a tuple of
+        """Returns a dictionary that maps a fragment name to a tuple of
         expected size and received size
 
         For RAW and YMODEM files, the recieved size is reported by the protocol for both up and down
@@ -251,8 +248,7 @@ class CommLog:
         return (None, None)
 
     def last_complete_surfacing(self):
-        """Returns the session for the last completed surfacing
-        """
+        """Returns the session for the last completed surfacing"""
         # for i in range(-1,-len(self.sessions) + 1, -1):
         for i in reversed(range(len(self.sessions))):
             if self.sessions[i].disconnect_ts:
@@ -261,11 +257,11 @@ class CommLog:
 
     def get_instrument_id(self):
         """Find the instrument id by searching backward through the
-           sessions, looking for one that has an instrument id
+        sessions, looking for one that has an instrument id
 
-           Returns:
-               Instrument ID if found as an int
-               None if no ID found
+        Returns:
+            Instrument ID if found as an int
+            None if no ID found
         """
         for i in reversed(range(len(self.sessions))):
             if self.sessions[i].sg_id:
@@ -274,11 +270,11 @@ class CommLog:
 
     def get_last_dive_num_and_call_counter(self):
         """Find the last dive number by searching backward through the
-           sessions, looking for one that has a dive number set
+        sessions, looking for one that has a dive number set
 
-           Returns:
-               dive number if found as an int and the call cycle (if exists) or calls made (ver 65)
-               None if no dive number found
+        Returns:
+            dive number if found as an int and the call cycle (if exists) or calls made (ver 65)
+            None if no dive number found
         """
         for i in reversed(range(len(self.sessions))):
             if self.sessions[i].dive_num is not None:
@@ -289,8 +285,7 @@ class CommLog:
         return (None, None)
 
     def last_surfacing(self):
-        """Returns the session for the last surfacing, regardless of completness
-        """
+        """Returns the session for the last surfacing, regardless of completness"""
         return self.sessions[-1]
 
     def last_GPS_lat_lon_and_recov(self, fmt, dive_prefix):
@@ -515,8 +510,7 @@ class CommLog:
         out_file.close()
 
     def dump_bad_files(self):
-        """ Lists files that are partial or have sector repeats
-        """
+        """Lists files that are partial or have sector repeats"""
         if self.files_transfered:
             for file_name in list(self.files_transfered.keys()):
                 if (
@@ -538,11 +532,11 @@ class CommLog:
 
     def check_multiple_sectors(self, incomplete_file_name, instrument_id):
         """Given an incompelte file, check if there are any repeated
-           sectors in the contributing fragments
+        sectors in the contributing fragments
 
-           Returns:
-               String, containing the recomendation for the pager mail
-               None if there is no recommendation
+        Returns:
+            String, containing the recomendation for the pager mail
+            None if there is no recommendation
         """
         ret_val = ""
 
@@ -625,13 +619,13 @@ class CommLog:
 
 
 def get_glider_id(comm_log):
-    """ Finds glider id in comm.log
+    """Finds glider id in comm.log
 
-        Input:
-            comm_log object
+    Input:
+        comm_log object
 
-        Returns:
-            glider id as int, -1 for failure
+    Returns:
+        glider id as int, -1 for failure
     """
     for s in comm_log.sessions:
         if s.sg_id is not None:
@@ -640,8 +634,7 @@ def get_glider_id(comm_log):
 
 
 class ConnectSession:
-    """Contains the data on a seaglider connection session to the basestation
-    """
+    """Contains the data on a seaglider connection session to the basestation"""
 
     def __init__(self, connect_ts, time_zone):
         self.connect_ts = connect_ts
@@ -688,8 +681,7 @@ class ConnectSession:
         self.cmd_directive = None
 
     def dump_contents(self, fo):
-        """Dumps out the session contents, used when called manually
-        """
+        """Dumps out the session contents, used when called manually"""
         print("_sg_id %s" % self.sg_id, file=fo)
         print(
             "connect_ts %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.connect_ts),
@@ -782,7 +774,7 @@ class ConnectSession:
         if self.cmd_directive:
             print(f"cmdfile directive {self.cmd_directive}", file=fo)
         else:
-            print(f"No cmdfile directive found", file=fo)
+            print("No cmdfile directive found", file=fo)
         # for i in self.files_transfered.keys():
         #    tot_bytes = 0
         #    for j in self.files_transfered[i]:
@@ -979,9 +971,7 @@ def crack_counter_line(
                         start_time = time.strftime("%m %d %y", session.reconnect_ts)
                     else:
                         start_time = time.strftime("%m %d %y", session.connect_ts)
-                    session.gps_fix = GPS.GPSFix(
-                        raw_strs[1], start_date_str=start_time
-                    )
+                    session.gps_fix = GPS.GPSFix(raw_strs[1], start_date_str=start_time)
                 else:
                     log_warning(
                         "Unknown line after counter: file %s, lineno %d, line %s"
@@ -1326,7 +1316,11 @@ def process_comm_log(
                                 )
                             continue
 
-                        if raw_strs[6] == "Sent" and "/YMODEM" not in raw_line and "/XMODEM" not in raw_line:
+                        if (
+                            raw_strs[6] == "Sent"
+                            and "/YMODEM" not in raw_line
+                            and "/XMODEM" not in raw_line
+                        ):
                             # Raw send
                             try:
                                 filename = raw_strs[10]
@@ -1437,15 +1431,16 @@ def process_comm_log(
                         if filename is not None:
                             if "/YMODEM:" in raw_line:
                                 try:
-                                    transfersize = int(
-                                        raw_strs[7].strip()
-                                    )
+                                    transfersize = int(raw_strs[7].strip())
                                     bps = int(
                                         end.lstrip().split(" ")[2].strip()
                                     )  # bytes per second third string
                                 except ValueError:
-                                    log_error("Error processing: lineno %d, line %s"
-                                              % (comm_log_file_name, line_count, raw_line), 'exc')
+                                    log_error(
+                                        "Error processing: %s lineno %d, line %s"
+                                        % (comm_log_file_name, line_count, raw_line),
+                                        "exc",
+                                    )
                                     transfersize = bps = -1
 
                                 if filename not in session.file_stats:
@@ -1749,28 +1744,24 @@ class TestCommLogCallback:
 
     # pylint: disable=R0201
     def callback_connected(self, connect_ts):
-        """ connected test callback
-        """
+        """connected test callback"""
         msg = "Connected: %s\n" % time.strftime("%a %b %d %H:%M:%S %Z %Y", connect_ts)
         sys.stdout.write(msg)
 
     def callback_counter_line(self, session):
-        """ counter line test callback
-        """
+        """counter line test callback"""
         sys.stdout.write("Counter line found\n")
         session.dump_contents(sys.stdout)
 
     def callback_reconnected(self, reconnect_ts):
-        """ reconnected test callback
-        """
+        """reconnected test callback"""
         msg = "Reconnected: %s\n" % time.strftime(
             "%a %b %d %H:%M:%S %Z %Y", reconnect_ts
         )
         sys.stdout.write(msg)
 
     def callback_disconnected(self, session):
-        """ disconnected test callback
-        """
+        """disconnected test callback"""
         if session:
             if session.logout_seen:
                 logout_msg = "Logout received"
@@ -1785,14 +1776,12 @@ class TestCommLogCallback:
             sys.stdout.write("dissconnect:no session\n")
 
     def callback_transfered(self, filename, receivedsize):
-        """ transfered test callback
-        """
+        """transfered test callback"""
         msg = "Transfered %d bytes of %s\n" % (receivedsize, filename)
         sys.stdout.write(msg)
 
     def callback_received(self, filename, receivedsize):
-        """ received test callback
-        """
+        """received test callback"""
         msg = "Received file %s (%d bytes)\n" % (filename, receivedsize)
         sys.stdout.write(msg)
 
@@ -1800,27 +1789,34 @@ class TestCommLogCallback:
 
 
 def main():
-    """ main - main entry point
-    """
-    base_opts = BaseOpts.BaseOptions(sys.argv, "o")
-    BaseLogger("CommLog", base_opts)  # initializes BaseLog
+    """main - main entry point"""
+    base_opts = BaseOpts.BaseOptions(
+        "Test entry for comm.log processing",
+        additional_arguments={
+            "comm_log": BaseOpts.options_t(
+                None,
+                ("CommLog",),
+                ("comm_log",),
+                str,
+                {
+                    "help": "comm.log file to process",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+        },
+    )
+    BaseLogger(base_opts)  # initializes BaseLog
 
-    args = base_opts.get_args()  # positional arguments
-
-    if len(args) < 1:
-        print("usage: CommLog.py logfile [latlong data file] [options]")
+    if base_opts.comm_log is None:
         return 1
 
-    comm_log= process_comm_log(
-        os.path.expanduser(args[0]), base_opts, scan_back=False
-    )[0]
+    comm_log = process_comm_log(base_opts.comm_log, base_opts, scan_back=False)[0]
 
     comm_log.sessions[-1].dump_contents(sys.stdout)
 
     # for ii in range(len(comm_log.sessions)):
     #     for k in comm_log.sessions[ii].file_stats.keys():
     #         print(k, comm_log.sessions[ii].file_stats[k])
-
 
     # fragment_size_dict = comm_log.get_fragment_size_dict()
     # for kk, vv in fragment_size_dict.items():
