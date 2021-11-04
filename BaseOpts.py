@@ -232,7 +232,7 @@ global_options_dict = {
             "Reprocess",
         ),
         ("--magcalfile",),
-        strm,
+        str,
         {
             "help": "compass cal file or search to use most recent version of tcm2mat.cal",
         },
