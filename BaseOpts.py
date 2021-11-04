@@ -232,9 +232,8 @@ global_options_dict = {
             "Reprocess",
         ),
         ("--magcalfile",),
-        FullPath,
+        strm,
         {
-            "action": FullPathAction,
             "help": "compass cal file or search to use most recent version of tcm2mat.cal",
         },
     ),
@@ -242,9 +241,8 @@ global_options_dict = {
         None,
         ("Base", "MakeDiveProfiles"),
         ("--auxmagcalfile",),
-        FullPath,
+        str,
         {
-            "action": FullPathAction,
             "help": "compass cal file or search to use most recent version of scicon.tcm",
         },
     ),
@@ -842,7 +840,7 @@ global_options_dict = {
             "Base",
             "MakeKML",
         ),
-        ("--pamm_data_directory",),
+        ("--paam_data_directory",),
         FullPath,
         {
             "help": "Directory with PAAM whale detections",
@@ -851,13 +849,13 @@ global_options_dict = {
             "option_group": "kml generation",
         },
     ),
-    "pamm_ici_percentage": options_t(
+    "paam_ici_percentage": options_t(
         0.25,
         (
             "Base",
             "MakeKML",
         ),
-        ("--pamm_ici_percentage",),
+        ("--paam_ici_percentage",),
         float,
         {
             "help": "Threshold for displaying a detection in paam data",
