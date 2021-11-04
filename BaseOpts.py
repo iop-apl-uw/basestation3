@@ -373,7 +373,7 @@ global_options_dict = {
         },
     ),
     "divetarballs": options_t(
-        None,
+        0,
         ("Base",),
         ("--divetarballs",),
         int,
@@ -1047,7 +1047,10 @@ global_options_dict = {
     ),
     "profile_filename": options_t(
         None,
-        ("Base", "MakePlotTSProfile",),
+        (
+            "Base",
+            "MakePlotTSProfile",
+        ),
         ("profile_filename",),
         str,
         {
