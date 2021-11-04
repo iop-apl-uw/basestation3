@@ -4104,6 +4104,26 @@ def make_dive_profile(
                 )
             ) - Kelvin_offset
 
+            # Hack to pull in the optode temperature - used for sg562
+            # on the NorEMSO_Iceland 2021 deployment.  Note - assumes
+            # optode and CTD are on the truck
+            if False:
+            #if id_str == "562":
+                from scipy.interpolate import InterpolatedUnivariateSpline
+                temp_raw_v = eng_f.get_col("aa4330_Temp")
+                if False:
+                    #sg_depth = eng_f.get_col("depth")
+                    #temp_raw_v = InterpolatedUnivariateSpline(sg_depth, optode_temp)
+                    elapsed_t = eng_f.get_col("elaps_t")
+                    good_i_v = [i for i in range(ctd_np) if not isnan(temp_raw_v[i])]
+                    f = InterpolatedUnivariateSpline(elapsed_t[good_i_v], temp_raw_v[good_i_v])
+                    bad_i_v = [i for i in range(ctd_np) if isnan(temp_raw_v[i])]
+                    temp_raw_v[bad_i_v] = f(elapsed_t[bad_i_v])
+
+                temp_raw_qc_v = initialize_qc(ctd_np, QC_GOOD)
+                bad_i_v = [i for i in range(ctd_np) if isnan(temp_raw_v[i])]
+                assert_qc(QC_UNSAMPLED, temp_raw_qc_v, bad_i_v, "unsampled temperature")
+
             # The Kistler pressure sensor, used on DGs and some SGs, responds quadratically in pressure and temperature
             # The glider code encodes depth (counts) using a linear transformation.  If we have the proper fit in sgc
             # we invert
