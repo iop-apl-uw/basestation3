@@ -601,10 +601,10 @@ global_options_dict = {
             "help": "glider group, used by Commission.py",
         },
     ),
-    "glider_home_dir_group": options_t(
+    "home_dir_group": options_t(
         None,
         ("Commission",),
-        ("--glider_home_dir_group",),
+        ("--home_dir_group",),
         str,
         {
             "help": "home dir group, used by Commission.py",
@@ -834,7 +834,7 @@ global_options_dict = {
         {"help": "Prefixes of dimensions and variables to strip", "nargs": "+"},
     ),
     # KML related
-    "pamm_data_directory": options_t(
+    "paam_data_directory": options_t(
         None,
         (
             "Base",
