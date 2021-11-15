@@ -12,6 +12,8 @@
 #include <sys/stat.h>
 #include <termios.h>
 #include <unistd.h>
+#include <string.h>
+#include "md5.h"
 
 int
 main(int argc, char *argv[])
@@ -30,13 +32,20 @@ main(int argc, char *argv[])
     int            fd;
     fd_set         fds;
     unsigned char  c;
-    
+    char          *md5_in = NULL;
+    unsigned int   size2 = 0;
+    char            md5_out[65];
 
-    if (argc != 2 || (fp = fopen(argv[1], "wb")) == NULL) {
+    if (argc < 2 || argc == 3 || argc > 4 || (fp = fopen(argv[1], "wb")) == NULL) {
         printf("NO!"); fflush(stdout);
         return 1;
     }
 
+    if (argc == 4) {
+        size2 = atol(argv[2]);
+        md5_in = argv[3];
+    }
+ 
     tcgetattr(0, &tios);
     tcgetattr(0, &orig_tios);
     tios.c_iflag = IGNBRK;
@@ -120,6 +129,29 @@ main(int argc, char *argv[])
     lsyslog(0, "Received %u bytes of %s (%.1f Bps)", nread, argv[1], nread/secs);
 
     fclose(fp);
+
+    if (argc == 4) {
+        md5_compute(argv[1], md5_out);
+        if (size != nread) {
+            printf("E0");
+            lsyslog(0, "E0 %u %u", size, nread); 
+        }
+        else if (size != size2) {
+            printf("E1");
+            lsyslog(0, "E1 %u %u", size, size2);
+        }
+        else if (strcmp(md5_in, md5_out)) {
+            printf("E2"); 
+            lsyslog(0, "E2 %s %s", md5_in, md5_out); 
+        }
+        else {
+            printf("OK");
+            lsyslog(0, "OK");
+        }
+
+        fflush(stdout);
+    }
+
     tcsetattr(0, TCSANOW, &orig_tios);
     return nread < size ? 1 : 0;
 }
