@@ -180,14 +180,14 @@ def decompress(input_file_name, output_file_or_file_name):
         # Read and discard a null-terminated string containing the filename
         while True:
             s = input_file.read(1)
-            if s == "\0":
+            if s == "\0" or s == b"\x00":
                 break
 
     if flag & FCOMMENT:
         # Read and discard a null-terminated string containing a comment
         while True:
             s = input_file.read(1)
-            if s == "\0":
+            if s == "\0" or s == b"\x00":
                 break
     if flag & FHCRC:
         input_file.read(2)  # Read & discard the 16-bit header CRC
