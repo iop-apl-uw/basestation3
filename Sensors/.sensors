@@ -16,8 +16,8 @@ pmar_ext.py,init_logger,process_tar_members,sensor_data_processing
 brb_ext.py,init_logger,process_log_files,process_payload_files
 #NOTYET lab_ext.py,init_logger
 scicon_ext.py,init_logger,process_tar_members
-
 cp_ext.py,init_logger,process_data_files
+edison_ext.py,init_logger,process_data_files
 
 # Place all cnf files at the end of this file!
 
@@ -29,3 +29,4 @@ ocr504i_scicon.cnf,add_netcdf_meta
 #ad2cp.cnf,init_logger,process_data_files
 echo.cnf,init_logger,process_data_files
 irrad.cnf,init_sensor,asc2eng
+
