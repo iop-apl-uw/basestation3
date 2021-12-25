@@ -28,6 +28,7 @@
 # TODO
 # MODEM_MSG, EKF, FINISH, RAFOS, FREEZE INTR WARN
 
+import collections
 import os
 import pdb
 import sys
@@ -48,6 +49,20 @@ from BaseLog import (
 )
 
 DEBUG_PDB = "darwin" in sys.platform
+# DEBUG_PDB = True
+
+# Handles message GC table entries
+# Matching type definitions are in BaseNetCDF
+
+# Each tuple must include a msgtype and a secs field
+newhead_gc = collections.namedtuple(
+    "newhead_gc", ["msgtype", "heading", "depth", "secs"]
+)
+# If there is no secs(time) in the msg, then supply NaN for the value
+# Note: this table is walked in Sensors.init_extensions to register all the possible variable dimensions
+msg_gc_entries = {
+    "NEWHEAD": lambda x: newhead_gc("NEWHEAD", *[float(y) for y in x.split(",")])
+}
 
 
 def map_state_code(state_str):
@@ -128,6 +143,8 @@ class LogFile:
         self.gc = []
         self.state = []
         self.warn = []
+        self.gc_msg_list = []  # All message entries
+        self.gc_msg_dict = {}  # Message entries as arrays
 
     def dump(self, fo=sys.stdout):
         """Dumps out the logfile"""
@@ -156,6 +173,8 @@ class LogFile:
                 item.dump(fo)
             else:
                 print("%s,%s" % (key, item), file=fo)
+        for x, values in self.gc_msg_dict.items():
+            print(x, values)
 
 
 def parse_log_file(in_filename, issue_warn=False):
@@ -282,7 +301,7 @@ def parse_log_file(in_filename, issue_warn=False):
         except UnicodeDecodeError:
             log_error("Could not process line %d of %s" % (line_count, in_filename))
             continue
-            
+
         if raw_line == "":
             break  # done with the file? BUG continue?
 
@@ -325,6 +344,14 @@ def parse_log_file(in_filename, issue_warn=False):
                 pass
             elif parm_name == "EKF":
                 pass
+            # Message GC entries
+            elif parm_name.lstrip("$") in ("NEWHEAD",):
+                try:
+                    log_file.gc_msg_list.append(
+                        msg_gc_entries[parm_name.lstrip("$")](value)
+                    )
+                except TypeError:
+                    log_warning("Could not process {parm_name} {value}", "exc")
             else:
                 # parse the value
                 nc_var_name = BaseNetCDF.nc_sg_log_prefix + parm_name.lstrip("$")
@@ -564,6 +591,27 @@ def parse_log_file(in_filename, issue_warn=False):
         state_data["eop_code"].append(eop_code)
 
     log_file.gc_state_data = state_data
+
+    # Convert list of paramaterized gc messages to
+    # dict of type of messages, as dicts of arrays of values
+    if log_file.gc_msg_list:
+        msg_types = {y.msgtype for y in log_file.gc_msg_list}
+        for mt in msg_types:
+            for msg in log_file.gc_msg_list:
+                if msg.msgtype == mt:
+                    if mt not in log_file.gc_msg_dict:
+                        # Init arrays
+                        log_file.gc_msg_dict[mt] = {}
+                        for field in msg._fields:
+                            if field == "msgtype":
+                                continue
+                            log_file.gc_msg_dict[mt][field] = []
+                    for field in msg._fields:
+                        if field == "msgtype":
+                            continue
+                        log_file.gc_msg_dict[mt][field].append(msg._asdict()[field])
+                        if field == "secs":
+                            log_file.gc_msg_dict[mt][field][-1] += log_file_start_time
 
     return log_file
 

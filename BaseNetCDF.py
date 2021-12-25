@@ -49,6 +49,8 @@ nc_sg_log_prefix = "log_"
 nc_sg_eng_prefix = "eng_"
 nc_gc_prefix = "gc_"
 nc_gc_state_prefix = "gc_state_"
+nc_gc_msg_prefix = "gc_msg_"
+
 
 # See http://www.unidata.ucar.edu/software/netcdf-java/formats/DataDiscoveryAttConvention.html
 nc_metadata_convention_version = "Unidata Dataset Discovery v1.0"
@@ -70,8 +72,7 @@ nc_ancillary_variables = "ancillary_variables"
 
 # Support functions for creating and merging global attributes
 def nc_ISO8601_date(epoch_time):
-    """ return an epoch_time ala time.time() in required metadata standard format
-    """
+    """return an epoch_time ala time.time() in required metadata standard format"""
     return time.strftime("%Y-%m-%dT%H:%m:%SZ", time.gmtime(epoch_time))
 
 
@@ -79,28 +80,24 @@ def nc_ISO8601_date(epoch_time):
 def nc_earliest_date(
     global_name, master_value, slave_value
 ):  # pylint: disable=unused-argument
-    """ Returns ealiest date
-    """
+    """Returns ealiest date"""
     return master_value if master_value <= slave_value else slave_value
 
 
 def nc_latest_date(
     global_name, master_value, slave_value
 ):  # pylint: disable=unused-argument
-    """ Returns ealiest date
-    """
+    """Returns ealiest date"""
     return master_value if master_value > slave_value else slave_value
 
 
 def nc_copy(global_name, master_value, slave_value):  # pylint: disable=unused-argument
-    """ Returns a copy
-    """
+    """Returns a copy"""
     return slave_value
 
 
 def nc_stet(global_name, master_value, slave_value):  # pylint: disable=unused-argument
-    """ don't ask, don't tell
-    """
+    """don't ask, don't tell"""
     return master_value
 
 
@@ -325,8 +322,7 @@ def merge_nc_globals(master_globals_d, slave_globals_d):
 
 
 def merge_instruments(master_instruments_d, slave_instruments_d):
-    """ Combine master and slave dictionaries into the master
-    """
+    """Combine master and slave dictionaries into the master"""
     for key, slave_value in list(slave_instruments_d.items()):
         try:
             # values for both master and slave: merge
@@ -346,7 +342,7 @@ def merge_instruments(master_instruments_d, slave_instruments_d):
 
 
 def update_globals_from_nodc(base_opts, globals_d, controls_d):
-    """ Parse global and local NODC.cnf files, if any
+    """Parse global and local NODC.cnf files, if any
     Updates globals_d and controls_d by side-effect
     Returns:
     files - the list of files, if any, read
@@ -622,7 +618,7 @@ nc_instrument_to_data_kind = {}  # e.g., sbe41 => 'physical', etc.
 def register_sensor_dim_info(
     dim_info, dim_name, time_var, data=False, instrument_var=None
 ):
-    """ Register the default dimension name and associated time nc var for dim info
+    """Register the default dimension name and associated time nc var for dim info
     Also registers the dim_info, of course.
     """
     if dim_info in nc_mdp_data_info:
@@ -662,8 +658,7 @@ def register_sensor_dim_info(
 
 
 def fetch_instrument_metadata(dim_info):
-    """ Find instrument metadata, given the dimension info
-    """
+    """Find instrument metadata, given the dimension info"""
     if dim_info in nc_mdp_instrument_vars:
         instrument_var = nc_mdp_instrument_vars[dim_info]
         try:
@@ -678,7 +673,7 @@ def fetch_instrument_metadata(dim_info):
 
 
 def assign_dim_info_dim_name(nc_info_d, dim_info, dim_name):
-    """ During processing of an nc file assign what actual dimension to use
+    """During processing of an nc file assign what actual dimension to use
     for a specific dim_info.  This is recorded in a transient nc_info dictionary
     associated with a specific file.
     """
@@ -711,7 +706,7 @@ def assign_dim_info_dim_name(nc_info_d, dim_info, dim_name):
 
 
 def assign_dim_info_size(nc_info_d, dim_info, size):
-    """ During processing of an nc file assign a size to a dimension
+    """During processing of an nc file assign a size to a dimension
     for a specific dim_info.  This is recorded in a transient nc_info dictionary
     associated with a specific file.
     """
@@ -740,7 +735,8 @@ def assign_dim_info_size(nc_info_d, dim_info, size):
         prev_size = nc_info_d[dim_name]
         if prev_size and prev_size != size:
             log_warning(
-                f"Reassigning {dim_name} size from {prev_size} to {size}!", "parent",
+                f"Reassigning {dim_name} size from {prev_size} to {size}!",
+                "parent",
             )
     except KeyError:
         pass
@@ -1884,7 +1880,7 @@ nc_var_metadata = {
         "d",
         {
             "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Start of STAGE time in GMT epoch format",
+            "description": "Start of STATE time in GMT epoch format",
         },
         (nc_gc_state_info,),
     ],
@@ -1899,6 +1895,36 @@ nc_var_metadata = {
         "i",
         {"description": "GC states end of phase (EOP) code"},
         (nc_gc_state_info,),
+    ],
+    # GC table messages
+    "gc_msg_NEWHEAD_secs": [
+        True,
+        "d",
+        {
+            "units": "seconds since 1970-1-1 00:00:00",
+            "description": "Start of NEWHEAD time in GMT epoch format",
+        },
+        (f"{nc_gc_msg_prefix}NEWHEAD_info",),
+    ],
+    "gc_msg_NEWHEAD_depth": [
+        True,
+        "d",
+        {
+            "standard_name": "depth",
+            "positive": "down",
+            "units": "meters",
+            "description": "Measured vertical distance below the surface",
+        },
+        (f"{nc_gc_msg_prefix}NEWHEAD_info",),
+    ],
+    "gc_msg_NEWHEAD_heading": [
+        True,
+        "d",
+        {
+            "description": "New vehicle heading (true)",
+            "units": "decimal degrees",
+        },
+        (f"{nc_gc_msg_prefix}NEWHEAD_info",),
     ],
     # $GC line entries (gc_event)
     "gc_st_secs": [
@@ -3125,7 +3151,7 @@ def form_nc_metadata(
     meta_data_d=None,
     mdp_dim_info=nc_scalar,
 ):
-    """ Create a valid nc_var metadata entry for the table above
+    """Create a valid nc_var metadata entry for the table above
     Encodes default policies and ensures CF compliance in metadata, etc.
 
     If var is specified, updates the table with a warning on replacement
@@ -3337,8 +3363,7 @@ def init_tables(init_dict):
 
 
 def reset_nc_char_dims():
-    """Reset the dictionary of string dimensions for the a new NC file
-    """
+    """Reset the dictionary of string dimensions for the a new NC file"""
     global nc_char_dims  # just for clarity
     nc_char_dims = {}
 

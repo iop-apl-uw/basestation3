@@ -21,15 +21,6 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-##
-## 11/21/2010 - ToDo
-## - Parameterize everything - see if there is a "named structure" format for netCDF to deal with
-##   arrays that are actually named fields.  The other approach is it just include the key in the
-##   description field and leave as a parsed array
-## - Fix GC table to include FINISH and STATE
-## - Confirm interop with matlab
-##
-
 ## Issues:
 ## - .cnf based sensors need to include descriptions, units and flag for inclusion in whole mission data fields for all columns
 ##
@@ -86,6 +77,7 @@ from TempSalinityVelocity import TSV_iterative, load_thermal_inertia_modes
 from TraceArray import *  # REMOVE use this only only if we are tracing/comparing computations w/ matlab
 import Utils
 
+DEBUG_PDB = False
 
 kg2g = 1000.0
 L2cc = 1000.0  # cc per liter
@@ -1948,6 +1940,7 @@ def load_dive_profile_data(
                     eng_var = re.compile("^%s" % nc_sg_eng_prefix)
                     gc_var = re.compile("^%s" % nc_gc_prefix)
                     gc_state_var = re.compile("^%s" % nc_gc_state_prefix)
+                    gc_msg_var = re.compile("^%s" % nc_gc_msg_prefix)
 
                     for global_var in list(
                         nc_global_variables.keys()
@@ -2277,6 +2270,15 @@ def load_dive_profile_data(
                                 :
                             ].copy()  # always an array
 
+                        elif gc_msg_var.search(dive_nc_varname):
+                            prefix, msg_col_name = gc_msg_var.split(dive_nc_varname)
+                            msg,col_name = msg_col_name.split("_",1)
+                            if msg not in log_f.gc_msg_dict:
+                                log_f.gc_msg_dict[msg] = {}
+                            log_f.gc_msg_dict[msg][col_name] = nc_var[
+                                :
+                            ].copy()  # always an array
+
                         elif gc_var.search(dive_nc_varname):
                             prefix, col_name = gc_var.split(dive_nc_varname)
                             log_f.gc_data[col_name] = nc_var[
@@ -2373,6 +2375,13 @@ def load_dive_profile_data(
                 assign_dim_info_size(
                     nc_info_d, nc_gc_state_info, len(log_f.gc_state_data["secs"])
                 )
+            if log_f.gc_msg_dict: # Dimension any gc messages
+                for msgtype, data_dict in log_f.gc_msg_dict.items():
+                    nc_gc_message_dim_info = nc_gc_msg_prefix + msgtype + "_info"
+                    assign_dim_info_size(
+                        nc_info_d, nc_gc_message_dim_info, len(next(iter(data_dict.items()))[1])
+                    )
+                
             assign_dim_info_size(nc_info_d, nc_gps_info_info, 3)
             # Add defaults only after possibly updating sg_calib_constants data
             status = 2  # raw data changed; results need updating
@@ -7022,6 +7031,21 @@ def make_dive_profile(
                     False,
                     gc_state_values,
                 )
+        # Create GC message variables
+        if log_f.gc_msg_dict:
+            for msgtype, data_dict in log_f.gc_msg_dict.items():
+                nc_dim_msg_state = nc_gc_msg_prefix + msgtype
+                for data_name, data in data_dict.items():
+                    nc_msg_name = nc_gc_msg_prefix + msgtype + "_" + data_name
+                    log_debug(f"Creating {nc_msg_name}")
+                    create_nc_var(
+                        nc_dive_file,
+                        nc_msg_name,
+                        (nc_dim_msg_state,),
+                        False,
+                        data,
+                    )
+                    
 
         # First record the actual GPS lines for future processing
         for gps_string in ["$GPS1", "$GPS2", "$GPS"]:
@@ -9583,6 +9607,11 @@ def main():
             ret_val = 1
             break
         except:
+            if DEBUG_PDB:
+                _, _, tb = sys.exc_info()
+                traceback.print_exc()
+                pdb.post_mortem(tb)
+
             log_error("Error processing dive %d - skipping" % dive_num, "exc")
             temp_ret_val = True
 
