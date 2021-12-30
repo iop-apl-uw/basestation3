@@ -14,7 +14,6 @@
 #include <unistd.h>
 #include <string.h>
 #include "md5.h"
-<<<<<<< HEAD
 
 int
 batch(int argc, char *argv[])
@@ -162,8 +161,6 @@ batch(int argc, char *argv[])
     tcsetattr(0, TCSANOW, &orig_tios);
     return 0;
 }
-=======
->>>>>>> d55ffb996aab85f170bfd68b854d5ef47cf5a0fe
 
 int
 main(int argc, char *argv[])
@@ -182,7 +179,6 @@ main(int argc, char *argv[])
     int            fd;
     fd_set         fds;
     unsigned char  c;
-<<<<<<< HEAD
     unsigned int   size2 = 0;
     char          *md5_in = NULL;
     char           md5_out[65];
@@ -190,11 +186,6 @@ main(int argc, char *argv[])
     if (strncmp(argv[0], "rawrcvb", 7) == 0) {
         return batch(argc, argv);
     }
-=======
-    char          *md5_in = NULL;
-    unsigned int   size2 = 0;
-    char            md5_out[65];
->>>>>>> d55ffb996aab85f170bfd68b854d5ef47cf5a0fe
 
     if (argc < 2 || argc == 3 || argc > 4 || (fp = fopen(argv[1], "wb")) == NULL) {
         printf("NO!"); fflush(stdout);
@@ -292,13 +283,8 @@ main(int argc, char *argv[])
             lsyslog(0, "E0 %u %u", size, nread); 
         }
         else if (size != size2) {
-<<<<<<< HEAD
-           printf("E1");
-           lsyslog(0, "E1 %u %u", size, size2);
-=======
             printf("E1");
             lsyslog(0, "E1 %u %u", size, size2);
->>>>>>> d55ffb996aab85f170bfd68b854d5ef47cf5a0fe
         }
         else if (strcmp(md5_in, md5_out)) {
             printf("E2"); 
