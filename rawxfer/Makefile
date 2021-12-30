@@ -11,8 +11,8 @@ CC = gcc
 
 all:    rawrcv rawsend
 
-rawrcv: rawrcv.o lsyslog.o
-		$(CC) -o rawrcv rawrcv.o lsyslog.o
+rawrcv: rawrcv.o lsyslog.o md5.o
+		$(CC) -o rawrcv rawrcv.o lsyslog.o md5.o
 
 rawsend: rawsend.o lsyslog.o
 		$(CC) -o rawsend rawsend.o lsyslog.o
