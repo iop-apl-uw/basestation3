@@ -13,6 +13,9 @@
 #include <termios.h>
 #include <unistd.h>
 #include <time.h>
+#include <string.h>
+
+extern void lsyslog(int prio, const char *format, ...);
 
 int
 main(int argc, char *argv[])
