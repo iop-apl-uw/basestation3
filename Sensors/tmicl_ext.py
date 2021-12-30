@@ -557,7 +557,10 @@ def init_logger(module_name, init_dict=None):
                     False,
                     "d",
                     {"description": description},
-                    (row_info, col_info,),
+                    (
+                        row_info,
+                        col_info,
+                    ),
                 )
     return 0
 
@@ -758,8 +761,7 @@ def process_tar_members(
                 fo.close()
                 processed_logger_eng_files.append(output_file)
         except:
-            log_error("Failed to process %s" % tmicl_file)
-            log_error(traceback.format_exc())
+            log_error("Failed to process %s" % tmicl_file, "exc")
             ret_val = 1
 
     return ret_val
@@ -1070,7 +1072,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         eng_file_class = tmp[1]
         eng_file_channel = tmp[2]  # channel
 
-        if eng_file_class == "base":
+        if eng_file_class == "base" or eng_file_class == "motors":
             eng_file_meta, ef_ret_list = extract_file_metadata(
                 filename, eng_file_channel
             )
@@ -1093,7 +1095,11 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
             # Remap column header names
             data_column_headers = []
-            columns = eng_file_meta["columns"].split()
+            # 2021/12/30 Bug - motor files have no column header
+            if eng_file_class == "motors" and "columns" not in eng_file_meta:
+                columns = ["time", "onoff", "sample"]
+            else:
+                columns = eng_file_meta["columns"].split()
             for column_name in columns:
                 data_column_headers.append(column_name.replace(".", "_"))
 
@@ -1111,11 +1117,18 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 )
 
             for i in range(len(columns)):
-                nc_var_name = "tmicl_%s_%s_%s" % (
-                    data_column_headers[i],
-                    eng_file_channel,
-                    FileMgr.cast_code[fn["cast"]],
-                )
+                if eng_file_class == "motors":
+                    nc_var_name = "tmicl_motors_%s_%s_%s" % (
+                        data_column_headers[i],
+                        eng_file_channel,
+                        FileMgr.cast_code[fn["cast"]],
+                    )
+                else:
+                    nc_var_name = "tmicl_%s_%s_%s" % (
+                        data_column_headers[i],
+                        eng_file_channel,
+                        FileMgr.cast_code[fn["cast"]],
+                    )
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, data[i]))
                 # Predeclare metadata for these variables in other sensor extension files when possible.
@@ -1286,8 +1299,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 nc_info_d, "%s_col_info" % nc_var_name, spectra.shape[1]
             )  # columns
 
-        elif eng_file_class == "motors":
-            log_info("Not adding %s to netcdf file" % filename)
+        # elif eng_file_class == "motors":
+        #    log_info("Not adding %s to netcdf file" % filename)
         else:
             log_warning(
                 "Unknown class %s of tmicl file %s -- skipping"
