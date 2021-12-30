@@ -160,10 +160,14 @@ In /usr/local/Base-3.01/packages/lrzsz-0.12.20:
 10b) Run "sudo make install"
 10c) Ensure that /usr/local/bin is at the head of the path for the glider accounts
 
-## Install optional raw send and raw recieve
+## Install raw send and raw recieve
 11a) In /usr/local/Base-3.01/packages unpack rawxfr.tgz by "sudo tar xvzf rawxfer.tgz"
 11b) In /usr/local/Base-3.01/packages/rawxfer build the binaries "sudo make"
 11c) Copy the binaries to /usr/local/bin "sudo cp rawrcv rawsend /usr/local/bin"
+11d) Create the following symlinks
+
+    ln -s /usr/local/bin/rawrcv /usr/local/bin/rawrcv2
+    ln -s /usr/local/bin/rawrcv /usr/local/bin/rawrcvb
 
 ## Install the optional cmdfile, science and targets validator
 12a) In /usr/local/Base-3.01/Validate-66.13 run 'sudo make -f Makefile.validate' to build validate binary
