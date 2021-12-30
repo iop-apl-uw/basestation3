@@ -158,7 +158,7 @@ def write_output_files(base_opts, base_file_name, fig):
     def isnotebook():
         try:
             shell = get_ipython().__class__.__name__
-            print(shell)
+            #print(shell)
             if shell == 'ZMQInteractiveShell':
                 return True   # Jupyter notebook or qtconsole
             elif shell == 'TerminalInteractiveShell':
