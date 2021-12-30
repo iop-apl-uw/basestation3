@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -67,14 +67,15 @@ def init_logger(module_name, init_dict=None):
     init_dict[module_name] = {'logger_prefix' : cp_prefix,
                               'eng_file_reader' : eng_file_reader,
                               'known_files' : ['NCP_GO'],
+                              'known_mailer_tags' : ['mat', "ad2cp"],
                               'netcdf_metadata_adds' : {
                                   'log_CP_RECORDABOVE': [False, 'd', {'description':'Depth above above which data is recorded', 'units':'meters'}, nc_scalar],
                                   'log_CP_PROFILE': [False, 'd', {'description':'Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
                                   'log_CP_XMITPROFILE': [False, 'd', {'description':'Which profile to transmit back to the basestation - 0 none, 1 dive, 2 climb, 3 both'}, nc_scalar],
                                   'log_CP_UPLOADMAX': [False, 'd', {'description':'Max size of file to upload'}, nc_scalar],
                                   'log_CP_FREE': [False, 'd', {'description':'Free diskspace on CP, in bytes'}, nc_scalar],
-                                  'log_CP_STARTS': [False, 'd', {'description':''}, nc_scalar],
-                                  'log_CP_NDIVE': [False, 'd', {'description':'Dive multiplier for CP'}, nc_scalar],
+                                  'log_CP_STARTS': [False, 'd', {'description':'Number of times instrument was started'}, nc_scalar],
+                                  'log_CP_NDIVE': [False, 'd', {'description':'Instrumet active every nth dive'}, nc_scalar],
                                   'cp_pressure': [False, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Pressure as reported by the CP'}, (nc_cp_data_info,)],
                                   'cp_heading': [False, 'd', {'standard_name':'heading', 'units':'degrees', 'description':' '}, (nc_cp_data_info,)],
                                   'cp_pitch': [False, 'd', {'standard_name':'pitch', 'units':'degrees', 'description':' '}, (nc_cp_data_info,)],
@@ -108,7 +109,13 @@ def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, p
 
     log_info("Processing %s to %s" % (fc.full_filename(), fc.mk_base_engfile_name()))
     if(fc.is_down_data() or fc.is_up_data()):
-        # Run the convertor
+        # The uploaded file in this case is an actual Nortek file.
+        # Copy to the correct extension
+        ad2cpfile = fc.mk_base_engfile_name().replace(".eng", ".ad2cp")
+        shutil.copy(fc.full_filename(), ad2cpfile)
+        processed_logger_other_files.append(ad2cpfile)
+
+        # Run the convertor to create a .mat file
         convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "ad2cpMAT")
         if not os.path.isfile(convertor):
             log_error("Convertor %s does not exits - not processing %s" % (convertor, fc.full_filename()))
@@ -118,6 +125,7 @@ def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, p
             return 1
             
         matfile = fc.mk_base_engfile_name().replace(".eng", ".mat")
+        
         cmdline = "%s %s %s" % (convertor, fc.full_filename(), matfile)
         log_info("Running %s" % cmdline)
         try:
@@ -131,14 +139,17 @@ def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, p
         processed_logger_other_files.append(matfile)
     return 0
 
-def eng_file_reader(eng_files, nc_info_d):
-    """ Reads the eng files for pmar instruments
+def eng_file_reader(eng_files, nc_info_d, calib_consts):
+    """ Reads the eng files for adcp instruments
 
-    eng_files - list of eng_file that contain one class of file
+    Input:
+        eng_files - list of eng_file that contain one class of file
+        nc_info_d - netcdf dictionary
+        calib_consts - calib conts dictionary
 
-    Returns
-    ret_list - list of (variable,data) tuples
-    netcdf_dict - dictionary of optional netcdf variable additions
+    Returns:
+        ret_list - list of (variable,data) tuples
+        netcdf_dict - dictionary of optional netcdf variable additions
 
     """
     netcdf_dict = {}

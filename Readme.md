@@ -61,7 +61,7 @@ On Ubuntu, use "sudo dpkg-reconfigure tzdata" to set UTC as the time zone.
 
 See the release notes at the bottom for more version specific details.
 
-This version of the code has been written to and tested against python 3.8.5.
+This version of the code has been written to and tested against python 3.9.6.
 
 See the relevant sections in the install steps on notes on packages versions.
 
@@ -76,7 +76,7 @@ to 2 packages:
 
 ## Installing python
 
-It is recommended that version 3.8.5 of python be installed along the a specific set of 
+It is recommended that version 3.9.6 of python be installed along the a specific set of 
 python support libraries.  The process is as follows:
 
 1. Install preliminaries
@@ -90,16 +90,16 @@ python3-dev python3-setuptools wget libgdbm-compat-dev uuid-dev
 2. Prepare to build
 
 ``` 
-mkdir /tmp/Python38
-cd /tmp/Python38
+mkdir /tmp/Python3.9
+cd /tmp/Python3.9
 ```
 
 3. Download python source distribution and build.  Depending on your machine, this can take a while
 
 ```
-wget https://www.python.org/ftp/python/3.8.5/Python-3.8.5.tar.xz
-tar xvf Python-3.8.5.tar.xz
-cd /tmp/Python38/Python-3.8.5
+wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tar.xz
+tar xvf Python-3.9.6.tar.xz
+cd /tmp/Python3.9/Python-3.9.6
 ./configure --enable-optimizations
 make 
 sudo make altinstall
@@ -108,7 +108,7 @@ sudo make altinstall
 4. Check build and install 
 
 ``` bash
-python3.8 --version
+python3.9 --version
 ```
 
 ## Install the basestation code and python packages
@@ -121,21 +121,14 @@ python3.8 --version
 
 ```
 cd /usr/local/Base-3.01
-pip3.8 install -r requirements.txt
+pip3.9 install -r requirements.txt
 ```
 
-5. Install additional plotting libs
-
-```
-sudo apt-get install libgeos-dev
-pip3.8 install git+https://github.com/matplotlib/basemap.git
-```
-
-6. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
+5. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
    using the command "sudo tar xvzf packages.tgz"
-7. In /usr/local/Base-3.01, run "sudo ./install_base.sh" to install the basestation code into /usr/local/basestation
+6. In /usr/local/Base-3.01, run "sudo ./install_base.sh" to install the basestation code into /usr/local/basestation
 
-8. In /usr/local/Base-3.01 run "sudo ./setup_users.sh" to setup the pilot and sg000 accounts
+7. In /usr/local/Base-3.01 run "sudo ./setup_users.sh" to setup the pilot and sg000 accounts
 
 -- OR --
 
@@ -284,18 +277,3 @@ N.B. The glider's user account must have write permissions to sg_calib_constants
 
 See FlightModel.pdf in the docs directory for further details.
 
--------------------
-Temp Notes - some of this is changing rapidly
-
-MakePlot4 plotting extension setup:
-
-Install xvfb:
-    sudo apt install xvfb
-
-Download orca app image (tested against 1.2.1) from https://github.com/plotly/orca/releases
-
-Create an orca app in /usr/local/bin/orca
-    #!/bin/bash                                                                                         
-    xvfb-run -a /usr/local/bin/orca-1.2.1-x86_64.AppImage "$@"
-
-sudo chmod +x /usr/local/bin/orca

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2009, 2011, 2012, 2013, 2014, 2015, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -251,6 +251,9 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
     hd_s = calib_consts['hd_s'] # how the drag scales by shape
     rho0 = calib_consts['rho0']
     glider_length = calib_consts['glider_length']
+
+    assert(hd_b != 0.0)
+    assert(hd_s != -1.0)
 
     # trace_comment('hd_a = %f' % hd_a);
     # trace_comment('hd_b = %f' % hd_b);

@@ -1,9 +1,10 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
-## 
-## Copyright (c) 2019, 2020 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## Copyright (c) 2019, 2020, 2021 by University of Washington.  All rights reserved.
+##
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -21,17 +22,21 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
+""" Support for posting .pagers messages to Slack or Mattermost
+"""
+
 import json
 import os
-import requests
-import string
 import sys
 import time
 
-import BaseOpts
+import requests
 
+import BaseOpts
 from BaseLog import log_error, log_info, BaseLogger
 
+
+# pylint: disable=unused-argument
 def post_slack(base_opts, instrument_id, slack_hook_url, subject_line, message_body):
     """Posts to slack channel
 
@@ -45,40 +50,79 @@ def post_slack(base_opts, instrument_id, slack_hook_url, subject_line, message_b
         1 - failure
     """
 
-    log_info("instrument_id:%s slack_hook_url:%s subject_line:%s message_body:%s" %
-             (instrument_id, slack_hook_url, subject_line, message_body))
+    log_info(
+        "instrument_id:%s slack_hook_url:%s subject_line:%s message_body:%s"
+        % (instrument_id, slack_hook_url, subject_line, message_body)
+    )
 
-    msg = {'text': "%s:%s" % (subject_line, message_body)}
+    msg = {"text": "%s:%s" % (subject_line, message_body)}
 
     try:
-        response = requests.post(slack_hook_url, data=json.dumps(msg), headers={'Content-Type': 'application/json'})
+        response = requests.post(
+            slack_hook_url,
+            data=json.dumps(msg),
+            headers={"Content-Type": "application/json"},
+        )
         if response.status_code != 200:
-            log_error('Request to slack returned an error %s, the response is:%s'
+            log_error(
+                "Request to slack returned an error %s, the response is:%s"
                 % (response.status_code, response.text)
             )
             return 1
     except:
-        log_error("Error in post", 'exc')
+        log_error("Error in post", "exc")
         return 1
 
     return 0
+
 
 if __name__ == "__main__":
     retval = 1
 
     # Force to be in UTC
-    os.environ['TZ'] = 'UTC'
+    os.environ["TZ"] = "UTC"
     time.tzset()
-    
-    base_opts = BaseOpts.BaseOptions(sys.argv, 'o')
-    BaseLogger("SlackPost", base_opts) # initializes BaseLog
 
-    args = base_opts.get_args() # positional arguments
+    base_options = BaseOpts.BaseOptions(
+        "Test entry for slack/mattermost message posting",
+        additional_arguments={
+            "slack_hook_url": BaseOpts.options_t(
+                None,
+                ("SlackPost",),
+                ("slack_hook_url",),
+                str,
+                {
+                    "help": "URL of the Slack/Mattermost hook",
+                },
+            ),
+            "subject_line": BaseOpts.options_t(
+                None,
+                ("SlackPost",),
+                ("subject_line",),
+                str,
+                {
+                    "help": "Subject line for post",
+                },
+            ),
+            "message_body": BaseOpts.options_t(
+                None,
+                ("SlackPost",),
+                ("message_body",),
+                str,
+                {
+                    "help": "Message body for the post",
+                },
+            ),
+        },
+    )
+    BaseLogger(base_options)  # initializes BaseLog
 
-    slack_hook_url = args[0]
-    subject_line = args[1]
-    gps_message = args[2]
-    
-    retval = post_slack(base_opts, "", slack_hook_url, subject_line, gps_message)
-    
+    retval = post_slack(
+        base_options,
+        "",
+        base_options.slack_hook_url,
+        base_options.subject_line,
+        base_options.message_body,
+    )
+
     sys.exit(retval)

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -47,6 +47,11 @@ import gsw
 from flight_data import *
 import copy # must be after numpy (and flight_data) import, since numpy has its own 'copy'
 import stat
+import pdb
+import traceback
+import numpy as np
+
+DEBUG_PDB = "darwin" in sys.platform
 
 # If you change
 # - the format of the flight_data class (which see),
@@ -178,12 +183,19 @@ biofouling_scale = 1.5 # what factor of the default hd_b is required to warn of 
 w_rms_func_bad = nan # 'normal'
 w_rms_func_bad = 1000 # tried inf but that failed
 # PARAMETERS used to filter which data are used in regressions
-required_fraction_good = 0.5 # PARAMETER how many of the dive's original points do we require?
-non_stalled_percent = 0.8 # PARAMETER
-missing_ct_threshold = 0.5 # PARAMETER what fraction of missing CT data (nans) indicates a suspect CT record (higher permits worse records)
-ignore_salinity_qc = False # PARAMETER whether to ignore salinity qc results in nc file
+# for shallow 200m dives this is about 20 pts during the dive and climb
+data_density_max_depth = 9 # PARAMETER final 'good' points should not be separated by more that N meters (higher is more permissive)
+decimation = 0; # DEAD debugging code for data_density_max_depth
+# raw temp and salinity will have NaN for timeout and unsampled points
+# if we want to eliminate flare, apo, spike and anomoly points, etc, then we need to use corrected salinity qc (but NOT the salinity values)
+ignore_salinity_qc = False # DEAD? PARAMETER whether to ignore salinity qc results in nc file 
+
+required_fraction_good = 0.5 # PARAMETER how many of the dive's good points remain after eliminating extreme pumps, rolls and pitches?
+non_stalled_percent = 0.8 # PARAMETER after fitting with given parameters, what fraction of the good points predict good (non-stalled) velocities
+
 # if 0, use all original valid points else limit the points to just the 'still water' with acceleration <dw/dt>)n_dives_grid_spacing less than value cm/s2
-limit_to_still_water = 0.01 # PARAMETER 
+limit_to_still_water = 0.01 # PARAMETER cm/s2 nominally 0.01 but higher if there is pressure sensor noise (TERIFIC) test mean(mdwdt) > limit_to_still_water
+max_speed = 200 # cm/s (deal with pressure sensor spikes?)
 # Avoid acceleration because of pumping and bleeding and big rolls
 vbddiffmax = 0.5 # PARAMETRER cc/s 
 # We seem to be able to fit steep,low power dives experienced at target turns.  See PAPA Jun09
@@ -363,7 +375,10 @@ def load_flight_database(base_opts,sg_calib_constants_d,verify=False,create_db=F
     if flight_dive_data_d is not None: # prior version exists?
         rebuild = flight_dive_data_d['fm_version'] != fm_version
         if verify: # have we filled sg_calib_constants_d with defaults for the assumption_variables?
-            rebuild = rebuild or len([variable for variable in assumption_variables if flight_dive_data_d[variable] != sg_calib_constants_d[variable]]) > 0
+            rebuild = rebuild or len(list(filter(lambda variable: (getattr(sg_calib_constants_d,variable,False) and
+                                                              flight_dive_data_d[variable] != sg_calib_constants_d[variable]),
+                                                 assumption_variables))) > 0
+            
         if rebuild:
             # assumptions differ somehow...
             log_warning("Assumptions changed; rebuilding flight data base.")
@@ -644,10 +659,26 @@ def get_flight_parameters(dive_num, base_opts, sg_calib_constants_d):
 
     # otherwise no specific dive data so let subsequent call get_FM_defaults() by MDP (in sg_config_constants()) fill in possible defaults
 
-def get_FM_defaults(glider_type,consts_d={}):
+def get_FM_defaults(consts_d={},glider_type=None):
     # TODO change parms.c to reflect new defaults
     # update/override variables in consts_d according to glider_type
     # Must supply a value for each of the flight_variables
+
+    if glider_type is None:
+        try:
+            if 'sg_configuration' not in consts_d:
+                raise RuntimeError("Internal Error - sg_configuration not specified")
+            
+            # MDP:sg_config_constants() calls with sg_configuration included
+            glider_type = {0: SEAGLIDER,
+                           1: SEAGLIDER,
+                           2: DEEPGLIDER,
+                           3: SEAGLIDER,
+                           4: OCULUS}[consts_d['sg_configuration']]
+        except KeyError:
+            raise RuntimeError("Unknown sg_configuration type %d!" % consts_d['sg_configuration'])
+    
+
     consts_d['rho0'] = FM_default_rho0
     consts_d['vbdbias'] = 0.0
     try:
@@ -657,6 +688,12 @@ def get_FM_defaults(glider_type,consts_d={}):
     except KeyError:
         log_warning('How can mass be missing?')
         pass
+
+    try:
+        mass_comp = consts_d['mass_comp']
+    except KeyError:
+        consts_d['mass_comp'] = 0
+    
     # Set the 'constant' values for flight model searches per vehicle type
     consts_d['hd_c'] = 5.7e-6 # induced drag (constant for all vehicles)
     # BAD consts_d['hd_c'] = 5.0e-5 # induced drag (constant for all vehicles) CCE 1/2019 from PAPA Jun09 steep low-thrust dives
@@ -675,7 +712,7 @@ def get_FM_defaults(glider_type,consts_d={}):
         consts_d['abs_compress'] =  4.1e-6 # m^3/dbar (slightly less than the compressibility of SW)
         if consts_d['mass'] > SGX_MASS:
             # An SGX, which are massive vehicles
-            log_info('Assuming this is an SGX vehicle', max_count=5)
+            log_info('FM:Assuming this is an SGX vehicle', max_count=1)
             consts_d['hd_a']    =   0.003548133892336
             consts_d['hd_b']    =   0.015848931924611 # a little more drag than even DGs
             consts_d['hd_s']    =   0.0 # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
@@ -709,8 +746,7 @@ def get_FM_defaults(glider_type,consts_d={}):
         # We force a plausible 'constant' here since there will be little pressure effect over 200m, the Oculus max depth
         # and we avoid estimating abs_compress below
         consts_d['abs_compress'] =  2.45e-6 # m^3/dbar
-    else:
-        raise RuntimeError("Unknown glider type %d from $DEEPGLIDER!" % glider_type)
+    return glider_type
 
 def dump_fm_values(dive_data):
     # For anxious pilots who want to see the solutions for each dive, dump in a format they can abuse into sg_calib_constants.m if desired
@@ -744,7 +780,8 @@ def dump_fm_values(dive_data):
 # Given a dive_data instance, open the nc file and load the vectors and other data we need for regression processing
 # make if data is ok and avoid loading again if known bad
 def load_dive_data(dive_data):
-    global nc_path_format, angles, compare_velo, mission_directory, missing_ct_threshold, ignore_salinity_qc
+    global nc_path_format, angles, compare_velo, mission_directory, ignore_salinity_qc, max_speed
+    global decimation,data_density_max_depth
     data_d = None
     if dive_data.dive_data_ok is False:
         # tried this before and it failed
@@ -779,8 +816,8 @@ def load_dive_data(dive_data):
         # SG eng time base
         eng_time = (dive_nc_file.variables['time'][:] - start_time)
         ctd_time = (dive_nc_file.variables['ctd_time'][:] - start_time)
-        np = len(ctd_time)
-        if np == 0:
+        num_pts = len(ctd_time)
+        if num_pts == 0:
             log_warning("No data for dive %d" % dive_num)
             raise RuntimeError # close the file handle below
 
@@ -827,23 +864,19 @@ def load_dive_data(dive_data):
 
         depth = dive_nc_file.variables['ctd_depth'][:]
         w = Utils.ctr_1st_diff(-depth * cm_per_m, ctd_time)
+        # if the pressure sensor is noisy then we can get poor results when looking for still water
+        w = Utils.medfilt1(w,L=min(num_pts,vbdbias_filter))
+        abs_w = abs(w)
         if limit_to_still_water:
-            dwdt = Utils.ctr_1st_diff(w, ctd_time)
-            mdwdt = Utils.medfilt1(dwdt, L=min(np, vbdbias_filter))
+            dwdt = abs(Utils.ctr_1st_diff(w, ctd_time))
+            mdwdt = Utils.medfilt1(dwdt, L=min(num_pts, vbdbias_filter))
         else:
-            mdwdt = zeros(np, float64) # assert everywhere is still
+            mdwdt = zeros(num_pts, float64) # assert everywhere is still
         # SG227 SODA Aug19 post dive 70 had intermittent pressure sensor issues so wildly bad w's
         # Consider adding tests to eliminate points that are driven by that noise (like limiting abs(dwdt) < 2cm/s^2
         # Thus we look for both quiet locations and actively expunge anti-quiet locations
         temperature_raw = dive_nc_file.variables['temperature_raw'][:]
         salinity_raw = dive_nc_file.variables['salinity_raw'][:]
-        tnan = float(len(where(isnan(temperature_raw))[0]))/np
-        snan = float(len(where(isnan(salinity_raw))[0]))/np
-        if (tnan > missing_ct_threshold or # in case T channel is bad
-            snan > missing_ct_threshold):  # in case C channel is bad
-            # report the fraction of bad points in T and S (generally they are the same)
-            log_warning("Dive %d is missing sufficient CT data (T:%.2f, S:%.2f)" % (dive_num,tnan,snan))
-            raise RuntimeError
         
         if Globals.f_use_seawater:
             density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
@@ -878,7 +911,7 @@ def load_dive_data(dive_data):
                 try:
                     velo_data_d = sio.loadmat(velo_pathname);
                     velo_speed = velo_data_d['velo_speed']
-                    velo_speed = reshape(velo_speed,np,1)
+                    velo_speed = reshape(velo_speed,num_pts,1)
                     correct_aoa_velo = False # externally measured
                 except:
                     pass
@@ -887,23 +920,33 @@ def load_dive_data(dive_data):
 
         # TODO real(density_insitu)
         # Find where data was apparently good
-        good_pts = zeros(np)
+        good_pts = zeros(num_pts)
         good_pts_i_v = list(filter(lambda i:
                               isfinite(temperature_raw[i]) and
                               isfinite(salinity_raw[i]) and
                               (pressmin <= press[i] <= pressmax) and
                               (not n_velo or isfinite(velo_speed[i])) and
-                              mdwdt[i] <= limit_to_still_water, # strictly <= so zero forces True
-                              range(np)))
+                              mdwdt[i] <= limit_to_still_water and
+                              abs_w[i] <= max_speed,
+                              range(num_pts)))
+        if len(good_pts_i_v) == 0:
+            log_warning("Dive %d has no good points; pressure sensor noise? (mean: %f min: %f)" % (dive_num,mean(mdwdt),min(mdwdt)))
+            return data_d
 
-        npts = len(good_pts_i_v)
         if not ignore_salinity_qc:
             # if we have a mis-estimate of the flight model parameters, notably volmax/vbdbias, etc
             # then we will have stalled speed_hdm solutions and hence QC_PROBABLY_BAD marks in salinity_qc
             # avoid those in the hope our searches find a better set of parameters
             # Cannot be salinity_raw_qc because apogee, surface, are not removed
+            # NOTE BUG: if solve_flare_apogee_speed is set in sg_calib_constants when flare/apogee/climb pump speeds
+            # are computed using the momentum balance eqns and the points we want to remove are set to QC_PROBABLY_GOOD
+            # and we include those accelerations in the good points. But the HDM code, which we rely upon, doesn't
+            # solve for those points well do we can get messed up.
+            # Need to mark those points separately in anpther vector showing accelerations? and use that here?
+            # Mark as VBD/pitch/roll flags per point.
+            # Have HDM solve during those points?
             salinity_qc = decode_qc(dive_nc_file.variables['salinity_qc'])
-            good_qc_i_v = list(filter(lambda i: salinity_qc[i] not in [QC_BAD,QC_UNSAMPLED],range(np)))
+            good_qc_i_v = list(filter(lambda i: salinity_qc[i] not in [QC_BAD,QC_UNSAMPLED],range(num_pts)))
             good_pts_i_v = intersect1d(good_pts_i_v,good_qc_i_v)
 
         # TODO?
@@ -912,23 +955,36 @@ def load_dive_data(dive_data):
         # then intersect any indicies with good_pts
         # what about 'flight_model_force' to ensure points are added anyway?
         # Add these directives to QC.py:drv_functions and ensure data (depth, etc.) is asserted to directives for eval
+
         npts = len(good_pts_i_v)
+        if data_density_max_depth:
+            mdd = mean(abs(diff(depth[good_pts_i_v])))
+            if mdd > data_density_max_depth:
+                log_warning("Dive %d mean data density too sparse: %d pts %.1fm " % (dive_num,npts,mdd))
+                raise RuntimeError
+
         if npts == 0:
             n_valid = 0
             fraction_good = 0
         else:
+            if decimation: # DEBUG -- code to determine minimum data point density that yield good results
+                # experimentally reduce good points and see impact on results
+                good_pts_i_v = good_pts_i_v[range(0,npts,decimation)]
+                npts = len(good_pts_i_v)
+                log_info("Dive %d decimated %d/%d %.2fm " % (dive_num,decimation,npts,mean(abs(diff(depth[good_pts_i_v])))))
+                
             good_pts[good_pts_i_v] = 1
             # reduce to valid points and place in data_d = {} if good
             aroll = abs(eng_roll_ang)
             apitch = abs(eng_pitch_ang)
-            delta_t = zeros(np, float64)
-            delta_t[0:np-1] = ctd_time[1:np] - ctd_time[0:np-1]
+            delta_t = zeros(num_pts, float64)
+            delta_t[0:num_pts-1] = ctd_time[1:num_pts] - ctd_time[0:num_pts-1]
             delta_t[-1] = delta_t[-2]
-            vbddiff = zeros(np, float64)
-            vbddiff[1:np] = diff(eng_vbd_cc)/delta_t[1:np]
+            vbddiff = zeros(num_pts, float64)
+            vbddiff[1:num_pts] = diff(eng_vbd_cc)/delta_t[1:num_pts]
             avbddiff = abs(fix(vbddiff))
             # TODO replace this with intersect1d calls for speed
-            valid_i = [i for i in range(np) if ((ignore_speed_gsm or speed_gsm[i] > 0) and
+            valid_i = [i for i in range(num_pts) if ((ignore_speed_gsm or speed_gsm[i] > 0) and
                                         # isfinite(temperature_raw[i]) and isfinite(salinity_raw[i]) and (pressmin <= press[i] <= pressmax) and
                                         good_pts[i] and
                                         (avbddiff[i] < vbddiffmax) and
@@ -1078,11 +1134,11 @@ def w_rms_func(vbdbias,a,b,abs_compress, # these variables can be varied by vari
         
     w_rms = w_rms_func_bad # assume stalled everywhere
     w_rms_components = []
-    np = len(w)
-    valid_i = Utils.setdiff(list(range(np)), fv_stalled_i_v)
+    num_pts = len(w)
+    valid_i = Utils.setdiff(list(range(num_pts)), fv_stalled_i_v)
     valid_pts = float(len(valid_i))
     # TODO really we should record dive and climb profile numbers and ensure so fraction of both for each dive number are solved
-    if hm_converged and valid_pts > 0 and valid_pts/np > non_stalled_percent:
+    if hm_converged and valid_pts > 0 and valid_pts/num_pts > non_stalled_percent:
         def rms(x):
             return sqrt(nanmean(x**2))
         
@@ -1974,6 +2030,25 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                     log_warning('Ignoring bad grid solution over %s!' % dive_set)
                     continue
                 W_misfit_RMS = W_misfit_RMS - min_misfit
+                if compare_velo == 0:
+                    # Unless compare_velo is non-zero (e.g., velocimeter) hd_a
+                    # is not well constrained even if trusted (really about b)
+                    # so most values of hd_a 'work' above 0.003.  However,
+                    # certain mixtures of dives might cause the solution set to
+                    # prefer an apparently high hd_a (0.01) even though there are
+                    # smaller values are equally acceptable. See SG236 NANOOS
+                    # Sep20 dives 27, 28 grid
+
+                    # Don't change too much away from existing a (typically the
+                    # default) except to move away from small values.
+                    # predicted_hd_a is prevailing value before adoptiong new grid value
+                    x_a_i = list(filter(lambda a: W_misfit_RMS[ib,a] <= ab_tolerance and hd_a_grid[a] >= predicted_hd_a,range(len(hd_a_grid))))
+                    if len(x_a_i):
+                        x_a_i = x_a_i[0]
+                        if x_a_i != ia:
+                            log_info('Assuming hd_a=%.4g rather than %.4g' % (hd_a_grid[x_a_i], hd_a_grid[ia]))
+                            ia = x_a_i
+
                 # cache to avoid this expensive calculation next time
                 ab_grid_cache_d[dive_num] = (W_misfit_RMS, ia, ib, min_misfit, dive_set, pitch_diff)
 
@@ -2421,8 +2496,10 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 # so os.waitpid does not hang.  Even using Popen.communicate() would have this problem
                 # plus we want to have a record of the output...which we save to the flight subdirectory
                 # time.strftime("%d%b%Y_%H%M%S", time.gmtime(time.time()))
+                
+                #TODO - need to evaluate the merit of a launch vs direct invokation
                 reprocess_log = os.path.join(flight_directory, 'Reprocess_%04d_%.f.log' % (max(flight_dive_nums), time.time()))
-                Utils.run_cmd_shell('python3.8 %s --force -v --mission_dir %s %s  > %s 2>&1' %
+                Utils.run_cmd_shell('python3.9 %s --force -v --mission_dir %s %s  > %s 2>&1' %
                                     (os.path.join(base_opts.basestation_directory, 'Reprocess.py'),
                                      mission_directory, dives, reprocess_log))
 
@@ -2467,7 +2544,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
 # Called as an extension or via cmdline_main() below
 def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_file_names=None, nc_files_created=None,
          processed_other_files=None, known_mailer_tags=None, known_ftp_tags=None, processed_file_names=None, exit_event=None):
-    """Basestation extension for evaluating flight model parameters from dive data
+    """Basestation support for evaluating flight model parameters from dive data
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -2482,9 +2559,8 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     global ab_grid_cache_d, restart_cache_d, angles, grid_spacing_keys, grid_dive_sets, dump_checkpoint_data_matfiles
     
     if(base_opts is None):
-        base_opts = BaseOpts.BaseOptions(sys.argv, 'g',
-                                         usage="%prog [Options] ")
-    BaseLogger("FlightModel", base_opts) # initializes BaseLog
+        base_opts = BaseOpts.BaseOptions("Basestation support for evaluating flight model parameters from dive data")
+    BaseLogger(base_opts) # initializes BaseLog
 
     Utils.check_versions()
 
@@ -2498,42 +2574,39 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         log_error("mission directory not set - bailing out")
         return 1
 
-    # DEBUG log_info("Matplotlib version %s" % matplotlib.__version__)
-    if True:
-        # update global variables from cnf file(s)
-        import configparser
-        cnf_file = 'flight_model.cnf'
-        # Important NOTE:
-        # all the names (but NOT the values) in the name,value pairs are coerced to lowercase!
-        # build from globals_d and declarations
-        files = [];
-        cp = configparser.RawConfigParser({})
-        try:
-            files = cp.read([os.path.join(base_opts.basestation_directory, cnf_file),
-                             os.path.join(mission_directory, cnf_file)])
-        except:
-            # One way to get here is to have continuation lines on an entry 
-            # that are not indented by a single space AND have a colon somewhere in the line
-            # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
-            # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
-            log_warning('Problems reading information from %s' % cnf_file) # problems...
-        else:
-            globs = globals() # we will update globals() as a side effect below
-            for pair in cp.items('FlightModel'): # keys are stored as lowercase!!
-                name,value = pair
-                try:
-                    ovalue = globs[name]
-                except KeyError:
-                    log_error('Unknown parameter %s' % name)
-                    continue
-                try:
-                    evalue = eval(value) # can't use = in expressions to eval
-                except:
-                    log_error(' Unable to interpret %s as a value for %s' % (value,name)) 
-                    continue
-                log_info(' Updating %s from %s to %s' % (name,ovalue,evalue)) # echo to log file
-                globs[name] = evalue
-
+    # update global variables from cnf file(s)
+    import configparser
+    cnf_file = 'flight_model.cnf'
+    # Important NOTE:
+    # all the names (but NOT the values) in the name,value pairs are coerced to lowercase!
+    # build from globals_d and declarations
+    files = [];
+    cp = configparser.RawConfigParser({})
+    try:
+        files = cp.read([os.path.join(base_opts.basestation_directory, cnf_file),
+                         os.path.join(mission_directory, cnf_file)])
+    except:
+        # One way to get here is to have continuation lines on an entry 
+        # that are not indented by a single space AND have a colon somewhere in the line
+        # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
+        # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
+        log_warning('Problems reading information from %s' % cnf_file) # problems...
+    else:
+        globs = globals() # we will update globals() as a side effect below
+        for pair in cp.items('FlightModel'): # keys are stored as lowercase!!
+            name,value = pair
+            try:
+                ovalue = globs[name]
+            except KeyError:
+                log_error('Unknown parameter %s' % name)
+                continue
+            try:
+                evalue = eval(value) # can't use = in expressions to eval
+            except:
+                log_error(' Unable to interpret %s as a value for %s' % (value,name)) 
+                continue
+            log_info(' Updating %s from %s to %s' % (name,ovalue,evalue)) # echo to log file
+            globs[name] = evalue
 
     # At this point all global parameters are updated so derive things from them
     grid_spacing_keys = sorted(list(grid_spacing_d.keys()))
@@ -2622,9 +2695,9 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             log_error("Unable to open %s to establish glider type" % dive_nc_file_name)
             return 1
         try:
-            glider_type = dive_nc_file.variables['log_DEEPGLIDER'].getValue()
+            log_deepglider = dive_nc_file.variables['log_DEEPGLIDER'].getValue()
         except KeyError:
-            glider_type = SEAGLIDER # assume SG
+            log_deepglider = SEAGLIDER # assume SG (0)
         try:
             sim_w = dive_nc_file.variables['log_SIM_W'].getValue()
         except KeyError:
@@ -2646,11 +2719,13 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             max_density = FM_default_rho0
         dive_nc_file.close()
 
-    if old_basestation:
-        MakeDiveProfiles.sg_config_constants(sg_calib_constants_d, None, {})
-        get_FM_defaults(glider_type, sg_calib_constants_d)
-    else:
-        MakeDiveProfiles.sg_config_constants(sg_calib_constants_d, glider_type, has_gpctd)
+        if old_basestation:
+            MakeDiveProfiles.sg_config_constants(sg_calib_constants_d,None,{})
+            glider_type = get_FM_defaults(sg_calib_constants_d)
+        else:
+            # the new sg_config_constants calls  get_FM_defaults recursively and returns glider_type
+            glider_type = MakeDiveProfiles.sg_config_constants(sg_calib_constants_d,log_deepglider,has_gpctd)
+        
     # (re)load or create the flight model db and ensure the assumptions of sg_calib_constants_d haven't changed
     flight_dive_data_d = None # reset and try loading again
     reinitialized = load_flight_database(base_opts, sg_calib_constants_d, verify=True, create_db=True)
@@ -2685,7 +2760,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         # Override whatever the pilot might have provided for FM parameters with our defaults
         # do this once when the db is being created and cache in flight_dive_data_d
         # but do this after loading the users sg_calib_constants (to get mass, id_str, etc.)
-        get_FM_defaults(glider_type, flight_dive_data_d)
+        get_FM_defaults(flight_dive_data_d,glider_type=glider_type)
         # Now Add additional defaults for the flight data base
 
         # Verify expected range of mass/mass_comp
@@ -2734,7 +2809,8 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
                 flight_dive_data_d['glider_type_string'] = 'SGX'
                 # Apparently substantially lower drag.
                 # NOTE this sets the drag grid directly, not log10hd_b_grid
-                hd_b_grid = linspace(0.0000, 0.030, 25)
+                # NOTE start the grid at 0.001 to avoid feeding a hd_b of zero into hydro_model
+                hd_b_grid = linspace(0.001, 0.030, 25)
             
         elif glider_type == DEEPGLIDER:
             flight_dive_data_d['glider_type_string'] = 'DG'
@@ -2804,6 +2880,10 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         log_info('CONTROL: reprocessing=%s compare_velo=%d hd_a_scale=%.2f hd_b_scale=%.2f' %
                  (enable_reprocessing_dives, compare_velo, predicted_hd_a_scale, predicted_hd_b_scale))
 
+    # Ensure that the hd_b_grid contains no zero values - those cause
+    # the hydro model to blow up and slows down all processing for no useful purpose
+    hd_b_grid[hd_b_grid == 0.0] = 0.001
+        
     ## Main processing loop
     # Scan to see what files need to be worked on
     new_dive_nums = []
@@ -2891,24 +2971,12 @@ def cmdline_main():
         1 - failure
     """
     global mission_directory
-    base_opts = BaseOpts.BaseOptions(sys.argv, 'd',
-                                     usage="%prog [Options] [basefile]")
+    base_opts = BaseOpts.BaseOptions("Command line driver for updateing flight model data")
     
-    BaseLogger("FlightModel", base_opts) # initializes BaseLog
-    args = base_opts.get_args() # positional arguments
-    if len(args) < 1 and not base_opts.mission_dir:
-        print((cmdline_main.__doc__))
-        return 1
+    BaseLogger(base_opts) # initializes BaseLog
+    
+    mission_directory = base_opts.mission_dir
 
-    if(base_opts.mission_dir):
-        mission_directory = os.path.expanduser(base_opts.mission_dir)
-        base_opts.mission_dir = mission_directory
-        if (not os.path.isdir(mission_directory)):
-            log_error("Directory %s does not exist -- exiting" % mission_directory)
-            return 1
-    else:
-        log_error("No --mission_dir specified")
-        return 1
     return process_directory(base_opts)
 
 # can be called from multiprocessing scheme
@@ -2931,6 +2999,11 @@ def process_directory(base_opts):
         # run like an extension
         return main(instrument_id=instrument_id, base_opts=base_opts, sg_calib_file_name=sg_calib_file_name, nc_files_created=nc_files_created)
     except KeyboardInterrupt:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+
         log_error("Keyboard interrupt - breaking out")
         return 1
     
@@ -2945,19 +3018,28 @@ if __name__ == "__main__":
     os.environ['TZ'] = 'UTC'
     time.tzset()
 
+    np.seterr(divide='raise', invalid='raise')
+
     try:
         if "--profile" in sys.argv:
             sys.argv.remove('--profile')
             profile_file_name = os.path.splitext(os.path.split(sys.argv[0])[1])[0] + '_' \
                 + Utils.ensure_basename(time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))) + ".cprof"
             # Generate line timings
-            retval = cProfile.run("main()", filename=profile_file_name)
+            retval = cProfile.run("cmdline_main()", filename=profile_file_name)
             stats = pstats.Stats(profile_file_name)
             stats.sort_stats('time', 'calls')
             stats.print_stats()
         else:
             retval = cmdline_main()
+    except SystemExit:
+        pass
     except Exception:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)

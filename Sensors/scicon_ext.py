@@ -41,6 +41,7 @@ from BaseLog import *
 from BaseNetCDF import *
 import DataFiles
 import Sensors
+import FileMgr
 from scipy.io import loadmat
 
 import pdb
@@ -66,6 +67,7 @@ ad2cp_single_value = ('blanking', 'cellSize', 'soundspeed')
 data_file_metadata =  collections.namedtuple('data_file_metadata', ['start_time', 'stop_time', 'samples', 'instrument', 'columns', 'scale_off', 'container', 'comment', 'sealevel'])
 instrument_type = collections.namedtuple('instrument_type', ['instr_instance', 'instr_class'])
 scale_off_type = collections.namedtuple('scale_off_type', ['scale', 'offset'])
+
 
 def process_adcp_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_eng_files, processed_logger_other_files):
     """Processes other files
@@ -129,24 +131,7 @@ def process_camfb_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_
         if len(ll) < 2:
             continue
         if ll.startswith("% start:"):
-            _, time_parts_str = ll.split(":", 1)
-            time_parts = time_parts_str.split()
-
-            if(int(time_parts[2]) - 100 < 0):
-                year_part = int(time_parts[2])
-            else:
-                year_part = int(time_parts[2]) - 100
-
-            sec_parts = time_parts[5].split('.')
-            sec_part = sec_parts[0]
-            if(len(sec_parts) == 2):
-                _, dec_sec_part = math.modf(float(time_parts[5]))
-            else:
-                dec_sec_part = 0.0
-
-            time_string = "%s %s %02d %s %s %s" % (time_parts[0], time_parts[1], year_part,
-                                                   time_parts[3], time_parts[4], sec_part)
-            start_time = time.mktime(Utils.fix_gps_rollover(time.strptime(time_string, "%m %d %y %H %M %S"))) + dec_sec_part
+            start_time = Utils.parse_time(ll.split(":", 1)[1], f_gps_rollover=True)
             continue
         elif ll.startswith("%"):
             continue
@@ -231,12 +216,6 @@ def init_logger(module_name, init_dict=None):
         # NOTE these are not presently included in MMT/MMP because their length isn't sg_np
         'depth_time': [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Pressure sensor time in GMT epoch format'}, (nc_depth_data_info,)],
         'depth_depth': [False, 'd', {'standard_name':'depth', 'positive':'down', 'units':'cm', 'description':'Measured vertical distance below the surface'}, (nc_depth_data_info,)],
-        'depth_ontime_a': [False, 'd', {'description':'depth total time turned on dive', 'units' : 'secs'}, nc_scalar],
-        'depth_samples_a': [False, 'i', {'description':'depth total number of samples taken dive'}, nc_scalar],
-        'depth_timeouts_a': [False, 'i', {'description':'depth total number of timeouts on dive'}, nc_scalar],
-        'depth_ontime_b': [False, 'd', {'description':'depth total time turned on climb', 'units' : 'secs'}, nc_scalar],
-        'depth_samples_b': [False, 'i', {'description':'depth total number of samples taken climb'}, nc_scalar],
-        'depth_timeouts_b': [False, 'i', {'description':'depth total number of timeouts on climb'}, nc_scalar],
 
         # adcp on scicon
         'ad2cp_pressure': [False, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Pressure as reported by the CP'}, (nc_ad2cp_data_info,)],
@@ -253,6 +232,12 @@ def init_logger(module_name, init_dict=None):
         'ad2cp_cellSize': [False, 'd', {'description':'Size of cells', 'units':'mm'}, nc_scalar],
         'ad2cp_soundspeed': [False, 'd', {'description':'Assumed sound speed', 'units':'m/s'}, nc_scalar],
     }
+
+    for cast, descr in FileMgr.cast_descr:
+        scicon_metadata_adds[f'depth_ontime_{cast}'] = [False, 'd', {'description':f'depth total time turned on {descr}', 'units' : 'secs'}, nc_scalar]
+        scicon_metadata_adds[f'depth_samples_{cast}'] = [False, 'i', {'description':f'depth total number of samples taken {descr}'}, nc_scalar]
+        scicon_metadata_adds[f'depth_timeouts_{cast}'] = [False, 'i', {'description':f'depth total number of timeouts on {descr}'}, nc_scalar]
+    
 
     # Aux compass/pressure sensor
     for auxname, aux_data_info in (('auxCompass', nc_auxcompass_data_info), ('auxB', nc_auxb_data_info)):
@@ -275,12 +260,10 @@ def init_logger(module_name, init_dict=None):
         scicon_metadata_adds[f'{auxname}_pressureTemp'] = [False, 'c', {'description':f'{auxname} pressure sensor temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_internalTemp'] = [False, 'c', {'description':f'{auxname} interernal temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_temperature'] = [False, 'c', {'description':f'{auxname} interernal temperature', 'units' : 'degrees_Celsius'}, (aux_data_info,)]
-        scicon_metadata_adds[f'{auxname}_ontime_a'] = [False, 'd', {'description':f'{auxname} total time turned on dive', 'units' : 'secs'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_samples_a'] = [False, 'i', {'description':f'{auxname} total number of samples taken dive'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_timeouts_a'] = [False, 'i', {'description':f'{auxname} total time turned samples timedout on dive', 'units' : 'secs'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_ontime_b'] = [False, 'd', {'description':f'{auxname} total time turned on climb', 'units' : 'secs'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_samples_b'] = [False, 'i', {'description':f'{auxname} total number of samples taken climb'}, nc_scalar]
-        scicon_metadata_adds[f'{auxname}_timeouts_b'] = [False, 'i', {'description':f'{auxname} total time turned samples timedout on climb', 'units' : 'secs'}, nc_scalar]
+        for cast, descr in FileMgr.cast_descr:
+            scicon_metadata_adds[f'{auxname}_ontime_{cast}'] = [False, 'd', {'description':f'{auxname} total time turned on {descr}', 'units' : 'secs'}, nc_scalar]
+            scicon_metadata_adds[f'{auxname}_samples_{cast}'] = [False, 'i', {'description':f'{auxname} total number of samples taken {descr}'}, nc_scalar]
+            scicon_metadata_adds[f'{auxname}_timeouts_{cast}'] = [False, 'i', {'description':f'{auxname} total time turned samples timedout on {descr}', 'units' : 'secs'}, nc_scalar]
         scicon_metadata_adds[f'sg_cal_{auxname}_coeffhex'] = [False, 'c', {'description':f'{auxname} coefficients'}, nc_scalar]
         scicon_metadata_adds[f'sg_cal_{auxname}_abc'] = [False, 'c', {'description':f'{auxname} soft-iron correction'}, nc_scalar]
         scicon_metadata_adds[f'sg_cal_{auxname}_pqr'] = [False, 'c', {'description':f'{auxname} hard-iron correction'}, nc_scalar]
@@ -432,31 +415,15 @@ def extract_file_metadata(inp_file_name):
             if(raw_strs[0] == '%xform' or raw_strs[0] == '%tcm2mat' or raw_strs[0] == '%pressure'):
                 ret_list.append(('auxCompass_%s' % raw_strs[0][1:], raw_strs[1].strip()))
             elif(raw_strs[0] == "%start" or raw_strs[0] == "%stop"):
-                time_parts = raw_strs[1].split()
-                if(int(time_parts[2]) - 100 < 0):
-                    year_part = int(time_parts[2])
-                else:
-                    year_part = int(time_parts[2]) - 100
-
-                sec_parts = time_parts[5].split('.')
-                sec_part = sec_parts[0]
-                if(len(sec_parts) == 2):
-                    _, dec_sec_part = math.modf(float(time_parts[5]))
-                else:
-                    dec_sec_part = 0.0
-
-                time_string = "%s %s %02d %s %s %s" % (time_parts[0], time_parts[1], year_part,
-                                                       time_parts[3], time_parts[4], sec_part)
-
                 if(raw_strs[0] == "%start"):
-                    start_time = time.mktime(Utils.fix_gps_rollover(time.strptime(time_string, "%m %d %y %H %M %S"))) + dec_sec_part
+                    start_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
                 else:
-                    stop_time = time.mktime(Utils.fix_gps_rollover(time.strptime(time_string, "%m %d %y %H %M %S"))) + dec_sec_part
+                    stop_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
             elif raw_strs[0] == '%ontime':
                 if not Utils.is_float(raw_strs[1].strip()):
                     log_warning("Could not convert %s to float - skipping" % raw_strs[1].strip())
                 else:
-                    if container is not None and (container[-1] in ('a', 'b')):
+                    if container is not None and (container[-1] in ('a', 'b', 'c', 'd')):
                         instrument_name = [instrument.instr_class]
                         Sensors.process_sensor_extensions('remap_instrument_names', instrument_name)
                         ret_list.append(('%s_%s_%s' % (instrument_name[0], raw_strs[0][1:], container[-1]), float(raw_strs[1].strip()) / 1000.))
@@ -466,7 +433,7 @@ def extract_file_metadata(inp_file_name):
                 if not Utils.is_integer(raw_strs[1].strip()):
                     log_warning("Could not convert %s to int - skipping" % raw_strs[1].strip())
                 else:
-                    if container is not None and (container[-1] in ('a', 'b')):
+                    if container is not None and (container[-1] in ('a', 'b', 'c', 'd')):
                         instrument_name = [instrument.instr_class]
                         Sensors.process_sensor_extensions('remap_instrument_names', instrument_name)
                         ret_list.append(('%s_%s_%s' % (instrument_name[0], raw_strs[0][1:], container[-1]), int(raw_strs[1].strip())))
@@ -718,13 +685,17 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
 
     return 0
 
-def eng_file_reader(eng_files, nc_info_d):
-    """ Reads the eng files for scicon instruments
+def eng_file_reader(eng_files, nc_info_d, calib_consts):
+    """ Reads the eng files for scicon instruments 
 
-    eng_files - list of eng_file
+    Input:
+        eng_files - list of eng_file that contain one class of file
+        nc_info_d - netcdf dictionary
+        calib_consts - calib conts dictionary
 
-    Returns
-    None,None - error
+    Returns:
+        ret_list - list of (variable,data) tuples
+        netcdf_dict - dictionary of optional netcdf variable additions
 
     """
     log_debug("%s" % eng_files)
@@ -809,9 +780,10 @@ def eng_file_reader(eng_files, nc_info_d):
             return None, None
 
     # Process non-adcp data
-    casts = sorted(df_meta.keys())
+    #casts = sorted(df_meta.keys())
+    casts = list(df_meta.keys())
 
-    eng_f = DataFiles.DataFile('eng', None)
+    eng_f = DataFiles.DataFile('eng', calib_consts)
     # assume the column names are uniform between casts
     eng_f.columns = df_meta[casts[0]].columns.split()
     eng_f.remap_engfile_columns()

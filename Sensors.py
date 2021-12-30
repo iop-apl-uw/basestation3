@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -35,6 +35,7 @@ import collections
 from BaseNetCDF import *
 from BaseLog import *
 import Utils
+import LogFile
 
 import traceback
 
@@ -278,6 +279,10 @@ def init_extensions(base_opts):
     register_sensor_dim_info(nc_gps_info_info, nc_dim_gps_info, 'log_gps_time', False, None) # could be GPS model
     register_sensor_dim_info(nc_gc_event_info, nc_dim_gc_event, 'gc_st_secs', False, None)
     register_sensor_dim_info(nc_gc_state_info, nc_dim_gc_state, 'gc_state_secs', False, None)
+    # Register all possible gc_msg dimensions
+    for msg in LogFile.msg_gc_entries:
+        register_sensor_dim_info(f"{nc_gc_msg_prefix}{msg}_info", f"{nc_gc_msg_prefix}{msg}", f"{nc_gc_msg_prefix}{msg}_secs", False, None)
+    
     register_sensor_dim_info(nc_ctd_results_info, nc_dim_ctd_data_point, nc_ctd_time_var, False, None) 
 
     sensor_extensions = SensorExtensions(base_opts)

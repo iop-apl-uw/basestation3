@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
 ##
 ## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
@@ -42,8 +43,15 @@ import shutil
 import sys
 import time
 
-#import NODC
-from BaseLog import BaseLogger, log_debug, log_info, log_error, log_warning, log_critical
+# import NODC
+from BaseLog import (
+    BaseLogger,
+    log_debug,
+    log_info,
+    log_error,
+    log_warning,
+    log_critical,
+)
 from CalibConst import getSGCalibrationConstants
 import BaseNetCDF
 import BaseOpts
@@ -58,6 +66,7 @@ import QC
 import Sensors
 import TraceArray
 import Utils
+
 
 def main():
     """Command line driver for reprocessing per-dive and other nc files
@@ -93,16 +102,25 @@ def main():
         0 - success
         1 - failure
     """
-    base_opts = BaseOpts.BaseOptions(sys.argv, "d", usage="%prog [Options] [basefile]")
+    base_opts = BaseOpts.BaseOptions(
+        "Command line driver for reprocessing per-dive and other nc files",
+        additional_arguments={
+            "dive_specs": BaseOpts.options_t(
+                None,
+                ("Reprocess",),
+                ("dive_specs",),
+                str,
+                {
+                    "help": "dive numbers to reprocess - either single dive nums or a range in the form X:Y",
+                    "nargs": "*",
+                },
+            ),
+        },
+    )
 
-    BaseLogger("Reprocess", base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)  # initializes BaseLog
 
     Utils.check_versions()
-    args = base_opts.get_args()  # positional arguments
-
-    if not base_opts.mission_dir:
-        print((main.__doc__))
-        return 1
 
     # Reset priority
     if base_opts.nice:
@@ -149,9 +167,9 @@ def main():
 
             full_dive_list = sorted(Utils.unique(full_dive_list))
 
-        if len(args):
+        if len(base_opts.dive_specs):
             expanded_dive_nums = []
-            for dive_num in args:
+            for dive_num in base_opts.dive_specs:
                 strs = dive_num.split(":", 1)
                 if len(strs) == 2:
                     expanded_dive_nums.extend(
@@ -298,7 +316,11 @@ def main():
         if not temp_ret_val:
             # no problem writting the nc file, try for the others
             dive_nc_file_names.append(nc_dive_file_name)
-            if base_opts.make_dive_kkyy or base_opts.make_dive_pro or base_opts.make_dive_bpo:
+            if (
+                base_opts.make_dive_kkyy
+                or base_opts.make_dive_pro
+                or base_opts.make_dive_bpo
+            ):
                 MakeDiveProfiles.write_auxillary_files(
                     base_opts,
                     nc_dive_file_name,
@@ -380,9 +402,7 @@ def main():
                 "Started MMT processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
             )
-            MakeDiveProfiles.make_mission_timeseries(
-                all_dive_nc_file_names, base_opts
-            )
+            MakeDiveProfiles.make_mission_timeseries(all_dive_nc_file_names, base_opts)
             log_info(
                 "Finished MMT processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))

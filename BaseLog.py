@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -27,6 +27,7 @@ import logging
 import collections
 import BaseOpts
 from io import StringIO
+import inspect
 
 # CONSIDER make adding code location an option for debugging
 # e.g., BaseLogger.opts.log_code_location
@@ -64,7 +65,7 @@ class BaseLogger:
     alerts_d = {}
     conversion_alerts_d = {}
 
-    def __init__(self, name, opts=None, include_time=False):
+    def __init__(self, opts, include_time=False):
         """
         Initializes a logging.Logger object, according to options (opts).
         """
@@ -73,13 +74,17 @@ class BaseLogger:
             BaseLogger.self = self
             BaseLogger.opts = opts
 
+            calling_module = os.path.splitext(
+                os.path.split(inspect.stack()[1].filename)[1]
+            )[0]
+
             #create logger
-            BaseLogger.log = logging.getLogger(name)
+            BaseLogger.log = logging.getLogger(calling_module)
             BaseLogger.log.setLevel(logging.DEBUG)
 
             # create a file handler if log filename is specified in opts
             if opts is not None:
-                if (opts.base_log is not None and opts.base_log is not ""):
+                if (opts.base_log is not None and opts.base_log != ""):
                     fh = logging.FileHandler(opts.base_log)
                     # fh.setLevel(logging.NOTSET) # messages of all levels will be recorded
                     self.setHandler(fh, opts, include_time)
@@ -209,11 +214,11 @@ def log_alerts():
 def log_conversion_alerts():
     return BaseLogger.conversion_alerts_d
 
-def log_conversion_alert(key, s):
+def log_conversion_alert(key, msg, resend):
     conversion_alerts_d = BaseLogger.conversion_alerts_d
     if key not in conversion_alerts_d:
         conversion_alerts_d[key] = []
-    conversion_alerts_d[key].append(s)
+    conversion_alerts_d[key].append((msg, resend))
 
 def log_alert(key, s):
     alerts_d = BaseLogger.alerts_d

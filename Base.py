@@ -148,10 +148,10 @@ urllib.request.FancyURLopener.prompt_user_passwd = my_prompt_user_passwd
 def read_processed_files(glider_dir, instrument_id):
     """Reads the processed file cache
 
-       Returns: list of processed dive files and a list of processed pdos logfiles
-                None for error opening the file
+    Returns: list of processed dive files and a list of processed pdos logfiles
+             None for error opening the file
 
-       Raises: IOError for file errors
+    Raises: IOError for file errors
     """
     log_debug("Enterting read_processed_files")
 
@@ -162,40 +162,42 @@ def read_processed_files(glider_dir, instrument_id):
     if not os.path.exists(processed_dive_file_name):
         return (files_dict, pdos_logfiles_dict)
 
-    processed_dives_file = open(processed_dive_file_name, "r")
+    with open(processed_dive_file_name, "r") as processed_dives_file:
 
-    for raw_line in processed_dives_file:
-        raw_line = raw_line.rstrip()
-        if raw_line == "":
-            continue
-        if raw_line[0:1] == "#":
-            continue
+        for raw_line in processed_dives_file:
+            raw_line = raw_line.rstrip()
+            if raw_line == "":
+                continue
+            if raw_line[0:1] == "#":
+                continue
 
-        raw_parts = raw_line.split(",")
+            raw_parts = raw_line.split(",")
 
-        fc = FileMgr.FileCode(raw_parts[0], instrument_id)
-        if fc.is_pdos_log():
-            try:
-                pdos_logfiles_dict[raw_parts[0]] = time.mktime(
-                    time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
+            fc = FileMgr.FileCode(raw_parts[0], instrument_id)
+            if fc.is_pdos_log():
+                try:
+                    pdos_logfiles_dict[raw_parts[0]] = time.mktime(
+                        time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
+                    )
+                except (ValueError, IndexError):
+                    # Old way - assume the current time
+                    pdos_logfiles_dict[raw_parts[0]] = time.time()
+            elif fc.is_seaglider() or fc.is_seaglider_selftest() or fc.is_logger():
+                try:
+                    files_dict[raw_parts[0]] = time.mktime(
+                        time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
+                    )
+                except ValueError:
+                    # Old format - read it in w/o regard to timezone
+                    files_dict[raw_parts[0]] = time.mktime(
+                        time.strptime(raw_parts[1].lstrip())
+                    )
+            else:
+                log_error(
+                    f"Unknown entry {raw_line} in {processed_files_cache} - skipping"
                 )
-            except (ValueError, IndexError):
-                # Old way - assume the current time
-                pdos_logfiles_dict[raw_parts[0]] = time.time()
-        elif fc.is_seaglider() or fc.is_seaglider_selftest() or fc.is_logger():
-            try:
-                files_dict[raw_parts[0]] = time.mktime(
-                    time.strptime(raw_parts[1].lstrip(), "%H:%M:%S %d %b %Y %Z")
-                )
-            except ValueError:
-                # Old format - read it in w/o regard to timezone
-                files_dict[raw_parts[0]] = time.mktime(
-                    time.strptime(raw_parts[1].lstrip())
-                )
-        else:
-            log_error(f"Unknown entry {raw_line} in {processed_files_cache} - skipping")
 
-    processed_dives_file.close()
+    del processed_dives_file
     try:
         os.chmod(
             processed_dive_file_name,
@@ -227,35 +229,35 @@ def write_processed_dives(glider_dir, files_dict, pdos_logfiles_dict):
 
     items = sorted(files_dict.items())
 
-    processed_dive_file = open(processed_dive_file_name, "w")
+    with open(processed_dive_file_name, "w") as processed_dive_file:
 
-    processed_dive_file.write(
-        "# This file contains the dives that have been"
-        " processed and the times they were processed\n"
-    )
-    processed_dive_file.write(
-        "# To force a file to be re-processed, delete the"
-        " corresponding line from this file\n"
-    )
-    processed_dive_file.write(
-        "# Written %s\n"
-        % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-    )
-
-    # for i in processed_pdos_logfiles:
-    #    processed_dive_file.write("%s\n" % i)
-    for i, j in pdos_items:
         processed_dive_file.write(
-            f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
+            "# This file contains the dives that have been"
+            " processed and the times they were processed\n"
+        )
+        processed_dive_file.write(
+            "# To force a file to be re-processed, delete the"
+            " corresponding line from this file\n"
+        )
+        processed_dive_file.write(
+            "# Written %s\n"
+            % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
         )
 
-    for i, j in items:
-        # processed_dive_file.write("%s, %.2f\n" % (i, j))
-        processed_dive_file.write(
-            f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
-        )
+        # for i in processed_pdos_logfiles:
+        #    processed_dive_file.write("%s\n" % i)
+        for i, j in pdos_items:
+            processed_dive_file.write(
+                f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
+            )
 
-    processed_dive_file.close()
+        for i, j in items:
+            # processed_dive_file.write("%s, %.2f\n" % (i, j))
+            processed_dive_file.write(
+                f"{i}, {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(j))}\n"
+            )
+
+    del processed_dive_file
 
     return 0
 
@@ -414,15 +416,15 @@ def select_fragments(file_group, instrument_id):
             defrag_file_name = root + "." + file_trans_received
             log_conversion_alert(
                 defrag_file_name,
-                f"File {fragment} is a PARTIAL file - consider {generate_resend(fragment, instrument_id)}",
+                f"File {fragment} is a PARTIAL file",
+                generate_resend(fragment, instrument_id),
             )
 
     return new_file_group
 
 
 def generate_resend(fragment_name, instrument_id):
-    """Given a fragment name, return the appropriate resend dive message
-    """
+    """Given a fragment name, return the appropriate resend dive message"""
     fragment_fc = FileMgr.FileCode(fragment_name, instrument_id)
     ret_val = ""
     if fragment_fc.is_seaglider() or fragment_fc.is_seaglider_selftest():
@@ -627,15 +629,11 @@ def process_file_group(
 
     # Cat the fragments together
     log_debug(f"About to open {defrag_file_name}")
-    output_file = open(defrag_file_name, "wb")
-
-    for i in fragments_1a:
-        fi = open(i, "rb")
-        data = fi.read()
-        fi.close()
-        output_file.write(data)
-
-    output_file.close()
+    with open(defrag_file_name, "wb") as output_file:
+        for i in fragments_1a:
+            with open(i, "rb") as fi:
+                data = fi.read()
+            output_file.write(data)
 
     # Now process based on the specifics of the file
     log_info(f"Processing {defrag_file_name} in process_file_group")
@@ -788,7 +786,10 @@ def process_file_group(
             elif fc.is_log():
                 shutil.move(in_file_name, fc.mk_base_logfile_name())
                 log_info(f"Removing secrets from {fc.mk_base_logfile_name()}")
-                expunge_secrets(fc.mk_base_logfile_name())
+                try:
+                    expunge_secrets(fc.mk_base_logfile_name())
+                except:
+                    log_error(f"Could not expunge secrets for {in_file_name}", "exc")
                 if not fc.is_seaglider_selftest():
                     processed_eng_and_log_files.append(fc.mk_base_logfile_name())
                 else:
@@ -813,14 +814,13 @@ def process_file_group(
                 else:
                     # Save the asc file out for debugging
                     sg_data_file.dat_to_asc()
-                    fo = open(fc.mk_base_ascfile_name(), "w")
-                    sg_data_file.dump(fo)
-                    fo.close()
+                    with open(fc.mk_base_ascfile_name(), "w") as fo:
+                        sg_data_file.dump(fo)
+                    del fo
                     processed_other_files.append(fc.mk_base_ascfile_name())
                     # Convert to the eng file
                     sg_log_file = LogFile.parse_log_file(
                         fc.mk_base_logfile_name(),
-                        base_opts.mission_dir,
                         issue_warn=True,
                     )
                     if not sg_log_file:
@@ -836,9 +836,8 @@ def process_file_group(
                             )
                             ret_val = 1
                         else:
-                            fo = open(fc.mk_base_engfile_name(), "w")
-                            sg_data_file.dump(fo)
-                            fo.close()
+                            with open(fc.mk_base_engfile_name(), "w") as fo:
+                                sg_data_file.dump(fo)
 
                 # Add this to the list potential dives to be processed for
                 if not fc.is_seaglider_selftest():
@@ -898,12 +897,12 @@ def check_file_fragments(
 ):
     """Checks that the file fragments are of a reasonable size
 
-       Note: this function will issue incorrect diagnostics if the size of fragment is
-       differnt then what is noted in the comm.log (that is, N_FILEKB has been changed)
+    Note: this function will issue incorrect diagnostics if the size of fragment is
+    differnt then what is noted in the comm.log (that is, N_FILEKB has been changed)
 
-       Returns:
-          TRUE for success
-          FALSE for a failure and issues a warning
+    Returns:
+       TRUE for success
+       FALSE for a failure and issues a warning
     """
     ret_val = True
 
@@ -965,7 +964,8 @@ def check_file_fragments(
             log_warning(msg)
             log_conversion_alert(
                 defrag_file_name,
-                msg + f" - consider {generate_resend(fragment, instrument_id)}",
+                msg,
+                generate_resend(fragment, instrument_id),
             )
             ret_val = False
             # See if there are more
@@ -988,7 +988,8 @@ def check_file_fragments(
                 log_warning(msg)
                 log_conversion_alert(
                     defrag_file_name,
-                    msg + f" - consider {generate_resend(fragment, instrument_id)}",
+                    msg,
+                    generate_resend(fragment, instrument_id),
                 )
                 ret_val = False
             else:
@@ -1013,7 +1014,8 @@ def check_file_fragments(
                 log_warning(msg)
                 log_conversion_alert(
                     defrag_file_name,
-                    msg + f" - consider {generate_resend(fragment, instrument_id)}",
+                    msg,
+                    generate_resend(fragment, instrument_id),
                 )
                 ret_val = False
 
@@ -1026,8 +1028,8 @@ def check_file_fragments(
                     log_warning(msg)
                     log_conversion_alert(
                         defrag_file_name,
-                        msg
-                        + f"- consider {generate_resend(fragment, instrument_id)}\n",
+                        msg,
+                        generate_resend(fragment, instrument_id),
                     )
 
             elif current_fragment_size > expectedsize:
@@ -1044,7 +1046,8 @@ def check_file_fragments(
                     log_warning(msg)
                     log_conversion_alert(
                         defrag_file_name,
-                        msg + f"consider {generate_resend(fragment, instrument_id)}\n",
+                        msg,
+                        generate_resend(fragment, instrument_id),
                     )
 
     if total_size != 0:
@@ -1101,7 +1104,7 @@ def expunge_secrets(logfile_name):
     private = ["$PASSWD", "$TEL_NUM", "$TEL_PREFIX", "$ALT_TEL_NUM", "$ALT_TEL_PREFIX"]
 
     try:
-        pub = open(logfile_name, "r")
+        pub = open(logfile_name, "rb")
     except IOError:
         log_error(
             f"could not open {logfile_name} for reading - skipping secret expunge"
@@ -1115,6 +1118,12 @@ def expunge_secrets(logfile_name):
     private_keys_found = False
 
     for s in pub:
+        try:
+            s = s.decode("utf-8")
+        except UnicodeDecodeError:
+            log_warning(f"Could not decode line {s} in {selftest_name} - skipping")
+            continue
+
         if s in ("", "\n"):
             continue
 
@@ -1189,38 +1198,40 @@ def expunge_secrets_st(selftest_name):
         )
         return 1
 
-    public_lines = ""
-    private_lines = ""
+    public_lines = "".encode("utf-8")
+    private_lines = "".encode("utf-8")
 
     base, _ = os.path.splitext(selftest_name)
     pvt_name = base + ".pvtst"
 
     private_keys_found = False
 
-    for s in pub:
+    for raw_line in pub:
         try:
-            s = s.decode("utf-8")
+            s = raw_line.decode("utf-8")
         except UnicodeDecodeError:
-            log_warning(f"Could not decode line {s} in {selftest_name} - skipping")
-            continue
-
-        if any(k in s for k in private):
-            private_lines = private_lines + s
-            private_keys_found = True
+            log_warning(
+                f"Could not decode line {s} in {selftest_name} - assuming no secret"
+            )
+            public_lines = public_lines + raw_line
         else:
-            public_lines = public_lines + s
+            if any(k in s for k in private):
+                private_lines = private_lines + raw_line
+                private_keys_found = True
+            else:
+                public_lines = public_lines + raw_line
 
     pub.close()
 
     if private_keys_found:
 
         try:
-            pvt = open(pvt_name, "w")
+            pvt = open(pvt_name, "wb")
         except IOError:
             log_error("could not open " + pvt_name + " for writing")
             return 1
         try:
-            pub = open(selftest_name, "w")
+            pub = open(selftest_name, "wb")
         except IOError:
             log_error("could not open " + selftest_name + " for writing")
             return 1
@@ -1240,7 +1251,7 @@ def expunge_secrets_st(selftest_name):
 def run_extension_script(script_name, script_args):
     """Attempts to execute a script named under a shell context
 
-       Output is recorded to the log, error code is ignored, no timeout enforced
+    Output is recorded to the log, error code is ignored, no timeout enforced
     """
     if os.path.exists(script_name):
         log_info(f"Processing {script_name}")
@@ -1262,8 +1273,7 @@ def run_extension_script(script_name, script_args):
 
 
 def signal_handler_defer(signum, frame):
-    """Handles SIGUSR1 signal during per-dive processing
-    """
+    """Handles SIGUSR1 signal during per-dive processing"""
     # pylint: disable=unused-argument
     # pylint: disable=global-statement
     # global skip_mission_processing
@@ -1273,8 +1283,7 @@ def signal_handler_defer(signum, frame):
 
 
 def signal_handler_defer_end(signum, frame):
-    """Handles SIGUSR1 signal during after whole mission processing
-    """
+    """Handles SIGUSR1 signal during after whole mission processing"""
     # pylint: disable=unused-argument
     # pylint: disable=global-statement
     # global skip_mission_processing
@@ -1284,8 +1293,7 @@ def signal_handler_defer_end(signum, frame):
 
 
 def signal_handler_abort_processing(signum, frame):
-    """Handles SIGUSR1 during whole mission processing
-    """
+    """Handles SIGUSR1 during whole mission processing"""
     # pylint: disable=unused-argument
     if signum == signal.SIGUSR1:
         log_warning("Caught SIGUSR1 - bailing out of further processing")
@@ -1293,8 +1301,7 @@ def signal_handler_abort_processing(signum, frame):
 
 
 class AbortProcessingException(Exception):
-    """Internal nofication to stop mission processing
-    """
+    """Internal nofication to stop mission processing"""
 
     def __init__(self):
         pass
@@ -1419,10 +1426,10 @@ def main():
 
     # Get options
     base_opts = BaseOpts.BaseOptions(
-        sys.argv, "b", usage="%prog [Options] --mission_dir MISSION_DIR"
+        "Command line driver for the all basestation processing."
     )
     # Initialize log
-    BaseLogger("Base", base_opts)
+    BaseLogger(base_opts)
 
     Utils.check_versions()
 
@@ -2118,6 +2125,7 @@ def main():
                 os.path.join(base_opts.mission_dir, f".{k}_ext"),
                 processed_logger_payload_files[k],
             )
+    del k
 
     # Run the post dive processing script
     run_extension_script(os.path.join(base_opts.mission_dir, ".post_dive"), None)
@@ -2174,16 +2182,20 @@ def main():
                         "No dive netCDF file created - mission netCDF file will not be updated"
                     )
                 else:
-                    (
-                        mp_ret_val,
-                        mission_profile_name,
-                    ) = MakeDiveProfiles.make_mission_profile(
-                        dive_nc_file_names, base_opts
-                    )
-                    if mp_ret_val:
+                    try:
+                        (
+                            mp_ret_val,
+                            mission_profile_name,
+                        ) = MakeDiveProfiles.make_mission_profile(
+                            dive_nc_file_names, base_opts
+                        )
+                        if mp_ret_val:
+                            failed_mission_profile = True
+                        else:
+                            data_product_file_names.append(mission_profile_name)
+                    except:
+                        log_error("Failed to create mission profile", "exc")
                         failed_mission_profile = True
-                    else:
-                        data_product_file_names.append(mission_profile_name)
             #
             # Create the mission timeseries file
             #
@@ -2193,17 +2205,20 @@ def main():
                         "No dive netCDF file created - mission timeseries file will not be updated"
                     )
                 else:
-                    # Create the timeseries file
-                    (
-                        mt_retval,
-                        mission_timeseries_name,
-                    ) = MakeDiveProfiles.make_mission_timeseries(
-                        dive_nc_file_names, base_opts
-                    )
-                    if mt_retval:
+                    try:
+                        (
+                            mt_retval,
+                            mission_timeseries_name,
+                        ) = MakeDiveProfiles.make_mission_timeseries(
+                            dive_nc_file_names, base_opts
+                        )
+                        if mt_retval:
+                            failed_mission_timeseries = True
+                        else:
+                            data_product_file_names.append(mission_timeseries_name)
+                    except:
+                        log_error("Failed to create mission timeseries", "exc")
                         failed_mission_timeseries = True
-                    else:
-                        data_product_file_names.append(mission_timeseries_name)
 
             processed_file_names = []
             processed_file_names.append(processed_eng_and_log_files)
@@ -2285,6 +2300,20 @@ def main():
             if recomendation:
                 log_alert(incomplete_file, recomendation)
 
+        # For now, write out to a static file with the resends
+        # TODO - Full feature - check for a logout. If seen, then append to or create the
+        # new pdoscmds.bat file to issue the resends
+        if conversion_alerts_d:
+            resend_file_name = os.path.join(
+                base_opts.mission_dir, "pdoscmds.bat.resend"
+            )
+            with open(resend_file_name, "w") as resend_file:
+                for file_name in conversion_alerts_d:
+                    for msg, resend_cmd in conversion_alerts_d[file_name]:
+                        if resend_cmd:
+                            resend_file.write(f"{resend_cmd}\n")
+                del file_name
+
         # Construct the pagers_convert_msg and alter_msg_file
         pagers_convert_msg = ""
         if base_opts.base_log is not None and base_opts.base_log != "":
@@ -2331,9 +2360,9 @@ def main():
                 pagers_convert_msg
                 + "The following files were not processed completely:\n"
             )
-            for i in incomplete_files:
+            for file_name in incomplete_files:
                 incomplete_file_name = os.path.abspath(
-                    os.path.join(base_opts.mission_dir, i)
+                    os.path.join(base_opts.mission_dir, file_name)
                 )
                 pagers_convert_msg = (
                     pagers_convert_msg + f"    {incomplete_file_name}\n"
@@ -2354,17 +2383,24 @@ def main():
                             "<!--diveno=%d-->\n"
                             % FileMgr.get_dive(incomplete_file_name)
                         )
-                if i in conversion_alerts_d:
+                if file_name in conversion_alerts_d:
                     alert_msg_file.write("<<ul>\n")
-                    prev_j = ""  # format the text of the alert
-                    for j in conversion_alerts_d[i]:
-                        if j != prev_j:
-                            pagers_convert_msg = pagers_convert_msg + f"        {j}\n"
+                    prev_full_msg = ""  # format the text of the alert
+                    for msg, resend_cmd in conversion_alerts_d[file_name]:
+                        full_msg = (
+                            f"{msg} - consider {resend_cmd}"
+                            if resend_cmd is not None
+                            else msg
+                        )
+                        if full_msg != prev_full_msg:
+                            pagers_convert_msg = (
+                                pagers_convert_msg + f"        {full_msg}\n"
+                            )
                             if alert_msg_file:
-                                alert_msg_file.write(f"<li>{j}</li>\n")
-                            prev_j = j
+                                alert_msg_file.write(f"<li>{full_msg}</li>\n")
+                            prev_full_msg = full_msg
                     del conversion_alerts_d[
-                        i
+                        file_name
                     ]  # clean up after ourselves - not clear this is needed anymore
                     alert_msg_file.write("</ul>\n")
                     pagers_convert_msg = pagers_convert_msg + "\n"
@@ -2379,6 +2415,7 @@ def main():
                             "<p>Glider logout not seen - retransmissions from glider possible</p>\n"
                         )
                     alert_msg_file.write("</div>\n")
+            del file_name
 
         if pagers_convert_msg:
             if comm_log.last_surfacing().logout_seen:
@@ -2525,9 +2562,8 @@ def main():
 
                 if base_opts.divetarballs > 0:
                     try:
-                        fi = open(tar_name, "rb")
-                        buff = fi.read()
-                        fi.close()
+                        with open(tar_name, "rb") as fi:
+                            buff = fi.read()
                     except:
                         log_error(
                             f"Could not process {tar_name} for fragmentation - skipping",
@@ -2545,17 +2581,16 @@ def main():
                         )
 
                         try:
-                            fo = open(tar_frag_name, "wb")
-                            fo.write(
-                                buff[
-                                    ii
-                                    * base_opts.divetarballs : (ii + 1)
-                                    * base_opts.divetarballs
-                                    if (ii + 1) * base_opts.divetarballs < len(buff)
-                                    else len(buff)
-                                ]
-                            )
-                            fo.close()
+                            with open(tar_frag_name, "wb") as fo:
+                                fo.write(
+                                    buff[
+                                        ii
+                                        * base_opts.divetarballs : (ii + 1)
+                                        * base_opts.divetarballs
+                                        if (ii + 1) * base_opts.divetarballs < len(buff)
+                                        else len(buff)
+                                    ]
+                                )
                         except:
                             log_error(
                                 f"Could not process {tar_frag_name} for fragmentation - skipping",

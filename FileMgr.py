@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 ## 
-## Copyright (c) 2006 - 2017, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006 - 2017, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -62,6 +62,10 @@ post_proc_glob_list = ["p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].??", # .nc NetCDF f
                        "pt[0-9][0-9][0-9][0-9][0-9][0-9][0-9].???",
                        "pt[0-9][0-9][0-9][0-9][0-9][0-9][0-9].?????"] # This gets .pvtst files
 
+# Common tables for profile mappings
+cast_descr = (('a', 'dive'), ('b', 'climb'), ('c', 'loiter'), ('d', 'surface loiter'))
+cast_code = {0: '', 1 : 'a', 2 : 'b', 3 : 'c', 4 : 'd'}
+
 # These lists are built from the installed loggers
 logger_prefixes = []
 
@@ -84,7 +88,7 @@ def logger_init(init_dict):
             pre_proc_glob_list.append("%s[0-9][0-9][0-9][0-9]??.x" % d['logger_prefix'])
             pre_proc_glob_list.append("%s[0-9][0-9][0-9][0-9]??.PARTIAL.[0-9]" % d['logger_prefix'])
             int_or_postproc_glob_list.append(d['logger_prefix'])
-            post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9][ab].???" % d['logger_prefix'])
+            post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9][abcd].???" % d['logger_prefix'])
             post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log" % d['logger_prefix'])
             post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9].tar" % d['logger_prefix'])
             post_proc_glob_list.append("p%s[0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9][0-9].log" % d['logger_prefix'])
@@ -107,8 +111,8 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
     log_debug("logger_eng_readers = %s" % logger_eng_readers)
 
     # How eng files are labeled by the logger interface for dive and climb, etc.
-    # order is critical here to get dive (a) files before climb (b)
-    c_list = ('', 'a', 'b')
+    # order is critical here to get dive (a) files before loiter (c) before climb (b) before surface loiter(d)
+    c_list = ('', 'a', 'c', 'b', 'd')
 
     # Patterns take a bit to compile so cache in addition to determining if they are needed
     logger_basename_pattern_d = {}
@@ -177,12 +181,16 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
                         except KeyError:
                             file_list = []
                             typed_files[sensor_type] = file_list
-                        if(c == ''):
-                            cast = 3
-                        elif(c == 'a'):
+                        if(c == 'a'):
                             cast = 1
-                        else:
+                        elif(c == 'b'):
                             cast = 2
+                        elif(c == 'c'):
+                            cast = 3
+                        elif(c == 'd'):
+                            cast = 4
+                        else:
+                            cast = 0
                         file_list.append({'cast' : cast, 'file_name' : logger_eng_filename})
 
             # One entry, per logger
@@ -190,10 +198,9 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
                 logger_eng_files[dive_path].append({'logger_prefix' : l,
                                                     'eng_files': typed_files,
                                                     'eng_file_reader' : logger_eng_readers[l]})
-    if False: # report the results for debugging
-        log_info("Logger eng list")
-        for k in list(logger_eng_files.keys()):
-            log_info("%s:%s" % (k, logger_eng_files[k]))
+    log_debug("Logger eng list")
+    for k in list(logger_eng_files.keys()):
+        log_debug("%s:%s" % (k, logger_eng_files[k]))
 
     return logger_eng_files
 
@@ -355,6 +362,9 @@ class FileCode:
         self._full_filename = filename
         self._instrument_id = instrument_id
 
+    def instrument_id(self):
+        return self._instrument_id
+
     def full_filename(self):
         return self._full_filename
         
@@ -481,12 +491,28 @@ class FileCode:
             return True
         else:
             return False
+
+    def is_loiter_data(self):
+        if(self._filename[6:7] == "c"):
+            return True
+        else:
+            return False
+
+    def is_surf_loiter_data(self):
+        if(self._filename[6:7] == "c"):
+            return True
+        else:
+            return False
         
     def up_down_data(self):
         if(self.is_down_data()):
             return "a"
         elif(self.is_up_data()):
             return "b"
+        elif(self.is_loiter_data()):
+            return "c"
+        elif(self.is_surf_loiter_data()):
+            return "d"
         else:
             return ''
 

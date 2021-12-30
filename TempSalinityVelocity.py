@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2008, 2009, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2009, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -52,60 +52,6 @@ thermal_cond_glass = 0.96   # CONSTANT thermal conductivity of glass [W/degC/m]
 #UNUSED in this version?
 thermal_cond_epoxy = 0.18          # CONSTANT thermal conductivity of jacket on pumped SBE4 CTs [W/(degC m)]
 thermal_cond_polyurethane = 0.2394 # CONSTANT thermal conductivity of jacket on unpumped SBE41 CTs [W/(degC m)]
-
-TSV_use_sparse = True # Used in MakeDiveProfiles as well to bound the number of points when non-sparse
-if TSV_use_sparse:
-    # http://docs.scipy.org/doc/scipy/reference/sparse.html
-    import scipy.sparse # for spare matrices
-    import scipy.sparse.linalg
-    # We directly call solve_f and avoid lu_f and dot_f.  Works fine.
-    use_scipy_sparse_diags = Utils.normalize_version(scipy.__version__) >= Utils.normalize_version(Globals.required_scipy_sparse_version)
-    use_scipy_sparse_diags = False # Disable using scipy.sparse.diags() for the moment
-    # Tried to use LU decomposition as w/ non sparse but...
-    # BUG: lu_f dies with : TypeError: 'factored_lu' object is not iterable
-    # deep in /opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/scipy/sparse/linalg/dsolve/_superlu.so
-    # called from /opt/local/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/site-packages/scipy/sparse/linalg/dsolve/linsolve.py(173)
-    #UNUSED lu_f = lambda A: scipy.sparse.linalg.splu(A) # TODO what are the options for computing the permuted matrix?
-    solve_f = scipy.sparse.linalg.spsolve
-    # does this work with spare arrays?  Some discussion on web about a spdot() but no implementation    
-    #UNUSED dot_f = scipy.dot # or lambda A,x: A.dot(x) # where A is sparse and x is dense
-else:
-    import scipy.linalg
-    lu_f = lambda A: scipy.linalg.lu(A, True) # compute the LU decomposition of CHlhs and return LL = PL, the permuted L matrix
-    solve_f = scipy.linalg.solve
-    dot_f = scipy.dot 
-    
-def TSV_diags(CH_array, diagonals, offsets):
-    ''' Update additively a (sparse) matrix from diagonals
-    Inputs:
-    CH_array -- the current array
-    diagonals -- sequence of arrays containing the matrix diagonals corresponding to offsets
-    offsets -- sequence of int, the diagonals to set:
-      k = 0 - main diagonal
-      k > 0 - upper k-th diagonal
-      k < 0 - lower k-th diagonal
-    Outputs:
-    CH_array -- the updated array, possibly converted to linked-list form if sparse
-    '''
-    if TSV_use_sparse:
-        CH_array = CH_array.tolil(); # ensure it is proper form for sparse world
-        if use_scipy_sparse_diags:
-            CH_array += scipy.sparse.diags(diagonals, offsets) # use the primitive
-            return CH_array;
-
-    # open code setting the diagonal elements
-    # this is like numpy.diag but updates the array directly, sparse or not
-    for offset, diag in zip(offsets, diagonals):
-        if offset >= 0: # an upper or main diagonal
-            i_offset = 0
-            j_offset = offset
-        else: # a lower diagonal
-            i_offset = -offset
-            j_offset = 0
-        for i in range(len(diag)):
-            CH_array[i+i_offset, i+j_offset] += diag[i]
-
-    return CH_array
 
 
 # Support for hollow cylinder multi-mode correction
@@ -761,28 +707,26 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
             mode_time_s_v = r_elapsed_time_s_v
             # BUG shouldn't it be this?  mode_time_s_v = time_a_v
             mode_temp_a_v = temp_a_v
-            # Map critical variables to a common fine time grid
+            # Map critical variables to a uniform fine time grid
             # NOTE: Force solution to 1s uniform grid. Solving using a non-uniform grid can cause ringing or extreme corrections
             # on scicon dives with ~1s sampling. See TestData/sg530_MISOBOB_Mar19 dives 83, 88, 95 etc.
-            if True or min_r_time_s > r_dt: # min_r_time_s > 1 sec
-                uniform_grid = True
-                m_dt = int(min_r_time_s)/2 # This is 5sec for papa
-                # What is the difference in time and accuracy?
-                # m_dt = int(min_r_time_s)/1 # 10s for papa
-                m_dt = max(r_dt, m_dt) # avoid 0 secs m_dt
-                m_dt = 1 # Force match to CCE code
-                r_dt = m_dt # For unsteady flight below
-                m_time_fine_s_v = arange(int(mode_time_s_v[0]), int(mode_time_s_v[-1] + 1.0), m_dt)
-                temp_a_fine_v  = pchip(mode_time_s_v, mode_temp_a_v, m_time_fine_s_v);
-            else: # already at least 1s if not finer...scicon or gpctd
-                uniform_grid = False
-                m_dt = r_dt
-                m_time_fine_s_v = mode_time_s_v
-                temp_a_fine_v = mode_temp_a_v
+            # m_dt = int(min_r_time_s)/2 # This is 5sec for papa
+            # m_dt = max(r_dt,m_dt) # avoid 0 secs m_dt
+            m_dt = 1 # Force match to CCE code - 1 second
+            r_dt = m_dt # For unsteady flight below
+            m_time_fine_s_v = arange(int(mode_time_s_v[0]), int(mode_time_s_v[-1] + 1.0),m_dt)
+            temp_a_fine_v  = pchip(mode_time_s_v,mode_temp_a_v,m_time_fine_s_v);
 
             mp_fine           = len(m_time_fine_s_v);
             tnp               = (r_sg_np,) # a tuple for interpolation reshape below
             log_debug("%d: mode %d: %d pts at %.3fs" % (loop, modes, mp_fine, m_dt)) # DEBUG
+
+            # compute the derivative of temp_a_fine_v wrt m_time_fine_s_v
+            dTadt_v = zeros(mp_fine)
+            dTadt_v[0] = (temp_a_fine_v[1] - temp_a_fine_v[0])/m_dt
+            dTadt_v[-1] = (temp_a_fine_v[-1] - temp_a_fine_v[-2])/m_dt
+            dTadt_v[1:-1] = (temp_a_fine_v[2:] - temp_a_fine_v[0:-2])/(2*m_dt)
+            trace_array('dTadt_v',dTadt_v);
 
             # Thermal boundary layer parameterization for large Prandtl number
             Pr = nu_v/kappa;  # Prandtl number
@@ -831,6 +775,7 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
             Bi = [(Bim_max if Bn > Bim_max else (Bim_min if Bn < Bim_min else Bn)) for Bn in Bi]
             Bo = [(Bem_max if Bn > Bem_max else (Bem_min if Bn < Bem_min else Bn)) for Bn in Bo]
 
+            temp_mode_v = zeros(mp_fine) # individual mode contribution
             temp_modes_v = zeros(mp_fine) # sum of modal contributions
             start_loop_time = time.process_time() #DEBUG
             for mode in range(modes): # get the contributions from each mode
@@ -847,83 +792,31 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
                 Ai_v  = reshape(array(Ai_v), tnp)
                 trace_array('mode_A_%d_%d' % (loop, mode), Ai_v);
 
-                if uniform_grid:
-                    # Expand tau and Ai to the fine-grained time grid
-                    # BUG pchip can perform poor interpolations if extended...
-                    tau_v = pchip(mode_time_s_v, tau_v, m_time_fine_s_v)
-                    Ai_v  = pchip(mode_time_s_v, Ai_v, m_time_fine_s_v)
+                # Expand tau and Ai to the fine-grained time grid
+                # NOTE pchip can perform poor interpolations if extended...
+                tau_v = pchip(mode_time_s_v,tau_v,m_time_fine_s_v)
+                Ai_v  = pchip(mode_time_s_v,Ai_v, m_time_fine_s_v)
 
-                # IMPLEMENTATION NOTE: The arrays below were constructed in
-                # matlab by ADDING a set of sparse() calls, hence we need
-                # additive rather than simple assignment. However, within the
-                # loop we are always off-diagonal, which are zero, and never
-                # duplicate an element reference so no need to use addition
-                # there.
-
-                if TSV_use_sparse: # expensive in time
-                    # NOTE: to get the 'full' version use A.todense()
-                    CHlhs = scipy.sparse.eye(mp_fine, mp_fine) # sparse(1:mp,1:mp,ones(mp,1)...)
-                    CHrhs = scipy.sparse.eye(mp_fine, mp_fine) # sparse(1:mp,1:mp,zeros(mp,1)...)
-                    # NOTE: CHrhs is really zeros but there is no sparse zeros function
-                    CHrhs = CHrhs - CHrhs
-                    # convert to support assignment
-                    CHlhs = CHlhs.tolil() 
-                    CHrhs = CHrhs.tolil()
-                else: # expensive in space (and if we swap, in time)
-                    CHlhs = eye(mp_fine, mp_fine)   # sparse(1:mp,1:mp,ones(mp,1)...)
-                    CHrhs = zeros((mp_fine, mp_fine,)) # sparse(1:mp,1:mp,zeros(mp,1)...)
-                # CHlhs[0,0] = 1.0 # eye()
-
-                # CHlhs[i,i] = 1.0 # eye()
-                m_dt2 = 2*m_dt
-                t_v = tau_v/m_dt2
-                t_v[0] = 0 # eliminate this in t_v and hence in ta_v; unused during diagnonal construction
-
-                # Except for the starting pair [0,0], [0,1] and ending pair [-1,-1], [-1,-2] in CHlhs and CHrhs (see below)
-                # the upper and lower off-diagnonal elements [x+1,x] and [x-1,x] should have identical values with
-                # negative values in the lower and positive values in the upper diagonals (and because of sign flip, vice versa in CHrhs)
-                # CHlhs will have 1 on the diagonal itself; CHrhs will have 0.  See DEBUG expressions below
-
-                # sparse(2:mp_fine-1, 1:mp_fine-2, -tau(2:mp_fine-1)/(2*dt),...)
-                # sparse(2:mp_fine-1, 3:mp_fine,    tau(2:mp_fine-1)/(2*dt),...)
-                CHlhs = TSV_diags(CHlhs, [-t_v[1:-1], t_v[0:-1]], [-1, +1])
-
-                # ta_v = Ai_v[i_v]*tau_v[i_v]/m_dt2
-                ta_v = Ai_v*t_v
-                # sparse(2:mp_fine-1, 1:mp_fine-2, -tau(2:mp_fine-1).*Ai(2:mp_fine-1)/(2*dt),...)
-                # sparse(2:mp_fine-1, 3:mp_fine,    tau(2:mp_fine-1).*Ai(2:mp_fine-1)/(2*dt),...)
-                CHrhs = TSV_diags(CHrhs, [-ta_v[1:-1], ta_v[0:-1]], [-1, +1])
-
-                # Add to the diagonals of the eye() expressions above
-                CHlhs[0, 0]   += -tau_v[0] /m_dt # sparse(1, 1, -tau(1)/dt,...)
-                CHlhs[0, 1]   +=  tau_v[0] /m_dt # sparse(1, 2,  tau(1)/dt,...)
-                CHlhs[-1, -2] += -tau_v[-1]/m_dt # sparse(mp_fine, mp_fine-1, -tau(mp_fine)/dt,...)
-                CHlhs[-1, -1] +=  tau_v[-1]/m_dt # sparse(mp_fine, mp_fine,    tau(mp_fine)/dt,...)
-
-                CHrhs[0, 0]   += -tau_v[0] *Ai_v[0] /m_dt # sparse(1, 1, -tau(1)*Ai(1)/dt,...)
-                CHrhs[0, 1]   +=  tau_v[0] *Ai_v[0] /m_dt # sparse(1, 2,  tau(1)*Ai(1)/dt,...)
-                CHrhs[-1, -2] += -tau_v[-1]*Ai_v[-1]/m_dt # sparse(mp_fine, mp_fine-1, -tau(mp_fine)*Ai(mp_fine)/dt,...)
-                CHrhs[-1, -1] +=  tau_v[-1]*Ai_v[-1]/m_dt # sparse(mp_fine, mp_fine,    tau(mp_fine)*Ai(mp_fine)/dt,...)
-
-                CHrhs = -CHrhs # invert sign
-                if TSV_use_sparse:
-                    # convert to efficient form for inversion 
-                    CHlhs = CHlhs.tocsc() 
-                    CHrhs = CHrhs.tocsc()
-                # DEBUG head CHlhs[0:5,0:5].todense()  CHrhs[0:5,0:5].todense()
-                # DEBUG tail CHlhs[-5:,-5:].todense()  CHrhs[-5:,-5:].todense()
-
-                # Solve:
-                #   CHlhs*Tc = CHrhs*Ta
-                # for Tc, so:
-                #   Tc = inv(CHlhs)*CHrhs*Ta
-                # "Almost anything you can do with A^(-1) can be done without it." Forsthye & Moler, Computer Solutions of Linear Algebraic Systems 1967
-                if TSV_use_sparse:
-                    temp_mode_v = solve_f(CHlhs, CHrhs*temp_a_fine_v)
-                else:
-                    # So, instead we compute two inverses...
-                    LL, UU = lu_f(CHlhs) # compute the LU decomposition of CHlhs and return LL = PL, the permuted L matrix
-                    temp_mode_v = solve_f(UU, solve_f(LL, dot_f(CHrhs, temp_a_fine_v))) # Tc = inv(CHlhs)*CHrhs*Ta via LU decomposition
+                # Iteratively solve for thermal inertia wall heat anomaly
+                temp_mode_v[:] = 0 # reset contrinution array and set temp_mode_v[0] = 0 as boundary condition
+                # initialize the iterative computation
+                prior_tau_v_i = tau_v[0]
+                prior_tau_v_2 = 2*prior_tau_v_i
+                prior_temp_mode_v_i = 0 # Twaf[0]
+                prior_Ai_dTadt = Ai_v[0]*dTadt_v[0]
+                # Explicitly unroll the indexing loop using rotational variables for iterative solution
+                for ii in range(1,mp_fine):
+                    tau_v_i = tau_v[ii]
+                    tau_v_2 = 2*tau_v_i
+                    Ai_dTadt = Ai_v[ii]*dTadt_v[ii]
+                    # update for the next iteration
+                    prior_temp_mode_v_i = ((prior_temp_mode_v_i*tau_v_i*(prior_tau_v_2 - m_dt)/(prior_tau_v_i*(tau_v_2 + m_dt))) -
+                                           (m_dt*tau_v_i*(prior_Ai_dTadt + Ai_dTadt)/(tau_v_2 + m_dt)))
+                    temp_mode_v[ii] = prior_temp_mode_v_i # record the anomaly
+                    # rotate variables (prior_temp_mode_v_i is already 'rotated')
+                    prior_tau_v_i = tau_v_i
+                    prior_tau_v_2 = tau_v_2
+                    prior_Ai_dTadt = Ai_dTadt
 
                 trace_array('mode_temp_%d_%d' % (loop, mode), temp_mode_v);
                 temp_modes_v = temp_modes_v + temp_mode_v # add this mode's contribution
@@ -933,9 +826,8 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
             # scaled by boundary layer
             # compute temperature at the cell wall back in the data time base
             temp_w_v = temp_a_fine_v + temp_modes_v
-            if uniform_grid:
-                # Return wall temperature to the original time grid
-                temp_w_v = pchip(m_time_fine_s_v, temp_w_v, mode_time_s_v)
+            # Return wall temperature to the original time grid
+            temp_w_v = pchip(m_time_fine_s_v,temp_w_v,mode_time_s_v)
             trace_array('temp_w_%d' % loop, temp_w_v);
 
             # and finally the corrected temperature given the boundary layer size in time
@@ -944,14 +836,14 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
 
             end_time = time.process_time() # DEBUG
             max_temp_c_diff = max(abs(temp_c_v - temp_a_v))
-            log_debug("%d: max temp_c diff: %.2fC TI time: %.3fs loop: %.3fs" % (loop, max_temp_c_diff, (end_time-start_time), (end_time-start_loop_time))) #DEBUG
+            log_info("%d: max temp_c diff: %.2fC TI time: %.3fs loop: %.3fs" % (loop,max_temp_c_diff, (end_time-start_time),(end_time-start_loop_time))) #DEBUG
             
             # then compute salinity from measured conductivity given corrected temperature of the lagged water
             # thus this is salinity of the actual water in the tube at effective time_a
             # but we want the salinity of the water outside at the thermistor
             # so we need to map it to measurement time below
             # M: salin_c = sw_salt(cond/c3515, temp_c, press);
-            # salinity_v = array(map(lambda i: seawater.salt(r_cond_cor_v[i]/c3515, temp_c_v[i], r_pressure_v[i]), xrange(r_sg_np))) # aka salin_c
+            # salinity_v = array(map(lambda i: seawater.salt(r_cond_cor_v[i]/c3515, temp_c_v[i], r_pressure_v[i]), range(r_sg_np))) # aka salin_c
             if Globals.f_use_seawater:
                 salin_c_v = seawater.salt(r_cond_cor_v/c3515, temp_c_v, r_pressure_v) # aka salin_c
             else:

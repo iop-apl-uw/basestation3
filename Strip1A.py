@@ -1,9 +1,10 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
-## 
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2020 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2020, 2021 by University of Washington.  All rights reserved.
+##
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -25,14 +26,11 @@
 Strip1A.py: Strips '1A's from files, called by basestation code
 """
 
-import string
 import sys
-import os
-import re
-import shutil
 
 import BaseOpts
-from BaseLog import *
+from BaseLog import BaseLogger, log_error, log_warning, log_debug
+
 
 def strip1A(in_filename, out_filename, size=0):
     """strip1A makes a copy of source file, then truncates copy according to calling method.
@@ -44,22 +42,22 @@ def strip1A(in_filename, out_filename, size=0):
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    
+
     try:
-        in_file = open(in_filename, 'rb')
-    except IOError as exception:
+        in_file = open(in_filename, "rb")
+    except IOError:
         log_error("Could not open %s for reading" % in_filename)
         return 1
     try:
-        out_file = open(out_filename, 'wb')
-    except IOError as exception:
+        out_file = open(out_filename, "wb")
+    except IOError:
         log_error("Could not open %s for writing" % out_filename)
         return 1
 
     data = in_file.read()
-    
-    # Actual padding always comes in blocks of 128 bytes 
-    # unless it is the last file in a series.  
+
+    # Actual padding always comes in blocks of 128 bytes
+    # unless it is the last file in a series.
 
     # For LOG FILES, the number of bytes can be odd or even.  In this case, we might
     # have, at worst, a singe 0x1a character at the end of the file.  You can deal with that
@@ -67,12 +65,15 @@ def strip1A(in_filename, out_filename, size=0):
     # However, warn if we drop any non-padding bytes in the truncated tail.
     # (This can happen, e.g., if we pass a default fragment_size of 4kb but NFILEKB is set to 8kb).
     if size != 0:
-        tail_size = len(data) - size;
-        if (tail_size > 0):
+        tail_size = len(data) - size
+        if tail_size > 0:
             tail_padding_i_v = [i for i in range(size, len(data)) if data[i] == 26]
             lost_data_size = tail_size - len(tail_padding_i_v)
-            if (lost_data_size > 0): # if it isn't all padding, warn
-                log_warning('Removing %d non-padding bytes from truncated %d-byte tail of %s' % (lost_data_size, tail_size, in_filename))
+            if lost_data_size > 0:  # if it isn't all padding, warn
+                log_warning(
+                    "Removing %d non-padding bytes from truncated %d-byte tail of %s"
+                    % (lost_data_size, tail_size, in_filename)
+                )
         # Write data as commanded
         out_file.write(data[0:size])
 
@@ -82,47 +83,80 @@ def strip1A(in_filename, out_filename, size=0):
     else:
         # The last place we saw non-padding chars
         strip1a_bytes = -1
-        
+
         # Always look for pairs of 0x1a.
         # This prevents stripping valid singleton 0x1a chars in data blocks
         # which, yes, do happen with surprising regularity
         for i in range(0, len(data) - 1):
-            if(data[i] == 26 and data[i+1] == 26):
-                if(strip1a_bytes < 0):
+            if data[i] == 26 and data[i + 1] == 26:
+                if strip1a_bytes < 0:
                     # Record the high water mark
                     strip1a_bytes = i
                 else:
-                    pass 
+                    pass
             else:
                 # Reset the high water mark
                 strip1a_bytes = -1
 
-        if(strip1a_bytes < 0):
+        if strip1a_bytes < 0:
             # No bytes found to strip
             strip1a_bytes = len(data)
-            
-        log_debug("Len(%s) = 0x%x, strip size = 0x%x" % (in_filename, len(data), strip1a_bytes))
+
+        log_debug(
+            "Len(%s) = 0x%x, strip size = 0x%x"
+            % (in_filename, len(data), strip1a_bytes)
+        )
         out_file.write(data[0:strip1a_bytes])
-        
+
     # Clean up
     out_file.close()
     in_file.close()
     return 0
 
+
 if __name__ == "__main__":
 
-    base_opts = BaseOpts.BaseOptions(sys.argv, 's',
-                                     usage="%prog [Options] src_file, dst_file [size]")
+    base_opts = BaseOpts.BaseOptions(
+        "Test entry point for Strip1a processing",
+        additional_arguments={
+            "infile": BaseOpts.options_t(
+                None,
+                ("Strip1A",),
+                ("infile",),
+                str,
+                {
+                    "help": "Name of file to strip",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "outfile": BaseOpts.options_t(
+                None,
+                ("Strip1A",),
+                ("outfile",),
+                str,
+                {
+                    "help": "Name of output file",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "strip_size": BaseOpts.options_t(
+                None,
+                ("Strip1A",),
+                ("strip_size",),
+                int,
+                {
+                    "help": "File size to strip to",
+                    "nargs": "?",
+                },
+            ),
+        },
+    )
 
-    BaseLogger("Strip1A", base_opts) # initializes BaseLog
-    args = base_opts.get_args() # positional arguments
+    BaseLogger(base_opts)  # initializes BaseLog
 
-    if (len(args)>2):
-        strip1A(args[0], args[1], args[2])
-    elif (len(args)==2):
-        strip1A(args[0], args[1])
+    if base_opts.strip_size:
+        strip1A(base_opts.infile, base_opts.outfile, base_opts.strip_size)
     else:
-        log_error("Usage: Strip1A.py infile outfile [size] [options]")
-        sys.exit(1)
+        strip1A(base_opts.infile, base_opts.outfile)
 
     sys.exit(0)
