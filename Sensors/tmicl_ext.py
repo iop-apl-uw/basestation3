@@ -34,7 +34,6 @@ import collections
 import math
 import os
 import re
-import traceback
 
 import numpy as np
 
@@ -604,14 +603,20 @@ def process_tar_members(
             if tail.lower() == ".eng":
                 _, tail = os.path.split(tmicl_file)
                 head, tail = os.path.splitext(tail)
-                s = head.split("_")
-                # Name format = base_name, class (base, logavg, dvdt), instance (channel)
-                if len(s) < 3:
-                    output_file = "%s_base_%s.eng" % (base_name, s[1])
+                splits = head.split("_")
+                # Name format = base_name, class (base, logavg, dvdt, motors), instance (channel)
+                if len(splits) < 3:
+                    output_file = "%s_base_%s.eng" % (base_name, splits[1])
+                    class_name = "base"
                 else:
-                    output_file = "%s_%s_%s.eng" % (base_name, s[2], s[1])
+                    output_file = "%s_%s_%s.eng" % (base_name, splits[2], splits[1])
+                    class_name = splits[2]
 
-                ef, _ = extract_file_metadata(tmicl_file, s[1])
+                ef, _ = extract_file_metadata(tmicl_file, splits[1])
+
+                # 2021/12/30 Bug - motor files have no column header
+                if class_name == "motors" and "columns" not in ef:
+                    ef["columns"] = "onoff sample"
 
                 log_debug("Output file %s" % output_file)
 
@@ -623,7 +628,7 @@ def process_tar_members(
 
                 # At this point, columns may be scaled and/or offset - correct that
                 if (
-                    os.path.split(output_file)[1].split("_")[1] == "base"
+                    os.path.split(output_file)[1].split("_")[1] in ("base",)
                     and "columns" in ef
                 ):
                     scale_off = []
@@ -740,10 +745,20 @@ def process_tar_members(
                     )
                 )
                 for row in range(np.shape(ed)[1]):
-                    fo.write("%.3f " % t)
+                    if class_name == "motors":
+                        # Motor files calculate time based on sample number
+                        motor_t = ef["start"] + (
+                            ed[ef["columns"].split().index("sample") - 1][row] / rate
+                        )
+                        fo.write("%.3f " % motor_t)
+                    else:
+                        fo.write("%.3f " % t)
                     t = t + time_step
                     for col in range(np.shape(ed)[0]):
-                        fo.write("%g " % ed[col][row])
+                        if class_name in ("motors", "base"):
+                            fo.write("%d " % ed[col][row])
+                        else:
+                            fo.write("%g " % ed[col][row])
                     fo.write("\n")
 
                 if "stop" in ef:
@@ -1072,7 +1087,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         eng_file_class = tmp[1]
         eng_file_channel = tmp[2]  # channel
 
-        if eng_file_class == "base" or eng_file_class == "motors":
+        if eng_file_class in ("base", "motors"):
             eng_file_meta, ef_ret_list = extract_file_metadata(
                 filename, eng_file_channel
             )
