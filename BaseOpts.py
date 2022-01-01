@@ -1075,11 +1075,13 @@ class BaseOptions:
        config file options are trumped by command-line arguments.
     """
 
-    def __init__(self, description, additional_arguments=None):
+    def __init__(self, description, additional_arguments=None, alt_cmdline=None):
         """
         Input:
             additional_arguments - dictionay of additional arguments - sepcific
                                    to a single module
+            alt_cmdline - alternate command line - this is a string of options
+                          equivilent to sys.argv[1:]
         """
 
         self._opts = None  # Retained for debugging
@@ -1172,7 +1174,10 @@ class BaseOptions:
         self._ap = ap
 
         # self._opts, self._args = ap.parse_known_args()
-        self._opts = ap.parse_args()
+        if alt_cmdline is not None:
+            self._opts = ap.parse_args(alt_cmdline.split())
+        else:
+            self._opts = ap.parse_args()
 
         # handle the config file first, then see if any args trump them
         if self._opts.config_file_name is not None:
