@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -35,14 +35,17 @@
 # TODO Figure out how to show defaults in option help (https://stackoverflow.com/questions/12151306/argparse-way-to-include-default-values-in-help)
 
 import argparse
-import collections
+
+# import collections
 import copy
 import configparser
+import dataclasses
 import inspect
 import os
 import pdb
 import sys
 import time
+import typing
 import traceback
 
 from Globals import WhichHalf  # basestation_version
@@ -55,6 +58,11 @@ def generate_range_action(arg, min_val, max_val):
         """Range checking action"""
 
         def __call__(self, parser, namespace, values, option_string=None):
+            if values is None:
+                raise argparse.ArgumentError(
+                    self, f"None is not valid for argument [{arg}]"
+                )
+
             if not min_val <= values <= max_val:
                 raise argparse.ArgumentError(
                     self, f"{values} not in range for argument [{arg}]"
@@ -105,9 +113,28 @@ class FullPathTrailingSlashAction(argparse.Action):
 # required:list of str - modules names for which thie option is required.  Also implies the option
 #                        group "required"
 #
-options_t = collections.namedtuple(
-    "options_t", ("default_val", "group", "args", "var_type", "kwargs")
-)
+# options_t = collections.namedtuple(
+#    "options_t", ("default_val", "group", "args", "var_type", "kwargs")
+# )
+@dataclasses.dataclass
+class options_t:
+    """Data that drives options processing"""
+
+    default_val: typing.Any
+    group: set
+    args: tuple
+    var_type: typing.Any
+    kwargs: dict
+
+    def __post_init__(self):
+        """Type conversions"""
+        if not isinstance(self.args, tuple):
+            raise ValueError("args is not a tuple")
+        if self.group is not None and not isinstance(self.group, set):
+            self.group = set(self.group)
+        if not isinstance(self.kwargs, dict):
+            raise ValueError("kwargs is not a dict")
+
 
 # TODO: convert all booleans - "action": argparse.BooleanOptionalAction,
 
@@ -443,17 +470,10 @@ global_options_dict = {
     ),
     "reprocess": options_t(
         None,
-        (
-            "Base",
-            "MakeDiveProfiles",
-        ),
+        ("Base",),
         ("--reprocess",),
-        bool,
-        {
-            "help": "Forces re-running of MakeDiveProfiles, regardless of file time stamps (generally used for debugging "
-            "- normally --force is the right option)",
-            "action": "store_true",
-        },
+        int,
+        {"help": "Forces reprocessing of a specific dive number "},
     ),
     "make_dive_profiles": options_t(
         None,
@@ -1075,13 +1095,20 @@ class BaseOptions:
        config file options are trumped by command-line arguments.
     """
 
-    def __init__(self, description, additional_arguments=None, alt_cmdline=None):
+    def __init__(
+        self,
+        description,
+        additional_arguments=None,
+        alt_cmdline=None,
+        add_arguments=None,
+    ):
         """
         Input:
             additional_arguments - dictionay of additional arguments - sepcific
                                    to a single module
             alt_cmdline - alternate command line - this is a string of options
                           equivilent to sys.argv[1:]
+            add_arguments - adds the calling_module to the list of .group set of that option
         """
 
         self._opts = None  # Retained for debugging
@@ -1096,6 +1123,10 @@ class BaseOptions:
             options_dict = global_options_dict | additional_arguments
         else:
             options_dict = global_options_dict
+
+        if add_arguments is not None:
+            for add_arg in add_arguments:
+                options_dict[add_arg].group.add(calling_module)
 
         cp_default = {}
         for k, v in options_dict.items():

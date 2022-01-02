@@ -2754,8 +2754,6 @@ def make_dive_profile(
     else:  # status == 2 or we are forced
         if base_opts.force:
             log_info("Reprocessing - forcing recreation of netCDF file")
-        elif base_opts.reprocess:
-            log_info("Reprocessing")
         if "history" in globals_d and not base_opts.force:
             processing_history = globals_d["history"]  # append to previous history
         if "processing_error" in results_d:

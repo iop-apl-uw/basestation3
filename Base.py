@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1732,6 +1732,11 @@ def main():
             )
             Utils.cleanup_lock_file(base_opts, base_lockfile_name)
             return 1
+        if base_opts.reprocess:
+            for ff in list(complete_files_dict.keys()):
+                if len(ff) > 6:
+                    if int(ff[2:6]) == base_opts.reprocess:
+                        del complete_files_dict[ff]
 
     # Start with self tests
     log_info("Processing seaglider selftests")
