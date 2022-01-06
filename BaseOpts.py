@@ -758,21 +758,6 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
-    "plot_legato": options_t(
-        False,
-        (
-            "Base",
-            "MakePlot3",
-        ),
-        ("--plot_legato",),
-        bool,
-        {
-            "help": "Plot raw legato output",
-            "section": "makeplot",
-            "action": "store_true",
-            "option_group": "plotting",
-        },
-    ),
     "plot_legato_use_glider_pressure": options_t(
         False,
         (
@@ -783,21 +768,6 @@ global_options_dict = {
         bool,
         {
             "help": "Use glider pressure for legato debug plots",
-            "section": "makeplot",
-            "action": "store_true",
-            "option_group": "plotting",
-        },
-    ),
-    "plot_legato_compare": options_t(
-        False,
-        (
-            "Base",
-            "MakePlot3",
-        ),
-        ("--plot_legato_compare",),
-        bool,
-        {
-            "help": "Legato raw vs smoothed pressure compare",
             "section": "makeplot",
             "action": "store_true",
             "option_group": "plotting",
