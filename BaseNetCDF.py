@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1498,6 +1498,31 @@ nc_var_metadata = {
         False,
         "d",
         {"description": "Conductivity zero frequency"},
+        nc_scalar,
+    ],
+    # Legato corrections
+    "sg_cal_legato_time_lag": [
+        False,
+        "d",
+        {"description": ""},
+        nc_scalar,
+    ],
+    "sg_cal_legato_alpha": [
+        False,
+        "d",
+        {"description": ""},
+        nc_scalar,
+    ],
+    "sg_cal_legato_tau": [
+        False,
+        "d",
+        {"description": "Thermister response"},
+        nc_scalar,
+    ],
+    "sg_cal_legato_ctcoeff": [
+        False,
+        "d",
+        {"description": ""},
         nc_scalar,
     ],
     # log file header values

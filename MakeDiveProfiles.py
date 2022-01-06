@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -76,6 +76,7 @@ import Sensors
 from TempSalinityVelocity import TSV_iterative, load_thermal_inertia_modes
 from TraceArray import *  # REMOVE use this only only if we are tracing/comparing computations w/ matlab
 import Utils
+import LegatoCorrections
 
 DEBUG_PDB = False
 
@@ -644,7 +645,16 @@ def sg_config_constants(calib_consts, log_deepglider=0, has_gpctd=False):
     }
 
     # CT type (sg_ct_type) and construction (sg_ct_geometry)
-    if sbect_unpumped:
+    if sg_ct_type == 4:
+        config.update(
+            {
+                'legato_time_lag' : -0.8,
+                'legato_alpha' : 0.08,
+                'legato_tau' : 10.0,
+                'legato_ctcoeff' : 0.0,
+            }
+        )
+    elif sbect_unpumped:
         config.update(
             {
                 ## all these constants apply to the unpumped SBE41 for its corrections
@@ -3915,6 +3925,7 @@ def make_dive_profile(
                     tmp_press_v = results_d["legato_pressure"]
                     ctd_temp_v = results_d["legato_temp"]
                     ctd_cond_v = results_d["legato_conduc"] / 10.0
+                    ctd_condtemp_v = results_d["legato_conducTemp"]
                     ctd_epoch_time_s_v = results_d["legato_time"]
                 except KeyError:
                     raise RuntimeError(
@@ -3923,12 +3934,14 @@ def make_dive_profile(
             else:
                 ctd_temp_v = eng_f.get_col("rbr_temp")
                 ctd_cond_v = eng_f.get_col("rbr_conduc")
+                ctd_condtemp_v = eng_f.get_col("rbr_conducTemp")
                 if ctd_cond_v is not None:
                     ctd_cond_v /= 10.0
                 ctd_epoch_time_s_v = sg_epoch_time_s_v.copy()
                 if (
                     ctd_temp_v is None
                     or ctd_cond_v is None
+                    or ctd_condtemp_v is None
                     or ctd_epoch_time_s_v is None
                 ):
                     raise RuntimeError(
@@ -5762,7 +5775,6 @@ def make_dive_profile(
                 True,  # force averaging and hope
                 ctd_gsm_speed_cm_s_v,
                 ctd_gsm_glide_angle_deg_v,
-                longitude,
                 latitude,
             )
 
@@ -5772,11 +5784,37 @@ def make_dive_profile(
             log_warning("TSV correction unable to converge")
             directives.suggest("skip_profile % nonconverged")
 
-        # Rebind these to our corrected versions
-        temp_cor_v = tmc_temp_cor_v
-        temp_cor_qc_v = tmc_temp_cor_qc_v
-        salin_cor_v = tmc_salin_cor_v
-        salin_cor_qc_v = tmc_salin_cor_qc_v
+        if sg_ct_type == 4:
+            (
+                corr_pressure,
+                corr_temperature,
+                corr_temperature_qc,
+                corr_salinity,
+                corr_salinity_qc,
+                corr_conductivity,
+                corr_conductivity_qc,                
+                corr_salinity_lag_only,
+            ) = LegatoCorrections.legato_correct_ct(
+                calib_consts,
+                ctd_epoch_time_s_v,
+                ctd_press_v,
+                temp_cor_v,
+                temp_cor_qc_v,
+                cond_cor_v,
+                cond_cor_qc_v,
+                ctd_condtemp_v,
+            )
+            #CONDSIDER: Add corr_salinity_lag_only, corr_conductivity and corr_pressure to netcdf file
+            temp_cor_v = corr_temperature
+            temp_cor_qc_v = corr_temperature_qc
+            salin_cor_v = corr_salinity
+            salin_cor_qc_v = corr_salinity_qc
+        else:
+            # Rebind these to our corrected versions 
+            temp_cor_v = tmc_temp_cor_v
+            temp_cor_qc_v = tmc_temp_cor_qc_v
+            salin_cor_v = tmc_salin_cor_v
+            salin_cor_qc_v = tmc_salin_cor_qc_v
 
         # finally, after all adjustments, update final salinity qc
         # no change to temp or cond expected but salin is corrected
