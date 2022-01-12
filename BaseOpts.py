@@ -242,6 +242,19 @@ global_options_dict = {
             ),
         },
     ),
+    "python": options_t(
+        "python 3.9",
+        (
+            "FlightModel",
+        ),
+        (
+            "--python",
+        ),
+        str,
+        {
+            "help": "path to python executable",
+        },
+    ),
     "delete_upload_files": options_t(
         False,
         ("Base",),
