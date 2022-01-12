@@ -1,3 +1,4 @@
+#('eng_qsp_PARuV', [True, 'd', {'units': 'umol/m^2/sec', 'description':'PAR', '_FillValue':nc_nan}, (nc_sg_data_info,)])
 name=QSP2150
 prefix=qsp
 timeout=250

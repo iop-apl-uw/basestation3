@@ -60,6 +60,8 @@ from BaseLog import *
 # TODO: fix delcarations and imports to eliminate circulatities!
 nc_nan = array([nan], dtype = float64)[0] # CF1.4 ensure double
 nc_scalar = ()
+# 2022/01/12 GBS - needed to add this to support qsp2150.cnf processing
+nc_sg_data_info = "sg_data_info"  # eng
 from scipy.io import netcdf
 import glob
 import pickle
