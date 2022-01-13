@@ -32,7 +32,7 @@ import scipy.interpolate
 import seawater
 import gsw
 
-from BaseLog import log_debug
+from BaseLog import log_debug, log_info
 import Globals
 import QC
 
@@ -108,11 +108,15 @@ def legato_correct_ct(
     # ctcoeff = 0
     # tau = 10
     # alpha = 0.08
+    time_lag = float(sg_calib_consts_d["legato_time_lag"])
+    ctcoeff = float(sg_calib_consts_d["legato_ctcoeff"])
+    tau = float(sg_calib_consts_d["legato_tau"])
+    alpha = sg_calib_consts_d["legato_alpha"]
     log_debug("Legato correction values")
-    log_debug(f"time_lag:{sg_calib_consts_d['legato_time_lag']:.1f} secs")
-    log_debug(f"alpha:{sg_calib_consts_d['legato_alpha']:.1f}")
-    log_debug(f"tau:{sg_calib_consts_d['legato_tau']:.1f}")
-    log_debug(f"ctcoeef:{sg_calib_consts_d['legato_ctcoeff']:.1f}")
+    log_debug(f"time_lag:{time_lag:.2f} secs")
+    log_debug(f"alpha:{alpha:.2f}")
+    log_debug(f"tau:{tau:.2f}")
+    log_debug(f"ctcoeef:{ctcoeff:.2f}")
 
     # Incoming QC for cond is generally a superset of temp with respect to non-good
     # points.  The approach here is fairly simple - consider "good working set" to be
@@ -163,31 +167,27 @@ def legato_correct_ct(
 
     # Morison et al, 1994; Lueck and Picklo,
     fn = 1.0 / sample_rate / 2.0
-    a = (
-        4.0
-        * fn
-        * sg_calib_consts_d["legato_alpha"]
-        * sg_calib_consts_d["legato_tau"]
-        / (1.0 + 4.0 * fn * sg_calib_consts_d["legato_tau"])
-    )
-    b = 1.0 - 2.0 * a / sg_calib_consts_d["legato_alpha"]
+    a = 4.0 * fn * alpha * tau / (1.0 + 4.0 * fn * tau)
+    b = 1.0 - 2.0 * a / alpha
     Tt = t1 * 0.0
     for nn in range(2, len(Tt)):
         Tt[nn] = -b * Tt[nn - 1] + a * (t1[nn] - t1[nn - 1])
 
     # advance the temperature by time lag (nominal - 0.8 sec) and thermal error...
-    t2 = interp1(reg_time + sg_calib_consts_d["legato_time_lag"], t1 + Tt, reg_time)
+    t2 = interp1(reg_time + time_lag, t1 + Tt, reg_time)
 
     # only the 0.8 sec (no thermal error)
-    t_lag_only = interp1(reg_time + sg_calib_consts_d["legato_time_lag"], t1, reg_time)
+    t_lag_only = interp1(reg_time + time_lag, t1, reg_time)
 
     # tau60 correction (nominal ctcoeff value means this is a NOP
-    c2 = c1 / (1.0 + sg_calib_consts_d["legato_ctcoeff"] * (ct - t1))
+    c2 = c1 / (1.0 + ctcoeff * (ct - t1))
 
     # correction of conductivity due to pressure (fit relative to sg180 Guam 2019)
     # TODO: Still needs verification from RBR on correctness
     P = np.array([3.3058e-05, 0.0488])
-    c2 = c2 - (P[0] * p2 + P[1])
+    # Looks odd - slope/int worked out for native Legato conductivity - a factor of 10 off
+    # from the SI units
+    c2 = ((c2 * 10.0) - (P[0] * p2 + P[1])) / 10.0
 
     if Globals.f_use_seawater:
         S = seawater.salt(c2 / (seawater.constants.c3515 / 10.0), t2, p2)
@@ -198,7 +198,7 @@ def legato_correct_ct(
         S = gsw.SP_from_C(c2 * 10.0, t2, p2)
         S_lag_only = gsw.SP_from_C(c1 * 10.0, t_lag_only, p2)
 
-    # BACK on the original grid.
+    # Back on the original grid.
     corr_pressure = np.full(len(legato_time), np.nan)
     corr_temperature = np.full(len(legato_time), np.nan)
     corr_salinity = np.full(len(legato_time), np.nan)
