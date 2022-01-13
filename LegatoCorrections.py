@@ -24,19 +24,15 @@
 """
 Thermal-iniertia corrections for legato ctd
 """
-import pdb
-
 import numpy as np
 from scipy import signal
 import scipy.interpolate
 import seawater
 import gsw
 
-from BaseLog import log_debug, log_info
+from BaseLog import log_debug
 import Globals
 import QC
-
-# TODO - Retain stand alone option here to corrrect the CTD and update the netCDF file
 
 
 def interp1(t1, data, t2, assume_sorted=False, extrapolate=False, extend=False):
@@ -69,8 +65,6 @@ def interp1(t1, data, t2, assume_sorted=False, extrapolate=False, extend=False):
     return f(t2)
 
 
-# TODO: Take in C and T QC flags, and apply to the data set before
-# correcting
 def legato_correct_ct(
     sg_calib_consts_d,
     legato_time,
@@ -151,19 +145,38 @@ def legato_correct_ct(
     NN = np.max(np.array((1.0, NN_tmp))).astype(np.int64)
 
     # Original - breaks down with half-profiles where the dive starts deep
-    # p2 = signal.convolve(p1, np.ones(NN) / NN, mode="same")
+    # p2 = signal.convolve(p1, np.ones(NN) / NN, mode="same", method="direct")
 
-    # Extend pressure signal out on both ends, convolve and chop
+    # Version 1 - Extend pressure signal out on both ends
     # This yeilds better results for half profiles, where the signal doesn't start or stop at 0
-    p1_tmp = np.empty((len(p1) + NN))
-    p1_tmp[NN // 2 : NN // 2 + len(p1)] = p1
-    p1_tmp[: NN // 2] = p1[0]
-    p1_tmp[NN // 2 + len(p1) :] = p1[-1]
+    # p1_tmp = np.empty((len(p1) + NN))
+    # p1_tmp[NN // 2 : NN // 2 + len(p1)] = p1
+    # p1_tmp[: NN // 2] = p1[0]
+    # p1_tmp[NN // 2 + len(p1) :] = p1[-1]
 
-    p2 = signal.convolve(p1_tmp, np.ones(NN) / NN, mode="same")
+    # Version 2 - do an interpolation into the tails to get smoother signal
+    # This works because we are on a regular grid
+    p1_time = np.arange(NN // 2, NN // 2 + len(p1))
+    p2_time = np.arange(len(p1) + NN)
+    f = scipy.interpolate.interp1d(
+        p1_time,
+        p1,
+        bounds_error=False,
+        fill_value="extrapolate",
+    )
+    p1_tmp = f(p2_time)
 
+    # Smoothing
+    p2 = signal.convolve(p1_tmp, np.ones(NN) / NN, mode="same", method="direct")
     # Extract the middle
     p2 = p2[NN // 2 : NN // 2 + len(p1)]
+
+    # Correction of conductivity due to pressure (fit relative to sg180 Guam 2019)
+    # TODO: Still needs verification from RBR on correctness
+    # Looks odd - Luc worked out slope/int for native Legato conductivity - a factor of 10 off
+    # from the SI units
+    Pcorrection = np.array([3.3058e-05, 0.0488])
+    c1 = ((c1 * 10.0) - (Pcorrection[0] * p2 + Pcorrection[1])) / 10.0
 
     # Morison et al, 1994; Lueck and Picklo,
     fn = 1.0 / sample_rate / 2.0
@@ -179,15 +192,8 @@ def legato_correct_ct(
     # only the 0.8 sec (no thermal error)
     t_lag_only = interp1(reg_time + time_lag, t1, reg_time)
 
-    # tau60 correction (nominal ctcoeff value means this is a NOP
+    # tau60 correction (nominal ctcoeff value means this is a NOP)
     c2 = c1 / (1.0 + ctcoeff * (ct - t1))
-
-    # correction of conductivity due to pressure (fit relative to sg180 Guam 2019)
-    # TODO: Still needs verification from RBR on correctness
-    P = np.array([3.3058e-05, 0.0488])
-    # Looks odd - slope/int worked out for native Legato conductivity - a factor of 10 off
-    # from the SI units
-    c2 = ((c2 * 10.0) - (P[0] * p2 + P[1])) / 10.0
 
     if Globals.f_use_seawater:
         S = seawater.salt(c2 / (seawater.constants.c3515 / 10.0), t2, p2)
