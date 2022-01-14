@@ -2954,6 +2954,13 @@ def make_dive_profile(
                     sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
                 else:
                     sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+                results_d.update(
+                    {
+                        "pressure": sg_press_v,
+                        "depth": sg_depth_m_v,
+                    }
+                )
+                    
 
     log_info(
         "%s auxcompass %s auxPressure"
@@ -3067,6 +3074,11 @@ def make_dive_profile(
         # matlab references to (1900-01-01 00:00:00 UTC)
         # ODV wants Date (as YYYY-MM-YY) and Time (HH:MM)
         sg_epoch_time_s_v = eng_file_start_time + elapsed_time_s_v
+        
+        results_d.update({nc_sg_time_var: sg_epoch_time_s_v})
+        globals_d["time_coverage_start"] = nc_ISO8601_date(min(sg_epoch_time_s_v))
+        globals_d["time_coverage_end"] = nc_ISO8601_date(max(sg_epoch_time_s_v))
+
 
         # dimension values
         sg_np = len(elapsed_time_s_v)
@@ -3970,6 +3982,13 @@ def make_dive_profile(
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+                
+            results_d.update(
+                {
+                    "pressure": sg_press_v,
+                    "depth": sg_depth_m_v,
+                }
+            )
 
             # Handle pressure spikes in legato pressure signal
             if tmp_press_v is not None:
@@ -4269,6 +4288,13 @@ def make_dive_profile(
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+            results_d.update(
+                {
+                    "pressure": sg_press_v,
+                    "depth": sg_depth_m_v,
+                }
+            )
+
 
             # There are two other possible 'depth' measurements from scicon
             # Both are based on the same pressure sensor used by the glider.
@@ -4437,6 +4463,12 @@ def make_dive_profile(
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+            results_d.update(
+                {
+                    "pressure": sg_press_v,
+                    "depth": sg_depth_m_v,
+                }
+            )
 
             # MDP automatically asserts instrument when writing
             # DEAD results_d['gpctd'] = 'pumped Seabird SBE41 (gpctd)' # record the instrument used for CTD
@@ -4640,16 +4672,21 @@ def make_dive_profile(
                 salin_raw_v = gsw.SP_from_C(cond_raw_v * 10.0, temp_raw_v, ctd_press_v)
 
         # elapsed time is recorded as eng_elaps_t
-        results_d.update(
-            {
-                nc_sg_time_var: sg_epoch_time_s_v,
-                "pressure": sg_press_v,
-                "depth": sg_depth_m_v,
-            }
-        )
 
-        globals_d["time_coverage_start"] = nc_ISO8601_date(min(sg_epoch_time_s_v))
-        globals_d["time_coverage_end"] = nc_ISO8601_date(max(sg_epoch_time_s_v))
+        # This are stored earlier, so they are always in the netcdf file,
+        # even if CT processing fails
+        
+        #results_d.update(
+        #    {
+        #        nc_sg_time_var: sg_epoch_time_s_v,
+        #        "pressure": sg_press_v,
+        #        "depth": sg_depth_m_v,
+        #    }
+        #)
+
+        #globals_d["time_coverage_start"] = nc_ISO8601_date(min(sg_epoch_time_s_v))
+        #globals_d["time_coverage_end"] = nc_ISO8601_date(max(sg_epoch_time_s_v))
+        
         # see discussion in BaseNetCDF about resolution vs accuracy
         # TODO some instruments have much better resolution than 1 secs and
         # even the glider doesn't have resolution finer than 2.5 secs nominally...so what is this saying?
