@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -323,6 +323,8 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
         # invert the sign here because we'll use it inverted below
         with warnings.catch_warnings():
             # RuntimeWarning: invalid value encountered in power occurs because q_prev has a negative value somewhere
+            neg_i = q_prev < 0
+            q_prev[neg_i] = nan
             warnings.simplefilter("ignore")
             scaled_drag = power(q_prev, -hd_s) 
         tth_v = tan(theta) # compute once
