@@ -244,12 +244,8 @@ global_options_dict = {
     ),
     "python": options_t(
         "python 3.9",
-        (
-            "FlightModel",
-        ),
-        (
-            "--python",
-        ),
+        ("FlightModel",),
+        ("--python",),
         str,
         {
             "help": "path to python executable",
@@ -650,7 +646,7 @@ global_options_dict = {
         None,
         ("MoveData",),
         ("--target_dir", "-t"),
-        str,
+        FullPath,
         {
             "help": "target directory, used by MoveData.py",
             "action": FullPathAction,
@@ -685,7 +681,7 @@ global_options_dict = {
             "WindRain",
         ),
         ("netcdf_filename",),
-        str,
+        FullPath,
         {
             "help": "Name of netCDF file to process (only honored when --mission_dir is not specified)",
             "nargs": "?",
@@ -799,7 +795,7 @@ global_options_dict = {
             "MakeMissionEngPlots",
         ),
         ("--plot_directory",),
-        str,
+        FullPath,
         {
             "help": "Override default plot directory location",
             "section": "makeplot",
@@ -1055,7 +1051,7 @@ global_options_dict = {
             "MakePlotTSProfile",
         ),
         ("profile_filename",),
-        str,
+        FullPath,
         {
             "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
             "nargs": "?",
