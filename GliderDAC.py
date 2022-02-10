@@ -25,6 +25,7 @@
 """ Create a file for submission to the GliderDAC from an existing netCDF file
 """
 
+import argparse
 import os
 import pdb
 import stat
@@ -33,6 +34,7 @@ import time
 import traceback
 from functools import reduce
 
+import gsw
 import numpy as np
 import xarray as xr
 
@@ -47,6 +49,19 @@ from BaseLog import BaseLogger, log_info, log_warning, log_error, log_debug
 DEBUG_PDB = True
 
 # Util functions
+def fix_ints(data_type, attrs):
+    """Convert int values from LL (json format) to appropriate size per gliderdac specs"""
+    new_attrs = {}
+    for k, v in attrs.items():
+        if isinstance(type(v), int):
+            new_attrs[k] = data_type(v)
+        elif k == "flag_values":
+            new_attrs[k] = [data_type(li) for li in v]
+        else:
+            new_attrs[k] = v
+    return new_attrs
+
+
 def create_nc_var(dso, template, var_name, data, qc_val=None):
     """Creates a nc variable and sets meta data
     Input:
@@ -97,21 +112,19 @@ def create_nc_var(dso, template, var_name, data, qc_val=None):
             qc_v = np.zeros((np.size(inp_data)), dtype="b") + np.dtype(
                 template["variables"][qc_name]["type"]
             ).type(qc_val)
-
         da_q = xr.DataArray(
             qc_v,
             dims=template["variables"][qc_name]["dimensions"],
-            attrs=template["variables"][qc_name]["attributes"],
+            attrs=fix_ints(np.byte, template["variables"][qc_name]["attributes"]),
         )
         dso[qc_name] = da_q
     else:
         da_q = None
 
-    # TODO Fix atttributes - if in, make short or int32
     da = xr.DataArray(
         inp_data,
         dims=template["variables"][var_name]["dimensions"] if not is_str else None,
-        attrs=template["variables"][var_name]["attributes"],
+        attrs=fix_ints(np.int32, template["variables"][var_name]["attributes"]),
         # coords=None,
     )
     dso[var_name] = da
@@ -278,21 +291,35 @@ def main(
                         "action": BaseOpts.FullPathAction,
                     },
                 ),
+                "delayed_submission": BaseOpts.options_t(
+                    False,
+                    ("GliderDAC",),
+                    ("--delayed_submission",),
+                    BaseOpts.FullPath,
+                    {
+                        "help": "Generated files for delayed submission",
+                        "section": "gliderdac",
+                        "action": argparse.BooleanOptionalAction,
+                    },
+                ),
             },
         )
 
     BaseLogger(base_opts)
 
-    if base_opts.bin_width is None:
-        base_opts.bin_width = 1.0
+    if base_opts.delayed_submission:
+        delayed_str = "_delayed"
+    else:
+        delayed_str = ""
 
     # TODO: Make these configurable
     master_time_name = "ctd_time"
     master_depth_name = "ctd_depth"
 
+    processing_start_time = time.gmtime(time.time())
     log_info(
         "Started processing "
-        + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+        + time.strftime("%H:%M:%S %d %b %Y %Z", processing_start_time)
     )
 
     if not base_opts.mission_dir and base_opts.netcdf_filename:
@@ -354,38 +381,41 @@ def main(
             continue
 
         master_depth = dsi[master_depth_name].data
-        max_depth = np.floor(np.nanmax(master_depth))
-
-        # This is actually bin edges, so one more point then actual bins
-        bin_edges = np.arange(
-            -base_opts.bin_width / 2.0,
-            max_depth + base_opts.bin_width / 2.0 + 0.01,
-            base_opts.bin_width,
-        )
-
-        # Do this to ensure everything is caught in the binned statistic
-        bin_edges[0] = -20.0
-        bin_edges[-1] = max_depth + 50.0
-
-        bin_centers_down = np.arange(0.0, max_depth + 0.01, base_opts.bin_width)
-        max_depth_i = find_deepest_bin_i(
-            master_depth, bin_centers_down, base_opts.bin_width
-        )
-
-        bin_centers = np.concatenate((bin_centers_down, bin_centers_down[:-1][::-1]))
         # Xarray converts to numpy.datetime64(ns) - get it back to something useful
         master_time = dsi[master_time_name].data.astype(np.float64) / 1000000000.0
 
-        t_profile = np.zeros(len(bin_centers))
+        if base_opts.bin_width:
+            max_depth = np.floor(np.nanmax(master_depth))
+            # This is actually bin edges, so one more point then actual bins
+            bin_edges = np.arange(
+                -base_opts.bin_width / 2.0,
+                max_depth + base_opts.bin_width / 2.0 + 0.01,
+                base_opts.bin_width,
+            )
 
-        t_profile[: len(bin_centers_down)] = NetCDFUtils.interp1_extend(
-            master_depth[:max_depth_i], master_time[:max_depth_i], bin_centers_down
-        )
-        t_profile[len(bin_centers_down) :] = NetCDFUtils.interp1_extend(
-            master_depth[max_depth_i:],
-            master_time[max_depth_i:],
-            bin_centers_down[1:][::-1],
-        )
+            # Do this to ensure everything is caught in the binned statistic
+            bin_edges[0] = -20.0
+            bin_edges[-1] = max_depth + 50.0
+
+            bin_centers_down = np.arange(0.0, max_depth + 0.01, base_opts.bin_width)
+            max_depth_i = find_deepest_bin_i(
+                master_depth, bin_centers_down, base_opts.bin_width
+            )
+
+            bin_centers = np.concatenate(
+                (bin_centers_down, bin_centers_down[:-1][::-1])
+            )
+
+            t_profile = np.zeros(len(bin_centers))
+
+            t_profile[: len(bin_centers_down)] = NetCDFUtils.interp1_extend(
+                master_depth[:max_depth_i], master_time[:max_depth_i], bin_centers_down
+            )
+            t_profile[len(bin_centers_down) :] = NetCDFUtils.interp1_extend(
+                master_depth[max_depth_i:],
+                master_time[max_depth_i:],
+                bin_centers_down[1:][::-1],
+            )
 
         timeseries_vars = {
             "temperature": "temperature",
@@ -393,28 +423,41 @@ def main(
             "conductivity": "conductivity",
             "latitude": "lat",
             "longitude": "lon",
+            "pressure": "pressure",
         }
 
-        tmp_vars = {}
+        # Note: for non-binned, this variable is just a copy of the data straight from
+        # the netcdf file
+        binned_vars = {}
         for var_name in timeseries_vars:
             log_debug(f"Adding variable {var_name}")
             data = load_var(
                 dsi,
                 var_name,
             )
-            max_depth_i = find_deepest_bin_i(
-                master_depth, bin_edges, base_opts.bin_width
-            )
+            if base_opts.bin_width:
+                max_depth_i = find_deepest_bin_i(
+                    master_depth, bin_edges, base_opts.bin_width
+                )
 
-            var_v = np.zeros(np.size(bin_centers)) * np.nan
-            var_v[: np.size(bin_centers_down)], *_ = NetCDFUtils.bindata(
-                master_depth[:max_depth_i], data[:max_depth_i], bin_edges
-            )
-            var_tmp, *_ = NetCDFUtils.bindata(
-                master_depth[max_depth_i:], data[max_depth_i:], bin_edges
-            )
-            var_v[np.size(bin_centers_down) :] = var_tmp[:-1][::-1]
-            tmp_vars[var_name] = (var_v, np.isfinite(var_v))
+                var_v = np.zeros(np.size(bin_centers)) * np.nan
+                n_obs = np.zeros(np.size(bin_centers))
+                (
+                    var_v[: np.size(bin_centers_down)],
+                    n_obs[: np.size(bin_centers_down)],
+                    *_,
+                ) = NetCDFUtils.bindata(
+                    master_depth[:max_depth_i], data[:max_depth_i], bin_edges
+                )
+
+                var_tmp, n_obs_tmp, *_ = NetCDFUtils.bindata(
+                    master_depth[max_depth_i:], data[max_depth_i:], bin_edges
+                )
+                var_v[np.size(bin_centers_down) :] = var_tmp[:-1][::-1]
+                n_obs[np.size(bin_centers_down) :] = n_obs_tmp[:-1][::-1]
+                binned_vars[var_name] = (var_v, np.isfinite(var_v), n_obs)
+            else:
+                binned_vars[var_name] = (data.data, np.isfinite(data))
 
         # Locate the good points
         good_pts_i = np.squeeze(
@@ -422,15 +465,15 @@ def main(
                 np.logical_and.reduce(
                     [
                         v[1]
-                        for k, v in tmp_vars.items()
-                        if k not in ("latitude", "longitude")
+                        for k, v in binned_vars.items()
+                        if k not in ("latitude", "longitude", "pressure")
                     ]
                 )
             )
         )
         # Create variables with only good points, based on the mask
         reduced_vars = {}
-        for var_name, val in tmp_vars.items():
+        for var_name, val in binned_vars.items():
             reduced_vars[var_name] = val[0][good_pts_i]
             create_nc_var(
                 dso,
@@ -438,19 +481,41 @@ def main(
                 timeseries_vars[var_name],
                 reduced_vars[var_name],
                 qc_val=QC.QC_GOOD
-                if var_name not in ("latitude", "longitude")
+                if var_name not in ("latitude", "longitude", "pressure")
                 else QC.QC_NO_CHANGE,
             )
+            # This is just for debugging
+            if base_opts.bin_width and var_name == "temperature":
+                create_nc_var(dso, template, "temperature_n", val[2][good_pts_i])
 
-        reduced_bin_centers = bin_centers[good_pts_i]
-        reduced_time = t_profile[good_pts_i]
+        if base_opts.bin_width:
+            reduced_depth = bin_centers[good_pts_i]
+            reduced_time = t_profile[good_pts_i]
+            del (
+                bin_centers,
+                t_profile,
+            )
+        else:
+            reduced_depth = master_depth[good_pts_i]
+            reduced_time = master_time[good_pts_i]
 
-        del tmp_vars, bin_centers, t_profile, good_pts_i
+        salinity_absolute = gsw.SA_from_SP(
+            reduced_vars["salinity"],
+            np.zeros(reduced_vars["salinity"].size),
+            reduced_vars["longitude"],
+            reduced_vars["latitude"],
+        )
+        density = gsw.rho_t_exact(
+            salinity_absolute,
+            reduced_vars["temperature"],
+            np.zeros(salinity_absolute.size),
+        )
+        create_nc_var(dso, template, "density", density, qc_val=QC.QC_GOOD)
+
+        del binned_vars, good_pts_i
 
         # Depth and time
-        create_nc_var(
-            dso, template, "depth", reduced_bin_centers, qc_val=QC.QC_NO_CHANGE
-        )
+        create_nc_var(dso, template, "depth", reduced_depth, qc_val=QC.QC_NO_CHANGE)
         create_nc_var(dso, template, "time", reduced_time, qc_val=QC.QC_NO_CHANGE)
 
         # Singleton variables
@@ -491,19 +556,50 @@ def main(
             reduced_vars["longitude"][median_time_i],
             qc_val=QC.QC_NO_CHANGE,
         )
-        # profile_time
-        # profile_lat
-        # profile_lon
 
-        # u
-        # v
-        # time_uv
-        # lat_uv
-        # lon_uv
-        #
-        # platform
-        # instrument_ctd
+        create_nc_var(
+            dso,
+            template,
+            "v",
+            dsi["depth_avg_curr_north"],
+            qc_val=dsi["depth_avg_curr_qc"],
+        )
+        create_nc_var(
+            dso,
+            template,
+            "u",
+            dsi["depth_avg_curr_east"],
+            qc_val=dsi["depth_avg_curr_qc"],
+        )
+        create_nc_var(
+            dso,
+            template,
+            "time_uv",
+            reduced_time[median_time_i],
+            qc_val=QC.QC_NO_CHANGE,
+        )
+        create_nc_var(
+            dso,
+            template,
+            "lat_uv",
+            reduced_vars["latitude"][median_time_i],
+            qc_val=QC.QC_NO_CHANGE,
+        )
+        create_nc_var(
+            dso,
+            template,
+            "lon_uv",
+            reduced_vars["longitude"][median_time_i],
+            qc_val=QC.QC_NO_CHANGE,
+        )
 
+        # This varibles are just to hold the attched metadata
+        create_nc_var(
+            dso,
+            template,
+            "platform",
+            template["variables"]["instrument_ctd"]["attributes"]["_FillValue"],
+        )
         create_nc_var(
             dso,
             template,
@@ -512,51 +608,45 @@ def main(
         )
 
         # attributes
-        # per-profile "project": "California Underwater Glider Network - Line 90",
+        dso.attrs[
+            "history"
+        ] = f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', processing_start_time)}: GliderDac.py"
+        now_ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time()))
+        dso.attrs["date_created"] = now_ts
+        dso.attrs["date_issued"] = now_ts
+        dso.attrs["date_modified"] = now_ts
+
+        #
+        # These are not required by the spec
+        #
         # per-profile "date_created": "2021-07-16T15:16:27.037189",
         # per-profile "date_modified": "2021-07-19T15:44:11.181969",
         # per-profile "date_issued": "2021-07-19T15:44:57.933159",
         # per-profile "geospatial_bounds": "POLYGON ((-117.6545 33.2183, -117.6833 33.2308, -117.6761 33.227675, -117.6545 33.2183))",
+        # for a in (
+        #     "geospatial_lat_min",
+        #     "geospatial_lat_max",
+        #     "geospatial_lon_min",
+        #     "geospatial_lon_max",
+        # ):
+        #     dso.attrs[a] = np.format_float_positional(
+        #         dsi.attrs[a], precision=4, unique=False
+        #     )
 
-        #  These are not required by the spec
-        for a in (
-            "geospatial_lat_min",
-            "geospatial_lat_max",
-            "geospatial_lon_min",
-            "geospatial_lon_max",
-        ):
-            dso.attrs[a] = np.format_float_positional(
-                dsi.attrs[a], precision=4, unique=False
-            )
-
-        dso.attrs["geospatial_vertical_min"] = np.format_float_positional(
-            np.floor(np.nanmin(reduced_bin_centers)), precision=2, unique=False
-        )
-        dso.attrs["geospatial_vertical_max"] = np.format_float_positional(
-            np.ceil(np.nanmax(reduced_bin_centers)), precision=2, unique=False
-        )
-
-        single_vars = [
-            "depth_avg_curr_qc",
-            "depth_avg_curr_error",
-            "depth_avg_curr_north_gsm",
-            "depth_avg_curr_east_gsm",
-            "depth_avg_curr_north",
-            "depth_avg_curr_east",
-        ]
-
-        # Back to timeseries data
-
-        # TODO Generated from existing data
-        # pressure
-        # density
+        # dso.attrs["geospatial_vertical_min"] = np.format_float_positional(
+        #     np.floor(np.nanmin(reduced_depth)), precision=2, unique=False
+        # )
+        # dso.attrs["geospatial_vertical_max"] = np.format_float_positional(
+        #     np.ceil(np.nanmax(reduced_depth)), precision=2, unique=False
+        # )
 
         # Apply global attributes from template
         for k, v in template["global_attributes"].items():
             dso.attrs[k] = v
 
         netcdf_out_filename = os.path.join(
-            base_opts.gliderdac_directory, f"{trajectory_name}.nc"
+            base_opts.gliderdac_directory,
+            f"{trajectory_name}Z{delayed_str}.nc".replace("-", "_"),
         )
         comp = dict(zlib=True, complevel=9)
         # encoding = {var: comp for var in dso.data_vars}
