@@ -357,7 +357,6 @@ global_options_dict = {
             "MakeDiveProfiles",
             "MakeMissionProfile",
             "SimpleNetCDF",
-            "GliderDAC",
         ),
         ("--bin_width",),
         float,
@@ -1115,6 +1114,18 @@ global_options_dict = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
+    "gliderdac_bin_width": options_t(
+        0.0,
+        (
+            "GliderDAC",
+        ),
+        ("--gliderdac_bin_width",),
+        float,
+        {
+            "help": "Width of bins for GliderDAC file (0.0 indicates timeseries",
+        },
+    )
+
 }
 
 # Note: All option_group kwargs listed above must have an entry in this dictionary
