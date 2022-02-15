@@ -25,14 +25,13 @@
 """ Create a file for submission to the GliderDAC from an existing netCDF file
 """
 
-import argparse
+from functools import reduce
 import os
 import pdb
 import stat
 import sys
 import time
 import traceback
-from functools import reduce
 
 import gsw
 import numpy as np
@@ -245,64 +244,6 @@ def main(
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for creating GliderDAC netCDF files",
-            add_arguments=("netcdf_filename", "bin_width"),
-            additional_arguments={
-                "gliderdac_base_config": BaseOpts.options_t(
-                    None,
-                    ("GliderDAC",),
-                    ("--gliderdac_base_config",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "GliderDAC base configuration JSON file - common for all Seagliders",
-                        "section": "gliderdac",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-                "gliderdac_project_config": BaseOpts.options_t(
-                    None,
-                    ("GliderDAC",),
-                    ("--gliderdac_project_config",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "GliderDAC project configuration JSON file - common for single study area",
-                        "section": "gliderdac",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-                "gliderdac_deployment_config": BaseOpts.options_t(
-                    None,
-                    ("GliderDAC",),
-                    ("--gliderdac_deployment_config",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "GliderDAC deployoment configuration JSON file - specific to the current glider deoployment",
-                        "section": "gliderdac",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-                "gliderdac_directory": BaseOpts.options_t(
-                    None,
-                    ("GliderDAC",),
-                    ("--gliderdac_directory",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "Directory to place output files in",
-                        "section": "gliderdac",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-                "delayed_submission": BaseOpts.options_t(
-                    False,
-                    ("GliderDAC",),
-                    ("--delayed_submission",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "Generated files for delayed submission",
-                        "section": "gliderdac",
-                        "action": argparse.BooleanOptionalAction,
-                    },
-                ),
-            },
         )
 
     BaseLogger(base_opts)

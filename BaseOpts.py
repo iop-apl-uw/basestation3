@@ -357,6 +357,7 @@ global_options_dict = {
             "MakeDiveProfiles",
             "MakeMissionProfile",
             "SimpleNetCDF",
+            "GliderDAC",
         ),
         ("--bin_width",),
         float,
@@ -672,6 +673,7 @@ global_options_dict = {
     "netcdf_filename": options_t(
         None,
         (
+            "GliderDAC",
             "MakePlot",
             "MakePlot2",
             "MakePlot3",
@@ -1056,6 +1058,61 @@ global_options_dict = {
             "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
             "nargs": "?",
             "action": FullPathAction,
+        },
+    ),
+    "gliderdac_base_config": options_t(
+        None,
+        ("GliderDAC",),
+        ("--gliderdac_base_config",),
+        FullPath,
+        {
+            "help": "GliderDAC base configuration JSON file - common for all Seagliders",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_project_config": options_t(
+        None,
+        ("GliderDAC",),
+        ("--gliderdac_project_config",),
+        FullPath,
+        {
+            "help": "GliderDAC project configuration JSON file - common for single study area",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_deployment_config": options_t(
+        None,
+        ("GliderDAC",),
+        ("--gliderdac_deployment_config",),
+        FullPath,
+        {
+            "help": "GliderDAC deployoment configuration JSON file - specific to the current glider deoployment",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_directory": options_t(
+        None,
+        ("GliderDAC",),
+        ("--gliderdac_directory",),
+        FullPath,
+        {
+            "help": "Directory to place output files in",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "delayed_submission": options_t(
+        False,
+        ("GliderDAC",),
+        ("--delayed_submission",),
+        FullPath,
+        {
+            "help": "Generated files for delayed submission",
+            "section": "gliderdac",
+            "action": argparse.BooleanOptionalAction,
         },
     ),
 }
