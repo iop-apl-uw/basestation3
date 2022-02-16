@@ -197,6 +197,7 @@ global_options_dict = {
             "BaseSMS",
             "FTPPush",
             "FlightModel",
+            "GliderDAC",
             "GliderEarlyGPS",
             "MakeDiveProfiles",
             "MakeKML",
