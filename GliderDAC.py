@@ -338,7 +338,9 @@ def main(
             bin_edges[0] = -20.0
             bin_edges[-1] = max_depth + 50.0
 
-            bin_centers_down = np.arange(0.0, max_depth + 0.01, base_opts.gliderdac_bin_width)
+            bin_centers_down = np.arange(
+                0.0, max_depth + 0.01, base_opts.gliderdac_bin_width
+            )
             max_depth_i = find_deepest_bin_i(
                 master_depth, bin_centers_down, base_opts.gliderdac_bin_width
             )

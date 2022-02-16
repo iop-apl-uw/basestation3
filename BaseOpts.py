@@ -1061,7 +1061,10 @@ global_options_dict = {
     ),
     "gliderdac_base_config": options_t(
         None,
-        ("GliderDAC",),
+        (
+            "Base",
+            "GliderDAC",
+        ),
         ("--gliderdac_base_config",),
         FullPath,
         {
@@ -1072,7 +1075,10 @@ global_options_dict = {
     ),
     "gliderdac_project_config": options_t(
         None,
-        ("GliderDAC",),
+        (
+            "Base",
+            "GliderDAC",
+        ),
         ("--gliderdac_project_config",),
         FullPath,
         {
@@ -1083,7 +1089,10 @@ global_options_dict = {
     ),
     "gliderdac_deployment_config": options_t(
         None,
-        ("GliderDAC",),
+        (
+            "Base",
+            "GliderDAC",
+        ),
         ("--gliderdac_deployment_config",),
         FullPath,
         {
@@ -1094,7 +1103,10 @@ global_options_dict = {
     ),
     "gliderdac_directory": options_t(
         None,
-        ("GliderDAC",),
+        (
+            "Base",
+            "GliderDAC",
+        ),
         ("--gliderdac_directory",),
         FullPath,
         {
@@ -1105,7 +1117,10 @@ global_options_dict = {
     ),
     "delayed_submission": options_t(
         False,
-        ("GliderDAC",),
+        (
+            "Base",
+            "GliderDAC",
+        ),
         ("--delayed_submission",),
         FullPath,
         {
@@ -1117,6 +1132,7 @@ global_options_dict = {
     "gliderdac_bin_width": options_t(
         0.0,
         (
+            "Base",
             "GliderDAC",
         ),
         ("--gliderdac_bin_width",),
@@ -1124,8 +1140,7 @@ global_options_dict = {
         {
             "help": "Width of bins for GliderDAC file (0.0 indicates timeseries",
         },
-    )
-
+    ),
 }
 
 # Note: All option_group kwargs listed above must have an entry in this dictionary
