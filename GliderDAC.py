@@ -366,7 +366,7 @@ def main(
             "conductivity": "conductivity",
             "latitude": "lat",
             "longitude": "lon",
-            "pressure": "pressure",
+            "ctd_pressure": "pressure",
         }
 
         # Note: for non-binned, this variable is just a copy of the data straight from
