@@ -1,6 +1,6 @@
 # For Plotly persistence
 kaleido>=0.0.3.post1 ; platform_machine != 'armv7l'
-matplotlib==3.2.0
+matplotlib>=3.2.0
 numpy>=1.19.1
 gsw==3.3.1
 seawater==3.3.4
