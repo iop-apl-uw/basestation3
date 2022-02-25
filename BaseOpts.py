@@ -197,6 +197,7 @@ global_options_dict = {
             "BaseSMS",
             "FTPPush",
             "FlightModel",
+            "GliderDAC",
             "GliderEarlyGPS",
             "MakeDiveProfiles",
             "MakeKML",
@@ -244,12 +245,8 @@ global_options_dict = {
     ),
     "python": options_t(
         "python 3.9",
-        (
-            "FlightModel",
-        ),
-        (
-            "--python",
-        ),
+        ("FlightModel",),
+        ("--python",),
         str,
         {
             "help": "path to python executable",
@@ -650,7 +647,7 @@ global_options_dict = {
         None,
         ("MoveData",),
         ("--target_dir", "-t"),
-        str,
+        FullPath,
         {
             "help": "target directory, used by MoveData.py",
             "action": FullPathAction,
@@ -676,6 +673,7 @@ global_options_dict = {
     "netcdf_filename": options_t(
         None,
         (
+            "GliderDAC",
             "MakePlot",
             "MakePlot2",
             "MakePlot3",
@@ -685,7 +683,7 @@ global_options_dict = {
             "WindRain",
         ),
         ("netcdf_filename",),
-        str,
+        FullPath,
         {
             "help": "Name of netCDF file to process (only honored when --mission_dir is not specified)",
             "nargs": "?",
@@ -799,7 +797,7 @@ global_options_dict = {
             "MakeMissionEngPlots",
         ),
         ("--plot_directory",),
-        str,
+        FullPath,
         {
             "help": "Override default plot directory location",
             "section": "makeplot",
@@ -1055,11 +1053,93 @@ global_options_dict = {
             "MakePlotTSProfile",
         ),
         ("profile_filename",),
-        str,
+        FullPath,
         {
             "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
             "nargs": "?",
             "action": FullPathAction,
+        },
+    ),
+    "gliderdac_base_config": options_t(
+        None,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_base_config",),
+        FullPath,
+        {
+            "help": "GliderDAC base configuration JSON file - common for all Seagliders",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_project_config": options_t(
+        None,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_project_config",),
+        FullPath,
+        {
+            "help": "GliderDAC project configuration JSON file - common for single study area",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_deployment_config": options_t(
+        None,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_deployment_config",),
+        FullPath,
+        {
+            "help": "GliderDAC deployoment configuration JSON file - specific to the current glider deoployment",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_directory": options_t(
+        None,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_directory",),
+        FullPath,
+        {
+            "help": "Directory to place output files in",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "delayed_submission": options_t(
+        False,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--delayed_submission",),
+        FullPath,
+        {
+            "help": "Generated files for delayed submission",
+            "section": "gliderdac",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
+    "gliderdac_bin_width": options_t(
+        0.0,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_bin_width",),
+        float,
+        {
+            "help": "Width of bins for GliderDAC file (0.0 indicates timeseries",
         },
     ),
 }

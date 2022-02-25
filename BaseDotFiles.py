@@ -1208,3 +1208,44 @@ def process_extensions(
         log_info(f"Finished processing on {extension_file_name}")
 
     return ret_val
+
+def main():
+    """Basestation extension for creating Seaglider plots
+
+    Returns:
+        0 for success (although there may have been individual errors in
+            file processing).
+        Non-zero for critical problems.
+
+    Raises:
+        Any exceptions raised are considered critical errors and not expected
+    """
+    import BaseOpts
+    from BaseLog import BaseLogger, log_info
+    from CommLog import process_comm_log
+    
+    # pylint: disable=unused-argument
+    base_opts = BaseOpts.BaseOptions(sys.argv, "g", usage="%prog [Options] ")
+    BaseLogger("BaseDotFiles", base_opts)  # initializes BaseLog
+
+    args = base_opts.get_args()  # positional arguments
+
+    log_info(
+        "Started processing "
+        + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+    )
+
+    comm_log= process_comm_log(
+        os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
+    )[0]
+
+    process_pagers(base_opts, 90, "gps", comm_log=comm_log)
+
+if __name__ == "__main__":
+    retval = 1
+
+    # Force to be in UTC
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+
+    main()
