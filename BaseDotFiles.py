@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -31,10 +31,12 @@ import fnmatch
 import itertools
 import netrc
 import os
+import pdb
 import smtplib
 import socket
 import sys
 import time
+import traceback
 
 from email.utils import COMMASPACE, formatdate
 from email.mime.multipart import MIMEMultipart, MIMEBase
@@ -45,11 +47,22 @@ from ftplib import FTP
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+import BaseOpts
 import BaseGZip
 import CommLog
 import Sensors
 
-from BaseLog import log_error, log_warning, log_info, log_debug
+from BaseLog import (
+    BaseLogger,
+    log_error,
+    log_warning,
+    log_info,
+    log_debug,
+    log_critical,
+)
+from Globals import known_ftp_tags
+
+DEBUG_PDB = "darwin" in sys.platform
 
 # Configuration
 mail_server = "localhost"
@@ -341,9 +354,7 @@ def process_pagers(
                     pagers_elts = pagers_line.split(",")
                     email_addr = pagers_elts[0]
                     # Look for alternate sending functions
-                    if len(pagers_elts) > 1 and (
-                        pagers_elts[1] in list(pagers_ext.keys())
-                    ):
+                    if len(pagers_elts) > 1 and (pagers_elts[1] in pagers_ext):
                         log_info(f"Using sending function {pagers_elts[1]}")
                         send_func = pagers_ext[pagers_elts[1]]
                         pagers_elts = pagers_elts[2:]
@@ -575,6 +586,7 @@ def process_ftp_line(
     if ftp_line[0] == "#":  # not a comment
         return 0
 
+    log_debug(f"{processed_file_names}")
     log_info(f"Processing ftp line ({ftp_line})")
     # Lines of the form
     # [user[:password]@]host[:port]/path
@@ -634,9 +646,16 @@ def process_ftp_line(
     ftp_file_names_to_send = []
 
     for ftp_tag in ftp_tags:
-        if not ftp_tag in known_ftp_tags:
-            log_error(f"Unknown tag ({ftp_tag}) on line ({ftp_line}) - skipping")
-        else:
+        if ftp_tag.startswith("fnmatch_"):
+            _, m = ftp_tag.split("_", 1)
+            log_info(f"Match criteria ({m})")
+            for processed_file_name in processed_file_names:
+                # Case insenitive match since tags were already lowercased
+                if fnmatch.fnmatchcase(processed_file_name.lower(), m):
+                    ftp_file_names_to_send.append(processed_file_name)
+                    log_info(f"Matched {processed_file_name}")
+
+        elif ftp_tag in known_ftp_tags:
             if ftp_tag == "comm":
                 ftp_file_names_to_send.append(
                     os.path.join(base_opts.mission_dir, "comm.log")
@@ -656,11 +675,14 @@ def process_ftp_line(
                         head, tail = os.path.splitext(processed_file_name)
                         if tail.lstrip(".") == ftp_tag.lower():
                             ftp_file_names_to_send.append(processed_file_name)
+        else:
+            log_error(f"Unknown tag ({ftp_tag}) on line ({ftp_line}) - skipping")
 
     if len(ftp_file_names_to_send) < 1:
         return 0  # nothing to send
 
     log_debug(f"ftp files to send {ftp_file_names_to_send}")
+
     # Connect
     try:
         ftp = FTP(host)
@@ -1209,6 +1231,7 @@ def process_extensions(
 
     return ret_val
 
+
 def main():
     """Basestation extension for creating Seaglider plots
 
@@ -1220,26 +1243,59 @@ def main():
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    import BaseOpts
-    from BaseLog import BaseLogger, log_info
-    from CommLog import process_comm_log
-    
-    # pylint: disable=unused-argument
-    base_opts = BaseOpts.BaseOptions(sys.argv, "g", usage="%prog [Options] ")
-    BaseLogger("BaseDotFiles", base_opts)  # initializes BaseLog
 
-    args = base_opts.get_args()  # positional arguments
+    # Add option for what action to perform
+    # 1) GPS of most recent fix
+    # 2) FTP for list of files
+
+    # pylint: disable=unused-argument
+    base_opts = BaseOpts.BaseOptions(
+        "cmdline entry for basestation dot file processing",
+        additional_arguments={
+            "basedotfiles_action": BaseOpts.options_t(
+                None,
+                ("BaseDotFiles",),
+                ("basedotfiles_action",),
+                str,
+                {
+                    "help": "Which action to run",
+                    "choices": ("gps", "ftp"),
+                },
+            ),
+            "ftp_files": BaseOpts.options_t(
+                None,
+                ("BaseDotFiles",),
+                ("ftp_files",),
+                str,
+                {
+                    "help": "List of files to upload",
+                    "nargs": "*",
+                },
+            ),
+        },
+    )
+
+    BaseLogger(base_opts)
 
     log_info(
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    comm_log= process_comm_log(
-        os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
-    )[0]
+    if base_opts.basedotfiles_action == "gps":
+        comm_log = CommLog.process_comm_log(
+            os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
+        )[0]
 
-    process_pagers(base_opts, 90, "gps", comm_log=comm_log)
+        process_pagers(
+            base_opts,
+            comm_log.last_complete_surfacing().session.sg_id,
+            "gps",
+            comm_log=comm_log,
+        )
+    elif base_opts.basedotfiles_action == "ftp":
+        process_ftp(base_opts, base_opts.ftp_files, None, None, known_ftp_tags)
+
 
 if __name__ == "__main__":
     retval = 1
@@ -1248,4 +1304,14 @@ if __name__ == "__main__":
     os.environ["TZ"] = "UTC"
     time.tzset()
 
-    main()
+    try:
+        main()
+    except SystemExit:
+        pass
+    except:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+
+        log_critical("Unhandled exception in main -- exiting", "exc")

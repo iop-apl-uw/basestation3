@@ -193,6 +193,7 @@ global_options_dict = {
         None,
         (
             "Base",
+            "BaseDotFiles",
             "BaseLogin",
             "BaseSMS",
             "FTPPush",
@@ -226,6 +227,7 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
             "required": (
                 "Base",
+                "BaseDotFiles",
                 "BaseSMS",
                 "BaseLogin",
                 "FTPPush",

@@ -76,6 +76,7 @@ from BaseLog import (
     log_alerts,
     BaseLogger,
 )
+from Globals import known_files, known_mailer_tags, known_ftp_tags
 
 
 # TODOCC
@@ -86,24 +87,6 @@ from BaseLog import (
 # Globals
 file_trans_received = "r"
 processed_files_cache = "processed_files.cache"
-known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal"]
-known_mailer_tags = [
-    "eng",
-    "log",
-    "pro",
-    "bpo",
-    "asc",
-    "cap",
-    "comm",
-    "dn_kkyy",
-    "up_kkyy",
-    "nc",
-    "ncf",
-    "mission_ts",
-    "mission_pro",
-    "bz2",
-]
-known_ftp_tags = known_mailer_tags
 # Set by signal handler to skip the time consuming processing of the whole mission data
 skip_mission_processing_event = threading.Event()
 base_lockfile_name = ".conversion_lock"
