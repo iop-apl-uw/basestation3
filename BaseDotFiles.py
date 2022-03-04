@@ -713,7 +713,7 @@ def process_ftp_line(
     for ftp_file_name_to_send in ftp_file_names_to_send:
         head, tail = os.path.split(ftp_file_name_to_send)
         try:
-            fi = open(ftp_file_name_to_send, "r")
+            fi = open(ftp_file_name_to_send, "rb")
         except:
             log_error(f"Unable to open {ftp_file_name_to_send} - skipping", "exc")
             result = 1  # we had issues

@@ -107,6 +107,7 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
+    log_info(f"Match spec {base_opts.file_spec}")
     files_to_send = []
     for m in glob.glob(base_opts.file_spec):
         files_to_send.append(os.path.abspath(os.path.expanduser(m)))
