@@ -1412,7 +1412,7 @@ def main():
         "Command line driver for the all basestation processing."
     )
     # Initialize log
-    BaseLogger(base_opts)
+    BaseLogger(base_opts, include_time=True)
 
     Utils.check_versions()
 
