@@ -44,6 +44,7 @@ from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email import encoders
 from ftplib import FTP
+#from ftplib import FTP_TLS
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -685,15 +686,28 @@ def process_ftp_line(
 
     # Connect
     try:
-        ftp = FTP(host)
+        # Some hosts - gliders.ioos.us for example - don't want to login when the
+        # host is specified in the FTP object creation - and then only when running from Base.py
+        ftp = FTP(timeout=30)
+        connect_response = ftp.connect(host=host)
+        #ftp = FTP_TLS(host)
     except:
         log_error("Unable to connect", "exc")
         return 1  # give up
+    log_info(connect_response)
+    # try:
+    #     ftp.prot_p()
+    # except:
+    #     log_warning("Could not go to secure - continuing", "exc")
     try:
-        ftp.login(user, pwd)
+        #ftp.set_debuglevel(2) # 2 is max level - all to stdout
+        ftp.set_pasv(True)
+        login_response = ftp.login(user, pwd)
     except:
         log_error("Unable to login", "exc")
-        return 1  # give up
+        return 1 # give up
+
+    log_info(login_response)
 
     for i in path.split("/"):
         try:
@@ -718,6 +732,7 @@ def process_ftp_line(
             log_error(f"Unable to open {ftp_file_name_to_send} - skipping", "exc")
             result = 1  # we had issues
         else:
+            log_info(f"Sending {tail}")
             try:
                 ftp.storbinary(f"STOR {tail}", fi)
             except:
@@ -1275,7 +1290,7 @@ def main():
         },
     )
 
-    BaseLogger(base_opts)
+    BaseLogger(base_opts, include_time=True)
 
     log_info(
         "Started processing "
