@@ -583,16 +583,7 @@ def process_file_group(
             return 1
         fragments_1a.append(fragment_1a)
 
-    if not fc.is_logger_payload():
-        # At this point, the fragments should be of the correct size, so now we can check them
-        check_file_fragments(
-            defrag_file_name,
-            fragments_1a,
-            fragment_size_dict,
-            total_size,
-            instrument_id,
-        )
-    else:
+    if fc.is_logger_payload():
         # Generic payload from the logger - hand it off to the extension and
         # skip the rest of the processing
 
@@ -626,6 +617,15 @@ def process_file_group(
             processed_logger_payload_files[fc.logger_prefix()].append(i)
         # log_info( processed_logger_payload_files )
         return 0
+
+    # At this point, the fragments should be of the correct size, so now we can check them
+    check_file_fragments(
+        defrag_file_name,
+        fragments_1a,
+        fragment_size_dict,
+        total_size,
+        instrument_id,
+    )
 
     # Cat the fragments together
     log_debug(f"About to open {defrag_file_name}")
