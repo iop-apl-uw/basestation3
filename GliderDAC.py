@@ -25,14 +25,13 @@
 """ Create a file for submission to the GliderDAC from an existing netCDF file
 """
 
-import argparse
+from functools import reduce
 import os
 import pdb
 import stat
 import sys
 import time
 import traceback
-from functools import reduce
 
 import gsw
 import numpy as np
@@ -245,64 +244,6 @@ def main(
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for creating GliderDAC netCDF files",
-            add_arguments=("netcdf_filename", "bin_width"),
-            additional_arguments={
-                "gliderdac_base_config": BaseOpts.options_t(
-                    None,
-                    ("GliderDAC",),
-                    ("--gliderdac_base_config",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "GliderDAC base configuration JSON file - common for all Seagliders",
-                        "section": "gliderdac",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-                "gliderdac_project_config": BaseOpts.options_t(
-                    None,
-                    ("GliderDAC",),
-                    ("--gliderdac_project_config",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "GliderDAC project configuration JSON file - common for single study area",
-                        "section": "gliderdac",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-                "gliderdac_deployment_config": BaseOpts.options_t(
-                    None,
-                    ("GliderDAC",),
-                    ("--gliderdac_deployment_config",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "GliderDAC deployoment configuration JSON file - specific to the current glider deoployment",
-                        "section": "gliderdac",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-                "gliderdac_directory": BaseOpts.options_t(
-                    None,
-                    ("GliderDAC",),
-                    ("--gliderdac_directory",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "Directory to place output files in",
-                        "section": "gliderdac",
-                        "action": BaseOpts.FullPathAction,
-                    },
-                ),
-                "delayed_submission": BaseOpts.options_t(
-                    False,
-                    ("GliderDAC",),
-                    ("--delayed_submission",),
-                    BaseOpts.FullPath,
-                    {
-                        "help": "Generated files for delayed submission",
-                        "section": "gliderdac",
-                        "action": argparse.BooleanOptionalAction,
-                    },
-                ),
-            },
         )
 
     BaseLogger(base_opts)
@@ -384,22 +325,24 @@ def main(
         # Xarray converts to numpy.datetime64(ns) - get it back to something useful
         master_time = dsi[master_time_name].data.astype(np.float64) / 1000000000.0
 
-        if base_opts.bin_width:
+        if base_opts.gliderdac_bin_width:
             max_depth = np.floor(np.nanmax(master_depth))
             # This is actually bin edges, so one more point then actual bins
             bin_edges = np.arange(
-                -base_opts.bin_width / 2.0,
-                max_depth + base_opts.bin_width / 2.0 + 0.01,
-                base_opts.bin_width,
+                -base_opts.gliderdac_bin_width / 2.0,
+                max_depth + base_opts.gliderdac_bin_width / 2.0 + 0.01,
+                base_opts.gliderdac_bin_width,
             )
 
             # Do this to ensure everything is caught in the binned statistic
             bin_edges[0] = -20.0
             bin_edges[-1] = max_depth + 50.0
 
-            bin_centers_down = np.arange(0.0, max_depth + 0.01, base_opts.bin_width)
+            bin_centers_down = np.arange(
+                0.0, max_depth + 0.01, base_opts.gliderdac_bin_width
+            )
             max_depth_i = find_deepest_bin_i(
-                master_depth, bin_centers_down, base_opts.bin_width
+                master_depth, bin_centers_down, base_opts.gliderdac_bin_width
             )
 
             bin_centers = np.concatenate(
@@ -423,7 +366,7 @@ def main(
             "conductivity": "conductivity",
             "latitude": "lat",
             "longitude": "lon",
-            "pressure": "pressure",
+            "ctd_pressure": "pressure",
         }
 
         # Note: for non-binned, this variable is just a copy of the data straight from
@@ -435,9 +378,9 @@ def main(
                 dsi,
                 var_name,
             )
-            if base_opts.bin_width:
+            if base_opts.gliderdac_bin_width:
                 max_depth_i = find_deepest_bin_i(
-                    master_depth, bin_edges, base_opts.bin_width
+                    master_depth, bin_edges, base_opts.gliderdac_bin_width
                 )
 
                 var_v = np.zeros(np.size(bin_centers)) * np.nan
@@ -485,10 +428,10 @@ def main(
                 else QC.QC_NO_CHANGE,
             )
             # This is just for debugging
-            if base_opts.bin_width and var_name == "temperature":
+            if base_opts.gliderdac_bin_width and var_name == "temperature":
                 create_nc_var(dso, template, "temperature_n", val[2][good_pts_i])
 
-        if base_opts.bin_width:
+        if base_opts.gliderdac_bin_width:
             reduced_depth = bin_centers[good_pts_i]
             reduced_time = t_profile[good_pts_i]
             del (

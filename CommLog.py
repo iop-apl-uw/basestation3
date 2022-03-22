@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -814,6 +814,16 @@ def crack_connect_line(input_line):
     return (connect_ts_tstruct, time_zone)
 
 
+def is_digit(val):
+    """Because python doesn't have a built-in solution that handles negative values"""
+    try:
+        int(val)
+    except ValueError:
+        return False
+    else:
+        return True
+
+
 def crack_counter_line(
     base_opts, session, raw_strs, comm_log_file_name, line_count, raw_line
 ):
@@ -831,7 +841,7 @@ def crack_counter_line(
             cnt_vals[i] = cnt_vals[i].lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
         # Looks like a counter line
-        if cnt_vals[0].isdigit() and cnt_vals[1].isdigit() and cnt_vals[2].isdigit():
+        if is_digit(cnt_vals[0]) and is_digit(cnt_vals[1]) and is_digit(cnt_vals[2]):
 
             # Differences in counter lines
             #
@@ -1099,6 +1109,7 @@ def process_comm_log(
 
             if raw_strs[0] == "Parsed" and raw_strs[2] == "from":
                 session.cmd_directive = raw_strs[1]
+                continue
 
             # XMODEM to glider
             if raw_strs[0] == "Sent":

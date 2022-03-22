@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -53,8 +53,7 @@ required_scipy_sparse_version = "1.4.1"
 
 # pylint: disable=E0239
 class WhichHalf(IntEnum):
-    """ Used for various profile processing routines
-    """
+    """Used for various profile processing routines"""
 
     down = 1
     up = 2
@@ -67,3 +66,23 @@ required_gsw_version = "3.3.1"
 
 # Global flag to control which seawater toolkit - just for short term testing
 f_use_seawater = True
+
+# Moved here from Base to allow other files to access without re-import of Base.py
+known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal"]
+known_mailer_tags = [
+    "eng",
+    "log",
+    "pro",
+    "bpo",
+    "asc",
+    "cap",
+    "comm",
+    "dn_kkyy",
+    "up_kkyy",
+    "nc",
+    "ncf",
+    "mission_ts",
+    "mission_pro",
+    "bz2",
+]
+known_ftp_tags = known_mailer_tags

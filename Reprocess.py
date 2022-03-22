@@ -354,7 +354,7 @@ def main():
 
     # CONSIDER process .extensions here using something like:
     #
-    # from Base import known_mailer_tags, known_ftp_tags
+    # from Globals import known_mailer_tags, known_ftp_tags
     # process_extensions('.extensions', ["dive", "global", "mission"], base_opts, sg_calib_file_name, dive_nc_file_names,  \
     #                    dive_nc_file_names, [], Base.known_mailer_tags, Base.known_ftp_tags, None)
     #
@@ -437,9 +437,9 @@ def main():
                 "Started PLOT processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
             )
-            #MakePlot.main(
+            # MakePlot.main(
             #    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            #)
+            # )
             MakePlot2.main(
                 instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
             )

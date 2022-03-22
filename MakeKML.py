@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -199,7 +199,7 @@ def printHeader(name, description, glider_color, fo):
     fo.write("            <scale>0.5</scale>\n")
     fo.write("            <Icon>\n")
     fo.write(
-        "                <href>http://iop.apl.washington.edu/images/Target.png</href>\n"
+        "                <href>https://iop.apl.washington.edu/images/Target.png</href>\n"
     )
     fo.write("            </Icon>\n")
     fo.write("         </IconStyle>\n")
@@ -214,7 +214,7 @@ def printHeader(name, description, glider_color, fo):
     fo.write("            <scale>0.75</scale>\n")
     fo.write("            <Icon>\n")
     fo.write(
-        "                <href>http://iop.apl.washington.edu/images/Target.png</href>\n"
+        "                <href>https://iop.apl.washington.edu/images/Target.png</href>\n"
     )
     fo.write("            </Icon>\n")
     fo.write("         </IconStyle>\n")
@@ -243,7 +243,7 @@ def printHeader(name, description, glider_color, fo):
     fo.write("             <scale>0.2</scale>\n")
     fo.write(f"             <color>99{glider_color}</color>\n")
     fo.write(
-        "             <Icon><href>http://maps.google.com/mapfiles/kml/shapes/shaded_dot.png</href></Icon>\n"
+        "             <Icon><href>https://maps.google.com/mapfiles/kml/shapes/shaded_dot.png</href></Icon>\n"
     )
     fo.write("         </IconStyle>\n")
     fo.write("        <LabelStyle>\n")
@@ -255,7 +255,7 @@ def printHeader(name, description, glider_color, fo):
     fo.write("            <scale>1.0</scale>\n")
     fo.write("            <Icon>\n")
     fo.write(
-        "                <href>http://iop.apl.washington.edu/images/SeagliderYellowIcon.png</href>\n"
+        "                <href>https://iop.apl.washington.edu/images/SeagliderYellowIcon.png</href>\n"
     )
     fo.write("            </Icon>\n")
     fo.write("        </IconStyle>\n")
@@ -276,7 +276,7 @@ def printHeader(name, description, glider_color, fo):
     fo.write("            <scale>0.3</scale>\n")
     fo.write("            <Icon>\n")
     fo.write(
-        "                <href>http://iop.apl.washington.edu/images/Cuviers.png</href>\n"
+        "                <href>https://iop.apl.washington.edu/images/Cuviers.png</href>\n"
     )
     fo.write("            </Icon>\n")
     fo.write("         </IconStyle>\n")
@@ -289,7 +289,7 @@ def printHeader(name, description, glider_color, fo):
     fo.write("            <scale>0.5</scale>\n")
     fo.write("            <Icon>\n")
     fo.write(
-        "                <href>http://iop.apl.washington.edu/images/Cuviers.png</href>\n"
+        "                <href>https://iop.apl.washington.edu/images/Cuviers.png</href>\n"
     )
     fo.write("            </Icon>\n")
     fo.write("        </IconStyle>\n")
@@ -994,7 +994,7 @@ def printDive(
     ballon_pairs.append(
         (
             "Dive page",
-            '<a href="http://iop.apl.washington.edu/seaglider/divegallery.php?dive=%d&glider=%d">sg%03d plots</a>'
+            '<a href="https://iop.apl.washington.edu/seaglider/divegallery.php?dive=%d&glider=%d">sg%03d plots</a>'
             % (dive_num, instrument_id, instrument_id),
         )
     )

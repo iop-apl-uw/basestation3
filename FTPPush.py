@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -33,7 +33,7 @@ import time
 import BaseDotFiles
 import BaseOpts
 from BaseLog import BaseLogger, log_info, log_error
-from Base import known_ftp_tags
+from Globals import known_ftp_tags
 
 
 def process_ftp(
@@ -107,6 +107,7 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
+    log_info(f"Match spec {base_opts.file_spec}")
     files_to_send = []
     for m in glob.glob(base_opts.file_spec):
         files_to_send.append(os.path.abspath(os.path.expanduser(m)))
