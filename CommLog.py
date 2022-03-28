@@ -1400,13 +1400,18 @@ def process_comm_log(
                                         int(raw_strs[7]),
                                         0.0,
                                     )
-                                else:
+                                elif len(raw_strs) == 13:
                                     session.file_stats[filename] = file_stats_nt(
                                         expected_size,
                                         int(raw_strs[7]),
                                         int(raw_strs[7]),
                                         float(raw_strs[11].lstrip("(")),
                                     )
+                                else:
+                                    log_warning(f"Could not process sent lineno {line_count} - skipping")
+                                    # Do not issue the callback
+                                    continue
+
                             except:
                                 log_error(
                                     "Could not process %s: lineno %d"
@@ -1699,8 +1704,12 @@ def process_history_log(history_log_file_name):
             continue
         if raw_line[0] == "#" and raw_line[1] == "+":
             ts_line = raw_line.split("+")
-            ts = float(ts_line[1].rstrip())
-            command_history.append([ts, None])
+            try:
+                ts = float(ts_line[1].rstrip())
+            except ValueError:
+                log_warning(f"Could not process line {line_count} in {history_log_file_name} - skipping")
+            else:
+                command_history.append([ts, None])
             continue
         # Next line is the command
         command_history[-1][1] = "%s (%s)" % (
