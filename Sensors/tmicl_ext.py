@@ -1040,8 +1040,9 @@ def extract_file_data(inp_file_name):
         if scaleoff:
             tmp = arr.array("B")
             tmp.frombytes(buffer[data_start:data_end])
-            data = arr.array("f")
-            data.frombytes(list(map(float, tmp)))
+            data = np.array(tmp).astype(np.float64)
+            # data = arr.array("f")
+            # data.frombytes(list(map(float, tmp)))
         else:
             data = arr.array("f")
             data.frombytes(buffer[data_start:data_end])
