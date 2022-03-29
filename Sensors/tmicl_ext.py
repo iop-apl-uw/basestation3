@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -58,6 +58,8 @@ def calc_center_freqs(rate, nfft, logmap):
     rate, nfft and logmap
     """
     if rate is None or nfft is None or logmap is None:
+        return None
+    if len(logmap.rstrip()) == 0:
         return None
     rate = float(rate)
     nfft = float(nfft)
@@ -1268,7 +1270,10 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
             # Center freqs
             if eng_file_class == "logavg":
                 # log_info("center_freqs:%s" % (center_freqs))
-                if len(center_freqs) != len(spectra[0, :]):
+                if center_freqs is None:
+                    # No spectral data
+                    pass
+                elif len(center_freqs) != len(spectra[0, :]):
                     log_error(
                         "len(center_freqs) %d != len(logavg) %d"
                         % (len(center_freqs), spectra[0, :])
