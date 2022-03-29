@@ -1304,8 +1304,8 @@ def main():
 
         process_pagers(
             base_opts,
-            comm_log.last_complete_surfacing().session.sg_id,
-            "gps",
+            comm_log.last_complete_surfacing().sg_id,
+            ("gps",),
             comm_log=comm_log,
         )
     elif base_opts.basedotfiles_action == "ftp":
