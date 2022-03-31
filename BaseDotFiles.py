@@ -44,7 +44,8 @@ from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email import encoders
 from ftplib import FTP
-#from ftplib import FTP_TLS
+
+# from ftplib import FTP_TLS
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
@@ -363,7 +364,7 @@ def process_pagers(
                         send_func = send_email
                         pagers_elts = pagers_elts[1:]
 
-                    tags_with_fmt = ["lategps", "gps", "recov", "critical"]
+                    tags_with_fmt = ["lategps", "gps", "recov", "critical", "drift"]
                     known_tags = [
                         "lategps",
                         "gps",
@@ -690,7 +691,7 @@ def process_ftp_line(
         # host is specified in the FTP object creation - and then only when running from Base.py
         ftp = FTP(timeout=30)
         connect_response = ftp.connect(host=host)
-        #ftp = FTP_TLS(host)
+        # ftp = FTP_TLS(host)
     except:
         log_error("Unable to connect", "exc")
         return 1  # give up
@@ -700,12 +701,12 @@ def process_ftp_line(
     # except:
     #     log_warning("Could not go to secure - continuing", "exc")
     try:
-        #ftp.set_debuglevel(2) # 2 is max level - all to stdout
+        # ftp.set_debuglevel(2) # 2 is max level - all to stdout
         ftp.set_pasv(True)
         login_response = ftp.login(user, pwd)
     except:
         log_error("Unable to login", "exc")
-        return 1 # give up
+        return 1  # give up
 
     log_info(login_response)
 
@@ -1248,7 +1249,7 @@ def process_extensions(
 
 
 def main():
-    """Basestation extension for creating Seaglider plots
+    """cli test/utility for dot file processing
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -1258,10 +1259,6 @@ def main():
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-
-    # Add option for what action to perform
-    # 1) GPS of most recent fix
-    # 2) FTP for list of files
 
     # pylint: disable=unused-argument
     base_opts = BaseOpts.BaseOptions(
@@ -1274,7 +1271,7 @@ def main():
                 str,
                 {
                     "help": "Which action to run",
-                    "choices": ("gps", "ftp"),
+                    "choices": ("gps", "drift", "ftp"),
                 },
             ),
             "ftp_files": BaseOpts.options_t(
@@ -1297,7 +1294,7 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    if base_opts.basedotfiles_action == "gps":
+    if base_opts.basedotfiles_action in ("gps", "drift"):
         comm_log = CommLog.process_comm_log(
             os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
         )[0]
@@ -1305,7 +1302,7 @@ def main():
         process_pagers(
             base_opts,
             comm_log.last_complete_surfacing().sg_id,
-            ("gps",),
+            (base_opts.basedotfiles_action,),
             comm_log=comm_log,
         )
     elif base_opts.basedotfiles_action == "ftp":
