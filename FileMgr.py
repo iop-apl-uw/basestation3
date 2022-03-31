@@ -400,6 +400,11 @@ def get_non_bogue_filename(filename):
         return filename
 
 
+def is_complete_xmit(filename):
+    _, ext = os.path.splitext(filename)
+    return ext.lower() == ".x"
+
+
 # Classes
 
 

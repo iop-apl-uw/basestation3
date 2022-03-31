@@ -253,13 +253,13 @@ def decompress(input_file_name, output_file_or_file_name):
             "CRC check failed on %s - expected 0x%s, generated 0x%x"
             % (input_file_name, crc32, U32(crcval))
         )
-        retval = 1
+        retval |= 1
     if isize != length:
         log_error(
             "Incorrect length of data produced from %s - expected 0x%x, generated 0x%x"
             % (input_file_name, isize, length)
         )
-        retval = 1
+        retval |= 2
     else:
         log_debug(
             "Data produced from decompression of %s - expected 0x%x, generated 0x%x"

@@ -450,6 +450,38 @@ def check_process_file_group(base, file_group, complete_files_dict):
     return False
 
 
+def cat_fragments(output_file_name, fragment_list):
+    """Helper routine to assemble a list of fragment"""
+    log_debug(f"About to open {output_file_name}")
+    with open(output_file_name, "wb") as output_file:
+        for filename in fragment_list:
+            with open(filename, "rb") as fi:
+                data = fi.read()
+            output_file.write(data)
+
+
+def test_decompress(inp_file_name, inp_file_list):
+    """Tests which of the two input inputs decompresses better
+
+    Return:
+        True if inp_file_name is better
+        False if inp_file_list is better
+    """
+
+    tmp_file = inp_file_name + ".temp"
+    ret1 = BaseGZip.decompress(inp_file_name, tmp_file)
+    os.unlink(tmp_file)
+
+    tmp_in_file = inp_file_list[0] + ".temp_in"
+    cat_fragments(tmp_in_file, inp_file_list)
+    tmp_out_file = inp_file_list[0] + ".temp_out"
+
+    ret2 = BaseGZip.decompress(tmp_in_file, tmp_out_file)
+    os.unlink(tmp_in_file)
+    os.unlink(tmp_out_file)
+    return ret1 <= ret2
+
+
 def process_file_group(
     base_opts,
     file_group,
@@ -613,13 +645,47 @@ def process_file_group(
         instrument_id,
     )
 
-    # Cat the fragments together
-    log_debug(f"About to open {defrag_file_name}")
-    with open(defrag_file_name, "wb") as output_file:
-        for i in fragments_1a:
-            with open(i, "rb") as fi:
-                data = fi.read()
-            output_file.write(data)
+    #
+    # GBS 2022/03/31 Scan the fragment list - if there is a mix of a
+    # straight .x file and fragments in the list, there are
+    # decisions to be made.
+    #
+    # In the case of zipped files, test the fragments and straight
+    # upload to determine which is "better" for for decompression and
+    # select the better option.
+    #
+    # For all other files, if selftest, chose the fragments over the
+    # whole file (reasoning, the fragments came up via uploadst and
+    # are "better").  Otherwise, choose the straight .x file
+    # (reasoning, that file was likely copied over from a CF/SD card
+    # post-deployment for post-processing)
+    #
+    complete_xmit_filename = None
+    for filename in fragments_1a:
+        if FileMgr.is_complete_xmit(filename):
+            complete_xmit_filename = filename
+            break
+
+    if complete_xmit_filename and len(fragments_1a) > 1:
+        if fc.is_gzip() or fc.is_tgz():
+            fragments_1a.remove(complete_xmit_filename)
+            if test_decompress(complete_xmit_filename, fragments_1a):
+                log_info(
+                    f"{complete_xmit_filename} decompresses (better) then fragments - using {complete_xmit_filename}"
+                )
+                fragments_1a = [complete_xmit_filename]
+            else:
+                log_info(
+                    f"Fragments decompress (better) then {complete_xmit_filename} - using fragments"
+                )
+        elif fc.is_seaglider_selftest():
+            log_info(f"Not using {complete_xmit_filename} in favor of fragments")
+            fragments_1a.remove(complete_xmit_filename)
+        else:
+            log_info(f"Using {complete_xmit_filename} instead of fragments")
+            fragments_1a = [complete_xmit_filename]
+
+    cat_fragments(defrag_file_name, fragments_1a)
 
     # Now process based on the specifics of the file
     log_info(f"Processing {defrag_file_name} in process_file_group")
