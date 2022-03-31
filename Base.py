@@ -50,6 +50,7 @@ import urllib.request
 import BaseDotFiles
 import BaseGZip
 import BaseNetCDF
+import BaseNetwork
 import BaseOpts
 import Bogue
 import CalibConst
@@ -476,6 +477,8 @@ def process_file_group(
 
     ret_val = 0
 
+    # pdb.set_trace()
+
     log_debug(f"process_file_group dictionary = {pprint.pformat(file_group)}")
     root, ext = os.path.splitext(FileMgr.get_non_partial_filename(file_group[0]))
     defrag_file_name = root + "." + file_trans_received
@@ -837,6 +840,23 @@ def process_file_group(
                     expunge_secrets_st(fc.mk_base_capfile_name())
 
                 processed_other_files.append(fc.mk_base_capfile_name())
+            elif fc.is_network():
+                if fc.is_network_logfile():
+                    BaseNetwork.convert_network_logfile(
+                        in_file_name, fc.mk_base_logfile_name()
+                    )
+                    processed_other_files.append(fc.mk_base_logfile_name())
+                elif fc.is_network_profile():
+                    BaseNetwork.convert_network_profile(
+                        in_file_name, fc.mk_base_datfile_name()
+                    )
+                    processed_other_files.append(fc.mk_base_datfile_name())
+            else:
+                log_error(
+                    f"Don't know how to deal with file ({in_file_name}) - unknown type"
+                )
+                ret_val = 1
+
         elif fc.is_logger():
             if fc.is_log():
                 if (
@@ -1104,7 +1124,7 @@ def expunge_secrets(logfile_name):
         try:
             s = s.decode("utf-8")
         except UnicodeDecodeError:
-            log_warning(f"Could not decode line {s} in {selftest_name} - skipping")
+            log_warning(f"Could not decode line {s} in {logfile_name} - skipping")
             continue
 
         if s in ("", "\n"):
@@ -1840,6 +1860,19 @@ def main():
         or base_opts.make_mission_timeseries
         or base_opts.make_dive_kkyy
     ):
+
+        # Process network files to netcdf
+        network_dive_nums_to_process = []
+        for file_name in processed_other_files:
+            fc = FileMgr.FileCode(file_name, instrument_id)
+            if fc.is_processed_network_log() or fc.is_processed_network_profile():
+                _, tail = os.path.split(file_name)
+                network_dive_nums_to_process.append(int(tail[4:8]))
+
+        if network_dive_nums_to_process:
+            log_info("There are network dives to process")
+
+        # Process regular files
         dives_to_profile = []  # A list of basenames to profile
 
         # log_info("processed_eng_and_log_files (%s)" % processed_eng_and_log_files)

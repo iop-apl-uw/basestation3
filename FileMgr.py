@@ -64,9 +64,9 @@ post_proc_extensions = [
 
 # These lists may be extended by loggers
 pre_proc_glob_list = [
-    "sg[0-9][0-9][0-9][0-9][ldkp][uztg].[xa0-9]??",  # seaglider file fragments,
-    "sg[0-9][0-9][0-9][0-9][ldkp][uztg].[xa0-9]??.PARTIAL.[0-9]",  # seaglider partial file fragments
-    "sg[0-9][0-9][0-9][0-9][ldkp][uztg].[x]",  # seaglider selftest complete files
+    "sg[0-9][0-9][0-9][0-9][ldkper][nuztg].[xa0-9]??",  # seaglider file fragments,
+    "sg[0-9][0-9][0-9][0-9][ldkper][nuztg].[xa0-9]??.PARTIAL.[0-9]",  # seaglider partial file fragments
+    "sg[0-9][0-9][0-9][0-9][ldkper][nuztg].[x]",  # seaglider complete files
     "sg0000kl.x",  # seaglider param file
     "st[0-9][0-9][0-9][0-9][ldkp][uztg].[xa0-9]??",  # seaglider selftest file fragments
     "st[0-9][0-9][0-9][0-9][ldkp][uztg].[xa]",
@@ -503,6 +503,9 @@ class FileCode:
         """
         return self._filename[7:8] == "p"
 
+    def is_network(self):
+        return self._filename[7:8] == "n"
+
     # Type of underlying file
     def is_log(self):
         return self._filename[6:7] == "l"
@@ -515,6 +518,12 @@ class FileCode:
 
     def is_pdos_log(self):
         return self._filename[6:7] == "p"
+
+    def is_network_logfile(self):
+        return self._filename[6:7] == "e"
+
+    def is_network_profile(self):
+        return self._filename[6:7] == "r"
 
     # These are only used by loggers
     def is_down_data(self):
@@ -581,6 +590,14 @@ class FileCode:
 
         return self._filename[0:1] == "pt" and ext == ".log"
 
+    def is_processed_network_log(self):
+        _, ext = os.path.splitext(self._filename)
+        return self._filename[0:1] == "p" and ext == ".nlog"
+
+    def is_processed_network_profile(self):
+        _, ext = os.path.splitext(self._filename)
+        return self._filename[0:1] == "p" and ext == ".npro"
+
     # Marker names
     def is_dive_marker(self):
         return self._len > 9 and self._filename[7:11] == "dive"
@@ -612,7 +629,16 @@ class FileCode:
         log_debug(self._filename + ": " + str(self.dive_number()))
         # print instrument_id
         if self.is_seaglider():
-            tail = "p%03d%04d.log" % (int(self._instrument_id), int(self.dive_number()))
+            if self.is_network_logfile():
+                tail = "p%03d%04d.nlog" % (
+                    int(self._instrument_id),
+                    int(self.dive_number()),
+                )
+            else:
+                tail = "p%03d%04d.log" % (
+                    int(self._instrument_id),
+                    int(self.dive_number()),
+                )
         elif self.is_seaglider_selftest():
             tail = "pt%03d%04d.log" % (
                 int(self._instrument_id),
@@ -667,12 +693,20 @@ class FileCode:
         """
         head, tail = os.path.split(self._full_filename)
         if self.is_seaglider():
-            tail = (
-                "p"
-                + "%03d" % (self._instrument_id)
-                + "%04d" % (self.dive_number())
-                + ".dat"
-            )
+            if self.is_network_profile():
+                tail = (
+                    "p"
+                    + "%03d" % (self._instrument_id)
+                    + "%04d" % (self.dive_number())
+                    + ".npro"
+                )
+            else:
+                tail = (
+                    "p"
+                    + "%03d" % (self._instrument_id)
+                    + "%04d" % (self.dive_number())
+                    + ".dat"
+                )
         elif self.is_seaglider_selftest():
             tail = (
                 "pt"
