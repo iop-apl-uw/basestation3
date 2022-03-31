@@ -240,28 +240,6 @@ def main(
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for creating simplified netCDF files",
-            additional_arguments={
-                "simplencf_bin_width": BaseOpts.options_t(
-                    None,
-                    ("SimpleNetCDF",),
-                    ("--simplencf_bin_width",),
-                    float,
-                    {
-                        "help": "Bin SimpleNetCDF output to this size",
-                        "section": "simplenetcdf",
-                    },
-                ),
-                "simplencf_compress_output": BaseOpts.options_t(
-                    None,
-                    ("SimpleNetCDF",),
-                    ("--simplencf_compress_output",),
-                    bool,
-                    {
-                        "help": "Compress the simple netcdf file",
-                        "action": "store_true",
-                    },
-                ),
-            },
         )
 
     BaseLogger(base_opts)  # initializes BaseLog
@@ -292,7 +270,7 @@ def main(
 
         netcdf_in_filename = dive_nc_file_name
         head = os.path.splitext(netcdf_in_filename)[0]
-        if base_opts.bin_width:
+        if base_opts.simplencf_bin_width:
             netcdf_out_filename = "%s.ncfb" % (head)
         else:
             netcdf_out_filename = "%s.ncf" % (head)
@@ -335,7 +313,7 @@ def main(
             nc_vars.add(var_name)
             nc_vars.add(var_meta.time_name)
 
-        if not base_opts.bin_width:
+        if not base_opts.simplencf_bin_width:
             # If not binning, copy over dimensions and variables,
             # converting the doubles to floats
             for d in nc_dims:
@@ -345,12 +323,14 @@ def main(
         else:
             master_depth = nci.variables[master_depth_name][:]
             max_depth = np.floor(np.nanmax(master_depth))
-            bin_centers = np.arange(0.0, max_depth + 0.01, base_opts.bin_width)
+            bin_centers = np.arange(
+                0.0, max_depth + 0.01, base_opts.simplencf_bin_width
+            )
             # This is actually bin edges, so one more point then actual bins
             bin_edges = np.arange(
-                -base_opts.bin_width / 2.0,
-                max_depth + base_opts.bin_width / 2.0 + 0.01,
-                base_opts.bin_width,
+                -base_opts.simplencf_bin_width / 2.0,
+                max_depth + base_opts.simplencf_bin_width / 2.0 + 0.01,
+                base_opts.simplencf_bin_width,
             )
             # Do this to ensure everything is caught in the binned statistic
             bin_edges[0] = -20.0
@@ -360,6 +340,9 @@ def main(
             nco.createDimension(depth_dimension_name, len(bin_centers))
             nco.createDimension(profile_dimension_name, 2)
             depth = create_nc_var(nco, "depth")
+            depth._attributes["description"] = (
+                depth._attributes["description"] + " - center of bin"
+            )
             depth[0, :] = bin_centers
             depth[1, :] = bin_centers
             profile = create_nc_var(nco, "profile")
@@ -389,7 +372,7 @@ def main(
                 master_time_name,
                 master_depth_name,
             )
-            if not base_opts.bin_width:
+            if not base_opts.simplencf_bin_width:
                 vv = nco.createVariable(
                     var_name, np.float32, nci.variables[var_name].dimensions
                 )
@@ -446,7 +429,7 @@ def main(
 
         # pylint: disable=protected-access
         for a in list(nci._attributes.keys()):
-            if not (base_opts.bin_width and a == "history"):
+            if not (base_opts.simplencf_bin_width and a == "history"):
                 nco.__setattr__(a, nci._attributes[a])
         # pylint: enable=protected-access
 

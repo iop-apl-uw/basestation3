@@ -359,7 +359,6 @@ global_options_dict = {
             "Base",
             "MakeDiveProfiles",
             "MakeMissionProfile",
-            "SimpleNetCDF",
         ),
         ("--bin_width",),
         float,
@@ -1142,6 +1141,26 @@ global_options_dict = {
         float,
         {
             "help": "Width of bins for GliderDAC file (0.0 indicates timeseries",
+        },
+    ),
+    "simplencf_bin_width": options_t(
+        None,
+        ("SimpleNetCDF",),
+        ("--simplencf_bin_width",),
+        float,
+        {
+            "help": "Bin SimpleNetCDF output to this size",
+            "section": "simplenetcdf",
+        },
+    ),
+    "simplencf_compress_output": options_t(
+        None,
+        ("SimpleNetCDF",),
+        ("--simplencf_compress_output",),
+        bool,
+        {
+            "help": "Compress the simple netcdf file",
+            "action": "store_true",
         },
     ),
 }
