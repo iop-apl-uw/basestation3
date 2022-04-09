@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -381,7 +381,10 @@ def init_logger(module_name, init_dict=None):
                 False,
                 "d",
                 {"description": description, "units": "units of variance/Hertz"},
-                (row_info, col_info,),
+                (
+                    row_info,
+                    col_info,
+                ),
             )
             init_dict[module_name]["netcdf_metadata_adds"][
                 var_name_qc
@@ -791,7 +794,7 @@ def extract_file_data(inp_file_name):
 
 
 def eng_file_reader(eng_files, nc_info_d, calib_consts):
-    """ Reads the eng files for pmar instruments
+    """Reads the eng files for pmar instruments
 
     Input:
         eng_files - list of eng_file that contain one class of file
@@ -1003,10 +1006,14 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                         "exc",
                     )
                     continue
-                ensemble_duration = (
-                    float(pmar_nfft) * (float(pmar_navg) / 2.0)
-                ) / float(pmar_samplerate)
-                log_debug("ensemble_duration = %f" % ensemble_duration)
+                try:
+                    ensemble_duration = (
+                        float(pmar_nfft) * (float(pmar_navg) / 2.0)
+                    ) / float(pmar_samplerate)
+                    log_debug("ensemble_duration = %f" % ensemble_duration)
+                except:
+                    log_error("Could not calculate ensemble_duration - skipping", "exc")
+                    continue
 
                 apogee_pump_start_time = None  # and the first time it started moving
 
@@ -1086,7 +1093,9 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                         "ensembles overlap with motor on time",
                     )
                     results_d.update(
-                        {"pmar_logavg%s_%c_qc" % (ch_tag, cast): logavg_qc_v,}
+                        {
+                            "pmar_logavg%s_%c_qc" % (ch_tag, cast): logavg_qc_v,
+                        }
                     )
                 else:
                     log_warning("Did not find the climb pump")
