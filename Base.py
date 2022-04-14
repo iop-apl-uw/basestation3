@@ -1928,15 +1928,16 @@ def main():
     ):
 
         # Process network files to netcdf
-        network_dive_nums_to_process = []
+        network_files_to_process = []
         for file_name in processed_other_files:
             fc = FileMgr.FileCode(file_name, instrument_id)
             if fc.is_processed_network_log() or fc.is_processed_network_profile():
-                _, tail = os.path.split(file_name)
-                network_dive_nums_to_process.append(int(tail[4:8]))
+                network_files_to_process.append(file_name)
 
-        if network_dive_nums_to_process:
-            log_info("There are network dives to process")
+        if network_files_to_process:
+            BaseNetwork.make_netcdf_network_files(
+                network_files_to_process, processed_other_files
+            )
 
         # Process regular files
         dives_to_profile = []  # A list of basenames to profile

@@ -160,7 +160,8 @@ def process_ctx3_dat(base_opts, scicon_file, output_file, processed_logger_other
         1 - failure
     """
 
-    convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "x3decode_ts")
+    #convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "x3decode_ts")
+    convertor = "/usr/local/bin/x3decode_ts"
     if not os.path.isfile(convertor):
         log_error("Convertor %s does not exits - not processing %s" % (convertor, scicon_file))
         return 1

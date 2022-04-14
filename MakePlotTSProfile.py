@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2021-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -22,16 +22,20 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-"""Routines for analysis based plots from netCDF data
+"""Routines for analysis based plots for reduced TS profiles
 """
 
 import os
+import pdb
 import stat
 import sys
+import traceback
 import time
 
 import plotly.graph_objects
 import numpy as np
+import seawater
+import xarray as xr
 
 from BaseLog import (
     BaseLogger,
@@ -44,11 +48,13 @@ import BaseOpts
 import Utils
 import PlotUtilsPlotly
 
+DEBUG_PDB = "darwin" in sys.platform
+
 #
 # Plots/Analysis
 #
 def plot_ts_profile(profile_file, dive_num, base_opts):
-    """Plot a reduced TS profile"""
+    """Plot a text version of a reduced TS profile"""
     with open(profile_file, "r") as fi:
         for ll in fi.readlines():
             if ll.startswith("%first_bin_depth"):
@@ -60,12 +66,36 @@ def plot_ts_profile(profile_file, dive_num, base_opts):
 
     depth = np.arange(first_bin_depth, bin_width * len(data["temperature"]), bin_width)
 
+    return plot_ts_profile_core(
+        bin_width, depth, data["temperature"], data["salinity"], dive_num, base_opts
+    )
+
+
+def plot_ncdf_profile(ncf_file, dive_num, base_opts):
+    """Plot a text version of a reduced TS profile"""
+
+    ds = xr.open_dataset(ncf_file)
+
+    return plot_ts_profile_core(
+        np.diff(ds["depth"])[0],
+        ds["depth"],
+        ds["temperature"][0],
+        ds["salinity"][0],
+        dive_num,
+        base_opts,
+    )
+
+
+def plot_ts_profile_core(bin_width, depth, temperature, salinity, dive_num, base_opts):
+    """Core plotting routine"""
+    ret_val = []
+
     fig = plotly.graph_objects.Figure()
 
     fig.add_trace(
         {
             "y": depth,
-            "x": data["salinity"],
+            "x": salinity,
             "name": "Salinity",
             "type": "scatter",
             "xaxis": "x1",
@@ -83,7 +113,7 @@ def plot_ts_profile(profile_file, dive_num, base_opts):
     fig.add_trace(
         {
             "y": depth,
-            "x": data["temperature"],
+            "x": temperature,
             "name": "Temp",
             "type": "scatter",
             "xaxis": "x2",
@@ -147,13 +177,188 @@ def plot_ts_profile(profile_file, dive_num, base_opts):
         }
     )
 
-    return [
+    ret_val.append(
         PlotUtilsPlotly.write_output_files(
             base_opts,
-            "dv%04d_ts_profile" % (dive_num,),
+            "dv%04d_reduced_ctd" % (dive_num,),
             fig,
         )
-    ]
+    )
+
+    # TS plot
+
+    temperature_dive = temperature
+    salinity_dive = salinity
+    depth_dive = depth
+
+    # Countour the density
+    min_salinity = np.nanmin(salinity) - (
+        0.05 * abs(np.nanmax(salinity) - np.nanmin(salinity))
+    )
+    max_salinity = np.nanmax(salinity) + (
+        0.05 * abs(np.nanmax(salinity) - np.nanmin(salinity))
+    )
+
+    min_temperature = np.nanmin(temperature) - (
+        0.05 * abs(np.nanmax(temperature) - np.nanmin(temperature))
+    )
+    max_temperature = np.nanmax(temperature) + (
+        0.05 * abs(np.nanmax(temperature) - np.nanmin(temperature))
+    )
+
+    fig = plotly.graph_objects.Figure()
+
+    # plt.xlim(xmax = max_salinity, xmin = min_salinity)
+    # plt.ylim(ymax = max_temperature, ymin = min_temperature)
+
+    sgrid = np.linspace(min_salinity, max_salinity)
+    tgrid = np.linspace(min_temperature, max_temperature)
+
+    (Sg, Tg) = np.meshgrid(sgrid, tgrid)
+    Pg = np.zeros((len(Sg), len(Tg)))
+    sigma_grid = seawater.dens(Sg, Tg, Pg) - 1000.0
+
+    # What a hack - this intermediate step is needed for plot.ly
+    tg = Tg[:, 0][:]
+    sg = Sg[0, :][:]
+
+    fig.add_trace(
+        {
+            "x": sg,
+            "y": tg,
+            "z": sigma_grid[:],
+            "type": "contour",
+            "contours_coloring": "none",
+            "showscale": False,
+            "showlegend": True,
+            "name": "Density",
+            "contours": {
+                "showlabels": True,
+            },
+            "hoverinfo": "skip",
+        }
+    )
+
+    cmin = np.nanmin(depth)
+    cmax = np.nanmax(depth)
+
+    sigma_dive = (
+        seawater.dens(salinity_dive, temperature_dive, np.zeros(len(temperature_dive)))
+        - 1000.0
+    )
+    # sigma_climb = (
+    #     seawater.dens(
+    #         salinity_climb, temperature_climb, np.zeros(len(temperature_climb))
+    #     )
+    #     - 1000.0
+    # )
+
+    fig.add_trace(
+        {
+            "y": temperature_dive,
+            "x": salinity_dive,
+            "customdata": sigma_dive,
+            # Not sure where this came from - previous version had this for dive and no
+            # meta for climb.  Might have been to address the sometimes mis-matched color bars
+            # "meta": {"colorbar": depth_dive,},
+            "meta": depth_dive,
+            "name": "Dive",
+            "type": "scatter",
+            "xaxis": "x1",
+            "yaxis": "y1",
+            "mode": "markers",
+            "marker": {
+                "symbol": "triangle-down",
+                "color": depth_dive,
+                "colorbar": {
+                    "title": "Depth(m)",
+                    "len": 0.8,
+                },
+                "colorscale": "jet",
+                "reversescale": True,
+                "cmin": cmin,
+                "cmax": cmax,
+                #'line':{'width':1, 'color':'LightSlateGrey'}
+            },
+            "hovertemplate": "Dive<br>%{x:.2f} psu<br>%{y:.3f} C<br>%{customdata:.2f}"
+            " sigma-t<br>%{meta:.2f} meters<extra></extra>",
+        }
+    )
+
+    # fig.add_trace(
+    #     {
+    #         "y": temperature_climb,
+    #         "x": salinity_climb,
+    #         "meta": depth_climb,
+    #         "customdata": np.squeeze(
+    #             np.dstack(
+    #                 (np.transpose(sigma_climb), np.transpose(point_num_ctd_climb))
+    #             )
+    #         ),
+    #         "name": "Climb",
+    #         "type": "scatter",
+    #         "xaxis": "x1",
+    #         "yaxis": "y1",
+    #         "mode": "markers",
+    #         "marker": {
+    #             "symbol": "triangle-up",
+    #             "color": depth_climb,
+    #             "colorbar": {
+    #                 "title": "Depth(m)",
+    #                 "len": 0.7 if freeze_pt is not None else 0.8,
+    #             },
+    #             "colorscale": "jet",
+    #             "reversescale": True,
+    #             "cmin": cmin,
+    #             "cmax": cmax,
+    #             #'line':{'width':1, 'color':'LightSlateGrey'}
+    #         },
+    #         "hovertemplate": "Climb<br>%{x:.2f} psu<br>%{y:.3f} C<br>%{customdata[0]:.2f}"
+    #         + " sigma-t<br>%{customdata[1]:d} point_num<br>%{meta:.2f} meters<extra></extra>",
+    #     }
+    # )
+
+    title_text = (
+        f"Raw/Uncorrect CTD Temperature and Salinity vs Depth<br>Binned to {bin_width}m"
+    )
+
+    # aspect_ratio = (max_salinity - min_salinity) / (max_temperature - min_temperature)
+
+    fig.update_layout(
+        {
+            "xaxis": {
+                "title": "Salinity (PSU)",
+                "showgrid": True,
+                "range": [min_salinity, max_salinity],
+            },
+            "yaxis": {
+                "title": "Temperature (C)",
+                "range": [min_temperature, max_temperature],
+                #'scaleanchor' : 'x1',
+                #'scaleratio' : aspect_ratio,
+            },
+            "title": {
+                "text": title_text,
+                "xanchor": "center",
+                "yanchor": "top",
+                "x": 0.5,
+                "y": 0.95,
+            },
+            "margin": {
+                "t": 150,
+            },
+        }
+    )
+
+    ret_val.append(
+        PlotUtilsPlotly.write_output_files(
+            base_opts,
+            "dv%04d_reduced_ts" % (dive_num,),
+            fig,
+        )
+    )
+
+    return ret_val
 
 
 # pylint: disable=unused-argument
@@ -181,8 +386,22 @@ def main(
 
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(
-            "Basestation extension for plotting X3 compressed TS profiles",
+            "Basestation extension for plotting X3 compressed or network cdf TS profiles",
+            additional_arguments={
+                "profile_filenames": BaseOpts.options_t(
+                    None,
+                    ("MakePlotTSProfile",),
+                    ("profile_filenames",),
+                    BaseOpts.FullPath,
+                    {
+                        "help": "Name of TS profile file(s) or network cdf (.ncdf) files to plot",
+                        "nargs": "+",
+                        "action": BaseOpts.FullPathAction,
+                    },
+                ),
+            },
         )
+
     BaseLogger(base_opts)  # initializes BaseLog
 
     log_info(
@@ -194,23 +413,36 @@ def main(
     Utils.check_versions()
 
     profile_file_names = []
-    if base_opts.profile_filename:
-        profile_file_names = [base_opts.profile_filename]
-    elif processed_file_names is not None:
+    ncdf_file_names = []
+    pdb.set_trace()
+    if hasattr(base_opts, "profile_filenames") and base_opts.profile_filenames:
+        processed_file_names = base_opts.profile_filenames
+
+    if processed_file_names is not None:
         for ff in processed_file_names:
             if ff.endswith(".profile"):
-                # Only the down casts are good at the moment
+                # While the glider can produce reduced profile up or down,
+                # only plot the downcast.
                 if os.path.split(ff)[1][10:11] == "a":
                     profile_file_names.append(ff)
+            elif ff.endswith(".ncdf"):
+                ncdf_file_names.append(ff)
     else:
         log_info("No profiles specified to plot")
         return 0
 
-    if profile_file_names:
-        if base_opts.plot_directory is None:
-            base_opts.plot_directory = os.path.split(
+    if profile_file_names or ncdf_file_names:
+        if profile_file_names:
+            # These files come from the scicon profile sub-directory
+            pd = base_opts.plot_directory = os.path.split(
                 os.path.split(profile_file_names[0])[0]
             )[0]
+        else:
+            pd = os.path.split(ncdf_file_names[0])[0]
+        pd = os.path.join(pd, "plots")
+
+        if base_opts.plot_directory is None:
+            base_opts.plot_directory = pd
         if not os.path.exists(base_opts.plot_directory):
             try:
                 os.mkdir(base_opts.plot_directory)
@@ -258,6 +490,25 @@ def main(
                     "exc",
                 )
 
+        for ncdf_file_name in ncdf_file_names:
+            log_info(f"Processing {ncdf_file_name}")
+            dive_num = int(os.path.split(ncdf_file_name)[1][4:8])
+            try:
+                plots = plot_ncdf_profile(ncdf_file_name, dive_num, base_opts)
+                if processed_other_files is not None and plots is not None:
+                    for p in plots:
+                        processed_other_files.append(p)
+
+            except KeyboardInterrupt:
+                log_error("Interupted by operator")
+                break
+            except:
+                log_error(
+                    "Error in plotting vertical velocity for %s - skipping"
+                    % ncdf_file_name,
+                    "exc",
+                )
+
     log_info(
         "Finished processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
@@ -277,6 +528,11 @@ if __name__ == "__main__":
     except SystemExit:
         pass
     except Exception:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)

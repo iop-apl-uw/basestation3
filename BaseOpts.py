@@ -74,7 +74,10 @@ def generate_range_action(arg, min_val, max_val):
 
 def FullPath(x):
     """Expand user- and relative-paths"""
-    return os.path.abspath(os.path.expanduser(x))
+    if type(x) is list:
+        return list(map(lambda y: os.path.abspath(os.path.expanduser(y)), x))
+    else:
+        return os.path.abspath(os.path.expanduser(x))
 
 
 def FullPathTrailingSlash(x):
@@ -1047,20 +1050,6 @@ global_options_dict = {
             "option_group": "kml generation",
         },
     ),
-    "profile_filename": options_t(
-        None,
-        (
-            "Base",
-            "MakePlotTSProfile",
-        ),
-        ("profile_filename",),
-        FullPath,
-        {
-            "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
-            "nargs": "?",
-            "action": FullPathAction,
-        },
-    ),
     "gliderdac_base_config": options_t(
         None,
         (
@@ -1200,6 +1189,9 @@ class BaseOptions:
         self._opts = None  # Retained for debugging
         self._ap = None  # Retailed for debugging
 
+        self._subparsers = {}
+        self._subparser = None
+
         calling_module = os.path.splitext(
             os.path.split(inspect.stack()[1].filename)[1]
         )[0]
@@ -1251,9 +1243,11 @@ class BaseOptions:
             )
 
         # Loop over potential arguments and add what is approriate
+        parser = None
         for k, v in options_dict.items():
             if v.group is None or calling_module in v.group:
                 kwargs = copy.deepcopy(v.kwargs)
+
                 if not (v.var_type == bool and "action" in v.kwargs.keys()):
                     kwargs["type"] = v.var_type
                 if v.args and v.args[0].startswith("-"):
@@ -1261,6 +1255,21 @@ class BaseOptions:
                 kwargs["default"] = None
                 if "section" in kwargs.keys():
                     del kwargs["section"]
+                if "subparser" in kwargs.keys():
+                    if not self._subparser:
+                        self._subparser = ap.add_subparsers(
+                            help="sub-command help", dest="subparser_name"
+                        )
+                    if kwargs["subparser"] not in self._subparsers:
+                        self._subparsers[
+                            kwargs["subparser"]
+                        ] = self._subparser.add_parser(
+                            kwargs["subparser"],
+                        )
+                    parser = self._subparsers[kwargs["subparser"]]
+                    del kwargs["subparser"]
+                else:
+                    parser = ap
                 if "required" in kwargs.keys() and isinstance(
                     kwargs["required"], tuple
                 ):
@@ -1286,7 +1295,7 @@ class BaseOptions:
                         *arg_list, **kwargs
                     )
                 else:
-                    ap.add_argument(*arg_list, **kwargs)
+                    parser.add_argument(*arg_list, **kwargs)
 
         self._ap = ap
 
@@ -1295,6 +1304,9 @@ class BaseOptions:
             self._opts = ap.parse_args(alt_cmdline.split())
         else:
             self._opts = ap.parse_args()
+
+        if "subparser_name" in self._opts:
+            self.subparser_name = self._opts.subparser_name
 
         # handle the config file first, then see if any args trump them
         if self._opts.config_file_name is not None:

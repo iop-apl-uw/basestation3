@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2021 by the University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by the University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -87,7 +87,7 @@ def map_state_code(state_str):
     ]
 
     for ii in range(len(state_strs)):
-        if state_str in state_strs[ii]:
+        if state_str == state_strs[ii]:
             return ii
     return -1
 
@@ -122,7 +122,7 @@ def map_eop_code(eop_str):
     ]
 
     for ii in range(len(eop_strs)):
-        if eop_str in eop_strs[ii]:
+        if eop_str == eop_strs[ii]:
             return ii
     return -1
 
