@@ -1625,9 +1625,13 @@ def process_comm_log(
                         session.fragment_size = 4
 
                     if len(tmp) > 3:
-                        session.launch_time = time.mktime(
-                            time.strptime(tmp[3].split("=")[1], "%d%m%y:%H%M%S")
-                        )
+                        try:
+                            session.launch_time = time.mktime(
+                                time.strptime(tmp[3].split("=")[1], "%d%m%y:%H%M%S")
+                            )
+                        except ValueError:
+                            log_error(f"Could not parse launch time - line {line_count} in comm.log")
+                            continue
 
                     if call_back and "ver" in call_back.callbacks:
                         try:
