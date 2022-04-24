@@ -115,6 +115,7 @@ class FullPathTrailingSlashAction(argparse.Action):
 # option_group:str - name of the option group to include the option in (for help)
 # required:list of str - modules names for which thie option is required.  Also implies the option
 #                        group "required"
+# subparsers: list of str - list of sub-commands this argument belongs to
 #
 # options_t = collections.namedtuple(
 #    "options_t", ("default_val", "group", "args", "var_type", "kwargs")
@@ -203,6 +204,7 @@ global_options_dict = {
             "FlightModel",
             "GliderDAC",
             "GliderEarlyGPS",
+            "GliderTrack",
             "MakeDiveProfiles",
             "MakeKML",
             "MakeMissionEngPlots",
@@ -235,6 +237,7 @@ global_options_dict = {
                 "BaseLogin",
                 "FTPPush",
                 "FlightModel",
+                "GliderTrack",
                 "MakeKML",
                 "MakeMissionEngPlots",
                 "MakeMissionProfile",
@@ -389,7 +392,7 @@ global_options_dict = {
     ),
     "daemon": options_t(
         None,
-        ("Base", "GliderEarlyGPS"),
+        ("Base", "GliderEarlyGPS", "GliderTrack"),
         ("--daemon",),
         bool,
         {"help": "Launch conversion as a daemon process", "action": "store_true"},
@@ -1246,56 +1249,60 @@ class BaseOptions:
         parser = None
         for k, v in options_dict.items():
             if v.group is None or calling_module in v.group:
-                kwargs = copy.deepcopy(v.kwargs)
+                kwargs_tmp = copy.deepcopy(v.kwargs)
 
-                if not (v.var_type == bool and "action" in v.kwargs.keys()):
-                    kwargs["type"] = v.var_type
-                if v.args and v.args[0].startswith("-"):
-                    kwargs["dest"] = k
-                kwargs["default"] = None
-                if "section" in kwargs.keys():
-                    del kwargs["section"]
-                if "subparser" in kwargs.keys():
+                if "subparsers" in kwargs_tmp.keys():
+                    parsers = []
                     if not self._subparser:
                         self._subparser = ap.add_subparsers(
                             help="sub-command help", dest="subparser_name"
                         )
-                    if kwargs["subparser"] not in self._subparsers:
-                        self._subparsers[
-                            kwargs["subparser"]
-                        ] = self._subparser.add_parser(
-                            kwargs["subparser"],
-                        )
-                    parser = self._subparsers[kwargs["subparser"]]
-                    del kwargs["subparser"]
+                    for subparser in kwargs_tmp["subparsers"]:
+                        if subparser not in self._subparsers:
+                            self._subparsers[subparser] = self._subparser.add_parser(
+                                subparser
+                            )
+                        parsers.append(self._subparsers[subparser])
+                    del kwargs_tmp["subparsers"]
                 else:
-                    parser = ap
-                if "required" in kwargs.keys() and isinstance(
-                    kwargs["required"], tuple
-                ):
-                    kwargs["required"] = calling_module in kwargs["required"]
-                if (
-                    "range" in kwargs.keys()
-                    and isinstance(kwargs["range"], list)
-                    and len(kwargs["range"]) == 2
-                ):
-                    min_val = kwargs["range"][0]
-                    max_val = kwargs["range"][1]
-                    kwargs["action"] = generate_range_action(k, min_val, max_val)
-                    del kwargs["range"]
-                    kwargs["metavar"] = f"{{{min_val}..{max_val}}}"
+                    parsers = [ap]
 
-                arg_list = v.args
-                if "option_group" in kwargs.keys():
-                    og = kwargs["option_group"]
-                    del kwargs["option_group"]
-                    option_group_dict[og].add_argument(*arg_list, **kwargs)
-                elif "required" in kwargs and kwargs["required"]:
-                    option_group_dict["required named arguments"].add_argument(
-                        *arg_list, **kwargs
-                    )
-                else:
-                    parser.add_argument(*arg_list, **kwargs)
+                for parser in parsers:
+                    kwargs = copy.deepcopy(kwargs_tmp)
+                    if not (v.var_type == bool and "action" in v.kwargs.keys()):
+                        kwargs["type"] = v.var_type
+                    if v.args and v.args[0].startswith("-"):
+                        kwargs["dest"] = k
+                    kwargs["default"] = None
+                    if "section" in kwargs.keys():
+                        del kwargs["section"]
+                    if "required" in kwargs.keys() and isinstance(
+                        kwargs["required"], tuple
+                    ):
+                        kwargs["required"] = calling_module in kwargs["required"]
+                    if (
+                        "range" in kwargs.keys()
+                        and isinstance(kwargs["range"], list)
+                        and len(kwargs["range"]) == 2
+                    ):
+                        min_val = kwargs["range"][0]
+                        max_val = kwargs["range"][1]
+                        kwargs["action"] = generate_range_action(k, min_val, max_val)
+                        del kwargs["range"]
+                        kwargs["metavar"] = f"{{{min_val}..{max_val}}}"
+
+                    arg_list = v.args
+                    if "option_group" in kwargs.keys():
+                        og = kwargs["option_group"]
+                        del kwargs["option_group"]
+                        option_group_dict[og].add_argument(*arg_list, **kwargs)
+                    elif "required" in kwargs and kwargs["required"]:
+                        option_group_dict["required named arguments"].add_argument(
+                            *arg_list, **kwargs
+                        )
+                    else:
+                        parser.add_argument(*arg_list, **kwargs)
+                    del kwargs
 
         self._ap = ap
 

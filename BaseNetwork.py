@@ -861,7 +861,7 @@ def main():
                 {
                     "help": "Compressed network logfile",
                     "action": BaseOpts.FullPathAction,
-                    "subparser": "log",
+                    "subparsers": ("log",),
                 },
             ),
             "log_out_file": BaseOpts.options_t(
@@ -872,7 +872,7 @@ def main():
                 {
                     "help": "Plain-text network logfile",
                     "action": BaseOpts.FullPathAction,
-                    "subparser": "log",
+                    "subparsers": ("log",),
                 },
             ),
             "pro_in_file": BaseOpts.options_t(
@@ -883,7 +883,7 @@ def main():
                 {
                     "help": "Compressed network logfile",
                     "action": BaseOpts.FullPathAction,
-                    "subparser": "pro",
+                    "subparsers": ("pro",),
                 },
             ),
             "pro_out_file": BaseOpts.options_t(
@@ -894,7 +894,7 @@ def main():
                 {
                     "help": "Plain-text network logfile",
                     "action": BaseOpts.FullPathAction,
-                    "subparser": "pro",
+                    "subparsers": ("pro",),
                 },
             ),
             "network_files": BaseOpts.options_t(
@@ -906,7 +906,7 @@ def main():
                     "help": "List of files to process",
                     "nargs": "+",
                     "action": BaseOpts.FullPathAction,
-                    "subparser": "cdf",
+                    "subparsers": ("cdf",),
                 },
             ),
         },

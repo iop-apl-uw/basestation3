@@ -9,7 +9,8 @@ plotly>=4.9.0
 scipy>=1.5.2
 # For SlackPost and InReachSend
 requests==2.24.0
-# For GliderDAC support
+# For GliderDAC and BaseNetwork support
 xarray>=0.21.1
 netCDF4>=1.5.8
-
+# For GliderTrack support
+oct2py>=5.5.1
