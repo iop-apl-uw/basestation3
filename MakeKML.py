@@ -132,40 +132,6 @@ def cmp_function(a, b):
                 return 0
 
 
-def bearing(lat0, lon0, lat1, lon1):
-    """Returns the bearing, in degress true from the current_pos
-    to the target_pos
-    """
-    # from math import *
-    RTD = 57.29578  # radians to degrees (180./acos(-1.)) 180./3.14159265
-    DTR = 0.0174532925  # degrees to radians 3.14159265/180.
-    # Approximates 1 minute of latitude
-    # METERS_PER_NM = (
-    #     11852.0  # meters in a international nautical mile, by NBST definition
-    # )
-    METERS_PER_DEG = 111120.0  # 60*METERS_PER_NM
-    # RADIUS_EARTH = 6371000.0
-
-    diff = METERS_PER_DEG * math.cos(lat1 * DTR)
-    x = -(lon0 - lon1) * diff
-    y = (lat1 - lat0) * METERS_PER_DEG
-
-    rng = math.sqrt(x * x + y * y) / 1000.0
-
-    bear = math.atan2(x, y) * RTD
-
-    if bear > 360.0:
-        bear = math.fmod(bear, 360.0)
-    if bear < 0.0:
-        bear = math.fmod(bear, 360.0) + 360.0
-
-    # bear = radians(bear)
-    # Assume small angle here = sin(theta) = theta
-    # rng = tan(rng / RADIUS_EARTH) / 1000.
-
-    return (rng, bear)
-
-
 def printHeader(name, description, glider_color, fo):
     """Prints out the KML header format and global styles"""
     fo.write('<?xml version="1.0" encoding="UTF-8"?>\n')
@@ -867,7 +833,7 @@ def printDive(
                     break
 
     try:
-        dog, cog = bearing(gps_lat_start, gps_lon_start, gps_lat_end, gps_lon_end)
+        dog, cog = Utils.bearing(gps_lat_start, gps_lon_start, gps_lat_end, gps_lon_end)
     except:
         log_error(f"Could not process dog/cog from {dive_nc_file_name}", "exc")
         dog = cog = None
@@ -877,7 +843,7 @@ def printDive(
         tgt_lat, tgt_lon = latlong.split(",")
         tgt_lat = Utils.ddmm2dd(float(tgt_lat))
         tgt_lon = Utils.ddmm2dd(float(tgt_lon))
-        dtg, ctg = bearing(gps_lat_end, gps_lon_end, tgt_lat, tgt_lon)
+        dtg, ctg = Utils.bearing(gps_lat_end, gps_lon_end, tgt_lat, tgt_lon)
     except:
         log_error(f"Could not process target lat/log from {dive_nc_file_name}", "exc")
         dtg = ctg = None
