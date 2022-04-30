@@ -218,6 +218,7 @@ global_options_dict = {
             "MakePlotMission",
             "MoveData",
             "Reprocess",
+            "SimpleNetCDF",
             "ValidateDirectives",
             "Ver65",
             "WindRain",
