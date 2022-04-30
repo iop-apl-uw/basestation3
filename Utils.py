@@ -62,7 +62,7 @@ nc_nan = array([nan], dtype = float64)[0] # CF1.4 ensure double
 nc_scalar = ()
 # 2022/01/12 GBS - needed to add this to support qsp2150.cnf processing
 nc_sg_data_info = "sg_data_info"  # eng
-from scipy.io import netcdf
+from scipy.io import netcdf_file
 import glob
 import pickle
 import collections
@@ -73,7 +73,7 @@ def open_netcdf_file(filename, mode='r', mmap=None, version=1):
     mmap=None says use mmap if you can
     '''
     #return netcdf.netcdf_file(filename,mode,mmap=False if sys.platform == 'darwin' else mmap, version=version)
-    return netcdf.netcdf_file(filename, mode, mmap=False, version=version)
+    return netcdf_file(filename, mode, mmap=False, version=version)
 
 
 col_ncmeta_map_type = collections.namedtuple('col_ncmeta_map_type', ['nc_var_name', 'nc_meta_str'])
