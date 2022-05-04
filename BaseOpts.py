@@ -1350,12 +1350,12 @@ class BaseOptions:
                                 ) from exc
                             else:
                                 if (
-                                    "range" in kwargs.keys()
-                                    and isinstance(kwargs["range"], list)
-                                    and len(kwargs["range"]) == 2
+                                    "range" in v.kwargs.keys()
+                                    and isinstance(v.kwargs["range"], list)
+                                    and len(v.kwargs["range"]) == 2
                                 ):
-                                    min_val = kwargs["range"][0]
-                                    max_val = kwargs["range"][1]
+                                    min_val = v.kwargs["range"][0]
+                                    max_val = v.kwargs["range"][1]
                                     if not min_val <= val <= max_val:
                                         raise f"{val} outside of range {min_val} {max_val}"
 
