@@ -47,6 +47,20 @@ DEBUG_PDB = "darwin" in sys.platform
 
 var_template = {
     "variables": {
+        "time": {
+            "type": "f8",
+            "num_digits": 0,
+            "dimensions": [
+                "profile_data_point",
+                "depth_data_point",
+            ],
+            "attributes": {
+                "_FillValue": -999,
+                "long_name": "Time",
+                "standard_name": "time",
+                "units": "seconds since 1970-01-01T00:00:00Z",
+            },
+        },
         "temperature": {
             "type": "f4",
             "num_digits": 3,
@@ -649,6 +663,8 @@ def make_netcdf_netork_file(network_logfile, network_profile):
 
     dso = xr.Dataset()
 
+    time_v = None
+
     if not os.path.isfile(network_profile):
         log_warning(f"{network_profile} not found - skipping")
     else:
@@ -672,6 +688,12 @@ def make_netcdf_netork_file(network_logfile, network_profile):
             for var_name in ("temperature", "salinity"):
                 tmp_v = np.array((data[var_name], np.full(len(data[var_name]), np.nan)))
                 create_ds_var(dso, var_template, var_name, tmp_v)
+            time_v = np.array(
+                (
+                    np.full(len(data[var_name]), np.nan),
+                    np.full(len(data[var_name]), np.nan),
+                )
+            )
         except:
             log_error(f"Failed processing {network_profile}", "exc")
 
@@ -731,6 +753,9 @@ def make_netcdf_netork_file(network_logfile, network_profile):
 
         create_ds_var(dso, var_template, "start_time", start_time)
 
+        if time_v is not None:
+            time_v[0, 0] = start_time
+
         # Regular logfile values
         for name, data in lp.global_table.items():
             create_ds_var(
@@ -774,6 +799,9 @@ def make_netcdf_netork_file(network_logfile, network_profile):
 
         rc = np.arange(np.shape(modem_table)[0])
         create_ds_var(dso, var_template, "log_MODEM", modem_table, row_coord=rc)
+
+    if time_v is not None:
+        create_ds_var(dso, var_template, "time", time_v)
 
     # Write out the netcdf file - netcdf 4, compressed variables
     comp = dict(zlib=True, complevel=9)
