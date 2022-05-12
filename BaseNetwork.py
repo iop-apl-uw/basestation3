@@ -25,9 +25,6 @@
 Processes network files
 """
 
-# TODO Add state and eop decoding into a comment for GC table
-
-
 import collections
 import os
 import pdb
@@ -41,6 +38,7 @@ import xarray as xr
 from BaseLog import BaseLogger, log_error, log_info, log_critical, log_warning
 import BaseOpts
 import LogFile
+import NetCDFUtils
 import Utils
 
 DEBUG_PDB = "darwin" in sys.platform
@@ -289,7 +287,21 @@ var_template = {
             "num_digits": 4,
             "attributes": {
                 "_FillValue": -999,
-                "comment": "Position fix for dive",
+                "comment": "Position fix for end of dive",
+            },
+            "coord_cols": [
+                "time",
+                "latitude",
+                "longitude",
+                "hdop",
+            ],
+        },
+        "log_GPS2": {
+            "type": "f8",
+            "num_digits": 4,
+            "attributes": {
+                "_FillValue": -999,
+                "comment": "Position fix for start of dive",
             },
             "coord_cols": [
                 "time",
@@ -754,6 +766,8 @@ def make_netcdf_netork_file(network_logfile, network_profile):
         create_ds_var(dso, var_template, "start_time", start_time)
 
         if time_v is not None:
+            # Use this since its closer to the downcast, as opposed to GPS which is the
+            # end of the upcast.
             time_v[0, 0] = start_time
 
         # Regular logfile values
@@ -865,6 +879,192 @@ def make_netcdf_network_files(network_files, processed_files_list):
     return ret_val
 
 
+def make_netcdf_network_file_from_perdive(ncf_filename):
+    """Processes a per-dive glider netcdf file into a network ncf file"""
+
+    # These match the current on-board binning routine
+    # TODO - make these configurable
+    bin_width = 5.0
+    first_bin_depth = 7.5
+
+    dsi = xr.open_dataset(ncf_filename)
+
+    ncf_output_filename = ncf_filename[: ncf_filename.rfind(".nc")] + ".ncdf"
+    log_info(f"Creating {ncf_output_filename}")
+
+    # Temperature/Salinity
+    if set(("temperature", "salinity", "ctd_depth", "ctd_time")).issubset(
+        set(dsi.variables)
+    ):
+        dso = xr.Dataset()
+        max_depth = np.floor(np.nanmax(dsi["ctd_depth"]))
+        bin_centers = np.arange(first_bin_depth, max_depth + 0.01, bin_width)
+        create_ds_var(dso, var_template, "depth", bin_centers)
+        # Find mid-points between centers
+        bin_edges = (bin_centers[1:] + bin_centers[:-1]) / 2.0
+        # Add edges to grab everything into the first and last bin
+        bin_edges = np.append(-20, np.append(bin_edges, max_depth + 50.0))
+
+        max_depth_i = int(dsi["ctd_depth"].argmax())
+        ctd_time = dsi["ctd_time"].data.astype(np.float64) / 1000000000.0
+        t_down = NetCDFUtils.interp1_extend(
+            dsi["ctd_depth"][:max_depth_i], ctd_time[:max_depth_i], bin_centers
+        )
+        t_up = NetCDFUtils.interp1_extend(
+            dsi["ctd_depth"][max_depth_i:],
+            ctd_time[max_depth_i:],
+            bin_centers[::-1],
+        )
+        time_v = np.array((t_down, t_up))
+        create_ds_var(dso, var_template, "time", time_v)
+
+        for vvar in ("temperature", "salinity"):
+            binned_data_down, *_ = NetCDFUtils.bindata(
+                dsi["ctd_depth"][:max_depth_i], dsi[vvar][:max_depth_i], bin_edges
+            )
+            binned_data_up, *_ = NetCDFUtils.bindata(
+                dsi["ctd_depth"][max_depth_i:], dsi[vvar][max_depth_i:], bin_edges
+            )
+            create_ds_var(
+                dso, var_template, vvar, np.array((binned_data_down, binned_data_up))
+            )
+
+        # GPS positions
+        log_gps_time = dsi["log_gps_time"].data.astype(np.float64) / 1000000000.0
+
+        for ii, gps_name in ((1, "log_GPS2"), (2, "log_GPS")):
+            create_ds_var(
+                dso,
+                var_template,
+                gps_name,
+                np.array(
+                    (
+                        log_gps_time[ii],
+                        dsi["log_gps_lat"][ii],
+                        dsi["log_gps_lon"][ii],
+                        dsi["log_gps_hdop"][ii],
+                    )
+                ),
+            )
+        # Simple log file
+        for log_var_name in (
+            "log__SM_DEPTHo",
+            "log__SM_ANGLEo",
+            "log_MHEAD_RNG_PITCHd_Wd",
+            "log_D_GRID",
+            "log_HUMID",
+            "log_TEMP",
+            "log_INTERNAL_PRESSURE",
+            "log_24V_AH",
+            "log_10V_AH",
+            "log_FG_AHR_24Vo",
+            "log_FG_AHR_10Vo",
+            "log_SDFILEDIR",
+            "log_MAGCAL",
+            "log_IMPLIED_C_PITCH",
+            "log_IMPLIED_C_VBD",
+            "log_FINISH",
+        ):
+            if log_var_name not in dsi.variables:
+                continue
+            if dsi[log_var_name].data.dtype.type is np.string_:
+                data = np.array(
+                    dsi[log_var_name].data.tobytes().decode().split(","),
+                    np.float32,
+                )
+            else:
+                data = dsi[log_var_name].data
+
+            create_ds_var(
+                dso,
+                var_template,
+                log_var_name,
+                data,
+            )
+
+        create_ds_var(dso, var_template, "log_TGT_NAME", dsi["log_TGT_NAME"])
+
+        # GC table
+
+        gc_st_secs = dsi["gc_st_secs"].data.astype(np.float64) / 1000000000.0
+        full_gc_table = np.vstack(
+            (
+                gc_st_secs,
+                dsi["gc_depth"],
+                dsi["gc_ob_vertv"],
+                dsi["gc_vbd_i"],
+                dsi["gc_pitch_i"],
+                dsi["gc_roll_i"],
+                dsi["gc_vbd_ad"],
+                dsi["gc_pitch_ad"],
+                dsi["gc_roll_ad"],
+                dsi["gc_vbd_volts"],
+                np.full(len(gc_st_secs), np.nan),
+                np.full(len(gc_st_secs), np.nan),
+            )
+        ).transpose()
+
+        gc_state_secs = dsi["gc_state_secs"].data.astype(np.float64) / 1000000000.0
+        for ii in range(len(gc_state_secs)):
+            full_gc_table = np.vstack(
+                [
+                    full_gc_table,
+                    np.append(
+                        np.append(gc_state_secs[ii], [np.nan] * 9),
+                        [
+                            dsi["gc_state_state"].data[ii].astype(np.float64),
+                            dsi["gc_state_eop_code"].data[ii].astype(np.float64),
+                        ],
+                    ),
+                ]
+            )
+
+        # Sort the table by the first column
+        gc_table = full_gc_table[full_gc_table[:, 0].argsort()]
+
+        create_ds_var(
+            dso, var_template, "log_GC", gc_table, row_coord=full_gc_table[:, 0]
+        )
+
+        # TODO: Modem table - not yet in the per-dive netcdf files
+
+        # Write out the netcdf file - netcdf 4, compressed variables
+        comp = dict(zlib=True, complevel=9)
+        encoding = {var: comp for var in dso.data_vars}
+        dso.to_netcdf(
+            ncf_output_filename,
+            "w",
+            encoding=encoding,
+            # engine="netcdf4",
+            format="netCDF4",
+        )
+        return ncf_output_filename
+    return None
+
+
+def make_netcdf_network_file_from_perdive_files(
+    ncf_filenames, processed_files_list=None
+):
+    """Processes a list of glider per-dive netcdf files to network ncf file format"""
+    ret_val = 0
+
+    for ncf_filename in ncf_filenames:
+        try:
+            ncf_output_filename = make_netcdf_network_file_from_perdive(ncf_filename)
+        except:
+            if DEBUG_PDB:
+                _, _, tracebk = sys.exc_info()
+                traceback.print_exc()
+                pdb.post_mortem(tracebk)
+            log_error(
+                f"Unhandled exception in processing {ncf_filename}-- skipping", "exc"
+            )
+        else:
+            if ncf_output_filename and processed_files_list is not None:
+                processed_files_list.append(ncf_output_filename)
+    return ret_val
+
+
 def main():
     """cli test/utility for network file processing
 
@@ -931,10 +1131,22 @@ def main():
                 ("network_files",),
                 str,
                 {
-                    "help": "List of files to process",
+                    "help": "List of network files to process",
                     "nargs": "+",
                     "action": BaseOpts.FullPathAction,
                     "subparsers": ("cdf",),
+                },
+            ),
+            "netcdf_files": BaseOpts.options_t(
+                None,
+                ("BaseNetwork",),
+                ("netcdf_files",),
+                str,
+                {
+                    "help": "List of per-dive netcdf files to process",
+                    "nargs": "+",
+                    "action": BaseOpts.FullPathAction,
+                    "subparsers": ("ncf",),
                 },
             ),
         },
@@ -948,7 +1160,14 @@ def main():
     )
 
     ret_val = 0
-    if base_opts.subparser_name == "log":
+    # TODO - when converting to extension, add not hasattr(base_opts, "subparser_name") or
+    if base_opts.subparser_name == "ncf":
+        processed_files_list = []
+        ret_val = make_netcdf_network_file_from_perdive_files(
+            base_opts.netcdf_files, processed_files_list
+        )
+        log_info(f"Created {processed_files_list}")
+    elif base_opts.subparser_name == "log":
         ret_val = convert_network_logfile(base_opts.log_in_file, base_opts.log_out_file)
     elif base_opts.subparser_name == "pro":
         ret_val = convert_network_profile(base_opts.pro_in_file, base_opts.pro_out_file)
