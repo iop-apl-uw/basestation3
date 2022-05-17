@@ -98,6 +98,14 @@ var_template = {
                 "units": "m",
             },
         },
+        "dive_number": {
+            "type": "i2",
+            "num_digits": 0,
+            "attributes": {
+                "_FillValue": -999,
+                "comment": "Number of dive in mission",
+            },
+        },
         "log__SM_DEPTHo": {
             "type": "f4",
             "num_digits": 2,
@@ -660,7 +668,7 @@ class log_parser:
 #
 
 
-def make_netcdf_netork_file(network_logfile, network_profile):
+def make_netcdf_netork_file(network_logfile, network_profile, ts_outputfile=True):
     """Creates a network netcdf file, from either or both of the arguments
 
     Returns:
@@ -670,10 +678,13 @@ def make_netcdf_netork_file(network_logfile, network_profile):
         log_error(f"Neither {network_logfile} nor {network_logfile} exits")
         return None
 
-    ncf_filename = network_logfile[: network_logfile.rfind(".nlog")] + ".ncdf"
-    log_info(f"Creating {ncf_filename}")
+    log_info(f"Processing {network_logfile} {network_profile}")
 
     dso = xr.Dataset()
+
+    dive_number = int(os.path.split(network_logfile)[1][4:8])
+    glider_number_str = os.path.split(network_logfile)[1][1:4]
+    create_ds_var(dso, var_template, "dive_number", dive_number)
 
     time_v = None
 
@@ -831,6 +842,16 @@ def make_netcdf_netork_file(network_logfile, network_profile):
     #         encoding[var]["char_dim_name"] = var_template["variables"][var][
     #             "dimensions"
     #         ][0]
+
+    if ts_outputfile and "start_time" in dso:
+        start_ts = time.strftime("%Y%m%dT%H%M", time.gmtime(int(dso["start_time"])))
+
+        file_name = f"sg{glider_number_str}_{start_ts}.ncdf"
+        ncf_filename = os.path.join(os.path.split(network_logfile)[0], file_name)
+    else:
+        ncf_filename = network_logfile[: network_logfile.rfind(".nlog")] + ".ncdf"
+    log_info(f"Creating {ncf_filename}")
+
     dso.to_netcdf(
         ncf_filename,
         "w",
@@ -879,7 +900,7 @@ def make_netcdf_network_files(network_files, processed_files_list):
     return ret_val
 
 
-def make_netcdf_network_file_from_perdive(ncf_filename):
+def make_netcdf_network_file_from_perdive(ncf_filename, ts_outputfile=True):
     """Processes a per-dive glider netcdf file into a network ncf file"""
 
     # These match the current on-board binning routine
@@ -889,7 +910,12 @@ def make_netcdf_network_file_from_perdive(ncf_filename):
 
     dsi = xr.open_dataset(ncf_filename)
 
-    ncf_output_filename = ncf_filename[: ncf_filename.rfind(".nc")] + ".ncdf"
+    if ts_outputfile:
+        start_ts = time.strftime("%Y%m%dT%H%M", time.gmtime(dsi.attrs["start_time"]))
+        file_name = f"{dsi.attrs['platform_id'].lower()}_{start_ts}.ncdf"
+        ncf_output_filename = os.path.join(os.path.split(ncf_filename)[0], file_name)
+    else:
+        ncf_output_filename = ncf_filename[: ncf_filename.rfind(".nc")] + ".ncdf"
     log_info(f"Creating {ncf_output_filename}")
 
     # Temperature/Salinity
@@ -983,6 +1009,9 @@ def make_netcdf_network_file_from_perdive(ncf_filename):
             )
 
         create_ds_var(dso, var_template, "log_TGT_NAME", dsi["log_TGT_NAME"])
+
+        create_ds_var(dso, var_template, "dive_number", dsi.dive_number)
+        create_ds_var(dso, var_template, "start_time", dsi.start_time)
 
         # GC table
 
