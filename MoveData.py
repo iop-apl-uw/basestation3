@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -354,6 +354,7 @@ def main():
         "mi_download",
         "plots",
         "flight",
+        "gliderdac",
         "inbox",
         "outbox",
         "outbox_archive",
