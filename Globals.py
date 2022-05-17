@@ -81,6 +81,8 @@ known_mailer_tags = [
     "up_kkyy",
     "nc",
     "ncf",
+    "ncfb",
+    "ncdf",
     "mission_ts",
     "mission_pro",
     "bz2",

@@ -32,8 +32,9 @@ import time
 
 import BaseDotFiles
 import BaseOpts
+import Globals
 from BaseLog import BaseLogger, log_info, log_error
-from Globals import known_ftp_tags
+
 
 
 def process_ftp(
@@ -64,7 +65,7 @@ def process_ftp(
                     mission_timeseries_name,
                     mission_profile_name,
                     ftp_line,
-                    known_ftp_tags,
+                    Globals.known_ftp_tags,
                 )
             except:
                 log_error("Could not process %s - skipping" % ftp_line, "exc")
@@ -85,6 +86,16 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Basestation helper for pushing files",
         additional_arguments={
+            "ftp_type": BaseOpts.options_t(
+                "ftp",
+                ("FTPPush",),
+                ("--ftp_type",),
+                str,
+                {
+                    "help": "Unix-style glob spec for files to push",
+                    "choices": ("ftp", "sftp"),
+                },
+            ),
             "file_spec": BaseOpts.options_t(
                 None,
                 ("FTPPush",),
@@ -107,12 +118,15 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    log_info(f"Match spec {base_opts.file_spec}")
+    match_spec = os.path.join(base_opts.mission_dir, base_opts.file_spec)
+    log_info(f"Match spec {match_spec}")
     files_to_send = []
-    for m in glob.glob(base_opts.file_spec):
+    for m in glob.glob(match_spec):
         files_to_send.append(os.path.abspath(os.path.expanduser(m)))
 
-    process_ftp(base_opts, files_to_send)
+    BaseDotFiles.process_ftp(
+        base_opts, files_to_send, None, None, Globals.known_ftp_tags, ftp_type=f".{base_opts.ftp_type}"
+    )
 
     log_info(
         "Finished processing "
