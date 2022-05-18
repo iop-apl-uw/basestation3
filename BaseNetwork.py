@@ -98,12 +98,30 @@ var_template = {
                 "units": "m",
             },
         },
+        # TODO - post AMOS2022/Hood Canal, this should be retired in favor of the log_ID
+        # for now, topside may be depending on this variable
         "dive_number": {
             "type": "i2",
             "num_digits": 0,
             "attributes": {
                 "_FillValue": -999,
                 "comment": "Number of dive in mission",
+            },
+        },
+        "log_ID": {
+            "type": "i2",
+            "num_digits": 0,
+            "attributes": {
+                "_FillValue": -999,
+                "comment": "Seaglider serial number",
+            },
+        },
+        "log_DIVE": {
+            "type": "i2",
+            "num_digits": 0,
+            "attributes": {
+                "_FillValue": -999,
+                "comment": "Profile number from start of mission",
             },
         },
         "log__SM_DEPTHo": {
@@ -515,10 +533,14 @@ def convert_network_logfile(in_file_name, out_file_name):
 
 def convert_network_profile(in_file_name, out_file_name):
     """Converts a network ct profile plain text output
-
+    Input:
+        in_file_name - name of input file name
+        out_file_name - name of output file name or None.
+                        if None, the out_file_name will be created from the compressed
+                        profile header info, in the same directory as the input file
     Returns:
-        0 - success
-        1 - failure
+        out_file_name
+        None - failure
     """
 
     convertor = "/usr/local/bin/x3decode_ts"
@@ -540,6 +562,23 @@ def convert_network_profile(in_file_name, out_file_name):
         log_error(f"{in_file_name} does not exits")
         return 1
 
+    if out_file_name is None:
+        # See if there is enough meta data to build the new file name
+        try:
+            with open(in_file_name, "rb") as fi:
+                header = fi.readline()
+                splits = header.decode().split(" ")
+                if len(splits) >= 4:
+                    out_file_name = os.path.join(
+                        os.path.split(in_file_name)[0],
+                        f"p{splits[2][2:]}{splits[3][2:6]}.npro",
+                    )
+        except:
+            log_error("Failed to format out_filename", "exc")
+
+    if out_file_name is None:
+        return out_file_name
+
     cmdline = f"{convertor} -i {in_file_name} -o {out_file_name}"
     log_info(f"Running {cmdline}")
     try:
@@ -560,9 +599,9 @@ def convert_network_profile(in_file_name, out_file_name):
             error += l.decode()
         log_error(f"Error running {cmdline} - {error}")
 
-        return 1
+        return None
 
-    return 0
+    return out_file_name
 
 
 # def parse_timestamp(rs):
@@ -822,8 +861,9 @@ def make_netcdf_netork_file(network_logfile, network_profile, ts_outputfile=True
             else:
                 modem_table = np.vstack([modem_table, ll])
 
-        rc = np.arange(np.shape(modem_table)[0])
-        create_ds_var(dso, var_template, "log_MODEM", modem_table, row_coord=rc)
+        if modem_table is not None:
+            rc = np.arange(np.shape(modem_table)[0])
+            create_ds_var(dso, var_template, "log_MODEM", modem_table, row_coord=rc)
 
     if time_v is not None:
         create_ds_var(dso, var_template, "time", time_v)
@@ -1130,6 +1170,7 @@ def main():
                     "help": "Plain-text network logfile",
                     "action": BaseOpts.FullPathAction,
                     "subparsers": ("log",),
+                    "nargs": "?",
                 },
             ),
             "pro_in_file": BaseOpts.options_t(
@@ -1138,7 +1179,7 @@ def main():
                 ("pro_in_file",),
                 str,
                 {
-                    "help": "Compressed network logfile",
+                    "help": "Compressed network ct profile",
                     "action": BaseOpts.FullPathAction,
                     "subparsers": ("pro",),
                 },
@@ -1149,9 +1190,10 @@ def main():
                 ("pro_out_file",),
                 str,
                 {
-                    "help": "Plain-text network logfile",
+                    "help": "Plain-text network ct profile",
                     "action": BaseOpts.FullPathAction,
                     "subparsers": ("pro",),
+                    "nargs": "?",
                 },
             ),
             "network_files": BaseOpts.options_t(
@@ -1200,6 +1242,10 @@ def main():
         ret_val = convert_network_logfile(base_opts.log_in_file, base_opts.log_out_file)
     elif base_opts.subparser_name == "pro":
         ret_val = convert_network_profile(base_opts.pro_in_file, base_opts.pro_out_file)
+        if ret_val is None:
+            ret_val = 1
+        else:
+            ret_val = 0
     elif base_opts.subparser_name == "cdf":
         processed_files_list = []
         ret_val = make_netcdf_network_files(
