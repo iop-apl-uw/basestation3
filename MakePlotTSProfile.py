@@ -414,7 +414,7 @@ def main(
 
     profile_file_names = []
     ncdf_file_names = []
-    pdb.set_trace()
+
     if hasattr(base_opts, "profile_filenames") and base_opts.profile_filenames:
         processed_file_names = base_opts.profile_filenames
 
