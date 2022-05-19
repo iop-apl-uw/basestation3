@@ -318,6 +318,12 @@ def main():
     moveFiles(
         "pt%03d*.tar.bz2" % instrument_id, base_opts.mission_dir, base_opts.target_dir
     )
+    moveFiles(
+        "sg%03d.kmz" % instrument_id, base_opts.mission_dir, base_opts.target_dir
+        )
+    moveFiles(
+        "sg%03d_network.kml" % instrument_id, base_opts.mission_dir, base_opts.target_dir
+        )
 
     # Move backup and recovery versions but NOT main versions of known_files from loggers
     for known_file in known_files:
