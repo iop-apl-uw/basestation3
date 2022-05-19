@@ -1168,8 +1168,18 @@ def make_netcdf_network_file_from_perdive_files(
     return ret_val
 
 
-def main():
-    """cli test/utility for network file processing
+def main(
+    instrument_id=None,
+    base_opts=None,
+    sg_calib_file_name=None,
+    dive_nc_file_names=None,
+    nc_files_created=None,
+    processed_other_files=None,
+    known_mailer_tags=None,
+    known_ftp_tags=None,
+    processed_file_names=None,
+):
+    """cli test/utility for network file processing and limited basestation extension
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -1179,83 +1189,83 @@ def main():
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-
     # pylint: disable=unused-argument
-    base_opts = BaseOpts.BaseOptions(
-        "cmdline entry for basestation network file processing",
-        additional_arguments={
-            "log_in_file": BaseOpts.options_t(
-                None,
-                ("BaseNetwork",),
-                ("log_in_file",),
-                str,
-                {
-                    "help": "Compressed network logfile",
-                    "action": BaseOpts.FullPathAction,
-                    "subparsers": ("log",),
-                },
-            ),
-            "log_out_file": BaseOpts.options_t(
-                None,
-                ("BaseNetwork",),
-                ("log_out_file",),
-                str,
-                {
-                    "help": "Plain-text network logfile",
-                    "action": BaseOpts.FullPathAction,
-                    "subparsers": ("log",),
-                    "nargs": "?",
-                },
-            ),
-            "pro_in_file": BaseOpts.options_t(
-                None,
-                ("BaseNetwork",),
-                ("pro_in_file",),
-                str,
-                {
-                    "help": "Compressed network ct profile",
-                    "action": BaseOpts.FullPathAction,
-                    "subparsers": ("pro",),
-                },
-            ),
-            "pro_out_file": BaseOpts.options_t(
-                None,
-                ("BaseNetwork",),
-                ("pro_out_file",),
-                str,
-                {
-                    "help": "Plain-text network ct profile",
-                    "action": BaseOpts.FullPathAction,
-                    "subparsers": ("pro",),
-                    "nargs": "?",
-                },
-            ),
-            "network_files": BaseOpts.options_t(
-                None,
-                ("BaseNetwork",),
-                ("network_files",),
-                str,
-                {
-                    "help": "List of network files to process",
-                    "nargs": "+",
-                    "action": BaseOpts.FullPathAction,
-                    "subparsers": ("cdf",),
-                },
-            ),
-            "netcdf_files": BaseOpts.options_t(
-                None,
-                ("BaseNetwork",),
-                ("netcdf_files",),
-                str,
-                {
-                    "help": "List of per-dive netcdf files to process",
-                    "nargs": "+",
-                    "action": BaseOpts.FullPathAction,
-                    "subparsers": ("ncf",),
-                },
-            ),
-        },
-    )
+    if base_opts is None:
+        base_opts = BaseOpts.BaseOptions(
+            "cmdline entry for basestation network file processing",
+            additional_arguments={
+                "log_in_file": BaseOpts.options_t(
+                    None,
+                    ("BaseNetwork",),
+                    ("log_in_file",),
+                    str,
+                    {
+                        "help": "Compressed network logfile",
+                        "action": BaseOpts.FullPathAction,
+                        "subparsers": ("log",),
+                    },
+                ),
+                "log_out_file": BaseOpts.options_t(
+                    None,
+                    ("BaseNetwork",),
+                    ("log_out_file",),
+                    str,
+                    {
+                        "help": "Plain-text network logfile",
+                        "action": BaseOpts.FullPathAction,
+                        "subparsers": ("log",),
+                        "nargs": "?",
+                    },
+                ),
+                "pro_in_file": BaseOpts.options_t(
+                    None,
+                    ("BaseNetwork",),
+                    ("pro_in_file",),
+                    str,
+                    {
+                        "help": "Compressed network ct profile",
+                        "action": BaseOpts.FullPathAction,
+                        "subparsers": ("pro",),
+                    },
+                ),
+                "pro_out_file": BaseOpts.options_t(
+                    None,
+                    ("BaseNetwork",),
+                    ("pro_out_file",),
+                    str,
+                    {
+                        "help": "Plain-text network ct profile",
+                        "action": BaseOpts.FullPathAction,
+                        "subparsers": ("pro",),
+                        "nargs": "?",
+                    },
+                ),
+                "network_files": BaseOpts.options_t(
+                    None,
+                    ("BaseNetwork",),
+                    ("network_files",),
+                    str,
+                    {
+                        "help": "List of network files to process",
+                        "nargs": "+",
+                        "action": BaseOpts.FullPathAction,
+                        "subparsers": ("cdf",),
+                    },
+                ),
+                "netcdf_files": BaseOpts.options_t(
+                    None,
+                    ("BaseNetwork",),
+                    ("netcdf_files",),
+                    str,
+                    {
+                        "help": "List of per-dive netcdf files to process",
+                        "nargs": "+",
+                        "action": BaseOpts.FullPathAction,
+                        "subparsers": ("ncf",),
+                    },
+                ),
+            },
+        )
 
     BaseLogger(base_opts, include_time=True)
 
@@ -1265,8 +1275,12 @@ def main():
     )
 
     ret_val = 0
-    # TODO - when converting to extension, add not hasattr(base_opts, "subparser_name") or
-    if base_opts.subparser_name == "ncf":
+    if not hasattr(base_opts, "subparser_name"):
+        # Called as a basestation extension
+        ret_val = make_netcdf_network_file_from_perdive_files(
+            nc_files_created, processed_other_files
+        )
+    elif base_opts.subparser_name == "ncf":
         processed_files_list = []
         ret_val = make_netcdf_network_file_from_perdive_files(
             base_opts.netcdf_files, processed_files_list
