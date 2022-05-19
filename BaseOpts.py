@@ -1133,7 +1133,8 @@ global_options_dict = {
         ("--gliderdac_bin_width",),
         float,
         {
-            "help": "Width of bins for GliderDAC file (0.0 indicates timeseries",
+            "help": "Width of bins for GliderDAC file (0.0 indicates timeseries)",
+            "section": "gliderdac",
         },
     ),
     "simplencf_bin_width": options_t(
