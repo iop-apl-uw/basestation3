@@ -242,6 +242,7 @@ def main():
     moveFiles("targets", base_opts.mission_dir, base_opts.target_dir, copy=True)
     moveFiles("science", base_opts.mission_dir, base_opts.target_dir, copy=True)
     moveFiles("pdoscmds.bat", base_opts.mission_dir, base_opts.target_dir, copy=True)
+    moveFiles("comm.log", base_opts.mission_dir, base_opts.target_dir, copy=True)
 
     #
     # Move files
