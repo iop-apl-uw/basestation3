@@ -36,7 +36,14 @@ import traceback
 import numpy as np
 import xarray as xr
 
-from BaseLog import BaseLogger, log_error, log_info, log_critical, log_warning
+from BaseLog import (
+    BaseLogger,
+    log_error,
+    log_info,
+    log_critical,
+    log_warning,
+    log_debug,
+)
 import BaseOpts
 import LogFile
 import NetCDFUtils
@@ -489,19 +496,19 @@ def convert_network_logfile(in_file_name, out_file_name):
 
     if not os.path.isfile(convertor):
         log_error(
-            f"Convertor {convertor} does not exits - not processing {in_file_name}"
+            f"Convertor {convertor} does not exit - not processing {in_file_name}"
         )
-        return 1
+        return None
 
     if not os.access(convertor, os.X_OK):
         log_error(
             f"Convertor {convertor} is not marked as executable - not processing {in_file_name}"
         )
-        return 1
+        return None
 
     if not os.path.isfile(in_file_name):
-        log_error(f"{in_file_name} does not exits")
-        return 1
+        log_error(f"{in_file_name} does not exist")
+        return None
 
     cmdline = f"{convertor} {in_file_name}"
     log_info(f"Running {cmdline}")
@@ -509,13 +516,13 @@ def convert_network_logfile(in_file_name, out_file_name):
         (sts, run_output) = Utils.run_cmd_shell(cmdline, timeout=10)
     except:
         log_error(f"Error running {cmdline}", "exc")
-        return 1
+        return None
 
     if sts is None:
         log_error(
             f"Error running {cmdline} - timeout", "exc", alert="CONVERSION_TIMEOUT"
         )
-        return 1
+        return None
 
     if sts >> 8:
         error = ""
@@ -537,9 +544,7 @@ def convert_network_logfile(in_file_name, out_file_name):
                 elif ll.startswith("$DIVE,"):
                     divenum = float(ll.rstrip()[6:])
             if sgid is None or divenum is None:
-                log_error(
-                    f"Could not formulate file name for {in_file_name} - bailing out"
-                )
+                log_debug(f"Could not formulate file name for {in_file_name}")
                 return None
             run_output.seek(0)
             out_file_name = os.path.join(
@@ -579,20 +584,20 @@ def convert_network_profile(in_file_name, out_file_name):
 
     if not os.path.isfile(convertor):
         log_error(
-            f"Convertor {convertor} does not exits - not processing {in_file_name}"
+            f"Convertor {convertor} does not exit - not processing {in_file_name}"
         )
-        return 1
+        return None
 
     if not os.access(convertor, os.X_OK):
         log_error(
             "Convertor (%s) is not marked as executable - not processing %s"
             % (convertor, in_file_name)
         )
-        return 1
+        return None
 
     if not os.path.isfile(in_file_name):
         log_error(f"{in_file_name} does not exits")
-        return 1
+        return None
 
     if out_file_name is None:
         # See if there is enough meta data to build the new file name
@@ -607,8 +612,10 @@ def convert_network_profile(in_file_name, out_file_name):
                     )
         except:
             log_error("Failed to format out_file_name", "exc")
+            return None
 
     if out_file_name is None:
+        log_debug(f"Could not formulate output file name for {in_file_name}")
         return out_file_name
 
     cmdline = f"{convertor} -i {in_file_name} -o {out_file_name}"
@@ -617,13 +624,13 @@ def convert_network_profile(in_file_name, out_file_name):
         (sts, fo) = Utils.run_cmd_shell(cmdline, timeout=10)
     except:
         log_error(f"Error running {cmdline}", "exc")
-        return 1
+        return None
 
     if sts is None:
         log_error(
             f"Error running {cmdline} - timeout", "exc", alert="CONVERSION_TIMEOUT"
         )
-        return 1
+        return None
 
     if sts >> 8:
         error = ""
