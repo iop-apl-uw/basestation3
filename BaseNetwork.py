@@ -26,6 +26,7 @@ Processes network files
 """
 
 import collections
+import io
 import os
 import pdb
 import sys
@@ -473,9 +474,15 @@ def create_ds_var(dso, template, var_name, data, row_coord=None):
 def convert_network_logfile(in_file_name, out_file_name):
     """Converts a network log/eng file to text output
 
+    Input:
+        in_file_name - name of input file name
+        out_file_name - name of output file name or None.
+                        if None, the out_file_name will be created from the compressed
+                        eng header info, in the same directory as the input file
     Returns:
-        0 - success
-        1 - failure
+        out_file_name
+        None - failure
+
     """
 
     convertor = "/usr/local/bin/log"
@@ -516,19 +523,44 @@ def convert_network_logfile(in_file_name, out_file_name):
             error += l.decode()
         log_error(f"Error running {cmdline} - {error}")
 
-        return 1
+        return None
+
+    if out_file_name is None:
+        try:
+            # So we can seek to the start
+            run_output = io.BytesIO(run_output.read())
+            sgid = divenum = None
+            for ll in run_output.readlines():
+                ll = ll.decode()
+                if ll.startswith("$ID,"):
+                    sgid = float(ll.rstrip()[4:])
+                elif ll.startswith("$DIVE,"):
+                    divenum = float(ll.rstrip()[6:])
+            if sgid is None or divenum is None:
+                log_error(
+                    f"Could not formulate file name for {in_file_name} - bailing out"
+                )
+                return None
+            run_output.seek(0)
+            out_file_name = os.path.join(
+                os.path.split(in_file_name)[0],
+                f"p{int(sgid):03d}{int(divenum):04d}.nlog",
+            )
+        except:
+            log_error("Failed to format out_file_name", "exc")
+            return None
 
     try:
         fo = open(out_file_name, "wb")
     except:
         log_error(f"Failed to open {out_file_name}")
-        return 1
+        return None
 
     for l in run_output:
         fo.write(l)
     fo.close()
 
-    return 0
+    return out_file_name
 
 
 def convert_network_profile(in_file_name, out_file_name):
@@ -574,7 +606,7 @@ def convert_network_profile(in_file_name, out_file_name):
                         f"p{splits[2][2:]}{splits[3][2:6]}.npro",
                     )
         except:
-            log_error("Failed to format out_filename", "exc")
+            log_error("Failed to format out_file_name", "exc")
 
     if out_file_name is None:
         return out_file_name
@@ -674,6 +706,8 @@ class log_parser:
         "$TGT_NAME": parser_type(str_cnv, add_to_global_table),
         "$MHEAD_RNG_PITCHd_Wd": parser_type(float32_cnv, add_to_global_table),
         "$D_GRID": parser_type(float32_cnv, add_to_global_table),
+        "$ID": parser_type(float32_cnv, add_to_global_table),
+        "$DIVE": parser_type(float32_cnv, add_to_global_table),
         "$HUMID": parser_type(float32_cnv, add_to_global_table),
         "$TEMP": parser_type(float32_cnv, add_to_global_table),
         "$INTERNAL_PRESSURE": parser_type(float32_cnv, add_to_global_table),
@@ -1240,6 +1274,10 @@ def main():
         log_info(f"Created {processed_files_list}")
     elif base_opts.subparser_name == "log":
         ret_val = convert_network_logfile(base_opts.log_in_file, base_opts.log_out_file)
+        if ret_val is None:
+            ret_val = 1
+        else:
+            ret_val = 0
     elif base_opts.subparser_name == "pro":
         ret_val = convert_network_profile(base_opts.pro_in_file, base_opts.pro_out_file)
         if ret_val is None:
