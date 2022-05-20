@@ -2773,6 +2773,15 @@ def main():
             known_ftp_tags,
         )
 
+        BaseDotFiles.process_ftp(
+            base_opts,
+            processed_file_names,
+            mission_timeseries_name,
+            mission_profile_name,
+            known_ftp_tags,
+            ftp_type=".sftp",
+        )
+
         BaseDotFiles.process_mailer(
             base_opts,
             instrument_id,
