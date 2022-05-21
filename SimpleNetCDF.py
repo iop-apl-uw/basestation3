@@ -440,7 +440,7 @@ def main(
         if processed_other_files is not None:
             processed_other_files.append(netcdf_out_filename)
 
-        if base_opts.compress_output:
+        if base_opts.simplencf_compress_output:
             netcdf_out_filename_bzip = netcdf_out_filename + ".bz2"
             try:
                 with open(netcdf_out_filename, "rb") as fi, bz2.open(
