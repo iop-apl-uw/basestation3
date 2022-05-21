@@ -60,6 +60,10 @@ post_proc_extensions = [
     ".gz",
     ".dn_kkyy",
     ".up_kkyy",
+    ".nlog",
+    ".npro",
+    ".ncdf",
+    ".ncf",
 ]
 
 # These lists may be extended by loggers
