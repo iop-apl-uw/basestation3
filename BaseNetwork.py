@@ -543,7 +543,7 @@ def convert_network_logfile(in_file_name, out_file_name):
                     sgid = float(ll.rstrip()[4:])
                 elif ll.startswith("$DIVE,"):
                     divenum = float(ll.rstrip()[6:])
-            if sgid is None or divenum is None:
+            if sgid is None or sgid < 100.0 or divenum is None or divenum <= 0:
                 log_debug(f"Could not formulate file name for {in_file_name}")
                 return None
             run_output.seek(0)
@@ -898,13 +898,16 @@ def make_netcdf_netork_file(network_logfile, network_profile, ts_outputfile=True
         modem_table = None
         for ll in lp.modem_table:
             if modem_table is None:
-                modem_table = ll
+                modem_table = np.array(ll)
             else:
                 modem_table = np.vstack([modem_table, ll])
 
         if modem_table is not None:
-            rc = np.arange(np.shape(modem_table)[0])
-            create_ds_var(dso, var_template, "log_MODEM", modem_table, row_coord=rc)
+            # TODO: What a mess - if there is only one modem sentence, we can't form a
+            # 3x1 array
+            if len(np.shape(modem_table)) != 1:
+                rc = np.arange(np.shape(modem_table)[0])
+                create_ds_var(dso, var_template, "log_MODEM", modem_table, row_coord=rc)
 
     if time_v is not None:
         create_ds_var(dso, var_template, "time", time_v)
