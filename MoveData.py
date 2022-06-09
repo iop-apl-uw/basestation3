@@ -48,7 +48,7 @@ import Const
 import FileMgr
 import Sensors
 
-known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal", "rafos.dat", "nav1.dat", "nav0.scr", "nav1.scr"]
+from Globals import known_files
 
 
 def moveFiles(file_re_str, src, dest, copy=False):
@@ -318,16 +318,15 @@ def main():
     moveFiles(
         "pt%03d*.tar.bz2" % instrument_id, base_opts.mission_dir, base_opts.target_dir
     )
+    moveFiles("sg%03d.kmz" % instrument_id, base_opts.mission_dir, base_opts.target_dir)
     moveFiles(
-        "sg%03d.kmz" % instrument_id, base_opts.mission_dir, base_opts.target_dir
-        )
-    moveFiles(
-        "sg%03d_network.kml" % instrument_id, base_opts.mission_dir, base_opts.target_dir
-        )
+        "sg%03d_network.kml" % instrument_id,
+        base_opts.mission_dir,
+        base_opts.target_dir,
+    )
     moveFiles(
         "sg%03d_*.ncdf" % instrument_id, base_opts.mission_dir, base_opts.target_dir
-        )
-    
+    )
 
     # Move backup and recovery versions but NOT main versions of known_files from loggers
     for known_file in known_files:
