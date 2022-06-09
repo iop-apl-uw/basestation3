@@ -48,7 +48,7 @@ import Const
 import FileMgr
 import Sensors
 
-known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal"]
+known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal", "rafos.dat", "nav1.dat", "nav0.scr", "nav1.scr"]
 
 
 def moveFiles(file_re_str, src, dest, copy=False):
