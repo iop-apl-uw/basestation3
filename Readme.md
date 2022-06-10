@@ -97,9 +97,9 @@ cd /tmp/Python3.9
 3. Download python source distribution and build.  Depending on your machine, this can take a while
 
 ```
-wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tar.xz
-tar xvf Python-3.9.6.tar.xz
-cd /tmp/Python3.9/Python-3.9.6
+wget https://www.python.org/ftp/python/3.9.13/Python-3.9.13.tar.xz
+tar xvf Python-3.9.13.tar.xz
+cd /tmp/Python-3.9.13
 ./configure --enable-optimizations
 make 
 sudo make altinstall
