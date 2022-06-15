@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -61,6 +61,7 @@ import MakeDiveProfiles
 import MakeKML
 import MakePlot
 import MakePlot2
+import MakePlot3
 import MakePlot4
 import QC
 import Sensors
@@ -353,7 +354,7 @@ def main():
 
     # CONSIDER process .extensions here using something like:
     #
-    # from Base import known_mailer_tags, known_ftp_tags
+    # from Globals import known_mailer_tags, known_ftp_tags
     # process_extensions('.extensions', ["dive", "global", "mission"], base_opts, sg_calib_file_name, dive_nc_file_names,  \
     #                    dive_nc_file_names, [], Base.known_mailer_tags, Base.known_ftp_tags, None)
     #
@@ -436,10 +437,13 @@ def main():
                 "Started PLOT processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
             )
-            MakePlot.main(
+            # MakePlot.main(
+            #    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+            # )
+            MakePlot2.main(
                 instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
             )
-            MakePlot2.main(
+            MakePlot3.main(
                 instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
             )
             MakePlot4.main(

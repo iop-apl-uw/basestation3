@@ -1,6 +1,6 @@
 # For Plotly persistence
 kaleido>=0.0.3.post1 ; platform_machine != 'armv7l'
-matplotlib==3.2.0
+matplotlib>=3.2.0
 numpy>=1.19.1
 gsw==3.3.1
 seawater==3.3.4
@@ -9,3 +9,10 @@ plotly>=4.9.0
 scipy>=1.5.2
 # For SlackPost and InReachSend
 requests==2.24.0
+# For GliderDAC and BaseNetwork support
+xarray>=0.21.1
+netCDF4>=1.5.8
+# For GliderTrack support
+oct2py>=5.5.1
+# For sftp support in BaseDotFiles
+paramiko>=2.10.4

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -160,7 +160,8 @@ def process_ctx3_dat(base_opts, scicon_file, output_file, processed_logger_other
         1 - failure
     """
 
-    convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "x3decode_ts")
+    #convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "x3decode_ts")
+    convertor = "/usr/local/bin/x3decode_ts"
     if not os.path.isfile(convertor):
         log_error("Convertor %s does not exits - not processing %s" % (convertor, scicon_file))
         return 1
@@ -457,9 +458,11 @@ def extract_file_data(inp_file_name):
         log_error("Unable to open %s" % inp_file_name)
         return None
 
+    line_count = 0
     rows = []
     # Process the data
     for inp_line in inp_file:
+        line_count += 1
         inp_line = inp_line.rstrip().rstrip()
         if(inp_line == "" or inp_line[0] == '%'):
             continue
@@ -470,7 +473,7 @@ def extract_file_data(inp_file_name):
                 row.append(float64(raw_strs[i]))
             except:
                 log_error("Problems converting [%s] to float from line [%s] (%s, line %d)"
-                               % (raw_strs[i], inp_line, eng_filename, line_count))
+                               % (raw_strs[i], inp_line, inp_file_name, line_count))
                 continue
 
         rows.append(row)

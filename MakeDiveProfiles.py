@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -19,15 +19,6 @@
 ## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
-##
-
-##
-## 11/21/2010 - ToDo
-## - Parameterize everything - see if there is a "named structure" format for netCDF to deal with
-##   arrays that are actually named fields.  The other approach is it just include the key in the
-##   description field and leave as a parsed array
-## - Fix GC table to include FINISH and STATE
-## - Confirm interop with matlab
 ##
 
 ## Issues:
@@ -85,7 +76,9 @@ import Sensors
 from TempSalinityVelocity import TSV_iterative, load_thermal_inertia_modes
 from TraceArray import *  # REMOVE use this only only if we are tracing/comparing computations w/ matlab
 import Utils
+import LegatoCorrections
 
+DEBUG_PDB = False
 
 kg2g = 1000.0
 L2cc = 1000.0  # cc per liter
@@ -652,7 +645,16 @@ def sg_config_constants(calib_consts, log_deepglider=0, has_gpctd=False):
     }
 
     # CT type (sg_ct_type) and construction (sg_ct_geometry)
-    if sbect_unpumped:
+    if sg_ct_type == 4:
+        config.update(
+            {
+                'legato_time_lag' : -0.8,
+                'legato_alpha' : 0.08,
+                'legato_tau' : 10.0,
+                'legato_ctcoeff' : 0.0,
+            }
+        )
+    elif sbect_unpumped:
         config.update(
             {
                 ## all these constants apply to the unpumped SBE41 for its corrections
@@ -1948,6 +1950,7 @@ def load_dive_profile_data(
                     eng_var = re.compile("^%s" % nc_sg_eng_prefix)
                     gc_var = re.compile("^%s" % nc_gc_prefix)
                     gc_state_var = re.compile("^%s" % nc_gc_state_prefix)
+                    gc_msg_var = re.compile("^%s" % nc_gc_msg_prefix)
 
                     for global_var in list(
                         nc_global_variables.keys()
@@ -2277,6 +2280,15 @@ def load_dive_profile_data(
                                 :
                             ].copy()  # always an array
 
+                        elif gc_msg_var.search(dive_nc_varname):
+                            prefix, msg_col_name = gc_msg_var.split(dive_nc_varname)
+                            msg,col_name = msg_col_name.split("_",1)
+                            if msg not in log_f.gc_msg_dict:
+                                log_f.gc_msg_dict[msg] = {}
+                            log_f.gc_msg_dict[msg][col_name] = nc_var[
+                                :
+                            ].copy()  # always an array
+
                         elif gc_var.search(dive_nc_varname):
                             prefix, col_name = gc_var.split(dive_nc_varname)
                             log_f.gc_data[col_name] = nc_var[
@@ -2373,6 +2385,13 @@ def load_dive_profile_data(
                 assign_dim_info_size(
                     nc_info_d, nc_gc_state_info, len(log_f.gc_state_data["secs"])
                 )
+            if log_f.gc_msg_dict: # Dimension any gc messages
+                for msgtype, data_dict in log_f.gc_msg_dict.items():
+                    nc_gc_message_dim_info = nc_gc_msg_prefix + msgtype + "_info"
+                    assign_dim_info_size(
+                        nc_info_d, nc_gc_message_dim_info, len(next(iter(data_dict.items()))[1])
+                    )
+                
             assign_dim_info_size(nc_info_d, nc_gps_info_info, 3)
             # Add defaults only after possibly updating sg_calib_constants data
             status = 2  # raw data changed; results need updating
@@ -2745,8 +2764,6 @@ def make_dive_profile(
     else:  # status == 2 or we are forced
         if base_opts.force:
             log_info("Reprocessing - forcing recreation of netCDF file")
-        elif base_opts.reprocess:
-            log_info("Reprocessing")
         if "history" in globals_d and not base_opts.force:
             processing_history = globals_d["history"]  # append to previous history
         if "processing_error" in results_d:
@@ -2937,6 +2954,13 @@ def make_dive_profile(
                     sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
                 else:
                     sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+                results_d.update(
+                    {
+                        "pressure": sg_press_v,
+                        "depth": sg_depth_m_v,
+                    }
+                )
+                    
 
     log_info(
         "%s auxcompass %s auxPressure"
@@ -3050,6 +3074,11 @@ def make_dive_profile(
         # matlab references to (1900-01-01 00:00:00 UTC)
         # ODV wants Date (as YYYY-MM-YY) and Time (HH:MM)
         sg_epoch_time_s_v = eng_file_start_time + elapsed_time_s_v
+        
+        results_d.update({nc_sg_time_var: sg_epoch_time_s_v})
+        globals_d["time_coverage_start"] = nc_ISO8601_date(min(sg_epoch_time_s_v))
+        globals_d["time_coverage_end"] = nc_ISO8601_date(max(sg_epoch_time_s_v))
+
 
         # dimension values
         sg_np = len(elapsed_time_s_v)
@@ -3908,6 +3937,7 @@ def make_dive_profile(
                     tmp_press_v = results_d["legato_pressure"]
                     ctd_temp_v = results_d["legato_temp"]
                     ctd_cond_v = results_d["legato_conduc"] / 10.0
+                    ctd_condtemp_v = results_d["legato_conducTemp"]
                     ctd_epoch_time_s_v = results_d["legato_time"]
                 except KeyError:
                     raise RuntimeError(
@@ -3916,12 +3946,14 @@ def make_dive_profile(
             else:
                 ctd_temp_v = eng_f.get_col("rbr_temp")
                 ctd_cond_v = eng_f.get_col("rbr_conduc")
+                ctd_condtemp_v = eng_f.get_col("rbr_conducTemp")
                 if ctd_cond_v is not None:
                     ctd_cond_v /= 10.0
                 ctd_epoch_time_s_v = sg_epoch_time_s_v.copy()
                 if (
                     ctd_temp_v is None
                     or ctd_cond_v is None
+                    or ctd_condtemp_v is None
                     or ctd_epoch_time_s_v is None
                 ):
                     raise RuntimeError(
@@ -3950,6 +3982,13 @@ def make_dive_profile(
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+                
+            results_d.update(
+                {
+                    "pressure": sg_press_v,
+                    "depth": sg_depth_m_v,
+                }
+            )
 
             # Handle pressure spikes in legato pressure signal
             if tmp_press_v is not None:
@@ -4249,6 +4288,13 @@ def make_dive_profile(
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+            results_d.update(
+                {
+                    "pressure": sg_press_v,
+                    "depth": sg_depth_m_v,
+                }
+            )
+
 
             # There are two other possible 'depth' measurements from scicon
             # Both are based on the same pressure sensor used by the glider.
@@ -4417,6 +4463,12 @@ def make_dive_profile(
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+            results_d.update(
+                {
+                    "pressure": sg_press_v,
+                    "depth": sg_depth_m_v,
+                }
+            )
 
             # MDP automatically asserts instrument when writing
             # DEAD results_d['gpctd'] = 'pumped Seabird SBE41 (gpctd)' # record the instrument used for CTD
@@ -4620,16 +4672,21 @@ def make_dive_profile(
                 salin_raw_v = gsw.SP_from_C(cond_raw_v * 10.0, temp_raw_v, ctd_press_v)
 
         # elapsed time is recorded as eng_elaps_t
-        results_d.update(
-            {
-                nc_sg_time_var: sg_epoch_time_s_v,
-                "pressure": sg_press_v,
-                "depth": sg_depth_m_v,
-            }
-        )
 
-        globals_d["time_coverage_start"] = nc_ISO8601_date(min(sg_epoch_time_s_v))
-        globals_d["time_coverage_end"] = nc_ISO8601_date(max(sg_epoch_time_s_v))
+        # This are stored earlier, so they are always in the netcdf file,
+        # even if CT processing fails
+        
+        #results_d.update(
+        #    {
+        #        nc_sg_time_var: sg_epoch_time_s_v,
+        #        "pressure": sg_press_v,
+        #        "depth": sg_depth_m_v,
+        #    }
+        #)
+
+        #globals_d["time_coverage_start"] = nc_ISO8601_date(min(sg_epoch_time_s_v))
+        #globals_d["time_coverage_end"] = nc_ISO8601_date(max(sg_epoch_time_s_v))
+        
         # see discussion in BaseNetCDF about resolution vs accuracy
         # TODO some instruments have much better resolution than 1 secs and
         # even the glider doesn't have resolution finer than 2.5 secs nominally...so what is this saying?
@@ -5755,8 +5812,7 @@ def make_dive_profile(
                 True,  # force averaging and hope
                 ctd_gsm_speed_cm_s_v,
                 ctd_gsm_glide_angle_deg_v,
-                longitude,
-                latitude,
+                longitude, latitude,
             )
 
             if converged:
@@ -5765,11 +5821,37 @@ def make_dive_profile(
             log_warning("TSV correction unable to converge")
             directives.suggest("skip_profile % nonconverged")
 
-        # Rebind these to our corrected versions
-        temp_cor_v = tmc_temp_cor_v
-        temp_cor_qc_v = tmc_temp_cor_qc_v
-        salin_cor_v = tmc_salin_cor_v
-        salin_cor_qc_v = tmc_salin_cor_qc_v
+        if sg_ct_type == 4:
+            (
+                corr_pressure,
+                corr_temperature,
+                corr_temperature_qc,
+                corr_salinity,
+                corr_salinity_qc,
+                corr_conductivity,
+                corr_conductivity_qc,                
+                corr_salinity_lag_only,
+            ) = LegatoCorrections.legato_correct_ct(
+                calib_consts,
+                ctd_epoch_time_s_v,
+                ctd_press_v,
+                temp_cor_v,
+                temp_cor_qc_v,
+                cond_cor_v,
+                cond_cor_qc_v,
+                ctd_condtemp_v,
+            )
+            #CONDSIDER: Add corr_salinity_lag_only, corr_conductivity and corr_pressure to netcdf file
+            temp_cor_v = corr_temperature
+            temp_cor_qc_v = corr_temperature_qc
+            salin_cor_v = corr_salinity
+            salin_cor_qc_v = corr_salinity_qc
+        else:
+            # Rebind these to our corrected versions 
+            temp_cor_v = tmc_temp_cor_v
+            temp_cor_qc_v = tmc_temp_cor_qc_v
+            salin_cor_v = tmc_salin_cor_v
+            salin_cor_qc_v = tmc_salin_cor_qc_v
 
         # finally, after all adjustments, update final salinity qc
         # no change to temp or cond expected but salin is corrected
@@ -7022,6 +7104,21 @@ def make_dive_profile(
                     False,
                     gc_state_values,
                 )
+        # Create GC message variables
+        if log_f.gc_msg_dict:
+            for msgtype, data_dict in log_f.gc_msg_dict.items():
+                nc_dim_msg_state = nc_gc_msg_prefix + msgtype
+                for data_name, data in data_dict.items():
+                    nc_msg_name = nc_gc_msg_prefix + msgtype + "_" + data_name
+                    log_debug(f"Creating {nc_msg_name}")
+                    create_nc_var(
+                        nc_dive_file,
+                        nc_msg_name,
+                        (nc_dim_msg_state,),
+                        False,
+                        data,
+                    )
+                    
 
         # First record the actual GPS lines for future processing
         for gps_string in ["$GPS1", "$GPS2", "$GPS"]:
@@ -9583,6 +9680,11 @@ def main():
             ret_val = 1
             break
         except:
+            if DEBUG_PDB:
+                _, _, tb = sys.exc_info()
+                traceback.print_exc()
+                pdb.post_mortem(tb)
+
             log_error("Error processing dive %d - skipping" % dive_num, "exc")
             temp_ret_val = True
 

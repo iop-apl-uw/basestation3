@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -34,7 +34,6 @@ import collections
 import math
 import os
 import re
-import traceback
 
 import numpy as np
 
@@ -59,6 +58,8 @@ def calc_center_freqs(rate, nfft, logmap):
     rate, nfft and logmap
     """
     if rate is None or nfft is None or logmap is None:
+        return None
+    if len(logmap.rstrip()) == 0:
         return None
     rate = float(rate)
     nfft = float(nfft)
@@ -557,7 +558,10 @@ def init_logger(module_name, init_dict=None):
                     False,
                     "d",
                     {"description": description},
-                    (row_info, col_info,),
+                    (
+                        row_info,
+                        col_info,
+                    ),
                 )
     return 0
 
@@ -601,14 +605,20 @@ def process_tar_members(
             if tail.lower() == ".eng":
                 _, tail = os.path.split(tmicl_file)
                 head, tail = os.path.splitext(tail)
-                s = head.split("_")
-                # Name format = base_name, class (base, logavg, dvdt), instance (channel)
-                if len(s) < 3:
-                    output_file = "%s_base_%s.eng" % (base_name, s[1])
+                splits = head.split("_")
+                # Name format = base_name, class (base, logavg, dvdt, motors), instance (channel)
+                if len(splits) < 3:
+                    output_file = "%s_base_%s.eng" % (base_name, splits[1])
+                    class_name = "base"
                 else:
-                    output_file = "%s_%s_%s.eng" % (base_name, s[2], s[1])
+                    output_file = "%s_%s_%s.eng" % (base_name, splits[2], splits[1])
+                    class_name = splits[2]
 
-                ef, _ = extract_file_metadata(tmicl_file, s[1])
+                ef, _ = extract_file_metadata(tmicl_file, splits[1])
+
+                # 2021/12/30 Bug - motor files have no column header
+                if class_name == "motors" and "columns" not in ef:
+                    ef["columns"] = "onoff sample"
 
                 log_debug("Output file %s" % output_file)
 
@@ -620,7 +630,7 @@ def process_tar_members(
 
                 # At this point, columns may be scaled and/or offset - correct that
                 if (
-                    os.path.split(output_file)[1].split("_")[1] == "base"
+                    os.path.split(output_file)[1].split("_")[1] in ("base",)
                     and "columns" in ef
                 ):
                     scale_off = []
@@ -737,10 +747,20 @@ def process_tar_members(
                     )
                 )
                 for row in range(np.shape(ed)[1]):
-                    fo.write("%.3f " % t)
+                    if class_name == "motors":
+                        # Motor files calculate time based on sample number
+                        motor_t = ef["start"] + (
+                            ed[ef["columns"].split().index("sample") - 1][row] / rate
+                        )
+                        fo.write("%.3f " % motor_t)
+                    else:
+                        fo.write("%.3f " % t)
                     t = t + time_step
                     for col in range(np.shape(ed)[0]):
-                        fo.write("%g " % ed[col][row])
+                        if class_name in ("motors", "base"):
+                            fo.write("%d " % ed[col][row])
+                        else:
+                            fo.write("%g " % ed[col][row])
                     fo.write("\n")
 
                 if "stop" in ef:
@@ -758,8 +778,7 @@ def process_tar_members(
                 fo.close()
                 processed_logger_eng_files.append(output_file)
         except:
-            log_error("Failed to process %s" % tmicl_file)
-            log_error(traceback.format_exc())
+            log_error("Failed to process %s" % tmicl_file, "exc")
             ret_val = 1
 
     return ret_val
@@ -1021,8 +1040,9 @@ def extract_file_data(inp_file_name):
         if scaleoff:
             tmp = arr.array("B")
             tmp.frombytes(buffer[data_start:data_end])
-            data = arr.array("f")
-            data.frombytes(list(map(float, tmp)))
+            data = np.array(tmp).astype(np.float64)
+            # data = arr.array("f")
+            # data.frombytes(list(map(float, tmp)))
         else:
             data = arr.array("f")
             data.frombytes(buffer[data_start:data_end])
@@ -1070,7 +1090,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         eng_file_class = tmp[1]
         eng_file_channel = tmp[2]  # channel
 
-        if eng_file_class == "base":
+        if eng_file_class in ("base", "motors"):
             eng_file_meta, ef_ret_list = extract_file_metadata(
                 filename, eng_file_channel
             )
@@ -1093,7 +1113,11 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
             # Remap column header names
             data_column_headers = []
-            columns = eng_file_meta["columns"].split()
+            # 2021/12/30 Bug - motor files have no column header
+            if eng_file_class == "motors" and "columns" not in eng_file_meta:
+                columns = ["time", "onoff", "sample"]
+            else:
+                columns = eng_file_meta["columns"].split()
             for column_name in columns:
                 data_column_headers.append(column_name.replace(".", "_"))
 
@@ -1111,11 +1135,18 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 )
 
             for i in range(len(columns)):
-                nc_var_name = "tmicl_%s_%s_%s" % (
-                    data_column_headers[i],
-                    eng_file_channel,
-                    FileMgr.cast_code[fn["cast"]],
-                )
+                if eng_file_class == "motors":
+                    nc_var_name = "tmicl_motors_%s_%s_%s" % (
+                        data_column_headers[i],
+                        eng_file_channel,
+                        FileMgr.cast_code[fn["cast"]],
+                    )
+                else:
+                    nc_var_name = "tmicl_%s_%s_%s" % (
+                        data_column_headers[i],
+                        eng_file_channel,
+                        FileMgr.cast_code[fn["cast"]],
+                    )
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, data[i]))
                 # Predeclare metadata for these variables in other sensor extension files when possible.
@@ -1240,7 +1271,10 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
             # Center freqs
             if eng_file_class == "logavg":
                 # log_info("center_freqs:%s" % (center_freqs))
-                if len(center_freqs) != len(spectra[0, :]):
+                if center_freqs is None:
+                    # No spectral data
+                    pass
+                elif len(center_freqs) != len(spectra[0, :]):
                     log_error(
                         "len(center_freqs) %d != len(logavg) %d"
                         % (len(center_freqs), spectra[0, :])
@@ -1286,8 +1320,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 nc_info_d, "%s_col_info" % nc_var_name, spectra.shape[1]
             )  # columns
 
-        elif eng_file_class == "motors":
-            log_info("Not adding %s to netcdf file" % filename)
+        # elif eng_file_class == "motors":
+        #    log_info("Not adding %s to netcdf file" % filename)
         else:
             log_warning(
                 "Unknown class %s of tmicl file %s -- skipping"

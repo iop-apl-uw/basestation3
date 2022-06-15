@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -814,6 +814,16 @@ def crack_connect_line(input_line):
     return (connect_ts_tstruct, time_zone)
 
 
+def is_digit(val):
+    """Because python doesn't have a built-in solution that handles negative values"""
+    try:
+        int(val)
+    except ValueError:
+        return False
+    else:
+        return True
+
+
 def crack_counter_line(
     base_opts, session, raw_strs, comm_log_file_name, line_count, raw_line
 ):
@@ -831,7 +841,7 @@ def crack_counter_line(
             cnt_vals[i] = cnt_vals[i].lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
         # Looks like a counter line
-        if cnt_vals[0].isdigit() and cnt_vals[1].isdigit() and cnt_vals[2].isdigit():
+        if is_digit(cnt_vals[0]) and is_digit(cnt_vals[1]) and is_digit(cnt_vals[2]):
 
             # Differences in counter lines
             #
@@ -1099,6 +1109,7 @@ def process_comm_log(
 
             if raw_strs[0] == "Parsed" and raw_strs[2] == "from":
                 session.cmd_directive = raw_strs[1]
+                continue
 
             # XMODEM to glider
             if raw_strs[0] == "Sent":
@@ -1389,13 +1400,18 @@ def process_comm_log(
                                         int(raw_strs[7]),
                                         0.0,
                                     )
-                                else:
+                                elif len(raw_strs) == 13:
                                     session.file_stats[filename] = file_stats_nt(
                                         expected_size,
                                         int(raw_strs[7]),
                                         int(raw_strs[7]),
                                         float(raw_strs[11].lstrip("(")),
                                     )
+                                else:
+                                    log_warning(f"Could not process sent lineno {line_count} - skipping")
+                                    # Do not issue the callback
+                                    continue
+
                             except:
                                 log_error(
                                     "Could not process %s: lineno %d"
@@ -1609,9 +1625,13 @@ def process_comm_log(
                         session.fragment_size = 4
 
                     if len(tmp) > 3:
-                        session.launch_time = time.mktime(
-                            time.strptime(tmp[3].split("=")[1], "%d%m%y:%H%M%S")
-                        )
+                        try:
+                            session.launch_time = time.mktime(
+                                time.strptime(tmp[3].split("=")[1], "%d%m%y:%H%M%S")
+                            )
+                        except ValueError:
+                            log_error(f"Could not parse launch time - line {line_count} in comm.log")
+                            continue
 
                     if call_back and "ver" in call_back.callbacks:
                         try:
@@ -1688,8 +1708,12 @@ def process_history_log(history_log_file_name):
             continue
         if raw_line[0] == "#" and raw_line[1] == "+":
             ts_line = raw_line.split("+")
-            ts = float(ts_line[1].rstrip())
-            command_history.append([ts, None])
+            try:
+                ts = float(ts_line[1].rstrip())
+            except ValueError:
+                log_warning(f"Could not process line {line_count} in {history_log_file_name} - skipping")
+            else:
+                command_history.append([ts, None])
             continue
         # Next line is the command
         command_history[-1][1] = "%s (%s)" % (

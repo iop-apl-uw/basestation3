@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -60,7 +60,9 @@ from BaseLog import *
 # TODO: fix delcarations and imports to eliminate circulatities!
 nc_nan = array([nan], dtype = float64)[0] # CF1.4 ensure double
 nc_scalar = ()
-from scipy.io import netcdf
+# 2022/01/12 GBS - needed to add this to support qsp2150.cnf processing
+nc_sg_data_info = "sg_data_info"  # eng
+from scipy.io import netcdf_file
 import glob
 import pickle
 import collections
@@ -71,7 +73,7 @@ def open_netcdf_file(filename, mode='r', mmap=None, version=1):
     mmap=None says use mmap if you can
     '''
     #return netcdf.netcdf_file(filename,mode,mmap=False if sys.platform == 'darwin' else mmap, version=version)
-    return netcdf.netcdf_file(filename, mode, mmap=False, version=version)
+    return netcdf_file(filename, mode, mmap=False, version=version)
 
 
 col_ncmeta_map_type = collections.namedtuple('col_ncmeta_map_type', ['nc_var_name', 'nc_meta_str'])
@@ -1308,3 +1310,74 @@ def format_time(t):
         milli * 1000.0,
     )
     return time_string
+
+RTD = 57.29578  # radians to degrees (180./acos(-1.)) 180./3.14159265
+DTR = 0.0174532925  # degrees to radians 3.14159265/180.
+METERS_PER_DEG = 111120.0  # 60*METERS_PER_N
+
+def bearing(lat0, lon0, lat1, lon1):
+    """Returns the bearing and range from current_pos 
+    target_pos
+    
+    Input:
+      lat0, lon0 - current position (decimal degrees)
+      lat1, lon1 - target position (decimal degrees)
+
+    Returns:
+      (rng, bear) where:
+      rng - range in meters
+      bear - bearning in degrees true
+    """
+    diff = METERS_PER_DEG * math.cos(lat1 * DTR)
+    x = -(lon0 - lon1) * diff
+    y = (lat1 - lat0) * METERS_PER_DEG
+
+    rng = math.sqrt(x * x + y * y) / 1000.0
+
+    bear = math.atan2(x, y) * RTD
+
+    if bear > 360.0:
+        bear = math.fmod(bear, 360.0)
+    if bear < 0.0:
+        bear = math.fmod(bear, 360.0) + 360.0
+
+    return (rng, bear)
+
+def synthesize_lat_lon(lat, lon, bearing, rng):
+    """ Generate a new lat/lon
+
+    Input:
+        lat, lon - starting position
+        bearing - heading to new position in degrees
+        rng - distance to new position in meters
+
+    Returns:
+        new position as (lat,lon) tuple in decimal degress
+    """
+    range_deg = rng / METERS_PER_DEG;
+
+    # convert nav bearing to polar radians
+    head_rad = (360.0 + 90.0) - bearing;
+    if head_rad > 360.0:
+        head_rad -= 360.0
+    
+    head_rad /= RTD  # radians
+
+    deg = lat + math.sin(head_rad)*range_deg 
+    if deg > 90.0:
+        deg -= 90.0 # over the North Pole
+    elif deg < -90.0:
+        deg += 90.0 # over the South poll
+    newlat = deg
+
+    # adjust longitude distance according to latitude
+    deg = lon + math.cos(head_rad) * range_deg / math.cos(deg * DTR)
+    # make mod 180
+    if deg > 180.0:
+        deg -= 360.0 # around the world from Greenwich W, so make E
+    elif deg < -180.0:
+        deg += 360.0 # around the world from Greenwich E, so make W
+    newlon = deg
+
+    return (newlat, newlon)
+

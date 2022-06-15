@@ -83,6 +83,10 @@ def main():
         "science": "S",
         "pdoscmds.bat": "P",
         "tcm2mat.cal": "M",
+        "rafos.dat": "R",
+        "nav1.dat": "r",
+        "nav0.scr": "N",
+        "nav1.scr": "n",
     }
     for f in list(base_files.keys()):
         if os.path.exists(os.path.join(base_opts.mission_dir, f)):

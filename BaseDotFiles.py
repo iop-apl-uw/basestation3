@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -31,10 +31,13 @@ import fnmatch
 import itertools
 import netrc
 import os
+import pdb
 import smtplib
 import socket
 import sys
 import time
+import traceback
+import warnings
 
 from email.utils import COMMASPACE, formatdate
 from email.mime.multipart import MIMEMultipart, MIMEBase
@@ -42,14 +45,34 @@ from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email import encoders
 from ftplib import FTP
+
+# from ftplib import FTP_TLS
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
+# paramiko is throwing a warning on import because it refernces Blowfish - which is depricated
+# Issue is here https://github.com/paramiko/paramiko/issues/2038
+# TODO: Remove when the warning has been fixed and the newer version is required
+with warnings.catch_warnings():
+    warnings.filterwarnings("ignore")
+    import paramiko
+
+import BaseOpts
 import BaseGZip
+import Globals
 import CommLog
 import Sensors
 
-from BaseLog import log_error, log_warning, log_info, log_debug
+from BaseLog import (
+    BaseLogger,
+    log_error,
+    log_warning,
+    log_info,
+    log_debug,
+    log_critical,
+)
+
+DEBUG_PDB = "darwin" in sys.platform
 
 # Configuration
 mail_server = "localhost"
@@ -341,9 +364,7 @@ def process_pagers(
                     pagers_elts = pagers_line.split(",")
                     email_addr = pagers_elts[0]
                     # Look for alternate sending functions
-                    if len(pagers_elts) > 1 and (
-                        pagers_elts[1] in list(pagers_ext.keys())
-                    ):
+                    if len(pagers_elts) > 1 and (pagers_elts[1] in pagers_ext):
                         log_info(f"Using sending function {pagers_elts[1]}")
                         send_func = pagers_ext[pagers_elts[1]]
                         pagers_elts = pagers_elts[2:]
@@ -351,7 +372,7 @@ def process_pagers(
                         send_func = send_email
                         pagers_elts = pagers_elts[1:]
 
-                    tags_with_fmt = ["lategps", "gps", "recov", "critical"]
+                    tags_with_fmt = ["lategps", "gps", "recov", "critical", "drift"]
                     known_tags = [
                         "lategps",
                         "gps",
@@ -545,6 +566,68 @@ def process_pagers(
         log_info("Finished processing on .pagers")
 
 
+def process_ftp_tags(
+    base_opts,
+    processed_file_names,
+    mission_timeseries_name,
+    mission_profile_name,
+    ftp_tags,
+    known_ftp_tags,
+    ftp_line,
+):
+    """Process the ftp tags for either .ftp or .sftp file"""
+
+    temp_tags = ftp_tags
+    for i in range(len(temp_tags)):
+        ftp_tags[i] = temp_tags[i].lower().rstrip().lstrip()
+
+    # Check for what file type
+    try:
+        ftp_tags.index("all")
+    except:
+        pass
+    else:
+        ftp_tags = known_ftp_tags
+
+    # Collect file to send into a list
+    ftp_file_names_to_send = []
+
+    for ftp_tag in ftp_tags:
+        if ftp_tag.startswith("fnmatch_"):
+            _, m = ftp_tag.split("_", 1)
+            log_info(f"Match criteria ({m})")
+            for processed_file_name in processed_file_names:
+                # Case insenitive match since tags were already lowercased
+                if fnmatch.fnmatchcase(processed_file_name.lower(), m):
+                    ftp_file_names_to_send.append(processed_file_name)
+                    log_info(f"Matched {processed_file_name}")
+
+        elif ftp_tag in known_ftp_tags:
+            if ftp_tag == "comm":
+                ftp_file_names_to_send.append(
+                    os.path.join(base_opts.mission_dir, "comm.log")
+                )
+            else:
+                for processed_file_name in processed_file_names:
+                    head, tail = os.path.splitext(processed_file_name)
+                    if processed_file_name == mission_timeseries_name:
+                        if ftp_tag == "mission_ts":
+                            ftp_file_names_to_send.append(processed_file_name)
+                    elif processed_file_name == mission_profile_name:
+                        if ftp_tag == "mission_pro":
+                            ftp_file_names_to_send.append(processed_file_name)
+                    elif os.path.splitext(head)[1] == ".nc" and ftp_tag.lower() == "nc":
+                        ftp_file_names_to_send.append(processed_file_name)
+                    else:
+                        head, tail = os.path.splitext(processed_file_name)
+                        if tail.lstrip(".") == ftp_tag.lower():
+                            ftp_file_names_to_send.append(processed_file_name)
+        else:
+            log_error(f"Unknown tag ({ftp_tag}) on line ({ftp_line}) - skipping")
+
+    return ftp_file_names_to_send
+
+
 def process_ftp_line(
     base_opts,
     processed_file_names,
@@ -575,6 +658,7 @@ def process_ftp_line(
     if ftp_line[0] == "#":  # not a comment
         return 0
 
+    log_debug(f"{processed_file_names}")
     log_info(f"Processing ftp line ({ftp_line})")
     # Lines of the form
     # [user[:password]@]host[:port]/path
@@ -615,63 +699,45 @@ def process_ftp_line(
 
     log_info(f"user:{user},host:{host},port:{port},path:{path}")
 
-    # Tags - what to send
-    ftp_tags = ftp_tags[1:]
-
-    temp_tags = ftp_tags
-    for i in range(len(temp_tags)):
-        ftp_tags[i] = temp_tags[i].lower().rstrip().lstrip()
-
-    # Check for what file type
-    try:
-        ftp_tags.index("all")
-    except:
-        pass
-    else:
-        ftp_tags = known_ftp_tags
-
-    # Collect file to send into a list
-    ftp_file_names_to_send = []
-
-    for ftp_tag in ftp_tags:
-        if not ftp_tag in known_ftp_tags:
-            log_error(f"Unknown tag ({ftp_tag}) on line ({ftp_line}) - skipping")
-        else:
-            if ftp_tag == "comm":
-                ftp_file_names_to_send.append(
-                    os.path.join(base_opts.mission_dir, "comm.log")
-                )
-            else:
-                for processed_file_name in processed_file_names:
-                    head, tail = os.path.splitext(processed_file_name)
-                    if processed_file_name == mission_timeseries_name:
-                        if ftp_tag == "mission_ts":
-                            ftp_file_names_to_send.append(processed_file_name)
-                    elif processed_file_name == mission_profile_name:
-                        if ftp_tag == "mission_pro":
-                            ftp_file_names_to_send.append(processed_file_name)
-                    elif os.path.splitext(head)[1] == ".nc" and ftp_tag.lower() == "nc":
-                        ftp_file_names_to_send.append(processed_file_name)
-                    else:
-                        head, tail = os.path.splitext(processed_file_name)
-                        if tail.lstrip(".") == ftp_tag.lower():
-                            ftp_file_names_to_send.append(processed_file_name)
+    ftp_file_names_to_send = process_ftp_tags(
+        base_opts,
+        processed_file_names,
+        mission_timeseries_name,
+        mission_profile_name,
+        ftp_tags[1:],
+        known_ftp_tags,
+        ftp_line,
+    )
 
     if len(ftp_file_names_to_send) < 1:
         return 0  # nothing to send
 
     log_debug(f"ftp files to send {ftp_file_names_to_send}")
+
     # Connect
     try:
-        ftp = FTP(host)
+        # Some hosts - gliders.ioos.us for example - don't want to login when the
+        # host is specified in the FTP object creation - and then only when running from Base.py
+        ftp = FTP(timeout=30)
+        connect_response = ftp.connect(host=host)
+        # ftp = FTP_TLS(host)
     except:
         log_error("Unable to connect", "exc")
         return 1  # give up
+    log_info(connect_response)
+    # try:
+    #     ftp.prot_p()
+    # except:
+    #     log_warning("Could not go to secure - continuing", "exc")
     try:
-        ftp.login(user, pwd)
+        # ftp.set_debuglevel(2) # 2 is max level - all to stdout
+        ftp.set_pasv(True)
+        login_response = ftp.login(user, pwd)
     except:
         log_error("Unable to login", "exc")
         return 1  # give up
+
+    log_info(login_response)
 
     for i in path.split("/"):
         try:
@@ -689,13 +755,14 @@ def process_ftp_line(
 
     result = 0  # assume the best
     for ftp_file_name_to_send in ftp_file_names_to_send:
-        head, tail = os.path.split(ftp_file_name_to_send)
+        _, tail = os.path.split(ftp_file_name_to_send)
         try:
-            fi = open(ftp_file_name_to_send, "r")
+            fi = open(ftp_file_name_to_send, "rb")
         except:
             log_error(f"Unable to open {ftp_file_name_to_send} - skipping", "exc")
             result = 1  # we had issues
         else:
+            log_info(f"Sending {tail}")
             try:
                 ftp.storbinary(f"STOR {tail}", fi)
             except:
@@ -710,21 +777,133 @@ def process_ftp_line(
     return result
 
 
+def process_sftp_line(
+    base_opts,
+    processed_file_names,
+    mission_timeseries_name,
+    mission_profile_name,
+    sftp_line,
+    known_ftp_tags,
+):
+    """Sends indicated files to the ftp site indicated in ftp_line.
+    Always sends nc files but can send others according to known_ftp_tags
+    Input:
+       base_opts - options
+       processed_file_names - list of files to send, fully-qualified
+       mission_timeseries_name - name or None
+       mission_profile_name - name or None
+       sftp_line - ftp specification of the form host,user,password,path_to_key,port,path,[files]
+       known_ftp_tags - list of acceptable tags as a filter (e.g., comm, mission_ts, mission_pro, or explicit extensions)
+
+    Returns
+      0 - success
+      1 - failure
+    """
+
+    sftp_line = sftp_line.rstrip()
+    log_debug(f"ftp line = ({sftp_line})")
+    if sftp_line == "":  # blank line
+        return 0
+    if sftp_line[0] == "#":  # not a comment
+        return 0
+
+    log_debug(f"{processed_file_names}")
+    log_info(f"Processing ftp line ({sftp_line})")
+
+    # sftp specification of the form host, user,password,path_to_key,port,path,[files]
+    sftp_tags = sftp_line.split(",")
+    if len(sftp_tags) < 6:
+        log_error(f"Incomplete sftp specification {sftp_line} - skipping")
+        return 1
+
+    # Address
+    host, user, pwd, path_to_key, port, remote_path = sftp_tags[:6]
+
+    if not port:
+        port = 22
+
+    if not pwd:
+        pwd = None
+
+    if not path_to_key:
+        path_to_key = None
+    else:
+        path_to_key = os.path.expanduser(path_to_key)
+
+    if path_to_key and not os.path.exists(path_to_key):
+        log_error(f"Key file {path_to_key} not found")
+        return 1
+
+    log_info(
+        f"user:{user},host:{host},keyfile:{path_to_key},port:{port},remote_path:{remote_path}"
+    )
+
+    sftp_file_names_to_send = process_ftp_tags(
+        base_opts,
+        processed_file_names,
+        mission_timeseries_name,
+        mission_profile_name,
+        sftp_tags[6:],
+        known_ftp_tags,
+        sftp_line,
+    )
+
+    if len(sftp_file_names_to_send) < 1:
+        return 0  # nothing to send
+
+    log_debug(f"ftp files to send {sftp_file_names_to_send}")
+
+    # pkey = paramiko.ed25519key.Ed25519Key(filename=path_to_key)
+    # transport = transport = paramiko.Transport((host, port))
+    # transport.connect(username = user, pkey = pkey)
+    # sftp = paramiko.SFTPClient.from_transport(transport)
+
+    try:
+        client = paramiko.SSHClient()
+        client.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
+        client.connect(host, username=user, password=pwd, key_filename=path_to_key)
+        sftp = client.open_sftp()
+    except:
+        log_error(f"Could not connect {sftp_line}")
+        return 1
+
+    for sftp_file_name_to_send in sftp_file_names_to_send:
+        remote_file = os.path.join(
+            remote_path, os.path.split(sftp_file_name_to_send)[1]
+        )
+        log_info(f"Sending {sftp_file_name_to_send} to {remote_file}")
+        sftp.put(sftp_file_name_to_send, remote_file)
+
+    client.close()
+
+    return 0
+
+
 def process_ftp(
     base_opts,
     processed_file_names,
     mission_timeseries_name,
     mission_profile_name,
     known_ftp_tags,
+    ftp_type=".ftp",
 ):
-    """Process the .ftp file and push the data to a ftp server"""
+    """Process the .ftp/.sftp file and push the data to a ftp/sftp server"""
     ret_val = 0
-    ftp_file_name = os.path.join(base_opts.mission_dir, ".ftp")
+    if ftp_type not in (".ftp", ".sftp"):
+        log_error(f"Unsupported ftp type {ftp_type}")
+        return 1
+
+    if ftp_type == ".ftp":
+        process_line = process_ftp_line
+    else:
+        process_line = process_sftp_line
+
+    ftp_file_name = os.path.join(base_opts.mission_dir, ftp_type)
     if not os.path.exists(ftp_file_name):
-        log_info("No .ftp file found - skipping .ftp processing")
+        log_info(f"No {ftp_type} file found - skipping {ftp_type} processing")
         return 0
 
-    log_info("Starting processing on .ftp")
+    log_info(f"Starting processing on {ftp_type}")
     try:
         ftp_file = open(ftp_file_name, "r")
     except IOError as exception:
@@ -733,7 +912,7 @@ def process_ftp(
     else:
         for ftp_line in ftp_file:
             try:
-                process_ftp_line(
+                process_line(
                     base_opts,
                     processed_file_names,
                     mission_timeseries_name,
@@ -743,7 +922,7 @@ def process_ftp(
                 )
             except:
                 log_error(f"Could not process {ftp_line} - skipping", "exc")
-    log_info("Finished processing on .ftp")
+    log_info(f"Finished processing on {ftp_type}")
     return ret_val
 
 
@@ -1208,3 +1387,93 @@ def process_extensions(
         log_info(f"Finished processing on {extension_file_name}")
 
     return ret_val
+
+
+def main():
+    """cli test/utility for dot file processing
+
+    Returns:
+        0 for success (although there may have been individual errors in
+            file processing).
+        Non-zero for critical problems.
+
+    Raises:
+        Any exceptions raised are considered critical errors and not expected
+    """
+
+    # pylint: disable=unused-argument
+    base_opts = BaseOpts.BaseOptions(
+        "cmdline entry for basestation dot file processing",
+        additional_arguments={
+            "basedotfiles_action": BaseOpts.options_t(
+                None,
+                ("BaseDotFiles",),
+                ("basedotfiles_action",),
+                str,
+                {
+                    "help": "Which action to run",
+                    "choices": ("gps", "drift", "ftp", "sftp"),
+                },
+            ),
+            "ftp_files": BaseOpts.options_t(
+                None,
+                ("BaseDotFiles",),
+                ("ftp_files",),
+                str,
+                {
+                    "help": "List of files to upload",
+                    "nargs": "*",
+                },
+            ),
+        },
+    )
+
+    BaseLogger(base_opts, include_time=True)
+
+    log_info(
+        "Started processing "
+        + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+    )
+
+    if base_opts.basedotfiles_action in ("gps", "drift"):
+        comm_log = CommLog.process_comm_log(
+            os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
+        )[0]
+
+        process_pagers(
+            base_opts,
+            comm_log.last_complete_surfacing().sg_id,
+            (base_opts.basedotfiles_action,),
+            comm_log=comm_log,
+        )
+    elif base_opts.basedotfiles_action == "ftp":
+        process_ftp(base_opts, base_opts.ftp_files, None, None, Globals.known_ftp_tags)
+    elif base_opts.basedotfiles_action == "sftp":
+        process_ftp(
+            base_opts,
+            base_opts.ftp_files,
+            None,
+            None,
+            Globals.known_ftp_tags,
+            ftp_type=".sftp",
+        )
+
+
+if __name__ == "__main__":
+    retval = 1
+
+    # Force to be in UTC
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+
+    try:
+        main()
+    except SystemExit:
+        pass
+    except:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+
+        log_critical("Unhandled exception in main -- exiting", "exc")

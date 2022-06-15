@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2018, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2018, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -35,11 +35,10 @@ import time
 import traceback
 
 import numpy as np
-import scipy.interpolate
-from scipy.stats import binned_statistic
 
 import BaseOpts
 import MakeDiveProfiles
+import NetCDFUtils
 import QC
 import Utils
 
@@ -197,7 +196,7 @@ def load_var(
     if var_meta.depth_name is not None:
         depth = ncf.variables[var_meta.depth_name][:]
     else:
-        depth = interp1_extend(
+        depth = NetCDFUtils.interp1_extend(
             ncf.variables[master_time_name][:],
             ncf.variables[master_depth_name][:],
             ncf.variables[var_meta.time_name][:],
@@ -214,75 +213,6 @@ def cp_attrs(in_var, out_var):
     for a in list(in_var._attributes.keys()):
         out_var.__setattr__(a, in_var._attributes[a])
     # pylint: enable=protected-access
-
-
-def interp1_extend(t1, data, t2):
-    """Interpolates t1/data onto t2, extending t1/data to cover the range
-    of t2
-    """
-    # add 'nearest' data item to the ends of data and t1
-    if t2[0] < t1[0]:
-        # Copy the first value below the interpolation range
-        data = np.append(np.array([data[0]]), data)
-        t1 = np.append(np.array([t2[0]]), t1)
-
-    if t2[-1] > t1[-1]:
-        # Copy the last value above the interpolation range
-        data = np.append(data, np.array([data[-1]]))
-        t1 = np.append(t1, np.array([t2[-1]]))
-
-    return scipy.interpolate.interp1d(t1, data)(t2)
-
-
-def bindata(x, y, bins, sigma=False):
-    """
-    Bins y(x) onto bins by averaging, when bins define the right hand side of the bin
-    NaNs are ignored.  Values less then bin[0] LHS are included in bin[0],
-    values greater then bin[-1] RHS are included in bin[-1]
-
-    Input:
-        x: values to be binned
-        y: data upon which the averaging will be calculated
-        bins: right hand side of the bins
-        sigma: boolean to indicated if the standard deviation should also be calculated
-
-    Returns:
-        b: binned data (averaged)
-        n: number of points in each bin
-        sigma: standard deviation of the data (if so requested)
-
-    Notes:
-        Current implimentation only handles the 1-D case
-    """
-    idx = np.logical_not(np.isnan(y))
-    if not idx.any():
-        nan_return = np.empty(bins.size - 1)
-        nan_return[:] = np.nan
-        if sigma:
-            return (nan_return, nan_return.copy(), nan_return.copy())
-        else:
-            return (nan_return, nan_return.copy())
-
-    # Only consider the non-nan data
-    x = x[idx]
-    y = y[idx]
-
-    # Note - this treats things to the left of the first bin edge as in "bin[0]",
-    # but does not include it in the first bin statistics - that is avgs[0], which is considered
-    # bin 1.  Same logic on the right.
-    avgs, _, inds = binned_statistic(x, y, statistic="mean", bins=bins)
-
-    bin_count = np.bincount(inds, minlength=bins.size)
-    # Bin number zero number len(bins) are not in the stats, so remove them
-    bin_count = bin_count[1 : bins.size]
-    bin_count = bin_count * 1.0  # Convert to float
-    bin_count[bin_count == 0] = np.nan
-
-    if sigma:
-        sigma, _, _ = binned_statistic(x, y, statistic="std", bins=bins)
-        return (avgs, bin_count, sigma)
-    else:
-        return (avgs, bin_count)
 
 
 def main(
@@ -310,28 +240,6 @@ def main(
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for creating simplified netCDF files",
-            additional_arguments={
-                "simplencf_bin_width": BaseOpts.options_t(
-                    None,
-                    ("SimpleNetCDF",),
-                    ("--simplencf_bin_width",),
-                    float,
-                    {
-                        "help": "Bin SimpleNetCDF output to this size",
-                        "section": "simplenetcdf",
-                    },
-                ),
-                "simplencf_compress_output": BaseOpts.options_t(
-                    None,
-                    ("SimpleNetCDF",),
-                    ("--simplencf_compress_output",),
-                    bool,
-                    {
-                        "help": "Compress the simple netcdf file",
-                        "action": "store_true",
-                    },
-                ),
-            },
         )
 
     BaseLogger(base_opts)  # initializes BaseLog
@@ -362,7 +270,7 @@ def main(
 
         netcdf_in_filename = dive_nc_file_name
         head = os.path.splitext(netcdf_in_filename)[0]
-        if base_opts.bin_width:
+        if base_opts.simplencf_bin_width:
             netcdf_out_filename = "%s.ncfb" % (head)
         else:
             netcdf_out_filename = "%s.ncf" % (head)
@@ -405,7 +313,7 @@ def main(
             nc_vars.add(var_name)
             nc_vars.add(var_meta.time_name)
 
-        if not base_opts.bin_width:
+        if not base_opts.simplencf_bin_width:
             # If not binning, copy over dimensions and variables,
             # converting the doubles to floats
             for d in nc_dims:
@@ -415,12 +323,14 @@ def main(
         else:
             master_depth = nci.variables[master_depth_name][:]
             max_depth = np.floor(np.nanmax(master_depth))
-            bin_centers = np.arange(0.0, max_depth + 0.01, base_opts.bin_width)
+            bin_centers = np.arange(
+                0.0, max_depth + 0.01, base_opts.simplencf_bin_width
+            )
             # This is actually bin edges, so one more point then actual bins
             bin_edges = np.arange(
-                -base_opts.bin_width / 2.0,
-                max_depth + base_opts.bin_width / 2.0 + 0.01,
-                base_opts.bin_width,
+                -base_opts.simplencf_bin_width / 2.0,
+                max_depth + base_opts.simplencf_bin_width / 2.0 + 0.01,
+                base_opts.simplencf_bin_width,
             )
             # Do this to ensure everything is caught in the binned statistic
             bin_edges[0] = -20.0
@@ -430,6 +340,9 @@ def main(
             nco.createDimension(depth_dimension_name, len(bin_centers))
             nco.createDimension(profile_dimension_name, 2)
             depth = create_nc_var(nco, "depth")
+            depth._attributes["description"] = (
+                depth._attributes["description"] + " - center of bin"
+            )
             depth[0, :] = bin_centers
             depth[1, :] = bin_centers
             profile = create_nc_var(nco, "profile")
@@ -439,10 +352,10 @@ def main(
             # Set the time variable for the depth vector
             master_time = nci.variables[master_time_name][:]
             max_depth_i = np.argmax(master_depth)
-            t_down = interp1_extend(
+            t_down = NetCDFUtils.interp1_extend(
                 master_depth[:max_depth_i], master_time[:max_depth_i], bin_centers
             )
-            t_up = interp1_extend(
+            t_up = NetCDFUtils.interp1_extend(
                 master_depth[max_depth_i:], master_time[max_depth_i:], bin_centers[::-1]
             )
             ttime = create_nc_var(nco, "time")
@@ -459,7 +372,7 @@ def main(
                 master_time_name,
                 master_depth_name,
             )
-            if not base_opts.bin_width:
+            if not base_opts.simplencf_bin_width:
                 vv = nco.createVariable(
                     var_name, np.float32, nci.variables[var_name].dimensions
                 )
@@ -473,10 +386,10 @@ def main(
                 if "time" in var_name or "depth" in var_name:
                     continue
                 max_depth_i = np.argmax(depth)
-                binned_data_down, n_obs_down, *_ = bindata(
+                binned_data_down, n_obs_down, *_ = NetCDFUtils.bindata(
                     depth[:max_depth_i], data[:max_depth_i], bin_edges
                 )
-                binned_data_up, n_obs_up, *_ = bindata(
+                binned_data_up, n_obs_up, *_ = NetCDFUtils.bindata(
                     depth[max_depth_i:], data[max_depth_i:], bin_edges
                 )
                 obs_max = max(np.nanmax(binned_data_down), np.nanmax(binned_data_up))
@@ -516,7 +429,7 @@ def main(
 
         # pylint: disable=protected-access
         for a in list(nci._attributes.keys()):
-            if not (base_opts.bin_width and a == "history"):
+            if not (base_opts.simplencf_bin_width and a == "history"):
                 nco.__setattr__(a, nci._attributes[a])
         # pylint: enable=protected-access
 
@@ -527,7 +440,7 @@ def main(
         if processed_other_files is not None:
             processed_other_files.append(netcdf_out_filename)
 
-        if base_opts.compress_output:
+        if base_opts.simplencf_compress_output:
             netcdf_out_filename_bzip = netcdf_out_filename + ".bz2"
             try:
                 with open(netcdf_out_filename, "rb") as fi, bz2.open(
