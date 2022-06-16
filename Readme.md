@@ -1,3 +1,7 @@
+* TODO
+- Note tcsh and glider group need to be installed exits
+- Note on building raw and the symlink for rawrcv2
+
 Seaglider Basestation Readme
 
 # Operation of the basestation
@@ -121,7 +125,7 @@ python3.9 --version
 
 ```
 cd /usr/local/Base-3.01
-pip3.9 install -r requirements.txt
+sudo /usr/local/bin/pip3.9 install -r requirements.txt
 ```
 
 5. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
