@@ -1108,7 +1108,8 @@ def process_comm_log(
                 continue
 
             if raw_strs[0] == "Parsed" and raw_strs[2] == "from":
-                session.cmd_directive = raw_strs[1]
+                if session:
+                    session.cmd_directive = raw_strs[1]
                 continue
 
             # XMODEM to glider
