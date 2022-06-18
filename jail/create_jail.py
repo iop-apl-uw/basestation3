@@ -35,7 +35,7 @@ f_create = True
 
 # Needs to be run as root
 
-arch_lib_dir = "aarch64-linux-gnu"
+arch_lib_dir =f"{os.uname().machine}-linux-gnu"
 
 ddirs = [
     "/bin",
@@ -65,10 +65,13 @@ seaglider_files = (
     "/usr/bin/touch",
     "/usr/bin/date",
     # End glider_login/glider_logout
-    "/usr/local/bin/rawrcv",
+    "/usr/local/bin/rawrcv2",
+    "/usr/local/bin/rawrcvb",
     "/usr/local/bin/rawsend",
-    #"/usr/local/bin/xs",
-    #"/usr/local/bin/xr",
+    "/usr/local/bin/lsx",
+    "/usr/local/bin/lrx",
+    "/usr/local/bin/lsb",
+    "/usr/local/bin/lrb",
 )
 
 for sgf in seaglider_files:
@@ -136,5 +139,5 @@ for ff in files_to_copy:
 for tree in tree_copy:
     tgt_tree = jail_root.joinpath(str(tree)[1:])
     print(tree, tgt_tree)
-    shutil.copytree(tree, tgt_tree)
+    shutil.copytree(tree, tgt_tree, dirs_exist_ok=True)
     
