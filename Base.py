@@ -1783,8 +1783,12 @@ def main():
 
     # Ensure that all pre-processed files are readable by all
     pre_proc_files = file_collector.get_pre_proc_files()
-    for file_name in pre_proc_files:
-        os.chmod(file_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
+    # GBS 2022/06/17 - this was essentially a hack for not setting the umask correctly
+    # and long standing decision to have xmodem files get created for 0640 permissions
+    # Both correct with this checkin
+    #
+    # for file_name in pre_proc_files:
+    #    os.chmod(file_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
 
     # Read cache for conversions done thus far
     if base_opts.force:

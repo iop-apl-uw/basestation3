@@ -1,5 +1,6 @@
+#!/usr/bin/tcsh
 ## 
-## Copyright (c) 2006, 2007, 2008, 2011, 2012, 2013, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -21,8 +22,14 @@
 
 # A glider just logged in
 # NOTE: Ensure this and the .login file do not contain hidden ^M's or things will fail
+
+umask 2
+
 # Ensure we have a comm.log file
 touch comm.log
+
+set PYTHON_BINARY = /usr/local/bin/python3.9
+set runner_timeout = 2
 
 if(! $?BASESTATION_PATH ) then
     set BASESTATION_PATH = "/usr/local/basestation"
@@ -31,16 +38,26 @@ endif
 printf "\n" >>! glider_early_gps.log
 printf "\n" >>! glider_early_gps.log
 
-set BASELOG = glider_early_gps_`date +%y%m%d%H%M%S`
-set PYTHON_BINARY = python3.9
-
-$PYTHON_BINARY $BASESTATION_PATH/GliderEarlyGPS.py --daemon --mission_dir `pwd` --verbose --base_log $BASELOG --csh_pid $$  >>&!  glider_early_gps.log
+set glider_early_gps_time = `date +%y%m%d%H%M%S`
+set glider_early_gps_cmd_line = "GliderEarlyGPS.py --daemon --mission_dir `pwd` --verbose --base_log `pwd`/glider_early_gps_${glider_early_gps_time} --csh_pid $$"
+set glider_early_gps_log = `pwd`/glider_early_gps.log
+if( $?RUNNER_DIR ) then
+  set glider_early_gps_run_file = ${RUNNER_DIR}/${glider_early_gps_time}.run
+  echo  ${glider_early_gps_log} ${glider_early_gps_cmd_line} > ${glider_early_gps_run_file}
+  set t_now = `date +%s`
+  while (-f ${glider_early_gps_run_file} )
+      sleep 0.2
+      if ( `date +%s` >= ${t_now} + ${runner_timeout}) then
+          break
+      endif
+  end
+else
+    $PYTHON_BINARY $BASESTATION_PATH/${glider_early_gps_cmd_line} >>&! ${glider_early_gps_log}
+endif
 
 if (-f .connected) then
-#    echo Reconnected at `date` >> comm.log
      echo Reconnected at `date +"%a %b %d %R:%S %Z %Y"` >> comm.log
 else
-#    echo Connected at `date` >> comm.log
      echo Connected at `date +"%a %b %d %R:%S %Z %Y"` >> comm.log
 endif
 
@@ -56,8 +73,23 @@ else
 endif
 
 # Signal the glider what files are waiting for upload
-set BASELOG = baselog_login_`date +%y%m%d%H%M%S`
-$PYTHON_BINARY $BASESTATION_PATH/BaseLogin.py --mission_dir `pwd` --verbose --base_log $BASELOG  >>&!  baselog.log
+set base_login_time = `date +%y%m%d%H%M%S`
+set base_login_cmd_line = "BaseLogin.py --mission_dir `pwd` --verbose --base_log `pwd`/baselog_login_${base_login_time}"
+set base_login_log = `pwd`/baselog.log
+
+if( $?RUNNER_DIR ) then
+  set base_login_run_file = ${RUNNER_DIR}/${base_login_time}.run
+  echo ${base_login_log} ${base_login_cmd_line} > ${base_login_run_file}
+  set t_now = `date +%s`
+  while (-f ${base_login_run_file} )
+      sleep 0.2
+      if ( `date +%s` >= ${t_now} + ${runner_timeout}) then
+          break
+      endif
+  end
+else
+    $PYTHON_BINARY $BASESTATION_PATH/${base_login_cmd_line}  >>&!  ${base_login_log}
+endif
 if ( -f upload_files ) then
    source upload_files
    rm -f upload_files
