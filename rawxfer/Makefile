@@ -9,10 +9,10 @@
 
 CC = gcc
 
-all:    rawrcv rawsend
+all:    rawrcv2 rawsend
 
-rawrcv: rawrcv.o lsyslog.o md5.o
-		$(CC) -o rawrcv rawrcv.o lsyslog.o md5.o
+rawrcv2: rawrcv.o lsyslog.o md5.o
+		$(CC) -o rawrcv2 rawrcv.o lsyslog.o md5.o
 
 rawsend: rawsend.o lsyslog.o
 		$(CC) -o rawsend rawsend.o lsyslog.o
