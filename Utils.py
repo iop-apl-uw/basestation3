@@ -434,7 +434,12 @@ def check_lock_file(base_opts, base_lockfile_name):
                 # Try to clean it up anyway
                 return(cleanup_lock_file(base_opts, base_lockfile_name))
             else:
-                previous_pid = int(fi.read())
+                try:
+                    previous_pid = int(fi.read())
+                except:
+                    log_error("Error fetching pid from lockfile", "exc")
+                    cleanup_lock_file(base_opts, base_lockfile_name)
+                    return -1
                 if(check_for_pid(previous_pid)):
                     return previous_pid
                 else:
