@@ -51,7 +51,7 @@ set base_logout_log = `pwd`/baselog.log
 
 if( $?RUNNER_DIR ) then
   set base_logout_run_file = ${RUNNER_DIR}/${base_logout_time}.run
-  echo ${base_logout_log} ${base_logout_cmd_line} > ${base_logout_run_file}
+  echo `pwd` ${base_logout_log} ${base_logout_cmd_line} > ${base_logout_run_file}
   set t_now = `date +%s`
   while (-f ${base_logout_run_file} )
       sleep 0.2

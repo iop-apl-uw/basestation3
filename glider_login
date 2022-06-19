@@ -43,7 +43,7 @@ set glider_early_gps_cmd_line = "GliderEarlyGPS.py --daemon --mission_dir `pwd` 
 set glider_early_gps_log = `pwd`/glider_early_gps.log
 if( $?RUNNER_DIR ) then
   set glider_early_gps_run_file = ${RUNNER_DIR}/${glider_early_gps_time}.run
-  echo  ${glider_early_gps_log} ${glider_early_gps_cmd_line} > ${glider_early_gps_run_file}
+  echo  `pwd` ${glider_early_gps_log} ${glider_early_gps_cmd_line} > ${glider_early_gps_run_file}
   set t_now = `date +%s`
   while (-f ${glider_early_gps_run_file} )
       sleep 0.2
@@ -79,7 +79,7 @@ set base_login_log = `pwd`/baselog.log
 
 if( $?RUNNER_DIR ) then
   set base_login_run_file = ${RUNNER_DIR}/${base_login_time}.run
-  echo ${base_login_log} ${base_login_cmd_line} > ${base_login_run_file}
+  echo `pwd` ${base_login_log} ${base_login_cmd_line} > ${base_login_run_file}
   set t_now = `date +%s`
   while (-f ${base_login_run_file} )
       sleep 0.2

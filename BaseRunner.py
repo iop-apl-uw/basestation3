@@ -70,9 +70,19 @@ def main():
                     "action": BaseOpts.FullPathTrailingSlashAction,
                 },
             ),
+            "jail_root": BaseOpts.options_t(
+                None,
+                ("BaseRunner",),
+                ("--jail_root",),
+                str,
+                {
+                    "help": "Root of the seaglider jail, if used",
+                    "action": BaseOpts.FullPathTrailingSlashAction,
+                },
+            ),
         },
     )
-    BaseLogger(base_opts)
+    BaseLogger(base_opts, include_time=True)
 
     if not os.path.exists(base_opts.watch_dir):
         log_error(f"{base_opts.watch_dir} does not exist - bailing out")
@@ -119,25 +129,46 @@ def main():
             log_debug(f"Found {run_file}")
             try:
                 runfile_line = open(run_file, "r").readline()
-                log_file, cmd_line = runfile_line.split(" ", 1)
+                log_info(runfile_line)
+                seaglider_root_dir, log_file, cmd_line = runfile_line.split(" ", 2)
+                seaglider_root_dir = seaglider_root_dir.rstrip()
                 log_file = log_file.rstrip()
-                # log_debug(f"{log_file}, {cmd_line}")
+                if base_opts.jail_root and log_file.startswith(seaglider_root_dir):
+                    log_file = os.path.join(base_opts.jail_root, log_file[1:])
+                # log_info(f"{log_file}, {cmd_line}")
                 if cmd_line.split(" ", 1)[0].rstrip() not in known_scripts:
                     log_error(f"Unknown script ({cmd_line}) - skipping")
                 else:
                     cmd_line = f"{python_version} {cmd_line}"
+                    if base_opts.jail_root:
+                        cmd_line_parts = cmd_line.split()
+                        for ii in range(len(cmd_line_parts)):
+                            if cmd_line_parts[ii].startswith(seaglider_root_dir):
+                                cmd_line_parts[ii] = os.path.join(
+                                    base_opts.jail_root, cmd_line_parts[ii][1:]
+                                )
+                        cmd_line = " ".join(cmd_line_parts)
+
+                    cmd_line += f" >> {log_file} 2>&1"
                     log_info(f"Running {cmd_line}")
+                    # TODO - scripts launched with --daemon are still waiting for process completion
+                    # 1) Will need to include redirection on the cmdline
+                    # 2) Un
+                    # Try includeing the redirection on the command line (but need to nail down the shell first)
+                    # to see if that helps
                     ret = subprocess.run(
                         cmd_line,
                         shell=True,
                         # env=my_env,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.STDOUT,
-                        text=True,
+                        start_new_session=True,
+                        # stdout=subprocess.PIPE,
+                        # stderr=subprocess.STDOUT,
+                        # text=True,
                     )
-                    with open(log_file, "a") as fo:
-                        for ll in ret.stdout.splitlines():
-                            fo.write(f"{ll}\n")
+                    log_info("Run done")
+                    # with open(log_file, "a") as fo:
+                    #    for ll in ret.stdout.splitlines():
+                    #        fo.write(f"{ll}\n")
             except KeyboardInterrupt:
                 f_processing = False
             except:
