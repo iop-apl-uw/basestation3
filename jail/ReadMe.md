@@ -32,5 +32,11 @@ just to provide the definition for the "dumb" terminal - needed?
 
 None of these files are being created automatically - probably no need to, but they will need documentation on how to setup.
 
+## ToDo
+
+- Need to create an updated commmision.py to setup glider directories in the jail
+
 ## Setup notes
+
+
 

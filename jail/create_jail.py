@@ -35,6 +35,9 @@ f_create = True
 
 # Needs to be run as root
 
+# Note: this script does not setup glider accounts (passwd, shadow, group and shadow group)
+# See ReadMe.md for those instructions
+
 arch_lib_dir =f"{os.uname().machine}-linux-gnu"
 
 ddirs = [
@@ -50,8 +53,11 @@ ddirs = [
     "/usr/local",
     "/usr/local/bin",
     "/var",
-    "/etc/pam.d",
-    "/var/log",
+    "/var/log",    
+    #"/etc/pam.d",
+    "/usr/local/basestation",
+    "/usr/local/basestation3",
+    "/home/rundir",
 ]
 dirs = []
 for dd in ddirs:
@@ -64,6 +70,9 @@ seaglider_files = (
     "/usr/bin/rm",
     "/usr/bin/touch",
     "/usr/bin/date",
+    "/usr/bin/printf",
+    "/usr/bin/pwd",
+    "/usr/bin/sleep",
     # End glider_login/glider_logout
     "/usr/local/bin/rawrcv2",
     "/usr/local/bin/rawrcvb",
@@ -101,7 +110,7 @@ for gg in pam_related_libs:
         f_tmp = pathlib.Path(m)
         files_to_copy.add(f_tmp)
 
-tree_copy = ["/lib/terminfo"]
+tree_copy = ["/lib/terminfo", "/etc/pam.d"]
     
 # cp /lib/aarch64-linux-gnu/libnss_files-2.31.so /home/jail/lib/aarch64-linux-gnu/libnss_files-2.31.so
 # cp /lib/aarch64-linux-gnu/libnss_files.so.2 /home/jail/lib/aarch64-linux-gnu/libnss_files.so.2
@@ -128,6 +137,8 @@ for dd in dirs:
     if f_create:
         tgt_dir.mkdir(exist_ok=True)
         shutil.copymode(dd, tgt_dir)
+        stat_info = os.stat(dd)
+        os.chown(tgt_dir, stat_info.st_uid, stat_info.st_gid)
 
 for ff in files_to_copy:
     tgt_file = jail_root.joinpath(str(ff)[1:])
