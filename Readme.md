@@ -189,6 +189,17 @@ If you plan to upload gzipped files to the glider, install this special version 
 14a) cd /usr/local/Base-3.01 and unpack via "sudo tar xvzf rudics.tgz"
 14b) Follow the instructions provided in packages/rudics/ReadMe
 
+## Configuring for login
+
+The PAM system is prone to generating a considerable ammont of output that interferes 
+with the basestation <-> Seaglider login handshaking.  In /etc/pam.d/login, locate and 
+comment out the following lines:
+
+    #session    optional   pam_motd.so motd=/run/motd.dynamic
+	#session    optional   pam_motd.so noupdate
+	#session    optional   pam_lastlog.so
+
+
 # Commissioning a new glider
 As root, run:
 
