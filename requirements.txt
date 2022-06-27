@@ -18,3 +18,4 @@ oct2py>=5.5.1
 paramiko>=2.10.4
 # For BaseRunner
 inotify_simple
+sdnotify

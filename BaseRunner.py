@@ -21,6 +21,10 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
+# TODO
+# - Split log levels for base_log and command line
+# - Add mailer to service
+
 """Run processing on behalf of glider accounts"""
 
 import os
@@ -33,6 +37,7 @@ import time
 import traceback
 
 from inotify_simple import INotify, flags
+import sdnotify
 
 import BaseOpts
 from BaseLog import (
@@ -50,6 +55,9 @@ previous_runner_time_out = 10
 
 known_scripts = ("BaseLogin.py", "GliderEarlyGPS.py", "Base.py")
 python_version = "/usr/local/bin/python3.9"
+
+dog_stroke_interval = 10
+inotify_read_timeout = 5 * 1000  # In milliseconds
 
 DEBUG_PDB = True
 
@@ -114,9 +122,17 @@ def main():
     watch_flags = flags.CLOSE_WRITE
     inotify.add_watch(base_opts.watch_dir, watch_flags)
 
+    notifier = sdnotify.SystemdNotifier()
+    notifier.notify("READY=1")
+
     f_processing = True
+    next_stroke_time = time.time() + dog_stroke_interval
+    # log_info(f"Next stroke {next_stroke_time}")
     while f_processing:
-        for event in inotify.read():
+        if time.time() > next_stroke_time:
+            notifier.notify("WATCHDOG=1")
+            next_stroke_time = time.time() + dog_stroke_interval
+        for event in inotify.read(timeout=inotify_read_timeout):
             run_file = os.path.join(base_opts.mission_dir, event.name)
             # log_info(f"Received {event.name} {run_file}")
             if not (
@@ -149,21 +165,19 @@ def main():
                                 )
                         cmd_line = " ".join(cmd_line_parts)
 
+                    # May not be critical, but for now, this script when launched out of systemd is
+                    # running with unbuffered stdin/stdout - no need to launch other scripts this way
+                    my_env = os.environ.copy()
+                    if "PYTHONUNBUFFERED" in my_env:
+                        del my_env["PYTHONUNBUFFERED"]
+                    # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
                     cmd_line += f" >> {log_file} 2>&1"
                     log_info(f"Running {cmd_line}")
-                    # TODO - scripts launched with --daemon are still waiting for process completion
-                    # 1) Will need to include redirection on the cmdline
-                    # 2) Un
-                    # Try includeing the redirection on the command line (but need to nail down the shell first)
-                    # to see if that helps
                     ret = subprocess.run(
                         cmd_line,
                         shell=True,
-                        # env=my_env,
+                        env=my_env,
                         start_new_session=True,
-                        # stdout=subprocess.PIPE,
-                        # stderr=subprocess.STDOUT,
-                        # text=True,
                     )
                     log_info("Run done")
                     # with open(log_file, "a") as fo:
@@ -180,7 +194,6 @@ def main():
                     except:
                         log_critical(f"Failed to remove {run_file}", "exc")
 
-        time.sleep(0.1)
     Utils.cleanup_lock_file(base_opts, base_runner_lockfile_name)
 
 
