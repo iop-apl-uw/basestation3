@@ -27,9 +27,11 @@ After=network.target
 Environment=PYTHONUNBUFFERED=true
 User=%i
 #ExecStart=/usr/local/bin/python3.9 /usr/local/basestation3/BaseRunnner.py <run_dir> --jail_root <jail_root>
-ExecStart=/usr/local/bin/python3.9 /home/gbs/work/git/basestation3/BaseRunner.py --verbose --jail_root /home/jail --base_log /var/log/baserunner.log /home/jail/home/rundir 
+ExecStart=/usr/local/bin/python3.9 /home/gbs/work/git/basestation3/BaseRunner.py --jail_root /home/jail --base_log /var/log/baserunner.log /home/jail/home/rundir 
 WatchdogSec=30
 Restart=always
+RuntimeMaxSec=86400
+TimeoutStopSec=10
 Type=notify
 # Unclear if these are required, given the above Restart setting
 #RestartSec=2

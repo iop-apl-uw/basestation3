@@ -21,10 +21,6 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-# TODO
-# - Split log levels for base_log and command line
-# - Add mailer to service
-
 """Run processing on behalf of glider accounts"""
 
 import os
@@ -33,6 +29,7 @@ import signal
 import stat
 import subprocess
 import sys
+import threading
 import time
 import traceback
 
@@ -59,7 +56,14 @@ python_version = "/usr/local/bin/python3.9"
 dog_stroke_interval = 10
 inotify_read_timeout = 5 * 1000  # In milliseconds
 
-DEBUG_PDB = True
+DEBUG_PDB = False
+
+exit_event = threading.Event()
+
+
+def quit(signo, _frame):
+    log_info("Interrupted by %d, shutting down" % signo)
+    exit_event.set()
 
 
 def main():
@@ -92,6 +96,9 @@ def main():
     )
     BaseLogger(base_opts, include_time=True)
 
+    for sig in ("TERM", "HUP", "INT"):
+        signal.signal(getattr(signal, "SIG" + sig), quit)
+
     if not os.path.exists(base_opts.watch_dir):
         log_error(f"{base_opts.watch_dir} does not exist - bailing out")
         return 1
@@ -108,7 +115,7 @@ def main():
             "Previous runner process (pid:%d) still exists - signalling process to complete"
             % lock_file_pid
         )
-        os.kill(lock_file_pid, signal.SIGUSR1)
+        os.kill(lock_file_pid, signal.SIGTERM)
         if Utils.wait_for_pid(lock_file_pid, previous_runner_time_out):
             log_error(
                 "Process pid:%d did not respond to sighup after %d seconds - trying to kill"
@@ -125,10 +132,10 @@ def main():
     notifier = sdnotify.SystemdNotifier()
     notifier.notify("READY=1")
 
-    f_processing = True
     next_stroke_time = time.time() + dog_stroke_interval
     # log_info(f"Next stroke {next_stroke_time}")
-    while f_processing:
+
+    while not exit_event.is_set():
         if time.time() > next_stroke_time:
             notifier.notify("WATCHDOG=1")
             next_stroke_time = time.time() + dog_stroke_interval
@@ -184,7 +191,7 @@ def main():
                     #    for ll in ret.stdout.splitlines():
                     #        fo.write(f"{ll}\n")
             except KeyboardInterrupt:
-                f_processing = False
+                exit_event.set()
             except:
                 log_error(f"Error processing {run_file}", "exc")
             finally:
@@ -193,6 +200,8 @@ def main():
                         os.unlink(run_file)
                     except:
                         log_critical(f"Failed to remove {run_file}", "exc")
+    else:
+        log_info("Shutdown signal received")
 
     Utils.cleanup_lock_file(base_opts, base_runner_lockfile_name)
 
