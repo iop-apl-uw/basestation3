@@ -24,6 +24,7 @@
 """Run processing on behalf of glider accounts"""
 
 import os
+import pathlib
 import pdb
 import signal
 import stat
@@ -47,6 +48,8 @@ from BaseLog import (
 )
 import Utils
 
+basestation_dir = str(pathlib.Path(__file__).parent.absolute())
+
 base_runner_lockfile_name = ".base_runner_lockfile"
 previous_runner_time_out = 10
 
@@ -61,7 +64,8 @@ DEBUG_PDB = False
 exit_event = threading.Event()
 
 
-def quit(signo, _frame):
+def quit_func(signo, _frame):
+    """Signal handler"""
     log_info("Interrupted by %d, shutting down" % signo)
     exit_event.set()
 
@@ -97,7 +101,7 @@ def main():
     BaseLogger(base_opts, include_time=True)
 
     for sig in ("TERM", "HUP", "INT"):
-        signal.signal(getattr(signal, "SIG" + sig), quit)
+        signal.signal(getattr(signal, "SIG" + sig), quit_func)
 
     if not os.path.exists(base_opts.watch_dir):
         log_error(f"{base_opts.watch_dir} does not exist - bailing out")
@@ -158,12 +162,17 @@ def main():
                 log_file = log_file.rstrip()
                 if base_opts.jail_root and log_file.startswith(seaglider_root_dir):
                     log_file = os.path.join(base_opts.jail_root, log_file[1:])
-                # log_info(f"{log_file}, {cmd_line}")
+                log_info(f"{seaglider_root_dir}, {log_file}, {cmd_line}")
                 if cmd_line.split(" ", 1)[0].rstrip() not in known_scripts:
                     log_error(f"Unknown script ({cmd_line}) - skipping")
                 else:
-                    cmd_line = f"{python_version} {cmd_line}"
+                    # Prepend the basestation directory and add on the python version
+                    script, tail = cmd_line.split(" ", 1)
+                    full_path_script = os.path.join(basestation_dir, script)
+                    cmd_line = f"{python_version} {full_path_script} {tail}"
+
                     if base_opts.jail_root:
+                        # Convert to the path outside the jail
                         cmd_line_parts = cmd_line.split()
                         for ii in range(len(cmd_line_parts)):
                             if cmd_line_parts[ii].startswith(seaglider_root_dir):
@@ -180,16 +189,12 @@ def main():
                     # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
                     cmd_line += f" >> {log_file} 2>&1"
                     log_info(f"Running {cmd_line}")
-                    ret = subprocess.run(
+                    subprocess.run(
                         cmd_line,
                         shell=True,
                         env=my_env,
                         start_new_session=True,
                     )
-                    log_info("Run done")
-                    # with open(log_file, "a") as fo:
-                    #    for ll in ret.stdout.splitlines():
-                    #        fo.write(f"{ll}\n")
             except KeyboardInterrupt:
                 exit_event.set()
             except:
@@ -200,8 +205,8 @@ def main():
                         os.unlink(run_file)
                     except:
                         log_critical(f"Failed to remove {run_file}", "exc")
-    else:
-        log_info("Shutdown signal received")
+
+    log_info("Shutdown signal received")
 
     Utils.cleanup_lock_file(base_opts, base_runner_lockfile_name)
 
