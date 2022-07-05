@@ -34,9 +34,24 @@ None of these files are being created automatically - probably no need to, but t
 
 ## ToDo
 
-- Need to create an updated commmision.py to setup glider directories in the jail
+- Need to create an updated commmision.py to setup glider directories in the jail and propagate credentials from outside jail to inside
+- /bin/csh in existing commissions needs to be changed to /usr/bin/tcsh
+- Need to create a /etc/nsswitch.conf in jail that looks like:
+
+    passwd: files
+    group: files
+    shadow: files
+    hosts: files
+    networks: files
+    protocols: files
+    services: files
+    ethers: files
+    rpc: files
+    netgroup: files
 
 ## Setup notes
+
+
 
 
 
