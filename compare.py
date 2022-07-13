@@ -77,7 +77,11 @@ for raw_line in log:
             pass
     elif len(columns) == 5 and columns[3].startswith('$'):
         key = columns[3].lstrip('$')
-        logdata[key] = float(columns[4])
+        try:
+            logdata[key] = float(columns[4])
+        except ValueError:
+            print(f"Could not process line {line_count} - skipping")
+            continue
 
 log.close()
 
