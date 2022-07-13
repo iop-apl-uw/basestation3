@@ -3,7 +3,7 @@
 
 
 ##
-## Copyright (c) 2006, 2007, 2012, 2013, 2015, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2012, 2013, 2015, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -140,7 +140,7 @@ def main():
         % (glider_path, glider_id, glider_group, glider_group, sg000_path, glider)
     )
     syscall(
-        "chmod g+rwx,o+rx %s" % glider_path
+        "chmod g+rwxs,o+rx %s" % glider_path
     )  # Let group members have full privies, read-only otherwise
 
     if base_opts.home_dir_group is None:
@@ -156,7 +156,7 @@ def main():
     syscall("chown pilot %s/cmdfile" % glider_path)
     # syscall("echo %s | passwd %s --stdin" % (pwd, glider))
     syscall("echo %s:%s | chpasswd" % (glider, pwd))
-    syscall("chsh -s /bin/csh %s" % glider)
+    syscall("chsh -s /usr/bin/tcsh %s" % glider)
     print("Account %s created in %s with password %s" % (glider, glider_path, pwd))
     return 0
 

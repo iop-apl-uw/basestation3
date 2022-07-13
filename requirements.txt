@@ -16,3 +16,8 @@ netCDF4>=1.5.8
 oct2py>=5.5.1
 # For sftp support in BaseDotFiles
 paramiko>=2.10.4
+# For BaseRunner
+inotify_simple
+sdnotify
+# For create_jail
+pylddwrap
