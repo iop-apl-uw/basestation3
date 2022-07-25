@@ -434,7 +434,7 @@ def main(
     if profile_file_names or ncdf_file_names:
         if profile_file_names:
             # These files come from the scicon profile sub-directory
-            pd = base_opts.plot_directory = os.path.split(
+            pd = os.path.split(
                 os.path.split(profile_file_names[0])[0]
             )[0]
         else:
