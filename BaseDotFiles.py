@@ -864,7 +864,7 @@ def process_sftp_line(
         client.connect(host, username=user, password=pwd, key_filename=path_to_key)
         sftp = client.open_sftp()
     except:
-        log_error(f"Could not connect {sftp_line}")
+        log_error(f"Could not connect {sftp_line}", "exc")
         return 1
 
     for sftp_file_name_to_send in sftp_file_names_to_send:
