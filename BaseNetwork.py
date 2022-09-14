@@ -940,7 +940,7 @@ def make_netcdf_netork_file(network_logfile, network_profile, ts_outputfile=True
         ncf_filename,
         "w",
         encoding=encoding,
-        # engine="netcdf4",
+        engine="netcdf4",
         format="netCDF4",
     )
     return ncf_filename
