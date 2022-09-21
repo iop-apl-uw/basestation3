@@ -203,7 +203,11 @@ class CommLog:
         )
         for ii in range(len(self.sessions)):
             for k in self.sessions[ii].file_stats.keys():
-                if len(k) >= 8 and FileMgr.FileCode(k, 0).get_fragment_counter() >= 0:
+                try:
+                    frag_counter = FileMgr.FileCode(k, 0).get_fragment_counter()
+                except ValueError:
+                    continue
+                if len(k) >= 8 and frag_counter >= 0:
                     fs_stats = self.sessions[ii].file_stats[k]
                     if fs_stats.expectedsize >= 0:
                         expected_size = fs_stats.expectedsize
