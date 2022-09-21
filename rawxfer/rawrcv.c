@@ -14,6 +14,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 #include "md5.h"
 
 extern void lsyslog(int prio, const char *format, ...);
@@ -99,8 +100,15 @@ batch(int argc, char *argv[])
         sizebuf[0] = header[3];
 
         fname  = &(header[4]);
+        fname[15] = 0;
         md5_in = &(header[20]);
         md5_in[32] = 0;
+
+        if (!isalnum(fname[0])) {
+            lsyslog(0, "bad filename %s", fname);
+            return 1;
+        }
+
         lsyslog(0, "Receiving %u bytes of %s", size, fname);
 
         fp = fopen(fname, "wb");
