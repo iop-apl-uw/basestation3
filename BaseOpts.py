@@ -1233,11 +1233,10 @@ class BaseOptions:
             options_dict["basestation_etc"],
             **{
                 "default_val": FullPathTrailingSlash(
-                    os.path.join(self.basestation_directory, ".etc")
+                    os.path.join(self.basestation_directory, "etc")
                 ),
             },
         )
-        pdb.set_trace()
         cp_default = {}
         for k, v in options_dict.items():
             setattr(self, k, v.default_val)  # Set the default for the object
