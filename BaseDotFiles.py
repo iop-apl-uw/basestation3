@@ -33,7 +33,6 @@ import netrc
 import os
 import pdb
 import smtplib
-import socket
 import sys
 import time
 import traceback
@@ -48,7 +47,8 @@ from ftplib import FTP
 
 # from ftplib import FTP_TLS
 from urllib.parse import urlencode
-from urllib.request import urlopen
+
+import requests
 
 # paramiko is throwing a warning on import because it refernces Blowfish - which is depricated
 # Issue is here https://github.com/paramiko/paramiko/issues/2038
@@ -244,9 +244,12 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
                 if urls_line[0] != "#":
                     log_info(f"Processing .urls line ({urls_line})")
                     urls_elts = urls_line.split()
-                    if len(urls_elts) > 2:
+                    if len(urls_elts) > 3:
                         log_error(f"Too many entries on line ({urls_line})")
-                    socket.setdefaulttimeout(int(urls_elts[0]))
+                    cert_file = True
+                    if len(urls_elts) > 2:
+                        cert_file = os.path.expanduser(urls_elts[2])
+                    get_timeout = int(urls_elts[0])
                     if isinstance(pass_num_or_gps, int) and pass_num_or_gps == 1:
                         url_line = "%s?instrument_name=SG%03d&dive=%d&files=perdive" % (
                             urls_elts[1],
@@ -283,12 +286,16 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
 
                     log_debug(f"URL line ({url_line})")
                     try:
-                        url_response = urlopen(url_line).read()
+                        url_response = requests.get(
+                            url_line, verify=cert_file, timeout=get_timeout
+                        )
                     except:
                         log_error(f"Error opening {url_line}", "exc")
                         log_error("Continuing processing...")
                     else:
-                        log_info(f"url ({url_line}) responded with:{url_response}")
+                        log_info(
+                            f"url ({url_line}) responded with code:{repr(url_response)} text:{url_response.text}"
+                        )
 
         log_info(f"Finished processing on .urls pass({pass_num_or_gps})")
 
@@ -1412,7 +1419,7 @@ def main():
                 str,
                 {
                     "help": "Which action to run",
-                    "choices": ("gps", "drift", "ftp", "sftp"),
+                    "choices": ("gps", "drift", "ftp", "sftp", "urls"),
                 },
             ),
             "ftp_files": BaseOpts.options_t(
@@ -1425,6 +1432,16 @@ def main():
                     "nargs": "*",
                 },
             ),
+            "pass_num": BaseOpts.options_t(
+                1,
+                ("BaseDotFiles",),
+                ("pass_num",),
+                int,
+                {
+                    "help": "URLs pass number",
+                    "nargs": "?",
+                },
+            ),
         },
     )
 
@@ -1435,11 +1452,12 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    if base_opts.basedotfiles_action in ("gps", "drift"):
+    if base_opts.basedotfiles_action in ("gps", "drift", "urls"):
         comm_log = CommLog.process_comm_log(
             os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
         )[0]
 
+    if base_opts.basedotfiles_action in ("gps", "drift"):
         process_pagers(
             base_opts,
             comm_log.last_complete_surfacing().sg_id,
@@ -1457,6 +1475,15 @@ def main():
             Globals.known_ftp_tags,
             ftp_type=".sftp",
         )
+    elif base_opts.basedotfiles_action == "urls":
+        process_urls(
+            base_opts,
+            base_opts.pass_num,
+            comm_log.last_complete_surfacing().sg_id,
+            comm_log.last_complete_surfacing().dive_num,
+        )
+    else:
+        log_error("Unkown action {base_opts.basedotfiles_action}")
 
 
 if __name__ == "__main__":
