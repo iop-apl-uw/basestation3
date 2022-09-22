@@ -30,7 +30,7 @@ import bz2
 import subprocess
 import signal
 from numpy import *
-import numpy
+import numpy as np
 import re
 import functools
 import seawater
@@ -898,12 +898,12 @@ def check_versions():
         log_warning("python %s or greater recomemnded" % str(Globals.recommended_python_version))
 
     # Check numpy version
-    log_info("Numpy version %s" % numpy.__version__)
-    if normalize_version(numpy.__version__) < normalize_version(Globals.required_numpy_version):
+    log_info("Numpy version %s" % np.__version__)
+    if normalize_version(np.__version__) < normalize_version(Globals.required_numpy_version):
         msg = "Numpy %s or greater required" % Globals.required_numpy_version
         log_critical(msg)
         raise RuntimeError(msg)
-    if normalize_version(numpy.__version__) < normalize_version(Globals.recommended_numpy_version):
+    if normalize_version(np.__version__) < normalize_version(Globals.recommended_numpy_version):
         log_warning("Numpy %s or greater recomemnded" % Globals.recommended_numpy_version)
     
     # Check scipy version
@@ -1089,7 +1089,8 @@ def compute_oxygen_saturation(temp_cor_v, salin_cor_v):
     
     Kelvin_offset = 273.15 # for 0 deg C
 
-    temp_cor_K_scaled_v = log( ((Kelvin_offset + 25.0) - temp_cor_v)/(Kelvin_offset + temp_cor_v))
+    with np.errstate(invalid='ignore'):
+        temp_cor_K_scaled_v = log( ((Kelvin_offset + 25.0) - temp_cor_v)/(Kelvin_offset + temp_cor_v))
     
     oxygen_sat_fresh_water_v = exp(polyval(A, temp_cor_K_scaled_v)); # [ml/L] based only on temperature
     oxygen_sat_salinity_adjustment_v = exp(salin_cor_v * polyval(B, temp_cor_K_scaled_v) +
@@ -1243,7 +1244,7 @@ def fix_gps_rollover(struct_time):
 
 def density(salinity, temperature, pressure, longitude, latitude):
     salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
-    dens = gsw.rho_t_exact(salinity_absolute, temperature, numpy.zeros(salinity.size))
+    dens = gsw.rho_t_exact(salinity_absolute, temperature, np.zeros(salinity.size))
     return dens
 
 def ptemp(salinity, temperature, pressure, longitude, latitude, pref=0.0):
