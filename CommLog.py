@@ -812,9 +812,13 @@ def crack_connect_line(input_line):
     )
     time_zone = cts_parts[4]
     # connect_ts_tstruc = time.strptime(connect_ts_notz_string, "%a %b %d %H:%M:%S %Y")
-    connect_ts_tstruct = BaseTime.convert_commline_to_utc(
-        connect_ts_notz_string, time_zone
-    )
+    connect_ts_tstruct = None
+    try:
+        connect_ts_tstruct = BaseTime.convert_commline_to_utc(
+            connect_ts_notz_string, time_zone
+        )
+    except ValueError:
+        pass
     return (connect_ts_tstruct, time_zone)
 
 
