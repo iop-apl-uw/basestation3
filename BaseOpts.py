@@ -74,7 +74,7 @@ def generate_range_action(arg, min_val, max_val):
 
 def FullPath(x):
     """Expand user- and relative-paths"""
-    if type(x) is list:
+    if isinstance(x, list):
         return list(map(lambda y: os.path.abspath(os.path.expanduser(y)), x))
     else:
         return os.path.abspath(os.path.expanduser(x))
@@ -191,6 +191,16 @@ global_options_dict = {
         ),
         bool,
         {"action": "store_false", "help": "don't print status messages to stdout"},
+    ),
+    "basestation_etc": options_t(
+        None,  # Updated below
+        None,
+        ("--basestation_etc",),
+        FullPathTrailingSlash,
+        {
+            "help": "Basestation etc dirctory (master config)",
+            "action": FullPathTrailingSlashAction,
+        },
     ),
     #
     "mission_dir": options_t(
@@ -1211,18 +1221,28 @@ class BaseOptions:
             for add_arg in add_arguments:
                 options_dict[add_arg].group.add(calling_module)
 
-        cp_default = {}
-        for k, v in options_dict.items():
-            setattr(self, k, v.default_val)  # Set the default for the object
-            # cp_default[k] = v.default_val
-            cp_default[k] = None
-
         basestation_directory, _ = os.path.split(
             os.path.abspath(os.path.expanduser(sys.argv[0]))
         )
         self.basestation_directory = basestation_directory  # make avaiable
         # add path to load common basestation modules from subdirectories
         sys.path.append(basestation_directory)
+
+        # Update default config location
+        options_dict["basestation_etc"] = dataclasses.replace(
+            options_dict["basestation_etc"],
+            **{
+                "default_val": FullPathTrailingSlash(
+                    os.path.join(self.basestation_directory, ".etc")
+                ),
+            },
+        )
+        pdb.set_trace()
+        cp_default = {}
+        for k, v in options_dict.items():
+            setattr(self, k, v.default_val)  # Set the default for the object
+            # cp_default[k] = v.default_val
+            cp_default[k] = None
 
         cp = configparser.RawConfigParser(cp_default)
 
