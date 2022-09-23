@@ -41,6 +41,7 @@ batch(int argc, char *argv[])
     char           md5_out[65];
     int            i;
     char          *fname;
+    char          *prevName = NULL;
 
     if (argc != 2) {
         printf("NO!"); fflush(stdout);
@@ -163,7 +164,15 @@ batch(int argc, char *argv[])
         else {
             printf("OK");
             lsyslog(0, "OK");
-            i ++;
+            // if the receiver does not receive our OK they will
+            // likely try to send the file again. Only increment
+            // our count of received files for uniquely received
+            // names. 
+            if (prevName == NULL || strcmp(prevName, fname)) {
+                i ++;
+            }
+            if (prevName) free(prevName);
+            prevName = strdup(fname);
         }
 
         fflush(stdout);
