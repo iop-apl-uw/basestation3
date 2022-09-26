@@ -1593,6 +1593,10 @@ def main():
         Utils.cleanup_lock_file(base_opts, base_lockfile_name)
         return 1
 
+    # Check for resends in the last session
+    for filename, retries in comm_log.last_surfacing().file_retries.items():
+        log_warning(f"{filename} resent {retries} times", alert="FILE_RETRY")
+
     # sys.stdout.write("Transfer Methods")
     # for i in comm_log.file_transfer_method.keys():
     #    sys.stdout.write("%s = %s\n" % (i, comm_log.file_transfer_method[i]))

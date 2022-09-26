@@ -159,7 +159,8 @@ class CommLog:
     ):
         self.sessions = sessions
         self.file_stats = {}
-        self.file_transfer_method = file_transfer_method  # Dictionay of the most recently used trasnfer mehcanism for each fragment
+        # Dictionay of the most recently used trasnfer mehcanism for each fragment
+        self.file_transfer_method = file_transfer_method
         self.raw_lines_with_ts = raw_lines_with_ts
         self.files_transfered = files_transfered
 
@@ -683,6 +684,9 @@ class ConnectSession:
         self.transfered_size = {}
         self.crc_errors = {}
         self.cmd_directive = None
+        # Dictionary of the file with send retries with in the sesssion
+        # This is a rawrcvb thing only
+        self.file_retries = collections.defaultdict(int)
 
     def dump_contents(self, fo):
         """Dumps out the session contents, used when called manually"""
@@ -1373,6 +1377,8 @@ def process_comm_log(
                         if raw_strs[6] == "Receiving":
                             try:
                                 filename = raw_strs[10]
+                                if filename in session.file_stats:
+                                    session.file_retries[filename] += 1
                                 session.file_stats[filename] = file_stats_nt(
                                     int(raw_strs[7]), -1, -1, -1
                                 )
@@ -1417,7 +1423,9 @@ def process_comm_log(
                                         float(raw_strs[11].lstrip("(")),
                                     )
                                 else:
-                                    log_warning(f"Could not process sent lineno {line_count} - skipping")
+                                    log_warning(
+                                        f"Could not process sent lineno {line_count} - skipping"
+                                    )
                                     # Do not issue the callback
                                     continue
 
@@ -1639,7 +1647,9 @@ def process_comm_log(
                                 time.strptime(tmp[3].split("=")[1], "%d%m%y:%H%M%S")
                             )
                         except ValueError:
-                            log_error(f"Could not parse launch time - line {line_count} in comm.log")
+                            log_error(
+                                f"Could not parse launch time - line {line_count} in comm.log"
+                            )
                             continue
 
                     if call_back and "ver" in call_back.callbacks:
@@ -1720,7 +1730,9 @@ def process_history_log(history_log_file_name):
             try:
                 ts = float(ts_line[1].rstrip())
             except ValueError:
-                log_warning(f"Could not process line {line_count} in {history_log_file_name} - skipping")
+                log_warning(
+                    f"Could not process line {line_count} in {history_log_file_name} - skipping"
+                )
             else:
                 command_history.append([ts, None])
             continue
