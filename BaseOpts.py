@@ -1050,7 +1050,7 @@ global_options_dict = {
         },
     ),
     "use_glider_target": options_t(
-        True,
+        False,
         (
             "Base",
             "MakeKML",
