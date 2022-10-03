@@ -1167,6 +1167,21 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    "network_log_decompressor": options_t(
+        None,
+        (
+            "Base",
+            "BaseNetwork",
+            "NetworkWatch",
+        ),
+        ("--network_log_decompressor",),
+        FullPath,
+        {
+            "help": "Compressed logfile decompressor path",
+            "section": "network",
+            "action": FullPathAction,
+        },
+    ),
 }
 
 # Note: All option_group kwargs listed above must have an entry in this dictionary

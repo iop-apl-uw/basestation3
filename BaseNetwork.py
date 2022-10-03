@@ -478,7 +478,7 @@ def create_ds_var(dso, template, var_name, data, row_coord=None):
     return da
 
 
-def convert_network_logfile(in_file_name, out_file_name):
+def convert_network_logfile(base_opts, in_file_name, out_file_name):
     """Converts a network log/eng file to text output
 
     Input:
@@ -492,7 +492,7 @@ def convert_network_logfile(in_file_name, out_file_name):
 
     """
 
-    convertor = "/usr/local/bin/log"
+    convertor = base_opts.network_log_decompressor or "/usr/local/bin/log"
 
     if not os.path.isfile(convertor):
         log_error(
@@ -1303,7 +1303,9 @@ def main(
         )
         log_info(f"Created {processed_files_list}")
     elif base_opts.subparser_name == "log":
-        ret_val = convert_network_logfile(base_opts.log_in_file, base_opts.log_out_file)
+        ret_val = convert_network_logfile(
+            base_opts, base_opts.log_in_file, base_opts.log_out_file
+        )
         if ret_val is None:
             ret_val = 1
         else:

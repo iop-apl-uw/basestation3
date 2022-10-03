@@ -909,7 +909,7 @@ def process_file_group(
             elif fc.is_network():
                 if fc.is_network_logfile():
                     BaseNetwork.convert_network_logfile(
-                        in_file_name, fc.mk_base_logfile_name()
+                        base_opts, in_file_name, fc.mk_base_logfile_name()
                     )
                     processed_other_files.append(fc.mk_base_logfile_name())
                 elif fc.is_network_profile():
@@ -1786,7 +1786,7 @@ def main():
     file_collector = FileMgr.FileCollector(base_opts.mission_dir, instrument_id)
 
     # Ensure that all pre-processed files are readable by all
-    pre_proc_files = file_collector.get_pre_proc_files()
+    # pre_proc_files = file_collector.get_pre_proc_files()
     # GBS 2022/06/17 - this was essentially a hack for not setting the umask correctly
     # and long standing decision to have xmodem files get created for 0640 permissions
     # Both correct with this checkin
