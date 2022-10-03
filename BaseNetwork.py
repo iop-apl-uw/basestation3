@@ -977,9 +977,15 @@ def make_netcdf_network_files(network_files, processed_files_list):
         net_files[dive_num].add(nf)
 
     for _, files in net_files.items():
-        ncf_filename = make_netcdf_netork_file(*sorted(files))
-        if ncf_filename:
-            processed_files_list.append(ncf_filename)
+        dive_net_files = sorted(files)
+        try:
+            ncf_filename = make_netcdf_netork_file(*dive_net_files)
+        except:
+            log_error(f"Failed to create cdf file from {dive_net_files}", "exc")
+            ret_val = 1
+        else:
+            if ncf_filename:
+                processed_files_list.append(ncf_filename)
 
     return ret_val
 
