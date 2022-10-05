@@ -1050,7 +1050,7 @@ global_options_dict = {
         },
     ),
     "use_glider_target": options_t(
-        True,
+        False,
         (
             "Base",
             "MakeKML",
@@ -1165,6 +1165,21 @@ global_options_dict = {
         {
             "help": "Compress the simple netcdf file",
             "action": "store_true",
+        },
+    ),
+    "network_log_decompressor": options_t(
+        None,
+        (
+            "Base",
+            "BaseNetwork",
+            "NetworkWatch",
+        ),
+        ("--network_log_decompressor",),
+        FullPath,
+        {
+            "help": "Compressed logfile decompressor path",
+            "section": "network",
+            "action": FullPathAction,
         },
     ),
 }

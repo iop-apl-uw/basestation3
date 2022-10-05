@@ -495,7 +495,7 @@ def create_ds_var(dso, template, var_name, data, row_coord=None):
     return da
 
 
-def convert_network_logfile(in_file_name, out_file_name):
+def convert_network_logfile(base_opts, in_file_name, out_file_name):
     """Converts a network log/eng file to text output
 
     Input:
@@ -509,7 +509,7 @@ def convert_network_logfile(in_file_name, out_file_name):
 
     """
 
-    convertor = "/usr/local/bin/log"
+    convertor = base_opts.network_log_decompressor or "/usr/local/bin/log"
 
     if not os.path.isfile(convertor):
         log_error(
@@ -1006,9 +1006,15 @@ def make_netcdf_network_files(network_files, processed_files_list):
         net_files[dive_num].add(nf)
 
     for _, files in net_files.items():
-        ncf_filename = make_netcdf_netork_file(*sorted(files))
-        if ncf_filename:
-            processed_files_list.append(ncf_filename)
+        dive_net_files = sorted(files)
+        try:
+            ncf_filename = make_netcdf_netork_file(*dive_net_files)
+        except:
+            log_error(f"Failed to create cdf file from {dive_net_files}", "exc")
+            ret_val = 1
+        else:
+            if ncf_filename:
+                processed_files_list.append(ncf_filename)
 
     return ret_val
 
@@ -1326,7 +1332,9 @@ def main(
         )
         log_info(f"Created {processed_files_list}")
     elif base_opts.subparser_name == "log":
-        ret_val = convert_network_logfile(base_opts.log_in_file, base_opts.log_out_file)
+        ret_val = convert_network_logfile(
+            base_opts, base_opts.log_in_file, base_opts.log_out_file
+        )
         if ret_val is None:
             ret_val = 1
         else:
