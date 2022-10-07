@@ -2650,21 +2650,22 @@ def SBECT_coefficents(type, calib_consts, log_f, sgc_vars, log_vars):
                             mismatch_alert = True
                             SBECT_mismatch_reported[type] = True
                             log_warning(
-                                "SBECT %s coefficient %s (%g) differs from %s (%g) in log file -- using %g."
+                                "SBECT %s coefficient %s (%g) differs from %s (%g) in log file (dive %d) -- using %g."
                                 % (
                                     type,
                                     var_values[0],
                                     sgc_value,
                                     var_values[2],
                                     log_value,
+                                    log_f.dive,
                                     sgc_value,
                                 )
                             )
                 if mismatch_alert:
                     log_alert(
                         "SBECT",
-                        "SBECT %s coefficient(s) are mismatched between sgc and log!"
-                        % type,
+                        "SBECT %s coefficient(s) are mismatched between sgc and log (dive %d)!"
+                        % (type, log_f.dive),
                     )
         sgc_values.append(sgc_vars_used)
         return tuple(sgc_values)
