@@ -2436,6 +2436,7 @@ def main():
 
         if alert_msg_file:
             for alert_topic in list(alerts_d.keys()):
+                log_info("Processing " + alert_topic)
                 alert_msg_file.write(
                     f'<div class="{Utils.ensure_basename(alert_topic)}">\n<p>Alert: {alert_topic}<ul>\n'
                 )
