@@ -745,6 +745,7 @@ global_options_dict = {
         "darwin" in sys.platform,
         (
             "Base",
+            "MakePlot2",
             "MakePlot3",
             "MakePlot4",
         ),
