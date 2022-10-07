@@ -14,6 +14,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <string.h>
+#include <ctype.h>
 #include "md5.h"
 
 extern void lsyslog(int prio, const char *format, ...);
@@ -40,6 +41,7 @@ batch(int argc, char *argv[])
     char           md5_out[65];
     int            i;
     char          *fname;
+    char          *prevName = NULL;
 
     if (argc != 2) {
         printf("NO!"); fflush(stdout);
@@ -99,8 +101,15 @@ batch(int argc, char *argv[])
         sizebuf[0] = header[3];
 
         fname  = &(header[4]);
+        fname[15] = 0;
         md5_in = &(header[20]);
         md5_in[32] = 0;
+
+        if (!isalnum(fname[0])) {
+            lsyslog(0, "bad filename %s", fname);
+            return 1;
+        }
+
         lsyslog(0, "Receiving %u bytes of %s", size, fname);
 
         fp = fopen(fname, "wb");
@@ -155,7 +164,15 @@ batch(int argc, char *argv[])
         else {
             printf("OK");
             lsyslog(0, "OK");
-            i ++;
+            // if the receiver does not receive our OK they will
+            // likely try to send the file again. Only increment
+            // our count of received files for uniquely received
+            // names. 
+            if (prevName == NULL || strcmp(prevName, fname)) {
+                i ++;
+            }
+            if (prevName) free(prevName);
+            prevName = strdup(fname);
         }
 
         fflush(stdout);

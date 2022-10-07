@@ -74,7 +74,10 @@ def generate_range_action(arg, min_val, max_val):
 
 def FullPath(x):
     """Expand user- and relative-paths"""
-    return os.path.abspath(os.path.expanduser(x))
+    if isinstance(x, list):
+        return list(map(lambda y: os.path.abspath(os.path.expanduser(y)), x))
+    else:
+        return os.path.abspath(os.path.expanduser(x))
 
 
 def FullPathTrailingSlash(x):
@@ -112,6 +115,7 @@ class FullPathTrailingSlashAction(argparse.Action):
 # option_group:str - name of the option group to include the option in (for help)
 # required:list of str - modules names for which thie option is required.  Also implies the option
 #                        group "required"
+# subparsers: list of str - list of sub-commands this argument belongs to
 #
 # options_t = collections.namedtuple(
 #    "options_t", ("default_val", "group", "args", "var_type", "kwargs")
@@ -188,16 +192,29 @@ global_options_dict = {
         bool,
         {"action": "store_false", "help": "don't print status messages to stdout"},
     ),
+    "basestation_etc": options_t(
+        None,  # Updated below
+        None,
+        ("--basestation_etc",),
+        FullPathTrailingSlash,
+        {
+            "help": "Basestation etc dirctory (master config)",
+            "action": FullPathTrailingSlashAction,
+        },
+    ),
     #
     "mission_dir": options_t(
         None,
         (
             "Base",
+            "BaseDotFiles",
             "BaseLogin",
             "BaseSMS",
             "FTPPush",
             "FlightModel",
+            "GliderDAC",
             "GliderEarlyGPS",
+            "GliderTrack",
             "MakeDiveProfiles",
             "MakeKML",
             "MakeMissionEngPlots",
@@ -211,6 +228,7 @@ global_options_dict = {
             "MakePlotMission",
             "MoveData",
             "Reprocess",
+            "SimpleNetCDF",
             "ValidateDirectives",
             "Ver65",
             "WindRain",
@@ -225,10 +243,12 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
             "required": (
                 "Base",
+                "BaseDotFiles",
                 "BaseSMS",
                 "BaseLogin",
                 "FTPPush",
                 "FlightModel",
+                "GliderTrack",
                 "MakeKML",
                 "MakeMissionEngPlots",
                 "MakeMissionProfile",
@@ -244,12 +264,8 @@ global_options_dict = {
     ),
     "python": options_t(
         "python 3.9",
-        (
-            "FlightModel",
-        ),
-        (
-            "--python",
-        ),
+        ("FlightModel",),
+        ("--python",),
         str,
         {
             "help": "path to python executable",
@@ -360,7 +376,6 @@ global_options_dict = {
             "Base",
             "MakeDiveProfiles",
             "MakeMissionProfile",
-            "SimpleNetCDF",
         ),
         ("--bin_width",),
         float,
@@ -388,7 +403,7 @@ global_options_dict = {
     ),
     "daemon": options_t(
         None,
-        ("Base", "GliderEarlyGPS"),
+        ("Base", "GliderEarlyGPS", "GliderTrack"),
         ("--daemon",),
         bool,
         {"help": "Launch conversion as a daemon process", "action": "store_true"},
@@ -650,7 +665,7 @@ global_options_dict = {
         None,
         ("MoveData",),
         ("--target_dir", "-t"),
-        str,
+        FullPath,
         {
             "help": "target directory, used by MoveData.py",
             "action": FullPathAction,
@@ -676,6 +691,7 @@ global_options_dict = {
     "netcdf_filename": options_t(
         None,
         (
+            "GliderDAC",
             "MakePlot",
             "MakePlot2",
             "MakePlot3",
@@ -685,7 +701,7 @@ global_options_dict = {
             "WindRain",
         ),
         ("netcdf_filename",),
-        str,
+        FullPath,
         {
             "help": "Name of netCDF file to process (only honored when --mission_dir is not specified)",
             "nargs": "?",
@@ -800,7 +816,7 @@ global_options_dict = {
             "MakeMissionEngPlots",
         ),
         ("--plot_directory",),
-        str,
+        FullPath,
         {
             "help": "Override default plot directory location",
             "section": "makeplot",
@@ -1035,7 +1051,7 @@ global_options_dict = {
         },
     ),
     "use_glider_target": options_t(
-        True,
+        False,
         (
             "Base",
             "MakeKML",
@@ -1049,17 +1065,121 @@ global_options_dict = {
             "option_group": "kml generation",
         },
     ),
-    "profile_filename": options_t(
+    "gliderdac_base_config": options_t(
         None,
         (
             "Base",
-            "MakePlotTSProfile",
+            "GliderDAC",
         ),
-        ("profile_filename",),
-        str,
+        ("--gliderdac_base_config",),
+        FullPath,
         {
-            "help": "Name of TS profile file to plot (only honored when --mission_dir is not specified)",
-            "nargs": "?",
+            "help": "GliderDAC base configuration JSON file - common for all Seagliders",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_project_config": options_t(
+        None,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_project_config",),
+        FullPath,
+        {
+            "help": "GliderDAC project configuration JSON file - common for single study area",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_deployment_config": options_t(
+        None,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_deployment_config",),
+        FullPath,
+        {
+            "help": "GliderDAC deployoment configuration JSON file - specific to the current glider deoployment",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "gliderdac_directory": options_t(
+        None,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_directory",),
+        FullPath,
+        {
+            "help": "Directory to place output files in",
+            "section": "gliderdac",
+            "action": FullPathAction,
+        },
+    ),
+    "delayed_submission": options_t(
+        False,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--delayed_submission",),
+        FullPath,
+        {
+            "help": "Generated files for delayed submission",
+            "section": "gliderdac",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
+    "gliderdac_bin_width": options_t(
+        0.0,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_bin_width",),
+        float,
+        {
+            "help": "Width of bins for GliderDAC file (0.0 indicates timeseries)",
+            "section": "gliderdac",
+        },
+    ),
+    "simplencf_bin_width": options_t(
+        None,
+        ("SimpleNetCDF",),
+        ("--simplencf_bin_width",),
+        float,
+        {
+            "help": "Bin SimpleNetCDF output to this size",
+            "section": "simplenetcdf",
+        },
+    ),
+    "simplencf_compress_output": options_t(
+        None,
+        ("SimpleNetCDF",),
+        ("--simplencf_compress_output",),
+        bool,
+        {
+            "help": "Compress the simple netcdf file",
+            "action": "store_true",
+        },
+    ),
+    "network_log_decompressor": options_t(
+        None,
+        (
+            "Base",
+            "BaseNetwork",
+            "NetworkWatch",
+        ),
+        ("--network_log_decompressor",),
+        FullPath,
+        {
+            "help": "Compressed logfile decompressor path",
+            "section": "network",
             "action": FullPathAction,
         },
     ),
@@ -1100,6 +1220,9 @@ class BaseOptions:
         self._opts = None  # Retained for debugging
         self._ap = None  # Retailed for debugging
 
+        self._subparsers = {}
+        self._subparser = None
+
         calling_module = os.path.splitext(
             os.path.split(inspect.stack()[1].filename)[1]
         )[0]
@@ -1114,18 +1237,27 @@ class BaseOptions:
             for add_arg in add_arguments:
                 options_dict[add_arg].group.add(calling_module)
 
-        cp_default = {}
-        for k, v in options_dict.items():
-            setattr(self, k, v.default_val)  # Set the default for the object
-            # cp_default[k] = v.default_val
-            cp_default[k] = None
-
         basestation_directory, _ = os.path.split(
             os.path.abspath(os.path.expanduser(sys.argv[0]))
         )
         self.basestation_directory = basestation_directory  # make avaiable
         # add path to load common basestation modules from subdirectories
         sys.path.append(basestation_directory)
+
+        # Update default config location
+        options_dict["basestation_etc"] = dataclasses.replace(
+            options_dict["basestation_etc"],
+            **{
+                "default_val": FullPathTrailingSlash(
+                    os.path.join(self.basestation_directory, "etc")
+                ),
+            },
+        )
+        cp_default = {}
+        for k, v in options_dict.items():
+            setattr(self, k, v.default_val)  # Set the default for the object
+            # cp_default[k] = v.default_val
+            cp_default[k] = None
 
         cp = configparser.RawConfigParser(cp_default)
 
@@ -1151,42 +1283,63 @@ class BaseOptions:
             )
 
         # Loop over potential arguments and add what is approriate
+        parser = None
         for k, v in options_dict.items():
             if v.group is None or calling_module in v.group:
-                kwargs = copy.deepcopy(v.kwargs)
-                if not (v.var_type == bool and "action" in v.kwargs.keys()):
-                    kwargs["type"] = v.var_type
-                if v.args and v.args[0].startswith("-"):
-                    kwargs["dest"] = k
-                kwargs["default"] = None
-                if "section" in kwargs.keys():
-                    del kwargs["section"]
-                if "required" in kwargs.keys() and isinstance(
-                    kwargs["required"], tuple
-                ):
-                    kwargs["required"] = calling_module in kwargs["required"]
-                if (
-                    "range" in kwargs.keys()
-                    and isinstance(kwargs["range"], list)
-                    and len(kwargs["range"]) == 2
-                ):
-                    min_val = kwargs["range"][0]
-                    max_val = kwargs["range"][1]
-                    kwargs["action"] = generate_range_action(k, min_val, max_val)
-                    del kwargs["range"]
-                    kwargs["metavar"] = f"{{{min_val}..{max_val}}}"
+                kwargs_tmp = copy.deepcopy(v.kwargs)
 
-                arg_list = v.args
-                if "option_group" in kwargs.keys():
-                    og = kwargs["option_group"]
-                    del kwargs["option_group"]
-                    option_group_dict[og].add_argument(*arg_list, **kwargs)
-                elif "required" in kwargs and kwargs["required"]:
-                    option_group_dict["required named arguments"].add_argument(
-                        *arg_list, **kwargs
-                    )
+                if "subparsers" in kwargs_tmp.keys():
+                    parsers = []
+                    if not self._subparser:
+                        self._subparser = ap.add_subparsers(
+                            help="sub-command help", dest="subparser_name"
+                        )
+                    for subparser in kwargs_tmp["subparsers"]:
+                        if subparser not in self._subparsers:
+                            self._subparsers[subparser] = self._subparser.add_parser(
+                                subparser
+                            )
+                        parsers.append(self._subparsers[subparser])
+                    del kwargs_tmp["subparsers"]
                 else:
-                    ap.add_argument(*arg_list, **kwargs)
+                    parsers = [ap]
+
+                for parser in parsers:
+                    kwargs = copy.deepcopy(kwargs_tmp)
+                    if not (v.var_type == bool and "action" in v.kwargs.keys()):
+                        kwargs["type"] = v.var_type
+                    if v.args and v.args[0].startswith("-"):
+                        kwargs["dest"] = k
+                    kwargs["default"] = None
+                    if "section" in kwargs.keys():
+                        del kwargs["section"]
+                    if "required" in kwargs.keys() and isinstance(
+                        kwargs["required"], tuple
+                    ):
+                        kwargs["required"] = calling_module in kwargs["required"]
+                    if (
+                        "range" in kwargs.keys()
+                        and isinstance(kwargs["range"], list)
+                        and len(kwargs["range"]) == 2
+                    ):
+                        min_val = kwargs["range"][0]
+                        max_val = kwargs["range"][1]
+                        kwargs["action"] = generate_range_action(k, min_val, max_val)
+                        del kwargs["range"]
+                        kwargs["metavar"] = f"{{{min_val}..{max_val}}}"
+
+                    arg_list = v.args
+                    if "option_group" in kwargs.keys():
+                        og = kwargs["option_group"]
+                        del kwargs["option_group"]
+                        option_group_dict[og].add_argument(*arg_list, **kwargs)
+                    elif "required" in kwargs and kwargs["required"]:
+                        option_group_dict["required named arguments"].add_argument(
+                            *arg_list, **kwargs
+                        )
+                    else:
+                        parser.add_argument(*arg_list, **kwargs)
+                    del kwargs
 
         self._ap = ap
 
@@ -1195,6 +1348,9 @@ class BaseOptions:
             self._opts = ap.parse_args(alt_cmdline.split())
         else:
             self._opts = ap.parse_args()
+
+        if "subparser_name" in self._opts:
+            self.subparser_name = self._opts.subparser_name
 
         # handle the config file first, then see if any args trump them
         if self._opts.config_file_name is not None:
@@ -1230,12 +1386,12 @@ class BaseOptions:
                                 ) from exc
                             else:
                                 if (
-                                    "range" in kwargs.keys()
-                                    and isinstance(kwargs["range"], list)
-                                    and len(kwargs["range"]) == 2
+                                    "range" in v.kwargs.keys()
+                                    and isinstance(v.kwargs["range"], list)
+                                    and len(v.kwargs["range"]) == 2
                                 ):
-                                    min_val = kwargs["range"][0]
-                                    max_val = kwargs["range"][1]
+                                    min_val = v.kwargs["range"][0]
+                                    max_val = v.kwargs["range"][1]
                                     if not min_val <= val <= max_val:
                                         raise f"{val} outside of range {min_val} {max_val}"
 

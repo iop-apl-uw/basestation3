@@ -12,6 +12,12 @@
 ##
 ## First entry on the line is the timeout to wait for a response to the GET
 ## It is separated by a whitespace from the URL
+## The third argument is a cert chain (PEM format) for the website.  This can be obtained either by:
+##
+## openssl s_client -showcerts -connect iop.apl.washington.edu:443
+##
+## Or via a browser (firefox seems to have the best support as of version 104.0.2)
+##
 ## Comments in the file are indicated by '#'
 ##
 ## Example

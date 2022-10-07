@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -48,7 +48,7 @@ import Const
 import FileMgr
 import Sensors
 
-known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal"]
+from Globals import known_files
 
 
 def moveFiles(file_re_str, src, dest, copy=False):
@@ -242,6 +242,7 @@ def main():
     moveFiles("targets", base_opts.mission_dir, base_opts.target_dir, copy=True)
     moveFiles("science", base_opts.mission_dir, base_opts.target_dir, copy=True)
     moveFiles("pdoscmds.bat", base_opts.mission_dir, base_opts.target_dir, copy=True)
+    moveFiles("comm.log", base_opts.mission_dir, base_opts.target_dir, copy=True)
 
     #
     # Move files
@@ -317,6 +318,15 @@ def main():
     moveFiles(
         "pt%03d*.tar.bz2" % instrument_id, base_opts.mission_dir, base_opts.target_dir
     )
+    moveFiles("sg%03d.kmz" % instrument_id, base_opts.mission_dir, base_opts.target_dir)
+    moveFiles(
+        "sg%03d_network.kml" % instrument_id,
+        base_opts.mission_dir,
+        base_opts.target_dir,
+    )
+    moveFiles(
+        "sg%03d_*.ncdf" % instrument_id, base_opts.mission_dir, base_opts.target_dir
+    )
 
     # Move backup and recovery versions but NOT main versions of known_files from loggers
     for known_file in known_files:
@@ -354,6 +364,7 @@ def main():
         "mi_download",
         "plots",
         "flight",
+        "gliderdac",
         "inbox",
         "outbox",
         "outbox_archive",

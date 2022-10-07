@@ -1,0 +1,42 @@
+#
+# Installing
+# - repalce username with the user account setup that will run the basestation
+# scripts (must be in the "gliders" group)
+#
+# If already installed
+#
+# sudo systemctl stop baserunner@username.service
+#
+# Installation or update
+#
+# sudo cp baserunner@.service /etc/systemd/system/baserunner@.service
+# sudo systemctl daemon-reload
+# sudo systemctl enable baserunner@username.service
+# sudo systemctl start baserunner@username.service
+# sudo systemctl status baserunner@username.service
+[Unit]
+Description=Seaglider runner process for jailed accounts
+After=network.target
+# No limit on number of times to retry - not clear if needed
+#StartLimitIntervalSec=0
+
+[Service]
+# Note: setting PYTHONUNBUFFERED is necessary to see the output of this service in the journal
+# See https://docs.python.org/2/using/cmdline.html#envvar-PYTHONUNBUFFERED
+# Not entirely clear we need this
+Environment=PYTHONUNBUFFERED=true
+User=%i
+ExecStart=/usr/local/bin/python3.9 /usr/local/basestation3/BaseRunner.py --jail_root /home/jail --base_log /var/log/baserunner.log /home/jail/home/rundir 
+#ExecStart=/usr/local/bin/python3.9 /home/gbs/work/git/basestation3/BaseRunner.py --jail_root /home/jail --base_log /var/log/baserunner.log /home/jail/home/rundir 
+WatchdogSec=30
+Restart=always
+RuntimeMaxSec=86400
+TimeoutStopSec=10
+Type=notify
+# Unclear if these are required, given the above Restart setting
+#RestartSec=2
+#SuccessExitStatus=3 4
+#RestartForceExitStatus=3 4
+
+[Install]
+WantedBy=multi-user.target

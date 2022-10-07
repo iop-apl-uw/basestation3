@@ -50,6 +50,7 @@ import urllib.request
 import BaseDotFiles
 import BaseGZip
 import BaseNetCDF
+import BaseNetwork
 import BaseOpts
 import Bogue
 import CalibConst
@@ -76,6 +77,7 @@ from BaseLog import (
     log_alerts,
     BaseLogger,
 )
+from Globals import known_files, known_mailer_tags, known_ftp_tags
 
 
 # TODOCC
@@ -86,24 +88,6 @@ from BaseLog import (
 # Globals
 file_trans_received = "r"
 processed_files_cache = "processed_files.cache"
-known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal"]
-known_mailer_tags = [
-    "eng",
-    "log",
-    "pro",
-    "bpo",
-    "asc",
-    "cap",
-    "comm",
-    "dn_kkyy",
-    "up_kkyy",
-    "nc",
-    "ncf",
-    "mission_ts",
-    "mission_pro",
-    "bz2",
-]
-known_ftp_tags = known_mailer_tags
 # Set by signal handler to skip the time consuming processing of the whole mission data
 skip_mission_processing_event = threading.Event()
 base_lockfile_name = ".conversion_lock"
@@ -466,6 +450,38 @@ def check_process_file_group(base, file_group, complete_files_dict):
     return False
 
 
+def cat_fragments(output_file_name, fragment_list):
+    """Helper routine to assemble a list of fragment"""
+    log_debug(f"About to open {output_file_name}")
+    with open(output_file_name, "wb") as output_file:
+        for filename in fragment_list:
+            with open(filename, "rb") as fi:
+                data = fi.read()
+            output_file.write(data)
+
+
+def test_decompress(inp_file_name, inp_file_list):
+    """Tests which of the two input inputs decompresses better
+
+    Return:
+        True if inp_file_name is better
+        False if inp_file_list is better
+    """
+
+    tmp_file = inp_file_name + ".temp"
+    ret1 = BaseGZip.decompress(inp_file_name, tmp_file)
+    os.unlink(tmp_file)
+
+    tmp_in_file = inp_file_list[0] + ".temp_in"
+    cat_fragments(tmp_in_file, inp_file_list)
+    tmp_out_file = inp_file_list[0] + ".temp_out"
+
+    ret2 = BaseGZip.decompress(tmp_in_file, tmp_out_file)
+    os.unlink(tmp_in_file)
+    os.unlink(tmp_out_file)
+    return ret1 <= ret2
+
+
 def process_file_group(
     base_opts,
     file_group,
@@ -492,6 +508,8 @@ def process_file_group(
     # pylint: disable=R0914
 
     ret_val = 0
+
+    # pdb.set_trace()
 
     log_debug(f"process_file_group dictionary = {pprint.pformat(file_group)}")
     root, ext = os.path.splitext(FileMgr.get_non_partial_filename(file_group[0]))
@@ -583,16 +601,7 @@ def process_file_group(
             return 1
         fragments_1a.append(fragment_1a)
 
-    if not fc.is_logger_payload():
-        # At this point, the fragments should be of the correct size, so now we can check them
-        check_file_fragments(
-            defrag_file_name,
-            fragments_1a,
-            fragment_size_dict,
-            total_size,
-            instrument_id,
-        )
-    else:
+    if fc.is_logger_payload():
         # Generic payload from the logger - hand it off to the extension and
         # skip the rest of the processing
 
@@ -627,13 +636,56 @@ def process_file_group(
         # log_info( processed_logger_payload_files )
         return 0
 
-    # Cat the fragments together
-    log_debug(f"About to open {defrag_file_name}")
-    with open(defrag_file_name, "wb") as output_file:
-        for i in fragments_1a:
-            with open(i, "rb") as fi:
-                data = fi.read()
-            output_file.write(data)
+    # At this point, the fragments should be of the correct size, so now we can check them
+    check_file_fragments(
+        defrag_file_name,
+        fragments_1a,
+        fragment_size_dict,
+        total_size,
+        instrument_id,
+    )
+
+    #
+    # GBS 2022/03/31 Scan the fragment list - if there is a mix of a
+    # straight .x file and fragments in the list, there are
+    # decisions to be made.
+    #
+    # In the case of zipped files, test the fragments and straight
+    # upload to determine which is "better" for for decompression and
+    # select the better option.
+    #
+    # For all other files, if selftest, chose the fragments over the
+    # whole file (reasoning, the fragments came up via uploadst and
+    # are "better").  Otherwise, choose the straight .x file
+    # (reasoning, that file was likely copied over from a CF/SD card
+    # post-deployment for post-processing)
+    #
+    complete_xmit_filename = None
+    for filename in fragments_1a:
+        if FileMgr.is_complete_xmit(filename):
+            complete_xmit_filename = filename
+            break
+
+    if complete_xmit_filename and len(fragments_1a) > 1:
+        if fc.is_gzip() or fc.is_tgz():
+            fragments_1a.remove(complete_xmit_filename)
+            if test_decompress(complete_xmit_filename, fragments_1a):
+                log_info(
+                    f"{complete_xmit_filename} decompresses (better) then fragments - using {complete_xmit_filename}"
+                )
+                fragments_1a = [complete_xmit_filename]
+            else:
+                log_info(
+                    f"Fragments decompress (better) then {complete_xmit_filename} - using fragments"
+                )
+        elif fc.is_seaglider_selftest():
+            log_info(f"Not using {complete_xmit_filename} in favor of fragments")
+            fragments_1a.remove(complete_xmit_filename)
+        else:
+            log_info(f"Using {complete_xmit_filename} instead of fragments")
+            fragments_1a = [complete_xmit_filename]
+
+    cat_fragments(defrag_file_name, fragments_1a)
 
     # Now process based on the specifics of the file
     log_info(f"Processing {defrag_file_name} in process_file_group")
@@ -854,6 +906,23 @@ def process_file_group(
                     expunge_secrets_st(fc.mk_base_capfile_name())
 
                 processed_other_files.append(fc.mk_base_capfile_name())
+            elif fc.is_network():
+                if fc.is_network_logfile():
+                    BaseNetwork.convert_network_logfile(
+                        base_opts, in_file_name, fc.mk_base_logfile_name()
+                    )
+                    processed_other_files.append(fc.mk_base_logfile_name())
+                elif fc.is_network_profile():
+                    BaseNetwork.convert_network_profile(
+                        in_file_name, fc.mk_base_datfile_name()
+                    )
+                    processed_other_files.append(fc.mk_base_datfile_name())
+            else:
+                log_error(
+                    f"Don't know how to deal with file ({in_file_name}) - unknown type"
+                )
+                ret_val = 1
+
         elif fc.is_logger():
             if fc.is_log():
                 if (
@@ -1121,7 +1190,7 @@ def expunge_secrets(logfile_name):
         try:
             s = s.decode("utf-8")
         except UnicodeDecodeError:
-            log_warning(f"Could not decode line {s} in {selftest_name} - skipping")
+            log_warning(f"Could not decode line {s} in {logfile_name} - skipping")
             continue
 
         if s in ("", "\n"):
@@ -1429,7 +1498,7 @@ def main():
         "Command line driver for the all basestation processing."
     )
     # Initialize log
-    BaseLogger(base_opts)
+    BaseLogger(base_opts, include_time=True)
 
     Utils.check_versions()
 
@@ -1523,6 +1592,10 @@ def main():
         log_critical("Could not process comm.log -- bailing out")
         Utils.cleanup_lock_file(base_opts, base_lockfile_name)
         return 1
+
+    # Check for resends in the last session
+    for filename, retries in comm_log.last_surfacing().file_retries.items():
+        log_warning(f"{filename} resent {retries} times", alert="FILE_RETRY")
 
     # sys.stdout.write("Transfer Methods")
     # for i in comm_log.file_transfer_method.keys():
@@ -1713,9 +1786,13 @@ def main():
     file_collector = FileMgr.FileCollector(base_opts.mission_dir, instrument_id)
 
     # Ensure that all pre-processed files are readable by all
-    pre_proc_files = file_collector.get_pre_proc_files()
-    for file_name in pre_proc_files:
-        os.chmod(file_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
+    # pre_proc_files = file_collector.get_pre_proc_files()
+    # GBS 2022/06/17 - this was essentially a hack for not setting the umask correctly
+    # and long standing decision to have xmodem files get created for 0640 permissions
+    # Both correct with this checkin
+    #
+    # for file_name in pre_proc_files:
+    #    os.chmod(file_name, stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH)
 
     # Read cache for conversions done thus far
     if base_opts.force:
@@ -1857,6 +1934,20 @@ def main():
         or base_opts.make_mission_timeseries
         or base_opts.make_dive_kkyy
     ):
+
+        # Process network files to netcdf
+        network_files_to_process = []
+        for file_name in processed_other_files:
+            fc = FileMgr.FileCode(file_name, instrument_id)
+            if fc.is_processed_network_log() or fc.is_processed_network_profile():
+                network_files_to_process.append(file_name)
+
+        if network_files_to_process:
+            BaseNetwork.make_netcdf_network_files(
+                network_files_to_process, processed_other_files
+            )
+
+        # Process regular files
         dives_to_profile = []  # A list of basenames to profile
 
         # log_info("processed_eng_and_log_files (%s)" % processed_eng_and_log_files)
@@ -2689,6 +2780,15 @@ def main():
             mission_timeseries_name,
             mission_profile_name,
             known_ftp_tags,
+        )
+
+        BaseDotFiles.process_ftp(
+            base_opts,
+            processed_file_names,
+            mission_timeseries_name,
+            mission_profile_name,
+            known_ftp_tags,
+            ftp_type=".sftp",
         )
 
         BaseDotFiles.process_mailer(

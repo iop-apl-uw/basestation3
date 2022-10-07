@@ -5813,7 +5813,7 @@ def make_dive_profile(
                 True,  # force averaging and hope
                 ctd_gsm_speed_cm_s_v,
                 ctd_gsm_glide_angle_deg_v,
-                latitude,
+                longitude, latitude,
             )
 
             if converged:

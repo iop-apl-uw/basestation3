@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2010, 2011 by the AUTHORS.  All rights reserved.
+## Copyright (c) 2006, 2007, 2010, 2011, 2022 by the AUTHORS.  All rights reserved.
 ## 
 ## This file contains proprietary information and remains the 
 ## unpublished property of the AUTHORS. Use, disclosure,
@@ -43,7 +43,7 @@ logname = sys.argv[2]
 canonname = sys.argv[1]
 
 try:
-    log = open(logname)
+    log = open(logname, "rb")
 except IOError:
     print(("could not open input file %s" % logname))
     sys.exit(1)
@@ -58,7 +58,15 @@ canonmin = {}
 canonmax = {}
 logdata = {}
 
-for line in log:
+line_count = 0
+for raw_line in log:
+    line_count += 1
+    try:
+        line = raw_line.decode()
+    except UnicodeDecodeError:
+        print("Could not process line %d of %s" % (line_count, logname))
+        continue
+
     columns = line.split(",")
     if len(columns) == 2 and columns[0].startswith('$') and not columns[0].startswith('$_'):
         #print columns
@@ -69,7 +77,11 @@ for line in log:
             pass
     elif len(columns) == 5 and columns[3].startswith('$'):
         key = columns[3].lstrip('$')
-        logdata[key] = float(columns[4])
+        try:
+            logdata[key] = float(columns[4])
+        except ValueError:
+            print(f"Could not process line {line_count} - skipping")
+            continue
 
 log.close()
 

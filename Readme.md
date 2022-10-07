@@ -1,3 +1,6 @@
+* TODO
+- Note tcsh and glider group need to be installed exits
+
 Seaglider Basestation Readme
 
 # Operation of the basestation
@@ -97,9 +100,9 @@ cd /tmp/Python3.9
 3. Download python source distribution and build.  Depending on your machine, this can take a while
 
 ```
-wget https://www.python.org/ftp/python/3.9.6/Python-3.9.6.tar.xz
-tar xvf Python-3.9.6.tar.xz
-cd /tmp/Python3.9/Python-3.9.6
+wget https://www.python.org/ftp/python/3.9.13/Python-3.9.13.tar.xz
+tar xvf Python-3.9.13.tar.xz
+cd /tmp/Python-3.9.13
 ./configure --enable-optimizations
 make 
 sudo make altinstall
@@ -121,7 +124,7 @@ python3.9 --version
 
 ```
 cd /usr/local/Base-3.01
-pip3.9 install -r requirements.txt
+sudo /usr/local/bin/pip3.9 install -r requirements.txt
 ```
 
 5. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
@@ -166,8 +169,8 @@ In /usr/local/Base-3.01/packages/lrzsz-0.12.20:
 11c) Copy the binaries to /usr/local/bin "sudo cp rawrcv rawsend /usr/local/bin"
 11d) Create the following symlinks
 
-    ln -s /usr/local/bin/rawrcv /usr/local/bin/rawrcv2
-    ln -s /usr/local/bin/rawrcv /usr/local/bin/rawrcvb
+    ln -s /usr/local/bin/rawrcv2 /usr/local/bin/rawrcv
+    ln -s /usr/local/bin/rawrcv2 /usr/local/bin/rawrcvb
 
 ## Install the optional cmdfile, science and targets validator
 12a) In /usr/local/Base-3.01/Validate-66.13 run 'sudo make -f Makefile.validate' to build validate binary
@@ -184,6 +187,17 @@ If you plan to upload gzipped files to the glider, install this special version 
 ## Install optional RUDICS support
 14a) cd /usr/local/Base-3.01 and unpack via "sudo tar xvzf rudics.tgz"
 14b) Follow the instructions provided in packages/rudics/ReadMe
+
+## Configuring for login
+
+The PAM system is prone to generating a considerable ammont of output that interferes 
+with the basestation <-> Seaglider login handshaking.  In /etc/pam.d/login, locate and 
+comment out the following lines:
+
+    #session    optional   pam_motd.so motd=/run/motd.dynamic
+	#session    optional   pam_motd.so noupdate
+	#session    optional   pam_lastlog.so
+
 
 # Commissioning a new glider
 As root, run:
