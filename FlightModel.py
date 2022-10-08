@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -877,11 +877,25 @@ def load_dive_data(dive_data):
         # Thus we look for both quiet locations and actively expunge anti-quiet locations
         temperature_raw = dive_nc_file.variables['temperature_raw'][:]
         salinity_raw = dive_nc_file.variables['salinity_raw'][:]
-        
-        if Globals.f_use_seawater:
-            density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
-        else:
-            density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
+
+        # TODO - GBS 2022/10/14 - SG243, AMOS2022 had an inital dive with negative salinities - consider changing
+        # to something like the below, but move up/refactor this code to handle the reduced vector size.
+
+        # good_pts = np.logical_not(np.logical_or(salinity_raw < 0.0, np.logical_or(np.isnan(salinity_raw), np.isnan(temperature_raw))))
+        # temperature_raw = temperature_raw[good_pts]
+        # salinity_raw = salinity_raw[good_pts]
+        # press = press[good_pts]
+        # ctd_time = ctd_time[good_pts]
+
+        # Protect against dives with bad values in the temperature_raw and salinity_raw columns
+        try:
+            if Globals.f_use_seawater:
+                density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
+            else:
+                density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
+        except:
+            log_error(f"Failed density calculation for {dive_num} - skipping")
+            return None
         
         # use the values in the log file, not the pilot's fiction in sg_calib_constants.h
         # this is what the glider used
