@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -93,11 +93,11 @@ def init_logger(module_name, init_dict=None):
     
     return 0
 
-def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, processed_logger_other_files):
+def process_data_files(base_opts, modules_name, calib_consts, fc, processed_logger_eng_files, processed_logger_other_files):
     """Processes other files 
     Input:
         base_opts - options object
-        module_name - 
+        calib_conts - calibration consts dict
         fc - file code object for file being processed
         processed_logger_eng_files - list of eng files to add to
         processed_logger_other_files - list of other processed files to add to
