@@ -81,7 +81,8 @@ from BaseLog import (
 )
 from Globals import known_files, known_mailer_tags, known_ftp_tags
 
-DEBUG_PDB = "darwin" in sys.platform
+# DEBUG_PDB = "darwin" in sys.platform
+DEBUG_PDB = False
 
 # TODOCC
 # 1) Largest issue is to remove mismash of globals and globals passed as arguments.
