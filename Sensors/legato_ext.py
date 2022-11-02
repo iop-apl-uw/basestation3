@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -212,7 +212,7 @@ def init_sensor(module_name, init_dict=None):
     return 0
 
 
-#pylint: disable=unused-argument
+# pylint: disable=unused-argument
 def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_names=None):
     """
     Called from MakeDiveProfiles.py to remap column headers from older .eng files to
@@ -287,7 +287,7 @@ def asc2eng(base_opts, module_name, datafile=None):
         log_error("Missing legato_sealevel in sg_calib_constants - bailing out")
         return -1
     else:
-        sealevel = datafile.calib_consts["legato_sealevel"] * 1000.0
+        sealevel = datafile.calib_consts["legato_sealevel"]
 
     # The pressure conversion is a total hack at the moment - the sealevel needs to be grabbed
     # from something like the selftest.  Also, this code should use the legato.cnf file to get the

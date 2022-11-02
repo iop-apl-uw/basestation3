@@ -233,7 +233,7 @@ def process_data_files(
             log_error("Missing legato_sealevel in sg_calib_constants - bailing out")
             return ([], {})
         else:
-            sealevel = calib_consts["legato_sealevel"]
+            sealevel = calib_consts["legato_sealevel"] / 1000.0
 
         if "legato_config" not in calib_consts:
             log_warning("No legato_config found in sg_calib constants - using default")
