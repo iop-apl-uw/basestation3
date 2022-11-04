@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2011, 2012, 2013, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -71,7 +71,7 @@ def init_logger(module_name, init_dict=None):
 
     return 1
         
-def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, processed_logger_other_files):
+def process_data_files(base_opts, module_name, calib_consts, fc, processed_logger_eng_files, processed_logger_other_files):
     """Processes other files 
 
     Returns:

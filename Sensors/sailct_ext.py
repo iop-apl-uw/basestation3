@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2010, 2011, 2012, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2020, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -78,7 +78,7 @@ def asc2eng(base_opts, module_name, datafile=None):
 
     return 1
         
-def process_data_files(base_opts, module_name, fc, processed_logger_eng_files, processed_logger_other_files):
+def process_data_files(base_opts, module_name, calib_consts, fc, processed_logger_eng_files, processed_logger_other_files):
     """Processes other files 
 
     Returns:

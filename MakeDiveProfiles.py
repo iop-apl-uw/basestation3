@@ -5730,6 +5730,9 @@ def make_dive_profile(
         else:
             if perform_thermal_inertia_correction:
                 log_info("Using %d-mode thermal-inertia correction." % modes)
+            elif calib_consts["sg_ct_type"] == 4:
+                # Issue no notification since legato corrections will happen later
+                pass
             else:
                 log_info("Not performing thermal-inertia correction.")
 
