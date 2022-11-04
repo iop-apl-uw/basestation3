@@ -61,6 +61,8 @@ import FileMgr
 import FlightModel
 import LogFile
 import MakeDiveProfiles
+import MakeMissionProfile
+import MakeMissionTimeSeries
 import Sensors
 import Strip1A
 import Utils
@@ -1275,12 +1277,14 @@ def expunge_secrets_st(selftest_name):
 
     private_keys_found = False
 
+    line_count = 0
     for raw_line in pub:
+        line_count += 1
         try:
             s = raw_line.decode("utf-8")
         except UnicodeDecodeError:
             log_warning(
-                f"Could not decode line {s} in {selftest_name} - assuming no secret"
+                f"Could not decode line {line_count} in {selftest_name} - assuming no secret"
             )
             public_lines = public_lines + raw_line
         else:
@@ -2282,7 +2286,7 @@ def main():
                         (
                             mp_ret_val,
                             mission_profile_name,
-                        ) = MakeDiveProfiles.make_mission_profile(
+                        ) = MakeMissionProfile.make_mission_profile(
                             dive_nc_file_names, base_opts
                         )
                         if mp_ret_val:
@@ -2305,7 +2309,7 @@ def main():
                         (
                             mt_retval,
                             mission_timeseries_name,
-                        ) = MakeDiveProfiles.make_mission_timeseries(
+                        ) = MakeMissionTimeSeries.make_mission_timeseries(
                             dive_nc_file_names, base_opts
                         )
                         if mt_retval:
