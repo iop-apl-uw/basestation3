@@ -2717,7 +2717,8 @@ def make_dive_profile(
             0 - success
             1 - failure
             2 - dive 0 skipped
-        nc_dive_file_name - the name possibly changed from the input parameter
+        nc_dive_file_name - None for no netcdf creation,
+                            Name of create netcdf file
 
     Raises:
       Any exceptions not explicitly raised are considered critical errors and not expected
@@ -2773,7 +2774,7 @@ def make_dive_profile(
         return (1, None)
     elif status == 1 and not (base_opts.force or base_opts.reprocess):
         log_info("Files up-to-date; nothing to do")
-        return (0, nc_dive_file_name)
+        return (0, None)
     else:  # status == 2 or we are forced
         if base_opts.force:
             log_info("Reprocessing - forcing recreation of netCDF file")

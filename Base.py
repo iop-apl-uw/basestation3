@@ -2060,9 +2060,11 @@ def main():
                 log_info("Continuing processing...")
                 failed_profiles.append(dive_num)
             else:
-                # Even if the processing failed, we may get a netcdf files out
                 if profile_file_name:
                     data_product_file_names.append(profile_file_name)
+                # Even if the processing failed, we may get a netcdf files out
+                if nc_dive_file_name:
+                    nc_files_created.append(nc_dive_file_name)
                 if retval == 1:
                     log_error(f"Failed to create profiles for {head}")
                     failed_profiles.append(dive_num)
@@ -2079,7 +2081,6 @@ def main():
                         data_product_file_names.append(kkyy_down_file_name)
                     if kkyy_up_file_name:
                         data_product_file_names.append(kkyy_up_file_name)
-                    nc_files_created.append(nc_dive_file_name)
 
         if not dives_to_profile:
             log_info("No dives found to profile")
