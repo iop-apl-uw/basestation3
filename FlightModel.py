@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -792,7 +792,7 @@ def load_dive_data(dive_data):
 
     dive_nc_file_name = nc_path_format % dive_num
     try:
-        dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r', mmap=False)
+        dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r')
     except:
         log_error("Unable to open %s" % dive_nc_file_name, 'exc')
         return data_d
@@ -1398,7 +1398,7 @@ def load_dive_data_DAC(dive_data):
     dive_num = dive_data.dive_num
     dive_nc_file_name = nc_path_format % dive_num
     try:
-        dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r', mmap=False)
+        dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r')
     except:
         log_error("Unable to open %s" % dive_nc_file_name, 'exc')
         return data_d
@@ -2690,7 +2690,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         # We need to get some additional assumptions about the glider before creating the flight db
         dive_nc_file_name = dive_nc_file_names[0] # open first found filename
         try:
-            dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r', mmap=False)
+            dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r')
         except:
             log_error("Unable to open %s to establish glider type" % dive_nc_file_name)
             return 1

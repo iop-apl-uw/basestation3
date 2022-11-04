@@ -68,7 +68,17 @@ required_gsw_version = "3.3.1"
 f_use_seawater = True
 
 # Moved here from Base to allow other files to access without re-import of Base.py
-known_files = ["cmdfile", "pdoscmds.bat", "targets", "science", "tcm2mat.cal", "rafos.dat", "nav1.dat", "nav0.scr", "nav1.scr"]
+known_files = [
+    "cmdfile",
+    "pdoscmds.bat",
+    "targets",
+    "science",
+    "tcm2mat.cal",
+    "rafos.dat",
+    "nav1.dat",
+    "nav0.scr",
+    "nav1.scr",
+]
 known_mailer_tags = [
     "eng",
     "log",

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -222,7 +222,7 @@ def main(
             break
 
         try:
-            nci = Utils.open_netcdf_file(netcdf_in_filename, "r", mmap=False)
+            nci = Utils.open_netcdf_file(netcdf_in_filename, "r")
         except:
             log_error("Could not open %s - skipping" % netcdf_in_filename, "exc")
             break
@@ -253,7 +253,7 @@ def main(
             % (netcdf_out_filename if base_opts.new_netcdf_file else netcdf_in_filename)
         )
 
-        nco = Utils.open_netcdf_file(netcdf_out_filename, "w", False)
+        nco = Utils.open_netcdf_file(netcdf_out_filename, "w")
 
         # Dup the original file
         for d in list(nci.dimensions.keys()):
