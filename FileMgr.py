@@ -50,8 +50,6 @@ post_proc_extensions = [
     ".dat",
     ".asc",
     ".eng",
-    ".pro",
-    ".bpo",
     ".prm",
     ".pdos",
     ".pvt",

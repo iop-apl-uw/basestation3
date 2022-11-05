@@ -28,10 +28,12 @@
 import cProfile
 import functools
 import os
+import pdb
 import pprint
 import pstats
 import sys
 import time
+import traceback
 
 import numpy as np
 
@@ -54,6 +56,289 @@ from BaseLog import (
     log_critical,
     log_debug,
 )
+
+DEBUG_PDB = False
+
+
+def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_columns):
+    """Bins data accorrding to the specified bin_width
+
+    Note: deepest bin is included in the down profile
+
+    Input:
+        bin_width - width of bin, in meters
+        which_half - see WhichHalf for details
+        include_empty_bins - Should the empty bins be included or eliminated?
+        depth_m_v - vehicle depth (corrected for latitude), in meters
+        inp_data_columns - list of data columns - each the same length as depth_m_v
+
+    Output:
+        obs_bin - number of observations for each bin
+        depth_m_bin - depth in m, binned
+        data_columns_bin - data colums binned
+
+    """
+
+    if not include_empty_bins and which_half == Globals.WhichHalf.combine:
+        log_error("Combined profiles and stripping empty bins not currently supported")
+        return None
+
+    try:
+        num_data_cols = len(inp_data_columns)
+        # Filter out NaNs from depth colunn
+        if len(np.nonzero(np.isnan(depth_m_v))[0]):
+            depth_filter_i = np.logical_not(np.isnan(depth_m_v))
+            depth_m_v = depth_m_v[depth_filter_i].copy()
+            data_columns = []
+            for d in range(num_data_cols):
+                data_columns.append(inp_data_columns[d][depth_filter_i])
+        else:
+            data_columns = inp_data_columns
+    except:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+        log_error("Unexpected error in bin_data", "exc")
+        return [None, None, None]
+
+    # First, create an array of indices of the bins and find the largest such index
+    # Find the sample index for the maximum depth
+    max_depth_sample_index = 0
+    max_depth = 0.0
+    num_rows = len(depth_m_v)
+    for i in range(num_rows):
+        if depth_m_v[i] > max_depth:
+            max_depth = depth_m_v[i]
+            max_depth_sample_index = i
+
+    bin_index = np.zeros(num_rows, np.int32)
+
+    try:
+        # Seed the bin_index mapping from index to depth bin
+        for i in range(num_rows):
+            # bin_index[i] = 1 + int((depth_m_v[i] + bin_width/2.0)/bin_width)
+            # Zero base indexing
+            bin_index[i] = int(round((depth_m_v[i] + bin_width / 2.0) / bin_width)) - 1
+    except:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+        log_error("Unexpected error in bin_data", "exc")
+        return [None, None, None]
+
+    # print len(bin_index)
+    # print "bin_index"
+    # print bin_index
+
+    log_debug(
+        "Init max_depth_sample_index = %d, bin_index[max_depth_sample_index] = %d, max_depth=%f"
+        % (max_depth_sample_index, bin_index[max_depth_sample_index], max_depth)
+    )  # Index of maximum depth
+
+    # Now that we know the index to bin mapping, make sure that the max_depth_sample_index is the
+    # highest index in the bin that contains the deepest observation - implicitly assigning those
+    # observations to the down bin
+    for i in range(max_depth_sample_index, num_rows):
+        if bin_index[i] == bin_index[max_depth_sample_index]:
+            max_depth_sample_index = i
+        if bin_index[i] < bin_index[max_depth_sample_index]:
+            break
+
+    log_debug(
+        "Final max_depth_sample_index = %d, bin_index[max_depth_sample_index] = %d"
+        % (max_depth_sample_index, bin_index[max_depth_sample_index])
+    )  # Index of maximum depth
+
+    log_debug(
+        "bin_index[max_depth_sample_index] = %d" % bin_index[max_depth_sample_index]
+    )
+    # float32 to float64
+    if which_half == Globals.WhichHalf.combine:
+        obs_bin = np.zeros(bin_index[max_depth_sample_index] + 1, np.float64)
+        # log_info("Number combined bins %d" % len(obs_bin))
+        # obs_bin = np.zeros(bin_index[max_depth_sample_index], np.float64)
+        obs_bin[:] = BaseNetCDF.nc_nan
+        data_cols_bin = []
+        for _ in data_columns:
+            data_cols_bin.append(
+                np.zeros(bin_index[max_depth_sample_index] + 1, np.float64)
+            )
+            # data_cols_bin.append(np.zeros(bin_index[max_depth_sample_index], np.float64))
+        depth_bin = np.zeros(bin_index[max_depth_sample_index] + 1, np.float64)
+        # depth_bin = np.zeros(bin_index[max_depth_sample_index], np.float64)
+
+        # Bin the profile
+        for j in range(bin_index[max_depth_sample_index] + 1):
+            # for j in xrange(bin_index[max_depth_sample_index]):
+            obs_bin_tuple = np.where(bin_index == j)
+            num_obs_bin = len(obs_bin_tuple[0])
+            if num_obs_bin:
+                depth_bin[j] = float((j + 1) * bin_width)
+                for d in range(num_data_cols):
+                    # data_cols_bin[d][j] = average(data_columns[d][obs_bin_tuple])
+                    # Average the actual readings - anything that is a BaseNetCDF.nc_nan or nc_inf is excluded
+                    temp_data_col = data_columns[d][obs_bin_tuple]
+                    try:
+                        data_cols_bin[d][j] = np.average(
+                            temp_data_col[np.where(np.isfinite(temp_data_col))]
+                        )
+                    except (ZeroDivisionError, FloatingPointError):
+                        data_cols_bin[d][j] = BaseNetCDF.nc_nan
+
+        return (obs_bin, depth_bin, data_cols_bin)
+
+    else:
+        # Up, Down or both
+        if which_half in (Globals.WhichHalf.down, Globals.WhichHalf.both):
+            obs_down_bin = np.zeros(bin_index[max_depth_sample_index] + 1, np.float64)
+            log_debug("Number down bins %d" % len(obs_down_bin))
+            # obs_down_bin = np.zeros(bin_index[max_depth_sample_index], np.float64)
+            data_cols_down_bin = []
+            for _ in data_columns:
+                data_cols_down_bin.append(
+                    np.zeros(bin_index[max_depth_sample_index] + 1, np.float64)
+                )
+                # data_cols_down_bin.append(np.zeros(bin_index[max_depth_sample_index], np.float64))
+            depth_down_bin = np.zeros(bin_index[max_depth_sample_index] + 1, np.float64)
+            # depth_down_bin = np.zeros(bin_index[max_depth_sample_index], np.float64)
+
+            bin_down_index = np.zeros(num_rows)
+            bin_down_index[:] = -1
+            bin_down_index[: max_depth_sample_index + 1] = bin_index[
+                : max_depth_sample_index + 1
+            ]
+            # print 'Bin down index'
+            # print bin_down_index
+
+            # Bin the down profile
+            for j in range(bin_index[max_depth_sample_index] + 1):
+                # for j in xrange(bin_index[max_depth_sample_index]):
+                obs_bin_tuple = np.where(bin_down_index == j)
+                num_obs_bin = len(obs_bin_tuple[0])
+                obs_down_bin[j] = num_obs_bin
+                depth_down_bin[j] = float((j + 1) * bin_width)
+                if num_obs_bin:
+                    # print data_columns
+                    for d in range(num_data_cols):
+                        # data_cols_down_bin[d][j] = np.average(data_columns[d][obs_bin_tuple])
+                        # Average the actual readings - anything that is a BaseNetCDF.nc_nan or nc_inf is excluded
+                        temp_data_col = data_columns[d][obs_bin_tuple]
+                        try:
+                            data_cols_down_bin[d][j] = np.average(
+                                temp_data_col[np.where(np.isfinite(temp_data_col))]
+                            )
+                        except (ZeroDivisionError, FloatingPointError):
+                            data_cols_down_bin[d][j] = BaseNetCDF.nc_nan
+
+                # msg = "index=%d obs = %d depth=%.2f" % (j, num_obs_bin, depth_up_bin[j])
+                # for d in xrange(num_data_cols):
+                #    msg = msg + " dc[%d]=%f" % (d, data_cols_up_bin[d][j])
+                # log_info(msg)
+            # print "obs_down_bin"
+            # print obs_down_bin
+
+        if which_half in (Globals.WhichHalf.up, Globals.WhichHalf.both):
+            # obs_up_bin = np.zeros(bin_index[max_depth_sample_index] + 1, np.float64)
+            obs_up_bin = np.zeros(bin_index[max_depth_sample_index], np.float64)
+            log_debug("Number up bins %d" % len(obs_up_bin))
+            data_cols_up_bin = []
+            for _ in data_columns:
+                # data_cols_up_bin.append(np.zeros(bin_index[max_depth_sample_index] + 1, np.float64))
+                data_cols_up_bin.append(
+                    np.zeros(bin_index[max_depth_sample_index], np.float64)
+                )
+            # depth_up_bin = np.zeros(bin_index[max_depth_sample_index] + 1, np.float64)
+            depth_up_bin = np.zeros(bin_index[max_depth_sample_index], np.float64)
+
+            bin_up_index = np.zeros(num_rows)
+            bin_up_index[:] = -1
+            bin_up_index[max_depth_sample_index + 1 : num_rows] = bin_index[
+                max_depth_sample_index + 1 : num_rows
+            ]
+            # print 'Bin up index'
+            # print bin_up_index
+
+            # Bin the up profile
+            # for j in xrange(bin_index[max_depth_sample_index] + 1):
+            for j in range(bin_index[max_depth_sample_index]):
+
+                obs_bin_tuple = np.where(bin_up_index == j)
+                num_obs_bin = len(obs_bin_tuple[0])
+                obs_up_bin[j] = num_obs_bin
+                depth_up_bin[j] = float((j + 1) * bin_width)
+                if num_obs_bin:
+                    for d in range(num_data_cols):
+                        # data_cols_up_bin[d][j] = np.average(data_columns[d][obs_bin_tuple])
+                        # Average the actual readings - anything that is a BaseNetCDF.nc_nan or nc_inf is excluded
+                        temp_data_col = data_columns[d][obs_bin_tuple]
+                        try:
+                            data_cols_up_bin[d][j] = np.average(
+                                temp_data_col[np.where(np.isfinite(temp_data_col))]
+                            )
+                        except (ZeroDivisionError, FloatingPointError):
+                            data_cols_up_bin[d][j] = BaseNetCDF.nc_nan
+
+                # msg = "index=%d obs = %d depth=%.2f" % (j, num_obs_bin, depth_up_bin[j])
+                # for d in xrange(num_data_cols):
+                #    msg = msg + " dc[%d]=%f" % (d, data_cols_up_bin[d][j])
+                # log_info(msg)
+
+        # Tranverse the vectors and remove the zero filled bins along the half profile desired
+        # NOTE: this needs to be re-done to deal with shift to a zero based index scheme
+        # and tested with .bpo file generation
+        total_bins = 0
+        if which_half in (Globals.WhichHalf.down, Globals.WhichHalf.both):
+            if include_empty_bins:
+                total_bins += len(depth_down_bin)
+            else:
+                for i in range(len(depth_down_bin)):
+                    if obs_down_bin[i] > 0:
+                        total_bins += 1
+
+        if which_half in (Globals.WhichHalf.up, Globals.WhichHalf.both):
+            if include_empty_bins:
+                total_bins += len(depth_up_bin)
+            else:
+                for i in range(len(depth_up_bin)):
+                    if obs_up_bin[i] > 0:
+                        total_bins += 1
+
+        log_debug("Total bins = %d" % total_bins)
+
+        obs_bin = np.zeros(total_bins, np.float64)
+        obs_bin[:] = BaseNetCDF.nc_nan
+        depth_bin = np.zeros(total_bins, np.float64)
+        depth_bin[:] = BaseNetCDF.nc_nan
+        data_cols_bin = []
+        for d in range(num_data_cols):
+            temp = np.zeros(total_bins, np.float64)
+            temp[:] = BaseNetCDF.nc_nan
+            data_cols_bin.append(temp)
+
+        current_bin = 0
+        if which_half in (Globals.WhichHalf.down, Globals.WhichHalf.both):
+            for i in range(len(depth_down_bin)):
+                if obs_down_bin[i] > 0:
+                    obs_bin[current_bin] = obs_down_bin[i]
+                    for d in range(num_data_cols):
+                        data_cols_bin[d][current_bin] = data_cols_down_bin[d][i]
+                if obs_down_bin[i] > 0 or include_empty_bins:
+                    depth_bin[current_bin] = depth_down_bin[i]
+                    current_bin += 1
+
+        if which_half in (Globals.WhichHalf.up, Globals.WhichHalf.both):
+            for i in range(-1, -len(depth_up_bin) - 1, -1):
+                if obs_up_bin[i] > 0:
+                    obs_bin[current_bin] = obs_up_bin[i]
+                    for d in range(num_data_cols):
+                        data_cols_bin[d][current_bin] = data_cols_up_bin[d][i]
+                if obs_up_bin[i] > 0 or include_empty_bins:
+                    depth_bin[current_bin] = depth_up_bin[i]
+                    current_bin += 1
+
+        return [obs_bin, depth_bin, data_cols_bin]
 
 
 # NOTE this is the closest to a ARGO profile data set, a set of dives (cycles)
@@ -466,7 +751,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                         wh = Globals.WhichHalf.up
                 else:
                     wh = which_half
-                temp_obs_bin, temp_depth_bin, data_cols_bin = MakeDiveProfiles.bin_data(
+                temp_obs_bin, temp_depth_bin, data_cols_bin = bin_data(
                     bin_width, wh, True, temp_dive_vars["depth"], data_columns
                 )
                 log_debug(

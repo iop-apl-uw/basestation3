@@ -82,8 +82,6 @@ known_files = [
 known_mailer_tags = [
     "eng",
     "log",
-    "pro",
-    "bpo",
     "asc",
     "cap",
     "comm",

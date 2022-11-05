@@ -1428,21 +1428,12 @@ def main():
                             Optional domain name to use for email messages
       --web_file_location=WEB_FILE_LOCATION
                             Optional location to prefix file locations in comp email messages
-      --dive_data_kkyy_weed_hacker=DIVE_DATA_KKYY_WEED_HACKER
-                            Data shallower then this setting is eliminated from the dive kkyy files
-                            (implies --make_dive_kkyy)
-      --climb_data_kkyy_weed_hacker=CLIMB_DATA_KKYY_WEED_HACKER
-                            Data shallower then this setting is eliminated from the climb kkyy files
-                            (implies --make_dive_kkyy)
       --make_dive_profiles  Create the common profile data products
-      --make_dive_pro       Create the dive profile in text format
-      --make_dive_bpo       Create the dive binned profile in text format
       --make_dive_netCDF    Create the dive netCDF output file
       --make_mission_profile
                             Create mission profile output file
       --make_mission_timeseries
                             Create mission timeseries output file
-      --make_dive_kkyy      Create the dive kkyy output files
       --delete_upload_files Remove any input files (except cmdfile) after being successfully uploaded to the
                             glider.  N.B. The check for successful upload is the file appears in the most recent
                             completed comms session and that the size reported for upload matches the current
@@ -1931,12 +1922,9 @@ def main():
     nc_dive_file_names = []
     nc_files_created = []
     if (
-        base_opts.make_dive_pro
-        or base_opts.make_dive_bpo
-        or base_opts.make_dive_netCDF
+        base_opts.make_dive_netCDF
         or base_opts.make_mission_profile
         or base_opts.make_mission_timeseries
-        or base_opts.make_dive_kkyy
     ):
 
         # Process network files to netcdf
@@ -2001,24 +1989,10 @@ def main():
             log_info(f"Processing ({head}) for profiles")
             log_file_name = head + ".log"
             eng_file_name = head + ".eng"
-            if base_opts.make_dive_pro:
-                profile_file_name = head + ".pro"
-            else:
-                profile_file_name = None
-            if base_opts.make_dive_bpo:
-                binned_profile_file_name = head + ".bpo"
-            else:
-                binned_profile_file_name = None
             if base_opts.make_dive_netCDF:
                 nc_dive_file_name = head + ".nc"
             else:
                 nc_dive_file_name = None
-            if base_opts.make_dive_kkyy:
-                kkyy_up_file_name = os.path.join(head + ".up_kkyy")
-                kkyy_down_file_name = os.path.join(head + ".dn_kkyy")
-            else:
-                kkyy_up_file_name = None
-                kkyy_down_file_name = None
 
             retval = None
             dive_num = FileMgr.get_dive(eng_file_name)
@@ -2037,16 +2011,6 @@ def main():
                     # logger_ct_eng_files=logger_ct_eng_files[dive_to_profile],
                     logger_eng_files=logger_eng_files[dive_to_profile],
                 )
-                if not retval:
-                    # no problem writting the nc file, try for the others
-                    retval = MakeDiveProfiles.write_auxillary_files(
-                        base_opts,
-                        nc_dive_file_name,
-                        profile_file_name,
-                        binned_profile_file_name,
-                        kkyy_up_file_name,
-                        kkyy_down_file_name,
-                    )
             except KeyboardInterrupt:
                 log_error(
                     "MakeDiveProfiles caught a keyboard exception - bailing out", "exc"
@@ -2060,8 +2024,6 @@ def main():
                 log_info("Continuing processing...")
                 failed_profiles.append(dive_num)
             else:
-                if profile_file_name:
-                    data_product_file_names.append(profile_file_name)
                 # Even if the processing failed, we may get a netcdf files out
                 if nc_dive_file_name:
                     nc_files_created.append(nc_dive_file_name)
@@ -2072,15 +2034,9 @@ def main():
                     log_info(f"Skipped creating profiles for {head}")
                 else:
                     # Add to list of data product files created/updated
-                    if binned_profile_file_name:
-                        data_product_file_names.append(binned_profile_file_name)
                     if nc_dive_file_name:
                         data_product_file_names.append(nc_dive_file_name)
                         nc_dive_file_names.append(nc_dive_file_name)
-                    if kkyy_down_file_name:
-                        data_product_file_names.append(kkyy_down_file_name)
-                    if kkyy_up_file_name:
-                        data_product_file_names.append(kkyy_up_file_name)
 
         if not dives_to_profile:
             log_info("No dives found to profile")

@@ -88,9 +88,6 @@ def main():
                               force instrument (glider) id
         --magcalfile=CALFILE  Reprocess compass headings using calfile (tcm2mat format)
         --gzip_netcdf         gzip netcdf files
-        --make_dive_pro       Create the dive profile in text format
-        --make_dive_bpo       Create the dive binned profile in text format
-        --make_dive_kkyy      Create the dive kkyy output files
         --make_mission_profile       Create the binned product from all dives
         --make_mission_timeseries    Create the composite product from all dives
         --reprocess_plots     Re-run MakePlot* extensions
@@ -272,22 +269,6 @@ def main():
         else:
             nc_dive_file_name = None
 
-        if base_opts.make_dive_pro:
-            profile_file_name = outhead + ".pro"
-        else:
-            profile_file_name = None
-        if base_opts.make_dive_bpo:
-            binned_profile_file_name = outhead + ".bpo"
-        else:
-            binned_profile_file_name = None
-
-        if base_opts.make_dive_kkyy:
-            kkyy_up_file_name = os.path.join(outhead + ".up_kkyy")
-            kkyy_down_file_name = os.path.join(outhead + ".dn_kkyy")
-        else:
-            kkyy_up_file_name = None
-            kkyy_down_file_name = None
-
         sg_calib_file_name, _ = os.path.split(os.path.abspath(dive_path))
         sg_calib_file_name = os.path.join(sg_calib_file_name, "sg_calib_constants.m")
 
@@ -313,23 +294,6 @@ def main():
         except:
             log_error("Error processing dive %d - skipping" % dive_num, "exc")
             temp_ret_val = 1
-
-        if not temp_ret_val:
-            # no problem writting the nc file, try for the others
-            dive_nc_file_names.append(nc_dive_file_name)
-            if (
-                base_opts.make_dive_kkyy
-                or base_opts.make_dive_pro
-                or base_opts.make_dive_bpo
-            ):
-                MakeDiveProfiles.write_auxillary_files(
-                    base_opts,
-                    nc_dive_file_name,
-                    profile_file_name,
-                    binned_profile_file_name,
-                    kkyy_up_file_name,
-                    kkyy_down_file_name,
-                )
 
         TraceArray.trace_results_stop()  # Just in case we bailed out...no harm if closed
         QC.qc_log_stop()
