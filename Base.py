@@ -35,6 +35,7 @@ import os
 import pprint
 import pstats
 import re
+import pdb
 import shutil
 import signal
 import stat
@@ -42,6 +43,7 @@ import struct
 import sys
 import tarfile
 import threading
+import traceback
 import time
 import urllib.error
 import urllib.parse
@@ -81,6 +83,8 @@ from BaseLog import (
 )
 from Globals import known_files, known_mailer_tags, known_ftp_tags
 
+# DEBUG_PDB = "darwin" in sys.platform
+DEBUG_PDB = False
 
 # TODOCC
 # 1) Largest issue is to remove mismash of globals and globals passed as arguments.
@@ -362,6 +366,11 @@ def process_dive_selftest(
                     incomplete_files,
                 )
             except:
+                if DEBUG_PDB:
+                    _, _, tb = sys.exc_info()
+                    traceback.print_exc()
+                    pdb.post_mortem(tb)
+
                 log_error(f"Could not process {fc.base_name()} - skipping", "exc")
                 ret_val = -1
             else:
@@ -942,6 +951,7 @@ def process_file_group(
                     Sensors.process_logger_func(
                         fc.logger_prefix(),
                         "process_data_files",
+                        calib_consts,
                         fc,
                         processed_logger_eng_files,
                         processed_logger_other_files,
@@ -2488,6 +2498,7 @@ def main():
 
         if alert_msg_file:
             for alert_topic in list(alerts_d.keys()):
+                log_info("Processing " + alert_topic)
                 alert_msg_file.write(
                     f'<div class="{Utils.ensure_basename(alert_topic)}">\n<p>Alert: {alert_topic}<ul>\n'
                 )

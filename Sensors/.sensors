@@ -19,6 +19,11 @@ scicon_ext.py,init_logger,process_tar_members
 cp_ext.py,init_logger,process_data_files
 edison_ext.py,init_logger,process_tar_members
 
+# From Vendor setups
+
+# Legato as a logdev
+legato_logdev_ext.py,init_logger,process_data_files,eng_file_reader
+
 # Place all cnf files at the end of this file!
 
 scct.cnf,init_sensor,asc2eng

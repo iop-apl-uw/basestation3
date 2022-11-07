@@ -2391,21 +2391,22 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
                             mismatch_alert = True
                             SBECT_mismatch_reported[sbect_type] = True
                             log_warning(
-                                "SBECT %s coefficient %s (%g) differs from %s (%g) in log file -- using %g."
+                                "SBECT %s coefficient %s (%g) differs from %s (%g) in log file (dive %d) -- using %g."
                                 % (
                                     sbect_type,
                                     var_values[0],
                                     sgc_value,
                                     var_values[2],
                                     log_value,
+                                    log_f.dive,
                                     sgc_value,
                                 )
                             )
                 if mismatch_alert:
                     log_alert(
                         "SBECT",
-                        "SBECT %s coefficient(s) are mismatched between sgc and log!"
-                        % sbect_type,
+                        "SBECT %s coefficient(s) are mismatched between sgc and log (dive %d)!"
+                        % (type, log_f.dive),
                     )
         sgc_values.append(sgc_vars_used)
         return tuple(sgc_values)
@@ -5544,7 +5545,13 @@ def make_dive_profile(
         elif sg_ct_type == 4:
             log_info("Skipping TSV based thermal-inertia correction for Legatto.")
         else:
-            log_info("Not performing thermal-inertia correction.")
+            if perform_thermal_inertia_correction:
+                log_info("Using %d-mode thermal-inertia correction." % modes)
+            elif calib_consts["sg_ct_type"] == 4:
+                # Issue no notification since legato corrections will happen later
+                pass
+            else:
+                log_info("Not performing thermal-inertia correction.")
 
         load_thermal_inertia_modes(base_opts, num_modes=modes)
 

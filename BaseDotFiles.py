@@ -464,6 +464,8 @@ def process_pagers(
                                 ) = comm_log.last_GPS_lat_lon_and_recov(
                                     fmt, dive_prefix
                                 )
+                                if session:
+                                    gps_message = "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f" % (gps_message, session.depth, session.obs_pitch, session.rh, session.int_press, session.volt_24V, session.volt_10V)
                                 reboot_msg = comm_log.has_glider_rebooted()
                             elif session:
                                 (
@@ -476,6 +478,8 @@ def process_pagers(
                                 )
                                 if msg_prefix:
                                     gps_message = f"{msg_prefix}{gps_message}"
+
+                                gps_message = "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f" % (gps_message, session.depth, session.obs_pitch, session.rh, session.int_press, session.volt_24V, session.volt_10V)
                                 reboot_msg = None
                             else:
                                 log_warning(

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -221,6 +221,9 @@ def log_conversion_alert(key, msg, resend):
     conversion_alerts_d[key].append((msg, resend))
 
 def log_alert(key, s):
+    if type(key) is not str:
+        log_warning(f"{type(key)} in alerts", 'exc')
+        return
     alerts_d = BaseLogger.alerts_d
     if key not in alerts_d:
         alerts_d[key] = []
