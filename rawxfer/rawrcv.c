@@ -19,6 +19,24 @@
 
 extern void lsyslog(int prio, const char *format, ...);
 
+char *
+strip(char *f)
+{
+    char *o = f;
+    int i = 0;
+
+    while(*f) {
+        if (isalnum(*f) || *f == '.' || *f == '_' || *f == '+') {
+            o[i] = *f;
+            i ++;
+        }
+        f ++;
+    }
+
+    o[i] = 0;
+    return o;
+}
+
 int
 batch(int argc, char *argv[])
 {
@@ -105,11 +123,16 @@ batch(int argc, char *argv[])
         md5_in = &(header[20]);
         md5_in[32] = 0;
 
-        if (!isalnum(fname[0])) {
-            lsyslog(0, "bad filename %s", fname);
+        //if (!isalnum(fname[0])) {
+        //    lsyslog(0, "bad filename %s", fname);
+        //    return 1;
+        //}
+
+        strip(fname);
+        if (fname[0] == 0) {
+            lsyslog(0, "bad filename");
             return 1;
         }
-
         lsyslog(0, "Receiving %u bytes of %s", size, fname);
 
         fp = fopen(fname, "wb");
