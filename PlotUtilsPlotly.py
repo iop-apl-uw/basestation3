@@ -1,5 +1,5 @@
 ##
-## Copyright (c) 2006-2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -25,6 +25,8 @@
 import os
 import sys
 import json
+import warnings
+
 import plotly
 import plotly.graph_objects
 import plotly.io
@@ -138,15 +140,23 @@ def write_output_files(base_opts, base_file_name, fig):
     def save_img_file(output_fmt):
         output_name = base_file_name + "." + output_fmt
         # No return code
-        fig.write_image(
-            output_name,
-            format=output_fmt,
-            width=std_width,
-            height=std_height,
-            scale=std_scale,
-            validate=True,
-            engine="kaleido",
-        )
+        # TODO - for kelido 0.2.1 and python 3.10 (and later) we get this warning:
+        #   File "/Users/gbs/.pyenv/versions/3.10.7/lib/python3.10/threading.py", line 1224, in setDaemon
+        #   warnings.warn('setDaemon() is deprecated, set the daemon attribute instead',
+        #   DeprecationWarning: setDaemon() is deprecated, set the daemon attribute instead
+        #
+        # Remove when kelido is updated
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore")
+            fig.write_image(
+                output_name,
+                format=output_fmt,
+                width=std_width,
+                height=std_height,
+                scale=std_scale,
+                validate=True,
+                engine="kaleido",
+            )
         return output_name
 
     if base_opts.save_png:

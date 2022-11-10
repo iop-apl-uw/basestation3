@@ -35,6 +35,7 @@ import os
 import pprint
 import pstats
 import re
+import pdb
 import shutil
 import signal
 import stat
@@ -42,6 +43,7 @@ import struct
 import sys
 import tarfile
 import threading
+import traceback
 import time
 import urllib.error
 import urllib.parse
@@ -61,6 +63,8 @@ import FileMgr
 import FlightModel
 import LogFile
 import MakeDiveProfiles
+import MakeMissionProfile
+import MakeMissionTimeSeries
 import Sensors
 import Strip1A
 import Utils
@@ -79,6 +83,8 @@ from BaseLog import (
 )
 from Globals import known_files, known_mailer_tags, known_ftp_tags
 
+# DEBUG_PDB = "darwin" in sys.platform
+DEBUG_PDB = False
 
 # TODOCC
 # 1) Largest issue is to remove mismash of globals and globals passed as arguments.
@@ -360,6 +366,11 @@ def process_dive_selftest(
                     incomplete_files,
                 )
             except:
+                if DEBUG_PDB:
+                    _, _, tb = sys.exc_info()
+                    traceback.print_exc()
+                    pdb.post_mortem(tb)
+
                 log_error(f"Could not process {fc.base_name()} - skipping", "exc")
                 ret_val = -1
             else:
@@ -940,6 +951,7 @@ def process_file_group(
                     Sensors.process_logger_func(
                         fc.logger_prefix(),
                         "process_data_files",
+                        calib_consts,
                         fc,
                         processed_logger_eng_files,
                         processed_logger_other_files,
@@ -1275,12 +1287,14 @@ def expunge_secrets_st(selftest_name):
 
     private_keys_found = False
 
+    line_count = 0
     for raw_line in pub:
+        line_count += 1
         try:
             s = raw_line.decode("utf-8")
         except UnicodeDecodeError:
             log_warning(
-                f"Could not decode line {s} in {selftest_name} - assuming no secret"
+                f"Could not decode line {line_count} in {selftest_name} - assuming no secret"
             )
             public_lines = public_lines + raw_line
         else:
@@ -1424,21 +1438,12 @@ def main():
                             Optional domain name to use for email messages
       --web_file_location=WEB_FILE_LOCATION
                             Optional location to prefix file locations in comp email messages
-      --dive_data_kkyy_weed_hacker=DIVE_DATA_KKYY_WEED_HACKER
-                            Data shallower then this setting is eliminated from the dive kkyy files
-                            (implies --make_dive_kkyy)
-      --climb_data_kkyy_weed_hacker=CLIMB_DATA_KKYY_WEED_HACKER
-                            Data shallower then this setting is eliminated from the climb kkyy files
-                            (implies --make_dive_kkyy)
       --make_dive_profiles  Create the common profile data products
-      --make_dive_pro       Create the dive profile in text format
-      --make_dive_bpo       Create the dive binned profile in text format
       --make_dive_netCDF    Create the dive netCDF output file
       --make_mission_profile
                             Create mission profile output file
       --make_mission_timeseries
                             Create mission timeseries output file
-      --make_dive_kkyy      Create the dive kkyy output files
       --delete_upload_files Remove any input files (except cmdfile) after being successfully uploaded to the
                             glider.  N.B. The check for successful upload is the file appears in the most recent
                             completed comms session and that the size reported for upload matches the current
@@ -1927,12 +1932,9 @@ def main():
     nc_dive_file_names = []
     nc_files_created = []
     if (
-        base_opts.make_dive_pro
-        or base_opts.make_dive_bpo
-        or base_opts.make_dive_netCDF
+        base_opts.make_dive_netCDF
         or base_opts.make_mission_profile
         or base_opts.make_mission_timeseries
-        or base_opts.make_dive_kkyy
     ):
 
         # Process network files to netcdf
@@ -1997,24 +1999,10 @@ def main():
             log_info(f"Processing ({head}) for profiles")
             log_file_name = head + ".log"
             eng_file_name = head + ".eng"
-            if base_opts.make_dive_pro:
-                profile_file_name = head + ".pro"
-            else:
-                profile_file_name = None
-            if base_opts.make_dive_bpo:
-                binned_profile_file_name = head + ".bpo"
-            else:
-                binned_profile_file_name = None
             if base_opts.make_dive_netCDF:
                 nc_dive_file_name = head + ".nc"
             else:
                 nc_dive_file_name = None
-            if base_opts.make_dive_kkyy:
-                kkyy_up_file_name = os.path.join(head + ".up_kkyy")
-                kkyy_down_file_name = os.path.join(head + ".dn_kkyy")
-            else:
-                kkyy_up_file_name = None
-                kkyy_down_file_name = None
 
             retval = None
             dive_num = FileMgr.get_dive(eng_file_name)
@@ -2033,16 +2021,6 @@ def main():
                     # logger_ct_eng_files=logger_ct_eng_files[dive_to_profile],
                     logger_eng_files=logger_eng_files[dive_to_profile],
                 )
-                if not retval:
-                    # no problem writting the nc file, try for the others
-                    retval = MakeDiveProfiles.write_auxillary_files(
-                        base_opts,
-                        nc_dive_file_name,
-                        profile_file_name,
-                        binned_profile_file_name,
-                        kkyy_up_file_name,
-                        kkyy_down_file_name,
-                    )
             except KeyboardInterrupt:
                 log_error(
                     "MakeDiveProfiles caught a keyboard exception - bailing out", "exc"
@@ -2057,8 +2035,8 @@ def main():
                 failed_profiles.append(dive_num)
             else:
                 # Even if the processing failed, we may get a netcdf files out
-                if profile_file_name:
-                    data_product_file_names.append(profile_file_name)
+                if nc_dive_file_name:
+                    nc_files_created.append(nc_dive_file_name)
                 if retval == 1:
                     log_error(f"Failed to create profiles for {head}")
                     failed_profiles.append(dive_num)
@@ -2066,16 +2044,9 @@ def main():
                     log_info(f"Skipped creating profiles for {head}")
                 else:
                     # Add to list of data product files created/updated
-                    if binned_profile_file_name:
-                        data_product_file_names.append(binned_profile_file_name)
                     if nc_dive_file_name:
                         data_product_file_names.append(nc_dive_file_name)
                         nc_dive_file_names.append(nc_dive_file_name)
-                    if kkyy_down_file_name:
-                        data_product_file_names.append(kkyy_down_file_name)
-                    if kkyy_up_file_name:
-                        data_product_file_names.append(kkyy_up_file_name)
-                    nc_files_created.append(nc_dive_file_name)
 
         if not dives_to_profile:
             log_info("No dives found to profile")
@@ -2282,7 +2253,7 @@ def main():
                         (
                             mp_ret_val,
                             mission_profile_name,
-                        ) = MakeDiveProfiles.make_mission_profile(
+                        ) = MakeMissionProfile.make_mission_profile(
                             dive_nc_file_names, base_opts
                         )
                         if mp_ret_val:
@@ -2305,7 +2276,7 @@ def main():
                         (
                             mt_retval,
                             mission_timeseries_name,
-                        ) = MakeDiveProfiles.make_mission_timeseries(
+                        ) = MakeMissionTimeSeries.make_mission_timeseries(
                             dive_nc_file_names, base_opts
                         )
                         if mt_retval:

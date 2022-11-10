@@ -281,8 +281,8 @@ def main(
             sys.stderr.write("File %s does not exists\n" % netcdf_in_filename)
             return 1
 
-        nci = Utils.open_netcdf_file(netcdf_in_filename, "r", mmap=False)
-        nco = Utils.open_netcdf_file(netcdf_out_filename, "w", mmap=False)
+        nci = Utils.open_netcdf_file(netcdf_in_filename, "r")
+        nco = Utils.open_netcdf_file(netcdf_out_filename, "w")
         if (
             master_time_name not in nci.variables
             or master_depth_name not in nci.variables

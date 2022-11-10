@@ -792,7 +792,7 @@ def load_dive_data(dive_data):
 
     dive_nc_file_name = nc_path_format % dive_num
     try:
-        dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r', mmap=False)
+        dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r')
     except:
         log_error("Unable to open %s" % dive_nc_file_name, 'exc')
         return data_d
@@ -1412,7 +1412,7 @@ def load_dive_data_DAC(dive_data):
     dive_num = dive_data.dive_num
     dive_nc_file_name = nc_path_format % dive_num
     try:
-        dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r', mmap=False)
+        dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r')
     except:
         log_error("Unable to open %s" % dive_nc_file_name, 'exc')
         return data_d
@@ -2513,7 +2513,8 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 
                 #TODO - need to evaluate the merit of a launch vs direct invokation
                 reprocess_log = os.path.join(flight_directory, 'Reprocess_%04d_%.f.log' % (max(flight_dive_nums), time.time()))
-                Utils.run_cmd_shell('python3.9 %s --force -v --mission_dir %s %s  > %s 2>&1' %
+                Utils.run_cmd_shell('%s %s --force -v --mission_dir %s %s  > %s 2>&1' %
+                                    sys.executable,
                                     (os.path.join(base_opts.basestation_directory, 'Reprocess.py'),
                                      mission_directory, dives, reprocess_log))
 
@@ -2704,7 +2705,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         # We need to get some additional assumptions about the glider before creating the flight db
         dive_nc_file_name = dive_nc_file_names[0] # open first found filename
         try:
-            dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r', mmap=False)
+            dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, 'r')
         except:
             log_error("Unable to open %s to establish glider type" % dive_nc_file_name)
             return 1

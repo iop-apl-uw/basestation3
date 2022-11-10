@@ -515,34 +515,6 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
-    "make_dive_pro": options_t(
-        None,
-        (
-            "Base",
-            "MakeDiveProfiles",
-            "Reprocess",
-        ),
-        ("--make_dive_pro",),
-        bool,
-        {
-            "help": "Create the dive profile in text format",
-            "action": "store_true",
-        },
-    ),
-    "make_dive_bpo": options_t(
-        None,
-        (
-            "Base",
-            "MakeDiveProfiles",
-            "Reprocess",
-        ),
-        ("--make_dive_bpo",),
-        bool,
-        {
-            "help": "Create the dive binned profile in text format",
-            "action": "store_true",
-        },
-    ),
     "make_dive_netCDF": options_t(
         None,
         (
@@ -576,19 +548,6 @@ global_options_dict = {
         bool,
         {
             "help": "Create mission timeseries output file",
-            "action": "store_true",
-        },
-    ),
-    "make_dive_kkyy": options_t(
-        None,
-        (
-            "Base",
-            "MakeDiveProfiles",
-        ),
-        ("--make_dive_kkyy",),
-        bool,
-        {
-            "help": "Create the dive kkyy output files",
             "action": "store_true",
         },
     ),
