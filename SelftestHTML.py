@@ -5,7 +5,7 @@ import glob
 import subprocess
 
 def format(line):
-    reds = ["errors", "error", "Failed", "failed", "[crit]"]
+    reds = ["errors", "error", "Failed", "failed", "[crit]", "timed out"]
     yellows = ["WARNING"]
     for r in reds:
         if line.find(r) > -1:
@@ -43,6 +43,8 @@ proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], sys.argv[1]], stdout=su
 #     sys.exit(1)
 
 print("<html><body>")
+print('<div id="top">top*<a href="#capture">capture</a>*<a href="#parameters">parameters</a><div><br>')
+
 showingRaw = False
 insideMoveDump = False
 insideDir = False
@@ -78,9 +80,13 @@ for raw_line in proc.stdout:
         continue
     elif line.startswith('Raw capture'):
         showingRaw = True
-        print("<h2>%s</h2>" % line)
-    elif line.startswith('Summary of') or line.startswith('Parameter comparison'):
-        print("<h2>%s</h2>" % line)
+        print('<h2 id="capture" style="margin-bottom:0px;">%s</h2>' % line)
+        print('<a href="#top">top</a>*capture*<a href="#parameters">parameters</a><br>')
+    elif line.startswith('Summary of'): 
+        print('<h2>%s</h2>' % line)
+    elif line.startswith('Parameter comparison'):
+        print('<h2 id="parameters" style="margin-bottom:0px;">%s</h2>' % line)
+        print('<a href="#top">top</a>*<a href="#capture">capture</a>*parameters<br>')
     elif line.find(',SUSR,N,---- Self test') > -1:
         parts = line.split(',')
         if showingRaw:

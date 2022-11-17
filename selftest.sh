@@ -117,7 +117,11 @@ foreach cal (t_g t_h t_i t_j c_g c_h c_i c_j)
     set cal_val = `grep $cal "$base"/sg"$1"/sg_calib_constants.m | cut -f2 -d= | cut -f1 -d\;` 
     set sgc = `printf "%.8f" $sg_val`
     set cac = `printf "%.8f" $cal_val`
-    set ratio = `echo "1000*$sgc/$cac" | bc`
+    if ( $cac == "0.00000000" ) then
+        set ratio = 0
+    else
+        set ratio = `echo "1000*$sgc/$cac" | bc`
+    endif
     if ( !($ratio > 990 && $ratio < 1010) ) then
        echo "value for $cal does not match in sg_calib_constants.m $cac and on glider $sgc"
     endif
