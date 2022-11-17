@@ -1,6 +1,8 @@
 #!/bin/tcsh
 
 set base = "/home/seaglider"
+# set base = "/server/work1/seaglider/www/selftests" 
+
 if (! -d "$base"/sg"$1" ) then
     echo "no such glider, usage: selfcheck NNN"
     exit
