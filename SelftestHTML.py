@@ -5,10 +5,15 @@ import glob
 import subprocess
 
 def format(line):
-    reds = ["errors", "error", "failed", "[crit]"]
+    reds = ["errors", "error", "Failed", "failed", "[crit]"]
+    yellows = ["WARNING"]
     for r in reds:
         if line.find(r) > -1:
             line = line.replace(r, "<span style='background-color:red;'>%s</span>" % r)
+            break
+    for y in yellows:
+        if line.find(y) > -1:
+            line = line.replace(y, "<span style='background-color:orange;'>%s</span>" % y)
             break
 
     print(line + "<br>")
@@ -40,6 +45,7 @@ proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], sys.argv[1]], stdout=su
 print("<html><body>")
 showingRaw = False
 insideMoveDump = False
+insideDir = False
 idnum = 0
 for raw_line in proc.stdout:
     try:
@@ -50,8 +56,19 @@ for raw_line in proc.stdout:
     if insideMoveDump and line.find('SUSR') > -1:
         print("</div>")
         insideMoveDump = False
+
+    if insideDir and line.find(',') > -1:
+        print("</pre>")
+        insideDir = False
  
-    if line.find(' completed from ') > -1 and showingRaw:
+    
+    if line.find('Reporting directory') > -1: 
+        parts = line.split(',')
+        print("<h2>%s</h2>" % parts[3])
+        print("<pre>") 
+        insideDir = True
+
+    elif line.find(' completed from ') > -1 and showingRaw:
         insideMoveDump = True
         format(line)
         print('<a href="#" onclick="document.getElementById(\'div%d\').style.display == \'none\' ? document.getElementById(\'div%d\').style.display = \'block\' : document.getElementById(\'div%d\').style.display = \'none\'; return false;">move record</a><br>' % (idnum, idnum, idnum));
@@ -74,6 +91,8 @@ for raw_line in proc.stdout:
     elif line.find(',SUSR,N,---- ') > -1:
         parts = line.split(',')
         print("<h2>%s</h2>" % parts[3])
+    elif insideDir:
+        print(line)
     else:
         format(line)
     

@@ -25,10 +25,18 @@ newFile = {}
 commFile = {}
 watchThread = {}
 
-def servePage(wfile):
-    with open('%s/vis.html' % sys.path[0], 'rb') as file:
+def serveFile(wfile, filename):
+    with open('%s/%s' % (sys.path[0], filename), 'rb') as file:
         wfile.write(file.read())
+    
+def servePage(wfile):
+    serveFile(wfile, 'vis.html')
 
+def serveScript(wfile, script):
+    if script.find('..') > -1 or script.find('/') > -1:
+        return
+
+    serveFile(wfile, 'scripts/%s' % script)
             
 def streamData(wfile, data):
     try:
@@ -136,6 +144,20 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 data = cur.fetchall()
                 self.wfile.write(json.dumps(data).encode('utf-8'))
                  
+        elif pieces[1] == 'selftest':
+            glider = pieces[2]
+            cmd = "%s/SelftestHTML.py %s" % (sys.path[0], glider)
+            output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            results = output.stdout
+            self.send_response(HTTPStatus.OK.value)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(bytes(results, 'utf-8')) 
+
+        elif pieces[1] == 'script':
+            # do we need headers?
+            serveScript(self.wfile, pieces[2])
+
         elif pieces[1] == 'plots':
             glider = pieces[2]
             dive = pieces[3]

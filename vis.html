@@ -119,6 +119,10 @@
         window.open('/div/' + currGlider + '/' + dive + '/' + elt, '_blank');
     }
 
+    function popupSelftest() {
+        window.open('/selftest/' + currGlider);
+    }
+
     function showPlot(elt, plotly) {
         $('mainImage').removeAttribute('hidden');
         $('mainImage').src = '/png/' + currGlider + '/' + currDive + '/' + elt;
@@ -432,11 +436,15 @@
     </table>
 </div>
 
-<div id="commlog" style="position: absolute; left:1060; top:0; width:800; height:400; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;">
+<div id="links" style="position: absolute; left:1060; top: 0; width:600; height:20; font-size:10px;">
+<a href="#" onclick="popupSelftest();">selftest</a>
+</div>
+
+<div id="commlog" style="position: absolute; left:1060; top:20; width:800; height:400; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;">
 
 </div>
 
-<div id="divCmdfile" style="position: absolute; left:1060; top:405; width:600px; height:400px; font-size: 12px;">
+<div id="divCmdfile" style="position: absolute; left:1060; top:425; width:600px; height:400px; font-size: 12px;">
     <textarea id="cmdfile" style="width:100%; height:100%; box-sizing:border-box;">
     </textarea>
     <button id="btnSave" type="button" onclick="saveCmdfile();">Save</button>
