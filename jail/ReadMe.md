@@ -9,9 +9,7 @@ and
 	
 The script is intended to help boot strap and update as the system binaries are updated.
 
-## To sort out
-
-### The latter has the following:
+### The latter script has the following:
 
     cd dev
     mknod null   c 1 3
@@ -19,7 +17,8 @@ The script is intended to help boot strap and update as the system binaries are 
     mknod random c 1 8
     chmod 666 *
 	mount -t proc proc  $JAIL/proc
-Needed?
+
+Does not seem to be needed
 
 ### Termcap
 To shut up output from tcsh, this tree is copied
