@@ -62,7 +62,9 @@ available options:
     -q              Run quietly (non-interactively).  The editor will
                     not be started and you will not be prompted. Changes
                     will be accepted automatically if the validation
-                    stage is clean. 
+                    stage is clean (or always if -i is used). 
+    -i              Ignore errors when running non-interactively (-q).
+                     
                  
     You cannot run interactively and take file input from stdin;
     specify '-q' if you use '-f -'.  Likewise, you must run interactively
@@ -73,9 +75,9 @@ available options:
 progname = basename(sys.argv[0])
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hqaf:d:")
+    opts, args = getopt.getopt(sys.argv[1:], "hiqaf:d:")
 except getopt.GetoptError:
-    print(f"usage: {progname} [-f file] [-q] [-d directory]")
+    print(f"usage: {progname} [-f file] [-q] [-i] [-d directory]")
     sys.exit(1)
 
 interactive = True
@@ -83,6 +85,7 @@ input_file = ""
 wd = os.getcwd()
 validator = "/usr/local/bin/validate"
 always_validate = False
+ignore_errors = False
 
 for o, a in opts:
     if o == "-h":
@@ -94,6 +97,8 @@ for o, a in opts:
         always_validate = True
     elif o == "-f":
         input_file = a
+    elif o == "-i":
+        ignore_errors = True
     elif o == "-d":
         wd = a
 
@@ -236,7 +241,7 @@ while done_editing == 0:
         else:
             answer = input("New file check ok, accept it (yes/no)? ")
     else:
-        if p.returncode > 0:
+        if p.returncode > 0 and not ignore_errors:
             answer = "no"
         else:
             answer = "yes"
