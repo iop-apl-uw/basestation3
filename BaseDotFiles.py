@@ -478,8 +478,10 @@ def process_pagers(
                                 )
                                 if msg_prefix:
                                     gps_message = f"{msg_prefix}{gps_message}"
-
-                                gps_message = "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f" % (gps_message, session.depth, session.obs_pitch, session.rh, session.int_press, session.volt_24V, session.volt_10V)
+                                try:
+                                    gps_message = "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f" % (gps_message, session.depth, session.obs_pitch, session.rh, session.int_press, session.volt_24V, session.volt_10V)
+                                except:
+                                    log_error("Problem formatting GPS message", "exc")
                                 reboot_msg = None
                             else:
                                 log_warning(
