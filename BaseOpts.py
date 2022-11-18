@@ -74,7 +74,7 @@ def generate_range_action(arg, min_val, max_val):
 
 def FullPath(x):
     """Expand user- and relative-paths"""
-    if type(x) is list:
+    if isinstance(x, list):
         return list(map(lambda y: os.path.abspath(os.path.expanduser(y)), x))
     else:
         return os.path.abspath(os.path.expanduser(x))
@@ -191,6 +191,16 @@ global_options_dict = {
         ),
         bool,
         {"action": "store_false", "help": "don't print status messages to stdout"},
+    ),
+    "basestation_etc": options_t(
+        None,  # Updated below
+        None,
+        ("--basestation_etc",),
+        FullPathTrailingSlash,
+        {
+            "help": "Basestation etc dirctory (master config)",
+            "action": FullPathTrailingSlashAction,
+        },
     ),
     #
     "mission_dir": options_t(
@@ -505,34 +515,6 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
-    "make_dive_pro": options_t(
-        None,
-        (
-            "Base",
-            "MakeDiveProfiles",
-            "Reprocess",
-        ),
-        ("--make_dive_pro",),
-        bool,
-        {
-            "help": "Create the dive profile in text format",
-            "action": "store_true",
-        },
-    ),
-    "make_dive_bpo": options_t(
-        None,
-        (
-            "Base",
-            "MakeDiveProfiles",
-            "Reprocess",
-        ),
-        ("--make_dive_bpo",),
-        bool,
-        {
-            "help": "Create the dive binned profile in text format",
-            "action": "store_true",
-        },
-    ),
     "make_dive_netCDF": options_t(
         None,
         (
@@ -566,19 +548,6 @@ global_options_dict = {
         bool,
         {
             "help": "Create mission timeseries output file",
-            "action": "store_true",
-        },
-    ),
-    "make_dive_kkyy": options_t(
-        None,
-        (
-            "Base",
-            "MakeDiveProfiles",
-        ),
-        ("--make_dive_kkyy",),
-        bool,
-        {
-            "help": "Create the dive kkyy output files",
             "action": "store_true",
         },
     ),
@@ -751,6 +720,7 @@ global_options_dict = {
         "darwin" in sys.platform,
         (
             "Base",
+            "MakePlot2",
             "MakePlot3",
             "MakePlot4",
         ),
@@ -1040,7 +1010,7 @@ global_options_dict = {
         },
     ),
     "use_glider_target": options_t(
-        True,
+        False,
         (
             "Base",
             "MakeKML",
@@ -1157,6 +1127,21 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    "network_log_decompressor": options_t(
+        None,
+        (
+            "Base",
+            "BaseNetwork",
+            "NetworkWatch",
+        ),
+        ("--network_log_decompressor",),
+        FullPath,
+        {
+            "help": "Compressed logfile decompressor path",
+            "section": "network",
+            "action": FullPathAction,
+        },
+    ),
 }
 
 # Note: All option_group kwargs listed above must have an entry in this dictionary
@@ -1211,18 +1196,27 @@ class BaseOptions:
             for add_arg in add_arguments:
                 options_dict[add_arg].group.add(calling_module)
 
-        cp_default = {}
-        for k, v in options_dict.items():
-            setattr(self, k, v.default_val)  # Set the default for the object
-            # cp_default[k] = v.default_val
-            cp_default[k] = None
-
         basestation_directory, _ = os.path.split(
             os.path.abspath(os.path.expanduser(sys.argv[0]))
         )
         self.basestation_directory = basestation_directory  # make avaiable
         # add path to load common basestation modules from subdirectories
         sys.path.append(basestation_directory)
+
+        # Update default config location
+        options_dict["basestation_etc"] = dataclasses.replace(
+            options_dict["basestation_etc"],
+            **{
+                "default_val": FullPathTrailingSlash(
+                    os.path.join(self.basestation_directory, "etc")
+                ),
+            },
+        )
+        cp_default = {}
+        for k, v in options_dict.items():
+            setattr(self, k, v.default_val)  # Set the default for the object
+            # cp_default[k] = v.default_val
+            cp_default[k] = None
 
         cp = configparser.RawConfigParser(cp_default)
 

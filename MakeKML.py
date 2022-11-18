@@ -601,7 +601,7 @@ def printDive(
     If any measurements are not available, return None for that position
     """
     try:
-        nc = Utils.open_netcdf_file(dive_nc_file_name, "r", mmap=False)
+        nc = Utils.open_netcdf_file(dive_nc_file_name, "r")
     except:
         log_error(f"Could not read {dive_nc_file_name}", "exc")
         log_info("Skipping...")
@@ -1064,7 +1064,7 @@ def extractGPSPositions(dive_nc_file_name, dive_num):
     many (1000) netCDF files opened at once.
     """
     try:
-        nc = Utils.open_netcdf_file(dive_nc_file_name, "r", mmap=False)
+        nc = Utils.open_netcdf_file(dive_nc_file_name, "r")
     except:
         log_error(f"Could not read {dive_nc_file_name}", "exc")
         log_error("Skipping...")

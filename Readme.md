@@ -1,6 +1,5 @@
 * TODO
 - Note tcsh and glider group need to be installed exits
-- Note on building raw and the symlink for rawrcv2
 
 Seaglider Basestation Readme
 
@@ -170,8 +169,8 @@ In /usr/local/Base-3.01/packages/lrzsz-0.12.20:
 11c) Copy the binaries to /usr/local/bin "sudo cp rawrcv rawsend /usr/local/bin"
 11d) Create the following symlinks
 
-    ln -s /usr/local/bin/rawrcv /usr/local/bin/rawrcv2
-    ln -s /usr/local/bin/rawrcv /usr/local/bin/rawrcvb
+    ln -s /usr/local/bin/rawrcv2 /usr/local/bin/rawrcv
+    ln -s /usr/local/bin/rawrcv2 /usr/local/bin/rawrcvb
 
 ## Install the optional cmdfile, science and targets validator
 12a) In /usr/local/Base-3.01/Validate-66.13 run 'sudo make -f Makefile.validate' to build validate binary

@@ -322,7 +322,7 @@ def process_tar_members(base_opts, module_name, fc, scicon_file_list, processed_
 
             _, ttail = os.path.split(scicon_file)
             hhead, _ = os.path.splitext(ttail)
-            if(hhead == 'ad2cp'):
+            if(hhead in ('ad2cp', 'adcp')):
                 if(process_adcp_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_eng_files, processed_logger_other_files)):
                     log_error("Error converting %s to %s" % (scicon_file, scicon_eng_file))
                     ret_val = 1
@@ -713,7 +713,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
     adcp_list = []
 
     for fn in eng_files:
-        if 'ad2cp' in os.path.split(fn['file_name'])[1]:
+        if 'ad2cp' in os.path.split(fn['file_name'])[1] or 'adcp' in os.path.split(fn['file_name'])[1]:
             adcp_list.append(fn)
         else:
             df_meta[fn['cast']], ef_ret_list = extract_file_metadata(fn['file_name'])

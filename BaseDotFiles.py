@@ -33,7 +33,6 @@ import netrc
 import os
 import pdb
 import smtplib
-import socket
 import sys
 import time
 import traceback
@@ -48,7 +47,8 @@ from ftplib import FTP
 
 # from ftplib import FTP_TLS
 from urllib.parse import urlencode
-from urllib.request import urlopen
+
+import requests
 
 # paramiko is throwing a warning on import because it refernces Blowfish - which is depricated
 # Issue is here https://github.com/paramiko/paramiko/issues/2038
@@ -216,81 +216,100 @@ def send_email_text(
 
 
 def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
-    """Process the urls file - supplying different arguments for the first and second pass"""
+    """Process the master and local urls file - supplying different arguments for the first and second pass"""
     # Process urls
-    urls_file_name = os.path.join(base_opts.mission_dir, ".urls")
-    if not os.path.exists(urls_file_name):
-        log_info(
-            f"No .urls file found - skipping .urls processing pass {pass_num_or_gps}"
-        )
-    elif dive_num is None:
-        log_error("dive_num is not an integer - skipping .urls file processing")
-    elif instrument_id is None:
-        log_error("instrument_id is not an integer - skipping .urls file processing")
-    else:
-        log_info(f"Starting processing on .urls pass({pass_num_or_gps})")
-        try:
-            urls_file = open(urls_file_name, "r")
-        except IOError as exception:
+
+    def process_one_urls(urls_file_name):
+        if not os.path.exists(urls_file_name):
+            log_info(
+                f"No .urls file {urls_file_name} found - skipping pass {pass_num_or_gps}"
+            )
+        elif dive_num is None:
+            log_error("dive_num is not an integer - skipping .urls file processing")
+        elif instrument_id is None:
             log_error(
-                f"Could not open {urls_file_name} ({exception.args}) - no urls notified"
+                "instrument_id is not an integer - skipping .urls file processing"
             )
         else:
-            for urls_line in urls_file:
-                urls_line = urls_line.rstrip()
-                log_debug(f"urls line = ({urls_line})")
-                if urls_line == "":
-                    continue
-                if urls_line[0] != "#":
-                    log_info(f"Processing .urls line ({urls_line})")
-                    urls_elts = urls_line.split()
-                    if len(urls_elts) > 2:
-                        log_error(f"Too many entries on line ({urls_line})")
-                    socket.setdefaulttimeout(int(urls_elts[0]))
-                    if isinstance(pass_num_or_gps, int) and pass_num_or_gps == 1:
-                        url_line = "%s?instrument_name=SG%03d&dive=%d&files=perdive" % (
-                            urls_elts[1],
-                            int(instrument_id),
-                            int(dive_num),
-                        )
-                    elif isinstance(pass_num_or_gps, int) and pass_num_or_gps == 2:
-                        url_line = "%s?instrument_name=SG%03d&dive=%d&files=all" % (
-                            urls_elts[1],
-                            int(instrument_id),
-                            int(dive_num),
-                        )
-                    elif isinstance(
-                        pass_num_or_gps, str
-                    ) and pass_num_or_gps.startswith("status"):
-                        url_line = "%s?instrument_name=SG%03d&%s" % (
-                            urls_elts[1],
-                            int(instrument_id),
-                            pass_num_or_gps,
-                        )
-                    elif isinstance(pass_num_or_gps, str):
-                        url_line = "%s?instrument_name=SG%03d&dive=%d&%s" % (
-                            urls_elts[1],
-                            int(instrument_id),
-                            int(dive_num),
-                            urlencode({"gpsstr": pass_num_or_gps}),
-                        )
-                    else:
-                        log_error(
-                            "Unknown pass(%s) - skipping processing"
-                            % str(pass_num_or_gps)
-                        )
+            log_info(f"Starting processing on .urls pass({pass_num_or_gps})")
+            try:
+                urls_file = open(urls_file_name, "r")
+            except IOError as exception:
+                log_error(
+                    f"Could not open {urls_file_name} ({exception.args}) - no urls notified"
+                )
+            else:
+                for urls_line in urls_file:
+                    urls_line = urls_line.rstrip()
+                    log_debug(f"urls line = ({urls_line})")
+                    if urls_line == "":
                         continue
+                    if urls_line[0] != "#":
+                        log_info(f"Processing .urls line ({urls_line})")
+                        urls_elts = urls_line.split()
+                        if len(urls_elts) > 3:
+                            log_error(f"Too many entries on line ({urls_line})")
+                        cert_file = True
+                        if len(urls_elts) > 2:
+                            cert_file = os.path.expanduser(urls_elts[2])
+                        get_timeout = int(urls_elts[0])
+                        if isinstance(pass_num_or_gps, int) and pass_num_or_gps == 1:
+                            url_line = (
+                                "%s?instrument_name=SG%03d&dive=%d&files=perdive"
+                                % (
+                                    urls_elts[1],
+                                    int(instrument_id),
+                                    int(dive_num),
+                                )
+                            )
+                        elif isinstance(pass_num_or_gps, int) and pass_num_or_gps == 2:
+                            url_line = "%s?instrument_name=SG%03d&dive=%d&files=all" % (
+                                urls_elts[1],
+                                int(instrument_id),
+                                int(dive_num),
+                            )
+                        elif isinstance(
+                            pass_num_or_gps, str
+                        ) and pass_num_or_gps.startswith("status"):
+                            url_line = "%s?instrument_name=SG%03d&%s" % (
+                                urls_elts[1],
+                                int(instrument_id),
+                                pass_num_or_gps,
+                            )
+                        elif isinstance(pass_num_or_gps, str):
+                            url_line = "%s?instrument_name=SG%03d&dive=%d&%s" % (
+                                urls_elts[1],
+                                int(instrument_id),
+                                int(dive_num),
+                                urlencode({"gpsstr": pass_num_or_gps}),
+                            )
+                        else:
+                            log_error(
+                                "Unknown pass(%s) - skipping processing"
+                                % str(pass_num_or_gps)
+                            )
+                            continue
 
-                    log_debug(f"URL line ({url_line})")
-                    try:
-                        url_response = urlopen(url_line).read()
-                    except:
-                        log_error(f"Error opening {url_line}", "exc")
-                        log_error("Continuing processing...")
-                    else:
-                        log_info(f"url ({url_line}) responded with:{url_response}")
+                        log_debug(f"URL line ({url_line})")
+                        try:
+                            url_response = requests.get(
+                                url_line, verify=cert_file, timeout=get_timeout
+                            )
+                        except:
+                            log_error(f"Error opening {url_line}", "exc")
+                            log_error("Continuing processing...")
+                        else:
+                            log_info(
+                                f"url ({url_line}) responded with code:{repr(url_response)} text:{url_response.text}"
+                            )
 
-        log_info(f"Finished processing on .urls pass({pass_num_or_gps})")
+            log_info(f"Finished processing on .urls pass({pass_num_or_gps})")
+
+    for urls_file_name in (
+        os.path.join(base_opts.basestation_etc, ".urls"),
+        os.path.join(base_opts.mission_dir, ".urls"),
+    ):
+        process_one_urls(urls_file_name)
 
 
 def send_email(
@@ -445,6 +464,8 @@ def process_pagers(
                                 ) = comm_log.last_GPS_lat_lon_and_recov(
                                     fmt, dive_prefix
                                 )
+                                if session:
+                                    gps_message = "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f" % (gps_message, session.depth, session.obs_pitch, session.rh, session.int_press, session.volt_24V, session.volt_10V)
                                 reboot_msg = comm_log.has_glider_rebooted()
                             elif session:
                                 (
@@ -457,6 +478,10 @@ def process_pagers(
                                 )
                                 if msg_prefix:
                                     gps_message = f"{msg_prefix}{gps_message}"
+                                try:
+                                    gps_message = "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f" % (gps_message, session.depth, session.obs_pitch, session.rh, session.int_press, session.volt_24V, session.volt_10V)
+                                except:
+                                    log_error("Problem formatting GPS message", "exc")
                                 reboot_msg = None
                             else:
                                 log_warning(
@@ -864,7 +889,7 @@ def process_sftp_line(
         client.connect(host, username=user, password=pwd, key_filename=path_to_key)
         sftp = client.open_sftp()
     except:
-        log_error(f"Could not connect {sftp_line}")
+        log_error(f"Could not connect {sftp_line}", "exc")
         return 1
 
     for sftp_file_name_to_send in sftp_file_names_to_send:
@@ -1412,7 +1437,7 @@ def main():
                 str,
                 {
                     "help": "Which action to run",
-                    "choices": ("gps", "drift", "ftp", "sftp"),
+                    "choices": ("gps", "drift", "ftp", "sftp", "urls"),
                 },
             ),
             "ftp_files": BaseOpts.options_t(
@@ -1425,6 +1450,16 @@ def main():
                     "nargs": "*",
                 },
             ),
+            "pass_num": BaseOpts.options_t(
+                1,
+                ("BaseDotFiles",),
+                ("pass_num",),
+                int,
+                {
+                    "help": "URLs pass number",
+                    "nargs": "?",
+                },
+            ),
         },
     )
 
@@ -1435,11 +1470,12 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    if base_opts.basedotfiles_action in ("gps", "drift"):
+    if base_opts.basedotfiles_action in ("gps", "drift", "urls"):
         comm_log = CommLog.process_comm_log(
             os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
         )[0]
 
+    if base_opts.basedotfiles_action in ("gps", "drift"):
         process_pagers(
             base_opts,
             comm_log.last_complete_surfacing().sg_id,
@@ -1457,6 +1493,15 @@ def main():
             Globals.known_ftp_tags,
             ftp_type=".sftp",
         )
+    elif base_opts.basedotfiles_action == "urls":
+        process_urls(
+            base_opts,
+            base_opts.pass_num,
+            comm_log.last_complete_surfacing().sg_id,
+            comm_log.last_complete_surfacing().dive_num,
+        )
+    else:
+        log_error("Unkown action {base_opts.basedotfiles_action}")
 
 
 if __name__ == "__main__":

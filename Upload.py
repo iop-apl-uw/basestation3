@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2020 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2020, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -52,8 +52,8 @@ def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pd
 
     gzip_upload_file_name = "CHUNK.GZ"
     if(glider_zip == "gzip"):
-        fi = open(base_upload_file_name, 'r')
-        fo = gzip.open(gzip_upload_file_name, 'w', 9)
+        fi = open(base_upload_file_name, 'rb')
+        fo = gzip.open(gzip_upload_file_name, 'wb', 9)
         data = fi.read()
         fo.write(data)
         fi.close()

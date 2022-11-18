@@ -1,7 +1,7 @@
-#! /usr/bin/env python
+#!/usr/bin/python3
 
 ## 
-## Copyright (c) 2006, 2007, 2010, 2011, 2022 by the AUTHORS.  All rights reserved.
+## Copyright (c) 2006, 2007 by the AUTHORS.  All rights reserved.
 ## 
 ## This file contains proprietary information and remains the 
 ## unpublished property of the AUTHORS. Use, disclosure,
@@ -26,7 +26,7 @@ import shutil
 import os
 
 help_message = """
-usage: compare.py canonical_parameter_file log_or_capture_or_parm_file 
+usage: compare.py canonicalParameterSetName log_or_capture_or_parm_file 
 
 Compares parameters from a log, selftest capture, or launch parameter
 file with those in a canonical reference file. Parameters in the reference
@@ -40,22 +40,22 @@ if len(sys.argv) != 3:
     sys.exit(1)
 
 logname = sys.argv[2]
-canonname = sys.argv[1]
-
+canonname = sys.path[0] + "/canonicals/canon_" + sys.argv[1] + ".log"
 try:
     log = open(logname, "rb")
 except IOError:
-    print(("could not open input file %s" % logname))
+    print("could not open input file %s" % logname)
     sys.exit(1)
 
 try:
     canon = open(canonname)
 except:
-    print(("could not open canonical file %s" % canonname))
+    print("could not open canonical file %s" % canonname)
     sys.exit(1)
 
 canonmin = {}
 canonmax = {}
+canonopt = {}
 logdata = {}
 
 line_count = 0
@@ -68,43 +68,69 @@ for raw_line in log:
         continue
 
     columns = line.split(",")
-    if len(columns) == 2 and columns[0].startswith('$') and not columns[0].startswith('$_'):
+    if len(columns) == 2 and columns[0].startswith('$') and not columns[0].startswith('$_') and columns[1].find('*') == -1:
         #print columns
         key = columns[0].lstrip('$')
         try:
             logdata[key] = float(columns[1])
         except ValueError:
             pass
-    elif len(columns) == 5 and columns[3].startswith('$'):
+    elif len(columns) == 5 and columns[3].startswith('$') and columns[4].find('*') == -1:
         key = columns[3].lstrip('$')
-        logdata[key] = float(columns[4])
+        try:
+            logdata[key] = float(columns[4])
+        except ValueError:
+            print(f"Could not process line {line_count} - skipping")
+            continue
 
+
+	
 log.close()
 
+opt = False
+
 for line in canon:
-    if(line[0] == '#'):
+    if line[0] == '#':
         continue
-    columns = line.split(",")
+
+    if line.startswith("opt"):
+        columns = line.split(" ")[1].split(",")
+        opt = True
+    else:
+        columns = line.split(",")
+        opt = False
+
     key = columns[0].lstrip('$')
     try:
         canonmin[key] = float(columns[1])
-        canonmax[key] = float(columns[2])
+        canonmax[key] = float(columns[2]) 
+        canonopt[key] = opt
     except IndexError:
         sys.stderr.write("Could not handle %s (%s)\n" %(key, columns))
-
+ 
 canon.close()
 
-keys = sorted(list(logdata.keys()))
+critical = ["COMM_SEQ", "LOGGERS", "N_DIVES", "PRESSURE_SLOPE"]
+serious = ["D_TGT", "T_DIVE", "T_MISSION", "D_OFFGRID"]
 
+keys = sorted(list(logdata.keys()))
 for key in keys:
     if key in canonmin:
         if logdata[key] < canonmin[key] or logdata[key] > canonmax[key]:
-            print(("$%s,%f not between %f and %f (currently %f)" % (key, logdata[key], canonmin[key], canonmax[key], logdata[key])))
-    else:
-        print(("$%s in input not found in canonical reference" % key))
+            if key in critical:
+                status = "crit"
+            elif key in serious:
+                status = "sers"
+            else:
+                status = "warn"
 
-keys = sorted(canonmin.keys())
+            print ("[%s] $%s,%f not between %f and %f (currently %f)" % (status, key, logdata[key], canonmin[key], canonmax[key], logdata[key]))
 
 for key in keys:
-    if key not in logdata:
-        print(("$%s in canonical reference not found in input" % key))
+    if not key in canonmin:
+        print ("$%s in input not found in canonical reference" % key)
+
+keys = sorted(canonmin.keys())
+for key in keys:
+    if not key in logdata and canonopt[key] == False:
+        print ("$%s in canonical reference not found in input" % key)

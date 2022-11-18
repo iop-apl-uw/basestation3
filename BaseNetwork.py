@@ -381,6 +381,23 @@ var_template = {
             ],
             "coord_row": "log_MODEM_data_points",
         },
+        "log_FREEZE": {
+            "type": "f8",
+            "num_digits": 2,
+            "attributes": {
+                "_FillValue": -999,
+                "comment": "Freezing point measurement table",
+            },
+            "coord_cols": [
+                "depth",
+                "temperature",
+                "freezing_point",
+                "ice_condition",
+                "dives_since_last_call",
+                "surface_urgency",
+            ],
+            "coord_row": "log_FREEZE_data_points",
+        },
         "start_time": {
             "type": "f8",
             "num_digits": 2,
@@ -478,7 +495,7 @@ def create_ds_var(dso, template, var_name, data, row_coord=None):
     return da
 
 
-def convert_network_logfile(in_file_name, out_file_name):
+def convert_network_logfile(base_opts, in_file_name, out_file_name):
     """Converts a network log/eng file to text output
 
     Input:
@@ -492,7 +509,7 @@ def convert_network_logfile(in_file_name, out_file_name):
 
     """
 
-    convertor = "/usr/local/bin/log"
+    convertor = base_opts.network_log_decompressor or "/usr/local/bin/log"
 
     if not os.path.isfile(convertor):
         log_error(
@@ -659,6 +676,7 @@ class log_parser:
         self.gc_table = []
         self.state_table = []
         self.modem_table = []
+        self.freeze_table = []
 
     # Parsers
     def float32_cnv(self, x):
@@ -700,6 +718,12 @@ class log_parser:
             raise TypeError("Incorrect number of values for MODEM line", val)
         self.modem_table.append(val)
 
+    def add_to_freeze_table(self, param_name, val):
+        # pylint: disable=unused-argument
+        if len(val) != 6:
+            raise TypeError("Incorrect number of values for FREEZE line", val)
+        self.freeze_table.append(val)
+
     def add_to_state_table(self, param_name, val):
         # pylint: disable=unused-argument
         if len(val) < 2 or len(val) > 3:
@@ -731,6 +755,7 @@ class log_parser:
         "$GC": parser_type(float32_cnv, add_to_gc_table),
         "$MODEM": parser_type(float32_cnv, add_to_modem_table),
         "$STATE": parser_type(state_cnv, add_to_state_table),
+        "$FREEZE": parser_type(float32_cnv, add_to_freeze_table),
     }
 
     def parse_log_line(self, rs):
@@ -894,20 +919,24 @@ def make_netcdf_netork_file(network_logfile, network_profile, ts_outputfile=True
         # Convert time to epoch time
         create_ds_var(dso, var_template, "log_GC", data, row_coord=rc)
 
-        # Modem table
-        modem_table = None
-        for ll in lp.modem_table:
-            if modem_table is None:
-                modem_table = np.array(ll)
-            else:
-                modem_table = np.vstack([modem_table, ll])
+        # Modem and FREEZE tables
+        for tab, var_name in (
+            ("modem_table", "log_MODEM"),
+            ("freeze_table", "log_FREEZE"),
+        ):
+            t_table = None
+            for ll in getattr(lp, tab):
+                if t_table is None:
+                    t_table = np.array(ll)
+                else:
+                    t_table = np.vstack([t_table, ll])
 
-        if modem_table is not None:
-            # TODO: What a mess - if there is only one modem sentence, we can't form a
-            # 3x1 array
-            if len(np.shape(modem_table)) != 1:
-                rc = np.arange(np.shape(modem_table)[0])
-                create_ds_var(dso, var_template, "log_MODEM", modem_table, row_coord=rc)
+            if t_table is not None:
+                if len(np.shape(t_table)) == 1:
+                    # Convert to a 1xN table - makes the netcdf creation go.
+                    t_table = np.reshape(t_table, (1, np.shape(t_table)[0]))
+                rc = np.arange(np.shape(t_table)[0])
+                create_ds_var(dso, var_template, var_name, t_table, row_coord=rc)
 
     if time_v is not None:
         create_ds_var(dso, var_template, "time", time_v)
@@ -940,7 +969,7 @@ def make_netcdf_netork_file(network_logfile, network_profile, ts_outputfile=True
         ncf_filename,
         "w",
         encoding=encoding,
-        # engine="netcdf4",
+        engine="netcdf4",
         format="netCDF4",
     )
     return ncf_filename
@@ -977,9 +1006,15 @@ def make_netcdf_network_files(network_files, processed_files_list):
         net_files[dive_num].add(nf)
 
     for _, files in net_files.items():
-        ncf_filename = make_netcdf_netork_file(*sorted(files))
-        if ncf_filename:
-            processed_files_list.append(ncf_filename)
+        dive_net_files = sorted(files)
+        try:
+            ncf_filename = make_netcdf_netork_file(*dive_net_files)
+        except:
+            log_error(f"Failed to create cdf file from {dive_net_files}", "exc")
+            ret_val = 1
+        else:
+            if ncf_filename:
+                processed_files_list.append(ncf_filename)
 
     return ret_val
 
@@ -1297,7 +1332,9 @@ def main(
         )
         log_info(f"Created {processed_files_list}")
     elif base_opts.subparser_name == "log":
-        ret_val = convert_network_logfile(base_opts.log_in_file, base_opts.log_out_file)
+        ret_val = convert_network_logfile(
+            base_opts, base_opts.log_in_file, base_opts.log_out_file
+        )
         if ret_val is None:
             ret_val = 1
         else:

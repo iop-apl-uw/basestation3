@@ -19,6 +19,11 @@ scicon_ext.py,init_logger,process_tar_members
 cp_ext.py,init_logger,process_data_files
 edison_ext.py,init_logger,process_tar_members
 
+# From Vendor setups
+
+# Legato as a logdev
+legato_logdev_ext.py,init_logger,process_data_files,eng_file_reader
+
 # Place all cnf files at the end of this file!
 
 scct.cnf,init_sensor,asc2eng
@@ -26,6 +31,7 @@ mag.cnf,init_sensor,asc2eng
 qsp2150.cnf,init_sensor,asc2eng
 #ocr504i.cnf,init_sensor
 ocr504i_scicon.cnf,add_netcdf_meta
+#redox_scicon.cnf,add_netcdf_meta
 #ad2cp.cnf,init_logger,process_data_files
 echo.cnf,init_logger,process_data_files
 irrad.cnf,init_sensor,asc2eng
