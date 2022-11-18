@@ -86,10 +86,11 @@ printf "Conductivity frequency=%.3f, Cal value=%.3f\n" $Cfreq $C0
 set legatoPressure = `grep HLEGATO,N,pressure: $fname | cut -f2 -d: | cut -f1 -d' '`
 if ($legatoPressure != "") then
     set sgcalLegatoPressure = `grep legato_sealevel "$base"/sg"$1"/sg_calib_constants.m`
-    if ($sgcalLegatoPressure == "") then
-        echo "MISSING: Make sure to set legato_sealevel = $legatoPressure; in sg_calib_constants.m"
-    else
+    echo $sgcalLegatoPressure
+    if ( "$sgcalLegatoPressure" != "" ) then
         echo "UPDATE: legato_sealevel = $legatoPressure; in sg_calib_constants.m"
+    else
+        echo "MISSING: Make sure to set legato_sealevel = $legatoPressure; in sg_calib_constants.m"
     endif
 endif
 

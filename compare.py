@@ -64,7 +64,7 @@ for raw_line in log:
     try:
         line = raw_line.decode()
     except UnicodeDecodeError:
-        print("Could not process line %d of %s" % (line_count, logname))
+        # print("[error] Could not process line %d of %s" % (line_count, logname))
         continue
 
     columns = line.split(",")
@@ -83,8 +83,6 @@ for raw_line in log:
             print(f"Could not process line {line_count} - skipping")
             continue
 
-
-	
 log.close()
 
 opt = False
@@ -128,9 +126,9 @@ for key in keys:
 
 for key in keys:
     if not key in canonmin:
-        print ("$%s in input not found in canonical reference" % key)
+        print ("[unknown] $%s in input not found in canonical reference" % key)
 
 keys = sorted(canonmin.keys())
 for key in keys:
     if not key in logdata and canonopt[key] == False:
-        print ("$%s in canonical reference not found in input" % key)
+        print ("[unknown] $%s in canonical reference not found in input" % key)
