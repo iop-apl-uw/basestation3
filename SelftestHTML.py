@@ -47,7 +47,8 @@ trow = 0
 #     print("could not open %s" % selftestFiles[0])
 #     sys.exit(1)
 
-print("<html><body>")
+print("<html><head><title>%03d-selftest</title></head><body>" % sgnum)
+
 print('<div id="top">top*<a href="#capture">capture</a>*<a href="#parameters">parameters</a><div><br>')
 
 showingRaw = False
@@ -69,7 +70,7 @@ for raw_line in proc.stdout:
         print("</pre>")
         insideDir = False
 
-    if insideParam and line.find('not between') == -1 and line.find('canonical reference') == -1:
+    if insideParam and line.find('not between') == -1: 
         if len(line) > 2:
             insideParam = False
             print("</table>")
