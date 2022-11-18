@@ -72,7 +72,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/event-stream')
             self.send_header('Cache-Control', 'no-cache');
             self.send_header('Access-Control-Allow-Origin', '*')
-            # print("retry: 30000\n");
+            self.wfile.write(b'retry: 30000\n');
             self.end_headers()
 
             if glider in commFile and commFile[glider]:
@@ -85,16 +85,23 @@ class _RequestHandler(BaseHTTPRequestHandler):
                     data = data
 
             while True:
-                if glider in commFile and glider in modifiedFile and modifiedFile[glider] and commFile[glider]:
-                    modifiedFile[glider] = False
-                    data = commFile[glider].read().decode('utf-8', errors='ignore')
-                    data = data.replace("\n", "<br>")
-                    data = data.encode('utf-8', errors='ignore')
-                    if data:
-                        streamData(self.wfile, data)
-                        print(f"new comm: {data}")
+                if glider in modifiedFile and modifiedFile[glider]:
+                    if modifiedFile[glider] == "comm.log" and glider in commFile and commFile[glider]:
+                        modifiedFile[glider] = False
+                        data = commFile[glider].read().decode('utf-8', errors='ignore')
+                        data = data.replace("\n", "<br>")
+                        data = data.encode('utf-8', errors='ignore')
+                        if data:
+                            streamData(self.wfile, data)
+                    elif modifiedFile[glider] == "cmdfile":
+                        modifiedFile[glider] = False
+                        filename = 'sg' + glider + '/cmdfile'
+                        print("new cmdfile detected")
+                        with open(filename, 'rb') as file:
+                            data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore').replace("\n", "<br>")
+                            streamData(self.wfile, data.encode('utf-8', errors='ignore'))
 
-                if glider in newDive and newDive[glider] :
+                if glider in newDive and newDive[glider]:
                     newDive[glider] = False
                     streamData(self.wfile, bytes('NEW=' + newFile[glider], 'utf-8'))
 
@@ -136,7 +143,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.OK.value)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-
+            print("sending db")
             with sqlite3.connect('sg' + glider + '/sg' + glider + '.db') as conn:
                 conn.row_factory = rowToDict
                 cur = conn.cursor()
@@ -265,7 +272,10 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 #    close_fds=True,
                 #)
                 #results, err = p.communicate()
-                cmd = f"/usr/local/basestation3/cmdedit -d {path} -q -f {tmp}"
+                if 'force' in message and message['force'] == 1:
+                    cmd = f"{sys.path[0]}/cmdedit -d {path} -q -i -f {tmp}"
+                else:
+                    cmd = f"{sys.path[0]}/cmdedit -d {path} -q -f {tmp}"
                 print(cmd)
                 output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 results = output.stdout
@@ -361,6 +371,15 @@ def watchFilesystem(glider):
     observer.schedule(eventHandler, "./sg" + glider + "/plots", recursive=False)
     observer.start()
 
+    patterns = ["./sg" + glider + "/cmdfile"]
+    eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
+    eventHandler.on_created = onCreated
+    eventHandler.on_modified = onModified
+
+    observer = Observer()
+    observer.schedule(eventHandler, "./sg" + glider, recursive=False)
+    observer.start()
+
     while True:
         time.sleep(1)
 
@@ -380,7 +399,7 @@ def onModified(evt):
 
     print("modified %s" % evt.src_path)
     path = os.path.basename(evt.src_path)
-    if path == "comm.log":
+    if path == "comm.log" or path == "cmdfile":
         glider = os.path.dirname(evt.src_path).split('/')[1][2:]
         print(f"marking {glider} {path} as modified")
         modifiedFile[glider] = path

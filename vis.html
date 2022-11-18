@@ -68,12 +68,18 @@
             var vals = {};
             var update;
             var newDive;
+            var newCmdfile;
 
             line = e.data;
             if (line.startsWith('NEW=')) {
                 console.log(line);
                 newDive = parseInt(line.split('=')[1].slice(2,6));
                 loadPlots(newDive);
+            }
+            else if (line.startsWith('CMDFILE=')) {
+                newCmdfile = line.split('=')[1];
+                newCmdfile = newCmdfile.replaceAll("<br>", "\n");  
+                $('cmdfile').value = newCmdfile;
             }
             else {
                 // line = e.data.replace("4096", "<br>");
@@ -92,7 +98,7 @@
     var maxDive = 10000; 
     var currElt = 'diveplot';
 
-    function saveCmdfile() {
+    function saveCmdfile(force) {
         var xhttp = new XMLHttpRequest();
         var json = {};
         xhttp.onreadystatechange = function() {
@@ -100,6 +106,7 @@
                 alert(this.responseText);
             }
         }
+        json['force'] = force;
         json['file'] = 'cmdfile';
         json['contents'] = $('cmdfile').value; 
         xhttp.open("POST", "/save/" + currGlider, true);
@@ -154,11 +161,14 @@
         var course; 
         var dist;
         var n, e;
+        console.log("building table");
+        clearTable();
         xhttp.onreadystatechange = function() {
             if (this.readyState == 4 && this.status == 200) {
                 resp = JSON.parse(this.responseText);
                 for (d of resp) {
                     row = tbody.insertRow(1);
+                    console.log("length = " + $('mainTable').rows.length);
                     i = $('mainTable').rows.length % 2;
                     row.style.backgroundColor = colors[i];
                     cell = row.insertCell(0);
@@ -298,8 +308,8 @@
                     loadPlots(currDive);
                 }
                 engplots = resp['engplots'];
+                buildTable();
             }
-            buildTable();
         }
         xhttp.open("GET", "/status/" + glider, true);
         xhttp.send();
@@ -309,6 +319,12 @@
     function clearPlots() {
         while($('bottom').firstChild) {
             $('bottom').removeChild($('bottom').firstChild);
+        }
+    }
+
+    function clearTable() {
+        while($('mainTable').rows.length > 1) {
+            $('mainTable').deleteRow(1);
         }
     }
 
@@ -447,7 +463,8 @@
 <div id="divCmdfile" style="position: absolute; left:1060; top:425; width:600px; height:400px; font-size: 12px;">
     <textarea id="cmdfile" style="width:100%; height:100%; box-sizing:border-box;">
     </textarea>
-    <button id="btnSave" type="button" onclick="saveCmdfile();">Save</button>
+    <button id="btnSave" type="button" onclick="saveCmdfile(0);">Save</button>
+    <button id="btnForce" type="button" onclick="saveCmdfile(1);">Force</button>
     <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
     <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
     <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>
