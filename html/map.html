@@ -1,0 +1,32 @@
+<html>
+    <head>
+        <link rel="stylesheet" href="/script/leaflet.css" />
+        <script src="/script/leaflet.js"></script>
+        <script src="/script/L.KML.js"></script>
+    </head>
+    <body>
+        <div style="width: 100vw; height: 100vh" id="map"></div>
+        <script type="text/javascript">
+            // Make basemap
+            const map = new L.Map('map', { center: new L.LatLng(58.4, 43.0), zoom: 11 });
+            const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+
+            map.addLayer(osm);
+
+            // Load kml file
+            fetch('/kml/249')
+                .then(res => res.text())
+                .then(kmltext => {
+                    // Create new kml overlay
+                    const parser = new DOMParser();
+                    const kml = parser.parseFromString(kmltext, 'text/xml');
+                    const track = new L.KML(kml);
+                    map.addLayer(track);
+                    
+                    // Adjust map to show the kml
+                    const bounds = track.getBounds();
+                    map.fitBounds(bounds);
+                });
+        </script>
+    </body>
+</html>
