@@ -3,7 +3,6 @@
     a:visited {color:#0000ff; text-decoration:none}
     a:hover   {color:#ff0000; text-decoration:underline}
     a:active  {color:#ff0000; text-decoration:underline}
-    td {text-align:right; padding-left: 4px; }
 </style>
 
 <script>
@@ -75,6 +74,7 @@
                 console.log(line);
                 newDive = parseInt(line.split('=')[1].slice(2,6));
                 loadPlots(newDive);
+                loadLog(newDive);
             }
             else if (line.startsWith('CMDFILE=')) {
                 newCmdfile = line.split('=')[1];
@@ -134,6 +134,7 @@
         $('mainImage').removeAttribute('hidden');
         $('mainImage').src = '/png/' + currGlider + '/' + currDive + '/' + elt;
         $('mainTable').setAttribute('hidden', '');
+        $('logDiv').setAttribute('hidden', '');
         if (plotly) {
             $('mainImage').onclick = function() { popupPlotly(currDive, elt); }
         }
@@ -147,8 +148,10 @@
         $('mainImage').removeAttribute('hidden');
         $('mainImage').src = '/eng/' + currGlider + '/' + elt;
         $('mainTable').setAttribute('hidden', '');
+        $('logDiv').setAttribute('hidden', '');
         // $('mainImage').onclick = function() { popupPlotly(currDive, elt); }
         $('mainImage').onclick = null;
+        currElt = elt;
     }
 
     function buildTable() {
@@ -279,7 +282,15 @@
 
     function showTable() {
         $('mainImage').setAttribute('hidden', '');
+        $('logDiv').setAttribute('hidden', '');
         $('mainTable').removeAttribute('hidden');
+    }
+
+    function showLog() {
+        $('mainImage').setAttribute('hidden', '');
+        $('mainTable').setAttribute('hidden', '');
+        $('logDiv').removeAttribute('hidden');
+        currElt = 'logfile';
     }
 
     function loadCmdfile(dive) {
@@ -306,6 +317,7 @@
                 if (parseInt(resp['dive']) != currDive) {
                     currDive = maxDive = parseInt(resp['dive']);
                     loadPlots(currDive);
+                    loadLog(currDive);
                 }
                 engplots = resp['engplots'];
                 buildTable();
@@ -346,6 +358,19 @@
         $('bottom').appendChild(img);
     }
 
+    function loadLog(dive) {
+        var xhttp = new XMLHttpRequest();
+
+        xhttp.onreadystatechange = function() {
+            if (this.readyState == 4 && this.status == 200) {
+                $('logDiv').innerHTML = 'Dive ' + dive + '<br>';
+                $('logDiv').innerHTML += this.responseText;
+            }
+        }
+        xhttp.open("GET", "/log/" + currGlider + '/' + dive, true);
+        xhttp.send();
+    }
+
     function loadPlots(dive) {
         var xhttp = new XMLHttpRequest();
         var plots;
@@ -379,7 +404,13 @@
                     x += 200;
                 }
 
-                showPlot(currElt, plotly.includes(currElt));
+                if (currElt == 'logfile')
+                    showLog();
+                else if (engplots.includes(currElt))
+                    showEng(currElt, plotly.includes(currElt));
+                else 
+                    showPlot(currElt, plotly.includes(currElt));
+
                 // $('mainImage').src = '/png/' + currGlider + '/' + dive + '/diveplot';
                 // $('mainImage').removeAttribute('hidden'); 
                 // $('mainTable').setAttribute('hidden', ''); 
@@ -401,6 +432,8 @@
 
         if (currDive != c) {
             loadPlots(currDive);
+            loadLog(currDive);
+            currDive = c;
         }
     }
         
@@ -420,36 +453,38 @@
 
 <div id="main" style="position: absolute; left: 0; top: 0; width:1058px; height:894px; overflow:auto;">
     <img id="mainImage">
-    <table id="mainTable" hidden="hidden" style="height:894px; width:1058px; font-size:12px;" rules=groups> 
-    <colgroup span=4>
-    <colgroup span=6>
-    <colgroup span=2>
-    <colgroup span=3>
-    <colgroup span=4>
-    <tbody style="height:894px; width:1058px; overflow-y:auto; display:block">
-        <tr bgcolor="#aaaaaa" align="center">
-            <th>dive</th>
-            <th>end</th>
-            <th>length</th>
-            <th>depth</th>
-            <th>dog</th>
-            <th>cog</th>
-            <th>dtw</th>
-            <th>ctw</th>
-            <th>dtg</th>
-            <th>ctg</th>
-            <th>Umag</th>
-            <th>Udir</th>
-            <th>temp</th>
-            <th>RH</th>
-            <th>int P</th>
-            <th>volts10</th>
-            <th>% cap</th>
-            <th>volts24</th>
-            <th>% cap</th>
-        </tr>
-    </tbody>
+    <table rules=groups id="mainTable" hidden="hidden" style="height:894px; width:1058px; font-size:12px; text-align:right; padding-left: 4px;">
+
+        <colgroup span=4>
+        <colgroup span=6>
+        <colgroup span=2>
+        <colgroup span=3>
+        <colgroup span=4>
+        <tbody style="height:894px; width:1058px; overflow-y:auto; display:block">
+            <tr bgcolor="#aaaaaa" align="center">
+                <th>dive</th>
+                <th>end</th>
+                <th>length</th>
+                <th>depth</th>
+                <th>dog</th>
+                <th>cog</th>
+                <th>dtw</th>
+                <th>ctw</th>
+                <th>dtg</th>
+                <th>ctg</th>
+                <th>Umag</th>
+                <th>Udir</th>
+                <th>temp</th>
+                <th>RH</th>
+                <th>int P</th>
+                <th>volts10</th>
+                <th>% cap</th>
+                <th>volts24</th>
+                <th>% cap</th>
+            </tr>
+        </tbody>
     </table>
+    <div id="logDiv" hidden="hidden"></div>
 </div>
 
 <div id="links" style="position: absolute; left:1060; top: 0; width:600; height:20; font-size:10px;">
@@ -470,13 +505,14 @@
     <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>
 </div>
 
-<div id="bottomButtons" style="position: absolute; left: 0; top: 900; width: 1058; height: 180; overflow: auto;">
+<div id="bottomButtons" style="position: absolute; left: 0; top: 900; width: 80; height: 180; overflow: auto;">
+    <span style="float: right;"><a href="#" onclick="showLog();">log</a></span><br>
     <button id="btnUp" type="button" onclick="changeDive(1);" style="font-size: 18px; width:80px;">&#x2191</button><br><br>
     <button id="btnTable" type="button" onclick="showTable();" style="font-size: 48px; width:80px;">&#x2637</button><br><br>
     <button id="btnDown" type="button" onclick="changeDive(-1);" style="font-size: 18px; width:80px;">&#x2193</button>
 </div>
 
-<div id="bottom" style="position: absolute; left: 100; top: 900; width: 958; height: 180; overflow: auto;">
+<div id="bottom" style="position: absolute; left: 80; top: 900; width: 978; height: 180; overflow: auto;">
 
 </div>
 

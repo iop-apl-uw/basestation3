@@ -18,6 +18,7 @@ import sqlite3
 import tempfile
 import subprocess
 import sys
+import LogHTML
 
 modifiedFile = {}
 newDive = {}
@@ -72,8 +73,8 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self.send_header('Content-type', 'text/event-stream')
             self.send_header('Cache-Control', 'no-cache');
             self.send_header('Access-Control-Allow-Origin', '*')
-            self.wfile.write(b'retry: 30000\n');
             self.end_headers()
+            self.wfile.write(b'retry: 30000\n');
 
             if glider in commFile and commFile[glider]:
                 # data = commFile[glider].read().decode('utf-8').encode('unicode_escape')
@@ -96,7 +97,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
                     elif modifiedFile[glider] == "cmdfile":
                         modifiedFile[glider] = False
                         filename = 'sg' + glider + '/cmdfile'
-                        print("new cmdfile detected")
+                        print("sending new cmdfile")
                         with open(filename, 'rb') as file:
                             data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore').replace("\n", "<br>")
                             streamData(self.wfile, data.encode('utf-8', errors='ignore'))
@@ -116,6 +117,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
 
             commFile[glider] = open('sg' + glider + '/comm.log', 'rb')
             commFile[glider].seek(-1000, 2)
+            # modifiedFile[glider] = "comm.log" # do we need this to trigger initial send??
 
             (maxdv, dvplots, engplots, sgplots, plotlyplots) = buildFileList(glider)
 
@@ -143,7 +145,6 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self.send_response(HTTPStatus.OK.value)
             self.send_header('Content-type', 'application/json')
             self.end_headers()
-            print("sending db")
             with sqlite3.connect('sg' + glider + '/sg' + glider + '.db') as conn:
                 conn.row_factory = rowToDict
                 cur = conn.cursor()
@@ -196,7 +197,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
             glider = int(pieces[2])
             image = pieces[3]
             filename = 'sg%03d/plots/eng_%s.png' % (glider, image)
-            print(f"sending {filename}")
+            # print(f"sending {filename}")
             if not os.path.exists(filename):
                 self.send_response(HTTPStatus.NOT_FOUND.value)
             else:
@@ -205,6 +206,16 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 self.end_headers()
                 with open(filename, 'rb') as file:
                     self.wfile.write(file.read())
+
+        elif pieces[1] == 'log':
+            glider = int(pieces[2])
+            dive  = int(pieces[3])
+            filename = 'sg%03d/p%03d%04d.log' % (glider, glider, dive)
+            s = LogHTML.captureTables(filename)
+            self.send_response(HTTPStatus.OK.value)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            self.wfile.write(s.encode('utf-8', errors='ignore'))
 
         elif pieces[1] == 'png' or pieces[1] == 'div':
             glider = int(pieces[2])
@@ -397,11 +408,11 @@ def onCreated(evt):
 def onModified(evt):
     global modifiedFile
 
-    print("modified %s" % evt.src_path)
+    # print("modified %s" % evt.src_path)
     path = os.path.basename(evt.src_path)
     if path == "comm.log" or path == "cmdfile":
         glider = os.path.dirname(evt.src_path).split('/')[1][2:]
-        print(f"marking {glider} {path} as modified")
+        # print(f"marking {glider} {path} as modified")
         modifiedFile[glider] = path
 
 def run_server(port):
