@@ -49,6 +49,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import BaseDB
 import BaseDotFiles
 import BaseGZip
 import BaseNetCDF
@@ -1622,6 +1623,8 @@ def main():
                 instrument_id = int(base_opts.instrument_id)
             else:
                 instrument_id = 0
+    else:
+        base_opts.instrument_id = instrument_id
 
     log_info(f"Instrument ID = {str(instrument_id)}")
 
@@ -2201,6 +2204,14 @@ def main():
     # Collect up the possible files
     if base_opts.make_mission_profile or base_opts.make_mission_timeseries:
         dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
+
+    # Add netcdf files to mission sql database
+    if base_opts.add_sqllite:
+        for ncf in nc_files_created:
+            try:
+                BaseDB.loadDB(base_opts, ncf)
+            except:
+                log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
 
     # Run and dive extensions
     processed_file_names = []

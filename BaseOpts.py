@@ -140,8 +140,6 @@ class options_t:
             raise ValueError("kwargs is not a dict")
 
 
-# TODO: convert all booleans - "action": argparse.BooleanOptionalAction,
-
 global_options_dict = {
     "config_file_name": options_t(
         None,
@@ -202,11 +200,22 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
         },
     ),
+    "add_sqllite": options_t(
+        True,
+        ("Base",),
+        ("--add_sqllite",),
+        bool,
+        {
+            "help": "Add netcdf files to mission sqllite db",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
     #
     "mission_dir": options_t(
         None,
         (
             "Base",
+            "BaseDB",
             "BaseDotFiles",
             "BaseLogin",
             "BaseSMS",
@@ -243,6 +252,7 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
             "required": (
                 "Base",
+                "BaseDB",
                 "BaseDotFiles",
                 "BaseSMS",
                 "BaseLogin",
