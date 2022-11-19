@@ -15,6 +15,56 @@
         return ('0'+this).slice(-2);
     }
 
+   function bearing(pt1, pt2) {
+        var lat2 = pt2.lat*Math.PI/180;
+        var lat1 = pt1.lat*Math.PI/180;
+        var dLat = (lat2 - lat1);
+        var dLon = (pt2.lon-pt1.lon)*Math.PI/180;
+        var y = Math.sin(dLon) * Math.cos(lat2);
+        var x = Math.cos(lat1)*Math.sin(lat2) -
+                Math.sin(lat1)*Math.cos(lat2)*Math.cos(dLon);
+        var brng = (Math.atan2(y, x)*180/Math.PI + 360) % 360;
+
+        return brng;
+    }
+
+    function haversine(pt0, pt1) {
+        var lat0, lon0, lat1, lon1;
+        var sdlat_2, sdlon_2;
+        var a;
+        const R = 6378137.0;
+        const DTR = 1.745329251994330e-02;
+
+        lat0 = pt0.lat*DTR;
+        lat1 = pt1.lat*DTR;
+        lon0 = pt0.lon*DTR;
+        lon1 = pt1.lon*DTR;
+
+        sdlat_2 = Math.sin(0.5*(lat0 - lat1));
+        sdlon_2 = Math.sin(0.5*(lon0 - lon1));
+
+        a = sdlat_2*sdlat_2 + Math.cos(lat0)*Math.cos(lat1)*sdlon_2*sdlon_2;
+        if (a >= 1 || a <= 0) {
+            return 0;
+        }
+
+        return 2.0*R*Math.asin(Math.sqrt(a));
+    }
+
+    function formatPos(ddmm) {
+        var deg = Math.trunc(ddmm/100);
+        var min = Math.abs(ddmm - deg*100);
+        var zero = min < 10 ? '0' : '';
+        return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
+    }
+
+    function ddmm2dd(ddmm) {
+        var deg = Math.trunc(ddmm/100);
+        var min = ddmm - deg*100;
+
+        return deg + min/60;
+    }
+
     var blurTimer  = false;
     var isBlurred  = false;
     var isFlashing =false;
@@ -23,6 +73,8 @@
     var currGlider = '';
 
     var engplots;
+
+    var fixes = [];
 
     function startFlash() {
         isFlashing = true;
@@ -68,8 +120,12 @@
             var update;
             var newDive;
             var newCmdfile;
+            var d, pieces, lines;
+            var pt, fix;
+            var yr, mo, da, hr, mi, se;
+            var tstr;
 
-            line = e.data;
+            var line = e.data;
             if (line.startsWith('NEW=')) {
                 console.log(line);
                 newDive = parseInt(line.split('=')[1].slice(2,6));
@@ -87,6 +143,66 @@
                 var elt = $('commlog');
                 elt.innerHTML += line;
                 elt.scrollTop = elt.scrollHeight;
+                lines = line.split('<br>');
+                for (d of lines) {
+                    if (d.includes('GPS')) {
+                        pieces = d.split(' ');
+                        if (pieces.length == 2) {
+                            colons = pieces[0].split(':');
+                            gps    = pieces[1].split(',');
+                            da = parseInt(gps[1].substring(0,2))
+                            mo = parseInt(gps[1].substring(2,4))
+                            yr = 2000 + parseInt(gps[1].substring(4,6))
+                            hr = parseInt(gps[2].substring(0,2))
+                            mi = parseInt(gps[2].substring(2,4))
+                            se = parseInt(gps[2].substring(4,6))
+                            tstr = yr + '-' + mo.zeroPad() + '-' + da.zeroPad()
+                                   + 'T' + hr.zeroPad() + ':' + mi.zeroPad() + ':' + se.zeroPad() + '.000Z';
+                            
+                            fix = { pt: { 
+                                            lat: ddmm2dd(parseFloat(gps[3])),
+                                            lon: ddmm2dd(parseFloat(gps[4]))
+                                        },
+                                
+                                    t: Date.parse(tstr)/1000,
+                                  };
+
+                            if (fixes.length == 0 || fixes.at(-1).t < fix.t) {
+                                console.log('pushing fix at ' + fix.t);
+                                fixes.push(fix);
+                            } 
+                            if (fixes.length >= 2) {
+                                var sog, cog, dog, dt;
+                                dt = fixes.at(-1).t - fixes.at(-2).t;
+                                dog = haversine(fixes.at(-1).pt, fixes.at(-2).pt);
+                                cog = bearing(fixes.at(-2).pt, fixes.at(-1).pt);
+                                sog = dog/dt/0.514;
+                                $('SOG').innerHTML = sog.toFixed(2) + 'kts';
+                                $('COG').innerHTML = cog.toFixed(1) + '&deg;';
+                                $('DOG').innerHTML = dog.toFixed(0) + 'm';
+                                $('dt').innerHTML = dt.toFixed(0) + 's';
+                            }
+                            else {
+                                $('SOG').innerHTML = '0';
+                                $('COG').innerHTML = '0';
+                                $('DOG').innerHTML = '0';
+                                $('dt').innerHTML = '0';
+                            } 
+                            
+                            $('position').innerHTML = formatPos(parseFloat(gps[3])) + ',' + formatPos(parseFloat(gps[4])); 
+                            $('positionTime').innerHTML = '@ ' + tstr.replace('T', ' ');
+                            $('RH').innerHTML = colons[15];
+                            $('intP').innerHTML = colons[14];
+                            $('volts').innerHTML = colons[12];
+                            $('pitch').innerHTML = colons[10];
+                            $('depth').innerHTML = colons[11];
+                            $('dive').innerHTML = colons[0];
+                            $('cycle').innerHTML = colons[1];
+                            $('call').innerHTML = colons[2];
+                        }    
+                    }
+                }
+                
             }
             if (isBlurred && !isFlashing) {
                 startFlash();
@@ -130,6 +246,10 @@
         window.open('/selftest/' + currGlider);
     }
 
+    function popupMap() {
+        window.open('/map/' + currGlider);
+    }
+
     function showPlot(elt, plotly) {
         $('mainImage').removeAttribute('hidden');
         $('mainImage').src = '/png/' + currGlider + '/' + currDive + '/' + elt;
@@ -171,7 +291,6 @@
                 resp = JSON.parse(this.responseText);
                 for (d of resp) {
                     row = tbody.insertRow(1);
-                    console.log("length = " + $('mainTable').rows.length);
                     i = $('mainTable').rows.length % 2;
                     row.style.backgroundColor = colors[i];
                     cell = row.insertCell(0);
@@ -488,14 +607,48 @@
 </div>
 
 <div id="links" style="position: absolute; left:1060; top: 0; width:600; height:20; font-size:10px;">
-<a href="#" onclick="popupSelftest();">selftest</a>
+    <a href="#" onclick="popupSelftest();">selftest</a> *
+    <a href="#" onclick="popupMap();">map</a>
 </div>
 
-<div id="commlog" style="position: absolute; left:1060; top:20; width:800; height:400; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;">
+<div id="commlog" style="position: absolute; left:1060; top:20; width:640; height:400; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;">
 
 </div>
 
-<div id="divCmdfile" style="position: absolute; left:1060; top:425; width:600px; height:400px; font-size: 12px;">
+<div id="status" style="position: absolute; left:1060; top:430; width:640; height:230; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black;">
+    <div id="position" style="font-weight: bold; font-size: 4vmin; padding-left: 2vmin; padding-top: 1px; padding-bottom: 1px">
+    </div>
+    <div id="positionTime" style="font-weight: bold; font-size: 1.5vmin; padding-left: 2vmin; padding-top: 1px; padding-bottom: 2px">
+    </div>
+    <table style="table-layout:fixed; width: 300px;">
+        <tr>
+            <td>SOG</td><td id="SOG"></td>
+            <td>COG</td><td id="COG"></td>
+        </tr>
+        <tr>
+            <td>DOG</td><td id="DOG"></td>
+            <td>&Delta;t</td><td id="dt"></td>
+        </tr>
+        <tr>
+            <td>pitch</td><td id="pitch"></td>
+            <td>volts</td><td id="volts"></td>
+        </tr>
+        <tr>
+            <td>depth</td><td id="depth"></td>
+            <td>dive</td><td id="dive"></td>
+        </tr>
+        <tr>
+            <td>RH</td><td id="RH"></td>
+            <td>cycle</td><td id="cycle"></td>
+        </tr>
+        <tr>
+            <td>int P</td><td id="intP"></td>
+            <td>call</td><td id="call"></td>
+        </tr>
+    </table>
+</div>
+
+<div id="divCmdfile" style="position: absolute; left:1060; top:670; width:640px; height:380px; font-size: 12px;">
     <textarea id="cmdfile" style="width:100%; height:100%; box-sizing:border-box;">
     </textarea>
     <button id="btnSave" type="button" onclick="saveCmdfile(0);">Save</button>
