@@ -129,7 +129,7 @@ def displayTables(fname):
     print("</td>")
 
     print("<td>") # row 2, col 3 
-    print("&#8226 Sensor errors: x")
+    print("&#8226 Sensor errors: %.0f" % sum(L['ERRORS'][6:]))
     print("</td>")
 
     print("</tr>")
@@ -152,7 +152,7 @@ def displayTables(fname):
     print("</td>")
 
     print("<td>") # row 3, col 3 
-    print("&#8226 Motor errors: x")
+    print("&#8226 Motor errors: %.0f" % sum(L['ERRORS'][0:6]))
     print("</td>")
 
     print("</tr>")
