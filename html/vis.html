@@ -112,7 +112,15 @@
     }
 
     var evtSrc = null;
+    var lastSetup = 0;
     function setupStream(glider) {
+        if (Date.now() < lastSetup + 5000) {
+            setTimeout('setupStream(glider)', 5000);
+            console.log('too soon');
+            return;
+        }
+        lastSetup = Date.now();
+
         if (evtSrc != null) {
             evtSrc.close();
             console.log('closing previous stream');
