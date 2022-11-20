@@ -19,6 +19,8 @@ import tempfile
 import subprocess
 import sys
 import LogHTML
+from zipfile import ZipFile
+from io import BytesIO
 
 modifiedFile = {}
 newDive = {}
@@ -27,12 +29,10 @@ commFile = {}
 watchThread = {}
 
 def serveFile(wfile, filename):
+    print("serving " + '%s/%s' % (sys.path[0], filename))
     with open('%s/%s' % (sys.path[0], filename), 'rb') as file:
         wfile.write(file.read())
     
-def servePage(wfile):
-    serveFile(wfile, 'vis.html')
-
 def serveScript(wfile, script):
     if script.find('..') > -1 or script.find('/') > -1:
         return
@@ -90,6 +90,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
                     if modifiedFile[glider] == "comm.log" and glider in commFile and commFile[glider]:
                         modifiedFile[glider] = False
                         data = commFile[glider].read().decode('utf-8', errors='ignore')
+                        print(data)
                         data = data.replace("\n", "<br>")
                         data = data.encode('utf-8', errors='ignore')
                         if data:
@@ -116,7 +117,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 commFile[glider] = None
 
             commFile[glider] = open('sg' + glider + '/comm.log', 'rb')
-            commFile[glider].seek(-1000, 2)
+            commFile[glider].seek(-10000, 2)
             # modifiedFile[glider] = "comm.log" # do we need this to trigger initial send??
 
             (maxdv, dvplots, engplots, sgplots, plotlyplots) = buildFileList(glider)
@@ -163,8 +164,20 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(bytes(results, 'utf-8')) 
 
         elif pieces[1] == 'script':
-            # do we need headers?
-            serveScript(self.wfile, pieces[2])
+            print(pieces)
+            if pieces[2] == 'images':
+                self.send_response(HTTPStatus.OK.value)
+                self.send_header('Content-type', 'image/png')
+                self.end_headers()
+                filename = sys.path[0] + '/scripts/images/' + pieces[3]
+                with open(filename, 'rb') as file:
+                    self.wfile.write(file.read())
+            else:
+                # do we need headers? Yes
+                self.send_response(HTTPStatus.OK.value)
+                self.send_header('Content-type', 'text/html')
+                self.end_headers()
+                serveScript(self.wfile, pieces[2])
 
         elif pieces[1] == 'plots':
             glider = pieces[2]
@@ -243,6 +256,24 @@ class _RequestHandler(BaseHTTPRequestHandler):
             
                 if pieces[1] == 'div':
                     self.wfile.write(b'</body></html>')  
+        elif pieces[1] == 'map':
+            # glider is included but map.html figures it out from
+            # the URL that gets passed in the location bar...
+            self.send_response(HTTPStatus.OK.value)
+            self.send_header('Content-type', 'text/html')
+            self.end_headers()
+            serveFile(self.wfile, 'html/map.html')
+
+        elif pieces[1] == 'kml':
+            glider = pieces[2]
+            self.send_response(HTTPStatus.OK.value)
+            self.send_header('Content-type', 'application/vnd.google-earth.kml')
+            self.end_headers()
+            filename = 'sg' + glider + '/sg' + glider + '.kmz'
+            with open(filename, 'rb') as file:
+                zip = ZipFile(BytesIO(file.read()))
+                self.wfile.write(zip.open('sg' + glider + '.kml').read())
+
         else:
             glider = pieces[1]
             filename = 'sg' + glider + '/comm.log'
@@ -252,7 +283,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 self.send_header('Access-Control-Allow-Origin', '*')
                 self.end_headers()
 
-                servePage(self.wfile)
+                serveFile(self.wfile, 'html/vis.html')
                 if not glider in watchThread:
                     watchThread[glider] = _thread.start_new_thread(watchFilesystem, (glider,))
             else:
@@ -408,7 +439,7 @@ def onCreated(evt):
 def onModified(evt):
     global modifiedFile
 
-    # print("modified %s" % evt.src_path)
+    print("modified %s" % evt.src_path)
     path = os.path.basename(evt.src_path)
     if path == "comm.log" or path == "cmdfile":
         glider = os.path.dirname(evt.src_path).split('/')[1][2:]
