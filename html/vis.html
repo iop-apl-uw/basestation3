@@ -75,10 +75,12 @@
     var engplots;
 
     var fixes = [];
+    var connect_t = 0;
+
+    var fixTimer = null;
 
     function startFlash() {
         isFlashing = true;
-        console.log('flashing');
         blurTimer = window.setInterval(function() 
             {
                 document.title = document.title == currTitle ? currTitle + "..." : currTitle;
@@ -87,7 +89,6 @@
  
     window.onblur=function() {
         isBlurred = true;
-        console.log('blurring');
     }
 
     window.onfocus=function() { 
@@ -98,20 +99,40 @@
             clearInterval(blurTimer);
         }
         blurTimer = false;
-        console.log('stopping');
     }
 
+    function updateTimer() {
+        if (fixes.length > 0) {
+            $('lastFix').innerHTML = '' + (Date.now()/1000 - fixes.at(-1).t).toFixed(0) + 's';
+        }
+        if (connect_t > 0) {
+            $('lastConnect').innerHTML = '' + (Date.now()/1000 - connect_t).toFixed(0) + 's';
+        }
+        fixTimer = setTimeout('updateTimer()', 1000);
+    }
+
+    var evtSrc = null;
     function setupStream(glider) {
-        var evtSrc = new EventSource('/stream/' + glider);
+        if (evtSrc != null) {
+            evtSrc.close();
+            console.log('closing previous stream');
+        }
+        console.log('setting up stream');
+        evtSrc = new EventSource('/stream/' + glider);
 
         evtSrc.addEventListener('open', function(e) {
             // document.getElementById('main').style.border = '7px solid #cccccc';
         }, false);
 
         evtSrc.addEventListener('error', function(e) {
+            console.log('stream error detected');
+            evtSrc.close();
+            setupStream(glider);
+            /*
             if (e.readyState == EventSource.CLOSED) {
                 // document.getElementById('main').style.border = '7px solid red';
             }
+            */
         }, false);
 
         evtSrc.addEventListener('message', function(e) {
@@ -124,6 +145,7 @@
             var pt, fix;
             var yr, mo, da, hr, mi, se;
             var tstr;
+            const months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12};
 
             var line = e.data;
             if (line.startsWith('NEW=')) {
@@ -171,6 +193,9 @@
                                 console.log('pushing fix at ' + fix.t);
                                 fixes.push(fix);
                             } 
+                            if (fixTimer == null) {
+                                updateTimer();
+                            }
                             if (fixes.length >= 2) {
                                 var sog, cog, dog, dt;
                                 dt = fixes.at(-1).t - fixes.at(-2).t;
@@ -200,6 +225,27 @@
                             $('cycle').innerHTML = colons[1];
                             $('call').innerHTML = colons[2];
                         }    
+                    }
+                    else if (d.includes('Connected at')) {
+                        pieces = d.split(' ');
+                        if (pieces.length == 8) {
+                            yr = pieces[7];
+                            mo = months[pieces[3]];
+                            da = parseInt(pieces[4]);
+                            hr = parseInt(pieces[5].split(':')[0]);
+                            mi = parseInt(pieces[5].split(':')[1]);
+                            se = parseInt(pieces[5].split(':')[2]);
+                            tstr = yr + '-' + mo.zeroPad() + '-' + da.zeroPad()
+                                   + 'T' + hr.zeroPad() + ':' + mi.zeroPad() + ':' + se.zeroPad() + '.000Z';
+                            console.log(tstr);
+                            if (pieces[6] == 'PST')
+                                connect_t = Date.parse(tstr)/1000 + 8*3600;
+                            else
+                                connect_t = Date.parse(tstr)/1000 + 7*3600;
+                            if (fixTimer == null) {
+                                updateTimer();
+                            }
+                        }
                     }
                 }
                 
@@ -496,7 +542,7 @@
         var img;
         var x = 0;
         var idx;
-        var priority = ["diveplot", "raw_ctd", "ts", "vert_vel"];
+        var priority = ["diveplot", "ctd", "ts", "vert_vel", "pitch"];
 
         xhttp.onreadystatechange = function() {
             if (this.readyState == 4 && this.status == 200) {
@@ -572,14 +618,14 @@
 
 <div id="main" style="position: absolute; left: 0; top: 0; width:1058px; height:894px; overflow:auto;">
     <img id="mainImage">
-    <table rules=groups id="mainTable" hidden="hidden" style="height:894px; width:1058px; font-size:12px; text-align:right; padding-left: 4px;">
+    <table rules="groups" id="mainTable" hidden="hidden" style="height:894px; width:1040px; font-size:14px; text-align:right; font-family:verdana, arial, tahoma, 'sans serif';"> 
 
-        <colgroup span=4>
-        <colgroup span=6>
-        <colgroup span=2>
-        <colgroup span=3>
-        <colgroup span=4>
-        <tbody style="height:894px; width:1058px; overflow-y:auto; display:block">
+        <colgroup span=4><col><col><col><col></colgroup>
+        <colgroup span=6><col><col><col><col><col><col></colgroup>
+        <colgroup span=2><col><col></colgroup>
+        <colgroup span=3><col><col><col></colgroup>
+        <colgroup span=4><col><col><col><col></colgroup>
+        <tbody style="height:894px; width:1040px; overflow-y:auto;"> <!-- display:block"> -->
             <tr bgcolor="#aaaaaa" align="center">
                 <th>dive</th>
                 <th>end</th>
@@ -620,14 +666,22 @@
     </div>
     <div id="positionTime" style="font-weight: bold; font-size: 1.5vmin; padding-left: 2vmin; padding-top: 1px; padding-bottom: 2px">
     </div>
-    <table style="table-layout:fixed; width: 300px;">
+    <table style="table-layout:fixed; width: 600px;">
+        <col style="width:60px;">
+        <col style="width:140px;">
+        <col style="width:60px;">
+        <col style="width:140px;">
+        <col style="width:60px;">
+        <col style="width:140px;">
         <tr>
             <td>SOG</td><td id="SOG"></td>
             <td>COG</td><td id="COG"></td>
+            <td>last fix</td><td id="lastFix"></td>
         </tr>
         <tr>
             <td>DOG</td><td id="DOG"></td>
             <td>&Delta;t</td><td id="dt"></td>
+            <td>last call</td><td id="lastConnect"></td>
         </tr>
         <tr>
             <td>pitch</td><td id="pitch"></td>
