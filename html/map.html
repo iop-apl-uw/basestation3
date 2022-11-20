@@ -1,26 +1,75 @@
 <html>
     <head>
         <link rel="stylesheet" href="/script/leaflet.css" />
+        <link rel="stylesheet" href="/script/leaflet-ruler.css" />
         <script src="/script/leaflet.js"></script>
+        <script src="/script/leaflet-ruler.js"></script>
         <script src="/script/L.KML.js"></script>
     </head>
     <body>
         <div style="width: 100vw; height: 100vh" id="map"></div>
         <script type="text/javascript">
+
+            // openseamap says this is a TMS tile, but that doesn't appear to be true
+            // and the bog std tilelayer interface works so this is just here for
+            // reference in the event we ever do find it being funny
+            L.TileLayer.AIS = L.TileLayer.extend({
+                getTileUrl: function(coords) {
+                    return "https://tiles.marinetraffic.com/ais_helpers/shiptilesingle.aspx?output=png&sat=1&grouping=shiptype&tile_size=512&legends=1&zoom=" + coords.z + "&X=" + coords.x + "&Y=" + coords.y;
+                }
+            });
+
+            L.tileLayer.ais = function() {
+                return new L.TileLayer.AIS();
+            }
+
             // Make basemap
-            const map = new L.Map('map', { center: new L.LatLng(58.4, 43.0), zoom: 11 });
+            const map = new L.Map('map', { center: new L.LatLng(47.5, -122.3), zoom: 11 });
             const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
 
             map.addLayer(osm);
 
+            gebco = L.tileLayer.wms("https://depth.openseamap.org/geoserver/gwc/service/wms", 
+                                    {
+                                        layers: "gebco2021:gebco_2021",
+                                        format:"image/png",
+                                        uppercase: true,
+                                    });
+                           
+            map.addLayer(gebco); 
+            
+            ais = L.tileLayer("https://tiles.marinetraffic.com/ais_helpers/shiptilesingle.aspx?output=png&sat=1&grouping=shiptype&tile_size=512&legends=1&zoom={z}&X={x}&Y={y}",
+                                    {
+                                        tileSize: 512,
+                                    });
+
+            map.addLayer(ais);
+
+            var options = {
+                position: 'topleft',
+                lengthUnit: {
+                    factor: 0.539956803,    //  from km to nm
+                    display: 'nmiles',
+                    decimal: 2,
+                    label: 'distance'
+                }
+            };                               
+            L.control.ruler(options).addTo(map);
+ 
             // Load kml file
-            fetch('/kml/249')
+            var glider = window.location.pathname.split('/').at(-1)
+            document.title = glider + ' - map';
+            fetch('/kml/' + glider)
                 .then(res => res.text())
                 .then(kmltext => {
                     // Create new kml overlay
                     const parser = new DOMParser();
                     const kml = parser.parseFromString(kmltext, 'text/xml');
-                    const track = new L.KML(kml);
+                    const track = new L.KML(kml, { 
+                                            iconOptions: {
+                                                iconSize: [16,16],
+                                            }
+                                        });
                     map.addLayer(track);
                     
                     // Adjust map to show the kml
