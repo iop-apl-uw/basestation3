@@ -88,12 +88,27 @@ def displayTables(fname):
     print("</td>")
    
     print("<td>") # row 1, col 2
-    if 'AH0_24V' in L and '24V_AH' in L:
-        pct24 = 100*(1.0 - L['24V_AH'][1]/L['AH0_24V'])
-        print("&#8226 %5.2f of %5.2f AH used of 24V (%s%% remains)" % (L['24V_AH'][1], L['AH0_24V'], ctext("%5.2f" % pct24, "red" if pct24 < 10 else "green")))
+    if 'GPS1' in L:
+        if len(L['GPS1']) >= 8:
+            st = 2
+        else:
+            st = 1
+
+        print("&#8226 GPS1 time: %s s" % ctext(L['GPS1'][st + 2], "red" if L['GPS1'][st + 2] > 90 else "green"))
+        if (L['GPS1'][st + 3] > 2):
+            print(", HDOP was %s m" % L['GPS1'][st + 3])
     print("</td>")
 
     print("<td>") # row 1, col 3
+    if 'GPS2' in L:
+        if len(L['GPS2']) >= 8:
+            st = 2
+        else:
+            st = 1
+
+        print("&#8226 GPS2 time: %s s" % ctext(L['GPS2'][st + 2], "red" if L['GPS2'][st + 2] > 90 else "green"))
+        if (L['GPS2'][st + 3] > 2):
+            print(", HDOP was %s m" % L['GPS2'][st + 3])
     print("</td>")
 
     print("</tr>")
@@ -101,7 +116,9 @@ def displayTables(fname):
     print("<tr>") # row 2
 
     print("<td>") # row 2, col 1
-        # this used to be xmodem NAKs and timeouts
+    if 'AH0_24V' in L and '24V_AH' in L:
+        pct24 = 100*(1.0 - L['24V_AH'][1]/L['AH0_24V'])
+        print("&#8226 %5.2f of %5.2f AH used of 24V (%s%% remains)" % (L['24V_AH'][1], L['AH0_24V'], ctext("%5.2f" % pct24, "red" if pct24 < 10 else "green")))
     print("</td>")
   
     print("<td>") # row 2, col 2 
@@ -112,6 +129,7 @@ def displayTables(fname):
     print("</td>")
 
     print("<td>") # row 2, col 3 
+    print("&#8226 Sensor errors: x")
     print("</td>")
 
     print("</tr>")
@@ -134,6 +152,7 @@ def displayTables(fname):
     print("</td>")
 
     print("<td>") # row 3, col 3 
+    print("&#8226 Motor errors: x")
     print("</td>")
 
     print("</tr>")
@@ -156,7 +175,19 @@ def displayTables(fname):
     print("</td>")
 
     print("<td>") # row 4, col 2 
+    if 'XPDR_PINGS' in L:
+        print("&#8226 Transponder ping count: %d" % L['XPDR_PINGS'][0])
     ms = -1
+    print("</td>")
+
+    print("<td>") # row 4, col 3 
+    print("&#8226 Turning time %d s" % turn_time)
+    print("</td>")
+
+    print("</tr>")
+    print("<tr>") # row 5
+
+    print("<td>") # row 5, col 1 
     if 'ALTIM_TOP_PING' in L:
         dep = L['ALTIM_TOP_PING'][0]
         rng = L['ALTIM_TOP_PING'][1]
@@ -172,24 +203,6 @@ def displayTables(fname):
         if ms > -1:
             print("(m = %.2f, R^2 = %.2f)" % (ms, Rs))
 
-    print("</td>")
-
-    print("<td>") # row 4, col 3 
-    print("</td>")
-
-    print("</tr>")
-    print("<tr>") # row 5
-
-    print("<td>") # row 5, col 1 
-    if 'GPS1' in L:
-        if len(L['GPS1']) >= 8:
-            st = 2
-        else:
-            st = 1
-
-        print("&#8226 GPS1 time: %s s" % ctext(L['GPS1'][st + 2], "red" if L['GPS1'][st + 2] > 90 else "green"))
-        if (L['GPS1'][st + 3] > 2):
-            print(", HDOP was %s m" % L['GPS1'][st + 3])
 
     print("</td>")
 
@@ -215,39 +228,12 @@ def displayTables(fname):
     print("</td>")
 
     print("</tr>")
-    print("<tr>") # row 6
-
-    print("<td>") # row 6, col 1 
-
-    if 'GPS2' in L:
-        if len(L['GPS2']) >= 8:
-            st = 2
-        else:
-            st = 1
-
-        print("&#8226 GPS2 time: %s s" % ctext(L['GPS2'][st + 2], "red" if L['GPS2'][st + 2] > 90 else "green"))
-        if (L['GPS2'][st + 3] > 2):
-            print(", HDOP was %s m" % L['GPS2'][st + 3])
-
-    print("</td>")
-
-    print("<td>") # row 6, col 2 
-    if 'XPDR_PINGS' in L:
-        print("&#8226 Transponder ping count: %d" % L['XPDR_PINGS'][0])
-
-    print("</td>")
-
-    print("<td>") # row 6, col 3 
-    print("</td></tr>")
-    print("<tr>") # row 7
-    print("<td>&#8226 Time spent turning %d s</td>\n" % turn_time)
-    print("</tr></tbody></table>")
+    print("</tbody></table>")
 
     print("""
 <table rules=groups style="text-align:center; font-family:verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
 <colgroup span=6><colgroup span=5><colgroup span=4><colgroup span=6><colgroup span=3><colgroup span=3>
-<tbody>
-
+<thead>
 <tr bgcolor="#aaaaaa">
 <td rowspan=2>t(s)</td>
 <td rowspan=2>depth(m)</td>
@@ -282,6 +268,8 @@ def displayTables(fname):
 <td>VBD</td>
 <td>pit</td><td>roll</td><td>VBD</td>
 </tr>
+</thead>
+<tbody>
 """)
 
     color = ["#cccccc", "#eeeeee"]
