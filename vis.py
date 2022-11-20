@@ -274,6 +274,15 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 zip = ZipFile(BytesIO(file.read()))
                 self.wfile.write(zip.open('sg' + glider + '.kml').read())
 
+        elif pieces[1] == 'favicon.ico':
+            self.send_response(HTTPStatus.OK.value)
+            self.send_header('Content-type', 'image/x-icon')
+            self.end_headers()
+            filename = sys.path[0] + '/html/favicon.ico'
+            print("serving favicon")
+            with open(filename, 'rb') as file:
+                self.wfile.write(file.read())
+
         else:
             glider = pieces[1]
             filename = 'sg' + glider + '/comm.log'
