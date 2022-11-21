@@ -9,6 +9,7 @@
         <script src="/script/L.KML.js"></script>
         <script src="/script/Control.Coordinates.js"></script>
         <script src="/script/leaflet-reticle.js"></script>
+        <script src="/script/leaflet-kmz-src.js"></script>
 
         <style>
             .leaflet-toggle{
@@ -18,7 +19,6 @@
               background-position: center;
             }
         </style>
-
     </head>
     <body>
         <div style="width: 100vw; height: 100vh" id="map"></div>
@@ -76,6 +76,7 @@
             // Make basemap
             const map = new L.Map('map', { center: new L.LatLng(47.5, -122.3), zoom: 11 });
             const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 1.0 });
+            const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
 
 
             gebco = L.tileLayer.wms("https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?",
@@ -87,7 +88,7 @@
                            
             map.addLayer(gebco); 
             map.addLayer(osm);
-
+            
             // AIS
             
             ais = L.tileLayer("https://tiles.marinetraffic.com/ais_helpers/shiptilesingle.aspx?output=png&sat=1&grouping=shiptype&tile_size=512&legends=1&zoom={z}&X={x}&Y={y}",
@@ -106,16 +107,47 @@
 
             map.addLayer(chart);
 
+            // wind
+
+            wind = L.tileLayer("https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=b20fbf5f478d03dc8fd5541f62871c40",
+                                    {
+                                    });
+
+            // map.addLayer(wind); //  not on by default
+
+            var legend = L.control({position: 'bottomright'});
+
+            legend.onAdd = function (map) {
+                console.log('adding legend');
+                var div = L.DomUtil.create('div', 'wind legend');
+                div.innerHTML = '<img src="/script/images/OWM_windscale.png">';
+                return div;
+            };
+
+            // legend.addTo(map); // match the layer default
+            map.on('overlayadd', function(evt) {
+                console.log('overlayadd ' + evt.name);
+                if (evt.name === 'wind') {
+                    legend.addTo(this);
+                }
+            });
+            map.on('overlayremove', function(evt) {
+                console.log('overlayremove ' + evt.name);
+                if (evt.name === 'wind')
+                    this.removeControl(legend);
+            });
+
             // contours
-            /* not reliable? or not right implementation
-            contours = L.tileLayer.wms("http:///osm.franken.de/cgi-bin/mapserv.fcgi?",
+            
+            contours = L.tileLayer.wms("http://www.opendem.info:80/geoserver/opendem/ows?",
                                     {
                                         format: "image/png",
-                                        layers: "contour,contour2",
-                                        tileSize: 1024,
+                                        layers: "opendem:gebco_2021_contours",
+                                        opacity: 0.2,
+                                        // tileSize: 1024,
                                     });
-            map.addLayer(contours);
-            */
+            //  map.addLayer(contours); // not on by default
+            
             // coordinate display
 
             L.control.coordinates({
@@ -158,18 +190,38 @@
 
             var baseLayers = {
                 "OpenSteetMap": osm,
+                "NOAA+Stamen": noaa,
             }
 
             var overlayLayers = {
                 "GEBCO": gebco,
-                // "contours": contours,
+                "contours": contours,
                 "AIS": ais,
                 "chart marks": chart,
+                "wind": wind,
             }
 
             var layerControl = L.control.layers(baseLayers, overlayLayers).addTo(map);
             
+
+            // ice edge first
+
+            kmz = L.kmzLayer();
+            kmz.on('load', function(e) {
+                layerControl.addOverlay(e.layer, e.name);
+            });
+
+            // we have to maintain our own sync'd copy or we run into CORS problems
+            kmz.load('/kmz/arctic.kmz', 'Arctic ice edge');
+
             // KML and snap to KML
+
+            // glider stuff
+
+            // use the KML library vz KMZ as we've already got the plumbing
+            // to get it out of the kmz via the server and that lib
+            // does a better job of grouping in the layers so we can
+            // turn pieces on and off
 
             var glider = window.location.pathname.split('/').at(-1)
             document.title = glider + ' - map';
@@ -208,6 +260,7 @@
                     map.fitBounds(bounds);
                     if (ctr) map.panTo(ctr);
                 });
+
 
         </script>
     </body>
