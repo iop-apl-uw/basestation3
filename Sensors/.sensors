@@ -21,7 +21,7 @@ edison_ext.py,init_logger,process_tar_members
 
 # From Vendor setups
 
-# Legato as a logdev
+# Legato as a logdev - must follow legato_ext.py
 legato_logdev_ext.py,init_logger,process_data_files,eng_file_reader
 
 # Place all cnf files at the end of this file!

@@ -1579,9 +1579,13 @@ nc_var_metadata = {
     "log_CT_RECORDABOVE": [False, None, {}, nc_scalar],
     "log_CT_XMITABOVE": [False, None, {}, nc_scalar],
     "log_C_PITCH": [False, "i", {}, nc_scalar],
+    "log_C_PITCH_AUTO_DELTA": [False, "d", {}, nc_scalar],
+    "log_C_PITCH_AUTO_MAX": [False, "d", {}, nc_scalar],
     "log_C_ROLL_CLIMB": [False, "d", {}, nc_scalar],
     "log_C_ROLL_DIVE": [False, "d", {}, nc_scalar],
     "log_C_VBD": [False, "i", {}, nc_scalar],
+    "log_C_VBD_AUTO_DELTA": [False, "i", {}, nc_scalar],
+    "log_C_VBD_AUTO_MAX": [False, "i", {}, nc_scalar],
     "log_DATA_FILE_SIZE": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_DBDW": [False, "d", {}, nc_scalar],
     "log_DEEPGLIDER": [False, "i", {}, nc_scalar],
@@ -1680,10 +1684,13 @@ nc_var_metadata = {
     "log_HUMID": [False, "d", {}, nc_scalar],
     "log_ICE_FREEZE_MARGIN": [False, "d", {}, nc_scalar],
     "log_ID": [False, "i", {}, nc_scalar],
+    "log_IMPLIED_C_PITCH": [False, "c", {}, nc_scalar],  # Multi-valued string
+    "log_IMPLIED_C_VBD": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_INTERNAL_PRESSURE": [False, "d", {}, nc_scalar],
     "log_INT_PRESSURE_SLOPE": [False, "d", {}, nc_scalar],
     "log_INT_PRESSURE_YINT": [False, "d", {}, nc_scalar],
     "log_IRIDIUM_FIX": [False, "c", {}, nc_scalar],  # Multi-valued string
+    "log_IRON": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_KALMAN_ARGS": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_KALMAN_CONTROL": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_KALMAN_USE": [False, "i", {}, nc_scalar],
@@ -1712,11 +1719,31 @@ nc_var_metadata = {
         {},
         nc_scalar,
     ],  # Multi-valued string for version 67.00 and later
+    "log_MEM0": [
+        False,
+        "c",
+        {},
+        nc_scalar,
+    ],  # Multi-valued string for version 67.00 and later
+    "log_MEM1": [
+        False,
+        "c",
+        {},
+        nc_scalar,
+    ],  # Multi-valued string for version 67.00 and later
+    "log_MEM2": [
+        False,
+        "c",
+        {},
+        nc_scalar,
+    ],  # Multi-valued string for version 67.00 and later
     "log_MHEAD_RNG_PITCHd_Wd": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_MINV_10V": [False, "d", {}, nc_scalar],
     "log_MINV_24V": [False, "d", {}, nc_scalar],
     "log_MISSION": [False, "i", {}, nc_scalar],
     "log_MOTHERBOARD": [False, "i", {}, nc_scalar],
+    "log_NAV_DEVICE": [False, "i", {}, nc_scalar],
+    "log_NAV2_DEVICE": [False, "i", {}, nc_scalar],
     "log_NAV_MODE": [False, "i", {}, nc_scalar],
     "log_NETWORK_DEVICE": [False, "c", {}, nc_scalar],
     "log_N_FILEKB": [False, "i", {}, nc_scalar],
@@ -1727,12 +1754,15 @@ nc_var_metadata = {
     "log_NOCOMM_ACTION": [False, "i", {}, nc_scalar],
     "log_PHONE_DEVICE": [False, "d", {}, nc_scalar],
     "log_PHONE_SUPPLY": [False, "i", {}, nc_scalar],
+    "log_OPTIONS": [False, "i", {}, nc_scalar],
     "log_PITCH_ADJ_DBAND": [False, "d", {}, nc_scalar],
     "log_PITCH_ADJ_GAIN": [False, "d", {}, nc_scalar],
     "log_PITCH_AD_RATE": [False, "d", {}, nc_scalar],
     "log_PITCH_CNV": [False, "d", {}, nc_scalar],
     "log_PITCH_DBAND": [False, "d", {}, nc_scalar],
     "log_PITCH_GAIN": [False, "d", {}, nc_scalar],
+    "log_PITCH_GAIN_AUTO_DELTA": [False, "d", {}, nc_scalar],
+    "log_PITCH_GAIN_AUTO_MAX": [False, "d", {}, nc_scalar],
     "log_PITCH_MAX": [False, "d", {}, nc_scalar],
     "log_PITCH_MAXERRORS": [False, "i", {}, nc_scalar],
     "log_PITCH_MIN": [False, "i", {}, nc_scalar],
@@ -3424,8 +3454,6 @@ def create_nc_var(
         nc_var_metadata - dictionary for netcdf variables metadata
         nc_char_dims - dictionary of character dimensions currently in use by nc_file
     """
-    global nc_char_dims  # just for clarity
-
     try:
         md = nc_var_metadata[var_name]
     except KeyError:
