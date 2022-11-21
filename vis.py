@@ -28,25 +28,7 @@ newFile = {}
 commFile = {}
 watchThread = {}
 
-def serveFile(wfile, filename):
-    print("serving " + '%s/%s' % (sys.path[0], filename))
-    with open('%s/%s' % (sys.path[0], filename), 'rb') as file:
-        wfile.write(file.read())
-    
-def serveScript(wfile, script):
-    if script.find('..') > -1 or script.find('/') > -1:
-        return
-
-    serveFile(wfile, 'scripts/%s' % script)
             
-def streamData(wfile, data):
-    try:
-        wfile.write(b'data: ')
-        wfile.write(data)
-        wfile.write(b'\n\n')
-        wfile.flush()
-    except:
-        pass
 
 
 def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
@@ -59,6 +41,28 @@ def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
 class _RequestHandler(BaseHTTPRequestHandler):
     # Borrowing from https://gist.github.com/nitaku/10d0662536f37a087e1b
 
+    def sendHeader(self, code, type):
+        self.send_response(code)
+        self.send_header('Content-type', type)
+        self.end_headers()
+
+    def streamData(self, data):
+        try:
+            self.wfile.write(b'data: ')
+            self.wfile.write(data)
+            self.wfile.write(b'\n\n')
+            self.wfile.flush()
+        except:
+            pass
+
+    def serveFile(self, filename, type):
+        if filename.find('..') > -1:
+            return
+
+        self.sendHeader(HTTPStatus.OK.value, type)
+        with open('%s/%s' % (sys.path[0], filename), 'rb') as file:
+            self.wfile.write(file.read())
+        
     def do_GET(self):
         global commFile
         global modifiedFile
@@ -82,7 +86,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 data = data.replace("\n", "<br>")
                 data = data.encode('utf-8')
                 if data:
-                    streamData(self.wfile, data)
+                    self.streamData(data)
                     data = data
 
             while True:
@@ -94,18 +98,18 @@ class _RequestHandler(BaseHTTPRequestHandler):
                         data = data.replace("\n", "<br>")
                         data = data.encode('utf-8', errors='ignore')
                         if data:
-                            streamData(self.wfile, data)
+                            self.streamData(data)
                     elif modifiedFile[glider] == "cmdfile":
                         modifiedFile[glider] = False
                         filename = 'sg' + glider + '/cmdfile'
                         print("sending new cmdfile")
                         with open(filename, 'rb') as file:
                             data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore').replace("\n", "<br>")
-                            streamData(self.wfile, data.encode('utf-8', errors='ignore'))
+                            self.streamData(data.encode('utf-8', errors='ignore'))
 
                 if glider in newDive and newDive[glider]:
                     newDive[glider] = False
-                    streamData(self.wfile, bytes('NEW=' + newFile[glider], 'utf-8'))
+                    self.streamData(bytes('NEW=' + newFile[glider], 'utf-8'))
 
                 time.sleep(0.5)
 
@@ -122,9 +126,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
 
             (maxdv, dvplots, engplots, sgplots, plotlyplots) = buildFileList(glider)
 
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
+            self.sendHeader(HTTPStatus.OK.value, 'application/json')
             message = {}
             message['glider'] = 'SG' + glider
             message['dive'] = maxdv
@@ -143,9 +145,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
             else:
                 q = q + " ORDER BY dive ASC;"
 
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
+            self.sendHeader(HTTPStatus.OK.value, 'application/json')
             with sqlite3.connect('sg' + glider + '/sg' + glider + '.db') as conn:
                 conn.row_factory = rowToDict
                 cur = conn.cursor()
@@ -158,33 +158,20 @@ class _RequestHandler(BaseHTTPRequestHandler):
             cmd = "%s/SelftestHTML.py %s" % (sys.path[0], glider)
             output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
             results = output.stdout
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
+            self.sendHeader(HTTPStatus.OK.value, 'text/html')
             self.wfile.write(bytes(results, 'utf-8')) 
 
         elif pieces[1] == 'script':
             if pieces[2] == 'images':
-                self.send_response(HTTPStatus.OK.value)
-                self.send_header('Content-type', 'image/png')
-                self.end_headers()
-                filename = sys.path[0] + '/scripts/images/' + pieces[3]
-                with open(filename, 'rb') as file:
-                    self.wfile.write(file.read())
+                self.serveFile('scripts/images/' + pieces[3], 'image/png')
             else:
-                # do we need headers? Yes
-                self.send_response(HTTPStatus.OK.value)
-                self.send_header('Content-type', 'text/html')
-                self.end_headers()
-                serveScript(self.wfile, pieces[2])
+                self.serveFile('scripts/' + pieces[2], 'text/html')
 
         elif pieces[1] == 'plots':
             glider = pieces[2]
             dive = pieces[3]
             (dvplots, plotlyplots) = buildPlotsList(int(glider), int(dive))
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
+            self.sendHeader(HTTPStatus.OK.value, 'application/json')
             message = {}
             message['glider'] = 'SG' + glider
             message['dive'] = dive
@@ -195,9 +182,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
 
         elif pieces[1] == 'cmdfile':
             glider = pieces[2]
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'application/json')
-            self.end_headers()
+            self.sendHeader(HTTPStatus.OK.value, 'application/json')
             filename = 'sg' + glider + '/cmdfile'
             message = {}
             message['file'] = 'cmdfile'
@@ -211,8 +196,9 @@ class _RequestHandler(BaseHTTPRequestHandler):
             filename = 'sg%03d/plots/eng_%s.png' % (glider, image)
             # print(f"sending {filename}")
             if not os.path.exists(filename):
-                self.send_response(HTTPStatus.NOT_FOUND.value)
+                self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
             else:
+                self.sendHeader(HTTPStatus.OK.value, 'image/png')
                 self.send_response(HTTPStatus.OK.value)
                 self.send_header('Content-type', 'image/png')
                 self.end_headers()
@@ -235,15 +221,12 @@ class _RequestHandler(BaseHTTPRequestHandler):
             image = pieces[4]
             filename = 'sg%03d/plots/dv%04d_%s.%s' % (glider, dive, image, pieces[1])
             if not os.path.exists(filename):
-                self.send_response(HTTPStatus.NOT_FOUND.value)
+                self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
             else:
-                self.send_response(HTTPStatus.OK.value)
                 if pieces[1] == 'png':
-                    self.send_header('Content-type', 'image/png')
-                    self.end_headers()
+                    self.sendHeader(HTTPStatus.OK.value, 'image/png')
                 elif pieces[1] == 'div':
-                    self.send_header('Content-type', 'text/html')
-                    self.end_headers()
+                    self.sendHeader(HTTPStatus.OK.value, 'text/html')
                     self.wfile.write(b'<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>')
                     self.wfile.write(b'<html>')
                     title = "<head><title>%03d-%d-%s</title></head>" % (glider, dive, image)
@@ -258,46 +241,36 @@ class _RequestHandler(BaseHTTPRequestHandler):
         elif pieces[1] == 'map':
             # glider is included but map.html figures it out from
             # the URL that gets passed in the location bar...
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
-            serveFile(self.wfile, 'html/map.html')
+            self.serveFile('html/map.html', 'text/html')
 
         elif pieces[1] == 'kml':
             glider = pieces[2]
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'application/vnd.google-earth.kml')
-            self.end_headers()
+            self.sendHeader(HTTPStatus.OK.value, 'application/vnd.google-earth.kml')
             filename = 'sg' + glider + '/sg' + glider + '.kmz'
             with open(filename, 'rb') as file:
                 zip = ZipFile(BytesIO(file.read()))
                 self.wfile.write(zip.open('sg' + glider + '.kml').read())
 
+        elif pieces[1] == 'kmz':
+            kmzfile = pieces[2]
+            if kmzfile.find('..') > -1 or kmzfile.find('/') > -1:
+                self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
+                return
+
+            self.serveFile('data/' + kmzfile, 'application/vnd.google-earth.kmz')
+
         elif pieces[1] == 'favicon.ico':
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'image/x-icon')
-            self.end_headers()
-            filename = sys.path[0] + '/html/favicon.ico'
-            print("serving favicon")
-            with open(filename, 'rb') as file:
-                self.wfile.write(file.read())
+            self.serveFile('html/favicon.ico', 'image/x-icon')
 
         else:
             glider = pieces[1]
             filename = 'sg' + glider + '/comm.log'
             if os.path.exists(filename):
-                self.send_response(HTTPStatus.OK.value)
-                self.send_header('Content-type', 'text/html')
-                self.send_header('Access-Control-Allow-Origin', '*')
-                self.end_headers()
-
-                serveFile(self.wfile, 'html/vis.html')
+                self.serveFile('html/vis.html', 'text/html')
                 if not glider in watchThread:
                     watchThread[glider] = _thread.start_new_thread(watchFilesystem, (glider,))
             else:
-                self.send_response(HTTPStatus.NOT_FOUND.value)
-                self.send_header('Content-type', 'text/html');
-                self.end_headers()
+                self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
                 self.wfile.write(b'invalid glider')
                 
     def do_POST(self):
@@ -334,9 +307,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 print(results)
                 print("err")
                 print(err)
-                self.send_response(HTTPStatus.OK.value)
-                self.send_header('Content-type', 'text/plain')
-                self.end_headers()
+                self.sendHeader(HTTPStatus.OK.value, 'text/plain')
                 self.wfile.write(bytes(results, 'utf-8')) 
 
     def do_OPTIONS(self):
