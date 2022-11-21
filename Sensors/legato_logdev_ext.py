@@ -56,13 +56,15 @@ def init_logger(module_name, init_dict=None):
         log_error("No datafile supplied for init_loggers - version mismatch?")
         return -1
 
-    BaseNetCDF.register_sensor_dim_info(
-        BaseNetCDF.nc_legato_data_info,
-        "legato_data_point",
-        "legato_time",
-        True,
-        "legato",
-    )
+    # Already provided by legato_ext.py
+    
+    # BaseNetCDF.register_sensor_dim_info(
+    #     BaseNetCDF.nc_legato_data_info,
+    #     "legato_data_point",
+    #     "legato_time",
+    #     True,
+    #     "legato",
+    # )
     # results are computed in MDP
     init_dict[module_name] = {
         "logger_prefix": "rb",

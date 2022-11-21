@@ -283,15 +283,14 @@ def asc2eng(base_opts, module_name, datafile=None):
 
     ret_val = 1
 
-    if "legato_sealevel" not in datafile.calib_consts:
-        log_error("Missing legato_sealevel in sg_calib_constants - bailing out")
-        return -1
-    else:
-        sealevel = datafile.calib_consts["legato_sealevel"]
+    sealevel = None
+    if "rbr.pressure" in datafile.columns:
+        if "legato_sealevel" not in datafile.calib_consts:
+            log_error("Missing legato_sealevel in sg_calib_constants - bailing out")
+            return -1
+        else:
+            sealevel = datafile.calib_consts["legato_sealevel"]
 
-    # The pressure conversion is a total hack at the moment - the sealevel needs to be grabbed
-    # from something like the selftest.  Also, this code should use the legato.cnf file to get the
-    # conversion scales
     for asc_col_name, eng_col_name, scale, offset in (
         ("rbr.conduc", "rbr_conduc", 10000.0, 0.0),
         ("rbr.conducTemp", "rbr_conducTemp", 10000.0, 0.0),
