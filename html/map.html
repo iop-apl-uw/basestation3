@@ -2,41 +2,93 @@
     <head>
         <link rel="stylesheet" href="/script/leaflet.css" />
         <link rel="stylesheet" href="/script/leaflet-ruler.css" />
+        <link rel="stylesheet" href="/script/leaflet-reticle.css" />
+        <link rel="stylesheet" href="/script/Control.Coordinates.css" />
         <script src="/script/leaflet.js"></script>
         <script src="/script/leaflet-ruler.js"></script>
         <script src="/script/L.KML.js"></script>
+        <script src="/script/Control.Coordinates.js"></script>
+        <script src="/script/leaflet-reticle.js"></script>
+
+        <style>
+            .leaflet-toggle{
+              height: 35px;
+              width: 35px;
+              background-repeat: no-repeat;
+              background-position: center;
+            }
+        </style>
+
     </head>
     <body>
         <div style="width: 100vw; height: 100vh" id="map"></div>
         <script type="text/javascript">
 
-            // openseamap says this is a TMS tile, but that doesn't appear to be true
-            // and the bog std tilelayer interface works so this is just here for
-            // reference in the event we ever do find it being funny
-            L.TileLayer.AIS = L.TileLayer.extend({
-                getTileUrl: function(coords) {
-                    return "https://tiles.marinetraffic.com/ais_helpers/shiptilesingle.aspx?output=png&sat=1&grouping=shiptype&tile_size=512&legends=1&zoom=" + coords.z + "&X=" + coords.x + "&Y=" + coords.y;
+            function formatPos(dd) {
+                var deg = Math.trunc(dd);
+                var min = Math.abs(dd - deg)*60;
+                var zero = min < 10 ? '0' : '';
+                return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
+            }
+
+        </script>
+
+        <script type="text/javascript">
+
+            L.Control.toggle = L.Control.extend({
+                onAdd: function(map) {
+                    this._map = map;
+                    this._container = L.DomUtil.create('div', 'leaflet-bar');
+                    this._container.classList.add('leaflet-toggle');
+                    L.DomEvent.disableClickPropagation(this._container);
+                    L.DomEvent.on(this._container, 'click', this._toggleControl, this);
+                    this._choice = false;
+                    this._defaultCursor = this._map._container.style.cursor;
+                    this._allLayers = L.layerGroup();
+                    this._control = null;
+                    return this._container;
+                },
+
+                onRemove: function(map) {
+                    L.DomEvent.off(this._container, 'click', this._toggleControl, this);
+                    // Nothing more to do here
+                },
+                _toggleControl: function() {
+                    if (this._control.style.visibility == "visible")  
+                        this._control.style.visibility = "hidden"; 
+                    else 
+                        this._control.style.visibility = "visible"; 
+
+                    return false;
+                },
+                configure: function(control, image, state) {
+                    this._control = control;
+                    control.style.visibility = state ? "visible" : "hidden";
+                    this._container.style.backgroundImage = 'url(' + image + ')';
                 }
             });
 
-            L.tileLayer.ais = function() {
-                return new L.TileLayer.AIS();
+            L.control.toggle = function(opts) {
+                return new L.Control.toggle(opts);
             }
+
 
             // Make basemap
             const map = new L.Map('map', { center: new L.LatLng(47.5, -122.3), zoom: 11 });
-            const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png');
+            const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 1.0 });
 
-            map.addLayer(osm);
 
-            gebco = L.tileLayer.wms("https://depth.openseamap.org/geoserver/gwc/service/wms", 
+            gebco = L.tileLayer.wms("https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?",
                                     {
-                                        layers: "gebco2021:gebco_2021",
+                                        layers:"GEBCO_LATEST_2",
                                         format:"image/png",
-                                        uppercase: true,
+                                        opacity: 0.4,
                                     });
                            
             map.addLayer(gebco); 
+            map.addLayer(osm);
+
+            // AIS
             
             ais = L.tileLayer("https://tiles.marinetraffic.com/ais_helpers/shiptilesingle.aspx?output=png&sat=1&grouping=shiptype&tile_size=512&legends=1&zoom={z}&X={x}&Y={y}",
                                     {
@@ -45,37 +97,118 @@
 
             map.addLayer(ais);
 
+            // chart marks
+
+            chart = L.tileLayer("https://t1.openseamap.org/seamark/{z}/{x}/{y}.png", 
+                                    {
+                                        
+                                    });
+
+            map.addLayer(chart);
+
+            // contours
+            /* not reliable? or not right implementation
+            contours = L.tileLayer.wms("http:///osm.franken.de/cgi-bin/mapserv.fcgi?",
+                                    {
+                                        format: "image/png",
+                                        layers: "contour,contour2",
+                                        tileSize: 1024,
+                                    });
+            map.addLayer(contours);
+            */
+            // coordinate display
+
+            L.control.coordinates({
+                position:"bottomleft", //optional default "bootomright"
+                decimals:2, //optional default 4
+                decimalSeperator:".", //optional default "."
+                labelTemplateLat:"Lat: {y}", //optional default "Lat: {y}"
+                labelTemplateLng:"Lon: {x}", //optional default "Lng: {x}"
+                enableUserInput:true, //optional default true
+                useDMS:false, //optional default false
+                useLatLngOrder: true, //ordering of labels, default false-> lng-lat
+                labelFormatterLng : formatPos, //optional default none,
+                labelFormatterLat : formatPos, //optional default none
+            }).addTo(map);
+
+            // ruler tool
+
             var options = {
                 position: 'topleft',
                 lengthUnit: {
-                    factor: 0.539956803,    //  from km to nm
-                    display: 'nmiles',
+                    factor: 1, // 0.539956803,    //  from km to nm
+                    display: 'km',
                     decimal: 2,
                     label: 'distance'
                 }
             };                               
             L.control.ruler(options).addTo(map);
- 
-            // Load kml file
+
+            // reticle
+
+            reticle = L.control.reticle({
+                                            mapId: "map",
+                                            metric: true,
+                                            fetchElevation: false,
+                                        });
+            reticle.addTo(map); 
+            L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '/script/images/reticle.png', false);
+            
+            // layer control
+
+            var baseLayers = {
+                "OpenSteetMap": osm,
+            }
+
+            var overlayLayers = {
+                "GEBCO": gebco,
+                // "contours": contours,
+                "AIS": ais,
+                "chart marks": chart,
+            }
+
+            var layerControl = L.control.layers(baseLayers, overlayLayers).addTo(map);
+            
+            // KML and snap to KML
+
             var glider = window.location.pathname.split('/').at(-1)
             document.title = glider + ' - map';
+            
             fetch('/kml/' + glider)
                 .then(res => res.text())
                 .then(kmltext => {
                     // Create new kml overlay
                     const parser = new DOMParser();
                     const kml = parser.parseFromString(kmltext, 'text/xml');
-                    const track = new L.KML(kml, { 
+                    let ctr = null;
+                    track = new L.KML(kml, { 
                                             iconOptions: {
                                                 iconSize: [16,16],
                                             }
                                         });
+
                     map.addLayer(track);
-                    
+                    // layerControl.addOverlay(track, "KML"); // If we add controls for the dives and targets layers
+                                                              // then this "KML" control only turns off the glider.
+                                                              // If we don't add controls for dives and targets
+                                                              // then the "KML" control works as expected
+
+                    for (k of Object.keys(track._layers)) {
+                        if (track._layers[k].options.hasOwnProperty('id') && track._layers[k].options.id == "seagliderPositionHighlightState") {
+                            ctr = track._layers[k]._latlng;
+                        }
+                        if (track._layers[k].options.hasOwnProperty('name') 
+                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
+                            layerControl.addOverlay(track._layers[k], track._layers[k].options.name);
+                        }
+                    }
+
                     // Adjust map to show the kml
                     const bounds = track.getBounds();
                     map.fitBounds(bounds);
+                    if (ctr) map.panTo(ctr);
                 });
+
         </script>
     </body>
 </html>

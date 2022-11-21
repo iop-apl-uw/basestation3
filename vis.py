@@ -164,7 +164,6 @@ class _RequestHandler(BaseHTTPRequestHandler):
             self.wfile.write(bytes(results, 'utf-8')) 
 
         elif pieces[1] == 'script':
-            print(pieces)
             if pieces[2] == 'images':
                 self.send_response(HTTPStatus.OK.value)
                 self.send_header('Content-type', 'image/png')
