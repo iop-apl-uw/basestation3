@@ -204,9 +204,6 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
             else:
                 self.sendHeader(HTTPStatus.OK.value, 'image/png')
-                self.send_response(HTTPStatus.OK.value)
-                self.send_header('Content-type', 'image/png')
-                self.end_headers()
                 with open(filename, 'rb') as file:
                     self.wfile.write(file.read())
 
@@ -215,9 +212,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
             dive  = int(pieces[3])
             filename = 'sg%03d/p%03d%04d.log' % (glider, glider, dive)
             s = LogHTML.captureTables(filename)
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'text/html')
-            self.end_headers()
+            self.sendHeader(HTTPStatus.OK.value, 'text/html')
             self.wfile.write(s.encode('utf-8', errors='ignore'))
 
         elif pieces[1] == 'png' or pieces[1] == 'div':
