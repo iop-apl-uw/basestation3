@@ -40,7 +40,7 @@ import BaseOpts
 import CommLog
 import Utils
 
-from BaseLog import BaseLogger, log_info, log_critical, log_error
+from BaseLog import BaseLogger, log_info, log_critical, log_error, log_debug
 
 DEBUG_PDB = "darwin" in sys.platform
 
@@ -209,6 +209,32 @@ def loadDB(base_opts, filename):
         cur.close()
 
 
+def addValToDB(base_opts, dive_num, var_n, val):
+    """Adds a single value to the dive database"""
+    try:
+        if isinstance(val, int):
+            db_type = "INTEGER"
+        elif isinstance(val, float):
+            db_type = "FLOAT"
+        else:
+            log_error(f"Unknown db_type for {var_n}:{type(val)}")
+            return 1
+        db = base_opts.mission_dir + f"/sg{base_opts.instrument_id:03d}.db"
+        if not os.path.exists(db):
+            log_error(f"{db} does not exist - not updating {var_n}")
+            return 1
+        log_debug(f"Loading {var_n}:{val} dive:{dive_num} to {db}")
+        con = sqlite3.connect(db)
+        with con:
+            cur = con.cursor()
+            insertColumn(dive_num, cur, var_n, val, db_type)
+            cur.close()
+    except:
+        log_error(f"Failed to add {var_n} to dive {dive_num}", "exc")
+        return 1
+    return 0
+
+
 def main():
     """Command line interface for BaseDB"""
     base_opts = BaseOpts.BaseOptions(
@@ -223,6 +249,37 @@ def main():
                     "help": "List of netcdf files to add to the db",
                     "nargs": "*",
                     "action": BaseOpts.FullPathAction,
+                    "subparsers": ("addncfs",),
+                },
+            ),
+            "dive_num": BaseOpts.options_t(
+                None,
+                ("BaseDB",),
+                ("dive_num",),
+                int,
+                {
+                    "help": "Dive number to variable to",
+                    "subparsers": ("addval",),
+                },
+            ),
+            "value_name": BaseOpts.options_t(
+                None,
+                ("BaseDB",),
+                ("value_name",),
+                str,
+                {
+                    "help": "Name of variable to add to db",
+                    "subparsers": ("addval",),
+                },
+            ),
+            "value": BaseOpts.options_t(
+                None,
+                ("BaseDB",),
+                ("value",),
+                int,
+                {
+                    "help": "Value to add",
+                    "subparsers": ("addval",),
                 },
             ),
         },
@@ -252,11 +309,16 @@ def main():
             log_error("Can't figure out the instrument id - bailing out")
             return
 
-    if base_opts.netcdf_files:
-        for ncf in base_opts.netcdf_files:
-            loadDB(base_opts, ncf)
+    if base_opts.subparser_name == "addncfs":
+        if base_opts.netcdf_files:
+            for ncf in base_opts.netcdf_files:
+                loadDB(base_opts, ncf)
+        else:
+            rebuildDB(base_opts)
+    elif base_opts.subparser_name == "addval":
+        addValToDB(base_opts, base_opts.dive_num, base_opts.value_name, base_opts.value)
     else:
-        rebuildDB(base_opts)
+        log_error(f"Unknown parser {base_opts.subparser_name}")
 
     log_info(
         "Finished processing "
