@@ -130,7 +130,7 @@ if os.path.isfile(ctrlfile) and not os.access(ctrlfile, os.W_OK):
 # scan the comm.log to figure out what the latest dive is
 
 try:
-    comm = open(wd + "/comm.log", "r")
+    comm = open(wd + "/comm.log", "r", errors="ignore")
 except IOError:
     print("could not open comm.log in working directory")
     sys.exit(2)

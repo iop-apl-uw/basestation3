@@ -47,6 +47,7 @@ class _RequestHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
     def streamData(self, data):
+        print('streaming')
         try:
             self.wfile.write(b'data: ')
             self.wfile.write(data)
@@ -57,12 +58,17 @@ class _RequestHandler(BaseHTTPRequestHandler):
 
     def serveFile(self, filename, type):
         if filename.find('..') > -1:
+            self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
             return
 
-        self.sendHeader(HTTPStatus.OK.value, type)
-        with open('%s/%s' % (sys.path[0], filename), 'rb') as file:
-            self.wfile.write(file.read())
-        
+        if os.path.exists('%s/%s' % (sys.path[0], filename)):
+            self.sendHeader(HTTPStatus.OK.value, type)
+            with open('%s/%s' % (sys.path[0], filename), 'rb') as file:
+                self.wfile.write(file.read())
+        else:
+            print("file not found %s" % filename)
+            self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
+ 
     def do_GET(self):
         global commFile
         global modifiedFile
@@ -87,7 +93,6 @@ class _RequestHandler(BaseHTTPRequestHandler):
                 data = data.encode('utf-8')
                 if data:
                     self.streamData(data)
-                    data = data
 
             while True:
                 if glider in modifiedFile and modifiedFile[glider]:
