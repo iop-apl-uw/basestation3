@@ -12,8 +12,6 @@ requests==2.24.0
 # For GliderDAC and BaseNetwork support
 xarray>=0.21.1
 netCDF4>=1.5.8
-# For GliderTrack support
-oct2py>=5.5.1
 # For sftp support in BaseDotFiles
 paramiko>=2.10.4
 # For BaseRunner
@@ -21,9 +19,18 @@ inotify_simple
 sdnotify
 # For create_jail
 pylddwrap
+# For visualization
+parse
+watchdog
+sanic
 #
+# Below here - not included in released version
+#
+# Used in by misc tools (tools directory)
 pyproj
 shapely
+# For GliderTrack support
+oct2py>=5.5.1
 # For BaseSMS
 google-auth
 google-auth-oauthlib
