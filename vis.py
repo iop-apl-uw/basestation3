@@ -1,17 +1,12 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3.9
 
-from http.server import HTTPServer, BaseHTTPRequestHandler
-from http import HTTPStatus
 import json
 import time
-# import socket
-import _thread
-from socketserver import ThreadingMixIn
-import base64
 import os
 import os.path
 from parse import parse
 import glob
+import _thread
 from watchdog.observers import Observer
 from watchdog.events import PatternMatchingEventHandler
 import sqlite3
@@ -21,6 +16,9 @@ import sys
 import LogHTML
 from zipfile import ZipFile
 from io import BytesIO
+import sanic
+import aiofiles
+import asyncio
 
 modifiedFile = {}
 newDive = {}
@@ -28,7 +26,7 @@ newFile = {}
 commFile = {}
 watchThread = {}
 
-            
+app = sanic.Sanic("SGpilot")            
 
 
 def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
@@ -38,289 +36,230 @@ def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
 
     return data
 
-class _RequestHandler(BaseHTTPRequestHandler):
-    # Borrowing from https://gist.github.com/nitaku/10d0662536f37a087e1b
+#
+# GET handlers - most of the API
+#
 
-    def sendHeader(self, code, type):
-        self.send_response(code)
-        self.send_header('Content-type', type)
-        self.end_headers()
+@app.route('/png/<glider:int>/<dive:int>/<image:str>')
+async def pngHandler(request, glider: int, dive: int, image: str):
+    filename = f'sg{glider:03d}/plots/dv{dive:04d}_{image}.png'
+    return await sanic.response.file(filename, mime_type='image/png')
 
-    def streamData(self, data):
-        print('streaming')
-        try:
-            self.wfile.write(b'data: ')
-            self.wfile.write(data)
-            self.wfile.write(b'\n\n')
-            self.wfile.flush()
-        except:
-            pass
+@app.route('/div/<glider:int>/<dive:int>/<image:str>')
+async def divHandler(request, glider: int, dive: int, image: str):
+    filename = f'sg{glider:03d}/plots/dv{dive:04d}_{image}.div'
+    resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
+    async with aiofiles.open(filename, 'r') as file:
+        div = await file.read() 
 
-    def serveFile(self, filename, type):
-        if filename.find('..') > -1:
-            self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
-            return
+    resp = resp + div + '</body></html>'
+    return sanic.response.html(resp)
 
-        if os.path.exists('%s/%s' % (sys.path[0], filename)):
-            self.sendHeader(HTTPStatus.OK.value, type)
-            with open('%s/%s' % (sys.path[0], filename), 'rb') as file:
-                self.wfile.write(file.read())
+@app.route('/eng/<glider:int>/<image:str>')
+async def engHandler(request, glider:int, image:str):
+    filename = f'sg{glider:03d}/plots/eng_{image}.png'
+    return await sanic.response.file(filename, mime_type='image/png')
+
+@app.route('/script/<script:str>')
+async def scriptHandler(request, script:str):
+    filename = f'{sys.path[0]}/scripts/{script}'
+    return await sanic.response.file(filename, mime_type='text/html')
+
+@app.route('/script/images/<image:str>')
+async def scriptImageHandler(request, image:str):
+    filename = f'{sys.path[0]}/scripts/images/{image}'
+    return await sanic.response.file(filename, mime_type='image/png')
+
+@app.route('/favicon.ico')
+async def faviconHandler(request):
+    filename = f'{sys.path[0]}/html/favicon.ico'
+    return await sanic.response.file(filename, mime_type='image/x-icon')
+
+@app.route('/<glider:int>')
+async def mainHandler(request, glider:int):
+    filename = f'sg{glider}/comm.log'
+    if os.path.exists(filename):
+        if not glider in watchThread:
+            watchThread[glider] = _thread.start_new_thread(watchFilesystem, (glider,))
+
+        filename = f'{sys.path[0]}/html/vis.html'
+        return await sanic.response.file(filename, mime_type='text/html')
+    else:
+        return sanic.response.text("oops")             
+
+@app.route('/map/<glider:int>')
+async def mapHandler(request, glider:int):
+    filename = f'{sys.path[0]}/html/map.html'
+    return await sanic.response.file(filename, mime_type='text/html')
+
+@app.route('/kml/<glider:int>')
+async def kmlHandler(request, glider:int):
+    filename = f'sg{glider}/sg{glider}.kmz'
+    with open(filename, 'rb') as file:
+        zip = ZipFile(BytesIO(file.read()))
+        kml = zip.open(f'sg{glider}.kml', 'r').read()
+        return sanic.response.raw(kml)
+
+@app.route('/kmz/<file:str>')
+async def kmzHandler(request, file:str):
+    filename = f'{sys.path[0]}/data/{file}'
+    return await sanic.response.file(filename, mime_type='application/vnd.google-earth.kmz')
+
+@app.route('/plots/<glider:int>/<dive:int>')
+async def plotsHandler(request, glider:int, dive:int):
+    (dvplots, plotlyplots) = buildPlotsList(glider, dive)
+    message = {}
+    message['glider']      = f'SG{glider:03d}'
+    message['dive']        = dive
+    message['dvplots']     = dvplots
+    message['plotlyplots'] = plotlyplots
+    # message['engplots']    = engplots
+    
+    return sanic.response.json(message)
+
+@app.route('/log/<glider:int>/<dive:int>')
+async def logHandler(request, glider:int, dive:int):
+    filename = f'sg{glider:03d}/p{glider:03d}{dive:04d}.log'
+    s = LogHTML.captureTables(filename)
+    return sanic.response.html(s)
+
+@app.route('/status/<glider:int>')
+async def statusHandler(request, glider:int):
+    if glider in commFile and commFile[glider]:
+        commFile[glider].close()
+        commFile[glider] = None
+
+    print('comm.log opened')
+    commFile[glider] = open(f'sg{glider:03d}/comm.log', 'rb')
+    commFile[glider].seek(-10000, 2)
+    # modifiedFile[glider] = "comm.log" # do we need this to trigger initial send??
+
+    (maxdv, dvplots, engplots, sgplots, plotlyplots) = buildFileList(glider)
+
+    message = {}
+    message['glider'] = f'SG{glider:03d}'
+    message['dive'] = maxdv
+    message['engplots'] = engplots
+    # message['dvplots'] = dvplots
+    # message['sgplots'] = sgplots
+    # message['plotlyplots'] = plotlyplots
+    print(message)
+    return sanic.response.json(message)
+
+@app.route('/cmdfile/<glider:int>')
+async def cmdfileHandler(request, glider:int):
+    message = {}
+    message['file'] = 'cmdfile'
+    filename = f'sg{glider:03d}/cmdfile'
+    async with aiofiles.open(filename, 'r') as file:
+        message['contents']= await file.read() 
+
+    return sanic.response.json(message)
+
+@app.route('/db/<args:path>')
+async def dbHandler(request, args):
+    q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,volts_10V,volts_24V,capacity_24V,capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north FROM dives"
+    pieces = args.split('/')
+    if len(pieces) == 0 or len(pieces) > 2:
+        return sanic.response.text("oops")
+
+    try:
+        glider = int(pieces[0])
+    except:
+        return sanic.response.text("oops")
+
+    if len(pieces) == 2:
+        dive = int(pieces[1])
+        q = q + f" WHERE dive={dive};"
+    else:
+        q = q + " ORDER BY dive ASC;"
+
+    with sqlite3.connect(f'sg{glider:03d}/sg{glider:03d}.db') as conn:
+        conn.row_factory = rowToDict
+        cur = conn.cursor()
+        cur.execute(q)
+        data = cur.fetchall()
+        return sanic.response.json(data)
+
+@app.route('/selftest/<glider:int>')
+async def selftestHandler(request, glider:int):
+    cmd = f"{sys.path[0]}/SelftestHTML.py {glider:03d}"
+    output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    results = output.stdout
+    return sanic.response.html(results)
+
+#
+# POST handler - to save files back to basestation
+#
+
+@app.post('/save/<glider:int>')
+async def saveHandler(request, glider:int):
+    message = request.json
+    path = f'sg{glider:03d}'
+    tempfile.tempdir = path
+    tmp = tempfile.mktemp()
+    with open(tmp, 'w') as file:
+        file.write(message['contents'])
+        file.close()
+        print(message['contents'])
+        print("saved to %s" % tmp)
+
+        if 'force' in message and message['force'] == 1:
+            cmd = f"{sys.path[0]}/cmdedit -d {path} -q -i -f {tmp}"
         else:
-            print("file not found %s" % filename)
-            self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
- 
-    def do_GET(self):
-        global commFile
-        global modifiedFile
-        global newFile
-        global newDive
+            cmd = f"{sys.path[0]}/cmdedit -d {path} -q -f {tmp}"
+        print(cmd)
+        output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+        results = output.stdout
+        err = output.stderr
+        print("results")
+        print(results)
+        print("err")
+        print(err)
 
-        pieces = self.path.split('/')
-        if pieces[1] == 'stream':
-            glider = pieces[2]
-            print("detecting stream")
-            self.send_response(HTTPStatus.OK.value)
-            self.send_header('Content-type', 'text/event-stream')
-            self.send_header('Cache-Control', 'no-cache');
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            self.wfile.write(b'retry: 30000\n');
+    return sanic.response.text(results)
 
-            if glider in commFile and commFile[glider]:
-                # data = commFile[glider].read().decode('utf-8').encode('unicode_escape')
-                data = commFile[glider].read().decode('utf-8')
-                data = data.replace("\n", "<br>")
-                data = data.encode('utf-8')
+#
+# web socket (real-time streams)
+#
+
+@app.websocket('/stream/<glider:int>')
+async def streamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int):
+    global commFile
+    global modifiedFile
+    global newFile
+    global newDive
+
+    if glider in commFile and commFile[glider]:
+        # data = commFile[glider].read().decode('utf-8').encode('unicode_escape')
+        data = commFile[glider].read().decode('utf-8', errors='ignore')
+        if data:
+            await ws.send(data)
+
+    while True:
+        if glider in modifiedFile and modifiedFile[glider]:
+            if modifiedFile[glider] == "comm.log" and glider in commFile and commFile[glider]:
+                modifiedFile[glider] = False
+                data = commFile[glider].read().decode('utf-8', errors='ignore')
                 if data:
-                    self.streamData(data)
-
-            while True:
-                if glider in modifiedFile and modifiedFile[glider]:
-                    if modifiedFile[glider] == "comm.log" and glider in commFile and commFile[glider]:
-                        modifiedFile[glider] = False
-                        data = commFile[glider].read().decode('utf-8', errors='ignore')
-                        print(data)
-                        data = data.replace("\n", "<br>")
-                        data = data.encode('utf-8', errors='ignore')
-                        if data:
-                            self.streamData(data)
-                    elif modifiedFile[glider] == "cmdfile":
-                        modifiedFile[glider] = False
-                        filename = 'sg' + glider + '/cmdfile'
-                        print("sending new cmdfile")
-                        with open(filename, 'rb') as file:
-                            data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore').replace("\n", "<br>")
-                            self.streamData(data.encode('utf-8', errors='ignore'))
-
-                if glider in newDive and newDive[glider]:
-                    newDive[glider] = False
-                    self.streamData(bytes('NEW=' + newFile[glider], 'utf-8'))
-
-                time.sleep(0.5)
-
-            # self.close_connection()
-        elif pieces[1] == 'status':
-            glider = pieces[2]
-            if glider in commFile and commFile[glider]:
-                commFile[glider].close()
-                commFile[glider] = None
-
-            commFile[glider] = open('sg' + glider + '/comm.log', 'rb')
-            commFile[glider].seek(-10000, 2)
-            # modifiedFile[glider] = "comm.log" # do we need this to trigger initial send??
-
-            (maxdv, dvplots, engplots, sgplots, plotlyplots) = buildFileList(glider)
-
-            self.sendHeader(HTTPStatus.OK.value, 'application/json')
-            message = {}
-            message['glider'] = 'SG' + glider
-            message['dive'] = maxdv
-            # message['dvplots'] = dvplots
-            message['engplots'] = engplots
-            # message['sgplots'] = sgplots
-            # message['plotlyplots'] = plotlyplots
-            self.wfile.write(json.dumps(message).encode('utf-8'))
-
-        elif pieces[1] == 'db':
-            glider = pieces[2]
-            q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,volts_10V,volts_24V,capacity_24V,capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north FROM dives"
-            if len(pieces) == 4:
-                dive = int(pieces[3])
-                q = q + f" WHERE dive={dive};"
-            else:
-                q = q + " ORDER BY dive ASC;"
-
-            self.sendHeader(HTTPStatus.OK.value, 'application/json')
-            with sqlite3.connect('sg' + glider + '/sg' + glider + '.db') as conn:
-                conn.row_factory = rowToDict
-                cur = conn.cursor()
-                cur.execute(q)
-                data = cur.fetchall()
-                self.wfile.write(json.dumps(data).encode('utf-8'))
-                 
-        elif pieces[1] == 'selftest':
-            glider = pieces[2]
-            cmd = "%s/SelftestHTML.py %s" % (sys.path[0], glider)
-            output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            results = output.stdout
-            self.sendHeader(HTTPStatus.OK.value, 'text/html')
-            self.wfile.write(bytes(results, 'utf-8')) 
-
-        elif pieces[1] == 'script':
-            if pieces[2] == 'images':
-                self.serveFile('scripts/images/' + pieces[3], 'image/png')
-            else:
-                self.serveFile('scripts/' + pieces[2], 'text/html')
-
-        elif pieces[1] == 'plots':
-            glider = pieces[2]
-            dive = pieces[3]
-            (dvplots, plotlyplots) = buildPlotsList(int(glider), int(dive))
-            self.sendHeader(HTTPStatus.OK.value, 'application/json')
-            message = {}
-            message['glider'] = 'SG' + glider
-            message['dive'] = dive
-            message['dvplots'] = dvplots
-            message['plotlyplots'] = plotlyplots
-            # message['engplots'] = engplots
-            self.wfile.write(json.dumps(message).encode('utf-8'))
-
-        elif pieces[1] == 'cmdfile':
-            glider = pieces[2]
-            self.sendHeader(HTTPStatus.OK.value, 'application/json')
-            filename = 'sg' + glider + '/cmdfile'
-            message = {}
-            message['file'] = 'cmdfile'
-            with open(filename, 'rb') as file:
-                message['contents'] = file.read().decode('utf-8')
-            self.wfile.write(json.dumps(message).encode('utf-8'))
-
-        elif pieces[1] == 'eng':
-            glider = int(pieces[2])
-            image = pieces[3]
-            filename = 'sg%03d/plots/eng_%s.png' % (glider, image)
-            # print(f"sending {filename}")
-            if not os.path.exists(filename):
-                self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
-            else:
-                self.sendHeader(HTTPStatus.OK.value, 'image/png')
+                    await ws.send(data)
+            elif modifiedFile[glider] == "cmdfile":
+                modifiedFile[glider] = False
+                filename = f'sg{glider:03d}/cmdfile'
                 with open(filename, 'rb') as file:
-                    self.wfile.write(file.read())
+                    data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore')
+                    await ws.send(data)
 
-        elif pieces[1] == 'log':
-            glider = int(pieces[2])
-            dive  = int(pieces[3])
-            filename = 'sg%03d/p%03d%04d.log' % (glider, glider, dive)
-            s = LogHTML.captureTables(filename)
-            self.sendHeader(HTTPStatus.OK.value, 'text/html')
-            self.wfile.write(s.encode('utf-8', errors='ignore'))
+        if glider in newDive and newDive[glider]:
+            newDive[glider] = False
+            await ws.send('NEW=' + newFile[glider])
 
-        elif pieces[1] == 'png' or pieces[1] == 'div':
-            glider = int(pieces[2])
-            dive  = int(pieces[3])
-            image = pieces[4]
-            filename = 'sg%03d/plots/dv%04d_%s.%s' % (glider, dive, image, pieces[1])
-            if not os.path.exists(filename):
-                self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
-            else:
-                if pieces[1] == 'png':
-                    self.sendHeader(HTTPStatus.OK.value, 'image/png')
-                elif pieces[1] == 'div':
-                    self.sendHeader(HTTPStatus.OK.value, 'text/html')
-                    self.wfile.write(b'<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>')
-                    self.wfile.write(b'<html>')
-                    title = "<head><title>%03d-%d-%s</title></head>" % (glider, dive, image)
-                    self.wfile.write(bytes(title, 'utf-8'))
-                    self.wfile.write(b'<body>')
-
-                with open(filename, 'rb') as file:
-                    self.wfile.write(file.read())
-            
-                if pieces[1] == 'div':
-                    self.wfile.write(b'</body></html>')  
-        elif pieces[1] == 'map':
-            # glider is included but map.html figures it out from
-            # the URL that gets passed in the location bar...
-            self.serveFile('html/map.html', 'text/html')
-
-        elif pieces[1] == 'kml':
-            glider = pieces[2]
-            self.sendHeader(HTTPStatus.OK.value, 'application/vnd.google-earth.kml')
-            filename = 'sg' + glider + '/sg' + glider + '.kmz'
-            with open(filename, 'rb') as file:
-                zip = ZipFile(BytesIO(file.read()))
-                self.wfile.write(zip.open('sg' + glider + '.kml').read())
-
-        elif pieces[1] == 'kmz':
-            kmzfile = pieces[2]
-            if kmzfile.find('..') > -1 or kmzfile.find('/') > -1:
-                self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
-                return
-
-            self.serveFile('data/' + kmzfile, 'application/vnd.google-earth.kmz')
-
-        elif pieces[1] == 'favicon.ico':
-            self.serveFile('html/favicon.ico', 'image/x-icon')
-
-        else:
-            glider = pieces[1]
-            filename = 'sg' + glider + '/comm.log'
-            if os.path.exists(filename):
-                self.serveFile('html/vis.html', 'text/html')
-                if not glider in watchThread:
-                    watchThread[glider] = _thread.start_new_thread(watchFilesystem, (glider,))
-            else:
-                self.sendHeader(HTTPStatus.NOT_FOUND.value, 'text/html')
-                self.wfile.write(b'invalid glider')
-                
-    def do_POST(self):
-
-        pieces = self.path.split('/')
-        length = int(self.headers.get('content-length'))
-        message = json.loads(self.rfile.read(length).decode())
-        if pieces[1] == 'save':
-            path = 'sg' + pieces[2]
-            tempfile.tempdir = path
-            tmp = tempfile.mktemp()
-            with open(tmp, 'w') as file:
-                file.write(message['contents'])
-                file.close()
-                print(message['contents'])
-                print("saved to %s" % tmp)
-                #p = subprocess.Popen(
-                #    ["/usr/local/basestation3/cmdedit", "-d", path, "-q", "-f", tmp],
-                #    stdin=subprocess.PIPE,
-                #    stdout=subprocess.PIPE,
-                #    stderr=subprocess.PIPE,
-                #    close_fds=True,
-                #)
-                #results, err = p.communicate()
-                if 'force' in message and message['force'] == 1:
-                    cmd = f"{sys.path[0]}/cmdedit -d {path} -q -i -f {tmp}"
-                else:
-                    cmd = f"{sys.path[0]}/cmdedit -d {path} -q -f {tmp}"
-                print(cmd)
-                output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                results = output.stdout
-                err = output.stderr
-                print("results")
-                print(results)
-                print("err")
-                print(err)
-                self.sendHeader(HTTPStatus.OK.value, 'text/plain')
-                self.wfile.write(bytes(results, 'utf-8')) 
-
-    def do_OPTIONS(self):
-        # Send allow-origin header for preflight POST XHRs.
-        self.send_response(HTTPStatus.NO_CONTENT.value)
-        self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, POST')
-        self.send_header('Access-Control-Allow-Headers', 'content-type,cache-control')
-        self.end_headers()
-
-class ThreadedHTTPServer(ThreadingMixIn, HTTPServer):
-    """Handle requests in a separate thread."""
-
+        await asyncio.sleep(1)
+      
+#
+#  other stuff (non-Sanic)
+#
+ 
 def buildPlotsList(glider, dive):
     dvplots = []
     plotlyplots = []
@@ -341,7 +280,7 @@ def buildFileList(glider):
     engplots = []
     sgplots = []
     plotlyplots = []
-    for fullFile in glob.glob('sg' + glider + '/plots/*.png'):
+    for fullFile in glob.glob(f'sg{glider:03d}/plots/*.png'):
         file = os.path.basename(fullFile)
         if file.startswith('dv'):
             x = parse('dv{}_{}.png', file)
@@ -374,31 +313,31 @@ def watchFilesystem(glider):
     ignore_directories = True
     case_sensitive = True
 
-    patterns = ["./sg" + glider + "/comm.log"]
+    patterns = [f"./sg{glider:03d}/comm.log"]
     eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
     eventHandler.on_created = onCreated
     eventHandler.on_modified = onModified
 
     observer = Observer()
-    observer.schedule(eventHandler, "./sg" + glider, recursive=False)
+    observer.schedule(eventHandler, f"./sg{glider:03d}", recursive=False)
     observer.start()
 
-    patterns = ["./sg" + glider + "/plots/dv*png"]
+    patterns = [f"./sg{glider:03d}/plots/dv*png"]
     eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
     eventHandler.on_created = onCreated
     eventHandler.on_modified = onModified
 
     observer = Observer()
-    observer.schedule(eventHandler, "./sg" + glider + "/plots", recursive=False)
+    observer.schedule(eventHandler, f"./sg{glider:03d}/plots", recursive=False)
     observer.start()
 
-    patterns = ["./sg" + glider + "/cmdfile"]
+    patterns = [f"./sg{glider:03d}/cmdfile"]
     eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
     eventHandler.on_created = onCreated
     eventHandler.on_modified = onModified
 
     observer = Observer()
-    observer.schedule(eventHandler, "./sg" + glider, recursive=False)
+    observer.schedule(eventHandler, f"./sg{glider:03d}", recursive=False)
     observer.start()
 
     while True:
@@ -410,10 +349,12 @@ def onCreated(evt):
     print("created %s" % evt.src_path)
     path = os.path.basename(evt.src_path)
     if path.startswith('dv'):
-        glider = os.path.dirname(evt.src_path).split('/')[1][2:]
-        newDive[glider] = True
-        newFile[glider] = path
-
+        try:
+            glider = int(os.path.dirname(evt.src_path).split('/')[1][2:])
+            newDive[glider] = True
+            newFile[glider] = path
+        except:
+            pass
 
 def onModified(evt):
     global modifiedFile
@@ -421,15 +362,12 @@ def onModified(evt):
     print("modified %s" % evt.src_path)
     path = os.path.basename(evt.src_path)
     if path == "comm.log" or path == "cmdfile":
-        glider = os.path.dirname(evt.src_path).split('/')[1][2:]
-        # print(f"marking {glider} {path} as modified")
-        modifiedFile[glider] = path
-
-def run_server(port):
-    server_address = ('', port)
-    httpd = ThreadedHTTPServer(server_address, _RequestHandler)
-    print('serving at %s:%d' % server_address)
-    httpd.serve_forever()
+        try:
+            glider = int(os.path.dirname(evt.src_path).split('/')[1][2:])
+            # print(f"marking {glider} {path} as modified")
+            modifiedFile[glider] = path
+        except:
+            pass
 
  
 if __name__ == '__main__':
@@ -440,4 +378,4 @@ if __name__ == '__main__':
     else:
         port = 20001
 
-    run_server(port)
+    app.run(host='0.0.0.0', port=port, access_log=True, debug=True)

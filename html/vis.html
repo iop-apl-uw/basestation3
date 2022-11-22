@@ -111,39 +111,35 @@
         fixTimer = setTimeout('updateTimer()', 1000);
     }
 
-    var evtSrc = null;
+    let wsocket  = null;
     var lastSetup = 0;
     function setupStream(glider) {
-        if (Date.now() < lastSetup + 5000) {
-            setTimeout('setupStream(glider)', 5000);
-            console.log('too soon');
-            return;
-        }
-        lastSetup = Date.now();
-
-        if (evtSrc != null) {
-            evtSrc.close();
+    
+        if (wsocket != null) {
+            wsocket.close();
             console.log('closing previous stream');
         }
         console.log('setting up stream');
-        evtSrc = new EventSource('/stream/' + glider);
+        wsocket = new WebSocket('ws://localhost:20004/stream/' + glider);
 
-        evtSrc.addEventListener('open', function(e) {
-            // document.getElementById('main').style.border = '7px solid #cccccc';
-        }, false);
-
-        evtSrc.addEventListener('error', function(e) {
+        wsocket.onerror = function(error) {
             console.log('stream error detected');
-            evtSrc.close();
+            wsocket.close();
             setupStream(glider);
-            /*
-            if (e.readyState == EventSource.CLOSED) {
-                // document.getElementById('main').style.border = '7px solid red';
-            }
-            */
-        }, false);
+        };
 
-        evtSrc.addEventListener('message', function(e) {
+        wsocket.onclose = function(e) {
+            if (e.wasClean) {
+                console.log('stream closed cleanly');
+            }
+            else {
+                console.log('connection died');
+                setupStream(glider);
+            }
+        };
+
+        var chunk = "";
+        wsocket.onmessage = function(e) { 
             var pieces, content, data, i;
             var vals = {};
             var update;
@@ -164,16 +160,13 @@
             }
             else if (line.startsWith('CMDFILE=')) {
                 newCmdfile = line.split('=')[1];
-                newCmdfile = newCmdfile.replaceAll("<br>", "\n");  
                 $('cmdfile').value = newCmdfile;
             }
             else {
-                // line = e.data.replace("4096", "<br>");
-                // line = line + '<br>\n';
                 var elt = $('commlog');
                 elt.innerHTML += line;
                 elt.scrollTop = elt.scrollHeight;
-                lines = line.split('<br>');
+                lines = line.split('\n');
                 for (d of lines) {
                     if (d.includes('GPS')) {
                         pieces = d.split(' ');
@@ -256,12 +249,12 @@
                         }
                     }
                 }
-                
+                console.log('last line=[' + lines.at(-1) + ']') 
             }
             if (isBlurred && !isFlashing) {
                 startFlash();
             }
-        }, false);
+        };
     }
 
     var currDive = -1;
@@ -310,10 +303,10 @@
         $('mainTable').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
         if (plotly) {
-            $('mainImage').onclick = function() { popupPlotly(currDive, elt); }
+            $('mainImage').ondblclick = function() { popupPlotly(currDive, elt); }
         }
         else {
-            $('mainImage').onclick = null;
+            $('mainImage').ondblclick = null;
         }
         currElt = elt;
     }
@@ -324,7 +317,7 @@
         $('mainTable').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
         // $('mainImage').onclick = function() { popupPlotly(currDive, elt); }
-        $('mainImage').onclick = null;
+        $('mainImage').ondblclick = null;
         currElt = elt;
     }
 
