@@ -1,0 +1,1168 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 TRANSITIONAL//EN"> 
+<html>
+<head>
+<title>Parameter Reference Manual</title>
+<meta http-equiv="content-type" content="text/html; charset=iso-8859-1">
+<style type="text/css">
+body {
+	font-family: "Arial, Helvetica", sans-serif;
+	font-size: 12px; font-style: normal; font-weight: normal;
+	color: #000000; background-color: #999999;
+	text-align: center; margin: 0px; 
+}
+
+table {clear: both;}
+table.pageContainer {width: 85%; height: 100%; border-collapse: collapse;}
+table.pageContainer td.content {
+	border-left: solid 1px #000000; border-right: solid 1px #000000;
+	background-color: #FFFFFF; text-align: left; padding: 12px;
+	vertical-align: top;
+}
+
+<!--A{text-decoration:none}-->
+
+/* BEGIN P ELEMENTS */
+p {
+	font-family: "Arial,Helvetica", sans-serif;
+	font-size: 12px; font-style: normal; font-weight: normal;
+	color: #000000; padding: 0px; margin: 0px; clear: both;
+}
+
+p.docTitle        {font-size: 24px; font-weight: bold; text-align: center;}
+p.docSubTitle     {font-size: 16px; text-align: center;}
+p.chapterTitle    {font-size: 20px; font-weight: bold;}
+p.chapterSubTitle {font-size: 20px; font-weight: bold;}
+p.chapterSection  {font-size: 18px; font-weight: bold;}
+p.subSection      {font-size: 16px; font-weight: bold;}
+
+p.boldCenterEm {font-weight: bold; text-align: center;}
+p.fileQuote    {font-family: Courier New, Courier; font-size: 14px; font-weight: bold;}
+p.fileName     {font-weight: bold;}
+
+p.intlist {font-size: 10px; margin: 10px 48px;}
+p.indent  {font-size: 12px; margin: 10px 48px;}
+
+/* END P ELEMENTS */
+
+/* BEGIN EMPHASIS ELEMENTS */
+
+span.bold   {font-weight: bold;}
+span.italic {font-style: italic;}
+em.bold     {font-style: normal; font-weight: bold;}
+em.italic   {font-style: italic; font-weight: normal;}
+span.quote  {font-family: Courier New, Courier; font-size: 14px; font-weight: bold;}
+span.annotate {font-family: Arial, Helvetica, sans-serif; font-size: 12px; font-weight: normal;}
+
+/* END EMPHASIS ELEMENTS */
+
+/* BEGIN LAYOUT HELPERS */
+
+div.tiny  {padding: 2px; margin: 0px;}
+div.small {padding: 6px; margin: 0px;}
+div.med   {padding: 12px; margin: 0px;}
+div.large {padding: 16px; margin: 0px;}
+div.tab   {padding: 0px 8px;}
+
+/* END LAYOUT HELPERS */
+
+table.pdos {border: solid 1px; border-collapse: collapse; width: 80%;}
+table.pdos td {
+	font-family: "Arial, Helvetica", sans-serif;
+	font-size: 12px; font-style: normal; font-weight: normal;
+	padding: 4px 4px 4px 8px; border: solid 1px; border-collapse: collapse;
+}
+table.pdos td.left {font-weight: bold; white-space: nowrap; vertical-align: top;}
+
+table.pdos td.coltitle {font-style: italic; white-space: nowrap;}
+</style>
+</head>
+<body link="#000000">
+
+<table class="pageContainer" align="center"><tr><td class="content">
+
+<p class="docTitle"><a name="top">Parameter Reference Manual</a></p><p class="docSubTitle">	APPLIED PHYSICS LABORATORY<br>	UNIVERSITY OF WASHINGTON<br>	Version 67.x November 2021<br></p>
+
+<div class="large"></div>
+
+<p class="chapterTitle">Chapter 1</p>
+
+<p class="chapterSubTitle">Conventions and Introduction</p>
+
+<div class="med"></div>
+<p class="chapterSection">1.1  Conventions</p>
+<p>All parameters have a leading <span class="bold">$</span> in their name.   Parameters will be given in bold font, file names in italic.  Example (not default) values follow each parameter's description in square brackets.</p>
+
+<div class="large"></div>
+<p class="chapterSection">1.2  Introduction</p>
+
+<div class="med"></div>
+<p>This manual provides an alphabetical reference to the parameters that govern the operation of the Seaglider. All parameters described in this manual are changeable by the pilot via the command file, using the <span class="bold">name,value</span> (example: <span class="bold"><a href="#SM_CC">$SM_CC,475</a></span>) convention. Clicking a parameter name jumps to that parameter's description. The "Back" button returns to the previous location in the document.</p>
+
+<div class="small"></div>
+<p>Values reported by the Seaglider in the log file associated with a dive include all the pilot-changeable parameters described in this document.  The log file also contains other values that are given parameter-like names for consistency of parsing during post-dive data processing.</p>
+<div class="large"></div>
+ <p class="chapterTitle">Chapter 2</p>
+
+<p class="chapterSubTitle">Seaglider Command File (<span class="italic">cmdfile</span>) Directives</p>
+
+<div class="med"></div>
+<p class="chapterSection">2.1 Introduction</p>
+
+<div class="med"></div>
+<p>Command file (<span class="italic">cmdfile</span>) directives control the fundamental state of autonomous Seaglider operations.  The two fundamental states of autonomous Seaglider operation are diving and recovery.  The diving state is the normal repeating sequence of canonical dives.  The recovery state is when the Seaglider is held at the surface, calling to the basestation at pilot-specified intervals with an updated position and receiving instructions.  
+</p>
+
+<div class="small"></div>
+<p>Command file (<span class="italic">cmdfile</span>) directives are given as the last (and perhaps only) line of the command file, as stored on the basestation and transferred to the Seaglider during its communication session.
+</p>
+
+<div class="large"></div>
+<p class="chapterSection">2.2 Directives</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="go">$GO</a></span><br>This command will cause the glider to continue in its current mode of operation. If in an autonomous run, doing repeated dives, it will continue to dive according to its current set of parameters. If a <span class="bold">$GO</span> command is received while the Seaglider is in the recovery phase, the Seaglider will stay in the recovery phase.</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="resume">$RESUME</a></span><br>This command will cause the Seaglider to resume diving from within the recovery phase, using its current set of parameters. It acts just like a <span class="bold"><a href="GO">$GO</a></span> directive if the Seaglider is diving.
+An optional argument may be given following a comma to specify a comment that will be inserted into the header of the subsequent log file.
+</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="quit">$QUIT</a></span><br>This command will cause the Seaglider to go immediately to the recovery phase. The Seaglider will hold at the surface, sleeping <span class="bold"><a href="#T_RSLEEP">$T_RSLEEP</a></span> minutes between the end of one communications session and the start of the next.  There are about two minutes of communications overhead associated with each session, so that sessions are about (<span class="bold"><a href="#T_RSLEEP">$T_RSLEEP</a></span> + 2) minutes apart. Replacing the <span class="bold">$QUIT</span> directive with a <span class="bold"><a href="#RESUME">$RESUME</a></span> directive will cause the Seaglider to initiate a new dive with the existing set of parameters.</p>
+
+<div class="small"></div><p>The state table below outlines the effect of each directive on the glider in each of the two autonomous run states: diving and recovery.</p>
+
+<div class="small"></div>
+
+<table class="pdos" align=center>
+	<tr>
+		<td class="coltitle" style="border: none;">
+			State
+		</td>
+		<td class="coltitle" align=right style="border: none;">
+			Directive
+		</td>
+		<td class="left">
+			$GO
+		</td>
+		<td class="left">
+			$RESUME
+		</td>
+		<td class="left">
+			$QUIT
+		</td>	
+	</tr>
+	<tr>  		<td colspan="2"> 
+			Diving
+		</th>
+		<td>
+			Diving
+		</td>
+		<td>
+			Diving
+		</td>
+		<td>
+			Recovery
+		</td>
+	</tr>
+	<tr>
+ 		<td colspan="2" style="align: center;"> 
+			Recovery
+		</th>
+		<td>
+			Recovery
+		</td>
+		<td>
+			Diving
+		</td>
+		<td>
+			Recovery
+		</td>
+	</tr>
+</table>
+
+<div class="med"></div>
+<p><span class="bold"><a name="exit">$EXIT_TO_MENU</a></span><br>This command will cause the Seaglider exit the mission and return to the menu. Requires an operator be plugged into the serial console and confirm the command. </p>
+
+  
+<div class="med"></div>
+<p><span class="bold"><a name="PDOSCMD">$PDOSCMD,...</a></span><br>Executes the specified epdos command during parsing of the cmdfile. Primarily used when comms are intermittent and a short cmdfile is more likely to be transmitted than a pdoscmds.bat file.</p>
+
+
+<div class="large"></div> <p class="chapterTitle">Chapter 3</p>
+
+<p class="chapterSubTitle">Seaglider Parameters</p> 
+
+<div class="med"></div>
+
+<p>Example (not default) values follow each parameter's description in square brackets.
+</p>
+ 
+<div class="med"></div>
+<p><span class="bold"><a name="ah0_10v">$AH0_10V</a></span><br>The capacity of the 10V (low-voltage) primary battery pack (AmpHr). There is some safety factor in this number, but its accuracy has been verified in post-recovery depletion testing of Seaglider battery packs. The Seaglider goes into the recovery state if the total 10V battery pack amp-hours used on a mission equals or exceeds this value. [575]
+</p>
+ 
+<div class="med"></div>
+<p><span class="bold"><a name="ah0_24v">$AH0_24V</a></span><br>The capacity of the 24V (high-voltage) battery pack (AmpHr). There is some safety factor in this number, but its accuracy has been verified in post-recovery depletion testing of Seaglider battery packs. The Seaglider goes into the recovery state if the total 24V battery pack amp-hours used on a mission equals or exceeds this value. Should be set to zero in 15V common bus systems.[0]
+</p>
+ 
+<p><span class="bold"><a name="altim_bottom_ping_range">$ALTIM_BOTTOM_PING_RANGE</a></span><br>The range (in meters) from the presumed apogee depth (the nominal depth at which the glider will begin its apogee maneuver) to ping for the bottom. With this parameter set the altimeter will only ping a maximum of once per dive. A value of 0 disables  pinging. If the configured transponder device does not have a ping function, these parameters are ignored. See also <span class="bold"><a href="#ALTIM_PING_DEPTH">$ALTIM_PING_DEPTH</a></span>. [0]
+</p>
+ 
+<div class="med"></div>
+<p><span class="bold"><a name="ALTIM_BOTTOM_TURN_MARGIN">$ALTIM_BOTTOM_TURN_MARGIN</a></span><br>The distance (in meters) from the altimeter-detected seafloor (or an obstacle) at which to initiate the apogee maneuver (bottom turn). A value of 0 disables use of the altimeter to determine the start of the apogee maneuver. [0]
+</p>
+ 
+<div class="med"></div>
+<p><span class="bold"><a name="ALTIM_FREQUENCY">$ALTIM_FREQUENCY</a></span><br>The frequency (kHz) to use for altimeter pings. Must be an integer between 10 and 25. [15]
+</p>
+ 
+<div class="med"></div>
+
+<p>
+<span class="bold"><a name="ALTIM_PING_DELTA">$ALTIM_PING_DELTA</a></span><br>
+If the altimeter does not get a successful return and confirmation ping 
+return at <span class="bold"><a href="#ALTIM_PING_DEPTH">$ALTIM_PING_DEPTH</a></span>, it 
+will continue to issue pings at depth intervals of 
+<span class="bold">$ALTIM_PING_DELTA</span> meters.  See 
+<span class="bold"><a href="#ALTIM_PING_DEPTH">$ALTIM_PING_DEPTH</a></span>.
+</p>
+ 
+<div class="med"></div>
+
+<p>
+<span class="bold"><a name="ALTIM_PING_DEPTH">$ALTIM_PING_DEPTH</a></span><br>
+The depth of the first altimeter ping (meters), if non-zero. If the altimeter 
+gets a return, and a return to an immediate second confirmation ping, it will 
+set the bottom depth equal to the current depth plus the altimeter range to 
+the bottom. The apogee maneuver will be initiated at 
+<span class="bold">
+<a href="#ALTIM_BOTTOM_TURN_MARGIN">$ALTIM_BOTTOM_TURN_MARGIN</a></span> 
+meters above the bottom. If <span class="bold">$ALTIM_PING_DEPTH</span> is 
+non-zero, the altimeter timeout will be set so that the maximum range is the 
+larger of 0.75*<span class="bold">$ALTIM_PING_DEPTH</span> and 
+1.2*<span class="bold"><a href="#ALTIM_TOP_PING_RANGE">$ALTIM_TOP_PING_RANGE</a>
+</span>, 
+if set. The first test is meant to exclude surface returns. Note that 
+<span class="bold">$ALTIM_PING_DEPTH</span> and the 
+<span class="bold"><a href="#ALTIM_BOTTOM_PING_RANGE">$ALTIM_BOTTOM_PING_RANGE</a></span> 
+modes are mutually exclusive. If 
+<span class="bold"><a href="#ALTIM_BOTTOM_PING_RANGE">$ALTIM_BOTTOM_PING_RANGE</a></span> 
+is set, it will be honored to the exclusion of <span class="bold">$ALTIM_PING_DEPTH</span>.</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="ALTIM_PING_FIT">$ALTIM_PING_FIT</a></span><br>
+</p>
+ 
+ 
+<div class="med"></div>
+
+<p><span class="bold"><a name="ALTIM_PULSE">$ALTIM_PULSE</a></span><br>Pulse width (ms) of altimeter pings. Must be an integer between 1 and 9. [5]
+<div class="med"></div>
+ <p><span class="bold"><a name="ALTIM_SENSITIVITY">$ALTIM_SENSITIVITY</a></span><br>Sensitivity of the envelope detector on the altimeter. Must be an integer between 0 and 5. A value of 0 disables the envelope detector, causing the altimeter to trigger on any return at the right frequency. Values between 1 and 5 require that the return signal be above that voltage for the duration of a pulse width before triggering. [1]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="ALTIM_TOP_MIN_OBSTACLE">$ALTIM_TOP_MIN_OBSTACLE</a></span><br>The minimum obstacle depth (m) to honor in initiating a subsurface finish. [2]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="ALTIM_TOP_PING_RANGE">$ALTIM_TOP_PING_RANGE</a></span><br>The range (in meters) from the surface (this is simply depth) at which to ping the altimeter. A value of 0 disables a ping. If the configured transponder device does not have a ping function these parameters are ignored.  [0]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="ALTIM_TOP_TURN_MARGIN">$ALTIM_TOP_TURN_MARGIN</a></span><br>The distance (in meters) from an altimeter-detected obstacle at which to initiate the sub-surface finish. A value of 0 disables use of the altimeter to determine the start of the sub-surface finish. [0]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="APOGEE_PITCH">$APOGEE_PITCH</a></span><br>The intermediate pitch (position of the pitch mass) the glider will pitch to between the dive and climb phases, to prevent stalling. The glider assumes <span class="bold">$APOGEE_PITCH</span> when it observes a depth of greater than the apogee depth (whether by altimeter, <span class="bold"><a href="#D_TGT">$D_TGT</a></span> or <span class="bold"><a href="#D_GRID">$D_GRID</a></span>). The apogee maneuver also includes pumping the VBD to 0cc. After the apogee maneuver, the climb is initiated by changing both pitch and VBD to the opposite-signed values from the dive. [-5]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="C_PITCH">$C_PITCH</a></span><br> The center (neutral, or flat) position (A/D counts) for pitch. [2590] </p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="C_PITCH_AUTO_DELTA">$C_PITCH_AUTO_DELTA</a></span><br> Proportion of auto-tune correction to apply to pitch center. Use 0.0 to turn off auto-tune of pitch center [0.5] </p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="C_PITCH_AUTO_MAX">$C_PITCH_AUTO_MAX</a></span><br> Maximum correction in counts to apply to auto-tuned pitch center. Use 0.0 to turn off auto-tune of pitch center [100] </p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="C_ROLL_CLIMB">$C_ROLL_CLIMB</a></span><br>The center (neutral, or straight flight) position (A/D counts) for roll during the climb (positive pitch control) phase. Note that the two roll centers will probably be different. This was implemented to correct for roll biases induced by physical asymmetries in the glider. [2150]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="C_ROLL_DIVE">$C_ROLL_DIVE</a></span><br>The center (neutral, or straight flight) position (A/D counts) for roll during the dive (negative pitch control) phase. [2150]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="C_VBD">$C_VBD</a></span><br> The center (neutrally buoyant at a specified density) position (A/D counts) for VBD. [2735]</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="C_VBD_AUTO_DELTA">$C_VBD_AUTO_DELTA</a></span><br> Proportion of auto-tune correcton to apply to VBD center. Use .0.0 to turn off auto-tune of VBD center. [0.5] [2735]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="C_VBD_AUTO_MAX">$C_VBD_AUTO_MAX</a></span><br> Maximum correction in counts to apply to auto-tuned VBD center. Use 0.0 to turn off auto-tune of VBD center [100] </p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="CALL_NDIVES">$CALL_NDIVES</a></span><br> The number of profiles (dive/climb cycles) to perform before attempting communications.  The Seaglider will surface normally following each dive, and GPS fixes 1 and 2 will be obtained at each surfacing, independent of the value of <span class="bold">$CALL_NDIVES</span>. [1]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="CALL_TRIES">$CALL_TRIES</a></span><br> The maximum number of phone calls to attempt during a surfacing between dives. [5]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="CALL_WAIT">$CALL_WAIT</a></span><br>The wait time (seconds) between call attempts during a communication session. This is time to allow the Iridium satellite geometry to change and perhaps improve the connection. [60]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="CAPMAXSIZE">$CAPMAXSIZE</a></span><br>The maximum size (in bytes, prior to compression) of the capture file to upload. If the capture file is to be uploaded (either due to critical output, <span class="bold"><a href="#CAPUPLOAD">$CAPUPLOAD</a></span> set to 1, or a completed self-test) and the capture file size exceeds this value, the glider will create a new capture file that is of the size requested, per the following strategy. If there are no critical lines of output, then the first <span class="bold">$CAPMAXSIZE</span> bytes will be sent. If there are critical lines of output, then the new capture file will consist of the first 20 of the critical output lines, with a window of output lines surrounding each critical line.</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="CAPUPLOAD">$CAPUPLOAD</a></span><br>A Boolean value that determines if the capture file from the current dive should be uploaded or not: 0 means do not upload the capture file, 1 means upload the capture file. If critical output is captured during a dive, or a self-test has been completed, then the capture file is uploaded regardless of the value of  <span class="bold">$CAPUPLOAD</span>.  [0]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="CF8_MAXERRORS">$CF8_MAXERRORS</a></span><br>The maximum number of CF8 errors allowed before the Seaglider goes into recovery state.  A CF8 error is counted against the <span class="bold">$CF8_MAXERRORS</span> limit when a CF8 open or write call continues to fail (returns an error code) after three retries.</p>
+ 
+<div class="med"></div>
+<p><span class="bold"><a name="COMM_SEQ">$COMM_SEQ</a></span><br>Bitmask specification of the sequence of files transfer to use. cmdfile is always transferred and is always the first transfer. 
+<ul> 
+<li>Bit 0 (1): Transfer control files other than cmdfile (targets, science, tcm2mat.cal, pdoscmds.bat, logger control files (if bit 2 also set).
+<li>Bit 1 (2): Transfer regular log and data files
+<li>Bit 2 (4): Transfer logger data files
+<li>Bit 3 (8): Transfer compact (network) packed log and profile files
+</ul>
+<p>Sequencing is fixed. Bits only control whether files of that type will
+be transferred. Fixed sequence is cmdfile, control files, compact files
+for current dive, compact files for archived dives, regular files for
+current dive, logger files for current dive, regular files for 
+archived (or resend) dives, logger files for archived (or resend)
+dives.  A value of zero indicates only the cmdfile will be transferred. [7]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="COMPASS_DEVICE">$COMPASS_DEVICE</a></span><br>
+Configuration flags specifying the specific model and port for 
+transponder/altimeter device. This integer value is equal to 
+port_number + 16*type_number. For example, for a TCM2-50 (type 0) on general 
+purpose port 1,  <span class="bold">$COMPASS_DEVICE</span> = 1 + 16*0 = 1.  
+The array of available models is specific to each device. The compass device 
+must be defined (parameter cannot be -1). 
+See <span class="bold"><a href="#DEVICE">$DEVICE</span>[<span class="bold">1</span>/<span class="bold">2</span>/<span class="bold">3</span>/<span class="bold">4</span>/ <span class="bold">5</span>/<span class="bold">6</span>]</a>.  [1]</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="COMPASS_USE">$COMPASS_USE</a></span><br>
+This parameter was used in development to assess compass problems. It allows 
+for faking inputs and outputs in compass calibration and reporting.  For 
+normal operations, it should be set to 4, which 
+trusts inputs from the compass, uses and reports fully calibrated 
+values, and reports raw magnetic data for tracking and calculation
+of magnetic calibrations.
+
+<ul> 
+<li><p>Bit 0 Heading source: </p>
+  <ul>
+     <li><p>0 = cal'd mag field w/PR corrections</p>
+     <li><p>1 = direct from compass (effectively ignores PR bits)</p>
+  </ul>
+<li><p>Bit 1 Autocal mode (SP3003 onboard magnetic adaption):</p>
+  <ul>
+     <li><p>0 = no autocalibration</p>
+     <li><p>1 = leave compass on throughout flight and run autocalibration</p>
+  </ul>
+<li><p>Bit 2 (4) Offboard cal mode (include mag data in engineering file):</p>
+  <ul>
+     <li><p>0 = do not report mag values in data file</p>
+     <li><p>1 = report mag values in data file for use in onboard or offboard cal</p>
+  </ul>
+<li><p>Bits 3-4 pitch source for heading correction:</p>
+  <ul>
+     <li><p>0 = calibrated from sensor inputs per normal routine</p>
+     <li><p>1 = use value direct from compass</p>
+     <li><p>2 = calculate based on pitch mass position and gain</p>
+  </ul>
+<li><p>Bits 5-6 roll source for heading correction</p>
+   <ul>
+      <li><p>0 = calibrated from sensor inputs per normal routine</p>
+      <li><p>1 = use value direct from compass</p>
+      <li><p>2 = calculate based on pitch mass position and gain</p>
+   </ul>
+<li><p>Bits 7-8 pitch to report in data stream</p>
+    <ul>
+        <li><p>0 = calibrated from sensor inputs per normal routine</p>
+        <li><p>1 = use value direct from compass</p>
+        <li><p>2 = calculate based on pitch mass position and gain</p>
+    </ul>
+<li><p>Bits 9-10 roll to report in data stream</p>
+    <ul>
+        <li><p>0 = calibrated from sensor inputs per normal routine</p>
+        <li><p>1 = use value direct from compass</p>
+        <li><p>2 = calculate based on pitch mass position and gain</p>
+    </ul>
+<li><p>Bit 11 (2048) which compass device to use</p>
+    <ul>
+        <li><p>0 = COMPASS_DEVICE</p>
+        <li><p>1 = COMPASS2_DEVICE</p>
+    </ul>
+<li><p>Bit 12 (4096) whether to report compass temperature in engineering file</p>
+    <ul>
+        <li><p>0 = do not report</p>
+        <li><p>1 = include temperature data</p>
+    </ul>
+<li><p>Bit 13 (8192) whether to report compass temperature in engineering file</p>
+    <ul>
+        <li><p>0 = do not report</p>
+        <li><p>1 = include temperature data</p>
+    </ul>
+<li><p>Bit 14 (16384) run post-dive calibration for soft and hard iron</p>
+    <ul>
+        <li><p>0 = do not run</p>
+        <li><p>1 = run calibration accoring to </p>
+    </ul>
+
+    <p>Calibration algorithm is controlled by additional parameters that can be set in tcm2mat.cal:</p>
+    <ul>
+        <li><p>min-quality= Set the threshold for the circularity of the resulting calibrated points. Circularity is measured as the RMS deviation from a circle normalized by the calculated mean field strength (circle radius). Zero is a perfect score. Default is 0.2. Only used when bit 15 is set to use the calculated results as the current calibration.</p>
+        <li><p>min-cover= Set the threshold for minimum coverage of the calibrated points, in tens of degrees. A value of 36 requires that data be collected around all compass points for example. Default is 18. Only used when bit 15 vis set to use the calculated results as the current calibration.</p>
+        <li><p>Wf= Set the weight for the 3D component of the residual (compared to 1.0 for horizontal) in the second step of the calibration (with soft iron). Default 0.1.</p>
+        <li><p>tail= Set the number of dives over which to run the calibration. Three (default) uses the current dive plus two previous dives. </p>
+        <li><p>maxpts= Sets the maximum number of points to use in the calibration. Points will be evenly selected from the dive data specified by the tail value. Default 2000.</p>
+    </ul>
+
+<li><p>Bit 15 (32768) apply post-dive calibration</p>
+    <ul>
+        <li><p>0 = do not apply</p>
+        <li><p>1 = use calibration result if quality and circularity minima are met and lower than previously applied result.</p>
+    </ul>
+</ul>
+
+<div class="med"></div>
+<p>
+A value of 40 (0x28) will calculate a pitch and roll from control positions 
+for use in the heading calibration but will report calibrated pitch and roll 
+in the data stream. A value of 680 (40 + 640) will use the control position 
+calculated attitudes for reporting as well.
+[0]
+</p>
+ 
+
+<div class="med"></div>
+<p><span class="bold"><a name="COMPASS2_DEVICE">$COMPASS2_DEVICE</a></span><br>
+Same as <span class="bold">$COMPASS_DEVICE</span> for an optional second compass (used in glider development).
+</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="D_ABORT">$D_ABORT</a></span><br>The maximum depth (meters) for Seaglider operations. If this depth is reached, the dive is aborted and the glider immediately enters the recovery phase. [1090]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="D_BOOST">$D_BOOST</a></span><br>The depth (meters) above which only the boost pump will be run.[0]</p>
+
+<div class="med"></div>
+
+<p><span class="bold"><a name="D_CALL">$D_CALL</a></span><br>
+For non-zero values, require a depth shallower than this value before initiating
+  the GPS and phone call portions of a surface maneuver. If this depth is not reached, a subsurface finish is executed.<br>
+[0]
+</p>
+ 
+<div class="med"></div>
+
+ <p><span class="bold"><a name="D_FINISH">$D_FINISH</a></span><br>Depth (meters) at which to consider a dive completed. Normally, this is 0, but may be a number greater than zero to specify the depth at which subsurface finish maneuvers should be started. Used only when an additional trigger to initiate a subsurface finish is present (see <span class="bold"><a href="#N_NOSURFACE">$N_NOSURFACE</a></span>). [0]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="D_FLARE">$D_FLARE</a></span><br>The depth (meters) at which the glider flares to the computed desired pitch angle following the initial dive from the surface. The guidance and control (G&C) action at the start of the dive phase maintains full pitch forward as VBD bleeding takes place. A new G&C action is initiated as soon as a glider reaches <span class="bold">$D_FLARE</span>: pitch is adjusted first (the flare), then VBD is adjusted (continued bleed to the target VBD), then roll is actuated to turn the glider to the desired heading. [3]</p>
+ 
+<div class="med"></div>
+
+ <p><span class="bold"><a name="D_NO_BLEED">$D_NO_BLEED</a></span><br>The depth (meters) below which the Seaglider will not bleed (move oil from the bladder into the internal reservoir, making the Seaglider less buoyant) on dives. This parameter also defines the depth at which the <span class="bold"><a href="#T_NO_W">$T_NO_W</a></span> parameter takes effect. Must be greater than <<span class="bold"><a href="#LOITER_D_TOP">$LOITER_D_TOP</a></span> to bleed when above that value during a loiter. [50]</p>
+
+<div class="med"></div>
+
+ <p><span class="bold"><a name="D_OFFGRID">$D_OFFGRID</a></span><br>The depth (meters) that the bathymetry map look-up routine returns in the event the Seaglider's position is outside an area for which the Seaglider carries a map. [1001]</p>
+ 
+<div class="med"></div>
+
+<p><span class="bold"><a name="D_PITCH">$D_PITCH</a></span><br>
+If non-zero, depth (meters) that must be reached before surface pitch maneuver is executed. If a depth shallower than this value is not reached then execute a subsurface finish.<br>
+[0] 
+</p>
+
+<div class="med"></div>
+
+<p><span class="bold"><a name="D_SAFE">$D_SAFE</a></span><br>
+If non-zero, target depth to use when flying an escape route and limiting dive depth for VBD safety reasons. Used on escape routes when the escape was triggered by VBD max errors exceeded or uncommanded bleed.<br>
+[0] 
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="D_SURF">$D_SURF</a></span><br>The depth (meters) at which the glider begins its approach to the surface. In order to collect data all the way to the surface, at <span class="bold">$D_SURF</span> the Seaglider computes how many more data samples to take, based on the observed vehicle vertical speed, depth, and the data sample interval. The number of additional points is limited to 50. The Seaglider then goes into passive G&C mode and collects that number of data points at the appropriate sample interval for the depth range. When complete, the Seaglider enters the surface phase.  Note that this approach will occasionally result in the last few data samples being taken when the conductivity sensor is actually in air, giving unrealistic conductivity values.  These samples can be removed in shore-side processing, if necessary.[3]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="D_TGT">$D_TGT</a></span><br>The nominal depth (meters) at which the Seaglider begins the apogee phase, the transition from the negatively buoyant, pitch-down dive to positively buoyant, pitch-up climb. This depth is also used in conjunction with <span class="bold"><a href="#T_DIVE">$T_DIVE</a></span> to determine the specified vertical velocity for the dive and climb. </p>
+ 
+<div class="med"></div>
+ <p>The actual depth of the starting point of the apogee maneuver may be determined by reading a digital bathymetric map (<span class="bold">$D_GRID</span>), or by using the altimeter. In either case, the vertical velocity specified by the combination of <span class="bold">$D_TGT</span> and <span class="bold"><a href="#T_DIVE">$T_DIVE</a></span> is retained by appropriate scaling of <span class="bold"><a href="#T_DIVE">$T_DIVE</a></span>. The apogee maneuver is not started until a depth greater than <span class="bold">$D_TGT</span> (or other depth trigger) is detected. In scenario runs, <span class="bold">$D_TGT</span> is also the depth at which the Seaglider enters the recovery phase. [990]</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="DBDW">$DBDW</a></span><br>
+Overrides the hydro model calculated derivative of buoyancy with respect to
+w (vertical speed) used as a gain term in adjusting buoyancy to achieve
+the desired vertical speed. If parameter is zero then the onboard calculated
+value is used. Units are grams per m/s. Typical onboard calculated values
+are between 2000 and 4000. [0]
+</p>
+
+
+<div class="med"></div>
+<p><span class="bold"><a name="DEEPGLIDER">$DEEPGLIDER</a></span><br>
+Indicates whether the glider is a standard Seaglider (0), or a Deepglider (1). [0]
+</p>
+
+<!--  OBSOLETE
+<div class="med"></div>
+<p><span class="bold"><a name="DEEPGLIDERMB">$DEEPGLIDERMB</a></span><br>
+Indicates whether the main board is intended for use in Deepglider. 0 means that the motherboard installed is intended for standard Seaglider, not for Deepglider. [0]
+</p>
+-->
+<div class="med"></div>
+ <p><span class="bold"><a name="DEVICE">$DEVICE</a></span>[<span class="bold">1</span>/<span class="bold">2</span>/<span class="bold">3</span>/<span class="bold">4</span>/<span class="bold">5</span>/<span class="bold">6</span>]<br>Configuration flags specifying device type and port for each of the six possible attached science sensors. Empty device slots are indicated with a parameter value of -1. Non-negative entries indicate that a device is attached.  The encoding is specific to the version of the Seaglider software.  These entries are set through the Seaglider menu system by the builder/assemblers. </p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="DIVE">$DIVE</a></span><br>The number of the next dive the Seaglider will start. []</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="ESCAPE_HEADING">$ESCAPE_HEADING</a></span><br>The base heading the Seaglider will steer in an escape recovery situation when either no position fix is available or no escape target was supplied in the targets file. [0]</p>
+ 
+<div class="med"></div>
+
+ <p><span class="bold"><a name="ESCAPE_HEADING_DELTA">$ESCAPE_HEADING_DELTA</a></span><br>The actual heading steered by the Seaglider in an escape recovery situation will always be <span class="bold"><a href="#ESCAPE_HEADING">$ESCAPE_HEADING</a></span> +/- <span class="bold">$ESCAPE_HEADING_DELTA</span>.  The sign will switch (and thus the heading will toggle) when the bottom depth (as detected by altimetry or <span class="bold"><a href="#T_NO_W">$T_NO_W</a></span>) shallows by 5% relative to the depth at the last toggle. [10]</p>
+ 
+<div class="med"></div>
+
+<p><span class="bold"><a name="FERRY_MAX">$FERRY_MAX</a></span><br>The maximum correction (in degrees) to apply to the rhumb line to the active (next) waypoint when <span class="bold"><a href="#NAV_MODE">$NAV_MODE</a></span> = 2.  This is a safety limit to prevent spurious depth-averaged current calculations from giving the Seaglider a heading in the wrong direction. [45]</p>
+ 
+
+<div class="med"></div>
+<p><span class="bold"><a name="FG_AHR_10V">$FG_AHR_10V</a></span><br>
+Cumulative A-hr consumed from the 10V pack as tracked by the supervisor fuel gauge. This parameter is automatically updated whenever the fuel gauge is read and the supervisor's onboard accumulators are cleared. When reported in the log file it reflects the fuel gauge state at the start of the dive. This parameter is only relevant for RevC and later Seaglider motherboards.  For RevB and earlier, this parameter is always zero. [0]
+</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="FG_AHR_24V">$FG_AHR_24V</a></span><br>
+Cumulative A-hr consumed from the 24V pack as tracked by the supervisor fuel gauge. This parameter is automatically updated whenever the fuel gauge is read and the supervisor's onboard accumulators are cleared. When reported in the log file it reflects the fuel gauge state at the start of the dive. This parameter is only relevant for RevC and later Seaglider motherboards.  For RevB and earlier, this parameter is always zero. [0]
+</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="FILEMGR">$FILEMGR</a></span><br>An integer parameter that specifies how aggressively to manage the onboard file system, according to the following table. [0]</p>
+
+<p class="indent"> 0: none<br>1: only store compressed files<br>2: delete splits on failed phone call<br></p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="FIX_MISSING_TIMEOUT">$FIX_MISSING_TIMEOUT</a></span><br>Time in days to tolerate lack of any valid navigation fix (GPS, RAFOS, Iridium geolocation) before triggering recovery.<br>
+[0] 
+</p>
+
+<div class="med"></div>
+
+<p><span class="bold"><a name="GLIDE_SLOPE">$GLIDE_SLOPE</a></span><br>The absolute value of the maximum glide slope (degrees) allowed for the Seaglider. The desired glide slope is calculated on board the Seaglider to best achieve the goals of the next dive. The stall angle provides the lower limit; this parameter is the upper limit.  [30]</p>
+ 
+<div class="med"></div>
+
+ <p><span class="bold"><a name="GPS_DEVICE">$GPS_DEVICE</a></span><br>Configuration value specifying the model of the attached device. These devices have dedicated hardware ports on all motherboard revisions and as such a port specification is not necessary. A GPS device must be defined (cannot be -1). [32]</p>
+ 
+<div class="med"></div>
+
+  <p><span class="bold"><a name="HD_A">$HD_A</a></span><br>The hydrodynamic parameter representing the lift coefficient, determined empirically and used in the glider's on-board performance prediction and guidance calculations. [0.0029217]</p>
+  
+<div class="med"></div>
+
+ <p><span class="bold"><a name="HD_B">$HD_B</a></span><br>The hydrodynamic parameter representing the drag coefficient, determined empirically and used in the glider's on-board performance prediction and guidance calculations.[0.010758]</p>
+  
+<div class="med"></div>
+
+ <p><span class="bold"><a name="HD_C">$HD_C</a></span><br>The hydrodynamic parameter representing the induced drag coefficient, determined empirically and used in the glider's on-board performance prediction and guidance calculations. [2.8991001e-06]</p>
+  
+<div class="med"></div>
+
+ <p><span class="bold"><a name="HEAD_ERRBAND">$HEAD_ERRBAND</a></span><br>Deadband for heading (degrees). This value is used to determine if a correction to heading is required during an active G&C mode. If the absolute value of the difference between the actual heading and the desired heading is less than or equal to <span class="bold">$HEAD_ERRBAND</span>, no heading correction is made. If the difference is greater than <span class="bold">$HEAD_ERRBAND</span>, then a turn is performed until the desired heading is passed, or until the amount of time <span class="bold"><a href="#T_TURN">$T_TURN</a></span> has elapsed. [10]</p>
+ 
+ 
+<div class="med"></div>
+  <p><span class="bold"><a name="HEADING">$HEADING</a></span><br>A floating point value between -1.0 and 360.0 (true degrees, 0.0 and 360.0 are equivalent values) used to synthesize a target 20 km from glider current position at a bearing specified by this value. A value of -1 turns off synthetic targets in favor of waypoint targets specified in the targets file. Any value other than -1 means that targets file will be ignored and the synthetic target will be used. Meaning varies with the <span class="bold"><a href="#NAV_MODE">$NAV_MODE</a></span> parameter:</p>
+ 
+<div class="small"></div>
+ 
+<p>-If <span class="bold"><a href="#NAV_MODE">$NAV_MODE</a></span> is 0, 1, or 
+2 and the value of <span class="bold">$HEADING</span> is between 0.0 and 360.0, the glider will use this value to synthesize a waypoint 20 km distant on the specified bearing from the current location. </p>
+ 
+<div class="small"></div>
+  
+<p>-If <span class="bold"><a href="#NAV_MODE">$NAV_MODE</a></span> is 3, <span class="bold">$HEADING</span> is added to the depth-averaged current calculated for the previous dive, to give a Seaglider heading that is the specified amount to the right of the current. [-1]</p>
+  
+
+<div class="med"></div>
+
+<p><span class="bold"><a name="ICE_FREEZE_MARGIN">$ICE_FREEZE_MARGIN</a></span><br>
+Temperature margin (degrees C) to apply to the freezing point  calculation, weighted by ice condition, for surfacing decisions. For an in situ freezing point Tf and temperature T, the glider will surface if T &#62; Tf + fm*(ic - 1), where fm is the freeze margin and ic is the ice condition. [0.3]
+</p>
+
+<div class="med"></div>
+
+ <p><span class="bold"><a name="ID">$ID</a></span><br>Seaglider identification (serial) number. This is a number between 1 and 999. Leading zeros are not required. This number is used in many ways, including creating the Seaglider's login on the basestation, in file naming conventions, and as a serial number for manufacturing purposes. [1]</p>
+ 
+<div class="med"></div>
+  <p><span class="bold"><a name="INT_PRESSURE_SLOPE">$INT_PRESSURE_SLOPE</a></span><br>The slope (psia per A/D count) calibration of the internal pressure sensor.  The sensor has a span of 0 to 30 psia, with a 90mV output at full-scale at 12V excitation.  The output is proportional to supply.   The Seaglider excitation is 4.096V and the gain is 100, so 30 psia = 90*4.096/12*100*1.  Full-scale = 90*4.096*gain*counts/mVolt, so the nominal slope is 0.009766 psia per A/D count. [0.0097660]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="INT_PRESSURE_YINT">$INT_PRESSURE_YINT</a></span><br>The y-intercept of the linear calibration of the internal pressure sensor. [0]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="KALMAN_USE">$KALMAN_USE</a></span><br>The control parameter for the run state of the Kalman filter navigation program.  The <span class="bold"><a href="#NAV_MODE">$NAV_MODE</a></span> parameter controls whether the Kalman filter output heading is used to control the Seaglider.  This separation of functions allows the Kalman filter to be run, but not used, while it "learns" the currents. Bits 0 and 1 together indicate the command mode of the filter and control its operation as described below. [1]</p>
+ 
+<p class="indent">	0: Reset the Kalman filter. Set Kalman state vector and origin of local Kalman coordinate system to 0 and restart the filter.<br>  	1: Run the Kalman filter.<br>	2: Do not run the Kalman filter.<br></p>
+  
+<div class="small"></div>
+ 
+<p>If the command mode of <span class="bold">$KALMAN_USE</span> are 0 or 1, and <span class="bold"><a href="#NAV_MODE">$NAV_MODE</a></span> is 1, the Kalman filter results will be used to determine the Seaglider's heading.
+</p>
+
+<div class="small"></div>
+
+<p>If <span class="bold"><a href="#NAV_MODE">$NAV_MODE</a></span> is 1, but the command mode of <span class="bold">$KALMAN_USE</span> is 2 (not being run), the Seaglider acts as though <span class="bold"><a href="#NAV_MODE">$NAV_MODE</a></span> is 0.</p>
+
+<div class="med"></div>
+
+<p> Bits 2 and 3 of <span class="bold">$KALMAN_USE</span> control whether to employ (0) or disable (1) the dirunal and semidiurnal components of the model, respectively.  The mean component is always determined. For example, a <span class="bold"><a name="KALMAN_USE">$KALMAN_USE</a></span> of 9 (= 8 + 1) runs the Kalman filter but disables the semidiurnal component of the model.  A <span class="bold"><a name="KALMAN_USE">$KALMAN_USE</a></span> value of 1 runs the Kalman filter with all components enabled. </p>
+
+
+<div class="med"></div>
+<p><span class="bold"><a name="LOGGERS">$LOGGERS</a></span><br>Which logger devices to enable or disable. [0]</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="LOGGERDEVICE">$LOGGERDEVICE</a></span>[<span class="bold">1</span>/<span class="bold">2</span>/<span class="bold">3</span>/<span class="bold">4</span>]<br>Configuration flags specifying logger device type and port for each of the found possible attached logger devices. Empty device slots are indicated with a parameter value of -1. Non-negative entries indicate that a device is attached.  The encoding is specific to the version of the Seaglider software.  These entries are set through the Seaglider menu system by the builder/assemblers. </p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="LOITER_D_BOTTOM">$LOITER_D_BOTTOM</a></span><br>Depth (Meters) below which to always pump during loiter. [0]</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="LOITER_D_TOP">$LOITER_D_TOP</a></span><br>Depth (meters) above which to always bleed during loiter. Use a negative value to specify no pumps above this depth during loiter (if for example you do not want to bleed, but if the glider is oscillating around this depth due to internal waves or drifts above this depth, but then starts coming down again, do not pump to try to stem that downward velocity if above a negative value of $LOITER_D_TOP). [0]</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="LOITER_DBDW">$LOITER_DBDW</a></span><br> <span class="bold"><a href="#DBDW">DBDWNAV_MODE</a></span> value to use during loiters. Often this will be a small value to avoid making overly large corrections while trying to hold depth. [0]</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="LOITER_N_DIVE">$LOITER_N_DIVE</a></span><br>An integer value that determines which dives the glider will loiter at apogee. For values greater than or equal 1, the rule is that when the remainder of <span class="bold"><a href="#DIVE">$DIVE</a></span> divided by <span class="bold">$LOITER_N_DIVE</span> is zero, the glider will loiter at apogee. Other dives will proceed directly from dive to climb as normal. For negative values less than -1, this logic is reversed, and values of <span class="bold"><a href="#DIVE">$DIVE</a></span> divisible by <span class="bold">$LOITER_N_DIVE/span> will not loiter; all others will loiter. A value of 0 disables loitering. [0] </p>
+
+
+<div class="med"></div>
+ <p><span class="bold"><a name="LOITER_W_DBAND">$LOITER_N_DIVE</a></span><br> Deadband (cm/s) around 0.0 for when to adjust buoyancy during loiters. [2]</p>
+ 
+<div class="med"></div>
+<p><span class="bold"><a name="MASS">$MASS</a></span><br>The mass of the glider in grams.  Used in on-board buoyancy and current estimation calculations.  [52000] </p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="MAX_BUOY">$MAX_BUOY</a></span><br>The absolute value of the maximum negative buoyant force (grams) to which the glider is allowed to bleed during the dive phase. There is no restriction on positive buoyancy during the climb phase. [150]</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="MAXI_10V">$MAXI_10V</a></span><br>
+The maximum allowable observed current draw in amperes from the 10 volt battery pack before the glider will stop diving and go into recovery. [0.6]
+</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="MAXI_24V">MAXI_24V</a></span><br>
+The maximum allowable observed current draw in amperes from the 24 volt battery pack before the glider will stop diving and go into recovery. [0.8]
+</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="MINV_10V">$MINV_10V</a></span><br>
+The minimum allowable observed voltage on the 10 volt battery pack before the glider will stop diving and go into recovery. A value of 0 disables the check. [8]
+</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="MINV_24V">$MINV_24V</a></span><br>
+The minimum allowable observed voltage on the 24 volt battery pack before the glider will stop diving and go into recovery. A value of 0 disables the check.[19]
+</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="MISSION">$MISSION</a></span><br>The current Seaglider mission number. This value is intended to be unique for each of a particular Seaglider's various deployments. It has no effect on glider operations, but is reported back in data files for the purpose of data file distinction from other missions a glider may have performed. [0] </p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="MOTHERBOARD">$MOTHERBOARD</a></span><br> An integer value indicating the motherboard revision carried by the glider and set by the builder or assembler. 1 = NOPP, 2 = A.1, 3 = AB, 4 = B.1, etc. [4] </p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="NAV_MODE">$NAV_MODE</a></span><br>An integer value specifying the method used to choose a heading for the Seaglider to maintain on the next dive, according to the following table [1].</p>
+<p class="indent">	0:	Steer heading directly to target (either from targets file or synthetic via <span class="bold"><a href="#HEADING">$HEADING</a></span>
+<br>	1:	Kalman filter (see <span class="bold"><a href="#KALMAN_USE">$KALMAN_USE</a></span>)<br>	2:	Use a ferry angle correction with respect to calculated depth-averaged current to make best progress toward current target (either from targets file or synthetic)<br>	3:	Steer relative to depth-averaged current<br></p>
+
+<div class="med"></div>
+ 
+<p>Navigation flow proceeds as follows.</p>
+  
+<div class="med"></div>
+ 
+<p style="padding: 0px 0px 0px 24px;">1. If we have calculated a valid depth-averaged-current (DAC) and <span class="bold">$NAV_MODE</span> = 3 (steer relative to DAC), synthesize a heading = currentdirection + <span class="bold"><a href="#HEADING">$HEADING</a></span>.</p>
+  
+<div class="small"></div>
+ 
+<p style="padding: 0px 0px 0px 24px;">2. If a synthesized heading exists from (1) or <span class="bold"><a href="#HEADING">$HEADING</a></span> >= 0, synthesize a target 20 km away at a true bearing given by that heading. Otherwise,choose a target based on the usual selection process. Calculate range and bearing to the target.</p>
+  
+<div class="small"></div>
+ 
+<p style="padding: 0px 0px 0px 24px;">3. Modify dive time and depth as needed to honor safeties and grids. Calculate speed limits - Seaglider minimum and maximum possible horizontalspeeds through the water. The speed limits and dive times fix the range of possibilities for the Seaglider's distance through the water.</p>
+  
+<div class="small"></div>
+ 
+<p style="padding: 0px 0px 0px 24px;">4. Choose a glide slope that gets the Seaglider closest to the target (maximum speed if the target is distant, minimum  speed if the target is too close).</p>
+ 
+<div class="small"></div>
+  
+<p style="padding: 0px 0px 0px 24px;">5. At this point the Seaglider has a bearing and glide slope in hand. If  <span class="bold">$NAV_MODE</span> = 0  or <span class="bold">$NAV_MODE</span> = 3,  then these will be the heading and slope for this dive.</p>
+ 
+<div class="small"></div>
+  
+<p style="padding: 0px 0px 0px 24px;">6. If <span class="bold">$NAV_MODE</span> = 2 (calculate set/ferry angle correction) and we have calculated a valid DAC, we apply <span class="bold"><a href="#SPEED_FACTOR">$SPEED_FACTOR</a></span> to the speed limits to account for the fact that the Seaglider actually won't achieve its ideal speed over the entire dive.  We then iteratively calculate set corrections as a function of our horizontal speed through the water so that we optimize the Seaglider's travel toward the target (just as we chose our slope above). At each speed setting, the code uses a nonlinear solver to solve for ferry angle.  First guess at speed is maximum. If the predicted distance over ground (DOG) with the set correction is less than the range to target (typical case) then the computation is complete. Otherwise we try the minimum speed. If the resulting DOG is greater than the range to target then the computation can't do any better and it is complete.  If neither limit applies, we iterate via bisection to settle on the best speed. At convergence, the Seaglider has a ferry angle to steer and a horizontal speed to apply. The predicted horizontal speed is used to calculate a new value for glide slope.</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="N_DIVES">$N_DIVES</a></span><br>
+The number of dives to complete before entering recovery. A value of zero
+(default) means dive until stopped by pilot command ($QUIT) or some
+other recovery condition occurs (battery exhaustion, error limit exceeded, etc.). [0] </p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="N_FILEKB">$N_FILEKB</a></span><br>An integer 
+value (0 <= <span class="bold">$N_FILEKB</span> <= 128), which is the size 
+(in kilobytes) and type (gzip-compressed or uncompressed) of file used for data uploading. A value of 0 means no splitting is performed. The maximum allowed value of this parameter is currently set to 128. [8]</p>
+  
+<div class="med"></div>
+<p><span class="bold"><a name="N_GPS">$N_GPS</a></span><br>The GPS termination criteria, encoded as <i>eeennff</i>, which, in addition to requiring horizontal dilution of precision (HDOP) to be less than 2.0, specifies the maximum estimated horizontal position error (HPE) permitted (<i>eee</i>, in meters), the minimum number of satellites required (<i>nn</i>) , and the maximum number of valid fixes to acquire (<i>ff</i>).  If either <i>eee</i> or <i>nn</i> are zero, the corresponding criteria is ignored; if both are zero the GPS code terminates acquisition upon the first fix with HDOP <= 2.0 and after no more than <i>ff</i> fixes.  Thus, the default value, 100840, requires a fix with HDOP <= 2.0 and an HPE of less than 10 meters acquired from at least 8 satellites but waiting no more than 40 valid fixes. </p>
+  
+<p>A negative value is treated as a specification of <i>ff</i> only (HPE and number of satellites criteria are ignored) and, when syncing time from GPS, forces a wait for that many valid fixes, independent of HDOP, HPE or number of satellites. A value of zero for all fields indicates that the NMEA data from the GPS should be copied to the glider's fix register at every update, regardless of the validity of the fix. Acquisition will cease on receipt of any valid fix with HDOD <= 2.0 or on timeout ( <span class="bold"><a href="#T_GPS">$T_GPS</a></span>). This might be useful when debugging lack of fix information to see if any of the NMEA fields are updating. [100840] </p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="N_NOCOMM">$N_NOCOMM</a></span><br>The number of dives that are allowed to occur without a complete and successful data communication session before actions are taken to improve communications, enter recovery, or navigate to a rescue position according to the value of <span class="bold"><a href="#NOCOMM_ACTION">$NOCOMM_ACTION</a></span>. The default (and traditional) behavior with a value for <span class="bold"><a href="#NOCOMM_ACTION">$NOCOMM_ACTION</a></span> of 0 is for the surface buoyancy parameter <span class="bold"><a href="#SM_CC">$SM_CC</a></span> to be set to the maximum allowed by the software limits.  This is a safety provision in the event <span class="bold"><a href="#SM_CC">$SM_CC</a></span> is not sufficient to allow for a good antenna position. [1]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="N_NOSURFACE">$N_NOSURFACE</a></span><br>An integer value that determines when the glider will finish the dive at <span class="bold"><a href="#D_FINISH">$D_FINISH</a></span> and when it will finish at the actual surface. For values greater than 1, the rule is that when the remainder of <span class="bold"><a href="#DIVE">$DIVE</a></span> divided by <span class="bold">$N_NOSURFACE</span> is zero, the glider will finish the dive at depth <span class="bold"><a href="#D_FINISH">$D_FINISH</a></span>. Other dives will finish at the surface. For negative values less than -1, this logic is reversed, and values of <span class="bold"><a href="#DIVE">$DIVE</a></span> divisible by <span class="bold">$N_NOSURFACE</span> will finish at the surface; all others will be subsurface finishes. Values of 1 and -1 are not allowed. A value of 0 disables this behavior. [0] </p>
+ 
+<div class="med"></div> <p><span class="bold"><a name="NOCOMM_ACTION">$NOCOMM_ACTION</a></span><br>
+Bitmask parameter controlling behavior after 
+<span class="bold"><a href="#N_NOCOMM">$N_NOCOMM</a></span> dives have 
+passed without successful communication with the basestation. The parameter
+is a logical or of the bits described below:
+
+<ul>
+	<li><p>Bit 0 pump to max behavior:</p>
+	  <ul>
+	     <li><p>0 = pump to max after $N_NOCOMM dives</p>
+	     <li><p>1 = pump to max after 1 dive with no comms. Setting this bit allows
+for setting $N_NOCOMM to a larger value while still getting the typical
+behavior of pumping to max after a single dive with failed communications.</p>
+	  </ul>
+    <li><p>Bit 1 recovery: Setting this bit causes the glider to enter recovery
+after $N_NOCOMM dives with no communications. This bit takes precedence over any
+values in bits 2-4.</p>
+	<li><p>Bit 2 EPIRB mode: If set, the glider will loiter on the
+surface in low power sleep for <span class="bold"><a href="#T_EPIRB">$T_EPIRB</a></span> seconds. The loiter
+period is immediately before GPS2 is acquired. The intent of this mode is
+to aid visual, acoustic, or ARGOS based backup recovery systems while
+still keeping the glider diving and navigating. This bit can be set 
+independently or in conjunction with bits 3 and 4. </p>
+	<li><p>Bit 3 escape: Setting this bit causes the glider to begin navigating
+to the escape target defined for the current target. If no escape target
+is defined then the glider navigates by heading according to the
+<span class="bold"><a href="#ESCAPE_HEADING">$ESCAPE_HEADING</a></span>
+parameter.</p>
+	<li><p>Bit 4 moor at position: This causes the glider to latch the current
+GPS position as a target and set that target as the current waypoint. 
+The glider will try to virtually moor at that position. </p>
+	<li><p>Bit 5 clear flow control bits on <span class="bold"><a href="#PHONE_DEVICE">$PHONE_DEVICE</a></span>.</p>
+	<li><p>Bit 6 lengthen <span class="bold"><a href="#T_RSLEEP">$T_RSLEEP</a></span> by a factor of 30 when 2x $N_NOCOMM dives miss communications .</p>
+	<li><p>Bit 7 send a SMS messages to the sms_email address configured in NVRAM. 
+The messages is identical to the GPS status line that is emitted to the comm.log on the basestation. </p>
+	<li><p>Bit 8 turn the network modem on (if available) to act as a transponder.</p>
+</ul>
+
+<p>As an example, parameter values for <span class="bold">$N_NOCOMM</span> of 10 and <span class="bold">$NOCOMM_ACTION</span> of 21 
+will cause the glider to reset $SM_CC to max any time one dive passes with 
+no communications. If 10 dives pass with no communications, the glider 
+will try to stay at its current position, with extra loitering on the
+surface between station keeping dives. [1]</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="OPTIONS">$OPTIONS</a></span><br>A bitmask value to control various (likely developmental) behaviors.</p>
+<ul>
+    <li><p>Bit 0 (1): At apogee during all dives, pump to a neutral VBD position based on measured in situ density</p>
+    <li><p>Bit 1 (2): At apogee during loiter dives, pump to a neutral VBD position based on measured in situ density<p>
+</ul>
+
+
+<div class="med"></div>
+ <p><span class="bold"><a name="PHONE_DEVICE">$PHONE_DEVICE</a></span><br>A configuration value specifying the model of the attached device, set by the assembler or builder. These devices have dedicated hardware ports on all motherboard revisions and, as such, a port specification is not necessary. [16]</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="PHONE_SUPPLY">$PHONE_SUPPLY</a></span><br>
+Controls the source of power for the Iridium phone: 1=10V battery pack, 2=24V battery pack. Intended for load balancing the energy consumption between the two packs. [2]
+</p>
+
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_ADJ_DBAND">$PITCH_ADJ_DBAND</a></span><br>This parameter, with <span class="bold"><a href="#PITCH_ADJ_GAIN">$PITCH_ADJ_GAIN</a></span>, enables and adjusts active (closed-loop) control on Seaglider pitch during a dive and climb.  The Seaglider will automatically seek to maintain the desired pitch angle by moving the pitch mass when
+</p>
+
+<div class="small"></div>
+
+<p style="text-align: center;"><span style="text-align: center;"> | Pitchobserved - Pitchdesired | </span>&#62;<span class="bold">$PITCH_ADJ_DBAND</span>.</p>
+  
+<div class="med"></div>
+ <p><span class="bold">$PITCH_ADJ_DBAND</span> has units of degrees.  A value of 0 disables automatic pitch adjustment. [0.5]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_ADJ_GAIN">$PITCH_ADJ_GAIN</a></span><br>This parameter, with <span class="bold"><a href="#PITCH_ADJ_DBAND">$PITCH_ADJ_DBAND</a></span>,  enables and adjusts active (closed-loop) control on Seaglider pitch during a dive and climb.  The amount of the adjustment is given by
+</p>
+
+<div class="small"></div>
+
+<p style="text-align: center;">	(PitchDesired - PitchObserved)*<span class="bold">$PITCH_ADJ_GAIN</span>.</p>
+  
+<div class="med"></div>
+ <p><span class="bold">$PITCH_ADJ_GAIN</span> has units of cm/degree.  Adjustments are calculated at the beginning of the active guidance and control phase, based on the pitch observed over the same samples for which observed vertical speed is calculated.  Adjustments are not made during the first two active guidance and control phases following the start of a dive or climb. A value of zero disables automatic pitch adjustment. [0.03]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_CNV">$PITCH_CNV</a></span><br>Pitch position conversion factor, from A/D counts to centimeters (cm/AD count). This is a constant determined by the pitch of the worm gear that drives the pitch motion, and is set by the builder or assembler. [0.0046]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_DBAND">$PITCH_DBAND</a></span><br>The pitch position deadband (cm). [0.05]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_GAIN">$PITCH_GAIN</a></span><br>The amount of vehicle pitch (degrees) change corresponding to 1 cm movement of the pitch mass. [15]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_MAX">$PITCH_MAX</a></span><br>Pitch position software limit (A/D counts) aft. [3850]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_MAXERRORS">$PITCH_MAXERRORS</a></span><br>The number of pitch motor errors allowed before the Seaglider goes into recovery state. An error occurs when the <span class="bold"><a href="#PITCH_TIMEOUT">$PITCH_TIMEOUT</a></span> expires prior to achieving the commanded pitch A/D position.</p> 
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_MIN">$PITCH_MIN</a></span><br>Pitch position software limit (A/D counts) forward. This is also the value to which the pitch mass moves during the surface maneuver (fully forward for maximum pitch down). [490]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_TIMEOUT">$PITCH_TIMEOUT</a></span><br>	Pitch mass timeout (seconds). [20]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="PITCH_VBD_SHIFT">$PITCH_VBD_SHIFT</a></span><br>Vehicle pitch is controlled by the axial positions of the mass shifter and the hydraulic oil.  <span class="bold">$PITCH_VBD_SHIFT</span> parameterizes volume control (VBD) displacement as an equivalent mass shifter displacement.  During each GC maneuver, pitch control (cm) is computed as the sum of the pitch desired (in degrees, see the third field in <span class="bold">$MHEAD_RNG_PITCHd_Wd</span>) divided by pitch gain (<span class="bold"><a href="#PITCH_CNV">$PITCH_CNV</a></span>) plus the VDB control (cc) times <span class="bold">$PITCH_VBD_SHIFT</span> (cm/cc). [0.00167]</p>
+  
+<div class="med"></div>
+<p>
+<span class="bold"><a name="PITCH_W_DBAND">$PITCH_W_DBAND</a></span><br>
+Deadband on pitch adjustments used for vertical speed control. Units
+of cm/s. If the observed vertical speed is outside the deadband, but
+not beyond <span class="bold"><a href="#W_ADJ_DBAND">$W_ADJ_DBAND</a></span>,
+the glider will adjust pitch according to 
+<span class="bold"><a href="#PITCH_W_GAIN">$PITCH_W_GAIN</a></span>
+try to maintain speed. Only valid when 
+<span class="bold"><a href="#PITCH_W_GAIN">$PITCH_W_GAIN</a></span> is
+also non-zero.[0]
+</p>
+  
+<div class="med"></div>
+<p>
+<span class="bold"><a name="PITCH_W_GAIN">$PITCH_W_GAIN</a></span><br>
+Gain on pitch adjustments used for vertical speed control. Units
+of cm per m/s. If the observed vertical speed is outside
+<span class="bold"><a href="#PITCH_W_GAIN">$PITCH_W_DBAND</a></span> 
+then this parameter controls the adjustment made to pitch control
+to try to maintain desired speed. If this parameter is negative adjustments
+will be made to both slow and speed the glider. If positive, adjustments
+will only be made if the glider is moving too slowly.  This parameter is 
+only used during climbs.  This parameter cannot be used at the same time as 
+<span class="bold"><a href="#PITCH_ADJ_GAIN">$PITCH_ADJ_GAIN</a></span>. 
+Interesting values might be in the range 2--10.[0]
+</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="PRESSURE_SLOPE">$PRESSURE_SLOPE</a></span><br>Slope of linear fit between psig and pressure sensor output (after digitization to A/D counts through AD7714). The fit is calculated from calibration data received with each pressure sensor, and converted to A/D counts knowing the configuration of the AD7714 and associated circuitry. This number is a constant for each pressure sensor and associated calibration. [1.159254e-04]</p>
+ 
+<div class="med"></div>
+  <p><span class="bold"><a name="PRESSURE_YINT">$PRESSURE_YINT</a></span><br>Y-intercept of linear fit between psig and pressure sensor output (after digitization to A/D counts through AD7714). This is the value that is adjusted in the field at launch to correct the pressure sensor relative to atmospheric pressure so that the seawater surface corresponds to 0m depth. [-19.65]</p>
+
+<div class="med"></div>
+  <p><span class="bold"><a name="PROTOCOL">$PROTOCOL</a></span><br>The file
+  transfer protocol to use. (bits 0-2 data protocol, bits 3-5 control protocol:
+  0 - ymodem, 1 - raw
+  upload) [0]</p>
+  
+  
+  
+<div class="med"></div>
+
+<p><span class="bold"><a name="RAFOS_CORR_THRESH">$RAFOS_CORR_THRESH</a></span><br>  Correlation threshold to use when selecting RAFOS hits for navigation  solutions.<br>
+[60]
+</p>
+
+<div class="med"></div>
+
+ <p><span class="bold"><a name="RAFOS_DEVICE">$RAFOS_DEVICE</a></span><br>A configuration value specifying the model of the attached device, set by the builder or assembler. These devices have dedicated hardware ports on all motherboard revisions and, as such, a port specification is not necessary. A value of -1 for the RAFOS device specifies that RAFOS is not installed. [-1]</p>
+  
+<div class="med"></div>
+
+<p><span class="bold"><a name="RAFOS_HIT_WINDOW">$RAFOS_HIT_WINDOW</a></span><br>  Size of search window in seconds to use when clustering hits for navigation solutions. <br>
+[3600] 
+</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="RAFOS_PEAK_OFFSET">$RAFOS_PEAK_OFFSET</a></span><br>  Offset in seconds of actual arrival time from the receiver reported arrival index due to receiver firmware artefacts. <br>
+[1.5] 
+</p>
+
+<div class="med"></div>
+
+ <p><span class="bold"><a name="RELAUNCH">$RELAUNCH</a></span><br>
+A Boolean value: 1 means the Seaglider automatically resumes diving in the 
+event of a crash to TOM8 (or any watchdog timer reset), 0 means 
+the Seaglider automatically enters recovery in the event of a crash to 
+TOM8 (or other watchdog timer reset). Internally the Seagliders ors this
+value with 2 during a commanded reboot and 4 to indicate the glider is
+in recovery. If the internal indication for recovery is true then the glider
+will enter into recovery on reboot, regardless of the original value of
+the parameter. Internal indicator for commanded reboot is cleared after
+reboot is complete and at selftest and launch. Indicator for recovery
+is cleared upon exiting recovery and at selftest and launch.  [1]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="RHO">$RHO</a></span><br>The water density (g/cm<sup>3</sup>) used for converting buoyancy force in grams to seawater displacement in cm<sup>3</sup>. This parameter is also used in the on-board performance prediction computations. [1.023]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="ROLL_ADJ_DBAND">$ROLL_ADJ_DBAND</a></span><br>This parameter, with <span class="bold"><a href="#ROLL_ADJ_GAIN">$ROLL_ADJ_GAIN</a></span>, controls the automatic adjustment of the Seaglider roll centers based on observed turn rate.  At the end of a complete passive phase, a full guidance and control (GC) interval, the Seaglider will adjust the appropriate dive or climb roll center based on the turn rate over the last half of the passive phase if
+</p>
+
+<div class="small"></div>
+
+<p style="text-align: center;">|turn rate| > <span class="bold">$ROLL_ADJ_DBAND</span>.</p>
+  
+<div class="med"></div>
+ <p><span class="bold">$ROLL_ADJ_DBAND</span> has units of degrees/second. A value of zero disables automatic adjustment of the roll centers. [0.03]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="ROLL_ADJ_GAIN">$ROLL_ADJ_GAIN</a></span><br>This parameter, with <span class="bold"><a href="#ROLL_ADJ_DBAND">$ROLL_ADJ_DBAND</a></span>, controls the automatic adjustment of the Seaglider roll centers based on observed turn rate.  The amount of the adjustment is
+</p>
+
+<div class="small"></div>
+
+<p style="text-align: center;">	-(turn rate)*<span class="bold"><a href="#ROLL_ADJ_DBAND">$ROLL_ADJ_DBAND</a></span>, if climbing, and,<br>
+<br>	 (turn rate)*<span class="bold"><a href="#ROLL_ADJ_DBAND">$ROLL_ADJ_DBAND</a></span>, if diving.<br></p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="ROLL_ADJ_GAIN">$ROLL_ADJ_GAIN</a></span> has units of degrees/(degrees/second).  This adjustment is only meaningful the next time the Seaglider turns, as the Seaglider will roll back to this new neutral position on the next turn.  It will not immediately roll from the old neutral to the new neutral at the start of the next active guidance and control (GC) phase.  Note that if <span class="bold"><a href="#HEAD_ERRBAND">$HEAD_ERRBAND</a></span> is large, then several active/passive GC phases might pass before a turn is initiated and the new roll center is used.  A new adjustment is computed only after a turn has been completed.  [1.0]</p>
+ 
+<div class="med"></div>
+  <p><span class="bold"><a name="ROLL_CNV">$ROLL_CNV</a></span><br>Roll position conversion factor, from A/D counts to degrees. This is a constant determined by the particulars of the roll gear train, motor and potentiometer. [0.02827]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="ROLL_DEG">$ROLL_DEG</a></span><br>The number of degrees to roll the internal roll mass during a turn.  Traditionally, this was hard-coded to 40<sup>o</sup>, and is used in all turns.  With larger battery packs, different trim lead configurations, and the possibility of longer wings, this was changed to allow the pilot to specify other roll targets for turns, primarily to take advantage of more of the available roll capacity.  The roll software limits will still provide the effective roll maximums. [45]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="ROLL_MAX">$ROLL_MAX</a></span><br>Roll position software limit (A/D counts) to starboard. The glider operating software will stop the mass shifter at this value when rolling to starboard. [4000]</p>
+ 
+<div class="med"></div>
+  <p><span class="bold"><a name="ROLL_MAXERRORS">$ROLL_MAXERRORS</a></span><br>The number of roll motor errors allowed before the Seaglider goes into recovery state. An error occurs when the <span class="bold"><a href="#ROLL_TIMEOUT">$ROLL_TIMEOUT</a></span> expires prior to achieving the commanded roll A/D position.</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="ROLL_MIN">$ROLL_MIN</a></span><br>Roll position software limit (A/D counts) to port. The Seaglider operating software will stop the mass shifter at this value when rolling to port. [120]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="ROLL_TIMEOUT">$ROLL_TIMEOUT</a></span><br>Roll maneuver timeout (seconds). [15]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="SEABIRD_C_G">$SEABIRD_</span>[<span class="bold">C_G</span>/ <span class="bold">C_H</span>/ <span class="bold">C_I</span>/ <span class="bold">C_J</span>/ <span class="bold">T_G</span>/ <span class="bold">T_H</span>/ <span class="bold">T_I</span>/ <span class="bold">T_J</span>]</a><br>
+Sea-Bird Electronics-provided calibration coefficients for their conductivity and temperature sensor on the Seaglider. These values are used to compute calibrated temperature and salinity for hardware test purposes and in situ density for self-trimming applications. Currently used for subsurface finish maneuvers in which the glider attempts to become neutral at a fixed depth below the surface or an obstacle on the surface. </p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="SIM_W">$SIM_W</a></span><br>Simulated Seaglider desired vertical velocity (m/s). If non-zero, this value is used to generate depths so that the Seaglider can do simulated dives in the lab or on the deck. A value of 0 disables this feature. This parameter is automatically zeroed during the Sea Launch procedure. [0.1]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="SM_CC">$SM_CC</a></span><br>The specified minimum-buoyancy position of the VBD (cm<sup>3</sup>) the Seaglider attains at the surface. If the Seaglider enters the surface maneuver with less than this value of VBD, it pumps to this value. If the Seaglider enters the surface maneuver with more than this value of VBD, it does not change the value of VBD and continues to the next part of the surface maneuver. [350]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="SPEED_FACTOR">$SPEED_FACTOR</a></span><br>A factor to compensate for Seaglider's inability to dive at the desired horizontal velocity. This is a measure of the efficiency of the Seaglider's progress along a specified track. Factors that lower the Seaglider's efficiency are turns, leaving the surface at arbitrary headings, and reduced horizontal speed during the apogee maneuver. <span class="bold"><a href="#SPEED_LIMITS">$SPEED_LIMITS</a></span> are multiplied by this factor and <span class="bold"><a href="#KALMAN_CONTROL">$KALMAN_CONTROL</a></span> components are divided by it. [0.9]</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="STOP_T">$STOP_T</a></span><br>Date and time after which the glider will stop diving and enter recovery. The stop time is only checked upon surfacing (the glider will not stop in the middle of a dive if this time is reached). Must be specified in the form mmddyyhh. For example, a value of 12151613 will cause the glider to enter recovery on the first surfacing after 15 December 2016 at 1300 hours. A value of zero turns off this check. [0]</p>
+
+<div class="med"></div>
+<p>
+<span class="bold"<a name="STROBE">$STROBE</a></span><br>
+Controls blinking of the strobe LED function available on gliders with
+Rev C motherboards. A value of zero disables all blinking, one turns the
+strobe on when the glider is in recovery, and two turns the strobe on whenever
+the glider is on the surface (between dives and recovery). [0]
+</p>
+ 
+<div class="med"></div>
+<p><span class="bold"><a name="SURFACE_URGENCY">$SURFACE_URGENCY</a></span><br>
+ Number of dives to accumulate before trying extra surfacings. The $SURFACE_ parameters only affect under ice capable gliders.  For non-under ice capable gliders, these parameters have no effect. [0]  
+<div class="med"></div>
+
+<p><span class="bold"><a name="SURFACE_URGENCY_FORCE">$SURFACE_URGENCY_FORCE</a></span><br>
+Dive number modulo for forced extra surfacing attempts. For under ice only. [0] 
+
+<div class="med"></div>
+<p><span class="bold"><a name="SURFACE_URGENCY_TRY">$SURFACE_URGENCY_TRY</a></span><br>
+Dive number modulo for extra surfacing attempts. For under ice only. [0]
+
+<div class="med"></div>
+<p><span class="bold"><a name="T_ABORT">$T_ABORT</a></span><br>A safety time (minutes) such that if the current elapsed time on a given dive exceeds this time, the Seaglider will enter the recovery phase. [1440]</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="T_BOOST">$T_BOOST</a></span><br>
+The desired time (seconds) to run the boost pump during VBD operations deeper than <span class="bold"><a href="#D_BOOST">$D_BOOST</a></span>. A value of 0 runs the boost pump continuously.  If non-zero, the boost pump will run for a minimum of 3 seconds (to prime the main pump) and then shut off the boost pump after  <span class="bold">$T_BOOST</a></span> total pump seconds have elapsed.</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="T_DIVE">$T_DIVE</a></span><br>The desired time (minutes) for the glider to make one dive-climb cycle to the depth <span class="bold"><a href="#D_TGT">$D_TGT</a></span> and back to the surface. This value does not include the time for pumping during the apogee phase. The value is used to calculate the Seaglider's desired vertical velocity in a particular dive, using the naive calculation w (cm/s) = 2*<span class="bold">$D_TGT</span>*100/(<span class="bold">$T_DIVE</span>*60). The desired w is combined with <span class="bold"><a href="#MAX_BUOY">$MAX_BUOY</a></span>, the range to the target, and the Seaglider hydrodynamic model to calculate the Seaglider's desired pitch angle on any given dive. [330]</p>
+
+<div class="med"></div>
+<p><span class="bold"><a name="T_EPIRB">$T_EPIRB</a></span><br>
+The amount of time in seconds to loiter on the surface when <span class="bold"><a href="#N_NOCOMM">$N_NOCOMM</a></span> is exceeded and bit 2 (EPIRB mode)
+of <span class="bold"><a href="#NOCOMM_ACTION">$NOCOMM_ACTION</a></span> is
+set. [0]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="T_GPS">$T_GPS</a></span><br>The maximum allowed time (minutes) to obtain a GPS position (GPS timeout). We often run with a <span class="bold">$T_GPS</span> of longer than 12.5 minutes, in order to ensure that the GPS receiver has time to receive a complete set of almanac entries in the event that lack of an almanac prevents getting a timely fix. [15]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="T_LOITER">$T_LOITER</a></span><br>
+Time (seconds) to loiter after going neutral at apogee, before pitching up
+and becoming positively buoyant for climb. While in the loiter state the
+glider will attempt to maintain zero vertical velocity. It will pump, but 
+not bleed (become heavier) to do this. 
+The glider does not servo on depth in this state. All other timeouts 
+and depths are honored in this state. <a href="#T_MISSION">$T_MISSION</a>
+and <a href="#T_ABORT">$T_ABORT</a> will be automatically adjusted manually to account
+for the additional dive duration. GC and sampling intervals 
+during the loiter state are controlled by the "loiter" bin if specified or the
+appropriate depth bins otherwise in the science file. 
+</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="T_MISSION">$T_MISSION</a></span><br>The maximum mission time (minutes) allowed. After <span class="bold">$T_MISSION</span>/2 minutes, the Seaglider will transition from dive phase to apogee phase, then commence the climb phase. If <span class="bold">$T_MISSION</span> is reached prior to the Seaglider reaching <span class="bold"><a href="#D_SURF">$D_SURF</a></span>, the Seaglider immediately enters the surface phase. This time includes the dive, apogee and climb phases. [375]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="T_NO_W">$T_NO_W</a></span><br>The time (seconds) for the Seaglider to wait with no significantly non-zero vertical velocity (less than 1 cm/s, as measured by dP/dt) before proceeding the next phase of a dive. This is primarily used to move from dive phase to climb phase (initiate an apogee maneuver) when the Seaglider unexpectedly encounters the bottom.  Note that this protection is only in place at depths below <span class="bold"><a href="#D_NO_BLEED">$D_NO_BLEED</a></span>.  [120]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="T_RSLEEP">$T_RSLEEP</a></span><br>The sleep time interval (minutes) during the recovery phase. During the recovery phase, the Seaglider first gets a GPS fix, then calls the basestation up to <span class="bold"><a href="#CALL_TRIES">$CALL_TRIES</a></span> times to upload the GPS fix, then goes into low-power sleep for this length of time. The surface evolution has about two minutes of "overhead", so that the Seaglider calls are about (<span class="bold">#$T_RSLEEP</span> + 2) minutes apart in practice. [8]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="T_TURN">$T_TURN</a></span><br>The maximum amount of time (seconds) allowed to complete a turn during the active G&C mode. If this timeout is reached before the desired heading is reached, the Seaglider rolls back to neutral and continues. [225]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="T_TURN_SAMPINT">$T_TURN_SAMPINT</a></span><br>The sample interval during active and passive G&C. This should be short enough so that the glider cannot pass entirely through the desired heading deadband without sampling. This was implemented to correct a bug in the guidance routine that allowed for complete circles to occur when trying simple course corrections. A negative value indicates that the "extra" samples taken during a turn should be recorded.[5]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="T_WATCHDOG">$T_WATCHDOG</a></span><br>The value to which the watchdog timer is set (minutes). This is an information-only parameter; the watchdog timer itself is set with DIP-switches on its chip on the main board. [10]</p>
+  
+<p><span class="bold"><a name="TGT_AUTO_DEFAULT">$TGT_AUTO_DEFAULT</a></span><br>A Boolean parameter: if set to 1, automatically update the default target in NVRAM, if set to 0, do not. [0]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="TGT_DEFAULT_LAT">$TGT_DEFAULT_LAT</a></span><br>Floating point value (decimal degrees) between -90.0 and 90.0. Together with <span class="bold"><a href="#TGT_DEFAULT_LON">$TGT_DEFAULT_LON</a></span> this parameter provides a default target location when the targets file cannot be read.</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="TGT_DEFAULT_LON">$TGT_DEFAULT_LON</a></span><br>Floating point value (decimal degrees) between -180.0 and 180.0. See <span class="bold"><a href="#TGT_DEFAULT_LAT">$TGT_DEFAULT_LAT</a></span>, above.</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="UNCOM_BLEED">$UNCOM_BLEED</a></span><br>The uncommanded change in A/D counts of VBD bleed that triggers the following actions in an attempt to save the Seaglider: stop whatever motor is running (the assumption is that electrical noise from one of the motors causes the Skinner valve to open) and disable it, close the Skinner valve, and enter the recovery phase (go to the surface and call home). [20]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="UPLOAD_DIVES_MAX">$UPLOAD_DIVES_MAX</a></span><br>The maximum number of dives to upload at one surfacing.  A value of -1 means upload all available dives that have not been previously uploaded. [-1]</p>
+  
+
+<div class="med"></div>
+ <p><span class="bold"><a name="USE_BATHY">$USE_BATHY</a></span><br>If 0, do not use bathymetry grid file. Either dive to <span class="bold"><a href="#D_TGT">$D_TGT</a></span>, or use the on-board altimeter to determine the appropriate depth at which to enter the apogee maneuver. If positive, use bathymetry file named <span class="italic">bathymap.nnn</span>, where <span class="italic">nnn</span> = <span class="bold">$USE_BATHY</span> (with leading zeros, if necessary), and dive to the shallower of the two parameters <span class="bold"><a href="#D_GRID">$D_GRID</a></span> and <span class="bold"><a href="#D_TGT">$D_TGT</a></span>. If negative, search for an on-board <span class="italic">bathymap.nnn</span> appropriate for the current position of the glider. This would be the standard usage in operating areas covered by more than one map. Example: If <span class="bold"><a href="#USE_BATHY">$USE_BATHY</a></span> = 7, then use the bathymetry file called <span class="italic">bathymap.007</span> to get <span class="bold"><a href="#D_GRID">$D_GRID</a></span>. No other map would be used. If <span class="bold">$USE_BATHY</span> = -4, then search all on-board <span class="italic">bathymap.nnn</span> files for one that covers the current glider position.</p>
+ 
+<div class="med"></div>
+  <p><span class="bold"><a name="USE_ICE">$USE_ICE</a></span><br>Same as <span class="bold"><a href="#USE_BATHY">$USE_BATHY</a></span> above, except for the controlling the use of ice maps. When <span class="bold">$USE_ICE</span> is non-zero, the glider will use the appropriate maps to determine time-varying ice condition codes for surfacing decisions.</p>
+ 
+<div class="med"></div>
+ <p><span class="bold"><a name="VBD_CNV">$VBD_CNV</a></span><br>VBD position conversion factor from A/D counts to cm<sup>3</sup>. This is a constant determined by the geometry of the internal hydraulic fluid reservoir and the potentiometers. The sign is negative to mean that higher A/D counts means more oil in the internal reservoir, hence a less-inflated external bladder, hence a lower Seaglider displacement, and thus a lower Seaglider buoyancy. [-0.2453]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="VBD_DBAND">$VBD_DBAND</a></span><br>VBD position deadband (cm<sup>3</sup>). [2]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="VBD_LP_IGNORE">$VBD_LP_IGNORE</a></span><br>Which VBD linpots to ignore when computing VBD position, if any. 0 - average both values; 1 - ignore A; 2 - ignore B [0]</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="VBD_MAX">$VBD_MAX</a></span><br>Variable Buoyancy Device (VBD) position (A/D counts) software limit when the internal reservoir is almost full (external bladder fully bled, minimum glider buoyancy). The Seaglider operating software will close the VBD main bleed valve (Skinner valve) when this value is reached. The builder or assembler typically sets this. [3800]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="VBD_MAXERRORS">$VBD_MAXERRORS</a></span><br>Number of VBD errors allowed before entering recovery phase. This is an attempt to keep a Seaglider at the surface (prevent another dive) in the event it is reporting VBD errors. [1]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="VBD_MIN">$VBD_MIN</a></span><br>Variable Buoyancy Device (VBD) position (A/D counts) software limit when the internal reservoir is almost empty (external bladder fully pumped). The Seaglider operating software will stop the VBD pump when this value is reached. The builder or assembler typically sets this. [300]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="VBD_TIMEOUT">$VBD_TIMEOUT</a></span><br>VBD pump or bleed timeout (seconds). [720]</p>
+  
+<div class="med"></div>
+ <p><span class="bold"><a name="W_ADJ_DBAND">$W_ADJ_DBAND</a></span><br>
+
+Seaglider adjusts its buoyancy to maintain a desired vertical velocity (w) in
+the presence of strong density changes.  In particular, if the observed w is too
+low, the glider may attempt to bleed on dives (subject to <span class="bold"><a
+ href="#D_NO_BLEED">$D_NO_BLEED</a></span> and <span class="bold"><a
+ href="#MAX_BUOY">$MAX_BUOY</a></span>) or pump on climbs.  However, in the
+presense of strong internal waves, the glider may appear to slow transiently
+because of upwelling on the dive or downwelling on the climb, triggering
+unneeded buoyancy adjustments.  This parameter limits active control on VBD
+changes during a dive and climb.  The Seaglider will automatically seek to
+maintain the desired vertical velocity by changing the VBD when </p>
+
+<div class="small"></div>
+
+<p style="text-align: center;"><span style="text-align: center;"> | Wobserved | &lt; | Wdesired | - <span class="bold">$W_ADJ_DBAND</span> </span>.</p>
+
+<div class="med"></div>
+ <p><span class="bold">$W_ADJ_DBAND</span> has units of cm/s, should be positive, and correspond to the typical RMS variance of observed w.  A value of 0 ignores internal wave effects. [0]</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="XPDR_DEVICE">$XPDR_DEVICE</a></span><br>A configuration value specifying the model of the attached device, set by the builder or assembler. These devices have dedicated hardware ports on all motherboard revisions and, as such, a port specification is not necessary. See <span class="bold"><a href="#COMPASS_DEVICE">$COMPASS_DEVICE</a></span>. [21]
+</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="XPDR_INHIBIT">$XPDR_INHIBIT</a></span><br>
+A configuration value specifying the transponder inhibit time in hundreds 
+of milliseconds. The inhibit time is the time after a transponder reply 
+during which the transponder will not reply to subsequent interrogation. 
+Shorter times mean the transponder can be interrogated more rapidly. 
+Valid values are from 1 (100 milliseconds) to 99 (9.9 seconds). [90]
+</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="XPDR_VALID">$XPDR_VALID</a></span><br>
+A configuration value specifying the transponder interrogation validation 
+sensitivity in units of 0.5 ms. Valid values are from 0 (no validation)
+to 6 (3 ms). The validation value is the total time over a 10 ms window 
+following initial triggering that the detector circuit must remain triggered.
+Validation of interrogation pulses is only available on AAE transponder
+boards with firmware version 3.061 or later. Longer validation times
+will reduce spurious interrogration replies, but could result in decreased
+range. A value of zero results in no validation which is equivalent to
+the behavior of firmware prior to 3.061. [0]
+</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="XPDR_INT">$XPDR_INT</a></span><br>
+Set the transponder interrogate frequency. Set to zero to use the 
+transponder's default value. [0]
+</p>
+
+<div class="med"></div>
+ <p><span class="bold"><a name="XPDR_REP">$XPDR_REP</a></span><br>
+Set the transponder reply frequency. Set to zero to use the 
+transponder's default value. [0]
+</p>
+
+
+<div class="large"></div>
+
+<div class="large"></div>
+
+<div class="large"></div>
+
+<div class="large"></div>
+
+<p style="color: #999999; text-align: center;">
+Copyright University of Washington, 2006-2014 All Rights Reserved.
+</p>
+
+<div class="large"></div>
+
+</body>
+</html>

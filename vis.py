@@ -92,6 +92,11 @@ async def mapHandler(request, glider:int):
     filename = f'{sys.path[0]}/html/map.html'
     return await sanic.response.file(filename, mime_type='text/html')
 
+@app.route('/parms')
+async def parmsHandler(request):
+    filename = f'{sys.path[0]}/html/Parameter_Reference_Manual.html'
+    return await sanic.response.file(filename, mime_type='text/html')
+
 @app.route('/kml/<glider:int>')
 async def kmlHandler(request, glider:int):
     filename = f'sg{glider}/sg{glider}.kmz'
