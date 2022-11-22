@@ -114,13 +114,27 @@
     let wsocket  = null;
     var lastSetup = 0;
     function setupStream(glider) {
-    
+        if (Date.now() < lastSetup + 5000) {
+            setTimeout('setupStream(glider)', 5000);
+            console.log('too soon');
+            return;
+        }
+        lastSetup = Date.now();
+ 
         if (wsocket != null) {
             wsocket.close();
             console.log('closing previous stream');
         }
         console.log('setting up stream');
-        wsocket = new WebSocket('ws://localhost:20004/stream/' + glider);
+        var loc = window.location, new_uri;
+        if (loc.protocol === "https:") 
+            new_uri = "wss:";
+        else
+            new_uri = "ws:";
+
+        new_uri += "//" + loc.host;
+        new_uri += "/stream/" + glider;
+        wsocket = new WebSocket(new_uri);
 
         wsocket.onerror = function(error) {
             console.log('stream error detected');
