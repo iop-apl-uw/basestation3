@@ -31,6 +31,31 @@
                 return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
             }
 
+            async function fetchWeather(latlng, popup, map) {
+                var url1 = "https://marine-api.open-meteo.com/v1/marine?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=wave_height";
+                var url2 = "https://api.open-meteo.com/v1/forecast?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=windspeed_10m";
+
+                const waves = await fetch(url1).then(response => response.json());
+                const wind = await fetch(url2).then(response => response.json());
+
+                var n = waves['hourly']['time'].length;
+                var m = wind['hourly']['time'].length;
+                var i;
+                var txt = "Forecast for " + formatPos(latlng.lat) + "," + formatPos(latlng.lng) + '<table style="text-align:right";>';
+                
+                txt += '<tr style="text-align:center;"><th>UTC</th><th>wind (m/s)</th><th>waves (m)</th></tr>';
+                console.log(n + ' ' + m);
+                for (i = 0 ; i < n && i < m && i < 72 ; i += 12) {
+                    txt += "<tr><td>" + waves['hourly']['time'][i] + "</td>"; 
+                    txt += "    <td>" + (parseFloat(wind['hourly']['windspeed_10m'][i])/3.6).toFixed(2) + "</td>";
+                    txt += "    <td>" + waves['hourly']['wave_height'][i] + "</td></tr>";
+                }
+                txt += "</table>";
+                txt += "via Open-Meteo and German Weather Service DWD";
+                popup.setLatLng(latlng)
+                     .setContent(txt)
+                     .openOn(map);
+            }
         </script>
 
         <script type="text/javascript">
@@ -125,6 +150,10 @@
             };
 
             // legend.addTo(map); // match the layer default
+
+            // map event handlers
+
+            //turn legend on and off as wind layer comes and goes
             map.on('overlayadd', function(evt) {
                 console.log('overlayadd ' + evt.name);
                 if (evt.name === 'wind') {
@@ -135,6 +164,14 @@
                 console.log('overlayremove ' + evt.name);
                 if (evt.name === 'wind')
                     this.removeControl(legend);
+            });
+
+            var popup = L.popup({ maxWidth:600, minWidth:300 });
+            map.on('click', function(evt) {
+                if (ruler._choice == false) {
+                    console.log(evt.latlng);
+                    fetchWeather(evt.latlng, popup, map);
+                }
             });
 
             // contours
@@ -174,7 +211,8 @@
                     label: 'distance'
                 }
             };                               
-            L.control.ruler(options).addTo(map);
+            ruler = L.control.ruler(options);
+            ruler.addTo(map);
 
             // reticle
 
@@ -213,6 +251,7 @@
 
             // we have to maintain our own sync'd copy or we run into CORS problems
             kmz.load('/kmz/arctic.kmz', 'Arctic ice edge');
+            kmz.load('/kmz/antarctic.kmz', 'Antarctic ice edge');
 
             // KML and snap to KML
 

@@ -19,6 +19,7 @@ from io import BytesIO
 import sanic
 import aiofiles
 import asyncio
+import aiohttp
 
 modifiedFile = {}
 newDive = {}
@@ -63,12 +64,14 @@ async def engHandler(request, glider:int, image:str):
 @app.route('/script/<script:str>')
 async def scriptHandler(request, script:str):
     filename = f'{sys.path[0]}/scripts/{script}'
-    return await sanic.response.file(filename, mime_type='text/html')
+    if os.path.exists(filename):
+        return await sanic.response.file(filename, mime_type='text/html')
 
 @app.route('/script/images/<image:str>')
 async def scriptImageHandler(request, image:str):
     filename = f'{sys.path[0]}/scripts/images/{image}'
-    return await sanic.response.file(filename, mime_type='image/png')
+    if os.path.exists(filename):
+        return await sanic.response.file(filename, mime_type='image/png')
 
 @app.route('/favicon.ico')
 async def faviconHandler(request):
@@ -107,8 +110,21 @@ async def kmlHandler(request, glider:int):
 
 @app.route('/kmz/<file:str>')
 async def kmzHandler(request, file:str):
-    filename = f'{sys.path[0]}/data/{file}'
-    return await sanic.response.file(filename, mime_type='application/vnd.google-earth.kmz')
+    if file == "arctic.kmz" or file == "antarctic.kmz":
+        if file == "arctic.kmz":
+            url = 'https://usicecenter.gov/File/DownloadCurrent?pId=14'
+        else:
+            url = 'https://usicecenter.gov/File/DownloadCurrent?pId=22'
+     
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    body = await response.read()
+                    return sanic.response.raw(body)
+         
+    else:
+        filename = f'{sys.path[0]}/data/{file}'
+        return await sanic.response.file(filename, mime_type='application/vnd.google-earth.kmz')
 
 @app.route('/plots/<glider:int>/<dive:int>')
 async def plotsHandler(request, glider:int, dive:int):
