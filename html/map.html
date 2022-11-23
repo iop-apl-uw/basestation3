@@ -33,7 +33,7 @@
 
             async function fetchWeather(latlng, popup, map) {
                 var url1 = "https://marine-api.open-meteo.com/v1/marine?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=wave_height";
-                var url2 = "https://api.open-meteo.com/v1/forecast?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=windspeed_10m";
+                var url2 = "https://api.open-meteo.com/v1/forecast?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=windspeed_10m,pressure_msl,precipitation,visibility";
 
                 const waves = await fetch(url1).then(response => response.json());
                 const wind = await fetch(url2).then(response => response.json());
@@ -43,12 +43,15 @@
                 var i;
                 var txt = "Forecast for " + formatPos(latlng.lat) + "," + formatPos(latlng.lng) + '<table style="text-align:right";>';
                 
-                txt += '<tr style="text-align:center;"><th>UTC</th><th>wind (m/s)</th><th>waves (m)</th></tr>';
+                txt += '<tr style="text-align:center;"><th>UTC</th><th>wind (m/s)</th><th>SWH (m)</th><th>SLP (mbar)</th><th>precip (mm)</th><th>vis (km)</th></tr>';
                 console.log(n + ' ' + m);
                 for (i = 0 ; i < n && i < m && i < 72 ; i += 12) {
                     txt += "<tr><td>" + waves['hourly']['time'][i] + "</td>"; 
                     txt += "    <td>" + (parseFloat(wind['hourly']['windspeed_10m'][i])/3.6).toFixed(2) + "</td>";
-                    txt += "    <td>" + waves['hourly']['wave_height'][i] + "</td></tr>";
+                    txt += "    <td>" + waves['hourly']['wave_height'][i] + "</td>";
+                    txt += "    <td>" + wind['hourly']['pressure_msl'][i] + "</td>";
+                    txt += "    <td>" + wind['hourly']['precipitation'][i] + "</td>";
+                    txt += "    <td>" + (parseFloat(wind['hourly']['visibility'][i])/1000).toFixed(0.1) + "</td></tr>";
                 }
                 txt += "</table>";
                 txt += "via Open-Meteo and German Weather Service DWD";
@@ -166,7 +169,7 @@
                     this.removeControl(legend);
             });
 
-            var popup = L.popup({ maxWidth:600, minWidth:300 });
+            var popup = L.popup({ maxWidth:900, minWidth:600 });
             map.on('click', function(evt) {
                 if (ruler._choice == false) {
                     console.log(evt.latlng);
