@@ -323,11 +323,11 @@
     }
 
     function popupSelftest() {
-        window.open('/selftest/' + currGlider);
+        window.open('/selftest/' + currGlider, currGlider + '-selftest');
     }
 
     function popupMap() {
-        window.open('/map/' + currGlider);
+        window.open('/map/' + currGlider, currGlider + '-map');
     }
 
     function showPlot(elt, plotly) {
@@ -642,7 +642,7 @@
         var v = $('cmdfile').value;
         if (v[s-1] == '$' && v[e] == ',') {
             var str = v.substring(s, e);
-            window.open('/parms#' + str);
+            window.open('/parms#' + str, 'parms');
         }
     }
  
