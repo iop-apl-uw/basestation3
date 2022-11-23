@@ -95,6 +95,11 @@ async def mapHandler(request, glider:int):
     filename = f'{sys.path[0]}/html/map.html'
     return await sanic.response.file(filename, mime_type='text/html')
 
+@app.route('/map/<glider:int>/<extras:path>')
+async def multimapHandler(request, glider:int, extras):
+    filename = f'{sys.path[0]}/html/map.html'
+    return await sanic.response.file(filename, mime_type='text/html')
+
 @app.route('/parms')
 async def parmsHandler(request):
     filename = f'{sys.path[0]}/html/Parameter_Reference_Manual.html'
