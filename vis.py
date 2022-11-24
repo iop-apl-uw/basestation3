@@ -82,7 +82,7 @@ async def faviconHandler(request):
 async def mainHandler(request, glider:int):
     filename = f'sg{glider}/comm.log'
     if os.path.exists(filename):
-        if not glider in watchThread:
+        if glider not in watchThread:
             watchThread[glider] = _thread.start_new_thread(watchFilesystem, (glider,))
 
         filename = f'{sys.path[0]}/html/vis.html'
@@ -172,11 +172,53 @@ async def statusHandler(request, glider:int):
     print(message)
     return sanic.response.json(message)
 
-@app.route('/cmdfile/<glider:int>')
-async def cmdfileHandler(request, glider:int):
+@app.route('/control/<glider:int>/<which:str>')
+async def controlHandler(request, glider:int, which:str):
+    ok = ["cmdfile", "targets", "science", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
+
+    if which not in ok:
+        return sanic.response.text("oops")
+
     message = {}
-    message['file'] = 'cmdfile'
-    filename = f'sg{glider:03d}/cmdfile'
+
+    message['file'] = 'none'
+    filename = f'sg{glider:03d}/{which}'
+
+    if os.path.exists(filename):
+        message['file'] = which
+        message['dive'] = -1
+    else:
+        versions = glob.glob(f'sg{glider:03d}/{which}.*')
+        latest = -1
+        call = -1;
+        for v in versions:
+            try:
+                j = parse('%s.{:d}.{:d}' % which, v.split('/')[1])
+                if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] > latest and j.fixed[1] > call:
+                    latest = j.fixed[0]
+                    call = j.fixed[1]
+                else:
+                    j = parse('%s.{:d}' % which, v.split('/')[1])
+                    if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] > latest:
+                        latest = j.fixed[0]
+                        call = -1
+            except Exception as e:
+                print(str(e))
+                continue
+
+        if latest > -1:
+            message['file'] = which
+            message['dive'] = latest
+            if call > -1:
+                filename = f'{filename}.{latest}.{call}'
+                message['call'] = call
+            else:
+                filename = f'{filename}.{latest}'
+                message['call'] = -1
+
+    if message['file'] == "none":
+        return sanic.response.text("none")
+
     async with aiofiles.open(filename, 'r') as file:
         message['contents']= await file.read() 
 
@@ -218,33 +260,43 @@ async def selftestHandler(request, glider:int):
 # POST handler - to save files back to basestation
 #
 
-@app.post('/save/<glider:int>')
-async def saveHandler(request, glider:int):
+@app.post('/save/<glider:int>/<which:str>')
+async def saveHandler(request, glider:int, which:str):
+    validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
+
     message = request.json
+    if 'file' not in message or message['file'] != which:
+        return sanic.response.text('oops')
+
     path = f'sg{glider:03d}'
-    tempfile.tempdir = path
-    tmp = tempfile.mktemp()
-    with open(tmp, 'w') as file:
-        file.write(message['contents'])
-        file.close()
-        print(message['contents'])
-        print("saved to %s" % tmp)
+    if which in validator:
+        tempfile.tempdir = path
+        tmp = tempfile.mktemp()
+        with open(tmp, 'w') as file:
+            file.write(message['contents'])
+            file.close()
+            print(message['contents'])
+            print("saved to %s" % tmp)
 
-        if 'force' in message and message['force'] == 1:
-            cmd = f"{sys.path[0]}/cmdedit -d {path} -q -i -f {tmp}"
-        else:
-            cmd = f"{sys.path[0]}/cmdedit -d {path} -q -f {tmp}"
-        print(cmd)
-        output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-        results = output.stdout
-        err = output.stderr
-        print("results")
-        print(results)
-        print("err")
-        print(err)
+            if 'force' in message and message['force'] == 1:
+                cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {tmp}"
+            else:
+                cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {tmp}"
+            print(cmd)
+            output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+            results = output.stdout
+            err = output.stderr
 
-    return sanic.response.text(results)
+        return sanic.response.text(results)
 
+    else: # no validator for this file type
+        try:
+            with open(f'{path}/{which}', 'w') as file:
+                file.write(message['contents'])
+            return sanic.response.text(f"{which} saved ok")
+        except Exception as e:
+            return sanic.response.text(f"error saving {which}, {str(e)}")
+            
 #
 # web socket (real-time streams)
 #
@@ -315,7 +367,7 @@ def buildFileList(glider):
                 plot = x[1] 
                 if dv > maxdv:
                     maxdv = dv
-                if not plot in dvplots:
+                if plot not in dvplots:
                     dvplots.append(plot)
 
                 divFile = fullFile.replace("png", "div")

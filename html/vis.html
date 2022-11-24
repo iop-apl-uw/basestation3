@@ -293,19 +293,22 @@
     var currDive = -1;
     var maxDive = 10000; 
     var currElt = 'diveplot';
+    var controlFileDive = {};
 
-    function saveCmdfile(force) {
+    function saveControl(force) {
         var xhttp = new XMLHttpRequest();
         var json = {};
+        var file = $('selectFile').value;
+
         xhttp.onreadystatechange = function() {
             if (this.readyState == 4 && this.status == 200) {
                 alert(this.responseText);
             }
         }
         json['force'] = force;
-        json['file'] = 'cmdfile';
-        json['contents'] = $('cmdfile').value; 
-        xhttp.open("POST", "/save/" + currGlider, true);
+        json['file'] = file;
+        json['contents'] = $(file).value; 
+        xhttp.open("POST", "/save/" + currGlider + "/" + file, true);
         xhttp.send(JSON.stringify(json));
     }
 
@@ -492,17 +495,25 @@
         currElt = 'logfile';
     }
 
-    function loadCmdfile(dive) {
+    function loadControlFile(file, dive) {
         var xhttp = new XMLHttpRequest();
         xhttp.onreadystatechange = function() {
             if (this.readyState == 4 && this.status == 200) {
+                if (this.responseText == "none" || this.responseText == "oops")  {
+                    console.log(file + ' ' + this.responseText);
+                    return;
+                } 
+
                 resp = JSON.parse(this.responseText);
-                if (resp['file'] == 'cmdfile') {
-                    $('cmdfile').value = resp['contents'];
+                if ('file' in resp && resp['file'] == file) {
+                    $(file).value = resp['contents'];
+                }
+                if ('dive' in resp && resp['dive'] > -1) {
+                    controlFileDive[file] = resp['dive'];
                 }
             }
         }
-        xhttp.open("GET", "/cmdfile/" + currGlider, true);
+        xhttp.open("GET", "/control/" + currGlider + "/" + file, true);
         xhttp.send();
     }
 
@@ -645,13 +656,47 @@
             window.open('/parms#' + str, 'parms');
         }
     }
+
+    const knownFiles = ["cmdfile", "targets", "science", "scicon.sch", "pdoscmds.bat", "tcm2mat.cal", "sg_calib_constants.m"];
+    const cmdfileButtons = ['btnGO', 'btnQUIT', 'btnRESUME'];
+    function changeFile() {
+        var file = $('selectFile').value;
+        for (var f of knownFiles) {
+            if (f == file)
+                $(f).removeAttribute('hidden');
+            else
+                $(f).setAttribute('hidden', '');
+        }
+
+        for (var b of cmdfileButtons) {
+            if (file != "cmdfile") 
+                $(b).setAttribute('hidden', '');
+            else 
+                $(b).removeAttribute('hidden');
+        }
+
+        if (file in controlFileDive) {
+            $('fileDive').innerHTML = '(' + controlFileDive[file] + ')';
+            $('fileDive').removeAttribute('hidden');
+        }
+        else {
+            $('fileDive').setAttribute('hidden', '');
+            $('fileDive').innerHTML = '';
+        }
+    }
  
     function init() {
         glider = window.location.pathname.substring(1);
         currGlider = glider;
         console.log(glider);
         loadStatus(glider);
-        loadCmdfile(0);
+        loadControlFile('cmdfile');
+        loadControlFile('science');
+        loadControlFile('targets');
+        loadControlFile('scicon.sch');
+        loadControlFile('tcm2mat.cal');
+        loadControlFile('pdoscmds.bat');
+        loadControlFile('sg_calib_constants.m');
     }
 
 </script>
@@ -749,11 +794,27 @@
 <div id="divCmdfile" style="position: absolute; left:1060; top:670; width:640px; height:380px; font-size: 12px;">
     <textarea id="cmdfile" style="width:100%; height:100%; box-sizing:border-box;" ondblclick="parameterHelp();">
     </textarea>
-    <button id="btnSave" type="button" onclick="saveCmdfile(0);">Save</button>
-    <button id="btnForce" type="button" onclick="saveCmdfile(1);">Force</button>
+    <textarea id="targets" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
+    <textarea id="science" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
+    <textarea id="scicon.sch" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
+    <textarea id="pdoscmds.bat" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
+    <textarea id="tcm2mat.cal" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
+    <textarea id="sg_calib_constants.m" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
+    <button id="btnSave" type="button" onclick="saveControl(0);">Save</button>
+    <button id="btnForce" type="button" onclick="saveControl(1);">Force</button>
     <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
     <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
     <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>
+    <select id="selectFile" onchange="changeFile()">
+        <option value="cmdfile" selected>cmdfile</option>
+        <option value="targets">targets</option>
+        <option value="science">science</option>
+        <option value="scicon.sch">scicon.sch</option>
+        <option value="pdoscmds.bat">pdoscmds.bat</option>
+        <option value="tcm2mat.cal">tcm2mat.cal</option>
+        <option value="sg_calib_constants.m">sg_calib_constants.m</option>
+    </select>
+    <span id="fileDive" hidden="hidden"></span>
 </div>
 
 <div id="bottomButtons" style="position: absolute; left: 0; top: 900; width: 80; height: 180; overflow: auto;">
