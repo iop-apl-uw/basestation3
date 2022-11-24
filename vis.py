@@ -41,6 +41,10 @@ def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
 # GET handlers - most of the API
 #
 
+@app.exception(sanic.exceptions.NotFound)
+def pageNotFound(request, exception):
+    return sanic.response.text("Page not found: {}".format(request.path), status=404)
+
 @app.route('/png/<glider:int>/<dive:int>/<image:str>')
 async def pngHandler(request, glider: int, dive: int, image: str):
     filename = f'sg{glider:03d}/plots/dv{dive:04d}_{image}.png'
@@ -66,12 +70,16 @@ async def scriptHandler(request, script:str):
     filename = f'{sys.path[0]}/scripts/{script}'
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='text/html')
+    else:
+        return sanic.response.text('not found', status=404)
 
 @app.route('/script/images/<image:str>')
 async def scriptImageHandler(request, image:str):
     filename = f'{sys.path[0]}/scripts/images/{image}'
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='image/png')
+    else:
+        return sanic.response.text('not found', status=404)
 
 @app.route('/favicon.ico')
 async def faviconHandler(request):
@@ -131,6 +139,25 @@ async def kmzHandler(request, file:str):
         filename = f'{sys.path[0]}/data/{file}'
         return await sanic.response.file(filename, mime_type='application/vnd.google-earth.kmz')
 
+@app.route('/proxy/<url:path>')
+async def proxyHandler(request, url):
+    if request.args and len(request.args) > 0:
+        url = url + '?' + request.query_string
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                body = await response.read()
+                return sanic.response.raw(body)
+    
+@app.route('/gebco/<lat:float>/<lon:float>')
+async def gebcoHandler(request, lat:float, lon:float):
+    url = f'https://api.opentopodata.org/v1/gebco2020?locations={lat:.4f},{lon:.4f}'
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                body = await response.read()
+                return sanic.response.raw(body)
+    
 @app.route('/plots/<glider:int>/<dive:int>')
 async def plotsHandler(request, glider:int, dive:int):
     (dvplots, plotlyplots) = buildPlotsList(glider, dive)
