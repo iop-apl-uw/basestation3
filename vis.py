@@ -121,37 +121,16 @@ async def kmlHandler(request, glider:int):
         kml = zip.open(f'sg{glider}.kml', 'r').read()
         return sanic.response.raw(kml)
 
-@app.route('/kmz/<file:str>')
-async def kmzHandler(request, file:str):
-    if file == "arctic.kmz" or file == "antarctic.kmz":
-        if file == "arctic.kmz":
-            url = 'https://usicecenter.gov/File/DownloadCurrent?pId=14'
-        else:
-            url = 'https://usicecenter.gov/File/DownloadCurrent?pId=22'
-     
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    body = await response.read()
-                    return sanic.response.raw(body)
-         
-    else:
-        filename = f'{sys.path[0]}/data/{file}'
-        return await sanic.response.file(filename, mime_type='application/vnd.google-earth.kmz')
+# do we need this for anything?? not yet
+@app.route('/data/<file:str>')
+async def dataHandler(request, file:str):
+    filename = f'{sys.path[0]}/data/{file}'
+    return await sanic.response.file(filename)
 
 @app.route('/proxy/<url:path>')
 async def proxyHandler(request, url):
     if request.args and len(request.args) > 0:
         url = url + '?' + request.query_string
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as response:
-            if response.status == 200:
-                body = await response.read()
-                return sanic.response.raw(body)
-    
-@app.route('/gebco/<lat:float>/<lon:float>')
-async def gebcoHandler(request, lat:float, lon:float):
-    url = f'https://api.opentopodata.org/v1/gebco2020?locations={lat:.4f},{lon:.4f}'
     async with aiohttp.ClientSession() as session:
         async with session.get(url) as response:
             if response.status == 200:

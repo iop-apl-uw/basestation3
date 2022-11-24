@@ -34,17 +34,23 @@
             async function fetchWeather(latlng, popup, map) {
                 var url1 = "https://marine-api.open-meteo.com/v1/marine?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=wave_height";
                 var url2 = "https://api.open-meteo.com/v1/forecast?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=windspeed_10m,pressure_msl,precipitation,visibility";
-
+                var url3 = `/proxy/https://api.opentopodata.org/v1/gebco2020?locations=${latlng.lat.toFixed(4)},${latlng.lng.toFixed(4)}`;
+                // var url4 = 'https://api.weather.gov/points/' + latlng.lat.toFixed(4) + ',' + latlng.lng.toFixed(4);
+                var url5 = `/proxy/https://marine.weather.gov/MapClick.php?lat=${latlng.lat.toFixed(4)}&lon=${latlng.lng.toFixed(4)}&unit=0&lg=english&FcstType=text&TextType=1`; 
                 const waves = await fetch(url1).then(response => response.json());
                 const wind = await fetch(url2).then(response => response.json());
-
+                const depth = await fetch(url3).then(response => response.json());
+                // const noaa = await fetch(url4).then(response => response.json());
+                // const response = await fetch(noaa['properties']['forecast']);
+                // const marine   = await response.json();
+                const marine = await fetch(url5).then(response => response.text());
+                
                 var n = waves['hourly']['time'].length;
                 var m = wind['hourly']['time'].length;
                 var i;
-                var txt = "Forecast for " + formatPos(latlng.lat) + "," + formatPos(latlng.lng) + '<table style="text-align:right";>';
+                var txt = "Forecast for " + formatPos(latlng.lat) + "," + formatPos(latlng.lng) + ',z=' + depth['results'][0]['elevation'] + 'm <table style="text-align:right";>';
                 
                 txt += '<tr style="text-align:center;"><th>UTC</th><th>wind (m/s)</th><th>SWH (m)</th><th>SLP (mbar)</th><th>precip (mm)</th><th>vis (km)</th></tr>';
-                console.log(n + ' ' + m);
                 for (i = 0 ; i < n && i < m && i < 72 ; i += 12) {
                     txt += "<tr><td>" + waves['hourly']['time'][i] + "</td>"; 
                     txt += "    <td>" + (parseFloat(wind['hourly']['windspeed_10m'][i])/3.6).toFixed(2) + "</td>";
@@ -55,6 +61,11 @@
                 }
                 txt += "</table>";
                 txt += "via Open-Meteo and German Weather Service DWD";
+
+                if (marine.includes("NWS Forecast for:")) {
+                    txt += "<br>" + marine;
+                }
+
                 popup.setLatLng(latlng)
                      .setContent(txt)
                      .openOn(map);
@@ -252,9 +263,9 @@
                 layerControl.addOverlay(e.layer, e.name);
             });
 
-            // we have to maintain our own sync'd copy or we run into CORS problems
-            kmz.load('/kmz/arctic.kmz', 'Arctic ice edge');
-            kmz.load('/kmz/antarctic.kmz', 'Antarctic ice edge');
+            // we have to proxy these or we run into CORS problems
+            kmz.load('/proxy/https://usicecenter.gov/File/DownloadCurrent?pId=14', 'Arctic ice edge');
+            kmz.load('/proxy/https://usicecenter.gov/File/DownloadCurrent?pId=22', 'Antarctic ice edge');
 
             // KML and snap to KML
 
