@@ -23,6 +23,7 @@ pylddwrap
 parse
 watchdog
 sanic
+aiohttp
 #
 # Below here - not included in released version
 #
