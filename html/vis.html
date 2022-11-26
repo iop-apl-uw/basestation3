@@ -340,9 +340,11 @@
         $('logDiv').setAttribute('hidden', '');
         if (plotly) {
             $('mainImage').ondblclick = function() { popupPlotly(currDive, elt); }
+            $('mainImage').oncontextmenu = function() { popupPlotly(currDive, elt); }
         }
         else {
             $('mainImage').ondblclick = null;
+            $('mainImage').oncontextmenu = null;
         }
         currElt = elt;
     }
