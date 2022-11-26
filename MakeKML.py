@@ -284,10 +284,10 @@ def printDivePlacemark(name, description, lon, lat, depth, fo, hide_label, pairs
     fo.write(f"        <description>{description}</description>\n")
     if pairs:
         fo.write('        <Style><BalloonStyle><text><![CDATA[<div align="center">\n')
-        fo.write('        <table width="300" bgcolor="white">\n')
+        fo.write('        <table width="400" bgcolor="white">\n')
         for pair in pairs:
             if pair[0] is None:
-                fo.write('        </table><hr /><table width="300" bgcolor="white">\n')
+                fo.write('        </table><hr /><table width="400" bgcolor="white">\n')
             else:
                 fo.write(
                     '        <tr><th width="200" align="right">%s</th><td width="200">%s</td></tr>\n'
@@ -344,7 +344,7 @@ def printTarget(
     fo.write(f"        <name>{name}</name>\n")
     fo.write(f"        <description>{description}</description>\n")
     fo.write('        <Style><BalloonStyle><text><![CDATA[<div align="center">\n')
-    fo.write('        <table width="300" bgcolor="white">\n')
+    fo.write('        <table width="400" bgcolor="white">\n')
     for pair in pairs:
         fo.write(
             '        <tr><th width="200" align="right">%s</th><td width="200">%s</td></tr>\n'
