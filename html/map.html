@@ -31,20 +31,39 @@
                 return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
             }
 
+            function removeTags(str, tag) {
+                const reStr = `<${tag}.*>.*?<\\\/${tag}>`;
+                const re = new RegExp(reStr, 'ig');
+                console.log(reStr);
+                if ((str===null) || (str===''))
+                    return false;
+                else
+                    str = str.toString();
+                      
+                return str.replace(re, '');
+            }
             async function fetchWeather(latlng, popup, map) {
                 var url1 = "https://marine-api.open-meteo.com/v1/marine?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=wave_height";
                 var url2 = "https://api.open-meteo.com/v1/forecast?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=windspeed_10m,pressure_msl,precipitation,visibility";
                 var url3 = `/proxy/https://api.opentopodata.org/v1/gebco2020?locations=${latlng.lat.toFixed(4)},${latlng.lng.toFixed(4)}`;
-                // var url4 = 'https://api.weather.gov/points/' + latlng.lat.toFixed(4) + ',' + latlng.lng.toFixed(4);
                 var url5 = `/proxy/https://marine.weather.gov/MapClick.php?lat=${latlng.lat.toFixed(4)}&lon=${latlng.lng.toFixed(4)}&unit=0&lg=english&FcstType=text&TextType=1`; 
-                const waves = await fetch(url1).then(response => response.json());
-                const wind = await fetch(url2).then(response => response.json());
-                const depth = await fetch(url3).then(response => response.json());
-                // const noaa = await fetch(url4).then(response => response.json());
-                // const response = await fetch(noaa['properties']['forecast']);
-                // const marine   = await response.json();
-                const marine = await fetch(url5).then(response => response.text());
+                // Promise.all does bomb if anything bombs - but is faster ...
+                let resp = await Promise.all([
+                                                fetch(url1).then(response => response.json()),
+                                                fetch(url2).then(response => response.json()),
+                                                fetch(url3).then(response => response.json()),
+                                                fetch(url5).then(response => response.text()),
+                                             ]);
                 
+                let waves = resp[0];
+                let wind = resp[1];
+                let depth = resp[2];
+                let marine = resp[3];
+                console.log(marine)
+                marine = removeTags(marine, 'head');
+                marine = marine.replaceAll('MapClick.php', 'https://marine.weather.gov/MapClick.php');
+
+                console.log(marine);
                 var n = waves['hourly']['time'].length;
                 var m = wind['hourly']['time'].length;
                 var i;
