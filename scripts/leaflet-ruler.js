@@ -1,3 +1,7 @@
+/* https://github.com/gokertanrisever/leaflet-ruler */
+/* Copyright (c) 2017 Goker Tanrisever */
+/* gokertanrisever/leaflet-ruler is licensed under the MIT License */
+
 (function(factory, window){
   "use strict";
   if (typeof define === 'function' && define.amd) {

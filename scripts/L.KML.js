@@ -1,3 +1,4 @@
+/* https://github.com/windycom/leaflet-kml */
 /*!
 	Copyright (c) 2011-2015, Pavel Shramov, Bruno Bergot - MIT licence
 */

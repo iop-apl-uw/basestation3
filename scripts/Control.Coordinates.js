@@ -1,3 +1,11 @@
+/* https://github.com/MrMufflon/Leaflet.Coordinates */
+/* 
+This work is licensed under a Creative Commons Attribution 3.0 Unported License.
+http://creativecommons.org/licenses/by/3.0
+*/
+
+/* modified for handling ddmm.mm in display */
+
 /*
  * L.Control.Coordinates is used for displaying current mouse coordinates on the map.
  */
