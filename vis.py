@@ -48,22 +48,34 @@ def pageNotFound(request, exception):
 @app.route('/png/<glider:int>/<dive:int>/<image:str>')
 async def pngHandler(request, glider: int, dive: int, image: str):
     filename = f'sg{glider:03d}/plots/dv{dive:04d}_{image}.png'
-    return await sanic.response.file(filename, mime_type='image/png')
+    if os.path.exists(filename):
+        return await sanic.response.file(filename, mime_type='image/png')
+    else:
+        return sanic.response.text('not found', status=404)
+        
 
 @app.route('/div/<glider:int>/<dive:int>/<image:str>')
 async def divHandler(request, glider: int, dive: int, image: str):
     filename = f'sg{glider:03d}/plots/dv{dive:04d}_{image}.div'
-    resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
-    async with aiofiles.open(filename, 'r') as file:
-        div = await file.read() 
+    
+    if os.path.exists(filename):
+        resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
+        async with aiofiles.open(filename, 'r') as file:
+            div = await file.read() 
 
-    resp = resp + div + '</body></html>'
-    return sanic.response.html(resp)
+        resp = resp + div + '</body></html>'
+        return sanic.response.html(resp)
+    else:
+        return sanic.response.text('not found', status=404)
+        
 
 @app.route('/eng/<glider:int>/<image:str>')
 async def engHandler(request, glider:int, image:str):
     filename = f'sg{glider:03d}/plots/eng_{image}.png'
-    return await sanic.response.file(filename, mime_type='image/png')
+    if os.path.exists(filename):
+        return await sanic.response.file(filename, mime_type='image/png')
+    else:
+        return sanic.response.text('not found', status=404)
 
 @app.route('/script/<script:str>')
 async def scriptHandler(request, script:str):
@@ -97,6 +109,14 @@ async def mainHandler(request, glider:int):
         return await sanic.response.file(filename, mime_type='text/html')
     else:
         return sanic.response.text("oops")             
+
+@app.route('/<glider:int>/<dive:int>')
+async def main2Handler(request, glider:int, dive:int):
+    return await mainHandler(request, glider)
+
+@app.route('/<glider:int>/order/<order:str>')
+async def main3Handler(request, glider:int, order:str):
+    return await mainHandler(request, glider)
 
 @app.route('/map/<glider:int>')
 async def mapHandler(request, glider:int):

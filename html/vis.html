@@ -70,6 +70,31 @@
         return deg + min/60;
     }
 
+    function createCookie(name,value,days) {
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime()+(days*24*60*60*1000));
+            var expires = "; expires="+date.toGMTString();
+        }
+        else var expires = "";
+        document.cookie = name+"="+value+expires+"; path=/";
+    }
+
+    function readCookie(name) {
+        var nameEQ = name + "=";
+        var ca = document.cookie.split(';');
+        for(var i=0;i < ca.length;i++) {
+            var c = ca[i];
+            while (c.charAt(0)==' ') c = c.substring(1,c.length);
+            if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
+        }
+        return null;
+    }
+
+    function eraseCookie(name) {
+        createCookie(name,"",-1);
+    }
+
     var blurTimer  = false;
     var isBlurred  = false;
     var isFlashing =false;
@@ -283,6 +308,7 @@
                 console.log('last line=[' + lines.at(-1) + ']') 
 
                 first = false;
+                elt.scrollTop = elt.scrollHeight;
             }
             if (isBlurred && !isFlashing) {
                 startFlash();
@@ -296,20 +322,28 @@
     var controlFileDive = {};
 
     function saveControl(force) {
-        var xhttp = new XMLHttpRequest();
         var json = {};
         var file = $('selectFile').value;
 
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                alert(this.responseText);
-            }
-        }
         json['force'] = force;
         json['file'] = file;
         json['contents'] = $(file).value; 
-        xhttp.open("POST", "/save/" + currGlider + "/" + file, true);
-        xhttp.send(JSON.stringify(json));
+
+        fetch(`/save/${currGlider}/${file}`, 
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(json),
+        })
+        .then(res => res.text())
+        .then(text => {
+            alert(text);
+        })
+        .catch(error => {
+            alert(error);
+        });
     }
 
     function changeDirective(cmd) {
@@ -359,10 +393,9 @@
         currElt = elt;
     }
 
-    function buildTable() {
+    function buildTable(glider) {
         var row, cell, text;
         var tbody = $('mainTable').getElementsByTagName('tbody')[0];
-        var xhttp = new XMLHttpRequest();
         const colors = ["#cccccc", "#eeeeee"];
         var i, c;
         var date;
@@ -370,118 +403,118 @@
         var dist;
         var n, e;
         console.log("building table");
+
         clearTable();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                resp = JSON.parse(this.responseText);
-                for (d of resp) {
-                    row = tbody.insertRow(1);
-                    i = $('mainTable').rows.length % 2;
-                    row.style.backgroundColor = colors[i];
-                    cell = row.insertCell(0);
-                    cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ');">' + d['dive'] + '</a>';
-                    cell.style.textAlign = 'left';
-                    // cell.appendChild(text);
 
-                    date = new Date(1000*(d['log_start'] + d['total_flight_time_s']));
-                    cell = row.insertCell(1); 
-                    text = document.createTextNode((date.getFullYear() - 2000) + '/' +
-                                                   (date.getMonth() + 1).zeroPad() + '/' + 
-                                                   date.getDate().zeroPad() + ' ' + 
-                                                   date.getHours().zeroPad() + ':' + 
-                                                   date.getMinutes().zeroPad());
-                    cell.appendChild(text);
+        fetch(`/db/${glider}`)
+        .then(res => res.json())
+        .then(data => {
+            for (d of data) {
+                row = tbody.insertRow(1);
+                i = $('mainTable').rows.length % 2;
+                row.style.backgroundColor = colors[i];
+                cell = row.insertCell(0);
+                cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ');">' + d['dive'] + '</a>';
+                cell.style.textAlign = 'left';
+                // cell.appendChild(text);
 
-                    cell = row.insertCell(2); 
-                    text = document.createTextNode('' + (d['total_flight_time_s']/60).toFixed(0));
-                    cell.appendChild(text);
+                date = new Date(1000*(d['log_start'] + d['total_flight_time_s']));
+                cell = row.insertCell(1); 
+                text = document.createTextNode((date.getFullYear() - 2000) + '/' +
+                                               (date.getMonth() + 1).zeroPad() + '/' + 
+                                               date.getDate().zeroPad() + ' ' + 
+                                               date.getHours().zeroPad() + ':' + 
+                                               date.getMinutes().zeroPad());
+                cell.appendChild(text);
 
-                    cell = row.insertCell(3);
-                    text = document.createTextNode('' + d['max_depth'].toFixed(0) + '(' + d['log_D_TGT'] + ')');
-                    cell.appendChild(text);
+                cell = row.insertCell(2); 
+                text = document.createTextNode('' + (d['total_flight_time_s']/60).toFixed(0));
+                cell.appendChild(text);
 
-                    dist = Math.sqrt(d['GPS_north_displacement_m']*d['GPS_north_displacement_m'] 
-                                     + d['GPS_east_displacement_m']*d['GPS_east_displacement_m']);
-                    course = Math.atan2(d['GPS_east_displacement_m'], d['GPS_north_displacement_m'])*180.0/Math.PI;
-                    if (course < 0) {
-                        course = course + 360;
-                    }
-                    cell = row.insertCell(4);
-                    text = document.createTextNode('' + (dist/1000).toFixed(2));
-                    cell.appendChild(text);
+                cell = row.insertCell(3);
+                text = document.createTextNode('' + d['max_depth'].toFixed(0) + '(' + d['log_D_TGT'] + ')');
+                cell.appendChild(text);
 
-                    cell = row.insertCell(5);
-                    text = document.createTextNode('' + course.toFixed(1));
-                    cell.appendChild(text);
-
-                    n = d['flight_avg_speed_north'] * d['total_flight_time_s'];
-                    e = d['flight_avg_speed_east'] * d['total_flight_time_s'];
-                    dist = Math.sqrt(n*n + e*e);
-                    course = Math.atan2(e, n)*180.0/Math.PI;
-                    if (course < 0) {
-                        course = course + 360;
-                    }
-                    cell = row.insertCell(6);
-                    text = document.createTextNode('' + (dist/1000).toFixed(2));
-                    cell.appendChild(text);
-
-                    cell = row.insertCell(7);
-                    text = document.createTextNode('' + course.toFixed(1));
-                    cell.appendChild(text);
-
-                    cell = row.insertCell(8);
-                    text = document.createTextNode('' + (d['meters_to_target']/1000).toFixed(2));
-                    cell.appendChild(text);
-
-                    cell = row.insertCell(9);
-                    text = document.createTextNode('' + (d['mag_heading_to_target'] + d['magnetic_variation']).toFixed(1));
-                    cell.appendChild(text);
-
-                    
-                    dist = Math.sqrt(d['depth_avg_curr_east']*d['depth_avg_curr_east'] 
-                                     + d['depth_avg_curr_north']*d['depth_avg_curr_north']);
-                    course = Math.atan2(d['depth_avg_curr_east'], d['depth_avg_curr_north'])*180.0/Math.PI;
-                    if (course < 0) {
-                        course = course + 360;
-                    }
-
-                    cell = row.insertCell(10);
-                    text = document.createTextNode('' + (dist*100.0).toFixed(1));
-                    cell.appendChild(text);
-
-                    cell = row.insertCell(11);
-                    text = document.createTextNode('' + course.toFixed(1));
-                    cell.appendChild(text);
-
-                    cell = row.insertCell(12);
-                    text = document.createTextNode('' + d['log_TEMP'].toFixed(2));
-                    cell.appendChild(text);
-                    cell = row.insertCell(13);
-                    text = document.createTextNode('' + d['log_HUMID'].toFixed(2));
-                    cell.appendChild(text);
-                    cell = row.insertCell(14);
-                    text = document.createTextNode('' + d['log_INTERNAL_PRESSURE'].toFixed(2));
-                    cell.appendChild(text);
-
-                    cell = row.insertCell(15);
-                    text = document.createTextNode('' + d['volts_10V'].toFixed(2));
-                    cell.appendChild(text);
-                    cell = row.insertCell(16);
-                    text = document.createTextNode('' + (d['capacity_10V']*100).toFixed(2));
-                    cell.appendChild(text);
-                    cell = row.insertCell(17);
-                    text = document.createTextNode('' + d['volts_24V'].toFixed(2));
-                    cell.appendChild(text);
-                    cell = row.insertCell(18);
-                    text = document.createTextNode('' + (d['capacity_24V']*100).toFixed(2));
-                    cell.appendChild(text);
-
+                dist = Math.sqrt(d['GPS_north_displacement_m']*d['GPS_north_displacement_m'] 
+                                 + d['GPS_east_displacement_m']*d['GPS_east_displacement_m']);
+                course = Math.atan2(d['GPS_east_displacement_m'], d['GPS_north_displacement_m'])*180.0/Math.PI;
+                if (course < 0) {
+                    course = course + 360;
                 }
+                cell = row.insertCell(4);
+                text = document.createTextNode('' + (dist/1000).toFixed(2));
+                cell.appendChild(text);
+
+                cell = row.insertCell(5);
+                text = document.createTextNode('' + course.toFixed(1));
+                cell.appendChild(text);
+
+                n = d['flight_avg_speed_north'] * d['total_flight_time_s'];
+                e = d['flight_avg_speed_east'] * d['total_flight_time_s'];
+                dist = Math.sqrt(n*n + e*e);
+                course = Math.atan2(e, n)*180.0/Math.PI;
+                if (course < 0) {
+                    course = course + 360;
+                }
+                cell = row.insertCell(6);
+                text = document.createTextNode('' + (dist/1000).toFixed(2));
+                cell.appendChild(text);
+
+                cell = row.insertCell(7);
+                text = document.createTextNode('' + course.toFixed(1));
+                cell.appendChild(text);
+
+                cell = row.insertCell(8);
+                text = document.createTextNode('' + (d['meters_to_target']/1000).toFixed(2));
+                cell.appendChild(text);
+
+                cell = row.insertCell(9);
+                text = document.createTextNode('' + (d['mag_heading_to_target'] + d['magnetic_variation']).toFixed(1));
+                cell.appendChild(text);
+
+                
+                dist = Math.sqrt(d['depth_avg_curr_east']*d['depth_avg_curr_east'] 
+                                 + d['depth_avg_curr_north']*d['depth_avg_curr_north']);
+                course = Math.atan2(d['depth_avg_curr_east'], d['depth_avg_curr_north'])*180.0/Math.PI;
+                if (course < 0) {
+                    course = course + 360;
+                }
+
+                cell = row.insertCell(10);
+                text = document.createTextNode('' + (dist*100.0).toFixed(1));
+                cell.appendChild(text);
+
+                cell = row.insertCell(11);
+                text = document.createTextNode('' + course.toFixed(1));
+                cell.appendChild(text);
+
+                cell = row.insertCell(12);
+                text = document.createTextNode('' + d['log_TEMP'].toFixed(2));
+                cell.appendChild(text);
+                cell = row.insertCell(13);
+                text = document.createTextNode('' + d['log_HUMID'].toFixed(2));
+                cell.appendChild(text);
+                cell = row.insertCell(14);
+                text = document.createTextNode('' + d['log_INTERNAL_PRESSURE'].toFixed(2));
+                cell.appendChild(text);
+
+                cell = row.insertCell(15);
+                text = document.createTextNode('' + d['volts_10V'].toFixed(2));
+                cell.appendChild(text);
+                cell = row.insertCell(16);
+                text = document.createTextNode('' + (d['capacity_10V']*100).toFixed(2));
+                cell.appendChild(text);
+                cell = row.insertCell(17);
+                text = document.createTextNode('' + d['volts_24V'].toFixed(2));
+                cell.appendChild(text);
+                cell = row.insertCell(18);
+                text = document.createTextNode('' + (d['capacity_24V']*100).toFixed(2));
+                cell.appendChild(text);
             }
-        }
-        xhttp.open("GET", "/db/" + currGlider, true);
-        xhttp.send();
-            
+        })
+        .catch(error => {
+            console.log(error);
+        });
     }
 
     function showTable() {
@@ -498,45 +531,45 @@
     }
 
     function loadControlFile(file, dive) {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                if (this.responseText == "none" || this.responseText == "oops")  {
-                    console.log(file + ' ' + this.responseText);
-                    return;
-                } 
-
-                resp = JSON.parse(this.responseText);
-                if ('file' in resp && resp['file'] == file) {
-                    $(file).value = resp['contents'];
-                }
-                if ('dive' in resp && resp['dive'] > -1) {
-                    controlFileDive[file] = resp['dive'];
-                }
+        fetch(`/control/${currGlider}/${file}`)
+        .then(res => res.json())
+        .then(data => {
+            if ('file' in data && data['file'] == file) {
+                $(file).value = data['contents'];
             }
-        }
-        xhttp.open("GET", "/control/" + currGlider + "/" + file, true);
-        xhttp.send();
+            if ('dive' in data && data['dive'] > -1) {
+                controlFileDive[file] = data['dive'];
+            }
+        })
+        .catch(error => {
+            console.log(`${dive}-${file}-${error}`);
+        })
     }
 
-    function loadStatus(glider) {
-        var xhttp = new XMLHttpRequest();
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                resp = JSON.parse(this.responseText);
-                document.title = resp['glider'];
-                currTitle = resp['glider'];
-                if (parseInt(resp['dive']) != currDive) {
-                    currDive = maxDive = parseInt(resp['dive']);
-                    loadPlots(currDive);
-                    loadLog(currDive);
-                }
-                engplots = resp['engplots'];
-                buildTable();
+    function loadStatus(glider, dive) {
+        fetch(`/status/${glider}`)
+        .then(res => res.json())
+        .then(data => {
+            document.title = data['glider'];
+            currTitle = data['glider'];
+            if (dive == -1 && parseInt(data['dive']) != currDive) {
+                currDive = maxDive = parseInt(data['dive']);
+                loadPlots(currDive);
+                loadLog(currDive);
             }
-        }
-        xhttp.open("GET", "/status/" + glider, true);
-        xhttp.send();
+            else if (dive > 0 && dive < parseInt(data['dive'])) {
+                maxDive = parseInt(data['dive']);
+                currDive = dive;
+                loadPlots(currDive);
+                loadLog(currDive);
+            }
+            engplots = data['engplots'];
+            buildTable(glider);
+        })
+        .catch(error => {
+            console.log(error);
+        });
+
         setupStream(glider);
     }
 
@@ -571,66 +604,78 @@
     }
 
     function loadLog(dive) {
-        var xhttp = new XMLHttpRequest();
-
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                $('logDiv').innerHTML = 'Dive ' + dive + '<br>';
-                $('logDiv').innerHTML += this.responseText;
-            }
-        }
-        xhttp.open("GET", "/log/" + currGlider + '/' + dive, true);
-        xhttp.send();
+        fetch(`/log/${currGlider}/${dive}`)
+        .then(res => res.text())
+        .then(data => {
+            $('logDiv').innerHTML = 'Dive ' + dive + '<br>';
+            $('logDiv').innerHTML += data;
+        })
+        .catch(error => {
+            consoloe.log(`loadLog - ${error}`);
+        });
     }
 
     function loadPlots(dive) {
-        var xhttp = new XMLHttpRequest();
         var plots;
         var img;
         var x = 0;
         var idx;
-        var priority = ["diveplot", "ctd", "ts", "vert_vel", "pitch"];
+        var cookie;
+        var priority;
+        const stockPriority = ["diveplot", "ctd", "ts", "vert_vel", "pitch", "roll", "roll_rate", "ab", "cog", "ctw", 
+                               "wlbb2fl_Chlorophyll_fluorescence", "wlbb2fl_backscatter", "aa4831"];
+       
+        cookie = readCookie("order");
+        if (cookie != null) 
+            priority = cookie.split(",");
+        else
+            priority = stockPriority;
 
-        xhttp.onreadystatechange = function() {
-            if (this.readyState == 4 && this.status == 200) {
-                resp = JSON.parse(this.responseText);
-                clearPlots();
-                var plots = resp['dvplots'];
-                var plotly = resp['plotlyplots'];
-                // var engplots = resp['engplots'];
+        currDive = dive; // inside the then or before plots might be actually loaded?
 
-                for (p of priority) {
-                    if (plots.includes(p)) {
-                        addPlot(p, x, plotly.includes(p));
-                        x += 200;
-                        idx = plots.indexOf(p);
-                        plots.splice(idx, 1); 
-                    }
-                }
-                for (p of plots) {
+        fetch(`/plots/${currGlider}/${dive}`)
+        .then(res => res.json())
+        .then(resp => {
+            clearPlots();
+            var plots = resp['dvplots'];
+            var plotly = resp['plotlyplots'];
+            // var engplots = resp['engplots'];
+
+            console.log(plots);
+            console.log(`${dive} ${currDive}`);
+
+            for (p of priority) {
+                if (plots.includes(p)) {
                     addPlot(p, x, plotly.includes(p));
                     x += 200;
+                    idx = plots.indexOf(p);
+                    plots.splice(idx, 1); 
                 }
-                for (p of engplots) {
-                    addEng(p, x, false);
-                    x += 200;
-                }
-
-                if (currElt == 'logfile')
-                    showLog();
-                else if (engplots.includes(currElt))
-                    showEng(currElt, plotly.includes(currElt));
-                else 
-                    showPlot(currElt, plotly.includes(currElt));
-
-                // $('mainImage').src = '/png/' + currGlider + '/' + dive + '/diveplot';
-                // $('mainImage').removeAttribute('hidden'); 
-                // $('mainTable').setAttribute('hidden', ''); 
             }
-            currDive = dive;
-        }
-        xhttp.open("GET", "/plots/" + currGlider + '/' + dive, true);
-        xhttp.send();
+            for (p of plots) {
+                addPlot(p, x, plotly.includes(p));
+                x += 200;
+            }
+            for (p of engplots) {
+                addEng(p, x, false);
+                x += 200;
+            }
+
+            if (currElt == 'logfile')
+                showLog();
+            else if (engplots.includes(currElt))
+                showEng(currElt, plotly.includes(currElt));
+            else 
+                showPlot(currElt, plotly.includes(currElt));
+
+            // $('mainImage').src = '/png/' + currGlider + '/' + dive + '/diveplot';
+            // $('mainImage').removeAttribute('hidden'); 
+            // $('mainTable').setAttribute('hidden', ''); 
+
+        })
+        .catch(error => {
+            console.log(`loadPlots - ${error}`);
+        });
     }
    
     function changeDive(dir) {
@@ -645,7 +690,6 @@
         if (currDive != c) {
             loadPlots(currDive);
             loadLog(currDive);
-            currDive = c;
         }
     }
        
@@ -688,10 +732,36 @@
     }
  
     function init() {
-        glider = window.location.pathname.substring(1);
+        let path = window.location.pathname.substring(1).split('/');
+        let glider = -1;
+        let dive = -1;
+
+        if (path.length >= 1) {
+            glider = path[0];
+            console.log(glider);
+        }
+        if (path.length == 2 && parseInt(path[1]) > 0) {
+            dive = parseInt(path[1]);
+            console.log(dive);
+        }
+        if (path.length == 3 && path[1] == 'order') {
+            createCookie("order", path[2], 180);
+        }
+
+        if (glider == -1) {
+            alert('invalid request - specify glider');
+            console.log('invalid request - specify glider');
+            return;
+        }
+
+        if (path.length > 1) {
+            window.history.replaceState('object or string', 'Title', `/${glider}`);
+        }
+
         currGlider = glider;
         console.log(glider);
-        loadStatus(glider);
+        window.name = glider;
+        loadStatus(glider, dive);
         loadControlFile('cmdfile');
         loadControlFile('science');
         loadControlFile('targets');

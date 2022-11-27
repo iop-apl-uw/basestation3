@@ -3,6 +3,8 @@
 	Copyright (c) 2011-2015, Pavel Shramov, Bruno Bergot - MIT licence
 */
 
+/* modified to re-write the seaglider dive link and write text vs description for the popup */
+
 L.KML = L.FeatureGroup.extend({
 
 	initialize: function (kml, kmlOptions) {
@@ -270,11 +272,12 @@ L.Util.extend(L.KML, {
     for (i = 0; i < el.length; i++) {
       for (j = 0; j < el[i].childNodes.length; j++) {
         descr = descr + el[i].childNodes[j].nodeValue;
+        descr = descr.replace(/"https:\/\/iop\.apl\.washington\.edu\/seaglider\/divegallery\.php\?dive=([0-9]+)\&glider=([0-9]+)"/, '"/$2/$1" target="$2"');
       }
     }
 
     if (name) {
-      layer.bindPopup('<h2>' + name + '</h2>' + descr, { className: 'kml-popup'});
+      layer.bindPopup('<h2>' + name + '</h2>' + descr, { className: 'kml-popup' });
     }
   },
 

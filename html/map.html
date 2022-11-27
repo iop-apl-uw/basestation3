@@ -18,6 +18,18 @@
               background-repeat: no-repeat;
               background-position: center;
             }
+            .kml-popup .leaflet-popup-tip,
+            .kml-popup table,
+            .weather-popup div,
+            .weather-popup .leaflet-popup-tip,
+            .weather-popup .leaflet-content-wrapper .leaflet-popup-content,
+            .weather-popup table,
+            .kml-popup .leaflet-popup-content-wrapper {
+                background: #e0e0e0;
+                color: #234c5e;
+                font-family: verdana, arial, tahoma, 'sans serif'; 
+                font-size: 10px;
+            }
         </style>
     </head>
     <body>
@@ -62,7 +74,7 @@
                 console.log(marine)
                 marine = removeTags(marine, 'head');
                 marine = marine.replaceAll('MapClick.php', 'https://marine.weather.gov/MapClick.php');
-
+                marine = marine.replaceAll('width="800"', '');
                 console.log(marine);
                 var n = waves['hourly']['time'].length;
                 var m = wind['hourly']['time'].length;
@@ -199,7 +211,7 @@
                     this.removeControl(legend);
             });
 
-            var popup = L.popup({ maxWidth:900, minWidth:600 });
+            var popup = L.popup({ maxWidth:600, minWidth:400, className: 'weather-popup' });
             map.on('click', function(evt) {
                 if (ruler._choice == false) {
                     console.log(evt.latlng);
