@@ -4,6 +4,7 @@
 */
 
 /* modified to re-write the seaglider dive link and write text vs description for the popup */
+/* added minWidth: 400 to popup */
 
 L.KML = L.FeatureGroup.extend({
 
@@ -277,7 +278,7 @@ L.Util.extend(L.KML, {
     }
 
     if (name) {
-      layer.bindPopup('<h2>' + name + '</h2>' + descr, { className: 'kml-popup' });
+      layer.bindPopup('<h2>' + name + '</h2>' + descr, { className: 'kml-popup', minWidth: 400 });
     }
   },
 
