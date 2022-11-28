@@ -1,8 +1,8 @@
 <style>
-    a:link    {color:#0000ff; text-decoration:none}
+    a:link,.spanClick           {color:#0000ff; text-decoration:none}
     a:visited {color:#0000ff; text-decoration:none}
-    a:hover   {color:#ff0000; text-decoration:underline}
-    a:active  {color:#ff0000; text-decoration:underline}
+    a:hover,.spanClick:hover    {color:#ff0000; text-decoration:underline}
+    a:active,.spanClick:active  {color:#ff0000; text-decoration:underline}
 </style>
 
 <script>
@@ -204,7 +204,7 @@
             if (line.startsWith('NEW=')) {
                 console.log(line);
                 newDive = parseInt(line.split('=')[1].slice(2,6));
-                loadPlots(newDive);
+                loadPlots(newDive, true);
                 loadLog(newDive);
             }
             else if (line.startsWith('CMDFILE=')) {
@@ -414,7 +414,7 @@
                 i = $('mainTable').rows.length % 2;
                 row.style.backgroundColor = colors[i];
                 cell = row.insertCell(0);
-                cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ');">' + d['dive'] + '</a>';
+                cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>';
                 cell.style.textAlign = 'left';
                 // cell.appendChild(text);
 
@@ -554,13 +554,13 @@
             currTitle = data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
                 currDive = maxDive = parseInt(data['dive']);
-                loadPlots(currDive);
+                loadPlots(currDive, true);
                 loadLog(currDive);
             }
             else if (dive > 0 && dive < parseInt(data['dive'])) {
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
-                loadPlots(currDive);
+                loadPlots(currDive, true);
                 loadLog(currDive);
             }
             engplots = data['engplots'];
@@ -615,16 +615,26 @@
         });
     }
 
-    function loadPlots(dive) {
+    function jumpScroll(n) {
+        $('bottom').scrollTo(200*n, 0, 'smooth');
+        console.log('scrolling to ' + 200*n);
+        return false;
+    }
+
+    function loadPlots(dive, setCurr) {
         var plots;
         var img;
         var x = 0;
         var idx;
         var cookie;
         var priority;
+        var first = false;
         const stockPriority = ["diveplot", "ctd", "ts", "vert_vel", "pitch", "roll", "roll_rate", "ab", "cog", "ctw", 
                                "wlbb2fl_Chlorophyll_fluorescence", "wlbb2fl_backscatter", "aa4831"];
        
+        const subs = { "wlbb2fl_Chlorophyll_fluorescence": "Chlorophyll",
+                       "wlbb2fl_backscatter": "backscatter", "ts": "T-S" };
+
         cookie = readCookie("order");
         if (cookie != null) 
             priority = cookie.split(",");
@@ -636,13 +646,11 @@
         fetch(`/plots/${currGlider}/${dive}`)
         .then(res => res.json())
         .then(resp => {
+            var links = [];
             clearPlots();
             var plots = resp['dvplots'];
             var plotly = resp['plotlyplots'];
             // var engplots = resp['engplots'];
-
-            console.log(plots);
-            console.log(`${dive} ${currDive}`);
 
             for (p of priority) {
                 if (plots.includes(p)) {
@@ -650,15 +658,45 @@
                     x += 200;
                     idx = plots.indexOf(p);
                     plots.splice(idx, 1); 
+                    if (p in subs) 
+                        links.push(subs[p]);
+                    else
+                        links.push(p);
+
+                    if (!first && setCurr) {
+                        first = true;
+                        currElt = p;
+                    } 
                 }
             }
+            plots.sort();
             for (p of plots) {
                 addPlot(p, x, plotly.includes(p));
+                if (p in subs)
+                    links.push(subs[p]);
+                else
+                    links.push(p);
                 x += 200;
+
+                if (!first && setCurr) {
+                    first = true;
+                    currElt = p;
+                } 
             }
+            links.push('eng');
+            engplots.sort();
             for (p of engplots) {
                 addEng(p, x, false);
+                if (p in subs)
+                    links.push(subs[p]);
+                else
+                    links.push(p);
                 x += 200;
+
+                if (!first && setCurr) {
+                    first = true;
+                    currElt = p;
+                } 
             }
 
             if (currElt == 'logfile')
@@ -672,6 +710,21 @@
             // $('mainImage').removeAttribute('hidden'); 
             // $('mainTable').setAttribute('hidden', ''); 
 
+
+            var n = links.length - 1;
+            var e = links.indexOf('eng');
+            links.splice(e, 1); 
+            var j;
+            $('bottomLinks').innerHTML = '';
+            for (var i = 0 ; i < e-1 ; i += 5) {
+                if (i + 4 < e-1)
+                    j = i+4;
+                else
+                    j = e-1;
+
+                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');">' + links[i] + '&hellip;' + links[j] + '</span> * '; 
+            }
+            $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');">eng</span>';
         })
         .catch(error => {
             console.log(`loadPlots - ${error}`);
@@ -688,7 +741,7 @@
             currDive = 1;
 
         if (currDive != c) {
-            loadPlots(currDive);
+            loadPlots(currDive, false);
             loadLog(currDive);
         }
     }
@@ -889,15 +942,20 @@
     <span id="fileDive" hidden="hidden"></span>
 </div>
 
-<div id="bottomButtons" style="position: absolute; left: 0; top: 900; width: 80; height: 180; overflow: auto;">
+<div id="bottomButtons" style="position: absolute; left: 0; top: 900; width: 82; height: 180; overflow: hidden;">
     <span style="float: right;"><a href="#" onclick="showLog();">log</a></span><br>
     <button id="btnUp" type="button" onclick="changeDive(1);" style="font-size: 18px; width:80px;">&#x2191</button><br><br>
     <button id="btnTable" type="button" onclick="showTable();" style="font-size: 48px; width:80px;">&#x2637</button><br><br>
     <button id="btnDown" type="button" onclick="changeDive(-1);" style="font-size: 18px; width:80px;">&#x2193</button>
 </div>
 
-<div id="bottom" style="position: absolute; left: 80; top: 900; width: 978; height: 180; overflow: auto;">
+<div id="bottomBox" style="position: absolute; left: 82; top: 900; width: 978; height: 200; overflow: hidden;">
+    <div id="bottomLinks" style="position: absolute; left: 10; top: 0; width: 978; height: 20; overflow: hidden;">
+        
+    </div>
+    <div id="bottom" style="position: absolute; left: 0; top: 20; width: 978; height: 180; overflow: auto;">
 
+    </div>
 </div>
 
 </div>
