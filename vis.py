@@ -60,6 +60,8 @@ async def divHandler(request, glider: int, dive: int, image: str):
     
     if os.path.exists(filename):
         resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
+        resp = resp + f'<a href="/div/{glider}/{dive-1}/{image}">prev</a> * <a href="/div/{glider}/{dive+1}/{image}">next</a>'
+
         async with aiofiles.open(filename, 'r') as file:
             div = await file.read() 
 
@@ -120,11 +122,6 @@ async def main3Handler(request, glider:int, order:str):
 
 @app.route('/map/<glider:int>')
 async def mapHandler(request, glider:int):
-    filename = f'{sys.path[0]}/html/map.html'
-    return await sanic.response.file(filename, mime_type='text/html')
-
-@app.route('/map/<glider:int>/<others:path')
-async def mapsHandler(request, glider:int, others):
     filename = f'{sys.path[0]}/html/map.html'
     return await sanic.response.file(filename, mime_type='text/html')
 
