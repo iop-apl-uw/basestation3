@@ -629,7 +629,7 @@
         var cookie;
         var priority;
         var first = false;
-        const stockPriority = ["diveplot", "ctd", "ts", "vert_vel", "pitch", "roll", "roll_rate", "ab", "cog", "ctw", 
+        const stockPriority = ["diveplot", "ctd", "ts", "vert_vel", "pitch", "roll", "roll_rate", "cog", "ctw", 
                                "wlbb2fl_Chlorophyll_fluorescence", "wlbb2fl_backscatter", "aa4831"];
        
         const subs = { "wlbb2fl_Chlorophyll_fluorescence": "Chlorophyll",
@@ -652,16 +652,18 @@
             var plotly = resp['plotlyplots'];
             // var engplots = resp['engplots'];
 
+            var ab = plots.indexOf('ab');
+            if (ab > -1 && !priority.includes('ab')) {
+                plots.splice(ab, 1);
+            }
+
             for (p of priority) {
                 if (plots.includes(p)) {
                     addPlot(p, x, plotly.includes(p));
                     x += 200;
                     idx = plots.indexOf(p);
                     plots.splice(idx, 1); 
-                    if (p in subs) 
-                        links.push(subs[p]);
-                    else
-                        links.push(p);
+                    links.push(p in subs ? subs[p] : p);
 
                     if (!first && setCurr) {
                         first = true;
@@ -672,10 +674,7 @@
             plots.sort();
             for (p of plots) {
                 addPlot(p, x, plotly.includes(p));
-                if (p in subs)
-                    links.push(subs[p]);
-                else
-                    links.push(p);
+                links.push(p in subs ? subs[p] : p);
                 x += 200;
 
                 if (!first && setCurr) {
@@ -683,14 +682,20 @@
                     currElt = p;
                 } 
             }
+
+
+            if (ab > -1 && !priority.includes('ab')) {
+                addPlot('ab', x, false);
+                links.push('ab' in subs ? subs['ab'] : 'ab');
+                x += 200;
+            }
+
             links.push('eng');
+
             engplots.sort();
             for (p of engplots) {
                 addEng(p, x, false);
-                if (p in subs)
-                    links.push(subs[p]);
-                else
-                    links.push(p);
+                links.push(p in subs ? subs[p] : p);
                 x += 200;
 
                 if (!first && setCurr) {
@@ -713,17 +718,23 @@
 
             var n = links.length - 1;
             var e = links.indexOf('eng');
+            var ab = links.indexOf('ab');
+            var mn = ab > -1 ? ab - 1 : e - 1;
+ 
             links.splice(e, 1); 
             var j;
             $('bottomLinks').innerHTML = '';
-            for (var i = 0 ; i < e-1 ; i += 5) {
-                if (i + 4 < e-1)
+            for (var i = 0 ; i < mn ; i += 5) {
+                if (i + 4 < mn)
                     j = i+4;
                 else
-                    j = e-1;
+                    j = mn;
 
                 $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');">' + links[i] + '&hellip;' + links[j] + '</span> * '; 
             }
+            if (ab > -1) //  && links[j] != 'ab')
+                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + ab + ');">ab</span> * ';
+
             $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');">eng</span>';
         })
         .catch(error => {
