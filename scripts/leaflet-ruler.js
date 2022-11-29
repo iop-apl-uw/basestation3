@@ -36,7 +36,8 @@
         decimal: 2,
         factor: null,
         label: 'Bearing:'
-      }
+      },
+      export: null,
     },
     onAdd: function(map) {
       this._map = map;
@@ -45,6 +46,8 @@
       L.DomEvent.disableClickPropagation(this._container);
       L.DomEvent.on(this._container, 'click', this._toggleMeasure, this);
       this._choice = false;
+      this._prevClickedPoints = [];
+      this._clickedPoints = [];
       this._defaultCursor = this._map._container.style.cursor;
       this._allLayers = L.layerGroup();
       return this._container;
@@ -55,6 +58,7 @@
     _toggleMeasure: function() {
       this._choice = !this._choice;
       this._clickedLatLong = null;
+      this._prevClickedPoints = this._clickedPoints;
       this._clickedPoints = [];
       this._totalLength = 0;
       if (this._choice){
@@ -138,6 +142,22 @@
         else {
           this._choice = true;
           this._toggleMeasure();
+        }
+      }
+      if (e.keyCode === 84 || e.keyCode === 116) {
+        var pts = null;
+        if (this.options.export) {
+            if (this._clickCount > 0) {
+                pts = this._clickedPoints;
+            }
+            else if (this._prevClickedPoints.length > 0) {
+                pts = this._prevClickedPoints;
+            }
+            if (pts) {
+                var txt = this.options.export(pts);
+                navigator.clipboard.writeText(txt);
+                L.circleMarker(pts[0], this.options.circleMarker).bindTooltip('<pre>' + txt + '</pre> (copied to clipboard)', {sticky: true, className: 'result-tooltip'}).addTo(this._pointLayer).openTooltip();
+            }
         }
       }
     },

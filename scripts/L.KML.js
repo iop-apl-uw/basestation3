@@ -250,6 +250,8 @@ L.Util.extend(L.KML, {
 				var l = this['parse' + tag.replace(/gx:/, '')](el[i], xml, opts);
                 if (tag.replace(/gx:/, '') == 'Point') {
                     if ('icon' in opts && 'options' in opts['icon']) { 
+                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://maps.google.com/mapfiles/kml/shapes', '/script/images');
+                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://iop.apl.washington.edu', '/script');
                         if (opts['icon']['options']['iconUrl'].includes('marker')) {
                             opts['icon']['options']['iconSize'] = [8,8];
                             opts['icon']['options']['iconAnchor'] = [4,4];

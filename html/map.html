@@ -35,6 +35,11 @@
     <body>
         <div style="width: 100vw; height: 100vh" id="map"></div>
         <script type="text/javascript">
+            function dd2ddmm(x)
+            {
+                var dd = Math.trunc(x);
+                return dd*100.0 + (x - dd)*60.0;
+            }
 
             function formatPos(dd) {
                 var deg = Math.trunc(dd);
@@ -144,6 +149,17 @@
                     }
                 }
             }
+
+            function exportTargets(points) {
+                var buffText = "";
+                for(var i = 1; i <= points.length ; i++) {
+                    latA = points[i-1].lat;
+                    lonA = points[i-1].lng;
+                    buffText += i + ' lat=' +  dd2ddmm(latA).toFixed(3) + ' lon=' + dd2ddmm(lonA).toFixed(3) + ' radius=2000 goto=' + (i < points.length ? i+1 : i) + '\n';
+                }
+                return buffText;
+            }
+
         </script>
 
         <script type="text/javascript">
@@ -297,7 +313,8 @@
                     display: 'km',
                     decimal: 2,
                     label: 'distance'
-                }
+                },
+                export: exportTargets
             };                               
             ruler = L.control.ruler(options);
             ruler.addTo(map);
