@@ -71,11 +71,11 @@
                 let wind = resp[1];
                 let depth = resp[2];
                 let marine = resp[3];
-                console.log(marine)
+                
                 marine = removeTags(marine, 'head');
                 marine = marine.replaceAll('MapClick.php', 'https://marine.weather.gov/MapClick.php');
                 marine = marine.replaceAll('width="800"', '');
-                console.log(marine);
+               
                 var n = waves['hourly']['time'].length;
                 var m = wind['hourly']['time'].length;
                 var i;
@@ -100,6 +100,49 @@
                 popup.setLatLng(latlng)
                      .setContent(txt)
                      .openOn(map);
+            }
+
+            async function loadGliderKML(map, urls) {
+                var kml;
+                var parser;
+
+                let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
+                for (var i = 0 ; i < urls.length ; i++) {
+                    kmltext = resp[i]; 
+
+                    // Create new kml overlay
+                    parser = new DOMParser();
+                    kml = parser.parseFromString(kmltext, 'text/xml');
+                    let ctr = null;
+                    track = new L.KML(kml, { 
+                                            iconOptions: {
+                                                iconSize: [16,16],
+                                            }
+                                        });
+
+                    map.addLayer(track);
+                    // layerControl.addOverlay(track, "KML"); // If we add controls for the dives and targets layers
+                                                              // then this "KML" control only turns off the glider.
+                                                              // If we don't add controls for dives and targets
+                                                              // then the "KML" control works as expected
+
+                    for (k of Object.keys(track._layers)) {
+                        if (track._layers[k].options.hasOwnProperty('id') && track._layers[k].options.id == "seagliderPositionHighlightState") {
+                            ctr = track._layers[k]._latlng;
+                        }
+                        if (track._layers[k].options.hasOwnProperty('name') 
+                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
+                            layerControl.addOverlay(track._layers[k], track._layers[k].options.name);
+                        }
+                    }
+
+                    // Adjust map to show the kml for the first glider
+                    if (i == 0) {
+                        const bounds = track.getBounds();
+                        map.fitBounds(bounds);
+                        if (ctr) map.panTo(ctr);
+                    }
+                }
             }
         </script>
 
@@ -307,44 +350,18 @@
             // does a better job of grouping in the layers so we can
             // turn pieces on and off
 
-            var glider = window.location.pathname.split('/').at(-1)
+            // var glider = window.location.pathname.split('/').at(-1)
+            var path = window.location.pathname.split('/');
+            var first = path.indexOf('map') + 1;
+            var glider = path[first];
+            var urls = [];
+
             document.title = glider + ' - map';
+            for (var i = first ; i < path.length ; i++) 
+                urls.push('/kml/' + path[i]);
+
+            loadGliderKML(map, urls);
             
-            fetch('/kml/' + glider)
-                .then(res => res.text())
-                .then(kmltext => {
-                    // Create new kml overlay
-                    const parser = new DOMParser();
-                    const kml = parser.parseFromString(kmltext, 'text/xml');
-                    let ctr = null;
-                    track = new L.KML(kml, { 
-                                            iconOptions: {
-                                                iconSize: [16,16],
-                                            }
-                                        });
-
-                    map.addLayer(track);
-                    // layerControl.addOverlay(track, "KML"); // If we add controls for the dives and targets layers
-                                                              // then this "KML" control only turns off the glider.
-                                                              // If we don't add controls for dives and targets
-                                                              // then the "KML" control works as expected
-
-                    for (k of Object.keys(track._layers)) {
-                        if (track._layers[k].options.hasOwnProperty('id') && track._layers[k].options.id == "seagliderPositionHighlightState") {
-                            ctr = track._layers[k]._latlng;
-                        }
-                        if (track._layers[k].options.hasOwnProperty('name') 
-                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
-                            layerControl.addOverlay(track._layers[k], track._layers[k].options.name);
-                        }
-                    }
-
-                    // Adjust map to show the kml
-                    const bounds = track.getBounds();
-                    map.fitBounds(bounds);
-                    if (ctr) map.panTo(ctr);
-                });
-
 
         </script>
     </body>

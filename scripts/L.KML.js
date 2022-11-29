@@ -132,6 +132,7 @@ L.Util.extend(L.KML, {
 		if (ioptions.href) {
 			var iconOptions = {
 				iconUrl: ioptions.href,
+                iconSize: [16,16],
 				shadowUrl: null,
 				anchorRef: {x: ioptions.x, y: ioptions.y},
 				anchorType:	{x: ioptions.xunits, y: ioptions.yunits}
@@ -247,6 +248,21 @@ L.Util.extend(L.KML, {
 			el = place.getElementsByTagName(tag);
 			for (i = 0; i < el.length; i++) {
 				var l = this['parse' + tag.replace(/gx:/, '')](el[i], xml, opts);
+                if (tag.replace(/gx:/, '') == 'Point') {
+                    if ('icon' in opts && 'options' in opts['icon']) { 
+                        if (opts['icon']['options']['iconUrl'].includes('marker')) {
+                            opts['icon']['options']['iconSize'] = [8,8];
+                            opts['icon']['options']['iconAnchor'] = [4,4];
+                            if (place.getElementsByTagName('name')[0].childNodes[0].nodeValue.includes(' end')) {
+                                opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('icon', 'yellow');
+                            }
+                        }
+                        else {
+                            opts['icon']['options']['iconSize'] = [32,32];
+                            opts['icon']['options']['iconAnchor'] = [16,16];
+                        }
+                    }
+                }
 				if (l) { layers.push(l); }
 			}
 		}
@@ -310,6 +326,10 @@ L.Util.extend(L.KML, {
 			return;
 		}
 		var ll = el[0].childNodes[0].nodeValue.split(',');
+        
+        if (!('icon' in options)) {
+            options['icon'] = new L.KMLIcon({ iconSize: [16,16], iconUrl: '/script/images/marker-icon.png', shadowUrl: null, iconAnchor: [8,8] });
+        }
 		return new L.KMLMarker(new L.LatLng(ll[1], ll[0]), options);
 	},
 
@@ -419,8 +439,12 @@ L.Util.extend(L.KML, {
 
 L.KMLIcon = L.Icon.extend({
 	options: {
-		iconSize: [32, 32],
-		iconAnchor: [16, 16],
+        iconUrl: '/script/images/marker-icon.png',
+        shadowUrl: null,
+		iconSize: [16, 16],
+		iconAnchor: [8, 8],
+		shadowSize: [16, 16],
+		shadowAnchor: [8, 8],
 	},
 	_setIconStyles: function (img, name) {
 		L.Icon.prototype._setIconStyles.apply(this, [img, name]);
@@ -437,21 +461,22 @@ L.KMLIcon = L.Icon.extend({
 		var height = options.iconSize[1];
 
 		this.options.popupAnchor = [0,(-0.83*height)];
-		if (options.anchorType.x === 'fraction')
-			img.style.marginLeft = (-options.anchorRef.x * width) + 'px';
-		if (options.anchorType.y === 'fraction')
-			img.style.marginTop  = ((-(1 - options.anchorRef.y) * height) + 1) + 'px';
-		if (options.anchorType.x === 'pixels')
-			img.style.marginLeft = (-options.anchorRef.x) + 'px';
-		if (options.anchorType.y === 'pixels')
-			img.style.marginTop  = (options.anchorRef.y - height + 1) + 'px';
+        if ('anchorType'  in options && 'x' in options['anchorType']) {
+            if (options.anchorType.x === 'fraction')
+                img.style.marginLeft = (-options.anchorRef.x * width) + 'px';
+            if (options.anchorType.y === 'fraction')
+                img.style.marginTop  = ((-(1 - options.anchorRef.y) * height) + 1) + 'px';
+            if (options.anchorType.x === 'pixels')
+                img.style.marginLeft = (-options.anchorRef.x) + 'px';
+            if (options.anchorType.y === 'pixels')
+                img.style.marginTop  = (options.anchorRef.y - height + 1) + 'px';
+        }
 	}
 });
 
-
 L.KMLMarker = L.Marker.extend({
 	options: {
-		icon: new L.KMLIcon.Default()
+		icon: new L.KMLIcon().Default
 	}
 });
 
