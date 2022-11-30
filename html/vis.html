@@ -808,7 +808,7 @@
         }
     }
 
-    function doPlotlyPlot() {
+    function doPlotlyPlot(which) {
         let x = $('selPlotlyX').value;
         // let y = $('selPlotlyY').value;
         let y = [...$('selPlotlyY').selectedOptions].map(option => option.value);
@@ -816,27 +816,61 @@
         fetch(`/query/${currGlider}/${x},${y.join(',')}`)
         .then(res => res.json())
         .then(data => {
-            var d = [];
-            var xd = data.map(v => v[x]);
-            for (var i = 0 ; i < y.length ; i++) {
-                var yd = data.map(v => v[y[i]]);
-                d.push({
-                        x: xd,
-                        y: yd,
-                        mode: x == "dive" ? "lines" : "markers",
-                        type: "scatter",
-                        name: y[i]
-                       });
+            if (which == 'plot') {
+                var d = [];
+                var xd = data.map(v => v[x]);
+                for (var i = 0 ; i < y.length ; i++) {
+                    var yd = data.map(v => v[y[i]]);
+                    d.push({
+                            x: xd,
+                            y: yd,
+                            mode: x == "dive" ? "lines" : "markers",
+                            type: "scatter",
+                            name: y[i]
+                           });
+                }
+                var layout = { 
+                                font:       {size: 12},
+                                margin: { t:20, l:80, r:80, b:80 },
+                                xaxis: { title: x },
+                                yaxis: { title: y[0] },
+                                plot_bgcolor: "#cccccc",
+                             };
+                var config = { responsive: true };
+                Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
             }
-            var layout = { 
-                            font:       {size: 12},
-                            margin: { t:20, l:80, r:80, b:80 },
-                            xaxis: { title: x },
-                            yaxis: { title: y[0] },
-                            plot_bgcolor: "#cccccc",
-                         };
-            var config = { responsive: true };
-            Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
+            else if (which == 'table') {
+                var values = [];
+                var headers = [];
+                values.push(data.map(v => v[x]));
+                headers.push([x]);
+                for (var i = 0 ; i < y.length ; i++) {
+                    values.push(data.map(v => v[y[i]]));
+                    headers.push([y[i]]);
+                }
+
+                console.log(headers);
+ 
+                var d = [{
+                    type: 'table',
+                    header: {
+                        values: headers,
+                        align: 'center',
+                        line: { width: 1, color: 'black' },
+                        fill: { color: "#aaaaaa" },
+                        font: {family: "Arial", size: 12, color: "white"}
+
+                    },
+                    cells: {
+                        values: values,
+                        align: "center",
+                        fill: { color: "#eeeeee" } ,
+                        line: {color: "#cccccc", width: 1},
+                        font: {family: "Arial", size: 11, color: ["black"]}
+                    },
+                }];
+                Plotly.newPlot($('plotlyPlotDiv'), d);
+            }
         })
         .catch(error => {
             console.log('plotly ' + error);
@@ -958,9 +992,10 @@
         <div id="plotyConfigDiv">
             <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top;"></select> 
             <span style="vertical-align:top;">Y:</span><select id="selPlotlyY" multiple size="4"> </select>
-            <button id="btnPlotlyGo" style="vertical-align:top;" onclick="doPlotlyPlot();">plot</button>
+            <button id="btnPlotlyPlot" style="vertical-align:top;" onclick="doPlotlyPlot('plot');">plot</button>
+            <button id="btnPlotlyTable" style="vertical-align:top;" onclick="doPlotlyPlot('table');">table</button>
         </div>
-        <div id="plotlyPlotDiv" style="height:93%;">
+        <div id="plotlyPlotDiv" style="height:90%;">
         </div>
     </div>
 
