@@ -277,6 +277,30 @@ async def dbHandler(request, args):
         data = cur.fetchall()
         return sanic.response.json(data)
 
+@app.route('/dbvars/<glider:int>')
+async def dbvarsHandler(request, glider:int):
+    with sqlite3.connect(f'sg{glider:03d}/sg{glider:03d}.db') as conn:
+        cur = conn.execute('select * from dives')
+        names = list(map(lambda x: x[0], cur.description))
+        data = {}
+        data['names'] = names
+        return sanic.response.json(data)
+
+@app.route('/query/<glider:int>/<vars:str>')
+async def queryHandler(request, glider, vars):
+    pieces = vars.split(',')
+    if pieces[0] == 'dive':
+        q = f"SELECT {vars} FROM DIVES ORDER BY dive ASC"
+    else:
+        q = f"SELECT {vars} FROM DIVES"
+
+    with sqlite3.connect(f'sg{glider:03d}/sg{glider:03d}.db') as conn:
+        conn.row_factory = rowToDict
+        cur = conn.cursor()
+        cur.execute(q)
+        data = cur.fetchall()
+        return sanic.response.json(data)
+
 @app.route('/selftest/<glider:int>')
 async def selftestHandler(request, glider:int):
     cmd = f"{sys.path[0]}/SelftestHTML.py {glider:03d}"

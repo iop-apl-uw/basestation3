@@ -4,7 +4,7 @@
     a:hover,.spanClick:hover    {color:#ff0000; text-decoration:underline}
     a:active,.spanClick:active  {color:#ff0000; text-decoration:underline}
 </style>
-
+<script src="/script/plotly-latest.min.js"></script>
 <script>
 
     function beep() {
@@ -372,6 +372,7 @@
         $('mainImage').src = '/png/' + currGlider + '/' + currDive + '/' + elt;
         $('mainTable').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
+        $('plotlyDiv').setAttribute('hidden', '');
         if (plotly) {
             $('mainImage').ondblclick = function() { popupPlotly(currDive, elt); }
             $('mainImage').oncontextmenu = function() { popupPlotly(currDive, elt); }
@@ -388,6 +389,7 @@
         $('mainImage').src = '/eng/' + currGlider + '/' + elt;
         $('mainTable').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
+        $('plotlyDiv').setAttribute('hidden', '');
         // $('mainImage').onclick = function() { popupPlotly(currDive, elt); }
         $('mainImage').ondblclick = null;
         currElt = elt;
@@ -520,12 +522,21 @@
     function showTable() {
         $('mainImage').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
+        $('plotlyDiv').setAttribute('hidden', '');
         $('mainTable').removeAttribute('hidden');
+    }
+
+    function showPlotly() {
+        $('mainImage').setAttribute('hidden', '');
+        $('logDiv').setAttribute('hidden', '');
+        $('mainTable').setAttribute('hidden', '');
+        $('plotlyDiv').removeAttribute('hidden');
     }
 
     function showLog() {
         $('mainImage').setAttribute('hidden', '');
         $('mainTable').setAttribute('hidden', '');
+        $('plotlyDiv').setAttribute('hidden', '');
         $('logDiv').removeAttribute('hidden');
         currElt = 'logfile';
     }
@@ -794,6 +805,64 @@
             $('fileDive').innerHTML = '';
         }
     }
+
+    function doPlotlyPlot() {
+        let x = $('selPlotlyX').value;
+        let y = $('selPlotlyY').value;
+
+        fetch(`/query/${currGlider}/${x},${y}`)
+        .then(res => res.json())
+        .then(data => {
+
+            var xd = data.map(v => v[x]);
+            var yd = data.map(v => v[y]);
+            var d = [{
+                        x: xd,
+                        y: yd,
+                        mode: x == "dive" ? "lines" : "markers",
+                        type: "scatter",
+                    }];
+            var layout = { 
+                            font:       {size: 12},
+                            margin: { t:20, l:80, r:80, b:120 },
+                            xaxis: { title: x },
+                            yaxis: { title: y },
+                            plot_bgcolor: "#cccccc",
+                         };
+            var config = { responsive: true };
+            Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
+        })
+        .catch(error => {
+            console.log('plotly ' + error);
+        })
+    }
+
+    function loadPlotlyControls(glider) {
+        fetch(`/dbvars/${glider}`)
+        .then(res => res.json())
+        .then(data => {
+            names = data['names'].sort();
+            dv = names.indexOf('dive');
+            names.splice(names.indexOf('dive'), 1);
+            names = ['dive'].concat(names);
+
+            for (n of names) {
+                let optX = document.createElement('option');
+                optX.value = n;
+                optX.innerHTML = n;
+                let optY = document.createElement('option');
+                optY.value = n;
+                optY.innerHTML = n;
+ 
+                $('selPlotlyX').appendChild(optX);
+                $('selPlotlyY').appendChild(optY);
+            }
+        })
+        .catch(error => {
+            console.log('dbvars ' + error);
+        });
+
+    }
  
     function init() {
         let path = window.location.pathname.substring(1).split('/');
@@ -833,6 +902,7 @@
         loadControlFile('tcm2mat.cal');
         loadControlFile('pdoscmds.bat');
         loadControlFile('sg_calib_constants.m');
+        loadPlotlyControls(glider);
     }
 
 </script>
@@ -875,6 +945,15 @@
         </tbody>
     </table>
     <div id="logDiv" hidden="hidden"></div>
+    <div id="plotlyDiv" hidden="hidden">
+        <div id="plotyConfigDiv">
+            X:<select id="selPlotlyX"></select>
+            Y:<select id="selPlotlyY"></select>
+            <button id="btnPlotlyGo" onclick="doPlotlyPlot();">plot</plot>
+        </div>
+        <div id="plotlyPlotDiv" style="height:100%;">
+        </div>
+    </div>
 </div>
 
 <div id="links" style="position: absolute; left:1060; top: 0; width:600; height:20; font-size:10px;">
@@ -954,7 +1033,10 @@
 </div>
 
 <div id="bottomButtons" style="position: absolute; left: 0; top: 900; width: 82; height: 180; overflow: hidden;">
-    <span style="float: right;"><a href="#" onclick="showLog();">log</a></span><br>
+    <span style="float: right;">
+        <a href="#" onclick="showPlotly();">tool</a> *
+        <a href="#" onclick="showLog();">log</a></span><br>
+    </span>  
     <button id="btnUp" type="button" onclick="changeDive(1);" style="font-size: 18px; width:80px;">&#x2191</button><br><br>
     <button id="btnTable" type="button" onclick="showTable();" style="font-size: 48px; width:80px;">&#x2637</button><br><br>
     <button id="btnDown" type="button" onclick="changeDive(-1);" style="font-size: 18px; width:80px;">&#x2193</button>
