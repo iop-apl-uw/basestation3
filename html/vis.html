@@ -808,25 +808,29 @@
 
     function doPlotlyPlot() {
         let x = $('selPlotlyX').value;
-        let y = $('selPlotlyY').value;
-
-        fetch(`/query/${currGlider}/${x},${y}`)
+        // let y = $('selPlotlyY').value;
+        let y = [...$('selPlotlyY').selectedOptions].map(option => option.value);
+        
+        fetch(`/query/${currGlider}/${x},${y.join(',')}`)
         .then(res => res.json())
         .then(data => {
-
+            var d = [];
             var xd = data.map(v => v[x]);
-            var yd = data.map(v => v[y]);
-            var d = [{
+            for (var i = 0 ; i < y.length ; i++) {
+                var yd = data.map(v => v[y[i]]);
+                d.push({
                         x: xd,
                         y: yd,
                         mode: x == "dive" ? "lines" : "markers",
                         type: "scatter",
-                    }];
+                        name: y[i]
+                       });
+            }
             var layout = { 
                             font:       {size: 12},
-                            margin: { t:20, l:80, r:80, b:120 },
+                            margin: { t:20, l:80, r:80, b:80 },
                             xaxis: { title: x },
-                            yaxis: { title: y },
+                            yaxis: { title: y[0] },
                             plot_bgcolor: "#cccccc",
                          };
             var config = { responsive: true };
@@ -944,16 +948,20 @@
             </tr>
         </tbody>
     </table>
+
     <div id="logDiv" hidden="hidden"></div>
+
+    
     <div id="plotlyDiv" hidden="hidden">
         <div id="plotyConfigDiv">
-            X:<select id="selPlotlyX"></select>
-            Y:<select id="selPlotlyY"></select>
-            <button id="btnPlotlyGo" onclick="doPlotlyPlot();">plot</plot>
+            <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top;"></select> 
+            <span style="vertical-align:top;">Y:</span><select id="selPlotlyY" multiple size="4"> </select>
+            <button id="btnPlotlyGo" style="vertical-align:top;" onclick="doPlotlyPlot();">plot</button>
         </div>
-        <div id="plotlyPlotDiv" style="height:100%;">
+        <div id="plotlyPlotDiv" style="height:93%;">
         </div>
     </div>
+
 </div>
 
 <div id="links" style="position: absolute; left:1060; top: 0; width:600; height:20; font-size:10px;">
