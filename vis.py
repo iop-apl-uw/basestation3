@@ -79,6 +79,14 @@ async def engHandler(request, glider:int, image:str):
     else:
         return sanic.response.text('not found', status=404)
 
+@app.route('/section/<glider:int>/<image:str>')
+async def sectionHandler(request, glider:int, image:str):
+    filename = f'sg{glider:03d}/plots/sg_{image}.png'
+    if os.path.exists(filename):
+        return await sanic.response.file(filename, mime_type='image/png')
+    else:
+        return sanic.response.text('not found', status=404)
+
 @app.route('/script/<script:str>')
 async def scriptHandler(request, script:str):
     filename = f'{sys.path[0]}/scripts/{script}'
@@ -203,8 +211,8 @@ async def statusHandler(request, glider:int):
     message['glider'] = f'SG{glider:03d}'
     message['dive'] = maxdv
     message['engplots'] = engplots
+    message['sgplots'] = sgplots
     # message['dvplots'] = dvplots
-    # message['sgplots'] = sgplots
     # message['plotlyplots'] = plotlyplots
     print(message)
     return sanic.response.json(message)
@@ -440,9 +448,9 @@ def buildFileList(glider):
         elif file.startswith('eng'):
             pieces = file.split('.')
             engplots.append('_'.join(pieces[0].split('_')[1:]))
-        elif file.startswith('sg'):
+        elif file.startswith('sg') and "section" not in file:
             pieces = file.split('.')
-            sgplots.append(pieces[0]) 
+            sgplots.append('_'.join(pieces[0].split('_')[1:]))
 
     return (maxdv, dvplots, engplots, sgplots, plotlyplots)
 

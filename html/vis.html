@@ -108,6 +108,7 @@
     var currGlider = '';
 
     var engplots;
+    var sgplots;
 
     var fixes = [];
     var connect_t = 0;
@@ -390,9 +391,9 @@
         currElt = elt;
     }
 
-    function showEng(elt, plotly) {
+    function showMissionPlot(which, elt, plotly) {
         $('mainImage').removeAttribute('hidden');
-        $('mainImage').src = '/eng/' + currGlider + '/' + elt;
+        $('mainImage').src = '/' + which + '/' + currGlider + '/' + elt;
         $('mainTable').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
         $('plotlyDiv').setAttribute('hidden', '');
@@ -594,6 +595,7 @@
                 // loadLog(currDive);
             }
             engplots = data['engplots'];
+            sgplots = data['sgplots'];
             buildTable(glider);
         })
         .catch(error => {
@@ -624,11 +626,11 @@
         $('bottom').appendChild(img);
     }
 
-    function addEng(p, x, plotly) {
+    function addMissionPlot(which, p, x, plotly) {
         img = document.createElement('img');
-        img.src = '/eng/' + currGlider + '/' + p;
+        img.src = '/' + which + '/' + currGlider + '/' + p;
         img.style = "position: absolute; left: " + x + "; top: 0; width:180px; heigh:169px;"
-        img.onclick = function() { showEng(p, plotly); };
+        img.onclick = function() { showMissionPlot(which, p, plotly); };
         img.title = p;
         $('bottom').appendChild(img);
     }
@@ -738,7 +740,20 @@
 
             engplots.sort();
             for (p of engplots) {
-                addEng(p, x, false);
+                addMissionPlot('eng', p, x, false);
+                links.push(p in subs ? subs[p] : p);
+                x += 200;
+
+                if (!first && setCurr) {
+                    first = true;
+                    currElt = p;
+                } 
+            }
+
+            links.push('sg');
+            sgplots.sort();
+            for (p of sgplots) {
+                addMissionPlot('section', p, x, false);
                 links.push(p in subs ? subs[p] : p);
                 x += 200;
 
@@ -753,7 +768,9 @@
             else if (currElt == 'logfileRaw')
                 showLogFile();
             else if (engplots.includes(currElt))
-                showEng(currElt, plotly.includes(currElt));
+                showMissionPlot('eng', currElt, plotly.includes(currElt));
+            else if (sgplots.includes(currElt))
+                showMissionPlot('section', currElt, plotly.includes(currElt));
             else 
                 showPlot(currElt, plotly.includes(currElt));
 
@@ -769,6 +786,9 @@
             var all;
  
             links.splice(e, 1); 
+
+            var sec = links.indexOf('sg');
+
             var j;
             $('bottomLinks').innerHTML = '';
             for (var i = 0 ; i < mn ; i += 5) {
@@ -783,8 +803,13 @@
             if (ab > -1) //  && links[j] != 'ab')
                 $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + ab + ');">ab</span> * ';
 
-            all = links.slice(e).join(', ');
-            $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');" title="' + all +'">eng</span>';
+            all = links.slice(e,sec).join(', ');
+            $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');" title="' + all +'">eng</span> * ';
+
+            links.splice(sec, 1); 
+
+            all = links.slice(sec).join(', ');
+            $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + sec + ');" title="' + all +'">sections</span>';
         })
         .catch(error => {
             console.log(`loadPlots - ${error}`);
@@ -1067,7 +1092,7 @@
         </div>
     </div>
 
-    <div id="logfileDiv" hidden="hidden" ondblclick="parameterHelp('logfile');" title="double click parameter for help">
+    <div id="logfileDiv" hidden="hidden" ondblclick="parameterHelp('logfile');" title="double click parameter for help" style="background-color:#dddddd;">
     </div>
 </div>
 
