@@ -14,12 +14,14 @@ import tempfile
 import subprocess
 import sys
 import LogHTML
+import ExtractBinnedProfiles
 from zipfile import ZipFile
 from io import BytesIO
 import sanic
 import aiofiles
 import asyncio
 import aiohttp
+import sanic_gzip
 
 modifiedFile = {}
 newDive = {}
@@ -28,7 +30,7 @@ commFile = {}
 watchThread = {}
 
 app = sanic.Sanic("SGpilot")            
-
+compress = sanic_gzip.Compress()
 
 def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
     data = {}
@@ -302,6 +304,26 @@ async def dbvarsHandler(request, glider:int):
         data = {}
         data['names'] = names
         return sanic.response.json(data)
+
+@app.route('/provars/<glider:int>')
+async def provarsHandler(request, glider:int):
+    ncfiles = glob.glob(f'sg{glider:03d}/sg{glider:03d}*profile.nc')
+    if len(ncfiles):
+        data = {}
+        data['names'] = ExtractBinnedProfiles.getVarNames(ncfiles[0])
+        return sanic.response.json(data)
+    else: 
+        return sanic.response.text('oops')
+
+@app.route('/pro/<glider:int>/<which:str>/<first:int>/<last:int>/<stride:int>/<zStride:int>')
+@compress.compress()
+async def proHandler(request, glider:int, which:str, first:int, last:int, stride:int, zStride:int):
+    ncfiles = glob.glob(f'sg{glider:03d}/sg{glider:03d}*profile.nc')
+    if len(ncfiles):
+        data = ExtractBinnedProfiles.extractVar(ncfiles[0], which, first, last, stride, zStride)
+        return sanic.response.json(data)
+    else:
+        return sanic.response.text('oops')
 
 @app.route('/query/<glider:int>/<vars:str>')
 async def queryHandler(request, glider, vars):

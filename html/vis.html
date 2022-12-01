@@ -901,6 +901,62 @@
         }
     }
 
+    function doPlotlyProfiles(which) {
+        let x = $('selPlotlyContour').value;
+        var stride = $('selPlotlyProfileStride').value;
+        var zStride = $('selPlotlyZStride').value;
+    
+        $('btnPlotlyContour').disabled = true;
+        var def  = $('btnPlotlyContour').style.backgroundColor;
+        $('btnPlotlyContour').style.backgroundColor = 'yellow';
+
+        console.log(Date.now());
+        fetch(`/pro/${currGlider}/${x}/0/-1/${stride}/${zStride}`)
+        .then(res => res.text())
+        .then(data => {
+            data = data.replaceAll('NaN', 'null');
+            data = JSON.parse(data);
+            // console.log(data[x]);
+            if (which == 'contour') {
+                var d = [{
+                    z: data[x],
+                    y: data['depth'],
+                    type: 'contour',
+                    /// xaxis: 'profile',
+                    // yaxis: 'depth',
+                    connectgaps: true,
+                    contours: {
+                        coloring: 'heatmap',
+                        showlabels: true,
+                        labelfont: {
+                            family: 'Raleway',
+                            size: 12,
+                            color: 'white',
+                        },
+                    }, 
+                }];
+                var layout = { 
+                                font:       {size: 12},
+                                margin: { t:20, l:80, r:80, b:80 },
+                                xaxis: { title: 'profile/' + stride },
+                                yaxis: { title: 'depth', autorange: 'reversed' },
+                                plot_bgcolor: "#cccccc",
+                             };
+                var config = { responsive: true };
+                
+                Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
+                console.log(Date.now());
+                $('btnPlotlyContour').style.backgroundColor = def;
+                $('btnPlotlyContour').disabled = false;
+            }
+            else if (which == 'profiles') {
+            }
+        })
+        .catch(error => {
+            console.log('plotly ' + error);
+        })
+    }
+
     function doPlotlyPlot(which) {
         let x = $('selPlotlyX').value;
         // let y = $('selPlotlyY').value;
@@ -970,7 +1026,26 @@
         })
     }
 
-    function loadPlotlyControls(glider) {
+    function loadPlotlyControlsContour(glider) {
+        fetch(`/provars/${glider}`)
+        .then(res => res.json())
+        .then(data => {
+            names = data['names'].sort();
+
+            for (n of names) {
+                let optX = document.createElement('option');
+                optX.value = n;
+                optX.innerHTML = n;
+                let optY = document.createElement('option');
+                $('selPlotlyContour').appendChild(optX);
+            }
+        })
+        .catch(error => {
+            console.log('provars ' + error);
+        });
+
+    }
+    function loadPlotlyControlsXY(glider) {
         fetch(`/dbvars/${glider}`)
         .then(res => res.json())
         .then(data => {
@@ -1035,7 +1110,8 @@
         loadControlFile('tcm2mat.cal');
         loadControlFile('pdoscmds.bat');
         loadControlFile('sg_calib_constants.m');
-        loadPlotlyControls(glider);
+        loadPlotlyControlsXY(glider);
+        loadPlotlyControlsContour(glider);
     }
 
 </script>
@@ -1087,6 +1163,37 @@
             <span style="vertical-align:top;">Y:</span><select id="selPlotlyY" multiple size="4"> </select>
             <button id="btnPlotlyPlot" style="vertical-align:top;" onclick="doPlotlyPlot('plot');">plot</button>
             <button id="btnPlotlyTable" style="vertical-align:top;" onclick="doPlotlyPlot('table');">table</button>
+            
+            <div style="float:right;">
+                <span style="vertical-align:top;">contour:</span><select id="selPlotlyContour" style="vertical-align:top;"> </select>
+                <button id="btnPlotlyContour" style="vertical-align:top;" onclick="doPlotlyProfiles('contour');">contour</button><br>
+                <span style="vertical-align:top;">profile stride</span>
+                <select style="vertical-align:top;" id="selPlotlyProfileStride">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+                <span style="vertical-align:top;">bin stride</span>
+                <select style="vertical-align:top;" id="selPlotlyZStride">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
         </div>
         <div id="plotlyPlotDiv" style="height:90%;">
         </div>
