@@ -924,7 +924,7 @@
                     type: 'contour',
                     /// xaxis: 'profile',
                     // yaxis: 'depth',
-                    connectgaps: true,
+                    connectgaps: $('chkFillGaps').checked,
                     contours: {
                         coloring: 'heatmap',
                         showlabels: true,
@@ -950,6 +950,38 @@
                 $('btnPlotlyContour').disabled = false;
             }
             else if (which == 'profiles') {
+                var d = [];
+                let nb = data[x].length;
+                let np = data[x][0].length;
+                console.log(np);
+                console.log(nb);
+                var xd;
+
+                for (var i = 0 ; i < np ; i++) {
+                    xd = [];
+                    for (var j = 0 ; j < nb ; j++) {
+                        xd[j] = data[x][j][i];
+                    }
+                    d.push({
+                            x:xd,
+                            y:data['depth'],
+                            mode: "lines",
+                            type: "scatter",
+                            connectgaps: $('chkFillGaps').checked,
+                            name: 'dive ' + data['dive'][i]
+                           });
+                }
+                var layout = {
+                                font:       {size: 12},
+                                margin: { t:20, l:80, r:80, b:80 },
+                                xaxis: { title: x },
+                                yaxis: { title: 'depth', autorange: 'reversed' },
+                                plot_bgcolor: "#cccccc",
+                             };
+                var config = { responsive: true };
+                Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
+                $('btnPlotlyContour').style.backgroundColor = def;
+                $('btnPlotlyContour').disabled = false;
             }
         })
         .catch(error => {
@@ -1165,34 +1197,41 @@
             <button id="btnPlotlyTable" style="vertical-align:top;" onclick="doPlotlyPlot('table');">table</button>
             
             <div style="float:right;">
-                <span style="vertical-align:top;">contour:</span><select id="selPlotlyContour" style="vertical-align:top;"> </select>
-                <button id="btnPlotlyContour" style="vertical-align:top;" onclick="doPlotlyProfiles('contour');">contour</button><br>
-                <span style="vertical-align:top;">profile stride</span>
-                <select style="vertical-align:top;" id="selPlotlyProfileStride">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5" selected>5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                </select>
-                <span style="vertical-align:top;">bin stride</span>
-                <select style="vertical-align:top;" id="selPlotlyZStride">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5" selected>5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                </select>
+                <span style="vertical-align:top;">value:<select id="selPlotlyContour" style="vertical-align:top;"> </select></span><br>
+                <div style="vertical-align:top; margin-top:4px; margin-bottom:4px;">
+                    profile stride
+                    <select style="vertical-align:top;" id="selPlotlyProfileStride">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5" selected>5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    bin stride
+                    <select style="vertical-align:top;" id="selPlotlyZStride">
+                        <option value="1">1</option>
+                        <option value="2">2</option>
+                        <option value="3">3</option>
+                        <option value="4">4</option>
+                        <option value="5" selected>5</option>
+                        <option value="6">6</option>
+                        <option value="7">7</option>
+                        <option value="8">8</option>
+                        <option value="9">9</option>
+                        <option value="10">10</option>
+                    </select>
+                    <input type="checkbox" checked id="chkFillGaps" style="vertical-align:top;"><span style="vertical-align:top;">fill gaps</span><br>
+                </div>
+                <button id="btnPlotlyContour" style="vertical-align:top;" onclick="doPlotlyProfiles('contour');">contour</button>
+                <button id="btnPlotlyProfiles" style="vertical-align:top;" onclick="doPlotlyProfiles('profiles');">profiles</button>
             </div>
         </div>
         <div id="plotlyPlotDiv" style="height:90%;">
