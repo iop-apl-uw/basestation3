@@ -3,6 +3,11 @@
     a:visited {color:#0000ff; text-decoration:none}
     a:hover,.spanClick:hover    {color:#ff0000; text-decoration:underline}
     a:active,.spanClick:active  {color:#ff0000; text-decoration:underline}
+
+    option { background-color:#eeeeee; }
+    select { background-color:#eeeeee; }
+    button { background-color:#dddddd; }
+
 </style>
 <script src="/script/plotly-latest.min.js"></script>
 <script>
@@ -373,6 +378,7 @@
         $('mainTable').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
         $('plotlyDiv').setAttribute('hidden', '');
+        $('logfileDiv').setAttribute('hidden', '');
         if (plotly) {
             $('mainImage').ondblclick = function() { popupPlotly(currDive, elt); }
             $('mainImage').oncontextmenu = function() { popupPlotly(currDive, elt); }
@@ -390,6 +396,7 @@
         $('mainTable').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
         $('plotlyDiv').setAttribute('hidden', '');
+        $('logfileDiv').setAttribute('hidden', '');
         // $('mainImage').onclick = function() { popupPlotly(currDive, elt); }
         $('mainImage').ondblclick = null;
         currElt = elt;
@@ -523,6 +530,7 @@
         $('mainImage').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
         $('plotlyDiv').setAttribute('hidden', '');
+        $('logfileDiv').setAttribute('hidden', '');
         $('mainTable').removeAttribute('hidden');
     }
 
@@ -530,6 +538,7 @@
         $('mainImage').setAttribute('hidden', '');
         $('logDiv').setAttribute('hidden', '');
         $('mainTable').setAttribute('hidden', '');
+        $('logfileDiv').setAttribute('hidden', '');
         $('plotlyDiv').removeAttribute('hidden');
     }
 
@@ -537,8 +546,18 @@
         $('mainImage').setAttribute('hidden', '');
         $('mainTable').setAttribute('hidden', '');
         $('plotlyDiv').setAttribute('hidden', '');
+        $('logfileDiv').setAttribute('hidden', '');
         $('logDiv').removeAttribute('hidden');
         currElt = 'logfile';
+    }
+
+    function showLogFile() {
+        $('mainImage').setAttribute('hidden', '');
+        $('mainTable').setAttribute('hidden', '');
+        $('plotlyDiv').setAttribute('hidden', '');
+        $('logDiv').setAttribute('hidden', '');
+        $('logfileDiv').removeAttribute('hidden');
+        currElt = 'logfileRaw';
     }
 
     function loadControlFile(file, dive) {
@@ -626,6 +645,17 @@
         });
     }
 
+    function loadLogFile(dive) {
+        fetch(`/logfile/${currGlider}/${dive}`)
+        .then(res => res.text())
+        .then(data => {
+            $('logfileDiv').innerHTML = '<pre>' + data + '</pre>';
+        })
+        .catch(error => {
+            consoloe.log(`loadLogFile - ${error}`);
+        });
+    }
+    
     function jumpScroll(n) {
         $('bottom').scrollTo(200*n, 0, 'smooth');
         console.log('scrolling to ' + 200*n);
@@ -655,6 +685,7 @@
         currDive = dive; // inside the then or before plots might be actually loaded?
 
         loadLog(dive);
+        loadLogFile(dive);
 
         fetch(`/plots/${currGlider}/${dive}`)
         .then(res => res.json())
@@ -717,8 +748,10 @@
                 } 
             }
 
-            if (currElt == 'logfile')
-                showLog();
+            if (currElt == 'logfile') 
+                showLog(); 
+            else if (currElt == 'logfileRaw')
+                showLogFile();
             else if (engplots.includes(currElt))
                 showEng(currElt, plotly.includes(currElt));
             else 
@@ -733,6 +766,7 @@
             var e = links.indexOf('eng');
             var ab = links.indexOf('ab');
             var mn = ab > -1 ? ab - 1 : e - 1;
+            var all;
  
             links.splice(e, 1); 
             var j;
@@ -743,12 +777,14 @@
                 else
                     j = mn;
 
-                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');">' + links[i] + '&hellip;' + links[j] + '</span> * '; 
+                all = links.slice(i,j+1).join(', ');
+                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> * '; 
             }
             if (ab > -1) //  && links[j] != 'ab')
                 $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + ab + ');">ab</span> * ';
 
-            $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');">eng</span>';
+            all = links.slice(e).join(', ');
+            $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');" title="' + all +'">eng</span>';
         })
         .catch(error => {
             console.log(`loadPlots - ${error}`);
@@ -769,13 +805,45 @@
             // loadLog(currDive);
         }
     }
-       
-    function parameterHelp() {
-        var s = $('cmdfile').selectionStart;
-        var e = $('cmdfile').selectionEnd;
-        var v = $('cmdfile').value;
-        if (v[s-1] == '$' && v[e] == ',') {
-            var str = v.substring(s, e);
+      
+    function getSelectionText() {
+        var text = "";
+        var activeEl = document.activeElement;
+        var activeElTagName = activeEl ? activeEl.tagName.toLowerCase() : null;
+        if (
+          (activeElTagName == "textarea") || (activeElTagName == "input" &&
+          /^(?:text|search|password|tel|url)$/i.test(activeEl.type)) &&
+          (typeof activeEl.selectionStart == "number")
+        ) {
+            text = activeEl.value.slice(activeEl.selectionStart, activeEl.selectionEnd);
+        } else if (window.getSelection) {
+            text = window.getSelection().toString();
+        }
+        return text;
+    } 
+
+    function parameterHelp(which) {
+        var str = false;
+
+        if (which == 'cmdfile') {
+            var s = $(which).selectionStart;
+            var e = $(which).selectionEnd;
+            var v = $(which).value;
+
+            if (v[s-1] == '$' && v[e] == ',') {
+                str = v.substring(s, e);
+            }
+        }
+        else if (which == 'logfile') {
+            var v = window.getSelection().toString();
+            var h = $('logfileDiv').innerHTML;
+            var i = h.indexOf(v);
+            if (i > 0 && h[i-1] == '$' && h[i + v.length] == ',') {
+                str = v;
+            }
+        }
+            
+        if (str) {
             window.open('/parms#' + str, 'parms');
         }
     }
@@ -999,6 +1067,8 @@
         </div>
     </div>
 
+    <div id="logfileDiv" hidden="hidden" ondblclick="parameterHelp('logfile');" title="double click parameter for help">
+    </div>
 </div>
 
 <div id="links" style="position: absolute; left:1060; top: 0; width:600; height:20; font-size:10px;">
@@ -1052,7 +1122,7 @@
 </div>
 
 <div id="divCmdfile" style="position: absolute; left:1060; top:670; width:640px; height:380px; font-size: 12px;">
-    <textarea id="cmdfile" style="width:100%; height:100%; box-sizing:border-box;" ondblclick="parameterHelp();">
+    <textarea id="cmdfile" style="width:100%; height:100%; box-sizing:border-box;" ondblclick="parameterHelp('cmdfile');">
     </textarea>
     <textarea id="targets" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
     <textarea id="science" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
@@ -1079,12 +1149,13 @@
 
 <div id="bottomButtons" style="position: absolute; left: 0; top: 900; width: 82; height: 180; overflow: hidden;">
     <span style="float: right;">
-        <a href="#" onclick="showPlotly();">tool</a> *
-        <a href="#" onclick="showLog();">log</a></span><br>
-    </span>  
-    <button id="btnUp" type="button" onclick="changeDive(1);" style="font-size: 18px; width:80px;">&#x2191</button><br><br>
-    <button id="btnTable" type="button" onclick="showTable();" style="font-size: 48px; width:80px;">&#x2637</button><br><br>
-    <button id="btnDown" type="button" onclick="changeDive(-1);" style="font-size: 18px; width:80px;">&#x2193</button>
+        <a href="#" onclick="showPlotly();" title="plot and table tool">tool</a> *
+        <a href="#" onclick="showLog();" title="log file">log</a> *
+        <a href="#" onclick="showLogFile();" title="raw log file">file</a>
+    </span> <br> 
+    <button id="btnUp" type="button" onclick="changeDive(1);" style="font-size: 18px; width:80px;" title="next dive">&#x2191</button><br><br>
+    <button id="btnTable" type="button" onclick="showTable();" style="font-size: 48px; width:80px;" title="dives table">&#x2637</button><br><br>
+    <button id="btnDown" type="button" onclick="changeDive(-1);" style="font-size: 18px; width:80px;" title="prev dive">&#x2193</button>
 </div>
 
 <div id="bottomBox" style="position: absolute; left: 82; top: 900; width: 978; height: 200; overflow: hidden;">

@@ -177,6 +177,15 @@ async def logHandler(request, glider:int, dive:int):
     s = LogHTML.captureTables(filename)
     return sanic.response.html(s)
 
+@app.route('/logfile/<glider:int>/<dive:int>')
+async def logfileHandler(request, glider: int, dive: int):
+    filename = f'sg{glider:03d}/p{glider:03d}{dive:04d}.log'
+    if os.path.exists(filename):
+        return await sanic.response.file(filename, mime_type='text/plain')
+    else:
+        return sanic.response.text('not found', status=404)
+        
+
 @app.route('/status/<glider:int>')
 async def statusHandler(request, glider:int):
     if glider in commFile and commFile[glider]:
