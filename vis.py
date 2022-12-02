@@ -194,8 +194,52 @@ async def logfileHandler(request, glider: int, dive: int):
         return await sanic.response.file(filename, mime_type='text/plain')
     else:
         return sanic.response.text('not found', status=404)
-        
+       
+@app.route('/alerts/<glider:int>/<dive:int>')
+async def alertsHandler(request, glider: int, dive: int):
+    filename = f'sg{glider:03d}/alert_message.html.{dive:d}'
+    if os.path.exists(filename):
+        return await sanic.response.file(filename, mime_type='text/plain')
+    else:
+        return sanic.response.text('not found')
+ 
+@app.route('/deltas/<glider:int>/<dive:int>')
+async def deltasHandler(request, glider: int, dive: int):
+    cmdfile = f'sg{glider:03d}/cmdfile.{dive:d}'
+    logfile = f'sg{glider:03d}/p{glider:03d}{dive:04d}.log'
+    if not os.path.exists(cmdfile) or not os.path.exists(logfile):
+        return sanic.response.text('not found')
 
+    cmd = f"/usr/local/bin/validate {logfile} -c {cmdfile}"
+    output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    results = output.stdout
+    err = output.stderr
+
+    message = {}
+    message['dive'] = dive
+    message['parm'] = []    
+    for line in results.splitlines():
+        if "will change" in line:         
+            pieces = line.split(' ')
+            logvar = pieces[2]
+            oldval = pieces[6]
+            newval = pieces[8]
+            message['parm'].append(f'{logvar},{oldval},{newval}')
+
+    message['file'] = []
+
+    files = ["science", "targets", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat"]
+    for f in files:
+        filename = f'sg{glider:03d}/{f}.{dive}'
+
+        if os.path.exists(filename):
+            with open(filename, 'r') as file:
+                c = file.read() 
+
+            message['file'].append({ "file": f, "contents":c }) 
+
+    return sanic.response.json(message)
+ 
 @app.route('/status/<glider:int>')
 async def statusHandler(request, glider:int):
     if glider in commFile and commFile[glider]:
