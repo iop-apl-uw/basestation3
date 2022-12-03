@@ -61,7 +61,7 @@ import BaseOpts
 import BaseGZip
 import Globals
 import CommLog
-import Sensors
+import Utils
 
 from BaseLog import (
     BaseLogger,
@@ -465,7 +465,18 @@ def process_pagers(
                                     fmt, dive_prefix
                                 )
                                 if session:
-                                    gps_message = "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f" % (gps_message, session.depth, session.obs_pitch, session.rh, session.int_press, session.volt_24V, session.volt_10V)
+                                    gps_message = (
+                                        "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f"
+                                        % (
+                                            gps_message,
+                                            session.depth,
+                                            session.obs_pitch,
+                                            session.rh,
+                                            session.int_press,
+                                            session.volt_24V,
+                                            session.volt_10V,
+                                        )
+                                    )
                                 reboot_msg = comm_log.has_glider_rebooted()
                             elif session:
                                 (
@@ -479,7 +490,18 @@ def process_pagers(
                                 if msg_prefix:
                                     gps_message = f"{msg_prefix}{gps_message}"
                                 try:
-                                    gps_message = "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f" % (gps_message, session.depth, session.obs_pitch, session.rh, session.int_press, session.volt_24V, session.volt_10V)
+                                    gps_message = (
+                                        "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f"
+                                        % (
+                                            gps_message,
+                                            session.depth,
+                                            session.obs_pitch,
+                                            session.rh,
+                                            session.int_press,
+                                            session.volt_24V,
+                                            session.volt_10V,
+                                        )
+                                    )
                                 except:
                                     log_error("Problem formatting GPS message", "exc")
                                 reboot_msg = None
@@ -1376,7 +1398,7 @@ def process_extensions(
                         extension_module_name = os.path.join(
                             extension_directory, extension_elts[0]
                         )
-                        extension_module = Sensors.loadmodule(extension_module_name)
+                        extension_module = Utils.loadmodule(extension_module_name)
                         if extension_module is None:
                             log_error(
                                 f"Error loading {extension_module_name} - skipping"

@@ -30,13 +30,9 @@
 """
 
 import collections
-import importlib
 import os
 import re
 import shutil
-import sys
-
-import pdb
 
 import BaseNetCDF
 import LogFile
@@ -54,39 +50,6 @@ known_logger_dict_keys = (
     "strip_files",
 )
 known_sensor_dict_keys = ("logger_prefix", "netcdf_metadata_adds")
-
-
-def loadmodule(pathname):
-    """Loads a module and returns a module handle
-
-    pathname - fully qualified path to the module to be loaded
-
-    Return:
-       None - error
-       Module object - success
-
-    """
-    # Fast path: see if the module has already been imported.
-    _, name = os.path.split(pathname)
-    name, _ = os.path.splitext(name)
-
-    try:
-        return sys.modules[name]
-    except:
-        pass
-
-    # If any of the following calls raises an exception,
-    # there's a problem we can't handle -- let the caller handle it.
-    try:
-        spec = importlib.util.spec_from_file_location(name, pathname)
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules["module.name"] = mod
-        spec.loader.exec_module(mod)
-        return mod
-    except:
-        log_error(f"Error loading {pathname}", "exc")
-        log_info("No module loaded")
-    return None
 
 
 class SensorExtensions:
@@ -169,7 +132,7 @@ class SensorExtensions:
                     _, tail = os.path.splitext(extension_module_name)
                     temp_dict = {}
                     if tail == ".py":
-                        extension_module = loadmodule(extension_module_name)
+                        extension_module = Utils.loadmodule(extension_module_name)
                         if extension_module is None:
                             log_error(
                                 f"Error loading {extension_module_name} - skipping"
@@ -293,9 +256,7 @@ class SensorExtensions:
             if processing_func in ext:
                 extension_ret_val = ext[processing_func](self.__base_opts, key, *args)
                 if extension_ret_val is None:
-                    log_warning(
-                        f"Extension returned None ({key},{processing_func})"
-                    )
+                    log_warning(f"Extension returned None ({key},{processing_func})")
                     ret_val = 1
                 elif extension_ret_val < 0:
                     log_debug(
