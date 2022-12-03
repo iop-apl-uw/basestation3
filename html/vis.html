@@ -374,13 +374,16 @@
         window.open('/map/' + currGlider, currGlider + '-map');
     }
 
+    function setVisibility(elt) {
+        const divs = ['mainImage', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv'];
+        for (var d of divs) {
+            if (d != elt) $(d).setAttribute('hidden', '');
+        }
+        $(elt).removeAttribute('hidden');
+    }
     function showPlot(elt, plotly) {
-        $('mainImage').removeAttribute('hidden');
+        setVisibility('mainImage');
         $('mainImage').src = '/png/' + currGlider + '/' + currDive + '/' + elt;
-        $('mainTable').setAttribute('hidden', '');
-        $('logDiv').setAttribute('hidden', '');
-        $('plotlyDiv').setAttribute('hidden', '');
-        $('logfileDiv').setAttribute('hidden', '');
         if (plotly) {
             $('mainImage').ondblclick = function() { popupPlotly(currDive, elt); }
             $('mainImage').oncontextmenu = function() { popupPlotly(currDive, elt); }
@@ -393,12 +396,8 @@
     }
 
     function showMissionPlot(which, elt, plotly) {
-        $('mainImage').removeAttribute('hidden');
+        setVisibility('mainImage');
         $('mainImage').src = '/' + which + '/' + currGlider + '/' + elt;
-        $('mainTable').setAttribute('hidden', '');
-        $('logDiv').setAttribute('hidden', '');
-        $('plotlyDiv').setAttribute('hidden', '');
-        $('logfileDiv').setAttribute('hidden', '');
         // $('mainImage').onclick = function() { popupPlotly(currDive, elt); }
         $('mainImage').ondblclick = null;
         currElt = elt;
@@ -529,37 +528,26 @@
     }
 
     function showTable() {
-        $('mainImage').setAttribute('hidden', '');
-        $('logDiv').setAttribute('hidden', '');
-        $('plotlyDiv').setAttribute('hidden', '');
-        $('logfileDiv').setAttribute('hidden', '');
-        $('mainTable').removeAttribute('hidden');
+        setVisibility('mainTable'); 
     }
 
     function showPlotly() {
-        $('mainImage').setAttribute('hidden', '');
-        $('logDiv').setAttribute('hidden', '');
-        $('mainTable').setAttribute('hidden', '');
-        $('logfileDiv').setAttribute('hidden', '');
-        $('plotlyDiv').removeAttribute('hidden');
+        setVisibility('plotlyDiv');
     }
 
     function showLog() {
-        $('mainImage').setAttribute('hidden', '');
-        $('mainTable').setAttribute('hidden', '');
-        $('plotlyDiv').setAttribute('hidden', '');
-        $('logfileDiv').setAttribute('hidden', '');
-        $('logDiv').removeAttribute('hidden');
+        setVisibility('logDiv');
         currElt = 'logfile';
     }
 
     function showLogFile() {
-        $('mainImage').setAttribute('hidden', '');
-        $('mainTable').setAttribute('hidden', '');
-        $('plotlyDiv').setAttribute('hidden', '');
-        $('logDiv').setAttribute('hidden', '');
-        $('logfileDiv').removeAttribute('hidden');
+        setVisibility('logfileDiv');
         currElt = 'logfileRaw';
+    }
+
+    function showNotifications() {
+        setVisibility('notificationsDiv');
+        currElt = 'notifications';
     }
 
     function loadControlFile(file, dive) {
@@ -658,7 +646,50 @@
             consoloe.log(`loadLogFile - ${error}`);
         });
     }
-    
+   
+    async function loadNotifications(dive) {
+        var i;
+        var html;
+        var pieces;
+        let urls = [`/alerts/${currGlider}/${dive}`, `/deltas/${currGlider}/${dive}`];
+        let notify = false;
+
+        let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
+        let alerts = resp[0];
+        let deltas = JSON.parse(resp[1]);
+        console.log(resp);
+        console.log(deltas);
+
+        html = "<h3>alerts</h3><p>";
+        if (alerts != "not found") {
+            html += alerts;
+            notify = true;
+        }
+
+        html += '<h3>parameter changes</h3><p><table style="margin-left:40px;">';
+        for (i = 0 ; i < deltas['parm'].length; i++) {
+            pieces = deltas['parm'][i].split(',');
+            html += `<tr><td>${pieces[0]}&nbsp;&nbsp;&nbsp;</td><td>${pieces[1]}</td><td> <b>&#10230;</b> <td>${pieces[2]}</td></tr>`;
+        } 
+        
+        html += "</table><p><h3>control files</h3><p>";
+        for (i = 0 ; i < deltas['file'].length; i++) {
+            html += '<b>' + deltas['file'][i]['file'] + '</b>';
+            html += '<div style="margin-left:40px;"><pre>' + deltas['file'][i]['contents'] + '</pre></div>';
+        }
+
+        $('notificationsDiv').innerHTML = html;
+
+        if (deltas['file'].length > 0 || deltas['parm'].length > 0) {
+            notify = true;
+        }        
+
+        if (notify) 
+            $('btnNotifications').style.backgroundImage = "url('/script/images/notification-active-icon.png')";
+        else
+            $('btnNotifications').style.backgroundImage = "url('/script/images/notification-icon.png')";
+    }
+ 
     function jumpScroll(n) {
         $('bottom').scrollTo(200*n, 0, 'smooth');
         console.log('scrolling to ' + 200*n);
@@ -689,6 +720,7 @@
 
         loadLog(dive);
         loadLogFile(dive);
+        loadNotifications(dive);
 
         fetch(`/plots/${currGlider}/${dive}`)
         .then(res => res.json())
@@ -768,6 +800,8 @@
                 showLog(); 
             else if (currElt == 'logfileRaw')
                 showLogFile();
+            else if (currElt == 'notifications')
+                showNotifications();
             else if (engplots.includes(currElt))
                 showMissionPlot('eng', currElt, plotly.includes(currElt));
             else if (sgplots.includes(currElt))
@@ -1166,11 +1200,12 @@
     <button class="tool" style="background: url(/script/images/log-table-icon.png);" onclick="showLog();" title="log summary"></button>
     <button class="tool" style="background: url(/script/images/log-icon.png);" onclick="showLogFile();" title="log file"></button>
     <button class="tool" style="background: url(/script/images/chart-icon.png);" onclick="showPlotly();" title="plot and table tool"></button>
+    <button class="tool" id="btnNotifications" style="background: url(/script/images/notification-icon.png);" onclick="showNotifications();" title="notifications"></button>
 </div>
 
 <div id="main" style="position: absolute; left: 50; top: 0; width:1060px; height:894px; overflow:auto;">
     <img id="mainImage">
-    <table rules="groups" id="mainTable" hidden="hidden" style="height:894px; width:900px; font-size:14px; text-align:right; font-family:verdana, arial, tahoma, 'sans serif';"> 
+    <table rules="groups" id="mainTable" hidden="hidden" style="height:894px; width:1000px; font-size:14px; text-align:right; font-family:verdana, arial, tahoma, 'sans serif';"> 
 
         <colgroup span=4><col><col><col><col></colgroup>
         <colgroup span=6><col><col><col><col><col><col></colgroup>
@@ -1203,7 +1238,8 @@
     </table>
 
     <div id="logDiv" hidden="hidden"></div>
-
+    <div id="notificationsDiv" hidden="hidden" style="margin-left:20px;"></div>
+    
     
     <div id="plotlyDiv" hidden="hidden">
         <div id="plotyConfigDiv">
