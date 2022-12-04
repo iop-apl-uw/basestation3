@@ -337,7 +337,7 @@
 
             // SSH
         
-            ssh = L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+            ssh = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
                                     {
                                         layer: 'JPL_MEaSUREs_L4_Sea_Surface_Height_Anomalies',
                                         format: "image/png",
@@ -346,6 +346,43 @@
                                         maxNativeZoom: 5,
                                         maxZoom: 9,
                                         opacity: 0.5,
+                                    });
+
+            // SST
+        
+            sst = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+                                    {
+                                        layer: 'MODIS_Aqua_L3_SST_Thermal_4km_Day_8Day',
+                                        format: "image/png",
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level6',
+                                        time: 'default',
+                                        maxNativeZoom: 5,
+                                        maxZoom: 10,
+                                        opacity: 1.0
+                                    });
+
+            // sea ice
+
+            seaIce = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+                                    {
+                                        layer: 'AMSRU2_Sea_Ice_Concentration_12km',
+                                        format: "image/png",
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level6',
+                                        time: 'default',
+                                        maxNativeZoom: 5,
+                                        maxZoom: 10,
+                                        opacity: 1.0
+                                    });
+
+            chlA = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+                                    {
+                                        layer: 'MODIS_Aqua_L2_Chlorophyll_A',
+                                        format: "image/png",
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level7',
+                                        time: 'default',
+                                        maxNativeZoom: 6,
+                                        maxZoom: 10,
+                                        opacity: 1.0
                                     });
 
             // contours
@@ -410,6 +447,9 @@
                 "GEBCO": gebco,
                 "contours": contours,
                 "SSH": ssh,
+                "SST (MODIS 8-day day)": sst,
+                "sea ice (AMSRU2 12km)": seaIce,
+                "Chlorophyll-A (Aqua MODIS L2)": chlA,
                 "AIS": ais,
                 "chart marks": chart,
                 "wind": wind,
