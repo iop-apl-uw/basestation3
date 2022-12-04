@@ -118,7 +118,7 @@
                      .openOn(map);
             }
 
-            function loadSA(layerControl, sa) {
+            function loadSA(map, layerControl, sa) {
                 const types = ["triangle", "circle", "square", "triangle"];
                 const colors = ["#ff0000", "#00ff00", "#0000ff", "#ff00ff"];
 
@@ -157,7 +157,9 @@
                         ctr[1] += d.lat; 
                         nctr ++;
                     } 
-                    layerControl.addOverlay(L.layerGroup(assetMarkers), sa); 
+                    let newLayer = L.layerGroup(assetMarkers);
+                    layerControl.addOverlay(newLayer, sa); 
+                    newLayer.addTo(map);
                 })
                 .catch(e => {
                     console.log('sa ' + url + ' error ' + e);
@@ -493,7 +495,7 @@
             let params = new URLSearchParams(window.location.search);
             if (params.has('sa')) {
                 let sa = params.get('sa'); 
-                loadSA(layerControl, sa);
+                loadSA(map, layerControl, sa);
             }
 
         </script>
