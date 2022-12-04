@@ -335,6 +335,19 @@
                 }
             });
 
+            // SSH
+        
+            ssh = L.tileLayer("https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+                                    {
+                                        layer: 'JPL_MEaSUREs_L4_Sea_Surface_Height_Anomalies',
+                                        format: "image/png",
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level6',
+                                        time: 'default',
+                                        maxNativeZoom: 5,
+                                        maxZoom: 9,
+                                        opacity: 0.5,
+                                    });
+
             // contours
             
             contours = L.tileLayer.wms("http://www.opendem.info:80/geoserver/opendem/ows?",
@@ -396,6 +409,7 @@
             var overlayLayers = {
                 "GEBCO": gebco,
                 "contours": contours,
+                "SSH": ssh,
                 "AIS": ais,
                 "chart marks": chart,
                 "wind": wind,
