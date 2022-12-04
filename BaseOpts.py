@@ -1230,7 +1230,10 @@ class BaseOptions:
 
         cp = configparser.RawConfigParser(cp_default)
 
-        ap = argparse.ArgumentParser(description=description)
+        ap = argparse.ArgumentParser(
+            description=description,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+        )
 
         # Build up group dictionary
         option_group_set = set()
@@ -1309,6 +1312,11 @@ class BaseOptions:
                     else:
                         parser.add_argument(*arg_list, **kwargs)
                     del kwargs
+
+            sub_cmd_help_list = "sub-commands usage:\n"
+            for _, sb in self._subparsers.items():
+                sub_cmd_help_list += f"  {sb.format_usage()[7:]}"
+            ap.epilog = sub_cmd_help_list
 
         self._ap = ap
 
