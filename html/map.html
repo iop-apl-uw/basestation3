@@ -47,6 +47,26 @@
     <body>
         <div style="width: 100vw; height: 100vh" id="map"></div>
         <script type="text/javascript">
+            function reckon(pt, range, az) 
+            {
+                const MPD = 111120.0; 
+                var pt2 = [0,0];
+
+                pt2[0] = pt[0] + range*Math.cos(az*Math.PI/180.0)/MPD;
+                pt2[1] = pt[1] + range*Math.sin(az*Math.PI/180.0)/(MPD*Math.cos(pt[0]*Math.PI/180));
+                return pt2;
+            }
+
+            function xy2magdir(x, y)
+            {
+                let mag = Math.sqrt(x*x + y*y);
+                let dir = Math.atan2(x, y)*180.0/Math.PI;
+                if (dir < 0)
+                    dir += 360;
+
+                return [mag, dir];
+            }
+
             function dd2ddmm(x)
             {
                 var dd = Math.trunc(x);
@@ -163,6 +183,31 @@
                 })
                 .catch(e => {
                     console.log('sa ' + url + ' error ' + e);
+                });
+            }
+
+            function loadGliderDAC(map, layerControl, glider) {
+                let  url = `/query/${glider}/dive,avg_latitude,avg_longitude,depth_avg_curr_north,depth_avg_curr_east`;
+
+                fetch(url)
+                .then(resp => resp.json()) 
+                .then(data => {
+                    var v = [];
+                    var line; 
+
+                    for (d of data) {
+                        [m,dir] = xy2magdir(d.depth_avg_curr_east, d.depth_avg_curr_north);
+                        [elat, elon] = reckon([d.avg_latitude, d.avg_longitude], 20000*m, dir);                        
+                        line = L.polyline([[d.avg_latitude, d.avg_longitude], [elat, elon]], {});
+                        line.bindTooltip(`dive ${d.dive}<br>${m.toFixed(3)}@${dir.toFixed(1)}&deg;`, {});
+                        v.push(line);
+                    }
+                    let newLayer = L.layerGroup(v);
+                    layerControl.addOverlay(newLayer, `${glider} DAC`); 
+                    // newLayer.addTo(map); // not by default
+                })
+                .catch(e => {
+                    console.log('DAC ' + e);
                 });
             }
 
@@ -491,6 +536,7 @@
                 urls.push('/kml/' + path[i]);
 
             loadGliderKML(map, layerControl, urls);
+            loadGliderDAC(map, layerControl, path[first]); 
            
             let params = new URLSearchParams(window.location.search);
             if (params.has('sa')) {
