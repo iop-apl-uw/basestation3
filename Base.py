@@ -2195,7 +2195,6 @@ def main():
                 os.path.join(base_opts.mission_dir, f".{k}_ext"),
                 processed_logger_payload_files[k],
             )
-    del k
 
     # Run the post dive processing script
     run_extension_script(os.path.join(base_opts.mission_dir, ".post_dive"), None)

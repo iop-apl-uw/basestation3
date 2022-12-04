@@ -30,6 +30,7 @@ import collections
 import errno
 import functools
 import glob
+import importlib
 import math
 import os
 import pickle
@@ -1557,3 +1558,36 @@ def average_position(gps_a_lat, gps_a_lon, gps_b_lat, gps_b_lon):
     gps_mean_lon = gps_a_lon_rad + math.atan2(b_y, math.cos(gps_a_lat_rad) + b_x)
 
     return (math.degrees(gps_mean_lat), math.degrees(gps_mean_lon))
+
+
+def loadmodule(pathname):
+    """Loads a module and returns a module handle
+
+    pathname - fully qualified path to the module to be loaded
+
+    Return:
+       None - error
+       Module object - success
+
+    """
+    # Fast path: see if the module has already been imported.
+    _, name = os.path.split(pathname)
+    name, _ = os.path.splitext(name)
+
+    try:
+        return sys.modules[name]
+    except:
+        pass
+
+    # If any of the following calls raises an exception,
+    # there's a problem we can't handle -- let the caller handle it.
+    try:
+        spec = importlib.util.spec_from_file_location(name, pathname)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["module.name"] = mod
+        spec.loader.exec_module(mod)
+        return mod
+    except:
+        log_error(f"Error loading {pathname}", "exc")
+        log_info("No module loaded")
+    return None
