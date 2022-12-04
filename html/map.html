@@ -10,6 +10,7 @@
         <script src="/script/Control.Coordinates.js"></script>
         <script src="/script/leaflet-reticle.js"></script>
         <script src="/script/leaflet-kmz-src.js"></script>
+        <script src="/script/leaflet-svg-shape-markers.min.js"></script>
 
         <style>
             .leaflet-toggle{
@@ -29,6 +30,17 @@
                 color: #234c5e;
                 font-family: verdana, arial, tahoma, 'sans serif'; 
                 font-size: 10px;
+            }
+            .leaflet-tooltip-top:before, 
+            .leaflet-tooltip-bottom:before, 
+            .leaflet-tooltip-left:before, 
+            .leaflet-tooltip-right:before {
+                border: none !important;
+            }
+            .assetLabel {
+                background: transparent;
+                border: none;
+                box-shadow: none;
             }
         </style>
     </head>
@@ -51,7 +63,6 @@
             function removeTags(str, tag) {
                 const reStr = `<${tag}.*>.*?<\\\/${tag}>`;
                 const re = new RegExp(reStr, 'ig');
-                console.log(reStr);
                 if ((str===null) || (str===''))
                     return false;
                 else
@@ -107,7 +118,53 @@
                      .openOn(map);
             }
 
-            async function loadGliderKML(map, urls) {
+            function loadSA(layerControl, sa) {
+                const types = ["triangle", "circle", "square", "triangle"];
+                const colors = ["#ff0000", "#00ff00", "#0000ff", "#ff00ff"];
+
+                let url = '/proxy/https://iop.apl.washington.edu/chart/sa_assets.php?mission=' + sa;
+
+                fetch(url)
+                .then(resp => resp.json())
+                .then(data => {
+                    var short;
+                    var html;
+                    var ctr = [0,0];
+                    var nctr;
+                    var assetMarkers = [];
+                    for (d of data) {
+                        if (d['id'].length > 8)
+                            short = "..." + d['id'].slice(-5);
+                        else
+                            short = d['id'];
+
+                        html = [
+                            d.class + " " + d.id,
+                            formatPos(d.lat) + "," + formatPos(d.lon),
+                            d.date + " " + d.time,
+                        ].join('<br />');
+
+                        assetMarkers.push(L.shapeMarker([d.lat, d.lon], 
+                                                        {
+                                                            shape: types[d.subcat],
+                                                            radius: 5,
+                                                            color: colors[d.subcat],
+                                                        }
+                                                       )
+                                                        .bindTooltip(short, { permanent: true, className: 'assetLabel' })
+                                                        .bindPopup(html));
+                        ctr[0] += d.lon;
+                        ctr[1] += d.lat; 
+                        nctr ++;
+                    } 
+                    layerControl.addOverlay(L.layerGroup(assetMarkers), sa); 
+                })
+                .catch(e => {
+                    console.log('sa ' + url + ' error ' + e);
+                });
+            }
+
+            async function loadGliderKML(map, layerControl, urls) {
                 var kml;
                 var parser;
 
@@ -278,6 +335,56 @@
                 }
             });
 
+            // SSH
+        
+            ssh = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+                                    {
+                                        layer: 'JPL_MEaSUREs_L4_Sea_Surface_Height_Anomalies',
+                                        format: "image/png",
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level6',
+                                        time: 'default',
+                                        maxNativeZoom: 5,
+                                        maxZoom: 9,
+                                        opacity: 0.5,
+                                    });
+
+            // SST
+        
+            sst = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+                                    {
+                                        layer: 'MODIS_Aqua_L3_SST_Thermal_4km_Day_8Day',
+                                        format: "image/png",
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level6',
+                                        time: 'default',
+                                        maxNativeZoom: 5,
+                                        maxZoom: 10,
+                                        opacity: 1.0
+                                    });
+
+            // sea ice
+
+            seaIce = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+                                    {
+                                        layer: 'AMSRU2_Sea_Ice_Concentration_12km',
+                                        format: "image/png",
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level6',
+                                        time: 'default',
+                                        maxNativeZoom: 5,
+                                        maxZoom: 10,
+                                        opacity: 1.0
+                                    });
+
+            chlA = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
+                                    {
+                                        layer: 'MODIS_Aqua_L2_Chlorophyll_A',
+                                        format: "image/png",
+                                        tileMatrixSet: 'GoogleMapsCompatible_Level7',
+                                        time: 'default',
+                                        maxNativeZoom: 6,
+                                        maxZoom: 10,
+                                        opacity: 1.0
+                                    });
+
             // contours
             
             contours = L.tileLayer.wms("http://www.opendem.info:80/geoserver/opendem/ows?",
@@ -339,6 +446,10 @@
             var overlayLayers = {
                 "GEBCO": gebco,
                 "contours": contours,
+                "SSH": ssh,
+                "SST (MODIS 8-day day)": sst,
+                "sea ice (AMSRU2 12km)": seaIce,
+                "Chlorophyll-A (Aqua MODIS L2)": chlA,
                 "AIS": ais,
                 "chart marks": chart,
                 "wind": wind,
@@ -377,8 +488,13 @@
             for (var i = first ; i < path.length ; i++) 
                 urls.push('/kml/' + path[i]);
 
-            loadGliderKML(map, urls);
-            
+            loadGliderKML(map, layerControl, urls);
+           
+            let params = new URLSearchParams(window.location.search);
+            if (params.has('sa')) {
+                let sa = params.get('sa'); 
+                loadSA(layerControl, sa);
+            }
 
         </script>
     </body>
