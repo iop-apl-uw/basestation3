@@ -1032,13 +1032,20 @@
 
     function doPlotlyPlot(which) {
         let x = $('selPlotlyX').value;
+        let x2 = $('selPlotlyX2').value;
         // let y = $('selPlotlyY').value;
         let y = [...$('selPlotlyY').selectedOptions].map(option => option.value);
-        
-        fetch(`/query/${currGlider}/${x},${y.join(',')}`)
+        var query;
+
+        if (x2 == '-')
+            query = `/query/${currGlider}/${x},${y.join(',')}`;
+        else
+            query = `/query/${currGlider}/${x},${x2},${y.join(',')}`;
+
+        fetch(query)
         .then(res => res.json())
         .then(data => {
-            if (which == 'plot') {
+            if (which == 'plot' && x2 == '-') {
                 var d = [];
                 var xd = data.map(v => v[x]);
                 for (var i = 0 ; i < y.length ; i++) {
@@ -1056,6 +1063,38 @@
                                 margin: { t:20, l:80, r:80, b:80 },
                                 xaxis: { title: x },
                                 yaxis: { title: y[0] },
+                                plot_bgcolor: "#cccccc",
+                             };
+                var config = { responsive: true };
+                Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
+            }
+            else if (which == 'plot') {
+                var d = [];
+                var xd = data.map(v => v[x]);
+                var xd2 = data.map(v => v[x2]);
+                for (var i = 0 ; i < y.length ; i++) {
+                    var yd = data.map(v => v[y[i]]);
+                    d.push({
+                            x: xd,
+                            y: xd2,
+                            mode: "markers",
+                            type: "scatter",
+                            name: y[i],
+                            marker: {
+                                color: yd,
+                                colorbar: {
+                                    title: y[i],
+                                    len: 0.8,
+                                },
+                                colorscale: "Jet", 
+                            }
+                           });
+                }
+                var layout = { 
+                                font:       {size: 12},
+                                margin: { t:20, l:80, r:80, b:80 },
+                                xaxis: { title: x },
+                                yaxis: { title: x2 },
                                 plot_bgcolor: "#cccccc",
                              };
                 var config = { responsive: true };
@@ -1127,15 +1166,24 @@
             names.splice(names.indexOf('dive'), 1);
             names = ['dive'].concat(names);
 
+            let noOpt = document.createElement('option');
+            noOpt.value = '-';
+            noOpt.innerHTML = '-';
+            $('selPlotlyX2').appendChild(noOpt);
+
             for (n of names) {
                 let optX = document.createElement('option');
                 optX.value = n;
                 optX.innerHTML = n;
+                let optX2 = document.createElement('option');
+                optX2.value = n;
+                optX2.innerHTML = n;
                 let optY = document.createElement('option');
                 optY.value = n;
                 optY.innerHTML = n;
  
                 $('selPlotlyX').appendChild(optX);
+                $('selPlotlyX2').appendChild(optX2);
                 $('selPlotlyY').appendChild(optY);
             }
         })
@@ -1243,8 +1291,11 @@
     
     <div id="plotlyDiv" hidden="hidden">
         <div id="plotyConfigDiv">
-            <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top;"></select> 
-            <span style="vertical-align:top;">Y:</span><select id="selPlotlyY" multiple size="4"> </select>
+            <div style="float:left;">
+                <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top;"></select> <br>
+                <span style="vertical-align:top;">Y:</span><select id="selPlotlyX2" style="vertical-align:top;"></select> <br>
+            </div>
+            <span style="vertical-align:top;">Z:</span><select id="selPlotlyY" multiple size="4"> </select>
             <button id="btnPlotlyPlot" style="vertical-align:top;" onclick="doPlotlyPlot('plot');">plot</button>
             <button id="btnPlotlyTable" style="vertical-align:top;" onclick="doPlotlyPlot('table');">table</button>
             
