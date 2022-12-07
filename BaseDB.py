@@ -69,6 +69,8 @@ def loadFileToDB(cur, filename):
             if not v.startswith("sg_cal"):
                 insertColumn(dive, cur, v, nci.variables[v].getValue(), "FLOAT")
 
+    nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(",")
+
     dep_mx = numpy.nanmax(nci.variables["depth"][:])
     insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
 
@@ -156,6 +158,22 @@ def loadFileToDB(cur, filename):
     insertColumn(dive, cur, "capacity_24V", avail24, "FLOAT")
     insertColumn(dive, cur, "capacity_10V", avail10, "FLOAT")
 
+    if "log_FG_AHR_10Vo" in nci.variables:
+        fg_10V_AH = (
+            nci.variables["log_FG_AHR_10Vo"].getValue()
+            - nci.variables["log_FG_AHR_10V"].getValue()
+        )
+        fg_24V_AH = (
+            nci.variables["log_FG_AHR_24Vo"].getValue()
+            - nci.variables["log_FG_AHR_24V"].getValue()
+        )
+
+        fg_10V_kJ = fg_10V_AH * v10 * 3600.0 / 1000.0
+        fg_24V_kJ = fg_24V_AH * v24 * 3600.0 / 1000.0
+
+        insertColumn(dive, cur, "fg_low_voltage_kJ_used", fg_10V_kJ, "FLOAT")
+        insertColumn(dive, cur, "fg_high_voltage_kJ_used", fg_24V_kJ, "FLOAT")
+
     mhead_line = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
     mhead_line = mhead_line.tobytes().decode("utf-8").split(",")
 
@@ -177,6 +195,63 @@ def loadFileToDB(cur, filename):
 
     nm = nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8")
     insertColumn(dive, cur, "target_name", nm, "TEXT")
+
+    try:
+        for pwr_type in ("SENSOR", "DEVICE"):
+            pwr_devices = (
+                nci.variables[f"log_{pwr_type}S"][:]
+                .tobytes()
+                .decode("utf-8")
+                .split(",")
+            )
+            pwr_devices_secs = [
+                float(x)
+                for x in nci.variables[f"log_{pwr_type}_SECS"][:]
+                .tobytes()
+                .decode("utf-8")
+                .split(",")
+            ]
+            pwr_devices_mamps = [
+                float(x)
+                for x in nci.variables[f"log_{pwr_type}_MAMPS"][:]
+                .tobytes()
+                .decode("utf-8")
+                .split(",")
+            ]
+
+            # Consolidate states
+
+            # Load into db
+            for ii, pwr_device in enumerate(pwr_devices):
+                if pwr_device == "nil":
+                    continue
+                insertColumn(
+                    dive,
+                    cur,
+                    f"{pwr_type.lower()}_{pwr_device}_secs",
+                    pwr_devices_secs[ii],
+                    "FLOAT",
+                )
+                insertColumn(
+                    dive,
+                    cur,
+                    f"{pwr_type.lower()}_{pwr_device}_amps",
+                    pwr_devices_mamps[ii] / 1000.0,
+                    "FLOAT",
+                )
+                insertColumn(
+                    dive,
+                    cur,
+                    f"{pwr_type.lower()}_{pwr_device}_joules",
+                    v10 * (pwr_devices_mamps[ii] / 1000.0) * pwr_devices_secs[ii],
+                    "FLOAT",
+                )
+    except:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+        log_error("Failed to add SENSOR/DEVICE power use", "exc")
 
 
 def rebuildDB(base_opts):
@@ -230,6 +305,10 @@ def addValToDB(base_opts, dive_num, var_n, val):
             insertColumn(dive_num, cur, var_n, val, db_type)
             cur.close()
     except:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
         log_error(f"Failed to add {var_n} to dive {dive_num}", "exc")
         return 1
     return 0

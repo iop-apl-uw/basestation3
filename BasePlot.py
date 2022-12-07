@@ -37,6 +37,7 @@ import plotly
 import numpy as np
 
 import BaseOpts
+import CommLog
 import MakeDiveProfiles
 import Plotting
 import Utils
@@ -198,6 +199,30 @@ def main():
 
     if base_opts.plot_directory is None:
         base_opts.plot_directory = os.path.join(base_opts.mission_dir, "plots")
+
+    log_info(
+        "Started processing "
+        + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+    )
+
+    if not base_opts.instrument_id:
+        (comm_log, _, _, _, _) = CommLog.process_comm_log(
+            os.path.join(base_opts.mission_dir, "comm.log"),
+            base_opts,
+        )
+        if comm_log:
+            base_opts.instrument_id = comm_log.get_instrument_id()
+
+    if not base_opts.instrument_id:
+        _, tail = os.path.split(base_opts.mission_dir[:-1])
+        if tail[-5:-3] != "sg":
+            log_error("Can't figure out the instrument id - bailing out")
+            return 1
+        try:
+            base_opts.instrument_id = int(tail[:-3])
+        except:
+            log_error("Can't figure out the instrument id - bailing out")
+            return 1
 
     if not os.path.exists(base_opts.plot_directory):
         try:

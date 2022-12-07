@@ -37,6 +37,7 @@ import pickle
 import re
 import signal
 import subprocess
+import sqlite3
 import sys
 import time
 
@@ -50,6 +51,7 @@ import scipy
 
 import Globals
 import BaseNetCDF
+import BaseOpts
 from BaseLog import log_debug, log_error, log_warning, log_info, log_critical
 
 
@@ -1591,3 +1593,18 @@ def loadmodule(pathname):
         log_error(f"Error loading {pathname}", "exc")
         log_info("No module loaded")
     return None
+
+
+def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection:
+    """Opens a mission database file"""
+    if not base_opts.mission_dir:
+        log_error("mission_dir is not set")
+        return None
+    if not base_opts.instrument_id:
+        log_error("instrument_id is not set")
+        return None
+    db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+    if not os.path.exists(db):
+        log_error(f"{db} does not exist")
+        return None
+    return sqlite3.connect(db)

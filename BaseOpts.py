@@ -321,6 +321,7 @@ global_options_dict = {
         0,
         (
             "Base",
+            "BasePlot",
             "FligthModel",
             "MakeDiveProfiles",
             "MakeMissionProfile",
