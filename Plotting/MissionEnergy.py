@@ -26,10 +26,12 @@
 """
 import collections
 import pdb
+import sqlite3
 import sys
 import traceback
 
 import plotly
+
 
 import numpy as np
 import pandas as pd
@@ -44,6 +46,9 @@ from Plotting import plotmissionsingle
 
 
 DEBUG_PDB = "darwin" in sys.platform
+
+# TODO - Tune up colors
+# TODO - test with RevB board
 
 line_type = collections.namedtuple("line_type", ("dash", "color"))
 
@@ -60,11 +65,30 @@ line_lookup = {
     # "Compass2" :
     # "network" :
     "STM32Mainboard": line_type("dash", "black"),
+    "SciCon": line_type("solid", "DarkMagenta"),
 }
+
+# Based on fuel gauge from combined packs over previous 10 dives:
+# dives remaining   : 534 (176.4 days at current dive duration)
+# projected end date: 02-Jun-2023 04:13:42 (to 15% capacity)
+# def estimate_endurace(conn: sqlite3.Connection) -> str:
+
+#     batt_df = pd.read_sql_query(
+#         "SELECT dive,batt_kJ_used_10V,batt_kJ_used_24V,time_seconds_diving from dives"
+#     )
+
+# if len(batt_df) >= dives_back:
+#    batt_df["batt_kJ_used_10V"] + batt_df["batt_kJ_used_24V"],
+#    m, b = np.polyfit(, freegb_var, 1)
+#    log_debug("Fit for %s: m = %f, b = %f" % (tag, m, b))
+#    last_dive = -b / m
+
 
 # pylint: disable=unused-argument
 @plotmissionsingle
-def mission_energy(base_opts: BaseOpts.BaseOptions) -> tuple[list, list]:
+def mission_energy(
+    base_opts: BaseOpts.BaseOptions, mission_str: list
+) -> tuple[list, list]:
     """Plots mission energy consumption and projections"""
     log_info("Starting mission_energy")
 
@@ -74,10 +98,27 @@ def mission_energy(base_opts: BaseOpts.BaseOptions) -> tuple[list, list]:
         return ([], [])
 
     try:
+        # capacity 10V and 24V are normalized battery availability
+
         fg_df = pd.read_sql_query(
-            "SELECT dive,fg_low_voltage_kJ_used,fg_high_voltage_kJ_used,capacity_10V,capacity_24V from dives",
+            "SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V from dives",
             conn,
         ).sort_values("dive")
+
+        batt_df = pd.read_sql_query(
+            "SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V from dives",
+            conn,
+        ).sort_values("dive")
+
+        if (
+            batt_df["batt_Ahr_cap_24V"].iloc()[-1] == 0
+            or batt_df["batt_Ahr_cap_10V"].iloc()[-1] == 0
+        ):
+            f_univolt = True
+        else:
+            f_univolt = False
+
+        # estimate_endurace(conn)
 
         # Find the device and sensor columnns for power consumption
         df = pd.read_sql_query("PRAGMA table_info(dives)", conn)
@@ -122,70 +163,103 @@ def mission_energy(base_opts: BaseOpts.BaseOptions) -> tuple[list, list]:
 
         fig = plotly.graph_objects.Figure()
 
-        for device_col in device_joules_df.columns.to_list():
-            if device_col.startswith("device_"):
-                device_name = device_col.removeprefix("device_").removesuffix("_joules")
-                # If there is no data at all - don't plot
-                if len(np.nonzero(device_joules_df[device_col].to_numpy())[0]) == 0:
-                    continue
-                fig.add_trace(
-                    {
-                        "name": device_name,
-                        "x": device_joules_df["dive"],
-                        "y": device_joules_df[device_col] / 1000.0,
-                        "yaxis": "y1",
-                        # "mode": "lines+markers",
-                        "mode": "lines",
-                        # "line": {"dash": "dash", "color": "Blue"},
-                        "line": {
-                            "dash": line_lookup[device_name].dash,
-                            "color": line_lookup[device_name].color,
-                            "width": 1,
-                        },
-                        # "marker": {"symbol": "cross", "size": 3, "color": "LightBlue"},
-                        # "hovertemplate": "Raw Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<extra></extra>",
-                    }
-                )
+        for energy_joules_df, energy_tag in (
+            (device_joules_df, "device_"),
+            (sensor_joules_df, "sensor_"),
+        ):
+            for energy_col in energy_joules_df.columns.to_list():
+                if energy_col.startswith(energy_tag):
+                    energy_name = energy_col.removeprefix(energy_tag).removesuffix(
+                        "_joules"
+                    )
+                    if len(np.nonzero(energy_joules_df[energy_col].to_numpy())[0]) == 0:
+                        continue
+                    fig.add_trace(
+                        {
+                            "name": energy_name,
+                            "x": energy_joules_df["dive"],
+                            "y": energy_joules_df[energy_col] / 1000.0,
+                            "yaxis": "y1",
+                            "mode": "lines",
+                            "line": {
+                                "dash": line_lookup[energy_name].dash,
+                                "color": line_lookup[energy_name].color,
+                                "width": 1,
+                            },
+                            "hovertemplate": energy_name
+                            + "<br>Dive %{x:.0f}<br> Energy used %{y:.2f} kJ<extra></extra>",
+                        }
+                    )
 
-        fig.add_trace(
-            {
-                "name": "10V Fuel Gauge",
-                "x": fg_df["dive"],
-                "y": fg_df["fg_low_voltage_kJ_used"],
-                "yaxis": "y1",
-                "mode": "lines+markers",
-                "line": {"width": 1},
-                "marker": {"symbol": "cross", "size": 3, "color": "LightBlue"},
-                # "hovertemplate": "Raw Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<extra></extra>",
-            }
-        )
-        fig.add_trace(
-            {
-                "name": "24V Fuel Gauge",
-                "x": fg_df["dive"],
-                "y": fg_df["fg_high_voltage_kJ_used"],
-                "yaxis": "y1",
-                "mode": "lines+markers",
-                "line": {"width": 1},
-                "marker": {"symbol": "cross", "size": 3, "color": "DarkBlue"},
-                # "hovertemplate": "Raw Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<extra></extra>",
-            }
-        )
-        fig.add_trace(
-            {
-                "name": "Fuel Gauge Sum",
-                "x": fg_df["dive"],
-                "y": fg_df["fg_high_voltage_kJ_used"] + fg_df["fg_low_voltage_kJ_used"],
-                "yaxis": "y1",
-                "mode": "lines+markers",
-                "line": {"width": 1},
-                "marker": {"symbol": "cross", "size": 3, "color": "DarkBlue"},
-                # "hovertemplate": "Raw Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<extra></extra>",
-            }
-        )
+        if f_univolt:
+            fig.add_trace(
+                {
+                    "name": "Fuel Gauge",
+                    "x": fg_df["dive"],
+                    "y": fg_df["fg_kJ_used_24V"] + fg_df["fg_kJ_used_10V"],
+                    "yaxis": "y1",
+                    "mode": "lines",
+                    "line": {"width": 1, "color": "DarkBlue"},
+                    "hovertemplate": "Fuel Gauge<br>Dive %{x:.0f}<br> Energy used %{y:.2f} kJ<extra></extra>",
+                }
+            )
+            fig.add_trace(
+                {
+                    "name": "Modeled Use",
+                    "x": batt_df["dive"],
+                    "y": batt_df["batt_kJ_used_10V"] + batt_df["batt_kJ_used_24V"],
+                    "yaxis": "y1",
+                    "mode": "lines",
+                    "line": {"width": 1, "color": "DarkGrey"},
+                    "hovertemplate": "Modeled Use<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
+                }
+            )
+        else:
+            fig.add_trace(
+                {
+                    "name": "10V Fuel Gauge",
+                    "x": fg_df["dive"],
+                    "y": fg_df["fg_10V_kJ_used"],
+                    "yaxis": "y1",
+                    "mode": "lines",
+                    "line": {"width": 1, "color": "LightBlue"},
+                    "hovertemplate": "Fuel Gauge 10V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
+                }
+            )
+            fig.add_trace(
+                {
+                    "name": "24V Fuel Gauge",
+                    "x": fg_df["dive"],
+                    "y": fg_df["fg_24V_used"],
+                    "yaxis": "y1",
+                    "mode": "lines",
+                    "line": {"width": 1, "color": "DarkBlue"},
+                    "hovertemplate": "Fuel Gauge 24V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
+                }
+            )
+            fig.add_trace(
+                {
+                    "name": "10V Modeled Use",
+                    "x": batt_df["dive"],
+                    "y": batt_df["batt_kJ_used_10V"],
+                    "yaxis": "y1",
+                    "mode": "lines",
+                    "line": {"width": 1, "color": "LightGrey"},
+                    "hovertemplate": "Modeled Use 10V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
+                }
+            )
+            fig.add_trace(
+                {
+                    "name": "Modeled Use 24V",
+                    "x": batt_df["dive"],
+                    "y": batt_df["batt_kj_used_24V"],
+                    "yaxis": "y1",
+                    "mode": "lines",
+                    "line": {"width": 1, "color": "DarkGrey"},
+                    "hovertemplate": "Modeled Use 24V<br>Dive %{x:.0f}<br>Energy Used %{y:.2f} kJ<extra></extra>",
+                }
+            )
 
-        # TODO - add mission string creation for all plots and feed into routines
-        mission_str = ""
         title_text = f"{mission_str}<br>Energy Consumption"
 
         fig.update_layout(

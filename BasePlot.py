@@ -43,6 +43,7 @@ import Plotting
 import Utils
 
 from BaseLog import BaseLogger, log_error, log_info, log_critical
+from CalibConst import getSGCalibrationConstants
 
 DEBUG_PDB = "darwin" in sys.platform
 
@@ -89,7 +90,7 @@ def plot_dives(
 
 
 def plot_mission(
-    base_opts: BaseOpts.BaseOptions, mission_plot_dict: dict
+    base_opts: BaseOpts.BaseOptions, mission_plot_dict: dict, mission_str: list
 ) -> tuple[list:list]:
     """
     Create per-dive related plots
@@ -106,7 +107,7 @@ def plot_mission(
     output_files = []
     for plot_name, plot_func in mission_plot_dict.items():
         try:
-            fig_list, file_list = plot_func(base_opts)
+            fig_list, file_list = plot_func(base_opts, mission_str)
         except:
             log_error(f"{plot_name} failed", "exc")
         else:
@@ -115,6 +116,15 @@ def plot_mission(
             for file_name in file_list:
                 output_files.append(file_name)
     return (figs, output_files)
+
+
+def get_mission_str(base_opts: BaseOpts.BaseOptions, calib_consts: dict) -> str:
+    """Constructs a mission title string"""
+    if not calib_consts:
+        mission_title = "UNKNOWN"
+    else:
+        mission_title = Utils.ensure_basename(calib_consts["mission_title"])
+    return f"SG{'%03d' % base_opts.instrument_id} {mission_title}"
 
 
 def main():
@@ -259,8 +269,11 @@ def main():
         plot_dict = get_dive_plots(base_opts)
         plot_dives(base_opts, plot_dict, dive_nc_file_names)
     elif base_opts.subparser_name == "plot_mission":
+        sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
+        calib_consts = getSGCalibrationConstants(sg_calib_file_name)
+        mission_str = get_mission_str(base_opts, calib_consts)
         plot_dict = get_mission_plots(base_opts)
-        plot_mission(base_opts, plot_dict)
+        plot_mission(base_opts, plot_dict, mission_str)
     else:
         log_error("Internal error - unknown sub-parser")
 

@@ -45,7 +45,9 @@ def plot_dive_single(
 
 
 # pylint: disable=unused-argument
-def plot_mission_single(base_opts: BaseOpts.BaseOptions) -> tuple[list, list]:
+def plot_mission_single(
+    base_opts: BaseOpts.BaseOptions, mission_str: list
+) -> tuple[list, list]:
     """Signature for whole mission plotting routines"""
     return ([], [])
 
