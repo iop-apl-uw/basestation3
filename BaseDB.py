@@ -74,6 +74,15 @@ def loadFileToDB(cur, filename):
     dep_mx = numpy.nanmax(nci.variables["depth"][:])
     insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
 
+    # Last state time is begin surface
+    insertColumn(
+        dive,
+        cur,
+        "time_seconds_diving",
+        nci.variables["gc_state_secs"][-1] - nci.start_time,
+        "FLOAT",
+    )
+
     i = numpy.where(
         nci.variables["eng_elaps_t"][:]
         < nci.variables["start_of_climb_time"].getValue()
@@ -153,10 +162,44 @@ def loadFileToDB(cur, filename):
     else:
         avail10 = 0
 
-    insertColumn(dive, cur, "volts_10V", v10, "FLOAT")
-    insertColumn(dive, cur, "volts_24V", v24, "FLOAT")
-    insertColumn(dive, cur, "capacity_24V", avail24, "FLOAT")
-    insertColumn(dive, cur, "capacity_10V", avail10, "FLOAT")
+    insertColumn(dive, cur, "batt_volts_10V", v10, "FLOAT")
+    insertColumn(dive, cur, "batt_volts_24V", v24, "FLOAT")
+
+    insertColumn(dive, cur, "batt_ah_10V", ah10, "FLOAT")
+    insertColumn(dive, cur, "batt_ah_24V", ah24, "FLOAT")
+
+    insertColumn(dive, cur, "batt_capacity_24V", avail24, "FLOAT")
+    insertColumn(dive, cur, "batt_capacity_10V", avail10, "FLOAT")
+    insertColumn(
+        dive, cur, "batt_Ahr_cap_10V", nci.variables["log_AH0_10V"].getValue(), "FLOAT"
+    )
+    insertColumn(
+        dive, cur, "batt_Ahr_cap_24V", nci.variables["log_AH0_24V"].getValue(), "FLOAT"
+    )
+
+    batt_kJ_used_10V = 0.0
+    batt_kJ_used_24V = 0.0
+    batt_ah_used_10V = 0.0
+    batt_ah_used_24V = 0.0
+
+    if dive > 1:
+        try:
+            data = cur.execute(
+                f"SELECT batt_ah_24V,batt_ah_10V from dives WHERE dive={dive-1}"
+            ).fetchall()[0]
+        except:
+            log_error("Failed to fetch batt_ah colums", "exc")
+        else:
+            batt_ah_used_10V = ah10 - data[1]
+            batt_ah_used_24V = ah24 - data[0]
+            batt_kJ_used_10V = batt_ah_used_10V * v10 * 3600.0 / 1000.0
+            batt_kJ_used_24V = batt_ah_used_24V * v10 * 3600.0 / 1000.0
+
+    insertColumn(dive, cur, "batt_ah_used_10V", batt_ah_used_10V, "FLOAT")
+    insertColumn(dive, cur, "batt_ah_used_24V", batt_ah_used_24V, "FLOAT")
+
+    insertColumn(dive, cur, "batt_kJ_used_10V", batt_kJ_used_10V, "FLOAT")
+    insertColumn(dive, cur, "batt_kJ_used_24V", batt_kJ_used_24V, "FLOAT")
 
     if "log_FG_AHR_10Vo" in nci.variables:
         fg_10V_AH = (
@@ -171,8 +214,8 @@ def loadFileToDB(cur, filename):
         fg_10V_kJ = fg_10V_AH * v10 * 3600.0 / 1000.0
         fg_24V_kJ = fg_24V_AH * v24 * 3600.0 / 1000.0
 
-        insertColumn(dive, cur, "fg_low_voltage_kJ_used", fg_10V_kJ, "FLOAT")
-        insertColumn(dive, cur, "fg_high_voltage_kJ_used", fg_24V_kJ, "FLOAT")
+        insertColumn(dive, cur, "fg_kJ_used_10V", fg_10V_kJ, "FLOAT")
+        insertColumn(dive, cur, "fg_kJ_used_24V", fg_24V_kJ, "FLOAT")
 
     mhead_line = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
     mhead_line = mhead_line.tobytes().decode("utf-8").split(",")
@@ -268,7 +311,11 @@ def rebuildDB(base_opts):
         cur.execute("CREATE TABLE dives(dive INT);")
         # patt = path + "/p%03d????.nc" % sg
         patt = base_opts.mission_dir + "/p%03d????.nc" % base_opts.instrument_id
+        ncfs = []
         for filename in glob.glob(patt):
+            ncfs.append(filename)
+        ncfs = sorted(ncfs)
+        for filename in ncfs:
             loadFileToDB(cur, filename)
         cur.close()
 
