@@ -509,16 +509,16 @@
                 cell.appendChild(text);
 
                 cell = row.insertCell(15);
-                text = document.createTextNode('' + d['volts_10V'].toFixed(2));
+                text = document.createTextNode('' + d['batt_volts_10V'].toFixed(2));
                 cell.appendChild(text);
                 cell = row.insertCell(16);
-                text = document.createTextNode('' + (d['capacity_10V']*100).toFixed(2));
+                text = document.createTextNode('' + (d['batt_capacity_10V']*100).toFixed(2));
                 cell.appendChild(text);
                 cell = row.insertCell(17);
-                text = document.createTextNode('' + d['volts_24V'].toFixed(2));
+                text = document.createTextNode('' + d['batt_volts_24V'].toFixed(2));
                 cell.appendChild(text);
                 cell = row.insertCell(18);
-                text = document.createTextNode('' + (d['capacity_24V']*100).toFixed(2));
+                text = document.createTextNode('' + (d['batt_capacity_24V']*100).toFixed(2));
                 cell.appendChild(text);
             }
         })
