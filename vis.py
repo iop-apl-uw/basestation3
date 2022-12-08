@@ -39,9 +39,21 @@ def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
 
     return data
 
+def gliderPath(glider, request):
+    if 'mission' in request.args and request.args['mission'] != 'current' and len(request.args['mission']) > 0:
+        mission = request.args['mission'][0]
+        return f'sg{glider:03d}/{mission}'
+    else:
+        return f'sg{glider:03d}'
+
 #
 # GET handlers - most of the API
 #
+
+app.static('/favicon.ico', f'{sys.path[0]}/html/favicon.ico', name='favicon.ico')
+app.static('/parms', '{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
+app.static('/script', f'{sys.path[0]}/scripts', name='script')
+app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
 
 @app.exception(sanic.exceptions.NotFound)
 def pageNotFound(request, exception):
@@ -49,7 +61,7 @@ def pageNotFound(request, exception):
 
 @app.route('/png/<glider:int>/<dive:int>/<image:str>')
 async def pngHandler(request, glider: int, dive: int, image: str):
-    filename = f'sg{glider:03d}/plots/dv{dive:04d}_{image}.png'
+    filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.png'
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='image/png')
     else:
@@ -58,8 +70,7 @@ async def pngHandler(request, glider: int, dive: int, image: str):
 
 @app.route('/div/<glider:int>/<dive:int>/<image:str>')
 async def divHandler(request, glider: int, dive: int, image: str):
-    filename = f'sg{glider:03d}/plots/dv{dive:04d}_{image}.div'
-    
+    filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.div'
     if os.path.exists(filename):
         resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
         resp = resp + f'<a href="/div/{glider}/{dive-1}/{image}">prev</a> * <a href="/div/{glider}/{dive+1}/{image}">next</a>'
@@ -75,7 +86,7 @@ async def divHandler(request, glider: int, dive: int, image: str):
 
 @app.route('/eng/<glider:int>/<image:str>')
 async def engHandler(request, glider:int, image:str):
-    filename = f'sg{glider:03d}/plots/eng_{image}.png'
+    filename = f'{gliderPath(glider,request)}/plots/eng_{image}.png'
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='image/png')
     else:
@@ -83,52 +94,24 @@ async def engHandler(request, glider:int, image:str):
 
 @app.route('/section/<glider:int>/<image:str>')
 async def sectionHandler(request, glider:int, image:str):
-    filename = f'sg{glider:03d}/plots/sg_{image}.png'
+    filename = f'{gliderPath(glider,request)}/plots/sg_{image}.png'
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='image/png')
     else:
         return sanic.response.text('not found', status=404)
-
-@app.route('/script/<script:str>')
-async def scriptHandler(request, script:str):
-    filename = f'{sys.path[0]}/scripts/{script}'
-    if os.path.exists(filename):
-        return await sanic.response.file(filename, mime_type='text/html')
-    else:
-        return sanic.response.text('not found', status=404)
-
-@app.route('/script/images/<image:str>')
-async def scriptImageHandler(request, image:str):
-    filename = f'{sys.path[0]}/scripts/images/{image}'
-    if os.path.exists(filename):
-        return await sanic.response.file(filename, mime_type='image/png')
-    else:
-        return sanic.response.text('not found', status=404)
-
-@app.route('/favicon.ico')
-async def faviconHandler(request):
-    filename = f'{sys.path[0]}/html/favicon.ico'
-    return await sanic.response.file(filename, mime_type='image/x-icon')
 
 @app.route('/<glider:int>')
 async def mainHandler(request, glider:int):
-    filename = f'sg{glider}/comm.log'
+    filename = f'{gliderPath(glider,request)}/comm.log'
+    print(filename)
     if os.path.exists(filename):
         if glider not in watchThread:
-            watchThread[glider] = _thread.start_new_thread(watchFilesystem, (glider,))
+            watchThread[glider] = _thread.start_new_thread(watchFilesystem, (gliderPath(glider,request),))
 
         filename = f'{sys.path[0]}/html/vis.html'
         return await sanic.response.file(filename, mime_type='text/html')
     else:
         return sanic.response.text("oops")             
-
-@app.route('/<glider:int>/<dive:int>')
-async def main2Handler(request, glider:int, dive:int):
-    return await mainHandler(request, glider)
-
-@app.route('/<glider:int>/order/<order:str>')
-async def main3Handler(request, glider:int, order:str):
-    return await mainHandler(request, glider)
 
 @app.route('/map/<glider:int>')
 async def mapHandler(request, glider:int):
@@ -140,14 +123,9 @@ async def multimapHandler(request, glider:int, extras):
     filename = f'{sys.path[0]}/html/map.html'
     return await sanic.response.file(filename, mime_type='text/html')
 
-@app.route('/parms')
-async def parmsHandler(request):
-    filename = f'{sys.path[0]}/html/Parameter_Reference_Manual.html'
-    return await sanic.response.file(filename, mime_type='text/html')
-
 @app.route('/kml/<glider:int>')
 async def kmlHandler(request, glider:int):
-    filename = f'sg{glider}/sg{glider}.kmz'
+    filename = f'{gliderPath(glider,request)}/sg{glider}.kmz'
     with open(filename, 'rb') as file:
         zip = ZipFile(BytesIO(file.read()))
         kml = zip.open(f'sg{glider}.kml', 'r').read()
@@ -171,7 +149,7 @@ async def proxyHandler(request, url):
     
 @app.route('/plots/<glider:int>/<dive:int>')
 async def plotsHandler(request, glider:int, dive:int):
-    (dvplots, plotlyplots) = buildPlotsList(glider, dive)
+    (dvplots, plotlyplots) = buildPlotsList(gliderPath(glider,request), dive)
     message = {}
     message['glider']      = f'SG{glider:03d}'
     message['dive']        = dive
@@ -183,13 +161,13 @@ async def plotsHandler(request, glider:int, dive:int):
 
 @app.route('/log/<glider:int>/<dive:int>')
 async def logHandler(request, glider:int, dive:int):
-    filename = f'sg{glider:03d}/p{glider:03d}{dive:04d}.log'
+    filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
     s = LogHTML.captureTables(filename)
     return sanic.response.html(s)
 
 @app.route('/logfile/<glider:int>/<dive:int>')
 async def logfileHandler(request, glider: int, dive: int):
-    filename = f'sg{glider:03d}/p{glider:03d}{dive:04d}.log'
+    filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='text/plain')
     else:
@@ -197,7 +175,7 @@ async def logfileHandler(request, glider: int, dive: int):
        
 @app.route('/alerts/<glider:int>/<dive:int>')
 async def alertsHandler(request, glider: int, dive: int):
-    filename = f'sg{glider:03d}/alert_message.html.{dive:d}'
+    filename = f'{gliderPath(glider,request)}/alert_message.html.{dive:d}'
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='text/plain')
     else:
@@ -205,8 +183,8 @@ async def alertsHandler(request, glider: int, dive: int):
  
 @app.route('/deltas/<glider:int>/<dive:int>')
 async def deltasHandler(request, glider: int, dive: int):
-    cmdfile = f'sg{glider:03d}/cmdfile.{dive:d}'
-    logfile = f'sg{glider:03d}/p{glider:03d}{dive:04d}.log'
+    cmdfile = f'{gliderPath(glider,request)}/cmdfile.{dive:d}'
+    logfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
     if not os.path.exists(cmdfile) or not os.path.exists(logfile):
         return sanic.response.text('not found')
 
@@ -247,11 +225,11 @@ async def statusHandler(request, glider:int):
         commFile[glider] = None
 
     print('comm.log opened')
-    commFile[glider] = open(f'sg{glider:03d}/comm.log', 'rb')
+    commFile[glider] = open(f'{gliderPath(glider,request)}/comm.log', 'rb')
     commFile[glider].seek(-10000, 2)
     # modifiedFile[glider] = "comm.log" # do we need this to trigger initial send??
 
-    (maxdv, dvplots, engplots, sgplots, plotlyplots) = buildFileList(glider)
+    (maxdv, dvplots, engplots, sgplots, plotlyplots) = buildFileList(gliderPath(glider, request))
 
     message = {}
     message['glider'] = f'SG{glider:03d}'
@@ -273,7 +251,7 @@ async def controlHandler(request, glider:int, which:str):
     message = {}
 
     message['file'] = 'none'
-    filename = f'sg{glider:03d}/{which}'
+    filename = f'{gliderPath(glider,request)}/{which}'
 
     if os.path.exists(filename):
         message['file'] = which
@@ -333,7 +311,9 @@ async def dbHandler(request, args):
     else:
         q = q + " ORDER BY dive ASC;"
 
-    with sqlite3.connect(f'sg{glider:03d}/sg{glider:03d}.db') as conn:
+    dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+    print(dbfile)
+    with sqlite3.connect(dbfile) as conn:
         conn.row_factory = rowToDict
         cur = conn.cursor()
         cur.execute(q)
@@ -342,7 +322,9 @@ async def dbHandler(request, args):
 
 @app.route('/dbvars/<glider:int>')
 async def dbvarsHandler(request, glider:int):
-    with sqlite3.connect(f'sg{glider:03d}/sg{glider:03d}.db') as conn:
+    dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+    print(dbfile)
+    with sqlite3.connect(dbfile) as conn:
         cur = conn.execute('select * from dives')
         names = list(map(lambda x: x[0], cur.description))
         data = {}
@@ -351,7 +333,7 @@ async def dbvarsHandler(request, glider:int):
 
 @app.route('/provars/<glider:int>')
 async def provarsHandler(request, glider:int):
-    ncfiles = glob.glob(f'sg{glider:03d}/sg{glider:03d}*profile.nc')
+    ncfiles = glob.glob(f'{gliderPath(glider,request)}/sg{glider:03d}*profile.nc')
     if len(ncfiles):
         data = {}
         data['names'] = ExtractBinnedProfiles.getVarNames(ncfiles[0])
@@ -362,7 +344,7 @@ async def provarsHandler(request, glider:int):
 @app.route('/pro/<glider:int>/<which:str>/<first:int>/<last:int>/<stride:int>/<zStride:int>')
 @compress.compress()
 async def proHandler(request, glider:int, which:str, first:int, last:int, stride:int, zStride:int):
-    ncfiles = glob.glob(f'sg{glider:03d}/sg{glider:03d}*profile.nc')
+    ncfiles = glob.glob(f'{gliderPath(glider,request)}/sg{glider:03d}*profile.nc')
     if len(ncfiles):
         data = ExtractBinnedProfiles.extractVar(ncfiles[0], which, first, last, stride, zStride)
         return sanic.response.json(data)
@@ -377,7 +359,7 @@ async def queryHandler(request, glider, vars):
     else:
         q = f"SELECT {vars} FROM DIVES"
 
-    with sqlite3.connect(f'sg{glider:03d}/sg{glider:03d}.db') as conn:
+    with sqlite3.connect(f'{gliderPath(glider,request)}/sg{glider:03d}.db') as conn:
         conn.row_factory = rowToDict
         cur = conn.cursor()
         cur.execute(q)
@@ -386,7 +368,7 @@ async def queryHandler(request, glider, vars):
 
 @app.route('/selftest/<glider:int>')
 async def selftestHandler(request, glider:int):
-    cmd = f"{sys.path[0]}/SelftestHTML.py {glider:03d}"
+    cmd = f"{sys.path.argv[0]}/SelftestHTML.py {glider:03d}"
     output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     results = output.stdout
     return sanic.response.html(results)
@@ -403,7 +385,7 @@ async def saveHandler(request, glider:int, which:str):
     if 'file' not in message or message['file'] != which:
         return sanic.response.text('oops')
 
-    path = f'sg{glider:03d}'
+    path = gliderPath(glide, request)
     if which in validator:
         tempfile.tempdir = path
         tmp = tempfile.mktemp()
@@ -458,7 +440,7 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int)
                     await ws.send(data)
             elif modifiedFile[glider] == "cmdfile":
                 modifiedFile[glider] = False
-                filename = f'sg{glider:03d}/cmdfile'
+                filename = f'{gliderPath(glider,request)}/cmdfile'
                 with open(filename, 'rb') as file:
                     data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore')
                     await ws.send(data)
@@ -473,10 +455,10 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int)
 #  other stuff (non-Sanic)
 #
  
-def buildPlotsList(glider, dive):
+def buildPlotsList(path, dive):
     dvplots = []
     plotlyplots = []
-    for fullFile in glob.glob('sg%03d/plots/dv%04d_*.png' % (glider, dive)):
+    for fullFile in glob.glob('%s/plots/dv%04d_*.png' % (path, dive)):
         file = os.path.basename(fullFile)
         if file.startswith('dv'):
             x = parse('dv{}_{}.png', file)
@@ -487,13 +469,13 @@ def buildPlotsList(glider, dive):
 
     return (dvplots, plotlyplots)
  
-def buildFileList(glider):
+def buildFileList(path):
     maxdv = -1
     dvplots = []
     engplots = []
     sgplots = []
     plotlyplots = []
-    for fullFile in glob.glob(f'sg{glider:03d}/plots/*.png'):
+    for fullFile in glob.glob(f'{path}/plots/*.png'):
         file = os.path.basename(fullFile)
         if file.startswith('dv'):
             x = parse('dv{}_{}.png', file)
@@ -520,37 +502,37 @@ def buildFileList(glider):
 
     return (maxdv, dvplots, engplots, sgplots, plotlyplots)
 
-def watchFilesystem(glider):
+def watchFilesystem(path):
     print("watching")
     ignore_patterns = None
     ignore_directories = True
     case_sensitive = True
 
-    patterns = [f"./sg{glider:03d}/comm.log"]
+    patterns = [f"./{path}/comm.log"]
     eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
     eventHandler.on_created = onCreated
     eventHandler.on_modified = onModified
 
     observer = Observer()
-    observer.schedule(eventHandler, f"./sg{glider:03d}", recursive=False)
+    observer.schedule(eventHandler, f"./{path}", recursive=False)
     observer.start()
 
-    patterns = [f"./sg{glider:03d}/plots/dv*png"]
+    patterns = [f"./{path}/plots/dv*png"]
     eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
     eventHandler.on_created = onCreated
     eventHandler.on_modified = onModified
 
     observer = Observer()
-    observer.schedule(eventHandler, f"./sg{glider:03d}/plots", recursive=False)
+    observer.schedule(eventHandler, f"./{path}/plots", recursive=False)
     observer.start()
 
-    patterns = [f"./sg{glider:03d}/cmdfile"]
+    patterns = [f"./{path}/cmdfile"]
     eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
     eventHandler.on_created = onCreated
     eventHandler.on_modified = onModified
 
     observer = Observer()
-    observer.schedule(eventHandler, f"./sg{glider:03d}", recursive=False)
+    observer.schedule(eventHandler, f"./{path}", recursive=False)
     observer.start()
 
     while True:

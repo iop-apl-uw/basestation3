@@ -525,20 +525,23 @@
             // does a better job of grouping in the layers so we can
             // turn pieces on and off
 
+            let params = new URLSearchParams(window.location.search);
+
             // var glider = window.location.pathname.split('/').at(-1)
             var path = window.location.pathname.split('/');
             var first = path.indexOf('map') + 1;
             var glider = path[first];
             var urls = [];
 
+            var mission = params.has('mission') ? '?mission=' + params.get('mission') : '';
+
             document.title = glider + ' - map';
             for (var i = first ; i < path.length ; i++) 
-                urls.push('/kml/' + path[i]);
+                urls.push('/kml/' + path[i] + mission);
 
             loadGliderKML(map, layerControl, urls);
             loadGliderDAC(map, layerControl, path[first]); 
            
-            let params = new URLSearchParams(window.location.search);
             if (params.has('sa')) {
                 let sa = params.get('sa'); 
                 loadSA(map, layerControl, sa);

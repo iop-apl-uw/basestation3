@@ -107,6 +107,7 @@
     var currTitle  = "";
 
     var currGlider = '';
+    var currMission = '';
 
     var engplots;
     var sgplots;
@@ -136,6 +137,13 @@
             clearInterval(blurTimer);
         }
         blurTimer = false;
+    }
+
+    function mission() {
+        if (currMission != '')
+            return `?mission=${currMission}`;
+        else
+            return '';
     }
 
     function updateTimer() {
@@ -336,7 +344,7 @@
         json['file'] = file;
         json['contents'] = $(file).value; 
 
-        fetch(`/save/${currGlider}/${file}`, 
+        fetch(`/save/${currGlider}/${file}${mission()}`, 
         {
             method: 'POST',
             headers: {
@@ -363,15 +371,15 @@
     }
 
     function popupPlotly(dive, elt) {
-        window.open('/div/' + currGlider + '/' + dive + '/' + elt, '_blank');
+        window.open('/div/' + currGlider + '/' + dive + '/' + elt + mission(), '_blank');
     }
 
     function popupSelftest() {
-        window.open('/selftest/' + currGlider, currGlider + '-selftest');
+        window.open('/selftest/' + currGlider + mission(), currGlider + '-selftest');
     }
 
     function popupMap() {
-        window.open('/map/' + currGlider, currGlider + '-map');
+        window.open('/map/' + currGlider + missin(), currGlider + '-map');
     }
 
     function setVisibility(elt) {
@@ -383,7 +391,7 @@
     }
     function showPlot(elt, plotly) {
         setVisibility('mainImage');
-        $('mainImage').src = '/png/' + currGlider + '/' + currDive + '/' + elt;
+        $('mainImage').src = '/png/' + currGlider + '/' + currDive + '/' + elt + mission();
         if (plotly) {
             $('mainImage').ondblclick = function() { popupPlotly(currDive, elt); }
             $('mainImage').oncontextmenu = function() { popupPlotly(currDive, elt); }
@@ -397,7 +405,7 @@
 
     function showMissionPlot(which, elt, plotly) {
         setVisibility('mainImage');
-        $('mainImage').src = '/' + which + '/' + currGlider + '/' + elt;
+        $('mainImage').src = '/' + which + '/' + currGlider + '/' + elt + mission();
         // $('mainImage').onclick = function() { popupPlotly(currDive, elt); }
         $('mainImage').ondblclick = null;
         currElt = elt;
@@ -416,7 +424,7 @@
 
         clearTable();
 
-        fetch(`/db/${glider}`)
+        fetch(`/db/${glider}${mission()}`)
         .then(res => res.json())
         .then(data => {
             for (d of data) {
@@ -551,7 +559,7 @@
     }
 
     function loadControlFile(file, dive) {
-        fetch(`/control/${currGlider}/${file}`)
+        fetch(`/control/${currGlider}/${file}${mission()}`)
         .then(res => res.json())
         .then(data => {
             if ('file' in data && data['file'] == file) {
@@ -567,7 +575,7 @@
     }
 
     function loadStatus(glider, dive) {
-        fetch(`/status/${glider}`)
+        fetch(`/status/${glider}${mission()}`)
         .then(res => res.json())
         .then(data => {
             document.title = data['glider'];
@@ -608,7 +616,7 @@
 
     function addPlot(p, x, plotly) {
         img = document.createElement('img');
-        img.src = '/png/' + currGlider + '/' + currDive + '/' + p;
+        img.src = '/png/' + currGlider + '/' + currDive + '/' + p + mission();
         img.style = "position: absolute; left: " + x + "; top: 0; width:180px; heigh:169px;"
         img.onclick = function() { showPlot(p, plotly); };
         img.title = p;
@@ -617,7 +625,7 @@
 
     function addMissionPlot(which, p, x, plotly) {
         img = document.createElement('img');
-        img.src = '/' + which + '/' + currGlider + '/' + p;
+        img.src = '/' + which + '/' + currGlider + '/' + p + mission();
         img.style = "position: absolute; left: " + x + "; top: 0; width:180px; heigh:169px;"
         img.onclick = function() { showMissionPlot(which, p, plotly); };
         img.title = p;
@@ -625,7 +633,7 @@
     }
 
     function loadLog(dive) {
-        fetch(`/log/${currGlider}/${dive}`)
+        fetch(`/log/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
             $('logDiv').innerHTML = 'Dive ' + dive + '<br>';
@@ -637,7 +645,7 @@
     }
 
     function loadLogFile(dive) {
-        fetch(`/logfile/${currGlider}/${dive}`)
+        fetch(`/logfile/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
             $('logfileDiv').innerHTML = '<pre>' + data + '</pre>';
@@ -651,14 +659,12 @@
         var i;
         var html;
         var pieces;
-        let urls = [`/alerts/${currGlider}/${dive}`, `/deltas/${currGlider}/${dive}`];
+        let urls = [`/alerts/${currGlider}/${dive}${mission()}`, `/deltas/${currGlider}/${dive}${mission()}`];
         let notify = false;
 
         let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
         let alerts = resp[0];
         let deltas = JSON.parse(resp[1]);
-        console.log(resp);
-        console.log(deltas);
 
         html = "<h3>alerts</h3><p>";
         if (alerts != "not found") {
@@ -692,7 +698,6 @@
  
     function jumpScroll(n) {
         $('bottom').scrollTo(200*n, 0, 'smooth');
-        console.log('scrolling to ' + 200*n);
         return false;
     }
 
@@ -722,7 +727,7 @@
         loadLogFile(dive);
         loadNotifications(dive);
 
-        fetch(`/plots/${currGlider}/${dive}`)
+        fetch(`/plots/${currGlider}/${dive}${mission()}`)
         .then(res => res.json())
         .then(resp => {
             var links = [];
@@ -947,8 +952,7 @@
         $('btnPlotlyContour').style.backgroundColor = 'yellow';
         $('btnPlotlyProfiles').style.backgroundColor = 'yellow';
 
-        console.log(Date.now());
-        fetch(`/pro/${currGlider}/${x}/0/-1/${stride}/${zStride}`)
+        fetch(`/pro/${currGlider}/${x}/0/-1/${stride}/${zStride}${mission()}`)
         .then(res => res.text())
         .then(data => {
             data = data.replaceAll('NaN', 'null');
@@ -982,7 +986,6 @@
                 var config = { responsive: true };
                 
                 Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
-                console.log(Date.now());
                 $('btnPlotlyContour').style.backgroundColor = def;
                 $('btnPlotlyContour').disabled = false;
                 $('btnPlotlyProfiles').style.backgroundColor = def;
@@ -992,8 +995,6 @@
                 var d = [];
                 let nb = data[x].length;
                 let np = data[x][0].length;
-                console.log(np);
-                console.log(nb);
                 var xd;
 
                 for (var i = 0 ; i < np ; i++) {
@@ -1038,9 +1039,9 @@
         var query;
 
         if (x2 == '-')
-            query = `/query/${currGlider}/${x},${y.join(',')}`;
+            query = `/query/${currGlider}/${x},${y.join(',')}${mission()}`;
         else
-            query = `/query/${currGlider}/${x},${x2},${y.join(',')}`;
+            query = `/query/${currGlider}/${x},${x2},${y.join(',')}${mission()}`;
 
         fetch(query)
         .then(res => res.json())
@@ -1110,8 +1111,6 @@
                     headers.push([y[i]]);
                 }
 
-                console.log(headers);
- 
                 var d = [{
                     type: 'table',
                     header: {
@@ -1139,7 +1138,7 @@
     }
 
     function loadPlotlyControlsContour(glider) {
-        fetch(`/provars/${glider}`)
+        fetch(`/provars/${glider}${mission()}`)
         .then(res => res.json())
         .then(data => {
             names = data['names'].sort();
@@ -1158,7 +1157,7 @@
 
     }
     function loadPlotlyControlsXY(glider) {
-        fetch(`/dbvars/${glider}`)
+        fetch(`/dbvars/${glider}${mission()}`)
         .then(res => res.json())
         .then(data => {
             names = data['names'].sort();
@@ -1202,13 +1201,18 @@
             glider = path[0];
             console.log(glider);
         }
-        if (path.length == 2 && parseInt(path[1]) > 0) {
-            dive = parseInt(path[1]);
-            console.log(dive);
+
+        let params = new URLSearchParams(window.location.search);
+        if (params.has('dive')) {
+            dive = parseInt(params.get('dive'));
         }
-        if (path.length == 3 && path[1] == 'order') {
-            createCookie("order", path[2], 180);
+        if (params.has('mission')) {
+            currMission = params.get('mission');
         }
+        if (params.has('order')) {
+            createCookie("order", params.get('order'), 180);
+        }
+        
 
         if (glider == -1) {
             alert('invalid request - specify glider');
