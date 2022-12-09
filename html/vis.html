@@ -1150,6 +1150,24 @@
                 }];
                 Plotly.newPlot($('plotlyPlotDiv'), d);
             }
+            else if (which == 'csv') {
+                var d = [];
+                d.push(([x].concat(y)).join(',')); // headers
+                
+                var o = []; 
+                o.push(mode == 0 ? data.map(v => v[x]) : data[x]);
+                for (var i = 0 ; i < y.length ; i++)
+                    o.push(mode == 0 ? data.map(v => v[y[i]]) : data[y[i]]);
+
+                output = o[0].map((_, colIndex) => o.map(row => row[colIndex]).join(','));
+
+                const blob = new Blob([d.concat(output).join('\n')], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.setAttribute('href', url);
+                a.setAttribute('download', y[0] + '.csv'); 
+                a.click();
+            }
         })
         .catch(error => {
             console.log('plotly ' + error);
@@ -1384,18 +1402,20 @@
     
     
     <div id="plotlyDiv" hidden="hidden">
-        <div id="plotyConfigDiv">
+        <div id="plotyConfigDiv" style="display:flex;">
             <div style="float:left;">
-                <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top;"></select> <br>
-                <span style="vertical-align:top;">Y:</span><select id="selPlotlyX2" style="vertical-align:top;"></select> <br>
+                <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top; width:240px;"></select> <br>
+                <span style="vertical-align:top;">Y:</span><select id="selPlotlyX2" style="vertical-align:top; width:240px;"></select> <br>
                 <input type="checkbox" checked id="chkMissionPlots" style="vertical-align:top;" onclick="switchControls(this.id);"><span style="vertical-align:top;">whole mission</span>
                 <input type="checkbox" id="chkTimeseriesPlots" style="vertical-align:top;" onclick="switchControls(this.id);"><span style="vertical-align:top;">dive time series</span><br>
             </div>
-            <span style="vertical-align:top;">Z:</span><select id="selPlotlyY" multiple size="4"> </select>
-            <button id="btnPlotlyPlot" style="vertical-align:top;" onclick="doPlotlyPlot('plot');">plot</button>
-            <button id="btnPlotlyTable" style="vertical-align:top;" onclick="doPlotlyPlot('table');">table</button>
-            
-            <div style="float:right;">
+            <span style="vertical-align:top; margin-left:8px;" >Z:</span><select id="selPlotlyY" multiple size="4" style="width:300px;"> </select>
+            <div style="margin-left:8px;">
+                <button id="btnPlotlyPlot" style="vertical-align:top;" onclick="doPlotlyPlot('plot');">plot</button>
+                <button id="btnPlotlyTable" style="vertical-align:top;" onclick="doPlotlyPlot('table');">table</button><br>
+                <button id="btnPlotlyCSV" style="vertical-align:top;" onclick="doPlotlyPlot('csv');">export</button>
+            </div>
+            <div style="margin-left:40px;"> <!-- style="float:right;"> -->
                 <span style="vertical-align:top;">value:<select id="selPlotlyContour" style="vertical-align:top;"> </select></span><br>
                 <div style="vertical-align:top; margin-top:4px; margin-bottom:4px;">
                     profile stride
