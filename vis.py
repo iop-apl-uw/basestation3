@@ -15,6 +15,7 @@ import subprocess
 import sys
 import LogHTML
 import ExtractBinnedProfiles
+import ExtractTimeseries
 from zipfile import ZipFile
 from io import BytesIO
 import sanic
@@ -347,6 +348,25 @@ async def proHandler(request, glider:int, which:str, first:int, last:int, stride
     ncfiles = glob.glob(f'{gliderPath(glider,request)}/sg{glider:03d}*profile.nc')
     if len(ncfiles):
         data = ExtractBinnedProfiles.extractVar(ncfiles[0], which, first, last, stride, zStride)
+        return sanic.response.json(data)
+    else:
+        return sanic.response.text('oops')
+
+@app.route('/timevars/<glider:int>/<dive:int>')
+async def timeSeriesVarsHandler(request, glider:int,dive:int):
+    ncfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.nc'
+    if os.path.exists(ncfile):
+        data = ExtractTimeseries.getVarNames(ncfile)
+        return sanic.response.json(data)
+    else: 
+        return sanic.response.text('oops')
+
+@app.route('/time/<glider:int>/<dive:int>/<which:str>')
+@compress.compress()
+async def timeSeriesHandler(request, glider:int, dive:int, which:str):
+    ncfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.nc'
+    if os.path.exists(ncfile):
+        data = ExtractTimeseries.extractVars(ncfile, which.split(','))
         return sanic.response.json(data)
     else:
         return sanic.response.text('oops')

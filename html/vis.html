@@ -807,6 +807,8 @@
                 showLogFile();
             else if (currElt == 'notifications')
                 showNotifications();
+            else if (currElt.includes('plotly'))
+                doPlotlyPlot(currElt.split('-')[1]);
             else if (engplots.includes(currElt))
                 showMissionPlot('eng', currElt, plotly.includes(currElt));
             else if (sgplots.includes(currElt))
@@ -1032,25 +1034,41 @@
     }
 
     function doPlotlyPlot(which) {
+        var mode;
         let x = $('selPlotlyX').value;
         let x2 = $('selPlotlyX2').value;
         // let y = $('selPlotlyY').value;
         let y = [...$('selPlotlyY').selectedOptions].map(option => option.value);
         var query;
 
-        if (x2 == '-')
-            query = `/query/${currGlider}/${x},${y.join(',')}${mission()}`;
-        else
-            query = `/query/${currGlider}/${x},${x2},${y.join(',')}${mission()}`;
+        if ($('chkMissionPlots').checked) {
+            if (x2 == '-')
+                query = `/query/${currGlider}/${x},${y.join(',')}${mission()}`;
+            else
+                query = `/query/${currGlider}/${x},${x2},${y.join(',')}${mission()}`;
+            mode = 0;
+        }
+        else {
+            if (x2 == '-')
+                query = `/time/${currGlider}/${currDive}/${x},${y.join(',')}${mission()}`;
+            else
+                query = `/time/${currGlider}/${currDive}/${x},${x2},${y.join(',')}${mission()}`;
 
+            mode = 1;
+        }
+
+        console.log('mode=' + mode + ' query=' + query);
         fetch(query)
-        .then(res => res.json())
+        .then(res => res.text())
         .then(data => {
+            currElt = 'plotly-' + which;
+            data = data.replaceAll('NaN', 'null');
+            data = JSON.parse(data);
             if (which == 'plot' && x2 == '-') {
                 var d = [];
-                var xd = data.map(v => v[x]);
+                var xd = mode == 0 ? data.map(v => v[x]) : data[x];
                 for (var i = 0 ; i < y.length ; i++) {
-                    var yd = data.map(v => v[y[i]]);
+                    var yd = mode ==  0 ? data.map(v => v[y[i]]) : data[y[i]];
                     d.push({
                             x: xd,
                             y: yd,
@@ -1063,7 +1081,8 @@
                                 font:       {size: 12},
                                 margin: { t:20, l:80, r:80, b:80 },
                                 xaxis: { title: x },
-                                yaxis: { title: y[0] },
+                                yaxis: { title: y[0], autorange: y[0].includes('depth') ? 'reversed' : true },
+                                title: { text: mode == 1 ? `Dive ${currDive} ${y[0]}` : '', y:0.95, x:0.5},
                                 plot_bgcolor: "#cccccc",
                              };
                 var config = { responsive: true };
@@ -1071,10 +1090,10 @@
             }
             else if (which == 'plot') {
                 var d = [];
-                var xd = data.map(v => v[x]);
-                var xd2 = data.map(v => v[x2]);
+                var xd = mode == 0 ? data.map(v => v[x]) : data[x];
+                var xd2 = mode == 0 ? data.map(v => v[x2]) : data[x2];
                 for (var i = 0 ; i < y.length ; i++) {
-                    var yd = data.map(v => v[y[i]]);
+                    var yd = mode == 0 ? data.map(v => v[y[i]]) : data[y[i]];
                     d.push({
                             x: xd,
                             y: xd2,
@@ -1095,7 +1114,7 @@
                                 font:       {size: 12},
                                 margin: { t:20, l:80, r:80, b:80 },
                                 xaxis: { title: x },
-                                yaxis: { title: x2 },
+                                yaxis: { title: x2, autorange: x2.includes('depth') ? 'reversed' : true },
                                 plot_bgcolor: "#cccccc",
                              };
                 var config = { responsive: true };
@@ -1104,10 +1123,10 @@
             else if (which == 'table') {
                 var values = [];
                 var headers = [];
-                values.push(data.map(v => v[x]));
+                values.push(mode == 0 ? data.map(v => v[x]) : data[x]);
                 headers.push([x]);
                 for (var i = 0 ; i < y.length ; i++) {
-                    values.push(data.map(v => v[y[i]]));
+                    values.push(mode == 0 ? data.map(v => v[y[i]]) : data[y[i]]);
                     headers.push([y[i]]);
                 }
 
@@ -1137,12 +1156,18 @@
         })
     }
 
+    function emptySelect(s) {
+        while(s.options.length > 0)
+            s.remove(0);
+    }
+
     function loadPlotlyControlsContour(glider) {
         fetch(`/provars/${glider}${mission()}`)
         .then(res => res.json())
         .then(data => {
             names = data['names'].sort();
 
+            emptySelect($('selPlotlyContour'));
             for (n of names) {
                 let optX = document.createElement('option');
                 optX.value = n;
@@ -1156,6 +1181,7 @@
         });
 
     }
+
     function loadPlotlyControlsXY(glider) {
         fetch(`/dbvars/${glider}${mission()}`)
         .then(res => res.json())
@@ -1164,6 +1190,10 @@
             dv = names.indexOf('dive');
             names.splice(names.indexOf('dive'), 1);
             names = ['dive'].concat(names);
+
+            emptySelect($('selPlotlyX'));
+            emptySelect($('selPlotlyX2'));
+            emptySelect($('selPlotlyY'));
 
             let noOpt = document.createElement('option');
             noOpt.value = '-';
@@ -1190,6 +1220,64 @@
             console.log('dbvars ' + error);
         });
 
+    }
+
+    function loadPlotlyControlsTS(glider, dive) {
+        fetch(`/timevars/${glider}/${dive}/${mission()}`)
+        .then(res => res.json())
+        .then(data => {
+            var names = data.map(v => v['var']).sort();
+            dv = names.indexOf('time');
+            names.splice(names.indexOf('time'), 1);
+            names = ['time'].concat(names);
+
+            emptySelect($('selPlotlyX'));
+            emptySelect($('selPlotlyX2'));
+            emptySelect($('selPlotlyY'));
+
+            let noOpt = document.createElement('option');
+            noOpt.value = '-';
+            noOpt.innerHTML = '-';
+            $('selPlotlyX2').appendChild(noOpt);
+
+            for (n of names) {
+                let optX = document.createElement('option');
+                optX.value = n;
+                optX.innerHTML = n;
+                let optX2 = document.createElement('option');
+                optX2.value = n;
+                optX2.innerHTML = n;
+                let optY = document.createElement('option');
+                optY.value = n;
+                optY.innerHTML = n;
+ 
+                $('selPlotlyX').appendChild(optX);
+                $('selPlotlyX2').appendChild(optX2);
+                $('selPlotlyY').appendChild(optY);
+            }
+        })
+        .catch(error => {
+            console.log('timevars ' + error);
+        });
+
+    }
+
+    function switchControls(id) {
+        if (id == 'chkTimeseriesPlots' && $(id).checked) {
+            $('chkMissionPlots').checked = false;
+            console.log('unchecking mission');
+            loadPlotlyControlsTS(currGlider, currDive);
+        }
+        else if (id == 'chkMissionPlots' && $(id).checked) {
+            $('chkTimeseriesPlots').checked = false;
+            console.log('unchecking ts');
+            loadPlotlyControlsXY(currGlider);
+        }
+
+        if ($('chkMissionPlots').checked == false 
+              && $('chkTimeseriesPlots').checked == false) {
+            $(id).checked =true;
+        } 
     }
  
     function init() {
@@ -1237,6 +1325,8 @@
         loadControlFile('sg_calib_constants.m');
         loadPlotlyControlsXY(glider);
         loadPlotlyControlsContour(glider);
+        $('chkMissionPlots').checked = true;
+        $('chkTimeseriesPlots').checked = false;
     }
 
 </script>
@@ -1298,6 +1388,8 @@
             <div style="float:left;">
                 <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top;"></select> <br>
                 <span style="vertical-align:top;">Y:</span><select id="selPlotlyX2" style="vertical-align:top;"></select> <br>
+                <input type="checkbox" checked id="chkMissionPlots" style="vertical-align:top;" onclick="switchControls(this.id);"><span style="vertical-align:top;">whole mission</span>
+                <input type="checkbox" id="chkTimeseriesPlots" style="vertical-align:top;" onclick="switchControls(this.id);"><span style="vertical-align:top;">dive time series</span><br>
             </div>
             <span style="vertical-align:top;">Z:</span><select id="selPlotlyY" multiple size="4"> </select>
             <button id="btnPlotlyPlot" style="vertical-align:top;" onclick="doPlotlyPlot('plot');">plot</button>
@@ -1341,7 +1433,7 @@
                 <button id="btnPlotlyProfiles" style="vertical-align:top;" onclick="doPlotlyProfiles('profiles');">profiles</button>
             </div>
         </div>
-        <div id="plotlyPlotDiv" style="height:90%;">
+        <div id="plotlyPlotDiv" style="height:90%; width:100%; position:absolute; bottom:0;">
         </div>
     </div>
 
