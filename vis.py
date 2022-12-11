@@ -391,7 +391,7 @@ async def queryHandler(request, glider, vars):
 
 @app.route('/selftest/<glider:int>')
 async def selftestHandler(request, glider:int):
-    cmd = f"{sys.path.argv[0]}/SelftestHTML.py {glider:03d}"
+    cmd = f"{sys.path[0]}/SelftestHTML.py {glider:03d}"
     output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     results = output.stdout
     return sanic.response.html(results)
