@@ -166,13 +166,16 @@ async def logHandler(request, glider:int, dive:int):
     s = LogHTML.captureTables(filename)
     return sanic.response.html(s)
 
-@app.route('/logfile/<glider:int>/<dive:int>')
-async def logfileHandler(request, glider: int, dive: int):
-    filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
+@app.route('/file/<ext:str>/<glider:int>/<dive:int>')
+async def logengcapFileHandler(request, ext:str, glider: int, dive: int):
+    filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.{ext}'
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='text/plain')
     else:
-        return sanic.response.text('not found', status=404)
+        if ext == 'cap':
+            return sanic.response.text('none')
+        else:
+            return sanic.response.text('not found', status=404)
        
 @app.route('/alerts/<glider:int>/<dive:int>')
 async def alertsHandler(request, glider: int, dive: int):

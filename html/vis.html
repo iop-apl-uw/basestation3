@@ -383,7 +383,7 @@
     }
 
     function setVisibility(elt) {
-        const divs = ['mainImage', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv'];
+        const divs = ['mainImage', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
         for (var d of divs) {
             if (d != elt) $(d).setAttribute('hidden', '');
         }
@@ -553,6 +553,19 @@
         currElt = 'logfileRaw';
     }
 
+    function showEng() {
+        setVisibility('engfileDiv');
+        currElt = 'engfile';
+    }
+
+    var critLine = null;
+    function showCap() {
+        setVisibility('capfileDiv');
+        currElt = 'capfile';
+        if (critLine !== null)
+            $(critLine).scrollIntoView();
+    }
+
     function showNotifications() {
         setVisibility('notificationsDiv');
         currElt = 'notifications';
@@ -640,21 +653,55 @@
             $('logDiv').innerHTML += data;
         })
         .catch(error => {
-            consoloe.log(`loadLog - ${error}`);
+            console.log(`loadLog - ${error}`);
         });
     }
 
-    function loadLogFile(dive) {
-        fetch(`/logfile/${currGlider}/${dive}${mission()}`)
+    function loadFile(dive, ext, div) {
+        fetch(`/file/${ext}/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
-            $('logfileDiv').innerHTML = '<pre>' + data + '</pre>';
+            if (data == 'none' && ext == 'cap') {
+                $('btnCapFile').style.backgroundImage = "url('/script/images/cap-none-icon.png')";
+                $(div).innerHTML = 'no capture file'; 
+            }
+            else {
+                if (ext == 'cap') {
+                    critLine = null;
+
+                    if (data.includes(',C,')) {
+                        var i = 0;
+                        var txt = '';
+                        for (var x of data.split('\n')) {      
+                            if (x.includes(',C,'))  {
+                                if (critLine == null) 
+                                    critLine = 'crit' + i;
+                                txt += `<span id="crit${i}"><b>${x}</b></span>\n`;
+                            }
+                            else {
+                                txt += x + '\n';
+                            }
+                            i++;
+                        } 
+                        $(div).innerHTML = '<pre>' + txt + '</pre>';
+                        
+                        $('btnCapFile').style.backgroundImage = "url('/script/images/cap-crit-icon.png')";
+                    }
+                    else {
+                        $(div).innerHTML = '<pre>' + data + '</pre>';
+                        $('btnCapFile').style.backgroundImage = "url('/script/images/cap-icon.png')";
+                    }
+                }
+                else {
+                    $(div).innerHTML = '<pre>' + data + '</pre>';
+                }
+            }
         })
         .catch(error => {
-            consoloe.log(`loadLogFile - ${error}`);
+            console.log(`loadFile - ${ext} ${error}`);
         });
     }
-   
+ 
     async function loadNotifications(dive) {
         var i;
         var html;
@@ -724,7 +771,9 @@
         currDive = dive; // inside the then or before plots might be actually loaded?
 
         loadLog(dive);
-        loadLogFile(dive);
+        loadFile(dive, 'log', 'logfileDiv');
+        loadFile(dive, 'eng', 'engfileDiv');
+        loadFile(dive, 'cap', 'capfileDiv');
         loadNotifications(dive);
 
         fetch(`/plots/${currGlider}/${dive}${mission()}`)
@@ -805,6 +854,10 @@
                 showLog(); 
             else if (currElt == 'logfileRaw')
                 showLogFile();
+            else if (currElt == 'engfile')
+                showEng();
+            else if (currElt == 'capfile')
+                showCap();
             else if (currElt == 'notifications')
                 showNotifications();
             else if (currElt.includes('plotly'))
@@ -1361,6 +1414,8 @@
     <button class="tool" style="background: url(/script/images/log-icon.png);" onclick="showLogFile();" title="log file"></button>
     <button class="tool" style="background: url(/script/images/chart-icon.png);" onclick="showPlotly();" title="plot and table tool"></button>
     <button class="tool" id="btnNotifications" style="background: url(/script/images/notification-icon.png);" onclick="showNotifications();" title="notifications"></button>
+    <button class="tool" id="btnCapFile" style="background: url(/script/images/cap-none-icon.png);" onclick="showCap();" title="notifications"></button>
+    <button class="tool" id="btnEngFile" style="background: url(/script/images/eng-icon.png);" onclick="showEng();" title="notifications"></button>
 </div>
 
 <div id="main" style="position: absolute; left: 50; top: 0; width:1060px; height:894px; overflow:auto;">
@@ -1458,6 +1513,12 @@
     </div>
 
     <div id="logfileDiv" hidden="hidden" ondblclick="parameterHelp('logfile');" title="double click parameter for help" style="background-color:#dddddd;">
+    </div>
+
+    <div id="engfileDiv" hidden="hidden" style="background-color:#dddddd;">
+    </div>
+
+    <div id="capfileDiv" hidden="hidden" style="background-color:#dddddd;">
     </div>
 </div>
 
