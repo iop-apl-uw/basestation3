@@ -24,11 +24,15 @@
 
 """ Plots mission energy consumption and projections
 """
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
+
 import collections
 import pdb
 import sqlite3
 import sys
 import traceback
+import typing
 
 import plotly
 
@@ -37,7 +41,8 @@ import numpy as np
 import pandas as pd
 
 
-import BaseOpts
+if typing.TYPE_CHECKING:
+    import BaseOpts
 import PlotUtilsPlotly
 import Utils
 
@@ -45,7 +50,8 @@ from BaseLog import log_info, log_error
 from Plotting import plotmissionsingle
 
 
-DEBUG_PDB = "darwin" in sys.platform
+# DEBUG_PDB = "darwin" in sys.platform
+DEBUG_PDB = False
 
 # TODO - Tune up colors
 # TODO - test with RevB board
@@ -172,7 +178,10 @@ def mission_energy(
                     energy_name = energy_col.removeprefix(energy_tag).removesuffix(
                         "_joules"
                     )
-                    if len(np.nonzero(energy_joules_df[energy_col].to_numpy())[0]) == 0:
+                    # A little convoluted, but if a db column is uninitialized, the database NULL gets
+                    # converted to a nan, which is treated as non-zero
+                    tmp_j = energy_joules_df[energy_col].to_numpy()
+                    if np.count_nonzero(tmp_j[~np.isnan(tmp_j)]) == 0:
                         continue
                     fig.add_trace(
                         {
@@ -300,7 +309,7 @@ def mission_energy(
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
             pdb.post_mortem(traceb)
-        log_error("Could not fetch needed columns")
+        log_error("Could not fetch needed columns", "exc")
         return ([], [])
 
     return ([], [])

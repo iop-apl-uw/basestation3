@@ -25,7 +25,6 @@ import traceback
 import os
 import logging
 import collections
-import BaseOpts
 from io import StringIO
 import inspect
 

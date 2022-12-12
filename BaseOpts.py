@@ -48,7 +48,12 @@ import time
 import typing
 import traceback
 
+import Plotting
 from Globals import WhichHalf  # basestation_version
+
+# Populate default plots with every plot registered in Plotting
+dive_plot_list = Plotting.dive_plot_funcs.keys()
+mission_plot_list = Plotting.mission_plot_funcs.keys()
 
 
 def generate_range_action(arg, min_val, max_val):
@@ -519,26 +524,13 @@ global_options_dict = {
         {"help": "Forces reprocessing of a specific dive number "},
     ),
     "make_dive_profiles": options_t(
-        None,
+        True,
         ("Base",),
         ("--make_dive_profiles",),
         bool,
         {
             "help": "Create the common profile data products",
-            "action": "store_true",
-        },
-    ),
-    "make_dive_netCDF": options_t(
-        None,
-        (
-            "Base",
-            "MakeDiveProfiles",
-        ),
-        ("--make_dive_netCDF",),
-        bool,
-        {
-            "help": "Create the dive netCDF output file",
-            "action": "store_true",
+            "action": argparse.BooleanOptionalAction,
         },
     ),
     "make_mission_profile": options_t(
@@ -781,6 +773,7 @@ global_options_dict = {
         None,
         (
             "Base",
+            "BasePlot",
             "MakePlot",
             "MakePlot2",
             "MakePlot3",
@@ -818,6 +811,55 @@ global_options_dict = {
             "section": "makeplot",
             "range": [0.0, 1e10],
             "option_group": "plotting",
+        },
+    ),
+    # Core plotting routines
+    "dive_plots": options_t(
+        dive_plot_list,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--dive_plots",),
+        str,
+        {
+            "help": "Which dive plots to produce",
+            "section": "plotting",
+            "choices": list(Plotting.dive_plot_funcs.keys()),
+            "option_group": "plotting",
+        },
+    ),
+    "mission_plots": options_t(
+        mission_plot_list,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--mission_plots",),
+        str,
+        {
+            "help": "Which mission plots to produce",
+            "section": "plotting",
+            "choices": list(Plotting.mission_plot_funcs.keys()),
+            "option_group": "plotting",
+        },
+    ),
+    "plot_types": options_t(
+        [
+            "dives",
+            "mission",
+        ],
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--plot_types",),
+        str,
+        {
+            "help": "Which type of plots to generate",
+            "option_group": "plotting",
+            "nargs": "+",
+            "choices": ["dives", "mission"],
         },
     ),
     "strip_list": options_t(
@@ -1165,6 +1207,14 @@ option_group_description = {
 }
 
 
+class CustomFormatter(
+    argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter
+):
+    """Allow for multiple formatters for help"""
+
+    pass
+
+
 class BaseOptions:
 
     """
@@ -1234,8 +1284,7 @@ class BaseOptions:
         cp = configparser.RawConfigParser(cp_default)
 
         ap = argparse.ArgumentParser(
-            description=description,
-            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=description, formatter_class=CustomFormatter
         )
 
         # Build up group dictionary
@@ -1285,7 +1334,11 @@ class BaseOptions:
                         kwargs["type"] = v.var_type
                     if v.args and v.args[0].startswith("-"):
                         kwargs["dest"] = k
-                    kwargs["default"] = None
+                    # GBS 2022/12/12 Added in the default value to the --help output would look
+                    # appropriate.
+                    #
+                    # kwargs["default"] = None
+                    kwargs["default"] = v.default_val
                     if "section" in kwargs.keys():
                         del kwargs["section"]
                     if "required" in kwargs.keys() and isinstance(
@@ -1316,10 +1369,11 @@ class BaseOptions:
                         parser.add_argument(*arg_list, **kwargs)
                     del kwargs
 
-            sub_cmd_help_list = "sub-commands usage:\n"
-            for _, sb in self._subparsers.items():
-                sub_cmd_help_list += f"  {sb.format_usage()[7:]}"
-            ap.epilog = sub_cmd_help_list
+            if self._subparsers:
+                sub_cmd_help_list = "sub-commands usage:\n"
+                for _, sb in self._subparsers.items():
+                    sub_cmd_help_list += f"  {sb.format_usage()[7:]}"
+                ap.epilog = sub_cmd_help_list
 
         self._ap = ap
 
@@ -1381,10 +1435,6 @@ class BaseOptions:
         for opt in dir(self._opts):
             if opt in options_dict.keys() and getattr(self._opts, opt) is not None:
                 setattr(self, opt, getattr(self._opts, opt))
-
-        # A bit of a hack
-        if self.make_dive_profiles:
-            self.make_dive_netCDF = True
 
 
 if __name__ == "__main__":

@@ -27,7 +27,6 @@ import cProfile
 import os
 import pdb
 import pstats
-import stat
 import sys
 import time
 import traceback
@@ -40,6 +39,7 @@ import BaseOpts
 import CommLog
 import MakeDiveProfiles
 import Plotting
+import PlotUtils
 import Utils
 
 from BaseLog import BaseLogger, log_error, log_info, log_critical
@@ -140,26 +140,9 @@ def main():
         Any exceptions raised are considered critical errors and not expected
     """
 
-    dive_plot_list = Plotting.dive_plot_funcs.keys()
-    mission_plot_list = Plotting.mission_plot_funcs.keys()
-
     base_opts = BaseOpts.BaseOptions(
         "Basestation CLI for creating Seaglider plots",
         additional_arguments={
-            # CONSIDER: this might be best as an option in BaseOpts so Base.py can pick it up
-            "dive_plots": BaseOpts.options_t(
-                dive_plot_list,
-                ("BasePlot",),
-                ("--dive_plots",),
-                str,
-                {
-                    "help": "Which dive plots to produce",
-                    "section": "baseplot",
-                    "choices": list(Plotting.dive_plot_funcs.keys()),
-                    # "option_group": "plotting",
-                    "subparsers": ("plot_dive",),
-                },
-            ),
             "netcdf_files": BaseOpts.options_t(
                 None,
                 ("BasePlot",),
@@ -168,22 +151,7 @@ def main():
                 {
                     "help": "List of per-dive netcdf files to process (all in mission_dir)",
                     "nargs": "*",
-                    # "option_group": "plotting",
-                    "subparsers": ("plot_dive",),
-                },
-            ),
-            # CONSIDER: this might be best as an option in BaseOpts so Base.py can pick it up
-            "mission_plots": BaseOpts.options_t(
-                mission_plot_list,
-                ("BasePlot",),
-                ("--mission_plots",),
-                str,
-                {
-                    "help": "Which mission plots to produce",
-                    "section": "baseplot",
-                    "choices": list(Plotting.mission_plot_funcs.keys()),
-                    # "option_group": "plotting",
-                    "subparsers": ("plot_mission",),
+                    "option_group": "plotting",
                 },
             ),
         },
@@ -207,8 +175,8 @@ def main():
 
     Utils.check_versions()
 
-    if base_opts.plot_directory is None:
-        base_opts.plot_directory = os.path.join(base_opts.mission_dir, "plots")
+    if PlotUtils.setup_plot_directory(base_opts):
+        return 1
 
     log_info(
         "Started processing "
@@ -234,574 +202,32 @@ def main():
             log_error("Can't figure out the instrument id - bailing out")
             return 1
 
-    if not os.path.exists(base_opts.plot_directory):
-        try:
-            os.mkdir(base_opts.plot_directory)
-            # Ensure that MoveData can move it as pilot if not run as the glider account
-            os.chmod(
-                base_opts.plot_directory,
-                stat.S_IRUSR
-                | stat.S_IWUSR
-                | stat.S_IXUSR
-                | stat.S_IRGRP
-                | stat.S_IXGRP
-                | stat.S_IWGRP
-                | stat.S_IROTH
-                | stat.S_IXOTH,
-            )
-        except:
-            log_error(f"Could not create {base_opts.plot_directory}", "exc")
-            log_info("Bailing out")
-            return 1
-
     old_err = np.geterr()
     np.seterr(invalid="warn")
 
-    if base_opts.subparser_name == "plot_dive":
-        if not base_opts.netcdf_files:
-            dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
-        else:
-            dive_nc_file_names = []
-            for ncf_file_name in base_opts.netcdf_files:
-                dive_nc_file_names.append(
-                    os.path.join(base_opts.mission_dir, ncf_file_name)
+    for plot_type in base_opts.plot_types:
+        if plot_type == "dives":
+            if not base_opts.netcdf_files:
+                dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(
+                    base_opts
                 )
-        plot_dict = get_dive_plots(base_opts)
-        plot_dives(base_opts, plot_dict, dive_nc_file_names)
-    elif base_opts.subparser_name == "plot_mission":
-        sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
-        calib_consts = getSGCalibrationConstants(sg_calib_file_name)
-        mission_str = get_mission_str(base_opts, calib_consts)
-        plot_dict = get_mission_plots(base_opts)
-        plot_mission(base_opts, plot_dict, mission_str)
-    else:
-        log_error("Internal error - unknown sub-parser")
-
-    # for dive_nc_file_name in dive_nc_file_names:
-    #     log_info(f"Processing {dive_nc_file_name}")
-
-    #     try:
-    #         dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, "r")
-    #     except:
-    #         log_error(f"Unable to open {dive_nc_file_name}", "exc")
-    #         log_info("Continuing processing...")
-    #         continue
-
-    #     if "processing_error" in dive_nc_file.variables:
-    #         log_warning(f"{dive_nc_file_name} is marked as having a processing error")
-
-    #     if "skipped_profile" in dive_nc_file.variables:
-    #         log_warning(f"{dive_nc_file_name} is marked as a skipped_profile")
-
-    #     try:
-    #         dive_num = dive_nc_file.dive_number
-    #     except (AttributeError, KeyError):
-    #         log_error(f"No dive_number attribute in {dive_nc_file_name} - skipping")
-    #         continue
-
-    #     if (
-    #         "gc_st_secs" in dive_nc_file.variables
-    #         and "diveplot" in base_opts.makeplot4_plots
-    #     ):
-    #         try:
-    #             figs, plots = plot_diveplot(
-    #                 dive_nc_file,
-    #                 dive_num,
-    #                 base_opts,
-    #             )
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-
-    #         except KeyboardInterrupt:
-    #             log_error("Interupted by operator")
-    #             break
-    #         except:
-    #             if DEBUG_PDB:
-    #                 _, _, tb = sys.exc_info()
-    #                 traceback.print_exc()
-    #                 pdb.post_mortem(tb)
-    #             log_error(
-    #                 f"Error in plotting diveplot for {dive_nc_file_name} - skipping",
-    #                 "exc",
-    #             )
-
-    #     # try:
-    #     #     head,tail = os.path.split(dive_nc_file_name)
-    #     #     qc_file = "%s/p%03d%04d.pckl" % (head, dive_nc_file.glider, dive_nc_file.variables['trajectory'][:][0])
-    #     #     plots = plot_qc(dive_nc_file, dive_num, base_opts, qc_file)
-    #     #     if(processed_other_files is not None and plots is not None):
-    #     #         for p in plots:
-    #     #             processed_other_files.append(p)
-
-    #     # except KeyboardInterrupt:
-    #     #     log_error('Interupted by operator')
-    #     #     break
-    #     # except:
-    #     # if DEBUG_PDB:
-    #     #         _, _, tb = sys.exc_info()
-    #     #         traceback.print_exc()
-    #     #         pdb.post_mortem(tb)
-
-    #     #     log_error("Error in plotting qc for %s - skipping" % dive_nc_file_name, 'exc')
-
-    #     if (
-    #         "auxCompass_time" in dive_nc_file.variables
-    #         and "compass_compare" in base_opts.makeplot4_plots
-    #     ):
-    #         try:
-    #             figs, plots = plot_compass_compare(
-    #                 dive_nc_file,
-    #                 dive_num,
-    #                 "auxCompass",
-    #                 "auxCompass_time",
-    #                 "auxCompass_hdg",
-    #                 "auxCompass_pit",
-    #                 "auxCompass_rol",
-    #                 "auxCompass_press",
-    #                 base_opts,
-    #             )
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-
-    #         except KeyboardInterrupt:
-    #             log_error("Interupted by operator")
-    #             break
-    #         except:
-    #             if DEBUG_PDB:
-    #                 _, _, tb = sys.exc_info()
-    #                 traceback.print_exc()
-    #                 pdb.post_mortem(tb)
-    #             log_error(
-    #                 "Error in plotting plot_compass_compare for auxCompass for %s - skipping"
-    #                 % dive_nc_file_name,
-    #                 "exc",
-    #             )
-
-    #     if (
-    #         "auxB_time" in dive_nc_file.variables
-    #         and "compass_compare" in base_opts.makeplot4_plots
-    #     ):
-    #         try:
-    #             figs, plots = plot_compass_compare(
-    #                 dive_nc_file,
-    #                 dive_num,
-    #                 "auxB",
-    #                 "auxB_time",
-    #                 "auxB_hdg",
-    #                 "auxB_pit",
-    #                 "auxB_rol",
-    #                 "auxB_press",
-    #                 base_opts,
-    #             )
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-    #         except KeyboardInterrupt:
-    #             log_error("Interupted by operator")
-    #             break
-    #         except:
-    #             if DEBUG_PDB:
-    #                 _, _, tb = sys.exc_info()
-    #                 traceback.print_exc()
-    #                 pdb.post_mortem(tb)
-    #             log_error(
-    #                 "Error in plotting plot_compass_compare for auxB for %s - skipping"
-    #                 % dive_nc_file_name,
-    #                 "exc",
-    #             )
-
-    #     if (
-    #         "cp_time" in dive_nc_file.variables
-    #         and "compass_compare" in base_opts.makeplot4_plots
-    #     ):
-    #         try:
-    #             figs, plots = plot_compass_compare(
-    #                 dive_nc_file,
-    #                 dive_num,
-    #                 "ADCPCompass",
-    #                 "cp_time",
-    #                 "cp_heading",
-    #                 "cp_pitch",
-    #                 "cp_roll",
-    #                 "cp_pressure",
-    #                 base_opts,
-    #             )
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #         except KeyboardInterrupt:
-    #             log_error("Interupted by operator")
-    #             break
-    #         except:
-    #             if DEBUG_PDB:
-    #                 _, _, tb = sys.exc_info()
-    #                 traceback.print_exc()
-    #                 pdb.post_mortem(tb)
-    #             log_error(
-    #                 "Error in plotting plot_compass_compare for ADCP Compass for %s - skipping"
-    #                 % dive_nc_file_name,
-    #                 "exc",
-    #             )
-
-    #     if (
-    #         "ad2cp_time" in dive_nc_file.variables
-    #         and "compass_compare" in base_opts.makeplot4_plots
-    #     ):
-    #         try:
-    #             figs, plots = plot_compass_compare(
-    #                 dive_nc_file,
-    #                 dive_num,
-    #                 "ADCPCompass",
-    #                 "ad2cp_time",
-    #                 "ad2cp_heading",
-    #                 "ad2cp_pitch",
-    #                 "ad2cp_roll",
-    #                 "ad2cp_pressure",
-    #                 base_opts,
-    #                 flip_pitch=True,
-    #                 flip_roll=True,
-    #                 flip_heading=True,
-    #             )
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-    #         except KeyboardInterrupt:
-    #             log_error("Interupted by operator")
-    #             break
-    #         except:
-    #             if DEBUG_PDB:
-    #                 _, _, tb = sys.exc_info()
-    #                 traceback.print_exc()
-    #                 pdb.post_mortem(tb)
-    #             log_error(
-    #                 "Error in plotting plot_compass_compare for ADCP Compass for %s - skipping"
-    #                 % dive_nc_file_name,
-    #                 "exc",
-    #             )
-
-    #     ### COG
-    #     try:
-    #         if (
-    #             "latitude" in dive_nc_file.variables
-    #             and "longitude" in dive_nc_file.variables
-    #             and "log_gps_lat" in dive_nc_file.variables
-    #             and "COG" in base_opts.makeplot4_plots
-    #         ):
-    #             figs, plots = plot_COG(dive_nc_file, dive_num, base_opts)
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-    #     except KeyboardInterrupt:
-    #         log_error("Interupted by operator")
-    #         break
-    #     except:
-    #         if DEBUG_PDB:
-    #             _, _, tb = sys.exc_info()
-    #             traceback.print_exc()
-    #             pdb.post_mortem(tb)
-    #         log_error(
-    #             f"Error in plotting COG for {dive_nc_file_name} - skipping", "exc"
-    #         )
-
-    #     ### Displacement
-    #     try:
-    #         if (
-    #             "north_displacement" in dive_nc_file.variables
-    #             and "east_displacement" in dive_nc_file.variables
-    #             and "CTW" in base_opts.makeplot4_plots
-    #         ):
-    #             figs, plots = plot_CTW(dive_nc_file, dive_num, base_opts)
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-    #     except KeyboardInterrupt:
-    #         log_error("Interupted by operator")
-    #         break
-    #     except:
-    #         if DEBUG_PDB:
-    #             _, _, tb = sys.exc_info()
-    #             traceback.print_exc()
-    #             pdb.post_mortem(tb)
-    #         log_error(
-    #             f"Error in plotting COG for {dive_nc_file_name} - skipping", "exc"
-    #         )
-
-    #     ### CTD
-    #     try:
-    #         if (
-    #             "temperature" in dive_nc_file.variables
-    #             and "ctd_data" in base_opts.makeplot4_plots
-    #         ):
-    #             figs, plots = plot_ctd_data(dive_nc_file, dive_num, base_opts)
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-    #     except KeyboardInterrupt:
-    #         log_error("Interupted by operator")
-    #         break
-    #     except:
-    #         if DEBUG_PDB:
-    #             _, _, tb = sys.exc_info()
-    #             traceback.print_exc()
-    #             pdb.post_mortem(tb)
-    #         log_error(
-    #             f"Error in plotting ctd for {dive_nc_file_name} - skipping", "exc"
-    #         )
-
-    #     ### TS
-    #     if "ts" in base_opts.makeplot4_plots:
-    #         try:
-    #             # TODO Finish and make work for truck as well as scicon
-    #             fig, plots = plot_ts(dive_nc_file, dive_num, base_opts)
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-
-    #         except KeyboardInterrupt:
-    #             log_error("Interupted by operator")
-    #             break
-    #         except:
-    #             if DEBUG_PDB:
-    #                 _, _, tb = sys.exc_info()
-    #                 traceback.print_exc()
-    #                 pdb.post_mortem(tb)
-    #             log_error(
-    #                 f"Error in plotting TS for {dive_nc_file_name} - skipping", "exc"
-    #             )
-
-    #     ### TMicro
-    #     try:
-    #         tmicl_present = False
-    #         for v in dive_nc_file.variables:
-    #             if "tmicl_" in v:
-    #                 tmicl_present = True
-    #         if tmicl_present and "tmicl_data" in base_opts.makeplot4_plots:
-    #             figs, plots = plot_tmicl_data(dive_nc_file, dive_num, base_opts)
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-
-    #     except KeyboardInterrupt:
-    #         log_error("Interupted by operator")
-    #         break
-    #     except:
-    #         if DEBUG_PDB:
-    #             _, _, tb = sys.exc_info()
-    #             traceback.print_exc()
-    #             pdb.post_mortem(tb)
-
-    #         log_error(
-    #             "Error in ploting tmicro for %s - skipping" % dive_nc_file_name, "exc"
-    #         )
-
-    #     ### PMAR
-    #     try:
-    #         pmar_present = False
-    #         for v in dive_nc_file.variables:
-    #             if "pmar_" in v:
-    #                 pmar_present = True
-    #         if pmar_present and "pmar_data" in base_opts.makeplot4_plots:
-    #             figs, plots = plot_pmar_data(dive_nc_file, dive_num, base_opts)
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-
-    #     except KeyboardInterrupt:
-    #         log_error("Interupted by operator")
-    #         break
-    #     except:
-    #         if DEBUG_PDB:
-    #             _, _, tb = sys.exc_info()
-    #             traceback.print_exc()
-    #             pdb.post_mortem(tb)
-    #         log_error(
-    #             "Error in plottting pmar for %s - skipping" % dive_nc_file_name, "exc"
-    #         )
-
-    #     ### Optode
-    #     try:
-    #         optode_type = None
-    #         is_scicon = False
-    #         if "aa4831_time" in dive_nc_file.variables:
-    #             optode_type = "4831"
-    #             is_scicon = True
-    #         elif "aa4330_time" in dive_nc_file.variables:
-    #             optode_type = "4330"
-    #             is_scicon = True
-    #         elif "aa3830_time" in dive_nc_file.variables:
-    #             optode_type = "3830"
-    #             is_scicon = True
-    #         elif "aa4831" in "".join(dive_nc_file.variables):
-    #             optode_type = "4831"
-    #         elif "aa4330" in "".join(dive_nc_file.variables):
-    #             optode_type = "4330"
-    #         elif "aa3830" in "".join(dive_nc_file.variables):
-    #             optode_type = "3830"
-    #         if optode_type is not None and "optode_data" in base_opts.makeplot4_plots:
-    #             log_debug("optode type = %s" % optode_type)
-    #             figs, plots = plot_optode_data(
-    #                 dive_nc_file,
-    #                 dive_num,
-    #                 base_opts,
-    #                 optode_type,
-    #                 scicon=is_scicon,
-    #             )
-    #             if processed_other_files is not None and plots is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-    #     except KeyboardInterrupt:
-    #         log_error("Interupted by operator")
-    #         break
-    #     except:
-    #         if DEBUG_PDB:
-    #             _, _, tb = sys.exc_info()
-    #             traceback.print_exc()
-    #             pdb.post_mortem(tb)
-
-    #         log_error(
-    #             "Error in plotting optode for %s - skipping" % dive_nc_file_name, "exc"
-    #         )
-
-    #     # try:
-    #     #     # SBE43
-    #     #     # TODO - Add truck support
-    #     #     if('sbe43_time' in dive_nc_file.variables):
-    #     #         plots = plot_sbe43_data(dive_nc_file, dive_num, base_opts, scicon=True)
-    #     #         if(processed_other_files is not None and plots is not None):
-    #     #             for p in plots:
-    #     #                 processed_other_files.append(p)
-    #     # except KeyboardInterrupt:
-    #     #     log_error('Interupted by operator')
-    #     #     break
-    #     # except:
-    #     # if DEBUG_PDB:
-    #     #     _, _, tb = sys.exc_info()
-    #     #     traceback.print_exc()
-    #     #     pdb.post_mortem(tb)
-    #     #     log_error("Error in plotting sbe43 for %s - skipping" % dive_nc_file_name, 'exc')
-
-    #     ### Wetlabs
-    #     try:
-    #         # The plot routine currently handles only the canonical wlbb2fl instrument (red, blue, and chlorophyll)
-    #         wetlabs_type = None
-    #         is_scicon = False
-    #         for typ in ("wlbb2fl", "wlbbfl2", "wlbb3", "wlfl3"):
-    #             if "%s_time" % typ in dive_nc_file.variables:
-    #                 wetlabs_type = typ
-    #                 is_scicon = True
-    #             elif typ in "".join(dive_nc_file.variables):
-    #                 wetlabs_type = typ
-
-    #             if wetlabs_type and "wetlabs_data" in base_opts.makeplot4_plots:
-    #                 log_debug("wetlabs type = %s" % wetlabs_type)
-    #                 figs, plots = plot_wetlabs_data(
-    #                     dive_nc_file,
-    #                     dive_num,
-    #                     base_opts,
-    #                     wetlabs_type,
-    #                     scicon=is_scicon,
-    #                 )
-    #                 if processed_other_files is not None:
-    #                     for p in plots:
-    #                         processed_other_files.append(p)
-    #                 if figures is not None and figs is not None:
-    #                     for fig in figs:
-    #                         figures.append(fig)
-    #     except KeyboardInterrupt:
-    #         log_error("Interupted by operator")
-    #         break
-    #     except:
-    #         if DEBUG_PDB:
-    #             _, _, tb = sys.exc_info()
-    #             traceback.print_exc()
-    #             pdb.post_mortem(tb)
-    #         log_error(
-    #             "Error in plotting wetlabs for %s - skipping" % dive_nc_file_name, "exc"
-    #         )
-
-    #     # try:
-    #     #     # PAR
-    #     #     # Add truck support
-    #     #     if('qsp2150a_time' in dive_nc_file.variables):
-    #     #         plots = plot_par_data(dive_nc_file, dive_num, base_opts, scicon=True)
-    #     #         if(processed_other_files is not None):
-    #     #             for p in plots:
-    #     #                 processed_other_files.append(p)
-    #     # except KeyboardInterrupt:
-    #     #     log_error('Interupted by operator')
-    #     #     break
-    #     # except:
-    #     # if DEBUG_PDB:
-    #     #     _, _, tb = sys.exc_info()
-    #     #     traceback.print_exc()
-    #     #     pdb.post_mortem(tb)
-    #     #     log_error("Error in plotting qsp2150a for %s - skipping" % dive_nc_file_name, 'exc')
-
-    #     try:
-    #         if ("ocr504i_time" in dive_nc_file.variables) or (
-    #             "eng_ocr504i" in "".join(dive_nc_file.variables)
-    #             and "ocr504i_data" in base_opts.makeplot4_plots
-    #         ):
-    #             figs, plots = plot_ocr504i_data(
-    #                 dive_nc_file,
-    #                 dive_num,
-    #                 base_opts,
-    #                 scicon=("ocr504i_time" in dive_nc_file.variables),
-    #             )
-    #             if processed_other_files is not None:
-    #                 for p in plots:
-    #                     processed_other_files.append(p)
-    #             if figures is not None and figs is not None:
-    #                 for fig in figs:
-    #                     figures.append(fig)
-    #     except KeyboardInterrupt:
-    #         log_error("Interupted by operator")
-    #         break
-    #     except:
-    #         if DEBUG_PDB:
-    #             _, _, tb = sys.exc_info()
-    #             traceback.print_exc()
-    #             pdb.post_mortem(tb)
-    #         log_error(
-    #             "Error in plotting ocr504i for %s - skipping" % dive_nc_file_name, "exc"
-    #         )
-
-    #     dive_nc_file.close()
+                dive_nc_file_names = []
+                for ncf_file_name in base_opts.netcdf_files:
+                    dive_nc_file_names.append(
+                        os.path.join(base_opts.mission_dir, ncf_file_name)
+                    )
+            plot_dict = get_dive_plots(base_opts)
+            plot_dives(base_opts, plot_dict, dive_nc_file_names)
+        elif plot_type == "mission":
+            sg_calib_file_name = os.path.join(
+                base_opts.mission_dir, "sg_calib_constants.m"
+            )
+            calib_consts = getSGCalibrationConstants(sg_calib_file_name)
+            mission_str = get_mission_str(base_opts, calib_consts)
+            plot_dict = get_mission_plots(base_opts)
+            plot_mission(base_opts, plot_dict, mission_str)
+        else:
+            log_error(f"Internal error - unknown plot_type {plot_type}")
 
     np.seterr(**old_err)
     log_info(

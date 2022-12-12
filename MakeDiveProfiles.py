@@ -7283,7 +7283,6 @@ def main():
         --gzip_netcdf         gzip netcdf files
         --profile             Profiles time to process
         --make_dive_profiles  Create the common profile data products
-        --make_dive_netCDF    Create the dive netCDF output file
 
     Note:
         sg_calib_constants must be in the same directory as the file(s) being processed
@@ -7418,10 +7417,9 @@ def main():
         eng_file_name = head + ".eng"
         log_file_name = head + ".log"
 
-        # Running make_dive_profiles directly always implies make_dive_netCDF
-        base_opts.make_dive_netCDF = True
+        base_opts.make_dive_profiles = True
 
-        if base_opts.make_dive_netCDF:
+        if base_opts.make_dive_profiles:
             nc_dive_file_name = outhead + ".nc"
         else:
             nc_dive_file_name = None

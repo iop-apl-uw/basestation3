@@ -40,7 +40,14 @@ import BaseOpts
 import CommLog
 import Utils
 
-from BaseLog import BaseLogger, log_info, log_critical, log_error, log_debug
+from BaseLog import (
+    BaseLogger,
+    log_info,
+    log_critical,
+    log_error,
+    log_debug,
+    log_warning,
+)
 
 DEBUG_PDB = "darwin" in sys.platform
 
@@ -187,8 +194,16 @@ def loadFileToDB(cur, filename):
             data = cur.execute(
                 f"SELECT batt_ah_24V,batt_ah_10V from dives WHERE dive={dive-1}"
             ).fetchall()[0]
+        except IndexError:
+            log_debug(
+                f"Failed to fetch batt_ah columns for dive {dive-1} - not generating ah/kj columns",
+            )
         except:
-            log_error("Failed to fetch batt_ah colums", "exc")
+            log_error(
+                f"Failed to fetch batt_ah columns for dive {dive-1} - not generating ah/kj columns",
+                "exc",
+            )
+
         else:
             batt_ah_used_10V = ah10 - data[1]
             batt_ah_used_24V = ah24 - data[0]
@@ -302,7 +317,7 @@ def rebuildDB(base_opts):
     # glider = os.path.basename()
     # sg = int(glider[2:])
     # db = path + "/" + glider + ".db"
-    db = base_opts.mission_dir + f"sg{base_opts.instrument_id:03d}.db"
+    db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     log_info("rebuilding %s" % db)
     con = sqlite3.connect(db)
     with con:
@@ -310,7 +325,9 @@ def rebuildDB(base_opts):
         cur.execute("DROP TABLE IF EXISTS dives;")
         cur.execute("CREATE TABLE dives(dive INT);")
         # patt = path + "/p%03d????.nc" % sg
-        patt = base_opts.mission_dir + "/p%03d????.nc" % base_opts.instrument_id
+        patt = os.path.join(
+            base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.nc"
+        )
         ncfs = []
         for filename in glob.glob(patt):
             ncfs.append(filename)
@@ -322,7 +339,7 @@ def rebuildDB(base_opts):
 
 def loadDB(base_opts, filename):
     """Load a single netcdf file into the database"""
-    db = base_opts.mission_dir + f"/sg{base_opts.instrument_id:03d}.db"
+    db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     log_info("Loading %s to %s" % (filename, db))
     con = sqlite3.connect(db)
     with con:
@@ -341,7 +358,7 @@ def addValToDB(base_opts, dive_num, var_n, val):
         else:
             log_error(f"Unknown db_type for {var_n}:{type(val)}")
             return 1
-        db = base_opts.mission_dir + f"/sg{base_opts.instrument_id:03d}.db"
+        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
         if not os.path.exists(db):
             log_error(f"{db} does not exist - not updating {var_n}")
             return 1

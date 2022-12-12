@@ -25,12 +25,16 @@
 
 """ Package setup for plotting routines
 """
-
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
 import inspect
 import logging
 import typing
 
-import BaseOpts
+# Avoid circular input for type checking
+if typing.TYPE_CHECKING:
+    import BaseOpts
+
 from BaseLog import log_error, log_info
 
 dive_plot_funcs = {}
