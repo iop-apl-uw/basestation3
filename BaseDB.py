@@ -89,6 +89,13 @@ def loadFileToDB(cur, filename):
         nci.variables["gc_state_secs"][-1] - nci.start_time,
         "FLOAT",
     )
+    insertColumn(
+        dive,
+        cur,
+        "time_seconds_on_surface",
+        nci.start_time - nci.variables["log_gps_time"][0],
+        "FLOAT",
+    )
 
     i = numpy.where(
         nci.variables["eng_elaps_t"][:]
@@ -217,6 +224,32 @@ def loadFileToDB(cur, filename):
     insertColumn(dive, cur, "batt_kJ_used_24V", batt_kJ_used_24V, "FLOAT")
 
     if "log_FG_AHR_10Vo" in nci.variables:
+        if nci.variables["log_AH0_24V"].getValue() == 0:
+            fg_ah10 = (
+                nci.variables["log_FG_AHR_24Vo"].getValue()
+                + nci.variables["log_FG_AHR_10Vo"].getValue()
+            )
+            fg_ah24 = 0
+        elif nci.variables["log_AH0_10V"].getValue() == 0:
+            fg_ah24 = (
+                nci.variables["log_FG_AHR_24Vo"].getValue()
+                + nci.variables["log_FG_AHR_10Vo"].getValue()
+            )
+            fg_ah10 = 0
+        else:
+            fg_ah10 = nci.variables["log_FG_AHR_10Vo"].getValue()
+            fg_ah24 = nci.variables["log_FG_AHR_24Vo"].getValue()
+
+        if nci.variables["log_AH0_24V"].getValue() > 0:
+            fg_avail24 = 1 - fg_ah24 / nci.variables["log_AH0_24V"].getValue()
+        else:
+            fg_avail24 = 0
+
+        if nci.variables["log_AH0_10V"].getValue() > 0:
+            fg_avail10 = 1 - fg_ah10 / nci.variables["log_AH0_10V"].getValue()
+        else:
+            fg_avail10 = 0
+
         fg_10V_AH = (
             nci.variables["log_FG_AHR_10Vo"].getValue()
             - nci.variables["log_FG_AHR_10V"].getValue()
@@ -225,6 +258,12 @@ def loadFileToDB(cur, filename):
             nci.variables["log_FG_AHR_24Vo"].getValue()
             - nci.variables["log_FG_AHR_24V"].getValue()
         )
+
+        insertColumn(dive, cur, "fg_ah_used_10V", fg_10V_AH, "FLOAT")
+        insertColumn(dive, cur, "fg_ah_used_24V", fg_24V_AH, "FLOAT")
+
+        insertColumn(dive, cur, "fg_batt_capacity_10V", fg_avail10, "FLOAT")
+        insertColumn(dive, cur, "fg_batt_capacity_24V", fg_avail24, "FLOAT")
 
         fg_10V_kJ = fg_10V_AH * v10 * 3600.0 / 1000.0
         fg_24V_kJ = fg_24V_AH * v24 * 3600.0 / 1000.0

@@ -71,6 +71,7 @@ def plot_dives(
     Returns:
         tuple
             list of figures created
+
             list of filenames created
     """
     figs = []
@@ -216,6 +217,8 @@ def main():
                     dive_nc_file_names.append(
                         os.path.join(base_opts.mission_dir, ncf_file_name)
                     )
+            else:
+                dive_nc_file_names = base_opts.netcdf_files
             plot_dict = get_dive_plots(base_opts)
             plot_dives(base_opts, plot_dict, dive_nc_file_names)
         elif plot_type == "mission":
