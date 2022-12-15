@@ -24,6 +24,8 @@
 
 """ Misc utility routines
 """
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
 
 import bz2
 import collections
@@ -40,6 +42,7 @@ import subprocess
 import sqlite3
 import sys
 import time
+import typing
 
 import gsw
 import seawater
@@ -51,7 +54,11 @@ import scipy
 
 import Globals
 import BaseNetCDF
-import BaseOpts
+
+# Avoid circular input for type checking
+if typing.TYPE_CHECKING:
+    import BaseOpts
+
 from BaseLog import log_debug, log_error, log_warning, log_info, log_critical
 
 

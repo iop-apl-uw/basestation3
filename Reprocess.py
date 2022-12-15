@@ -262,12 +262,8 @@ def main():
         log_file_name = head + ".log"
         dive_num = FileMgr.get_dive(eng_file_name)
 
-        # Running make_dive_profiles directly always implies make_dive_netCDF
-        base_opts.make_dive_netCDF = True
-        if base_opts.make_dive_netCDF:
-            nc_dive_file_name = outhead + ".nc"
-        else:
-            nc_dive_file_name = None
+        base_opts.make_dive_profiles = True
+        nc_dive_file_name = outhead + ".nc"
 
         sg_calib_file_name, _ = os.path.split(os.path.abspath(dive_path))
         sg_calib_file_name = os.path.join(sg_calib_file_name, "sg_calib_constants.m")

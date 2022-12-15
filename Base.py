@@ -55,6 +55,7 @@ import BaseGZip
 import BaseNetCDF
 import BaseNetwork
 import BaseOpts
+import BasePlot
 import Bogue
 import CalibConst
 import CommLog
@@ -66,6 +67,7 @@ import LogFile
 import MakeDiveProfiles
 import MakeMissionProfile
 import MakeMissionTimeSeries
+import PlotUtils
 import Sensors
 import Strip1A
 import Utils
@@ -639,7 +641,7 @@ def process_file_group(
         # Even if there are problems processing files, continue on
 
         # log_info(tmp_processed_logger_payload_files)
-        if fc.logger_prefix() not in list(processed_logger_payload_files.keys()):
+        if fc.logger_prefix() not in processed_logger_payload_files:
             processed_logger_payload_files[fc.logger_prefix()] = []
 
         for i in tmp_processed_logger_payload_files:
@@ -1387,8 +1389,8 @@ def signal_handler_abort_processing(signum, frame):
 class AbortProcessingException(Exception):
     """Internal nofication to stop mission processing"""
 
-    def __init__(self):
-        pass
+    # def __init__(self):
+    #    pass
 
 
 def main():
@@ -1440,7 +1442,6 @@ def main():
       --web_file_location=WEB_FILE_LOCATION
                             Optional location to prefix file locations in comp email messages
       --make_dive_profiles  Create the common profile data products
-      --make_dive_netCDF    Create the dive netCDF output file
       --make_mission_profile
                             Create mission profile output file
       --make_mission_timeseries
@@ -1935,7 +1936,7 @@ def main():
     nc_dive_file_names = []
     nc_files_created = []
     if (
-        base_opts.make_dive_netCDF
+        base_opts.make_dive_profiles
         or base_opts.make_mission_profile
         or base_opts.make_mission_timeseries
     ):
@@ -2002,7 +2003,7 @@ def main():
             log_info(f"Processing ({head}) for profiles")
             log_file_name = head + ".log"
             eng_file_name = head + ".eng"
-            if base_opts.make_dive_netCDF:
+            if base_opts.make_dive_profiles:
                 nc_dive_file_name = head + ".nc"
             else:
                 nc_dive_file_name = None
@@ -2159,7 +2160,7 @@ def main():
                             else:
                                 log_info(f"{known_file} was uploaded and deleted")
 
-    if base_opts.make_dive_netCDF:
+    if base_opts.make_dive_profiles:
         last_session = comm_log.last_surfacing()
         if base_opts.skip_flight_model:
             log_info("Skipping flight model processing per directive")
@@ -2221,6 +2222,15 @@ def main():
     processed_file_names.append(processed_logger_eng_files)
     processed_file_names.append(processed_logger_other_files)
     processed_file_names = Utils.flatten(processed_file_names)
+
+    # Per-dive plotting
+    if PlotUtils.setup_plot_directory(base_opts):
+        log_error("Failed to setup plot directory - not plots being generated")
+    else:
+        plot_dict = BasePlot.get_dive_plots(base_opts)
+        _, output_files = BasePlot.plot_dives(base_opts, plot_dict, nc_files_created)
+        for output_file in output_files:
+            processed_other_files.append(output_file)
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
@@ -2306,6 +2316,18 @@ def main():
             processed_file_names.append(processed_logger_other_files)
             processed_file_names = Utils.flatten(processed_file_names)
 
+            # Whole mission plotting
+            if PlotUtils.setup_plot_directory(base_opts):
+                log_error("Failed to setup plot directory - not plots being generated")
+            else:
+                mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
+                plot_dict = BasePlot.get_mission_plots(base_opts)
+                _, output_files = BasePlot.plot_mission(
+                    base_opts, plot_dict, mission_str
+                )
+                for output_file in output_files:
+                    processed_other_files.append(output_file)
+
             # Invoke extensions, if any
             BaseDotFiles.process_extensions(
                 ".extensions",
@@ -2385,11 +2407,10 @@ def main():
                 base_opts.mission_dir, "pdoscmds.bat.resend"
             )
             with open(resend_file_name, "w") as resend_file:
-                for file_name in conversion_alerts_d:
-                    for msg, resend_cmd in conversion_alerts_d[file_name]:
+                for _, alert_tuple in conversion_alerts_d.items():
+                    for msg, resend_cmd in alert_tuple:
                         if resend_cmd:
                             resend_file.write(f"{resend_cmd}\n")
-                del file_name
 
         # Construct the pagers_convert_msg and alter_msg_file
         pagers_convert_msg = ""
@@ -2492,7 +2513,6 @@ def main():
                             "<p>Glider logout not seen - retransmissions from glider possible</p>\n"
                         )
                     alert_msg_file.write("</div>\n")
-            del file_name
 
         if pagers_convert_msg:
             if comm_log.last_surfacing().logout_seen:
