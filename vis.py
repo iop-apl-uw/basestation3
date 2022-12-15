@@ -60,18 +60,34 @@ app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_image
 def pageNotFound(request, exception):
     return sanic.response.text("Page not found: {}".format(request.path), status=404)
 
-@app.route('/png/<glider:int>/<dive:int>/<image:str>')
-async def pngHandler(request, glider: int, dive: int, image: str):
-    filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.png'
+@app.route('/png/<which:str>/<glider:int>/<dive:int>/<image:str>')
+async def pngHandler(request, which:str, glider: int, dive: int, image: str):
+    if which == 'dv':
+        filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.png'
+    elif which == 'eng':
+        filename = f'{gliderPath(glider,request)}/plots/eng_{image}.png'
+    elif which == 'section':
+        filename = f'{gliderPath(glider,request)}/plots/sg_{image}.png'
+    else:
+        return sanic.response.text('not found', status=404)
+
     if os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='image/png')
     else:
         return sanic.response.text('not found', status=404)
         
 
-@app.route('/div/<glider:int>/<dive:int>/<image:str>')
-async def divHandler(request, glider: int, dive: int, image: str):
-    filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.div'
+@app.route('/div/<which:str>/<glider:int>/<dive:int>/<image:str>')
+async def divHandler(request, which: str, glider: int, dive: int, image: str):
+    if which == 'dv':
+        filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.div'
+    elif which == 'eng':
+        filename = f'{gliderPath(glider,request)}/plots/eng_{image}.div'
+    elif which == 'section':
+        filename = f'{gliderPath(glider,request)}/plots/sg_{image}.div'
+    else:
+        return sanic.response.text('not found', status=404)
+
     if os.path.exists(filename):
         resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
         resp = resp + f'<a href="/div/{glider}/{dive-1}/{image}">prev</a> * <a href="/div/{glider}/{dive+1}/{image}">next</a>'
@@ -84,23 +100,6 @@ async def divHandler(request, glider: int, dive: int, image: str):
     else:
         return sanic.response.text('not found', status=404)
         
-
-@app.route('/eng/<glider:int>/<image:str>')
-async def engHandler(request, glider:int, image:str):
-    filename = f'{gliderPath(glider,request)}/plots/eng_{image}.png'
-    if os.path.exists(filename):
-        return await sanic.response.file(filename, mime_type='image/png')
-    else:
-        return sanic.response.text('not found', status=404)
-
-@app.route('/section/<glider:int>/<image:str>')
-async def sectionHandler(request, glider:int, image:str):
-    filename = f'{gliderPath(glider,request)}/plots/sg_{image}.png'
-    if os.path.exists(filename):
-        return await sanic.response.file(filename, mime_type='image/png')
-    else:
-        return sanic.response.text('not found', status=404)
-
 @app.route('/<glider:int>')
 async def mainHandler(request, glider:int):
     filename = f'{gliderPath(glider,request)}/comm.log'
@@ -233,13 +232,15 @@ async def statusHandler(request, glider:int):
     commFile[glider].seek(-10000, 2)
     # modifiedFile[glider] = "comm.log" # do we need this to trigger initial send??
 
-    (maxdv, dvplots, engplots, sgplots, plotlyplots) = buildFileList(gliderPath(glider, request))
+    (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly) = buildFileList(gliderPath(glider, request))
 
     message = {}
     message['glider'] = f'SG{glider:03d}'
     message['dive'] = maxdv
     message['engplots'] = engplots
     message['sgplots'] = sgplots
+    message['engplotly'] = engplotly;
+    message['sgplotly'] = sgplotly;
     # message['dvplots'] = dvplots
     # message['plotlyplots'] = plotlyplots
     print(message)
@@ -498,6 +499,8 @@ def buildFileList(path):
     engplots = []
     sgplots = []
     plotlyplots = []
+    engplotly = []
+    sgplotly = []
     for fullFile in glob.glob(f'{path}/plots/*.png'):
         file = os.path.basename(fullFile)
         if file.startswith('dv'):
@@ -518,12 +521,21 @@ def buildFileList(path):
 
         elif file.startswith('eng'):
             pieces = file.split('.')
-            engplots.append('_'.join(pieces[0].split('_')[1:]))
+            plot = '_'.join(pieces[0].split('_')[1:])
+            engplots.append(plot)
+            divFile = fullFile.replace("png", "div")
+            if os.path.exists(divFile):
+                engplotly.append(plot)
+
         elif file.startswith('sg') and "section" not in file:
             pieces = file.split('.')
-            sgplots.append('_'.join(pieces[0].split('_')[1:]))
+            plot = '_'.join(pieces[0].split('_')[1:])
+            sgplots.append(plot)
+            divFile = fullFile.replace("png", "div")
+            if os.path.exists(divFile):
+                sgplotly.append(plot)
 
-    return (maxdv, dvplots, engplots, sgplots, plotlyplots)
+    return (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly)
 
 def watchFilesystem(path):
     print("watching")
