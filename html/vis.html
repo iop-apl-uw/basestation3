@@ -1,14 +1,32 @@
 <style>
     a:link,.spanClick           {color:#0000ff; text-decoration:none}
-    a:visited {color:#0000ff; text-decoration:none}
-    a:hover,.spanClick:hover    {color:#ff0000; text-decoration:underline}
-    a:active,.spanClick:active  {color:#ff0000; text-decoration:underline}
+    a:visited {color:#0000aa; text-decoration:none}
+    a:hover,.spanClick:hover    {color:#0000aa; text-decoration:underline}
+    a:active,.spanClick:active  {color:#0000aa; text-decoration:underline}
 
     option { background-color:#eeeeee; }
     select { background-color:#eeeeee; }
     button { background-color:#dddddd; }
     button.tool { background-color:#dddddd; margin-top: 2px; margin-bottom: 2px; width:48px; height:48px;  border:0px; }
 
+    .thumb { mix-blend-mode:multiply }
+
+    .editFile {
+        width:100%; 
+        height:100%; 
+        box-sizing:border-box; 
+        background-color:#bbbbbb;
+        border: 1px solid black;
+    }
+
+    body {
+        background-color: #999999;
+        color: #000000;
+    }
+
+    table {
+        color: #000000;
+    }
 </style>
 <script src="/script/plotly-latest.min.js"></script>
 <script>
@@ -626,7 +644,7 @@
     function addPlot(which, p, x, plotly) {
         img = document.createElement('img');
         img.src = '/png/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
-        img.style = "position: absolute; left: " + x + "; top: 0; width:180px; heigh:169px;"
+        img.style = "position: absolute; left: " + x + "; top: 0; width:180px; heigh:169px; mix-blend-mode:multiply;"
         img.onclick = function() { showPlot(which, p, plotly); };
         img.title = p;
         $('bottom').appendChild(img);
@@ -1024,6 +1042,7 @@
                                 xaxis: { title: 'profile/' + stride },
                                 yaxis: { title: 'depth', autorange: 'reversed' },
                                 plot_bgcolor: "#cccccc",
+                                paper_bgcolor: "#bbbbbb",
                              };
                 var config = { responsive: true };
                 
@@ -1059,6 +1078,7 @@
                                 xaxis: { title: x },
                                 yaxis: { title: 'depth', autorange: 'reversed' },
                                 plot_bgcolor: "#cccccc",
+                                paper_bgcolor: "#bbbbbb",
                              };
                 var config = { responsive: true };
                 Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
@@ -1124,6 +1144,7 @@
                                 yaxis: { title: y[0], autorange: y[0].includes('depth') ? 'reversed' : true },
                                 title: { text: mode == 1 ? `Dive ${currDive} ${y[0]}` : '', y:0.95, x:0.5},
                                 plot_bgcolor: "#cccccc",
+                                paper_bgcolor: "#bbbbbb",
                              };
                 var config = { responsive: true };
                 Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
@@ -1156,6 +1177,7 @@
                                 xaxis: { title: x },
                                 yaxis: { title: x2, autorange: x2.includes('depth') ? 'reversed' : true },
                                 plot_bgcolor: "#cccccc",
+                                paper_bgcolor: "#bbbbbb",
                              };
                 var config = { responsive: true };
                 Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
@@ -1192,14 +1214,22 @@
             }
             else if (which == 'csv') {
                 var d = [];
-                d.push(([x].concat(y)).join(',')); // headers
-                
+                if (x2 == '-')
+                    d.push(([x].concat(y)).join(',')); // headers
+                else 
+                    d.push(([x,x2].concat(y)).join(',')); // headers
+
+                console.log(d); 
                 var o = []; 
                 o.push(mode == 0 ? data.map(v => v[x]) : data[x]);
+                if (x2 != '-') 
+                    o.push(mode == 0 ? data.map(v => v[x2]) : data[x2]);
+
                 for (var i = 0 ; i < y.length ; i++)
                     o.push(mode == 0 ? data.map(v => v[y[i]]) : data[y[i]]);
 
                 output = o[0].map((_, colIndex) => o.map(row => row[colIndex]).join(','));
+                console.log(output);
 
                 const blob = new Blob([d.concat(output).join('\n')], { type: 'text/csv' });
                 const url = window.URL.createObjectURL(blob);
@@ -1405,8 +1435,8 @@
     <button class="tool" id="btnEngFile" style="background: url(/script/images/eng-icon.png);" onclick="showEng();" title="notifications"></button>
 </div>
 
-<div id="main" style="position: absolute; left: 50; top: 0; width:1060px; height:894px; overflow:auto;">
-    <img id="mainImage">
+<div id="main" style="position: absolute; left: 50; top: 0; width:1050px; height:894px; overflow:auto; background-color:#bbbbbb;" >
+    <img id="mainImage" style="mix-blend-mode:multiply">
     <table rules="groups" id="mainTable" hidden="hidden" style="height:894px; width:1000px; font-size:14px; text-align:right; font-family:verdana, arial, tahoma, 'sans serif';"> 
 
         <colgroup span=4><col><col><col><col></colgroup>
@@ -1514,11 +1544,11 @@
     <button class="tool" style="background: url(/script/images/globe-icon.png);" onclick="popupMap();" title="map"></button>
 </div>
 
-<div id="commlog" style="position: absolute; left:1110; top:50; width:600; height:400; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;">
+<div id="commlog" style="position: absolute; left:1110; top:50; width:600; height:400; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;background-color:#bbbbbb;">
 
 </div>
 
-<div id="status" style="position: absolute; left:1110; top:460px; width:600px; height:240px; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black;">
+<div id="status" style="position: absolute; left:1110; top:460px; width:600px; height:240px; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; background-color:#bbbbbb;">
     <div id="position" style="font-weight: bold; font-size: 4vmin; padding-left: 2vmin; padding-top: 1px; padding-bottom: 1px">
     </div>
     <div id="positionTime" style="font-weight: bold; font-size: 1.5vmin; padding-left: 2vmin; padding-top: 1px; padding-bottom: 2px">
@@ -1560,15 +1590,15 @@
 </div>
 
 <div id="divCmdfile" style="position: absolute; left:1110; top:710; width:600px; height:380px; font-size: 12px;">
-    <textarea id="cmdfile" style="width:100%; height:100%; box-sizing:border-box;" ondblclick="parameterHelp('cmdfile');">
+    <textarea id="cmdfile" class="editFile" ondblclick="parameterHelp('cmdfile');">
     </textarea>
-    <textarea id="targets" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
-    <textarea id="science" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
-    <textarea id="scicon.sch" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
-    <textarea id="pdoscmds.bat" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
-    <textarea id="tcm2mat.cal" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
-    <textarea id="sg_calib_constants.m" style="width:100%; height:100%; box-sizing:border-box;" hidden="hidden"></textarea>
-    <button id="btnSave" type="button" onclick="saveControl(0);">Save</button>
+    <textarea id="targets" class="editFile" hidden="hidden"></textarea>
+    <textarea id="science" class="editFile" hidden="hidden"></textarea>
+    <textarea id="scicon.sch" class="editFile" hidden="hidden"></textarea>
+    <textarea id="pdoscmds.bat" class="editFile" hidden="hidden"></textarea>
+    <textarea id="tcm2mat.cal" class="editFile" hidden="hidden"></textarea>
+    <textarea id="sg_calib_constants.m" class="editFile" hidden="hidden"></textarea>
+    <button id="btnSave" type="button" onclick="saveControl(0);" style="margin-left:2px;">Save</button>
     <button id="btnForce" type="button" onclick="saveControl(1);">Force</button>
     <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
     <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
@@ -1585,11 +1615,11 @@
     <span id="fileDive" hidden="hidden"></span>
 </div>
 
-<div id="bottomBox" style="position: absolute; left: 0; top: 900; width: 1110; height: 200; overflow: hidden;">
+<div id="bottomBox" style="position: absolute; left: 0; top: 900; width: 1100; height: 200; overflow: hidden">
     <div id="bottomLinks" style="position: absolute; left: 10; top: 0; width: 978; height: 20; overflow: hidden;">
 
     </div>
-    <div id="bottom" style="position: absolute; left: 0; top: 20; width: 1110; height: 180; overflow: auto;">
+    <div id="bottom" style="position: absolute; left: 0; top: 20; width: 1100; height: 180; overflow: auto; background-color:#bbbbbb;">
 
     </div>
 </div>
