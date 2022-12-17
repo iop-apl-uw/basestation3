@@ -52,7 +52,7 @@ def gliderPath(glider, request):
 #
 
 app.static('/favicon.ico', f'{sys.path[0]}/html/favicon.ico', name='favicon.ico')
-app.static('/parms', '{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
+app.static('/parms', f'{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
 app.static('/script', f'{sys.path[0]}/scripts', name='script')
 app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
 
