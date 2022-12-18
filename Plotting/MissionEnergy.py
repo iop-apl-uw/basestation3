@@ -96,7 +96,6 @@ def estimate_endurance(dive_col, gauge_col, dive_times):
     return (dives_remaining, days_remaining, end_date)
 
 
-# pylint: disable=unused-argument
 @plotmissionsingle
 def mission_energy(
     base_opts: BaseOpts.BaseOptions, mission_str: list
@@ -412,5 +411,3 @@ def mission_energy(
             pdb.post_mortem(traceb)
         log_error("Could not fetch needed columns", "exc")
         return ([], [])
-
-    return ([], [])
