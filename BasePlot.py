@@ -23,19 +23,24 @@
 ##
 """Routines for driving the individual plotting routines
 """
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
+
 import cProfile
 import os
 import pdb
 import pstats
 import sys
 import time
+import typing
 import traceback
 import warnings
 
 import plotly
 import numpy as np
 
-import BaseOpts
+if typing.TYPE_CHECKING:
+    import BaseOpts
 import CommLog
 import MakeDiveProfiles
 import Plotting
