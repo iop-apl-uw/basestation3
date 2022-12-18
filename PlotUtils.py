@@ -25,12 +25,19 @@
 """ Utility functions for plotting routines
 """
 
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
+
 import os
 import time
+import typing
 import stat
 import sys
 
-import BaseOpts
+# pylint: disable=wrong-import-position
+if typing.TYPE_CHECKING:
+    import BaseOpts
+
 from BaseLog import log_error
 
 # Plotting configuration
