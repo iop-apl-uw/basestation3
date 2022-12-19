@@ -67,6 +67,8 @@ def insertColumn(dive, cur, col, val, db_type):
 
 def loadFileToDB(cur, filename):
     """Process single netcdf file into the database"""
+    gpsVars = [ "time", "lat", "lon", "magvar", "hdop", "first_fix_time", "final_fix_time" ]
+
     nci = Utils.open_netcdf_file(filename)
     dive = nci.variables["log_DIVE"].getValue()
     cur.execute(f"DELETE FROM dives WHERE dive={dive};")
@@ -75,6 +77,15 @@ def loadFileToDB(cur, filename):
         if not nci.variables[v].dimensions:
             if not v.startswith("sg_cal"):
                 insertColumn(dive, cur, v, nci.variables[v].getValue(), "FLOAT")
+        elif len(nci.variables[v].dimensions) == 1 and nci.variables[v].dimensions[0] == 'gps_info' and '_'.join(v.split('_')[2:]) in gpsVars:
+            for i in range(0,nci.dimensions['gps_info']):
+                if i == 0 or i == 1:
+                    name = v.replace('gps_', f'gps{i+1}_')
+                else:
+                    name = v
+
+                print(f"insert {name} {nci.variables[v][i]}")
+                insertColumn(dive, cur, name, nci.variables[v][i], "FLOAT")
 
     nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(",")
 
