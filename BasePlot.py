@@ -39,15 +39,14 @@ import warnings
 import plotly
 import numpy as np
 
-if typing.TYPE_CHECKING:
-    import BaseOpts
+import BaseOpts
 import CommLog
 import MakeDiveProfiles
 import Plotting
 import PlotUtils
 import Utils
 
-from BaseLog import BaseLogger, log_error, log_info, log_critical
+from BaseLog import BaseLogger, log_error, log_info, log_critical, log_debug
 from CalibConst import getSGCalibrationConstants
 
 DEBUG_PDB = "darwin" in sys.platform
@@ -83,7 +82,7 @@ def plot_dives(
     output_files = []
     for dive_nc_file_name in dive_nc_file_names:
         for plot_name, plot_func in dive_plot_dict.items():
-            log_info(f"Plotting:{plot_name}")
+            log_debug(f"Trying Dive Plot :{plot_name}")
             try:
                 dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
                 fig_list, file_list = plot_func(base_opts, dive_ncf)
@@ -114,6 +113,7 @@ def plot_mission(
     figs = []
     output_files = []
     for plot_name, plot_func in mission_plot_dict.items():
+        log_debug(f"Trying Mission Plot :{plot_name}")
         try:
             fig_list, file_list = plot_func(base_opts, mission_str)
         except:

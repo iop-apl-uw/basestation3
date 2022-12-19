@@ -103,6 +103,17 @@ def plotmissionsingle(func):
 # pylint: disable=wrong-import-position
 
 # Per-dive plotting routines
+from . import DivePlot
+from . import DiveCOG
+from . import DiveCTW
+from . import DiveOptode
+from . import DiveWetlabs
+from . import DiveOCR504i
+from . import DiveCTD
+from . import DiveTS
+from . import DiveTMICL
+from . import DivePMAR
+from . import DiveCompassCompare
 from . import DiveVertVelocity
 from . import DivePitchRoll
 from . import DiveMagCal
