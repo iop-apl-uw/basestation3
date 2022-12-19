@@ -84,7 +84,6 @@ def loadFileToDB(cur, filename):
                 else:
                     name = v
 
-                print(f"insert {name} {nci.variables[v][i]}")
                 insertColumn(dive, cur, name, nci.variables[v][i], "FLOAT")
 
     nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(",")
@@ -170,6 +169,9 @@ def loadFileToDB(cur, filename):
             ] = errors_line[:18]
         if len(errors_line) == 19:
             logger_timeouts4 = errors_line[18]
+
+    errors = sum(list(map(int, nci.variables["log_ERRORS"][:].tobytes().decode('utf-8').split(','))))
+    insertColumn(dive, cur, "error_count", errors, "INTEGER")
 
     [v10, ah10] = list(
         map(float, nci.variables["log_10V_AH"][:].tobytes().decode("utf-8").split(","))
