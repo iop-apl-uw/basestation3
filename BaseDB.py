@@ -51,6 +51,10 @@ from BaseLog import (
 
 DEBUG_PDB = "darwin" in sys.platform
 
+def ddmm2dd(x):
+    deg = int(x/100)
+    min = x - deg*100
+    return deg + min/60
 
 def insertColumn(dive, cur, col, val, db_type):
     """Insert the specified column"""
@@ -172,6 +176,20 @@ def loadFileToDB(cur, filename):
 
     errors = sum(list(map(int, nci.variables["log_ERRORS"][:].tobytes().decode('utf-8').split(','))))
     insertColumn(dive, cur, "error_count", errors, "INTEGER")
+
+    [minSpeed, maxSpeed] = list(
+        map(float, nci.variables["log_SPEED_LIMITS"][:].tobytes().decode("utf-8").split(","))
+    )
+    insertColumn(dive, cur, "log_speed_min", minSpeed, "FLOAT")
+    insertColumn(dive, cur, "log_speed_max", maxSpeed, "FLOAT")
+
+    insertColumn(dive, cur, "log_TGT_NAME", nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8"), "TEXT")
+
+    [lat, lon] = list(
+        map(float, nci.variables["log_TGT_LATLONG"][:].tobytes().decode("utf-8").split(","))
+    )
+    insertColumn(dive, cur, "log_TGT_LAT", ddmm2dd(lat), "FLOAT")
+    insertColumn(dive, cur, "log_TGT_LON", ddmm2dd(lon), "FLOAT")
 
     [v10, ah10] = list(
         map(float, nci.variables["log_10V_AH"][:].tobytes().decode("utf-8").split(","))
