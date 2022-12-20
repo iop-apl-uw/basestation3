@@ -824,6 +824,7 @@ global_options_dict = {
         str,
         {
             "help": "Which dive plots to produce",
+            "nargs": "*",
             "section": "plotting",
             "choices": list(Plotting.dive_plot_funcs.keys()),
             "option_group": "plotting",
@@ -839,6 +840,7 @@ global_options_dict = {
         str,
         {
             "help": "Which mission plots to produce",
+            "nargs": "*",
             "section": "plotting",
             "choices": list(Plotting.mission_plot_funcs.keys()),
             "option_group": "plotting",

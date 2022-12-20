@@ -34,6 +34,7 @@ import typing
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
     import BaseOpts
+    import scipy
 
 from BaseLog import log_error, log_info
 
@@ -42,7 +43,7 @@ mission_plot_funcs = {}
 
 # pylint: disable=unused-argument
 def plot_dive_single(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file_name: str
+    base_opts: BaseOpts.BaseOptions, dive_nc_file_name: scipy.io._netcdf.netcdf_file
 ) -> tuple[list, list]:
     """Signature for per-dive plotting routines"""
     return ([], [])
@@ -102,6 +103,23 @@ def plotmissionsingle(func):
 # pylint: disable=wrong-import-position
 
 # Per-dive plotting routines
+from . import DivePlot
+from . import DiveCOG
+from . import DiveCTW
+from . import DiveOptode
+from . import DiveWetlabs
+from . import DiveOCR504i
+from . import DiveCTD
+from . import DiveTS
+from . import DiveTMICL
+from . import DivePMAR
+from . import DiveCompassCompare
+from . import DiveLegatoPressure
+from . import DiveLegatoData
+from . import DiveLegatoCorrections
+from . import DiveVertVelocity
+from . import DivePitchRoll
+from . import DiveMagCal
 
 # Whole mission plotting routines
 from . import MissionEnergy

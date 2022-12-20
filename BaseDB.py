@@ -37,7 +37,9 @@ import math
 import numpy
 
 import BaseOpts
+import BasePlot
 import CommLog
+import PlotUtils
 import Utils
 
 from BaseLog import (
@@ -46,7 +48,6 @@ from BaseLog import (
     log_critical,
     log_error,
     log_debug,
-    log_warning,
 )
 
 DEBUG_PDB = "darwin" in sys.platform
@@ -76,7 +77,12 @@ def loadFileToDB(cur, filename):
     """Process single netcdf file into the database"""
     gpsVars = [ "time", "lat", "lon", "magvar", "hdop", "first_fix_time", "final_fix_time" ]
 
-    nci = Utils.open_netcdf_file(filename)
+    try:
+        nci = Utils.open_netcdf_file(filename)
+    except:
+        log_error(f"Could not open {filename} - bailing out", "exc")
+        return
+
     dive = nci.variables["log_DIVE"].getValue()
     cur.execute(f"DELETE FROM dives WHERE dive={dive};")
     cur.execute(f"INSERT INTO dives(dive) VALUES({dive});")
@@ -389,7 +395,15 @@ def loadFileToDB(cur, filename):
         log_error("Failed to add SENSOR/DEVICE power use", "exc")
 
 
-def rebuildDB(base_opts):
+def updateDBFromPlots(base_opts, ncfs):
+    """Update the database with the output of plotting routines that generate db columns"""
+
+    base_opts.dive_plots = ["plot_vert_vel", "plot_pitch_roll"]
+    dive_plots_dict = BasePlot.get_dive_plots(base_opts)
+    BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs)
+
+
+def rebuildDB(base_opts, from_cli=False):
     """Rebuild the database from scratch"""
     # glider = os.path.basename()
     # sg = int(glider[2:])
@@ -413,9 +427,11 @@ def rebuildDB(base_opts):
         for filename in ncfs:
             loadFileToDB(cur, filename)
         cur.close()
+    if from_cli:
+        updateDBFromPlots(base_opts, ncfs)
 
 
-def loadDB(base_opts, filename):
+def loadDB(base_opts, filename, from_cli=False):
     """Load a single netcdf file into the database"""
     db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     log_info("Loading %s to %s" % (filename, db))
@@ -424,6 +440,8 @@ def loadDB(base_opts, filename):
         cur = con.cursor()
         loadFileToDB(cur, filename)
         cur.close()
+    if from_cli:
+        updateDBFromPlots(base_opts, [filename])
 
 
 def addValToDB(base_opts, dive_num, var_n, val):
@@ -530,12 +548,17 @@ def main():
             log_error("Can't figure out the instrument id - bailing out")
             return
 
+    if PlotUtils.setup_plot_directory(base_opts):
+        log_warning(
+            "Could not setup plots directory - plotting contributions will not be added"
+        )
+
     if base_opts.subparser_name == "addncfs":
         if base_opts.netcdf_files:
             for ncf in base_opts.netcdf_files:
-                loadDB(base_opts, ncf)
+                loadDB(base_opts, ncf, from_cli=True)
         else:
-            rebuildDB(base_opts)
+            rebuildDB(base_opts, from_cli=True)
     elif base_opts.subparser_name == "addval":
         addValToDB(base_opts, base_opts.dive_num, base_opts.value_name, base_opts.value)
     else:

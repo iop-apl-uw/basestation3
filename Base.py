@@ -1528,6 +1528,9 @@ def main():
         )
         return 1
 
+    if PlotUtils.setup_plot_directory(base_opts):
+        log_error("Failed to setup plot directory - not plots being generated")
+
     if base_opts.daemon:
         if Daemon.createDaemon(base_opts.mission_dir, False):
             log_error("Could not launch as a daemon - continuing synchronously")
@@ -2224,13 +2227,10 @@ def main():
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Per-dive plotting
-    if PlotUtils.setup_plot_directory(base_opts):
-        log_error("Failed to setup plot directory - not plots being generated")
-    else:
-        plot_dict = BasePlot.get_dive_plots(base_opts)
-        _, output_files = BasePlot.plot_dives(base_opts, plot_dict, nc_files_created)
-        for output_file in output_files:
-            processed_other_files.append(output_file)
+    plot_dict = BasePlot.get_dive_plots(base_opts)
+    _, output_files = BasePlot.plot_dives(base_opts, plot_dict, nc_files_created)
+    for output_file in output_files:
+        processed_other_files.append(output_file)
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
@@ -2317,16 +2317,11 @@ def main():
             processed_file_names = Utils.flatten(processed_file_names)
 
             # Whole mission plotting
-            if PlotUtils.setup_plot_directory(base_opts):
-                log_error("Failed to setup plot directory - not plots being generated")
-            else:
-                mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
-                plot_dict = BasePlot.get_mission_plots(base_opts)
-                _, output_files = BasePlot.plot_mission(
-                    base_opts, plot_dict, mission_str
-                )
-                for output_file in output_files:
-                    processed_other_files.append(output_file)
+            mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
+            plot_dict = BasePlot.get_mission_plots(base_opts)
+            _, output_files = BasePlot.plot_mission(base_opts, plot_dict, mission_str)
+            for output_file in output_files:
+                processed_other_files.append(output_file)
 
             # Invoke extensions, if any
             BaseDotFiles.process_extensions(

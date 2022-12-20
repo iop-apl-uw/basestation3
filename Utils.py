@@ -47,9 +47,7 @@ import typing
 import gsw
 import seawater
 
-from scipy.io import netcdf_file
 import numpy as np
-import scipy.interpolate
 import scipy
 
 import Globals
@@ -62,13 +60,16 @@ if typing.TYPE_CHECKING:
 from BaseLog import log_debug, log_error, log_warning, log_info, log_critical
 
 
-def open_netcdf_file(filename, mode="r", version=1):
+def open_netcdf_file(
+    filename: str, mode="r", version=1
+) -> scipy.io._netcdf.netcdf_file:
     """A wrapper to handle the fact that mmap does not work on Mac OSX
     Running under Darwin sometimes yields 'Error 24: Too many open files', which is nonsense
     mmap=None says use mmap if you can
     """
     # return netcdf.netcdf_file(filename,mode,mmap=False if sys.platform == 'darwin' else mmap, version=version)
-    return netcdf_file(filename, mode, mmap=False, version=version)
+    # pylint: disable=protected-access
+    return scipy.io._netcdf.netcdf_file(filename, mode, mmap=False, version=version)
 
 
 col_ncmeta_map_type = collections.namedtuple(
@@ -1615,3 +1616,31 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
         log_error(f"{db} does not exist")
         return None
     return sqlite3.connect(db)
+
+
+def extract_calib_consts(dive_nc_file):
+    """Extracts the calibration constants from the netCDF file
+
+    Input:
+    dive_nc_file - Open dive netcdf file
+
+    Returns:
+    calib_consts - calibration constants dictionary
+    """
+
+    calib_consts = {}
+
+    sgc_var = re.compile(f"^{BaseNetCDF.nc_sg_cal_prefix}")
+
+    for (dive_nc_varname, nc_var) in list(dive_nc_file.variables.items()):
+        nc_is_scalar = len(nc_var.shape) == 0  # treat strings as scalars
+        if sgc_var.search(dive_nc_varname):
+            _, variable = sgc_var.split(dive_nc_varname)
+            if nc_is_scalar:
+                calib_consts[variable] = nc_var.getValue()
+            else:  # nc_string
+                calib_consts[variable] = (
+                    nc_var[:].tobytes().decode("utf-8")
+                )  # string comments
+
+    return calib_consts

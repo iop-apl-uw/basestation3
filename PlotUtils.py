@@ -25,13 +25,23 @@
 """ Utility functions for plotting routines
 """
 
-import os
-import time
-import stat
-import sys
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
 
-import BaseOpts
-from BaseLog import log_error
+import collections
+import os
+import stat
+import time
+import typing
+
+import numpy as np
+import scipy
+
+# pylint: disable=wrong-import-position
+if typing.TYPE_CHECKING:
+    import BaseOpts
+
+from BaseLog import log_error, log_warning
 
 # Plotting configuration
 # make_plot_section = "makeplot"
@@ -146,3 +156,223 @@ def setup_plot_directory(base_opts: BaseOpts.BaseOptions) -> int:
             log_error(f"Could not create {base_opts.plot_directory}", "exc")
             return 1
     return 0
+
+
+def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
+    """
+    Motor positions returned contain positions at all times from the GC table, plus locations
+    interpolated from the those positions onto the engineering file time grid.  This is a good
+    for plotly based plotting code, but does not accurately where motors may have been between
+    GC reported positions.
+    """
+    gc_moves = []
+
+    # Figure it out from the actual moves
+    start_time = ncf.start_time
+    gc_st_secs = ncf.variables["gc_st_secs"][:]
+    gc_end_secs = ncf.variables["gc_end_secs"][:]
+    gc_vbd_secs = ncf.variables["gc_vbd_secs"][:]
+    gc_pitch_secs = ncf.variables["gc_pitch_secs"][:]
+    gc_roll_secs = ncf.variables["gc_roll_secs"][:]
+    if "gc_gcphase" in ncf.variables:
+        gc_phase = ncf.variables["gc_gcphase"][:]
+    elif "gc_flags" in ncf.variables:
+        gc_phase = ncf.variables["gc_flags"][:]
+    else:
+        log_error(
+            "Could not find gc_gcphase or gc_flags in netcdf file - skipping gcphase/flags in plots"
+        )
+        return None
+
+    gc_roll_pos = np.concatenate(
+        (ncf.variables["gc_roll_ad_start"][:], ncf.variables["gc_roll_ad"][:])
+    )
+
+    gc_pitch_pos = np.concatenate(
+        (ncf.variables["gc_pitch_ad_start"][:], ncf.variables["gc_pitch_ad"][:])
+    )
+
+    if "gc_vbd_ad_start" in ncf.variables:
+        # RevE
+        vbd_start = ncf.variables["gc_vbd_ad_start"][:]
+    else:
+        # Recent RevB
+        pot1 = ncf.variables["gc_vbd_pot1_ad_start"][:]
+        pot2 = ncf.variables["gc_vbd_pot2_ad_start"][:]
+        vbd_start = np.zeros(np.size(pot1))
+        for ii in range(np.size(vbd_start)):
+            vbd_start[ii] = np.nanmean((pot1[ii], pot2[ii]))
+    gc_vbd_pos = np.concatenate((vbd_start, ncf.variables["gc_vbd_ad"][:]))
+
+    gc_time = np.concatenate(
+        (
+            (gc_st_secs - start_time),
+            (gc_end_secs - start_time),
+        )
+    )
+
+    sort_i = np.argsort(gc_time)
+    gc_time = gc_time[sort_i]
+    gc_roll_pos = gc_roll_pos[sort_i]
+    gc_pitch_pos = gc_pitch_pos[sort_i]
+    gc_vbd_pos = gc_vbd_pos[sort_i]
+    gc_roll_time = np.copy(gc_time)
+    gc_pitch_time = np.copy(gc_time)
+    gc_vbd_time = np.copy(gc_time)
+
+    for ii in range(len(gc_st_secs)):
+        g_autonomous_turning = gc_phase[ii] & 1024
+        if g_autonomous_turning:
+            motors = [
+                ("roll", gc_roll_secs[ii]),
+                ("pitch", gc_pitch_secs[ii]),
+                ("vbd", gc_vbd_secs[ii]),
+            ]
+        else:
+            motors = [
+                ("pitch", gc_pitch_secs[ii]),
+                ("vbd", gc_vbd_secs[ii]),
+                ("roll", gc_roll_secs[ii]),
+            ]
+        st = gc_st_secs[ii] - ncf.start_time
+        for m in motors:
+            if m[1] > 0.0:
+                if m[0] == "vbd":
+                    gc_moves.append(gc_move(st, st + m[1], 1))
+                    gc_vbd_time[ii * 2] = st
+                    gc_vbd_time[(ii * 2) + 1] = st + m[1]
+                elif m[0] == "pitch":
+                    gc_moves.append(gc_move(st, st + m[1], 2))
+                    gc_pitch_time[ii * 2] = st
+                    gc_pitch_time[(ii * 2) + 1] = st + m[1]
+                elif m[0] == "roll":
+                    gc_moves.append(gc_move(st, st + m[1], 4))
+                    gc_roll_time[ii * 2] = st
+                    gc_roll_time[(ii * 2) + 1] = st + m[1]
+
+                st += m[1]
+
+    # Convert Roll to engineering units
+    gc_state_state = ncf.variables["gc_state_state"][:]
+    gc_state_time = ncf.variables["gc_state_secs"][:]
+    # 1 is the code for 'end dive'
+    gc_dive_end = gc_state_time[np.argwhere(gc_state_state == 1)[0]][0]
+    roll_ctr = np.zeros(len(gc_roll_pos))
+    roll_ctr[np.argwhere(gc_roll_time <= gc_dive_end)] = ncf.variables[
+        "log_C_ROLL_DIVE"
+    ].getValue()
+    roll_ctr[np.argwhere(gc_roll_time > gc_dive_end)] = ncf.variables[
+        "log_C_ROLL_CLIMB"
+    ].getValue()
+    gc_roll_pos = (gc_roll_pos - roll_ctr) * ncf.variables["log_ROLL_CNV"].getValue()
+
+    # Convert pitch to eng units
+    gc_pitch_pos = (
+        gc_pitch_pos - ncf.variables["log_C_PITCH"].getValue()
+    ) * ncf.variables["log_PITCH_CNV"].getValue()
+
+    # Convert VBD to eng units
+    gc_vbd_pos = (gc_vbd_pos - ncf.variables["log_C_VBD"].getValue()) * ncf.variables[
+        "log_VBD_CNV"
+    ].getValue()
+
+    eng_time = ncf.variables["time"][:] - ncf.start_time
+
+    def build_dense_motor_vector(motor_pos, motor_time, eng_time):
+        """
+        Creates dense motor position and time vectors that are all gc reported
+        positions, plus interpolated values for the engieering file times
+        """
+        try:
+            f = scipy.interpolate.interp1d(
+                motor_time,
+                motor_pos,
+                kind="previous",
+                bounds_error=False,
+                # fill_value=0.0,
+                fill_value=(motor_pos[0], motor_pos[-1]),
+            )
+        except NotImplementedError:
+            log_warning(
+                "Interp1d does not impliment kind previous - failing back to linear"
+            )
+            f = scipy.interpolate.interp1d(
+                motor_time, motor_pos, kind="linear", bounds_error=False, fill_value=0.0
+            )
+        motor_pos = np.concatenate((motor_pos, f(eng_time)))
+        motor_time = np.concatenate((motor_time, eng_time))
+        sort_i = np.argsort(motor_time)
+        motor_pos = motor_pos[sort_i]
+        motor_time = motor_time[sort_i]
+        return (motor_pos, motor_time)
+
+    roll_pos, roll_time = build_dense_motor_vector(gc_roll_pos, gc_roll_time, eng_time)
+    pitch_pos, pitch_time = build_dense_motor_vector(
+        gc_pitch_pos, gc_pitch_time, eng_time
+    )
+    vbd_pos, vbd_time = build_dense_motor_vector(gc_vbd_pos, gc_vbd_time, eng_time)
+
+    return (gc_moves, roll_time, roll_pos, pitch_time, pitch_pos, vbd_time, vbd_pos)
+
+
+def add_gc_moves(
+    fig,
+    gc_moves,
+    data,
+    xaxis="x1",
+    yaxis="y1",
+):
+    """Add the gc move regions to a figure"""
+    show_label = collections.defaultdict(lambda: True)
+    for gc in gc_moves:
+        fig.add_trace(
+            {
+                "type": "scatter",
+                "x": (
+                    gc.start_time,
+                    gc.start_time,
+                    gc.end_time,
+                    gc.end_time,
+                ),
+                "y": (
+                    np.nanmin(data),
+                    np.nanmax(data),
+                    np.nanmax(data),
+                    np.nanmin(data),
+                ),
+                "xaxis": xaxis,
+                "yaxis": yaxis,
+                "fill": "toself",
+                "fillcolor": gc_move_colormap[gc[2]].color,
+                "line": {
+                    "dash": "solid",
+                    "color": gc_move_colormap[gc[2]].color,
+                },
+                "mode": "none",  # no outter lines and ponts
+                "legendgroup": f"{gc_move_colormap[gc[2]].name}_group",
+                "name": f"GC {gc_move_colormap[gc[2]].name}",
+                "showlegend": show_label[gc_move_colormap[gc[2]].name],
+                "text": f"GC {gc_move_colormap[gc[2]].name}, Start {gc[0] / 60.0:.2f}mins, End {gc[1] / 60.0:.2f}mins",
+                "hoverinfo": "text",
+            }
+        )
+        show_label[gc_move_colormap[gc[2]].name] = False
+
+
+gc_move_color = collections.namedtuple("gc_movecolor", ("color", "name"))
+gc_move_colormap = {
+    1: gc_move_color("rgba(255, 0, 255, 0.25)", "VBD"),  # Magenta
+    2: gc_move_color("rgba(0, 128, 0, 0.25)", "Pitch"),  # Green
+    3: gc_move_color("rgba(0, 0, 255, 0.25)", "VBD/Pitch"),  # Blue
+    4: gc_move_color("rgba(218, 165, 32, 0.40)", "Roll"),  # Goldenrod
+    5: gc_move_color("rgba(255, 0, 0, 0.25)", "VBD/Roll"),  # Red
+    6: gc_move_color("rgba(0, 128, 0, 0.25)", "Pitch/Roll"),  # Green
+    7: gc_move_color("rgba(0, 0, 0, 0.25)", "VBD/Pitch/Roll"),  # Black
+}
+
+motor_move = collections.namedtuple("motor_move", ["name", "units"])
+
+gc_move = collections.namedtuple("gc_move", ["start_time", "end_time", "move_type"])
+gc_move_depth = collections.namedtuple(
+    "gc_move_depth", ["start_depth", "end_depth", "move_type"]
+)

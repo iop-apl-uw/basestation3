@@ -23,12 +23,16 @@
 ##
 """Routines for driving the individual plotting routines
 """
+# TODO: This can be removed as of python 3.11
+from __future__ import annotations
+
 import cProfile
 import os
 import pdb
 import pstats
 import sys
 import time
+import typing
 import traceback
 import warnings
 
@@ -42,7 +46,7 @@ import Plotting
 import PlotUtils
 import Utils
 
-from BaseLog import BaseLogger, log_error, log_info, log_critical
+from BaseLog import BaseLogger, log_error, log_info, log_critical, log_debug
 from CalibConst import getSGCalibrationConstants
 
 DEBUG_PDB = "darwin" in sys.platform
@@ -78,8 +82,10 @@ def plot_dives(
     output_files = []
     for dive_nc_file_name in dive_nc_file_names:
         for plot_name, plot_func in dive_plot_dict.items():
+            log_debug(f"Trying Dive Plot :{plot_name}")
             try:
-                fig_list, file_list = plot_func(base_opts, dive_nc_file_name)
+                dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
+                fig_list, file_list = plot_func(base_opts, dive_ncf)
             except:
                 log_error(f"{plot_name} failed {dive_nc_file_name}", "exc")
             else:
@@ -107,6 +113,7 @@ def plot_mission(
     figs = []
     output_files = []
     for plot_name, plot_func in mission_plot_dict.items():
+        log_debug(f"Trying Mission Plot :{plot_name}")
         try:
             fig_list, file_list = plot_func(base_opts, mission_str)
         except:
@@ -212,13 +219,12 @@ def main():
                 dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(
                     base_opts
                 )
+            else:
                 dive_nc_file_names = []
                 for ncf_file_name in base_opts.netcdf_files:
                     dive_nc_file_names.append(
                         os.path.join(base_opts.mission_dir, ncf_file_name)
                     )
-            else:
-                dive_nc_file_names = base_opts.netcdf_files
             plot_dict = get_dive_plots(base_opts)
             plot_dives(base_opts, plot_dict, dive_nc_file_names)
         elif plot_type == "mission":
