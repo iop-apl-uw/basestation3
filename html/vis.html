@@ -285,7 +285,7 @@
     }
 
     function popupPlotly(which, dive, elt) {
-        window.open('/div/' + which + '/' + currGlider + '/' + dive + '/' + elt + mission(), '_blank');
+        window.open('/div/' + which + '/' + currGlider + '/' + dive + '/' + elt + mission(), `${currGlider}-${dive}-${elt}`);
     }
 
     function popupSelftest() {
