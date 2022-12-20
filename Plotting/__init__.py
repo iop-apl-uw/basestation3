@@ -114,6 +114,9 @@ from . import DiveTS
 from . import DiveTMICL
 from . import DivePMAR
 from . import DiveCompassCompare
+from . import DiveLegatoPressure
+from . import DiveLegatoData
+from . import DiveLegatoCorrections
 from . import DiveVertVelocity
 from . import DivePitchRoll
 from . import DiveMagCal
