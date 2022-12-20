@@ -3,7 +3,16 @@ function $(x) {
 }
 
 Number.prototype.zeroPad = function() {
-    return ('0'+this).slice(-2);
+    let t = '' + this;
+    if (t.length > 2 && this > 0)
+        return t;
+    else if (t.length > 3 && this < 0)
+        return t;
+
+    if (this > 0)
+        return ('0'+this).slice(-2);
+    else
+        return ('-0'+this).slice(-2);
 }
 
 function bearing(pt1, pt2) {
@@ -56,6 +65,12 @@ function ddmm2dd(ddmm) {
     return deg + min/60;
 }
 
+function dd2ddmm(dd) {
+    var deg = Math.trunc(dd);
+    var min = (dd - deg)*60;
+    
+    return deg*100 + min;
+}
 
 function commGPSParser(d) {
     var p = {};

@@ -33,7 +33,7 @@ import sqlite3
 import sys
 import time
 import traceback
-
+import math
 import numpy
 
 import BaseOpts
@@ -63,9 +63,12 @@ def insertColumn(dive, cur, col, val, db_type):
     except:
         pass
 
+
     if db_type == "TEXT":
         cur.execute(f"UPDATE dives SET {col} = '{val}' WHERE dive={dive};")
     else:
+        if math.isnan(val):
+            val = 'NULL'
         cur.execute(f"UPDATE dives SET {col} = {val} WHERE dive={dive};")
 
 
@@ -92,8 +95,11 @@ def loadFileToDB(cur, filename):
 
     nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(",")
 
-    dep_mx = numpy.nanmax(nci.variables["depth"][:])
-    insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
+    if 'depth' in nci.variables:
+        dep_mx = numpy.nanmax(nci.variables["depth"][:])
+        insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
+    else:
+        print(filename)
 
     # Last state time is begin surface
     insertColumn(
@@ -111,21 +117,22 @@ def loadFileToDB(cur, filename):
         "FLOAT",
     )
 
-    i = numpy.where(
-        nci.variables["eng_elaps_t"][:]
-        < nci.variables["start_of_climb_time"].getValue()
-    )
-    pi_div = numpy.nanmean(nci.variables["eng_pitchAng"][i])
-    ro_div = numpy.nanmean(nci.variables["eng_rollAng"][i])
+    if "start_of_climb_time" in nci.variables:
+        i = numpy.where(
+            nci.variables["eng_elaps_t"][:]
+            < nci.variables["start_of_climb_time"].getValue()
+        )
+        pi_div = numpy.nanmean(nci.variables["eng_pitchAng"][i])
+        ro_div = numpy.nanmean(nci.variables["eng_rollAng"][i])
 
-    i = numpy.where(
-        nci.variables["eng_elaps_t"][:]
-        > nci.variables["start_of_climb_time"].getValue()
-    )
-    pi_clm = numpy.nanmean(nci.variables["eng_pitchAng"][i])
-    ro_clm = numpy.nanmean(nci.variables["eng_rollAng"][i])
-    insertColumn(dive, cur, "pitch_dive", pi_div, "FLOAT")
-    insertColumn(dive, cur, "pitch_climb", pi_clm, "FLOAT")
+        i = numpy.where(
+            nci.variables["eng_elaps_t"][:]
+            > nci.variables["start_of_climb_time"].getValue()
+        )
+        pi_clm = numpy.nanmean(nci.variables["eng_pitchAng"][i])
+        ro_clm = numpy.nanmean(nci.variables["eng_rollAng"][i])
+        insertColumn(dive, cur, "pitch_dive", pi_div, "FLOAT")
+        insertColumn(dive, cur, "pitch_climb", pi_clm, "FLOAT")
 
     errors_line = nci.variables["log_ERRORS"][:].tobytes().decode("utf-8").split(",")
     if len(errors_line) == 16:
@@ -389,6 +396,7 @@ def rebuildDB(base_opts):
     # db = path + "/" + glider + ".db"
     db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     log_info("rebuilding %s" % db)
+    
     con = sqlite3.connect(db)
     with con:
         cur = con.cursor()

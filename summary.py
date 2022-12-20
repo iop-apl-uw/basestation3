@@ -59,7 +59,6 @@ def collectSummary(dbfile, commlog, cmdfile):
         cur = conn.cursor()
         cur.execute("SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon FROM dives ORDER BY dive DESC LIMIT 1")
         data = dict(cur.fetchall()[0])
-        print(data)
 
     conn.close()
 
@@ -95,6 +94,8 @@ def collectSummary(dbfile, commlog, cmdfile):
     out['dtg'] = dtg2
     out['dogEfficiency'] = dmg/bestDOG
 
+    out['vbdEfficiency'] = 0
+
     out['mtime']    = mtime
     out['connect']  = connect_t
     out['depth']    = data['max_depth']
@@ -105,6 +106,7 @@ def collectSummary(dbfile, commlog, cmdfile):
     out['volts']    = [ data['batt_volts_10V'], data['batt_volts_24V'] ] 
     out['capacity'] = [ data['batt_capacity_10V'], data['batt_capacity_24V'] ]
     out['errors']   = data['error_count']
+    out['alerts']   = 0
     out['commDirective'] = directive
     out['cmdfileDirective'] = cmdfileDirective
 

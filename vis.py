@@ -14,6 +14,7 @@ import tempfile
 import subprocess
 import sys
 import LogHTML
+import summary
 import ExtractBinnedProfiles
 import ExtractTimeseries
 from zipfile import ZipFile
@@ -53,6 +54,7 @@ def gliderPath(glider, request):
 
 app.static('/favicon.ico', f'{sys.path[0]}/html/favicon.ico', name='favicon.ico')
 app.static('/parms', f'{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
+app.static('/index', f'{sys.path[0]}/html/index.html', name='index')
 app.static('/script', f'{sys.path[0]}/scripts', name='script')
 app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
 
@@ -99,7 +101,7 @@ async def divHandler(request, which: str, glider: int, dive: int, image: str):
         return sanic.response.html(resp)
     else:
         return sanic.response.text('not found', status=404)
-        
+       
 @app.route('/<glider:int>')
 async def mainHandler(request, glider:int):
     filename = f'{gliderPath(glider,request)}/comm.log'
@@ -220,7 +222,29 @@ async def deltasHandler(request, glider: int, dive: int):
             message['file'].append({ "file": f, "contents":c }) 
 
     return sanic.response.json(message)
+
+@app.route('/optable/<mask:int>')
+async def optableHandler(request, mask:int):
+    t = []
+    with open('ops.dat', 'r') as file:
+        for line in file:
+            pieces = line.strip().split('/')
+            if len(pieces) == 1:
+                t.append({"mission": '', "glider": pieces[0][2:]})
+            else: 
+                t.append({"mission": pieces[1], "glider": pieces[0][2:]})
+
+    return sanic.response.json(t)
  
+@app.route('/summary/<glider:int>')
+async def summaryHandler(request, glider:int):
+    commlog = f'{gliderPath(glider,request)}/comm.log'
+    cmdfile = f'{gliderPath(glider,request)}/cmdfile'
+    dbfile  = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+    msg = summary.collectSummary(dbfile, commlog, cmdfile)
+    return sanic.response.json(msg)
+
+# this does setup so should only be used once-ish
 @app.route('/status/<glider:int>')
 async def statusHandler(request, glider:int):
     if glider in commFile and commFile[glider]:
