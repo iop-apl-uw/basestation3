@@ -6,11 +6,12 @@
 
     .tile {
         width: 300px;
-        height: 400px;
+        height: 420px;
         border: 1px solid black;
         margin-left: 10px;
         margin-top: 10px;
         float: left;
+        padding: 4px;
     }
 
     .header {
@@ -35,7 +36,7 @@
 
     .indicator {
         border: 1px solid black;
-        margin-left: 5px;
+        margin-right: 5px;
         text-align: center;
         width: 60px;
     }
@@ -319,7 +320,7 @@
 
             img = document.createElement('img');
             img.src = '/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
-            img.style = "top: 0; width:270px; mix-blend-mode:multiply;"
+            img.style = "top: 0; width:290px; mix-blend-mode:multiply;"
      
             t.appendChild(img);
         })
