@@ -54,7 +54,7 @@
 
     .chart span {
         margin-left: 2px;
-        color: #fff;
+        color: #555;
         font-weight: bolder;
     }
 
@@ -168,12 +168,14 @@
     }
 
     function createTile(glider, t) {
+        const colors = { "GO": "green", "QUIT": "red", "RESUME": "yellow" };
         fetch(`/summary/${glider.glider}${mission(glider)}`)
         .then(res => res.json())
         .then(data => {
             t.classList.add('tile');
             t.onclick = function() { window.open(`/${data.name}${mission(glider)}`, `${data.name}`); };
 
+            var color1, color2;
             var h, txt, box, barBatt, chartBatt, spanBatt, header;
             var barNext, chartNext, spanNex;
             if (glider.mission == '')
@@ -191,6 +193,13 @@
             txt = document.createElement('div');
             let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
             txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
+            t.appendChild(txt);
+
+            txt = document.createElement('div');
+            color1 = colors[data.commDirective];
+            color2 = colors[data.cmdfileDirective];
+
+            txt.innerHTML = `parsed <span style="color:${color1};">${data.commDirective}</span>, waiting <span style="color:${color2};">${data.cmdfileDirective}</span>`
             t.appendChild(txt);
 
             box = document.createElement('div');
@@ -327,21 +336,31 @@
         if (params.has('plot'))
             plotWhich = params.get('plot');
 
-        clearTiles();
+        clearTiles('main');
         nextGauges = [];
 
         fetch(`/optable/1`)
         .then(res => res.json())
         .then(data => {
-            var glider;
+            var glider, t;
             for (g of data) {
                 glider = { glider: g.glider, mission: g.mission };
 
                 // create div and append as blank to main
                 // so that we can control the order independently
                 // of when then individual /summary fetches arrive
-                let t = document.createElement('div');
-                $('main').appendChild(t);
+
+                // this tile probably never exists here in loadTable
+                if ($(`${g.glider}`)) {
+                    console.log('tile exists, clearing');
+                    clearTiles(`${g.glider}`);
+                    t = $(`${g.glider}`);
+                }
+                else {
+                    t = document.createElement('div');
+                    t.id = `${g.glider}`
+                    $('main').appendChild(t);
+                }
                 createTile(glider, t);
             }
 
@@ -357,9 +376,9 @@
 
     }
 
-    function clearTiles() {
-        while($('main').firstChild) {
-            $('main').removeChild($('main').firstChild);
+    function clearTiles(parent) {
+        while($(parent).firstChild) {
+            $(parent).removeChild($(parent).firstChild);
         }
     }
 
