@@ -189,8 +189,8 @@
 
 
             txt = document.createElement('div');
-            let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-4);
-            txt.innerHTML = `dive ${data.dive} ended ${end_t}`;
+            let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
+            txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
             t.appendChild(txt);
 
             box = document.createElement('div');
