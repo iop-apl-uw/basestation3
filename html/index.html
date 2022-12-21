@@ -5,6 +5,7 @@
     }
 
     .tile {
+        background: #bbbbbb;
         width: 300px;
         height: 420px;
         border: 1px solid black;
@@ -35,10 +36,11 @@
     }
 
     .indicator {
-        border: 1px solid black;
+        border: 2px solid black;
         margin-right: 5px;
         text-align: center;
-        width: 60px;
+        width: 50px;
+        border-radius: 8px;
     }
 
     .chart {
@@ -270,21 +272,25 @@
             
             setPlusMinusBar(chartNext.id, barNext.id, spanNext.id, next/28800.0, `${nextHour.zeroPad()}:${nextMin.zeroPad()}`);
 
+            // annunciators
             box = document.createElement('div');
             box.classList.add('box');
+
+            // errors
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `errors<br>${data.errors}`;
+            h.innerHTML = `errors<br>${data.errors + data.crits}`;
             if (data.errors > 0) 
                 h.style.backgroundColor = 'red';
             else
                 h.style.backgroundColor = '';
             box.appendChild(h);
 
+            // alerts
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `alerts<br>${data.alerts}`;
-            if (data.alerts > 0)
+            h.innerHTML = `alerts<br>${data.alert ? 'Y' : 'N'}`;
+            if (data.alert > 0)
                 h.style.backgroundColor = 'yellow';
             else
                 h.style.backgroundColor = '';
@@ -294,7 +300,7 @@
            
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `OG effic.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
+            h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
             if (data.dogEfficiency < 0.25)
                 h.style.backgroundColor = 'red';
             else if (data.dogEfficiency < 0.5)
@@ -306,7 +312,7 @@
 
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `VBD effic.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
+            h.innerHTML = `VBD eff.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
             if (data.vbdEfficiency < 0.25)
                 h.style.backgroundColor = 'red';
             else if (data.dogEfficiency < 0.4)
@@ -320,7 +326,7 @@
 
             img = document.createElement('img');
             img.src = '/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
-            img.style = "top: 0; width:290px; mix-blend-mode:multiply;"
+            img.style = "top: 0; width:290px; max-height:240px; mix-blend-mode:multiply;"
      
             t.appendChild(img);
         })
@@ -332,7 +338,7 @@
 
     function loadTable() {
         window.name = 'index';
-
+        document.title = 'index';
         let params = new URLSearchParams(window.location.search);
         if (params.has('plot'))
             plotWhich = params.get('plot');

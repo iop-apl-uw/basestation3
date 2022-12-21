@@ -238,10 +238,7 @@ async def optableHandler(request, mask:int):
  
 @app.route('/summary/<glider:int>')
 async def summaryHandler(request, glider:int):
-    commlog = f'{gliderPath(glider,request)}/comm.log'
-    cmdfile = f'{gliderPath(glider,request)}/cmdfile'
-    dbfile  = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-    msg = summary.collectSummary(dbfile, commlog, cmdfile)
+    msg = summary.collectSummary(glider, gliderPath(glider,request))
     return sanic.response.json(msg)
 
 # this does setup so should only be used once-ish
