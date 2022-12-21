@@ -155,7 +155,7 @@ def mission_motors(
             },
             "margin": {
                 "t": 100,
-                "b": 125,
+                "b": 25,
             },
         })
 
@@ -231,7 +231,7 @@ def mission_motors(
             },
             "margin": {
                 "t": 100,
-                "b": 125,
+                "b": 25,
             },
         })
 
@@ -280,7 +280,7 @@ def mission_motors(
             },
             "margin": {
                 "t": 100,
-                "b": 125,
+                "b": 25,
             },
         })
 

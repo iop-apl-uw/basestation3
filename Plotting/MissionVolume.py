@@ -44,7 +44,7 @@ if typing.TYPE_CHECKING:
 import PlotUtilsPlotly
 import Utils
 
-from BaseLog import log_error
+from BaseLog import log_error,log_warning
 from Plotting import plotmissionsingle
 
 
@@ -98,7 +98,7 @@ def mission_volume(
             "SELECT dive,implied_volmax_glider from dives",
             conn,
         ).sort_values("dive")
-    except pd.errors.DatabaseError:
+    except pd.io.sql.DatabaseError:
         log_warning("Could not load implied volmax from the glider estimate", "exc")
 
     flight_df = None
@@ -107,7 +107,7 @@ def mission_volume(
             "SELECT dive,implied_volmax_fm from dives",
             conn,
         ).sort_values("dive")
-    except pd.errors.DatabaseError:
+    except pd.io.sql.DatabaseError:
         log_warning(
             "Could not load implied volmax from the flight model estimate", "exc"
         )
@@ -188,7 +188,7 @@ def mission_volume(
                 "y": 0.95,
             },
             "margin": {
-                "b": 250,
+                "b": 120,
             },
             # "annotations": tuple(l_annotations),
         },
