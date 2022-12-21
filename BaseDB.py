@@ -26,6 +26,7 @@
 """ Add selected data from per-dive netcdf file to the mission sqllite db
 """
 
+import contextlib
 import glob
 import os.path
 import pdb
@@ -38,6 +39,7 @@ import numpy
 
 import BaseOpts
 import BasePlot
+import CalibConst
 import CommLog
 import PlotUtils
 import Utils
@@ -48,6 +50,7 @@ from BaseLog import (
     log_critical,
     log_error,
     log_debug,
+    log_warning,
 )
 
 DEBUG_PDB = "darwin" in sys.platform
@@ -348,6 +351,25 @@ def loadFileToDB(cur, filename):
                     v10 * (pwr_devices_mamps[ii] / 1000.0) * pwr_devices_secs[ii],
                     "FLOAT",
                 )
+        # Estimates for volmax
+        if "log_IMPLIED_C_VBD" in nci.variables:
+            glider_implied_c_vbd = int(
+                nci.variables["log_IMPLIED_C_VBD"][:]
+                .tobytes()
+                .decode("utf-8")
+                .split(",")[0]
+            )
+            mass = nci.variables["log_MASS"].getValue()
+            vbd_min_cnts = nci.variables["log_VBD_MIN"].getValue()
+            vbd_cnts_per_cc = nci.variables["log_VBD_CNV"].getValue()
+            rho0 = nci.variables["log_RHO"].getValue()
+            glider_implied_volmax = (
+                mass / rho0 + (vbd_min_cnts - glider_implied_c_vbd) * vbd_cnts_per_cc
+            )
+            insertColumn(
+                dive, cur, "implied_volmax_glider", glider_implied_volmax, "FLOAT"
+            )
+
     except:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
@@ -362,6 +384,36 @@ def updateDBFromPlots(base_opts, ncfs):
     base_opts.dive_plots = ["plot_vert_vel", "plot_pitch_roll"]
     dive_plots_dict = BasePlot.get_dive_plots(base_opts)
     BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs)
+
+
+def updateDBFromFM(base_opts, ncfs, con):
+    """Update the database with the output of flight model"""
+
+    flight_dir = os.path.join(base_opts.mission_dir, "flight")
+    with con:
+        cur = con.cursor()
+
+        for ncf in ncfs:
+            try:
+                with contextlib.closing(Utils.open_netcdf_file(ncf)) as nci:
+                    fm_file = os.path.join(flight_dir, f"fm_{nci.dive_number:04d}.m")
+                    if not os.path.exists(fm_file):
+                        continue
+                    fm_dict = CalibConst.getSGCalibrationConstants(
+                        fm_file, suppress_required_error=True
+                    )
+                    if "volmax" in fm_dict and "vbdbias" in fm_dict:
+                        fm_volmax = fm_dict["volmax"] - fm_dict["vbdbias"]
+                        insertColumn(
+                            nci.dive_number,
+                            cur,
+                            "implied_volmax_fm",
+                            fm_volmax,
+                            "FLOAT",
+                        )
+            except:
+                log_error(f"Problem opening FM data associated with {ncf}")
+        cur.close()
 
 
 def rebuildDB(base_opts, from_cli=False):
@@ -389,6 +441,7 @@ def rebuildDB(base_opts, from_cli=False):
         cur.close()
     if from_cli:
         updateDBFromPlots(base_opts, ncfs)
+        updateDBFromFM(base_opts, ncfs, con)
 
 
 def loadDB(base_opts, filename, from_cli=False):
@@ -402,6 +455,7 @@ def loadDB(base_opts, filename, from_cli=False):
         cur.close()
     if from_cli:
         updateDBFromPlots(base_opts, [filename])
+        updateDBFromFM(base_opts, [filename], con)
 
 
 def addValToDB(base_opts, dive_num, var_n, val):

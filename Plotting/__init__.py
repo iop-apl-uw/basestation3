@@ -123,3 +123,4 @@ from . import DiveMagCal
 
 # Whole mission plotting routines
 from . import MissionEnergy
+from . import MissionVolume
