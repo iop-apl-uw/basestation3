@@ -83,26 +83,26 @@ def processGC(dive, cur, nci):
         vbd_rate = 0
         vbd_eff = 0
 
-        if i > 0:
-            if nci.variables['gc_roll_secs'][i] > 0:
-                roll_rate = (nci.variables['gc_roll_ad'][i]  \
-                             - nci.variables['gc_roll_ad'][i-1])  \
-                           / nci.variables['gc_roll_secs'][i]
-            if nci.variables['gc_pitch_secs'][i] > 0:
-                pitch_rate = (nci.variables['gc_pitch_ad'][i]  \
-                              - nci.variables['gc_pitch_ad'][i-1])  \
-                           / nci.variables['gc_pitch_secs'][i]
-            if nci.variables['gc_vbd_secs'][i] > 0:
-                vbd_rate = (nci.variables['gc_vbd_ad'][i]  \
-                            - nci.variables['gc_vbd_ad'][i-1])  \
-                           / nci.variables['gc_vbd_secs'][i]
+        if nci.variables['gc_roll_secs'][i] > 0.5:
+            dAD = nci.variables['gc_roll_ad'][i] - nci.variables['gc_roll_ad_start'][i]
+            if math.fabs(dAD) > 2:
+                roll_rate = dAD / nci.variables['gc_roll_secs'][i]
 
-            rate = vbd_rate*nci.variables['log_VBD_CNV'].getValue()
+        if nci.variables['gc_pitch_secs'][i] > 0.5:
+            dAD = nci.variables['gc_pitch_ad'][i] - nci.variables['gc_pitch_ad_start'][i]
+            if math.fabs(dAD) > 2:
+                pitch_rate = dAD / nci.variables['gc_pitch_secs'][i]
 
-            if nci.variables['gc_vbd_i'][i] > 0:
-                vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
+        if nci.variables['gc_vbd_secs'][i] > 0.5:
+            dAD = nci.variables['gc_vbd_ad'][i] - nci.variables['gc_vbd_ad_start'][i]
+            if math.fabs(dAD) > 2:
+                vbd_rate = dAD / nci.variables['gc_vbd_secs'][i]
+                rate = vbd_rate*nci.variables['log_VBD_CNV'].getValue()
 
-        cur.execute(f"INSERT INTO gc(dive," \
+                if rate > 0:
+                    vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
+
+        cur.execute("INSERT INTO gc(dive," \
                                      "st_secs," \
                                      "depth," \
                                      "ob_vertv," \
@@ -134,8 +134,8 @@ def processGC(dive, cur, nci):
                                      "vbd_volts) " \
                               f"VALUES({dive}," \
                                      f"{nci.variables['gc_st_secs'][i]}," \
-                                     f"{nci.variables['gc_ob_vertv'][i]}," \
                                      f"{nci.variables['gc_depth'][i]}," \
+                                     f"{nci.variables['gc_ob_vertv'][i]}," \
                                      f"{nci.variables['gc_end_secs'][i]}," \
                                      f"{nci.variables['gc_flags'][i]}," \
                                      f"{nci.variables['gc_pitch_ctl'][i]}," \
