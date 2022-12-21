@@ -34,7 +34,7 @@ import sqlite3
 import sys
 import time
 import traceback
-
+import math
 import numpy
 
 import BaseOpts
@@ -55,6 +55,10 @@ from BaseLog import (
 
 DEBUG_PDB = "darwin" in sys.platform
 
+def ddmm2dd(x):
+    deg = int(x/100)
+    min = x - deg*100
+    return deg + min/60
 
 def insertColumn(dive, cur, col, val, db_type):
     """Insert the specified column"""
@@ -63,19 +67,115 @@ def insertColumn(dive, cur, col, val, db_type):
     except:
         pass
 
+
     if db_type == "TEXT":
         cur.execute(f"UPDATE dives SET {col} = '{val}' WHERE dive={dive};")
     else:
+        if math.isnan(val):
+            val = 'NULL'
         cur.execute(f"UPDATE dives SET {col} = {val} WHERE dive={dive};")
 
+def processGC(dive, cur, nci):
+    cur.execute("CREATE TABLE IF NOT EXISTS gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
+
+    cur.execute(f"DELETE FROM gc WHERE dive={dive};")
+
+    for i in range(0, nci.dimensions['gc_event']):
+        roll_rate = 0
+        pitch_rate = 0
+        vbd_rate = 0
+        vbd_eff = 0
+
+        if nci.variables['gc_roll_secs'][i] > 0.5:
+            dAD = nci.variables['gc_roll_ad'][i] - nci.variables['gc_roll_ad_start'][i]
+            if math.fabs(dAD) > 2:
+                roll_rate = dAD / nci.variables['gc_roll_secs'][i]
+
+        if nci.variables['gc_pitch_secs'][i] > 0.5:
+            dAD = nci.variables['gc_pitch_ad'][i] - nci.variables['gc_pitch_ad_start'][i]
+            if math.fabs(dAD) > 2:
+                pitch_rate = dAD / nci.variables['gc_pitch_secs'][i]
+
+        if nci.variables['gc_vbd_secs'][i] > 0.5:
+            dAD = nci.variables['gc_vbd_ad'][i] - nci.variables['gc_vbd_ad_start'][i]
+            if math.fabs(dAD) > 2:
+                vbd_rate = dAD / nci.variables['gc_vbd_secs'][i]
+                rate = vbd_rate*nci.variables['log_VBD_CNV'].getValue()
+
+                if rate > 0:
+                    vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
+
+        cur.execute("INSERT INTO gc(dive," \
+                                     "st_secs," \
+                                     "depth," \
+                                     "ob_vertv," \
+                                     "end_secs," \
+                                     "flags," \
+                                     "pitch_ctl," \
+                                     "pitch_secs," \
+                                     "pitch_i," \
+                                     "pitch_ad," \
+                                     "pitch_rate," \
+                                     "roll_ctl," \
+                                     "roll_secs," \
+                                     "roll_i," \
+                                     "roll_ad," \
+                                     "roll_rate," \
+                                     "vbd_ctl," \
+                                     "vbd_secs," \
+                                     "vbd_i," \
+                                     "vbd_ad," \
+                                     "vbd_rate," \
+                                     "vbd_eff," \
+                                     "vbd_pot1_ad," \
+                                     "vbd_pot2_ad," \
+                                     "pitch_errors," \
+                                     "roll_errors," \
+                                     "vbd_errors," \
+                                     "pitch_volts," \
+                                     "roll_volts," \
+                                     "vbd_volts) " \
+                              f"VALUES({dive}," \
+                                     f"{nci.variables['gc_st_secs'][i]}," \
+                                     f"{nci.variables['gc_depth'][i]}," \
+                                     f"{nci.variables['gc_ob_vertv'][i]}," \
+                                     f"{nci.variables['gc_end_secs'][i]}," \
+                                     f"{nci.variables['gc_flags'][i]}," \
+                                     f"{nci.variables['gc_pitch_ctl'][i]}," \
+                                     f"{nci.variables['gc_pitch_secs'][i]}," \
+                                     f"{nci.variables['gc_pitch_i'][i]}," \
+                                     f"{nci.variables['gc_pitch_ad'][i]}," \
+                                     f"{pitch_rate}," \
+                                     f"{nci.variables['gc_roll_ctl'][i]}," \
+                                     f"{nci.variables['gc_roll_secs'][i]}," \
+                                     f"{nci.variables['gc_roll_i'][i]}," \
+                                     f"{nci.variables['gc_roll_ad'][i]}," \
+                                     f"{roll_rate}," \
+                                     f"{nci.variables['gc_vbd_ctl'][i]}," \
+                                     f"{nci.variables['gc_vbd_secs'][i]}," \
+                                     f"{nci.variables['gc_vbd_i'][i]}," \
+                                     f"{nci.variables['gc_vbd_ad'][i]}," \
+                                     f"{vbd_rate}," \
+                                     f"{vbd_eff}," \
+                                     f"{nci.variables['gc_vbd_pot1_ad'][i]}," \
+                                     f"{nci.variables['gc_vbd_pot2_ad'][i]}," \
+                                     f"{nci.variables['gc_pitch_errors'][i]}," \
+                                     f"{nci.variables['gc_roll_errors'][i]}," \
+                                     f"{nci.variables['gc_vbd_errors'][i]}," \
+                                     f"{nci.variables['gc_pitch_volts'][i]}," \
+                                     f"{nci.variables['gc_roll_volts'][i]}," \
+                                     f"{nci.variables['gc_vbd_volts'][i]});")
 
 def loadFileToDB(cur, filename):
     """Process single netcdf file into the database"""
+    gpsVars = [ "time", "lat", "lon", "magvar", "hdop", "first_fix_time", "final_fix_time" ]
+
     try:
         nci = Utils.open_netcdf_file(filename)
     except:
         log_error(f"Could not open {filename} - bailing out", "exc")
         return
+
     dive = nci.variables["log_DIVE"].getValue()
     cur.execute(f"DELETE FROM dives WHERE dive={dive};")
     cur.execute(f"INSERT INTO dives(dive) VALUES({dive});")
@@ -83,11 +183,22 @@ def loadFileToDB(cur, filename):
         if not nci.variables[v].dimensions:
             if not v.startswith("sg_cal"):
                 insertColumn(dive, cur, v, nci.variables[v].getValue(), "FLOAT")
+        elif len(nci.variables[v].dimensions) == 1 and nci.variables[v].dimensions[0] == 'gps_info' and '_'.join(v.split('_')[2:]) in gpsVars:
+            for i in range(0,nci.dimensions['gps_info']):
+                if i == 0 or i == 1:
+                    name = v.replace('gps_', f'gps{i+1}_')
+                else:
+                    name = v
+
+                insertColumn(dive, cur, name, nci.variables[v][i], "FLOAT")
 
     nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(",")
 
-    dep_mx = numpy.nanmax(nci.variables["depth"][:])
-    insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
+    if 'depth' in nci.variables:
+        dep_mx = numpy.nanmax(nci.variables["depth"][:])
+        insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
+    else:
+        print(filename)
 
     # Last state time is begin surface
     insertColumn(
@@ -105,21 +216,22 @@ def loadFileToDB(cur, filename):
         "FLOAT",
     )
 
-    i = numpy.where(
-        nci.variables["eng_elaps_t"][:]
-        < nci.variables["start_of_climb_time"].getValue()
-    )
-    pi_div = numpy.nanmean(nci.variables["eng_pitchAng"][i])
-    ro_div = numpy.nanmean(nci.variables["eng_rollAng"][i])
+    if "start_of_climb_time" in nci.variables:
+        i = numpy.where(
+            nci.variables["eng_elaps_t"][:]
+            < nci.variables["start_of_climb_time"].getValue()
+        )
+        pi_div = numpy.nanmean(nci.variables["eng_pitchAng"][i])
+        ro_div = numpy.nanmean(nci.variables["eng_rollAng"][i])
 
-    i = numpy.where(
-        nci.variables["eng_elaps_t"][:]
-        > nci.variables["start_of_climb_time"].getValue()
-    )
-    pi_clm = numpy.nanmean(nci.variables["eng_pitchAng"][i])
-    ro_clm = numpy.nanmean(nci.variables["eng_rollAng"][i])
-    insertColumn(dive, cur, "pitch_dive", pi_div, "FLOAT")
-    insertColumn(dive, cur, "pitch_climb", pi_clm, "FLOAT")
+        i = numpy.where(
+            nci.variables["eng_elaps_t"][:]
+            > nci.variables["start_of_climb_time"].getValue()
+        )
+        pi_clm = numpy.nanmean(nci.variables["eng_pitchAng"][i])
+        ro_clm = numpy.nanmean(nci.variables["eng_rollAng"][i])
+        insertColumn(dive, cur, "pitch_dive", pi_div, "FLOAT")
+        insertColumn(dive, cur, "pitch_climb", pi_clm, "FLOAT")
 
     errors_line = nci.variables["log_ERRORS"][:].tobytes().decode("utf-8").split(",")
     if len(errors_line) == 16:
@@ -167,6 +279,23 @@ def loadFileToDB(cur, filename):
             ] = errors_line[:18]
         if len(errors_line) == 19:
             logger_timeouts4 = errors_line[18]
+
+    errors = sum(list(map(int, nci.variables["log_ERRORS"][:].tobytes().decode('utf-8').split(','))))
+    insertColumn(dive, cur, "error_count", errors, "INTEGER")
+
+    [minSpeed, maxSpeed] = list(
+        map(float, nci.variables["log_SPEED_LIMITS"][:].tobytes().decode("utf-8").split(","))
+    )
+    insertColumn(dive, cur, "log_speed_min", minSpeed, "FLOAT")
+    insertColumn(dive, cur, "log_speed_max", maxSpeed, "FLOAT")
+
+    insertColumn(dive, cur, "log_TGT_NAME", nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8"), "TEXT")
+
+    [lat, lon] = list(
+        map(float, nci.variables["log_TGT_LATLONG"][:].tobytes().decode("utf-8").split(","))
+    )
+    insertColumn(dive, cur, "log_TGT_LAT", ddmm2dd(lat), "FLOAT")
+    insertColumn(dive, cur, "log_TGT_LON", ddmm2dd(lon), "FLOAT")
 
     [v10, ah10] = list(
         map(float, nci.variables["log_10V_AH"][:].tobytes().decode("utf-8").split(","))
@@ -377,6 +506,8 @@ def loadFileToDB(cur, filename):
             pdb.post_mortem(traceb)
         log_error("Failed to add SENSOR/DEVICE power use", "exc")
 
+    processGC(dive, cur, nci)
+
 
 def updateDBFromPlots(base_opts, ncfs):
     """Update the database with the output of plotting routines that generate db columns"""
@@ -423,11 +554,15 @@ def rebuildDB(base_opts, from_cli=False):
     # db = path + "/" + glider + ".db"
     db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     log_info("rebuilding %s" % db)
+    
     con = sqlite3.connect(db)
     with con:
         cur = con.cursor()
         cur.execute("DROP TABLE IF EXISTS dives;")
+        cur.execute("DROP TABLE IF EXISTS gc;")
         cur.execute("CREATE TABLE dives(dive INT);")
+        cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
+
         # patt = path + "/p%03d????.nc" % sg
         patt = os.path.join(
             base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.nc"

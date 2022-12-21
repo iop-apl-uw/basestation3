@@ -100,6 +100,7 @@ processed_files_cache = "processed_files.cache"
 # Set by signal handler to skip the time consuming processing of the whole mission data
 skip_mission_processing_event = threading.Event()
 base_lockfile_name = ".conversion_lock"
+base_completed_name = ".completed"
 
 logger_eng_readers = {}  # Mapping from logger prefix to eng_file readers
 
@@ -2820,6 +2821,11 @@ def main():
         "Finished processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
+
+    with open(base_completed_name, 'w') as file:
+        file.write("Finished processing "
+                   + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
+
     return 0
 
 

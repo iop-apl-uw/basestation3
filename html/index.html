@@ -1,0 +1,403 @@
+<style>
+    body {
+        background-color: #999999;
+        color: #000000;
+    }
+
+    .tile {
+        background: #bbbbbb;
+        width: 300px;
+        height: 420px;
+        border: 1px solid black;
+        margin-left: 10px;
+        margin-top: 10px;
+        float: left;
+        padding: 4px;
+    }
+
+    .header {
+        font-size: 20px;
+        font-weight: bold;
+    }
+    .position {
+        font-size: 16px;
+        font-weight: bold;
+    }
+
+    .label {
+        float: left;
+        width: 30px;
+    }
+
+    .box {
+        display: flex;
+        align-items: center; 
+        margin-top: 5px;
+    }
+
+    .indicator {
+        border: 2px solid black;
+        margin-right: 5px;
+        text-align: center;
+        width: 50px;
+        border-radius: 8px;
+    }
+
+    .chart {
+        background: rgba(255, 255, 255, 0.4);
+        justify-content: flex-start;
+        border-radius: 50px;
+        align-items: center;
+        position: relative;
+        padding: 0 5px;
+        display: flex;
+        height: 20px;
+        width: 260px;
+    }
+
+    .chart span {
+        margin-left: 2px;
+        color: #555;
+        font-weight: bolder;
+    }
+
+    .bar {
+        border-radius: 0px;
+        background: #00ff00;
+        height: 16px;
+        width: 100%;
+        margin-left: 0px;
+    }
+
+    .barPercent {
+        border-radius: 10px;
+        background: #00ff00;
+        height: 16px;
+        width: 100%;
+        margin-left: -2px;
+    }
+
+
+</style>
+<script src="/script/util.js"></script>
+<script>
+
+
+    function setPlusMinusBar(chart, bar, span, pct, text) {
+        if (pct < -1)
+            pct = -1;
+        else if (pct > 1)
+            pct = 1;
+
+        var wide = $(chart).offsetWidth;
+        var half = wide/2;
+        var pix = half*Math.abs(pct);
+        var off = pct < 0 ? half - pix : half;
+      
+        if (pct < 0) {
+            $(bar).style.borderTopLeftRadius = '10px'; 
+            $(bar).style.borderBottomLeftRadius = '10px';
+            $(bar).style.borderTopRightRadius = '0px';
+            $(bar).style.borderBottomRightRadius = '0px';
+        }
+        else {
+            $(bar).style.borderTopLeftRadius = '0px'; 
+            $(bar).style.borderBottomLeftRadius = '0px';
+            $(bar).style.borderTopRightRadius = '10px';
+            $(bar).style.borderBottomRightRadius = '10px';
+        }
+        $(bar).style.marginLeft = off + 'px';
+        $(bar).style.width = pix + 'px';
+
+        if (pct < 0 && pct > -0.1)
+            $(bar).style.backgroundColor = 'yellow';
+        else if (pct < -0.1)
+            $(bar).style.backgroundColor = 'red';
+        else 
+            $(bar).style.backgroundColor = 'green';
+
+        $(span).innerHTML = text;
+    }
+
+    function setPercentBar(bar, span, pct, text) {
+
+        if (pct < -1)
+            pct = -1;
+        else if (pct > 1)
+            pct = 1;
+        
+
+        $(bar).style.width = (100*pct) + '%';
+
+        if (pct < 0.1)
+            $(bar).style.backgroundColor = 'red';
+        else if (pct < 0.25)
+            $(bar).style.backgroundColor = 'yellow';
+        else 
+            $(bar).style.backgroundColor = 'green';
+
+        if (text != '')
+            $(span).innerHTML = text;
+        else 
+            $(span).innerHTML = (pct*100).toFixed(0) + '%';
+
+    }
+    
+    var gliders = [];
+    var nextGauges = [];
+    var nextTimer = null;
+    var plotWhich = 'diveplot';
+ 
+    function mission(glider) {
+        if (glider.mission != '')
+            return `?mission=${glider.mission}`;
+        else
+            return '';
+    }
+
+    function updateNext() {
+        var next, nextHour, nextMin;
+        for (var i = 0 ; i < nextGauges.length ; i++) {
+            next = (nextGauges[i].next - Date.now()/1000);
+            nextHour = parseInt('' + (next/3600));
+            nextMin  = parseInt('' + Math.abs(((next - nextHour*3600)/60)));
+
+            setPlusMinusBar(nextGauges[i].chart, 
+                            nextGauges[i].bar,
+                            nextGauges[i].span,
+                            next/28800.0,
+                            `${nextHour.zeroPad()}:${nextMin.zeroPad()}`);
+        }
+    }
+
+    function createTile(glider, t) {
+        const colors = { "GO": "green", "QUIT": "red", "RESUME": "yellow" };
+        fetch(`/summary/${glider.glider}${mission(glider)}`)
+        .then(res => res.json())
+        .then(data => {
+            t.classList.add('tile');
+            t.onclick = function() { window.open(`/${data.name}${mission(glider)}`, `${data.name}`); };
+
+            var color1, color2;
+            var h, txt, box, barBatt, chartBatt, spanBatt, header;
+            var barNext, chartNext, spanNex;
+            if (glider.mission == '')
+                h = h = 'SG' + data.name + '<br><hr>';
+            else
+                h = 'SG' + data.name + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
+
+            header = document.createElement('div');
+            header.classList.add('header');
+            header.innerHTML = h;
+
+            t.appendChild(header);
+
+
+            txt = document.createElement('div');
+            let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
+            txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
+            t.appendChild(txt);
+
+            txt = document.createElement('div');
+            color1 = colors[data.commDirective];
+            color2 = colors[data.cmdfileDirective];
+
+            txt.innerHTML = `parsed <span style="color:${color1};">${data.commDirective}</span>, waiting <span style="color:${color2};">${data.cmdfileDirective}</span>`
+            t.appendChild(txt);
+
+            box = document.createElement('div');
+            box.classList.add('box');
+
+            txt = document.createElement('div');
+            txt.classList.add('position');
+            txt.innerHTML = formatPos(dd2ddmm(data.lat)) + ',' + formatPos(dd2ddmm(data.lon));
+            h = document.createElement('div');
+            h.appendChild(document.createTextNode('pos: '));
+            h.classList.add('label');
+            box.appendChild(h);
+            box.appendChild(txt);
+            t.appendChild(box);
+
+            box = document.createElement('div');
+            box.classList.add('box');
+
+            chartBatt = document.createElement('div');
+            chartBatt.classList.add('chart');
+            chartBatt.id = 'chartBatt' + data.name;
+            h = document.createElement('div');
+            h.appendChild(document.createTextNode('batt: '));
+            h.classList.add('label');
+            box.appendChild(h);
+            box.appendChild(chartBatt);
+            t.appendChild(box);
+
+            barBatt = document.createElement('div');
+            barBatt.classList.add('barPercent');
+            barBatt.id = 'barBatt' + data.name;
+            chartBatt.appendChild(barBatt);
+
+            spanBatt = document.createElement('span');
+            spanBatt.id = 'spanBatt' + data.name;
+            chartBatt.appendChild(spanBatt);
+
+            setPercentBar(barBatt.id, spanBatt.id, data.capacity[1], '');
+
+            box = document.createElement('div');
+            box.classList.add('box');
+
+            chartNext = document.createElement('div');
+            chartNext.classList.add('chart');
+            chartNext.id = 'chartNext' + data.name;
+            h = document.createElement('div');
+            h.appendChild(document.createTextNode('next: '));
+            h.classList.add('label');
+            box.appendChild(h);
+            box.appendChild(chartNext);
+            t.appendChild(box);
+
+            barNext = document.createElement('div');
+            barNext.classList.add('barPercent');
+            barNext.id = 'barNext' + data.name;
+            chartNext .appendChild(barNext);
+
+            spanNext = document.createElement('span');
+            spanNext.id = 'spanNext' + data.name;
+            chartNext.appendChild(spanNext);
+
+            nextGauges.push({chart:chartNext.id, bar:barNext.id, span:spanNext.id, next:data.next});
+
+            next = (data.next - Date.now()/1000);
+            nextHour = parseInt('' + (next/3600));
+            nextMin  = parseInt('' + Math.abs(((next - nextHour*3600)/60)));
+            
+            setPlusMinusBar(chartNext.id, barNext.id, spanNext.id, next/28800.0, `${nextHour.zeroPad()}:${nextMin.zeroPad()}`);
+
+            // annunciators
+            box = document.createElement('div');
+            box.classList.add('box');
+
+            // errors
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            h.innerHTML = `errors<br>${data.errors + data.crits}`;
+            if (data.errors > 0) 
+                h.style.backgroundColor = 'red';
+            else
+                h.style.backgroundColor = '';
+            box.appendChild(h);
+
+            // alerts
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            h.innerHTML = `alerts<br>${data.alert ? 'Y' : 'N'}`;
+            if (data.alert > 0)
+                h.style.backgroundColor = 'yellow';
+            else
+                h.style.backgroundColor = '';
+
+            box.appendChild(h);
+
+           
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
+            if (data.dogEfficiency < 0.25)
+                h.style.backgroundColor = 'red';
+            else if (data.dogEfficiency < 0.5)
+                h.style.backgroundColor = 'yellow';
+            else
+                h.style.backgroundColor = 'LightGreen';
+
+            box.appendChild(h);
+
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            h.innerHTML = `VBD eff.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
+            if (data.vbdEfficiency < 0.25)
+                h.style.backgroundColor = 'red';
+            else if (data.dogEfficiency < 0.4)
+                h.style.backgroundColor = 'yellow';
+            else
+                h.style.backgroundColor = 'LightGreen';
+
+            box.appendChild(h);
+
+            t.appendChild(box);
+
+            img = document.createElement('img');
+            img.src = '/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
+            img.style = "top: 0; width:290px; max-height:240px; mix-blend-mode:multiply;"
+     
+            t.appendChild(img);
+        })
+        .catch(error => {
+            console.log(error);
+        });
+    }
+
+
+    function loadTable() {
+        window.name = 'index';
+        document.title = 'index';
+        let params = new URLSearchParams(window.location.search);
+        if (params.has('plot'))
+            plotWhich = params.get('plot');
+
+        clearTiles('main');
+        nextGauges = [];
+
+        fetch(`/optable/1`)
+        .then(res => res.json())
+        .then(data => {
+            var glider, t;
+            for (g of data) {
+                glider = { glider: g.glider, mission: g.mission };
+
+                // create div and append as blank to main
+                // so that we can control the order independently
+                // of when then individual /summary fetches arrive
+
+                // this tile probably never exists here in loadTable
+                if ($(`${g.glider}`)) {
+                    console.log('tile exists, clearing');
+                    clearTiles(`${g.glider}`);
+                    t = $(`${g.glider}`);
+                }
+                else {
+                    t = document.createElement('div');
+                    t.id = `${g.glider}`
+                    $('main').appendChild(t);
+                }
+                createTile(glider, t);
+            }
+
+            if (nextTimer) {
+                clearInterval(nextTimer);
+            }
+        
+            nextTimer = window.setInterval(updateNext, 60000);
+        })
+        .catch(error => {
+            console.log(error);
+        });
+
+    }
+
+    function clearTiles(parent) {
+        while($(parent).firstChild) {
+            $(parent).removeChild($(parent).firstChild);
+        }
+    }
+
+</script>
+
+<html>
+<body onload="loadTable();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
+
+<div id="main" style="position: relative;">
+
+
+</div> 
+
+</body>
+</html>
