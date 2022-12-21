@@ -51,25 +51,6 @@ from Plotting import plotmissionsingle
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
-line_type = collections.namedtuple("line_type", ("dash", "color"))
-
-line_lookup = {
-    "VBD_pump": line_type("solid", "magenta"),
-    "Pitch_motor": line_type("solid", "green"),
-    "Roll_motor": line_type("solid", "red"),
-    "Iridium": line_type("solid", "black"),
-    "Transponder_ping": line_type("solid", "orange"),
-    "GPS": line_type("dash", "green"),
-    "Compass": line_type("dash", "magenta"),
-    # "RAFOS" :
-    # "Transponder" :
-    # "Compass2" :
-    # "network" :
-    "STM32Mainboard": line_type("dash", "black"),
-    "SciCon": line_type("solid", "DarkMagenta"),
-}
-
-
 @plotmissionsingle
 def mission_volume(
     base_opts: BaseOpts.BaseOptions, mission_str: list
