@@ -22,15 +22,11 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-""" Plots volume estimates
+""" Plots internal pressure and RH
 """
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import collections
-import pdb
-import sys
-import traceback
 import typing
 
 import plotly
@@ -44,18 +40,19 @@ if typing.TYPE_CHECKING:
 import PlotUtilsPlotly
 import Utils
 
-from BaseLog import log_error, log_warning
+from BaseLog import log_error
 from Plotting import plotmissionsingle
 
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
+
 @plotmissionsingle
-def mission_volume(
+def mission_intpressrh(
     base_opts: BaseOpts.BaseOptions, mission_str: list
 ) -> tuple[list, list]:
-    """Plots various estimates for volmax"""
+    """Plots internal pressure and RH"""
 
     conn = Utils.open_mission_database(base_opts)
     if not conn:
@@ -66,38 +63,18 @@ def mission_volume(
     df = None
     try:
         df = pd.read_sql_query(
-            "SELECT dive,implied_volmax from dives",
+            "SELECT dive,log_HUMID,log_INTERNAL_PRESSURE from dives",
             conn,
         ).sort_values("dive")
     except:
         log_error("Could not fetch needed columns", "exc")
         return ([], [])
 
-    glider_df = None
-    try:
-        glider_df = pd.read_sql_query(
-            "SELECT dive,implied_volmax_glider from dives",
-            conn,
-        ).sort_values("dive")
-    except pd.io.sql.DatabaseError:
-        log_warning("Could not load implied volmax from the glider estimate", "exc")
-
-    flight_df = None
-    try:
-        flight_df = pd.read_sql_query(
-            "SELECT dive,implied_volmax_fm from dives",
-            conn,
-        ).sort_values("dive")
-    except pd.io.sql.DatabaseError:
-        log_warning(
-            "Could not load implied volmax from the flight model estimate", "exc"
-        )
-
     fig.add_trace(
         {
-            "name": "Basestation volmax",
+            "name": "Internl Pressure",
             "x": df["dive"],
-            "y": df["implied_volmax"],
+            "y": df["log_INTERNAL_PRESSURE"],
             "yaxis": "y1",
             "mode": "lines",
             "line": {
@@ -105,44 +82,27 @@ def mission_volume(
                 "color": "DarkMagenta",
                 "width": 1,
             },
-            "hovertemplate": "Basestation volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
+            "hovertemplate": "Internal Pressure<br>Dive %{x:.0f}<br>pressure %{y:.2f} psia<extra></extra>",
         }
     )
-    if glider_df is not None:
-        fig.add_trace(
-            {
-                "name": "Glider volmax",
-                "x": glider_df["dive"],
-                "y": glider_df["implied_volmax_glider"],
-                "yaxis": "y1",
-                "mode": "lines",
-                "line": {
-                    "dash": "solid",
-                    "color": "DarkBlue",
-                    "width": 1,
-                },
-                "hovertemplate": "Glider volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
-            }
-        )
 
-    if flight_df is not None:
-        fig.add_trace(
-            {
-                "name": "Flight Model volmax",
-                "x": flight_df["dive"],
-                "y": flight_df["implied_volmax_fm"],
-                "yaxis": "y1",
-                "mode": "lines",
-                "line": {
-                    "dash": "solid",
-                    "color": "Dark Green",
-                    "width": 1,
-                },
-                "hovertemplate": "FM volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
-            }
-        )
+    fig.add_trace(
+        {
+            "name": "Relative Humidity",
+            "x": df["dive"],
+            "y": df["log_HUMID"],
+            "yaxis": "y2",
+            "mode": "lines",
+            "line": {
+                "dash": "solid",
+                "color": "DarkBlue",
+                "width": 1,
+            },
+            "hovertemplate": "Relative Humidity<br>Dive %{x:.0f}<br>RH %{y:.2f} percent<extra></extra>",
+        }
+    )
 
-    title_text = f"{mission_str}<br>Volmax estimates"
+    title_text = f"{mission_str}<br>Internal Pressure and Relative Humidity"
 
     fig.update_layout(
         {
@@ -151,9 +111,16 @@ def mission_volume(
                 "showgrid": True,
             },
             "yaxis": {
-                "title": "volmax (cc)",
+                "title": "Internal Pressure (psia)",
                 "showgrid": True,
-                "tickformat": "d",
+                "tickformat": ".02f",
+            },
+            "yaxis2": {
+                "title": "Relative Humidity",
+                "overlaying": "y1",
+                "side": "right",
+                "showgrid": False,
+                "tickformat": ".02f",
             },
             "title": {
                 "text": title_text,
@@ -171,7 +138,7 @@ def mission_volume(
         [fig],
         PlotUtilsPlotly.write_output_files(
             base_opts,
-            "eng_mission_volmax",
+            "eng_mission_inttemprh",
             fig,
         ),
     )
