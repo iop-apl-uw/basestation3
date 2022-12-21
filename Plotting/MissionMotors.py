@@ -288,7 +288,7 @@ def mission_motors(
         file_list.append(
             PlotUtilsPlotly.write_output_files(
                 base_opts,
-                "eng_vbd_motors",
+                "eng_vbd_effic",
                 fig,
             )
         )
