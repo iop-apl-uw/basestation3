@@ -138,7 +138,7 @@ def mission_intpressrh(
         [fig],
         PlotUtilsPlotly.write_output_files(
             base_opts,
-            "eng_mission_inttemprh",
+            "eng_mission_intpressrh",
             fig,
         ),
     )
