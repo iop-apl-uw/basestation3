@@ -44,30 +44,12 @@ if typing.TYPE_CHECKING:
 import PlotUtilsPlotly
 import Utils
 
-from BaseLog import log_error,log_warning
+from BaseLog import log_error, log_warning
 from Plotting import plotmissionsingle
 
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
-
-line_type = collections.namedtuple("line_type", ("dash", "color"))
-
-line_lookup = {
-    "VBD_pump": line_type("solid", "magenta"),
-    "Pitch_motor": line_type("solid", "green"),
-    "Roll_motor": line_type("solid", "red"),
-    "Iridium": line_type("solid", "black"),
-    "Transponder_ping": line_type("solid", "orange"),
-    "GPS": line_type("dash", "green"),
-    "Compass": line_type("dash", "magenta"),
-    # "RAFOS" :
-    # "Transponder" :
-    # "Compass2" :
-    # "network" :
-    "STM32Mainboard": line_type("dash", "black"),
-    "SciCon": line_type("solid", "DarkMagenta"),
-}
 
 
 @plotmissionsingle
@@ -121,7 +103,7 @@ def mission_volume(
             "mode": "lines",
             "line": {
                 "dash": "solid",
-                "color": "magenta",
+                "color": "DarkMagenta",
                 "width": 1,
             },
             "hovertemplate": "Basestation volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
@@ -137,7 +119,7 @@ def mission_volume(
                 "mode": "lines",
                 "line": {
                     "dash": "solid",
-                    "color": "Blue",
+                    "color": "DarkBlue",
                     "width": 1,
                 },
                 "hovertemplate": "Glider volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
@@ -168,17 +150,11 @@ def mission_volume(
             "xaxis": {
                 "title": "Dive Number",
                 "showgrid": True,
-                # "side": "top"
             },
             "yaxis": {
                 "title": "volmax (cc)",
                 "showgrid": True,
                 "tickformat": "d",
-                # Fixed ratio
-                # "scaleanchor": "x",
-                # "scaleratio": (plot_lon_max - plot_lon_min)
-                # / (plot_lat_max - plot_lat_min),
-                # Fixed ratio
             },
             "title": {
                 "text": title_text,
@@ -190,7 +166,6 @@ def mission_volume(
             "margin": {
                 "b": 120,
             },
-            # "annotations": tuple(l_annotations),
         },
     )
     return (
