@@ -328,7 +328,6 @@ async def controlHandler(request, glider:int, which:str):
 
 @app.route('/db/<args:path>')
 async def dbHandler(request, args):
-    q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,batt_volts_10V,batt_volts_24V,batt_capacity_24V,batt_capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north FROM dives"
     pieces = args.split('/')
     if len(pieces) == 0 or len(pieces) > 2:
         return sanic.response.text("oops")
@@ -338,27 +337,43 @@ async def dbHandler(request, args):
     except:
         return sanic.response.text("oops")
 
+    dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+    if not os.path.exists(dbfile):
+        return sanic.response.text('no db')
+
+    q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,batt_volts_10V,batt_volts_24V,batt_capacity_24V,batt_capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north FROM dives"
+
     if len(pieces) == 2:
         dive = int(pieces[1])
         q = q + f" WHERE dive={dive};"
     else:
         q = q + " ORDER BY dive ASC;"
 
-    dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
     print(dbfile)
     with sqlite3.connect(dbfile) as conn:
         conn.row_factory = rowToDict
         cur = conn.cursor()
-        cur.execute(q)
+        try:
+            cur.execute(q)
+        except sqlite3.OperationalError:
+            return sanic.response.text('no table')
+
         data = cur.fetchall()
         return sanic.response.json(data)
 
 @app.route('/dbvars/<glider:int>')
 async def dbvarsHandler(request, glider:int):
     dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+    dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+    if not os.path.exists(dbfile):
+        return sanic.response.text('no db')
+
     print(dbfile)
     with sqlite3.connect(dbfile) as conn:
-        cur = conn.execute('select * from dives')
+        try:
+            cur = conn.execute('select * from dives')
+        except sqlite3.OperationalError:
+            return sanic.response.text('no table')
         names = list(map(lambda x: x[0], cur.description))
         data = {}
         data['names'] = names
