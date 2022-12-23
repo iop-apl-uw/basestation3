@@ -151,8 +151,17 @@
             var line = e.data;
             if (line.startsWith('NEW=')) {
                 console.log(line);
-                newDive = parseInt(line.split('=')[1].slice(2,6));
-                loadPlots(newDive, true);
+                pieces = line.split('=')[1].split(',');
+                glider  = parseInt(pieces[0]);
+                newDive = parseInt(pieces[1]);
+                which   = pieces[2];
+                if (which == 'perdive') {
+                    loadPlots(newDive, true);
+                    buildTable(currGlider, newDive);
+                }
+                else {
+                    loadStatus(currGlider, -1);
+                }
                 // loadLog(newDive);
             }
             else if (line.startsWith('CMDFILE=')) {
@@ -317,7 +326,8 @@
         currElt = elt;
     }
 
-    function buildTable(glider) {
+    function addTableRow(d) 
+    {
         var row, cell, text;
         var tbody = $('mainTable').getElementsByTagName('tbody')[0];
         const colors = ["#cccccc", "#eeeeee"];
@@ -326,114 +336,135 @@
         var course; 
         var dist;
         var n, e;
+        var rowID = 'row' + d['dive'];
+
+        if ($(rowID) != null) {
+            console.log('row exists ' + rowID);
+            $(rowID).remove();
+        }
+     
+        row = tbody.insertRow(1);
+        row.id = rowID;
+        console.log('inserted ' + rowID);
+        i = $('mainTable').rows.length % 2;
+        row.style.backgroundColor = colors[i];
+        cell = row.insertCell(0);
+        cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>';
+        cell.style.textAlign = 'left';
+        // cell.appendChild(text);
+
+        date = new Date(1000*(d['log_start'] + d['total_flight_time_s']));
+        cell = row.insertCell(1); 
+        text = document.createTextNode((date.getFullYear() - 2000) + '/' +
+                                       (date.getMonth() + 1).zeroPad() + '/' + 
+                                       date.getDate().zeroPad() + ' ' + 
+                                       date.getHours().zeroPad() + ':' + 
+                                       date.getMinutes().zeroPad());
+        cell.appendChild(text);
+
+        cell = row.insertCell(2); 
+        text = document.createTextNode('' + (d['total_flight_time_s']/60).toFixed(0));
+        cell.appendChild(text);
+
+        cell = row.insertCell(3);
+        text = document.createTextNode('' + d['max_depth'].toFixed(0) + '(' + d['log_D_TGT'] + ')');
+        cell.appendChild(text);
+
+        dist = Math.sqrt(d['GPS_north_displacement_m']*d['GPS_north_displacement_m'] 
+                         + d['GPS_east_displacement_m']*d['GPS_east_displacement_m']);
+        course = Math.atan2(d['GPS_east_displacement_m'], d['GPS_north_displacement_m'])*180.0/Math.PI;
+        if (course < 0) {
+            course = course + 360;
+        }
+        cell = row.insertCell(4);
+        text = document.createTextNode('' + (dist/1000).toFixed(2));
+        cell.appendChild(text);
+
+        cell = row.insertCell(5);
+        text = document.createTextNode('' + course.toFixed(1));
+        cell.appendChild(text);
+
+        n = d['flight_avg_speed_north'] * d['total_flight_time_s'];
+        e = d['flight_avg_speed_east'] * d['total_flight_time_s'];
+        dist = Math.sqrt(n*n + e*e);
+        course = Math.atan2(e, n)*180.0/Math.PI;
+        if (course < 0) {
+            course = course + 360;
+        }
+        cell = row.insertCell(6);
+        text = document.createTextNode('' + (dist/1000).toFixed(2));
+        cell.appendChild(text);
+
+        cell = row.insertCell(7);
+        text = document.createTextNode('' + course.toFixed(1));
+        cell.appendChild(text);
+
+        cell = row.insertCell(8);
+        text = document.createTextNode('' + (d['meters_to_target']/1000).toFixed(2));
+        cell.appendChild(text);
+
+        cell = row.insertCell(9);
+        text = document.createTextNode('' + (d['mag_heading_to_target'] + d['magnetic_variation']).toFixed(1));
+        cell.appendChild(text);
+
+        
+        dist = Math.sqrt(d['depth_avg_curr_east']*d['depth_avg_curr_east'] 
+                         + d['depth_avg_curr_north']*d['depth_avg_curr_north']);
+        course = Math.atan2(d['depth_avg_curr_east'], d['depth_avg_curr_north'])*180.0/Math.PI;
+        if (course < 0) {
+            course = course + 360;
+        }
+
+        cell = row.insertCell(10);
+        text = document.createTextNode('' + (dist*100.0).toFixed(1));
+        cell.appendChild(text);
+
+        cell = row.insertCell(11);
+        text = document.createTextNode('' + course.toFixed(1));
+        cell.appendChild(text);
+
+        cell = row.insertCell(12);
+        text = document.createTextNode('' + d['log_TEMP'].toFixed(2));
+        cell.appendChild(text);
+        cell = row.insertCell(13);
+        text = document.createTextNode('' + d['log_HUMID'].toFixed(2));
+        cell.appendChild(text);
+        cell = row.insertCell(14);
+        text = document.createTextNode('' + d['log_INTERNAL_PRESSURE'].toFixed(2));
+        cell.appendChild(text);
+
+        cell = row.insertCell(15);
+        text = document.createTextNode('' + d['batt_volts_10V'].toFixed(2));
+        cell.appendChild(text);
+        cell = row.insertCell(16);
+        text = document.createTextNode('' + (d['batt_capacity_10V']*100).toFixed(2));
+        cell.appendChild(text);
+        cell = row.insertCell(17);
+        text = document.createTextNode('' + d['batt_volts_24V'].toFixed(2));
+        cell.appendChild(text);
+        cell = row.insertCell(18);
+        text = document.createTextNode('' + (d['batt_capacity_24V']*100).toFixed(2));
+        cell.appendChild(text);
+    }
+
+    function buildTable(glider, dive) {
+        var q;
         console.log("building table");
 
-        clearTable();
-
-        fetch(`/db/${glider}${mission()}`)
+    
+        if (dive > -1) {
+            q = `/db/${glider}/${dive}${mission()}`
+        }
+        else {
+            clearTable();
+            q = `/db/${glider}${mission()}`
+        }
+ 
+        fetch(q)
         .then(res => res.json())
         .then(data => {
             for (d of data) {
-                row = tbody.insertRow(1);
-                i = $('mainTable').rows.length % 2;
-                row.style.backgroundColor = colors[i];
-                cell = row.insertCell(0);
-                cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>';
-                cell.style.textAlign = 'left';
-                // cell.appendChild(text);
-
-                date = new Date(1000*(d['log_start'] + d['total_flight_time_s']));
-                cell = row.insertCell(1); 
-                text = document.createTextNode((date.getFullYear() - 2000) + '/' +
-                                               (date.getMonth() + 1).zeroPad() + '/' + 
-                                               date.getDate().zeroPad() + ' ' + 
-                                               date.getHours().zeroPad() + ':' + 
-                                               date.getMinutes().zeroPad());
-                cell.appendChild(text);
-
-                cell = row.insertCell(2); 
-                text = document.createTextNode('' + (d['total_flight_time_s']/60).toFixed(0));
-                cell.appendChild(text);
-
-                cell = row.insertCell(3);
-                text = document.createTextNode('' + d['max_depth'].toFixed(0) + '(' + d['log_D_TGT'] + ')');
-                cell.appendChild(text);
-
-                dist = Math.sqrt(d['GPS_north_displacement_m']*d['GPS_north_displacement_m'] 
-                                 + d['GPS_east_displacement_m']*d['GPS_east_displacement_m']);
-                course = Math.atan2(d['GPS_east_displacement_m'], d['GPS_north_displacement_m'])*180.0/Math.PI;
-                if (course < 0) {
-                    course = course + 360;
-                }
-                cell = row.insertCell(4);
-                text = document.createTextNode('' + (dist/1000).toFixed(2));
-                cell.appendChild(text);
-
-                cell = row.insertCell(5);
-                text = document.createTextNode('' + course.toFixed(1));
-                cell.appendChild(text);
-
-                n = d['flight_avg_speed_north'] * d['total_flight_time_s'];
-                e = d['flight_avg_speed_east'] * d['total_flight_time_s'];
-                dist = Math.sqrt(n*n + e*e);
-                course = Math.atan2(e, n)*180.0/Math.PI;
-                if (course < 0) {
-                    course = course + 360;
-                }
-                cell = row.insertCell(6);
-                text = document.createTextNode('' + (dist/1000).toFixed(2));
-                cell.appendChild(text);
-
-                cell = row.insertCell(7);
-                text = document.createTextNode('' + course.toFixed(1));
-                cell.appendChild(text);
-
-                cell = row.insertCell(8);
-                text = document.createTextNode('' + (d['meters_to_target']/1000).toFixed(2));
-                cell.appendChild(text);
-
-                cell = row.insertCell(9);
-                text = document.createTextNode('' + (d['mag_heading_to_target'] + d['magnetic_variation']).toFixed(1));
-                cell.appendChild(text);
-
-                
-                dist = Math.sqrt(d['depth_avg_curr_east']*d['depth_avg_curr_east'] 
-                                 + d['depth_avg_curr_north']*d['depth_avg_curr_north']);
-                course = Math.atan2(d['depth_avg_curr_east'], d['depth_avg_curr_north'])*180.0/Math.PI;
-                if (course < 0) {
-                    course = course + 360;
-                }
-
-                cell = row.insertCell(10);
-                text = document.createTextNode('' + (dist*100.0).toFixed(1));
-                cell.appendChild(text);
-
-                cell = row.insertCell(11);
-                text = document.createTextNode('' + course.toFixed(1));
-                cell.appendChild(text);
-
-                cell = row.insertCell(12);
-                text = document.createTextNode('' + d['log_TEMP'].toFixed(2));
-                cell.appendChild(text);
-                cell = row.insertCell(13);
-                text = document.createTextNode('' + d['log_HUMID'].toFixed(2));
-                cell.appendChild(text);
-                cell = row.insertCell(14);
-                text = document.createTextNode('' + d['log_INTERNAL_PRESSURE'].toFixed(2));
-                cell.appendChild(text);
-
-                cell = row.insertCell(15);
-                text = document.createTextNode('' + d['batt_volts_10V'].toFixed(2));
-                cell.appendChild(text);
-                cell = row.insertCell(16);
-                text = document.createTextNode('' + (d['batt_capacity_10V']*100).toFixed(2));
-                cell.appendChild(text);
-                cell = row.insertCell(17);
-                text = document.createTextNode('' + d['batt_volts_24V'].toFixed(2));
-                cell.appendChild(text);
-                cell = row.insertCell(18);
-                text = document.createTextNode('' + (d['batt_capacity_24V']*100).toFixed(2));
-                cell.appendChild(text);
+                addTableRow(d);
             }
         })
         .catch(error => {
@@ -514,13 +545,12 @@
             engplots = data['engplots'];
             sgplots = data['sgplots'];
             sgplotlyplots = data['sgplotly'];
-            buildTable(glider);
+            buildTable(glider, -1);
         })
         .catch(error => {
             console.log(error);
         });
 
-        setupStream(glider);
     }
 
     function clearPlots() {
@@ -1298,6 +1328,7 @@
         console.log(glider);
         window.name = glider;
         loadStatus(glider, dive);
+        setupStream(glider);
         loadControlFile('cmdfile');
         loadControlFile('science');
         loadControlFile('targets');

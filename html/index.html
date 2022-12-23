@@ -8,7 +8,7 @@
         background: #bbbbbb;
         width: 300px;
         height: 420px;
-        border: 1px solid black;
+        border: 2px solid black;
         margin-left: 10px;
         margin-top: 10px;
         float: left;
@@ -170,15 +170,24 @@
         }
     }
 
+    const directiveColors = { "GO": "green", "QUIT": "red", "RESUME": "yellow" };
+    function formatDirective(comm, cmd) {
+        var color1, color2;
+        color1 = directiveColors[comm];
+        color2 = directiveColors[cmd];
+        return `parsed <span style="color:${color1};">${comm}</span>, waiting <span style="color:${color2};">${cmd}</span>`;
+    }
+
     function createTile(glider, t) {
-        const colors = { "GO": "green", "QUIT": "red", "RESUME": "yellow" };
+        console.log(glider);
+        console.log(mission(glider));
+
         fetch(`/summary/${glider.glider}${mission(glider)}`)
         .then(res => res.json())
         .then(data => {
             t.classList.add('tile');
             t.onclick = function() { window.open(`/${data.name}${mission(glider)}`, `${data.name}`); };
 
-            var color1, color2;
             var h, txt, box, barBatt, chartBatt, spanBatt, header;
             var barNext, chartNext, spanNex;
             if (glider.mission == '')
@@ -199,10 +208,9 @@
             t.appendChild(txt);
 
             txt = document.createElement('div');
-            color1 = colors[data.commDirective];
-            color2 = colors[data.cmdfileDirective];
+            txt.id = `${glider}_directive`
 
-            txt.innerHTML = `parsed <span style="color:${color1};">${data.commDirective}</span>, waiting <span style="color:${color2};">${data.cmdfileDirective}</span>`
+            txt.innerHTML = formatDirective(data.commDirective, data.cmdfileDirective);
             t.appendChild(txt);
 
             box = document.createElement('div');
@@ -350,6 +358,7 @@
         .then(res => res.json())
         .then(data => {
             var glider, t;
+            console.log(data);
             for (g of data) {
                 glider = { glider: g.glider, mission: g.mission };
 
@@ -368,6 +377,7 @@
                     t.id = `${g.glider}`
                     $('main').appendChild(t);
                 }
+                console.log(glider);
                 createTile(glider, t);
             }
 
@@ -389,10 +399,79 @@
         }
     }
 
+    let wsocket  = null;
+    var lastSetup = 0;
+    var first = true;
+
+    function setupStream() {
+        if (Date.now() < lastSetup + 5000) {
+            setTimeout('setupStream(glider)', 5000);
+            console.log('too soon');
+            return;
+        }
+        lastSetup = Date.now();
+
+        if (wsocket != null) {
+            wsocket.close();
+            console.log('closing previous stream');
+        }
+        console.log('setting up stream');
+        var loc = window.location, new_uri;
+        if (loc.protocol === "https:")
+            new_uri = "wss:";
+        else
+            new_uri = "ws:";
+
+        new_uri += "//" + loc.host;
+        new_uri += "/watch";
+        wsocket = new WebSocket(new_uri);
+
+        wsocket.onerror = function(error) {
+            console.log('stream error detected');
+            wsocket.close();
+            setupStream();
+        };
+
+        wsocket.onclose = function(e) {
+            if (e.wasClean) {
+                console.log('stream closed cleanly');
+            }
+            else {
+                console.log('connection died');
+                setupStream();
+            }
+        };
+
+        wsocket.onmessage = function(e) {
+            var line = e.data;
+            console.log(line);
+            if (line.startsWith('NEW=')) {
+                pieces = line.split('=')[1].split(',')
+                glider = pieces[0]
+                which = pieces[1]
+                console.log(glider + ' ' + which);
+                if (which == 'cmdfile') {
+                    clearTiles('' + glider);
+                    createTile({ "glider": glider, "mission": ''}, $('' + glider))
+                }
+                else if (which.startsWith('status')) {
+                    $(glider).style.border = '2px solid black';
+                }
+                else if (which.startsWith('gpsstr')) {
+                    $(glider).style.border = '2px solid magenta';
+                }
+            }
+        }
+    }
+    function init() {
+        loadTable();
+        setupStream();
+    }
+
 </script>
 
 <html>
-<body onload="loadTable();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
+<body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
 
 <div id="main" style="position: relative;">
 

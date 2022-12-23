@@ -6,9 +6,9 @@ import os
 import os.path
 from parse import parse
 import glob
-import _thread
-from watchdog.observers import Observer
-from watchdog.events import PatternMatchingEventHandler
+#import _thread
+#from watchdog.observers import Observer
+#from watchdog.events import PatternMatchingEventHandler
 import sqlite3
 import tempfile
 import subprocess
@@ -25,11 +25,13 @@ import asyncio
 import aiohttp
 import sanic_gzip
 
-modifiedFile = {}
-newDive = {}
-newFile = {}
 commFile = {}
-watchThread = {}
+watchList = {}
+baseStatus = {}
+baseTrigger = {}
+opTable = []
+
+watchFiles = ['comm.log', 'cmdfile', '.completed']
 
 app = sanic.Sanic("SGpilot")            
 compress = sanic_gzip.Compress()
@@ -104,11 +106,21 @@ async def divHandler(request, which: str, glider: int, dive: int, image: str):
        
 @app.route('/<glider:int>')
 async def mainHandler(request, glider:int):
+    global watchList
+
     filename = f'{gliderPath(glider,request)}/comm.log'
-    print(filename)
     if os.path.exists(filename):
-        if glider not in watchThread:
-            watchThread[glider] = _thread.start_new_thread(watchFilesystem, (gliderPath(glider,request),))
+        if glider not in watchList:
+            watchList[glider] = { "path": f'{gliderPath(glider,request)}' }
+
+            for f in watchFiles: 
+                filename = f'{gliderPath(glider,request)}/{f}' 
+                if os.path.exists(filename):
+                    t = os.path.getmtime(filename)
+                else:
+                    t = 0
+
+                watchList[glider].update({ f:t })
 
         filename = f'{sys.path[0]}/html/vis.html'
         return await sanic.response.file(filename, mime_type='text/html')
@@ -213,7 +225,7 @@ async def deltasHandler(request, glider: int, dive: int):
 
     files = ["science", "targets", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat"]
     for f in files:
-        filename = f'sg{glider:03d}/{f}.{dive}'
+        filename = f'{gliderPath(glider,request)}/{f}.{dive}'
 
         if os.path.exists(filename):
             with open(filename, 'r') as file:
@@ -225,34 +237,29 @@ async def deltasHandler(request, glider: int, dive: int):
 
 @app.route('/optable/<mask:int>')
 async def optableHandler(request, mask:int):
-    t = []
+    global opTable
+
+    opTable = []
     with open('ops.dat', 'r') as file:
         for line in file:
             pieces = line.strip().split('/')
+            glider = int(pieces[0][2:])
             if len(pieces) == 1:
-                t.append({"mission": '', "glider": pieces[0][2:]})
+                cmdfile = f"sg{glider:03d}/cmdfile"
+                opTable.append({"mission": '', "glider": glider, "cmdfile": os.path.getmtime(cmdfile)})
             else: 
-                t.append({"mission": pieces[1], "glider": pieces[0][2:]})
+                opTable.append({"mission": pieces[1], "glider": glider, "cmdfile": None})
 
-    return sanic.response.json(t)
+    return sanic.response.json(opTable)
  
 @app.route('/summary/<glider:int>')
 async def summaryHandler(request, glider:int):
     msg = summary.collectSummary(glider, gliderPath(glider,request))
     return sanic.response.json(msg)
 
-# this does setup so should only be used once-ish
+# this does setup and might get called after .completed is touched
 @app.route('/status/<glider:int>')
 async def statusHandler(request, glider:int):
-    if glider in commFile and commFile[glider]:
-        commFile[glider].close()
-        commFile[glider] = None
-
-    print('comm.log opened')
-    commFile[glider] = open(f'{gliderPath(glider,request)}/comm.log', 'rb')
-    commFile[glider].seek(-10000, 2)
-    # modifiedFile[glider] = "comm.log" # do we need this to trigger initial send??
-
     (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly) = buildFileList(gliderPath(glider, request))
 
     message = {}
@@ -460,42 +467,97 @@ async def saveHandler(request, glider:int, which:str):
             return sanic.response.text(f"error saving {which}, {str(e)}")
             
 #
-# web socket (real-time streams)
+# web socket (real-time streams), including the get handler for notifications
+# from the basestation
 #
+
+@app.route('/url')
+async def urlHandler(request):
+    glider = int(request.args['instrument_name'][0][2:])
+    dive   = int(request.args['dive'][0]) if 'dive' in request.args else None
+    files  = request.args['files'][0] if 'files' in request.args else None
+    status = request.args['status'][0] if 'status' in request.args else None
+    gpsstr = request.args['gpsstr'][0] if 'gpsstr' in request.args else None
+  
+    if status:
+        baseStatus[glider] = f"status={status}"
+    elif gpsstr:
+        baseStatus[glider] = f"gpsstr={gpsstr}"
+
+    if files:
+        baseTrigger[glider] = {"which": files, "dive": dive}
+
+    return sanic.response.text('ok')
+ 
+
+def checkFileMods(w):
+    mod = []
+    for g in w.keys():
+        for f in watchFiles:
+            filename = f"{w[g]['path']}/{f}"
+            if os.path.exists(filename):
+                t = os.path.getmtime(filename)
+                if t > w[g][f]:
+                    mod.append(f)
+                    w[g][f] = t
+
+    return mod
 
 @app.websocket('/stream/<glider:int>')
 async def streamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int):
     global commFile
-    global modifiedFile
-    global newFile
-    global newDive
+    global watchList
+    global baseTrigger
 
-    if glider in commFile and commFile[glider]:
-        # data = commFile[glider].read().decode('utf-8').encode('unicode_escape')
+    filename = f'{gliderPath(glider,request)}/comm.log'
+    if not os.path.exists(filename):
+        await ws.send('no')
+        return
+
+    if glider not in commFile:
+        commFile[glider] = open(filename, 'rb')
+        commFile[glider].seek(-10000, 2)
         data = commFile[glider].read().decode('utf-8', errors='ignore')
+        watchList[glider]['comm.log'] = os.path.getmtime(f"{watchList[glider]['path']}/comm.log")
         if data:
             await ws.send(data)
 
     while True:
-        if glider in modifiedFile and modifiedFile[glider]:
-            if modifiedFile[glider] == "comm.log" and glider in commFile and commFile[glider]:
-                modifiedFile[glider] = False
-                data = commFile[glider].read().decode('utf-8', errors='ignore')
-                if data:
-                    await ws.send(data)
-            elif modifiedFile[glider] == "cmdfile":
-                modifiedFile[glider] = False
-                filename = f'{gliderPath(glider,request)}/cmdfile'
-                with open(filename, 'rb') as file:
-                    data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore')
-                    await ws.send(data)
+        modFiles = checkFileMods(watchList)
+        if 'comm.log' in modFiles and glider in commFile and commFile[glider]:
+            data = commFile[glider].read().decode('utf-8', errors='ignore')
+            if data:
+                await ws.send(data)
+        elif 'cmdfile' in modFiles:
+            filename = f'{gliderPath(glider,request)}/cmdfile'
+            with open(filename, 'rb') as file:
+                data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore')
+                await ws.send(data)
+        elif glider in baseTrigger:
+            await ws.send(f"NEW={glider},{baseTrigger[glider]['dive']},{baseTrigger[glider]['which']}")
+            del baseTrigger[glider]
 
-        if glider in newDive and newDive[glider]:
-            newDive[glider] = False
-            await ws.send('NEW=' + newFile[glider])
+        await asyncio.sleep(2)
 
-        await asyncio.sleep(1)
-      
+@app.websocket('/watch')
+async def watchHandler(request: sanic.Request, ws: sanic.Websocket):
+    global baseStatus
+    global opTable
+     
+    while True:
+        for o in opTable:
+            if o['glider'] in baseStatus:
+                print(f"{o['glider']} baseStatus")
+                await ws.send(f"NEW={o['glider']},{baseStatus[o['glider']]}")
+                del baseStatus[o['glider']]
+                
+            t = os.path.getmtime(f"sg{o['glider']:03d}/cmdfile")
+            if o['cmdfile'] != None and t > o['cmdfile']:
+                print(f"{o['glider']} cmdfile")
+                await ws.send(f"NEW={o['glider']},cmdfile")
+                o['cmdfile'] = t
+
+        await asyncio.sleep(2) 
 #
 #  other stuff (non-Sanic)
 #
@@ -558,69 +620,6 @@ def buildFileList(path):
 
     return (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly)
 
-def watchFilesystem(path):
-    print("watching")
-    ignore_patterns = None
-    ignore_directories = True
-    case_sensitive = True
-
-    patterns = [f"./{path}/comm.log"]
-    eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
-    eventHandler.on_created = onCreated
-    eventHandler.on_modified = onModified
-
-    observer = Observer()
-    observer.schedule(eventHandler, f"./{path}", recursive=False)
-    observer.start()
-
-    patterns = [f"./{path}/plots/dv*png"]
-    eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
-    eventHandler.on_created = onCreated
-    eventHandler.on_modified = onModified
-
-    observer = Observer()
-    observer.schedule(eventHandler, f"./{path}/plots", recursive=False)
-    observer.start()
-
-    patterns = [f"./{path}/cmdfile"]
-    eventHandler = PatternMatchingEventHandler(patterns, ignore_patterns, ignore_directories, case_sensitive)
-    eventHandler.on_created = onCreated
-    eventHandler.on_modified = onModified
-
-    observer = Observer()
-    observer.schedule(eventHandler, f"./{path}", recursive=False)
-    observer.start()
-
-    while True:
-        time.sleep(1)
-
-def onCreated(evt):
-    global newDive
-    global newFile
-    print("created %s" % evt.src_path)
-    path = os.path.basename(evt.src_path)
-    if path.startswith('dv'):
-        try:
-            glider = int(os.path.dirname(evt.src_path).split('/')[1][2:])
-            newDive[glider] = True
-            newFile[glider] = path
-        except:
-            pass
-
-def onModified(evt):
-    global modifiedFile
-
-    print("modified %s" % evt.src_path)
-    path = os.path.basename(evt.src_path)
-    if path == "comm.log" or path == "cmdfile":
-        try:
-            glider = int(os.path.dirname(evt.src_path).split('/')[1][2:])
-            # print(f"marking {glider} {path} as modified")
-            modifiedFile[glider] = path
-        except:
-            pass
-
- 
 if __name__ == '__main__':
     os.chdir("/home/seaglider")
 

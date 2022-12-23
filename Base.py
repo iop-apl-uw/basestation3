@@ -2822,6 +2822,8 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
+    # looked at processed_other_files list to decide if we should be more
+    # granular about what is completed
     with open(base_completed_name, 'w') as file:
         file.write("Finished processing "
                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
