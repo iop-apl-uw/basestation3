@@ -38,6 +38,7 @@ import sys
 import time
 import traceback
 import warnings
+import subprocess
 
 from email.utils import COMMASPACE, formatdate
 from email.mime.multipart import MIMEMultipart, MIMEBase
@@ -311,25 +312,26 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
         else:
             process_one_urls(urls_file)
 
-    # Check for vis.py processes to notify
-    p = psutil.process_iter(["pid", "name", "cmdline", "connections"])
-    for f in p:
+    # Check for vis.py processes to notify - we have to rely
+    # on an external program so we can get privileged access
+    # to /proc to get the connection info we need
+    p = subprocess.Popen(
+                [f"{sys.path[0]}/psvislist"],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                close_fds=True,
+    )
+    list_out,list_err = p.communicate()
+    print(list_out)
+    for port in list_out.decode('utf-8').splitlines():
+        print(f"port {port}")
         try:
-            # log_info(f.info["cmdline"], f.info["connections"])
-            if f.info["cmdline"] is not None and "vis.py" in " ".join(
-                f.info["cmdline"]
-            ):
-                log_info(f)
-                if (
-                    f.info["connections"] is not None
-                    and len(f.info["connections"]) == 1
-                ):
-                    pdb.set_trace()
-                    port = f.info["connections"][0].laddr.port
-                    url = f"http://localhost:{port}/url/"
-                    pdb.set_trace()
-                    with io.StringIO(f"5 {url}\n") as fi:
-                        process_one_urls(fi)
+            url = f"http://localhost:{port}/url/"
+            print(url)
+            with io.StringIO(f"5 {url}\n") as fi:
+                print("processing")
+                process_one_urls(fi)
         except:
             log_error(f"Failed processing {f} for urls and vis.py", "exc")
 
