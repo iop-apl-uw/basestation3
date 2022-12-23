@@ -44,13 +44,13 @@ L.Util.extend(L.KML, {
 		for (var i = 0; i < el.length; i++) {
 			if (!this._check_folder(el[i])) { continue; }
 			l = this.parseFolder(el[i], style);
-			if (l) { layers.push(l); }
+			if (l) { console.log('added folder layer ' + el[i].id + ' ' + l.options.name); layers.push(l); }
 		}
 		el = xml.getElementsByTagName('Placemark');
 		for (var j = 0; j < el.length; j++) {
 			if (!this._check_folder(el[j])) { continue; }
 			l = this.parsePlacemark(el[j], xml, style);
-			if (l) { layers.push(l); }
+			if (l) { console.log('add placemark layer ' + l.options.name); layers.push(l); }
 		}
 		el = xml.getElementsByTagName('GroundOverlay');
 		for (var k = 0; k < el.length; k++) {
@@ -180,6 +180,7 @@ L.Util.extend(L.KML, {
 		for (var i = 0; i < el.length; i++) {
 			if (!this._check_folder(el[i], xml)) { continue; }
 			l = this.parseFolder(el[i], style);
+            l.layerID = el[i].id;
 			if (l) { layers.push(l); }
 		}
 		el = xml.getElementsByTagName('Placemark');
@@ -200,6 +201,7 @@ L.Util.extend(L.KML, {
 		} else {
 			l = new L.FeatureGroup(layers);
 		}
+        
 		el = xml.getElementsByTagName('name');
 		if (el.length && el[0].childNodes.length) {
 			l.options.name = el[0].childNodes[0].nodeValue;
@@ -332,7 +334,8 @@ L.Util.extend(L.KML, {
         if (!('icon' in options)) {
             options['icon'] = new L.KMLIcon({ iconSize: [16,16], iconUrl: '/script/images/marker-icon.png', shadowUrl: null, iconAnchor: [8,8] });
         }
-		return new L.KMLMarker(new L.LatLng(ll[1], ll[0]), options);
+		marker = new L.KMLMarker(new L.LatLng(ll[1], ll[0]), options);
+        return marker;
 	},
 
 	parsePolygon: function (line, xml, options) {

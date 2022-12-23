@@ -211,7 +211,7 @@
                 });
             }
 
-            async function loadGliderKML(map, layerControl, urls) {
+            async function loadGliderKML(map, layerControl, urls, tail) {
                 var kml;
                 var parser;
 
@@ -243,6 +243,32 @@
                             && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
                             layerControl.addOverlay(track._layers[k], track._layers[k].options.name);
                         }
+
+                        if (tail > -1 && track._layers[k].options.hasOwnProperty('name')
+                            && track._layers[k].options.name.includes('Dives')) {
+                            console.log('looking for dive layers');
+                            var dv, mx = -1;
+                            track._layers[k].eachLayer(function(layer) {
+                                if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${glider} dive `)) {
+                                    dv = parseInt(layer.layerID.split(' ')[2]);
+                                    if (dv > mx)
+                                        mx = dv; 
+                                }
+                            });
+                            console.log('latest dive is ' + mx);
+
+                            track._layers[k].eachLayer(function(layer) {
+                                if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${glider} dive `)) {
+                                    dv = parseInt(layer.layerID.split(' ')[2]);
+                                    if (dv < mx - tail) {
+                                        track._layers[k].removeLayer(layer);
+                                    }
+                                }
+                            });
+
+                        }
+
+                        
                     }
 
                     // Adjust map to show the kml for the first glider
@@ -534,12 +560,13 @@
             var urls = [];
 
             var mission = params.has('mission') ? '?mission=' + params.get('mission') : '';
+            var tail = params.has('tail') ? parseInt(params.get('tail')) : -1;
 
             document.title = glider + ' - map';
             for (var i = first ; i < path.length ; i++) 
                 urls.push('/kml/' + path[i] + mission);
 
-            loadGliderKML(map, layerControl, urls);
+            loadGliderKML(map, layerControl, urls, tail);
             loadGliderDAC(map, layerControl, path[first]); 
            
             if (params.has('sa')) {
