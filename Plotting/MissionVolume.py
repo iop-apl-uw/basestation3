@@ -32,6 +32,7 @@ import pdb
 import sys
 import traceback
 import typing
+import sqlite3
 
 import plotly
 
@@ -62,36 +63,43 @@ def mission_volume(
         log_error("Could not open mission database")
         return ([], [])
 
+    cur = conn.cursor()
+    res = cur.execute('PRAGMA table_info(dives)')
+    columns = [i[1] for i in res]
+
     fig = plotly.graph_objects.Figure()
     df = None
-    try:
-        df = pd.read_sql_query(
-            "SELECT dive,implied_volmax from dives",
-            conn,
-        ).sort_values("dive")
-    except:
-        log_error("Could not fetch needed columns", "exc")
-        return ([], [])
+    if 'implied_volmax' in columns:
+        try:
+            df = pd.read_sql_query(
+                "SELECT dive,implied_volmax from dives",
+                conn,
+            ).sort_values("dive")
+        except (pd.io.sql.DatabaseError,sqlite3.OperationalError):
+            log_error("Could not fetch needed columns", "exc")
+            return ([], [])
 
     glider_df = None
-    try:
-        glider_df = pd.read_sql_query(
-            "SELECT dive,implied_volmax_glider from dives",
-            conn,
-        ).sort_values("dive")
-    except pd.io.sql.DatabaseError:
-        log_warning("Could not load implied volmax from the glider estimate", "exc")
+    if 'implied_volmax_glider' in columns:
+        try:
+            glider_df = pd.read_sql_query(
+                "SELECT dive,implied_volmax_glider from dives",
+                conn,
+            ).sort_values("dive")
+        except (sqlite3.OperationalError,pd.io.sql.DatabaseError):
+            log_warning("Could not load implied volmax from the glider estimate", "exc")
 
     flight_df = None
-    try:
-        flight_df = pd.read_sql_query(
-            "SELECT dive,implied_volmax_fm from dives",
-            conn,
-        ).sort_values("dive")
-    except pd.io.sql.DatabaseError:
-        log_warning(
-            "Could not load implied volmax from the flight model estimate", "exc"
-        )
+    if 'implied_volmax_fm' in columns:
+        try:
+            flight_df = pd.read_sql_query(
+                "SELECT dive,implied_volmax_fm from dives",
+                conn,
+            ).sort_values("dive")
+        except (sqlite3.OperationalError,pd.io.sql.DatabaseError):
+            log_warning(
+                "Could not load implied volmax from the flight model estimate", "exc"
+            )
 
     fig.add_trace(
         {

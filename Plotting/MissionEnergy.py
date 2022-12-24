@@ -77,12 +77,15 @@ line_lookup = {
 }
 
 # TODO - paramaterize these
-p_dives_back = 10
+g_p_dives_back = 10
 p_reserve_percent = 0.15
 
 
 def estimate_endurance(dive_col, gauge_col, dive_times):
     """Estimate endurace from normalized remaining battery capacity"""
+    print(dive_col)
+    p_dives_back = g_p_dives_back if dive_col[-1] >= g_p_dives_back else dive_col[-1]
+
     m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
     log_info(f"m:{m} b:{b}")
     lastdive_num = np.int32((p_reserve_percent - b) / m)
@@ -166,6 +169,8 @@ def mission_energy(
                 cap_col.to_numpy(),
                 dive_time.to_numpy(),
             )
+
+            p_dives_back = g_p_dives_back if dive_col.to_numpy()[-1] >= g_p_dives_back else dive_col.to_numpy()[-1]
 
             y_offset += -0.02
             l_annotations.append(
