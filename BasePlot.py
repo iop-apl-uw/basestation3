@@ -116,8 +116,8 @@ def plot_mission(
         log_debug(f"Trying Mission Plot :{plot_name}")
         try:
             fig_list, file_list = plot_func(base_opts, mission_str)
-        except:
-            log_error(f"{plot_name} failed", "exc")
+        except Exception as e:
+            log_error(f"{plot_name} failed {e}", "exc")
         else:
             for figure in fig_list:
                 figs.append(figure)
@@ -253,7 +253,7 @@ if __name__ == "__main__":
     os.environ["TZ"] = "UTC"
     time.tzset()
 
-    warnings.filterwarnings("error")
+    # warnings.filterwarnings("error")
 
     try:
         if "--profile" in sys.argv:
