@@ -32,13 +32,13 @@ import itertools
 import netrc
 import io
 import os
+import stat
 import pdb
 import smtplib
 import sys
 import time
 import traceback
 import warnings
-import subprocess
 
 from email.utils import COMMASPACE, formatdate
 from email.mime.multipart import MIMEMultipart, MIMEBase
@@ -315,25 +315,16 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
     # Check for vis.py processes to notify - we have to rely
     # on an external program so we can get privileged access
     # to /proc to get the connection info we need
-    p = subprocess.Popen(
-                [f"{sys.path[0]}/psvislist"],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                close_fds=True,
-    )
-    list_out,list_err = p.communicate()
-    print(list_out)
-    for port in list_out.decode('utf-8').splitlines():
-        print(f"port {port}")
-        try:
-            url = f"http://localhost:{port}/url/"
-            print(url)
-            with io.StringIO(f"5 {url}\n") as fi:
-                print("processing")
-                process_one_urls(fi)
-        except:
-            log_error(f"Failed processing {f} for urls and vis.py", "exc")
+    prog = f"{sys.path[0]}/psvislist"
+    if os.path.exists(prog) and (os.stat(prog).st_mode & stat.S_ISUID):
+        list_status,list_out = Utils.run_cmd_shell(prog, timeout=3, shell=True)
+        for port in list_out.read().decode('utf-8').splitlines():
+            try:
+                url = f"http://localhost:{port}/url/"
+                with io.StringIO(f"5 {url}\n") as fi:
+                    process_one_urls(fi)
+            except:
+                log_error(f"Failed processing {f} for urls and vis.py", "exc")
 
 
 def send_email(
