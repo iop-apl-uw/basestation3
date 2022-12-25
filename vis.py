@@ -94,7 +94,8 @@ async def divHandler(request, which: str, glider: int, dive: int, image: str):
 
     if os.path.exists(filename):
         resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
-        resp = resp + f'<a href="/div/{glider}/{dive-1}/{image}">prev</a> * <a href="/div/{glider}/{dive+1}/{image}">next</a>'
+        if which == 'dv':
+            resp = resp + f'<a href="/div/{which}/{glider}/{dive-1}/{image}"style="text-decoration:none; font-size:32px;">&larr;</a><span style="font-size:32px;"> &#9863; </span> <a href="/div/{which}/{glider}/{dive+1}/{image}" style="text-decoration:none; font-size:32px;">&rarr;</a>'
 
         async with aiofiles.open(filename, 'r') as file:
             div = await file.read() 
