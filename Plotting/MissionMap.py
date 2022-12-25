@@ -39,8 +39,9 @@ import matplotlib.path as mpath
 import matplotlib.patches as patches
 import os
 from CalibConst import getSGCalibrationConstants
-#import warnings
-#from shapely.errors import ShapelyDeprecationWarning
+import matplotlib.cm as cm
+import matplotlib.colors as mcolors
+import xarray as xr
 
 import numpy as np
 import pandas as pd
@@ -55,9 +56,17 @@ import Utils
 from BaseLog import log_info, log_error
 from Plotting import plotmissionsingle
 
-
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
+
+def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
+    if n == -1:
+        n = cmap.N
+    new_cmap = mcolors.LinearSegmentedColormap.from_list(
+         'trunc({name},{a:.2f},{b:.2f})'.format(name=cmap.name, a=minval, b=maxval),
+         cmap(np.linspace(minval, maxval, n)))
+    return new_cmap
+
 
 @plotmissionsingle
 def mission_map(
@@ -106,14 +115,31 @@ def mission_map(
     myProj = ccrs.Orthographic(central_longitude=ctrlon, central_latitude=ctrlat)
     myProj._threshold = myProj._threshold/40.  #for higher precision plot
 
+    bathy_lat_min = extent[2] - 1
+    bathy_lat_max = extent[3] + 1
+    bathy_lon_min = extent[0] - 1
+    bathy_lon_max = extent[1] + 1
+
+    bathy = xr.load_dataset(f'{sys.path[0]}/data/ETOPO2v2g_f4.nc')
+    lat_range_xr = np.logical_and(
+        bathy.y >= bathy_lat_min, bathy.y <= bathy_lat_max
+    )
+    lon_range_xr = np.logical_and(
+        bathy.x >= bathy_lon_min, bathy.x <= bathy_lon_max
+    )
+    bathy_depth_xr = bathy.z[lat_range_xr, lon_range_xr]
+    bathy_depth = bathy_depth_xr.to_numpy()
+    bathy_depth[bathy_depth > 0] = 0
+    bathy_depth = -bathy_depth
+    bathy_lats = bathy.y[lat_range_xr].to_numpy()
+    bathy_lons = bathy.x[lon_range_xr].to_numpy()
+
     fig = plt.figure(figsize=(8,12))
     ax = fig.add_subplot(1, 1, 1, projection=myProj)
 
     fudgex = 0.12*(extent[1] - extent[0])
     fudgey = 0.12*(extent[3] - extent[2])
 
-#    with warnings.catch_warnings():
-#        warnings.filterwarnings("ignore", category=ShapelyDeprecationWarning)
     ax.set_extent([extent[0]-fudgex,extent[1]+fudgex,extent[2]-fudgey,extent[3]+fudgey], ccrs.PlateCarree())
 
     g = ax.gridlines(draw_labels=True, x_inline=False, y_inline=False)
@@ -168,12 +194,17 @@ def mission_map(
     ax.add_patch(patch1s)
     ax.add_patch(patch1v)
 
-    ax.stock_img()
-
-    ax.add_feature(cartopy.feature.OCEAN, linewidth=.3, color='lightblue')
     ax.add_feature(cartopy.feature.LAND, zorder=1, edgecolor='black', facecolor='gray')
     ax.title.set_text("")
-    plt.plot(df['lon'].to_numpy(), df['lat'].to_numpy(), color='orange', marker='+', transform=ccrs.PlateCarree(), linestyle='None')
+
+    deep = truncate_colormap(cm.get_cmap('Blues'), minval=0.3, maxval=1)
+    ax.pcolormesh(bathy_lons, bathy_lats, bathy_depth, transform=ccrs.PlateCarree(), 
+                  cmap=deep, zorder=0, alpha=1, edgecolors=None, shading='gouraud')
+
+    Ndv = df['dive'].max()
+    rdf = df[df['dive'] > Ndv - 10]
+    plt.plot(df['lon'].to_numpy(), df['lat'].to_numpy(), color='lightsalmon', alpha=1, marker='.', markersize=4, transform=ccrs.PlateCarree(), linestyle='None')
+    plt.plot(rdf['lon'].to_numpy(), rdf['lat'].to_numpy(), color='red', marker='+', transform=ccrs.PlateCarree(), linestyle='None')
     plt.show()
 
     output_name = "eng_mission_map.png"
