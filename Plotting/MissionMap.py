@@ -55,9 +55,30 @@ import Utils
 
 from BaseLog import log_info, log_error
 from Plotting import plotmissionsingle
-
+from cartopy.mpl.ticker import LatitudeFormatter,LongitudeFormatter
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
+
+class MyFormatter(LatitudeFormatter):
+    def _get_dms(self, x):
+        self._precision = 6
+        x = np.asarray(x, 'd')
+        degs = np.round(x, self._precision).astype('i')
+        y = (x - degs) * 60
+        mins = y
+        secs = 0
+        return x, degs, mins, secs
+
+    def _format_minutes(self, mn):
+        out = f'{mn:05.2f}'
+        if out[3:5] == '00':
+            out = out[0:2]
+        elif out[4] == '0':
+            out = out[0:4]
+        return f'{out}{self._minute_symbol}'
+
+    def _format_seconds(self, sec):
+        return ''
 
 def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
     if n == -1:
@@ -139,7 +160,7 @@ def mission_map(
     bathy_lats = bathy.y[lat_range_xr].to_numpy()
     bathy_lons = bathy.x[lon_range_xr].to_numpy()
 
-    fig = plt.figure(figsize=(8,12))
+    fig = plt.figure(figsize=(8,12), dpi=200)
     ax = fig.add_subplot(1, 1, 1, projection=myProj)
 
     fudgex = 0.12*(extent[1] - extent[0])
@@ -147,9 +168,12 @@ def mission_map(
 
     ax.set_extent([extent[0]-fudgex,extent[1]+fudgex,extent[2]-fudgey,extent[3]+fudgey], ccrs.PlateCarree())
 
-    g = ax.gridlines(draw_labels=True, x_inline=False, y_inline=False)
+    g = ax.gridlines(draw_labels=True, x_inline=False, y_inline=False, dms=True)
     xt = g.xlocator.tick_values(ll_lon,ur_lon)
     yt = g.ylocator.tick_values(ll_lat,ur_lat)
+    
+    g.yformatter = MyFormatter(dms=True)
+    g.xformatter = MyFormatter(dms=True)
 
     xp = []
     yp = []
@@ -176,7 +200,7 @@ def mission_map(
     # 2: Right edge: Bottom - Top
     # 3: Upper edge: Right - Left
     # 4: Left edge: Top - Bottom
-    print(len(xp))
+    
     [ax_hdl] = ax.plot(xp, yp, color='black', linewidth=0.5, transform=noProj)
     tx_path = ax_hdl._get_transformed_path()
     path_in_data_coords, _ = tx_path.get_transformed_path_and_affine()
