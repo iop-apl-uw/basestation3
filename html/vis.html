@@ -833,8 +833,27 @@
             if (ab > -1) //  && links[j] != 'ab')
                 $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + ab + ');">ab</span> * ';
 
-            all = links.slice(e,sec).join(', ');
-            $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');" title="' + all +'">eng</span> * ';
+            mn = sec-1;
+            for (var i = e ; i < mn ; i += 5) {
+                if (i + 4 < mn)
+                    j = i+4;
+                else
+                    j = mn;
+
+                all = links.slice(i,j+1).join(', ');
+                links[i] = links[i].replace('eng_', ''); 
+                links[i] = links[i].replace('mission_', ''); 
+                links[i] = links[i].replace('SDCARD_', ''); 
+                links[i] = links[i].replace('FM_', ''); 
+                links[j] = links[j].replace('eng_', ''); 
+                links[j] = links[j].replace('mission_', ''); 
+                links[j] = links[j].replace('SDCARD_', ''); 
+                links[j] = links[j].replace('FM_', ''); 
+                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> * '; 
+            }
+
+            // all = links.slice(e,sec).join(', ');
+            // $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');" title="' + all +'">eng</span> * ';
 
             links.splice(sec, 1); 
 
