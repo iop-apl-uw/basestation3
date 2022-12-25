@@ -92,6 +92,8 @@ def mission_map(
     ur_lon = df['lon'].max() + 0.3*(df['lon'].max() - df['lon'].min())
     ur_lat = df['lat'].max() + 0.3*(df['lat'].max() - df['lat'].min())
 
+    tail = 20
+
     sg_plot_consts_file_name = os.path.join(
         base_opts.mission_dir, "sg_plot_constants.m"
     )
@@ -104,6 +106,9 @@ def mission_map(
             ur_lon = plot_constants["lon_east"]
             ll_lat = plot_constants["lat_south"]
             ur_lat = plot_constants["lat_north"]
+
+        if "tail" in plot_constants:
+            tail = plot_constants["tail"]
 
     ctrlat = df['lat'].mean()
     ctrlon = df['lon'].mean()
@@ -202,7 +207,7 @@ def mission_map(
                   cmap=deep, zorder=0, alpha=1, edgecolors=None, shading='gouraud')
 
     Ndv = df['dive'].max()
-    rdf = df[df['dive'] > Ndv - 10]
+    rdf = df[df['dive'] > Ndv - tail]
     plt.plot(df['lon'].to_numpy(), df['lat'].to_numpy(), color='lightsalmon', alpha=1, marker='.', markersize=4, transform=ccrs.PlateCarree(), linestyle='None')
     plt.plot(rdf['lon'].to_numpy(), rdf['lat'].to_numpy(), color='red', marker='+', transform=ccrs.PlateCarree(), linestyle='None')
     plt.show()
