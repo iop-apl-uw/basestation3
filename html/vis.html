@@ -1367,6 +1367,12 @@
         $('chkTimeseriesPlots').checked = false;
 
         document.onkeydown = function (event) {
+            const excl = ['input', 'textarea'];
+            if (excl.includes(event.target.tagName.toLowerCase()))
+                return;
+
+            console.log(event);
+            console.log(event.target);
             var idx;
             const key = event.key;
             if (key == 'a') {
