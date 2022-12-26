@@ -1380,23 +1380,23 @@
             console.log(event.target);
             var idx;
             const key = event.key;
-            if (key == 'a') {
+            if (key == 'a' || key == 'h') {
                 idx = plotList.indexOf(currElt);
                 if (idx > 0) {
                     idx --;
                     $('thumb' + plotList[idx]).click();
                 }
             }
-            else if (key == 'd') {
+            else if (key == 'd' || key == 'l') {
                 idx = plotList.indexOf(currElt);
                 if (idx < (plotList.length - 1)) {
                     idx ++;
                     $('thumb' + plotList[idx]).click();
                 }
             }
-            else if (key == 'w')
+            else if (key == 'w' || key == 'k')
                 changeDive(1);
-            else if (key == 's')
+            else if (key == 's' || key == 'j')
                 changeDive(-1);
             else if ("123456789".includes(key) && parseInt(key) <= numPages) {
                 jumpScroll((parseInt(key) - 1)*5);
