@@ -21,7 +21,7 @@ sdnotify
 pylddwrap
 # For visualization
 parse
-watchdog
+# watchdog - not anymore 
 sanic
 sanic_gzip
 aiohttp
@@ -30,6 +30,7 @@ aiohttp
 #
 # Used in by misc tools (tools directory)
 pyproj
+# latest cartopy crashes when shapely is not built from source
 shapely
 # For GliderTrack support
 oct2py>=5.5.1
