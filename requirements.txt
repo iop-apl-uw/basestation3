@@ -4,9 +4,9 @@ matplotlib>=3.2.0
 numpy>=1.19.1
 gsw==3.3.1
 seawater==3.3.4
-# For MakePlot2, 3 and 4
 plotly>=4.9.0
 scipy>=1.9.0
+cartopy
 # For SlackPost and InReachSend
 requests==2.24.0
 # For GliderDAC and BaseNetwork support

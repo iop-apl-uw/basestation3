@@ -76,19 +76,19 @@ line_lookup = {
     "SciCon": line_type("solid", "DarkMagenta"),
 }
 
-# TODO - paramaterize these
-g_p_dives_back = 10
-p_reserve_percent = 0.15
 
-
-def estimate_endurance(dive_col, gauge_col, dive_times):
+def estimate_endurance(base_opts, dive_col, gauge_col, dive_times):
     """Estimate endurace from normalized remaining battery capacity"""
-    print(dive_col)
-    p_dives_back = g_p_dives_back if dive_col[-1] >= g_p_dives_back else dive_col[-1]
+    # print(dive_col)
+    p_dives_back = (
+        base_opts.mission_energy_dives_back
+        if dive_col[-1] >= base_opts.mission_energy_dives_back
+        else dive_col[-1]
+    )
 
     m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
     log_info(f"m:{m} b:{b}")
-    lastdive_num = np.int32((p_reserve_percent - b) / m)
+    lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)
     dives_remaining = lastdive_num - dive_col[-1]
     secs_remaining = dives_remaining * np.mean(dive_times[-p_dives_back:])
     end_date = time.strftime(
@@ -115,7 +115,6 @@ def mission_energy(
 
     try:
         # capacity 10V and 24V are normalized battery availability
-
         fg_df = pd.read_sql_query(
             "SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V,fg_batt_capacity_10V,fg_batt_capacity_24V,fg_ah_used_10V,fg_ah_used_24V,log_FG_AHR_10Vo,log_FG_AHR_24Vo from dives",
             conn,
@@ -165,12 +164,17 @@ def mission_energy(
         y_offset = -0.08
         for type_str, dive_col, cap_col, dive_time in scenarios:
             dives_remaining, days_remaining, end_date = estimate_endurance(
+                base_opts,
                 dive_col.to_numpy(),
                 cap_col.to_numpy(),
                 dive_time.to_numpy(),
             )
 
-            p_dives_back = g_p_dives_back if dive_col.to_numpy()[-1] >= g_p_dives_back else dive_col.to_numpy()[-1]
+            p_dives_back = (
+                base_opts.mission_energy_dives_back
+                if dive_col.to_numpy()[-1] >= base_opts.mission_energy_dives_back
+                else dive_col.to_numpy()[-1]
+            )
 
             y_offset += -0.02
             l_annotations.append(
@@ -200,7 +204,7 @@ def mission_energy(
             batt_df["batt_Ahr_cap_10V"].to_numpy()[-1],
         )
         dives_remaining = (
-            batt_cap * (1.0 - p_reserve_percent) - used_to_date
+            batt_cap * (1.0 - base_opts.mission_energy_reserve_percent) - used_to_date
         ) / avg_use
         secs_remaining = (
             dives_remaining * batt_df["dive_time"].to_numpy()[-p_dives_back]
