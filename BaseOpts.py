@@ -864,6 +864,33 @@ global_options_dict = {
             "choices": ["dives", "mission"],
         },
     ),
+    "mission_energy_reserve_percent": options_t(
+        0.15,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--mission_energy_reserve_percent",),
+        float,
+        {
+            "help": "For Mission Energy projection, what is the battery reserve",
+            "option_group": "plotting",
+        },
+    ),
+    "mission_energy_dives_back": options_t(
+        10,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--mission_energy_dives_back",),
+        int,
+        {
+            "help": "For Mission Energy projection, how many dives back to fit",
+            "option_group": "plotting",
+        },
+    ),
+    # End plotting related
     "strip_list": options_t(
         None,
         ("StripNetCDF",),
