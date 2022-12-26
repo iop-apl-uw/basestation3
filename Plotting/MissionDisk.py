@@ -63,7 +63,7 @@ def mission_disk(
     res = conn.cursor().execute('PRAGMA table_info(dives)')
     columns = [i[1] for i in res]
 
-    qcols = list(filter(lambda x: x.startswith("SD_") or x.endswith("_FREEKB"), columns))
+    qcols = list(filter(lambda x: x.startswith("SD_") or x.endswith("_FREEKB"), columns) or x.endswith("_FREE"))
 
     if len(qcols) == 0:
         return ([], [])
