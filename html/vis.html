@@ -1403,6 +1403,10 @@
             }
 
         };
+        $('bottom').addEventListener("wheel", (evt) => {
+            evt.preventDefault();
+            $('bottom').scrollLeft += evt.deltaY;
+        });
     }
 
 </script>
