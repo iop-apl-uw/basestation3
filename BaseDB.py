@@ -313,6 +313,17 @@ def loadFileToDB(cur, filename):
     else:
         avail10 = 0
 
+    [sdcap, sdfree] = list(
+        map(int, nci.variables["log_SDSIZE"][:].tobytes().decode("utf-8").split(","))
+    )
+    [sdfiles, sddirs] = list(
+        map(int, nci.variables["log_SDFILEDIR"][:].tobytes().decode("utf-8").split(","))
+    )
+
+    insertColumn(dive, cur, "SD_free", sdfree, "INTEGER")
+    insertColumn(dive, cur, "SD_files", sdfiles, "INTEGER")
+    insertColumn(dive, cur, "SD_dirs", sddirs, "INTEGER")
+
     insertColumn(dive, cur, "batt_volts_10V", v10, "FLOAT")
     insertColumn(dive, cur, "batt_volts_24V", v24, "FLOAT")
 

@@ -519,8 +519,8 @@ def checkFileMods(w):
 
     return mod
 
-@app.websocket('/stream/<glider:int>')
-async def streamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int):
+@app.websocket('/stream/<which:str>/<glider:int>')
+async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
     global commFile
     global watchList
     global baseTrigger
@@ -530,6 +530,10 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int)
         await ws.send('no')
         return
 
+    if which == 'init' and glider in commFile:
+        commFile[glider].close()
+        del commFile[glider]
+ 
     if glider not in commFile:
         commFile[glider] = open(filename, 'rb')
         commFile[glider].seek(-10000, 2)

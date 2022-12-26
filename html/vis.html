@@ -93,9 +93,9 @@
     var lastSetup = 0;
     var first = true;
 
-    function setupStream(glider) {
+    function setupStream(glider, first) {
         if (Date.now() < lastSetup + 5000) {
-            setTimeout('setupStream(glider)', 5000);
+            setTimeout('setupStream(glider, false)', 5000);
             console.log('too soon');
             return;
         }
@@ -113,13 +113,14 @@
             new_uri = "ws:";
 
         new_uri += "//" + loc.host;
-        new_uri += "/stream/" + glider;
+        new_uri += "/stream/" + (first ? "init/" : "restart/") + glider;
+        console.log(new_uri);
         wsocket = new WebSocket(new_uri);
 
         wsocket.onerror = function(error) {
             console.log('stream error detected');
             wsocket.close();
-            setupStream(glider);
+            setupStream(glider, false);
         };
 
         wsocket.onclose = function(e) {
@@ -128,7 +129,7 @@
             }
             else {
                 console.log('connection died');
-                setupStream(glider);
+                setupStream(glider, false);
             }
         };
 
@@ -259,6 +260,8 @@
     var currElt = 'diveplot';
     var controlFileDive = {};
 
+    var numPages = 0;
+
     function saveControl(force) {
         var json = {};
         var file = $('selectFile').value;
@@ -347,7 +350,7 @@
      
         row = tbody.insertRow(1);
         row.id = rowID;
-        console.log('inserted ' + rowID);
+        
         i = $('mainTable').rows.length % 2;
         row.style.backgroundColor = colors[i];
         cell = row.insertCell(0);
@@ -814,7 +817,9 @@
             var ab = links.indexOf('ab');
             var mn = ab > -1 ? ab - 1 : e - 1;
             var all;
- 
+
+            numPages = parseInt(n / 5) + 1;
+
             links.splice(e, 1); 
 
             var sec = links.indexOf('sg');
@@ -828,10 +833,10 @@
                     j = mn;
 
                 all = links.slice(i,j+1).join(', ');
-                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> * '; 
+                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> <b>&#124;</b> '; 
             }
             if (ab > -1) //  && links[j] != 'ab')
-                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + ab + ');">ab</span> * ';
+                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + ab + ');">ab</span> <b>&#124;</b> ';
 
             mn = sec-1;
             for (var i = e ; i < mn ; i += 5) {
@@ -849,7 +854,7 @@
                 links[j] = links[j].replace('mission_', ''); 
                 links[j] = links[j].replace('SDCARD_', ''); 
                 links[j] = links[j].replace('FM_', ''); 
-                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> * '; 
+                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> <b>&#124;</b> '; 
             }
 
             // all = links.slice(e,sec).join(', ');
@@ -1353,7 +1358,7 @@
         console.log(glider);
         window.name = glider;
         loadStatus(glider, dive);
-        setupStream(glider);
+        setupStream(glider, true);
         loadControlFile('cmdfile');
         loadControlFile('science');
         loadControlFile('targets');
@@ -1393,6 +1398,10 @@
                 changeDive(1);
             else if (key == 's')
                 changeDive(-1);
+            else if ("123456789".includes(key) && parseInt(key) <= numPages) {
+                jumpScroll((parseInt(key) - 1)*5);
+            }
+
         };
     }
 
