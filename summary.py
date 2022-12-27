@@ -21,8 +21,24 @@ def haversine(lat0, lon0, lat1, lon1):
 
     return 2.0*R*math.asin(math.sqrt(a))
 
-def collectSummary(glider, path):
+def getCmdfileDirective(cmdfile):
+    cmdfileDirective = 'unknown'
     possibleDirectives = ["GO", "QUIT", "RESUME", "EXIT_TO_MENU"]
+
+    if cmdfile is not None and os.path.exists(cmdfile):
+        with open(cmdfile, 'rb') as file:
+            for line in file:
+                line = line.decode('utf-8', errors='ignore').strip()[1:].split(
+',')[0]
+                if line in possibleDirectives:
+                    cmdfileDirective = line
+        
+
+        file.close()
+
+    return cmdfileDirective
+
+def collectSummary(glider, path):
 
     commlog = f'{path}/comm.log'
     dbfile  = f'{path}/sg{glider:03d}.db'
@@ -69,19 +85,7 @@ def collectSummary(glider, path):
 
     conn.close()
 
-    cmdfileDirective = 'unknown'
-
-    if cmdfile is not None:
-        with open(cmdfile, 'rb') as file:
-            for line in file:
-                line = line.decode('utf-8', errors='ignore').strip()[1:].split(
-',')[0]
-                if line in possibleDirectives:
-                    cmdfileDirective = line
-        
-
-        file.close()
-
+    cmdfileDirective = getCmdfileDirective(cmdfile)
 
     try: 
         dog = math.sqrt(math.pow(data['GPS_north_displacement_m'], 2) +

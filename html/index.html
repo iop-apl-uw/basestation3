@@ -171,11 +171,10 @@
     }
 
     const directiveColors = { "GO": "green", "QUIT": "red", "RESUME": "yellow" };
-    function formatDirective(comm, cmd) {
-        var color1, color2;
-        color1 = directiveColors[comm];
-        color2 = directiveColors[cmd];
-        return `parsed <span style="color:${color1};">${comm}</span>, waiting <span style="color:${color2};">${cmd}</span>`;
+    function formatDirective(d, id) {
+        var color;
+        color = d in directiveColors ? directiveColors[d] : 'black'; 
+        return `<span style="color:${color};" id="${id}">${d}</span>`;
     }
 
     function createTile(glider, t) {
@@ -201,7 +200,6 @@
 
             t.appendChild(header);
 
-
             txt = document.createElement('div');
             let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
             txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
@@ -210,7 +208,7 @@
             txt = document.createElement('div');
             txt.id = `${glider}_directive`
 
-            txt.innerHTML = formatDirective(data.commDirective, data.cmdfileDirective);
+            txt.innerHTML = `parsed ${formatDirective(data.commDirective, "commdirective" + glider.glider)}, waiting ${formatDirective(data.cmdfileDirective, "cmdfileDirective" + glider.glider)}`;
             t.appendChild(txt);
 
             box = document.createElement('div');
@@ -450,14 +448,27 @@
                 glider = pieces[0]
                 which = pieces[1]
                 console.log(glider + ' ' + which);
-                if (which == 'cmdfile') {
+                if (which == 'cmdfile' && pieces.length == 3) {
+                    d = pieces[2]
+                    $('cmdfileDirective' + glider).innerHTML = d;
+                    $('cmdfileDirective' + glider).style.color = d in directiveColors ? directiveColors[d] : 'black';
+                    // cmdfile has changed, brute force reload the whole
+                    // tile so that the waiting directive changes
+                    // clearTiles('' + glider);
+                    // createTile({ "glider": glider, "mission": ''}, $('' + glider))
+                }
+                else if (which.startsWith('files')) {
+                    // the only files we get is perdive which we use 
+                    // to trigger a reload of this tile
                     clearTiles('' + glider);
                     createTile({ "glider": glider, "mission": ''}, $('' + glider))
                 }
                 else if (which.startsWith('status')) {
+                    // the only status message is disconnected
                     $(glider).style.border = '2px solid black';
                 }
                 else if (which.startsWith('gpsstr')) {
+                    // we only get gpsstr on new connection
                     $(glider).style.border = '2px solid magenta';
                 }
             }

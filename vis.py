@@ -495,11 +495,15 @@ async def urlHandler(request):
     status = request.args['status'][0] if 'status' in request.args else None
     gpsstr = request.args['gpsstr'][0] if 'gpsstr' in request.args else None
   
+    # baseStatus is used by /watch websocket stream (index.html)
     if status:
         baseStatus[glider] = f"status={status}"
     elif gpsstr:
         baseStatus[glider] = f"gpsstr={gpsstr}"
+    elif files and files == "perdive":
+        baseStatus[glider] = f"files=perdive" 
 
+    # baseTrigger is used by /stream (vis.html)
     if files:
         baseTrigger[glider] = {"which": files, "dive": dive}
 
@@ -571,10 +575,12 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket):
                 await ws.send(f"NEW={o['glider']},{baseStatus[o['glider']]}")
                 del baseStatus[o['glider']]
                 
-            t = os.path.getmtime(f"sg{o['glider']:03d}/cmdfile")
+            cmdfile = f"sg{o['glider']:03d}/cmdfile"
+            t = os.path.getmtime(cmdfile)
             if o['cmdfile'] != None and t > o['cmdfile']:
+                directive = summary.getCmdfileDirective(cmdfile)
                 print(f"{o['glider']} cmdfile")
-                await ws.send(f"NEW={o['glider']},cmdfile")
+                await ws.send(f"NEW={o['glider']},cmdfile,{directive}")
                 o['cmdfile'] = t
 
         await asyncio.sleep(2) 
