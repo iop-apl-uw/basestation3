@@ -654,4 +654,4 @@ if __name__ == '__main__':
     else:
         port = 20001
 
-    app.run(host='0.0.0.0', port=port, access_log=True, debug=True)
+    app.run(host='0.0.0.0', port=port, access_log=True, debug=False)
