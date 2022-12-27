@@ -122,6 +122,7 @@ def mission_depthangle(
                 "side": "right",
                 "showgrid": False,
                 "tickformat": "-.0f",
+                'autorange' : 'reversed',
             },
             "title": {
                 "text": title_text,
@@ -130,8 +131,12 @@ def mission_depthangle(
                 "x": 0.5,
                 "y": 0.95,
             },
+            "legend": {
+                "x": 1.05,
+                "y": 1,
+            },
             "margin": {
-                "b": 120,
+                "b": 80,
             },
         },
     )
