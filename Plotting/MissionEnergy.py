@@ -35,7 +35,7 @@ import traceback
 import typing
 
 import plotly
-
+import BaseDB
 
 import numpy as np
 import pandas as pd
@@ -94,12 +94,12 @@ def mission_energy(
     try:
         # capacity 10V and 24V are normalized battery availability
         fg_df = pd.read_sql_query(
-            "SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V,fg_batt_capacity_10V,fg_batt_capacity_24V,fg_ah_used_10V,fg_ah_used_24V,log_FG_AHR_10Vo,log_FG_AHR_24Vo from dives",
+            f"SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V,fg_batt_capacity_10V,fg_batt_capacity_24V,fg_ah_used_10V,fg_ah_used_24V,log_FG_AHR_10Vo,log_FG_AHR_24Vo from dives ORDER BY dive DESC LIMIT {base_opts.mission_energy_dives_back}",
             conn,
         ).sort_values("dive")
 
         batt_df = pd.read_sql_query(
-            "SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V,time_seconds_on_surface,time_seconds_diving,log_gps_time AS dive_end from dives",
+            f"SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V,time_seconds_on_surface,time_seconds_diving,log_gps_time AS dive_end from dives ORDER BY dive DESC LIMIT {base_opts.mission_energy_dives_back}",
             conn,
         ).sort_values("dive")
 
@@ -122,7 +122,7 @@ def mission_energy(
         if univolt:
             scenarios.append(
                 scenario_t(
-                    "Modeled Use",
+                    "Modeled",
                     batt_df["dive"],
                     batt_df[f"batt_capacity_{univolt}"],
                     batt_df["dive_time"],
@@ -139,6 +139,7 @@ def mission_energy(
             #         batt_df["dive_time"],
             #     )
             # )
+
 
         y_offset = -0.08
         for type_str, dive_col, cap_col, dive_time, dive_end in scenarios:
@@ -168,7 +169,11 @@ def mission_energy(
                 }
             )
 
-        # TODO Using the polyfit on the normailzed battery capacity for the fuel guage yeilds
+            BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), f"dives_remaining_{type_str}", float(dives_remaining));
+            BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), f"days_remaining_{type_str}", days_remaining);
+            BaseDB.addValToDB(base_opts, int(batt_df["dive"].to_numpy()[-1]), f"dives_back_{type_str}", p_dives_back);
+
+        # TODO Using the polyfit on the normailzed battery capacity for the fuel guage yields
         # roughly 10% less dives then next calc (taken directly from the current matlab code)
         used_to_date = (
             fg_df["log_FG_AHR_24Vo"].to_numpy()[-1]
@@ -207,6 +212,10 @@ def mission_energy(
                 "y": y_offset,
             }
         )
+
+        BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "dives_remaining_FG", dives_remaining);
+        BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "days_remaining_FG", days_remaining);
+        BaseDB.addValToDB(base_opts, int(batt_df["dive"].to_numpy()[-1]), "dives_back_FG", p_dives_back);
 
         # Find the device and sensor columnns for power consumption
         df = pd.read_sql_query("PRAGMA table_info(dives)", conn)
@@ -296,7 +305,7 @@ def mission_energy(
             )
             fig.add_trace(
                 {
-                    "name": "Modeled Use",
+                    "name": "Modeled",
                     "x": batt_df["dive"],
                     "y": batt_df["batt_kJ_used_10V"] + batt_df["batt_kJ_used_24V"],
                     "yaxis": "y1",

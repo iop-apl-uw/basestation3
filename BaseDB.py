@@ -526,6 +526,9 @@ def updateDBFromPlots(base_opts, ncfs):
     base_opts.dive_plots = ["plot_vert_vel", "plot_pitch_roll"]
     dive_plots_dict = BasePlot.get_dive_plots(base_opts)
     BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs)
+    base_opts.mission_plots = ["mission_energy"]
+    mission_plots_dict = BasePlot.get_mission_plots(base_opts)
+    BasePlot.plot_mission(base_opts, dive_plots_dict, ncfs)
 
 
 def updateDBFromFM(base_opts, ncfs, con):

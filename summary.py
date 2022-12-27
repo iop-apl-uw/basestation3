@@ -4,6 +4,8 @@ from parse import parse
 import sqlite3
 from datetime import datetime
 import math
+import pandas as pd
+import Utils
 
 def haversine(lat0, lon0, lat1, lon1):
     R = 6378137.0
@@ -38,11 +40,21 @@ def getCmdfileDirective(cmdfile):
 
     return cmdfileDirective
 
+def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
+    data = {}
+    for idx, col in enumerate(cursor.description):
+        data[col[0]] = row[idx]
+
+    return data
+
 def collectSummary(glider, path):
+    import CalibConst
 
     commlog = f'{path}/comm.log'
     dbfile  = f'{path}/sg{glider:03d}.db'
     cmdfile = f'{path}/cmdfile'
+    calibfile = f'{path}/sg_calib_constants.m'
+
      
     with open(commlog, 'rb') as file:
         file.seek(-10000, 2)
@@ -75,16 +87,23 @@ def collectSummary(glider, path):
     pos_stamp = datetime.strptime(f"{year+2000}-{mon:02d}-{day:02d}T{hour:02d}:{min:02d}:{sec:02d}Z", "%Y-%m-%dT%H:%M:%S%z").timestamp()
 
     with sqlite3.connect(dbfile) as conn:
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        cur.execute("SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon FROM dives ORDER BY dive DESC LIMIT 1")
-        data = dict(cur.fetchall()[0])
+        data = pd.read_sql_query(
+            "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon,dives_remaining_Modeled,days_remaining_Modeled FROM dives ORDER BY dive DESC LIMIT 1",
+            conn,
+        ).loc[0,:]
 
-        cur.execute(f"SELECT pitch_volts,roll_volts,vbd_volts,vbd_eff FROM gc WHERE dive={data['dive']} ORDER BY vbd_eff DESC LIMIT 1")
-        gc = dict(cur.fetchall()[0])
+        gc = pd.read_sql_query(
+            f"SELECT pitch_volts,roll_volts,vbd_volts,vbd_eff FROM gc WHERE dive={int(data['dive'])} ORDER BY vbd_eff DESC LIMIT 1",
+            conn,
+        ).loc[0,:]
 
-    conn.close()
+        start = pd.read_sql_query(
+            "SELECT log_gps1_time FROM dives WHERE dive=1",
+            conn,
+        ).loc[0,:]
 
+    print(start)
+    print(start['log_gps1_time'])
     cmdfileDirective = getCmdfileDirective(cmdfile)
 
     try: 
@@ -103,7 +122,7 @@ def collectSummary(glider, path):
         dogEff = 0
         dtg2 = 0
 
-    dv = data['dive']
+    dv = int(data['dive'])
     capfile = f"{path}/p{glider:03d}{dv:04d}.cap"
     critcount = 0
     if os.path.exists(capfile):
@@ -120,6 +139,11 @@ def collectSummary(glider, path):
         alert = 1
     else:
         alert = 0
+
+    end_t = 0
+    cal_constants = CalibConst.getSGCalibrationConstants(calibfile)
+    if 'end_date' in cal_constants:
+        end_t = datetime.strptime(cal_constants['end_date'], "%Y-%m-%d").timestamp()
 
     out = {}
     out['name'] = int(data['log_glider'])
@@ -152,6 +176,13 @@ def collectSummary(glider, path):
     out['alert'] = alert
     out['crits']  = critcount
 
+    out['enduranceBasis'] = 'model'
+    out['enduranceEndT'] = data['log_gps_time'] + data['days_remaining_Modeled']*86400;
+    out['enduranceDays'] = data['days_remaining_Modeled']
+    out['enduranceDives'] = data['dives_remaining_Modeled']
+    out['missionStart'] = start['log_gps1_time']
+    out['missionEnd'] = end_t
+    
     return out
 
 if __name__ == "__main__":
