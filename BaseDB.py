@@ -587,7 +587,7 @@ def rebuildDB(base_opts, from_cli=False):
         cur.close()
     if from_cli:
         updateDBFromPlots(base_opts, ncfs)
-        updateDBFromFM(base_opts, ncfs, con)
+    updateDBFromFM(base_opts, ncfs, con)
 
 
 def loadDB(base_opts, filename, from_cli=False):
@@ -601,7 +601,7 @@ def loadDB(base_opts, filename, from_cli=False):
         cur.close()
     if from_cli:
         updateDBFromPlots(base_opts, [filename])
-        updateDBFromFM(base_opts, [filename], con)
+    updateDBFromFM(base_opts, [filename], con)
 
 
 def addValToDB(base_opts, dive_num, var_n, val):
