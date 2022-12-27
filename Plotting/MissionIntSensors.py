@@ -49,10 +49,10 @@ DEBUG_PDB = False
 
 
 @plotmissionsingle
-def mission_intpressrh(
+def mission_int_sensors(
     base_opts: BaseOpts.BaseOptions, mission_str: list
 ) -> tuple[list, list]:
-    """Plots internal pressure and RH"""
+    """Plots internal pressure, RH, temp"""
 
     conn = Utils.open_mission_database(base_opts)
     if not conn:
@@ -63,7 +63,7 @@ def mission_intpressrh(
     df = None
     try:
         df = pd.read_sql_query(
-            "SELECT dive,log_HUMID,log_INTERNAL_PRESSURE from dives",
+            "SELECT dive,log_HUMID,log_INTERNAL_PRESSURE,log_TEMP from dives",
             conn,
         ).sort_values("dive")
     except:
@@ -102,18 +102,36 @@ def mission_intpressrh(
         }
     )
 
-    title_text = f"{mission_str}<br>Internal Pressure and Relative Humidity"
+    fig.add_trace(
+        {
+            "name": "Temperature",
+            "x": df["dive"],
+            "y": df["log_TEMP"],
+            "yaxis": "y3",
+            "mode": "lines",
+            "line": {
+                "dash": "solid",
+                "color": "Red",
+                "width": 1,
+            },
+            "hovertemplate": "Temperature<br>Dive %{x:.0f}<br>T %{y:.2f}C<extra></extra>",
+        }
+    )
+
+    title_text = f"{mission_str}<br>Internal Sensors"
 
     fig.update_layout(
         {
             "xaxis": {
                 "title": "Dive Number",
                 "showgrid": True,
+                "domain": [0.0, 0.9],
             },
             "yaxis": {
                 "title": "Internal Pressure (psia)",
                 "showgrid": True,
                 "tickformat": ".02f",
+                "position": 0.0,
             },
             "yaxis2": {
                 "title": "Relative Humidity",
@@ -121,6 +139,19 @@ def mission_intpressrh(
                 "side": "right",
                 "showgrid": False,
                 "tickformat": ".02f",
+                "position": 0.9,
+            },
+            "yaxis3": {
+                "title": "Temperature (C)",
+                "overlaying": "y1",
+                "anchor": "free",
+                "side": "right",
+                "position": 1,
+                "showgrid": False,
+            },
+            "legend": {
+                "x": 1.05,
+                "y": 1,
             },
             "title": {
                 "text": title_text,
@@ -138,7 +169,7 @@ def mission_intpressrh(
         [fig],
         PlotUtilsPlotly.write_output_files(
             base_opts,
-            "eng_mission_intpressrh",
+            "eng_mission_int_sensors",
             fig,
         ),
     )

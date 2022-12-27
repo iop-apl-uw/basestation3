@@ -125,7 +125,7 @@ from . import DiveMagCal
 from . import MissionEnergy
 from . import MissionVolume
 from . import MissionMotors
-from . import MissionIntPressRH
+from . import MissionIntSensors
 from . import MissionDepthAngle
 from . import MissionMap
 from . import MissionDisk
