@@ -236,10 +236,6 @@ global_options_dict = {
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
             "MakePositions",
-            "MakePlot",
-            "MakePlot2",
-            "MakePlot3",
-            "MakePlot4",
             "MakePlotMission",
             "MoveData",
             "Reprocess",
@@ -656,10 +652,6 @@ global_options_dict = {
         None,
         (
             "GliderDAC",
-            "MakePlot",
-            "MakePlot2",
-            "MakePlot3",
-            "MakePlot4",
             "SimpleNetCDF",
             "StripNetCDF",
             "WindRain",
@@ -677,7 +669,7 @@ global_options_dict = {
         False,
         (
             "Base",
-            "MakePlot",
+            "BasePlot",
         ),
         ("--plot_raw",),
         bool,
@@ -692,8 +684,7 @@ global_options_dict = {
         False,
         (
             "Base",
-            "MakePlot",
-            "MakePlot2",
+            "BasePlot",
             "MakeMissionEngPlot",
         ),
         ("--save_svg",),
@@ -709,8 +700,7 @@ global_options_dict = {
         True,
         (
             "Base",
-            "MakePlot3",
-            "MakePlot4",
+            "BasePlot",
         ),
         ("--save_png",),
         bool,
@@ -725,9 +715,7 @@ global_options_dict = {
         "darwin" in sys.platform,
         (
             "Base",
-            "MakePlot2",
-            "MakePlot3",
-            "MakePlot4",
+            "BasePlot",
         ),
         ("--full_html",),
         bool,
@@ -742,8 +730,7 @@ global_options_dict = {
         False,
         (
             "Base",
-            "MakePlot",
-            "MakePlot4",
+            "BasePlot",
         ),
         ("--plot_freeze_pt",),
         bool,
@@ -758,7 +745,7 @@ global_options_dict = {
         False,
         (
             "Base",
-            "MakePlot3",
+            "BasePlot",
         ),
         ("--plot_legato_use_glider_pressure",),
         bool,
@@ -774,10 +761,6 @@ global_options_dict = {
         (
             "Base",
             "BasePlot",
-            "MakePlot",
-            "MakePlot2",
-            "MakePlot3",
-            "MakePlot4",
             "MakeMissionEngPlots",
         ),
         ("--plot_directory",),
@@ -791,7 +774,10 @@ global_options_dict = {
     ),
     "pmar_logavg_max": options_t(
         1e2,
-        ("Base", "MakePlot", "MakePlot4"),
+        (
+            "Base",
+            "BasePlot",
+        ),
         ("--pmar_logavg_max",),
         float,
         {
@@ -803,7 +789,10 @@ global_options_dict = {
     ),
     "pmar_logavg_min": options_t(
         1e-4,
-        ("Base", "MakePlot", "MakePlot4"),
+        (
+            "Base",
+            "BasePlot",
+        ),
         ("--pmar_logavg_min",),
         float,
         {

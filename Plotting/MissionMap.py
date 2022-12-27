@@ -24,6 +24,7 @@
 
 """ Plots motor GC data over whole mission
 """
+# fmt: off
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
@@ -53,7 +54,7 @@ if typing.TYPE_CHECKING:
 import PlotUtilsPlotly
 import Utils
 
-from BaseLog import log_info, log_error
+from BaseLog import log_info, log_error, log_warning
 from Plotting import plotmissionsingle
 from cartopy.mpl.ticker import LatitudeFormatter,LongitudeFormatter
 # DEBUG_PDB = "darwin" in sys.platform
@@ -146,19 +147,24 @@ def mission_map(
     bathy_lon_min = extent[0] - 1
     bathy_lon_max = extent[1] + 1
 
-    bathy = xr.load_dataset(f'{sys.path[0]}/data/ETOPO2v2g_f4.nc')
-    lat_range_xr = np.logical_and(
-        bathy.y >= bathy_lat_min, bathy.y <= bathy_lat_max
-    )
-    lon_range_xr = np.logical_and(
-        bathy.x >= bathy_lon_min, bathy.x <= bathy_lon_max
-    )
-    bathy_depth_xr = bathy.z[lat_range_xr, lon_range_xr]
-    bathy_depth = bathy_depth_xr.to_numpy()
-    bathy_depth[bathy_depth > 0] = 0
-    bathy_depth = -bathy_depth
-    bathy_lats = bathy.y[lat_range_xr].to_numpy()
-    bathy_lons = bathy.x[lon_range_xr].to_numpy()
+    bathy = None
+    bathy_db = f'{base_opts.basestation_directory}/data/ETOPO2v2g_f4.nc'
+    if not os.path.exists(bathy_db):
+        log_warning(f"{bathy_db} does not exist - skipping bathy in plots")
+    else:
+        bathy = xr.load_dataset(bathy_db)
+        lat_range_xr = np.logical_and(
+            bathy.y >= bathy_lat_min, bathy.y <= bathy_lat_max
+        )
+        lon_range_xr = np.logical_and(
+            bathy.x >= bathy_lon_min, bathy.x <= bathy_lon_max
+        )
+        bathy_depth_xr = bathy.z[lat_range_xr, lon_range_xr]
+        bathy_depth = bathy_depth_xr.to_numpy()
+        bathy_depth[bathy_depth > 0] = 0
+        bathy_depth = -bathy_depth
+        bathy_lats = bathy.y[lat_range_xr].to_numpy()
+        bathy_lons = bathy.x[lon_range_xr].to_numpy()
 
     fig = plt.figure(figsize=(8,12), dpi=200)
     ax = fig.add_subplot(1, 1, 1, projection=myProj)
@@ -227,8 +233,9 @@ def mission_map(
     ax.title.set_text("")
 
     deep = truncate_colormap(cm.get_cmap('Blues'), minval=0.3, maxval=1)
-    ax.pcolormesh(bathy_lons, bathy_lats, bathy_depth, transform=ccrs.PlateCarree(), 
-                  cmap=deep, zorder=0, alpha=1, edgecolors=None, shading='gouraud')
+    if bathy is not None:
+        ax.pcolormesh(bathy_lons, bathy_lats, bathy_depth, transform=ccrs.PlateCarree(), 
+                      cmap=deep, zorder=0, alpha=1, edgecolors=None, shading='gouraud')
 
     Ndv = df['dive'].max()
     rdf = df[df['dive'] > Ndv - tail]
@@ -245,3 +252,4 @@ def mission_map(
     plt.savefig(output_name, format="png", bbox_inches='tight')
     
     return ([], ret_list)
+# fmt: on
