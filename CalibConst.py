@@ -29,7 +29,6 @@ CalibConst.py: seaglider calibration constants (matlab file) parser
 import re
 import sys
 
-import BaseOpts
 
 from BaseLog import BaseLogger, log_error, log_debug
 from BaseNetCDF import nc_sg_cal_prefix, nc_var_metadata
@@ -180,6 +179,7 @@ def dump(in_filename, fo):
 
 
 if __name__ == "__main__":
+    import BaseOpts
     base_opts = BaseOpts.BaseOptions(
         "Test entry for sg_calib_constants.m processing",
         additional_arguments={
