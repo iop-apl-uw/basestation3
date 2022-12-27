@@ -271,6 +271,31 @@ def mission_energy(
 
         fig = plotly.graph_objects.Figure()
 
+        if np.std(batt_df["batt_volts_10V"]):
+            fig.add_trace(
+                {
+                    "name": "Min Volts Observed - LV Pack",
+                    "x": batt_df["dive"],
+                    "y": batt_df["batt_volts_10V"],
+                    "yaxis": "y2",
+                    "mode": "lines",
+                    "line": {"dash": "dash", "width": 1, "color": "Cyan"},
+                    "hovertemplate": "Min LV Volts<br>Dive %{x:.0f}<br>%{y:.2f} volts<extra></extra>",
+                }
+            )
+        if np.std(batt_df["batt_volts_24V"]):
+            fig.add_trace(
+                {
+                    "name": "Min Volts Observed - HV Pack",
+                    "x": batt_df["dive"],
+                    "y": batt_df["batt_volts_24V"],
+                    "yaxis": "y2",
+                    "mode": "lines",
+                    "line": {"dash": "dash", "width": 1, "color": "DarkCyan"},
+                    "hovertemplate": "Min HV Volts<br>Dive %{x:.0f}<br>%{y:.2f} volts<extra></extra>",
+                }
+            )
+
         for energy_joules_df, energy_tag in (
             (device_joules_df, "device_"),
             (sensor_joules_df, "sensor_"),
@@ -388,6 +413,12 @@ def mission_energy(
                     # "scaleratio": (plot_lon_max - plot_lon_min)
                     # / (plot_lat_max - plot_lat_min),
                     # Fixed ratio
+                },
+                "yaxis2": {
+                    "title": "volts",
+                    "showgrid": False,
+                    "overlaying": "y1",
+                    "side": "right",
                 },
                 "title": {
                     "text": title_text,
