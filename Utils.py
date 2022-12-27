@@ -1617,6 +1617,27 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
         return None
     return sqlite3.connect(db)
 
+def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
+    """Estimate endurace from normalized remaining battery capacity"""
+    # print(dive_col)
+    p_dives_back = (
+        base_opts.mission_energy_dives_back
+        if dive_col[-1] >= base_opts.mission_energy_dives_back
+        else dive_col[-1]
+    )
+
+    m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
+    log_info(f"m:{m} b:{b}")
+    lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)
+    dives_remaining = lastdive_num - dive_col[-1]
+    secs_remaining = dives_remaining * np.mean(dive_times[-p_dives_back:])
+    end_date = time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(dive_end[-1] + secs_remaining)
+    )
+    days_remaining = secs_remaining / (24.0 * 3600.0)
+
+    return (dives_remaining, days_remaining, end_date)
+
 
 def extract_calib_consts(dive_nc_file):
     """Extracts the calibration constants from the netCDF file
