@@ -68,10 +68,10 @@ line_lookup = {
     "Transponder_ping": line_type("solid", "orange"),
     "GPS": line_type("dash", "green"),
     "Compass": line_type("dash", "magenta"),
-    # "RAFOS" :
-    # "Transponder" :
-    # "Compass2" :
-    # "network" :
+    "RAFOS" : line_type("solid", "goldenrod"),
+    "Transponder" : line_type("solid", "maroon")
+    "Compass2" : line_type("dash", "turquoise"),
+    "network" : line_type("dash", "purple"),
     "STM32Mainboard": line_type("dash", "black"),
     "SciCon": line_type("solid", "DarkMagenta"),
 }
