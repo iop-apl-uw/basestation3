@@ -442,7 +442,7 @@ global_options_dict = {
         },
     ),
     "use_gsw": options_t(
-        False,
+        True,
         ("Base", "BasePlot", "MakeDiveProfiles"),
         ("--use_gsw",),
         bool,

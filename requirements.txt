@@ -2,7 +2,8 @@
 kaleido>=0.0.3.post1 ; platform_machine != 'armv7l'
 matplotlib>=3.2.0
 numpy>=1.19.1
-gsw==3.3.1
+#gsw==3.3.1
+gsw==3.6.16.post1
 seawater==3.3.4
 plotly>=4.9.0
 scipy>=1.9.0
