@@ -75,6 +75,7 @@ line_lookup = {
     "network": line_type("dash", "purple"),
     "STM32Mainboard": line_type("dash", "black"),
     "SciCon": line_type("solid", "DarkMagenta"),
+    "SBE_CT": line_type("dash", "yellow"),
 }
 
 
