@@ -115,9 +115,9 @@ def mission_energy(
         ).sort_values("dive")
 
         start = pd.read_sql_query(
-            "SELECT dive,log_gps2_time FROM dives",
+            "SELECT dive,log_gps2_time FROM dives ORDER BY dive ASC LIMIT 1",
             conn,
-        ).sort_values("dive")["log_gps2_time"].iloc()[-1]
+        )["log_gps2_time"].iloc()[0]
 
         if batt_df["batt_Ahr_cap_24V"].iloc()[-1] == 0:
             univolt = "10V"
