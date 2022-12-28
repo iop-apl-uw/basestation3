@@ -54,7 +54,7 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_volume(
-    base_opts: BaseOpts.BaseOptions, mission_str: list
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
 ) -> tuple[list, list]:
     """Plots various estimates for volmax"""
 

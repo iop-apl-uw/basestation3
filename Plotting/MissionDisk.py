@@ -51,7 +51,7 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_disk(
-    base_opts: BaseOpts.BaseOptions, mission_str: list
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
 ) -> tuple[list, list]:
     """Plots disk stats """
 

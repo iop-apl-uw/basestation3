@@ -36,6 +36,7 @@ import typing
 
 import plotly
 import BaseDB
+from datetime import datetime
 
 import numpy as np
 import pandas as pd
@@ -79,7 +80,7 @@ line_lookup = {
 
 @plotmissionsingle
 def mission_energy(
-    base_opts: BaseOpts.BaseOptions, mission_str: list
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
 ) -> tuple[list, list]:
     """Plots mission energy consumption and projections"""
     log_info("Starting mission_energy")
@@ -91,17 +92,27 @@ def mission_energy(
 
     l_annotations = []
 
+    if dive == None:
+        clause = ''
+    else:
+        clause = f"WHERE dive <= {dive}"
+
     try:
         # capacity 10V and 24V are normalized battery availability
         fg_df = pd.read_sql_query(
-            f"SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V,fg_batt_capacity_10V,fg_batt_capacity_24V,fg_ah_used_10V,fg_ah_used_24V,log_FG_AHR_10Vo,log_FG_AHR_24Vo from dives ORDER BY dive DESC LIMIT {base_opts.mission_energy_dives_back}",
+            f"SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V,fg_batt_capacity_10V,fg_batt_capacity_24V,fg_ah_used_10V,fg_ah_used_24V,log_FG_AHR_10Vo,log_FG_AHR_24Vo from dives {clause} ORDER BY dive DESC", # LIMIT {base_opts.mission_energy_dives_back}",
             conn,
         ).sort_values("dive")
 
         batt_df = pd.read_sql_query(
-            f"SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V,time_seconds_on_surface,time_seconds_diving,log_gps_time AS dive_end from dives ORDER BY dive DESC LIMIT {base_opts.mission_energy_dives_back}",
+            f"SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V,time_seconds_on_surface,time_seconds_diving,log_gps_time AS dive_end from dives {clause} ORDER BY dive DESC", # LIMIT {base_opts.mission_energy_dives_back}",
             conn,
         ).sort_values("dive")
+
+        start = pd.read_sql_query(
+            "SELECT log_gps2_time FROM dives WHERE dive=1",
+            conn,
+        ).loc[0,:]
 
         if batt_df["batt_Ahr_cap_24V"].iloc()[-1] == 0:
             univolt = "10V"
@@ -169,24 +180,31 @@ def mission_energy(
                 }
             )
 
-            BaseDB.addValToDB(
-                base_opts,
-                int(dive_col.to_numpy()[-1]),
-                f"dives_remaining_{type_str}",
-                float(dives_remaining),
-            )
-            BaseDB.addValToDB(
-                base_opts,
-                int(dive_col.to_numpy()[-1]),
-                f"days_remaining_{type_str}",
-                days_remaining,
-            )
-            BaseDB.addValToDB(
-                base_opts,
-                int(batt_df["dive"].to_numpy()[-1]),
-                f"dives_back_{type_str}",
-                p_dives_back,
-            )
+            end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              f"energy_dives_remain_{type_str}", 
+                              float(dives_remaining))
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              f"energy_dives_total_{type_str}", 
+                              float(dives_remaining + dive_col.to_numpy()[-1]))
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              f"energy_days_remain_{type_str}", 
+                              days_remaining);
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              f"energy_days_total_{type_str}", 
+                              (end_t - start['log_gps2_time'])/86400);
+            BaseDB.addValToDB(base_opts, 
+                              int(batt_df["dive"].to_numpy()[-1]), 
+                              f"energy_end_time_{type_str}", 
+                              end_t)
+            BaseDB.addValToDB(base_opts, 
+                              int(batt_df["dive"].to_numpy()[-1]), 
+                              f"energy_dives_back_{type_str}", 
+                              float(p_dives_back));
 
         # TODO Using the polyfit on the normailzed battery capacity for the fuel guage yields
         # roughly 10% less dives then next calc (taken directly from the current matlab code)
@@ -229,21 +247,28 @@ def mission_energy(
             }
         )
 
-        BaseDB.addValToDB(
-            base_opts,
-            int(dive_col.to_numpy()[-1]),
-            "dives_remaining_FG",
-            dives_remaining,
-        )
-        BaseDB.addValToDB(
-            base_opts, int(dive_col.to_numpy()[-1]), "days_remaining_FG", days_remaining
-        )
-        BaseDB.addValToDB(
-            base_opts,
-            int(batt_df["dive"].to_numpy()[-1]),
-            "dives_back_FG",
-            p_dives_back,
-        )
+        end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
+        BaseDB.addValToDB(base_opts, 
+                          int(dive_col.to_numpy()[-1]), 
+                          "energy_dives_remain_FG", 
+                          dives_remaining)
+        BaseDB.addValToDB(base_opts, 
+                          int(dive_col.to_numpy()[-1]), 
+                          "energy_dives_total_FG", 
+                          dives_remaining + int(dive_col.to_numpy()[-1]))
+        BaseDB.addValToDB(base_opts, 
+                          int(dive_col.to_numpy()[-1]), 
+                          "energy_days_remain_FG", 
+                          days_remaining);
+        BaseDB.addValToDB(base_opts, 
+                          int(dive_col.to_numpy()[-1]), 
+                          "energy_end_time_FG", 
+                          end_t)
+        BaseDB.addValToDB(base_opts, 
+                          int(dive_col.to_numpy()[-1]), 
+                          "energy_days_total_FG", 
+                          (end_t - start['log_gps2_time'])/86400);
+
 
         # Find the device and sensor columnns for power consumption
         df = pd.read_sql_query("PRAGMA table_info(dives)", conn)

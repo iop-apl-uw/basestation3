@@ -449,7 +449,7 @@ def plot_vert_vel(
         base_opts, dive_nc_file.dive_number, "implied_max_MAX_BUOY", implied_max_maxbuoy
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_mas_SM_CC", implied_max_smcc
+        base_opts, dive_nc_file.dive_number, "implied_max_SM_CC", implied_max_smcc
     )
 
     # Find the deepest sample

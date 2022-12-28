@@ -92,7 +92,7 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
 
 @plotmissionsingle
 def mission_map(
-    base_opts: BaseOpts.BaseOptions, mission_str: list
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
 ) -> tuple[list, list]:
     """Plots mission map"""
     log_info("Starting mission_map")
