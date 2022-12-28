@@ -89,7 +89,7 @@ def collectSummary(glider, path):
     with sqlite3.connect(dbfile) as conn:
         try:
             data = pd.read_sql_query(
-                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope FROM dives ORDER BY dive DESC LIMIT 1",
+                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope,implied_volmax,implied_volmax_slope FROM dives ORDER BY dive DESC LIMIT 1",
                 conn,
             ).loc[0,:]
 
@@ -178,6 +178,9 @@ def collectSummary(glider, path):
     out['humiditySlope'] = data['log_HUMID_slope']
     out['internalPressure'] = data['log_INTERNAL_PRESSURE']
     out['internalPressureSlope'] = data['log_INTERNAL_PRESSURE_slope']
+
+    out['impliedVolmax'] = data['implied_volmax']
+    out['impliedVolmaxSlope'] = data['implied_volmax_slope']
 
     out['cap']   = cap
     out['alert'] = alert

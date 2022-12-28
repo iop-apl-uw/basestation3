@@ -76,6 +76,7 @@ line_lookup = {
     "STM32Mainboard": line_type("dash", "black"),
     "SciCon": line_type("solid", "DarkMagenta"),
     "SBE_CT": line_type("dash", "yellow"),
+    "TMICL": line_type("dash", "LightGreen"),
 }
 
 
@@ -371,6 +372,10 @@ def mission_energy(
                             "line": {
                                 "dash": line_lookup[energy_name].dash,
                                 "color": line_lookup[energy_name].color,
+                                "width": 1,
+                            } if energy_name in line_lookup else {
+                                "dash": "dot",
+                                "color": "LightGray",
                                 "width": 1,
                             },
                             "hovertemplate": energy_name

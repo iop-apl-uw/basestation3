@@ -581,6 +581,7 @@ def updateDBFromFM(base_opts, ncfs, con):
                             fm_volmax,
                             "FLOAT",
                         )
+                        addSlopeValToDB(base_opts, nci.dive_number, ["implied_volmax_fm"], con)
             except:
                 log_error(f"Problem opening FM data associated with {ncf}")
 

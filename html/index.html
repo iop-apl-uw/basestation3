@@ -217,7 +217,6 @@
         fetch(`/summary/${glider.glider}${mission(glider)}`)
         .then(res => res.json())
         .then(data => {
-            console.log(data);
             t.classList.add('tile');
             t.onclick = function() { window.open(`/${data.name}${mission(glider)}`, `${data.name}`); };
            
@@ -330,13 +329,14 @@
             // alerts
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `alerts<br>${data.alert ? 'Y' : 'N'}`;
+            h.innerHTML = `alerts<br>${data.alert ? 'yes' : 'none'}`;
             h.classList.add(thresh(data.alert ? 1 : 0, 0, 0));
             h.setAttribute('hidden', ''); 
             box.appendChild(h);
  
             // OG efficiency
             h = document.createElement('div');
+            h.title = "over-ground efficiency (flight quality)"
             h.classList.add('indicator');
             h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
             h.classList.add(thresh(data.dogEfficiency, 0.25, 0.5));
@@ -354,6 +354,7 @@
             // mission endurance
             let days = (data.missionEnd - data.enduranceEndT)/86400;
             h = document.createElement('div');
+            h.title = 'mission endurance';
             h.classList.add('indicator');
             h.innerHTML = `endur.<br>-${days.toFixed(0)} days`;
             h.classList.add(thresh(days, 30, 0));
@@ -362,6 +363,7 @@
 
             // internal pressure
             h = document.createElement('div');
+            h.title = "internal pressure";
             h.classList.add('indicator');
             h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
             h.classList.add(thresh(data.internalPressureSlope, 0.01, 0.005));
@@ -373,6 +375,14 @@
             h.classList.add('indicator');
             h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
             h.classList.add(thresh(data.humiditySlope, 0.2, 0.05));
+            h.setAttribute('hidden', ''); 
+            box.appendChild(h);
+
+            // volmax
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            h.innerHTML = `volmax<br>${data.impliedVolmaxSlope.toFixed(1)} cc/dv`;
+            h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
             h.setAttribute('hidden', ''); 
             box.appendChild(h);
 

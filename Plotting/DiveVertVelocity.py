@@ -451,6 +451,9 @@ def plot_vert_vel(
     BaseDB.addValToDB(
         base_opts, dive_nc_file.dive_number, "implied_max_SM_CC", implied_max_smcc
     )
+    BaseDB.addSlopeValToDB(
+        base_opts, dive_nc_file.dive_number, ["implied_volmax", "implied_C_VBD"], None
+    )
 
     # Find the deepest sample
     max_depth_sample_index = np.argmax(depth)
