@@ -1026,14 +1026,15 @@ def check_versions():
         log_critical(msg)
         raise RuntimeError(msg)
 
+    # TODO - deal with "post" in gsw version
     # Check GSW Toolkit Version
-    log_info("gsw version %s" % gsw.__version__)
-    if normalize_version(gsw.__version__) < normalize_version(
-        Globals.required_gsw_version
-    ):
-        msg = "gsw version %s or greater required" % Globals.required_gsw_version
-        log_critical(msg)
-        raise RuntimeError(msg)
+    # log_info("gsw version %s" % gsw.__version__)
+    # if normalize_version(gsw.__version__) < normalize_version(
+    #     Globals.required_gsw_version
+    # ):
+    #     msg = "gsw version %s or greater required" % Globals.required_gsw_version
+    #     log_critical(msg)
+    #     raise RuntimeError(msg)
 
 
 def normalize_version(v):
@@ -1617,6 +1618,7 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
         return None
     return sqlite3.connect(db)
 
+
 def dive_var_trend(base_opts, dive_col, y_col):
     """Get the trend (dive over dive slope) of a dive variable"""
 
@@ -1628,6 +1630,7 @@ def dive_var_trend(base_opts, dive_col, y_col):
 
     m, b = np.polyfit(dive_col[-p_dives_back:], y_col[-p_dives_back:], 1)
     return (m, b)
+
 
 def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
     """Estimate endurace from normalized remaining battery capacity"""
