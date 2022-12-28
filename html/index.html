@@ -43,6 +43,16 @@
         border-radius: 8px;
     }
 
+    [class~="indicatorGreen"] {
+        background-color: #00ff00;
+    }
+    [class~="indicatorRed"] {
+        background-color: #ff0000;
+    }
+    [class~="indicatorYellow"] {
+        background-color: #ffff00;
+    }
+
     .chart {
         background: rgba(255, 255, 255, 0.4);
         justify-content: flex-start;
@@ -83,7 +93,7 @@
 <script>
 
 
-    function setPlusMinusBar(chart, bar, span, pct, text) {
+    function setPlusMinusBar(chart, bar, span, pct, text, hover) {
         if (pct < -1)
             pct = -1;
         else if (pct > 1)
@@ -93,7 +103,8 @@
         var half = wide/2;
         var pix = half*Math.abs(pct);
         var off = pct < 0 ? half - pix : half;
-      
+     
+        $(chart).title = hover;
         if (pct < 0) {
             $(bar).style.borderTopLeftRadius = '10px'; 
             $(bar).style.borderBottomLeftRadius = '10px';
@@ -119,13 +130,14 @@
         $(span).innerHTML = text;
     }
 
-    function setPercentBar(bar, span, pct, text) {
+    function setPercentBar(chart, bar, span, pct, text, hover) {
 
         if (pct < -1)
             pct = -1;
         else if (pct > 1)
             pct = 1;
-        
+       
+        $(chart).title = hover; 
 
         $(bar).style.width = (100*pct) + '%';
 
@@ -162,11 +174,13 @@
             nextHour = parseInt('' + (next/3600));
             nextMin  = parseInt('' + Math.abs(((next - nextHour*3600)/60)));
 
+            let due_t = new Date(Date.now() + next*1000).toISOString().replace('T', ' ').slice(0,-8);
             setPlusMinusBar(nextGauges[i].chart, 
                             nextGauges[i].bar,
                             nextGauges[i].span,
                             next/28800.0,
-                            `${nextHour.zeroPad()}:${nextMin.zeroPad()}`);
+                            `${nextHour.zeroPad()}:${nextMin.zeroPad()}`, 
+                            `next call due ${due_t}`);
         }
     }
 
@@ -177,6 +191,25 @@
         return `<span style="color:${color};" id="${id}">${d}</span>`;
     }
 
+    function thresh(val, lim1, lim2) {
+        if (lim1 < lim2) {
+            if (val < lim1)
+                return 'indicatorRed';
+            else if (val < lim2)
+                return 'indicatorYellow';
+            else
+                return 'indicatorGreen';
+        }
+        else {
+            if (val > lim1)
+                return 'indicatorRed';
+            else if (val > lim2)
+                return 'indicatorYellow';
+            else
+                return 'indicatorGreen';
+        }
+    }
+
     function createTile(glider, t) {
         console.log(glider);
         console.log(mission(glider));
@@ -184,9 +217,10 @@
         fetch(`/summary/${glider.glider}${mission(glider)}`)
         .then(res => res.json())
         .then(data => {
+            console.log(data);
             t.classList.add('tile');
             t.onclick = function() { window.open(`/${data.name}${mission(glider)}`, `${data.name}`); };
-
+           
             var h, txt, box, barBatt, chartBatt, spanBatt, header;
             var barNext, chartNext, spanNex;
             if (glider.mission == '')
@@ -246,7 +280,8 @@
             spanBatt.id = 'spanBatt' + data.name;
             chartBatt.appendChild(spanBatt);
 
-            setPercentBar(barBatt.id, spanBatt.id, data.capacity[1], '');
+            let endurance_t = new Date(data.enduranceEndT*1000).toISOString().replace('T', ' ').slice(0,-14);
+            setPercentBar(chartBatt.id, barBatt.id, spanBatt.id, data.capacity[1], '', `projected end ${endurance_t}`);
 
             box = document.createElement('div');
             box.classList.add('box');
@@ -276,7 +311,8 @@
             nextHour = parseInt('' + (next/3600));
             nextMin  = parseInt('' + Math.abs(((next - nextHour*3600)/60)));
             
-            setPlusMinusBar(chartNext.id, barNext.id, spanNext.id, next/28800.0, `${nextHour.zeroPad()}:${nextMin.zeroPad()}`);
+            let due_t = new Date(Date.now() + next*1000).toISOString().replace('T', ' ').slice(0,-8);
+            setPlusMinusBar(chartNext.id, barNext.id, spanNext.id, next/28800.0, `${nextHour.zeroPad()}:${nextMin.zeroPad()}`, `next call due ${due_t}`);
 
             // annunciators
             box = document.createElement('div');
@@ -286,50 +322,75 @@
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `errors<br>${data.errors + data.crits}`;
-            if (data.errors > 0) 
-                h.style.backgroundColor = 'red';
-            else
-                h.style.backgroundColor = '';
+            h.classList.add(thresh(data.errors + data.crits, 0, 0));
+            console.log('error ' + h.classList);
+            h.setAttribute('hidden', ''); 
             box.appendChild(h);
 
             // alerts
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `alerts<br>${data.alert ? 'Y' : 'N'}`;
-            if (data.alert > 0)
-                h.style.backgroundColor = 'yellow';
-            else
-                h.style.backgroundColor = '';
-
+            h.classList.add(thresh(data.alert ? 1 : 0, 0, 0));
+            h.setAttribute('hidden', ''); 
             box.appendChild(h);
-
-           
+ 
+            // OG efficiency
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
-            if (data.dogEfficiency < 0.25)
-                h.style.backgroundColor = 'red';
-            else if (data.dogEfficiency < 0.5)
-                h.style.backgroundColor = 'yellow';
-            else
-                h.style.backgroundColor = 'LightGreen';
-
+            h.classList.add(thresh(data.dogEfficiency, 0.25, 0.5));
+            h.setAttribute('hidden', ''); 
             box.appendChild(h);
 
+            // VBD efficiency
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `VBD eff.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
-            if (data.vbdEfficiency < 0.25)
-                h.style.backgroundColor = 'red';
-            else if (data.dogEfficiency < 0.4)
-                h.style.backgroundColor = 'yellow';
-            else
-                h.style.backgroundColor = 'LightGreen';
+            h.classList.add(thresh(data.vbdEfficiency, 0.25, 0.4));
+            h.setAttribute('hidden', ''); 
+            box.appendChild(h);
 
+            // mission endurance
+            let days = (data.missionEnd - data.enduranceEndT)/86400;
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            h.innerHTML = `endur.<br>-${days.toFixed(0)} days`;
+            h.classList.add(thresh(days, 30, 0));
+            h.setAttribute('hidden', ''); 
+            box.appendChild(h);
+
+            // internal pressure
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
+            h.classList.add(thresh(data.internalPressureSlope, 0.01, 0.005));
+            h.setAttribute('hidden', ''); 
+            box.appendChild(h);
+
+            // humidity
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
+            h.classList.add(thresh(data.humiditySlope, 0.2, 0.05));
+            h.setAttribute('hidden', ''); 
             box.appendChild(h);
 
             t.appendChild(box);
 
+            var count = 0;
+             
+            const classes = ["indicatorRed", "indicatorYellow", "indicatorGreen"];
+            coll = box.children;
+            for (const c of classes) {
+                for (var i = 0 ; i < coll.length && count < 5 ; i++) {
+                    if (coll[i].classList.contains(c)) {
+                        coll[i].removeAttribute('hidden');
+                        count ++;
+                    }
+                }
+            }    
+            
             img = document.createElement('img');
             img.src = '/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
             img.style = "top: 0; width:290px; max-height:240px; mix-blend-mode:multiply;"
@@ -403,7 +464,7 @@
 
     function setupStream() {
         if (Date.now() < lastSetup + 5000) {
-            setTimeout('setupStream(glider)', 5000);
+            setTimeout('setupStream()', 5000);
             console.log('too soon');
             return;
         }
