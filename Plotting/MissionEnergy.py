@@ -97,15 +97,18 @@ def mission_energy(
     else:
         clause = f"WHERE dive <= {dive}"
 
+    res = conn.cursor().execute('PRAGMA table_info(dives)')
+    columns = [i[1] for i in res]
+
     try:
         # capacity 10V and 24V are normalized battery availability
         fg_df = pd.read_sql_query(
-            f"SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V,fg_batt_capacity_10V,fg_batt_capacity_24V,fg_ah_used_10V,fg_ah_used_24V,log_FG_AHR_10Vo,log_FG_AHR_24Vo,energy_days_total_FG from dives {clause} ORDER BY dive DESC", # LIMIT {base_opts.mission_energy_dives_back}",
+            f"SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V,fg_batt_capacity_10V,fg_batt_capacity_24V,fg_ah_used_10V,fg_ah_used_24V,log_FG_AHR_10Vo,log_FG_AHR_24Vo FROM dives {clause} ORDER BY dive ASC", 
             conn,
         ).sort_values("dive")
 
         batt_df = pd.read_sql_query(
-            f"SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V,time_seconds_on_surface,time_seconds_diving,energy_days_total_Modeled,log_gps_time AS dive_end from dives {clause} ORDER BY dive DESC", # LIMIT {base_opts.mission_energy_dives_back}",
+            f"SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V,time_seconds_on_surface,time_seconds_diving,log_gps_time AS dive_end FROM dives {clause} ORDER BY dive ASC", 
             conn,
         ).sort_values("dive")
 
@@ -269,6 +272,11 @@ def mission_energy(
                           "energy_days_total_FG", 
                           (end_t - start['log_gps2_time'])/86400);
 
+        days_df = pd.read_sql_query(
+            f"SELECT dive,energy_days_total_Modeled,energy_days_total_FG FROM dives {clause} ORDER BY dive ASC", 
+            conn,
+        ).sort_values("dive")
+
 
         # Find the device and sensor columnns for power consumption
         df = pd.read_sql_query("PRAGMA table_info(dives)", conn)
@@ -372,8 +380,8 @@ def mission_energy(
         fig.add_trace(
             {
                 "name": "mission days/10 (FG)",
-                "x": fg_df["dive"],
-                "y": fg_df["energy_days_total_FG"]/10,
+                "x": days_df["dive"],
+                "y": days_df["energy_days_total_FG"]/10,
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkBlue"},
@@ -383,8 +391,8 @@ def mission_energy(
         fig.add_trace(
             {
                 "name": "mission days/10 (model)",
-                "x": batt_df["dive"],
-                "y": batt_df["energy_days_total_Modeled"]/10,
+                "x": days_df["dive"],
+                "y": days_df["energy_days_total_Modeled"]/10,
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
