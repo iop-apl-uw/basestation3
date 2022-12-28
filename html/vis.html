@@ -148,7 +148,6 @@
             var styles = ["font-weight:bold;", "font-weight:bold; color:red;", "font-weight:bold; color:green;"]
             var bolds = {"targets":0, "science":0, "cmdfile":0, "pdoscmds.bat":0, "Connected":0, "QUIT":1, "RECOV_CODE":1, "GO":2};
 
-
             var line = e.data;
             if (line.startsWith('NEW=')) {
                 console.log(line);
@@ -468,8 +467,23 @@
         fetch(q)
         .then(res => res.json())
         .then(data => {
+            var has10 = false;
+            var has24 = false;
+
             for (d of data) {
                 addTableRow(d);
+                if (d['batt_capacity_24V'] > 0)
+                    has24 = true;
+                if (d['batt_capacity_10V'] > 0) 
+                    has10 = true;
+            }
+            if (has10 == false) {
+                $('volt10_group').style.visibility = 'collapse';
+                $('volt24_header').innerHTML = 'volts';
+            }
+            else if (has24 == false) {
+                $('volt24_group').style.visibility = 'collapse';
+                $('volt10_header').innerHTML = 'volts';
             }
         })
         .catch(error => {
@@ -1435,7 +1449,8 @@
         <colgroup span=6><col><col><col><col><col><col></colgroup>
         <colgroup span=2><col><col></colgroup>
         <colgroup span=3><col><col><col></colgroup>
-        <colgroup span=4><col><col><col><col></colgroup>
+        <colgroup span=2 id="volt10_group"><col><col></colgroup>
+        <colgroup span=2 id="volt24_group"><col><col></colgroup>
         <tbody style="height:894px; width:1040px; overflow-y:auto;"> <!-- display:block"> -->
             <tr bgcolor="#aaaaaa" align="center">
                 <th>dive</th>
@@ -1453,10 +1468,10 @@
                 <th>temp</th>
                 <th>RH</th>
                 <th>int P</th>
-                <th>volts10</th>
-                <th>% cap</th>
-                <th>volts24</th>
-                <th>% cap</th>
+                <th id="volt10_header">volts10</th>
+                <th id="cap10_header">% cap</th>
+                <th id="volt24_header">volts24</th>
+                <th id="cap24_header">% cap</th>
             </tr>
         </tbody>
     </table>
