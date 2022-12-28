@@ -1,3 +1,6 @@
+#! /usr/bin/env python
+# -*- python-fmt -*-
+
 ##
 ## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
 ##
@@ -23,7 +26,6 @@
 """
 
 import os
-import sys
 import json
 import warnings
 
@@ -31,8 +33,7 @@ import plotly
 import plotly.graph_objects
 import plotly.io
 
-import Utils
-from BaseLog import *
+from BaseLog import log_warning
 
 # IOP Standard Figure size
 std_width = 1058
@@ -91,7 +92,7 @@ def write_output_files(base_opts, base_file_name, fig):
     and standalone .html and .svg based on conf file settings
 
     Input:
-        base_opts - all options 
+        base_opts - all options
         base_file_name - file name base for the output file names (i.e. no extension)
         fig - plotly figure object
     Returns:
@@ -120,7 +121,7 @@ def write_output_files(base_opts, base_file_name, fig):
             auto_open=False,
             validate=True,
             config=std_config_dict,
-            include_mathjax = 'cdn',
+            include_mathjax="cdn",
         )
         ret_list.append(output_name)
 
@@ -133,7 +134,7 @@ def write_output_files(base_opts, base_file_name, fig):
         auto_open=False,
         validate=True,
         config=std_config_dict,
-        include_mathjax = 'cdn'
+        include_mathjax="cdn",
     )
     ret_list.append(output_name)
 
@@ -168,18 +169,18 @@ def write_output_files(base_opts, base_file_name, fig):
     def isnotebook():
         try:
             shell = get_ipython().__class__.__name__
-            #print(shell)
-            if shell == 'ZMQInteractiveShell':
-                return True   # Jupyter notebook or qtconsole
-            elif shell == 'TerminalInteractiveShell':
+            # print(shell)
+            if shell == "ZMQInteractiveShell":
+                return True  # Jupyter notebook or qtconsole
+            elif shell == "TerminalInteractiveShell":
                 return False  # Terminal running IPython
             else:
                 return False  # Other type (?)
         except NameError:
-            return False      # Probably standard Python interpreter
+            return False  # Probably standard Python interpreter
 
     if isnotebook():
-        fig.update_layout(width=std_width,height=std_height)
+        fig.update_layout(width=std_width, height=std_height)
         fig.show()
 
     return ret_list

@@ -69,10 +69,10 @@ line_lookup = {
     "Transponder_ping": line_type("solid", "orange"),
     "GPS": line_type("dash", "green"),
     "Compass": line_type("dash", "magenta"),
-    # "RAFOS" :
-    # "Transponder" :
-    # "Compass2" :
-    # "network" :
+    "RAFOS": line_type("solid", "goldenrod"),
+    "Transponder": line_type("solid", "maroon"),
+    "Compass2": line_type("dash", "turquoise"),
+    "network": line_type("dash", "purple"),
     "STM32Mainboard": line_type("dash", "black"),
     "SciCon": line_type("solid", "DarkMagenta"),
 }
@@ -126,7 +126,8 @@ def mission_energy(
         )
 
         scenario_t = collections.namedtuple(
-            "scenario_type", ["type_str", "dive_col", "cap_col", "dive_time", "dive_end"]
+            "scenario_type",
+            ["type_str", "dive_col", "cap_col", "dive_time", "dive_end"],
         )
 
         scenarios = []
@@ -151,7 +152,6 @@ def mission_energy(
             #     )
             # )
 
-
         y_offset = -0.08
         for type_str, dive_col, cap_col, dive_time, dive_end in scenarios:
             dives_remaining, days_remaining, end_date = Utils.estimate_endurance(
@@ -159,7 +159,7 @@ def mission_energy(
                 dive_col.to_numpy(),
                 cap_col.to_numpy(),
                 dive_time.to_numpy(),
-                dive_end.to_numpy()
+                dive_end.to_numpy(),
             )
 
             p_dives_back = (
@@ -206,11 +206,12 @@ def mission_energy(
         dives_remaining = (
             batt_cap * (1.0 - base_opts.mission_energy_reserve_percent) - used_to_date
         ) / avg_use
-        secs_remaining = (
-            dives_remaining * np.mean(batt_df["dive_time"].to_numpy()[-p_dives_back:])
+        secs_remaining = dives_remaining * np.mean(
+            batt_df["dive_time"].to_numpy()[-p_dives_back:]
         )
         end_date = time.strftime(
-            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(batt_df["dive_end"].to_numpy()[-1] + secs_remaining)
+            "%Y-%m-%dT%H:%M:%SZ",
+            time.gmtime(batt_df["dive_end"].to_numpy()[-1] + secs_remaining),
         )
         days_remaining = secs_remaining / (24.0 * 3600.0)
         log_info(
@@ -228,6 +229,7 @@ def mission_energy(
             }
         )
 
+<<<<<<< HEAD
         BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "energy_dives_remain_FG", dives_remaining)
         BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "energy_dives_total_FG", dives_remaining + int(dive_col.to_numpy()[-1]))
         BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "energy_days_remain_FG", days_remaining);
@@ -235,6 +237,23 @@ def mission_energy(
         BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "energy_end_time_FG", end_t)
         BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "energy_days_total_FG", (end_t - start['log_gps1_time'])/86400);
 
+=======
+        BaseDB.addValToDB(
+            base_opts,
+            int(dive_col.to_numpy()[-1]),
+            "dives_remaining_FG",
+            dives_remaining,
+        )
+        BaseDB.addValToDB(
+            base_opts, int(dive_col.to_numpy()[-1]), "days_remaining_FG", days_remaining
+        )
+        BaseDB.addValToDB(
+            base_opts,
+            int(batt_df["dive"].to_numpy()[-1]),
+            "dives_back_FG",
+            p_dives_back,
+        )
+>>>>>>> d90695d6b755d3d148c25fb43901a38ae50d3b63
 
         # Find the device and sensor columnns for power consumption
         df = pd.read_sql_query("PRAGMA table_info(dives)", conn)
@@ -278,6 +297,31 @@ def mission_energy(
         ).sort_values("dive")
 
         fig = plotly.graph_objects.Figure()
+
+        if np.std(batt_df["batt_volts_10V"]):
+            fig.add_trace(
+                {
+                    "name": "Min Volts Observed - LV Pack",
+                    "x": batt_df["dive"],
+                    "y": batt_df["batt_volts_10V"],
+                    "yaxis": "y2",
+                    "mode": "lines",
+                    "line": {"dash": "dash", "width": 1, "color": "Cyan"},
+                    "hovertemplate": "Min LV Volts<br>Dive %{x:.0f}<br>%{y:.2f} volts<extra></extra>",
+                }
+            )
+        if np.std(batt_df["batt_volts_24V"]):
+            fig.add_trace(
+                {
+                    "name": "Min Volts Observed - HV Pack",
+                    "x": batt_df["dive"],
+                    "y": batt_df["batt_volts_24V"],
+                    "yaxis": "y2",
+                    "mode": "lines",
+                    "line": {"dash": "dash", "width": 1, "color": "DarkCyan"},
+                    "hovertemplate": "Min HV Volts<br>Dive %{x:.0f}<br>%{y:.2f} volts<extra></extra>",
+                }
+            )
 
         for energy_joules_df, energy_tag in (
             (device_joules_df, "device_"),
@@ -396,6 +440,12 @@ def mission_energy(
                     # "scaleratio": (plot_lon_max - plot_lon_min)
                     # / (plot_lat_max - plot_lat_min),
                     # Fixed ratio
+                },
+                "yaxis2": {
+                    "title": "volts",
+                    "showgrid": False,
+                    "overlaying": "y1",
+                    "side": "right",
                 },
                 "title": {
                     "text": title_text,

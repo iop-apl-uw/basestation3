@@ -2701,7 +2701,7 @@ def make_dive_profile(
             #         sg_epoch_time_s_v,
             #         kind="linear",
             #     )
-            #     if Globals.f_use_seawater:
+            #     if not base_opts.use_gsw:
             #         sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             #     else:
             #         sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
@@ -3069,7 +3069,7 @@ def make_dive_profile(
 
         if auxpressure_present:
             # auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 auxCompass_depth_v = seawater.dpth(auxCompass_pressure_v, latitude)
             else:
                 auxCompass_depth_v = -1.0 * gsw.z_from_p(
@@ -3740,7 +3740,7 @@ def make_dive_profile(
                 eng_f.get_col("depth") * cm2m - calib_consts["depth_bias"]
             ) * psi_per_meter
             sg_press_v *= dbar_per_psi  # convert to dbar
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
@@ -3768,7 +3768,7 @@ def make_dive_profile(
             else:
                 ctd_press_v = sg_press_v.copy()
 
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 ctd_salin_v = seawater.salt(
                     ctd_cond_v / c3515, ctd_temp_v, ctd_press_v
                 )  # temporary, not the real salinity raw
@@ -4066,7 +4066,7 @@ def make_dive_profile(
 
             # This is the latitude corrected depth given the measure pressure
             # The force of gravity varies by latitude given the oblate spheroid shape and unequal mass distributions in the Earth
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
@@ -4136,7 +4136,7 @@ def make_dive_profile(
             ###                    # This hack is to handle bad truck pressure, but to auxcompass pressure
             ###                    log_warning("Re-writing truck pressure and depth from auxCompass pressure")
             ###                    sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')
-            ###                    if Globals.f_use_seawater:
+            ###                    if not base_opts.use_gsw:
             ###                        sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             ###                    else:
             ###                        sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
@@ -4162,7 +4162,7 @@ def make_dive_profile(
                 # This might be close though...
                 # Negative because the CT sail is above the pressure sensor so is shallower
                 ctd_press_v = ctd_press_v - zTP * psi_per_meter * dbar_per_psi  # [dbar]
-                if Globals.f_use_seawater:
+                if not base_opts.use_gsw:
                     ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) - zTP  # [m]
                 else:
                     ctd_depth_m_v = (
@@ -4245,7 +4245,7 @@ def make_dive_profile(
                 eng_f.get_col("depth") * cm2m - calib_consts["depth_bias"]
             ) * psi_per_meter
             sg_press_v *= dbar_per_psi  # convert to dbar
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
             else:
                 sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
@@ -4260,7 +4260,7 @@ def make_dive_profile(
             # DEAD results_d['gpctd'] = 'pumped Seabird SBE41 (gpctd)' # record the instrument used for CTD
             ctd_np = len(ctd_epoch_time_s_v)
 
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 ctd_salin_v = seawater.salt(
                     ctd_cond_v / c3515, ctd_temp_v, ctd_press_v
                 )  # temporary, not the real salinity raw
@@ -4461,7 +4461,7 @@ def make_dive_profile(
         cond_raw_v -= calib_consts["cond_bias"]  # remove bias [S/m]
         if salin_raw_v is None:
             # Compute salinity based on raw data, w/o modification
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 salin_raw_v = seawater.salt(cond_raw_v / c3515, temp_raw_v, ctd_press_v)
             else:
                 salin_raw_v = gsw.SP_from_C(cond_raw_v * 10.0, temp_raw_v, ctd_press_v)
@@ -5367,7 +5367,7 @@ def make_dive_profile(
                 )
 
         # Now estimate an initial adjusted salinity based on adjusted temp and cond
-        if Globals.f_use_seawater:
+        if not base_opts.use_gsw:
             salin_cor_v = seawater.salt(cond_cor_v / c3515, temp_cor_v, ctd_press_v)
         else:
             salin_cor_v = gsw.SP_from_C(cond_cor_v * 10.0, temp_cor_v, ctd_press_v)
@@ -5532,7 +5532,7 @@ def make_dive_profile(
         #     )
         #     log_info("diff:%f" % nanmean(volume_v - displaced_volume_v))
 
-        TSV_f = TSV_iterative  # the only choice now; used to have two versions
+        # TSV_f = TSV_iterative  # the only choice now; used to have two versions
         use_averaged_speeds = False
 
         modes = int(calib_consts["sbect_modes"])  # ensure integer
@@ -5570,7 +5570,8 @@ def make_dive_profile(
             hdm_speed_cm_s_v,
             hdm_glide_angle_rad_v,
             speed_qc_v,
-        ) = TSV_f(
+        ) = TSV_iterative(
+            base_opts,
             ctd_elapsed_time_s_v,
             start_of_climb_i,
             temp_cor_v,
@@ -5606,7 +5607,8 @@ def make_dive_profile(
                 hdm_speed_cm_s_v,
                 hdm_glide_angle_rad_v,
                 speed_qc_v,
-            ) = TSV_f(
+            ) = TSV_iterative(
+                base_opts,
                 ctd_elapsed_time_s_v,
                 start_of_climb_i,
                 temp_cor_v,
@@ -5646,6 +5648,7 @@ def make_dive_profile(
                 _,
                 _,
             ) = LegatoCorrections.legato_correct_ct(
+                base_opts,
                 calib_consts,
                 ctd_epoch_time_s_v,
                 ctd_press_v,
@@ -6093,7 +6096,7 @@ def make_dive_profile(
         QC.report_qc("salin_cor_qc", salin_cor_qc_v)
         QC.report_qc("speed_qc", speed_qc_v)
 
-        if Globals.f_use_seawater:
+        if not base_opts.use_gsw:
             # sigma_t_v AKA density_v - 1000
             sigma_t_v = (
                 seawater.dens(salin_cor_v, temp_cor_v, np.zeros(salin_cor_v.size))
@@ -6152,7 +6155,7 @@ def make_dive_profile(
         try:
             if log_f.data["$DEEPGLIDER"] == 1:
                 # regardless of depth achieved since we might add to MMT, etc.
-                if Globals.f_use_seawater:
+                if not base_opts.use_gsw:
                     sigma_theta3_v = (
                         seawater.dens(
                             salin_cor_v,

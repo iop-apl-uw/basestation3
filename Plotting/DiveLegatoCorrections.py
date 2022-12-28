@@ -45,6 +45,7 @@ import QC
 from BaseLog import log_error
 from Plotting import plotdivesingle
 
+
 @plotdivesingle
 def plot_legato_corrections(
     base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
@@ -83,7 +84,7 @@ def plot_legato_corrections(
     ctd_time = (ctd_time - start_time) / 60.0
     legato_time = (legato_time - start_time) / 60.0
 
-    if Globals.f_use_seawater:
+    if not base_opts.use_gsw:
         legato_salinity = seawater.salt(
             legato_cond / (seawater.constants.c3515 / 10.0), legato_temp, ctd_press
         )

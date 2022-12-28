@@ -81,7 +81,7 @@ def plot_legato_data(
 
     log_gps_lat = dive_nc_file.variables["log_gps_lat"][:]
 
-    if Globals.f_use_seawater:
+    if not base_opts.use_gsw:
         depth = seawater.dpth(pressure, log_gps_lat[0])
     else:
         depth = -1.0 * gsw.z_from_p(pressure, log_gps_lat[0], 0.0, 0.0)
@@ -134,7 +134,7 @@ def plot_legato_data(
     conductivity_dive = conductivity[0:max_depth_sample_index]
     conductivity_climb = conductivity[max_depth_sample_index:]
 
-    if Globals.f_use_seawater:
+    if not base_opts.use_gsw:
         salinity = seawater.salt(
             conductivity / (seawater.constants.c3515 / 10.0), temp, pressure
         )
