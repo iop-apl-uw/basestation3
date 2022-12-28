@@ -241,7 +241,6 @@ def mission_map(
     rdf = df[df['dive'] > Ndv - tail]
     plt.plot(df['lon'].to_numpy(), df['lat'].to_numpy(), color='lightsalmon', alpha=1, marker='.', markersize=4, transform=ccrs.PlateCarree(), linestyle='None')
     plt.plot(rdf['lon'].to_numpy(), rdf['lat'].to_numpy(), color='red', marker='+', transform=ccrs.PlateCarree(), linestyle='None')
-    plt.show()
 
     output_name = "eng_mission_map.png"
 
