@@ -1,4 +1,5 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
 ##
 ## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
@@ -20,6 +21,8 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
+""" Basestation wide logging infrastructure """
+
 import sys
 import traceback
 import os
@@ -33,19 +36,21 @@ import inspect
 # otherwise drop for released code
 # However, Geoff reports much after-the-fact debugging for which the linenos are critical.
 #                 debug,    info,      warning, error,    critical
-_stack_options = ['caller', 'caller', 'caller', 'caller', 'exc'] # default
+_stack_options = ["caller", "caller", "caller", "caller", "exc"]  # default
 # _stack_options = ['caller', None,      None,    None,     'exc'] # relative silence
 # _stack_options = ['caller', None,      None,    'caller', 'exc'] # only if we have big issues
-#DEBUG _stack_options = ['caller', 'exc',    'exc',   'exc',    'exc'] # exercise
+# DEBUG _stack_options = ['caller', 'exc',    'exc',   'exc',    'exc'] # exercise
+
 
 class BaseLogger:
     """
     BaseLog: for use by all basestation code and utilities
     """
-    self = None # the global instance
+
+    self = None  # the global instance
     is_initialized = False
-    opts = None # whatever starting options
-    log = None # the logger
+    opts = None  # whatever starting options
+    log = None  # the logger
     # for transient string logging
     stringHandler = None
     stringBuffer = None
@@ -69,7 +74,7 @@ class BaseLogger:
         Initializes a logging.Logger object, according to options (opts).
         """
 
-        if (BaseLogger.is_initialized == False):
+        if not BaseLogger.is_initialized:
             BaseLogger.self = self
             BaseLogger.opts = opts
 
@@ -77,13 +82,13 @@ class BaseLogger:
                 os.path.split(inspect.stack()[1].filename)[1]
             )[0]
 
-            #create logger
+            # create logger
             BaseLogger.log = logging.getLogger(calling_module)
             BaseLogger.log.setLevel(logging.DEBUG)
 
             # create a file handler if log filename is specified in opts
             if opts is not None:
-                if (opts.base_log is not None and opts.base_log != ""):
+                if opts.base_log is not None and opts.base_log != "":
                     fh = logging.FileHandler(opts.base_log)
                     # fh.setLevel(logging.NOTSET) # messages of all levels will be recorded
                     self.setHandler(fh, opts, include_time)
@@ -93,24 +98,26 @@ class BaseLogger:
             self.setHandler(sh, opts, include_time)
 
             BaseLogger.is_initialized = True
-            log_info("Process id = %d" % os.getpid()) # report our process id
+            log_info("Process id = %d" % os.getpid())  # report our process id
 
     def setHandler(self, handle, opts, include_time):
         """
         Set a logging handle.
         """
         if include_time:
-            formatter = logging.Formatter("%(asctime)s: %(levelname)s: %(message)s", "%H:%M:%S %d %b %Y %Z")
+            formatter = logging.Formatter(
+                "%(asctime)s: %(levelname)s: %(message)s", "%H:%M:%S %d %b %Y %Z"
+            )
         else:
             # Remove timestamps for easier log comparison and reading
             formatter = logging.Formatter("%(levelname)s: %(message)s")
 
         if opts is not None:
-            if (opts.debug):
+            if opts.debug:
                 BaseLogger.debug_enabled = True
                 BaseLogger.info_enabled = True
                 handle.setLevel(logging.DEBUG)
-            elif (opts.verbose):
+            elif opts.verbose:
                 BaseLogger.info_enabled = True
                 handle.setLevel(logging.INFO)
             else:
@@ -127,24 +134,22 @@ class BaseLogger:
         warnings_logger.addHandler(handle)
 
     def getLogger(self):
-        """getLogger: access function to log (static member)
-        """
+        """getLogger: access function to log (static member)"""
         if not BaseLogger.is_initialized:
             # error condition
             pass
 
         return BaseLogger.log
 
-
-    def startStringCapture(self,include_time=False):
+    def startStringCapture(self, include_time=False):
         """
         Start capturing all logging traffic to a string
         """
-        if (self.stringHandler):
+        if self.stringHandler:
             # already capturing...probably not closed properly from previous call due to bailing out or exception handling
-            self.stopStringCapture() # close handler and drop string on the floor
+            self.stopStringCapture()  # close handler and drop string on the floor
 
-        self.stringBuffer = StringIO() # start a string stream
+        self.stringBuffer = StringIO()  # start a string stream
         self.stringHandler = logging.StreamHandler(self.stringBuffer)
         self.setHandler(self.stringHandler, self.opts, include_time)
 
@@ -152,8 +157,8 @@ class BaseLogger:
         """
         Stop capturing logging traffic to a string and return results
         """
-        if (self.stringHandler is None):
-            return "" # not capturing, return an empty string
+        if self.stringHandler is None:
+            return ""  # not capturing, return an empty string
         else:
             self.log.removeHandler(self.stringHandler)
             self.stringHandler.flush()
@@ -163,6 +168,7 @@ class BaseLogger:
             value = self.stringBuffer.getvalue()
             self.stringBuffer = None
             return value
+
 
 def __log_caller_info(s, loc):
     """Add stack or module: line number info for log caller to given string
@@ -175,86 +181,106 @@ def __log_caller_info(s, loc):
     if loc:
         try:
             # skip our local callers
-            offset = 3; # __log_caller_info(); log_XXXX; <caller>
-            if loc in ['caller', 'parent']:
-                if loc == 'parent': # A utlity routine
+            offset = 3
+            # __log_caller_info(); log_XXXX; <caller>
+            if loc in ["caller", "parent"]:
+                if loc == "parent":  # A utlity routine
                     offset = offset + 1
                 frame = traceback.extract_stack(None, offset)[0]
                 module, lineno, function, _ = frame
-                module = os.path.basename(module) # lose extension
+                module = os.path.basename(module)  # lose extension
                 s = "%s(%d): %s" % (module, lineno, s)
-            elif loc == 'exc':
+            elif loc == "exc":
                 exc = traceback.format_exc()
-                if exc: # if no exception, nothing added
+                if exc:  # if no exception, nothing added
                     s = "%s:\n%s" % (s, exc)
-            elif loc == 'stack':
-                frame_num = 0
-                prefix = '>'
-                stack = ''
+            elif loc == "stack":
+                # frame_num = 0
+                prefix = ">"
+                stack = ""
                 frames = traceback.extract_stack()
                 # normally from bottom to top; reverse this so most recent call first
                 frames.reverse()
-                frames = frames[offset-1:-1] # drop our callers
+                frames = frames[offset - 1 : -1]  # drop our callers
                 for frame in frames:
-                    module, lineno, function, _ = frame # avoid the source code text
-                    module = os.path.basename(module) # lose extension
-                    stack = "%s\n%s %s(%d) %s()" % (stack, prefix, module, lineno, function)
-                    prefix = ' '
+                    module, lineno, function, _ = frame  # avoid the source code text
+                    module = os.path.basename(module)  # lose extension
+                    stack = "%s\n%s %s(%d) %s()" % (
+                        stack,
+                        prefix,
+                        module,
+                        lineno,
+                        function,
+                    )
+                    prefix = " "
                 s = "%s:%s" % (s, stack)
-            else: # unknown location request
+            else:  # unknown location request
                 s = "(%s?): %s" % (loc, s)
         except:
             pass
     return s
 
+
 def log_alerts():
+    """Fetches the alerts dictionary"""
     return BaseLogger.alerts_d
 
+
 def log_conversion_alerts():
+    """Fetches the conversion alerts dictionary"""
     return BaseLogger.conversion_alerts_d
 
+
 def log_conversion_alert(key, msg, resend):
+    """Log a conversion alert"""
     conversion_alerts_d = BaseLogger.conversion_alerts_d
     if key not in conversion_alerts_d:
         conversion_alerts_d[key] = []
     conversion_alerts_d[key].append((msg, resend))
 
+
 def log_alert(key, s):
-    if type(key) is not str:
-        log_warning(f"{type(key)} in alerts", 'exc')
+    """Log a genreral alert"""
+    if not isinstance(key, str):
+        log_warning(f"{type(key)} in alerts", "exc")
         return
     alerts_d = BaseLogger.alerts_d
     if key not in alerts_d:
         alerts_d[key] = []
     alerts_d[key].append(s)
 
+
 # alert=None argument is optional to the log_X functions
 # for easy searching, call like:
 # log_warning("You got issues boss",alert='Salinity processing')
 
-def log_critical(s,loc=BaseLogger.critical_loc,alert=None):
+
+def log_critical(s, loc=BaseLogger.critical_loc, alert=None):
     """Report string to baselog as a CRITICAL error
     Input:
     s - string
     """
-    s =__log_caller_info(s, loc)
+    s = __log_caller_info(s, loc)
     if alert:
         log_alert(alert, "CRITICAL: %s" % s)
-    if(BaseLogger.log):
+    if BaseLogger.log:
         BaseLogger.log.critical(s)
     else:
         sys.stderr.write("CRITICAL: %s\n" % s)
 
+
 log_error_max_count = collections.defaultdict(int)
-def log_error(s,loc=BaseLogger.error_loc,alert=None,max_count=None):
+
+
+def log_error(s, loc=BaseLogger.error_loc, alert=None, max_count=None):
     """Report string to baselog as an ERROR
     Input:
     s - string
     """
-    s =__log_caller_info(s, loc)
+    s = __log_caller_info(s, loc)
 
     if max_count:
-        k = s.split(':')[0]
+        k = s.split(":")[0]
         log_error_max_count[k] += 1
         if log_error_max_count[k] == max_count:
             s += " (Max message count exceeded)"
@@ -264,21 +290,24 @@ def log_error(s,loc=BaseLogger.error_loc,alert=None,max_count=None):
     if alert:
         log_alert(alert, "ERROR: %s" % s)
 
-    if(BaseLogger.log):
+    if BaseLogger.log:
         BaseLogger.log.error(s)
     else:
         sys.stderr.write("ERROR: %s\n" % s)
 
+
 log_warning_max_count = collections.defaultdict(int)
-def log_warning(s,loc=BaseLogger.warning_loc,alert=None, max_count=None):
+
+
+def log_warning(s, loc=BaseLogger.warning_loc, alert=None, max_count=None):
     """Report string to baselog as a WARNING
     Input:
     s - string
     """
-    s =__log_caller_info(s, loc)
+    s = __log_caller_info(s, loc)
 
     if max_count:
-        k = s.split(':')[0]
+        k = s.split(":")[0]
         log_warning_max_count[k] += 1
         if log_warning_max_count[k] == max_count:
             s += " (Max message count exceeded)"
@@ -287,23 +316,26 @@ def log_warning(s,loc=BaseLogger.warning_loc,alert=None, max_count=None):
 
     if alert:
         log_alert(alert, "WARNING: %s" % s)
-    if(BaseLogger.log):
+    if BaseLogger.log:
         BaseLogger.log.warning(s)
     else:
         sys.stderr.write("WARNING: %s\n" % s)
 
+
 log_info_max_count = collections.defaultdict(int)
-def log_info(s,loc=BaseLogger.info_loc,alert=None, max_count=None):
+
+
+def log_info(s, loc=BaseLogger.info_loc, alert=None, max_count=None):
     """Report string to baselog as an ERROR
     Input:
     s - string
     """
     if not BaseLogger.info_enabled:
         return
-    s =__log_caller_info(s, loc)
+    s = __log_caller_info(s, loc)
 
     if max_count:
-        k = s.split(':')[0]
+        k = s.split(":")[0]
         log_info_max_count[k] += 1
         if log_info_max_count[k] == max_count:
             s += " (Max message count exceeded)"
@@ -312,32 +344,35 @@ def log_info(s,loc=BaseLogger.info_loc,alert=None, max_count=None):
 
     if alert:
         log_alert(alert, "INFO: %s" % s)
-    if(BaseLogger.log):
+    if BaseLogger.log:
         BaseLogger.log.info(s)
     else:
         sys.stderr.write("INFO: %s\n" % s)
 
-log_debug_max_count = collections.defaultdict(int)        
-def log_debug(s,loc=BaseLogger.debug_loc,alert=None, max_count=None):
+
+log_debug_max_count = collections.defaultdict(int)
+
+
+def log_debug(s, loc=BaseLogger.debug_loc, alert=None, max_count=None):
     """Report string to baselog as DEBUG info
     Input:
     s - string
     """
     if not BaseLogger.debug_enabled:
         return
-    s =__log_caller_info(s, loc)
+    s = __log_caller_info(s, loc)
 
     if max_count:
-        k = s.split(':')[0]
+        k = s.split(":")[0]
         log_debug_max_count[k] += 1
         if log_debug_max_count[k] == max_count:
             s += " (Max message count exceeded)"
         elif log_debug_max_count[k] > max_count:
             return
-    
+
     if alert:
         log_alert(alert, "DEBUG: %s" % s)
-    if(BaseLogger.log):
+    if BaseLogger.log:
         BaseLogger.log.debug(s)
     else:
         sys.stderr.write("DEBUG: %s\n" % s)
