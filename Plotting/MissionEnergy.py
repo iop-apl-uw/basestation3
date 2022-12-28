@@ -21,7 +21,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
-
+# fmt: off
 """ Plots mission energy consumption and projections
 """
 # TODO: This can be removed as of python 3.11
@@ -115,9 +115,9 @@ def mission_energy(
         ).sort_values("dive")
 
         start = pd.read_sql_query(
-            "SELECT log_gps2_time FROM dives WHERE dive=1",
+            "SELECT dive,log_gps2_time FROM dives",
             conn,
-        ).loc[0,:]
+        ).sort_values("dive")["log_gps2_time"].iloc()[-1]
 
         if batt_df["batt_Ahr_cap_24V"].iloc()[-1] == 0:
             univolt = "10V"
@@ -201,7 +201,7 @@ def mission_energy(
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               f"energy_days_total_{type_str}", 
-                              (end_t - start['log_gps2_time'])/86400);
+                              (end_t - start)/86400);
             BaseDB.addValToDB(base_opts, 
                               int(batt_df["dive"].to_numpy()[-1]), 
                               f"energy_end_time_{type_str}", 
@@ -272,7 +272,7 @@ def mission_energy(
         BaseDB.addValToDB(base_opts, 
                           int(dive_col.to_numpy()[-1]), 
                           "energy_days_total_FG", 
-                          (end_t - start['log_gps2_time'])/86400);
+                          (end_t - start)/86400);
 
         days_df = pd.read_sql_query(
             f"SELECT dive,energy_days_total_Modeled,energy_days_total_FG FROM dives {clause} ORDER BY dive ASC", 
@@ -529,3 +529,4 @@ def mission_energy(
             pdb.post_mortem(traceb)
         log_error("Could not fetch needed columns", "exc")
         return ([], [])
+# fmt: on
