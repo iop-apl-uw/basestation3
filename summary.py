@@ -87,23 +87,25 @@ def collectSummary(glider, path):
     pos_stamp = datetime.strptime(f"{year+2000}-{mon:02d}-{day:02d}T{hour:02d}:{min:02d}:{sec:02d}Z", "%Y-%m-%dT%H:%M:%S%z").timestamp()
 
     with sqlite3.connect(dbfile) as conn:
-        data = pd.read_sql_query(
-            "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon,dives_remaining_Modeled,days_remaining_Modeled FROM dives ORDER BY dive DESC LIMIT 1",
-            conn,
-        ).loc[0,:]
+        try:
+            data = pd.read_sql_query(
+                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled FROM dives ORDER BY dive DESC LIMIT 1",
+                conn,
+            ).loc[0,:]
 
-        gc = pd.read_sql_query(
-            f"SELECT pitch_volts,roll_volts,vbd_volts,vbd_eff FROM gc WHERE dive={int(data['dive'])} ORDER BY vbd_eff DESC LIMIT 1",
-            conn,
-        ).loc[0,:]
+            gc = pd.read_sql_query(
+                f"SELECT pitch_volts,roll_volts,vbd_volts,vbd_eff FROM gc WHERE dive={int(data['dive'])} ORDER BY vbd_eff DESC LIMIT 1",
+                conn,
+            ).loc[0,:]
 
-        start = pd.read_sql_query(
-            "SELECT log_gps1_time FROM dives WHERE dive=1",
-            conn,
-        ).loc[0,:]
+            start = pd.read_sql_query(
+                "SELECT log_gps2_time FROM dives WHERE dive=1",
+                conn,
+            ).loc[0,:]
+        except Exception as e:
+            print(e)
+            return {}
 
-    print(start)
-    print(start['log_gps1_time'])
     cmdfileDirective = getCmdfileDirective(cmdfile)
 
     try: 
@@ -177,10 +179,10 @@ def collectSummary(glider, path):
     out['crits']  = critcount
 
     out['enduranceBasis'] = 'model'
-    out['enduranceEndT'] = data['log_gps_time'] + data['days_remaining_Modeled']*86400;
-    out['enduranceDays'] = data['days_remaining_Modeled']
-    out['enduranceDives'] = data['dives_remaining_Modeled']
-    out['missionStart'] = start['log_gps1_time']
+    out['enduranceEndT'] = data['log_gps_time'] + data['energy_days_remain_Modeled']*86400;
+    out['enduranceDays'] = data['energy_days_remain_Modeled']
+    out['enduranceDives'] = data['energy_dives_remain_Modeled']
+    out['missionStart'] = start['log_gps2_time']
     out['missionEnd'] = end_t
     
     return out
