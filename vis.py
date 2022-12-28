@@ -243,6 +243,8 @@ async def optableHandler(request, mask:int):
     opTable = []
     with open('ops.dat', 'r') as file:
         for line in file:
+            if line[0] == '#':
+                continue
             pieces = line.strip().split('/')
             glider = int(pieces[0][2:])
             if len(pieces) == 1:

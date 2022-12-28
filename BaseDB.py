@@ -553,7 +553,6 @@ def updateDBFromPlots(base_opts, ncfs):
 
     for n in ncfs:
         dive = int(os.path.basename(n)[4:8])
-        print(f"{dive}")
         BasePlot.plot_mission(base_opts, mission_plots_dict, mission_str, dive=dive)
 
 
