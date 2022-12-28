@@ -1617,6 +1617,18 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
         return None
     return sqlite3.connect(db)
 
+def dive_var_trend(base_opts, dive_col, y_col):
+    """Get the trend (dive over dive slope) of a dive variable"""
+
+    p_dives_back = (
+        base_opts.mission_trends_dives_back
+        if dive_col[-1] >= base_opts.mission_trends_dives_back
+        else dive_col[-1]
+    )
+
+    m, b = np.polyfit(dive_col[-p_dives_back:], y_col[-p_dives_back:], 1)
+    return (m, b)
+
 def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
     """Estimate endurace from normalized remaining battery capacity"""
     # print(dive_col)

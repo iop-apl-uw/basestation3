@@ -194,10 +194,12 @@ def plot_pitch_roll(
     implied_gain = fit.slope / pitch_cnv
 
     log_info(f"implied_cpitch {implied_C}, implied_pitchgain {implied_gain}")
+    
     BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "implied_C_PITCH", implied_C)
     BaseDB.addValToDB(
         base_opts, dive_nc_file.dive_number, "implied_PITCH_GAIN", implied_gain
     )
+    BaseDB.addSlopeValToDB(base_opts, dive_nc_file.dive_number, ["implied_C_PITCH"], None)
 
     pitchAD_Fit = [min(pitchAD), max(pitchAD)]
     pitch_Fit = (pitchAD_Fit - implied_C) * implied_gain * pitch_cnv

@@ -879,6 +879,19 @@ global_options_dict = {
             "option_group": "plotting",
         },
     ),
+    "mission_trends_dives_back": options_t(
+        10,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--mission_trends_dives_back",),
+        int,
+        {
+            "help": "For diagnostic change detectors (int P, volmax), ..., how many dives back to fit",
+            "option_group": "plotting",
+        },
+    ),
     # End plotting related
     "strip_list": options_t(
         None,

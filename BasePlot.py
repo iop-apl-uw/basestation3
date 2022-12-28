@@ -97,7 +97,7 @@ def plot_dives(
 
 
 def plot_mission(
-    base_opts: BaseOpts.BaseOptions, mission_plot_dict: dict, mission_str: list
+    base_opts: BaseOpts.BaseOptions, mission_plot_dict: dict, mission_str: list, dive=None
 ) -> tuple[list:list]:
     """
     Create per-dive related plots
@@ -113,9 +113,12 @@ def plot_mission(
     figs = []
     output_files = []
     for plot_name, plot_func in mission_plot_dict.items():
-        log_debug(f"Trying Mission Plot :{plot_name}")
+        log_debug(f"Trying Mission Plot: {plot_name}")
         try:
-            fig_list, file_list = plot_func(base_opts, mission_str)
+            if dive == None:
+                fig_list, file_list = plot_func(base_opts, mission_str)
+            else:
+                fig_list, file_list = plot_func(base_opts, mission_str, dive=dive)
         except Exception as e:
             log_error(f"{plot_name} failed {e}", "exc")
         else:

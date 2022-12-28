@@ -39,6 +39,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtilsPlotly
 import Utils
+import BaseDB
 
 from BaseLog import log_error
 from Plotting import plotmissionsingle
@@ -50,7 +51,7 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_int_sensors(
-    base_opts: BaseOpts.BaseOptions, mission_str: list
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
 ) -> tuple[list, list]:
     """Plots internal pressure, RH, temp"""
 
@@ -59,17 +60,26 @@ def mission_int_sensors(
         log_error("Could not open mission database")
         return ([], [])
 
+    if dive == None:
+        clause = ''
+    else:
+        clause = f"WHERE dive <= {dive}"
+
     fig = plotly.graph_objects.Figure()
     df = None
     try:
         df = pd.read_sql_query(
-            "SELECT dive,log_HUMID,log_INTERNAL_PRESSURE,log_TEMP from dives",
+            f"SELECT dive,log_HUMID,log_INTERNAL_PRESSURE,log_TEMP from dives {clause} ORDER BY dive ASC",
             conn,
         ).sort_values("dive")
     except:
         log_error("Could not fetch needed columns", "exc")
         return ([], [])
 
+    for v in ["log_INTERNAL_PRESSURE", "log_HUMID"]:
+        m,b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
+        BaseDB.addValToDB(base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m)
+        
     fig.add_trace(
         {
             "name": "Internl Pressure",

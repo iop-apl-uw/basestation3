@@ -43,6 +43,8 @@ import CalibConst
 import CommLog
 import PlotUtils
 import Utils
+import pandas as pd
+from CalibConst import getSGCalibrationConstants
 
 from BaseLog import (
     BaseLogger,
@@ -54,6 +56,15 @@ from BaseLog import (
 )
 
 DEBUG_PDB = "darwin" in sys.platform
+
+slopeVars = [ 
+                "batt_volts_10V",
+                "batt_volts_24V",
+                "log_IMPLIED_C_VBD",
+                "implied_volmax_glider",
+                "batt_capacity_10V",
+                "batt_capacity_24V", 
+            ]
 
 def ddmm2dd(x):
     deg = int(x/100)
@@ -166,7 +177,7 @@ def processGC(dive, cur, nci):
                                      f"{nci.variables['gc_roll_volts'][i]}," \
                                      f"{nci.variables['gc_vbd_volts'][i]});")
 
-def loadFileToDB(cur, filename):
+def loadFileToDB(base_opts, cur, filename, con):
     """Process single netcdf file into the database"""
     gpsVars = [ "time", "lat", "lon", "magvar", "hdop", "first_fix_time", "final_fix_time" ]
 
@@ -507,6 +518,9 @@ def loadFileToDB(cur, filename):
                 mass / rho0 + (vbd_min_cnts - glider_implied_c_vbd) * vbd_cnts_per_cc
             )
             insertColumn(
+                dive, cur, "log_IMPLIED_C_VBD", glider_implied_c_vbd, "FLOAT"
+            )
+            insertColumn(
                 dive, cur, "implied_volmax_glider", glider_implied_volmax, "FLOAT"
             )
 
@@ -519,6 +533,7 @@ def loadFileToDB(cur, filename):
 
     processGC(dive, cur, nci)
 
+    addSlopeValToDB(base_opts, dive, slopeVars, con)
 
 def updateDBFromPlots(base_opts, ncfs):
     """Update the database with the output of plotting routines that generate db columns"""
@@ -526,9 +541,20 @@ def updateDBFromPlots(base_opts, ncfs):
     base_opts.dive_plots = ["plot_vert_vel", "plot_pitch_roll"]
     dive_plots_dict = BasePlot.get_dive_plots(base_opts)
     BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs)
-    base_opts.mission_plots = ["mission_energy"]
+
+    sg_calib_file_name = os.path.join(
+        base_opts.mission_dir, "sg_calib_constants.m"
+    )
+    calib_consts = getSGCalibrationConstants(sg_calib_file_name)
+    mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
+
+    base_opts.mission_plots = ["mission_energy", "mission_int_sensors"]
     mission_plots_dict = BasePlot.get_mission_plots(base_opts)
-    BasePlot.plot_mission(base_opts, dive_plots_dict, ncfs)
+
+    for n in ncfs:
+        dive = int(os.path.basename(n)[4:8])
+        print(f"{dive}")
+        BasePlot.plot_mission(base_opts, mission_plots_dict, mission_str, dive=dive)
 
 
 def updateDBFromFM(base_opts, ncfs, con):
@@ -558,8 +584,8 @@ def updateDBFromFM(base_opts, ncfs, con):
                         )
             except:
                 log_error(f"Problem opening FM data associated with {ncf}")
-        cur.close()
 
+        cur.close()
 
 def rebuildDB(base_opts, from_cli=False):
     """Rebuild the database from scratch"""
@@ -586,8 +612,9 @@ def rebuildDB(base_opts, from_cli=False):
             ncfs.append(filename)
         ncfs = sorted(ncfs)
         for filename in ncfs:
-            loadFileToDB(cur, filename)
-        cur.close()
+            loadFileToDB(base_opts, cur, filename, con)
+        cur.close() 
+
     if from_cli:
         updateDBFromPlots(base_opts, ncfs)
     updateDBFromFM(base_opts, ncfs, con)
@@ -600,15 +627,25 @@ def loadDB(base_opts, filename, from_cli=False):
     con = sqlite3.connect(db)
     with con:
         cur = con.cursor()
-        loadFileToDB(cur, filename)
+        loadFileToDB(base_opts, cur, filename, con)
         cur.close()
+  
     if from_cli:
         updateDBFromPlots(base_opts, [filename])
     updateDBFromFM(base_opts, [filename], con)
 
-
-def addValToDB(base_opts, dive_num, var_n, val):
+def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
+    if con == None:
+        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+        if not os.path.exists(db):
+            log_error(f"{db} does not exist - not updating {var_n}")
+            return 1
+
+        mycon = sqlite3.connect(db)
+    else:
+        mycon = con
+
     try:
         if isinstance(val, int):
             db_type = "INTEGER"
@@ -617,25 +654,55 @@ def addValToDB(base_opts, dive_num, var_n, val):
         else:
             log_error(f"Unknown db_type for {var_n}:{type(val)}")
             return 1
-        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
-        if not os.path.exists(db):
-            log_error(f"{db} does not exist - not updating {var_n}")
-            return 1
-        log_debug(f"Loading {var_n}:{val} dive:{dive_num} to {db}")
-        con = sqlite3.connect(db)
-        with con:
-            cur = con.cursor()
-            insertColumn(dive_num, cur, var_n, val, db_type)
+
+        cur = mycon.cursor()
+        log_debug(f"Loading {var_n}:{val} dive:{dive_num} to db")
+        insertColumn(dive_num, cur, var_n, val, db_type)
+        mycon.commit()
+ 
+        if con == None:
             cur.close()
+            mycon.close()
     except:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
             pdb.post_mortem(traceb)
         log_error(f"Failed to add {var_n} to dive {dive_num}", "exc")
+        print(f"Failed to add {var_n} to dive {dive_num}", "exc")
         return 1
     return 0
 
+def addSlopeValToDB(base_opts, dive_num, var, con):
+    if con == None:
+        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+        mycon = sqlite3.connect(db)
+    else:
+        mycon = con
+        
+    try:
+        res = mycon.cursor().execute('PRAGMA table_info(dives)')
+        vexist = []
+        columns = [i[1] for i in res]
+        for v in var:
+            if v in columns:
+                vexist.append(v)
+        vstr = ','.join(vexist)
+        q = f"SELECT dive,{vstr} FROM dives WHERE dive <= {dive_num} ORDER BY dive DESC LIMIT {base_opts.mission_trends_dives_back}"
+        df = pd.read_sql_query(q, mycon).sort_values("dive")
+    except Exception as e:
+        log_error(f"{e} could not fetch {var} for slope calculation")
+        return
+
+    for v in vexist:
+        if df[v].isnull().values.any():
+            continue
+
+        m,b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
+        addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
+
+    if con == None:
+        mycon.close()
 
 def main():
     """Command line interface for BaseDB"""
