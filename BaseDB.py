@@ -699,8 +699,8 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
             continue
 
         with warnings.catch_warnings():
-            # With short missions (less then 10 dives), we get this:
-            #     RankWarning: Polyfit may be poorly conditioned
+            # For very small number of dives, we get
+            # RankWarning: Polyfit may be poorly conditioned
             warnings.simplefilter('ignore', numpy.RankWarning)
             m,b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
         addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
