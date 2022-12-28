@@ -68,10 +68,10 @@ line_lookup = {
     "Transponder_ping": line_type("solid", "orange"),
     "GPS": line_type("dash", "green"),
     "Compass": line_type("dash", "magenta"),
-    "RAFOS" : line_type("solid", "goldenrod"),
-    "Transponder" : line_type("solid", "maroon")
-    "Compass2" : line_type("dash", "turquoise"),
-    "network" : line_type("dash", "purple"),
+    "RAFOS": line_type("solid", "goldenrod"),
+    "Transponder": line_type("solid", "maroon"),
+    "Compass2": line_type("dash", "turquoise"),
+    "network": line_type("dash", "purple"),
     "STM32Mainboard": line_type("dash", "black"),
     "SciCon": line_type("solid", "DarkMagenta"),
 }
@@ -115,7 +115,8 @@ def mission_energy(
         )
 
         scenario_t = collections.namedtuple(
-            "scenario_type", ["type_str", "dive_col", "cap_col", "dive_time", "dive_end"]
+            "scenario_type",
+            ["type_str", "dive_col", "cap_col", "dive_time", "dive_end"],
         )
 
         scenarios = []
@@ -140,7 +141,6 @@ def mission_energy(
             #     )
             # )
 
-
         y_offset = -0.08
         for type_str, dive_col, cap_col, dive_time, dive_end in scenarios:
             dives_remaining, days_remaining, end_date = Utils.estimate_endurance(
@@ -148,7 +148,7 @@ def mission_energy(
                 dive_col.to_numpy(),
                 cap_col.to_numpy(),
                 dive_time.to_numpy(),
-                dive_end.to_numpy()
+                dive_end.to_numpy(),
             )
 
             p_dives_back = (
@@ -169,9 +169,24 @@ def mission_energy(
                 }
             )
 
-            BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), f"dives_remaining_{type_str}", float(dives_remaining));
-            BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), f"days_remaining_{type_str}", days_remaining);
-            BaseDB.addValToDB(base_opts, int(batt_df["dive"].to_numpy()[-1]), f"dives_back_{type_str}", p_dives_back);
+            BaseDB.addValToDB(
+                base_opts,
+                int(dive_col.to_numpy()[-1]),
+                f"dives_remaining_{type_str}",
+                float(dives_remaining),
+            )
+            BaseDB.addValToDB(
+                base_opts,
+                int(dive_col.to_numpy()[-1]),
+                f"days_remaining_{type_str}",
+                days_remaining,
+            )
+            BaseDB.addValToDB(
+                base_opts,
+                int(batt_df["dive"].to_numpy()[-1]),
+                f"dives_back_{type_str}",
+                p_dives_back,
+            )
 
         # TODO Using the polyfit on the normailzed battery capacity for the fuel guage yields
         # roughly 10% less dives then next calc (taken directly from the current matlab code)
@@ -191,11 +206,12 @@ def mission_energy(
         dives_remaining = (
             batt_cap * (1.0 - base_opts.mission_energy_reserve_percent) - used_to_date
         ) / avg_use
-        secs_remaining = (
-            dives_remaining * np.mean(batt_df["dive_time"].to_numpy()[-p_dives_back:])
+        secs_remaining = dives_remaining * np.mean(
+            batt_df["dive_time"].to_numpy()[-p_dives_back:]
         )
         end_date = time.strftime(
-            "%Y-%m-%dT%H:%M:%SZ", time.gmtime(batt_df["dive_end"].to_numpy()[-1] + secs_remaining)
+            "%Y-%m-%dT%H:%M:%SZ",
+            time.gmtime(batt_df["dive_end"].to_numpy()[-1] + secs_remaining),
         )
         days_remaining = secs_remaining / (24.0 * 3600.0)
         log_info(
@@ -213,9 +229,21 @@ def mission_energy(
             }
         )
 
-        BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "dives_remaining_FG", dives_remaining);
-        BaseDB.addValToDB(base_opts, int(dive_col.to_numpy()[-1]), "days_remaining_FG", days_remaining);
-        BaseDB.addValToDB(base_opts, int(batt_df["dive"].to_numpy()[-1]), "dives_back_FG", p_dives_back);
+        BaseDB.addValToDB(
+            base_opts,
+            int(dive_col.to_numpy()[-1]),
+            "dives_remaining_FG",
+            dives_remaining,
+        )
+        BaseDB.addValToDB(
+            base_opts, int(dive_col.to_numpy()[-1]), "days_remaining_FG", days_remaining
+        )
+        BaseDB.addValToDB(
+            base_opts,
+            int(batt_df["dive"].to_numpy()[-1]),
+            "dives_back_FG",
+            p_dives_back,
+        )
 
         # Find the device and sensor columnns for power consumption
         df = pd.read_sql_query("PRAGMA table_info(dives)", conn)

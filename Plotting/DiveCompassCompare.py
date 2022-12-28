@@ -122,7 +122,7 @@ def plot_compass_compare(
         second_compass_depth = None
     else:
         try:
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 second_compass_depth = seawater.dpth(
                     second_compass_pressure, np.mean((gps_lat[1], gps_lat[2]))
                 )

@@ -134,7 +134,7 @@ def plot_TS(
                 if good_mask is not None:
                     pressure = pressure[good_mask]
 
-            if not Globals.f_use_seawater:
+            if not not base_opts.use_gsw:
                 avg_longitude = dive_nc_file.variables["avg_longitude"].getValue()
                 avg_latitude = dive_nc_file.variables["avg_latitude"].getValue()
 
@@ -173,7 +173,7 @@ def plot_TS(
             point_num_ctd_climb = np.arange(max_depth_sample_index, len(ctd_depth_m_v))
 
         if pressure is not None:
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 freeze_pt = seawater.fp(salinity, pressure)
             else:
                 freeze_pt = Utils.fp(salinity, pressure, avg_longitude, avg_latitude)
@@ -218,7 +218,7 @@ def plot_TS(
 
         (Sg, Tg) = np.meshgrid(sgrid, tgrid)
         Pg = np.zeros((len(Sg), len(Tg)))
-        if Globals.f_use_seawater:
+        if not base_opts.use_gsw:
             sigma_grid = seawater.dens(Sg, Tg, Pg) - 1000.0
         else:
             sigma_grid = Utils.density(Sg, Tg, Pg, avg_longitude, avg_latitude) - 1000.0
@@ -276,7 +276,7 @@ def plot_TS(
         cmin = np.nanmin(ctd_depth_m_v)
         cmax = np.nanmax(ctd_depth_m_v)
 
-        if Globals.f_use_seawater:
+        if not base_opts.use_gsw:
             sigma_dive = (
                 seawater.dens(
                     salinity_dive, temperature_dive, np.zeros(len(temperature_dive))

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2008, 2009, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2009, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -223,7 +223,7 @@ def filter_unsteady(tau_i, r_elapsed_time_s_v, time_fine_s_v, r_dt, hdm_speed_st
 # ALTERNATIVE: use np.where with np.logical_and and np.logical_or to handle multiple conditions,
 #  e,g, np.logical_and(np.where(x > 2), np.where(y < 5))
 # empty index arrays no longer a problem?  But iteration still requires fancy footwork
-def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
+def TSV_iterative(base_opts, elapsed_time_s_v, start_of_climb_i,
                   # measurements, corrected
                   temp_init_cor_v, temp_init_cor_qc_v,
                   cond_init_cor_v, cond_init_cor_qc_v,
@@ -844,7 +844,7 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
             # so we need to map it to measurement time below
             # M: salin_c = sw_salt(cond/c3515, temp_c, press);
             # salinity_v = array(map(lambda i: seawater.salt(r_cond_cor_v[i]/c3515, temp_c_v[i], r_pressure_v[i]), range(r_sg_np))) # aka salin_c
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 salin_c_v = seawater.salt(r_cond_cor_v/c3515, temp_c_v, r_pressure_v) # aka salin_c
             else:
                 salin_c_v = gsw.SP_from_C(r_cond_cor_v * 10., temp_c_v, r_pressure_v) # aka salin_c
@@ -879,7 +879,7 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
 
 
         else: # no thermal_inertia correction
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 r_salin_cor_v = seawater.salt(r_cond_cor_v/c3515, r_temp_cor_v, r_pressure_v) # aka salin_c
             else:
                 r_salin_cor_v = gsw.SP_from_C(r_cond_cor_v * 10., r_temp_cor_v, r_pressure_v) # aka salin_c
@@ -913,14 +913,14 @@ def TSV_iterative(elapsed_time_s_v, start_of_climb_i,
         # This is also our potential density...we  use this to compute sigma_t below
 
         # Note that because of the isopycnal hull, we compute density as if pressure = 0
-        if Globals.f_use_seawater:
+        if not base_opts.use_gsw:
             density_v = seawater.dens(r_salin_cor_v, r_temp_cor_v, zeros(r_salin_cor_v.size))  
         else:
             density_v = Utils.density(r_salin_cor_v, r_temp_cor_v, zeros(r_salin_cor_v.size), longitude, latitude)
         trace_array('density_%d' % loop, density_v);
         # density_insitu = sw_dens(salin_TS, temp, press);
         # TODO should we return density_insitu_v instead of density_v?
-        if Globals.f_use_seawater:
+        if not base_opts.use_gsw:
             density_insitu_v = seawater.dens(r_salin_cor_v, r_temp_cor_v, r_pressure_v)
         else:
             density_insitu_v = Utils.density(r_salin_cor_v, r_temp_cor_v, r_pressure_v, longitude, latitude)

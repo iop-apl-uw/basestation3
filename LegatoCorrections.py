@@ -66,6 +66,7 @@ def interp1(t1, data, t2, assume_sorted=False, extrapolate=False, extend=False):
 
 
 def legato_correct_ct(
+    base_opts,
     sg_calib_consts_d,
     legato_time,
     legato_press,
@@ -195,7 +196,7 @@ def legato_correct_ct(
     # tau60 correction (nominal ctcoeff value means this is a NOP)
     c2 = c1 / (1.0 + ctcoeff * (ct - t1))
 
-    if Globals.f_use_seawater:
+    if not base_opts.use_gsw:
         S = seawater.salt(c2 / (seawater.constants.c3515 / 10.0), t2, p2)
         S_lag_only = seawater.salt(
             c1 / (seawater.constants.c3515 / 10.0), t_lag_only, p2

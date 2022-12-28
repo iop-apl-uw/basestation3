@@ -779,7 +779,7 @@ def dump_fm_values(dive_data):
 
 # Given a dive_data instance, open the nc file and load the vectors and other data we need for regression processing
 # make if data is ok and avoid loading again if known bad
-def load_dive_data(dive_data):
+def load_dive_data(base_opts, dive_data):
     global nc_path_format, angles, compare_velo, mission_directory, ignore_salinity_qc, max_speed
     global decimation,data_density_max_depth
     data_d = None
@@ -889,7 +889,7 @@ def load_dive_data(dive_data):
 
         # Protect against dives with bad values in the temperature_raw and salinity_raw columns
         try:
-            if Globals.f_use_seawater:
+            if not base_opts.use_gsw:
                 density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
             else:
                 density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
@@ -1212,13 +1212,13 @@ def w_rms_func(vbdbias,a,b,abs_compress, # these variables can be varied by vari
 # exceeds the internal temperature reported by the compass at the
 # end of the dive and apply it retroactively to the start of this
 # dive.
-def solve_vbdbias_abs_compress(dive_data):
+def solve_vbdbias_abs_compress(base_opts, dive_data):
     # given a dive data instance, with updated a/b, sovle for this die's vbdbias (over prevailing volmax)
     # and abs_compress
     global flight_dive_data_d, HIST, glider_type, max_w_rms_vbdbias
     if not dive_data.recompute_vbdbias_abs_compress:
         return True # solved before and no reason to do it again
-    dive_data_d = load_dive_data(dive_data)
+    dive_data_d = load_dive_data(base_opts, dive_data)
     if dive_data_d is None:
         return False
     # copy these to local variables so code below is succinct
@@ -1318,7 +1318,7 @@ def solve_vbdbias_abs_compress(dive_data):
     dive_data.recompute_vbdbias_abs_compress = False # done for this a/b combination
     return True
     
-def solve_ab_grid(dive_set,reprocess_count,dive_num=None):
+def solve_ab_grid(base_opts, dive_set,reprocess_count,dive_num=None):
     # returns the w_rms grid for a set of dives and the min a/b
     # CONSIDER: for speed, pass tared prior W_misfit_RMS array, if any, and restrict search
     # to prior values of .3 or so
@@ -1336,7 +1336,7 @@ def solve_ab_grid(dive_set,reprocess_count,dive_num=None):
     for dive_set_num in dive_set:
         dd = flight_dive_data_d[dive_set_num]
         # NOTE we used to cache this data in a dive_cache_d but not really worth it?
-        dive_data_d = load_dive_data(dd) # load data
+        dive_data_d = load_dive_data(base_opts, dd) # load data
         if dd.dive_data_ok is False:
             log_error("Dive %d is marked as not okay - skipping grid solution!" % dive_set_num, alert=True)
             return (None, None, None)
@@ -1443,7 +1443,7 @@ def load_dive_data_DAC(dive_data):
 
         temperature_raw = dive_nc_file.variables['temperature_raw'][:]
         salinity_raw = dive_nc_file.variables['salinity_raw'][:]
-        if Globals.f_use_seawater:
+        if not base_opts.use_gsw:
             density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
         else:
             density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
@@ -1743,7 +1743,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                     del updated_dives_d[dive_num]
                     dive_data = flight_dive_data_d[dive_num]
                     dive_data.last_updated = dive_nc_file_time
-                    load_dive_data(dive_data) # update our db object with current values from updated nc file by side effect
+                    load_dive_data(base_opts, dive_data) # update our db object with current values from updated nc file by side effect
                 except KeyError:
                     pass
             save_flight_database() # record this issue and updated filetimes in history
@@ -1834,7 +1834,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 if dive_data.recompute_vbdbias_abs_compress and dive_data.dive_data_ok is False:
                     dive_data.dive_data_ok = None # could be ok now (None marks unknown)
 
-                if not solve_vbdbias_abs_compress(dive_data):
+                if not solve_vbdbias_abs_compress(base_opts, dive_data):
                     continue # unable to solve so don't add
 
                 # We make an initial estimate of volmax from the 'first' dive's bottom density and mass
@@ -1867,7 +1867,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                                 dd.vbdbias -= early_vbdbias
                                 dd.volmax = new_volmax
                                 dump_fm_values(dd)
-                                data_d = load_dive_data(dd)
+                                data_d = load_dive_data(base_opts, dd)
                                 if data_d is not None:
                                     # Update the C_VBD over the first few dives, latching the final version
                                     flight_dive_data_d['C_VBD'] = data_d['C_VBD']
@@ -2034,7 +2034,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 flight_dive_data_d['any_hd_ab_trusted'] = flight_dive_data_d['any_hd_ab_trusted'] or trusted_ab
                 # Now we have a set of dives to run 'regress_vbd' on over a fixed grid for cross-group and mission comparison 
                 # compute a new ab grid solution
-                W_misfit_RMS, ia, ib = solve_ab_grid(dive_set, reprocess_count, dive_num)
+                W_misfit_RMS, ia, ib = solve_ab_grid(base_opts, dive_set, reprocess_count, dive_num)
                 if W_misfit_RMS is None:
                     log_warning('Grid solution failed - ignoring!')
                     continue
@@ -2219,7 +2219,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 ddc.hd_b = predicted_hd_b
                 ddc.hd_ab_trusted = predicted_hd_ab_trusted
                 ddc.recompute_vbdbias_abs_compress = True # permit recomputation
-                if solve_vbdbias_abs_compress(ddc):
+                if solve_vbdbias_abs_compress(base_opts, ddc):
                     # DEBUG log_info("Dive %d RMS=%5.4f -> %5.4f" % (d_n,dd.w_rms_vbdbias,ddc.w_rms_vbdbias)) # DEBUG
                     if ddc.w_rms_vbdbias < dd.w_rms_vbdbias:
                         flight_dive_data_d[d_n] = ddc
@@ -2918,7 +2918,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
     # Now, as a heuristic, if we are within a few days of the dive_num's START TIME assume we are during a live deployment
     # Avoid relying on the reprocess file modified time, which can be updated by reprocess and FM itself
     dd = flight_data(dive_num) # make up a temporary dive data instance but don't intern into flight_dive_data_d
-    data_d = load_dive_data(dd) # ignore result
+    data_d = load_dive_data(base_opts, dd) # ignore result
     alert_dive_num = None
     # Deepgliders can take 2 days down and back
     # if the load_dive_data fails to update start_time, the value is 0 and we don't set alert_dive_num
@@ -2957,7 +2957,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         for dive_set in grid_dive_sets:
             if all(map(lambda d: d in flight_dive_data_d, dive_set)):
                 log_info('Solving a/b grid for %s' % dive_set)
-                solve_ab_grid(dive_set,99)
+                solve_ab_grid(base_opts, dive_set,99)
     return ret_val
 
 def cmdline_main():

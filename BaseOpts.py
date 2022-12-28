@@ -441,6 +441,16 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    "use_gsw": options_t(
+        False,
+        ("Base", "BasePlot", "MakeDiveProfiles"),
+        ("--use_gsw",),
+        bool,
+        {
+            "help": "Uses the GSW toolbox for all oceanographic calculations.  False uses the seawater toolkit",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
     "divetarballs": options_t(
         0,
         ("Base",),
@@ -630,17 +640,6 @@ global_options_dict = {
             "help": "target directory, used by MoveData.py",
             "action": FullPathAction,
             "required": ("MoveData",),
-        },
-    ),
-    #
-    "encrypt": options_t(
-        None,
-        ("Base",),
-        ("--encrypt",),
-        bool,
-        {
-            "help": "encrypt the file",
-            "action": "store_true",
         },
     ),
     # This is an option, but is now handled in code in each extension
