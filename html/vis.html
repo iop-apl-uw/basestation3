@@ -716,7 +716,10 @@
     }
  
     function jumpScroll(n) {
-        $('bottom').scrollTo(200*n, 0, 'smooth');
+        if (n <= plotList.length) {
+            $('bottom').scrollTo(200*n, 0, 'smooth');
+            $('thumb' + plotList[n]).click();
+        }
         return false;
     }
 
