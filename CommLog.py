@@ -1284,7 +1284,7 @@ def process_comm_log(
                                 ]
                             else:
                                 log_warning(
-                                    "Found Recieved for %s with out matching X/Y MODEM line"
+                                    "Found Received for %s with out matching X/Y MODEM line"
                                     % filename
                                 )
                                 expectedsize = -1
