@@ -74,7 +74,7 @@ def collectSummary(glider, path):
     with sqlite3.connect(dbfile) as conn:
         try:
             data = pd.read_sql_query(
-                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope,implied_volmax,implied_volmax_slope,capture,criticals,alerts FROM dives ORDER BY dive DESC LIMIT 1",
+                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,meters_to_target,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope,implied_volmax,implied_volmax_slope,capture,criticals,alerts,distance_made_good,distance_to_goal,dog_efficiency,distance_over_ground FROM dives ORDER BY dive DESC LIMIT 1",
                 conn,
             ).loc[0,:]
 
@@ -93,22 +93,6 @@ def collectSummary(glider, path):
 
     cmdfileDirective = getCmdfileDirective(cmdfile)
 
-    try: 
-        dog = math.sqrt(math.pow(data['GPS_north_displacement_m'], 2) +
-                        math.pow(data['GPS_east_displacement_m'], 2))
-
-        bestDOG = data['max_depth']/data['log_D_TGT']*(data['log_T_DIVE']*60)*data['log_speed_max']
-        dtg1 = Utils.haversine(data['log_gps2_lat'], data['log_gps2_lon'], data['log_TGT_LAT'], data['log_TGT_LON']) 
-        dtg2 = Utils.haversine(data['log_gps_lat'], data['log_gps_lon'], data['log_TGT_LAT'], data['log_TGT_LON']) 
-
-        dmg = dtg1 - dtg2
-        dogEff = dmg/bestDOG
-    except:
-        dmg = 0
-        dog = 0
-        dogEff = 0
-        dtg2 = 0
-
     end_t = 0
     cal_constants = CalibConst.getSGCalibrationConstants(calibfile)
     if 'end_date' in cal_constants:
@@ -116,14 +100,14 @@ def collectSummary(glider, path):
 
     out = {}
     out['name'] = int(data['log_glider'])
-    out['dive'] = dv
+    out['dive'] = int(data['dive'])
     out['end']  = data['log_gps_time']
     out['next'] = data['log_gps_time'] + data['total_flight_time_s']
 
-    out['dmg'] = dmg
-    out['dog'] = dog
-    out['dtg'] = dtg2
-    out['dogEfficiency'] = dogEff
+    out['dmg'] = data['distance_made_good']
+    out['dog'] = data['distance_over_ground']
+    out['dtg'] = data['distance_to_goal']
+    out['dogEfficiency'] = data['dog_efficiency']
 
     out['vbdEfficiency'] = gc['vbd_eff']
     out['vbdVolts'] = gc['vbd_volts']

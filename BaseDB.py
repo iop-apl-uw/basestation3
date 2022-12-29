@@ -355,6 +355,33 @@ def loadFileToDB(base_opts, cur, filename, con):
         dive, cur, "batt_Ahr_cap_24V", nci.variables["log_AH0_24V"].getValue(), "FLOAT"
     )
 
+    try:
+        data = pd.read_sql_query(
+                    f"SELECT dive,max_depth,GPS_north_displacement_m,GPS_east_displacement_m,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon FROM dives WHERE dive={dive} ORDER BY dive DESC LIMIT 1",
+                    conn,
+                ).loc[0,:]
+
+        dog = math.sqrt(math.pow(data['GPS_north_displacement_m'], 2) +
+                        math.pow(data['GPS_east_displacement_m'], 2))
+
+        bestDOG = data['max_depth']/data['log_D_TGT']*(data['log_T_DIVE']*60)*data['log_speed_max']
+        dtg1 = Utils.haversine(data['log_gps2_lat'], data['log_gps2_lon'], data['log_TGT_LAT'], data['log_TGT_LON'])
+        dtg2 = Utils.haversine(data['log_gps_lat'], data['log_gps_lon'], data['log_TGT_LAT'], data['log_TGT_LON'])
+
+        dmg = dtg1 - dtg2
+        dogEff = dmg/bestDOG
+    except:
+        dmg = 0
+        dog = 0
+        dogEff = 0
+        dtg2 = 0
+        dtg1 = 0
+
+    insertColumn(dive, cur, "distance_over_ground", dog, "FLOAT")
+    insertColumn(dive, cur, "distance_made_good", dmg, "FLOAT")
+    insertColumn(dive, cur, "distance_to_goal", dtg2, "FLOAT")
+    insertColumn(dive, cur, "dog_efficiency", dogEff, "FLOAT")
+
     batt_kJ_used_10V = 0.0
     batt_kJ_used_24V = 0.0
     batt_ah_used_10V = 0.0
@@ -568,8 +595,9 @@ def updateDBFromFileExistence(base_opts, ncfs, con):
         critcount = 0
         if os.path.exists(capfile):
             cap = 1;
-            with open(capfile, 'r') as file:
-                for line in file:
+            with open(capfile, 'rb') as file:
+                blk = file.read().decode('utf-8', errors='ignore')
+                for line in blk.splitlines():
                     pieces = line.split(',')
                     if len(pieces) >= 4 and pieces[2] == 'C':
                         critcount = critcount + 1;
