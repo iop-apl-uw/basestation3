@@ -358,7 +358,7 @@ def loadFileToDB(base_opts, cur, filename, con):
     try:
         data = pd.read_sql_query(
                     f"SELECT dive,max_depth,GPS_north_displacement_m,GPS_east_displacement_m,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon FROM dives WHERE dive={dive} ORDER BY dive DESC LIMIT 1",
-                    conn,
+                    con,
                 ).loc[0,:]
 
         dog = math.sqrt(math.pow(data['GPS_north_displacement_m'], 2) +
@@ -376,6 +376,8 @@ def loadFileToDB(base_opts, cur, filename, con):
         dogEff = 0
         dtg2 = 0
         dtg1 = 0
+
+    # print(f"{dive}: OG:{dog:.1f} MG:{dmg:.1f} TG:{dtg2:.1f} {dogEff}")
 
     insertColumn(dive, cur, "distance_over_ground", dog, "FLOAT")
     insertColumn(dive, cur, "distance_made_good", dmg, "FLOAT")

@@ -414,6 +414,10 @@
         text = document.createTextNode('' + (d['mag_heading_to_target'] + d['magnetic_variation']).toFixed(1));
         cell.appendChild(text);
 
+        cell = row.insertCell(10);
+        text = document.createTextNode('' + d['dog_efficiency'].toFixed(2));
+        cell.appendChild(text);
+
         
         dist = Math.sqrt(d['depth_avg_curr_east']*d['depth_avg_curr_east'] 
                          + d['depth_avg_curr_north']*d['depth_avg_curr_north']);
@@ -422,43 +426,43 @@
             course = course + 360;
         }
 
-        cell = row.insertCell(10);
+        cell = row.insertCell(11);
         text = document.createTextNode('' + (dist*100.0).toFixed(1));
         cell.appendChild(text);
 
-        cell = row.insertCell(11);
+        cell = row.insertCell(12);
         text = document.createTextNode('' + course.toFixed(1));
         cell.appendChild(text);
 
-        cell = row.insertCell(12);
+        cell = row.insertCell(13);
         text = document.createTextNode('' + d['log_HUMID'].toFixed(2));
         cell.appendChild(text);
 
-        cell = row.insertCell(13);
-        text = document.createTextNode('' + d['log_INTERNAL_PRESSURE'].toFixed(2));
-        cell.appendChild(text);
-
         cell = row.insertCell(14);
-        cell.classList.add("volt10");
-        text = document.createTextNode('' + d['batt_volts_10V'].toFixed(2));
+        text = document.createTextNode('' + d['log_INTERNAL_PRESSURE'].toFixed(2));
         cell.appendChild(text);
 
         cell = row.insertCell(15);
         cell.classList.add("volt10");
-        text = document.createTextNode('' + (d['batt_capacity_10V']*100).toFixed(2));
+        text = document.createTextNode('' + d['batt_volts_10V'].toFixed(2));
         cell.appendChild(text);
 
         cell = row.insertCell(16);
-        cell.classList.add("volt24");
-        text = document.createTextNode('' + d['batt_volts_24V'].toFixed(2));
+        cell.classList.add("volt10");
+        text = document.createTextNode('' + (d['batt_capacity_10V']*100).toFixed(2));
         cell.appendChild(text);
 
         cell = row.insertCell(17);
         cell.classList.add("volt24");
+        text = document.createTextNode('' + d['batt_volts_24V'].toFixed(2));
+        cell.appendChild(text);
+
+        cell = row.insertCell(18);
+        cell.classList.add("volt24");
         text = document.createTextNode('' + (d['batt_capacity_24V']*100).toFixed(2));
         cell.appendChild(text);
         
-        cell = row.insertCell(18);
+        cell = row.insertCell(19);
         text = document.createTextNode('' + d['error_count'].toFixed(0));
         cell.appendChild(text);
     }
@@ -1446,9 +1450,9 @@
 <div style="position: relative;">
 
 <div id="toolbar" style="position:absolute; left:0 top:0; width:50px; height:894px;"> 
-    <button class="tool" style="background: url(/script/images/up-icon.png);" onclick="changeDive(1);" title="next dive"></button>
+    <button class="tool" style="background: url(/script/images/up-icon.png);" onclick="changeDive(1);" title="next dive [w,k] "></button>
     <button class="tool" style="background: url(/script/images/table-icon.png);" onclick="showTable();" title="dives table"></button>
-    <button class="tool" style="background: url(/script/images/down-icon.png);" onclick="changeDive(-1);" title="prev dive"></button>
+    <button class="tool" style="background: url(/script/images/down-icon.png);" onclick="changeDive(-1);" title="prev dive [s,j]"></button>
     <button class="tool" style="background: url(/script/images/log-table-icon.png);" onclick="showLog();" title="log summary"></button>
     <button class="tool" style="background: url(/script/images/log-icon.png);" onclick="showLogFile();" title="log file"></button>
     <button class="tool" style="background: url(/script/images/chart-icon.png);" onclick="showPlotly();" title="plot and table tool"></button>
@@ -1462,7 +1466,7 @@
     <table rules="groups" id="mainTable" hidden="hidden" style="height:894px; width:1000px; font-size:14px; text-align:right; font-family:verdana, arial, tahoma, 'sans serif';"> 
 
         <colgroup span=4><col><col><col><col></colgroup>
-        <colgroup span=6><col><col><col><col><col><col></colgroup>
+        <colgroup span=6><col><col><col><col><col><col><col></colgroup>
         <colgroup span=2><col><col></colgroup>
         <colgroup span=2><col><col></colgroup>
         <colgroup span=2 id="volt10_group"><col class="volt10"><col class="volt10"></colgroup>
@@ -1480,6 +1484,7 @@
                 <th>ctw</th>
                 <th>dtg</th>
                 <th>ctg</th>
+                <th>OG eff.</th>
                 <th>Umag</th>
                 <th>Udir</th>
                 <th>RH</th>
@@ -1639,7 +1644,7 @@
     <span id="fileDive" hidden="hidden"></span>
 </div>
 
-<div id="bottomBox" style="position: absolute; left: 0; top: 900; width: 1100; height: 200; overflow: hidden">
+<div id="bottomBox" style="position: absolute; left: 0; top: 900; width: 1100; height: 200; overflow: hidden" title="a or h to move left, f or l to move right, number key 1-8 to jump to section, scroll wheel scrolls">
     <div id="bottomLinks" style="position: absolute; left: 10; top: 0; width: 978; height: 20; overflow: hidden;">
 
     </div>
