@@ -13,6 +13,7 @@
         margin-top: 10px;
         float: left;
         padding: 4px;
+        position: relative;
     }
 
     .header {
@@ -28,6 +29,11 @@
         float: left;
         width: 30px;
     }
+    .expander {
+        width: 8px;
+        max-width: 8px;
+        cursor: pointer;
+    }
 
     .box {
         display: flex;
@@ -35,12 +41,34 @@
         margin-top: 5px;
     }
 
+    .indicatorInsideBox {
+        display: flex;
+        min-height: 35px;
+        margin-top: 5px;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+
+    .indicatorBox {
+        display: flex;
+        flex: 1;
+        align-items: center; 
+        margin-top: 5px;
+        overflow: auto;
+    }
+
     .indicator {
+        cursor: help;
+        flex-grow: 0;
+        flex-shrink: 0;
         border: 2px solid black;
-        margin-right: 5px;
         text-align: center;
+        max-width: 50px;
         width: 50px;
         border-radius: 8px;
+        height: 30px;
+        max-height: 30px;
+        z-index: 20;
     }
 
     [class~="indicatorGreen"] {
@@ -212,6 +240,7 @@
 
     function createTile(glider, t) {
         console.log(glider);
+        var indicators = [];
 
         fetch(`/summary/${glider.glider}${mission(glider)}`)
         .then(res => res.json())
@@ -313,24 +342,27 @@
             setPlusMinusBar(chartNext.id, barNext.id, spanNext.id, next/28800.0, `${nextHour.zeroPad()}:${nextMin.zeroPad()}`, `next call due ${due_t}`);
 
             // annunciators
+            h = document.createElement('div');
+            h.classList.add('indicatorBox');
             box = document.createElement('div');
-            box.classList.add('box');
+            box.classList.add('indicatorInsideBox');
+            h.appendChild(box);
+
+
 
             // errors
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `errors<br>${data.errors + data.crits}`;
             h.classList.add(thresh(data.errors + data.crits, 0, 0));
-            h.setAttribute('hidden', ''); 
-            box.appendChild(h);
+            indicators.push(h);
 
             // alerts
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `alerts<br>${data.alert ? 'yes' : 'none'}`;
             h.classList.add(thresh(data.alert ? 1 : 0, 0, 0));
-            h.setAttribute('hidden', ''); 
-            box.appendChild(h);
+            indicators.push(h);
  
             // OG efficiency
             h = document.createElement('div');
@@ -338,70 +370,95 @@
             h.classList.add('indicator');
             h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
             h.classList.add(thresh(data.dogEfficiency, 0.25, 0.5));
-            h.setAttribute('hidden', ''); 
-            box.appendChild(h);
+            indicators.push(h);
 
             // VBD efficiency
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `VBD eff.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
             h.classList.add(thresh(data.vbdEfficiency, 0.25, 0.4));
-            h.setAttribute('hidden', ''); 
-            box.appendChild(h);
+            indicators.push(h);
 
             // mission endurance
             let days = (data.missionEnd - data.enduranceEndT)/86400;
             h = document.createElement('div');
             h.title = 'mission endurance';
             h.classList.add('indicator');
-            h.innerHTML = `endur.<br>-${days.toFixed(0)} days`;
+            h.innerHTML = `endur.<br>${-days.toFixed(0)} days`;
             h.classList.add(thresh(days, 30, 0));
-            h.setAttribute('hidden', ''); 
-            box.appendChild(h);
+            indicators.push(h);
 
             // internal pressure
             h = document.createElement('div');
-            h.title = "internal pressure";
+            h.title = `internal pressure slope ${data.internalPressureSlope.toFixed(3)}psi/dv`;
             h.classList.add('indicator');
             h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
             h.classList.add(thresh(data.internalPressureSlope, 0.01, 0.005));
-            h.setAttribute('hidden', ''); 
-            box.appendChild(h);
+            indicators.push(h);
 
             // humidity
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
             h.classList.add(thresh(data.humiditySlope, 0.2, 0.05));
-            h.setAttribute('hidden', ''); 
-            box.appendChild(h);
+            indicators.push(h);
 
             // volmax
             h = document.createElement('div');
             h.classList.add('indicator');
             h.innerHTML = `volmax<br>${data.impliedVolmaxSlope.toFixed(1)} cc/dv`;
             h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
-            h.setAttribute('hidden', ''); 
-            box.appendChild(h);
+            indicators.push(h);
 
-            t.appendChild(box);
 
             var count = 0;
+            var firstExta = null;
              
             const classes = ["indicatorRed", "indicatorYellow", "indicatorGreen"];
-            coll = box.children;
             for (const c of classes) {
-                for (var i = 0 ; i < coll.length && count < 5 ; i++) {
-                    if (coll[i].classList.contains(c)) {
-                        coll[i].removeAttribute('hidden');
+                for (var i = 0 ; i < indicators.length ; i++) {
+                    if (indicators[i].classList.contains(c)) {
+                        box.appendChild(indicators[i]);
+                        if (count >= 5) {
+                            indicators[i].setAttribute('hidden', '');
+                            indicators[i].setAttribute('data-extra', '');
+                        }
+                        if (count == 5)
+                            firstExtra = indicators[i];
+
                         count ++;
                     }
                 }
             }    
+
+            h = document.createElement('span');
+            h.classList.add('expander');
+            h.innerHTML = '&#9654;'; // tri right, &#9660; is tri down
+            h.onclick = function() { 
+                event.stopPropagation();
+                var extra = box.querySelectorAll('[data-extra]'); 
+                if (extra[0].hasAttribute('hidden')) {
+                    for (e of extra) {
+                        e.removeAttribute('hidden');
+                    }
+                    this.innerHTML = '&#9660;'
+                }
+                else {
+                    for (e of extra) {
+                        e.setAttribute('hidden', '');
+                    }
+                    this.innerHTML = '&#9654;'
+                }
+                return true;
+            } 
+            box.insertBefore(h, firstExtra);
+
+
+            t.appendChild(box);
             
             img = document.createElement('img');
             img.src = '/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
-            img.style = "top: 0; width:290px; max-height:240px; mix-blend-mode:multiply;"
+            img.style = "position: absolute; top: 190px; left: 0px; width:290px; max-height:240px; mix-blend-mode:multiply;"
      
             t.appendChild(img);
         })

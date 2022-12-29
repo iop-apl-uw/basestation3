@@ -135,7 +135,7 @@ def compute_w_obs(elapsed_time, sample_depth):
     return w_obs_v
 
 
-def run_hydro(buoy, vehicle_pitch_degrees_v, calib_consts):
+def run_hydro(dv, buoy, vehicle_pitch_degrees_v, calib_consts):
     """
     Input:
         buoyancy_v - n_pts vector (grams, positive is upward)
@@ -159,7 +159,7 @@ def run_hydro(buoy, vehicle_pitch_degrees_v, calib_consts):
     ) = HydroModel.hydro_model(buoy, vehicle_pitch_degrees_v, calib_consts)
 
     if not hm_converged:
-        log_warning("Unable to converge during hydro-model calculations")
+        log_warning(f"Unable to converge during hydro-model calculations ({dv})")
 
     hdm_speed_unsteady_cm_s_v[stalled_i_v] = np.nan
     hdm_glide_angle_unsteady_rad_v[stalled_i_v] = np.nan
@@ -393,6 +393,7 @@ def plot_vert_vel(
             # print (bias_buoy)
 
             bias_vert_speed_hdm, stalled_i = run_hydro(
+                dive_nc_file.dive_number,
                 bias_buoy, vehicle_pitch_degrees_v, calib_consts
             )
 
