@@ -381,10 +381,14 @@
 
             // mission endurance
             let days = (data.missionEnd - data.enduranceEndT)/86400;
+            let missionEnd = new Date(data.missionEnd*1000).toISOString().replace('T', ' ').slice(0,-14);
             h = document.createElement('div');
-            h.title = 'mission endurance';
+            if (days < 0)
+                h.title = `mission endurance ${-days.toFixed(0)} days beyond end-date (${missionEnd})`;
+            else
+                h.title = `mission endurance ${days.toFixed(0)} days short of end-date (${missionEnd})`;
             h.classList.add('indicator');
-            h.innerHTML = `endur.<br>${-days.toFixed(0)} days`;
+            h.innerHTML = `endur.<br><span style="font-size:11px;">${-days.toFixed(0)} days</span>`;
             h.classList.add(thresh(days, 30, 0));
             indicators.push(h);
 
@@ -406,7 +410,7 @@
             // volmax
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `volmax<br>${data.impliedVolmaxSlope.toFixed(1)} cc/dv`;
+            h.innerHTML = `volmax<br><span style="font-size:11px;">${data.impliedVolmaxSlope.toFixed(1)}cc/dv</span>`;
             h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
             indicators.push(h);
 
@@ -457,7 +461,11 @@
             t.appendChild(box);
             
             img = document.createElement('img');
-            img.src = '/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
+            if (plotWhich == 'map')
+                img.src = '/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
+            else
+                img.src = '/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
+            console.log(img.src); 
             img.style = "position: absolute; top: 190px; left: 0px; width:290px; max-height:240px; mix-blend-mode:multiply;"
      
             t.appendChild(img);
