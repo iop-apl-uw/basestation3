@@ -2548,9 +2548,14 @@ def main():
         # Put the alert message into  the logfile
         if pagers_convert_msg != "":
             log_error(pagers_convert_msg)
+
+        if backup_dive_num is not None and int(backup_dive_num) > 0:
+            BaseDB.addValToDB(base_opts, int(backup_dive_num), "alerts", 1)
     else:
         # No alerts - remove the alert file, if it exists
         if os.path.exists(alert_msg_file_name):
+            if backup_dive_num is not None and int(backup_dive_num) > 0:
+                BaseDB.addValToDB(base_opts, int(backup_dive_num), "alerts", 0)
             try:
                 os.remove(alert_msg_file_name)
             except:
@@ -2740,6 +2745,10 @@ def main():
                 new_cap_text = "\n".join(cap_lines)
                 crits = prog.findall(new_cap_text)
                 num_crits = len(crits)
+
+                f = os.path.basename(p)
+                dive = int(os.path.basename(p)[4:8])
+
                 if num_crits > 0:
                     if critical_msg == "":
                         critical_msg = (
@@ -2749,6 +2758,12 @@ def main():
                     for c in crits:
                         critical_msg += f"    {c}\n"
 
+                    if f[0] == 'p' and len(f) == 12:
+                        BaseDB.addValToDB(base_opts, dive, "criticals", num_crits)
+
+                if f[0] == 'p' and len(f) == 12:
+                    BaseDB.addValToDB(base_opts, dive, "capture", 1)
+                    
     if critical_msg:
         log_warning(critical_msg)
 

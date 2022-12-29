@@ -301,6 +301,21 @@ def flatten(inlist, ltype=(list, tuple), maxint=sys.maxsize):
         pass
     return inlist
 
+def haversine(lat0, lon0, lat1, lon1):
+    R = 6378137.0
+    lat0 = lat0*math.pi/180
+    lat1 = lat1*math.pi/180
+    lon0 = lon0*math.pi/180
+    lon1 = lon1*math.pi/180
+
+    sdlat_2 = math.sin(0.5*(lat0 - lat1))
+    sdlon_2 = math.sin(0.5*(lon0 - lon1))
+
+    a = sdlat_2*sdlat_2 + math.cos(lat0)*math.cos(lat1)*sdlon_2*sdlon_2
+    if a >= 1 or a <= 0:
+        return 0
+
+    return 2.0*R*math.asin(math.sqrt(a))
 
 def ddmm2dd(x):
     """Converts a lat/long from ddmm.mmm to dd.dddd

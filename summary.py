@@ -7,21 +7,6 @@ import math
 import pandas as pd
 import Utils
 
-def haversine(lat0, lon0, lat1, lon1):
-    R = 6378137.0
-    lat0 = lat0*math.pi/180
-    lat1 = lat1*math.pi/180
-    lon0 = lon0*math.pi/180
-    lon1 = lon1*math.pi/180
-
-    sdlat_2 = math.sin(0.5*(lat0 - lat1))
-    sdlon_2 = math.sin(0.5*(lon0 - lon1))
-
-    a = sdlat_2*sdlat_2 + math.cos(lat0)*math.cos(lat1)*sdlon_2*sdlon_2
-    if a >= 1 or a <= 0:
-        return 0
-
-    return 2.0*R*math.asin(math.sqrt(a))
 
 def getCmdfileDirective(cmdfile):
     cmdfileDirective = 'unknown'
@@ -89,7 +74,7 @@ def collectSummary(glider, path):
     with sqlite3.connect(dbfile) as conn:
         try:
             data = pd.read_sql_query(
-                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope,implied_volmax,implied_volmax_slope FROM dives ORDER BY dive DESC LIMIT 1",
+                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,GPS_north_displacement_m,GPS_east_displacement_m,meters_to_target,log_speed_max,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,log_gps2_lat,log_gps2_lon,log_gps_lat,log_gps_lon,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope,implied_volmax,implied_volmax_slope,capture,criticals,alerts FROM dives ORDER BY dive DESC LIMIT 1",
                 conn,
             ).loc[0,:]
 
@@ -113,8 +98,8 @@ def collectSummary(glider, path):
                         math.pow(data['GPS_east_displacement_m'], 2))
 
         bestDOG = data['max_depth']/data['log_D_TGT']*(data['log_T_DIVE']*60)*data['log_speed_max']
-        dtg1 = haversine(data['log_gps2_lat'], data['log_gps2_lon'], data['log_TGT_LAT'], data['log_TGT_LON']) 
-        dtg2 = haversine(data['log_gps_lat'], data['log_gps_lon'], data['log_TGT_LAT'], data['log_TGT_LON']) 
+        dtg1 = Utils.haversine(data['log_gps2_lat'], data['log_gps2_lon'], data['log_TGT_LAT'], data['log_TGT_LON']) 
+        dtg2 = Utils.haversine(data['log_gps_lat'], data['log_gps_lon'], data['log_TGT_LAT'], data['log_TGT_LON']) 
 
         dmg = dtg1 - dtg2
         dogEff = dmg/bestDOG
@@ -123,24 +108,6 @@ def collectSummary(glider, path):
         dog = 0
         dogEff = 0
         dtg2 = 0
-
-    dv = int(data['dive'])
-    capfile = f"{path}/p{glider:03d}{dv:04d}.cap"
-    critcount = 0
-    if os.path.exists(capfile):
-        cap = 1;
-        with open(capfile, 'r') as file:
-            for line in file:
-                if ',C,' in line:
-                    critcount = critcount + 1;
-    else:
-        cap = 0;
-
-    alertfile = f"{path}/alert_message.html.{dv}"
-    if os.path.exists(alertfile):
-        alert = 1
-    else:
-        alert = 0
 
     end_t = 0
     cal_constants = CalibConst.getSGCalibrationConstants(calibfile)
@@ -182,9 +149,9 @@ def collectSummary(glider, path):
     out['impliedVolmax'] = data['implied_volmax']
     out['impliedVolmaxSlope'] = data['implied_volmax_slope']
 
-    out['cap']   = cap
-    out['alert'] = alert
-    out['crits']  = critcount
+    out['cap']   = data['capture']
+    out['alert'] = data['alerts']
+    out['crits']  = data['criticals']
 
     out['enduranceBasis'] = 'model'
     out['enduranceEndT'] = data['log_gps_time'] + data['energy_days_remain_Modeled']*86400;

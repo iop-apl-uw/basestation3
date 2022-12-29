@@ -353,7 +353,10 @@
         i = $('mainTable').rows.length % 2;
         row.style.backgroundColor = colors[i];
         cell = row.insertCell(0);
-        cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>';
+        
+        alerts = 'alerts' in d && d['alerts'] > 0 ? 'a' : '';
+        capture = 'capture' in d && d['capture'] > 0 ? 'c' : '';
+        cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>' + alerts + capture;
         cell.style.textAlign = 'left';
         // cell.appendChild(text);
 
@@ -428,26 +431,35 @@
         cell.appendChild(text);
 
         cell = row.insertCell(12);
-        text = document.createTextNode('' + d['log_TEMP'].toFixed(2));
-        cell.appendChild(text);
-        cell = row.insertCell(13);
         text = document.createTextNode('' + d['log_HUMID'].toFixed(2));
         cell.appendChild(text);
-        cell = row.insertCell(14);
+
+        cell = row.insertCell(13);
         text = document.createTextNode('' + d['log_INTERNAL_PRESSURE'].toFixed(2));
         cell.appendChild(text);
 
-        cell = row.insertCell(15);
+        cell = row.insertCell(14);
+        cell.classList.add("volt10");
         text = document.createTextNode('' + d['batt_volts_10V'].toFixed(2));
         cell.appendChild(text);
-        cell = row.insertCell(16);
+
+        cell = row.insertCell(15);
+        cell.classList.add("volt10");
         text = document.createTextNode('' + (d['batt_capacity_10V']*100).toFixed(2));
         cell.appendChild(text);
-        cell = row.insertCell(17);
+
+        cell = row.insertCell(16);
+        cell.classList.add("volt24");
         text = document.createTextNode('' + d['batt_volts_24V'].toFixed(2));
         cell.appendChild(text);
-        cell = row.insertCell(18);
+
+        cell = row.insertCell(17);
+        cell.classList.add("volt24");
         text = document.createTextNode('' + (d['batt_capacity_24V']*100).toFixed(2));
+        cell.appendChild(text);
+        
+        cell = row.insertCell(18);
+        text = document.createTextNode('' + d['error_count'].toFixed(0));
         cell.appendChild(text);
     }
 
@@ -478,11 +490,15 @@
                     has10 = true;
             }
             if (has10 == false) {
-                $('volt10_group').style.visibility = 'collapse';
+                coll = document.getElementsByClassName("volt10");
+                for (var i = 0 ; i < coll.length ; i++)
+                    coll[i].style.display = "none";
                 $('volt24_header').innerHTML = 'volts';
             }
             else if (has24 == false) {
-                $('volt24_group').style.visibility = 'collapse';
+                coll = document.getElementsByClassName("volt24");
+                for (var i = 0 ; i < coll.length ; i++)
+                    coll[i].style.display = "none";
                 $('volt10_header').innerHTML = 'volts';
             }
         })
@@ -1448,9 +1464,10 @@
         <colgroup span=4><col><col><col><col></colgroup>
         <colgroup span=6><col><col><col><col><col><col></colgroup>
         <colgroup span=2><col><col></colgroup>
-        <colgroup span=3><col><col><col></colgroup>
-        <colgroup span=2 id="volt10_group"><col><col></colgroup>
-        <colgroup span=2 id="volt24_group"><col><col></colgroup>
+        <colgroup span=2><col><col></colgroup>
+        <colgroup span=2 id="volt10_group"><col class="volt10"><col class="volt10"></colgroup>
+        <colgroup span=2 id="volt24_group"><col class="volt24"><col class="volt24"></colgroup>
+        <colgroup span=1><col></colgroup>
         <tbody style="height:894px; width:1040px; overflow-y:auto;"> <!-- display:block"> -->
             <tr bgcolor="#aaaaaa" align="center">
                 <th>dive</th>
@@ -1465,13 +1482,13 @@
                 <th>ctg</th>
                 <th>Umag</th>
                 <th>Udir</th>
-                <th>temp</th>
                 <th>RH</th>
                 <th>int P</th>
-                <th id="volt10_header">volts10</th>
-                <th id="cap10_header">% cap</th>
-                <th id="volt24_header">volts24</th>
-                <th id="cap24_header">% cap</th>
+                <th id="volt10_header" class="volt10">volts10</th>
+                <th id="cap10_header" class="volt10">% cap</th>
+                <th id="volt24_header" class="volt24">volts24</th>
+                <th id="cap24_header" class="volt24">% cap</th>
+                <th>errors</th>
             </tr>
         </tbody>
     </table>
@@ -1536,13 +1553,13 @@
         </div>
     </div>
 
-    <div id="logfileDiv" hidden="hidden" ondblclick="parameterHelp('logfile');" title="double click parameter for help" style="background-color:#dddddd;">
+    <div id="logfileDiv" hidden="hidden" ondblclick="parameterHelp('logfile');" title="double click parameter for help" style="background-color:#dddddd; text-align:left;" >
     </div>
 
-    <div id="engfileDiv" hidden="hidden" style="background-color:#dddddd;">
+    <div id="engfileDiv" hidden="hidden" style="background-color:#dddddd; text-align:left;">
     </div>
 
-    <div id="capfileDiv" hidden="hidden" style="background-color:#dddddd;">
+    <div id="capfileDiv" hidden="hidden" style="background-color:#dddddd; text-align:left;">
     </div>
 </div>
 

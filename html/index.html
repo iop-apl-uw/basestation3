@@ -212,7 +212,6 @@
 
     function createTile(glider, t) {
         console.log(glider);
-        console.log(mission(glider));
 
         fetch(`/summary/${glider.glider}${mission(glider)}`)
         .then(res => res.json())
@@ -322,7 +321,6 @@
             h.classList.add('indicator');
             h.innerHTML = `errors<br>${data.errors + data.crits}`;
             h.classList.add(thresh(data.errors + data.crits, 0, 0));
-            console.log('error ' + h.classList);
             h.setAttribute('hidden', ''); 
             box.appendChild(h);
 
@@ -427,7 +425,6 @@
         .then(res => res.json())
         .then(data => {
             var glider, t;
-            console.log(data);
             for (g of data) {
                 glider = { glider: g.glider, mission: g.mission };
 
@@ -446,7 +443,6 @@
                     t.id = `${g.glider}`
                     $('main').appendChild(t);
                 }
-                console.log(glider);
                 createTile(glider, t);
             }
 

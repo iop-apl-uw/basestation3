@@ -209,8 +209,12 @@ def loadFileToDB(base_opts, cur, filename, con):
     if 'depth' in nci.variables:
         dep_mx = numpy.nanmax(nci.variables["depth"][:])
         insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
+    elif 'eng_depth' in nci.variables:
+        dep_mx = numpy.nanmax(nci.variables["eng_depth"][:])/100
+        insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
+        print(f'using eng for depth {filename}')
     else:
-        print(filename)
+        print(f'no depth {filename}')
 
     # Last state time is begin surface
     insertColumn(
@@ -556,6 +560,31 @@ def updateDBFromPlots(base_opts, ncfs):
         dive = int(os.path.basename(n)[4:8])
         BasePlot.plot_mission(base_opts, mission_plots_dict, mission_str, dive=dive)
 
+def updateDBFromFileExistence(base_opts, ncfs, con):
+    for n in ncfs:
+        dv = int(os.path.basename(n)[4:8])
+        
+        capfile = f"{os.path.dirname(n)}/p{base_opts.instrument_id:03d}{dv:04d}.cap"
+        critcount = 0
+        if os.path.exists(capfile):
+            cap = 1;
+            with open(capfile, 'r') as file:
+                for line in file:
+                    pieces = line.split(',')
+                    if len(pieces) >= 4 and pieces[2] == 'C':
+                        critcount = critcount + 1;
+        else:
+            cap = 0;
+
+        alertfile = f"{os.path.dirname(n)}/alert_message.html.{dv}"
+        if os.path.exists(alertfile):
+            alert = 1
+        else:
+            alert = 0
+
+        addValToDB(base_opts, dv, "alerts", alert, con)
+        addValToDB(base_opts, dv, "criticals", critcount, con)
+        addValToDB(base_opts, dv, "capture", cap, con)
 
 def updateDBFromFM(base_opts, ncfs, con):
     """Update the database with the output of flight model"""
@@ -619,6 +648,7 @@ def rebuildDB(base_opts, from_cli=False):
     if from_cli:
         updateDBFromPlots(base_opts, ncfs)
     updateDBFromFM(base_opts, ncfs, con)
+    updateDBFromFileExistence(base_opts, ncfs, con)
 
 
 def loadDB(base_opts, filename, from_cli=False):
@@ -634,6 +664,7 @@ def loadDB(base_opts, filename, from_cli=False):
     if from_cli:
         updateDBFromPlots(base_opts, [filename])
     updateDBFromFM(base_opts, [filename], con)
+    updateDBFromFileExistence(base_opts, [filename], con)
 
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
