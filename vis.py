@@ -245,7 +245,12 @@ async def dataHandler(request, file:str):
     return await sanic.response.file(filename)
 
 @app.route('/proxy/<url:path>')
-@authorized(protections=['pilot'])
+# This is not a great idea to leave this open as a public proxy server,
+# but we need it for all layers to work with public maps t the moment.
+# Need to evaluate what we lose if we turn proxy off or find another solution.
+# Or limit the dictionary of what urls can be proxied ...
+# NOAA forecast, NIC ice edges, iop SA list, opentopo GEBCO bathy
+# @authorized(protections=['pilot'])
 async def proxyHandler(request, url):
     if request.args and len(request.args) > 0:
         url = url + '?' + request.query_string
@@ -817,6 +822,15 @@ if __name__ == '__main__':
         runMode = 'public'
 
     buildMissionTable(app)
+
+    # if runMode == 'public':
+    #     ssl = {
+    #         "cert": "/path/to/fullchain.pem",
+    #         "key": "/path/to/privkey.pem",
+    #         # "password": "for encrypted privkey file",   # Optional
+    #     }
+    #     app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
+    # else:
 
     app.run(host='0.0.0.0', port=port, access_log=True, debug=False)
 
