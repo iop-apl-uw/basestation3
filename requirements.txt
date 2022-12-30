@@ -26,6 +26,11 @@ parse
 sanic
 sanic_gzip
 aiohttp
+jinja2
+sanic_ext
+uuid
+passlib
+jwt
 #
 # Below here - not included in released version
 #

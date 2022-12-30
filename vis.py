@@ -24,17 +24,94 @@ import aiofiles
 import asyncio
 import aiohttp
 import sanic_gzip
+import sanic_ext
+from functools import wraps
+import jwt
+from passlib.hash import sha256_crypt
+import threading
+import uuid
 
-commFile = {}
-watchList = {}
-baseStatus = {}
-baseTrigger = {}
-opTable = []
+lock = threading.Lock()
 
-watchFiles = ['comm.log', 'cmdfile', '.completed']
+missionTable = []
+urlMessages = []
+
+watchFiles = ['comm.log', 'cmdfile'] # rely on .urls vs '.completed']
 
 app = sanic.Sanic("SGpilot")            
+if 'SECRET' not in app.config:
+    app.config.SECRET = "SECRET"
+if 'MISSIONS_FILE' not in app.config:
+    app.config.MISSIONS_FILE = "/home/seaglider/missions.dat"
+if 'USERS_FILE' not in app.config:
+    app.config.USERS_FILE = "/home/seaglider/users.dat"
+if 'ROOTDIR' not in app.config:
+    app.config.ROOTDIR = "/home/seaglider"
+
+app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
+
+print(app.config)
+
 compress = sanic_gzip.Compress()
+
+runMode = None
+
+def checkToken(request, user):
+    if not 'token' in request.cookies:
+        return False
+
+    try:
+         token = jwt.decode(request.cookies.get("token"), request.app.config.SECRET, algorithms=["HS256"])
+    except jwt.exceptions.InvalidTokenError:
+        return False
+    else:
+        if 'user' in token and token['user'] == user:
+            print(f'{user} authorized')
+            return True
+
+    print('rejected')
+    return False
+
+def checkGliderMission(request, glider, mission):
+    global missionTable
+
+    for m in missionTable:
+        if m['glider'] == glider and m['mission'] == mission and m['auth'] is not None: 
+            return checkToken(request, m['auth'])
+        elif m['glider'] == glider and m['mission'] == mission:
+            return True
+
+    # no matching mission in table - do not allow access
+    print(f'rejecting for {glider} {mission} for no mission entry')
+    return False
+
+def authorized(protections=None):
+    def decorator(f):
+        @wraps(f)
+        async def decorated_function(request, *args, **kwargs):
+            global runMode
+            # run some method that checks the request
+            # for the client's authorization status
+
+            if protections and 'pilot' in protections and runMode == 'public':
+                print("rejecting based on pilot")
+                return sanic.response.text("Page not found: {}".format(request.path), status=404)
+            elif protections and 'pilot' in protections: # we're running in pilot mode and this is pilot only 
+                return await f(request, *args, **kwargs)
+            
+            glider = kwargs['glider'] if 'glider' in kwargs else None
+            mission = request.args['mission'][0] if 'mission' in request.args else None
+            
+            # this will always fail and return not authorized if glider is None
+            if checkGliderMission(request, glider, mission) == False:
+                return sanic.response.text("authorization failed")
+             
+            # the user is authorized.
+            # run the handler method and return the response
+            response = await f(request, *args, **kwargs)
+            return response
+        return decorated_function
+    return decorator
 
 def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
     data = {}
@@ -56,7 +133,6 @@ def gliderPath(glider, request):
 
 app.static('/favicon.ico', f'{sys.path[0]}/html/favicon.ico', name='favicon.ico')
 app.static('/parms', f'{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
-app.static('/index', f'{sys.path[0]}/html/index.html', name='index')
 app.static('/script', f'{sys.path[0]}/scripts', name='script')
 app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
 
@@ -64,7 +140,28 @@ app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_image
 def pageNotFound(request, exception):
     return sanic.response.text("Page not found: {}".format(request.path), status=404)
 
+@app.post('/auth')
+async def authHandler(request):
+    username = request.json.get("username", None)
+    password = request.json.get("password", None)
+
+    with open(request.app.config.USERS_FILE, "r") as file:
+        for line in file:
+            if line[0] == '#':
+                continue
+            parts = line.split(' ')
+            if len(parts) != 2:
+                continue
+            if parts[0] == username and sha256_crypt.verify(password, parts[1].strip()):
+                token = jwt.encode({ "user": username }, request.app.config.SECRET)
+                response = sanic.response.text("authorization ok")
+                response.cookies["token"] = token
+                return response
+
+    return sanic.response.text('authorization failed') 
+
 @app.route('/png/<which:str>/<glider:int>/<dive:int>/<image:str>')
+@authorized()
 async def pngHandler(request, which:str, glider: int, dive: int, image: str):
     if which == 'dv':
         filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.png'
@@ -82,6 +179,7 @@ async def pngHandler(request, which:str, glider: int, dive: int, image: str):
         
 
 @app.route('/div/<which:str>/<glider:int>/<dive:int>/<image:str>')
+@authorized()
 async def divHandler(request, which: str, glider: int, dive: int, image: str):
     if which == 'dv':
         filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.div'
@@ -105,40 +203,33 @@ async def divHandler(request, which: str, glider: int, dive: int, image: str):
     else:
         return sanic.response.text('not found', status=404)
        
+# we don't protect this so they get a blank page with a login option even
+# if not authorized
 @app.route('/<glider:int>')
+@app.ext.template("vis.html")
 async def mainHandler(request, glider:int):
-    global watchList
+    # return await sanic_ext.render("vis.html", context={"runMode": runMode}, status=400)
+    return {"runMode": runMode}
 
-    filename = f'{gliderPath(glider,request)}/comm.log'
-    if os.path.exists(filename):
-        if glider not in watchList:
-            watchList[glider] = { "path": f'{gliderPath(glider,request)}' }
-
-            for f in watchFiles: 
-                filename = f'{gliderPath(glider,request)}/{f}' 
-                if os.path.exists(filename):
-                    t = os.path.getmtime(filename)
-                else:
-                    t = 0
-
-                watchList[glider].update({ f:t })
-
-        filename = f'{sys.path[0]}/html/vis.html'
-        return await sanic.response.file(filename, mime_type='text/html')
-    else:
-        return sanic.response.text("oops")             
+@app.route('/index')
+@app.ext.template("index.html")
+async def indexHandler(request):
+    return {"runMode": runMode}
 
 @app.route('/map/<glider:int>')
+@authorized()
 async def mapHandler(request, glider:int):
     filename = f'{sys.path[0]}/html/map.html'
     return await sanic.response.file(filename, mime_type='text/html')
 
 @app.route('/map/<glider:int>/<extras:path>')
+@authorized()
 async def multimapHandler(request, glider:int, extras):
     filename = f'{sys.path[0]}/html/map.html'
     return await sanic.response.file(filename, mime_type='text/html')
 
 @app.route('/kml/<glider:int>')
+@authorized()
 async def kmlHandler(request, glider:int):
     filename = f'{gliderPath(glider,request)}/sg{glider}.kmz'
     with open(filename, 'rb') as file:
@@ -148,11 +239,13 @@ async def kmlHandler(request, glider:int):
 
 # do we need this for anything?? not yet
 @app.route('/data/<file:str>')
+@authorized(protections=['pilot'])
 async def dataHandler(request, file:str):
     filename = f'{sys.path[0]}/data/{file}'
     return await sanic.response.file(filename)
 
 @app.route('/proxy/<url:path>')
+@authorized(protections=['pilot'])
 async def proxyHandler(request, url):
     if request.args and len(request.args) > 0:
         url = url + '?' + request.query_string
@@ -163,6 +256,7 @@ async def proxyHandler(request, url):
                 return sanic.response.raw(body)
     
 @app.route('/plots/<glider:int>/<dive:int>')
+@authorized()
 async def plotsHandler(request, glider:int, dive:int):
     (dvplots, plotlyplots) = buildPlotsList(gliderPath(glider,request), dive)
     message = {}
@@ -175,12 +269,14 @@ async def plotsHandler(request, glider:int, dive:int):
     return sanic.response.json(message)
 
 @app.route('/log/<glider:int>/<dive:int>')
+@authorized()
 async def logHandler(request, glider:int, dive:int):
     filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
     s = LogHTML.captureTables(filename)
     return sanic.response.html(s)
 
 @app.route('/file/<ext:str>/<glider:int>/<dive:int>')
+@authorized()
 async def logengcapFileHandler(request, ext:str, glider: int, dive: int):
     filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.{ext}'
     if os.path.exists(filename):
@@ -192,6 +288,7 @@ async def logengcapFileHandler(request, ext:str, glider: int, dive: int):
             return sanic.response.text('not found', status=404)
        
 @app.route('/alerts/<glider:int>/<dive:int>')
+@authorized()
 async def alertsHandler(request, glider: int, dive: int):
     filename = f'{gliderPath(glider,request)}/alert_message.html.{dive:d}'
     if os.path.exists(filename):
@@ -200,6 +297,7 @@ async def alertsHandler(request, glider: int, dive: int):
         return sanic.response.text('not found')
  
 @app.route('/deltas/<glider:int>/<dive:int>')
+@authorized()
 async def deltasHandler(request, glider: int, dive: int):
     cmdfile = f'{gliderPath(glider,request)}/cmdfile.{dive:d}'
     logfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
@@ -236,32 +334,19 @@ async def deltasHandler(request, glider: int, dive: int):
 
     return sanic.response.json(message)
 
-@app.route('/optable/<mask:int>')
-async def optableHandler(request, mask:int):
-    global opTable
-
-    opTable = []
-    with open('ops.dat', 'r') as file:
-        for line in file:
-            if line[0] == '#':
-                continue
-            pieces = line.strip().split('/')
-            glider = int(pieces[0][2:])
-            if len(pieces) == 1:
-                cmdfile = f"sg{glider:03d}/cmdfile"
-                opTable.append({"mission": '', "glider": glider, "cmdfile": os.path.getmtime(cmdfile)})
-            else: 
-                opTable.append({"mission": pieces[1], "glider": glider, "cmdfile": None})
-
-    return sanic.response.json(opTable)
+@app.route('/missions/<mask:str>')
+async def missionsHandler(request, mask:int):
+    return sanic.response.json(buildAuthTable(request, mask))
  
 @app.route('/summary/<glider:int>')
+@authorized()
 async def summaryHandler(request, glider:int):
     msg = summary.collectSummary(glider, gliderPath(glider,request))
     return sanic.response.json(msg)
 
 # this does setup and might get called after .completed is touched
 @app.route('/status/<glider:int>')
+@authorized()
 async def statusHandler(request, glider:int):
     (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly) = buildFileList(gliderPath(glider, request))
 
@@ -278,6 +363,7 @@ async def statusHandler(request, glider:int):
     return sanic.response.json(message)
 
 @app.route('/control/<glider:int>/<which:str>')
+@authorized()
 async def controlHandler(request, glider:int, which:str):
     ok = ["cmdfile", "targets", "science", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
 
@@ -329,25 +415,16 @@ async def controlHandler(request, glider:int, which:str):
 
     return sanic.response.json(message)
 
-@app.route('/db/<args:path>')
-async def dbHandler(request, args):
-    pieces = args.split('/')
-    if len(pieces) == 0 or len(pieces) > 2:
-        return sanic.response.text("oops")
-
-    try:
-        glider = int(pieces[0])
-    except:
-        return sanic.response.text("oops")
-
+@app.route('/db/<glider:int>/<dive:int>')
+@authorized()
+async def dbHandler(request, glider:int, dive:int):
     dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
     if not os.path.exists(dbfile):
         return sanic.response.text('no db')
 
     q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,batt_volts_10V,batt_volts_24V,batt_capacity_24V,batt_capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north,dog_efficiency,alerts,criticals,capture,error_count FROM dives"
 
-    if len(pieces) == 2:
-        dive = int(pieces[1])
+    if dive > -1:
         q = q + f" WHERE dive={dive};"
     else:
         q = q + " ORDER BY dive ASC;"
@@ -365,6 +442,7 @@ async def dbHandler(request, args):
         return sanic.response.json(data)
 
 @app.route('/dbvars/<glider:int>')
+@authorized()
 async def dbvarsHandler(request, glider:int):
     dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
     dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
@@ -383,6 +461,7 @@ async def dbvarsHandler(request, glider:int):
         return sanic.response.json(data)
 
 @app.route('/provars/<glider:int>')
+@authorized()
 async def provarsHandler(request, glider:int):
     ncfiles = glob.glob(f'{gliderPath(glider,request)}/sg{glider:03d}*profile.nc')
     if len(ncfiles):
@@ -393,6 +472,7 @@ async def provarsHandler(request, glider:int):
         return sanic.response.text('oops')
 
 @app.route('/pro/<glider:int>/<which:str>/<first:int>/<last:int>/<stride:int>/<zStride:int>')
+@authorized()
 @compress.compress()
 async def proHandler(request, glider:int, which:str, first:int, last:int, stride:int, zStride:int):
     ncfiles = glob.glob(f'{gliderPath(glider,request)}/sg{glider:03d}*profile.nc')
@@ -403,6 +483,7 @@ async def proHandler(request, glider:int, which:str, first:int, last:int, stride
         return sanic.response.text('oops')
 
 @app.route('/timevars/<glider:int>/<dive:int>')
+@authorized()
 async def timeSeriesVarsHandler(request, glider:int,dive:int):
     ncfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.nc'
     if os.path.exists(ncfile):
@@ -412,6 +493,7 @@ async def timeSeriesVarsHandler(request, glider:int,dive:int):
         return sanic.response.text('oops')
 
 @app.route('/time/<glider:int>/<dive:int>/<which:str>')
+@authorized()
 @compress.compress()
 async def timeSeriesHandler(request, glider:int, dive:int, which:str):
     ncfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.nc'
@@ -422,6 +504,7 @@ async def timeSeriesHandler(request, glider:int, dive:int, which:str):
         return sanic.response.text('oops')
 
 @app.route('/query/<glider:int>/<vars:str>')
+@authorized()
 async def queryHandler(request, glider, vars):
     pieces = vars.split(',')
     if pieces[0] == 'dive':
@@ -437,6 +520,7 @@ async def queryHandler(request, glider, vars):
         return sanic.response.json(data)
 
 @app.route('/selftest/<glider:int>')
+@authorized(protections=['pilot'])
 async def selftestHandler(request, glider:int):
     cmd = f"{sys.path[0]}/SelftestHTML.py {glider:03d}"
     output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
@@ -448,6 +532,7 @@ async def selftestHandler(request, glider:int):
 #
 
 @app.post('/save/<glider:int>/<which:str>')
+@authorized(protections=['pilot'])
 async def saveHandler(request, glider:int, which:str):
     validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
 
@@ -455,7 +540,7 @@ async def saveHandler(request, glider:int, which:str):
     if 'file' not in message or message['file'] != which:
         return sanic.response.text('oops')
 
-    path = gliderPath(glide, request)
+    path = gliderPath(glider, request)
     if which in validator:
         tempfile.tempdir = path
         tmp = tempfile.mktemp()
@@ -491,91 +576,121 @@ async def saveHandler(request, glider:int, which:str):
 
 @app.route('/url')
 async def urlHandler(request):
+    global urlMessages
+
     glider = int(request.args['instrument_name'][0][2:])
     dive   = int(request.args['dive'][0]) if 'dive' in request.args else None
     files  = request.args['files'][0] if 'files' in request.args else None
     status = request.args['status'][0] if 'status' in request.args else None
     gpsstr = request.args['gpsstr'][0] if 'gpsstr' in request.args else None
-  
-    # baseStatus is used by /watch websocket stream (index.html)
+
     if status:
-        baseStatus[glider] = f"status={status}"
+        content = f"status={status}"
     elif gpsstr:
-        baseStatus[glider] = f"gpsstr={gpsstr}"
-    elif files and files == "perdive":
-        baseStatus[glider] = f"files=perdive" 
+        content = f"gpsstr={gpsstr}"
+    elif files:
+        content = f"files={files}" 
 
-    # baseTrigger is used by /stream (vis.html)
-    if files:
-        baseTrigger[glider] = {"which": files, "dive": dive}
+    msg = { "glider": glider, "dive": dive, "content": content, "uuid": uuid.uuid4(), "time": time.time() }
 
+    t = time.time() - 10
+    lock.acquire()
+    try:
+        urlMessages = list(filter(lambda m: m['time'] < t, urlMessages))
+        urlMessages.append(msg)
+    except:
+        pass
+    lock.release()
+             
     return sanic.response.text('ok')
  
+def buildWatchList(request, glider):
+    watchList = { "path": f'{gliderPath(glider,request)}' }
+
+    for f in watchFiles: 
+        filename = f'{gliderPath(glider,request)}/{f}' 
+        if os.path.exists(filename):
+            t = os.path.getmtime(filename)
+            watchList.update({ f:t })
+
+    return watchList
 
 def checkFileMods(w):
     mod = []
-    for g in w.keys():
-        for f in watchFiles:
-            filename = f"{w[g]['path']}/{f}"
-            if os.path.exists(filename):
-                t = os.path.getmtime(filename)
-                if t > w[g][f]:
-                    mod.append(f)
-                    w[g][f] = t
+    for f in watchFiles:
+        filename = f"{w['path']}/{f}"
+        if os.path.exists(filename): # could assume exists if it's in the dict
+            t = os.path.getmtime(filename)
+            if t > w[f]:
+                mod.append(f)
+                w[f] = t
 
     return mod
 
 @app.websocket('/stream/<which:str>/<glider:int>')
+@authorized()
 async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
-    global commFile
-    global watchList
-    global baseTrigger
+    global urlMessages
 
     filename = f'{gliderPath(glider,request)}/comm.log'
     if not os.path.exists(filename):
         await ws.send('no')
         return
 
-    if which == 'init' and glider in commFile:
-        commFile[glider].close()
-        del commFile[glider]
- 
-    if glider not in commFile:
-        commFile[glider] = open(filename, 'rb')
-        commFile[glider].seek(-10000, 2)
-        data = commFile[glider].read().decode('utf-8', errors='ignore')
-        watchList[glider]['comm.log'] = os.path.getmtime(f"{watchList[glider]['path']}/comm.log")
-        if data:
-            await ws.send(data)
-
-    while True:
-        modFiles = checkFileMods(watchList)
-        if 'comm.log' in modFiles and glider in commFile and commFile[glider]:
-            data = commFile[glider].read().decode('utf-8', errors='ignore')
+    if runMode == 'pilot':
+        commFile = open(filename, 'rb')
+        if which == 'init':
+            commFile.seek(-10000, 2)
+            data = commFile.read().decode('utf-8', errors='ignore')
             if data:
                 await ws.send(data)
-        elif 'cmdfile' in modFiles:
+        else:
+            commFile.seek(0, 2)
+       
+    watchList = buildWatchList(request, glider) 
+    prev_t = 0
+    while True:
+        modFiles = checkFileMods(watchList)
+        if 'comm.log' in modFiles and runMode == 'pilot':
+            data = commFile.read().decode('utf-8', errors='ignore')
+            if data:
+                await ws.send(data)
+        elif 'cmdfile' in modFiles and runMode == 'pilot':
             filename = f'{gliderPath(glider,request)}/cmdfile'
             with open(filename, 'rb') as file:
                 data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore')
                 await ws.send(data)
-        elif glider in baseTrigger:
-            await ws.send(f"NEW={glider},{baseTrigger[glider]['dive']},{baseTrigger[glider]['which']}")
-            del baseTrigger[glider]
+        elif 'cmdfile' in modFiles:
+            filename = f'{gliderPath(glider,request)}/cmdfile'
+            directive = summary.getCmdfileDirective(filename)
+            await ws.send(f"CMDFILE={directive}")
+        else:
+            lock.acquire()
+            msg = list(filter(lambda m: m['glider'] == glider and m['time'] > prev_t, urlMessages))
+            lock.release()
+            prev_t = time.time()
+            for m in msg:
+                await ws.send(f"NEW={glider},{m['dive']},{m['content']}")
 
         await asyncio.sleep(2)
 
-@app.websocket('/watch')
-async def watchHandler(request: sanic.Request, ws: sanic.Websocket):
-    global baseStatus
-    global opTable
-     
+# not protected by decorator - buildAuthTable only returns authorized missions
+@app.websocket('/watch/<mask:str>')
+# @authorized(protections=['pilot'])
+async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
+    global urlMessages
+
+    opTable = buildAuthTable(request, mask)
+    prev_t = 0 
+
     while True:
         for o in opTable:
-            if o['glider'] in baseStatus:
-                print(f"{o['glider']} baseStatus")
-                await ws.send(f"NEW={o['glider']},{baseStatus[o['glider']]}")
-                del baseStatus[o['glider']]
+            lock.acquire()
+            msg = list(filter(lambda m: m['glider'] == o['glider'] and m['time'] > prev_t, urlMessages))
+            lock.release()
+            prev_t = time.time()
+            for m in msg:
+                await ws.send(f"NEW={o['glider']},{m['content']}")
                 
             cmdfile = f"sg{o['glider']:03d}/cmdfile"
             t = os.path.getmtime(cmdfile)
@@ -589,7 +704,47 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket):
 #
 #  other stuff (non-Sanic)
 #
+
+def buildMissionTable(app):
+    global missionTable
+
+    missionTable = []
+    with open(app.config.MISSIONS_FILE, "r") as file:
+        for line in file:
+            if line[0] == '#':
+                continue
+
+            pieces = line.split(' ')
+            parts = pieces[0].split('/')
+            if len(parts) == 1:
+                mission = None
+            else:
+                mission = parts[1].strip()
  
+            if len(pieces) == 2:
+                user = pieces[1].strip()
+            else:
+                user = None
+    
+            glider = int(parts[0][2:])
+            missionTable.append({ "glider": glider, "mission": mission, "auth": user})
+
+    print(missionTable)
+ 
+def buildAuthTable(request, mask):
+    opTable = []
+    for m in missionTable:
+        if checkGliderMission(request, m['glider'], m['mission']) == False:
+            continue
+
+        if m['mission'] == None:
+            cmdfile = f"sg{m['glider']:03d}/cmdfile"
+            opTable.append({"mission": '', "glider": m['glider'], "cmdfile": os.path.getmtime(cmdfile)})
+        else: 
+            opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None})
+
+    return opTable
+
 def buildPlotsList(path, dive):
     dvplots = []
     plotlyplots = []
@@ -649,11 +804,19 @@ def buildFileList(path):
     return (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly)
 
 if __name__ == '__main__':
-    os.chdir("/home/seaglider")
+    os.chdir(app.config.ROOTDIR)
 
     if len(sys.argv) == 2:
         port = int(sys.argv[1])
     else:
         port = 20001
 
+    if "vis.py" in sys.argv[0]:
+        runMode = 'pilot'
+    else:
+        runMode = 'public'
+    runMode = 'public'
+    buildMissionTable(app)
+
     app.run(host='0.0.0.0', port=port, access_log=True, debug=False)
+

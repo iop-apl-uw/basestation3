@@ -1,3 +1,5 @@
+<link rel="stylesheet" href="/script/login.css" />
+
 <style>
     a:link,.spanClick           {color:#0000ff; text-decoration:none}
     a:visited {color:#0000aa; text-decoration:none}
@@ -30,6 +32,7 @@
 </style>
 <script src="/script/plotly-latest.min.js"></script>
 <script src="/script/util.js"></script>
+<script src="/script/login.js"></script>
 <script>
 
     var blurTimer  = false;
@@ -45,10 +48,14 @@
     var sgplots = [];
     var sgplotlyplots = [];
 
+{% if runMode == 'pilot' %}
     var fixes = [];
     var connect_t = 0;
 
     var fixTimer = null;
+{% endif %}
+
+    var accessToken;
 
     function startFlash() {
         isFlashing = true;
@@ -79,6 +86,7 @@
             return '';
     }
 
+{% if runMode == 'pilot' %}
     function updateTimer() {
         if (fixes.length > 0) {
             $('lastFix').innerHTML = '' + (Date.now()/1000 - fixes.at(-1).t).toFixed(0) + 's';
@@ -88,6 +96,7 @@
         }
         fixTimer = setTimeout('updateTimer()', 1000);
     }
+{% endif %}
 
     let wsocket  = null;
     var lastSetup = 0;
@@ -95,7 +104,9 @@
 
     function setupStream(glider, first) {
         if (Date.now() < lastSetup + 5000) {
-            setTimeout('setupStream(glider, false)', 5000);
+            setTimeout(() => {
+                setupStream(glider, false);
+            }, 5000);
             console.log('too soon');
             return;
         }
@@ -113,7 +124,7 @@
             new_uri = "ws:";
 
         new_uri += "//" + loc.host;
-        new_uri += "/stream/" + (first ? "init/" : "restart/") + glider;
+        new_uri += "/stream/" + (first ? "init/" : "restart/") + glider + mission();
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
 
@@ -155,15 +166,17 @@
                 glider  = parseInt(pieces[0]);
                 newDive = parseInt(pieces[1]);
                 which   = pieces[2];
-                if (which == 'perdive') {
+                if (which == 'files=perdive') {
                     loadPlots(newDive, true);
                     buildTable(currGlider, newDive);
                 }
                 else {
                     loadStatus(currGlider, -1);
+                    console.log('unexpected NEW= response');
                 }
                 // loadLog(newDive);
             }
+{% if runMode == 'pilot' %}
             else if (line.startsWith('CMDFILE=')) {
                 newCmdfile = line.split('=')[1];
                 $('cmdfile').value = newCmdfile;
@@ -248,6 +261,11 @@
                 first = false;
                 elt.scrollTop = elt.scrollHeight;
             }
+{% else %}
+            else if (line.startsWith('CMDFILE=')) {
+                newDirective = line.split('=')[1];
+            }
+{% endif %}
             if (isBlurred && !isFlashing) {
                 startFlash();
             }
@@ -261,6 +279,7 @@
 
     var numPages = 0;
 
+{% if runMode == 'pilot' %}
     function saveControl(force) {
         var json = {};
         var file = $('selectFile').value;
@@ -274,6 +293,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': 'Bearer ${accessToken}'
             },
             body: JSON.stringify(json),
         })
@@ -295,6 +315,50 @@
         $('cmdfile').value = $('cmdfile').value.replace('$EXIT_TO_MENU', newCmd);
     }
 
+    function loadControlFile(file, dive) {
+        fetch(`/control/${currGlider}/${file}${mission()}`)
+        .then(res => res.json())
+        .then(data => {
+            if ('file' in data && data['file'] == file) {
+                $(file).value = data['contents'];
+            }
+            if ('dive' in data && data['dive'] > -1) {
+                controlFileDive[file] = data['dive'];
+            }
+        })
+        .catch(error => {
+            console.log(`${dive}-${file}-${error}`);
+        })
+    }
+
+    const knownFiles = ["cmdfile", "targets", "science", "scicon.sch", "pdoscmds.bat", "tcm2mat.cal", "sg_calib_constants.m"];
+    const cmdfileButtons = ['btnGO', 'btnQUIT', 'btnRESUME'];
+    function changeFile() {
+        var file = $('selectFile').value;
+        for (var f of knownFiles) {
+            if (f == file)
+                $(f).removeAttribute('hidden');
+            else
+                $(f).setAttribute('hidden', '');
+        }
+
+        for (var b of cmdfileButtons) {
+            if (file != "cmdfile") 
+                $(b).setAttribute('hidden', '');
+            else 
+                $(b).removeAttribute('hidden');
+        }
+
+        if (file in controlFileDive) {
+            $('fileDive').innerHTML = '(' + controlFileDive[file] + ')';
+            $('fileDive').removeAttribute('hidden');
+        }
+        else {
+            $('fileDive').setAttribute('hidden', '');
+            $('fileDive').innerHTML = '';
+        }
+    }
+{% endif %}
 
     function popupPlotly(which, dive, elt) {
         window.open('/div/' + which + '/' + currGlider + '/' + dive + '/' + elt + mission(), `${currGlider}-${dive}-${elt}`);
@@ -472,20 +536,18 @@
         console.log("building table");
 
     
-        if (dive > -1) {
-            q = `/db/${glider}/${dive}${mission()}`
-        }
-        else {
+        q = `/db/${glider}/${dive}${mission()}`
+        if (dive  == -1) {
             clearTable();
-            q = `/db/${glider}${mission()}`
         }
  
         fetch(q)
-        .then(res => res.json())
+        .then(res => res.text())
         .then(data => {
+            data = JSON.parse(data);
+
             var has10 = false;
             var has24 = false;
-
             for (d of data) {
                 addTableRow(d);
                 if (d['batt_capacity_24V'] > 0)
@@ -547,26 +609,16 @@
         currElt = 'notifications';
     }
 
-    function loadControlFile(file, dive) {
-        fetch(`/control/${currGlider}/${file}${mission()}`)
-        .then(res => res.json())
-        .then(data => {
-            if ('file' in data && data['file'] == file) {
-                $(file).value = data['contents'];
-            }
-            if ('dive' in data && data['dive'] > -1) {
-                controlFileDive[file] = data['dive'];
-            }
-        })
-        .catch(error => {
-            console.log(`${dive}-${file}-${error}`);
-        })
-    }
-
     function loadStatus(glider, dive) {
         fetch(`/status/${glider}${mission()}`)
-        .then(res => res.json())
+        .then(res => res.text())
         .then(data => {
+            console.log(data);
+            if (data.includes("authorization failed")) {
+                openLoginForm();
+                return;
+            }
+            data = JSON.parse(data);
             document.title = data['glider'];
             currTitle = data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
@@ -961,34 +1013,6 @@
             
         if (str) {
             window.open('/parms#' + str, 'parms');
-        }
-    }
-
-    const knownFiles = ["cmdfile", "targets", "science", "scicon.sch", "pdoscmds.bat", "tcm2mat.cal", "sg_calib_constants.m"];
-    const cmdfileButtons = ['btnGO', 'btnQUIT', 'btnRESUME'];
-    function changeFile() {
-        var file = $('selectFile').value;
-        for (var f of knownFiles) {
-            if (f == file)
-                $(f).removeAttribute('hidden');
-            else
-                $(f).setAttribute('hidden', '');
-        }
-
-        for (var b of cmdfileButtons) {
-            if (file != "cmdfile") 
-                $(b).setAttribute('hidden', '');
-            else 
-                $(b).removeAttribute('hidden');
-        }
-
-        if (file in controlFileDive) {
-            $('fileDive').innerHTML = '(' + controlFileDive[file] + ')';
-            $('fileDive').removeAttribute('hidden');
-        }
-        else {
-            $('fileDive').setAttribute('hidden', '');
-            $('fileDive').innerHTML = '';
         }
     }
 
@@ -1396,6 +1420,7 @@
         window.name = glider;
         loadStatus(glider, dive);
         setupStream(glider, true);
+{% if runMode == 'pilot' %}
         loadControlFile('cmdfile');
         loadControlFile('science');
         loadControlFile('targets');
@@ -1403,6 +1428,7 @@
         loadControlFile('tcm2mat.cal');
         loadControlFile('pdoscmds.bat');
         loadControlFile('sg_calib_constants.m');
+{% endif %}
         loadPlotlyControlsXY(glider);
         loadPlotlyControlsContour(glider);
         $('chkMissionPlots').checked = true;
@@ -1446,13 +1472,15 @@
         });
     }
 
+
 </script>
 
 <html>
 <body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
 <div style="position: relative;">
 
-<div id="toolbar" style="position:absolute; left:0 top:0; width:50px; height:894px;"> 
+<div id="toolbar" style="position:absolute; left:0 top:0; width:50px; height:894px;">
+<div style="position:relative; width:50px; height:894px;">
     <button class="tool" style="background: url(/script/images/up-icon.png);" onclick="changeDive(1);" title="next dive [w,k] "></button>
     <button class="tool" style="background: url(/script/images/table-icon.png);" onclick="showTable();" title="dives table"></button>
     <button class="tool" style="background: url(/script/images/down-icon.png);" onclick="changeDive(-1);" title="prev dive [s,j]"></button>
@@ -1462,6 +1490,10 @@
     <button class="tool" id="btnNotifications" style="background: url(/script/images/notification-icon.png);" onclick="showNotifications();" title="notifications"></button>
     <button class="tool" id="btnCapFile" style="background: url(/script/images/cap-none-icon.png);" onclick="showCap();" title="notifications"></button>
     <button class="tool" id="btnEngFile" style="background: url(/script/images/eng-icon.png);" onclick="showEng();" title="notifications"></button>
+
+    <button class="tool" style="background: url(/script/images/globe-icon.png); position:absolute; bottom:50px; left:0" onclick="popupMap();" title="map"></button>
+    <button class="tool" style="background: url(/script/images/selftest-icon.png); position:absolute; bottom:0;" onclick="popupSelftest();" title="selftest"></button>
+</div>
 </div>
 
 <div id="main" style="position: absolute; left: 50; top: 0; width:1050px; height:894px; overflow:auto; background-color:#bbbbbb; text-align:center;" >
@@ -1571,12 +1603,9 @@
     </div>
 </div>
 
-<div id="links" style="position: absolute; left:1110; top: 0; width:600; height:50; font-size:10px;">
-    <button class="tool" style="background: url(/script/images/selftest-icon.png);" onclick="popupSelftest();" title="selftest"></button>
-    <button class="tool" style="background: url(/script/images/globe-icon.png);" onclick="popupMap();" title="map"></button>
-</div>
+{% if runMode == 'pilot' %}
 
-<div id="commlog" style="position: absolute; left:1110; top:50; width:600; height:400; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;background-color:#bbbbbb;">
+<div id="commlog" style="position: absolute; left:1110; top:0; width:600; height:450; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;background-color:#bbbbbb;">
 
 </div>
 
@@ -1647,6 +1676,8 @@
     <span id="fileDive" hidden="hidden"></span>
 </div>
 
+{% endif %}
+
 <div id="bottomBox" style="position: absolute; left: 0; top: 900; width: 1100; height: 200; overflow: hidden" title="a or h to move left, f or l to move right, number key 1-8 to jump to section, scroll wheel scrolls">
     <div id="bottomLinks" style="position: absolute; left: 10; top: 0; width: 978; height: 20; overflow: hidden;">
 
@@ -1657,6 +1688,9 @@
 </div>
 
 </div> 
+
+{% include "login.html" %}
+
 </body>
 
 
