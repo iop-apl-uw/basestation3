@@ -86,6 +86,8 @@ def plot_dives(
             try:
                 dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
                 fig_list, file_list = plot_func(base_opts, dive_ncf)
+            except KeyboardInterrupt:
+                return (figs, output_files)
             except:
                 log_error(f"{plot_name} failed {dive_nc_file_name}", "exc")
             else:
