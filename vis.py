@@ -815,7 +815,7 @@ if __name__ == '__main__':
         runMode = 'pilot'
     else:
         runMode = 'public'
-    runMode = 'public'
+
     buildMissionTable(app)
 
     app.run(host='0.0.0.0', port=port, access_log=True, debug=False)
