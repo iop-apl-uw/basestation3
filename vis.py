@@ -62,7 +62,7 @@ def checkToken(request, users, groups):
         return False
     else:
         if 'user' in token and token['user'] in users:
-            print(f'{user} authorized')
+            print(f"{token['user']} authorized")
             return True
         if 'groups' in token:
             # search the list of groups that this user is auth'd for

@@ -19,13 +19,16 @@
         })
         .then(res => res.text())
         .then(text => {
-            if (text.includes('failed')) 
+            closeLoginForm();
+            console.log(text);
+            if (text.includes('failed'))  {
                 alert(text);
+            }
             else {
-                console.log(text);
+                console.log(window.location.pathname);
+                console.log(window.location.search);
                 window.location.reload();
             }
-            closeLoginForm();
         })
         .catch(error => {
             alert(error);
