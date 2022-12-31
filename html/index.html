@@ -486,7 +486,7 @@
         clearTiles('main');
         nextGauges = [];
 
-        fetch(`/optable/1`)
+        fetch(`/missions/1`)
         .then(res => res.json())
         .then(data => {
             var glider, t;
@@ -553,7 +553,7 @@
             new_uri = "ws:";
 
         new_uri += "//" + loc.host;
-        new_uri += "/watch";
+        new_uri += "/watch/mask";
         wsocket = new WebSocket(new_uri);
 
         wsocket.onerror = function(error) {
@@ -589,7 +589,7 @@
                     // clearTiles('' + glider);
                     // createTile({ "glider": glider, "mission": ''}, $('' + glider))
                 }
-                else if (which.startsWith('files')) {
+                else if (which.startsWith('files=perdive')) {
                     // the only files we get is perdive which we use 
                     // to trigger a reload of this tile
                     clearTiles('' + glider);
