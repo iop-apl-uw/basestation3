@@ -547,20 +547,23 @@ async def saveHandler(request, glider:int, which:str):
     if which in validator:
         tempfile.tempdir = path
         tmp = tempfile.mktemp()
-        with open(tmp, 'w') as file:
-            file.write(message['contents'])
-            file.close()
-            print(message['contents'])
-            print("saved to %s" % tmp)
+        try:
+            with open(tmp, 'w') as file:
+                file.write(message['contents'])
+                file.close()
+                print(message['contents'])
+                print("saved to %s" % tmp)
 
-            if 'force' in message and message['force'] == 1:
-                cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {tmp}"
-            else:
-                cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {tmp}"
-            print(cmd)
-            output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-            results = output.stdout
-            err = output.stderr
+                if 'force' in message and message['force'] == 1:
+                    cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {tmp}"
+                else:
+                    cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {tmp}"
+                print(cmd)
+                output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                results = output.stdout
+                err = output.stderr
+        except Exception as e:
+            results = f"error saving {which}, {str(e)}"
 
         return sanic.response.text(results)
 
