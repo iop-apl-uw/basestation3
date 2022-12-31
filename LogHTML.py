@@ -1,12 +1,13 @@
 import sys
 import io
 from contextlib import redirect_stdout
+import aiofiles
 
 def ctext(text, color):
     x = f'<font color="{color}">{text}</font>'
     return x
 
-def displayTables(fname):
+async def displayTables(fname):
     global GC
     global L
     global PING
@@ -16,8 +17,8 @@ def displayTables(fname):
     PING = []
 
     last_real_GC = 0
-    with open(fname, 'r') as file:
-        for line in file:
+    async with aiofiles.open(fname, 'r') as file:
+        async for line in file:
             line = line.rstrip()
             if not line.startswith('$'):
                 continue
@@ -475,10 +476,10 @@ def displayTables(fname):
 
     print("</tbody></table>")
 
-def captureTables(fname):
+async def captureTables(fname):
     f = io.StringIO()
     with redirect_stdout(f):
-        displayTables(fname)
+        await displayTables(fname)
 
     return f.getvalue()
  

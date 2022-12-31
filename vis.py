@@ -9,7 +9,8 @@ import glob
 #import _thread
 #from watchdog.observers import Observer
 #from watchdog.events import PatternMatchingEventHandler
-import sqlite3
+# import sqlite3
+import aiosqlite
 import tempfile
 import subprocess
 import sys
@@ -76,9 +77,9 @@ def checkToken(request, users, groups):
     return False
 
 # checks whether access is authorized for the glider,mission
-def checkGliderMission(request, glider, mission):
+async def checkGliderMission(request, glider, mission):
     if (len(request.app.ctx.missionTable) == 0):
-        request.app.ctx.missionTable = buildMissionTable(app)
+        request.app.ctx.missionTable = await buildMissionTable(app)
         print("built table")
 
     for m in request.app.ctx.missionTable:
@@ -108,7 +109,8 @@ def authorized(protections=None):
             mission = request.args['mission'][0] if 'mission' in request.args else None
             
             # this will always fail and return not authorized if glider is None
-            if checkGliderMission(request, glider, mission) == False:
+            status = await checkGliderMission(request, glider, mission)
+            if status == False:
                 return sanic.response.text("authorization failed")
              
             # the user is authorized.
@@ -118,7 +120,7 @@ def authorized(protections=None):
         return decorated_function
     return decorator
 
-def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
+def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
     data = {}
     for idx, col in enumerate(cursor.description):
         data[col[0]] = row[idx]
@@ -150,8 +152,8 @@ async def authHandler(request):
     username = request.json.get("username", None)
     password = request.json.get("password", None)
 
-    with open(request.app.config.USERS_FILE, "r") as file:
-        for line in file:
+    async with aiofiles.open(request.app.config.USERS_FILE, "r") as file:
+        async for line in file:
             if line[0] == '#':
                 continue
             parts = line.split(' ')
@@ -180,7 +182,7 @@ async def pngHandler(request, which:str, glider: int, dive: int, image: str):
     else:
         return sanic.response.text('not found', status=404)
 
-    if os.path.exists(filename):
+    if await aiofiles.os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='image/png')
     else:
         return sanic.response.text('not found', status=404)
@@ -198,7 +200,7 @@ async def divHandler(request, which: str, glider: int, dive: int, image: str):
     else:
         return sanic.response.text('not found', status=404)
 
-    if os.path.exists(filename):
+    if await aiofiles.os.path.exists(filename):
         resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
         if which == 'dv':
             resp = resp + f'<a href="/div/{which}/{glider}/{dive-1}/{image}"style="text-decoration:none; font-size:32px;">&larr;</a><span style="font-size:32px;"> &#9863; </span> <a href="/div/{which}/{glider}/{dive+1}/{image}" style="text-decoration:none; font-size:32px;">&rarr;</a>'
@@ -245,8 +247,8 @@ async def multimapHandler(request, glider:int, extras):
 @authorized()
 async def kmlHandler(request, glider:int):
     filename = f'{gliderPath(glider,request)}/sg{glider}.kmz'
-    with open(filename, 'rb') as file:
-        zip = ZipFile(BytesIO(file.read()))
+    async with aiofiles.open(filename, 'rb') as file:
+        zip = ZipFile(BytesIO(await file.read()))
         kml = zip.open(f'sg{glider}.kml', 'r').read()
         return sanic.response.raw(kml)
 
@@ -276,7 +278,7 @@ async def proxyHandler(request, url):
 @app.route('/plots/<glider:int>/<dive:int>')
 @authorized()
 async def plotsHandler(request, glider:int, dive:int):
-    (dvplots, plotlyplots) = buildPlotsList(gliderPath(glider,request), dive)
+    (dvplots, plotlyplots) = await buildPlotsList(gliderPath(glider,request), dive)
     message = {}
     message['glider']      = f'SG{glider:03d}'
     message['dive']        = dive
@@ -290,14 +292,14 @@ async def plotsHandler(request, glider:int, dive:int):
 @authorized()
 async def logHandler(request, glider:int, dive:int):
     filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
-    s = LogHTML.captureTables(filename)
+    s = await LogHTML.captureTables(filename)
     return sanic.response.html(s)
 
 @app.route('/file/<ext:str>/<glider:int>/<dive:int>')
 @authorized()
 async def logengcapFileHandler(request, ext:str, glider: int, dive: int):
     filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.{ext}'
-    if os.path.exists(filename):
+    if await aiofiles.os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='text/plain')
     else:
         if ext == 'cap':
@@ -309,7 +311,7 @@ async def logengcapFileHandler(request, ext:str, glider: int, dive: int):
 @authorized()
 async def alertsHandler(request, glider: int, dive: int):
     filename = f'{gliderPath(glider,request)}/alert_message.html.{dive:d}'
-    if os.path.exists(filename):
+    if await aiofiles.os.path.exists(filename):
         return await sanic.response.file(filename, mime_type='text/plain')
     else:
         return sanic.response.text('not found')
@@ -319,13 +321,18 @@ async def alertsHandler(request, glider: int, dive: int):
 async def deltasHandler(request, glider: int, dive: int):
     cmdfile = f'{gliderPath(glider,request)}/cmdfile.{dive:d}'
     logfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
-    if not os.path.exists(cmdfile) or not os.path.exists(logfile):
+    if not await aiofiles.os.path.exists(cmdfile) or not await aiofiles.os.path.exists(logfile):
         return sanic.response.text('not found')
 
     cmd = f"/usr/local/bin/validate {logfile} -c {cmdfile}"
-    output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    results = output.stdout
-    err = output.stderr
+
+    proc = await asyncio.create_subprocess_shell(
+        cmd, 
+        stdout=asyncio.subprocess.PIPE, 
+        stderr=asyncio.subprocess.PIPE
+    )
+    out, err = await proc.communicate()
+    results = out.decode('utf-8', errors='ignore') 
 
     message = {}
     message['dive'] = dive
@@ -344,9 +351,9 @@ async def deltasHandler(request, glider: int, dive: int):
     for f in files:
         filename = f'{gliderPath(glider,request)}/{f}.{dive}'
 
-        if os.path.exists(filename):
-            with open(filename, 'r') as file:
-                c = file.read() 
+        if await aiofiles.os.path.exists(filename):
+            async with aiofiles.open(filename, 'r') as file:
+                c = await file.read() 
 
             message['file'].append({ "file": f, "contents":c }) 
 
@@ -354,19 +361,19 @@ async def deltasHandler(request, glider: int, dive: int):
 
 @app.route('/missions/<mask:str>')
 async def missionsHandler(request, mask:int):
-    return sanic.response.json(buildAuthTable(request, mask))
+    return sanic.response.json(await buildAuthTable(request, mask))
  
 @app.route('/summary/<glider:int>')
 @authorized()
 async def summaryHandler(request, glider:int):
-    msg = summary.collectSummary(glider, gliderPath(glider,request))
+    msg = await summary.collectSummary(glider, gliderPath(glider,request))
     return sanic.response.json(msg)
 
 # this does setup and might get called after .completed is touched
 @app.route('/status/<glider:int>')
 @authorized()
 async def statusHandler(request, glider:int):
-    (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly) = buildFileList(gliderPath(glider, request))
+    (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly) = await buildFileList(gliderPath(glider, request))
 
     message = {}
     message['glider'] = f'SG{glider:03d}'
@@ -393,7 +400,7 @@ async def controlHandler(request, glider:int, which:str):
     message['file'] = 'none'
     filename = f'{gliderPath(glider,request)}/{which}'
 
-    if os.path.exists(filename):
+    if await aiofiles.os.path.exists(filename):
         message['file'] = which
         message['dive'] = -1
     else:
@@ -437,7 +444,7 @@ async def controlHandler(request, glider:int, which:str):
 @authorized()
 async def dbHandler(request, glider:int, dive:int):
     dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-    if not os.path.exists(dbfile):
+    if not await aiofiles.os.path.exists(dbfile):
         return sanic.response.text('no db')
 
     q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,batt_volts_10V,batt_volts_24V,batt_capacity_24V,batt_capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north,dog_efficiency,alerts,criticals,capture,error_count FROM dives"
@@ -448,15 +455,17 @@ async def dbHandler(request, glider:int, dive:int):
         q = q + " ORDER BY dive ASC;"
 
     print(dbfile)
-    with sqlite3.connect(dbfile) as conn:
-        conn.row_factory = rowToDict
-        cur = conn.cursor()
+    async with aiosqlite.connect(dbfile) as conn:
+        conn.row_factory = rowToDict # not async but called from async fetchall
+        cur = await conn.cursor()
         try:
-            cur.execute(q)
-        except sqlite3.OperationalError:
+            await cur.execute(q)
+        except aiosqlite.OperationalError:
             return sanic.response.text('no table')
 
-        data = cur.fetchall()
+        data = await cur.fetchall()
+        # r = [dict((cur.description[i][0], value) \
+        #       for i, value in enumerate(row)) for row in data]
         return sanic.response.json(data)
 
 @app.route('/dbvars/<glider:int>')
@@ -464,14 +473,15 @@ async def dbHandler(request, glider:int, dive:int):
 async def dbvarsHandler(request, glider:int):
     dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
     dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-    if not os.path.exists(dbfile):
+    if not await aiofiles.os.path.exists(dbfile):
         return sanic.response.text('no db')
 
     print(dbfile)
-    with sqlite3.connect(dbfile) as conn:
+    async with aiosqlite.connect(dbfile) as conn:
+        cur = await conn.cursor()
         try:
-            cur = conn.execute('select * from dives')
-        except sqlite3.OperationalError:
+            await cur.execute('select * from dives')
+        except aiosqlite.OperationalError:
             return sanic.response.text('no table')
         names = list(map(lambda x: x[0], cur.description))
         data = {}
@@ -504,7 +514,7 @@ async def proHandler(request, glider:int, which:str, first:int, last:int, stride
 @authorized()
 async def timeSeriesVarsHandler(request, glider:int,dive:int):
     ncfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.nc'
-    if os.path.exists(ncfile):
+    if await aiofiles.os.path.exists(ncfile):
         data = ExtractTimeseries.getVarNames(ncfile)
         return sanic.response.json(data)
     else: 
@@ -515,7 +525,7 @@ async def timeSeriesVarsHandler(request, glider:int,dive:int):
 @compress.compress()
 async def timeSeriesHandler(request, glider:int, dive:int, which:str):
     ncfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.nc'
-    if os.path.exists(ncfile):
+    if await aiofiles.os.path.exists(ncfile):
         data = ExtractTimeseries.extractVars(ncfile, which.split(','))
         return sanic.response.json(data)
     else:
@@ -530,20 +540,24 @@ async def queryHandler(request, glider, vars):
     else:
         q = f"SELECT {vars} FROM DIVES"
 
-    with sqlite3.connect(f'{gliderPath(glider,request)}/sg{glider:03d}.db') as conn:
+    async with aiosqlite.connect(f'{gliderPath(glider,request)}/sg{glider:03d}.db') as conn:
         conn.row_factory = rowToDict
-        cur = conn.cursor()
-        cur.execute(q)
-        data = cur.fetchall()
+        cur = await conn.cursor()
+        await cur.execute(q)
+        data = await cur.fetchall()
         return sanic.response.json(data)
 
 @app.route('/selftest/<glider:int>')
 @authorized(protections=['pilot'])
 async def selftestHandler(request, glider:int):
-    cmd = f"{sys.path[0]}/SelftestHTML.py {glider:03d}"
-    output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-    results = output.stdout
-    return sanic.response.html(results)
+    cmd = f"{sys.path[0]}/SelftestHTML.py"
+    proc = await asyncio.create_subprocess_exec(
+        cmd, f"{glider:03d}", 
+        stdout=asyncio.subprocess.PIPE, 
+        stderr=asyncio.subprocess.PIPE
+    )
+    results, err = await proc.communicate()
+    return sanic.response.html(results.decode('utf-8', errors='ignore'))
 
 #
 # POST handler - to save files back to basestation
@@ -563,9 +577,9 @@ async def saveHandler(request, glider:int, which:str):
         tempfile.tempdir = path
         tmp = tempfile.mktemp()
         try:
-            with open(tmp, 'w') as file:
-                file.write(message['contents'])
-                file.close()
+            async with aiofiles.open(tmp, 'w') as file:
+                await file.write(message['contents'])
+                await file.close()
                 print(message['contents'])
                 print("saved to %s" % tmp)
 
@@ -574,9 +588,13 @@ async def saveHandler(request, glider:int, which:str):
                 else:
                     cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {tmp}"
                 print(cmd)
-                output = subprocess.run(cmd, shell=True, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                results = output.stdout
-                err = output.stderr
+                proc = await asyncio.create_subprocess_shell(
+                    cmd, 
+                    stdout=asyncio.subprocess.PIPE, 
+                    stderr=asyncio.subprocess.PIPE
+                )
+                out, err = await proc.communicate()
+                results = out.decode('utf-8', errors='ignore') 
         except Exception as e:
             results = f"error saving {which}, {str(e)}"
 
@@ -584,8 +602,8 @@ async def saveHandler(request, glider:int, which:str):
 
     else: # no validator for this file type
         try:
-            with open(f'{path}/{which}', 'w') as file:
-                file.write(message['contents'])
+            async with aiofiles.open(f'{path}/{which}', 'w') as file:
+                await file.write(message['contents'])
             return sanic.response.text(f"{which} saved ok")
         except Exception as e:
             return sanic.response.text(f"error saving {which}, {str(e)}")
@@ -624,23 +642,23 @@ async def urlHandler(request):
              
     return sanic.response.text('ok')
  
-def buildWatchList(request, glider):
+async def buildWatchList(request, glider):
     watchList = { "path": f'{gliderPath(glider,request)}' }
 
     for f in watchFiles: 
         filename = f'{gliderPath(glider,request)}/{f}' 
-        if os.path.exists(filename):
-            t = os.path.getmtime(filename)
+        if await aiofiles.os.path.exists(filename):
+            t = await aiofiles.os.path.getctime(filename)
             watchList.update({ f:t })
 
     return watchList
 
-def checkFileMods(w):
+async def checkFileMods(w):
     mod = []
     for f in watchFiles:
         filename = f"{w['path']}/{f}"
-        if os.path.exists(filename): # could assume exists if it's in the dict
-            t = os.path.getmtime(filename)
+        if await aiofiles.os.path.exists(filename): # could assume exists if it's in the dict
+            t = await aiofiles.os.path.getctime(filename)
             if t > w[f]:
                 mod.append(f)
                 w[f] = t
@@ -652,32 +670,33 @@ def checkFileMods(w):
 async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
 
     filename = f'{gliderPath(glider,request)}/comm.log'
-    if not os.path.exists(filename):
+    if not await aiofiles.os.path.exists(filename):
         await ws.send('no')
         return
 
     if request.app.ctx.runMode == 'pilot':
-        commFile = open(filename, 'rb')
+        commFile = await aiofiles.open(filename, 'rb')
         if which == 'init':
-            commFile.seek(-10000, 2)
-            data = commFile.read().decode('utf-8', errors='ignore')
+            await commFile.seek(-10000, 2)
+            data = await commFile.read()
             if data:
-                await ws.send(data)
+                await ws.send(data.decode('utf-8', errors='ignore'))
         else:
-            commFile.seek(0, 2)
+            await commFile.seek(0, 2)
        
-    watchList = buildWatchList(request, glider) 
+    watchList = await buildWatchList(request, glider) 
     prev_t = 0
     while True:
-        modFiles = checkFileMods(watchList)
+        modFiles = await checkFileMods(watchList)
         if 'comm.log' in modFiles and request.app.ctx.runMode == 'pilot':
-            data = commFile.read().decode('utf-8', errors='ignore')
+            data = await commFile.read().decode('utf-8', errors='ignore')
             if data:
                 await ws.send(data)
         elif 'cmdfile' in modFiles and request.app.ctx.runMode == 'pilot':
             filename = f'{gliderPath(glider,request)}/cmdfile'
-            with open(filename, 'rb') as file:
-                data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore')
+            async with aiofiles.open(filename, 'rb') as file:
+                body = await file.read().decode('utf-8', errors='ignore')
+                data = "CMDFILE=" + body
                 await ws.send(data)
         elif 'cmdfile' in modFiles:
             filename = f'{gliderPath(glider,request)}/cmdfile'
@@ -698,7 +717,7 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
 # @authorized(protections=['pilot'])
 async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 
-    opTable = buildAuthTable(request, mask)
+    opTable = await buildAuthTable(request, mask)
     prev_t = 0 
 
     while True:
@@ -711,7 +730,7 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
                 await ws.send(f"NEW={o['glider']},{m['content']}")
                 
             cmdfile = f"sg{o['glider']:03d}/cmdfile"
-            t = os.path.getmtime(cmdfile)
+            t = await aiofiles.os.path.getctime(cmdfile)
             if o['cmdfile'] != None and t > o['cmdfile']:
                 directive = summary.getCmdfileDirective(cmdfile)
                 print(f"{o['glider']} cmdfile")
@@ -723,11 +742,11 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 #  other stuff (non-Sanic)
 #
 
-def buildMissionTable(app):
+async def buildMissionTable(app):
 
     missionTable = []
-    with open(app.config.MISSIONS_FILE, "r") as file:
-        for line in file:
+    async with aiofiles.open(app.config.MISSIONS_FILE, "r") as file:
+        async for line in file:
             if line[0] == '#':
                 continue
 
@@ -757,28 +776,30 @@ def buildMissionTable(app):
     print(missionTable)
     return missionTable
  
-def buildAuthTable(request, mask):
+async def buildAuthTable(request, mask):
     if len(request.app.ctx.missionTable) == 0:
-        request.app.ctx.missionTable = buildMissionTable(request.app)
+        request.app.ctx.missionTable = await buildMissionTable(request.app)
         print("built table")
 
     opTable = []
     for m in request.app.ctx.missionTable:
-        if checkGliderMission(request, m['glider'], m['mission']) == False:
+        status = await checkGliderMission(request, m['glider'], m['mission'])
+        if status == False:
             continue
 
         cmdfile = f"sg{m['glider']:03d}/cmdfile"
-        if not os.path.exists(cmdfile):
+        if not await aiofiles.os.path.exists(cmdfile):
             continue
 
         if m['mission'] == None:
-            opTable.append({"mission": '', "glider": m['glider'], "cmdfile": os.path.getmtime(cmdfile)})
+            t = await aiofiles.os.path.getctime(cmdfile)
+            opTable.append({"mission": '', "glider": m['glider'], "cmdfile": t})
         else: 
             opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None})
 
     return opTable
 
-def buildPlotsList(path, dive):
+async def buildPlotsList(path, dive):
     dvplots = []
     plotlyplots = []
     for fullFile in glob.glob('%s/plots/dv%04d_*.png' % (path, dive)):
@@ -787,12 +808,12 @@ def buildPlotsList(path, dive):
             x = parse('dv{}_{}.png', file)
             plot = x[1] 
             dvplots.append(plot)
-            if os.path.exists(fullFile.replace("png", "div")):
+            if await aiofiles.os.path.exists(fullFile.replace("png", "div")):
                 plotlyplots.append(plot)
 
     return (dvplots, plotlyplots)
  
-def buildFileList(path):
+async def buildFileList(path):
     maxdv = -1
     dvplots = []
     engplots = []
@@ -813,7 +834,7 @@ def buildFileList(path):
                     dvplots.append(plot)
 
                 divFile = fullFile.replace("png", "div")
-                if os.path.exists(divFile):     
+                if await aiofiles.os.path.exists(divFile):     
                     plotlyplots.append(plot)           
             except:
                 pass
@@ -823,7 +844,7 @@ def buildFileList(path):
             plot = '_'.join(pieces[0].split('_')[1:])
             engplots.append(plot)
             divFile = fullFile.replace("png", "div")
-            if os.path.exists(divFile):
+            if await aiofiles.os.path.exists(divFile):
                 engplotly.append(plot)
 
         elif file.startswith('sg') and "section" not in file:
@@ -831,14 +852,14 @@ def buildFileList(path):
             plot = '_'.join(pieces[0].split('_')[1:])
             sgplots.append(plot)
             divFile = fullFile.replace("png", "div")
-            if os.path.exists(divFile):
+            if await aiofiles.os.path.exists(divFile):
                 sgplotly.append(plot)
 
     return (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly)
 
 @app.listener("before_server_start")
 async def initApp(app):
-    app.ctx.missionTable = buildMissionTable(app)
+    app.ctx.missionTable = await buildMissionTable(app)
     app.ctx.runMode = 'pilot'
     if len(sys.argv) == 2 and sys.argv[1] == 'public':
         app.ctx.runMode = 'public'
