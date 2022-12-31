@@ -30,18 +30,19 @@
         width: 30px;
     }
 
+    .box {
+        display: flex;
+        align-items: center; 
+        margin-top: 5px;
+    }
+
+
 {% if runMode == 'pilot' %}
 
     .expander {
         width: 8px;
         max-width: 8px;
         cursor: pointer;
-    }
-
-    .box {
-        display: flex;
-        align-items: center; 
-        margin-top: 5px;
     }
 
     .indicatorInsideBox {
@@ -503,10 +504,11 @@
             header.innerHTML = h;
 
             t.appendChild(header);
-
+            
             txt = document.createElement('div');
+            txt.classList.add('position');
             let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
-            txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
+            txt.innerHTML = `dive ${data.dive} ended ${end_t}<br>to ${data.depth.toFixed(0)}m in ${(data.length/60).toFixed(0)} minutes`;
             t.appendChild(txt);
 
             box = document.createElement('div');
@@ -527,9 +529,10 @@
 
             img = document.createElement('img');
             img.src = '/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
-            img.style = "position: absolute; top: 50px; left: 0px; width:290px; max-height:400px; mix-blend-mode:multiply;"
+            img.style = "width:290px; max-height:360px; mix-blend-mode:multiply;"
      
-            t.appendChild(img);
+            box.appendChild(img);
+            t.appendChild(box);
         })
         .catch(error => {
             console.log(error);
@@ -580,11 +583,11 @@
                 createTile(glider, t);
             }
 
+{% if runMode == 'pilot' %}
             if (nextTimer) {
                 clearInterval(nextTimer);
             }
         
-{% if runMode == 'pilot' %}
             nextTimer = window.setInterval(updateNext, 60000);
 {% endif %}
         })
