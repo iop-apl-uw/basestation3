@@ -57,7 +57,12 @@ def collectSummary(glider, path):
  
         file.close()
 
-    connect_t = datetime.strptime(connected, '%b %d %H:%M:%S %Z %Y').timestamp()
+    try:
+        connect_t = datetime.strptime(connected.strip(), '%b %d %H:%M:%S %Z %Y').timestamp()
+    except Exception as e:
+        print(f"weird date: [{connected}]")
+        connect_t = 0
+
     mtime = os.path.getmtime(commlog) 
 
     last_GPS = ','.join(last_GPS.split(',')[0:5])

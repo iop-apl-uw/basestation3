@@ -486,7 +486,7 @@
         clearTiles('main');
         nextGauges = [];
 
-        fetch(`/optable/1`)
+        fetch(`/missions/1`)
         .then(res => res.json())
         .then(data => {
             var glider, t;
@@ -553,7 +553,7 @@
             new_uri = "ws:";
 
         new_uri += "//" + loc.host;
-        new_uri += "/watch";
+        new_uri += "/watch/1";
         wsocket = new WebSocket(new_uri);
 
         wsocket.onerror = function(error) {
