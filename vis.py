@@ -34,11 +34,9 @@ from types import SimpleNamespace
 
 lock = threading.Lock()
 
-urlMessages = []
-
 watchFiles = ['comm.log', 'cmdfile'] # rely on .urls vs '.completed']
 
-d = { "missionTable": [], "runMode": 'pilot' }
+d = { "missionTable": [], "runMode": 'pilot', "urlMessages": [] }
 app = sanic.Sanic("SGpilot", ctx=SimpleNamespace(**d))
 if 'SECRET' not in app.config:
     app.config.SECRET = "SECRET"
@@ -582,7 +580,6 @@ async def saveHandler(request, glider:int, which:str):
 
 @app.route('/url')
 async def urlHandler(request):
-    global urlMessages
 
     glider = int(request.args['instrument_name'][0][2:])
     dive   = int(request.args['dive'][0]) if 'dive' in request.args else None
@@ -602,8 +599,8 @@ async def urlHandler(request):
     t = time.time() - 10
     lock.acquire()
     try:
-        urlMessages = list(filter(lambda m: m['time'] < t, urlMessages))
-        urlMessages.append(msg)
+        request.app.ctx.urlMessages = list(filter(lambda m: m['time'] < t, request.app.ctx.urlMessages))
+        request.app.ctx.urlMessages.append(msg)
     except:
         pass
     lock.release()
@@ -636,7 +633,6 @@ def checkFileMods(w):
 @app.websocket('/stream/<which:str>/<glider:int>')
 @authorized()
 async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
-    global urlMessages
 
     filename = f'{gliderPath(glider,request)}/comm.log'
     if not os.path.exists(filename):
@@ -672,7 +668,7 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
             await ws.send(f"CMDFILE={directive}")
         else:
             lock.acquire()
-            msg = list(filter(lambda m: m['glider'] == glider and m['time'] > prev_t, urlMessages))
+            msg = list(filter(lambda m: m['glider'] == glider and m['time'] > prev_t, request.app.ctx.urlMessages))
             lock.release()
             prev_t = time.time()
             for m in msg:
@@ -684,7 +680,6 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
 @app.websocket('/watch/<mask:str>')
 # @authorized(protections=['pilot'])
 async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
-    global urlMessages
 
     opTable = buildAuthTable(request, mask)
     prev_t = 0 
@@ -692,7 +687,7 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
     while True:
         for o in opTable:
             lock.acquire()
-            msg = list(filter(lambda m: m['glider'] == o['glider'] and m['time'] > prev_t, urlMessages))
+            msg = list(filter(lambda m: m['glider'] == o['glider'] and m['time'] > prev_t, request.app.ctx.urlMessages))
             lock.release()
             prev_t = time.time()
             for m in msg:
