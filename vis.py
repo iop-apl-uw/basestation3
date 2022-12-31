@@ -207,10 +207,15 @@ async def mainHandler(request, glider:int):
     # return await sanic_ext.render("vis.html", context={"runMode": request.app.ctx.runMode}, status=400)
     return {"runMode": request.app.ctx.runMode}
 
-@app.route('/index')
+@app.route('/dash')
 @app.ext.template("index.html")
 async def indexHandler(request):
-    return {"runMode": request.app.ctx.runMode}
+    return {"runMode": "pilot"}
+
+@app.route('/')
+@app.ext.template("index.html")
+async def indexHandler(request):
+    return {"runMode": "public"}
 
 @app.route('/map/<glider:int>')
 @authorized()
