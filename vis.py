@@ -51,7 +51,8 @@ app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
 compress = sanic_gzip.Compress()
 
-def checkToken(request, user):
+# checks whether the auth token authorizes a user or group in users, groups
+def checkToken(request, users, groups):
     if not 'token' in request.cookies:
         return False
 
@@ -60,21 +61,28 @@ def checkToken(request, user):
     except jwt.exceptions.InvalidTokenError:
         return False
     else:
-        if 'user' in token and token['user'] == user:
+        if 'user' in token and token['user'] in users:
             print(f'{user} authorized')
             return True
+        if 'groups' in token:
+            # search the lift of groups that this user is auth'd for
+            for g in token['groups'].split(','):
+                if g in groups:
+                    print(f'{g} authorized')
+                    return True
 
     print('rejected')
     return False
 
+# checks whether access is authorized for the glider,mission
 def checkGliderMission(request, glider, mission):
     if (len(request.app.ctx.missionTable) == 0):
         request.app.ctx.missionTable = buildMissionTable(app)
         print("built table")
 
     for m in request.app.ctx.missionTable:
-        if m['glider'] == glider and m['mission'] == mission and m['auth'] is not None: 
-            return checkToken(request, m['auth'])
+        if m['glider'] == glider and m['mission'] == mission and (m['users'] is not None or m['groups'] is not None): 
+            return checkToken(request, m['users'], m['groups'])
         elif m['glider'] == glider and m['mission'] == mission:
             return True
 
@@ -146,12 +154,15 @@ async def authHandler(request):
             if line[0] == '#':
                 continue
             parts = line.split(' ')
-            if len(parts) != 2:
+            if len(parts) != 3:
                 continue
-            if parts[0] == username and sha256_crypt.verify(password, parts[1].strip()):
-                token = jwt.encode({ "user": username }, request.app.config.SECRET)
+            if parts[0] == username and sha256_crypt.verify(password, parts[2].strip()):
+                token = jwt.encode({ "user": username, "groups": parts[1].strip() }, request.app.config.SECRET)
                 response = sanic.response.text("authorization ok")
                 response.cookies["token"] = token
+                response.cookies["token"]["max-age"] = 86400
+                response.cookies["token"]["samesite"] = "Strict"
+                response.cookies["token"]["httponly"] = True
                 return response
 
     return sanic.response.text('authorization failed') 
@@ -720,19 +731,27 @@ def buildMissionTable(app):
                 continue
 
             pieces = line.split(' ')
-            parts = pieces[0].split('/')
+            status = pieces[0].strip()
+
+            parts = pieces[1].strip().split('/')
             if len(parts) == 1:
                 mission = None
             else:
                 mission = parts[1].strip()
  
-            if len(pieces) == 2:
-                user = pieces[1].strip()
-            else:
-                user = None
+            users  = None
+            groups = None
+            link   = None
+            for i in range(2,len(pieces)):
+                if 'users=' in pieces[i]:
+                    users = pieces[i].strip().split('=')[1].split(',')
+                if 'groups=' in pieces[i]:
+                    link = pieces[i].strip().split('=')[1].split(',')
+                if 'link=' in pieces[i]:
+                    link = pieces[i].strip().split('=')[1]
     
             glider = int(parts[0][2:])
-            missionTable.append({ "glider": glider, "mission": mission, "auth": user})
+            missionTable.append({"status": satus, "glider": glider, "mission": mission, "users": users, "groups": groups, "link": link })
 
     print(missionTable)
     return missionTable

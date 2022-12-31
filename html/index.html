@@ -29,6 +29,9 @@
         float: left;
         width: 30px;
     }
+
+{% if runMode == 'pilot' %}
+
     .expander {
         width: 8px;
         max-width: 8px;
@@ -115,12 +118,22 @@
         margin-left: -2px;
     }
 
+{% endif %}
 
 </style>
 <script src="/script/util.js"></script>
 <script>
 
+    var gliders = [];
 
+    function mission(glider) {
+        if (glider.mission != '')
+            return `?mission=${glider.mission}`;
+        else
+            return '';
+    }
+
+{% if runMode == 'pilot' %}
     function setPlusMinusBar(chart, bar, span, pct, text, hover) {
         if (pct < -1)
             pct = -1;
@@ -183,17 +196,10 @@
 
     }
     
-    var gliders = [];
     var nextGauges = [];
     var nextTimer = null;
     var plotWhich = 'diveplot';
  
-    function mission(glider) {
-        if (glider.mission != '')
-            return `?mission=${glider.mission}`;
-        else
-            return '';
-    }
 
     function updateNext() {
         var next, nextHour, nextMin;
@@ -475,16 +481,79 @@
         });
     }
 
+{% else %}
+
+    function createTile(glider, t) {
+        console.log(glider);
+
+        fetch(`/summary/${glider.glider}${mission(glider)}`)
+        .then(res => res.json())
+        .then(data => {
+            t.classList.add('tile');
+            t.onclick = function() { window.open(`/${data.name}${mission(glider)}`, `${data.name}`); };
+           
+            var h, txt, box, header;
+            if (glider.mission == '')
+                h = h = 'SG' + data.name + '<br><hr>';
+            else
+                h = 'SG' + data.name + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
+
+            header = document.createElement('div');
+            header.classList.add('header');
+            header.innerHTML = h;
+
+            t.appendChild(header);
+
+            txt = document.createElement('div');
+            let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
+            txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
+            t.appendChild(txt);
+
+            box = document.createElement('div');
+            box.classList.add('box');
+
+            txt = document.createElement('div');
+            txt.classList.add('position');
+            txt.innerHTML = formatPos(dd2ddmm(data.lat)) + ',' + formatPos(dd2ddmm(data.lon));
+            h = document.createElement('div');
+            h.appendChild(document.createTextNode('pos: '));
+            h.classList.add('label');
+            box.appendChild(h);
+            box.appendChild(txt);
+            t.appendChild(box);
+
+            box = document.createElement('div');
+            box.classList.add('box');
+
+            img = document.createElement('img');
+            img.src = '/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
+            img.style = "position: absolute; top: 50px; left: 0px; width:290px; max-height:400px; mix-blend-mode:multiply;"
+     
+            t.appendChild(img);
+        })
+        .catch(error => {
+            console.log(error);
+        });
+    }
+
+{% endif %}
 
     function loadTable() {
-        window.name = 'index';
-        document.title = 'index';
+{% if runMode == 'pilot' %}
+        window.name = 'dash';
+        document.title = 'dash';
+
         let params = new URLSearchParams(window.location.search);
         if (params.has('plot'))
             plotWhich = params.get('plot');
 
-        clearTiles('main');
         nextGauges = [];
+{% else %}
+        window.name = 'index';
+        document.title = 'index';
+{% endif %}
+
+        clearTiles('main');
 
         fetch(`/missions/1`)
         .then(res => res.json())
@@ -515,7 +584,9 @@
                 clearInterval(nextTimer);
             }
         
+{% if runMode == 'pilot' %}
             nextTimer = window.setInterval(updateNext, 60000);
+{% endif %}
         })
         .catch(error => {
             console.log(error);
@@ -580,6 +651,7 @@
                 glider = pieces[0]
                 which = pieces[1]
                 console.log(glider + ' ' + which);
+{% if runMode == 'pilot' %}
                 if (which == 'cmdfile' && pieces.length == 3) {
                     d = pieces[2]
                     $('cmdfileDirective' + glider).innerHTML = d;
@@ -590,6 +662,9 @@
                     // createTile({ "glider": glider, "mission": ''}, $('' + glider))
                 }
                 else if (which.startsWith('files=perdive')) {
+{% else %}
+                if (which.startsWith('files=perdive')) {
+{% endif %}
                     // the only files we get is perdive which we use 
                     // to trigger a reload of this tile
                     clearTiles('' + glider);
