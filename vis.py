@@ -38,7 +38,7 @@ urlMessages = []
 
 watchFiles = ['comm.log', 'cmdfile'] # rely on .urls vs '.completed']
 
-d = { "missionTable": [] }
+d = { "missionTable": [], "runMode": 'pilot' }
 app = sanic.Sanic("SGpilot", ctx=SimpleNamespace(**d))
 if 'SECRET' not in app.config:
     app.config.SECRET = "SECRET"
@@ -52,8 +52,6 @@ if 'ROOTDIR' not in app.config:
 app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
 compress = sanic_gzip.Compress()
-
-runMode = None
 
 def checkToken(request, user):
     if not 'token' in request.cookies:
@@ -90,11 +88,10 @@ def authorized(protections=None):
     def decorator(f):
         @wraps(f)
         async def decorated_function(request, *args, **kwargs):
-            global runMode
             # run some method that checks the request
             # for the client's authorization status
 
-            if protections and 'pilot' in protections and runMode == 'public':
+            if protections and 'pilot' in protections and request.app.ctx.runMode == 'public':
                 print("rejecting based on pilot")
                 return sanic.response.text("Page not found: {}".format(request.path), status=404)
             elif protections and 'pilot' in protections: # we're running in pilot mode and this is pilot only 
@@ -209,13 +206,13 @@ async def divHandler(request, which: str, glider: int, dive: int, image: str):
 @app.route('/<glider:int>')
 @app.ext.template("vis.html")
 async def mainHandler(request, glider:int):
-    # return await sanic_ext.render("vis.html", context={"runMode": runMode}, status=400)
-    return {"runMode": runMode}
+    # return await sanic_ext.render("vis.html", context={"runMode": request.app.ctx.runMode}, status=400)
+    return {"runMode": request.app.ctx.runMode}
 
 @app.route('/index')
 @app.ext.template("index.html")
 async def indexHandler(request):
-    return {"runMode": runMode}
+    return {"runMode": request.app.ctx.runMode}
 
 @app.route('/map/<glider:int>')
 @authorized()
@@ -643,7 +640,7 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
         await ws.send('no')
         return
 
-    if runMode == 'pilot':
+    if request.app.ctx.runMode == 'pilot':
         commFile = open(filename, 'rb')
         if which == 'init':
             commFile.seek(-10000, 2)
@@ -657,11 +654,11 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
     prev_t = 0
     while True:
         modFiles = checkFileMods(watchList)
-        if 'comm.log' in modFiles and runMode == 'pilot':
+        if 'comm.log' in modFiles and request.app.ctx.runMode == 'pilot':
             data = commFile.read().decode('utf-8', errors='ignore')
             if data:
                 await ws.send(data)
-        elif 'cmdfile' in modFiles and runMode == 'pilot':
+        elif 'cmdfile' in modFiles and request.app.ctx.runMode == 'pilot':
             filename = f'{gliderPath(glider,request)}/cmdfile'
             with open(filename, 'rb') as file:
                 data = "CMDFILE=" + file.read().decode('utf-8', errors='ignore')
@@ -816,21 +813,23 @@ def buildFileList(path):
 
     return (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly)
 
+@app.listener("before_server_start")
+async def initApp(app):
+    app.ctx.missionTable = buildMissionTable(app)
+    app.ctx.runMode = 'pilot'
+    if len(sys.argv) == 2 and sys.argv[1] == 'public':
+        app.ctx.runMode = 'public'
+
 if __name__ == '__main__':
     os.chdir(app.config.ROOTDIR)
-
-    runMode = "pilot"
 
     if len(sys.argv) == 2:
         if sys.argv[1] == "public":
             port = 443
-            runMode = "public"
         else:
             port = int(sys.argv[1])
     else:
         port = 20001
-
-    app.ctx.missionTable = buildMissionTable(app)
 
     if port == 443:
         ssl = {
