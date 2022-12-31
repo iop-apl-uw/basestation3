@@ -65,9 +65,10 @@ def checkToken(request, users, groups):
             print(f'{user} authorized')
             return True
         if 'groups' in token:
-            # search the lift of groups that this user is auth'd for
+            # search the list of groups that this user is auth'd for
+            # or check if this user has root
             for g in token['groups'].split(','):
-                if g in groups:
+                if g == 'root' or g in groups:
                     print(f'{g} authorized')
                     return True
 
@@ -746,7 +747,7 @@ def buildMissionTable(app):
                 if 'users=' in pieces[i]:
                     users = pieces[i].strip().split('=')[1].split(',')
                 if 'groups=' in pieces[i]:
-                    link = pieces[i].strip().split('=')[1].split(',')
+                    groups = pieces[i].strip().split('=')[1].split(',')
                 if 'link=' in pieces[i]:
                     link = pieces[i].strip().split('=')[1]
     
