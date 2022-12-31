@@ -65,9 +65,10 @@ def checkToken(request, users, groups):
             print(f'{user} authorized')
             return True
         if 'groups' in token:
-            # search the lift of groups that this user is auth'd for
+            # search the list of groups that this user is auth'd for
+            # or check if this user has root
             for g in token['groups'].split(','):
-                if g in groups:
+                if g == 'root' or g in groups:
                     print(f'{g} authorized')
                     return True
 
@@ -220,7 +221,7 @@ async def mainHandler(request, glider:int):
 
 @app.route('/dash')
 @app.ext.template("index.html")
-async def indexHandler(request):
+async def dashHandler(request):
     return {"runMode": "pilot"}
 
 @app.route('/')
@@ -746,12 +747,12 @@ def buildMissionTable(app):
                 if 'users=' in pieces[i]:
                     users = pieces[i].strip().split('=')[1].split(',')
                 if 'groups=' in pieces[i]:
-                    link = pieces[i].strip().split('=')[1].split(',')
+                    groups = pieces[i].strip().split('=')[1].split(',')
                 if 'link=' in pieces[i]:
                     link = pieces[i].strip().split('=')[1]
     
             glider = int(parts[0][2:])
-            missionTable.append({"status": satus, "glider": glider, "mission": mission, "users": users, "groups": groups, "link": link })
+            missionTable.append({"status": status, "glider": glider, "mission": mission, "users": users, "groups": groups, "link": link })
 
     print(missionTable)
     return missionTable
