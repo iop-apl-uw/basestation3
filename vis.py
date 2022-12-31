@@ -220,7 +220,7 @@ async def mainHandler(request, glider:int):
 
 @app.route('/dash')
 @app.ext.template("index.html")
-async def indexHandler(request):
+async def dashHandler(request):
     return {"runMode": "pilot"}
 
 @app.route('/')
@@ -751,7 +751,7 @@ def buildMissionTable(app):
                     link = pieces[i].strip().split('=')[1]
     
             glider = int(parts[0][2:])
-            missionTable.append({"status": satus, "glider": glider, "mission": mission, "users": users, "groups": groups, "link": link })
+            missionTable.append({"status": status, "glider": glider, "mission": mission, "users": users, "groups": groups, "link": link })
 
     print(missionTable)
     return missionTable
