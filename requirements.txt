@@ -1,11 +1,11 @@
 # For Plotly persistence
-kaleido>=0.0.3.post1 ; platform_machine != 'armv7l'
+kaleido>=0.2.1; platform_machine != 'armv7l'
 matplotlib>=3.2.0
 numpy>=1.19.1
 #gsw==3.3.1
-gsw==3.6.16.post1
+gsw==3.6.16
 seawater==3.3.4
-plotly>=4.9.0
+plotly>=5.11.0
 scipy>=1.9.0
 cartopy
 # For SlackPost and InReachSend
@@ -30,7 +30,7 @@ jinja2
 sanic_ext
 uuid
 passlib
-jwt
+PyJWT
 #
 # Below here - not included in released version
 #

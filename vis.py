@@ -30,15 +30,16 @@ import jwt
 from passlib.hash import sha256_crypt
 import threading
 import uuid
+from types import SimpleNamespace
 
 lock = threading.Lock()
 
-missionTable = []
 urlMessages = []
 
 watchFiles = ['comm.log', 'cmdfile'] # rely on .urls vs '.completed']
 
-app = sanic.Sanic("SGpilot")            
+d = { "missionTable": [] }
+app = sanic.Sanic("SGpilot", ctx=SimpleNamespace(**d))
 if 'SECRET' not in app.config:
     app.config.SECRET = "SECRET"
 if 'MISSIONS_FILE' not in app.config:
@@ -49,8 +50,6 @@ if 'ROOTDIR' not in app.config:
     app.config.ROOTDIR = "/home/seaglider"
 
 app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
-
-print(app.config)
 
 compress = sanic_gzip.Compress()
 
@@ -73,9 +72,11 @@ def checkToken(request, user):
     return False
 
 def checkGliderMission(request, glider, mission):
-    global missionTable
+    if (len(request.app.ctx.missionTable) == 0):
+        request.app.ctx.missionTable = buildMissionTable(app)
+        print("built table")
 
-    for m in missionTable:
+    for m in request.app.ctx.missionTable:
         if m['glider'] == glider and m['mission'] == mission and m['auth'] is not None: 
             return checkToken(request, m['auth'])
         elif m['glider'] == glider and m['mission'] == mission:
@@ -711,7 +712,6 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 #
 
 def buildMissionTable(app):
-    global missionTable
 
     missionTable = []
     with open(app.config.MISSIONS_FILE, "r") as file:
@@ -735,15 +735,23 @@ def buildMissionTable(app):
             missionTable.append({ "glider": glider, "mission": mission, "auth": user})
 
     print(missionTable)
+    return missionTable
  
 def buildAuthTable(request, mask):
+    if len(request.app.ctx.missionTable) == 0:
+        request.app.ctx.missionTable = buildMissionTable(request.app)
+        print("built table")
+
     opTable = []
-    for m in missionTable:
+    for m in request.app.ctx.missionTable:
         if checkGliderMission(request, m['glider'], m['mission']) == False:
             continue
 
+        cmdfile = f"sg{m['glider']:03d}/cmdfile"
+        if not os.path.exists(cmdfile):
+            continue
+
         if m['mission'] == None:
-            cmdfile = f"sg{m['glider']:03d}/cmdfile"
             opTable.append({"mission": '', "glider": m['glider'], "cmdfile": os.path.getmtime(cmdfile)})
         else: 
             opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None})
@@ -821,16 +829,16 @@ if __name__ == '__main__':
     else:
         runMode = 'public'
 
-    buildMissionTable(app)
-
-    # if runMode == 'public':
-    #     ssl = {
-    #         "cert": "/path/to/fullchain.pem",
-    #         "key": "/path/to/privkey.pem",
-    #         # "password": "for encrypted privkey file",   # Optional
-    #     }
-    #     app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
-    # else:
-
-    app.run(host='0.0.0.0', port=port, access_log=True, debug=False)
+    app.ctx.missionTable = buildMissionTable(app)
+    print(app.ctx.missionTable)
+    runMode = "public"
+    if runMode == 'public':
+        ssl = {
+            "cert": "/etc/letsencrypt/live/www.seaglider.pub/fullchain.pem",
+            "key": "/etc/letsencrypt/live/www.seaglider.pub/privkey.pem",
+            # "password": "for encrypted privkey file",   # Optional
+        }
+        app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=True)
+    else:
+        app.run(host='0.0.0.0', port=port, access_log=True, debug=False)
 
