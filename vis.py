@@ -127,8 +127,10 @@ def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
 
     return data
 
-def gliderPath(glider, request):
-    if 'mission' in request.args and request.args['mission'] != 'current' and len(request.args['mission']) > 0:
+def gliderPath(glider, request, mission=None):
+    if mission:
+        return f'sg{glider:03d}/{mission}'
+    elif 'mission' in request.args and request.args['mission'] != 'current' and len(request.args['mission']) > 0:
         mission = request.args['mission'][0]
         return f'sg{glider:03d}/{mission}'
     else:
@@ -729,13 +731,14 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
             for m in msg:
                 await ws.send(f"NEW={o['glider']},{m['content']}")
                 
-            cmdfile = f"sg{o['glider']:03d}/cmdfile"
-            t = await aiofiles.os.path.getctime(cmdfile)
-            if o['cmdfile'] != None and t > o['cmdfile']:
-                directive = summary.getCmdfileDirective(cmdfile)
-                print(f"{o['glider']} cmdfile")
-                await ws.send(f"NEW={o['glider']},cmdfile,{directive}")
-                o['cmdfile'] = t
+            if o['cmdfile'] is not None:
+                cmdfile = f"sg{o['glider']:03d}/cmdfile"
+                t = await aiofiles.os.path.getctime(cmdfile)
+                if t > o['cmdfile']:
+                    directive = summary.getCmdfileDirective(cmdfile)
+                    print(f"{o['glider']} cmdfile")
+                    await ws.send(f"NEW={o['glider']},cmdfile,{directive}")
+                    o['cmdfile'] = t
 
         await asyncio.sleep(2) 
 #
@@ -787,7 +790,7 @@ async def buildAuthTable(request, mask):
         if status == False:
             continue
 
-        cmdfile = f"sg{m['glider']:03d}/cmdfile"
+        cmdfile = f"{gliderPath(m['glider'], None, mission=m['mission'])}/cmdfile"
         if not await aiofiles.os.path.exists(cmdfile):
             continue
 
@@ -797,6 +800,7 @@ async def buildAuthTable(request, mask):
         else: 
             opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None})
 
+    print(opTable)
     return opTable
 
 async def buildPlotsList(path, dive):
