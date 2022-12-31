@@ -819,19 +819,20 @@ def buildFileList(path):
 if __name__ == '__main__':
     os.chdir(app.config.ROOTDIR)
 
+    runMode = "pilot"
+
     if len(sys.argv) == 2:
-        port = int(sys.argv[1])
+        if sys.argv[1] == "public":
+            port = 443
+            runMode = "public"
+        else:
+            port = int(sys.argv[1])
     else:
         port = 20001
 
-    if "vis.py" in sys.argv[0]:
-        runMode = 'pilot'
-    else:
-        runMode = 'public'
-
     app.ctx.missionTable = buildMissionTable(app)
 
-    if runMode == 'public':
+    if port == 443:
         ssl = {
             "cert": "/etc/letsencrypt/live/www.seaglider.pub/fullchain.pem",
             "key": "/etc/letsencrypt/live/www.seaglider.pub/privkey.pem",
