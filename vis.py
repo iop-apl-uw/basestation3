@@ -710,13 +710,14 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
             for m in msg:
                 await ws.send(f"NEW={o['glider']},{m['content']}")
                 
-            cmdfile = f"sg{o['glider']:03d}/cmdfile"
-            t = os.path.getmtime(cmdfile)
-            if o['cmdfile'] != None and t > o['cmdfile']:
-                directive = summary.getCmdfileDirective(cmdfile)
-                print(f"{o['glider']} cmdfile")
-                await ws.send(f"NEW={o['glider']},cmdfile,{directive}")
-                o['cmdfile'] = t
+            if o['cmdfile'] is not None:
+                cmdfile = f"sg{o['glider']:03d}/cmdfile"
+                t = os.path.getmtime(cmdfile)
+                if t > o['cmdfile']:
+                    directive = summary.getCmdfileDirective(cmdfile)
+                    print(f"{o['glider']} cmdfile")
+                    await ws.send(f"NEW={o['glider']},cmdfile,{directive}")
+                    o['cmdfile'] = t
 
         await asyncio.sleep(2) 
 #
@@ -767,7 +768,11 @@ def buildAuthTable(request, mask):
         if checkGliderMission(request, m['glider'], m['mission']) == False:
             continue
 
-        cmdfile = f"sg{m['glider']:03d}/cmdfile"
+        if m['mission'] is None:
+            cmdfile = f"sg{m['glider']:03d}/cmdfile"
+        else:
+            cmdfile = f"sg{m['glider']:03d}/{m['mission']}/cmdfile"
+
         if not os.path.exists(cmdfile):
             continue
 
@@ -776,6 +781,7 @@ def buildAuthTable(request, mask):
         else: 
             opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None})
 
+    print(opTable)
     return opTable
 
 def buildPlotsList(path, dive):
