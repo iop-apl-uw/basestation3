@@ -30,7 +30,7 @@ jinja2
 sanic_ext
 uuid
 passlib
-jwt
+PyJWT
 #
 # Below here - not included in released version
 #
