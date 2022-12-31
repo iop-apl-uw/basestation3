@@ -106,6 +106,7 @@ def collectSummary(glider, path):
     out = {}
     out['name'] = int(data['log_glider'])
     out['dive'] = int(data['dive'])
+    out['length'] = int(data['total_flight_time_s'])
     out['end']  = data['log_gps_time']
     out['next'] = data['log_gps_time'] + data['total_flight_time_s']
 
