@@ -830,15 +830,14 @@ if __name__ == '__main__':
         runMode = 'public'
 
     app.ctx.missionTable = buildMissionTable(app)
-    print(app.ctx.missionTable)
-    runMode = "public"
+
     if runMode == 'public':
         ssl = {
             "cert": "/etc/letsencrypt/live/www.seaglider.pub/fullchain.pem",
             "key": "/etc/letsencrypt/live/www.seaglider.pub/privkey.pem",
             # "password": "for encrypted privkey file",   # Optional
         }
-        app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=True)
+        app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
     else:
-        app.run(host='0.0.0.0', port=port, access_log=True, debug=False)
+        app.run(host='0.0.0.0', port=port, access_log=True, debug=True)
 
