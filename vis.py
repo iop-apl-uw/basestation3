@@ -801,7 +801,6 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 
     opTable = await buildAuthTable(request, mask)
     prev_t = 0 
-    print(opTable)
     while True:
         lock.acquire()
         purgeMessages(request)
