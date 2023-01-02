@@ -799,8 +799,10 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
 # @authorized(protections=['pilot'])
 async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 
+    sanic.log.logger.debug("watchHandler start")
     opTable = await buildAuthTable(request, mask)
     prev_t = 0 
+    await ws.send(f"START") # send something to ack the connection opened
     while True:
         lock.acquire()
         purgeMessages(request)
@@ -829,6 +831,8 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
                     o['cmdfile'] = t
 
         await asyncio.sleep(2) 
+
+    sanic.log.logger.debug('watchHandler exit') # never gets here
 #
 #  other stuff (non-Sanic)
 #
