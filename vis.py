@@ -5,20 +5,15 @@ import time
 import os
 import os.path
 from parse import parse
-import glob
-from anyio import Path
-#import _thread
-#from watchdog.observers import Observer
-#from watchdog.events import PatternMatchingEventHandler
-# import sqlite3
-import aiosqlite
 import sys
 from zipfile import ZipFile
 from io import BytesIO
-import sanic
+from anyio import Path
+import aiosqlite
 import aiofiles
 import asyncio
 import aiohttp
+import sanic
 import sanic_gzip
 import sanic_ext
 from functools import wraps
@@ -439,7 +434,6 @@ async def missionsHandler(request, mask:int):
 @app.route('/summary/<glider:int>')
 @authorized()
 async def summaryHandler(request, glider:int):
-    
     msg = await summary.collectSummary(glider, gliderPath(glider,request))
     msg['mission'] = filterMission(glider, request)
     return sanic.response.json(msg)
@@ -448,7 +442,6 @@ async def summaryHandler(request, glider:int):
 @app.route('/status/<glider:int>')
 @authorized()
 async def statusHandler(request, glider:int):
-
     dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
     if await Path(dbfile).exists():
         async with aiosqlite.connect(dbfile) as conn:
@@ -784,7 +777,7 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
                 await ws.send(data)
         elif 'cmdfile' in modFiles:
             filename = f'{gliderPath(glider,request)}/cmdfile'
-            directive = summary.getCmdfileDirective(filename)
+            directive = await summary.getCmdfileDirective(filename)
             await ws.send(f"CMDFILE={directive}")
         else:
             lock.acquire()
@@ -817,7 +810,7 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
                 cmdfile = f"sg{o['glider']:03d}/cmdfile"
                 t = await aiofiles.os.path.getctime(cmdfile)
                 if t > o['cmdfile']:
-                    directive = summary.getCmdfileDirective(cmdfile)
+                    directive = await summary.getCmdfileDirective(cmdfile)
                     sanic.log.logger.debug(f"watch {o['glider']} cmdfile modified")
                     await ws.send(f"NEW={o['glider']},cmdfile,{directive}")
                     o['cmdfile'] = t
