@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="/script/login.css" />
+<link rel="stylesheet" href="/script/dialogs.css" />
 
 <style>
     a:link,.spanClick           {color:#0000ff; text-decoration:none}
@@ -32,7 +32,7 @@
 </style>
 <script src="/script/plotly-latest.min.js"></script>
 <script src="/script/util.js"></script>
-<script src="/script/login.js"></script>
+<script src="/script/dialogs.js"></script>
 <script>
 
     var blurTimer  = false;
@@ -609,6 +609,29 @@
         currElt = 'notifications';
     }
 
+    function loadAbout(mission, org) {
+        var cell, t, tbody, row;
+
+        console.log(mission);
+
+        d = $('aboutContent');
+        t = document.createElement('table');
+        d.appendChild(t);
+        tbody = document.createElement('tbody');
+        t.appendChild(tbody);
+
+        for (k of Object.keys(mission)) {
+            if (mission[k] == null)
+                continue;
+
+            row = tbody.insertRow();
+            cell = row.insertCell(0);
+            cell.innerHTML = k;
+            cell = row.insertCell(1);
+            cell.innerHTML = mission[k];
+        } 
+    }
+
     function loadStatus(glider, dive) {
         fetch(`/status/${glider}${mission()}`)
         .then(res => res.text())
@@ -637,6 +660,8 @@
             sgplots = data['sgplots'];
             sgplotlyplots = data['sgplotly'];
             buildTable(glider, -1);
+            console.log(data);
+            loadAbout(data.mission, data.organization);
         })
         .catch(error => {
             console.log(error);
@@ -1477,6 +1502,9 @@
 
 <html>
 <body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
+
+ <a href="/">Index</a> <b>&#124;</b> <a href="/dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>
+
 <div style="position: relative;">
 
 <div id="toolbar" style="position:absolute; left:0 top:0; width:50px; height:894px;">
@@ -1689,7 +1717,7 @@
 
 </div> 
 
-{% include "login.html" %}
+{% include "dialogs.html" %}
 
 </body>
 

@@ -15,11 +15,21 @@
 .form-popup {
   display: none;
   position: fixed;
-  margin-left: -100px;
+  /* margin-left: -100px; */
   top: 100px;
-  right: 50%;
+  left: 15%;
   border: 3px solid #555;
-  z-index: 9;
+  z-index: 200;
+  background-color: #777;
+  padding: 10px;
+}
+
+.form-content {
+  /* max-width: 400px; */
+  max-width: 400px;
+  min-width: 200px;
+  padding: 10px;
+  background-color: #777;
 }
 
 /* Add styles to the form container */
@@ -45,7 +55,7 @@
 }
 
 /* Set a style for the submit/login button */
-.form-container .btn {
+.form-container .btn, .form-content .btn {
   background-color: #04AA6D;
   color: white;
   padding: 8px 8px;
@@ -57,7 +67,7 @@
 }
 
 /* Add a red background color to the cancel button */
-.form-container .cancel {
+.form-container .cancel, .form-content .cancel {
   background-color: red;
 }
 

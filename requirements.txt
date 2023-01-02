@@ -32,6 +32,7 @@ uuid
 passlib
 PyJWT
 aiosqlite
+anyio
 #
 # Below here - not included in released version
 #

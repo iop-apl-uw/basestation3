@@ -97,11 +97,6 @@ async def collectSummary(glider, path):
 
     cmdfileDirective = await getCmdfileDirective(cmdfile)
 
-    end_t = 0
-    cal_constants = CalibConst.getSGCalibrationConstants(calibfile)
-    if 'end_date' in cal_constants:
-        end_t = datetime.strptime(cal_constants['end_date'], "%Y-%m-%d").timestamp()
-
     out = {}
     out['name'] = int(data['log_glider'])
     out['dive'] = int(data['dive'])
@@ -147,7 +142,6 @@ async def collectSummary(glider, path):
     out['enduranceDays'] = data['energy_days_remain_Modeled']
     out['enduranceDives'] = data['energy_dives_remain_Modeled']
     out['missionStart'] = start['log_gps2_time']
-    out['missionEnd'] = end_t
     
     return out
 

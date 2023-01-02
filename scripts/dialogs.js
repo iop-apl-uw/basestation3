@@ -6,6 +6,13 @@
         $('loginForm').style.display = "none";
     } 
 
+    function closeAboutForm() {
+        $('aboutForm').style.display = "none";
+    } 
+    function openAboutForm() {
+        $('aboutForm').style.display = "block";
+    } 
+
     function submitLoginForm() {
         var formData = new FormData($('formLoginForm'));
         var json = JSON.stringify(Object.fromEntries(formData));

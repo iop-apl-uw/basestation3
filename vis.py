@@ -1,23 +1,18 @@
 #!/usr/bin/env python3.9
 
-import json
+from orjson import dumps
 import time
 import os
 import os.path
 from parse import parse
 import glob
+from anyio import Path
 #import _thread
 #from watchdog.observers import Observer
 #from watchdog.events import PatternMatchingEventHandler
 # import sqlite3
 import aiosqlite
-import tempfile
-import subprocess
 import sys
-import LogHTML
-import summary
-import ExtractBinnedProfiles
-import ExtractTimeseries
 from zipfile import ZipFile
 from io import BytesIO
 import sanic
@@ -32,13 +27,25 @@ from passlib.hash import sha256_crypt
 import threading
 import uuid
 from types import SimpleNamespace
+import yaml
+import LogHTML
+import summary
+import ExtractBinnedProfiles
+import ExtractTimeseries
 
 lock = threading.Lock()
 
 watchFiles = ['comm.log', 'cmdfile'] # rely on .urls vs '.completed']
 
-d = { "missionTable": [], "runMode": 'pilot', "urlMessages": [] }
-app = sanic.Sanic("SGpilot", ctx=SimpleNamespace(**d))
+d = { "missionTable": [],   # list of missions (each a dict)
+      "userTable": {},      # dict (keyed by username) of dict
+      "runMode": 'private', 
+      "urlMessages": [], 
+      "organization": {},
+    }
+
+app = sanic.Sanic("SGpilot", ctx=SimpleNamespace(**d), dumps=dumps)
+
 if 'SECRET' not in app.config:
     app.config.SECRET = "SECRET"
 if 'MISSIONS_FILE' not in app.config:
@@ -48,49 +55,71 @@ if 'USERS_FILE' not in app.config:
 if 'ROOTDIR' not in app.config:
     app.config.ROOTDIR = "/home/seaglider"
 
+PERM_REJECT = 0
+PERM_VIEW   = 1
+PERM_PILOT  = 2
+
 app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
 compress = sanic_gzip.Compress()
 
+publicMissionFields = {"started", "ended", "planned",
+                       "orgname", "orglink", "contact", "email",
+                       "project", "link", "comment", "reason"} # making this a dict does a set intersection
+
+pilotModes = ['private', 'pilot']
+
 # checks whether the auth token authorizes a user or group in users, groups
-def checkToken(request, users, groups):
+def checkToken(request, users, groups, pilots, pilotgroups):
     if not 'token' in request.cookies:
         return False
 
+    perm = PERM_REJECT
     try:
          token = jwt.decode(request.cookies.get("token"), request.app.config.SECRET, algorithms=["HS256"])
     except jwt.exceptions.InvalidTokenError:
-        return False
+        return perm
     else:
-        if 'user' in token and token['user'] in users:
-            print(f"{token['user']} authorized")
-            return True
-        if 'groups' in token:
+        if users and 'user' in token and token['user'] in users:
+            sanic.log.logger.debug(f"{token['user']} authorized [{request.path}]")
+            perm = PERM_VIEW
+        elif groups and 'groups' in token:
             # search the list of groups that this user is auth'd for
             # or check if this user has root
-            for g in token['groups'].split(','):
+            for g in token['groups']:
                 if g == 'root' or g in groups:
-                    print(f'{g} authorized')
-                    return True
+                    sanic.log.logger.debug(f"{token['user']} authorized based on group {g} [{request.path}]")
+                    perm = PERM_VIEW
+                    break
 
-    print('rejected')
-    return False
+        if pilots and 'user' in token and token['user'] in pilots:
+            perm = PERM_PILOT
+            sanic.log.logger.debug(f"{token['user']} authorized to pilot [{request.path}]")
+        elif pilotgroups and 'groups' in token:
+            # search the list of groups that this user is auth'd for
+            # or check if this user has root
+            for g in token['groups']:
+                if g in pilotgroups:
+                    sanic.log.logger.debug(f"{token['user']} authorized to pilot based on group {g} [{request.path}]")
+                    perm = PERM_PILOT
+                    break
+
+    return perm
 
 # checks whether access is authorized for the glider,mission
-async def checkGliderMission(request, glider, mission):
-    if (len(request.app.ctx.missionTable) == 0):
-        request.app.ctx.missionTable = await buildMissionTable(app)
-        print("built table")
+def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
 
     for m in request.app.ctx.missionTable:
-        if m['glider'] == glider and m['mission'] == mission and (m['users'] is not None or m['groups'] is not None): 
-            return checkToken(request, m['users'], m['groups'])
+        if m['glider'] == glider and m['mission'] == mission and \
+            (m['users'] is not None or m['groups'] is not None \
+             or m['pilotusers'] is not None or m['pilotgroups'] is not None): 
+            return checkToken(request, m['users'], m['groups'], m['pilotusers'], m['pilotgroups'])
         elif m['glider'] == glider and m['mission'] == mission:
-            return True
+            return PERM_VIEW
 
     # no matching mission in table - do not allow access
-    print(f'rejecting for {glider} {mission} for no mission entry')
-    return False
+    sanic.log.logger.debug(f'rejecting {glider} {mission} for no mission entry')
+    return PERM_REJECT
 
 def authorized(protections=None):
     def decorator(f):
@@ -99,18 +128,32 @@ def authorized(protections=None):
             # run some method that checks the request
             # for the client's authorization status
 
+            defaultPerm = PERM_VIEW
+
+            # we never allow access to pilot APIs when running in public mode
             if protections and 'pilot' in protections and request.app.ctx.runMode == 'public':
-                print("rejecting based on pilot")
+                sanic.log.logger.debug("rejecting no pilot APIs while running public")
                 return sanic.response.text("Page not found: {}".format(request.path), status=404)
-            elif protections and 'pilot' in protections: # we're running in pilot mode and this is pilot only 
-                return await f(request, *args, **kwargs)
-            
+            # on an open pilot server (e.g., non-public server running 443) we require 
+            # positive authentication as a pilot against mission specified list of 
+            # allowed pilots (and pilotgroups). Access to missions without pilots: and/or pilotgroups: specs
+            # will be denied for all. 
+            elif protections and 'pilot' in protections and request.app.ctx.runMode == 'pilot':
+                requirePilot = True
+            # if we're running a private instance of a pilot server then we only require authentication
+            # as a pilot if the pilots/pilotgroups spec is given (similar to how users work)
+            elif request.app.ctx.runMode == 'private' and protections and 'pilot' in protections:
+                requirePilot = True
+                defaultPerm = PERM_PILOT 
+            else:
+                requirePilot = False
+
             glider = kwargs['glider'] if 'glider' in kwargs else None
             mission = request.args['mission'][0] if 'mission' in request.args else None
             
             # this will always fail and return not authorized if glider is None
-            status = await checkGliderMission(request, glider, mission)
-            if status == False:
+            status = checkGliderMission(request, glider, mission, perm=defaultPerm)
+            if status == PERM_REJECT or (requirePilot and status < PERM_PILOT):
                 return sanic.response.text("authorization failed")
              
             # the user is authorized.
@@ -130,12 +173,25 @@ def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
 def gliderPath(glider, request, mission=None):
     if mission:
         return f'sg{glider:03d}/{mission}'
-    elif 'mission' in request.args and request.args['mission'] != 'current' and len(request.args['mission']) > 0:
+    elif request and 'mission' in request.args and request.args['mission'] != 'current' and len(request.args['mission']) > 0:
         mission = request.args['mission'][0]
         return f'sg{glider:03d}/{mission}'
     else:
         return f'sg{glider:03d}'
 
+def filterMission(gld, request, mission=None):
+    if mission == None and \
+       request and \
+       'mission' in request.args and \
+       request.args['mission'] != 'current' and \
+       len(request.args['mission']) > 0:
+
+        mission = request.args['mission'][0]
+    
+    m = next(filter(lambda d: d['glider'] == gld and d['mission'] == mission, request.app.ctx.missionTable), None)
+    m = { k: m[k] for k in m.keys() & publicMissionFields } if m else None
+
+    return m
 #
 # GET handlers - most of the API
 #
@@ -154,21 +210,15 @@ async def authHandler(request):
     username = request.json.get("username", None)
     password = request.json.get("password", None)
 
-    async with aiofiles.open(request.app.config.USERS_FILE, "r") as file:
-        async for line in file:
-            if line[0] == '#':
-                continue
-            parts = line.split(' ')
-            if len(parts) != 3:
-                continue
-            if parts[0] == username and sha256_crypt.verify(password, parts[2].strip()):
-                token = jwt.encode({ "user": username, "groups": parts[1].strip() }, request.app.config.SECRET)
-                response = sanic.response.text("authorization ok")
-                response.cookies["token"] = token
-                response.cookies["token"]["max-age"] = 86400
-                response.cookies["token"]["samesite"] = "Strict"
-                response.cookies["token"]["httponly"] = True
-                return response
+    for user,prop in request.app.ctx.userTable.items():
+        if user == username and sha256_crypt.verify(password, prop['password']):
+            token = jwt.encode({ "user": username, "groups": prop['groups']}, request.app.config.SECRET)
+            response = sanic.response.text("authorization ok")
+            response.cookies["token"] = token
+            response.cookies["token"]["max-age"] = 86400
+            response.cookies["token"]["samesite"] = "Strict"
+            response.cookies["token"]["httponly"] = True
+            return response
 
     return sanic.response.text('authorization failed') 
 
@@ -221,7 +271,11 @@ async def divHandler(request, which: str, glider: int, dive: int, image: str):
 @app.ext.template("vis.html")
 async def mainHandler(request, glider:int):
     # return await sanic_ext.render("vis.html", context={"runMode": request.app.ctx.runMode}, status=400)
-    return {"runMode": request.app.ctx.runMode}
+    runMode = request.app.ctx.runMode
+    if runMode == 'private':
+        runMode = 'pilot'
+
+    return {"runMode": runMode}
 
 @app.route('/dash')
 @app.ext.template("index.html")
@@ -263,12 +317,27 @@ async def dataHandler(request, file:str):
 
 @app.route('/proxy/<url:path>')
 # This is not a great idea to leave this open as a public proxy server,
-# but we need it for all layers to work with public maps t the moment.
+# but we need it for all layers to work with public maps at the moment.
 # Need to evaluate what we lose if we turn proxy off or find another solution.
 # Or limit the dictionary of what urls can be proxied ...
 # NOAA forecast, NIC ice edges, iop SA list, opentopo GEBCO bathy
 # @authorized(protections=['pilot'])
 async def proxyHandler(request, url):
+    allowed = ['https://api.opentopodata.org/v1/gebco2020',
+               'https://marine.weather.gov/MapClick.php',
+               'https://iop.apl.washington.edu/', 
+               'https://usicecenter.gov/File/DownloadCurrent?pId',
+              ]
+
+    found = False
+    for x in allowed:
+        if url.startswith(x):
+            found = True
+            break
+
+    if found == False:
+        return sanic.response.text(f"Page not found: {request.path}", status=404)
+          
     if request.args and len(request.args) > 0:
         url = url + '?' + request.query_string
     async with aiohttp.ClientSession() as session:
@@ -280,7 +349,7 @@ async def proxyHandler(request, url):
 @app.route('/plots/<glider:int>/<dive:int>')
 @authorized()
 async def plotsHandler(request, glider:int, dive:int):
-    (dvplots, plotlyplots) = await buildPlotsList(gliderPath(glider,request), dive)
+    (dvplots, plotlyplots) = await buildDivePlotList(gliderPath(glider,request), dive)
     message = {}
     message['glider']      = f'SG{glider:03d}'
     message['dive']        = dive
@@ -363,19 +432,37 @@ async def deltasHandler(request, glider: int, dive: int):
 
 @app.route('/missions/<mask:str>')
 async def missionsHandler(request, mask:int):
-    return sanic.response.json(await buildAuthTable(request, mask))
+    table = await buildAuthTable(request, mask)
+    msg = { "missions": table, "organization": request.app.ctx.organization }
+    return sanic.response.json(msg)
  
 @app.route('/summary/<glider:int>')
 @authorized()
 async def summaryHandler(request, glider:int):
+    
     msg = await summary.collectSummary(glider, gliderPath(glider,request))
+    msg['mission'] = filterMission(glider, request)
     return sanic.response.json(msg)
 
-# this does setup and might get called after .completed is touched
+# this does setup and is generally only called once at page load
 @app.route('/status/<glider:int>')
 @authorized()
 async def statusHandler(request, glider:int):
-    (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly) = await buildFileList(gliderPath(glider, request))
+
+    dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+    if await Path(dbfile).exists():
+        async with aiosqlite.connect(dbfile) as conn:
+            cur = await conn.cursor()
+            try:
+                await cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
+            except aiosqlite.OperationalError:
+                return sanic.response.text('no table')
+
+            maxdv = (await cur.fetchone())[0]
+    else:
+        return sanic.response.text('file not found')
+
+    (engplots, sgplots, engplotly, sgplotly) = await buildMissionPlotList(gliderPath(glider, request))
 
     message = {}
     message['glider'] = f'SG{glider:03d}'
@@ -384,9 +471,9 @@ async def statusHandler(request, glider:int):
     message['sgplots'] = sgplots
     message['engplotly'] = engplotly;
     message['sgplotly'] = sgplotly;
-    # message['dvplots'] = dvplots
-    # message['plotlyplots'] = plotlyplots
-    print(message)
+    message['organization'] = request.app.ctx.organization
+    
+    message['mission'] = filterMission(glider, request) 
     return sanic.response.json(message)
 
 @app.route('/control/<glider:int>/<which:str>')
@@ -421,7 +508,7 @@ async def controlHandler(request, glider:int, which:str):
                         latest = j.fixed[0]
                         call = -1
             except Exception as e:
-                print(str(e))
+                sanic.log.logger.info(f"controlHandler: {e}")
                 continue
 
         if latest > -1:
@@ -456,7 +543,6 @@ async def dbHandler(request, glider:int, dive:int):
     else:
         q = q + " ORDER BY dive ASC;"
 
-    print(dbfile)
     async with aiosqlite.connect(dbfile) as conn:
         conn.row_factory = rowToDict # not async but called from async fetchall
         cur = await conn.cursor()
@@ -478,7 +564,6 @@ async def dbvarsHandler(request, glider:int):
     if not await aiofiles.os.path.exists(dbfile):
         return sanic.response.text('no db')
 
-    print(dbfile)
     async with aiosqlite.connect(dbfile) as conn:
         cur = await conn.cursor()
         try:
@@ -576,20 +661,17 @@ async def saveHandler(request, glider:int, which:str):
 
     path = gliderPath(glider, request)
     if which in validator:
-        tempfile.tempdir = path
-        tmp = tempfile.mktemp()
         try:
-            async with aiofiles.open(tmp, 'w') as file:
+            async with aiofiles.tempfile.NamedTemporaryFile('w') as file:
                 await file.write(message['contents'])
                 await file.close()
-                print(message['contents'])
-                print("saved to %s" % tmp)
+                sanic.log.logger.debug("cosaved to %s" % file.name)
 
                 if 'force' in message and message['force'] == 1:
-                    cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {tmp}"
+                    cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {file.name}"
                 else:
-                    cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {tmp}"
-                print(cmd)
+                    cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {file.name}"
+                
                 proc = await asyncio.create_subprocess_shell(
                     cmd, 
                     stdout=asyncio.subprocess.PIPE, 
@@ -676,7 +758,7 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
         await ws.send('no')
         return
 
-    if request.app.ctx.runMode == 'pilot':
+    if request.app.ctx.runMode in pilotModes:
         commFile = await aiofiles.open(filename, 'rb')
         if which == 'init':
             await commFile.seek(-10000, 2)
@@ -690,11 +772,11 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
     prev_t = 0
     while True:
         modFiles = await checkFileMods(watchList)
-        if 'comm.log' in modFiles and request.app.ctx.runMode == 'pilot':
+        if 'comm.log' in modFiles and request.app.ctx.runMode in pilotModes:
             data = await commFile.read().decode('utf-8', errors='ignore')
             if data:
                 await ws.send(data)
-        elif 'cmdfile' in modFiles and request.app.ctx.runMode == 'pilot':
+        elif 'cmdfile' in modFiles and request.app.ctx.runMode in pilotModes:
             filename = f'{gliderPath(glider,request)}/cmdfile'
             async with aiofiles.open(filename, 'rb') as file:
                 body = await file.read().decode('utf-8', errors='ignore')
@@ -736,7 +818,7 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
                 t = await aiofiles.os.path.getctime(cmdfile)
                 if t > o['cmdfile']:
                     directive = summary.getCmdfileDirective(cmdfile)
-                    print(f"{o['glider']} cmdfile")
+                    sanic.log.logger.debug(f"watch {o['glider']} cmdfile modified")
                     await ws.send(f"NEW={o['glider']},cmdfile,{directive}")
                     o['cmdfile'] = t
 
@@ -745,49 +827,96 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 #  other stuff (non-Sanic)
 #
 
+async def buildUserTable(app):
+
+    if await aiofiles.os.path.exists(app.config.USERS_FILE):
+        async with aiofiles.open(app.config.USERS_FILE, "r") as f:
+            d = await f.read()
+            try:
+                x = yaml.safe_load(d)
+            except Exception as e:
+                sanic.log.logger.info(f"users parse error {e}")
+                x = {}
+    else:
+        x = {}
+
+    userDictKeys = [ "groups", "password" ]
+
+    dflts = None
+    for user in x.keys():
+        if user == 'default':
+            dflts = x[user]
+            continue
+        
+        for uk in userDictKeys:
+            if uk not in x[user].keys():
+                x[user].update( { uk: dflts[uk] if uk in dflts else None } )
+
+    app.ctx.userTable = x
+    return x
+
 async def buildMissionTable(app):
 
-    missionTable = []
-    async with aiofiles.open(app.config.MISSIONS_FILE, "r") as file:
-        async for line in file:
-            if line[0] == '#':
-                continue
+    if await aiofiles.os.path.exists(app.config.MISSIONS_FILE):
+        async with aiofiles.open(app.config.MISSIONS_FILE, "r") as f:
+            d = await f.read()
+            x = yaml.safe_load(d)
+    else:
+        x = {}
 
-            pieces = line.split(' ')
-            status = pieces[0].strip()
+    if 'organization' not in x:
+        x['organization'] = {}
+    if 'missions' not in x:
+        x['missions'] = []
 
-            parts = pieces[1].strip().split('/')
-            if len(parts) == 1:
-                mission = None
-            else:
-                mission = parts[1].strip()
- 
-            users  = None
-            groups = None
-            link   = None
-            for i in range(2,len(pieces)):
-                if 'users=' in pieces[i]:
-                    users = pieces[i].strip().split('=')[1].split(',')
-                if 'groups=' in pieces[i]:
-                    groups = pieces[i].strip().split('=')[1].split(',')
-                if 'link=' in pieces[i]:
-                    link = pieces[i].strip().split('=')[1]
-    
-            glider = int(parts[0][2:])
-            missionTable.append({"status": status, "glider": glider, "mission": mission, "users": users, "groups": groups, "link": link })
+    missionDictKeys = [ "glider", "mission", "users", "pilotusers", "groups", "pilotgroups", 
+                        "started", "ended", "planned", 
+                        "orgname", "orglink", "contact", "email", 
+                        "project", "link", "comment", "reason", 
+                      ]
+    dflts = None
+    missions = []
+    for k in x['missions'].keys():
+        if k == 'defaults':
+            dflts = x['missions'][k]
+            continue
+        
+        pieces = k.split('/')
+        if len(pieces) == 1:
+            mission = None
+        else:
+            mission = pieces[1]
 
-    print(missionTable)
-    return missionTable
+        try:
+            glider = int(pieces[0][2:])
+            x['missions'][k].update({ "glider":glider, "mission":mission })
+            for mk in missionDictKeys:
+                if mk not in x['missions'][k].keys():
+                    if mk in dflts:
+                        x['missions'][k].update( { mk: dflts[mk] })
+                    else:
+                        x['missions'][k].update( { mk: None })
+
+            missions.append(x['missions'][k])
+        except Exception as e:
+            sanic.log.logger.info(f"error on key {k}, {e}")
+            continue 
+        
+    orgDictKeys = ["name", "link", "text", "contact", "email"]
+    for ok in orgDictKeys:
+        if ok not in x['organization'].keys():
+            x['organization'].update( { ok: None } )
+
+    app.ctx.missionTable = missions
+    app.ctx.organization = x['organization']
+
+    return missions
  
 async def buildAuthTable(request, mask):
-    if len(request.app.ctx.missionTable) == 0:
-        request.app.ctx.missionTable = await buildMissionTable(request.app)
-        print("built table")
-
     opTable = []
     for m in request.app.ctx.missionTable:
-        status = await checkGliderMission(request, m['glider'], m['mission'])
-        if status == False:
+        status = checkGliderMission(request, m['glider'], m['mission'])
+        if status == PERM_REJECT:
             continue
 
         cmdfile = f"{gliderPath(m['glider'], None, mission=m['mission'])}/cmdfile"
@@ -800,73 +929,51 @@ async def buildAuthTable(request, mask):
         else: 
             opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None})
 
-    print(opTable)
     return opTable
 
-async def buildPlotsList(path, dive):
-    dvplots = []
-    plotlyplots = []
-    for fullFile in glob.glob('%s/plots/dv%04d_*.png' % (path, dive)):
-        file = os.path.basename(fullFile)
-        if file.startswith('dv'):
-            x = parse('dv{}_{}.png', file)
+async def buildDivePlotList(path, dive):
+    exts = [".png", ".div"] 
+    plots = { ".png": [], ".div": [] }
+    p = Path(path)
+    p = p / 'plots' 
+    
+    async for fpath in p.glob(f"dv{dive:04d}_*.???"):
+        if fpath.suffix in exts:
+            x = parse('dv{}_{}.{}', fpath.name)
             plot = x[1] 
-            dvplots.append(plot)
-            if await aiofiles.os.path.exists(fullFile.replace("png", "div")):
-                plotlyplots.append(plot)
-
-    return (dvplots, plotlyplots)
+            plots[fpath.suffix].append(plot)
+    
+    return (plots[".png"], plots[".div"])
  
-async def buildFileList(path):
+async def buildMissionPlotList(path):
+    plots = { "eng": { ".png": [], ".div": [] }, "sg": { ".png": [], ".div": [] } }
     maxdv = -1
-    dvplots = []
-    engplots = []
-    sgplots = []
-    plotlyplots = []
-    engplotly = []
-    sgplotly = []
-    for fullFile in glob.glob(f'{path}/plots/*.png'):
-        file = os.path.basename(fullFile)
-        if file.startswith('dv'):
-            x = parse('dv{}_{}.png', file)
-            try:
-                dv = int(x[0])
-                plot = x[1] 
-                if dv > maxdv:
-                    maxdv = dv
-                if plot not in dvplots:
-                    dvplots.append(plot)
+    p = Path(path)
+    p = p / 'plots' 
+    exts = ['.div', '.png']
+    for prefix in ['eng', 'sg']:
+        async for fpath in p.glob(f"{prefix}_*.???"):
+            if prefix == 'sg' and '_section_' in fpath.name:
+                continue
 
-                divFile = fullFile.replace("png", "div")
-                if await aiofiles.os.path.exists(divFile):     
-                    plotlyplots.append(plot)           
-            except:
-                pass
+            if fpath.suffix in exts:
+                plot = '_'.join(fpath.stem.split('_')[1:])
+                plots[prefix][fpath.suffix].append(plot)
 
-        elif file.startswith('eng'):
-            pieces = file.split('.')
-            plot = '_'.join(pieces[0].split('_')[1:])
-            engplots.append(plot)
-            divFile = fullFile.replace("png", "div")
-            if await aiofiles.os.path.exists(divFile):
-                engplotly.append(plot)
-
-        elif file.startswith('sg') and "section" not in file:
-            pieces = file.split('.')
-            plot = '_'.join(pieces[0].split('_')[1:])
-            sgplots.append(plot)
-            divFile = fullFile.replace("png", "div")
-            if await aiofiles.os.path.exists(divFile):
-                sgplotly.append(plot)
-
-    return (maxdv, dvplots, engplots, sgplots, plotlyplots, engplotly, sgplotly)
+    return (plots['eng']['.png'], plots['sg']['.png'], plots['eng']['.png'], plots['sg']['.div'])
 
 @app.listener("before_server_start")
 async def initApp(app):
-    app.ctx.missionTable = await buildMissionTable(app)
-    app.ctx.runMode = 'pilot'
+    await buildMissionTable(app)
+    await buildUserTable(app)
+
+    app.ctx.runMode = 'private'
     if len(sys.argv) == 2 and sys.argv[1] == 'public':
         app.ctx.runMode = 'public'
+    elif app._state.port == 443:
+        app.ctx.runMode = 'pilot'
+
+    sanic.log.logger.info(f'runMode {app.ctx.runMode}')
 
 if __name__ == '__main__':
     os.chdir(app.config.ROOTDIR)

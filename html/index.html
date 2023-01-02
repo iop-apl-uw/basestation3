@@ -1,4 +1,11 @@
+<link rel="stylesheet" href="/script/dialogs.css" />
+
 <style>
+    a:link,.spanClick           {color:#0000ff; text-decoration:none}
+    a:visited {color:#0000aa; text-decoration:none}
+    a:hover,.spanClick:hover    {color:#0000aa; text-decoration:underline; cursor:pointer; }
+    a:active,.spanClick:active  {color:#0000aa; text-decoration:underline}
+
     body {
         background-color: #999999;
         color: #000000;
@@ -123,6 +130,7 @@
 
 </style>
 <script src="/script/util.js"></script>
+<script src="/script/dialogs.js"></script>
 <script>
 
     var gliders = [];
@@ -250,8 +258,11 @@
         var indicators = [];
 
         fetch(`/summary/${glider.glider}${mission(glider)}`)
-        .then(res => res.json())
+        .then(res => res.text())
         .then(data => {
+            data = data.replaceAll('NaN', 'null');
+            data = JSON.parse(data)
+ 
             t.classList.add('tile');
             t.onclick = function() { window.open(`/${data.name}${mission(glider)}`, `${data.name}`); };
            
@@ -386,18 +397,20 @@
             h.classList.add(thresh(data.vbdEfficiency, 0.25, 0.4));
             indicators.push(h);
 
-            // mission endurance
-            let days = (data.missionEnd - data.enduranceEndT)/86400;
-            let missionEnd = new Date(data.missionEnd*1000).toISOString().replace('T', ' ').slice(0,-14);
-            h = document.createElement('div');
-            if (days < 0)
-                h.title = `mission endurance ${-days.toFixed(0)} days beyond end-date (${missionEnd})`;
-            else
-                h.title = `mission endurance ${days.toFixed(0)} days short of end-date (${missionEnd})`;
-            h.classList.add('indicator');
-            h.innerHTML = `endur.<br><span style="font-size:11px;">${-days.toFixed(0)} days</span>`;
-            h.classList.add(thresh(days, 30, 0));
-            indicators.push(h);
+            // mission endurance - planned end date must be defined
+            if ('mission' in data && 'planned' in data.mission && data.mission.planned) {
+                planned = new Date(data.mission.planned).getTime() /1000;
+                let days = (planned - data.enduranceEndT)/86400;
+                h = document.createElement('div');
+                if (days < 0)
+                    h.title = `mission endurance ${-days.toFixed(0)} days beyond end-date (${data.mission.planned})`;
+                else
+                    h.title = `mission endurance ${days.toFixed(0)} days short of end-date (${data.mission.planned})`;
+                h.classList.add('indicator');
+                h.innerHTML = `endur.<br><span style="font-size:11px;">${-days.toFixed(0)} days</span>`;
+                h.classList.add(thresh(days, 30, 0));
+                indicators.push(h);
+            }
 
             // internal pressure
             h = document.createElement('div');
@@ -541,6 +554,42 @@
 
 {% endif %}
 
+    function loadAbout(org) {
+        var t;
+
+        d = $('aboutContent');
+        t = document.createElement('div');
+        t.classList.add('header');
+        t.innerHTML = org.name + '<br><hr>';
+        d.appendChild(t);
+
+        if ('link' in org) {
+            t = document.createElement('div');
+            t.innerHTML = `<a href="${org.link}">${org.link}</a>`;
+            d.appendChild(t);
+        }
+        if ('contact' in org) {
+            t = document.createElement('div');
+            t.innerHTML = `contact: ${org.contact}` 
+            if ('email' in org) {
+                t.innerHTML = t.innerHTML + ` (${org.email})`;
+            }
+            d.appendChild(t);
+        }
+        else if ('email' in org) {
+            t = document.createElement('div');
+            t.innerHTML = `contact: ${org.email}` 
+            d.appendChild(t);
+        }
+        
+        if ('text' in org) {
+            t = document.createElement('div');
+            t.innerHTML = org.text;
+            d.appendChild(t);
+        }
+
+    }
+
     function loadTable() {
 {% if runMode == 'pilot' %}
         window.name = 'dash';
@@ -562,7 +611,8 @@
         .then(res => res.json())
         .then(data => {
             var glider, t;
-            for (g of data) {
+            loadAbout(data['organization']);
+            for (g of data['missions']) {
                 glider = { glider: g.glider, mission: g.mission };
 
                 // create div and append as blank to main
@@ -694,13 +744,19 @@
 <html>
 <body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
 
-{% if runMode != 'pilot' %}
-<a href="/dash">Dashboard mode</a>
-{% endif %}
+<script>
+    if (window.location.pathname.includes("dash"))
+        document.write('<a href="/">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+    else
+        document.write('Index <b>&#124;</b> <a href="/dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+</script>
+
 <div id="main" style="position: relative;">
 
 
 </div> 
+
+{% include "dialogs.html" %}
 
 </body>
 </html>
