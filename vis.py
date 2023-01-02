@@ -158,6 +158,11 @@ def authorized(protections=None):
         return decorated_function
     return decorator
 
+# must be locked by calling function
+def purgeMessages(request):
+    t = time.time() - 10
+    request.app.ctx.urlMessages = list(filter(lambda m: m['time'] > t, request.app.ctx.urlMessages))
+
 def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
     data = {}
     for idx, col in enumerate(cursor.description):
@@ -486,17 +491,17 @@ async def controlHandler(request, glider:int, which:str):
         message['file'] = which
         message['dive'] = -1
     else:
-        versions = glob.glob(f'sg{glider:03d}/{which}.*')
+        p = Path(gliderPath(glider,request))
         latest = -1
         call = -1;
-        for v in versions:
+        async for fpath in p.glob(f'{which}.*'):
             try:
-                j = parse('%s.{:d}.{:d}' % which, v.split('/')[1])
+                j = parse('%s.{:d}.{:d}' % which, fpath.name)
                 if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] > latest and j.fixed[1] > call:
                     latest = j.fixed[0]
                     call = j.fixed[1]
                 else:
-                    j = parse('%s.{:d}' % which, v.split('/')[1])
+                    j = parse('%s.{:d}' % which, fpath.name)
                     if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] > latest:
                         latest = j.fixed[0]
                         call = -1
@@ -571,24 +576,24 @@ async def dbvarsHandler(request, glider:int):
 @app.route('/provars/<glider:int>')
 @authorized()
 async def provarsHandler(request, glider:int):
-    ncfiles = glob.glob(f'{gliderPath(glider,request)}/sg{glider:03d}*profile.nc')
-    if len(ncfiles):
+    p = Path(gliderPath(glider,request))
+    async for ncfile in p.glob(f'sg{glider:03d}*profile.nc'):
         data = {}
-        data['names'] = ExtractBinnedProfiles.getVarNames(ncfiles[0])
+        data['names'] = ExtractBinnedProfiles.getVarNames(ncfile)
         return sanic.response.json(data)
-    else: 
-        return sanic.response.text('oops')
+     
+    return sanic.response.text('oops')
 
 @app.route('/pro/<glider:int>/<which:str>/<first:int>/<last:int>/<stride:int>/<zStride:int>')
 @authorized()
 @compress.compress()
 async def proHandler(request, glider:int, which:str, first:int, last:int, stride:int, zStride:int):
-    ncfiles = glob.glob(f'{gliderPath(glider,request)}/sg{glider:03d}*profile.nc')
-    if len(ncfiles):
-        data = ExtractBinnedProfiles.extractVar(ncfiles[0], which, first, last, stride, zStride)
+    p = Path(gliderPath(glider,request))
+    async for ncfile in p.glob(f'sg{glider:03d}*profile.nc'):
+        data = ExtractBinnedProfiles.extractVar(ncfile, which, first, last, stride, zStride)
         return sanic.response.json(data)
-    else:
-        return sanic.response.text('oops')
+
+    return sanic.response.text('oops')
 
 @app.route('/timevars/<glider:int>/<dive:int>')
 @authorized()
@@ -708,10 +713,9 @@ async def urlHandler(request):
 
     msg = { "glider": glider, "dive": dive, "content": content, "uuid": uuid.uuid4(), "time": time.time() }
 
-    t = time.time() - 10
     lock.acquire()
     try:
-        request.app.ctx.urlMessages = list(filter(lambda m: m['time'] < t, request.app.ctx.urlMessages))
+        purgeMessages(request)
         request.app.ctx.urlMessages.append(msg)
     except:
         pass
@@ -781,6 +785,7 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
             await ws.send(f"CMDFILE={directive}")
         else:
             lock.acquire()
+            purgeMessages(request)
             msg = list(filter(lambda m: m['glider'] == glider and m['time'] > prev_t, request.app.ctx.urlMessages))
             lock.release()
             prev_t = time.time()
@@ -796,14 +801,23 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 
     opTable = await buildAuthTable(request, mask)
     prev_t = 0 
-
+    print(opTable)
     while True:
+        lock.acquire()
+        purgeMessages(request)
+        allMsgs = list(filter(lambda m: m['time'] > prev_t, request.app.ctx.urlMessages))
+        lock.release()
+        prev_t = time.time()
+
         for o in opTable:
-            lock.acquire()
-            msg = list(filter(lambda m: m['glider'] == o['glider'] and m['time'] > prev_t, request.app.ctx.urlMessages))
-            lock.release()
-            prev_t = time.time()
+            msg = list(filter(lambda m: m['glider'] == o['glider'], allMsgs))
+
+            # We could block long enough here such that messages for 
+            # other gliders might come in and we won't see them
+            # because we're only checking outside the opTable loop.
+            # Assume we'll get them next time around (2 seconds)
             for m in msg:
+                sanic.log.logger.debug(f"watch msg {m}")
                 await ws.send(f"NEW={o['glider']},{m['content']}")
                 
             if o['cmdfile'] is not None:
