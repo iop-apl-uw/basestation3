@@ -49,6 +49,8 @@ if 'USERS_FILE' not in app.config:
     app.config.USERS_FILE = "/home/seaglider/users.dat"
 if 'ROOTDIR' not in app.config:
     app.config.ROOTDIR = "/home/seaglider"
+if 'FQDN' not in app.config:
+    app.config.FQDN = "seaglider.pub"
 
 PERM_REJECT = 0
 PERM_VIEW   = 1
@@ -170,14 +172,21 @@ def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
 
     return data
 
+def requestMission(request):
+    if request and 'mission' in request.args and request.args['mission'] != 'current' and len(request.args['mission']) > 0:
+        return request.args['mission'][0]
+
+    return None
+
 def gliderPath(glider, request, mission=None):
     if mission:
         return f'sg{glider:03d}/{mission}'
-    elif request and 'mission' in request.args and request.args['mission'] != 'current' and len(request.args['mission']) > 0:
-        mission = request.args['mission'][0]
-        return f'sg{glider:03d}/{mission}'
     else:
-        return f'sg{glider:03d}'
+        mission = requestMission(request)
+        if mission:
+            return f'sg{glider:03d}/{mission}'
+        else:
+            return f'sg{glider:03d}'
 
 def filterMission(gld, request, mission=None):
     if mission == None and \
@@ -253,9 +262,12 @@ async def divHandler(request, which: str, glider: int, dive: int, image: str):
         return sanic.response.text('not found', status=404)
 
     if await aiofiles.os.path.exists(filename):
+        mission = requestMission(request)
+        mission = f"?mission={mission}" if mission else ''
+
         resp = '<script src="/script/plotly-latest.min.js"></script><html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
         if which == 'dv':
-            resp = resp + f'<a href="/div/{which}/{glider}/{dive-1}/{image}"style="text-decoration:none; font-size:32px;">&larr;</a><span style="font-size:32px;"> &#9863; </span> <a href="/div/{which}/{glider}/{dive+1}/{image}" style="text-decoration:none; font-size:32px;">&rarr;</a>'
+            resp = resp + f'<a href="/div/{which}/{glider}/{dive-1}/{image}{mission}"style="text-decoration:none; font-size:32px;">&larr;</a><span style="font-size:32px;"> &#9863; </span> <a href="/div/{which}/{glider}/{dive+1}/{image}{mission}" style="text-decoration:none; font-size:32px;">&rarr;</a>'
 
         async with aiofiles.open(filename, 'r') as file:
             div = await file.read() 
@@ -755,6 +767,10 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
         await ws.send('no')
         return
 
+    await ws.send(f"START") # send something to ack the connection opened
+
+    sanic.log.logger.debug(f"streamHandler start {filename}")
+
     if request.app.ctx.runMode in pilotModes:
         commFile = await aiofiles.open(filename, 'rb')
         if which == 'init':
@@ -767,6 +783,7 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
        
     watchList = await buildWatchList(request, glider) 
     prev_t = 0
+    filename = f'{gliderPath(glider,request)}/cmdfile'
     while True:
         modFiles = await checkFileMods(watchList)
         if 'comm.log' in modFiles and request.app.ctx.runMode in pilotModes:
@@ -774,13 +791,11 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
             if data:
                 await ws.send(data)
         elif 'cmdfile' in modFiles and request.app.ctx.runMode in pilotModes:
-            filename = f'{gliderPath(glider,request)}/cmdfile'
             async with aiofiles.open(filename, 'rb') as file:
-                body = await file.read().decode('utf-8', errors='ignore')
+                body = (await file.read()).decode('utf-8', errors='ignore')
                 data = "CMDFILE=" + body
                 await ws.send(data)
         elif 'cmdfile' in modFiles:
-            filename = f'{gliderPath(glider,request)}/cmdfile'
             directive = await summary.getCmdfileDirective(filename)
             await ws.send(f"CMDFILE={directive}")
         else:
@@ -799,8 +814,10 @@ async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, 
 # @authorized(protections=['pilot'])
 async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 
+    sanic.log.logger.debug("watchHandler start")
     opTable = await buildAuthTable(request, mask)
     prev_t = 0 
+    await ws.send(f"START") # send something to ack the connection opened
     while True:
         lock.acquire()
         purgeMessages(request)
@@ -829,6 +846,8 @@ async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
                     o['cmdfile'] = t
 
         await asyncio.sleep(2) 
+
+    sanic.log.logger.debug('watchHandler exit') # never gets here
 #
 #  other stuff (non-Sanic)
 #
@@ -980,6 +999,12 @@ async def initApp(app):
         app.ctx.runMode = 'pilot'
 
     sanic.log.logger.info(f'runMode {app.ctx.runMode}')
+
+@app.middleware('request')
+async def checkRequest(request):
+    if request.app.ctx.runMode != 'private' and app.config.FQDN not in request.headers['host']:
+        sanic.logger.log.info('request blocked')
+        return sanic.response.text('not found', status=404)
 
 if __name__ == '__main__':
     os.chdir(app.config.ROOTDIR)

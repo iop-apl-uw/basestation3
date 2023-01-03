@@ -658,16 +658,15 @@
     var first = true;
 
     function setupStream() {
-        if (Date.now() < lastSetup + 5000) {
-            setTimeout('setupStream()', 5000);
+        if (Date.now() < lastSetup + 20000) {
+            setTimeout('setupStream()', 20000);
             console.log('too soon');
             return;
         }
         lastSetup = Date.now();
 
-        if (wsocket != null) {
-            wsocket.close();
-            console.log('closing previous stream');
+        if (wsocket != null) {			      	
+            console.log('previous stream exists');
         }
         console.log('setting up stream');
         var loc = window.location, new_uri;
@@ -683,7 +682,6 @@
         wsocket.onerror = function(error) {
             console.log('stream error detected');
             wsocket.close();
-            setupStream();
         };
 
         wsocket.onclose = function(e) {
@@ -692,8 +690,8 @@
             }
             else {
                 console.log('connection died');
-                setupStream();
             }
+            setupStream();
         };
 
         wsocket.onmessage = function(e) {
