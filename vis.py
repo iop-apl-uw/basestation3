@@ -49,6 +49,8 @@ if 'USERS_FILE' not in app.config:
     app.config.USERS_FILE = "/home/seaglider/users.dat"
 if 'ROOTDIR' not in app.config:
     app.config.ROOTDIR = "/home/seaglider"
+if 'FQDN' not in app.config:
+    app.config.FQDN = "seaglider.pub"
 
 PERM_REJECT = 0
 PERM_VIEW   = 1
@@ -997,6 +999,12 @@ async def initApp(app):
         app.ctx.runMode = 'pilot'
 
     sanic.log.logger.info(f'runMode {app.ctx.runMode}')
+
+@app.middleware('request')
+async def checkRequest(request):
+    if request.app.ctx.runMode != 'private' and app.config.FQDN not in request.headers['host']:
+        sanic.logger.log.info('request blocked')
+        return sanic.response.text('not found', status=404)
 
 if __name__ == '__main__':
     os.chdir(app.config.ROOTDIR)
