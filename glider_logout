@@ -1,6 +1,6 @@
 #!/usr/bin/tcsh
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -20,7 +20,9 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
-set PYTHON_BINARY = python3.9
+if(! $?PYTHON_BINARY ) then
+    set PYTHON_BINARY = /usr/local/bin/python3.9
+endif
 
 # A glider just logged out properly
 history -T -h >>! history.log
