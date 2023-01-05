@@ -51,6 +51,8 @@ if 'ROOTDIR' not in app.config:
     app.config.ROOTDIR = "/home/seaglider"
 if 'FQDN' not in app.config:
     app.config.FQDN = "seaglider.pub"
+if 'PORT' not in app.config:
+    app.config.PORT = 20001
 
 PERM_REJECT = 0
 PERM_VIEW   = 1
@@ -645,7 +647,7 @@ async def queryHandler(request, glider, vars):
         return sanic.response.json(data)
 
 @app.route('/selftest/<glider:int>')
-@authorized(protections=['pilot'])
+# @authorized(protections=['pilot'])
 async def selftestHandler(request, glider:int):
     cmd = f"{sys.path[0]}/SelftestHTML.py"
     proc = await asyncio.create_subprocess_exec(
@@ -992,20 +994,32 @@ async def initApp(app):
     await buildMissionTable(app)
     await buildUserTable(app)
 
-    app.ctx.runMode = 'private'
+    app.ctx.runMode = 'pilot'
     if len(sys.argv) == 2 and sys.argv[1] == 'public':
         app.ctx.runMode = 'public'
     elif app._state.port == 443:
         app.ctx.runMode = 'pilot'
 
-    sanic.log.logger.info(f'runMode {app.ctx.runMode}')
+    print(app._state.port)
+    print(app.config.FQDN)
+    print(app.config.PORT)
 
+    sanic.log.logger.info(f'port {app.state.port}')
+    sanic.log.logger.info(f'port {app.config.PORT}')
+    sanic.log.logger.info(f'runMode {app.ctx.runMode}')
+"""
 @app.middleware('request')
 async def checkRequest(request):
-    if request.app.ctx.runMode != 'private' and app.config.FQDN not in request.headers['host']:
-        sanic.logger.log.info('request blocked')
+    
+    sanic.log.logger.info(request.headers['host'])
+    sanic.log.logger.info(request.app.config.FQDN)
+    sanic.log.logger.info(request.app.ctx.runMode)
+    if request.app.ctx.runMode != 'private' and request.app.config.FQDN not in request.headers['host']:
+        sanic.log.logger.info('request blocked')
         return sanic.response.text('not found', status=404)
 
+    return None
+"""
 if __name__ == '__main__':
     os.chdir(app.config.ROOTDIR)
 
@@ -1023,7 +1037,8 @@ if __name__ == '__main__':
             "key": "/etc/letsencrypt/live/www.seaglider.pub/privkey.pem",
             # "password": "for encrypted privkey file",   # Optional
         }
-        app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
+        app.config.PORT = 443
+        app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False, fast=True)
     else:
+        app.config.PORT = port
         app.run(host='0.0.0.0', port=port, access_log=True, debug=True)
-
