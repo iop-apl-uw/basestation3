@@ -992,13 +992,17 @@ async def initApp(app):
     await buildMissionTable(app)
     await buildUserTable(app)
 
+        
     app.ctx.runMode = 'private'
     if len(sys.argv) == 2 and sys.argv[1] == 'public':
         app.ctx.runMode = 'public'
     elif app._state.port == 443:
         app.ctx.runMode = 'pilot'
 
-    sanic.log.logger.info(f'runMode {app.ctx.runMode}')
+    print(app._state.port)
+    print(app.config.FQDN)
+    print(app.config.PORT)
+    sanic.log.logger.info(f'STARTING runMode {app.ctx.runMode}')
 
 @app.middleware('request')
 async def checkRequest(request):
@@ -1023,7 +1027,9 @@ if __name__ == '__main__':
             "key": "/etc/letsencrypt/live/www.seaglider.pub/privkey.pem",
             # "password": "for encrypted privkey file",   # Optional
         }
+        app.config.PORT = 443
         app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
     else:
-        app.run(host='0.0.0.0', port=port, access_log=True, debug=True)
+        app.config.PORT = port
+        app.run(host='0.0.0.0', port=port, access_log=True, debug=True, fast=True)
 
