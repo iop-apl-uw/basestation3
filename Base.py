@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -2758,12 +2758,12 @@ def main():
                     for c in crits:
                         critical_msg += f"    {c}\n"
 
-                    if f[0] == 'p' and len(f) == 12:
+                    if f[0] == "p" and len(f) == 12:
                         BaseDB.addValToDB(base_opts, dive, "criticals", num_crits)
 
-                if f[0] == 'p' and len(f) == 12:
+                if f[0] == "p" and len(f) == 12:
                     BaseDB.addValToDB(base_opts, dive, "capture", 1)
-                    
+
     if critical_msg:
         log_warning(critical_msg)
 
@@ -2832,16 +2832,21 @@ def main():
 
     Utils.cleanup_lock_file(base_opts, base_lockfile_name)
 
+    # looked at processed_other_files list to decide if we should be more
+    # granular about what is completed
+    try:
+        with open(base_completed_name, "w") as file:
+            file.write(
+                "Finished processing "
+                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            )
+    except:
+        log_error(f"Failed to open {base_completed_name}")
+
     log_info(
         "Finished processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
-
-    # looked at processed_other_files list to decide if we should be more
-    # granular about what is completed
-    with open(base_completed_name, 'w') as file:
-        file.write("Finished processing "
-                   + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
 
     return 0
 

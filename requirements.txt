@@ -7,6 +7,8 @@ gsw==3.6.16
 seawater==3.3.4
 plotly>=5.11.0
 scipy>=1.9.0
+# latest cartopy crashes when shapely is not built from source
+shapely --no-binary shapely
 cartopy
 # For SlackPost and InReachSend
 requests==2.24.0
@@ -38,8 +40,6 @@ anyio
 #
 # Used in by misc tools (tools directory)
 pyproj
-# latest cartopy crashes when shapely is not built from source
-shapely
 # For GliderTrack support
 oct2py>=5.5.1
 # For BaseSMS

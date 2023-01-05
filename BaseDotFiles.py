@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -49,7 +49,6 @@ from ftplib import FTP
 
 # from ftplib import FTP_TLS
 from urllib.parse import urlencode
-import psutil
 
 import requests
 
@@ -317,8 +316,8 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
     # to /proc to get the connection info we need
     prog = f"{sys.path[0]}/psvislist"
     if os.path.exists(prog) and (os.stat(prog).st_mode & stat.S_ISUID):
-        list_status,list_out = Utils.run_cmd_shell(prog, timeout=3, shell=True)
-        for port in list_out.read().decode('utf-8').splitlines():
+        list_status, list_out = Utils.run_cmd_shell(prog, timeout=3, shell=True)
+        for port in list_out.read().decode("utf-8").splitlines():
             try:
                 url = f"http://localhost:{port}/url/"
                 with io.StringIO(f"5 {url}\n") as fi:
