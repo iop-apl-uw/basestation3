@@ -6,7 +6,9 @@ from datetime import datetime
 import math
 import Utils
 import aiofiles
-
+import CommLog
+import sys
+import asyncio
 
 async def getCmdfileDirective(cmdfile):
     cmdfileDirective = 'unknown'
@@ -32,44 +34,58 @@ def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
 async def collectSummary(glider, path):
     import CalibConst
 
-    commlog = f'{path}/comm.log'
-    dbfile  = f'{path}/sg{glider:03d}.db'
-    cmdfile = f'{path}/cmdfile'
-    calibfile = f'{path}/sg_calib_constants.m'
+    commlogfile = f'{path}/comm.log'
+    dbfile      = f'{path}/sg{glider:03d}.db'
+    cmdfile     = f'{path}/cmdfile'
+    calibfile   = f'{path}/sg_calib_constants.m'
 
+    statinfo = await aiofiles.os.stat(commlogfile)
+    if statinfo.st_size < 10000:
+        start = 0
+    else:
+        start = statinfo.st_size - 10000
+
+    (commlog, commlog_pos, ongoing_session, _, _) = await CommLog.process_comm_log_worker(commlogfile, {}, start_pos=start)
+    if len(commlog.sessions) == 0:
+        session = None
+    else:
+        session = commlog.sessions[-1]
+   
+    if ongoing_session and ongoing_session.connect_ts:
+        connected    = time.mktime(ongoing_session.connect_ts)
+    elif session and session.connect_ts:
+        connected    = time.mktime(session.connect_ts)
+    
+    if ongoing_session and ongoing_session.disconnect_ts:
+        disconnected = time.mktime(ongoing_session.disconnect_ts)
+    elif ongoing_session:
+        disconnected = 0
+    elif session and session.disconnect_ts:
+        disconnected = time.mktime(session.disconnect_ts)
+
+    if ongoing_session and ongoing_session.gps_fix:
+        last_GPS     = ongoing_session.gps_fix
+    elif session and session.gps_fix:
+        last_GPS     = session.gps_fix
+    
+    if ongoing_session and ongoing_session.cmd_directive:
+        directive    = ongoing_session.cmd_directive
+    elif session and session.cmd_directive:
+        directive    = session.cmd_directive
+
+    if ongoing_session:
+        logout = ongoing_session.logout_seen
+    elif session:
+        logout = session.logout_seen
+
+    if ongoing_session and ongoing_session.recov_code:
+        recovery    = ongoing_session.recov_code
+    elif session and session.cmd_directive:
+        recovery    = session.recov_code
+    else:
+        recovery = None
      
-    async with aiofiles.open(commlog, 'rb') as file:
-        await file.seek(-10000, 2)
-        last_GPS = ''
-        directive  = ''
-        connected = ''
-        async for line in file:
-            line = line.decode('utf-8', errors='ignore').strip()
-            if 'GPS' in line:
-                last_GPS = line[line.find('GPS'):]
-            elif 'Parsed' in line:
-                directive = line.split(' ')[1]
-            elif 'Connected at' in line:
-                connected = ' '.join(line.split(' ')[3:])
- 
-    try:
-        connect_t = datetime.strptime(connected.strip(), '%b %d %H:%M:%S %Z %Y').timestamp()
-    except Exception as e:
-        print(f"weird date: [{connected}]")
-        connect_t = 0
-
-    mtime = await aiofiles.os.path.getctime(commlog) 
-
-    last_GPS = ','.join(last_GPS.split(',')[0:5])
-    p = parse("GPS,{:2d}{:2d}{:2d},{:2d}{:2d}{:2d},{:f},{:f}", last_GPS)
-    (day,mon,year,hour,min,sec,lat,lon) = p.fixed
-
-    lat_deg = int(lat / 100)
-    lon_deg = int(lon / 100)
-    lat_min = lat - lat_deg*100
-    lon_min = lon - lon_deg*100
-
-    pos_stamp = datetime.strptime(f"{year+2000}-{mon:02d}-{day:02d}T{hour:02d}:{min:02d}:{sec:02d}Z", "%Y-%m-%dT%H:%M:%S%z").timestamp()
+    mtime = await aiofiles.os.path.getctime(commlogfile) 
 
     async with aiosqlite.connect(dbfile) as conn:
         conn.row_factory = rowToDict
@@ -113,17 +129,20 @@ async def collectSummary(glider, path):
     out['vbdVolts'] = gc['vbd_volts']
 
     out['mtime']    = mtime
-    out['connect']  = connect_t
+    out['connect']  = connected
+    out['disconnect']  = disconnected
+    out['logout']   = logout
     out['depth']    = data['max_depth']
     out['grid']     = data['log_D_GRID']
-    out['fix']      = pos_stamp
-    out['lat']      = lat_deg + lat_min/60
-    out['lon']      = lon_deg + lon_min/60
+    out['fix']      = time.mktime(last_GPS.datetime)
+    out['lat']      = Utils.ddmm2dd(last_GPS.lat)
+    out['lon']      = Utils.ddmm2dd(last_GPS.lon)
     out['volts']    = [ data['batt_volts_10V'], data['batt_volts_24V'] ] 
     out['capacity'] = [ data['batt_capacity_10V'], data['batt_capacity_24V'] ]
     out['errors']   = data['error_count']
     out['commDirective'] = directive
     out['cmdfileDirective'] = cmdfileDirective
+    out['recovery'] = recovery
 
     out['humidity'] = data['log_HUMID']
     out['humiditySlope'] = data['log_HUMID_slope']
@@ -146,5 +165,5 @@ async def collectSummary(glider, path):
     return out
 
 if __name__ == "__main__":
-    msg = collectSummary('/home/seaglider/sg249/sg249.db', '/home/seaglider/sg249/comm.log', '/home/seaglider/sg249/cmdfile')
+    msg = asyncio.run(collectSummary(249, '/home/seaglider/sg249'))
     print(msg)

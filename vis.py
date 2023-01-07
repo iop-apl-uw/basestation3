@@ -195,7 +195,7 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                 mission = request.args['mission'][0] if 'mission' in request.args else None
 
                 m = next(filter(lambda d: d['glider'] == glider and d['mission'] == mission, request.app.ctx.missionTable), None)
-                if m is not None and endpoints in m and m['endpoints'] is not None and url in m['endpoints']:
+                if m is not None and 'endpoints' in m and m['endpoints'] is not None and url in m['endpoints']:
                     e = m['endpoints'][url]
                     status = checkEndpoint(request, e)
                     if status == PERM_INVALID:
@@ -899,6 +899,7 @@ def attachHandlers(app: sanic.Sanic):
         opTable = await buildAuthTable(request, mask)
         prev_t = 0 
         await ws.send(f"START") # send something to ack the connection opened
+
         while True:
             purgeMessages(request)
             allMsgs = list(filter(lambda m: m['time'] > prev_t, request.app.shared_ctx.urlMessages))
@@ -933,7 +934,7 @@ def attachHandlers(app: sanic.Sanic):
         await buildMissionTable(app)
         await buildUserTable(app)
 
-        sanic.log.logger.info(f'STARTING runMode {app.config.RUNMODE}')
+        sanic.log.logger.info(f'STARTING runMode {modeNames[app.config.RUNMODE]}')
 
     @app.main_process_start
     async def mainProcessStart(app):
@@ -1197,7 +1198,7 @@ if __name__ == '__main__':
             ssl = True
         else:
             port = int(sys.argv[1])
-            if port == 4430:
+            if port == 443:
                 runMode = MODE_PILOT
     else:
         try:

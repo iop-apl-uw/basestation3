@@ -14,7 +14,7 @@
     .tile {
         background: #bbbbbb;
         width: 300px;
-        height: 420px;
+        height: 435px;
         border: 2px solid black;
         margin-left: 10px;
         margin-top: 10px;
@@ -290,6 +290,20 @@
             txt.innerHTML = `parsed ${formatDirective(data.commDirective, "commdirective" + glider.glider)}, waiting ${formatDirective(data.cmdfileDirective, "cmdfileDirective" + glider.glider)}`;
             t.appendChild(txt);
 
+
+            txt = document.createElement('div');
+            if (data.recovery != null) {
+                var color;
+                if (data.commDirective == 'RESUME')       color = 'black';
+                else if (data.recovery == 'QUIT_COMMAND') color = 'yellow';
+                else                                      color = 'red';
+                txt.innerHTML = `in recovery: <span style="color:${color}; font-weight: bold;">${data.recovery}</span>`;
+            }
+            else {
+                txt.innerHTML = 'in recovery: <span style="color:green; font-weight: bold;">no</span>';
+            }
+            t.appendChild(txt);
+
             box = document.createElement('div');
             box.classList.add('box');
 
@@ -407,7 +421,10 @@
                 else
                     h.title = `mission endurance ${days.toFixed(0)} days short of end-date (${data.mission.planned})`;
                 h.classList.add('indicator');
-                h.innerHTML = `endur.<br><span style="font-size:11px;">${-days.toFixed(0)} days</span>`;
+                if (days < 0)
+                    h.innerHTML = `endur.<br><span style="font-size:11px;">+${-days.toFixed(0)} days</span>`;
+                else
+                    h.innerHTML = `endur.<br><span style="font-size:11px;">${days.toFixed(0)} days</span>`;
                 h.classList.add(thresh(days, 30, 0));
                 indicators.push(h);
             }
@@ -486,7 +503,7 @@
             else
                 img.src = '/plot/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
             console.log(img.src); 
-            img.style = "position: absolute; top: 190px; left: 0px; width:290px; max-height:240px; mix-blend-mode:multiply;"
+            img.style = "position: absolute; top: 200px; left: 0px; width:290px; max-height:240px; mix-blend-mode:multiply;"
      
             t.appendChild(img);
         })
@@ -707,10 +724,6 @@
                     d = pieces[2]
                     $('cmdfileDirective' + glider).innerHTML = d;
                     $('cmdfileDirective' + glider).style.color = d in directiveColors ? directiveColors[d] : 'black';
-                    // cmdfile has changed, brute force reload the whole
-                    // tile so that the waiting directive changes
-                    // clearTiles('' + glider);
-                    // createTile({ "glider": glider, "mission": ''}, $('' + glider))
                 }
                 else if (which.startsWith('files=perdive')) {
 {% else %}
