@@ -363,8 +363,14 @@
     }
 {% endif %}
 
-    function popupPlotly(which, dive, elt) {
-        window.open('/div/' + which + '/' + currGlider + '/' + dive + '/' + elt + mission(), `${currGlider}-${dive}-${elt}`);
+    function popupImage(ext, which, dive, elt) {
+        var m = mission();
+        if (m == '')
+            m = '?wrap=page';
+        else
+            m = m + '&wrap=page';
+
+        window.open('/plot/' + ext + '/' + which + '/' + currGlider + '/' + dive + '/' + elt + m, `${currGlider}-${dive}-${elt}`);
     }
 
     function popupSelftest() {
@@ -376,23 +382,54 @@
     }
 
     function setVisibility(elt) {
-        const divs = ['mainImage', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
+        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
         for (var d of divs) {
             if (d != elt) $(d).setAttribute('hidden', '');
         }
         $(elt).removeAttribute('hidden');
     }
+
+    function setInnerHTML(elm, html) {
+        elm.innerHTML = html;
+          
+        Array.from(elm.querySelectorAll("script"))
+          .forEach( oldScriptEl => {
+            const newScriptEl = document.createElement("script");
+            
+            Array.from(oldScriptEl.attributes).forEach( attr => {
+                newScriptEl.setAttribute(attr.name, attr.value) 
+            });
+              
+            const scriptText = document.createTextNode(oldScriptEl.innerHTML);
+            newScriptEl.appendChild(scriptText);
+            
+            oldScriptEl.parentNode.replaceChild(newScriptEl, oldScriptEl);
+        });
+    }
+
     function showPlot(which, elt, plotly) {
         console.log('showing ' + elt);
-        setVisibility('mainImage');
-        $('mainImage').src = '/png/' + which + '/' + currGlider + '/' + currDive + '/' + elt + mission();
-        if (plotly) {
-            $('mainImage').ondblclick = function() { popupPlotly(which, currDive, elt); }
-            $('mainImage').oncontextmenu = function() { popupPlotly(which, currDive, elt); }
+        console.log('plotly available ' + plotly)
+        if (!plotly) {
+            setVisibility('mainImage');
+            $('mainImage').src = '/plot/png/' + which + '/' + currGlider + '/' + currDive + '/' + elt + mission();
+            // $('mainImage').ondblclick = null;
+            // $('mainImage').oncontextmenu = null;
+            $('mainImage').ondblclick = function() { popupImage('png', which, currDive, elt); } 
+            $('mainDiv').ondblclick = null;
         }
         else {
-            $('mainImage').ondblclick = null;
-            $('mainImage').oncontextmenu = null;
+            setVisibility('mainDiv');
+            fetch('/plot/div/' + which + '/' + currGlider + '/' + currDive + '/' + elt + mission())
+            .then(res => res.text())
+            .then(data => {
+                setInnerHTML($('mainDiv'), data);
+                $('mainDiv').ondblclick = function() { popupImage('div', which, currDive, elt); } 
+                $('mainImage').ondblclick = null;
+            })
+            .catch(error => {
+                console.log(error);
+            });
         }
         currElt = elt;
     }
@@ -688,7 +725,7 @@
     var plotList = []
     function addPlot(which, p, x, plotly) {
         img = document.createElement('img');
-        img.src = '/png/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
+        img.src = '/plot/png/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
         img.style = "position: absolute; left: " + x + "; top: 0; max-width:180px; max-height:169px; mix-blend-mode:multiply;"
         img.onclick = function() { showPlot(which, p, plotly); };
         img.title = p;
@@ -924,7 +961,7 @@
             else 
                 showPlot('dv', currElt, plotly.includes(currElt));
 
-            // $('mainImage').src = '/png/' + currGlider + '/' + dive + '/diveplot';
+            // $('mainImage').src = '/plot/png/' + currGlider + '/' + dive + '/diveplot';
             // $('mainImage').removeAttribute('hidden'); 
             // $('mainTable').setAttribute('hidden', ''); 
 
@@ -1528,7 +1565,8 @@
 </div>
 
 <div id="main" style="position: absolute; left: 50; top: 0; width:1050px; height:894px; overflow:auto; background-color:#bbbbbb; text-align:center;" >
-    <img id="mainImage" style="mix-blend-mode:multiply; max-height:894px; max-width:1050px; text-align:center;" title="double click for interactive version">
+    <img id="mainImage" style="mix-blend-mode:multiply; max-height:894px; max-width:1050px; text-align:center;" title="double click for interactive version if available">
+    <div id="mainDiv" style="mix-blend-mode:multiply; max-height:894px; max-width:1050px; text-align:center;" hidden="hidden"></div>
     <table rules="groups" id="mainTable" hidden="hidden" style="height:894px; width:1000px; font-size:14px; text-align:right; font-family:verdana, arial, tahoma, 'sans serif';"> 
 
         <colgroup span=4><col><col><col><col></colgroup>
