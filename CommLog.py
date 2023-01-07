@@ -54,6 +54,9 @@ from BaseLog import (
     log_error,
     log_critical,
 )
+import asyncio
+import aiofiles
+import aiofiles.os
 
 DEBUG_PDB = False  # Set to True to enter debugger on exceptions
 
@@ -678,6 +681,7 @@ class ConnectSession:
         self.fragment_size = None
         self.files_transfered = None
         self.logout_seen = False
+        self.shutdown_seen = False
         self.file_stats = {}
         self.transfer_method = {}
         self.transfer_direction = {}
@@ -695,11 +699,12 @@ class ConnectSession:
             "connect_ts %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.connect_ts),
             file=fo,
         )
-        print(
-            "disconnect_ts %s"
-            % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.disconnect_ts),
-            file=fo,
-        )
+        if self.disconnect_ts:
+            print(
+                "disconnect_ts %s"
+                % time.strftime("%a %b %d %H:%M:%S %Z %Y", self.disconnect_ts),
+                file=fo,
+            )
         if self.reconnect_ts:
             print(
                 "reconnect_ts %s"
@@ -730,6 +735,10 @@ class ConnectSession:
             print("calls_made %d" % self.calls_made, file=fo)
         if self.no_comm is not None:
             print("no_comm %d" % self.no_comm, file=fo)
+        if self.logout_seen is not None:
+            print(f"logout_seen {self.logout_seen}", file=fo)
+        if self.shutdown_seen is not None:
+            print(f"shutdown_seen {self.shutdown_seen}", file=fo)
         if self.mission_num is not None:
             print("mission_num %d" % self.mission_num, file=fo)
         if self.reboot_count is not None:
@@ -1008,8 +1017,10 @@ def crack_counter_line(
 
     return False
 
+def process_comm_log(*args, **kwargs):
+    return asyncio.run(process_comm_log_worker(*args, **kwargs))
 
-def process_comm_log(
+async def process_comm_log_worker(
     comm_log_file_name,
     base_opts,
     known_commlog_files=None,
@@ -1031,33 +1042,34 @@ def process_comm_log(
         # Look backward through the file for the last line starting with "Connected" as starting point
         # If found, any start_pos supplied will be ignored
         if scan_back:
+            print("scanning backwards")
             try:
-                comm_log_file = open(comm_log_file_name, "rb")
+                comm_log_file = await aiofiles.open(comm_log_file_name, "rb")
             except IOError:
                 log_error("Could not open %s for reading." % comm_log_file_name)
                 return (None, None, None, None, 1)
 
             try:
-                comm_log_file.seek(-2, os.SEEK_END)
+                await comm_log_file.seek(-2, os.SEEK_END)
                 while True:
-                    while comm_log_file.read(1) != b"\n":
-                        comm_log_file.seek(-2, os.SEEK_CUR)
+                    while await comm_log_file.read(1) != b"\n":
+                        await comm_log_file.seek(-2, os.SEEK_CUR)
 
-                    curr_pos = comm_log_file.tell()
-                    curr_line = comm_log_file.readline().decode()
+                    curr_pos = await comm_log_file.tell()
+                    curr_line = (await comm_log_file.readline()).decode()
                     print((curr_line, curr_pos))
                     if curr_line.startswith("Connected"):
                         start_pos = curr_pos
-                        comm_log_file.close()
+                        await comm_log_file.close()
                         break
                     else:
-                        comm_log_file.seek(curr_pos - 2, os.SEEK_SET)
+                        await comm_log_file.seek(curr_pos - 2, os.SEEK_SET)
             except IOError:
                 # Didn't find a line starting with connected - fall through
-                comm_log_file.close()
+                await comm_log_file.close()
 
         if start_pos >= 0:
-            statinfo = os.stat(comm_log_file_name)
+            statinfo = await aiofiles.os.stat(comm_log_file_name)
             if statinfo.st_size < start_pos:
                 # File got smaller - reparse
                 # print "Resetting starting position (%d,%d)" % (statinfo.st_size,start_pos)
@@ -1066,7 +1078,7 @@ def process_comm_log(
                 # Start pos is the same as filesize - nothing to do
                 return (None, start_pos, session, line_count, 0)
         try:
-            comm_log_file = open(comm_log_file_name, "rb")
+            comm_log_file = await aiofiles.open(comm_log_file_name, "rb")
         except IOError:
             log_error("Could not open %s for reading." % comm_log_file_name)
             return (None, None, None, None, 1)
@@ -1074,7 +1086,7 @@ def process_comm_log(
         log_debug("process_comm_log starting")
         if start_pos >= 0 and statinfo.st_size > start_pos:
             # print "Resetting to file pos %d" % start_pos
-            comm_log_file.seek(start_pos, 0)
+            await comm_log_file.seek(start_pos, 0)
 
         sessions = []
         raw_file_lines = []
@@ -1085,7 +1097,7 @@ def process_comm_log(
 
         file_transfer_method = {}
 
-        for raw_line in comm_log_file:
+        async for raw_line in comm_log_file:
             line_count = line_count + 1
             try:
                 raw_line = raw_line.decode("utf-8")
@@ -1198,6 +1210,10 @@ def process_comm_log(
                     except:
                         log_error("Disconnected callback failed", "exc")
                 session = None
+                continue
+            elif raw_strs[0] == "shutdown" and len(raw_strs) == 1:
+                if session:
+                    session.shutdown_seen = True
                 continue
             elif session:
                 if crack_counter_line(
@@ -1396,7 +1412,7 @@ def process_comm_log(
                                 filename = raw_strs[10]
                                 if filename not in session.file_stats:
                                     log_warning(
-                                        "Found Recieved for %s with out matching Receiving line"
+                                        "Found Received for %s with out matching Receiving line"
                                         % filename
                                     )
                                     expected_size = -1
@@ -1481,7 +1497,7 @@ def process_comm_log(
                                     # but proceeds the Received line for an upload, so there may
                                     # or may not be existing stats to add to
                                     log_debug(
-                                        "Found Recieved for %s with out matching Receiving line"
+                                        "Found Received for %s with out matching Receiving line"
                                         % filename
                                     )
                                     expected_size = -1
@@ -1681,8 +1697,8 @@ def process_comm_log(
                     "Line outside session: file %s, lineno %d, line %s"
                     % (comm_log_file_name, line_count, raw_line)
                 )
-        start_pos = comm_log_file.tell()
-        comm_log_file.close()
+        start_pos = await comm_log_file.tell()
+        await comm_log_file.close()
 
         commlog = CommLog(
             sessions, raw_file_lines, files_transfered, file_transfer_method
@@ -1855,9 +1871,15 @@ def main():
     if base_opts.comm_log is None:
         return 1
 
-    comm_log = process_comm_log(base_opts.comm_log, base_opts, scan_back=False)[0]
+    # comm_log, pos, session, cnt, n = process_comm_log(base_opts.comm_log, base_opts, scan_back=True)
+    (comm_log, pos, session, _, _) = process_comm_log(sys.argv[1], {}, scan_back=True)
+    if pos: print(pos)
 
-    comm_log.sessions[-1].dump_contents(sys.stdout)
+    if len(comm_log.sessions):
+        comm_log.sessions[-1].dump_contents(sys.stdout)
+    else:
+        print("no sessions")
+    print(session)
 
     # for ii in range(len(comm_log.sessions)):
     #     for k in comm_log.sessions[ii].file_stats.keys():
