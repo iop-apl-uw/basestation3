@@ -142,6 +142,28 @@ def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
     sanic.log.logger.info(f'rejecting {glider} {mission} for no mission entry')
     return PERM_INVALID
 
+def checkEndpoint(request, e):
+    runningMode = modeNames[request.app.config.RUNMODE]
+
+    if e['modes'] is not None and runningMode not in e['modes']: 
+        sanic.log.logger.info(f"rejecting {url}: mode not allowed")
+        return PERM_INVALID # so we can return "not found"
+
+    if e['users'] is not None or e['groups'] is not None:
+        (tU, tG) = getTokenUser(request)
+        allowAccess = False
+
+        if tU and e['users'] and tU in e['users']:
+            allowAccess = True
+        elif tG and e['groups'] and len(set(tG) & set(e['groups'])) > 0:
+            allowAccess = True
+
+        if not allowAccess:
+            sanic.log.logger.info(f"rejecting {url}: user auth required")
+            return PERM_REJECT # so we return "auth failed"
+
+    return PERM_VIEW # don't make a distinction view/pilot at this level
+
 def authorized(modes=None, check=3): # check=3 both endpoint and mission checks applied
     def decorator(f):
         @wraps(f)
@@ -149,47 +171,45 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
             nonlocal modes
             nonlocal check
 
-            # run some method that checks the request
-            # for the client's authorization status
-         
+            url = request.server_path[1:].split('/')[0]
             if check & AUTH_ENDPOINT:
-                url = request.server_path[1:].split('/')[0]
                 if url in request.app.ctx.endpoints:
                     e = request.app.ctx.endpoints[url]
-                    runningMode = modeNames[request.app.config.RUNMODE]
-                    if e['modes'] is not None and runningMode not in e['modes']: 
-                        sanic.log.logger.info(f"rejecting {url}: mode not allowed")
+                    status = checkEndpoint(request, e)
+                    if status == PERM_INVALID:
                         return sanic.response.text("Page not found: {}".format(request.path), status=404)
+                    elif status == PERM_REJECT:
+                        return sanic.response.text("authorization failed")
                     elif e['modes'] is not None:
                         modes = e['modes']
 
-                    if e['users'] is not None or e['groups'] is not None:
-                        (tU, tG) = getTokenUser(request)
-                        allowAccess = False
-
-                        if tU and e['users'] and tU in e['users']:
-                            allowAccess = True
-                        elif tG and e['groups'] and len(set(tG) & set(e['groups'])) > 0:
-                            allowAccess = True
-
-                        if not allowAccess:
-                            sanic.log.logger.info(f"rejecting {url}: user auth required")
-                            return sanic.response.text("authorization failed")
-
-            defaultPerm = PERM_VIEW
-
-            requirePilot = False
-
-            # we never allow access to pilot APIs when running in public mode
-            if modes and 'public' not in modes and request.app.config.RUNMODE == public:
-                sanic.log.logger.info("rejecting: no pilot APIs while running public")
-                return sanic.response.text("Page not found: {}".format(request.path), status=404)
-
             if check & AUTH_MISSION:
+                defaultPerm = PERM_VIEW
+                requirePilot = False
+
                 # on an open pilot server (typically a non-public server running 443) we require 
                 # positive authentication as a pilot against mission specified list of 
                 # allowed pilots (and pilotgroups). Access to missions without pilots: and/or pilotgroups: specs
                 # will be denied for all. 
+                glider = kwargs['glider'] if 'glider' in kwargs else None
+                mission = request.args['mission'][0] if 'mission' in request.args else None
+
+                m = next(filter(lambda d: d['glider'] == glider and d['mission'] == mission, request.app.ctx.missionTable), None)
+                if m is not None and endpoints in m and m['endpoints'] is not None and url in m['endpoints']:
+                    e = m['endpoints'][url]
+                    status = checkEndpoint(request, e)
+                    if status == PERM_INVALID:
+                        return sanic.response.text("Page not found: {}".format(request.path), status=404)
+                    elif status == PERM_REJECT:
+                        return sanic.response.text("authorization failed")
+                    elif e['modes'] is not None:
+                        modes = e['modes']
+                    
+                # modes now has final possible value - so check for pilot restricted API in public run mode
+                if modes and 'public' not in modes and request.app.config.RUNMODE == public:
+                    sanic.log.logger.info("rejecting: no pilot APIs while running public")
+                    return sanic.response.text("Page not found: {}".format(request.path), status=404)
+
                 if modes and 'public' not in modes and request.app.config.RUNMODE == MODE_PILOT:
                     requirePilot = True
                 # if we're running a private instance of a pilot server then we only require authentication
@@ -197,9 +217,6 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                 elif modes and 'public' not in modes and request.app.config.RUNMODE == MODE_PRIVATE:
                     requirePilot = True
                     defaultPerm = PERM_PILOT 
-     
-                glider = kwargs['glider'] if 'glider' in kwargs else None
-                mission = request.args['mission'][0] if 'mission' in request.args else None
                 
                 # this will always fail and return not authorized if glider is None
                 status = checkGliderMission(request, glider, mission, perm=defaultPerm)
@@ -209,6 +226,11 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                         return sanic.response.text("not found")
                     else: 
                         return sanic.response.text("authorization failed")
+
+            elif modes and 'public' not in modes and request.app.config.RUNMODE == public:
+                # do the public / pilot check that for AUTH_ENDPOINT only mode
+                sanic.log.logger.info("rejecting: no pilot APIs while running public")
+                return sanic.response.text("Page not found: {}".format(request.path), status=404)
 
             # the user is authorized.
             # run the handler method and return the response
@@ -380,12 +402,32 @@ def attachHandlers(app: sanic.Sanic):
             kml = zip.open(f'sg{glider}.kml', 'r').read()
             return sanic.response.raw(kml)
 
-    # do we need this for anything?? not yet
-    @app.route('/data/<file:str>')
-    @authorized(modes=['pilot', 'private'])
+    # Not currently linked on a public facing page, but available.
+    # Protect at the mission level (which protects that mission at 
+    # all endpoints) or at the endpoint level with something like
+    # users: [download] or groups: [download] and build
+    # users.dat appropriately
+    @app.route('/data/<which:str>/<glider:int>/<dive:int>')
+    @authorized()
     async def dataHandler(request, file:str):
-        filename = f'{sys.path[0]}/data/{file}'
-        return await sanic.response.file(filename)
+        path = gliderPath(glider,request)
+        if which == 'dive':
+            filename = f'{path}/p{glider:03d}{dive:04d}.nc'
+        elif which == 'profiles':
+            p = Path(path)
+            async for ncfile in p.glob(f'sg{glider:03d}*profile.nc'):
+                filename = ncfile
+                break
+        elif which == 'timeseries':
+            p = Path(path)
+            async for ncfile in p.glob(f'sg{glider:03d}*timeseries.nc'):
+                filename = ncfile
+                break
+            
+        if await aiofiles.os.path.exists(filename):
+            return await sanic.response.file(filename)
+        else:
+            return sanic.response.text('not found', status=404)
 
     @app.route('/proxy/<url:path>')
     # This is not a great idea to leave this open as a public proxy server,
@@ -948,14 +990,15 @@ async def buildUserTable(app):
     userDictKeys = [ "groups", "password" ]
 
     dflts = None
-    for user in x.keys():
+    for user in list(x.keys()):
         if user == 'default':
             dflts = x[user]
+            del x[user]
             continue
         
         for uk in userDictKeys:
             if uk not in x[user].keys():
-                x[user].update( { uk: dflts[uk] if uk in dflts else None } )
+                x[user].update( { uk: dflts[uk] if dflts and uk in dflts else None } )
 
     app.ctx.userTable = x
     return x
@@ -979,7 +1022,7 @@ async def buildMissionTable(app):
     missionDictKeys = [ "glider", "mission", "users", "pilotusers", "groups", "pilotgroups", 
                         "started", "ended", "planned", 
                         "orgname", "orglink", "contact", "email", 
-                        "project", "link", "comment", "reason", 
+                        "project", "link", "comment", "reason", "endpoints"
                       ]
     
     dflts         = None
@@ -1050,8 +1093,6 @@ async def buildMissionTable(app):
     app.ctx.missionTable = missions
     app.ctx.organization = x['organization']
     app.ctx.endpoints = x['endpoints']
-
-    print(app.ctx.endpoints)
 
     return missions
  

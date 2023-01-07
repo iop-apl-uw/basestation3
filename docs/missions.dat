@@ -61,11 +61,23 @@ endpoints:
 # is always used, else use values from run mode specific defaults,
 # else use any values specified in defaults. Values not specified
 # anywhere will be left empty - no defaults are provided in the code. 
+#
+# A mission can also have its own endpoint specific restrictions.
+# Format is the same as for the endpoints section above:
+#
+# sg249: { endpoints: { data: { users: [collaborator] } } }
+#
+# using whatever YAML {}/block or separate line style you prefer
+#
 missions:
 # defaults applied to all missions if not elsewhere spec'd
  defaults: { link: http://iop.apl.washington.edu }
 # defaults applied to all missions when running in pilot mode
  pilotdefaults: { pilotgroups: [analysts] }
+# we don't specify private defaults - if we add pilots or pilotusers
+# to privatedefaults then we must auth as pilot for every mission,
+# which would mean we were running as in pilot mode
+#
 # now the actual missions
  sg249: { planned: 2023-07-30 }
  sg236: {}
