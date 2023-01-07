@@ -482,9 +482,9 @@
             
             img = document.createElement('img');
             if (plotWhich == 'map')
-                img.src = '/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
+                img.src = '/plot/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
             else
-                img.src = '/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
+                img.src = '/plot/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
             console.log(img.src); 
             img.style = "position: absolute; top: 190px; left: 0px; width:290px; max-height:240px; mix-blend-mode:multiply;"
      
@@ -541,7 +541,7 @@
             box.classList.add('box');
 
             img = document.createElement('img');
-            img.src = '/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
+            img.src = '/plot/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
             img.style = "width:290px; max-height:330px; mix-blend-mode:multiply;"
      
             box.appendChild(img);

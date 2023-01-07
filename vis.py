@@ -32,6 +32,7 @@ import getopt
 watchFiles = ['comm.log', 'cmdfile'] # rely on .urls vs '.completed']
 
 
+PERM_INVALID = -1
 PERM_REJECT = 0
 PERM_VIEW   = 1
 PERM_PILOT  = 2
@@ -57,7 +58,6 @@ protectableRoutes = [
                         'file',     # get log, eng, cap file
                         'alerts',   # get alerts
                         'deltas',   # get changes between dives
-                        'missions', # get list of missions
                         'summary',  # get mission summary for a glider
                         'status',   # get basic mission staus (current dive) and eng plot list
                         'control',  # get a control file (cmdfile, etc.)
@@ -74,7 +74,7 @@ protectableRoutes = [
                         'watch',    # web socket stream for live updates of mission and index pages
                     ]
 
-    # unprotectable: /auth, /, /GLIDERNUM
+    # unprotectable: /auth, /, /GLIDERNUM, /missions
 
 compress = sanic_gzip.Compress()
 
@@ -140,7 +140,7 @@ def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
 
     # no matching mission in table - do not allow access
     sanic.log.logger.info(f'rejecting {glider} {mission} for no mission entry')
-    return PERM_REJECT
+    return PERM_INVALID
 
 def authorized(modes=None, check=3): # check=3 both endpoint and mission checks applied
     def decorator(f):
@@ -203,10 +203,13 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                 
                 # this will always fail and return not authorized if glider is None
                 status = checkGliderMission(request, glider, mission, perm=defaultPerm)
-                if status == PERM_REJECT or (requirePilot and status < PERM_PILOT):
+                if status <= PERM_REJECT or (requirePilot and status < PERM_PILOT):
                     sanic.log.logger.info(f"{url} authorization failed {status}, {requirePilot}")
-                    return sanic.response.text(f"authorization failed {status}, {requirePilot}")
-             
+                    if status == PERM_INVALID:
+                        return sanic.response.text("not found")
+                    else: 
+                        return sanic.response.text("authorization failed")
+
             # the user is authorized.
             # run the handler method and return the response
             response = await f(request, *args, **kwargs)

@@ -38,10 +38,10 @@ organization:
 # must be appropriately credentialed at both endpoint and mission levels
 # if both are specified)
 #
-# Endpoints /auth, /GLIDERNUM, and /, cannot be protected in this
-# way. Protected missions and gliders will not be available on those
-# pages of course, but the assumption is that those pages will always
-# be available if only to provide a login page.
+# Endpoints /auth, /GLIDERNUM,  /, and /missions (used by /), cannot be 
+# protected in this way. Protected missions and gliders will not be 
+# available on those pages of course, but the assumption is that those 
+# pages will always be available if only to provide a login page.
 #
 # default values, specified with the defaults: key, will
 # be applied to all protectable endpoints, whether or not
