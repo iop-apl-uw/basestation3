@@ -411,8 +411,9 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def dataHandler(request, file:str):
         path = gliderPath(glider,request)
+
         if which == 'dive':
-            filename = f'{path}/p{glider:03d}{dive:04d}.nc'
+            filename = 'p{glider:03d}{dive:04d}.nc'
         elif which == 'profiles':
             p = Path(path)
             async for ncfile in p.glob(f'sg{glider:03d}*profile.nc'):
@@ -423,9 +424,10 @@ def attachHandlers(app: sanic.Sanic):
             async for ncfile in p.glob(f'sg{glider:03d}*timeseries.nc'):
                 filename = ncfile
                 break
-            
-        if await aiofiles.os.path.exists(filename):
-            return await sanic.response.file(filename)
+
+        fullname = f"{path}/{filename}"           
+        if await aiofiles.os.path.exists(fullname):
+            return await sanic.response.file(fullname, filename=filename, mime_type='application/x-netcdf4')
         else:
             return sanic.response.text('not found', status=404)
 
