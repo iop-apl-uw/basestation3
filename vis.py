@@ -206,7 +206,7 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                         modes = e['modes']
                     
                 # modes now has final possible value - so check for pilot restricted API in public run mode
-                if modes and 'public' not in modes and request.app.config.RUNMODE == public:
+                if modes and 'public' not in modes and request.app.config.RUNMODE == MODE_PUBLIC:
                     sanic.log.logger.info("rejecting: no pilot APIs while running public")
                     return sanic.response.text("Page not found: {}".format(request.path), status=404)
 
@@ -227,7 +227,7 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                     else: 
                         return sanic.response.text("authorization failed")
 
-            elif modes and 'public' not in modes and request.app.config.RUNMODE == public:
+            elif modes and 'public' not in modes and request.app.config.RUNMODE == MODE_PUBLIC:
                 # do the public / pilot check that for AUTH_ENDPOINT only mode
                 sanic.log.logger.info("rejecting: no pilot APIs while running public")
                 return sanic.response.text("Page not found: {}".format(request.path), status=404)
