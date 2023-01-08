@@ -72,6 +72,7 @@ protectableRoutes = [
                         'save',     # save control file
                         'stream',   # web socket stream for glider app page in pilot mode
                         'watch',    # web socket stream for live updates of mission and index pages
+                        'chat',     # post a message to chat
                     ]
 
     # unprotectable: /auth, /, /GLIDERNUM, /missions
@@ -132,7 +133,6 @@ def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
 
     for m in request.app.ctx.missionTable:
         if m['glider'] == glider and m['mission'] == mission: 
-            print(m)
             if (m['users'] is not None or \
                 m['groups'] is not None or \
                 m['pilotusers'] is not None or \
@@ -151,11 +151,6 @@ def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
     return PERM_INVALID
 
 def checkEndpoint(request, e):
-    runningMode = modeNames[request.app.config.RUNMODE]
-
-    if e['modes'] is not None and runningMode not in e['modes']: 
-        sanic.log.logger.info(f"rejecting {url}: mode not allowed")
-        return PERM_INVALID # so we can return "not found"
 
     if e['users'] is not None or e['groups'] is not None:
         (tU, tG) = getTokenUser(request)
@@ -168,11 +163,11 @@ def checkEndpoint(request, e):
 
         if not allowAccess:
             sanic.log.logger.info(f"rejecting {url}: user auth required")
-            return PERM_REJECT # so we return "auth failed"
+            return PERM_REJECT # so we respond "auth failed"
 
     return PERM_VIEW # don't make a distinction view/pilot at this level
 
-def authorized(modes=None, check=3): # check=3 both endpoint and mission checks applied
+def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint and mission checks applied
     def decorator(f):
         @wraps(f)
         async def decorated_function(request, *args, **kwargs):
@@ -188,17 +183,21 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                         return sanic.response.text("Page not found: {}".format(request.path), status=404)
                     elif status == PERM_REJECT:
                         return sanic.response.text("authorization failed")
-                    elif e['modes'] is not None:
-                        modes = e['modes']
+                    else:
+                        if 'modes' in e and e['modes'] is not None:
+                            modes = e['modes']
+                        if 'requirepilot' in e and e['requirepilot'] is not None:
+                            requirePilot = e['requirepilot']
+
+            runningMode = modeNames[request.app.config.RUNMODE]
 
             if check & AUTH_MISSION:
                 defaultPerm = PERM_VIEW
-                requirePilot = False
 
-                # on an open pilot server (typically a non-public server running 443) we require 
-                # positive authentication as a pilot against mission specified list of 
-                # allowed pilots (and pilotgroups). Access to missions without pilots: and/or pilotgroups: specs
-                # will be denied for all. 
+                # on an open pilot server (typically a non-public server running 443) 
+                # we require positive authentication as a pilot against mission specified 
+                # list of allowed pilots (and pilotgroups). Access to missions without 
+                # pilots: and/or pilotgroups: specs will be denied for all. 
                 glider = kwargs['glider'] if 'glider' in kwargs else None
                 mission = request.args['mission'][0] if 'mission' in request.args else None
 
@@ -210,20 +209,21 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                         return sanic.response.text("Page not found: {}".format(request.path), status=404)
                     elif status == PERM_REJECT:
                         return sanic.response.text("authorization failed")
-                    elif e['modes'] is not None:
-                        modes = e['modes']
+                    else:
+                        if 'modes' in e and e['modes'] is not None:
+                            modes = e['modes']
+                        if 'requirepilot' in e and e['requirepilot'] is not None:
+                            requirePilot = e['requirepilot']
                     
                 # modes now has final possible value - so check for pilot restricted API in public run mode
-                if modes and 'public' not in modes and request.app.config.RUNMODE == MODE_PUBLIC:
-                    sanic.log.logger.info("rejecting: no pilot APIs while running public")
+                if modes is not None and runningMode not in modes:
+                    sanic.log.logger.info(f"rejecting {url}: mode not allowed")
                     return sanic.response.text("Page not found: {}".format(request.path), status=404)
-
-                if modes and 'public' not in modes and request.app.config.RUNMODE == MODE_PILOT:
-                    requirePilot = True
+                    
                 # if we're running a private instance of a pilot server then we only require authentication
                 # as a pilot if the pilots/pilotgroups spec is given (similar to how users always work)
-                elif modes and 'public' not in modes and request.app.config.RUNMODE == MODE_PRIVATE:
-                    requirePilot = True
+                # so our default (no spec) is to grant pilot access
+                if requirePilot and request.app.config.RUNMODE == MODE_PRIVATE:
                     defaultPerm = PERM_PILOT 
                 
                 # this will always fail and return not authorized if glider is None
@@ -235,9 +235,9 @@ def authorized(modes=None, check=3): # check=3 both endpoint and mission checks 
                     else: 
                         return sanic.response.text("authorization failed")
 
-            elif modes and 'public' not in modes and request.app.config.RUNMODE == MODE_PUBLIC:
-                # do the public / pilot check that for AUTH_ENDPOINT only mode
-                sanic.log.logger.info("rejecting: no pilot APIs while running public")
+            elif modes is not None and runningMode not in modes:
+                # do the public / pilot mode check for AUTH_ENDPOINT only mode
+                sanic.log.logger.info(f"rejecting {url}: mode not allowed")
                 return sanic.response.text("Page not found: {}".format(request.path), status=404)
 
             # the user is authorized.
@@ -772,7 +772,7 @@ def attachHandlers(app: sanic.Sanic):
     #
 
     @app.post('/save/<glider:int>/<which:str>')
-    @authorized(modes=['private', 'pilot'])
+    @authorized(modes=['private', 'pilot'], requirePilot=True)
     async def saveHandler(request, glider:int, which:str):
         validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
 
@@ -848,11 +848,45 @@ def attachHandlers(app: sanic.Sanic):
                  
         return sanic.response.text('ok')
 
+    @app.post('/chat/<glider:int>')
+    @authorized(modes=['private', 'pilot'])
+    async def chatHandler(request, glider:int):
+        # we could have gotten here by virtue of no restrictions specified for this glider/mission,
+        # but chat only worked if someone is logged in, so we check that we have a user
+        (tU, _) = getTokenUser(request)
+        print(tU)
+        if tU == False:
+            return sanic.response.text('authorization failed')
+ 
+        if 'message' not in request.json:
+            return sanic.response.text('oops')
+
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+
+        msg = request.json['message']
+        now = time.time()
+        
+        async with aiosqlite.connect(dbfile) as conn:
+            cur = await conn.cursor()
+            try:
+                q = f"INSERT INTO chat(timestamp, user, message) VALUES({now}, '{tU}', '{msg}')"
+                sanic.log.logger.info(q)
+                await cur.execute(q)
+                await conn.commit()
+                return sanic.response.text('SENT')
+            except aiosqlite.OperationalError as e:
+                return sanic.response.text('oops')
+                sanic.log.logger.info(e)
+
+            await cur.close()
+            # await conn.close()
+
     @app.websocket('/stream/<which:str>/<glider:int>')
     @authorized()
     async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
         # assert isinstance(request.app.shared_ctx.urlMessages, multiprocessing.managers.ListProxy)
 
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         filename = f'{gliderPath(glider,request)}/comm.log'
         if not await aiofiles.os.path.exists(filename):
             await ws.send('no')
@@ -861,6 +895,7 @@ def attachHandlers(app: sanic.Sanic):
         await ws.send(f"START") # send something to ack the connection opened
 
         sanic.log.logger.debug(f"streamHandler start {filename}")
+
 
         if request.app.config.RUNMODE > MODE_PUBLIC:
             commFile = await aiofiles.open(filename, 'rb')
@@ -872,10 +907,27 @@ def attachHandlers(app: sanic.Sanic):
             else:
                 await commFile.seek(0, 2)
            
+        (tU, _) = getTokenUser(request)
+        print(tU)
+        if tU and request.app.config.RUNMODE > MODE_PUBLIC:
+            conn = await aiosqlite.connect(dbfile)
+            conn.row_factory = rowToDict 
+
         watchList = await buildWatchList(request, glider) 
         prev_t = 0
         filename = f'{gliderPath(glider,request)}/cmdfile'
+        prev_db_t = 0
         while True:
+            if tU and request.app.config.RUNMODE > MODE_PUBLIC:
+                cur = await conn.cursor()
+                q = f"SELECT * FROM chat WHERE timestamp > {prev_db_t} ORDER BY timestamp DESC LIMIT 20;"
+                await cur.execute(q)
+                prev_db_t = time.time()
+                rows = await cur.fetchall()
+                await cur.close()
+                if rows:
+                    await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
+
             modFiles = await checkFileMods(watchList)
             if 'comm.log' in modFiles and request.app.config.RUNMODE > MODE_PUBLIC:
                 data = await commFile.read().decode('utf-8', errors='ignore')
@@ -1081,7 +1133,7 @@ async def buildMissionTable(app):
         if ok not in x['organization'].keys():
             x['organization'].update( { ok: None } )
 
-    endpointsDictKeys = [ "modes", "users", "groups" ]
+    endpointsDictKeys = [ "modes", "users", "groups", "requirepilot" ]
     dflts = None
     for k in list(x['endpoints'].keys()):
         if k == 'defaults':

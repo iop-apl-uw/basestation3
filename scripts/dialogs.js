@@ -1,5 +1,8 @@
-    function openLoginForm() {
+    var loginCallback = null;
+
+    function openLoginForm(callback) {
         $('loginForm').style.display = "block";
+        loginCallback = callback;
     }
 
     function closeLoginForm() {
@@ -34,7 +37,7 @@
             else {
                 console.log(window.location.pathname);
                 console.log(window.location.search);
-                window.location.reload();
+                if (loginCallback) loginCallback();
             }
         })
         .catch(error => {

@@ -1,4 +1,7 @@
 <link rel="stylesheet" href="/script/dialogs.css" />
+{% if runMode == 'pilot' %}
+<link rel="stylesheet" href="/script/chat.css" />
+{% endif %}
 
 <style>
     a:link,.spanClick           {color:#0000ff; text-decoration:none}
@@ -33,6 +36,9 @@
 <script src="/script/plotly-latest.min.js"></script>
 <script src="/script/util.js"></script>
 <script src="/script/dialogs.js"></script>
+{% if runMode == 'pilot' %}
+<script src="/script/chat.js"></script>
+{% endif %}
 <script>
 
     var blurTimer  = false;
@@ -127,6 +133,8 @@
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
 
+        $('chatContent').innerHTML = '';
+
         wsocket.onerror = function(error) {
             console.log('stream error detected');
             wsocket.close();
@@ -142,6 +150,7 @@
             setupStream(glider, false);
         };
 
+        var lastChat_t = 0;
 
         var chunk = "";
         wsocket.onmessage = function(e) { 
@@ -152,7 +161,7 @@
             var newCmdfile;
             var d, pieces, lines;
             var pt, fix;
-            var yr, mo, da, hr, mi, se;
+            var prevDate, thisDate, yr, mo, da, hr, mi, se;
             var tstr;
             const months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12};
             var styles = ["font-weight:bold;", "font-weight:bold; color:red;", "font-weight:bold; color:green;"]
@@ -161,6 +170,24 @@
             var line = e.data;
             if (line.startsWith('START')) {
                 console.log('got START ping');
+            }
+            else if (line.startsWith('CHAT=')) {
+                msgs = JSON.parse(line.slice(5));
+                for (i = msgs.length - 1 ; i >= 0 ; i--) {
+                    m = msgs[i];
+                    var txt = '';
+                    thisDate = new Date(1000*m['timestamp']).toISOString();
+                    prevDate = new Date(1000*lastChat_t).toISOString();
+                    console.log(thisDate);
+                    console.log(prevDate);
+                    if (thisDate.slice(0,10) != prevDate.slice(0,10)) {
+                        txt = txt + `[${thisDate.slice(0,10)}]<br>`;
+                    } 
+                    txt = txt + `<b>${m['user']}</b> ${thisDate.slice(11,16)}<br>`
+                    txt = txt + '&nbsp;' + m['message'] + '<br>';
+                    $('chatContent').innerHTML += txt;
+                    lastChat_t = m['timestamp'];
+                }                 
             }
             else if (line.startsWith('NEW=')) {
                 console.log(line);
@@ -301,7 +328,7 @@
         .then(res => res.text())
         .then(text => {
             if (text.includes("authorization failed")) {
-                openLoginForm();
+                openLoginForm(function() { saveControl(force); });
                 return;
             }
             alert(text);
@@ -681,7 +708,7 @@
         .then(data => {
             console.log(data);
             if (data.includes("authorization failed")) {
-                openLoginForm();
+                openLoginForm(window.location.reload);
                 return;
             }
             data = JSON.parse(data);
@@ -1502,6 +1529,8 @@
         $('chkMissionPlots').checked = true;
         $('chkTimeseriesPlots').checked = false;
 
+        dragElement($('chatDiv'));
+
         document.onkeydown = function (event) {
             const excl = ['input', 'textarea'];
             if (excl.includes(event.target.tagName.toLowerCase()))
@@ -1546,7 +1575,12 @@
 <html>
 <body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
 
- <a href="/">Index</a> <b>&#124;</b> <a href="/dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>
+ <a href="/">Index</a> <b>&#124;</b> 
+ <a href="/dash"> Dashboard </a> <b>&#124;</b> 
+{% if runMode == 'pilot' %}
+ <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
+{% endif %}
+ <span class="spanClick" onclick="openAboutForm(); return false;">About</span>
 
 <div style="position: relative;">
 
@@ -1762,6 +1796,9 @@
 </div> 
 
 {% include "dialogs.html" %}
+{% if runMode == 'pilot' %}
+{% include "chat.html" %}
+{% endif %}
 
 </body>
 

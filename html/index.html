@@ -767,9 +767,9 @@
 
 <script>
     if (window.location.pathname.includes("dash"))
-        document.write('<a href="/">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+        document.write('<a href="/">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
     else
-        document.write('Index <b>&#124;</b> <a href="/dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+        document.write('Index <b>&#124;</b> <a href="/dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
 </script>
 
 <div id="main" style="position: relative;">
