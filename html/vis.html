@@ -55,7 +55,6 @@
     var fixTimer = null;
 {% endif %}
 
-    var accessToken;
 
     function startFlash() {
         isFlashing = true;
@@ -296,12 +295,15 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ${accessToken}'
             },
             body: JSON.stringify(json),
         })
         .then(res => res.text())
         .then(text => {
+            if (text.includes("authorization failed")) {
+                openLoginForm();
+                return;
+            }
             alert(text);
         })
         .catch(error => {

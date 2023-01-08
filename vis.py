@@ -131,12 +131,20 @@ def checkToken(request, users, groups, pilots, pilotgroups):
 def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
 
     for m in request.app.ctx.missionTable:
-        if m['glider'] == glider and m['mission'] == mission and \
-            (m['users'] is not None or m['groups'] is not None \
-             or m['pilotusers'] is not None or m['pilotgroups'] is not None): 
-            return checkToken(request, m['users'], m['groups'], m['pilotusers'], m['pilotgroups'])
-        elif m['glider'] == glider and m['mission'] == mission:
-            return perm
+        if m['glider'] == glider and m['mission'] == mission: 
+            print(m)
+            if (m['users'] is not None or \
+                m['groups'] is not None or \
+                m['pilotusers'] is not None or \
+                m['pilotgroups'] is not None): 
+
+                grant = checkToken(request, m['users'], m['groups'], m['pilotusers'], m['pilotgroups'])
+                if m['users'] is None and m['groups'] is None and grant < PERM_VIEW:
+                    grant = PERM_VIEW
+
+                return grant
+            else:
+                return perm
 
     # no matching mission in table - do not allow access
     sanic.log.logger.info(f'rejecting {glider} {mission} for no mission entry')
@@ -775,7 +783,7 @@ def attachHandlers(app: sanic.Sanic):
         path = gliderPath(glider, request)
         if which in validator:
             try:
-                async with aiofiles.tempfile.NamedTemporaryFile('w') as file:
+                async with aiofiles.tempfile.NamedTemporaryFile('w', delete=False) as file:
                     await file.write(message['contents'])
                     await file.close()
                     sanic.log.logger.debug("saved to %s" % file.name)
@@ -784,7 +792,7 @@ def attachHandlers(app: sanic.Sanic):
                         cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {file.name}"
                     else:
                         cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {file.name}"
-                    
+            
                     proc = await asyncio.create_subprocess_shell(
                         cmd, 
                         stdout=asyncio.subprocess.PIPE, 
@@ -792,6 +800,7 @@ def attachHandlers(app: sanic.Sanic):
                     )
                     out, err = await proc.communicate()
                     results = out.decode('utf-8', errors='ignore') 
+                    await aiofiles.os.remove(file.name)
             except Exception as e:
                 results = f"error saving {which}, {str(e)}"
 
@@ -868,11 +877,11 @@ def attachHandlers(app: sanic.Sanic):
         filename = f'{gliderPath(glider,request)}/cmdfile'
         while True:
             modFiles = await checkFileMods(watchList)
-            if 'comm.log' in modFiles and request.app.config.RUNMODE in pilotModes:
+            if 'comm.log' in modFiles and request.app.config.RUNMODE > MODE_PUBLIC:
                 data = await commFile.read().decode('utf-8', errors='ignore')
                 if data:
                     await ws.send(data)
-            elif 'cmdfile' in modFiles and request.app.config.RUNMODE in pilotModes:
+            elif 'cmdfile' in modFiles and request.app.config.RUNMODE > MODE_PUBLIC:
                 async with aiofiles.open(filename, 'rb') as file:
                     body = (await file.read()).decode('utf-8', errors='ignore')
                     data = "CMDFILE=" + body
