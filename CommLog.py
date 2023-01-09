@@ -54,9 +54,6 @@ from BaseLog import (
     log_error,
     log_critical,
 )
-import asyncio
-import aiofiles
-import aiofiles.os
 
 DEBUG_PDB = False  # Set to True to enter debugger on exceptions
 
@@ -1017,10 +1014,7 @@ def crack_counter_line(
 
     return False
 
-def process_comm_log(*args, **kwargs):
-    return asyncio.run(process_comm_log_worker(*args, **kwargs))
-
-async def process_comm_log_worker(
+def process_comm_log(
     comm_log_file_name,
     base_opts,
     known_commlog_files=None,
@@ -1044,32 +1038,32 @@ async def process_comm_log_worker(
         if scan_back:
             print("scanning backwards")
             try:
-                comm_log_file = await aiofiles.open(comm_log_file_name, "rb")
+                comm_log_file = open(comm_log_file_name, "rb")
             except IOError:
                 log_error("Could not open %s for reading." % comm_log_file_name)
                 return (None, None, None, None, 1)
 
             try:
-                await comm_log_file.seek(-2, os.SEEK_END)
+                comm_log_file.seek(-2, os.SEEK_END)
                 while True:
-                    while await comm_log_file.read(1) != b"\n":
-                        await comm_log_file.seek(-2, os.SEEK_CUR)
+                    while comm_log_file.read(1) != b"\n":
+                        comm_log_file.seek(-2, os.SEEK_CUR)
 
-                    curr_pos = await comm_log_file.tell()
-                    curr_line = (await comm_log_file.readline()).decode()
+                    curr_pos = comm_log_file.tell()
+                    curr_line = comm_log_file.readline().decode()
                     print((curr_line, curr_pos))
                     if curr_line.startswith("Connected"):
                         start_pos = curr_pos
-                        await comm_log_file.close()
+                        comm_log_file.close()
                         break
                     else:
-                        await comm_log_file.seek(curr_pos - 2, os.SEEK_SET)
+                        comm_log_file.seek(curr_pos - 2, os.SEEK_SET)
             except IOError:
                 # Didn't find a line starting with connected - fall through
-                await comm_log_file.close()
+                comm_log_file.close()
 
         if start_pos >= 0:
-            statinfo = await aiofiles.os.stat(comm_log_file_name)
+            statinfo = os.stat(comm_log_file_name)
             if statinfo.st_size < start_pos:
                 # File got smaller - reparse
                 # print "Resetting starting position (%d,%d)" % (statinfo.st_size,start_pos)
@@ -1078,7 +1072,7 @@ async def process_comm_log_worker(
                 # Start pos is the same as filesize - nothing to do
                 return (None, start_pos, session, line_count, 0)
         try:
-            comm_log_file = await aiofiles.open(comm_log_file_name, "rb")
+            comm_log_file = open(comm_log_file_name, "rb")
         except IOError:
             log_error("Could not open %s for reading." % comm_log_file_name)
             return (None, None, None, None, 1)
@@ -1086,7 +1080,7 @@ async def process_comm_log_worker(
         log_debug("process_comm_log starting")
         if start_pos >= 0 and statinfo.st_size > start_pos:
             # print "Resetting to file pos %d" % start_pos
-            await comm_log_file.seek(start_pos, 0)
+            comm_log_file.seek(start_pos, 0)
 
         sessions = []
         raw_file_lines = []
@@ -1097,7 +1091,7 @@ async def process_comm_log_worker(
 
         file_transfer_method = {}
 
-        async for raw_line in comm_log_file:
+        for raw_line in comm_log_file:
             line_count = line_count + 1
             try:
                 raw_line = raw_line.decode("utf-8")
@@ -1697,8 +1691,8 @@ async def process_comm_log_worker(
                     "Line outside session: file %s, lineno %d, line %s"
                     % (comm_log_file_name, line_count, raw_line)
                 )
-        start_pos = await comm_log_file.tell()
-        await comm_log_file.close()
+        start_pos = comm_log_file.tell()
+        comm_log_file.close()
 
         commlog = CommLog(
             sessions, raw_file_lines, files_transfered, file_transfer_method

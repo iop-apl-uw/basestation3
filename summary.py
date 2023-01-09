@@ -9,6 +9,7 @@ import aiofiles
 import CommLog
 import sys
 import asyncio
+import aiofiles.os
 
 async def getCmdfileDirective(cmdfile):
     cmdfileDirective = 'unknown'
@@ -45,7 +46,8 @@ async def collectSummary(glider, path):
     else:
         start = statinfo.st_size - 10000
 
-    (commlog, commlog_pos, ongoing_session, _, _) = await CommLog.process_comm_log_worker(commlogfile, {}, start_pos=start)
+    processor = aiofiles.os.wrap(CommLog.process_comm_log)
+    (commlog, commlog_pos, ongoing_session, _, _) = await processor(commlogfile, {}, start_pos=start)
     if len(commlog.sessions) == 0:
         session = None
     else:
