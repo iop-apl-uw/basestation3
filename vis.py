@@ -28,6 +28,7 @@ import ExtractBinnedProfiles
 import ExtractTimeseries
 import multiprocessing
 import getopt
+import base64
 
 watchFiles = ['comm.log', 'cmdfile'] # rely on .urls vs '.completed']
 
@@ -88,6 +89,9 @@ publicMissionFields = {"started", "ended", "planned",
 # which modes need full comm.log stream vs just change notices
 
 def getTokenUser(request):
+    if request.app.config.SINGLE_MISSION:
+        return (request.app.config.USER, False)
+
     if not 'token' in request.cookies:
         return (False, False)
 
@@ -855,24 +859,34 @@ def attachHandlers(app: sanic.Sanic):
         # we could have gotten here by virtue of no restrictions specified for this glider/mission,
         # but chat only worked if someone is logged in, so we check that we have a user
         (tU, _) = getTokenUser(request)
-        print(tU)
         if tU == False:
             return sanic.response.text('authorization failed')
+
+        attach = None
+        if 'attachment' in request.files:
+            attach = request.files['attachment'][0]
  
-        if 'message' not in request.json:
+        msg = None
+        if 'message' in request.form:
+            msg = request.form['message'][0]
+
+        if not msg and not attach:
             return sanic.response.text('oops')
 
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
 
-        msg = request.json['message']
         now = time.time()
-        
+ 
         async with aiosqlite.connect(dbfile) as conn:
             cur = await conn.cursor()
             try:
-                q = f"INSERT INTO chat(timestamp, user, message) VALUES({now}, '{tU}', '{msg}')"
-                sanic.log.logger.info(q)
-                await cur.execute(q)
+                if attach:
+                    q = f"INSERT INTO chat(timestamp, user, message, attachment, mime) VALUES(?, ?, ?, ?, ?)"
+                    values = (now, tU, msg, attach.body, attach.type)
+                else:
+                    q = f"INSERT INTO chat(timestamp, user, message) VALUES(?, ?, ?)"
+                    values = ( now, tU, msg )
+                await cur.execute(q, values)
                 await conn.commit()
                 return sanic.response.text('SENT')
             except aiosqlite.OperationalError as e:
@@ -886,6 +900,10 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
         # assert isinstance(request.app.shared_ctx.urlMessages, multiprocessing.managers.ListProxy)
+        if which == 'init':
+            prev_db_t = 0
+        else:
+            prev_db_t = time.time();
 
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         filename = f'{gliderPath(glider,request)}/comm.log'
@@ -896,7 +914,6 @@ def attachHandlers(app: sanic.Sanic):
         await ws.send(f"START") # send something to ack the connection opened
 
         sanic.log.logger.debug(f"streamHandler start {filename}")
-
 
         if request.app.config.RUNMODE > MODE_PUBLIC:
             commFile = await aiofiles.open(filename, 'rb')
@@ -909,7 +926,7 @@ def attachHandlers(app: sanic.Sanic):
                 await commFile.seek(0, 2)
            
         (tU, _) = getTokenUser(request)
-        print(tU)
+        
         if tU and request.app.config.RUNMODE > MODE_PUBLIC:
             conn = await aiosqlite.connect(dbfile)
             conn.row_factory = rowToDict 
@@ -917,21 +934,25 @@ def attachHandlers(app: sanic.Sanic):
         watchList = await buildWatchList(request, glider) 
         prev_t = 0
         filename = f'{gliderPath(glider,request)}/cmdfile'
-        prev_db_t = 0
         while True:
             if tU and request.app.config.RUNMODE > MODE_PUBLIC:
                 cur = await conn.cursor()
-                q = f"SELECT * FROM chat WHERE timestamp > {prev_db_t} ORDER BY timestamp DESC LIMIT 20;"
+                q = f"SELECT * FROM chat WHERE timestamp > {prev_db_t} ORDER BY timestamp;" #  DESC LIMIT 20;"
                 await cur.execute(q)
                 prev_db_t = time.time()
                 rows = await cur.fetchall()
                 await cur.close()
                 if rows:
+                    for r in rows:
+                        if 'attachment' in r and r['attachment'] is not None:
+                            b = r['attachment']
+                            r['attachment'] = base64.b64encode(b).decode('utf-8')
+
                     await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
             modFiles = await checkFileMods(watchList)
             if 'comm.log' in modFiles and request.app.config.RUNMODE > MODE_PUBLIC:
-                data = await commFile.read().decode('utf-8', errors='ignore')
+                data = (await commFile.read()).decode('utf-8', errors='ignore')
                 if data:
                     await ws.send(data)
             elif 'cmdfile' in modFiles and request.app.config.RUNMODE > MODE_PUBLIC:
@@ -1069,13 +1090,16 @@ async def buildUserTable(app):
     return x
 
 async def buildMissionTable(app):
-
-    if await aiofiles.os.path.exists(app.config.MISSIONS_FILE):
-        async with aiofiles.open(app.config.MISSIONS_FILE, "r") as f:
-            d = await f.read()
-            x = yaml.safe_load(d)
-    else:
-        x = {}
+    if 'SINGLE_MISSION' in app.config:
+        sanic.log.logger.info(f'building table for single mission {app.config.SINGLE_MISSION}')
+        x = { 'missions': { app.config.SINGLE_MISSION: {} } }
+    else: 
+        if await aiofiles.os.path.exists(app.config.MISSIONS_FILE):
+            async with aiofiles.open(app.config.MISSIONS_FILE, "r") as f:
+                d = await f.read()
+                x = yaml.safe_load(d)
+        else:
+            x = {}
 
     if 'organization' not in x:
         x['organization'] = {}
@@ -1236,6 +1260,8 @@ def createApp(overrides: dict) -> sanic.Sanic:
         app.config.USERS_FILE = "/home/seaglider/users.dat"
     if 'FQDN' not in app.config:
         app.config.FQDN = "seaglider.pub"
+    if 'USER' not in app.config:
+        app.config.USER = os.getlogin()
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
@@ -1264,7 +1290,7 @@ if __name__ == '__main__':
                 runMode = MODE_PILOT
     else:
         try:
-            opts, args = getopt.getopt(sys.argv[1:], 'p:m:r:d:f:u:c:s', ["port=", "mode=", "root=", "domain=", "missions=", "users=", "certs=", "ssl"])
+            opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:s', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl"])
         except getopt.GetopterError as err:
             print(err)
             sys.exit(1)
@@ -1272,20 +1298,22 @@ if __name__ == '__main__':
         for o,a in opts:
             if o in ['-p', '--port']:
                 port = int(a)
-            elif o in ['-m', '--mode']:
+            elif o in ['-o', '--mode']:
                 runMode = runModes[a]
             elif o in ['-r', '--root']:
                 root = a
             elif o in ['-d', '--domain']:
                 overrides['FQDN'] = a
-            elif o in ['-f', '--missions']:
+            elif o in ['-f', '--missionsfile']:
                 overrides['MISSIONS_FILE'] = a
-            elif o in ['-u', '--users']:
+            elif o in ['-u', '--usersfile']:
                 overrides['USERS_FILE'] = a
             elif o in ['-c', '--certs']:
                 certPath = a
             elif o in ['-s', '--ssl']:
                 ssl = True
+            elif o in ['-m', '--mission']:
+                overrides['SINGLE_MISSION'] = a
                  
     os.chdir(root if root is not None else '/home/seaglider')
 

@@ -133,7 +133,9 @@
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
 
-        $('chatContent').innerHTML = '';
+        if (first) {
+            $('chatContent').innerHTML = '';
+        }
 
         wsocket.onerror = function(error) {
             console.log('stream error detected');
@@ -162,6 +164,7 @@
             var d, pieces, lines;
             var pt, fix;
             var prevDate, thisDate, yr, mo, da, hr, mi, se;
+            var h;
             var tstr;
             const months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12};
             var styles = ["font-weight:bold;", "font-weight:bold; color:red;", "font-weight:bold; color:green;"]
@@ -171,24 +174,34 @@
             if (line.startsWith('START')) {
                 console.log('got START ping');
             }
+{% if runMode == 'pilot' %}
             else if (line.startsWith('CHAT=')) {
                 msgs = JSON.parse(line.slice(5));
-                for (i = msgs.length - 1 ; i >= 0 ; i--) {
-                    m = msgs[i];
+                for (m of msgs) {
                     var txt = '';
                     thisDate = new Date(1000*m['timestamp']).toISOString();
                     prevDate = new Date(1000*lastChat_t).toISOString();
-                    console.log(thisDate);
-                    console.log(prevDate);
                     if (thisDate.slice(0,10) != prevDate.slice(0,10)) {
                         txt = txt + `[${thisDate.slice(0,10)}]<br>`;
                     } 
                     txt = txt + `<b>${m['user']}</b> ${thisDate.slice(11,16)}<br>`
                     txt = txt + '&nbsp;' + m['message'] + '<br>';
-                    $('chatContent').innerHTML += txt;
+                 
+                    h = document.createElement('div');
+                    h.innerHTML = txt;
+                    $('chatContent').appendChild(h);
+                
+                    if (m.attachment && m.attachment.length > 0) {
+                        h = new Image();
+                        h.src = `data:${m.mime};base64,${m.attachment}`;
+                        h.style.maxWidth = '260px';
+                        $('chatContent').appendChild(h);
+                        h.onclick = function() { $('modalImgDiv').style.display = "block"; $('modalImg').src = this.src; return false; }
+                    }
                     lastChat_t = m['timestamp'];
                 }                 
             }
+{% endif %}
             else if (line.startsWith('NEW=')) {
                 console.log(line);
                 pieces = line.split('=')[1].split(',');
@@ -1529,7 +1542,13 @@
         $('chkMissionPlots').checked = true;
         $('chkTimeseriesPlots').checked = false;
 
+{% if runMode == 'pilot' %}
         dragElement($('chatDiv'));
+        $('attachImage').addEventListener('change', attachImageChange);
+        $('modalImgClose').onclick = function() {
+            $('modalImgDiv').style.display = "none";
+        }
+{% endif %}
 
         document.onkeydown = function (event) {
             const excl = ['input', 'textarea'];
@@ -1575,8 +1594,8 @@
 <html>
 <body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
 
- <a href="/">Index</a> <b>&#124;</b> 
- <a href="/dash"> Dashboard </a> <b>&#124;</b> 
+ <a href="/" target="index">Index</a> <b>&#124;</b> 
+ <a href="/dash" target="dash"> Dashboard </a> <b>&#124;</b> 
 {% if runMode == 'pilot' %}
  <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
 {% endif %}

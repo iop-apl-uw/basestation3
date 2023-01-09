@@ -42,19 +42,35 @@
     }
 
     function chatSend() {
-        var json = {}
+        var formdata = new FormData();
+        var message = $('chatInput').value.trim();
 
-        json['message'] = $('chatInput').value.trim();
-        if (json['message'] == '') {
+        if (!chatHaveAttachment && message == '') 
             return;
+
+        if (chatHaveAttachment) {
+            chatHaveAttachment = false;
+            formdata.append('attachment', $('attachImage').files[0]);
+            $('attachImage').value = null;
+            $('chatInput').style.border = '1px solid black';
+            console.log('image attached');
         }
+
+        console.log(message);
+        formdata.append('message', message);
+
+        for (k of formdata.keys()) {
+            console.log(k);
+            console.log(formdata.get(k));
+        }
+
         fetch(`/chat/${currGlider}${mission()}`,
         {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(json),
+            //headers: {
+            //    'Content-Type': 'multipart/form-data'
+            //},
+            body: formdata, // JSON.stringify(json),
         })
         .then(res => res.text())
         .then(text => {
@@ -76,4 +92,10 @@
 
     function chatShow() {
         $('chatDiv').style.display = 'block';
+    }
+
+    var chatHaveAttachment = false;
+    function attachImageChange() {
+        $('chatInput').style.border = "1px solid blue";
+        chatHaveAttachment = true;
     }
