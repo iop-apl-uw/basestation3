@@ -73,10 +73,19 @@ async def collectSummary(glider, path):
     elif session and session.cmd_directive:
         directive    = session.cmd_directive
 
+    if ongoing_session and ongoing_session.calls_made:
+        calls   = ongoing_session.calls_made
+    elif session and session.cmd_directive:
+        calls   = session.calls_made
+
+    logout = False
+    shutdown = False
     if ongoing_session:
         logout = ongoing_session.logout_seen
+        shutdown = ongoing_session.shutdown_seen
     elif session:
         logout = session.logout_seen
+        shutdown = session.shutdown_seen
 
     if ongoing_session and ongoing_session.recov_code:
         recovery    = ongoing_session.recov_code
@@ -132,6 +141,8 @@ async def collectSummary(glider, path):
     out['connect']  = connected
     out['disconnect']  = disconnected
     out['logout']   = logout
+    out['shutdown'] = shutdown
+    out['calls']    = calls
     out['depth']    = data['max_depth']
     out['grid']     = data['log_D_GRID']
     out['fix']      = time.mktime(last_GPS.datetime)

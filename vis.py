@@ -173,6 +173,7 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
         async def decorated_function(request, *args, **kwargs):
             nonlocal modes
             nonlocal check
+            nonlocal requirePilot
 
             url = request.server_path[1:].split('/')[0]
             if check & AUTH_ENDPOINT:

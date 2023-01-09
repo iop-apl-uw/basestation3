@@ -299,7 +299,10 @@
 
 
             txt = document.createElement('div');
-            if (data.recovery != null) {
+            if (data.shutdown) {
+                txt.innerHTML = '<span style="color:magenta; font-weight: bold;">powered off</span>';
+            }
+            else if (data.recovery != null) {
                 var color;
                 if (data.commDirective == 'RESUME')       color = 'black';
                 else if (data.recovery == 'QUIT_COMMAND') color = 'yellow';
@@ -387,8 +390,6 @@
             box.classList.add('indicatorInsideBox');
             h.appendChild(box);
 
-
-
             // errors
             h = document.createElement('div');
             h.classList.add('indicator');
@@ -458,6 +459,26 @@
             h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
             indicators.push(h);
 
+            // comms
+            h = document.createElement('div');
+            h.classList.add('indicator');
+            let callState = data.logout ? "call finished ok" : "call dropped";
+            if (data.calls == 1 && data.logout) {
+                h.title = 'calls 1, call finished ok';
+                h.innerHTML = 'comms<br>good';
+                h.classList.add('indicatorGreen');
+            }
+            else if (data.calls < 3 || data.logout == false) {
+                h.title = `calls ${data.calls}, ${callState}`;
+                h.innerHTML = 'comms<br>fair';
+                h.classList.add('indicatorYellow');
+            }
+            else {
+                h.title = `calls ${data.calls}, ${callState}`;
+                h.innerHTML = 'comms<br>poor';
+                h.classList.add('indicatorRed');
+            }
+            indicators.push(h);
 
             var count = 0;
             var firstExta = null;
@@ -470,6 +491,7 @@
                         if (count >= 5) {
                             indicators[i].setAttribute('hidden', '');
                             indicators[i].setAttribute('data-extra', '');
+                            console.log('attaching attributes');
                         }
                         if (count == 5)
                             firstExtra = indicators[i];
@@ -484,7 +506,8 @@
             h.innerHTML = '&#9654;'; // tri right, &#9660; is tri down
             h.onclick = function() { 
                 event.stopPropagation();
-                var extra = box.querySelectorAll('[data-extra]'); 
+                var extra = this.parentElement.querySelectorAll('[data-extra]'); 
+
                 if (extra[0].hasAttribute('hidden')) {
                     for (e of extra) {
                         e.removeAttribute('hidden');
@@ -512,7 +535,7 @@
             else
                 img.src = '/plot/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
     
-            img.style = "max-width:290px; max-height:240px; mix-blend-mode:multiply;"
+            img.style = "position: absolute; top: 200px; max-width:290px; max-height:240px; mix-blend-mode:multiply;"
      
             box.appendChild(img);
             t.appendChild(box);
