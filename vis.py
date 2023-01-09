@@ -1090,7 +1090,7 @@ async def buildUserTable(app):
     return x
 
 async def buildMissionTable(app):
-    if 'SINGLE_MISSION' in app.config:
+    if 'SINGLE_MISSION' in app.config and app.config.SINGLE_MISSION:
         sanic.log.logger.info(f'building table for single mission {app.config.SINGLE_MISSION}')
         x = { 'missions': { app.config.SINGLE_MISSION: {} } }
     else: 
@@ -1262,6 +1262,8 @@ def createApp(overrides: dict) -> sanic.Sanic:
         app.config.FQDN = "seaglider.pub"
     if 'USER' not in app.config:
         app.config.USER = os.getlogin()
+    if 'SINGLE_MISSION' not in app.config:
+        app.config.SINGLE_MISSION = None
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
