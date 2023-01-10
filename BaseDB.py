@@ -696,6 +696,19 @@ def loadDB(base_opts, filename, from_cli=False):
     updateDBFromFM(base_opts, [filename], con)
     updateDBFromFileExistence(base_opts, [filename], con)
 
+def prepDB(base_opts):
+    db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+    # if not os.path.exists(db): 
+    # connect creates if it needs to
+
+    con = sqlite3.connect(db)
+    with con:
+        cur = con.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
+        cur.close()
+
+    con.close()
+
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
     if con == None:
@@ -848,6 +861,8 @@ def main():
         log_warning(
             "Could not setup plots directory - plotting contributions will not be added"
         )
+
+    prepDB(base_opts)
 
     if base_opts.subparser_name == "addncfs":
         if base_opts.netcdf_files:
