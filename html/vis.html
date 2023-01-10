@@ -139,7 +139,7 @@
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
 
-        if (first) {
+        if (first || history) {
             $('chatContent').innerHTML = '';
         }
 
@@ -632,9 +632,15 @@
  
         fetch(q)
         .then(res => res.text())
-        .then(data => {
-            data = JSON.parse(data);
-
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log('buildTable ' + error);
+                console.log(text);
+                return;
+            }
+        
             var has10 = false;
             var has24 = false;
             for (d of data) {
@@ -725,13 +731,19 @@
     function loadStatus(glider, dive) {
         fetch(`/status/${glider}${mission()}`)
         .then(res => res.text())
-        .then(data => {
-            console.log(data);
-            if (data.includes("authorization failed")) {
-                openLoginForm(window.location.reload);
+        .then(text => {
+            console.log(text);
+            if (text.includes("authorization failed")) {
+                openLoginForm(window.location.reload.bind(window.location))
                 return;
             }
-            data = JSON.parse(data);
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log('loadStatus ' + error);
+                console.log(text);
+                return;
+            }
             document.title = data['glider'];
             currTitle = data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
@@ -852,12 +864,19 @@
         var i;
         var html;
         var pieces;
+        var deltas;
         let urls = [`/alerts/${currGlider}/${dive}${mission()}`, `/deltas/${currGlider}/${dive}${mission()}`];
         let notify = false;
 
         let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
         let alerts = resp[0];
-        let deltas = JSON.parse(resp[1]);
+        try {
+            deltas = JSON.parse(resp[1]);
+        } catch (error) {
+            console.log('loadNotifications ' + error);
+            console.log(resp[1]);
+            deltas = { 'parms': [], 'files': [] };
+        }
 
         html = "<h3>alerts</h3><p>";
         if (alerts != "not found") {
