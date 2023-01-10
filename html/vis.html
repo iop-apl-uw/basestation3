@@ -139,10 +139,11 @@
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
 
+{% if runMode == 'pilot' %}
         if (first || history) {
             $('chatContent').innerHTML = '';
         }
-
+{% endif %}
         wsocket.onerror = function(error) {
             console.log('stream error detected');
             wsocket.close();
@@ -875,7 +876,7 @@
         } catch (error) {
             console.log('loadNotifications ' + error);
             console.log(resp[1]);
-            deltas = { 'parms': [], 'files': [] };
+            deltas = { 'parm': [], 'file': [] };
         }
 
         html = "<h3>alerts</h3><p>";
