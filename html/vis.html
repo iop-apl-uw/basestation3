@@ -107,10 +107,10 @@
     var lastSetup = 0;
     var first = true;
 
-    function setupStream(glider, first) {
-        if (Date.now() < lastSetup + 20000) {
+    function setupStream(glider, first, history) {
+        if (Date.now() < lastSetup + 5000) {
             setTimeout(() => {
-                setupStream(glider, false);
+                setupStream(glider, false, history);
             }, 20000);
             console.log('too soon');
             return;
@@ -128,8 +128,14 @@
         else
             new_uri = "ws:";
 
+        let which = 'restart';
+        if (first)
+            which = 'init';
+        else if (history)
+            which = 'history';
+        
         new_uri += "//" + loc.host;
-        new_uri += "/stream/" + (first ? "init/" : "restart/") + glider + mission();
+        new_uri += "/stream/" + which + "/" + glider + mission();
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
 
@@ -149,7 +155,7 @@
             else {
                 console.log('connection died');
             }
-            setupStream(glider, false);
+            setupStream(glider, false, false);
         };
 
         var lastChat_t = 0;
@@ -1545,7 +1551,7 @@
         console.log(glider);
         window.name = glider;
         loadStatus(glider, dive);
-        setupStream(glider, true);
+        setupStream(glider, true, true);
 {% if runMode == 'pilot' %}
         loadControlFile('cmdfile');
         loadControlFile('science');

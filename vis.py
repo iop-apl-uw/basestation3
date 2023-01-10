@@ -329,6 +329,12 @@ def attachHandlers(app: sanic.Sanic):
 
         return sanic.response.text('authorization failed') 
 
+    @app.route('/user')
+    @authorized(modes=['pilot','private'], check=AUTH_ENDPOINT)
+    async def userHandler(request):
+        (tU, tG) = getTokenUser(request)
+        return sanic.response.text('YES' if tU else 'NO')
+ 
     @app.route('/plot/<fmt:str>/<which:str>/<glider:int>/<dive:int>/<image:str>')
     @authorized()
     async def plotHandler(request, fmt:str, which: str, glider: int, dive: int, image: str):
@@ -900,7 +906,7 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
         # assert isinstance(request.app.shared_ctx.urlMessages, multiprocessing.managers.ListProxy)
-        if which == 'init':
+        if which == 'init' or which == 'history':
             prev_db_t = 0
         else:
             prev_db_t = time.time();
