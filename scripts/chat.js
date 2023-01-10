@@ -75,7 +75,7 @@
         .then(res => res.text())
         .then(text => {
             if (text.includes("authorization failed")) {
-                openLoginForm(function() { setupStream(currGlider, 0); chatSend(); } );
+                openLoginForm(function() { setupStream(currGlider, false, true); chatSend(); } );
                 return;
             }
             $('chatInput').value = '';
@@ -91,7 +91,7 @@
         var glider;
         var dive;
         var plot;
-        const re = /(@(?<GDP_G>[0-9][0-9][0-9])#(?<GDP_D>[0-9]+)\$(?<GDP_P>[a-z0-9]+))|(@(?<GD_G>[0-9][0-9][0-9])#(?<GD_D>[0-9]+))|(@(?<G>[0-9][0-9][0-9]))|(#(?<D>[0-9]+))|(\$(?<P>[a-z0-9]+))|(#(?<DP_D>[0-9]+)\$(?<DP_P>[a-z0-9]+))|(?<link>\[(?<text>[\w\s\d]+)\]\((?<url>https?:\/\/([a-z0-9@#/.-]+))\))/g;
+        const re = /(@(?<GDP_G>[0-9][0-9][0-9])#(?<GDP_D>[0-9]+)\$(?<GDP_P>[a-z0-9]+))|(@(?<GD_G>[0-9][0-9][0-9])#(?<GD_D>[0-9]+))|(#(?<DP_D>[0-9]+)\$(?<DP_P>[a-z0-9]+))|(@(?<G>[0-9][0-9][0-9]))|(#(?<D>[0-9]+))|(\$(?<P>[a-z0-9]+))|(?<link>\[(?<text>[\w\s\d]+)\]\((?<url>https?:\/\/([a-z0-9@#/.-]+))\))/g;
         let matches = input.matchAll(re);
         let out = '';
         let cursorPos = 0;
@@ -101,7 +101,7 @@
 
         for (let match of matches) {
             console.log(match);
-            const { groups: { GDP_G, GDP_D, GDP_P, GD_G, GD_D, G, D, P, DP_D, DP_P, link, text, url }, index } = match;
+            const { groups: { GDP_G, GDP_D, GDP_P, GD_G, GD_D, DP_D, DP_P, G, D, P, link, text, url }, index } = match;
             const full = match[0];
             console.log(full);
  
@@ -117,7 +117,7 @@
                 dive   = parseInt(GDP_D);
                 plot   = GDP_P;
                 if (glider == currGlider) {
-                    out += `<span class="spanClick" onclick="setDive(${dive}); jumpScrollByName('${plot}');">${match[0]}</a>`;
+                    out += `<span class="spanClick" onclick="setDive(${dive}); jumpScrollByName('${plot}');">${match[0]}</span>`;
                 }
                 else { 
                     out += `<a href="/${glider}?dive=${dive}&plot=${plot}" target="${glider}">${match[0]}</a>`; 
@@ -127,7 +127,7 @@
                 glider = parseInt(GD_G);
                 dive   = parseInt(GD_D);
                 if (glider == currGlider) {
-                    out += `<span class="spanClick" onclick="setDive(${dive});">${match[0]}</a>`;
+                    out += `<span class="spanClick" onclick="setDive(${dive});">${match[0]}</span>`;
                 }
                 else { 
                     out += `<a href="/${glider}?dive=${dive}" target="${glider}">${full}</a>`; 
@@ -136,14 +136,14 @@
             else if (DP_D !== undefined) {
                 dive = parseInt(DP_D);
                 plot = DP_P;
-                out += `<span class="spanClick" onclick="setDive(${dive}); jumpScrollByName('${plot}');">${match[0]}</a>`;
+                out += `<span class="spanClick" onclick="setDive(${dive}); jumpScrollByName('${plot}');">${match[0]}</span>`;
             }
             else if (P !== undefined) {
-                out += `<span class="spanClick" onclick="jumpScrollByName('${P}');">${match[0]}</a>`;
+                out += `<span class="spanClick" onclick="jumpScrollByName('${P}');">${match[0]}</span>`;
             }
             else if (D !== undefined) {
                 dive   = parseInt(D);
-                out += `<span class="spanClick" onclick="setDive(${dive});">${match[0]}</a>`;
+                out += `<span class="spanClick" onclick="setDive(${dive});">${match[0]}</span>`;
             }
             else if (G !== undefined) {
                 glider = parseInt(G);
@@ -169,6 +169,13 @@
 
     function chatShow() {
         $('chatDiv').style.display = 'block';
+        fetch('/user')
+        .then(res => res.text())
+        .then(text => {
+            if (text !== 'YES') {
+                openLoginForm(function() { setupStream(currGlider, false, true); } );
+            }
+        })
     }
 
     var chatHaveAttachment = false;
