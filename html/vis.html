@@ -188,7 +188,7 @@
                     txt = txt + '&nbsp;' + m['message'] + '<br>';
                  
                     h = document.createElement('div');
-                    h.innerHTML = txt;
+                    h.innerHTML = chatMarkdown(glider, txt);
                     $('chatContent').appendChild(h);
                 
                     if (m.attachment && m.attachment.length > 0) {
@@ -199,6 +199,7 @@
                         h.onclick = function() { $('modalImgDiv').style.display = "block"; $('modalImg').src = this.src; return false; }
                     }
                     lastChat_t = m['timestamp'];
+                    $('chatContent').scrollTo(0, $('chatContent').scrollHeight);
                 }                 
             }
 {% endif %}
@@ -729,13 +730,13 @@
             currTitle = data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
                 currDive = maxDive = parseInt(data['dive']);
-                loadPlots(currDive, true);
+                loadPlots(currDive, false);
                 // loadLog(currDive);
             }
             else if (dive > 0 && dive < parseInt(data['dive'])) {
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
-                loadPlots(currDive, true);
+                loadPlots(currDive, false);
                 // loadLog(currDive);
             }
             engplotlyplots = data['engplotly'];
@@ -775,6 +776,13 @@
         img.id = 'thumb' + p;
         $('bottom').appendChild(img);
         plotList.push(p);
+    }
+
+    function jumpScrollByName(x) {
+        i = plotList.indexOf(x);
+        if (i > -1) {
+            jumpScroll(i);
+        }
     }
 
     function loadLog(dive) {
@@ -1081,7 +1089,14 @@
             // loadLog(currDive);
         }
     }
-      
+     
+    function setDive(dive) {
+        if (currDive != dive && dive <= maxDive && dive >= 1) {
+            currDive = dive;
+            loadPlots(currDive, false);
+        }
+    } 
+
     function getSelectionText() {
         var text = "";
         var activeEl = document.activeElement;
@@ -1507,6 +1522,9 @@
         }
         if (params.has('mission')) {
             currMission = params.get('mission');
+        }
+        if (params.has('plot')) {
+            currElt = params.get('plot');
         }
         if (params.has('order')) {
             createCookie("order", params.get('order'), 180);
