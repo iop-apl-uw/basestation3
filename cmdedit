@@ -184,6 +184,9 @@ else:
     newfile = input_file
     # BUG shouldn't we delete newfile at this point?
     newfile_is_temp = False
+    if not os.path.exists(newfile):
+        print("input file not found")
+        sys.exit(2)
 
 done_editing = 0
 while done_editing == 0:

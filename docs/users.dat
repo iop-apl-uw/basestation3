@@ -1,0 +1,3 @@
+---
+#user: { password=hashedString, groups=[group1,group2] }
+guest: { groups: [basic,guest,analysts], password: $5$rounds=535000$5I5iOtEZRoObh.En$xh7kyEnCimU.FY.FvOBzYve70NMGQol0RbgFUQZKWU8 }

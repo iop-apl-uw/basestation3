@@ -1,0 +1,94 @@
+---
+# all mission fields optional
+# values are inherited from defaults mission
+# mission fields: users: [user1,user2], pilotusers: [...], 
+#                 groups: [group1,group2], pilotgroups: [...],
+#                 started: yyyy-mm-dd, ended: yyyy-mm-dd, planned: yyyy-mm-dd,
+#                 orgname: string, orglink: URL, contact: string, email: string",
+#                 project: string, link: URL, comment: string, reason: string,
+#
+# organization details optional
+# organization fields: link: URL, name: string, contact: string, email: string,
+#                      text: markdown
+#
+organization:
+ link: http://iop.apl.washington.edu
+ name: Seaglider Public Operations
+ contact: IOP Seaglider support team
+ email: iopsg@uw.edu
+ text: some markdown eventually
+
+# protections adds additional restrictions to who can access certain API
+# endpoints. By default only the /save endpoint is protected - it is only
+# available in private and pilot run modes. Format:
+#
+# url: { mode:[pilot,private,public], groups:[group1, group2, ...], users:[user1user2] }
+#
+# There are two typical use cases for these types of control 
+#   - to change the run modes under which certain endpoints can be 
+#     accessed (i.e., to prevent all access to selftest, raw file, or 
+#     download endpoints when running as a public server)
+#   - to give only a certain group of users access to these endpoints,
+#     independently of the per mission controls. A "download" user could
+#     be created and raw data API endpoints could be restricted to that
+#     user, or only users in a "downloads" group 
+#
+# Protections are checked first at the endpoint level and then at the
+# the mission level. All checks must pass (a user or user's assigned groups
+# must be appropriately credentialed at both endpoint and mission levels
+# if both are specified)
+#
+# Endpoints /auth, /GLIDERNUM,  /, and /missions (used by /), cannot be 
+# protected in this way. Protected missions and gliders will not be 
+# available on those pages of course, but the assumption is that those 
+# pages will always be available if only to provide a login page.
+#
+# default values, specified with the defaults: key, will
+# be applied to all protectable endpoints, whether or not
+# they are specified herein.
+# 
+# To create a completely protected site, add a groups to defaults here
+# and in defaults under missions.
+# 
+endpoints:
+ defaults: { groups:[basic] }
+ selftest: { modes:[pilot,private], groups:[pilots] }
+
+
+# 4 sets of defaults can be specified: defaults (fallback)
+# privatedefaltis, pilotdefaults, and publicdefaults corresponding to
+# the different run modes. If a value is specified for a mission it
+# is always used, else use values from run mode specific defaults,
+# else use any values specified in defaults. Values not specified
+# anywhere will be left empty - no defaults are provided in the code. 
+#
+# A mission can also have its own endpoint specific restrictions.
+# Format is the same as for the endpoints section above:
+#
+# sg249: { endpoints: { data: { users: [collaborator] } } }
+#
+# using whatever YAML {}/block or separate line style you prefer
+#
+missions:
+# defaults applied to all missions if not elsewhere spec'd
+ defaults: { link: http://iop.apl.washington.edu }
+# defaults applied to all missions when running in pilot mode
+ pilotdefaults: { pilotgroups: [analysts] }
+# we don't specify private defaults - if we add pilots or pilotusers
+# to privatedefaults then we must auth as pilot for every mission,
+# which would mean we were running as in pilot mode
+#
+# now the actual missions
+ sg249: { planned: 2023-07-30 }
+ sg236: {}
+ sg241: {}
+ sg180/SMODE_Aug22: { users:[fred], groups: [guest], pilotgroups: [  iop,    analysts], 
+                      link: http://seaglider.pub,
+                      comment: "this is a comment", 
+                      start: 2022-08-27, end: 2022-10-30, 
+                      reason: "mission complete" }
+ sg219/SMODE_Aug22: {}
+ sg220/SMODE_Aug22: {}
+ sg237/SMODE_Aug22: {}
+ sg247/SMODE_Aug22: {}
+ sg248/SMODE_Oct22: {}

@@ -1,4 +1,7 @@
 <link rel="stylesheet" href="/script/dialogs.css" />
+{% if runMode == 'pilot' %}
+<link rel="stylesheet" href="/script/chat.css" />
+{% endif %}
 
 <style>
     a:link,.spanClick           {color:#0000ff; text-decoration:none}
@@ -33,6 +36,9 @@
 <script src="/script/plotly-latest.min.js"></script>
 <script src="/script/util.js"></script>
 <script src="/script/dialogs.js"></script>
+{% if runMode == 'pilot' %}
+<script src="/script/chat.js"></script>
+{% endif %}
 <script>
 
     var blurTimer  = false;
@@ -55,7 +61,6 @@
     var fixTimer = null;
 {% endif %}
 
-    var accessToken;
 
     function startFlash() {
         isFlashing = true;
@@ -102,10 +107,10 @@
     var lastSetup = 0;
     var first = true;
 
-    function setupStream(glider, first) {
-        if (Date.now() < lastSetup + 20000) {
+    function setupStream(glider, first, history) {
+        if (Date.now() < lastSetup + 5000) {
             setTimeout(() => {
-                setupStream(glider, false);
+                setupStream(glider, false, history);
             }, 20000);
             console.log('too soon');
             return;
@@ -123,11 +128,22 @@
         else
             new_uri = "ws:";
 
+        let which = 'restart';
+        if (first)
+            which = 'init';
+        else if (history)
+            which = 'history';
+        
         new_uri += "//" + loc.host;
-        new_uri += "/stream/" + (first ? "init/" : "restart/") + glider + mission();
+        new_uri += "/stream/" + which + "/" + glider + mission();
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
 
+{% if runMode == 'pilot' %}
+        if (first || history) {
+            $('chatContent').innerHTML = '';
+        }
+{% endif %}
         wsocket.onerror = function(error) {
             console.log('stream error detected');
             wsocket.close();
@@ -140,9 +156,10 @@
             else {
                 console.log('connection died');
             }
-            setupStream(glider, false);
+            setupStream(glider, false, false);
         };
 
+        var lastChat_t = 0;
 
         var chunk = "";
         wsocket.onmessage = function(e) { 
@@ -153,7 +170,8 @@
             var newCmdfile;
             var d, pieces, lines;
             var pt, fix;
-            var yr, mo, da, hr, mi, se;
+            var prevDate, thisDate, yr, mo, da, hr, mi, se;
+            var h;
             var tstr;
             const months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12};
             var styles = ["font-weight:bold;", "font-weight:bold; color:red;", "font-weight:bold; color:green;"]
@@ -163,6 +181,35 @@
             if (line.startsWith('START')) {
                 console.log('got START ping');
             }
+{% if runMode == 'pilot' %}
+            else if (line.startsWith('CHAT=')) {
+                msgs = JSON.parse(line.slice(5));
+                for (m of msgs) {
+                    var txt = '';
+                    thisDate = new Date(1000*m['timestamp']).toISOString();
+                    prevDate = new Date(1000*lastChat_t).toISOString();
+                    if (thisDate.slice(0,10) != prevDate.slice(0,10)) {
+                        txt = txt + `[${thisDate.slice(0,10)}]<br>`;
+                    } 
+                    txt = txt + `<b>${m['user']}</b> ${thisDate.slice(11,16)}<br>`
+                    txt = txt + '&nbsp;' + m['message'] + '<br>';
+                 
+                    h = document.createElement('div');
+                    h.innerHTML = chatMarkdown(glider, txt);
+                    $('chatContent').appendChild(h);
+                
+                    if (m.attachment && m.attachment.length > 0) {
+                        h = new Image();
+                        h.src = `data:${m.mime};base64,${m.attachment}`;
+                        h.style.maxWidth = '260px';
+                        $('chatContent').appendChild(h);
+                        h.onclick = function() { $('modalImgDiv').style.display = "block"; $('modalImg').src = this.src; return false; }
+                    }
+                    lastChat_t = m['timestamp'];
+                    $('chatContent').scrollTo(0, $('chatContent').scrollHeight);
+                }                 
+            }
+{% endif %}
             else if (line.startsWith('NEW=')) {
                 console.log(line);
                 pieces = line.split('=')[1].split(',');
@@ -296,12 +343,15 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ${accessToken}'
             },
             body: JSON.stringify(json),
         })
         .then(res => res.text())
         .then(text => {
+            if (text.includes("authorization failed")) {
+                openLoginForm(function() { saveControl(force); });
+                return;
+            }
             alert(text);
         })
         .catch(error => {
@@ -363,8 +413,14 @@
     }
 {% endif %}
 
-    function popupPlotly(which, dive, elt) {
-        window.open('/div/' + which + '/' + currGlider + '/' + dive + '/' + elt + mission(), `${currGlider}-${dive}-${elt}`);
+    function popupImage(ext, which, dive, elt) {
+        var m = mission();
+        if (m == '')
+            m = '?wrap=page';
+        else
+            m = m + '&wrap=page';
+
+        window.open('/plot/' + ext + '/' + which + '/' + currGlider + '/' + dive + '/' + elt + m, `${currGlider}-${dive}-${elt}`);
     }
 
     function popupSelftest() {
@@ -376,23 +432,54 @@
     }
 
     function setVisibility(elt) {
-        const divs = ['mainImage', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
+        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
         for (var d of divs) {
             if (d != elt) $(d).setAttribute('hidden', '');
         }
         $(elt).removeAttribute('hidden');
     }
+
+    function setInnerHTML(elm, html) {
+        elm.innerHTML = html;
+          
+        Array.from(elm.querySelectorAll("script"))
+          .forEach( oldScriptEl => {
+            const newScriptEl = document.createElement("script");
+            
+            Array.from(oldScriptEl.attributes).forEach( attr => {
+                newScriptEl.setAttribute(attr.name, attr.value) 
+            });
+              
+            const scriptText = document.createTextNode(oldScriptEl.innerHTML);
+            newScriptEl.appendChild(scriptText);
+            
+            oldScriptEl.parentNode.replaceChild(newScriptEl, oldScriptEl);
+        });
+    }
+
     function showPlot(which, elt, plotly) {
         console.log('showing ' + elt);
-        setVisibility('mainImage');
-        $('mainImage').src = '/png/' + which + '/' + currGlider + '/' + currDive + '/' + elt + mission();
-        if (plotly) {
-            $('mainImage').ondblclick = function() { popupPlotly(which, currDive, elt); }
-            $('mainImage').oncontextmenu = function() { popupPlotly(which, currDive, elt); }
+        console.log('plotly available ' + plotly)
+        if (!plotly) {
+            setVisibility('mainImage');
+            $('mainImage').src = '/plot/png/' + which + '/' + currGlider + '/' + currDive + '/' + elt + mission();
+            // $('mainImage').ondblclick = null;
+            // $('mainImage').oncontextmenu = null;
+            $('mainImage').ondblclick = function() { popupImage('png', which, currDive, elt); } 
+            $('mainDiv').ondblclick = null;
         }
         else {
-            $('mainImage').ondblclick = null;
-            $('mainImage').oncontextmenu = null;
+            setVisibility('mainDiv');
+            fetch('/plot/div/' + which + '/' + currGlider + '/' + currDive + '/' + elt + mission())
+            .then(res => res.text())
+            .then(data => {
+                setInnerHTML($('mainDiv'), data);
+                $('mainDiv').ondblclick = function() { popupImage('div', which, currDive, elt); } 
+                $('mainImage').ondblclick = null;
+            })
+            .catch(error => {
+                console.log(error);
+            });
         }
         currElt = elt;
     }
@@ -546,9 +633,15 @@
  
         fetch(q)
         .then(res => res.text())
-        .then(data => {
-            data = JSON.parse(data);
-
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log('buildTable ' + error);
+                console.log(text);
+                return;
+            }
+        
             var has10 = false;
             var has24 = false;
             for (d of data) {
@@ -629,7 +722,8 @@
 
             row = tbody.insertRow();
             cell = row.insertCell(0);
-            cell.innerHTML = k;
+            cell.innerHTML = k + ':';
+            cell.style = "text-align:right;"
             cell = row.insertCell(1);
             cell.innerHTML = mission[k];
         } 
@@ -638,24 +732,30 @@
     function loadStatus(glider, dive) {
         fetch(`/status/${glider}${mission()}`)
         .then(res => res.text())
-        .then(data => {
-            console.log(data);
-            if (data.includes("authorization failed")) {
-                openLoginForm();
+        .then(text => {
+            console.log(text);
+            if (text.includes("authorization failed")) {
+                openLoginForm(window.location.reload.bind(window.location))
                 return;
             }
-            data = JSON.parse(data);
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log('loadStatus ' + error);
+                console.log(text);
+                return;
+            }
             document.title = data['glider'];
             currTitle = data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
                 currDive = maxDive = parseInt(data['dive']);
-                loadPlots(currDive, true);
+                loadPlots(currDive, false);
                 // loadLog(currDive);
             }
             else if (dive > 0 && dive < parseInt(data['dive'])) {
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
-                loadPlots(currDive, true);
+                loadPlots(currDive, false);
                 // loadLog(currDive);
             }
             engplotlyplots = data['engplotly'];
@@ -688,13 +788,20 @@
     var plotList = []
     function addPlot(which, p, x, plotly) {
         img = document.createElement('img');
-        img.src = '/png/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
+        img.src = '/plot/png/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
         img.style = "position: absolute; left: " + x + "; top: 0; max-width:180px; max-height:169px; mix-blend-mode:multiply;"
         img.onclick = function() { showPlot(which, p, plotly); };
         img.title = p;
         img.id = 'thumb' + p;
         $('bottom').appendChild(img);
         plotList.push(p);
+    }
+
+    function jumpScrollByName(x) {
+        i = plotList.indexOf(x);
+        if (i > -1) {
+            jumpScroll(i);
+        }
     }
 
     function loadLog(dive) {
@@ -758,12 +865,19 @@
         var i;
         var html;
         var pieces;
+        var deltas;
         let urls = [`/alerts/${currGlider}/${dive}${mission()}`, `/deltas/${currGlider}/${dive}${mission()}`];
         let notify = false;
 
         let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
         let alerts = resp[0];
-        let deltas = JSON.parse(resp[1]);
+        try {
+            deltas = JSON.parse(resp[1]);
+        } catch (error) {
+            console.log('loadNotifications ' + error);
+            console.log(resp[1]);
+            deltas = { 'parm': [], 'file': [] };
+        }
 
         html = "<h3>alerts</h3><p>";
         if (alerts != "not found") {
@@ -924,7 +1038,7 @@
             else 
                 showPlot('dv', currElt, plotly.includes(currElt));
 
-            // $('mainImage').src = '/png/' + currGlider + '/' + dive + '/diveplot';
+            // $('mainImage').src = '/plot/png/' + currGlider + '/' + dive + '/diveplot';
             // $('mainImage').removeAttribute('hidden'); 
             // $('mainTable').setAttribute('hidden', ''); 
 
@@ -1001,7 +1115,14 @@
             // loadLog(currDive);
         }
     }
-      
+     
+    function setDive(dive) {
+        if (currDive != dive && dive <= maxDive && dive >= 1) {
+            currDive = dive;
+            loadPlots(currDive, false);
+        }
+    } 
+
     function getSelectionText() {
         var text = "";
         var activeEl = document.activeElement;
@@ -1428,6 +1549,9 @@
         if (params.has('mission')) {
             currMission = params.get('mission');
         }
+        if (params.has('plot')) {
+            currElt = params.get('plot');
+        }
         if (params.has('order')) {
             createCookie("order", params.get('order'), 180);
         }
@@ -1447,7 +1571,7 @@
         console.log(glider);
         window.name = glider;
         loadStatus(glider, dive);
-        setupStream(glider, true);
+        setupStream(glider, true, true);
 {% if runMode == 'pilot' %}
         loadControlFile('cmdfile');
         loadControlFile('science');
@@ -1461,6 +1585,14 @@
         loadPlotlyControlsContour(glider);
         $('chkMissionPlots').checked = true;
         $('chkTimeseriesPlots').checked = false;
+
+{% if runMode == 'pilot' %}
+        dragElement($('chatDiv'));
+        $('attachImage').addEventListener('change', attachImageChange);
+        $('modalImgClose').onclick = function() {
+            $('modalImgDiv').style.display = "none";
+        }
+{% endif %}
 
         document.onkeydown = function (event) {
             const excl = ['input', 'textarea'];
@@ -1506,7 +1638,12 @@
 <html>
 <body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
 
- <a href="/">Index</a> <b>&#124;</b> <a href="/dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>
+ <a href="/" target="index">Index</a> <b>&#124;</b> 
+ <a href="/dash" target="dash"> Dashboard </a> <b>&#124;</b> 
+{% if runMode == 'pilot' %}
+ <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
+{% endif %}
+ <span class="spanClick" onclick="openAboutForm(); return false;">About</span>
 
 <div style="position: relative;">
 
@@ -1528,7 +1665,8 @@
 </div>
 
 <div id="main" style="position: absolute; left: 50; top: 0; width:1050px; height:894px; overflow:auto; background-color:#bbbbbb; text-align:center;" >
-    <img id="mainImage" style="mix-blend-mode:multiply; max-height:894px; max-width:1050px; text-align:center;" title="double click for interactive version">
+    <img id="mainImage" style="mix-blend-mode:multiply; max-height:894px; max-width:1050px; text-align:center;" title="double click for interactive version if available">
+    <div id="mainDiv" style="mix-blend-mode:multiply; max-height:894px; max-width:1050px; text-align:center;" hidden="hidden"></div>
     <table rules="groups" id="mainTable" hidden="hidden" style="height:894px; width:1000px; font-size:14px; text-align:right; font-family:verdana, arial, tahoma, 'sans serif';"> 
 
         <colgroup span=4><col><col><col><col></colgroup>
@@ -1721,6 +1859,9 @@
 </div> 
 
 {% include "dialogs.html" %}
+{% if runMode == 'pilot' %}
+{% include "chat.html" %}
+{% endif %}
 
 </body>
 
