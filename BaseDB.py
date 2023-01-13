@@ -233,6 +233,7 @@ def loadFileToDB(base_opts, cur, filename, con):
     )
 
     if "start_of_climb_time" in nci.variables:
+        insertColumn(dive, cur, "start_of_climb_time", nci.variables["start_of_climb_time"].getValue(), "FLOAT")
         i = numpy.where(
             nci.variables["eng_elaps_t"][:]
             < nci.variables["start_of_climb_time"].getValue()
