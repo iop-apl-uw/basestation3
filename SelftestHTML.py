@@ -117,6 +117,11 @@ for raw_line in proc.stdout:
     elif line.find(',SUSR,N,---- ') > -1:
         parts = line.split(',')
         print("<h2>%s</h2>" % parts[3])
+
+    elif line.find('>log test') > -1:
+        print("<h2>logger sensor test results</h2>")
+        format(line)
+
     elif insideParam:
         if line.find('not between') > -1:
             print('<tr style="background-color:%s;">' % rcolors[trow % 2])
