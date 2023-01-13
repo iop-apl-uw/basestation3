@@ -4,18 +4,20 @@
   </div>  
   <textarea id="chatInput" rows=3>
   </textarea>
-  <button id="chatBtnSend" onclick="chatSend(); return false;">send</button>
-  <span class="image-upload">
-  <label for="attachImage">
-    <img src="script/images/paperclip.png" title="attach an image" style="vertical-align: middle;">
-  </label>
-  <input type="file" id="attachImage" name="attachImage" accept="image/*" />
-<!--
-  <label for="captureImage">photo</label>
-  <input type="file" id="captureImage" name="captureImage" accept=".jpg, .jpeg, .png" capture="environment" />
--->
-  </span> 
-  <button id="chatBtnClose" onclick="chatClose(); return false;">close</button>
+  <div id="chatButtons">
+      <button id="chatBtnSend" onclick="chatSend(); return false;">send</button>
+      <span class="image-upload">
+      <label for="attachImage">
+        <img id="paperclip" src="script/images/paperclip.png" title="attach an image">
+      </label>
+      <input type="file" id="attachImage" name="attachImage" accept="image/*" />
+    <!--
+      <label for="captureImage">photo</label>
+      <input type="file" id="captureImage" name="captureImage" accept=".jpg, .jpeg, .png" capture="environment" />
+    -->
+      </span> 
+      <button id="chatBtnClose" onclick="chatClose(); return false;">close</button>
+  </div>
 </div>
 
 <div id="modalImgDiv">

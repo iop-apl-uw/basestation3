@@ -1,38 +1,13 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
+
 <link rel="stylesheet" href="/script/dialogs.css" />
 {% if runMode == 'pilot' %}
 <link rel="stylesheet" href="/script/chat.css" />
+<link rel="manifest" href="/manifest.json">
 {% endif %}
 
-<style>
-    a:link,.spanClick           {color:#0000ff; text-decoration:none}
-    a:visited {color:#0000aa; text-decoration:none}
-    a:hover,.spanClick:hover    {color:#0000aa; text-decoration:underline}
-    a:active,.spanClick:active  {color:#0000aa; text-decoration:underline}
+<link rel="stylesheet" href="/script/base.css" />
 
-    option { background-color:#eeeeee; }
-    select { background-color:#eeeeee; }
-    button { background-color:#dddddd; }
-    button.tool { background-color:#dddddd; margin-top: 2px; margin-bottom: 2px; width:48px; height:48px;  border:0px; }
-
-    .thumb { mix-blend-mode:multiply }
-
-    .editFile {
-        width:100%; 
-        height:100%; 
-        box-sizing:border-box; 
-        background-color:#bbbbbb;
-        border: 1px solid black;
-    }
-
-    body {
-        background-color: #999999;
-        color: #000000;
-    }
-
-    table {
-        color: #000000;
-    }
-</style>
 <script src="/script/plotly-latest.min.js"></script>
 <script src="/script/util.js"></script>
 <script src="/script/dialogs.js"></script>
@@ -40,6 +15,8 @@
 <script src="/script/chat.js"></script>
 {% endif %}
 <script>
+
+    var mobile = false;
 
     var blurTimer  = false;
     var isBlurred  = false;
@@ -366,6 +343,8 @@
         $('cmdfile').value = $('cmdfile').value.replace('$QUIT', newCmd);
         $('cmdfile').value = $('cmdfile').value.replace('$RESUME', newCmd);
         $('cmdfile').value = $('cmdfile').value.replace('$EXIT_TO_MENU', newCmd);
+
+        return false;
     }
 
     function loadControlFile(file, dive) {
@@ -437,6 +416,7 @@
             if (d != elt) $(d).setAttribute('hidden', '');
         }
         $(elt).removeAttribute('hidden');
+        $('plotlyPopperOuter').style.display = 'none';
     }
 
     function setInnerHTML(elm, html) {
@@ -457,25 +437,44 @@
         });
     }
 
+    function changeTab(which) {
+    }
+
     function showPlot(which, elt, plotly) {
         console.log('showing ' + elt);
         console.log('plotly available ' + plotly)
-        if (!plotly) {
+        if (!plotly || mobile) {
             setVisibility('mainImage');
-            $('mainImage').src = '/plot/png/' + which + '/' + currGlider + '/' + currDive + '/' + elt + mission();
-            // $('mainImage').ondblclick = null;
-            // $('mainImage').oncontextmenu = null;
-            $('mainImage').ondblclick = function() { popupImage('png', which, currDive, elt); } 
-            $('mainDiv').ondblclick = null;
+            $('mainImage').src = `/plot/png/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
+            $('plotlyPopperOuter').style.display = 'block';
+            console.log('popper up');
+            if (plotly)
+                $('plotlyPopperOuter').onclick = function() 
+                    { 
+                        popupImage('div', which, currDive, elt); 
+                        return false; 
+                    } 
+            else
+                $('plotlyPopperOuter').onclick = function() 
+                    { 
+                        popupImage('png', which, currDive, elt); 
+                        return false; 
+                    } 
         }
         else {
             setVisibility('mainDiv');
-            fetch('/plot/div/' + which + '/' + currGlider + '/' + currDive + '/' + elt + mission())
+            $('plotlyPopperOuter').style.display = 'block';
+            console.log('popper up');
+
+            fetch(`/plot/div/${which}/${currGlider}/${currDive}/${elt}${mission()}`)
             .then(res => res.text())
             .then(data => {
                 setInnerHTML($('mainDiv'), data);
-                $('mainDiv').ondblclick = function() { popupImage('div', which, currDive, elt); } 
-                $('mainImage').ondblclick = null;
+                $('plotlyPopperOuter').onclick = function() 
+                    { 
+                        popupImage('div', which, currDive, elt); 
+                        return false; 
+                    } 
             })
             .catch(error => {
                 console.log(error);
@@ -773,8 +772,8 @@
     }
 
     function clearPlots() {
-        while($('bottom').firstChild) {
-            $('bottom').removeChild($('bottom').firstChild);
+        while($('plotRibbon').firstChild) {
+            $('plotRibbon').removeChild($('plotRibbon').firstChild);
         }
         plotList = []
     }
@@ -787,13 +786,16 @@
 
     var plotList = []
     function addPlot(which, p, x, plotly) {
+        var div = document.createElement('div');
+        div.classList.add('thumbDiv');
         img = document.createElement('img');
+        img.classList.add('thumbImg');
         img.src = '/plot/png/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
-        img.style = "position: absolute; left: " + x + "; top: 0; max-width:180px; max-height:169px; mix-blend-mode:multiply;"
         img.onclick = function() { showPlot(which, p, plotly); };
         img.title = p;
         img.id = 'thumb' + p;
-        $('bottom').appendChild(img);
+        div.appendChild(img);
+        $('plotRibbon').appendChild(div);
         plotList.push(p);
     }
 
@@ -911,7 +913,7 @@
  
     function jumpScroll(n) {
         if (n <= plotList.length) {
-            $('bottom').scrollTo(200*n, 0, 'smooth');
+            $('plotRibbon').scrollTo(200*n, 0, 'smooth');
             $('thumb' + plotList[n]).click();
         }
         return false;
@@ -1056,7 +1058,7 @@
             var sec = links.indexOf('sg');
 
             var j;
-            $('bottomLinks').innerHTML = '';
+            $('plotRibbonLinks').innerHTML = '';
             for (var i = 0 ; i < mn ; i += 5) {
                 if (i + 4 < mn)
                     j = i+4;
@@ -1064,10 +1066,10 @@
                     j = mn;
 
                 all = links.slice(i,j+1).join(', ');
-                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> <b>&#124;</b> '; 
+                $('plotRibbonLinks').innerHTML += '<span class="spanClick jumpLink" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> <b>&#124;</b> '; 
             }
             if (ab > -1) //  && links[j] != 'ab')
-                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + ab + ');">ab</span> <b>&#124;</b> ';
+                $('plotRibbonLinks').innerHTML += '<span class="spanClick jumpLink" onclick="jumpScroll(' + ab + ');">ab</span> <b>&#124;</b> ';
 
             mn = sec-1;
             for (var i = e ; i < mn ; i += 5) {
@@ -1085,16 +1087,16 @@
                 links[j] = links[j].replace('mission_', ''); 
                 links[j] = links[j].replace('SDCARD_', ''); 
                 links[j] = links[j].replace('FM_', ''); 
-                $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> <b>&#124;</b> '; 
+                $('plotRibbonLinks').innerHTML += '<span class="spanClick jumpLink" onclick="jumpScroll(' + i + ');" title="' + all +'">' + links[i] + '&hellip;' + links[j] + '</span> <b>&#124;</b> '; 
             }
 
             // all = links.slice(e,sec).join(', ');
-            // $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + e + ');" title="' + all +'">eng</span> * ';
+            // $('plotRibbonLinks').innerHTML += '<span class="spanClick jumpLink" onclick="jumpScroll(' + e + ');" title="' + all +'">eng</span> * ';
 
             links.splice(sec, 1); 
 
             all = links.slice(sec).join(', ');
-            $('bottomLinks').innerHTML += '<span class="spanClick" onclick="jumpScroll(' + sec + ');" title="' + all +'">sections</span>';
+            $('plotRibbonLinks').innerHTML += '<span class="spanClick jumpLink" onclick="jumpScroll(' + sec + ');" title="' + all +'">sections</span>';
         })
         .catch(error => {
             console.log(`loadPlots - ${error}`);
@@ -1531,15 +1533,26 @@
             $(id).checked =true;
         } 
     }
- 
+
+    var bodyFudge = 0;
+
     function init() {
         let path = window.location.pathname.substring(1).split('/');
         let glider = -1;
         let dive = -1;
 
+        var scale = 'scale(1.0)';
+        document.body.style.webkitTransform =  scale;    // Chrome, Opera, Safari
+        document.body.style.msTransform =   scale;       // IE 9
+        document.body.style.transform = scale;     // General
+
         if (path.length >= 1) {
             glider = path[0];
             console.log(glider);
+        }
+
+        if (window.matchMedia("(pointer: coarse)").matches) {
+            mobile = true;
         }
 
         let params = new URLSearchParams(window.location.search);
@@ -1626,48 +1639,92 @@
             }
 
         };
-        $('bottom').addEventListener("wheel", (evt) => {
+
+        $('plotRibbon').addEventListener("wheel", (evt) => {
             evt.preventDefault();
-            $('bottom').scrollLeft += evt.deltaY;
+            $('plotRibbon').scrollLeft += evt.deltaY;
         });
+
+        if (mobile) {
+            document.body.addEventListener("focus", event => {
+                const target = event.target;
+                switch (target.id) {
+                    case "cmdfile":
+                    case "targets":
+                    case "science":
+                    case "scicon.sch":
+                    case "sg_calib_constants.m":
+                    case "pdoscmds.bat":
+                    case "tcm2mat.cal":
+                        $('divCmdfile').classList.add("editing");   
+                        document.body.scrollTo( { top: 0, left: 0 } );
+                        window.scrollTo( { top: 0, left: 0 });
+                        $('divCmdfile').scrollIntoView();
+                        $('navLinks').scrollIntoView();
+                        $('cmdfileEditClose').style.display = "block";
+                        
+                }
+            }, true); 
+            document.body.addEventListener("blur", () => {
+                defocusEditWindow();
+            }, true); 
+        }
+
     }
 
+    function defocusEditWindow() {
+        $('divCmdfile').classList.remove("editing");
+        $('cmdfileEditClose').style.display = "none";
+    }
+
+    function showRibbon() {
+        if ($('plotRibbonBox').style.display == 'none')
+            $('plotRibbonBox').style.display = 'block';
+        else
+            $('plotRibbonBox').style.display = 'none';
+    }
 
 </script>
 
 <html>
-<body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
+<body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif';">
 
- <a href="/" target="index">Index</a> <b>&#124;</b> 
- <a href="/dash" target="dash"> Dashboard </a> <b>&#124;</b> 
+<div id="navLinks">
+    <a href="/" target="index">Index</a> <b>&#124;</b> 
+    <a href="/dash" target="dash"> Dashboard </a> <b>&#124;</b> 
 {% if runMode == 'pilot' %}
- <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
+    <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
 {% endif %}
- <span class="spanClick" onclick="openAboutForm(); return false;">About</span>
-
-<div style="position: relative;">
-
-<div id="toolbar" style="position:absolute; left:0 top:0; width:50px; height:894px;">
-<div style="position:relative; width:50px; height:894px;">
-    <button class="tool" style="background: url(/script/images/up-icon.png);" onclick="changeDive(1);" title="next dive [w,k] "></button>
-    <button class="tool" style="background: url(/script/images/table-icon.png);" onclick="showTable();" title="dives table"></button>
-    <button class="tool" style="background: url(/script/images/down-icon.png);" onclick="changeDive(-1);" title="prev dive [s,j]"></button>
-    <button class="tool" style="background: url(/script/images/log-table-icon.png);" onclick="showLog();" title="log summary"></button>
-    <button class="tool" style="background: url(/script/images/log-icon.png);" onclick="showLogFile();" title="log file"></button>
-    <button class="tool" style="background: url(/script/images/chart-icon.png);" onclick="showPlotly();" title="plot and table tool"></button>
-    <button class="tool" id="btnNotifications" style="background: url(/script/images/notification-icon.png);" onclick="showNotifications();" title="notifications"></button>
-    <button class="tool" id="btnCapFile" style="background: url(/script/images/cap-none-icon.png);" onclick="showCap();" title="notifications"></button>
-    <button class="tool" id="btnEngFile" style="background: url(/script/images/eng-icon.png);" onclick="showEng();" title="notifications"></button>
-
-    <button class="tool" style="background: url(/script/images/globe-icon.png); position:absolute; bottom:50px; left:0" onclick="popupMap();" title="map"></button>
-    <button class="tool" style="background: url(/script/images/selftest-icon.png); position:absolute; bottom:0; left:0;" onclick="popupSelftest();" title="selftest"></button>
-</div>
+    <span class="spanClick" onclick="openAboutForm(); return false;">About</span>
 </div>
 
-<div id="main" style="position: absolute; left: 50; top: 0; width:1050px; height:894px; overflow:auto; background-color:#bbbbbb; text-align:center;" >
-    <img id="mainImage" style="mix-blend-mode:multiply; max-height:894px; max-width:1050px; text-align:center;" title="double click for interactive version if available">
-    <div id="mainDiv" style="mix-blend-mode:multiply; max-height:894px; max-width:1050px; text-align:center;" hidden="hidden"></div>
-    <table rules="groups" id="mainTable" hidden="hidden" style="height:894px; width:1000px; font-size:14px; text-align:right; font-family:verdana, arial, tahoma, 'sans serif';"> 
+<div id="bodyView">
+
+<div id="toolbar">
+    <div class="toolTop">
+        <button class="tool" id="btnDiveUp"        onclick="changeDive(1);" title="next dive [w,k] "></button>
+        <button class="tool" id="btnDiveTable"     onclick="showTable();" title="dives table"></button>
+        <button class="tool" id="btnDiveDown"      onclick="changeDive(-1);" title="prev dive [s,j]"></button>
+        <button class="tool" id="btnNotifications" onclick="showNotifications();" title="notifications"></button>
+        <button class="tool" id="btnCapFile"       onclick="showCap();" title="notifications"></button>
+        <button class="tool" id="btnLogTable"      onclick="showLog();" title="log summary"></button>
+        <button class="tool" id="btnPlotTool"      onclick="showPlotly();" title="plot and table tool"></button>
+        <button class="tool" id="btnLogFile"       onclick="showLogFile();" title="log file"></button>
+        <button class="tool" id="btnEngFile"       onclick="showEng();" title="notifications"></button>
+    </div>
+
+    <div class="toolBottom">
+        <button class="tool" id="btnMap"      onclick="popupMap();" title="map"></button>
+        <button class="tool" id="btnSelftest" onclick="popupSelftest();" title="selftest"></button>
+    </div>
+</div>
+
+<div id="main">
+    <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
+    <div id="plotlyPopperOuter">&#x2922;</div>
+    <img id="mainImage" style="mix-blend-mode:multiply;" title="right click/long press for interactive version if available">
+    <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;" hidden="hidden"></div>
+    <table rules="groups" id="mainTable" hidden="hidden" > 
 
         <colgroup span=4><col><col><col><col></colgroup>
         <colgroup span=6><col><col><col><col><col><col><col></colgroup>
@@ -1676,7 +1733,7 @@
         <colgroup span=2 id="volt10_group"><col class="volt10"><col class="volt10"></colgroup>
         <colgroup span=2 id="volt24_group"><col class="volt24"><col class="volt24"></colgroup>
         <colgroup span=1><col></colgroup>
-        <tbody style="height:894px; width:1040px; overflow-y:auto;"> <!-- display:block"> -->
+        <tbody>
             <tr bgcolor="#aaaaaa" align="center">
                 <th>dive</th>
                 <th>end</th>
@@ -1762,7 +1819,7 @@
         </div>
     </div>
 
-    <div id="logfileDiv" hidden="hidden" ondblclick="parameterHelp('logfile');" title="double click parameter for help" style="background-color:#dddddd; text-align:left;" >
+    <div id="logfileDiv" hidden="hidden" oncontextmenu="parameterHelp('logfile'); return false;" title="right click/long press parameter for help" style="background-color:#dddddd; text-align:left;" >
     </div>
 
     <div id="engfileDiv" hidden="hidden" style="background-color:#dddddd; text-align:left;">
@@ -1772,91 +1829,98 @@
     </div>
 </div>
 
+<div id="plotRibbonBox" title="a or h to move left, f or l to move right, number key 1-8 to jump to section, scroll wheel scrolls">
+    <div id="plotRibbonLinks">
+
+    </div>
+    <div id="plotRibbon">
+
+    </div>
+</div>
+
+
 {% if runMode == 'pilot' %}
 
-<div id="commlog" style="position: absolute; left:1110; top:0; width:600; height:450; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; white-space:pre;background-color:#bbbbbb;">
+<div id="right">
 
-</div>
-
-<div id="status" style="position: absolute; left:1110; top:460px; width:600px; height:240px; overflow:auto; font-size: 10px; box-sizing:border-box; border:1px solid black; background-color:#bbbbbb;">
-    <div id="position" style="font-weight: bold; font-size: 42px; padding-left: 2vmin; padding-top: 1px; padding-bottom: 1px">
+    <div id="status">
+        <div id="position">
+        </div>
+        <div id="positionTime">
+        </div>
+        <table id="statusTable">
+            <col class="statusTableLabel">
+            <col class="statusTableValue">
+            <col class="statusTableLabel">
+            <col class="statusTableValue">
+            <col class="statusTableLabel">
+            <col class="statusTableValue">
+            <tr>
+                <td>SOG</td><td id="SOG"></td>
+                <td>COG</td><td id="COG"></td>
+                <td>last fix</td><td id="lastFix"></td>
+            </tr>
+            <tr>
+                <td>DOG</td><td id="DOG"></td>
+                <td>&Delta;t</td><td id="dt"></td>
+                <td>last call</td><td id="lastConnect"></td>
+            </tr>
+            <tr>
+                <td>pitch</td><td id="pitch"></td>
+                <td>volts</td><td id="volts"></td>
+            </tr>
+            <tr>
+                <td>depth</td><td id="depth"></td>
+                <td>dive</td><td id="dive"></td>
+            </tr>
+            <tr>
+                <td>RH</td><td id="RH"></td>
+                <td>cycle</td><td id="cycle"></td>
+            </tr>
+            <tr>
+                <td>int P</td><td id="intP"></td>
+                <td>call</td><td id="call"></td>
+            </tr>
+        </table>
     </div>
-    <div id="positionTime" style="font-weight: bold; font-size: 20px; padding-left: 2vmin; padding-top: 1px; padding-bottom: 2px">
-    </div>
-    <table style="table-layout:fixed; width: 590px;">
-        <col style="width:60px;">
-        <col style="width:130px;">
-        <col style="width:60px;">
-        <col style="width:130px;">
-        <col style="width:60px;">
-        <col style="width:130px;">
-        <tr>
-            <td>SOG</td><td id="SOG"></td>
-            <td>COG</td><td id="COG"></td>
-            <td>last fix</td><td id="lastFix"></td>
-        </tr>
-        <tr>
-            <td>DOG</td><td id="DOG"></td>
-            <td>&Delta;t</td><td id="dt"></td>
-            <td>last call</td><td id="lastConnect"></td>
-        </tr>
-        <tr>
-            <td>pitch</td><td id="pitch"></td>
-            <td>volts</td><td id="volts"></td>
-        </tr>
-        <tr>
-            <td>depth</td><td id="depth"></td>
-            <td>dive</td><td id="dive"></td>
-        </tr>
-        <tr>
-            <td>RH</td><td id="RH"></td>
-            <td>cycle</td><td id="cycle"></td>
-        </tr>
-        <tr>
-            <td>int P</td><td id="intP"></td>
-            <td>call</td><td id="call"></td>
-        </tr>
-    </table>
-</div>
 
-<div id="divCmdfile" style="position: absolute; left:1110; top:710; width:600px; height:380px; font-size: 12px;">
-    <textarea id="cmdfile" class="editFile" ondblclick="parameterHelp('cmdfile');">
-    </textarea>
-    <textarea id="targets" class="editFile" hidden="hidden"></textarea>
-    <textarea id="science" class="editFile" hidden="hidden"></textarea>
-    <textarea id="scicon.sch" class="editFile" hidden="hidden"></textarea>
-    <textarea id="pdoscmds.bat" class="editFile" hidden="hidden"></textarea>
-    <textarea id="tcm2mat.cal" class="editFile" hidden="hidden"></textarea>
-    <textarea id="sg_calib_constants.m" class="editFile" hidden="hidden"></textarea>
-    <button id="btnSave" type="button" onclick="saveControl(0);" style="margin-left:2px;">Save</button>
-    <button id="btnForce" type="button" onclick="saveControl(1);">Force</button>
-    <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
-    <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
-    <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>
-    <select id="selectFile" onchange="changeFile()">
-        <option value="cmdfile" selected>cmdfile</option>
-        <option value="targets">targets</option>
-        <option value="science">science</option>
-        <option value="scicon.sch">scicon.sch</option>
-        <option value="pdoscmds.bat">pdoscmds.bat</option>
-        <option value="tcm2mat.cal">tcm2mat.cal</option>
-        <option value="sg_calib_constants.m">sg_calib_constants.m</option>
-    </select>
-    <span id="fileDive" hidden="hidden"></span>
-</div>
+    <div id="commlog">
+
+    </div>
+
+    <div id="divCmdfile">
+        <div id="cmdfileEditClose" onclick="defocusEditWindow(); return false;"><b>&#10060;</b></div>
+        <textarea id="cmdfile" class="editFile" oncontextmenu="parameterHelp('cmdfile'); return false;">
+        </textarea>
+        <textarea id="targets" class="editFile" hidden="hidden"></textarea>
+        <textarea id="science" class="editFile" hidden="hidden"></textarea>
+        <textarea id="scicon.sch" class="editFile" hidden="hidden"></textarea>
+        <textarea id="pdoscmds.bat" class="editFile" hidden="hidden"></textarea>
+        <textarea id="tcm2mat.cal" class="editFile" hidden="hidden"></textarea>
+        <textarea id="sg_calib_constants.m" class="editFile" hidden="hidden"></textarea>
+        <div id="fileButtons">
+            <button id="btnSave" type="button" onclick="saveControl(0);" style="margin-left:2px;">Save</button>
+            <button id="btnForce" type="button" onclick="saveControl(1);">Force</button>
+            <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
+            <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
+            <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>
+            <select id="selectFile" onchange="changeFile()">
+                <option value="cmdfile" selected>cmdfile</option>
+                <option value="targets">targets</option>
+                <option value="science">science</option>
+                <option value="scicon.sch">scicon.sch</option>
+                <option value="pdoscmds.bat">pdoscmds.bat</option>
+                <option value="tcm2mat.cal">tcm2mat.cal</option>
+                <option value="sg_calib_constants.m">sg_calib_constants.m</option>
+            </select>
+            <span id="fileDive" hidden="hidden"></span>
+        </div>
+    </div>
+</div>  <!-- right --> 
 
 {% endif %}
 
-<div id="bottomBox" style="position: absolute; left: 0; top: 900; width: 1100; height: 205; overflow: hidden" title="a or h to move left, f or l to move right, number key 1-8 to jump to section, scroll wheel scrolls">
-    <div id="bottomLinks" style="position: absolute; left: 10; top: 0; width: 978; height: 20; overflow: hidden;">
-
-    </div>
-    <div id="bottom" style="position: absolute; left: 0; top: 20; width: 1100; height: 185; overflow: auto; background-color:#bbbbbb;">
-
-    </div>
-</div>
-
-</div> 
+</div>  <!-- bodyView -->
 
 {% include "dialogs.html" %}
 {% if runMode == 'pilot' %}

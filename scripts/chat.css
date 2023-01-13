@@ -1,117 +1,300 @@
-#chatDiv {
-  position: absolute;
-  top:80px;
-  left: 200px;
-  z-index: 9;
-  background-color: #f1f1f1;
-  border: 1px solid #d3d3d3;
-  display: none;
-  margin: 5px;
-  width: 300px;
-  height: 450px;
-  box-sizing:border-box;
+
+@media (pointer: coarse)  {
+
+    @media screen and (orientation:portrait) {
+
+        #chatDiv {
+          display: none;
+          position: absolute;
+          top: 4vh;
+          left: 10vw;
+          z-index: 9;
+          background-color: #f1f1f1;
+          border: 1px solid #d3d3d3;
+          margin: 5px;
+          width: 75vw;
+          height: 40vh;
+          box-sizing:border-box;
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr 8vh max-content; 
+          grid-template-areas:
+             "content"
+             "input"
+             "buttons";
+          row-gap: 2px;
+        }
+    }
+
+    @media screen and (orientation:landscape) {
+        #chatDiv {
+          display: none;
+          position: absolute;
+          top: 4vh;
+          left: 15vw;
+          z-index: 9;
+          background-color: #f1f1f1;
+          border: 1px solid #d3d3d3;
+          margin: 5px;
+          width: 50vw;
+          height: 60vh;
+          box-sizing:border-box;
+          grid-template-columns: 1fr;
+          grid-template-rows: 1fr 15vh max-content; 
+          grid-template-areas:
+             "content"
+             "input"
+             "buttons";
+          row-gap: 2px;
+        }
+    }
+
+    #chatDivHeader {
+      display: none;
+      text-align: center;
+      padding: 10px;
+      cursor: move;
+      z-index: 10;
+      background-color: #2196F3;
+      color: #fff;
+      font-size: 2vh;
+      font-weight:bold;
+      margin: 2px;
+      grid-area: header;
+    }
+
+    #chatContent {
+      grid-area: content;
+      margin: 5px;
+      padding: 5px;
+      width: calc(100% - 22px);
+      z-index: 10;
+      border: 1px solid black;
+      background-color: #dddddd;
+      color: #000;
+      cursor: pointer;
+      overflow-y: auto;  
+      font-size: 2vh;
+    }
+
+    #chatInput {
+      grid-area: input;
+      margin: 5px;
+      padding:5px;
+      width: calc(100% - 10px);
+      background-color:#bbbbbb;
+      border: 1px solid black;
+      resize: none;
+      cursor: text;
+    }
+
+    #chatInput:focus {
+        border: 1px solid black;
+        outline: none;
+        outline-width: 0;
+    }
+
+    #chatButtons {
+        grid-area: buttons;
+    }
+
+    #chatButtons button  {
+      color: white;
+      padding: 8px 8px;
+      border: none;
+      cursor: pointer;
+      width: 25%;
+      opacity: 0.8;
+      margin: 5px;
+      margin-top: 0px;
+      font-size: 2.5vh;
+    }
+
+    #chatButtons button:hover {
+      opacity: 1;
+    }
+
+    #chatBtnSend {
+      background-color: #04AA6D;
+    }
+
+    #chatBtnClose {
+      background-color: red;
+      float: right;
+    }
+
+    #paperclip {
+        width: 3vh;
+        vertical-align: middle;
+    }
+
+    .image-upload>input {
+        display: none;
+    }
+    .image-upload {
+        margin: 0px;
+        padding: 0px;
+    }
+
+    #modalImgDiv {
+        display: none;
+    /*
+        width: 100%;
+        height: 100%;
+    */
+        min-width: 300px;
+        min-height: 300px;
+        position: fixed;
+        z-index: 1000;
+        overflow: auto;
+        background-color: rgba(128,128,128,0.8);
+        padding: 100px;
+        cursor: pointer;
+    }
+
+    #modalImg {
+        margin: auto;
+        display: block;
+        max-width: 90%;
+    }
+
+    #modalImgClose {
+        position: absolute;
+        top: 15px;
+        right: 35px;
+        font-size: 40px;
+        font-weight: bold;
+        color: #eeeeee;
+    }
 }
 
-#chatDivHeader {
-  text-align: center;
-  padding: 10px;
-  cursor: move;
-  z-index: 10;
-  background-color: #2196F3;
-  color: #fff;
-  font-size:20px;
-  font-weight:bold;
-  margin: 5px;
-}
+/* desktop */
+@media (pointer: fine)  {
 
-#chatContent {
-  margin: 5px;
-  padding: 5px;
-  width: calc(100% - 22px);
-  height: 270px;
-  z-index: 10;
-  border: 1px solid black;
-  background-color: #dddddd;
-  color: #000;
-  cursor: pointer;
-  overflow-y: auto;
-}
+    #chatDiv {
+      display: none;
+      position: absolute;
+      top:80px;
+      left: 200px;
+      z-index: 9;
+      background-color: #f1f1f1;
+      border: 1px solid #d3d3d3;
+      margin: 5px;
+      width: 300px;
+      height: 600px;
+      box-sizing:border-box;
+      grid-template-columns: 1fr;
+      grid-template-rows: max-content 1fr 60px max-content; 
+      grid-template-areas:
+         "header"
+         "content"
+         "input"
+         "buttons";
+      row-gap: 5px;
+      padding: 5px;
+    }
 
-#chatInput {
-  margin: 5px;
-  padding:5px;
-  width: calc(100% - 10px);
-  background-color:#bbbbbb;
-  border: 1px solid black;
-  resize: none;
-  cursor: text;
-}
+    #chatDivHeader {
+      grid-area: header;
+      text-align: center;
+      cursor: move;
+      z-index: 10;
+      background-color: #2196F3;
+      color: #fff;
+      font-size:16px;
+      font-weight:bold;
+    }
 
-#chatInput:focus {
-    border: 1px solid black;
-    outline: none;
-    outline-width: 0;
-}
+    #chatContent {
+      grid-area: content;
+      z-index: 10;
+      border: 1px solid black;
+      background-color: #dddddd;
+      color: #000;
+      cursor: pointer;
+      overflow-y: auto;
+    }
 
-#chatDiv button  {
-  color: white;
-  padding: 8px 8px;
-  border: none;
-  cursor: pointer;
-  width: 25%;
-  opacity: 0.8;
-  margin: 5px;
-  margin-top: 0px;
-}
+    #chatInput {
+      grid-area: input;
+      background-color:#bbbbbb;
+      border: 1px solid black;
+      resize: none;
+      cursor: text;
+    }
 
-#chatDiv button:hover {
-  opacity: 1;
-}
+    #chatInput:focus {
+        border: 1px solid black;
+        outline: none;
+        outline-width: 0;
+    }
 
-#chatBtnSend {
-  background-color: #04AA6D;
-}
+    #chatButtons {
+        grid-area: buttons;
+    }
 
-#chatBtnClose {
-  background-color: red;
-  float: right;
-}
+    #chatButtons button  {
+      color: white;
+      padding: 8px 8px; 
+      border: none;
+      cursor: pointer;
+      width: 25%;
+      opacity: 0.8;
+      margin-top: 0px;
+    }
 
-.image-upload>input {
-    display: none;
-}
-.image-upload {
-    margin: 0px;
-    padding: 0px;
-}
+    #chatButtons button:hover {
+      opacity: 1;
+    }
 
-#modalImgDiv {
-    display: none;
-/*
-    width: 100%;
-    height: 100%;
-*/
-    min-width: 300px;
-    min-height: 300px;
-    position: fixed;
-    z-index: 1000;
-    overflow: auto;
-    background-color: rgba(128,128,128,0.8);
-    padding: 100px;
-    cursor: pointer;
-}
+    #chatBtnSend {
+      background-color: #04AA6D;
+    }
 
-#modalImg {
-    margin: auto;
-    display: block;
-    max-width: 90%;
-}
+    #chatBtnClose {
+      background-color: red;
+      float: right;
+    }
 
-#modalImgClose {
-    position: absolute;
-    top: 15px;
-    right: 35px;
-    font-size: 40px;
-    font-weight: bold;
-    color: #eeeeee;
+    #paperclip {
+        vertical-align: middle;
+    }
+
+    .image-upload>input {
+        display: none;
+    }
+    .image-upload {
+        margin: 0px;
+        padding: 0px;
+    }
+
+    #modalImgDiv {
+        display: none;
+    /*
+        width: 100%;
+        height: 100%;
+    */
+        min-width: 300px;
+        min-height: 300px;
+        position: fixed;
+        z-index: 1000;
+        overflow: auto;
+        background-color: rgba(128,128,128,0.8);
+        padding: 100px;
+        cursor: pointer;
+    }
+
+    #modalImg {
+        margin: auto;
+        display: block;
+        max-width: 90%;
+    }
+
+    #modalImgClose {
+        position: absolute;
+        top: 15px;
+        right: 35px;
+        font-size: 40px;
+        font-weight: bold;
+        color: #eeeeee;
+    }
 }

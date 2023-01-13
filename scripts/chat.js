@@ -168,7 +168,7 @@
     }
 
     function chatShow() {
-        $('chatDiv').style.display = 'block';
+        $('chatDiv').style.display = 'grid';
         fetch('/user')
         .then(res => res.text())
         .then(text => {

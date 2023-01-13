@@ -1,77 +1,133 @@
- /* {box-sizing: border-box;} */
-
-/* Button used to open the contact form - fixed at the bottom of the page */
-.open-button {
-  background-color: #555;
-  color: white;
-  padding: 16px 20px;
-  border: none;
-  cursor: pointer;
-  opacity: 0.8;
-  float: right;
-}
 
 /* The popup form - hidden by default */
 .form-popup {
   display: none;
   position: fixed;
-  /* margin-left: -100px; */
-  top: 100px;
-  left: 15%;
-  border: 3px solid #555;
+  top: 3vh;
+  left: 5vh;
+  border: 2px solid #555;
   z-index: 200;
   background-color: #777;
-  padding: 10px;
 }
 
-.form-content {
-  /* max-width: 400px; */
-  max-width: 400px;
-  min-width: 200px;
-  padding: 10px;
-  background-color: #777;
+@media (pointer: coarse)  {
+
+    .about-content {
+      /* max-width: 400px; */
+      max-width: 90vw;
+      min-width: 40vw;
+      background-color: #bbb;
+      font-size: 1rem;
+      display: flex;
+      flex-direction: column;
+      margin: 5px;
+      padding-right: 5px;
+    }
+
+    #aboutContent tbody {
+        font-size: 1rem;
+    }
+
+    /* Add styles to the form container */
+    .form-login {
+      font-size: 1.2rem;
+      background-color: #777;
+      max-width: 40vw;
+      flex-direction: column;
+      justify-content: space-between;
+      margin: 5px;
+      padding-right: 5px;
+    }
+
+    label {
+        font-size: 1.2rem;
+    }
+
+    /* Full-width input fields */
+    .form-login input[type=text], .form-login input[type=password] {
+      width: 100%;
+      border: none;
+      background: #bbb;
+      margin: 5px;
+      font-size: 1.2rem;
+    }
+
+    /* Set a style for the submit/login button */
+    .form-login .btn, .about-content .btn {
+      background-color: #04AA6D;
+      color: white;
+      border: none;
+      cursor: pointer;
+      width: calc(100% - 10px);
+      opacity: 0.8;
+      margin: 5px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      font-size: 1.3rem;
+    }
 }
 
-/* Add styles to the form container */
-.form-container {
-  max-width: 200px;
-  padding: 10px;
-  background-color: #777;
+@media (pointer: fine) {
+    .about-content {
+      max-width: 800px;
+      min-width: 300px;
+      background-color: #777;
+      font-size: 1rem;
+      display: flex;
+      flex-direction: column;
+      margin: 5px;
+      padding-right: 5px;
+    }
+
+    .form-login {
+      max-width: 200px;
+      background-color: #777;
+      font-size: 1rem;
+      display: flex;
+      flex-direction: column;
+      margin: 5px;
+      padding-right: 5px;
+    }
+
+    label {
+        font-size: 1.2rem;
+    }
+
+    .form-login input[type=text], .form-login input[type=password] {
+      width: 100%;
+      border: none;
+      background: #bbb;
+      margin: 5px;
+      font-size: 1.2rem;
+    }
+
+    .form-login .btn, .about-content .btn {
+      background-color: #04AA6D;
+      color: white;
+      border: none;
+      cursor: pointer;
+      width: calc(100% - 5px);
+      opacity: 0.8;
+      margin: 5px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      font-size: 1.3rem;
+    }
 }
 
-/* Full-width input fields */
-.form-container input[type=text], .form-container input[type=password] {
-  width: 100%;
-  padding: 15px;
-  margin: 5px 0 5px 5px;
-  border: none;
-  background: #bbb;
-}
 
 /* When the inputs get focus, do something */
-.form-container input[type=text]:focus, .form-container input[type=password]:focus {
+.form-login input[type=text]:focus, .form-login input[type=password]:focus {
   background-color: #eee;
   outline: none;
 }
 
-/* Set a style for the submit/login button */
-.form-container .btn, .form-content .btn {
-  background-color: #04AA6D;
-  color: white;
-  padding: 8px 8px;
-  border: none;
-  cursor: pointer;
-  width: 100%;
-  margin-top:10px;
-  opacity: 0.8;
-}
-
 /* Add a red background color to the cancel button */
-.form-container .cancel, .form-content .cancel {
+.form-login .cancel, .about-content .cancel {
   background-color: red;
 }
 
 /* Add some hover effects to buttons */
-.form-container .btn:hover, .open-button:hover {
+.form-login .btn:hover, .open-button:hover {
   opacity: 1;
 } 

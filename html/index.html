@@ -1,3 +1,14 @@
+{% if runMode == 'pilot' %}
+<link rel="shortcut icon" href="/script/images/SGX_square_transparent.ico"/>
+<link rel="apple-touch-icon" href="/script/images/SGX_square_transparent_72.png"/>
+<link sizes="72x72" rel="apple-touch-icon" href="/script/images/SGX_square_transparent_72.png"/>
+<link sizes="114x114" rel="apple-touch-icon" href="/script/images/SGX_square_transparent_114.png"/>
+<link sizes="144x144" rel="apple-touch-icon" href="/script/images/SGX_square_transparent_144.png"/>
+<link rel="manifest" href="/manifest.json">
+{% endif %}
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <link rel="stylesheet" href="/script/dialogs.css" />
 
 <style>
@@ -779,6 +790,11 @@
         }
     }
     function init() {
+        var scale = 'scale(1)';
+        document.body.style.webkitTransform =  scale;    // Chrome, Opera, Safari
+        document.body.style.msTransform =   scale;       // IE 9
+        document.body.style.transform = scale;     // General
+
         loadTable();
         setupStream();
     }

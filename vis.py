@@ -307,6 +307,7 @@ def attachHandlers(app: sanic.Sanic):
     app.static('/parms', f'{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
     app.static('/script', f'{sys.path[0]}/scripts', name='script')
     app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
+    app.static('/manifest.json', f'{sys.path[0]}/scripts/manifest.json', name='manifest')
 
     @app.exception(sanic.exceptions.NotFound)
     def pageNotFound(request, exception):
@@ -337,6 +338,7 @@ def attachHandlers(app: sanic.Sanic):
  
     @app.route('/plot/<fmt:str>/<which:str>/<glider:int>/<dive:int>/<image:str>')
     @authorized()
+    @compress.compress()
     async def plotHandler(request, fmt:str, which: str, glider: int, dive: int, image: str):
         if fmt not in ['png', 'div']:
             return sanic.response.text('not found', status=404)
@@ -786,11 +788,16 @@ def attachHandlers(app: sanic.Sanic):
     @authorized(modes=['private', 'pilot'], requirePilot=True)
     async def saveHandler(request, glider:int, which:str):
         validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
+        forbidden = ['shutdown', 'scuttle', 'wipe', 'reboot', 'pdos', 'quit']
 
         message = request.json
         if 'file' not in message or message['file'] != which:
             return sanic.response.text('oops')
 
+        for nono in forbidden:
+            if nono in message['contents']:
+                return sanic.response.text('not allowed')
+     
         path = gliderPath(glider, request)
         if which in validator:
             try:

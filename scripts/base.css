@@ -1,0 +1,755 @@
+    a:link,.spanClick,.navTab           {color:#0000ff; text-decoration:none}
+    a:visited {color:#0000aa; text-decoration:none}
+    a:hover,.spanClick:hover,.navTab    {color:#0000aa; text-decoration:underline}
+    a:active,.spanClick:active,.navTab  {color:#0000aa; text-decoration:underline}
+
+    option { background-color:#eeeeee; }
+    select { background-color:#eeeeee; }
+    button { background-color:#dddddd; }
+    button.tool { background-color:#dddddd; margin-top: 2px; margin-bottom: 2px; width:48px; height:48px;  border:0px; }
+
+    input { text-transform:none; }
+
+    .jumpLink {
+        font-size: 0.8rem; 
+    }
+
+    #navLinks {
+        font-size: 1rem;
+    }
+
+
+    .thumbImg {
+        max-width:180px; 
+        max-height:169px; 
+        mix-blend-mode:multiply;
+    }
+
+    .thumbDiv {
+        width: 200px;
+        max-width: 200px;
+        min-width: 200px;
+        height: 100%;
+    }
+
+
+    #mainTable tbody {
+        font-size:1.0rem; 
+        text-align:right; 
+        font-family:verdana, arial, tahoma, 'sans serif';
+        /* width:1040px; */
+        overflow-y:auto;
+    }
+
+    #mainTable td,th {
+        padding-left: 5px;
+        padding-right: 5px;
+    }     
+
+    #position {
+        font-weight: bold; 
+        font-size: 42px; 
+        padding-left: 2vmin; 
+        padding-top: 1px; 
+        padding-bottom: 1px
+    }
+
+    #positionTime {
+        font-weight: bold; 
+        font-size: 20px; 
+        padding-left: 2vmin; 
+        padding-top: 1px; 
+        padding-bottom: 2px
+    }
+
+    #ribbonExpander {
+        display: none;
+    }
+
+    #plotlyPopperOuter {
+        display: none;
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        z-index: 10;
+        font-size: 2rem;
+        font-weight: bold;
+    }
+
+    #btnDiveUp {
+        background: url("/script/images/up-icon.png");
+    }
+    #btnDiveDown {
+        background: url("/script/images/down-icon.png");
+    }
+    #btnDiveTable {
+        background: url("/script/images/table-icon.png");
+    }
+    #btnLogTable {
+        background: url("/script/images/log-table-icon.png");
+    }
+    #btnLogFile {
+        background: url("/script/images/log-icon.png");
+    }
+    #btnPlotTool {
+        background: url("/script/images/chart-icon.png");
+    }
+    #btnNotifications {
+        background: url("/script/images/notification-icon.png");
+    }
+    #btnCapFile {
+        background: url("/script/images/cap-none-icon.png");
+    }
+    #btnEngFile {
+        background: url("/script/images/eng-icon.png");
+    } 
+    #btnMap {
+        background: url("/script/images/globe-icon.png"); 
+    } 
+    #btnSelftest {
+        background: url("/script/images/selftest-icon.png"); 
+    } 
+
+/* mobile device */
+@media (pointer: coarse)  {
+
+
+    @media screen and (orientation:portrait) {
+        #navLinks {
+            font-size: 1rem;
+        }
+
+        #bodyView {
+            /* position: relative; */
+            display: grid;
+            grid-template-columns: auto;
+            grid-template-rows: 0.55fr 50px 150px 0.45fr;
+            grid-template-areas:
+                "main"
+                "toolbar"
+                "plotRibbonBox"
+                "right";
+            height: 100vh;
+            width: 100vw;
+            row-gap: 3px;
+        }
+
+        #toolbar {
+            opacity: 0.8;
+            z-index: 5;
+            grid-area: toolbar;
+            height:50px; 
+            display: grid;
+            overflow-x: auto;
+            overflow-y: none;
+            grid-template-columns: max-content 1fr max-content;
+            grid-template-rows: 50px;
+            grid-template-areas:
+                "top . bottom";
+            column-gap: 2px;
+        }
+
+        .toolTop {
+            grid-area: top;
+        }
+
+        .toolBottom {
+            grid-area: bottom;
+        }
+
+        #main {
+            z-index: 3;
+            grid-area: main;
+            overflow:auto; 
+            background-color:#bbbbbb; 
+            text-align:center;
+            position: relative;
+        }
+
+        #mainTable tbody {
+            font-size:0.4rem; 
+            text-align:right; 
+            font-family:verdana, arial, tahoma, 'sans serif';
+            overflow-y:auto;
+        }
+
+        #mainTable td,th {
+            padding-left: 0px;
+            padding-right: 0px;
+        }     
+
+        .thumbImg {
+            max-width:148px; 
+            max-height:148px; 
+            mix-blend-mode:multiply;
+        }
+
+        .thumbDiv {
+            max-width: 148px;
+            min-width: 148px;
+            width: 148px;
+            display: flex;
+            align-items: center;
+            justify-content: center; 
+        }
+
+        #plotRibbonBox {
+            height: 150px; 
+            overflow: hidden;
+            grid-area: plotRibbonBox;
+        }
+
+        #plotRibbonLinks {
+            overflow: hidden;
+            display: none; /* flex; */
+            width: 100%;
+            gap: 5px;
+        }
+
+        #plotRibbon {
+            width: 100%;
+            height: 150px;
+            display: flex;
+            overflow-x:scroll; 
+            background-color:#bbbbbb;
+            gap: 0px;
+        }
+
+        #right {
+            grid-area: right;
+            display: flex;
+            flex-direction: row;
+            scroll-snap-type: x mandatory;
+            overflow-x: scroll;
+            overflow-y: hidden
+        }
+        #commlog {
+            scroll-snap-align: center;
+            overflow-y:auto; 
+            overflow-x:hidden;
+            font-size: 0.5rem;
+            box-sizing:border-box; 
+            border:1px solid black; 
+            white-space:pre;
+            background-color:#bbbbbb;
+            min-width: 80vw;
+        }
+
+        #status {
+            overflow:none; 
+            scroll-snap-align: center;
+            font-size: 10px; 
+            box-sizing:border-box; 
+            border:1px solid black; 
+            background-color:#bbbbbb;
+            min-width: 80vw;
+        }
+
+        #statusTable {
+            table-layout:fixed; 
+        }
+
+        #statusTable tbody {
+            font-size: 1.5vh;
+        }
+
+        .statusTableLabel {
+            width: 15%;
+            font-weight: bold;
+        }
+        .statusTableValue {
+            width: 18%;
+        }
+
+        #position {
+            font-weight: bold; 
+            font-size: 3vh;
+            padding-left: 2vmin; 
+            padding-top: 1px; 
+            padding-bottom: 1px
+        }
+
+        #positionTime {
+            font-weight: bold; 
+            font-size: 2vh; 
+            padding-left: 2vmin; 
+            padding-top: 1px; 
+            padding-bottom: 2px
+        }
+
+    
+        #divCmdfile {
+            scroll-snap-align: center;
+            font-size: 1rem;
+            min-width: 80vw;
+            display: grid;
+            grid-template-columns: auto;
+            grid-template-rows: 0.97fr min-content;
+            grid-template-areas:
+                "editor"
+                "buttons";
+            row-gap: 5px;
+            opacity: 1;
+            border: 1px solid black;
+            background-color:#bbbbbb;
+        }
+
+        .editFile {
+            grid-area: editor;
+            /* width:100%; */
+            /* height:100%; */
+            box-sizing:border-box; 
+            background-color:#bbbbbb;
+            border: 1px solid black;
+        }
+        
+        #fileButtons {
+            grid-area: buttons;
+        }
+
+        #fileButtons button {
+            font-size: 13px;
+        }
+
+        #selectFile {
+            font-size: 14px;
+        }
+
+        #mainImage {
+            max-width: 100%;
+            max-height: 100%;
+        }
+    }
+
+
+    @media screen and (orientation:landscape) {
+        #navLinks {
+            font-size: 4vh;
+        }
+
+        #bodyView {
+            /* position: relative; */
+            display: grid;
+            grid-template-rows: 100%;
+            grid-template-columns: 50px calc(95% - 50px) 70vw;
+            grid-template-areas:
+                "toolbar main right";
+            height: 96vh;
+            width: 100%;
+            scroll-snap-type: x mandatory;
+            position:relative;
+            gap: 5px;
+            overflow-x: scroll;
+        }
+
+        #toolbar {
+            grid-area: toolbar;
+            scroll-snap-align: start;
+            width:50px; 
+            max-width:50px;
+            display: grid;
+            height: 100%;
+            overflow-y: auto;
+            display: grid;
+            grid-template-rows: max-content 1fr max-content;
+            grid-template-areas:
+                "top"
+                "."
+                "bottom";
+            flex-shrink: 0;
+            flex-grow: 1; 
+        }
+
+        .toolTop {
+            grid-area: top;
+        }
+
+        .toolBottom {
+            grid-area: bottom;
+        }
+
+        #main {
+            grid-area: main;
+            width: 100%;
+            height: 100%;
+            overflow:auto; 
+            background-color:#bbbbbb; 
+            text-align:center;
+            flex-shrink: 0;
+            flex-grow: 1; 
+            position: relative;
+        }
+
+        #ribbonExpander { 
+            display: block;
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            font-size: 5vh;
+            z-index: 10;
+        }
+
+        #mainTable tbody {
+            font-size:0.9rem; 
+            text-align:right; 
+            font-family:verdana, arial, tahoma, 'sans serif';
+            overflow-y:auto;
+        }
+
+        #mainTable td,th {
+            padding-left: 3px;
+            padding-right: 3px;
+        }     
+
+        .thumbImg {
+            max-width:185px; 
+            max-height:185px; 
+            mix-blend-mode:multiply;
+        }
+
+        .thumbDiv {
+            max-width: 185px;
+            min-width: 185px;
+            width: 185px;
+            display: flex;
+            align-items: center;
+            justify-content: center; 
+        }
+
+        #plotRibbonBox {
+            display: none;
+            width: 100%;
+            height: 185px; 
+            max-height: 185px; 
+            overflow: hidden;
+            position: absolute;
+            left: 105px;
+            top: 7vh;
+            z-index: 100;
+            opacity: 0.8;
+        }
+
+        #plotRibbonLinks {
+            display: none;
+            overflow: hidden;
+            width: 100%;
+            gap: 5px;
+        }
+
+        #plotRibbon {
+            width: 100%;
+            height: 185px;
+            max-height: 185px;
+            display: flex;
+            overflow-x:scroll; 
+            background-color:#bbbbbb;
+        }
+
+        #right {
+            grid-area: right;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: row;
+            scroll-snap-type: x mandatory;
+            height: 100%;
+            width: 100%;
+            flex-shrink: 0;
+            flex-grow: 0;
+            gap: 5px;
+            overflow-x: scroll;
+            overflow-y: hidden
+        }
+        #commlog {
+            scroll-snap-align: center;
+            overflow-y:auto; 
+            overflow-x:hidden;
+            font-size: 0.8rem;
+            box-sizing:border-box; 
+            border:1px solid black; 
+            white-space:pre;
+            background-color:#bbbbbb;
+            grid-area: commlog;
+            height: 100%;
+            min-width: 60vw;
+        }
+
+        #status {
+            overflow:none; 
+            scroll-snap-align: start;
+            font-size: 10px; 
+            box-sizing:border-box; 
+            border:1px solid black; 
+            background-color:#bbbbbb;
+            grid-area: status;
+            height: 100%;
+            min-width: 60vw;
+        }
+
+        #statusTable {
+            table-layout:fixed; 
+        }
+
+        #statusTable tbody {
+            font-size: 1rem;
+        }
+
+        .statusTableLabel {
+            width: 15%;
+            font-weight: bold;
+        }
+        .statusTableValue {
+            width: 18%;
+        }
+
+        #position {
+            font-weight: bold; 
+            font-size: 8vh;
+            padding-left: 2vmin; 
+            padding-top: 1px; 
+            padding-bottom: 1px
+        }
+
+        #positionTime {
+            font-weight: bold; 
+            font-size: 6vh; 
+            padding-left: 2vmin; 
+            padding-top: 1px; 
+            padding-bottom: 2px
+        }
+
+    
+        #divCmdfile {
+            grid-area: cmdfile;
+            scroll-snap-align: start;
+            font-size: 1rem;
+            height: 100%;
+            min-width: 60vw;
+            display: grid;
+            grid-template-columns: auto;
+            grid-template-rows: 0.97fr min-content;
+            grid-template-areas:
+                "editor"
+                "buttons";
+            row-gap: 5px;
+            position: relative;
+            border: 1px solid black;
+            opacity: 1.0;
+            background-color:#bbbbbb;
+        }
+
+        .editFile {
+            grid-area: editor;
+            /* width:100%; */
+            /* height:100%; */
+            box-sizing:border-box; 
+            background-color:#bbbbbb;
+            border: 1px solid black;
+        }
+        
+        #fileButtons {
+            grid-area: buttons;
+            margin-bottom: 3px;
+        }
+
+        #fileButtons button {
+            font-size: 16px;
+            padding-bottom: 2px;
+        }
+
+        #selectFile {
+            font-size: 16px;
+        }
+
+        #mainImage {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+    }
+
+    #cmdfileEditClose {
+        position: absolute;
+        display: none;
+        right: 5px;
+        top: 5px;
+    }
+
+    .editing {
+        display: block;
+        position: absolute;
+        top: 5vh;
+        left: 10vw;
+        max-height: 40vh;
+        height: 40vh;
+        width: 60vw;
+        z-index: 200;
+    }
+}
+
+/* desktop */
+@media (pointer: fine), (pointer: none) {
+
+    #bodyView {
+        /* position: relative; */
+        display: grid;
+        grid-template-columns: 50px 1fr 600px;
+        grid-template-rows: 0.98fr 205px;
+        grid-template-areas:
+            "toolbar main right"
+            "plotRibbonBox plotRibbonBox right";
+        height: 100%;
+        max-height: 100%;
+        row-gap: 10px;
+    }
+
+    #toolbar {
+        grid-area: toolbar;
+        width:50px; 
+        max-width:50px;
+        display: grid;
+        grid-template-columns: 50px;
+        grid-template-rows: max-content 1fr max-content;
+        grid-template-areas:
+            "top"
+            "."
+            "bottom";
+        row-gap: 5px;
+    }
+
+    .toolTop {
+        grid-area: top;
+    }
+
+    .toolBottom {
+        grid-area: bottom;
+    }
+
+    #main {
+	    overflow:auto; 
+	    background-color:#bbbbbb; 
+	    text-align:center;
+        grid-area: main;
+        position: relative;
+    }
+
+
+    #plotRibbonBox {
+        height: 210px; 
+        max-height: 210px; 
+        overflow: hidden;
+        grid-area: plotRibbonBox;
+    }
+
+    #plotRibbonLinks {
+        overflow: hidden;
+        display: flex;
+        width: 100%;
+        gap: 5px;
+    }
+
+    #plotRibbon {
+        width: 100%;
+        height: 185px;
+        max-height: 185px;
+        display: flex;
+        overflow-x:scroll; 
+        background-color:#bbbbbb;
+    }
+
+    #right {
+        grid-area: right;
+        display: grid;
+        grid-template-rows: 240px 1fr 380px;
+        grid-template-columns: auto;
+        grid-template-areas:
+            "status"
+            "commlog"
+            "cmdfile";
+        row-gap: 10px;
+        margin-left: 10px;
+    }
+    #commlog {
+        overflow:auto; 
+        font-size: 10px; 
+        box-sizing:border-box; 
+        border:1px solid black; 
+        white-space:pre;
+        background-color:#bbbbbb;
+        grid-area: commlog;
+    }
+
+    #status {
+        overflow:none; 
+        font-size: 10px; 
+        box-sizing:border-box; 
+        border:1px solid black; 
+        background-color:#bbbbbb;
+        grid-area: status;
+        height: 240px;
+        max-height: 240px;
+    }
+
+    #statusTable {
+        table-layout:fixed; 
+    }
+
+    .statusTableLabel {
+        width: 60px;
+    }
+    .statusTableValue {
+        width: 130px;
+    }
+
+    #divCmdfile {
+        grid-area: cmdfile;
+        font-size: 12px;
+        height: 380px;
+        max-height: 380px;
+        min-height: 380px;
+        display: grid;
+        grid-template-columns: auto;
+        grid-template-rows: 1fr 20px;
+        grid-template-areas:
+            "editor"
+            "buttons";
+        row-gap: 5px;
+    }
+
+    .editFile {
+        grid-area: editor;
+        /* width:100%; */
+        /* height:100%; */
+        box-sizing:border-box; 
+        background-color:#bbbbbb;
+        border: 1px solid black;
+    }
+    
+    #fileButtons {
+        grid-area: buttons;
+        height: 20px;
+        max-height: 20px;
+    }
+
+    #mainImage {
+        max-width: 100%;
+        max-height: 100%;
+    }
+}
+
+body {
+    background-color: #999999;
+    color: #000000;
+    height: 100%;
+    width: 100%;
+    display: block;
+}
+
+html {
+    height: 100%;
+    overflow: auto;
+}
+ 
+table {
+    color: #000000;
+}
+
