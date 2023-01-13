@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -59,10 +59,6 @@ import FileMgr
 import FlightModel
 import MakeDiveProfiles
 import MakeKML
-import MakePlot
-import MakePlot2
-import MakePlot3
-import MakePlot4
 import QC
 import Sensors
 import TraceArray
@@ -392,33 +388,33 @@ def main():
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
             )
 
-        if base_opts.reprocess_plots:
-            log_info(
-                "Started PLOT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-            # MakePlot.main(
-            #    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            # )
-            MakePlot2.main(
-                instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            )
-            MakePlot3.main(
-                instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            )
-            MakePlot4.main(
-                instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            )
+        # if base_opts.reprocess_plots:
+        #     log_info(
+        #         "Started PLOT processing "
+        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+        #     )
+        #     # MakePlot.main(
+        #     #    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+        #     # )
+        #     MakePlot2.main(
+        #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+        #     )
+        #     MakePlot3.main(
+        #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+        #     )
+        #     MakePlot4.main(
+        #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+        #     )
 
-            log_info(
-                "Finished PLOT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-        else:
-            log_info(
-                "Skipping PLOT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
+        #     log_info(
+        #         "Finished PLOT processing "
+        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+        #     )
+        # else:
+        #     log_info(
+        #         "Skipping PLOT processing "
+        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+        #     )
 
         # if process_NODC:
         #     log_info(
