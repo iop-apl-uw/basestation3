@@ -1,0 +1,51 @@
+dives: structure maintained by BaseDB based on what is getting summarized, keyed by dive, one row per dive
+CREATE TABLE dives(dive INT, log_gps1_time FLOAT, log_gps2_time FLOAT, log_gps_time FLOAT, log_gps1_lat FLOAT, log_gps2_lat FLOAT, log_gps_lat FLOAT, log_gps1_lon FLOAT, log_gps2_lon FLOAT, log_gps_lon FLOAT, log_gps1_first_fix_time FLOAT, log_gps2_first_fix_time FLOAT, log_gps_first_fix_time FLOAT, log_gps1_final_fix_time FLOAT, log_gps2_final_fix_time FLOAT, log_gps_final_fix_time FLOAT ...
+
+gc: structure maintained by BaseDB - one row per gc move
+CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT ...
+
+
+
+Profile data, 3 tables:
+
+profilesMeta: doesn't have bin info in it because that might change over mission or per variable as a sensor is turned on or off over dives or at different sampling schemes, also multiple bin products could live in the profiles table quite happily (2m, 5m, 10m products) for some variables, all referring back this same meta table. One row per half dive
+
+idx(AUTOINCREMENT) dive direction(1=dive,2=climb,4=loiter) epoch lat(dd.ddd) lon(dd.ddd)
+
+profilesVars:
+
+idx(AUTOINCREMENT) variable(TEXT) units(TEXT) instrumentIdx(from equipment DB? for tracking across missions)
+
+profiles:
+
+idx(AUTOINCREMENT) metaIdx varIdx firstBin(m) lastBin(m) binSize(m) data(binary blob of floats? or serialize (to JSON?))
+
+SELECT firstBin,lastBin,binSize,data from profiles,profilesMeta,profilesVars WHERE metaIdx=profilesMeta.idx AND varIdx=profilesVars.idx AND profilesVar.variable="temperature" AND profilesMeta.dive=1;
+
+would get you two profiles (the down and up temperature) presumably
+
+
+
+Timeseries data - 2 tables: meta table is the already existing dives table
+
+observationVars:
+
+idx(AUTOINCREMENT) variableName(TEXT) units(TEXT) instrumentIdx(for future lookup into cals, tracking inst performance across missions, etc. not important for this discsussion)
+
+observations:
+
+idx(AUTOINCREMENT) varIdx epoch value
+
+SELECT observations.value,observations.epoch FROM observations,dives,observationVars WHERE observationVars.idx=observations.varIdx AND observationVars.variableName="temperature" AND observations.epoch > dives.log_gps2_time AND observations.epoch < dives.log_gps_time and dives.dive=5;
+
+=> pandas into t_temperature, temperature
+
+SELECT observations.value,observations.epoch FROM observations,dives,observationVars WHERE observationVars.idx=observations.varIdx AND observationVars.variableName="depth" AND observations.epoch > dives.log_gps2_time AND observations.epoch < dives.log_gps_time and dives.dive=5;
+
+=> pandas into t_depth, depth
+
+// want just dive data?
+
+SELECT observations.value,observations.epoch FROM observations,dives,observationVars WHERE observationVars.idx=observations.varIdx AND observationVars.variableName="temperature" AND observations.epoch > dives.log_gps2_time AND observations.epoch < dives.start_of_climb_time and dives.dive=5;
+
+=> pandas into t_temperature, temperature
