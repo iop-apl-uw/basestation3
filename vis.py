@@ -315,12 +315,12 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.post('/auth')
     async def authHandler(request):
-        username = request.json.get("username", None)
+        username = request.json.get("username", None).lower()
         password = request.json.get("password", None)
 
         for user,prop in request.app.ctx.userTable.items():
-            if user == username and sha256_crypt.verify(password, prop['password']):
-                token = jwt.encode({ "user": username, "groups": prop['groups']}, request.app.config.SECRET)
+            if user.lower() == username and sha256_crypt.verify(password, prop['password']):
+                token = jwt.encode({ "user": user, "groups": prop['groups']}, request.app.config.SECRET)
                 response = sanic.response.text("authorization ok")
                 response.cookies["token"] = token
                 response.cookies["token"]["max-age"] = 86400
@@ -753,14 +753,15 @@ def attachHandlers(app: sanic.Sanic):
         else:
             return sanic.response.text('oops')
 
-    @app.route('/query/<glider:int>/<vars:str>')
+    @app.route('/query/<glider:int>/<queryVars:str>')
     @authorized()
-    async def queryHandler(request, glider, vars):
-        pieces = vars.split(',')
+    async def queryHandler(request, glider, queryVars):
+        queryVars = queryVars.rstrip(',')
+        pieces = queryVars.split(',')
         if pieces[0] == 'dive':
-            q = f"SELECT {vars} FROM DIVES ORDER BY dive ASC"
+            q = f"SELECT {queryVars} FROM dives ORDER BY dive ASC"
         else:
-            q = f"SELECT {vars} FROM DIVES"
+            q = f"SELECT {queryVars} FROM dives"
 
         async with aiosqlite.connect(f'{gliderPath(glider,request)}/sg{glider:03d}.db') as conn:
             conn.row_factory = rowToDict
