@@ -930,9 +930,15 @@ def attachHandlers(app: sanic.Sanic):
         sanic.log.logger.debug(f"streamHandler start {filename}")
 
         if request.app.config.RUNMODE > MODE_PUBLIC:
+            statinfo = await aiofiles.os.stat(filename)
+            if statinfo.st_size < 10000:
+                start = 0
+            else:
+                start = statinfo.st_size - 10000
+
             commFile = await aiofiles.open(filename, 'rb')
             if which == 'init':
-                await commFile.seek(-10000, 2)
+                await commFile.seek(start, 0)
                 data = await commFile.read()
                 if data:
                     await ws.send(data.decode('utf-8', errors='ignore'))
