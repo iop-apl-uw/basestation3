@@ -1,0 +1,38 @@
+on desktop, shortcut keys can be used to move through dives and plots in the ribbon: 
+
+    wasd: W up a dive, A down a dive
+          S left in the ribbon, D right in the ribbon
+
+    hjkl: (vi key bindings)  
+          j down a dive, k up a dive
+          h left in the ribbon, l right in the ribbon
+
+    1-5: jumps through the 5 plot "pages" of the ribbon (1 = page 1, etc.)
+
+    scrolling with a scroll wheel inside the ribbon, scrolls horizontally
+
+In chat, markdown for glider, dive, plots and links is available
+
+    @236 = go to glider 236 (link to /236)
+    #376 = create link that when clicked will change shown plots to dive 376
+    $ts = create link that when clicked will change plot to ts plot
+
+    markdown can be combined: #376$ts = link to change to dive 376 and show ts
+                              @234#123$map
+
+    [text](url) = create standard URL link
+
+On mobile:
+
+    landscape: 
+        click the three squares to show the ribbon to change the plot
+        click the diagonal expander arrow to open the plot full size
+        swipe left on the plot to show status - comm.log - cmdfile edit windows
+        swipe up down on the left hand side toolbar to show the tool options to change the main display
+    
+    portrait:
+        swipe left and right on the bottom panels to center status or comm.log or cmdfile
+        click the expander arrow on the plot to open the plot full size
+
+
+Not all features are available in all users and/or in all modes.
