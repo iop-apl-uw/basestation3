@@ -7,17 +7,22 @@
       /* Hide original inputs */
       visibility: hidden;
       position: absolute;
+      /* width: 4vmin;  */
+      height: 8vh;
     }
+
+
     input[type=radio] + label:before,
     input[type=checkbox] + label:before{
-      height:3.5vmin;
-      width:3.5vmin;
+      width: 6vh;
+      height:6vh;
+      /* width:3.5vmin; */
       margin-right: 2px;
       content: " ";
       display:inline-block;
       vertical-align: middle;
       border:2px solid #666;
-      font-size: 3vmin;
+      font-size: 6vh;
     }
     input[type=radio]:checked + label:before,
     input[type=checkbox]:checked + label:before{
@@ -34,13 +39,26 @@
     }
     body {
         font-family: 'Helvetica'; 
-        font-size: 5vmin
+        font-size: 8vh;
+    }
+
+    #position {
+        font-weight: bold; 
+        font-size: 12vh;
+        padding-left: 5vmin; 
+        padding-top: 10px; 
+        padding-bottom: 10px;
+    }
+    #timestamp, #refreshed {
+        padding-left: 5vmin; 
+        padding-top: 10px; 
+        padding-bottom: 10px;
     }
 
     #main {
         display: inline-block; 
         border-style: solid; 
-        border-width: 7px; 
+        border-width: 10px; 
     }
 
     .day {
@@ -48,6 +66,15 @@
         background-color: #bbb; 
         padding: 6px;
         color: #000;
+    }
+
+
+    button {
+        height: 8vh;
+        font-size: 7vh;
+        line-height: 4vh;
+        text-align: center; 
+        box-sizing: border-box;
     }
 
     .day button {
@@ -58,11 +85,17 @@
         background-color: #222;
     }
 
+    /* night follows day in style so will take precedence */
     .night {
         border-color: #222; 
         background-color: #000; 
         padding: 6px;
         color: #800;
+    }
+
+    /* blink comes last so both can day and night blink  */
+    .blink {
+        border-color: #800;
     }
 
     button:hover {
@@ -77,10 +110,42 @@
     // var mode;
     // var mission;
     var intervalTimer = null;
-    var webSocket = null;
+    var wsocket = null;
     var currentGlider;
     var currentMission;
 
+    var blinkTimer = null;
+    var blinkTimeoutTimer = null;
+
+    function cancelBlink() {
+        if (blinkTimer) {
+            clearInterval(blinkTimer);
+            blinkTimer = null;
+        }
+        if (blinkTimeoutTimer) {
+            clearTimeout(blinkTimeoutTimer);
+            blinkTimeoutTimer = null;
+        }
+        document.getElementById('main').classList.remove('blink');
+    }
+
+    function doBlink() {
+        console.log('blink');
+        if (document.getElementById('main').classList.contains('blink')) {
+            document.getElementById('main').classList.remove('blink');
+            console.log('off');
+        }
+        else {
+            console.log('on');
+            document.getElementById('main').classList.add('blink');
+        }
+    }
+
+    function startBlink() {
+        blinkTimer = setInterval(doBlink, 1000);
+        blinkTimeoutTimer = setTimeout(cancelBlink, 60000);
+    }
+    
     function setup() {
         let params = new URLSearchParams(window.location.search);
 
@@ -88,26 +153,21 @@
         var first = path.indexOf('pos') + 1;
 
         var glider  = parseInt(path[first]);
-        var mission = params.has('mission') ? '?mission=' + params.get('mission') : '';
-        var mode    = params.has('mode') ? params.get('mode') : 'poll';
+        var mission = params.has('mission') ? 'mission=' + params.get('mission') : false;
+        if (params.has('mode'))
+            document.getElementById('poll').checked = params.get('mode') == 'poll'
+
         if (params.has('night'))
             document.getElementById('night').checked = true;
 
         nightMode();
 
-        loadPosition(glider, mission);
-        if (mode == 'poll') {
-            intervalTimer = setInterval(function() { loadPosition(glider,mission); }, 60000);
-            console.log('starting poll mode');
-            document.getElementById('poll').checked = true;
-        }
-        else {
-            setupStream(glider, mission);
-        }
-
         currentMission = mission;
         currentGlider  = glider;
 
+        pollMode(glider, mission);
+
+        document.getElementById('poll').onchange = function() { pollMode(glider, mission); };
         document.getElementById('refresh').onclick = function() { loadPosition(glider, mission); };
     }
 
@@ -122,20 +182,87 @@
         }
     }
 
-    function pollMode() {
+    function pollMode(glider, mission) {
         var poll = document.getElementById('poll').checked;
         if (poll) {
-            if (webSocket) webSocket.close();
+            console.log('starting poll');
+            if (wsocket) wsocket.close();
+            loadPosition(glider, mission);
             intervalTimer = setInterval(function() { loadPosition(currentGlider, currentMission); }, 60000);
+            document.getElementById('refresh').style.display = 'block';
         }
         else {
-            if (intervalTimer) clearInterval(intervalTimer);    
-            setupStream(currentGlider, currentMission);
+            console.log('starting stream');
+            if (intervalTimer) {
+                clearInterval(intervalTimer);    
+                intervalTimer = null;
+            }
+            setupStream(glider, mission);
+            document.getElementById('refresh').style.display = 'none';
         }
     }
 
+    function handleMessage(data) {
+        currentLat = data['lat'];
+        currentLon = data['lon']; 
+
+        if (data['epoch'] > currentEpoch) {
+            if (document.getElementById('audio').checked) {
+                beeps(10);
+            }
+
+            var thisDate = new Date(1000*data['epoch']);
+            document.getElementById('timestamp').innerHTML = formatDate(thisDate);
+            displayPosition();
+            startBlink();
+        }
+
+        currentEpoch = data['epoch'];
+
+        var d = new Date;
+        document.getElementById('refreshed').innerHTML = formatDate(d);
+    }
+
     function setupStream(glider, mission) {
+        console.log('setupStream');
         if (intervalTimer) clearInterval(intervalTImer); 
+     
+        var loc = window.location, new_uri;
+        if (loc.protocol === "https:")
+            new_uri = "wss:";
+        else
+            new_uri = "ws:";
+
+        new_uri += "//" + loc.host;
+        new_uri += "/pos/stream/" + glider + (mission ? "?" + mission : "");
+        console.log(new_uri);
+        wsocket = new WebSocket(new_uri);
+
+        wsocket.onerror = function(error) {
+            console.log('stream error detected');
+            wsocket.close();
+        };
+
+        wsocket.onclose = function(e) {
+            if (e.wasClean) {
+                console.log('stream closed cleanly');
+            }
+            else {
+                console.log('connection died');
+                setupStream(glider, mission);
+            }
+        };
+
+        wsocket.onmessage = function(e) {
+            var data = e.data;
+            if (data == 'none') {
+                return;                
+            } 
+            try {
+                handleMessage(JSON.parse(data));
+            } catch {
+            }
+        }
     }
 
     var currentLat;
@@ -179,9 +306,15 @@
     }
 
     function loadPosition(glider, mission) {
-        fetch(`/pos/poll/${glider}${mission}`)
+        console.log('polling');
+        let m = mission ? '&' + mission : '';
+        fetch(`/pos/poll/${glider}?t=${currentEpoch}${m}`)
         .then(res => res.text())
         .then(text => {
+            console.log(text);
+            if (text == "none")
+                return;
+
             try {
                 data = JSON.parse(text);
             } catch(e) {
@@ -189,24 +322,7 @@
                 return;
             }
 
-            currentLat = data['lat'];
-            currentLon = data['lon']; 
-
-            if (data['epoch'] > currentEpoch) {
-                if (document.getElementById('audio').checked) {
-                    beeps(10);
-                }
-
-                var thisDate = new Date(1000*data['epoch']);
-                document.getElementById('timestamp').innerHTML = formatDate(thisDate);
-                displayPosition();
-
-            }
-
-            currentEpoch = data['epoch'];
-
-            var d = new Date;
-            document.getElementById('refreshed').innerHTML = formatDate(d);
+            handleMessage(data);
         });
 
         // document.getElementById('main').style.border = '7px solid red';
@@ -228,21 +344,23 @@
 
 </script>
 
-<body onload="setup();">
-<div id="main" class="day">
+<body class="day" onload="setup();">
+<div id="main" class="day" onclick="cancelBlink();">
     Position:
-    <input class="day" name="format" type="radio" onchange="displayPosition();" id="_ddmm" value="ddmm" checked style="width: 4vmin; height: 4vmin"><label for="_ddmm">dd mm.mmm</label>
-    <input class="day" name="format" type="radio" onchange="displayPosition();" id="_dd" value="dd" style="width: 4vmin; height: 4vmin"><label for="_dd">dd.ddd</label>
-    <div id="position" style="font-weight: bold; font-size: 7vmin; padding-left: 5vmin; paddin-top: 10px; padding-bottom: 10px"></div>
+    <input class="day" name="format" type="radio" onchange="displayPosition();" id="_ddmm" value="ddmm" checked><label for="_ddmm">dd mm.mmm</label>
+    <input class="day" name="format" type="radio" onchange="displayPosition();" id="_dd" value="dd"><label for="_dd">dd.ddd</label>
+    <div id="position"></div>
     as of
-    <div id="timestamp" style="padding-left: 5vmin; padding-top: 10px; padding-bottom: 10px"></div>
+    <div id="timestamp"></div>
     last refreshed
-    <div id="refreshed" style="padding-left: 5vmin; padding-top: 10px; padding-bottom: 10px"></div>
+    <div id="refreshed"></div>
 
-    <button class="day" id="refresh" style="width: 20vmin; height: 6vmin; font-size: 4vmin;">refresh</button>
-    <input type="checkbox" id="audio" checked style="width: 4vmin; height: 4vmin"><label for="audio">audio</label>
-    <input type="checkbox" id="night" style="width: 4vmin; height: 4vmin" onchange="nightMode();"><label for="night">night</label>
-    <input type="checkbox" id="poll" style="width: 4vmin; height: 4vmin" onchange="pollMode();"><label for="poll">poll</label>
+    <div style="width: 100%; display: flex; flex-direction:row; gap:20px;">
+        <button class="day" id="refresh" title="query for new position">&#8635;</button>
+        <input type="checkbox" id="audio" checked ><label for="audio" title="click off and on or change browser settings to allow audio">audio</label>
+        <input type="checkbox" id="night" onchange="nightMode();"><label for="night" title="dark mode">night</label>
+        <input type="checkbox" id="poll"><label for="poll" title="poll every 60seconds for new position (for poor connections)">poll</label>
+    </div>
 </div>
 </body>
 

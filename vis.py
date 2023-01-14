@@ -919,16 +919,24 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/pos/poll/<glider:int>')
     @authorized()
     async def posPollHandler(request: sanic.Request, glider:int):
+        if 't' in request.args and len(request.args['t']) > 0:
+            t = int(request.args['t'][0])
+            q = f"SELECT * FROM calls WHERE epoch > {t} ORDER BY epoch DESC LIMIT 1;"
+        else:
+            q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         try:
             conn = await aiosqlite.connect(dbfile)
             conn.row_factory = rowToDict
             cur = await conn.cursor()
-            q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
             await cur.execute(q)
             row = await cur.fetchone()
             await cur.close()
-            return sanic.response.json(row)
+            if row:
+                return sanic.response.json(row)
+            else:
+                return sanic.response.text('none')
         except Exception as e:
             sanic.log.logger.info(e)
             return sanic.response.text('oops')
@@ -944,7 +952,7 @@ def attachHandlers(app: sanic.Sanic):
         prev_t = 0
         while True:
             modFiles = await checkFileMods(watchList, ['comm.log'])
-            if 'comm.log' in modFiles:
+            if 'comm.log' in modFiles or prev_t == 0:
                 try:
                     cur = await conn.cursor()
                     q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
