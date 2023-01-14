@@ -697,15 +697,18 @@ def loadDB(base_opts, filename, from_cli=False):
     updateDBFromFM(base_opts, [filename], con)
     updateDBFromFileExistence(base_opts, [filename], con)
 
-def prepDB(base_opts):
-    db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+def prepDB(base_opts, db=None):
+    if db == None:
+        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     # if not os.path.exists(db): 
     # connect creates if it needs to
 
+    print("prepping db tables")
     con = sqlite3.connect(db)
     with con:
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
+        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));");
         cur.close()
 
     con.close()
@@ -784,6 +787,23 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
     if con == None:
         mycon.close()
 
+def addSession(base_opts, session, con=None):
+    if con == None:
+        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+        mycon = sqlite3.connect(db)
+    else:
+        mycon = con
+
+    try:
+        cur = mycon.cursor();
+        cur.execute(f"INSERT OR IGNORE iNTO calls(dive,cycle,call,lat,lon,epoch,RH,intP,volts10,volts24,pitch,depth) VALUES({session.dive_num}, {session.call_cycle}, {session.calls_made}, {Utils.ddmm2dd(session.gps_fix.lat)}, {Utils.ddmm2dd(session.gps_fix.lon)}, {time.mktime(session.gps_fix.datetime)}, {session.rh}, {session.int_press}, {session.volt_10V}, {session.volt_24V}, {session.obs_pitch}, {session.depth});")  
+        mycon.commit()
+    except Exception as e:
+        log_error(f"{e} inserting comm.log session")
+
+    if con == None:
+        mycon.close();
+    
 def main():
     """Command line interface for BaseDB"""
     base_opts = BaseOpts.BaseOptions(

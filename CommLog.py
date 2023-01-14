@@ -1844,6 +1844,8 @@ class TestCommLogCallback:
 
 
 def main():
+    import BaseDB
+
     """main - main entry point"""
     base_opts = BaseOpts.BaseOptions(
         "Test entry for comm.log processing",
@@ -1865,14 +1867,22 @@ def main():
     if base_opts.comm_log is None:
         return 1
 
+    
     # comm_log, pos, session, cnt, n = process_comm_log(base_opts.comm_log, base_opts, scan_back=True)
-    (comm_log, pos, session, _, _) = process_comm_log(sys.argv[1], {}, scan_back=True)
-    if pos: print(pos)
+    (comm_log, pos, session, _, _) = process_comm_log(base_opts.comm_log, base_opts) # , scan_back=True)
 
+    if not base_opts.instrument_id:
+        base_opts.instrument_id = comm_log.get_instrument_id()
+
+    BaseDB.prepDB(base_opts)
+
+    print(f"{len(comm_log.sessions)} sessions")
     if len(comm_log.sessions):
-        comm_log.sessions[-1].dump_contents(sys.stdout)
+        for session in comm_log.sessions:
+            BaseDB.addSession(base_opts, session)
     else:
         print("no sessions")
+
     print(session)
 
     # for ii in range(len(comm_log.sessions)):

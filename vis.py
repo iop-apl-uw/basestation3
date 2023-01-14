@@ -904,12 +904,61 @@ def attachHandlers(app: sanic.Sanic):
                 await conn.commit()
                 return sanic.response.text('SENT')
             except aiosqlite.OperationalError as e:
-                return sanic.response.text('oops')
                 sanic.log.logger.info(e)
+                return sanic.response.text('oops')
 
             await cur.close()
             # await conn.close()
 
+    @app.route('/pos/<glider:int>')
+    @authorized()
+    async def posHandler(request, glider:int):
+        filename = f'{sys.path[0]}/html/pos.html'
+        return await sanic.response.file(filename, mime_type='text/html')
+
+    @app.route('/pos/poll/<glider:int>')
+    @authorized()
+    async def posPollHandler(request: sanic.Request, glider:int):
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        try:
+            conn = await aiosqlite.connect(dbfile)
+            conn.row_factory = rowToDict
+            cur = await conn.cursor()
+            q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+            await cur.execute(q)
+            row = await cur.fetchone()
+            await cur.close()
+            return sanic.response.json(row)
+        except Exception as e:
+            sanic.log.logger.info(e)
+            return sanic.response.text('oops')
+            
+    @app.websocket('/pos/stream/<glider:int>')
+    @authorized()
+    async def posStreamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int):
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        conn = await aiosqlite.connect(dbfile)
+        conn.row_factory = rowToDict
+
+        watchList = await buildWatchList(request, glider, ['comm.log'])
+        prev_t = 0
+        while True:
+            modFiles = await checkFileMods(watchList, ['comm.log'])
+            if 'comm.log' in modFiles:
+                try:
+                    cur = await conn.cursor()
+                    q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+                    await cur.execute(q)
+                    row = await cur.fetchone()
+                    await cur.close()
+                    if row and row['epoch'] > prev_t:
+                        await ws.send(dumps(row).decode('utf-8'))
+                        prev_t = row['epoch']
+                except Exception as e:
+                    pass
+
+            await asyncio.sleep(2)
+ 
     @app.websocket('/stream/<which:str>/<glider:int>')
     @authorized()
     async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
@@ -951,7 +1000,7 @@ def attachHandlers(app: sanic.Sanic):
             conn = await aiosqlite.connect(dbfile)
             conn.row_factory = rowToDict 
 
-        watchList = await buildWatchList(request, glider) 
+        watchList = await buildWatchList(request, glider, watchFiles) 
         prev_t = 0
         filename = f'{gliderPath(glider,request)}/cmdfile'
         while True:
@@ -970,7 +1019,7 @@ def attachHandlers(app: sanic.Sanic):
 
                     await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
-            modFiles = await checkFileMods(watchList)
+            modFiles = await checkFileMods(watchList, watchFiles)
             if 'comm.log' in modFiles and request.app.config.RUNMODE > MODE_PUBLIC:
                 data = (await commFile.read()).decode('utf-8', errors='ignore')
                 if data:
@@ -1053,10 +1102,10 @@ def attachHandlers(app: sanic.Sanic):
         return None
 
 
-async def buildWatchList(request, glider):
+async def buildWatchList(request, glider, whichFiles):
     watchList = { "path": f'{gliderPath(glider,request)}' }
 
-    for f in watchFiles: 
+    for f in whichFiles: 
         filename = f'{gliderPath(glider,request)}/{f}' 
         if await aiofiles.os.path.exists(filename):
             t = await aiofiles.os.path.getctime(filename)
@@ -1064,15 +1113,15 @@ async def buildWatchList(request, glider):
 
     return watchList
 
-async def checkFileMods(w):
+async def checkFileMods(watchList, whichFiles):
     mod = []
-    for f in watchFiles:
-        filename = f"{w['path']}/{f}"
+    for f in whichFiles:
+        filename = f"{watchList['path']}/{f}"
         if await aiofiles.os.path.exists(filename): # could assume exists if it's in the dict
             t = await aiofiles.os.path.getctime(filename)
-            if t > w[f]:
+            if t > watchList[f]:
                 mod.append(f)
-                w[f] = t
+                watchList[f] = t
 
     return mod
 

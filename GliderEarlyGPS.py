@@ -290,6 +290,8 @@ class GliderEarlyGPSClient:
                     time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(gliderTime)),
                 )
 
+                BaseDB.addSession(self.__base_opts, session)
+
                 BaseDotFiles.process_urls(
                     self.__base_opts, send_str, session.sg_id, session.dive_num
                 )
