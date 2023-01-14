@@ -410,6 +410,10 @@
         window.open('/map/' + currGlider + mission(), currGlider + '-map');
     }
 
+    function popupPosition() {
+        window.open('/pos/' + currGlider + mission(), currGlider + '-position');
+    }
+
     function setVisibility(elt) {
         const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
         for (var d of divs) {
@@ -1696,6 +1700,7 @@
     <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
 {% endif %}
     <span class="spanClick" onclick="openAboutForm(); return false;">About</span>
+    <span class="spanClick" onclick="popupPosition(); return false;">About</span>
 </div>
 
 <div id="bodyView">
