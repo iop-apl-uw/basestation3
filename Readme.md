@@ -85,35 +85,36 @@ python support libraries.  The process is as follows:
 1. Install preliminaries
 
 ```
-sudo apt-get install -y build-essential checkinstall libreadline-gplv2-dev libncursesw5-dev \
+sudo apt-get install -y build-essential checkinstall libreadline-dev libncursesw5-dev \
 libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev zlib1g-dev openssl libffi-dev libgeos-dev \
 python3-dev python3-setuptools wget libgdbm-compat-dev uuid-dev liblzma-dev
-
-(libreadline-dev for Ubuntu22)
 
 ```
 2. Prepare to build
 
 ``` 
-mkdir /tmp/Python3.9
-cd /tmp/Python3.9
+mkdir /tmp/Python3.10
+cd /tmp/Python3.10
 ```
 
 3. Download python source distribution and build.  Depending on your machine, this can take a while
 
 ```
-wget https://www.python.org/ftp/python/3.9.13/Python-3.9.13.tar.xz
-tar xvf Python-3.9.13.tar.xz
-cd /tmp/Python-3.9.13
-./configure --enable-optimizations
+wget https://www.python.org/ftp/python/3.10.7/Python-3.10.7.tar.xz
+tar xvf Python-3.10.7.tar.xz
+cd Python-3.10.7
+./configure --enable-optimizations --prefix /opt/python/3.10.7
 make 
-sudo make altinstall
+
+sudo mkdir /opt/python
+sudo chown -R user:gliders /opt/python
+make install
 ```
 
 4. Check build and install 
 
 ``` bash
-python3.9 --version
+/opt/python/3.10.7/bin/python --version
 ```
 
 ## Install the basestation code and python packages
@@ -125,8 +126,19 @@ python3.9 --version
 4. Install the required python libraries
 
 ```
-cd /usr/local/Base-3.01
-sudo /usr/local/bin/pip3.9 install -r requirements.txt
+sudo mkdir /opt/basestation
+sudo chown user:gliders /opt/basestation
+```
+or
+```
+rm -rf /opt/basestation
+```
+
+then
+
+```
+/opt/python/3.10.7/bin/python3 -m venv /opt/basestation
+/opt/basestation/bin/pip install -r /usr/local/basestation3/requirements.txt
 ```
 
 5. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
@@ -171,10 +183,15 @@ In /usr/local/Base-3.01/packages/lrzsz-0.12.20:
 11c) Copy the binaries to /usr/local/bin "sudo cp rawrcv rawsend /usr/local/bin"
 11d) Create the following symlinks
 
+# TODO - check for the correct symlinks
+
     ln -s /usr/local/bin/rawrcv2 /usr/local/bin/rawrcv
     ln -s /usr/local/bin/rawrcv2 /usr/local/bin/rawrcvb
 
 ## Install the optional cmdfile, science and targets validator
+
+# TODO - change to copy in binary
+
 12a) In /usr/local/Base-3.01/Validate-66.13 run 'sudo make -f Makefile.validate' to build validate binary
 12b) In /usr/local/Base-3.01 run "sudo ./install_validate.sh"
 12c) Confirm that validate, cmdedit, targedit and sciedit are installed in /usr/local/bin
@@ -185,6 +202,8 @@ If you plan to upload gzipped files to the glider, install this special version 
 
 13a) In /usr/local/Base-3.01/gliderzip_src build the binaries "sudo make -f Makefile.gliderzip"
 13b) Copy gliderzip to /usr/local/basestation
+
+# TODO - change upload to point to regular zip
 
 ## Install optional RUDICS support
 14a) cd /usr/local/Base-3.01 and unpack via "sudo tar xvzf rudics.tgz"
