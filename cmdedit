@@ -75,7 +75,7 @@ available options:
 progname = basename(sys.argv[0])
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hiqaf:d:")
+    opts, args = getopt.getopt(sys.argv[1:], "hiqaf:d:u:")
 except getopt.GetoptError:
     print(f"usage: {progname} [-f file] [-q] [-i] [-d directory]")
     sys.exit(1)
@@ -86,6 +86,7 @@ wd = os.getcwd()
 validator = "/usr/local/bin/validate"
 always_validate = False
 ignore_errors = False
+username = None
 
 for o, a in opts:
     if o == "-h":
@@ -101,6 +102,8 @@ for o, a in opts:
         ignore_errors = True
     elif o == "-d":
         wd = a
+    elif o == "-u":
+        username = a
 
 if input_file == "-" and interactive:
     print("cannot run interactively with input from stdin, must use -q with -f -")
@@ -281,7 +284,7 @@ checksum = zlib.crc32(ctrlfile_text)
 size = os.path.getsize(ctrlfile)
 
 log = open(wd + "/" + progname + ".log", "a")
-log.write(f"### {pilot} {date}\n")
+log.write(f"### {pilot} ({username}) {date}\n")
 log.write(f"+++ {filename} ({size:d} bytes, {checksum:d} checksum)\n")
 log.write(ctrlfile_text.decode('utf-8'))
 log.write(f"--- validation against {logfile} (latest dive is {latest:d})\n")

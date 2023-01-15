@@ -29,6 +29,7 @@ import ExtractTimeseries
 import multiprocessing
 import getopt
 import base64
+import re
 
 watchFiles = ['comm.log', 'cmdfile'] # rely on .urls vs '.completed']
 
@@ -77,12 +78,14 @@ protectableRoutes = [
                     ]
 
     # unprotectable: /auth, /, /GLIDERNUM, /missions
+    # but /GLIDERNUM could probably be protected if we wanted to?
+    # credentials at the dash level via the Credentials link?
 
 compress = sanic_gzip.Compress()
 
 # making this a dict makes a set intersection simple when
 # we use it in filterMission
-publicMissionFields = {"started", "ended", "planned",
+publicMissionFields = {"glider", "mission", "started", "ended", "planned",
                        "orgname", "orglink", "contact", "email",
                        "project", "link", "comment", "reason"} 
 
@@ -135,21 +138,24 @@ def checkToken(request, users, groups, pilots, pilotgroups):
 # checks whether access is authorized for the glider,mission
 def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
 
-    for m in request.app.ctx.missionTable:
-        if m['glider'] == glider and m['mission'] == mission: 
-            if (m['users'] is not None or \
-                m['groups'] is not None or \
-                m['pilotusers'] is not None or \
-                m['pilotgroups'] is not None): 
+    # find the entry in the table matching glider+mission (mission could be None)
+    m = matchMission(glider, request, mission)
+    if m:
+        # if there are any user/group/pilot restrictions associated with
+        # the matched mission, check the token
+        if (m['users'] is not None or \
+            m['groups'] is not None or \
+            m['pilotusers'] is not None or \
+            m['pilotgroups'] is not None): 
 
-                grant = checkToken(request, m['users'], m['groups'], m['pilotusers'], m['pilotgroups'])
-                if m['users'] is None and m['groups'] is None and grant < PERM_VIEW:
-                    grant = PERM_VIEW
+            grant = checkToken(request, m['users'], m['groups'], m['pilotusers'], m['pilotgroups'])
+            if m['users'] is None and m['groups'] is None and grant < PERM_VIEW:
+                grant = PERM_VIEW
 
-                return grant
-            else:
-                return perm
-
+            return grant
+        else:
+            return perm
+    
     # no matching mission in table - do not allow access
     sanic.log.logger.info(f'rejecting {glider} {mission} for no mission entry')
     return PERM_INVALID
@@ -267,35 +273,38 @@ def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
 
     return data
 
-def requestMission(request):
+def missionFromRequest(request):
     if request and 'mission' in request.args and len(request.args['mission']) > 0 and request.args['mission'][0] != 'current':
         return request.args['mission'][0]
 
     return None
 
-def gliderPath(glider, request, mission=None):
-    if mission:
-        return f'sg{glider:03d}/{mission}'
-    else:
-        mission = requestMission(request)
-        if mission:
-            return f'sg{glider:03d}/{mission}'
-        else:
-            return f'sg{glider:03d}'
-
-def filterMission(gld, request, mission=None):
+def matchMission(gld, request, mission=None):
     if mission == None and \
        request and \
        'mission' in request.args and \
-       request.args['mission'] != 'current' and \
-       len(request.args['mission']) > 0:
+       request.args['mission'][0] != 'current' and \
+       len(request.args['mission'][0]) > 0:
 
         mission = request.args['mission'][0]
-    
-    m = next(filter(lambda d: d['glider'] == gld and d['mission'] == mission, request.app.ctx.missionTable), None)
-    m = { k: m[k] for k in m.keys() & publicMissionFields } if m else None
 
-    return m
+    return next(filter(lambda d: d['glider'] == gld and (d['mission'] == mission or (mission == None and d['path'] == None)), request.app.ctx.missionTable), None)
+
+def filterMission(gld, request, mission=None):
+    m = matchMission(gld, request, mission)    
+    return { k: m[k] for k in m.keys() & publicMissionFields } if m else None
+
+def gliderPath(glider, request, path=None):
+    if path:
+        return f'sg{glider:03d}/{path}'
+    else:
+        m = matchMission(glider, request)
+        if m and 'path' in m and m['path']:
+            return f"sg{glider:03d}/{m['path']}"
+        else:
+            return f'sg{glider:03d}'
+
+
 #
 # GET handlers - most of the API
 #
@@ -354,7 +363,7 @@ def attachHandlers(app: sanic.Sanic):
 
         if await aiofiles.os.path.exists(filename):
             if 'wrap' in request.args and request.args['wrap'][0] == 'page':
-                mission = requestMission(request)
+                mission = missionFromRequest(request)
                 mission = f"?mission={mission}" if mission else ''
                 wrap = '?wrap=page' if mission == '' else '&wrap=page'
 
@@ -781,6 +790,54 @@ def attachHandlers(app: sanic.Sanic):
         results, err = await proc.communicate()
         return sanic.response.html(results.decode('utf-8', errors='ignore'))
 
+    def applyControls(c, text, filename):
+        forbidden = ['shutdown', 'scuttle', 'wipe', 'reboot', 'pdos']
+        for nono in forbidden:
+            if nono in text.lower():
+                sanic.log.logger.info(f"{nono} is a nono")
+                return True
+
+        d1 = c['global']['deny'] if 'global' in c and 'deny' in c['global'] else []
+        d2 = c[filename]['deny'] if filename in c and 'deny' in c[filename] else []
+        a1 = c['global']['allow'] if 'global' in c and 'allow' in c['global'] else []
+        a2 = c[filename]['allow'] if filename in c and 'allow' in c[filename] else []
+
+        status = False
+        for line in text.splitlines():
+            for d in d1:
+                if d.search(line):
+                    status = True
+                    sanic.log.logger.info(f"global deny {line} ({d})")
+                    for a in a1:
+                        if a.search(line):
+                            sanic.log.logger.info(f"global allow {line} ({d})")
+                            status = False
+                            break;
+                    if status:
+                        for a in a2:
+                            if a.search(line):
+                                sanic.log.logger.info(f"{filename} allow {line} ({d})")
+                                status = False
+                                break;
+
+                    if status:
+                        return status
+
+            for d in d2:
+                if d.search(line):
+                    status = True
+                    sanic.log.logger.info(f"{filename} deny {line} ({d})")
+                    for a in a2:
+                        if a.search(line):
+                            sanic.log.logger.info(f"{filename} allow {line} ({d})")
+                            status = False
+                            break
+
+                    if status:
+                        return status
+    
+        return False
+
     #
     # POST handler - to save files back to basestation
     #
@@ -789,16 +846,14 @@ def attachHandlers(app: sanic.Sanic):
     @authorized(modes=['private', 'pilot'], requirePilot=True)
     async def saveHandler(request, glider:int, which:str):
         validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
-        forbidden = ['shutdown', 'scuttle', 'wipe', 'reboot', 'pdos', 'quit']
 
         message = request.json
         if 'file' not in message or message['file'] != which:
             return sanic.response.text('oops')
 
-        for nono in forbidden:
-            if nono in message['contents']:
-                return sanic.response.text('not allowed')
-     
+        if applyControls(request.app.ctx.controls, message['contents'], which) == True:
+            return sanic.response.text('not allowed')
+         
         path = gliderPath(glider, request)
         if which in validator:
             try:
@@ -807,10 +862,12 @@ def attachHandlers(app: sanic.Sanic):
                     await file.close()
                     sanic.log.logger.debug("saved to %s" % file.name)
 
+                    (tU, _) = getTokenUser(request)
+
                     if 'force' in message and message['force'] == 1:
-                        cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {file.name}"
+                        cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {file.name} -u {tU}"
                     else:
-                        cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {file.name}"
+                        cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {file.name} -u {tU}"
             
                     proc = await asyncio.create_subprocess_shell(
                         cmd, 
@@ -1013,12 +1070,17 @@ def attachHandlers(app: sanic.Sanic):
         filename = f'{gliderPath(glider,request)}/cmdfile'
         while True:
             if tU and request.app.config.RUNMODE > MODE_PUBLIC:
-                cur = await conn.cursor()
-                q = f"SELECT * FROM chat WHERE timestamp > {prev_db_t} ORDER BY timestamp;" #  DESC LIMIT 20;"
-                await cur.execute(q)
-                prev_db_t = time.time()
-                rows = await cur.fetchall()
-                await cur.close()
+                try:
+                    cur = await conn.cursor()
+                    q = f"SELECT * FROM chat WHERE timestamp > {prev_db_t} ORDER BY timestamp;" #  DESC LIMIT 20;"
+                    await cur.execute(q)
+                    prev_db_t = time.time()
+                    rows = await cur.fetchall()
+                    await cur.close()
+                except Exception as e:
+                    sanic.log.logger.info(e)
+                    rows = []
+
                 if rows:
                     for r in rows:
                         if 'attachment' in r and r['attachment'] is not None:
@@ -1184,8 +1246,10 @@ async def buildMissionTable(app):
         x['missions'] = []
     if 'endpoints' not in x:
         x['endpoints'] = {}
+    if 'controls' not in x:
+        x['controls'] = {}
 
-    missionDictKeys = [ "glider", "mission", "users", "pilotusers", "groups", "pilotgroups", 
+    missionDictKeys = [ "glider", "path", "mission", "users", "pilotusers", "groups", "pilotgroups", 
                         "started", "ended", "planned", 
                         "orgname", "orglink", "contact", "email", 
                         "project", "link", "comment", "reason", "endpoints"
@@ -1201,7 +1265,7 @@ async def buildMissionTable(app):
             continue
 
         if 'defaults' in k:
-            if k == modeNames[app.config.RUNMODE] + 'defaults':
+            if k == (modeNames[app.config.RUNMODE] + 'defaults'):
                 mode_dflts = x['missions'][k]
 
             del x['missions'][k]
@@ -1209,13 +1273,13 @@ async def buildMissionTable(app):
 
         pieces = k.split('/')
         if len(pieces) == 1:
-            mission = None
+            path = None
         else:
-            mission = pieces[1]
+            path = pieces[1]
 
         try:
             glider = int(pieces[0][2:])
-            x['missions'][k].update({ "glider":glider, "mission":mission })
+            x['missions'][k].update({ "glider":glider, "path":path })
             for mk in missionDictKeys:
                 if mk not in x['missions'][k].keys():
                     if mode_dflts and mk in mode_dflts:
@@ -1225,11 +1289,14 @@ async def buildMissionTable(app):
                     else:
                         x['missions'][k].update( { mk: None })
 
+            if x['missions'][k]['mission'] == None and path is not None:
+                x['missions'][k]['mission'] = path
+
             missions.append(x['missions'][k])
         except Exception as e:
             sanic.log.logger.info(f"error on key {k}, {e}")
             continue 
-        
+       
     orgDictKeys = ["name", "link", "text", "contact", "email"]
     for ok in orgDictKeys:
         if ok not in x['organization'].keys():
@@ -1256,9 +1323,15 @@ async def buildMissionTable(app):
                 x['endpoints'][k] = dict.fromkeys(endpointsDictKeys)
                 x['endpoints'][k].update( dflts )        
 
+    for k in x['controls'].keys():
+        for da in x['controls'][k].keys():
+            for index,exp in enumerate(x['controls'][k][da]):
+                x['controls'][k][da][index] = re.compile(exp, re.IGNORECASE)
+
     app.ctx.missionTable = missions
     app.ctx.organization = x['organization']
     app.ctx.endpoints = x['endpoints']
+    app.ctx.controls = x['controls']
 
     return missions
  
@@ -1269,13 +1342,13 @@ async def buildAuthTable(request, mask):
         if status == PERM_REJECT:
             continue
 
-        cmdfile = f"{gliderPath(m['glider'], None, mission=m['mission'])}/cmdfile"
+        cmdfile = f"{gliderPath(m['glider'], request, path=m['path'])}/cmdfile"
         if not await aiofiles.os.path.exists(cmdfile):
             continue
 
-        if m['mission'] == None:
+        if m['path'] == None:
             t = await aiofiles.os.path.getctime(cmdfile)
-            opTable.append({"mission": '', "glider": m['glider'], "cmdfile": t})
+            opTable.append({"mission": m['mission'] if m['mission'] else '', "glider": m['glider'], "cmdfile": t})
         else: 
             opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None})
 
