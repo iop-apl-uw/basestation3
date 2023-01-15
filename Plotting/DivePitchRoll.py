@@ -147,7 +147,7 @@ def plot_pitch_roll(
         gc_x = np.transpose(gc_x).ravel()
 
         f = scipy.interpolate.interp1d(
-            gc_t, gc_x, kind="linear", bounds_error=False, fill_value="extrapolate"
+            gc_t, gc_x, kind="linear", bounds_error=False, fill_value=(gc_x[0], gc_x[-1]) # "extrapolate"
         )
         pitchAD = f(sg_time)
         pitch_control = (pitchAD - c_pitch) * pitch_cnv
@@ -159,7 +159,7 @@ def plot_pitch_roll(
         gc_x = np.transpose(gc_x).ravel()
 
         f = scipy.interpolate.interp1d(
-            gc_t, gc_x, kind="linear", bounds_error=False, fill_value="extrapolate"
+            gc_t, gc_x, kind="linear", bounds_error=False, fill_value=(gc_x[0], gc_x[-1]) # "extrapolate"
         )
         rollAD = f(sg_time)
         roll_control = (rollAD - c_roll_dive) * roll_cnv
@@ -472,7 +472,7 @@ def plot_pitch_roll(
         fitc = False
 
     if fitc or fitd:
-        rollAD_Fit = np.array([min(ADs), max(ADs)])
+        rollAD_Fit = np.array([max([0,min(ADs)]), min([max(ADs), 4096])])
 
     if fitd is not False:
         roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit
