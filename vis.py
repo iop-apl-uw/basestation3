@@ -976,11 +976,14 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/pos/poll/<glider:int>')
     @authorized()
     async def posPollHandler(request: sanic.Request, glider:int):
-        if 't' in request.args and len(request.args['t']) > 0:
+        if 't' in request.args and len(request.args['t'][0]) > 0:
             t = int(request.args['t'][0])
             q = f"SELECT * FROM calls WHERE epoch > {t} ORDER BY epoch DESC LIMIT 1;"
         else:
             q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+
+        # xurvey uses this but nothing else - easy enough to add
+        # nmea = 'format' in request.args and request.args['format'][0] == 'nmea'
 
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         try:
@@ -1416,6 +1419,7 @@ def createApp(overrides: dict) -> sanic.Sanic:
         app.config.SINGLE_MISSION = None
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
+    app.config.INSPECTOR = True
 
     attachHandlers(app)
 
