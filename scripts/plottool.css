@@ -1,0 +1,90 @@
+    #plotlyDiv {
+        margin: 10px;
+        min-width: 96%;
+        width: 96%;
+        height: 96%;
+        display: grid;
+        grid-template-rows: min-content 1fr;
+        grid-template-columns: max-content max-content min-content 1fr max-content;
+        grid-template-areas:
+            "configXY configZ configXYZButtons . configContour"
+            "plot plot plot plot plot";           
+        row-gap: 5px; 
+        column-gap: 5px;
+        box-sizing: border-box;
+    }
+
+    #plotlyConfigXYDiv {
+        grid-area: configXY;
+    }
+
+    #plotlyConfigXYDiv span,select,input,label {
+        vertical-align: top;
+    }
+
+    #plotlyConfigXYDiv select {
+        width: 240px;
+    }
+
+    #plotlyConfigZDiv {
+        grid-area: configZ;
+        display: flex;
+        flex-direction: row;
+    }
+
+    #plotlyConfigZDiv span {
+        vertical-align: top;
+    }
+
+    #plotlyConfigZDiv select {
+        width: 300px;
+    }
+
+    #plotlyConfigXYZButtons {
+        grid-area: configXYZButtons;
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    #plotlyConfigXYZButtons button {
+        vertical-align:top;
+    }
+
+    #plotlyConfigContour {
+        grid-area: configContour;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        text-align: left;
+    }
+
+    #plotlyConfigContour select {
+        vertical-align: top;
+    }
+    
+    #plotlyConfigContourValue {
+    }
+
+    #plotlyConfigStrides {
+        vertical-align:top; 
+        margin-top:4px; 
+        margin-bottom:4px;
+    }
+
+    #plotlyConfigStrides select,input,label {
+        vertical-align: top;
+    }
+
+
+    #plotlyConfigContourButtons {
+    }
+
+    #plotlyConfigContourButtons button {
+        vertical-align: top;
+    }
+
+    #plotlyPlotDiv {
+        grid-area: plot;
+        width: 100%;
+    }

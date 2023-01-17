@@ -7,6 +7,7 @@
 {% endif %}
 
 <link rel="stylesheet" href="/script/base.css" />
+<link rel="stylesheet" href="/script/plottool.css" />
 
 <script src="/script/plotly-latest.min.js"></script>
 <script src="/script/util.js"></script>
@@ -1505,11 +1506,17 @@
             $('chkMissionPlots').checked = false;
             console.log('unchecking mission');
             loadPlotlyControlsTS(currGlider, currDive);
+            $('labelY').innerHTML = 'Y:';
+            $('labelZ').innerHTML = 'Z:';
+            $('selPlotlyX2').disabled = false;
         }
         else if (id == 'chkMissionPlots' && $(id).checked) {
             $('chkTimeseriesPlots').checked = false;
             console.log('unchecking ts');
             loadPlotlyControlsXY(currGlider);
+            $('selPlotlyX2').disabled = true;
+            $('labelY').innerHTML = '-:';
+            $('labelZ').innerHTML = 'Y:';
         }
 
         if ($('chkMissionPlots').checked == false 
@@ -1749,58 +1756,60 @@
     
     
     <div id="plotlyDiv" hidden="hidden">
-        <div id="plotyConfigDiv" style="display:flex;">
-            <div style="float:left;">
-                <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top; width:240px;"></select> <br>
-                <span style="vertical-align:top;">Y:</span><select id="selPlotlyX2" style="vertical-align:top; width:240px;"></select> <br>
-                <input type="checkbox" checked id="chkMissionPlots" style="vertical-align:top;" onclick="switchControls(this.id);"><span style="vertical-align:top;">whole mission</span>
-                <input type="checkbox" id="chkTimeseriesPlots" style="vertical-align:top;" onclick="switchControls(this.id);"><span style="vertical-align:top;">dive time series</span><br>
+        <div id="plotyConfigXYDiv">
+            <span id="labelX">X:</span><select id="selPlotlyX"></select><br>
+            <span id="labelY">-:</span><select id="selPlotlyX2" disabled></select> <br>
+            <input type="checkbox" checked id="chkMissionPlots" onclick="switchControls(this.id);"><label for="chkMissionPlots">whole mission</label>
+            <input type="checkbox" id="chkTimeseriesPlots" onclick="switchControls(this.id);"><label for="chkTimeseriesPlots">dive time series</label><br>
+        </div>
+        <div id="plotlyConfigZDiv">
+            <span id="labelZ">Y:</span><select id="selPlotlyY" multiple size="4"> </select>
+        </div>
+        <div id="plotlyConfigXYZButtons">
+            <button id="btnPlotlyPlot" onclick="doPlotlyPlot('plot');">plot</button>
+            <button id="btnPlotlyTable" onclick="doPlotlyPlot('table');">table</button><br>
+            <button id="btnPlotlyCSV" onclick="doPlotlyPlot('csv');">export</button>
+        </div>
+        <div id="plotlyConfigContour"> <!-- style="float:right;"> -->
+            <div id="plotlyConfigContourValue">value:<select id="selPlotlyContour"> </select></div><br>
+            <div id="plotlyConfigStrides">
+                profile stride
+                <select style="vertical-align:top;" id="selPlotlyProfileStride">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                bin stride
+                <select style="vertical-align:top;" id="selPlotlyZStride">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+                <input type="checkbox" checked id="chkFillGaps"><label for="chkFillGaps">fill gaps</label><br>
             </div>
-            <span style="vertical-align:top; margin-left:8px;" >Z:</span><select id="selPlotlyY" multiple size="4" style="width:300px;"> </select>
-            <div style="margin-left:8px;">
-                <button id="btnPlotlyPlot" style="vertical-align:top;" onclick="doPlotlyPlot('plot');">plot</button>
-                <button id="btnPlotlyTable" style="vertical-align:top;" onclick="doPlotlyPlot('table');">table</button><br>
-                <button id="btnPlotlyCSV" style="vertical-align:top;" onclick="doPlotlyPlot('csv');">export</button>
-            </div>
-            <div style="margin-left:40px;"> <!-- style="float:right;"> -->
-                <span style="vertical-align:top;">value:<select id="selPlotlyContour" style="vertical-align:top;"> </select></span><br>
-                <div style="vertical-align:top; margin-top:4px; margin-bottom:4px;">
-                    profile stride
-                    <select style="vertical-align:top;" id="selPlotlyProfileStride">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5" selected>5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    bin stride
-                    <select style="vertical-align:top;" id="selPlotlyZStride">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5" selected>5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                    </select>
-                    <input type="checkbox" checked id="chkFillGaps" style="vertical-align:top;"><span style="vertical-align:top;">fill gaps</span><br>
-                </div>
-                <button id="btnPlotlyContour" style="vertical-align:top;" onclick="doPlotlyProfiles('contour');">contour</button>
-                <button id="btnPlotlyProfiles" style="vertical-align:top;" onclick="doPlotlyProfiles('profiles');">profiles</button>
+            <div id="plotlyConfigContourButtons">
+                <button id="btnPlotlyContour" onclick="doPlotlyProfiles('contour');">contour</button>
+                <button id="btnPlotlyProfiles" onclick="doPlotlyProfiles('profiles');">profiles</button>
             </div>
         </div>
-        <div id="plotlyPlotDiv" style="height:90%; width:100%; position:absolute; bottom:0;">
+        <div id="plotlyPlotDiv">
         </div>
     </div>
 
