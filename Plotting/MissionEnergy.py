@@ -119,6 +119,11 @@ def mission_energy(
             conn,
         )["log_gps2_time"].iloc()[0]
 
+        start_t = pd.read_sql_query(
+            "SELECT dive,log_gps2_time FROM dives ORDER BY dive",
+            conn,
+        )["log_gps2_time"]
+
         if batt_df["batt_Ahr_cap_24V"].iloc()[-1] == 0:
             univolt = "10V"
         elif batt_df["batt_Ahr_cap_10V"].iloc()[-1] == 0:
@@ -388,11 +393,15 @@ def mission_energy(
                 "name": "Mission days/10 (FG)",
                 "x": days_df["dive"],
                 "y": days_df["energy_days_total_FG"]/10,
-                "meta": days_df["energy_days_total_FG"],
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (days_df["energy_days_total_FG"], (start_t - start) / 86400)
+                    )
+                ),
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkBlue"},
-                "hovertemplate": "Mission Days (FG)<br>Dive %{x:.0f}<br>Days %{meta:.1f}<extra></extra>",
+                "hovertemplate": "Mission Days (FG)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
             }
         )
         fig.add_trace(
@@ -400,11 +409,15 @@ def mission_energy(
                 "name": "Mission days/10 (model)",
                 "x": days_df["dive"],
                 "y": days_df["energy_days_total_Modeled"]/10,
-                "meta": days_df["energy_days_total_Modeled"],
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (days_df["energy_days_total_Modeled"], (start_t - start) / 86400)
+                    )
+                ),
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
-                "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Days %{meta:.1f}<extra></extra>",
+                "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
             }
         )        
         if univolt:
@@ -476,7 +489,7 @@ def mission_energy(
                 }
             )
 
-        title_text = f"{mission_str}<br>Energy Consumption"
+        title_text = f"{mission_str}<br>Energy Consumption and Endurance"
 
         fig.update_layout(
             {
