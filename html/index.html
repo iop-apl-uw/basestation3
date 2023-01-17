@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 {% endif %}
 
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link rel="stylesheet" href="/script/dialogs.css" />
 
@@ -17,87 +17,35 @@
     a:hover,.spanClick:hover    {color:#0000aa; text-decoration:underline; cursor:pointer; }
     a:active,.spanClick:active  {color:#0000aa; text-decoration:underline}
 
+    #navLinks {
+        font-size: 1rem;
+        position: sticky;  
+        top: 0;
+        width: 100%;
+        z-index: 100;
+        list-style: none; 
+        opacity: 1.0;
+        background: #999;
+        background-color: #999;
+        padding-bottom: 1.0vh;
+/*
+        height: calc(100% + 2vh);
+        min-height: calc(100% + 2vh);
+*/
+    }
+
+
+    #page {
+        overflow: none;
+    }
+    
     body {
         background-color: #999999;
         color: #000000;
-    }
-
-    .tile {
-        background: #bbbbbb;
-        width: 300px;
-        height: 435px;
-        border: 2px solid black;
-        margin-left: 10px;
-        margin-top: 10px;
-        float: left;
-        padding: 4px;
-        position: relative;
-    }
-
-    .header {
-        font-size: 20px;
-        font-weight: bold;
-    }
-    .position {
-        font-size: 16px;
-        font-weight: bold;
-    }
-
-    .label {
-        float: left;
-        width: 30px;
-    }
-
-    .box {
-        display: flex;
-        align-items: center;  
-        margin-top: 5px;
-    }
-  
-    .imgbox {
-        display: flex;
-        align-items: center;  
-        margin-top: 0px;
-        justify-content: center;
-        flex-direction: column; 
-    }
-
-{% if runMode == 'pilot' %}
-
-    .expander {
-        width: 8px;
-        max-width: 8px;
-        cursor: pointer;
-    }
-
-    .indicatorInsideBox {
-        display: flex;
-        min-height: 35px;
-        margin-top: 5px;
-        flex-wrap: wrap;
-        gap: 4px;
-    }
-
-    .indicatorBox {
-        display: flex;
-        flex: 1;
-        align-items: center; 
-        margin-top: 5px;
-        overflow: auto;
-    }
-
-    .indicator {
-        cursor: help;
-        flex-grow: 0;
-        flex-shrink: 0;
-        border: 2px solid black;
-        text-align: center;
-        max-width: 50px;
-        width: 50px;
-        border-radius: 8px;
-        height: 30px;
-        max-height: 30px;
-        z-index: 20;
+        font-family: verdana, arial, tahoma, 'sans serif'; 
+        box-sizing: border-box;
+        /* overflow: none; */
+        font-size: 1rem;
     }
 
     [class~="indicatorGreen"] {
@@ -110,41 +58,300 @@
         background-color: #ffff00;
     }
 
-    .chart {
-        background: rgba(255, 255, 255, 0.4);
-        justify-content: flex-start;
-        border-radius: 50px;
-        align-items: center;
-        position: relative;
-        padding: 0 5px;
-        display: flex;
-        height: 20px;
-        width: 260px;
-    }
+    @media (pointer: coarse) {
 
-    .chart span {
-        margin-left: 2px;
-        color: #555;
-        font-weight: bolder;
-    }
+        @media screen and (orientation:portrait) {
+            #main {
+                top: 1rem;
+                width: 100vw;
+                overflow: scroll; 
+/*
+                overflow-y: scroll;
+                overflow-x: hidden;
+                display: flex;
+                flex-direction: column; 
+*/
+            }
+        
+            .tile {
+                background: #bbb;
+                width: 90vw;
+                height: 136vw;
+                border: 2px solid black;
+                margin-left: 10px;
+                margin-top: 10px;
+                float: left; 
+                padding: 4px;
+                position: relative; 
+                /* box-sizing: border-box; */
+                font-size: 1rem;
+            }
 
-    .bar {
-        border-radius: 0px;
-        background: #00ff00;
-        height: 16px;
-        width: 100%;
-        margin-left: 0px;
-    }
+            .header {
+                font-size: 6vw;
+                font-weight: bold;
+            }
+            .position {
+                font-size: 5vw;
+                font-weight: bold;
+            }
 
-    .barPercent {
-        border-radius: 10px;
-        background: #00ff00;
-        height: 16px;
-        width: 100%;
-        margin-left: -2px;
-    }
+            .label {
+                float: left;
+                width: 8vw;
+            }
 
+            .box {
+                display: flex;
+                align-items: center;  
+                margin-top: 5px;
+            }
+          
+            .imgbox {
+                display: flex;
+                align-items: center;  
+                margin-top: 0px;
+                justify-content: center;
+                flex-direction: column; 
+            }
+
+
+            .indexImg {
+                max-width: calc(90vw - 10px);
+                max-height: calc(103vw - 10px);
+                mix-blend-mode:multiply;
+            }
+
+{% if runMode == 'pilot' %}
+            .dashImg {
+                max-width:calc(90vw - 10px);
+                max-height:calc(75vw - 10px);
+                mix-blend-mode:multiply;
+            }
+
+            .expander {
+                width: 2vw;
+                max-width: 2vw;
+                cursor: pointer;
+            }
+
+            .indicatorInsideBox {
+                display: flex;
+                min-height: 5vw;
+                margin-top: 5px;
+                flex-wrap: wrap;
+                gap: 4px;
+            }
+
+            .indicatorBox {
+                display: flex;
+                flex: 1;
+                align-items: center; 
+                margin-top: 5px;
+                overflow: auto;
+            }
+
+            .indicator {
+                cursor: help;
+                flex-grow: 0;
+                flex-shrink: 0;
+                border: 2px solid black;
+                text-align: center;
+                max-width: 15vw;
+                width: 15vw;  
+                border-radius: 1vw; 
+                height: 9vw;;
+                max-height: 12vw;
+                z-index: 20;
+                font-size:3vw;
+            }
+
+            .indicator span {
+                font-size:3vw;
+            }
+
+            .chart {
+                background: rgba(255, 255, 255, 0.4);
+                justify-content: flex-start;
+                border-radius: 50px;
+                align-items: center;
+                position: relative;
+                padding: 0 5px;
+                display: flex;
+                height: 5vw;
+                width: 86vw;
+            }
+
+            .chart span {
+                margin-left: 2px;
+                color: #555;
+                font-weight: bolder;
+            }
+
+            .bar {
+                border-radius: 0px;
+                background: #00ff00;
+                height: 5vw;
+                width: 100%;
+                margin-left: 0px;
+            }
+
+            .barPercent {
+                border-radius: 10px;
+                background: #00ff00;
+                height: 3.5vw;
+                width: 100%;
+                margin-left: -2px;
+            }
 {% endif %}
+        }
+    }
+
+    @media (pointer: fine) {
+        body: {
+            font-size: 0.8rem;
+        }
+
+        #main {
+            top: 1rem;
+            width: 100%;
+            overflow: scroll;
+        }
+    
+        .tile {
+            background: #bbb;
+            width: 300px;
+            height: 480px;
+            border: 2px solid black;
+            margin-left: 10px;
+            margin-top: 10px;
+            float: left;
+            padding: 4px;
+            position: relative;
+            font-size: 0.8rem;
+        }
+
+        .header {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .position {
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .label {
+            float: left;
+            width: 30px;
+        }
+
+        .box {
+            display: flex;
+            align-items: center;  
+            margin-top: 5px;
+        }
+      
+        .imgbox {
+            display: flex;
+            align-items: center;  
+            margin-top: 0px;
+            justify-content: center;
+            flex-direction: column; 
+        }
+
+        .indexImg {
+            max-width:290px; 
+            max-height:330px; 
+            mix-blend-mode:multiply;
+        }
+
+{% if runMode == 'pilot' %}
+        .dashImg {
+            /* position: absolute;  */
+            top: 200px; 
+            max-width:290px; 
+            max-height:240px; 
+            mix-blend-mode:multiply;
+        }
+
+
+        .expander {
+            width: 8px;
+            max-width: 8px;
+            cursor: pointer;
+        }
+
+        .indicatorInsideBox {
+            display: flex;
+            min-height: 35px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .indicatorBox {
+            display: flex;
+            flex: 1;
+            align-items: center; 
+            margin-top: 5px;
+            overflow: auto;
+        }
+
+        .indicator {
+            cursor: help;
+            flex-grow: 0;
+            flex-shrink: 0;
+            border: 2px solid black;
+            text-align: center;
+            max-width: 50px;
+            width: 50px;
+            border-radius: 8px;
+            height: 30px;
+            max-height: 30px;
+            z-index: 20;
+            font-size:11px;
+        }
+
+        .indicator span {
+            font-size:11px;
+        }
+
+        .chart {
+            background: rgba(255, 255, 255, 0.4);
+            justify-content: flex-start;
+            border-radius: 50px;
+            align-items: center;
+            position: relative;
+            padding: 0 5px;
+            display: flex;
+            height: 20px;
+            width: 260px;
+        }
+
+        .chart span {
+            margin-left: 2px;
+            color: #555;
+            font-weight: bolder;
+        }
+
+        .bar {
+            border-radius: 0px;
+            background: #00ff00;
+            height: 16px;
+            width: 100%;
+            margin-left: 0px;
+        }
+
+        .barPercent {
+            border-radius: 10px;
+            background: #00ff00;
+            height: 16px;
+            width: 100%;
+            margin-left: -2px;
+        }
+{% endif %}
+
+    }
 
 </style>
 <script src="/script/util.js"></script>
@@ -441,9 +648,9 @@
                     h.title = `mission endurance ${days.toFixed(0)} days short of end-date (${data.mission.planned})`;
                 h.classList.add('indicator');
                 if (days < 0)
-                    h.innerHTML = `endur.<br><span style="font-size:11px;">+${-days.toFixed(0)} days</span>`;
+                    h.innerHTML = `endur.<br><span>+${-days.toFixed(0)} days</span>`;
                 else
-                    h.innerHTML = `endur.<br><span style="font-size:11px;">${days.toFixed(0)} days</span>`;
+                    h.innerHTML = `endur.<br><span>${days.toFixed(0)} days</span>`;
                 h.classList.add(thresh(days, 30, 0));
                 indicators.push(h);
             }
@@ -466,7 +673,7 @@
             // volmax
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `volmax<br><span style="font-size:11px;">${data.impliedVolmaxSlope.toFixed(1)}cc/dv</span>`;
+            h.innerHTML = `volmax<br><span>${data.impliedVolmaxSlope.toFixed(1)}cc/dv</span>`;
             h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
             indicators.push(h);
 
@@ -546,7 +753,7 @@
             else
                 img.src = '/plot/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
     
-            img.style = "position: absolute; top: 200px; max-width:290px; max-height:240px; mix-blend-mode:multiply;"
+            img.classList.add('dashImg');
      
             box.appendChild(img);
             t.appendChild(box);
@@ -603,7 +810,7 @@
 
             img = document.createElement('img');
             img.src = '/plot/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
-            img.style = "max-width:290px; max-height:330px; mix-blend-mode:multiply;"
+            img.classList.add('indexImg');
      
             box.appendChild(img);
             t.appendChild(box);
@@ -802,20 +1009,24 @@
 </script>
 
 <html>
-<body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
+<body onload="init();">
 
-<script>
-    if (window.location.pathname.includes("dash"))
-        document.write('<a href="/" target="index">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
-    else
-        document.write('Index <b>&#124;</b> <a href="/dash" target="dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
-</script>
+<div id="page">
+    <div id="navLinks">
+        <script>
+            if (window.location.pathname.includes("dash"))
+                document.write('<a href="/" target="index">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+            else
+                document.write('Index <b>&#124;</b> <a href="/dash" target="dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+        </script>
+    </div>
 
-<div id="main" style="position: relative;">
+    <div id="main">
 
 
-</div> 
+    </div> 
 
+</div>
 {% include "dialogs.html" %}
 
 </body>
