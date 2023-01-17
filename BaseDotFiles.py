@@ -217,7 +217,7 @@ def send_email_text(
         return 0
 
 
-def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
+def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=None):
     """Process the master and local urls file - supplying different arguments for the first and second pass"""
     # Process urls
 
@@ -281,7 +281,7 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
                     log_debug(f"URL line ({url_line})")
                     try:
                         url_response = requests.get(
-                            url_line, verify=cert_file, timeout=get_timeout
+                            url_line, verify=cert_file, timeout=get_timeout, json=payload
                         )
                     except:
                         log_error(f"Error opening {url_line}", "exc")
@@ -310,21 +310,6 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num):
             )
         else:
             process_one_urls(urls_file)
-
-    # Check for vis.py processes to notify - we have to rely
-    # on an external program so we can get privileged access
-    # to /proc to get the connection info we need
-    prog = f"{sys.path[0]}/psvislist"
-    if os.path.exists(prog) and (os.stat(prog).st_mode & stat.S_ISUID):
-        list_status, list_out = Utils.run_cmd_shell(prog, timeout=3, shell=True)
-        for port in list_out.read().decode("utf-8").splitlines():
-            try:
-                url = f"http://localhost:{port}/url/"
-                with io.StringIO(f"5 {url}\n") as fi:
-                    process_one_urls(fi)
-            except:
-                log_error(f"Failed processing {f} for urls and vis.py", "exc")
-
 
 def send_email(
     base_opts, instrument_id, email_addr, subject_line, message_body, html_format=False

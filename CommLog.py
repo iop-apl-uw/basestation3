@@ -39,6 +39,7 @@ import re
 import sys
 import time
 import traceback
+import copy
 
 import BaseOpts
 import BaseTime
@@ -46,6 +47,7 @@ import FileMgr
 import GPS
 import Utils
 import Ver65
+import json
 from BaseLog import (
     BaseLogger,
     log_debug,
@@ -689,6 +691,27 @@ class ConnectSession:
         # This is a rawrcvb thing only
         self.file_retries = collections.defaultdict(int)
 
+    def to_dict(self):
+        x = copy.deepcopy(self)
+        x.gps_fix = vars(x.gps_fix)
+        return vars(x)
+       
+    def to_message_dict(self):
+        return {
+                "dive": self.dive_num,
+                "cycle": self.call_cycle,
+                "call": self.calls_made,
+                "lat": Utils.ddmm2dd(self.gps_fix.lat),
+                "lon": Utils.ddmm2dd(self.gps_fix.lon),
+                "epoch": time.mktime(self.gps_fix.datetime),
+                "RH":   self.rh,
+                "intP": self.int_press,
+                "volts10": self.volt_10V,
+                "volts24": self.volt_24V,
+                "pitch": self.obs_pitch,
+                "depth": self.depth,
+               }
+ 
     def dump_contents(self, fo):
         """Dumps out the session contents, used when called manually"""
         print("_sg_id %s" % self.sg_id, file=fo)
@@ -1875,6 +1898,9 @@ def main():
         base_opts.instrument_id = comm_log.get_instrument_id()
 
     BaseDB.prepDB(base_opts)
+
+    se = comm_log.sessions[-1]
+    print( json.dumps(se.to_message_dict()) )
 
     print(f"{len(comm_log.sessions)} sessions")
     if len(comm_log.sessions):

@@ -41,6 +41,51 @@
         }
     }
 
+    var lastChat_t = 0;
+
+    function chatLoadMessage(glider, m) {
+        var txt = '';
+        thisDate = new Date(1000*m['timestamp']).toISOString();
+        prevDate = new Date(1000*lastChat_t).toISOString();
+        if (thisDate.slice(0,10) != prevDate.slice(0,10)) {
+            txt = txt + `[${thisDate.slice(0,10)}]<br>`;
+        } 
+        txt = txt + `<b>${m['user']}</b> ${thisDate.slice(11,16)}<br>`
+        txt = txt + '&nbsp;' + m['message'] + '<br>';
+     
+        h = document.createElement('div');
+        h.innerHTML = chatMarkdown(glider, txt);
+        $('chatContent').appendChild(h);
+    
+        if (m.attachment && m.attachment.length > 0) {
+            h = new Image();
+            h.src = `data:${m.mime};base64,${m.attachment}`;
+            h.style.maxWidth = '260px';
+            $('chatContent').appendChild(h);
+            h.onclick = function() { console.log('img clicked'); $('modalImgDiv').style.display = "block"; $('modalImg').src = this.src; return false; }
+        }
+        lastChat_t = m['timestamp'];
+        // $('chatContent').scrollTo(0, $('chatContent').scrollHeight);
+        h.scrollIntoView();
+    }
+
+    function chatHistory(glider) {
+        fetch(`/chat/history/${glider}`)
+        .then(res => res.text())
+        .then(text => {
+            try {
+                msgs = JSON.parse(text);
+            } catch (error) {
+                console.log('chat history ' + error);
+                return;
+            } 
+
+            for (m of msgs) {
+                chatLoadMessage(glider, m);
+            }    
+        });
+    }
+
     function chatSend() {
         var formdata = new FormData();
         var message = $('chatInput').value.trim();
@@ -58,13 +103,14 @@
 
         console.log(message);
         formdata.append('message', message);
-
+        /*
         for (k of formdata.keys()) {
             console.log(k);
             console.log(formdata.get(k));
         }
+        */
 
-        fetch(`/chat/${currGlider}${mission()}`,
+        fetch(`/chat/send/${currGlider}${mission()}`,
         {
             method: 'POST',
             //headers: {
@@ -96,21 +142,21 @@
         let out = '';
         let cursorPos = 0;
 
-        console.log(input);
-        console.log(matches);
+        // console.log(input);
+        // console.log(matches);
 
         for (let match of matches) {
             console.log(match);
             const { groups: { GDP_G, GDP_D, GDP_P, GD_G, GD_D, DP_D, DP_P, G, D, P, link, text, url }, index } = match;
             const full = match[0];
-            console.log(full);
+            // console.log(full);
  
             out += input.substr(cursorPos, (index - cursorPos));
             cursorPos = index + full.length;
 
-            console.log(GD_G);
-            console.log(GD_D);
-            console.log(match.groups);
+            // console.log(GD_G);
+            // console.log(GD_D);
+            // console.log(match.groups);
  
             if (GDP_G !== undefined) {
                 glider = parseInt(GDP_G);

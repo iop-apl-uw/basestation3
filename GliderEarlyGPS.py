@@ -225,7 +225,7 @@ class GliderEarlyGPSClient:
                 BaseDotFiles.process_urls(
                     self.__base_opts, send_str, session.sg_id, session.dive_num
                 )
-
+                Utils.notifyVis(session.sg_id, "urls-status", "status=disconnected")
                 self.cleanup_shutdown()
 
     def callback_transfered(self, filename, receivedsize):
@@ -293,8 +293,9 @@ class GliderEarlyGPSClient:
                 BaseDB.addSession(self.__base_opts, session)
 
                 BaseDotFiles.process_urls(
-                    self.__base_opts, send_str, session.sg_id, session.dive_num
+                    self.__base_opts, send_str, session.sg_id, session.dive_num, payload=session.to_message_dict()
                 )
+                Utils.notifyVis(session.sg_id, "urls-gpsstr", f"gpsstr={send_str}")
             except:
                 ret_val = "Failed to process gps position (%s)" % traceback.format_exc()
 

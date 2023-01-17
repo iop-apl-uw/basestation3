@@ -2252,6 +2252,7 @@ def main():
     # Process the urls file for the first pass (before mission profile, timeseries, etc).
     if not base_opts.local:
         BaseDotFiles.process_urls(base_opts, 1, instrument_id, dive_num)
+        Utils.notifyVis(instrument_id, "urls-files", "files=perdive")
 
     # Check for sighup here
     if skip_mission_processing_event.is_set():
@@ -2815,6 +2816,7 @@ def main():
         # Process the urls file for the second time
         if not base_opts.local:
             BaseDotFiles.process_urls(base_opts, 2, instrument_id, dive_num)
+            Utils.notifyVis(instrument_id, "urls-files", "files=all")
 
     # Optionally: Clean up intermediate (working) files here
     if base_opts.clean:

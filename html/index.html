@@ -773,7 +773,7 @@
 {% else %}
                 if (which.startsWith('files=perdive')) {
 {% endif %}
-                    // the only files we get is perdive which we use 
+                    // the only files we care about is perdive which we use 
                     // to trigger a reload of this tile
                     clearTiles('' + glider);
                     createTile({ "glider": glider, "mission": ''}, $('' + glider))

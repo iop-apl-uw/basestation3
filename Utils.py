@@ -43,6 +43,7 @@ import sqlite3
 import sys
 import time
 import typing
+import zmq
 
 import gsw
 import seawater
@@ -1695,3 +1696,18 @@ def extract_calib_consts(dive_nc_file):
                 )  # string comments
 
     return calib_consts
+
+def notifyVis(glider: int, topic: str, body: str):
+    # Check for vis.py processes to notify - each main process
+    # creates a socket in /tmp so we just glob through there and
+    # send notices via zmq
+
+    p = Path('/tmp')
+    topic = "{glider:03d}-{topic}"
+    for f in p.glob(f'sanic-*-notify.ipc'):
+        print(f"connecting to {f}")
+        socket = ctx.socket(zmq.PUSH)
+        socket.connect(f)
+        socket.send_multipart([topic.encode('utf-8'), body.encode('utf-8')])
+        socket.close()
+
