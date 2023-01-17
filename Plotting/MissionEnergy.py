@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -238,7 +238,7 @@ def mission_energy(
         )
         days_remaining = secs_remaining / (24.0 * 3600.0)
         log_info(
-            f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
+            f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining:{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
         )
         y_offset += -0.02
         l_annotations.append(
@@ -385,24 +385,26 @@ def mission_energy(
 
         fig.add_trace(
             {
-                "name": "mission days/10 (FG)",
+                "name": "Mission days/10 (FG)",
                 "x": days_df["dive"],
                 "y": days_df["energy_days_total_FG"]/10,
+                "meta": days_df["energy_days_total_FG"],
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkBlue"},
-                "hovertemplate": "Fuel Gauge<br>Dive %{x:.0f}<br> Energy used %{y:.2f} kJ<extra></extra>",
+                "hovertemplate": "Mission Days (FG)<br>Dive %{x:.0f}<br>Days %{meta:.1f}<extra></extra>",
             }
         )
         fig.add_trace(
             {
-                "name": "mission days/10 (model)",
+                "name": "Mission days/10 (model)",
                 "x": days_df["dive"],
                 "y": days_df["energy_days_total_Modeled"]/10,
+                "meta": days_df["energy_days_total_Modeled"],
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
-                "hovertemplate": "Fuel Gauge<br>Dive %{x:.0f}<br> Energy used %{y:.2f} kJ<extra></extra>",
+                "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Days %{meta:.1f}<extra></extra>",
             }
         )        
         if univolt:
