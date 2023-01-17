@@ -793,10 +793,12 @@ def addSession(base_opts, session, con=None):
         mycon = sqlite3.connect(db)
     else:
         mycon = con
-
+    
     try:
         cur = mycon.cursor();
-        cur.execute(f"INSERT OR IGNORE iNTO calls(dive,cycle,call,lat,lon,epoch,RH,intP,volts10,volts24,pitch,depth) VALUES({session.dive_num}, {session.call_cycle}, {session.calls_made}, {Utils.ddmm2dd(session.gps_fix.lat)}, {Utils.ddmm2dd(session.gps_fix.lon)}, {time.mktime(session.gps_fix.datetime)}, {session.rh}, {session.int_press}, {session.volt_10V}, {session.volt_24V}, {session.obs_pitch}, {session.depth});")  
+        cur.execute("INSERT OR IGNORE iNTO calls(dive,cycle,call,lat,lon,epoch,RH,intP,volts10,volts24,pitch,depth) \
+                     VALUES(:dive, :cycle, :call, :lat, :lon, :epoch, :RH, :intP, :volts10, :volts24, :pitch, :depth);", 
+                    session.to_message_dict())
         mycon.commit()
     except Exception as e:
         log_error(f"{e} inserting comm.log session")

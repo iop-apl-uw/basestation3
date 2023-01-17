@@ -111,16 +111,17 @@
         else if (history)
             which = 'history';
         
-        new_uri += "//" + loc.host;
-        new_uri += "/stream/" + which + "/" + glider + mission();
-        console.log(new_uri);
-        wsocket = new WebSocket(new_uri);
-
 {% if runMode == 'pilot' %}
         if (first || history) {
             $('chatContent').innerHTML = '';
         }
 {% endif %}
+
+        new_uri += "//" + loc.host;
+        new_uri += "/stream/" + which + "/" + glider + mission();
+        console.log(new_uri);
+        wsocket = new WebSocket(new_uri);
+
         wsocket.onerror = function(error) {
             console.log('stream error detected');
             wsocket.close();
@@ -162,28 +163,7 @@
             else if (line.startsWith('CHAT=')) {
                 msgs = JSON.parse(line.slice(5));
                 for (m of msgs) {
-                    var txt = '';
-                    thisDate = new Date(1000*m['timestamp']).toISOString();
-                    prevDate = new Date(1000*lastChat_t).toISOString();
-                    if (thisDate.slice(0,10) != prevDate.slice(0,10)) {
-                        txt = txt + `[${thisDate.slice(0,10)}]<br>`;
-                    } 
-                    txt = txt + `<b>${m['user']}</b> ${thisDate.slice(11,16)}<br>`
-                    txt = txt + '&nbsp;' + m['message'] + '<br>';
-                 
-                    h = document.createElement('div');
-                    h.innerHTML = chatMarkdown(glider, txt);
-                    $('chatContent').appendChild(h);
-                
-                    if (m.attachment && m.attachment.length > 0) {
-                        h = new Image();
-                        h.src = `data:${m.mime};base64,${m.attachment}`;
-                        h.style.maxWidth = '260px';
-                        $('chatContent').appendChild(h);
-                        h.onclick = function() { $('modalImgDiv').style.display = "block"; $('modalImg').src = this.src; return false; }
-                    }
-                    lastChat_t = m['timestamp'];
-                    $('chatContent').scrollTo(0, $('chatContent').scrollHeight);
+                    chatLoadMessage(glider, m);
                 }                 
             }
 {% endif %}
