@@ -271,6 +271,16 @@
         }
     }
 
+    var gliderTable = [];
+
+    function missionName(glider) {
+        for (tbl of gliderTable) {
+            if (tbl.glider == glider && (tbl.path == '' || tbl.path == null))
+                return tbl.mission;
+        }
+        return '';
+    }
+
     function createTile(glider, t) {
         console.log(glider);
         var indicators = [];
@@ -674,21 +684,22 @@
             var glider, t;
             loadAbout(data['organization']);
             for (g of data['missions']) {
-                glider = { glider: g.glider, mission: g.mission };
+                glider = { glider: g.glider, mission: g.mission, path: g.path };
+                gliderTable.push(glider);
 
                 // create div and append as blank to main
                 // so that we can control the order independently
                 // of when then individual /summary fetches arrive
 
                 // this tile probably never exists here in loadTable
-                if ($(`${g.glider}_${g.mission}`)) {
+                if ($(`${g.glider}_${g.path}`)) {
                     console.log('tile exists, clearing');
-                    clearTiles(`${g.glider}_${g.mission}`);
-                    t = $(`${g.glider}_${g.mission}`);
+                    clearTiles(`${g.glider}_${g.path}`);
+                    t = $(`${g.glider}_${g.path}`);
                 }
                 else {
                     t = document.createElement('div');
-                    t.id = `${g.glider}_${g.mission}`
+                    t.id = `${g.glider}_${g.path}`
                     $('main').appendChild(t);
                 }
                 createTile(glider, t);
@@ -775,16 +786,16 @@
 {% endif %}
                     // the only files we care about is perdive which we use 
                     // to trigger a reload of this tile
-                    clearTiles('' + glider);
-                    createTile({ "glider": glider, "mission": ''}, $('' + glider))
+                    clearTiles(glider + '_');
+                    createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'))
                 }
                 else if (which.startsWith('status')) {
                     // the only status message is disconnected
-                    $(glider).style.border = '2px solid black';
+                    $(glider + '_').style.border = '2px solid black';
                 }
                 else if (which.startsWith('gpsstr')) {
                     // we only get gpsstr on new connection
-                    $(glider).style.border = '2px solid magenta';
+                    $(glider + '_').style.border = '2px solid magenta';
                 }
             }
         }

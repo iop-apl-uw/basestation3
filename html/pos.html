@@ -130,13 +130,10 @@
     }
 
     function doBlink() {
-        console.log('blink');
         if (document.getElementById('main').classList.contains('blink')) {
             document.getElementById('main').classList.remove('blink');
-            console.log('off');
         }
         else {
-            console.log('on');
             document.getElementById('main').classList.add('blink');
         }
     }

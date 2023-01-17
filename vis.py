@@ -84,7 +84,8 @@ compress = sanic_gzip.Compress()
 
 # making this a dict makes a set intersection simple when
 # we use it in filterMission
-publicMissionFields = {"glider", "mission", "started", "ended", "planned",
+publicMissionFields = {"glider", "mission", "path", 
+                       "started", "ended", "planned",
                        "orgname", "orglink", "contact", "email",
                        "project", "link", "comment", "reason"} 
 
@@ -1054,12 +1055,11 @@ def attachHandlers(app: sanic.Sanic):
         socket.connect(request.app.config.WATCH_IPC)
         socket.setsockopt(zmq.SUBSCRIBE, (f"{glider}-urls-gpsstr").encode('utf-8'))
 
+        prev_t = 0
         while True:
-            msg = await socket.recv_multipart()
-
             try:
                 cur = await conn.cursor()
-                q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+                q = "SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
                 await cur.execute(q)
                 row = await cur.fetchone()
                 await cur.close()
@@ -1068,6 +1068,8 @@ def attachHandlers(app: sanic.Sanic):
                     prev_t = row['epoch']
             except Exception as e:
                 pass
+
+            msg = await socket.recv_multipart()
  
     @app.websocket('/stream/<which:str>/<glider:int>')
     @authorized()
@@ -1166,7 +1168,8 @@ def attachHandlers(app: sanic.Sanic):
             pieces = topic.split('-')
             glider = int(pieces[0])
             topic  = pieces[1:]
- 
+
+            print(f"{glider} {topic} {body}") 
             if 'cmdfile' in topic:
                 cmdfile = f"sg{glider:03d}/cmdfile"
                 t = await aiofiles.os.path.getctime(cmdfile)
@@ -1175,8 +1178,8 @@ def attachHandlers(app: sanic.Sanic):
                 await ws.send(f"NEW={glider:03d},cmdfile,{directive}")
             elif 'urls' in topic:
                 m = loads(body)
-                for m in msg:
-                    await ws.send(f"NEW={glider},{m['content']}")
+                print(f"sending {m['content']}")
+                await ws.send(f"NEW={glider},{m['content']}")
 
     @app.listener("after_server_start")
     async def initApp(app, loop):
@@ -1352,11 +1355,12 @@ async def buildAuthTable(request, mask):
         if not await aiofiles.os.path.exists(cmdfile):
             continue
 
+        path = m['path'] if m['path'] else ""
         if m['path'] == None:
             t = await aiofiles.os.path.getctime(cmdfile)
-            opTable.append({"mission": m['mission'] if m['mission'] else '', "glider": m['glider'], "cmdfile": t})
+            opTable.append({"mission": m['mission'] if m['mission'] else '', "glider": m['glider'], "cmdfile": t, "path": path})
         else: 
-            opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None})
+            opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None, "path": path})
 
     return opTable
 
