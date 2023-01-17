@@ -367,6 +367,17 @@
             return '';
     }
 
+    var gliderTable = [];
+
+    function missionName(glider) {
+        for (tbl of gliderTable) {
+            if (tbl.glider == glider && (tbl.path == '' || tbl.path == null))
+                return tbl.mission;
+        }
+        return '';
+    }
+
+
 {% if runMode == 'pilot' %}
     function setPlusMinusBar(chart, bar, span, pct, text, hover) {
         if (pct < -1)
@@ -478,16 +489,6 @@
         }
     }
 
-    var gliderTable = [];
-
-    function missionName(glider) {
-        for (tbl of gliderTable) {
-            if (tbl.glider == glider && (tbl.path == '' || tbl.path == null))
-                return tbl.mission;
-        }
-        return '';
-    }
-
     function createTile(glider, t) {
         console.log(glider);
         var indicators = [];
@@ -504,9 +505,9 @@
             var h, txt, box, barBatt, chartBatt, spanBatt, header;
             var barNext, chartNext, spanNex;
             if (glider.mission == '')
-                h = h = 'SG' + data.mission.glider + '<br><hr>';
+                h = h = 'SG' + glider.glider + '<br><hr>';
             else
-                h = 'SG' + data.mission.glider + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
+                h = 'SG' + glider.glider + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
 
             header = document.createElement('div');
             header.classList.add('header');
@@ -786,9 +787,9 @@
            
             var h, txt, box, header;
             if (glider.mission == '')
-                h = h = 'SG' + data.name + '<br><hr>';
+                h = h = 'SG' + glider.glider + '<br><hr>';
             else
-                h = 'SG' + data.name + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
+                h = 'SG' + glider.glider + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
 
             header = document.createElement('div');
             header.classList.add('header');
