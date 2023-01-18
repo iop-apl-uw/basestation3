@@ -30,9 +30,7 @@ import configparser
 import fnmatch
 import itertools
 import netrc
-import io
 import os
-import stat
 import pdb
 import smtplib
 import sys
@@ -281,7 +279,10 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
                     log_debug(f"URL line ({url_line})")
                     try:
                         url_response = requests.get(
-                            url_line, verify=cert_file, timeout=get_timeout, json=payload
+                            url_line,
+                            verify=cert_file,
+                            timeout=get_timeout,
+                            json=payload,
                         )
                     except:
                         log_error(f"Error opening {url_line}", "exc")
@@ -310,6 +311,7 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
             )
         else:
             process_one_urls(urls_file)
+
 
 def send_email(
     base_opts, instrument_id, email_addr, subject_line, message_body, html_format=False
@@ -489,16 +491,21 @@ def process_pagers(
                                 if msg_prefix:
                                     gps_message = f"{msg_prefix}{gps_message}"
                                 try:
+
+                                    def convert_f(x):
+                                        """Conversion helper"""
+                                        return f"{x:.2f}" if x is not None else "None"
+
                                     gps_message = (
-                                        "%s D=%.2f,pit=%.2f,RH=%.2f,P=%.2f,24V=%.2f,10V=%.2f"
+                                        "%s D=%s,pit=%s,RH=%s,P=%s,24V=%s,10V=%s"
                                         % (
                                             gps_message,
-                                            session.depth,
-                                            session.obs_pitch,
-                                            session.rh,
-                                            session.int_press,
-                                            session.volt_24V,
-                                            session.volt_10V,
+                                            convert_f(session.depth),
+                                            convert_f(session.obs_pitch),
+                                            convert_f(session.rh),
+                                            convert_f(session.int_press),
+                                            convert_f(session.volt_24V),
+                                            convert_f(session.volt_10V),
                                         )
                                     )
                                 except:
