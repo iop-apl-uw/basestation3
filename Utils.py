@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -43,10 +43,11 @@ import sqlite3
 import sys
 import time
 import typing
-import zmq
+import pathlib
 
 import gsw
 import seawater
+import zmq
 
 import numpy as np
 import scipy
@@ -302,21 +303,24 @@ def flatten(inlist, ltype=(list, tuple), maxint=sys.maxsize):
         pass
     return inlist
 
+
 def haversine(lat0, lon0, lat1, lon1):
+    """Distance between to positions, using the haversine method"""
     R = 6378137.0
-    lat0 = lat0*math.pi/180
-    lat1 = lat1*math.pi/180
-    lon0 = lon0*math.pi/180
-    lon1 = lon1*math.pi/180
+    lat0 = lat0 * math.pi / 180
+    lat1 = lat1 * math.pi / 180
+    lon0 = lon0 * math.pi / 180
+    lon1 = lon1 * math.pi / 180
 
-    sdlat_2 = math.sin(0.5*(lat0 - lat1))
-    sdlon_2 = math.sin(0.5*(lon0 - lon1))
+    sdlat_2 = math.sin(0.5 * (lat0 - lat1))
+    sdlon_2 = math.sin(0.5 * (lon0 - lon1))
 
-    a = sdlat_2*sdlat_2 + math.cos(lat0)*math.cos(lat1)*sdlon_2*sdlon_2
+    a = sdlat_2 * sdlat_2 + math.cos(lat0) * math.cos(lat1) * sdlon_2 * sdlon_2
     if a >= 1 or a <= 0:
         return 0
 
-    return 2.0*R*math.asin(math.sqrt(a))
+    return 2.0 * R * math.asin(math.sqrt(a))
+
 
 def ddmm2dd(x):
     """Converts a lat/long from ddmm.mmm to dd.dddd
@@ -1697,17 +1701,19 @@ def extract_calib_consts(dive_nc_file):
 
     return calib_consts
 
+
 def notifyVis(glider: int, topic: str, body: str):
-    # Check for vis.py processes to notify - each main process
-    # creates a socket in /tmp so we just glob through there and
-    # send notices via zmq
+    """
+    Check for vis.py processes to notify - each main process
+    creates a socket in /tmp so we just glob through there and
+    send notices via zmq
+    """
 
-    p = Path('/tmp')
+    p = pathlib.Path("/tmp")
     topic = "{glider:03d}-{topic}"
-    for f in p.glob(f'sanic-*-notify.ipc'):
+    for f in p.glob("sanic-*-notify.ipc"):
         print(f"connecting to {f}")
-        socket = ctx.socket(zmq.PUSH)
+        socket = zmq.Context().socket(zmq.PUSH)
         socket.connect(f)
-        socket.send_multipart([topic.encode('utf-8'), body.encode('utf-8')])
+        socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
-

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2009, 2010, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2009, 2010, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -33,6 +33,7 @@ import time
 import traceback
 from urllib.parse import urlencode
 
+import BaseDB
 import BaseDotFiles
 import BaseOpts
 import CommLog
@@ -57,6 +58,7 @@ class GliderEarlyGPSClient:
         self._commlog_linecount = 0
         self._last_update = time.time()
         self._last_cmdfile_mtime = 0
+        self.__comm_log = None
         # CommLog callbacks
         self._show = "away"
         self._status = "No status"
@@ -95,13 +97,27 @@ class GliderEarlyGPSClient:
                         self.cleanup_shutdown()
                 if self._first_time:
                     log_info("First time finished - start_pos:%d" % self._start_pos)
+                    if not self.__base_opts.instrument_id:
+                        if not self.__comm_log:
+                            log_error(
+                                "comm_log processing failed - cannot set instrument_id"
+                            )
+                        else:
+                            self.__base_opts.instrument_id = (
+                                self.__comm_log.get_instrument_id()
+                            )
+                            # log_info(
+                            #    f"Set instrument_id to  {self.__base_opts.instrument_id}"
+                            # )
                 self._first_time = False
                 if self.__base_opts.csh_pid:
                     if not Utils.check_for_pid(self.__base_opts.csh_pid):
                         shell_missing_count += 1
-                        log_info(f"login shell has gone away ({shell_missing_count})")
+                        log_info(
+                            f"login shell has gone away ({shell_missing_count}, logout_seen:{self._commlog_session.logout_seen})"
+                        )
                         # Wait 4 seconds before doing anything
-                        if shell_missing_count == 4:
+                        if shell_missing_count >= 4:
                             self.closeout_commlog()
                         # Let the normal disconnect code will handle the rest of closeout and shutdown
                 time.sleep(1)
@@ -119,36 +135,42 @@ class GliderEarlyGPSClient:
         Called to process the comm log
 
         Returns
-            comm_log object
+            error code from comm.log processing
         """
         # pylint: disable=C0301
-        (
-            comm_log,
-            self._start_pos,
-            self._commlog_session,
-            self._commlog_linecount,
-            err_code,
-        ) = CommLog.process_comm_log(
-            self.__comm_log_file_name,
-            self.__base_opts,
-            start_pos=self._start_pos,
-            call_back=self,
-            session=self._commlog_session,
-            scan_back=self._first_time,
-        )
-        if comm_log is not None:
-            self._last_update = time.time()
-        return err_code
+        try:
+            (
+                self.__comm_log,
+                self._start_pos,
+                self._commlog_session,
+                self._commlog_linecount,
+                err_code,
+            ) = CommLog.process_comm_log(
+                self.__comm_log_file_name,
+                self.__base_opts,
+                start_pos=self._start_pos,
+                call_back=self,
+                session=self._commlog_session,
+                scan_back=self._first_time,
+            )
+        except:
+            log_error("comm_log processing failed", "exc")
+            return 1
+        else:
+            if self.__comm_log is not None:
+                self._last_update = time.time()
+            return err_code
 
     def closeout_commlog(self):
         """
         Closes out the comm.log and removes the .connected file
         """
         connected_file = os.path.join(self.__base_opts.mission_dir, ".connected")
-        try:
-            os.remove(connected_file)
-        except:
-            log_error(f"Unable to remove {connected_file} -- permissions?", "exc")
+        if os.path.exists(connected_file):
+            try:
+                os.remove(connected_file)
+            except:
+                log_error(f"Unable to remove {connected_file} -- permissions?", "exc")
 
         try:
             # (_, fo) = Utils.run_cmd_shell("date")
@@ -160,9 +182,9 @@ class GliderEarlyGPSClient:
             log_info(ts)
             fo.close()
 
-            comm_log = os.path.join(self.__base_opts.mission_dir, "comm.log")
+            comm_log_filename = os.path.join(self.__base_opts.mission_dir, "comm.log")
             try:
-                with open(comm_log, "a") as fo:
+                with open(comm_log_filename, "a") as fo:
                     fo.write(f"Disconnected at {ts} (shell_disappeared)\n\n\n")
             except:
                 log_error("Could not update {commlog}")
@@ -225,7 +247,10 @@ class GliderEarlyGPSClient:
                 BaseDotFiles.process_urls(
                     self.__base_opts, send_str, session.sg_id, session.dive_num
                 )
-                Utils.notifyVis(session.sg_id, "urls-status", "status=disconnected")
+                try:
+                    Utils.notifyVis(session.sg_id, "urls-status", "status=disconnected")
+                except:
+                    log_error("notifyVis failed", "exc")
                 self.cleanup_shutdown()
 
     def callback_transfered(self, filename, receivedsize):
@@ -293,9 +318,17 @@ class GliderEarlyGPSClient:
                 BaseDB.addSession(self.__base_opts, session)
 
                 BaseDotFiles.process_urls(
-                    self.__base_opts, send_str, session.sg_id, session.dive_num, payload=session.to_message_dict()
+                    self.__base_opts,
+                    send_str,
+                    session.sg_id,
+                    session.dive_num,
+                    payload=session.to_message_dict(),
                 )
-                Utils.notifyVis(session.sg_id, "urls-gpsstr", f"gpsstr={send_str}")
+                try:
+                    Utils.notifyVis(session.sg_id, "urls-gpsstr", f"gpsstr={send_str}")
+                except:
+                    log_error("notifyVis failed", "exc")
+
             except:
                 ret_val = "Failed to process gps position (%s)" % traceback.format_exc()
 
