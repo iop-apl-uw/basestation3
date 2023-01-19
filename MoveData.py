@@ -300,6 +300,8 @@ def main():
         moveFiles("errors_*", base_opts.mission_dir, base_opts.target_dir)
         moveFiles("alert_message*", base_opts.mission_dir, base_opts.target_dir)
 
+    moveFiles("sg???.db", base_opts.mission_dir, base_opts.target_dir)
+
     # Files common to both versions of the basestation
     moveFiles(comm_log, base_opts.mission_dir, base_opts.target_dir)
     moveFiles(

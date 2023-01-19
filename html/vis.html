@@ -15,6 +15,12 @@
 {% if runMode == 'pilot' %}
 <script src="/script/chat.js"></script>
 {% endif %}
+<style>
+    .hide {
+        display: none !important;
+    }
+</style>
+
 <script>
 
     var mobile = false;
@@ -398,9 +404,9 @@
     function setVisibility(elt) {
         const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
         for (var d of divs) {
-            if (d != elt) $(d).setAttribute('hidden', '');
+            if (d != elt) $(d).classList.add('hide');
         }
-        $(elt).removeAttribute('hidden');
+        $(elt).classList.remove('hide');
         $('plotlyPopperOuter').style.display = 'none';
     }
 
@@ -1714,9 +1720,9 @@
 <div id="main">
     <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
     <div id="plotlyPopperOuter">&#x2922;</div>
-    <img id="mainImage" style="mix-blend-mode:multiply;" hidden="hidden">
-    <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;"></div>
-    <table rules="groups" id="mainTable" hidden="hidden" > 
+    <img id="mainImage" style="mix-blend-mode:multiply;" class="hide">
+    <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;" class="hide"></div>
+    <table rules="groups" id="mainTable" class="hide">
 
         <colgroup span=4><col><col><col><col></colgroup>
         <colgroup span=6><col><col><col><col><col><col><col></colgroup>
@@ -1751,11 +1757,11 @@
         </tbody>
     </table>
 
-    <div id="logDiv" hidden="hidden"></div>
-    <div id="notificationsDiv" hidden="hidden" style="margin-left:20px; text-align:left;"></div>
+    <div id="logDiv" class="hide"></div>
+    <div id="notificationsDiv" style="margin-left:20px; text-align:left;" class="hide"></div>
     
     
-    <div id="plotlyDiv" hidden="hidden">
+    <div id="plotlyDiv" class="hide">
         <div id="plotyConfigXYDiv">
             <span id="labelX">X:</span><select id="selPlotlyX"></select><br>
             <span id="labelY">-:</span><select id="selPlotlyX2" disabled></select> <br>
@@ -1813,13 +1819,13 @@
         </div>
     </div>
 
-    <div id="logfileDiv" hidden="hidden" oncontextmenu="parameterHelp('logfile'); return false;" title="right click/long press parameter for help" style="background-color:#dddddd; text-align:left;" >
+    <div id="logfileDiv" class="hide" oncontextmenu="parameterHelp('logfile'); return false;" title="right click/long press parameter for help" style="background-color:#dddddd; text-align:left;" >
     </div>
 
-    <div id="engfileDiv" hidden="hidden" style="background-color:#dddddd; text-align:left;">
+    <div id="engfileDiv" class="hide" style="background-color:#dddddd; text-align:left;">
     </div>
 
-    <div id="capfileDiv" hidden="hidden" style="background-color:#dddddd; text-align:left;">
+    <div id="capfileDiv" class="hide" style="background-color:#dddddd; text-align:left;">
     </div>
 </div>
 

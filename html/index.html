@@ -64,16 +64,18 @@
             #main {
                 top: 1rem;
                 width: 100vw;
-                overflow: scroll; 
+                overflow: auto;
+                scroll-snap-type: y mandatory;
 /*
                 overflow-y: scroll;
                 overflow-x: hidden;
+*/
                 display: flex;
                 flex-direction: column; 
-*/
             }
         
             .tile {
+                scroll-snap-align: center;
                 background: #bbb;
                 width: 90vw;
                 height: 136vw;
@@ -85,6 +87,7 @@
                 position: relative; 
                 /* box-sizing: border-box; */
                 font-size: 1rem;
+                overflow: hidden;
             }
 
             .header {
@@ -215,7 +218,7 @@
         #main {
             top: 1rem;
             width: 100%;
-            overflow: scroll;
+            overflow: auto;
         }
     
         .tile {
@@ -367,6 +370,17 @@
             return '';
     }
 
+    var gliderTable = [];
+
+    function missionName(gliderNum) {
+        for (tbl of gliderTable) {
+            if (tbl.glider == gliderNum && (tbl.path == '' || tbl.path == null))
+                return tbl.mission;
+        }
+        return '';
+    }
+
+
 {% if runMode == 'pilot' %}
     function setPlusMinusBar(chart, bar, span, pct, text, hover) {
         if (pct < -1)
@@ -478,16 +492,6 @@
         }
     }
 
-    var gliderTable = [];
-
-    function missionName(glider) {
-        for (tbl of gliderTable) {
-            if (tbl.glider == glider && (tbl.path == '' || tbl.path == null))
-                return tbl.mission;
-        }
-        return '';
-    }
-
     function createTile(glider, t) {
         console.log(glider);
         var indicators = [];
@@ -499,14 +503,15 @@
             data = JSON.parse(data)
  
             t.classList.add('tile');
+            t.style.scrollSnapAlign = 'center';
             t.onclick = function() { window.open(`/${data.mission.glider}${mission(glider)}`, `${data.mission.glider}`); };
            
             var h, txt, box, barBatt, chartBatt, spanBatt, header;
             var barNext, chartNext, spanNex;
             if (glider.mission == '')
-                h = h = 'SG' + data.mission.glider + '<br><hr>';
+                h = h = 'SG' + glider.glider + '<br><hr>';
             else
-                h = 'SG' + data.mission.glider + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
+                h = 'SG' + glider.glider + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
 
             header = document.createElement('div');
             header.classList.add('header');
@@ -520,7 +525,7 @@
             t.appendChild(txt);
 
             txt = document.createElement('div');
-            txt.id = `${glider}_directive`
+            txt.id = `${glider.glider}_directive`
 
             txt.innerHTML = `parsed ${formatDirective(data.commDirective, "commdirective" + glider.glider)}, waiting ${formatDirective(data.cmdfileDirective, "cmdfileDirective" + glider.glider)}`;
             t.appendChild(txt);
@@ -560,7 +565,7 @@
 
             chartBatt = document.createElement('div');
             chartBatt.classList.add('chart');
-            chartBatt.id = 'chartBatt' + data.name;
+            chartBatt.id = 'chartBatt_' + glider.glider + '_' + glider.path;
             h = document.createElement('div');
             h.appendChild(document.createTextNode('batt: '));
             h.classList.add('label');
@@ -570,11 +575,11 @@
 
             barBatt = document.createElement('div');
             barBatt.classList.add('barPercent');
-            barBatt.id = 'barBatt' + data.name;
+            barBatt.id = 'barBatt_' + glider.glider + '_' + glider.path;
             chartBatt.appendChild(barBatt);
 
             spanBatt = document.createElement('span');
-            spanBatt.id = 'spanBatt' + data.name;
+            spanBatt.id = 'spanBatt_' + glider.glider + '_' + glider.path;
             chartBatt.appendChild(spanBatt);
 
             let endurance_t = new Date(data.enduranceEndT*1000).toISOString().replace('T', ' ').slice(0,-14);
@@ -585,7 +590,7 @@
 
             chartNext = document.createElement('div');
             chartNext.classList.add('chart');
-            chartNext.id = 'chartNext' + data.name;
+            chartNext.id = 'chartNext_' + glider.glider + '_' + glider.path;
             h = document.createElement('div');
             h.appendChild(document.createTextNode('next: '));
             h.classList.add('label');
@@ -595,11 +600,11 @@
 
             barNext = document.createElement('div');
             barNext.classList.add('barPercent');
-            barNext.id = 'barNext' + data.name;
+            barNext.id = 'barNext_' + glider.glider + '_' + glider.path;
             chartNext .appendChild(barNext);
 
             spanNext = document.createElement('span');
-            spanNext.id = 'spanNext' + data.name;
+            spanNext.id = 'spanNext_' + glider.glider + '_' + glider.path;
             chartNext.appendChild(spanNext);
 
             nextGauges.push({chart:chartNext.id, bar:barNext.id, span:spanNext.id, next:data.next});
@@ -759,9 +764,9 @@
             box.classList.add('imgbox');
             img = document.createElement('img');
             if (plotWhich == 'map')
-                img.src = '/plot/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
+                img.src = '/plot/png/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
             else
-                img.src = '/plot/png/dv/' + data.name + '/' + data.dive + '/' + plotWhich + mission(glider);
+                img.src = '/plot/png/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
     
             img.classList.add('dashImg');
      
@@ -782,13 +787,13 @@
         .then(res => res.json())
         .then(data => {
             t.classList.add('tile');
-            t.onclick = function() { window.open(`/${data.name}${mission(glider)}`, `${data.name}`); };
+            t.onclick = function() { window.open(`/${glider.glider}${mission(glider)}`, `${glider.glider}`); };
            
             var h, txt, box, header;
             if (glider.mission == '')
-                h = h = 'SG' + data.name + '<br><hr>';
+                h = h = 'SG' + glider.glider + '<br><hr>';
             else
-                h = 'SG' + data.name + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
+                h = 'SG' + glider.glider + ': ' + glider.mission.replace('_', ' ') + '<br><hr>';
 
             header = document.createElement('div');
             header.classList.add('header');
@@ -819,7 +824,7 @@
             box.classList.add('imgbox');
 
             img = document.createElement('img');
-            img.src = '/plot/png/eng/' + data.name + '/' + data.dive + '/mission_map' + mission(glider);
+            img.src = '/plot/png/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
             img.classList.add('indexImg');
      
             box.appendChild(img);
