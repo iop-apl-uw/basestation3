@@ -651,13 +651,8 @@ def updateDBFromFM(base_opts, ncfs, con):
 
 def rebuildDB(base_opts, from_cli=False):
     """Rebuild the database from scratch"""
-    # glider = os.path.basename()
-    # sg = int(glider[2:])
-    # db = path + "/" + glider + ".db"
-    db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
-    log_info("rebuilding %s" % db)
-    
-    con = sqlite3.connect(db)
+    log_info("rebuilding database")
+    con = open_mission_database(base_opts)
     with con:
         cur = con.cursor()
         cur.execute("DROP TABLE IF EXISTS dives;")
@@ -685,9 +680,7 @@ def rebuildDB(base_opts, from_cli=False):
 
 def loadDB(base_opts, filename, from_cli=False):
     """Load a single netcdf file into the database"""
-    db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
-    log_info("Loading %s to %s" % (filename, db))
-    con = sqlite3.connect(db)
+    con = open_mission_database(base_opts)
     with con:
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
@@ -699,16 +692,15 @@ def loadDB(base_opts, filename, from_cli=False):
     updateDBFromFM(base_opts, [filename], con)
     updateDBFromFileExistence(base_opts, [filename], con)
 
-def prepDB(base_opts, db=None):
-    if db == None:
-        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
-    # if not os.path.exists(db): 
-    # connect creates if it needs to
+def prepDB(base_opts, dbfile=None)
+    if dbfile == None:
+        con = open_mission_database(base_opts)
+    else:
+        con = sqlite3.connect(dbfile)
 
-    print("prepping db tables")
-    con = sqlite3.connect(db)
     with con:
         cur = con.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
         cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
         cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));");
         cur.close()
@@ -718,12 +710,7 @@ def prepDB(base_opts, db=None):
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
     if con == None:
-        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
-        if not os.path.exists(db):
-            log_error(f"{db} does not exist - not updating {var_n}")
-            return 1
-
-        mycon = sqlite3.connect(db)
+        mycon = open_mission_database(base_opts)
     else:
         mycon = con
 
@@ -756,8 +743,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
 
 def addSlopeValToDB(base_opts, dive_num, var, con):
     if con == None:
-        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
-        mycon = sqlite3.connect(db)
+        mycon = open_mission_database(base_opts)
     else:
         mycon = con
         
@@ -791,11 +777,8 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
 
 def addSession(base_opts, session, con=None):
     if con == None:
-        db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
-        db_str = f" datbase:{db}" 
-        mycon = sqlite3.connect(db)
+        mycon = open_mission_database(base_opts)
     else:
-        db_str = ""
         mycon = con
     
     try:
@@ -805,7 +788,7 @@ def addSession(base_opts, session, con=None):
                     session.to_message_dict())
         mycon.commit()
     except Exception as e:
-        log_error(f"{e} inserting comm.log session{db_str}")
+        log_error(f"{e} inserting comm.log session")
 
     if con == None:
         mycon.close();

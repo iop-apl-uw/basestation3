@@ -1634,8 +1634,13 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
         return None
     db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     if not os.path.exists(db):
-        log_error(f"{db} does not exist")
-        return None
+        try:
+            log_info(f"{db} does not exist - creating")
+            BaseDB.prepDB(base_opts, dbfile=db)
+        except Exception as e:
+            log_error(f"error creating DB: {e}")
+            return None
+
     return sqlite3.connect(db)
 
 
