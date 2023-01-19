@@ -1518,7 +1518,7 @@ if __name__ == '__main__':
     else:
         try:
             opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:si', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector"])
-        except getopt.GetopterError as err:
+        except getopt.GetoptError as err:
             print(err)
             sys.exit(1)
 
