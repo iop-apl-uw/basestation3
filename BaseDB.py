@@ -689,6 +689,7 @@ def loadDB(base_opts, filename, from_cli=False):
     con = sqlite3.connect(db)
     with con:
         cur = con.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
         loadFileToDB(base_opts, cur, filename, con)
         cur.close()
   
