@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -22,6 +22,7 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
+# fmt: off
 
 """ Add selected data from per-dive netcdf file to the mission sqllite db
 """
@@ -791,8 +792,10 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
 def addSession(base_opts, session, con=None):
     if con == None:
         db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+        db_str = f" datbase:{db}" 
         mycon = sqlite3.connect(db)
     else:
+        db_str = ""
         mycon = con
     
     try:
@@ -802,7 +805,7 @@ def addSession(base_opts, session, con=None):
                     session.to_message_dict())
         mycon.commit()
     except Exception as e:
-        log_error(f"{e} inserting comm.log session")
+        log_error(f"{e} inserting comm.log session{db_str}")
 
     if con == None:
         mycon.close();
@@ -923,3 +926,4 @@ if __name__ == "__main__":
             pdb.post_mortem(traceb)
 
         log_critical("Unhandled exception in main -- exiting", "exc")
+# fmt: on

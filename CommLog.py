@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -28,9 +28,11 @@ Commlog.py: Contains all routines for extracting data from a glider's comm logfi
     Intended to be called from another module (Base.py) OR stand-alone (to generate glider tracking data info).
 """
 
+import argparse
 import cProfile
 import collections
 import inspect
+import json
 import math
 import os
 import pdb
@@ -47,7 +49,6 @@ import FileMgr
 import GPS
 import Utils
 import Ver65
-import json
 from BaseLog import (
     BaseLogger,
     log_debug,
@@ -56,6 +57,7 @@ from BaseLog import (
     log_error,
     log_critical,
 )
+import BaseDB
 
 DEBUG_PDB = False  # Set to True to enter debugger on exceptions
 
@@ -669,6 +671,7 @@ class ConnectSession:
         self.volt_24V = None
         self.int_press = None
         self.rh = None
+        self.temperature = None
         self.launch_time = None
         self.eop_code = None
         self.recov_code = None
@@ -692,26 +695,28 @@ class ConnectSession:
         self.file_retries = collections.defaultdict(int)
 
     def to_dict(self):
+        """Converts session object to a dict"""
         x = copy.deepcopy(self)
         x.gps_fix = vars(x.gps_fix)
         return vars(x)
-       
+
     def to_message_dict(self):
+        """Creates a dict from a subset of the session object for use in db operations"""
         return {
-                "dive": self.dive_num,
-                "cycle": self.call_cycle,
-                "call": self.calls_made,
-                "lat": Utils.ddmm2dd(self.gps_fix.lat),
-                "lon": Utils.ddmm2dd(self.gps_fix.lon),
-                "epoch": time.mktime(self.gps_fix.datetime),
-                "RH":   self.rh,
-                "intP": self.int_press,
-                "volts10": self.volt_10V,
-                "volts24": self.volt_24V,
-                "pitch": self.obs_pitch,
-                "depth": self.depth,
-               }
- 
+            "dive": self.dive_num,
+            "cycle": self.call_cycle,
+            "call": self.calls_made,
+            "lat": Utils.ddmm2dd(self.gps_fix.lat),
+            "lon": Utils.ddmm2dd(self.gps_fix.lon),
+            "epoch": time.mktime(self.gps_fix.datetime),
+            "RH": self.rh,
+            "intP": self.int_press,
+            "volts10": self.volt_10V,
+            "volts24": self.volt_24V,
+            "pitch": self.obs_pitch,
+            "depth": self.depth,
+        }
+
     def dump_contents(self, fo):
         """Dumps out the session contents, used when called manually"""
         print("_sg_id %s" % self.sg_id, file=fo)
@@ -785,6 +790,8 @@ class ConnectSession:
             print("int_press %f" % self.int_press, file=fo)
         if self.rh is not None:
             print("rh %f" % self.rh, file=fo)
+        if self.temperature is not None:
+            print("temperature %f" % self.temperature, file=fo)
         if self.launch_time is not None:
             print(
                 "launch_time %s"
@@ -865,6 +872,7 @@ def is_digit(val):
         return True
 
 
+# pylint: disable=unused-argument
 def crack_counter_line(
     base_opts, session, raw_strs, comm_log_file_name, line_count, raw_line
 ):
@@ -877,7 +885,7 @@ def crack_counter_line(
     # Check for valid counter
     cnt_vals = raw_strs[0].split(":")
 
-    if len(cnt_vals) >= 3 and len(cnt_vals) <= 16:
+    if len(cnt_vals) >= 3 and len(cnt_vals) <= 17:
         for i in range(len(cnt_vals)):
             cnt_vals[i] = cnt_vals[i].lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
@@ -889,6 +897,9 @@ def crack_counter_line(
             # First - counter line with optional GPS string on end
             # Final - counter line with logout at end
             #
+            # 67.00 (r6718) First: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, last_open_error,
+            #       pitch_ad, roll_ad, vbd_ad, angle, depth, temperature, v10, v24, int_press, rh
+            # 67.00 (r6718) Final: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, status
             # 66.10 First: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, last_open_error,
             #       pitch_ad, roll_ad, vbd_ad, angle, depth, v10, v24, int_press, rh
             # 66.10 Final: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, status
@@ -914,72 +925,101 @@ def crack_counter_line(
             # 65.01 First and Final: dive_num, callsMade, cnt_NoComm
             # 65.00 First and Final: dive_num, callsMade, cnt_NoComm
 
-            if len(cnt_vals) == 16 and Utils.is_float(cnt_vals[15]):
+            def convert_f(counter_vals, position, cnv_type):
+
+                try:
+                    return cnv_type(counter_vals[position])
+                except ValueError:
+                    log_error(
+                        f"Failed to convert {counter_vals[position]} to {str(cnv_type)} line_num:{line_count}, position:{position}"
+                    )
+                    return None
+
+            if len(cnt_vals) == 17 and Utils.is_float(cnt_vals[16]):
                 # Version 66.09 - 66.10 First counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
-                session.reboot_count = int(cnt_vals[5])
-                session.last_call_error = int(cnt_vals[6])
-                session.pitch_ad = int(cnt_vals[7])
-                session.roll_ad = int(cnt_vals[8])
-                session.vbd_ad = int(cnt_vals[9])
-                session.obs_pitch = float(cnt_vals[10])
-                session.depth = float(cnt_vals[11])
-                session.volt_10V = float(cnt_vals[12])
-                session.volt_24V = float(cnt_vals[13])
-                session.int_press = float(cnt_vals[14])
-                session.rh = float(cnt_vals[15])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
+                session.last_call_error = convert_f(cnt_vals, 6, int)
+                session.pitch_ad = convert_f(cnt_vals, 7, int)
+                session.roll_ad = convert_f(cnt_vals, 8, int)
+                session.vbd_ad = convert_f(cnt_vals, 9, int)
+                session.obs_pitch = convert_f(cnt_vals, 10, float)
+                session.depth = convert_f(cnt_vals, 11, float)
+                session.temperature = convert_f(cnt_vals, 12, float)
+                session.volt_10V = convert_f(cnt_vals, 13, float)
+                session.volt_24V = convert_f(cnt_vals, 14, float)
+                session.int_press = convert_f(cnt_vals, 15, float)
+                session.rh = convert_f(cnt_vals, 16, float)
+            elif len(cnt_vals) == 16 and Utils.is_float(cnt_vals[15]):
+                # Version 66.09 - 66.10 First counter
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
+                session.last_call_error = convert_f(cnt_vals, 6, int)
+                session.pitch_ad = convert_f(cnt_vals, 7, int)
+                session.roll_ad = convert_f(cnt_vals, 8, int)
+                session.vbd_ad = convert_f(cnt_vals, 9, int)
+                session.obs_pitch = convert_f(cnt_vals, 10, float)
+                session.depth = convert_f(cnt_vals, 11, float)
+                session.volt_10V = convert_f(cnt_vals, 12, float)
+                session.volt_24V = convert_f(cnt_vals, 13, float)
+                session.int_press = convert_f(cnt_vals, 14, float)
+                session.rh = convert_f(cnt_vals, 15, float)
             elif len(cnt_vals) == 10 and Utils.is_integer(cnt_vals[9]):
                 # Version 66.08 First counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
-                session.reboot_count = int(cnt_vals[5])
-                session.last_call_error = int(cnt_vals[6])
-                session.pitch_ad = int(cnt_vals[7])
-                session.roll_ad = int(cnt_vals[8])
-                session.vbd_ad = int(cnt_vals[9])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
+                session.last_call_error = convert_f(cnt_vals, 6, int)
+                session.pitch_ad = convert_f(cnt_vals, 7, int)
+                session.roll_ad = convert_f(cnt_vals, 8, int)
+                session.vbd_ad = convert_f(cnt_vals, 9, int)
             elif len(cnt_vals) == 7 and Utils.is_integer(cnt_vals[6]):
                 # Version 66.08 - 66.10 Final counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
-                session.reboot_count = int(cnt_vals[5])
-                session.this_call_error = int(cnt_vals[6])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
+                session.this_call_error = convert_f(cnt_vals, 6, int)
             elif len(cnt_vals) == 6 and Utils.is_integer(cnt_vals[5]):
                 # Version 66.06 - 66.07 counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
-                session.reboot_count = int(cnt_vals[5])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
             elif len(cnt_vals) == 5 and Utils.is_integer(cnt_vals[4]):
                 # Version 66.05 counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
             elif len(cnt_vals) == 4 and Utils.is_integer(cnt_vals[3]):
                 # Version 66.00 - 66.04
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
             else:
                 # Version 65 counter
                 log_info("Version 65 counter (%s)" % raw_strs[0])
-                session.dive_num = int(cnt_vals[0])
-                session.calls_made = int(cnt_vals[1])
-                session.no_comm = int(cnt_vals[2])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.calls_made = convert_f(cnt_vals, 1, int)
+                session.no_comm = convert_f(cnt_vals, 2, int)
 
             # if(session.calls_made == 0):
             #    print cnt_vals
@@ -1036,6 +1076,7 @@ def crack_counter_line(
             return True
 
     return False
+
 
 def process_comm_log(
     comm_log_file_name,
@@ -1548,7 +1589,7 @@ def process_comm_log(
                                 session.transfer_method[filename] = "xmodem"
                                 file_transfer_method[filename] = "xmodem"
                             file_transfered = []
-                            if file_crc_errors != []:
+                            if file_crc_errors:
                                 session.crc_errors[filename] = file_crc_errors
                                 file_crc_errors = []
 
@@ -1586,7 +1627,7 @@ def process_comm_log(
                         file_transfered.append(file_transfered_nt(0, 0))
                         files_transfered[filename] = file_transfered
                         file_transfered = []
-                        if file_crc_errors != []:
+                        if file_crc_errors:
                             session.crc_errors[filename] = file_crc_errors
                             file_crc_errors = []
                         continue
@@ -1867,49 +1908,79 @@ class TestCommLogCallback:
 
 
 def main():
-    import BaseDB
-
     """main - main entry point"""
     base_opts = BaseOpts.BaseOptions(
         "Test entry for comm.log processing",
         additional_arguments={
-            "comm_log": BaseOpts.options_t(
-                None,
+            "dump_last": BaseOpts.options_t(
+                False,
                 ("CommLog",),
-                ("comm_log",),
+                ("--dump_last",),
                 str,
                 {
-                    "help": "comm.log file to process",
-                    "action": BaseOpts.FullPathAction,
+                    "help": "Dump the last comm.log session",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "dump_all": BaseOpts.options_t(
+                False,
+                ("CommLog",),
+                ("--dump_all",),
+                str,
+                {
+                    "help": "Dump the last comm.log session",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "init_db": BaseOpts.options_t(
+                False,
+                ("CommLog",),
+                ("--init_db",),
+                str,
+                {
+                    "help": "Initialize database with sessions",
+                    "action": argparse.BooleanOptionalAction,
                 },
             ),
         },
     )
-    BaseLogger(base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)
 
-    if base_opts.comm_log is None:
+    comm_log_path = os.path.join(base_opts.mission_dir, "comm.log")
+    if not os.path.exists(comm_log_path):
+        log_error(f"{comm_log_path} does not exist")
         return 1
 
-    
-    # comm_log, pos, session, cnt, n = process_comm_log(base_opts.comm_log, base_opts, scan_back=True)
-    (comm_log, pos, session, _, _) = process_comm_log(base_opts.comm_log, base_opts) # , scan_back=True)
+    (comm_log, _, session, _, _) = process_comm_log(comm_log_path, base_opts)
 
     if not base_opts.instrument_id:
         base_opts.instrument_id = comm_log.get_instrument_id()
 
-    BaseDB.prepDB(base_opts)
+    if base_opts.init_db:
+        BaseDB.prepDB(base_opts)
 
-    se = comm_log.sessions[-1]
-    print( json.dumps(se.to_message_dict()) )
+        if not comm_log.sessions:
+            print("No sessions")
+        else:
+            try:
+                se = comm_log.sessions[-1]
+                print(json.dumps(se.to_message_dict()))
+            except:
+                log_error("Couldn't dump last session", "exc")
 
-    print(f"{len(comm_log.sessions)} sessions")
-    if len(comm_log.sessions):
+            print(f"{len(comm_log.sessions)} sessions")
+            for session in comm_log.sessions:
+                BaseDB.addSession(base_opts, session)
+
+    if base_opts.dump_last:
+        if not comm_log.sessions:
+            print("No sessions")
+        else:
+            comm_log.sessions[-1].dump_contents(sys.stdout)
+
+    if base_opts.dump_all:
         for session in comm_log.sessions:
-            BaseDB.addSession(base_opts, session)
-    else:
-        print("no sessions")
-
-    print(session)
+            session.dump_contents(sys.stdout)
 
     # for ii in range(len(comm_log.sessions)):
     #     for k in comm_log.sessions[ii].file_stats.keys():

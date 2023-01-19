@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -118,6 +118,11 @@ def mission_energy(
             "SELECT dive,log_gps2_time FROM dives ORDER BY dive ASC LIMIT 1",
             conn,
         )["log_gps2_time"].iloc()[0]
+
+        start_t = pd.read_sql_query(
+            "SELECT dive,log_gps2_time FROM dives ORDER BY dive",
+            conn,
+        )["log_gps2_time"]
 
         if batt_df["batt_Ahr_cap_24V"].iloc()[-1] == 0:
             univolt = "10V"
@@ -238,7 +243,7 @@ def mission_energy(
         )
         days_remaining = secs_remaining / (24.0 * 3600.0)
         log_info(
-            f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
+            f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining:{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
         )
         y_offset += -0.02
         l_annotations.append(
@@ -385,24 +390,34 @@ def mission_energy(
 
         fig.add_trace(
             {
-                "name": "mission days/10 (FG)",
+                "name": "Mission days/10 (FG)",
                 "x": days_df["dive"],
                 "y": days_df["energy_days_total_FG"]/10,
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (days_df["energy_days_total_FG"], (start_t - start) / 86400)
+                    )
+                ),
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkBlue"},
-                "hovertemplate": "Fuel Gauge<br>Dive %{x:.0f}<br> Energy used %{y:.2f} kJ<extra></extra>",
+                "hovertemplate": "Mission Days (FG)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
             }
         )
         fig.add_trace(
             {
-                "name": "mission days/10 (model)",
+                "name": "Mission days/10 (model)",
                 "x": days_df["dive"],
                 "y": days_df["energy_days_total_Modeled"]/10,
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (days_df["energy_days_total_Modeled"], (start_t - start) / 86400)
+                    )
+                ),
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
-                "hovertemplate": "Fuel Gauge<br>Dive %{x:.0f}<br> Energy used %{y:.2f} kJ<extra></extra>",
+                "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
             }
         )        
         if univolt:
@@ -474,7 +489,7 @@ def mission_energy(
                 }
             )
 
-        title_text = f"{mission_str}<br>Energy Consumption"
+        title_text = f"{mission_str}<br>Energy Consumption and Endurance"
 
         fig.update_layout(
             {
