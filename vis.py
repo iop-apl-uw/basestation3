@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.9
+#!/usr/bin/env python3.10
 
 from orjson import dumps,loads
 import time
@@ -1238,7 +1238,7 @@ async def buildMissionTable(app, config=None):
         config = app.config
 
     if 'SINGLE_MISSION' in config and config.SINGLE_MISSION:
-        sanic.log.logger.info(f'building table for single mission {app.config.SINGLE_MISSION}')
+        sanic.log.logger.info(f'building table for single mission {config.SINGLE_MISSION}')
         x = { 'missions': { config.SINGLE_MISSION: {} } }
     else: 
         if await aiofiles.os.path.exists(config.MISSIONS_FILE):
