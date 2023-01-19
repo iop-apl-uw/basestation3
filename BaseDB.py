@@ -652,7 +652,7 @@ def updateDBFromFM(base_opts, ncfs, con):
 def rebuildDB(base_opts, from_cli=False):
     """Rebuild the database from scratch"""
     log_info("rebuilding database")
-    con = open_mission_database(base_opts)
+    con = Utils.open_mission_database(base_opts)
     with con:
         cur = con.cursor()
         cur.execute("DROP TABLE IF EXISTS dives;")
@@ -680,7 +680,7 @@ def rebuildDB(base_opts, from_cli=False):
 
 def loadDB(base_opts, filename, from_cli=False):
     """Load a single netcdf file into the database"""
-    con = open_mission_database(base_opts)
+    con = Utils.open_mission_database(base_opts)
     with con:
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
@@ -692,9 +692,9 @@ def loadDB(base_opts, filename, from_cli=False):
     updateDBFromFM(base_opts, [filename], con)
     updateDBFromFileExistence(base_opts, [filename], con)
 
-def prepDB(base_opts, dbfile=None)
+def prepDB(base_opts, dbfile=None):
     if dbfile == None:
-        con = open_mission_database(base_opts)
+        con = Utils.open_mission_database(base_opts)
     else:
         con = sqlite3.connect(dbfile)
 
@@ -710,7 +710,7 @@ def prepDB(base_opts, dbfile=None)
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
     if con == None:
-        mycon = open_mission_database(base_opts)
+        mycon = Utils.open_mission_database(base_opts)
     else:
         mycon = con
 
@@ -743,7 +743,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
 
 def addSlopeValToDB(base_opts, dive_num, var, con):
     if con == None:
-        mycon = open_mission_database(base_opts)
+        mycon = Utils.open_mission_database(base_opts)
     else:
         mycon = con
         
@@ -777,7 +777,7 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
 
 def addSession(base_opts, session, con=None):
     if con == None:
-        mycon = open_mission_database(base_opts)
+        mycon = Utils.open_mission_database(base_opts)
     else:
         mycon = con
     

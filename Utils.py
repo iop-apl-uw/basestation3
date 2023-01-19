@@ -1625,6 +1625,8 @@ def loadmodule(pathname):
 
 
 def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection:
+    import BaseDB
+
     """Opens a mission database file"""
     if not base_opts.mission_dir:
         log_error("mission_dir is not set")
