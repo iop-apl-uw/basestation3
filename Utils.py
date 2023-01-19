@@ -43,8 +43,8 @@ import sqlite3
 import sys
 import time
 import typing
+import pathlib
 
-import anyio
 import gsw
 import seawater
 import zmq
@@ -1709,11 +1709,11 @@ def notifyVis(glider: int, topic: str, body: str):
     send notices via zmq
     """
 
-    p = anyio.Path("/tmp")
+    p = pathlib.Path("/tmp")
     topic = "{glider:03d}-{topic}"
     for f in p.glob("sanic-*-notify.ipc"):
         print(f"connecting to {f}")
-        socket = ctx.socket(zmq.PUSH)
+        socket = zmq.Context().socket(zmq.PUSH)
         socket.connect(f)
         socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
