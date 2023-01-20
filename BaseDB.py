@@ -36,8 +36,10 @@ import sys
 import time
 import traceback
 import math
-import numpy
 import warnings
+
+import numpy
+import pandas as pd
 
 import BaseOpts
 import BasePlot
@@ -45,7 +47,6 @@ import CalibConst
 import CommLog
 import PlotUtils
 import Utils
-import pandas as pd
 from CalibConst import getSGCalibrationConstants
 
 from BaseLog import (
@@ -59,20 +60,180 @@ from BaseLog import (
 
 DEBUG_PDB = "darwin" in sys.platform
 
-slopeVars = [ 
+slopeVars = [
                 "batt_volts_10V",
                 "batt_volts_24V",
                 "log_IMPLIED_C_VBD",
                 "implied_volmax_glider",
                 "batt_capacity_10V",
-                "batt_capacity_24V", 
+                "batt_capacity_24V",
             ]
 
 def ddmm2dd(x):
+    """Convert decimal degrees to degrees decimal minutes"""
     deg = int(x/100)
-    min = x - deg*100
-    return deg + min/60
+    mins = x - deg*100
+    return deg + mins/60
 
+# fmt: on
+
+
+def getVarNames(nci):
+    """Collect var names from netcdf file - not used for debugging"""
+    nc_vars = []
+
+    for k in nci.variables.keys():
+        if (
+            len(nci.variables[k].dimensions)
+            and "_data_point" in nci.variables[k].dimensions[0]
+        ):
+            nc_vars.append({"var": k, "dim": nci.variables[k].dimensions[0]})
+
+    return nc_vars
+
+
+# legato_time
+# legato_conduc
+# legato_temp
+# legato_pressure
+# legato_conducTemp
+# ctd_pressure_qc
+# speed_gsm
+# glide_angle_gsm
+# horz_speed_gsm
+# vert_speed_gsm
+# ctd_time
+# ctd_depth
+# ctd_pressure
+# temperature_raw
+# temperature_raw_qc
+# conductivity_raw
+# conductivity_raw_qc
+# salinity_raw
+# salinity_raw_qc
+# temperature
+# temperature_qc
+# conductivity
+# conductivity_qc
+# salinity
+# salinity_qc
+# buoyancy
+# speed
+# glide_angle
+# horz_speed
+# vert_speed
+# speed_qc
+# sigma_t
+# theta
+# density
+# density_insitu
+# sigma_theta
+# sound_velocity
+# dissolved_oxygen_sat
+# east_displacement_gsm
+# north_displacement_gsm
+# east_displacement
+# north_displacement
+# delta_time_s
+# polar_heading
+# latitude_gsm
+# longitude_gsm
+# latitude
+# longitude
+# conservative_temperature
+# absolute_salinity
+# gsw_sigma0
+# gsw_sigma3
+# gsw_sigma4
+# time
+# eng_vbdCC
+# pressure
+# depth
+# eng_elaps_t_0000
+# eng_elaps_t
+# eng_depth
+# eng_head
+# eng_pitchAng
+# eng_rollAng
+# eng_rec
+# eng_mag_x
+# eng_mag_y
+# eng_mag_z
+# depth_time
+# depth_depth
+
+# Mapping from name to arbitrary ordinal
+time_series_variables = {
+    0: "temperature_raw",
+    1: "temperature_raw_qc",
+    2: "conductivity_raw",
+    3: "conductivity_raw_qc",
+    4: "salinity_raw",
+    5: "salinity_raw_qc",
+    6: "temperature",
+    7: "temperature_qc",
+    8: "conductivity",
+    9: "conductivity_qc",
+    10: "salinity",
+    11: "salinity_qc",
+}
+
+
+def processTimeSeries(dive, cur, nci):
+    """Inserts timeseries data into db"""
+
+    cur.execute("COMMIT")
+
+    cur.execute(
+        "CREATE TABLE IF NOT EXISTS observation_type(observation_id INTEGER PRIMARY KEY, observation_name TEXT);"
+    )
+
+    res = cur.execute("SELECT observation_name FROM observation_type")
+    if res.fetchone() is None:
+        for obs_id, name in time_series_variables.items():
+            cur.execute(
+                "INSERT INTO observation_type (observation_id, observation_name) VALUES (?,?)",
+                (obs_id, name),
+            )
+
+    cur.execute(
+        "CREATE TABLE IF NOT EXISTS observations(idx INTEGER PRIMARY KEY AUTOINCREMENT,"
+        "dive INTEGER, observation FLOAT, observation_time FLOAT, obs_type INTEGER,"
+        "FOREIGN KEY(obs_type) REFERENCES observation_type(observation_id))"
+    )
+
+    cur.execute(f"DELETE FROM observations WHERE dive={dive};")
+
+    for obs_idx, tv in time_series_variables.items():
+        if tv not in nci.variables:
+            continue
+        try:
+            nc_var = nci.variables[tv][:]
+            nc_dim = nci.variables[tv].dimensions[0]
+            for k, v in nci.variables.items():
+                var_t = []
+                if (
+                    "time" in k[-4:]
+                    and len(nci.variables[k].dimensions)
+                    and "_data_point" in nci.variables[k].dimensions[0]
+                    and nc_dim == nci.variables[k].dimensions[0]
+                ):
+                    var_t = nci.variables[k][:]
+                    break
+
+            if len(var_t):
+                for ii in range(numpy.size(var_t)):
+                    cur.execute(
+                        "INSERT INTO observations(dive, observation, observation_time, obs_type) VALUES (?,?,?,?)",
+                        (dive, nc_var[ii], var_t[ii], obs_idx),
+                    )
+            else:
+                log_error(f"no time variable found for {tv}({nc_dim})")
+        except:
+            log_error(f"Problems processing {nc_var}", "exc")
+
+
+# fmt: off
 def insertColumn(dive, cur, col, val, db_type):
     """Insert the specified column"""
     try:
@@ -198,7 +359,7 @@ def loadFileToDB(base_opts, cur, filename, con):
                 insertColumn(dive, cur, v, nci.variables[v].getValue(), "FLOAT")
         elif len(nci.variables[v].dimensions) == 1 and nci.variables[v].dimensions[0] == 'gps_info' and '_'.join(v.split('_')[2:]) in gpsVars:
             for i in range(0,nci.dimensions['gps_info']):
-                if i == 0 or i == 1:
+                if i in (0, 1):
                     name = v.replace('gps_', f'gps{i+1}_')
                 else:
                     name = v
@@ -569,6 +730,8 @@ def loadFileToDB(base_opts, cur, filename, con):
 
     processGC(dive, cur, nci)
 
+    processTimeSeries(dive, cur, nci)
+
     addSlopeValToDB(base_opts, dive, slopeVars, con)
 
 def updateDBFromPlots(base_opts, ncfs):
@@ -594,19 +757,19 @@ def updateDBFromPlots(base_opts, ncfs):
 def updateDBFromFileExistence(base_opts, ncfs, con):
     for n in ncfs:
         dv = int(os.path.basename(n)[4:8])
-        
+
         capfile = f"{os.path.dirname(n)}/p{base_opts.instrument_id:03d}{dv:04d}.cap"
         critcount = 0
         if os.path.exists(capfile):
-            cap = 1;
+            cap = 1
             with open(capfile, 'rb') as file:
                 blk = file.read().decode('utf-8', errors='ignore')
                 for line in blk.splitlines():
                     pieces = line.split(',')
                     if len(pieces) >= 4 and pieces[2] == 'C':
-                        critcount = critcount + 1;
+                        critcount = critcount + 1
         else:
-            cap = 0;
+            cap = 0
 
         alertfile = f"{os.path.dirname(n)}/alert_message.html.{dv}"
         if os.path.exists(alertfile):
@@ -670,7 +833,7 @@ def rebuildDB(base_opts, from_cli=False):
         ncfs = sorted(ncfs)
         for filename in ncfs:
             loadFileToDB(base_opts, cur, filename, con)
-        cur.close() 
+        cur.close()
 
     if from_cli:
         updateDBFromPlots(base_opts, ncfs)
@@ -686,14 +849,14 @@ def loadDB(base_opts, filename, from_cli=False):
         cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
         loadFileToDB(base_opts, cur, filename, con)
         cur.close()
-  
+
     if from_cli:
         updateDBFromPlots(base_opts, [filename])
     updateDBFromFM(base_opts, [filename], con)
     updateDBFromFileExistence(base_opts, [filename], con)
 
 def prepDB(base_opts, dbfile=None):
-    if dbfile == None:
+    if dbfile is None:
         con = Utils.open_mission_database(base_opts)
     else:
         con = sqlite3.connect(dbfile)
@@ -702,14 +865,14 @@ def prepDB(base_opts, dbfile=None):
         cur = con.cursor()
         cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
         cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
-        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));");
+        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));")
         cur.close()
 
     con.close()
 
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
-    if con == None:
+    if con is None:
         mycon = Utils.open_mission_database(base_opts)
     else:
         mycon = con
@@ -727,8 +890,8 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
         log_debug(f"Loading {var_n}:{val} dive:{dive_num} to db")
         insertColumn(dive_num, cur, var_n, val, db_type)
         mycon.commit()
- 
-        if con == None:
+
+        if con is None:
             cur.close()
             mycon.close()
     except:
@@ -742,11 +905,11 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
     return 0
 
 def addSlopeValToDB(base_opts, dive_num, var, con):
-    if con == None:
+    if con is None:
         mycon = Utils.open_mission_database(base_opts)
     else:
         mycon = con
-        
+
     try:
         res = mycon.cursor().execute('PRAGMA table_info(dives)')
         vexist = []
@@ -769,31 +932,31 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
             # For very small number of dives, we get
             # RankWarning: Polyfit may be poorly conditioned
             warnings.simplefilter('ignore', numpy.RankWarning)
-            m,b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
+            m,_ = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
         addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
 
-    if con == None:
+    if con is None:
         mycon.close()
 
 def addSession(base_opts, session, con=None):
-    if con == None:
+    if con is None:
         mycon = Utils.open_mission_database(base_opts)
     else:
         mycon = con
-    
+
     try:
-        cur = mycon.cursor();
-        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));");
+        cur = mycon.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));")
         cur.execute("INSERT OR IGNORE INTO calls(dive,cycle,call,lat,lon,epoch,RH,intP,volts10,volts24,pitch,depth) \
-                     VALUES(:dive, :cycle, :call, :lat, :lon, :epoch, :RH, :intP, :volts10, :volts24, :pitch, :depth);", 
+                     VALUES(:dive, :cycle, :call, :lat, :lon, :epoch, :RH, :intP, :volts10, :volts24, :pitch, :depth);",
                     session.to_message_dict())
         mycon.commit()
     except Exception as e:
         log_error(f"{e} inserting comm.log session")
 
-    if con == None:
-        mycon.close();
-    
+    if con is None:
+        mycon.close()
+
 def main():
     """Command line interface for BaseDB"""
     base_opts = BaseOpts.BaseOptions(
