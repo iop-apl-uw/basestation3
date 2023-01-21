@@ -44,10 +44,12 @@ import sys
 import time
 import typing
 import pathlib
+import anyio
 
 import gsw
 import seawater
 import zmq
+import zmq.asyncio
 
 import numpy as np
 import scipy
@@ -1717,11 +1719,21 @@ def notifyVis(glider: int, topic: str, body: str):
     """
 
     p = pathlib.Path("/tmp")
-    topic = "{glider:03d}-{topic}"
+    topic = f"{glider:03d}-{topic}"
+    ctx = zmq.Context()
     for f in p.glob("sanic-*-notify.ipc"):
-        print(f"connecting to {f}")
-        socket = zmq.Context().socket(zmq.PUSH)
-        sockname = f"ipc://{f}"
-        socket.connect(sockname)
+        socket = ctx.socket(zmq.PUSH)
+        socket.connect(f"ipc://{f}")
         socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
+        socket.close()
+
+async def notifyVisAsync(glider: int, topic: str, body: str):
+    p = anyio.Path("/tmp")
+    topic = f"{glider:03d}-{topic}"
+    ctx = zmq.asyncio.Context()
+    async for f in p.glob("sanic-*-notify.ipc"):
+        print(f"sending {topic} {f}")
+        socket = ctx.socket(zmq.PUSH)
+        socket.connect(f"ipc://{f}")
+        await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()

@@ -981,27 +981,23 @@
         wsocket.onmessage = function(e) {
             var line = e.data;
             console.log(line);
-            if (line.startsWith('NEW=')) {
+            if (line.startsWith('CMDFILE=')) {
                 pieces = line.split('=')[1].split(',')
                 glider = pieces[0]
-                which = pieces[1]
-                console.log(glider + ' ' + which);
-{% if runMode == 'pilot' %}
-                if (which == 'cmdfile' && pieces.length == 3) {
-                    d = pieces[2]
-                    $('cmdfileDirective' + glider).innerHTML = d;
-                    $('cmdfileDirective' + glider).style.color = d in directiveColors ? directiveColors[d] : 'black';
-                }
-                else if (which.startsWith('files=perdive')) {
-{% else %}
-                if (which.startsWith('files=perdive')) {
-{% endif %}
+                d = pieces[1]
+                $('cmdfileDirective' + glider).innerHTML = d;
+                $('cmdfileDirective' + glider).style.color = d in directiveColors ? directiveColors[d] : 'black';
+            }
+            else if (line.startswith('NEW=')) {
+                json = JSON.parse(line.slice(4));
+                glider = json['glider'];
+                if ( 'content' in json && json['content'] == "files=perdive") {
                     // the only files we care about is perdive which we use 
                     // to trigger a reload of this tile
                     clearTiles(glider + '_');
                     createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'))
                 }
-                else if (which.startsWith('status')) {
+                else if ('content' in json && json['content'].startsWith('status')) {
                     // the only status message is disconnected
                     $(glider + '_').style.border = '2px solid black';
                 }

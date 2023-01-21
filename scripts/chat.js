@@ -101,7 +101,7 @@
             console.log('image attached');
         }
 
-        console.log(message);
+        // console.log(message);
         formdata.append('message', message);
         /*
         for (k of formdata.keys()) {
@@ -146,7 +146,7 @@
         // console.log(matches);
 
         for (let match of matches) {
-            console.log(match);
+            // console.log(match);
             const { groups: { GDP_G, GDP_D, GDP_P, GD_G, GD_D, DP_D, DP_P, G, D, P, link, text, url }, index } = match;
             const full = match[0];
             // console.log(full);

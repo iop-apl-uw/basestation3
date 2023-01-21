@@ -32,6 +32,7 @@ import sys
 import time
 import traceback
 from urllib.parse import urlencode
+import orjson
 
 import BaseDB
 import BaseDotFiles
@@ -323,15 +324,19 @@ class GliderEarlyGPSClient:
                 )
                 BaseDB.addSession(self.__base_opts, session)
 
+                payload = session.to_message_dict()
                 BaseDotFiles.process_urls(
                     self.__base_opts,
                     send_str,
                     session.sg_id,
                     session.dive_num,
-                    payload=session.to_message_dict(),
+                    payload=payload,
                 )
                 try:
-                    Utils.notifyVis(session.sg_id, "urls-gpsstr", f"gpsstr={send_str}")
+                    # old school gpsstr, just the string - not used
+                    # Utils.notifyVis(session.sg_id, "urls-gpsstr", f"gpsstr={send_str}")
+                    # new school send the whole session as a json dict
+                    Utils.notifyVis(session.sg_id, "urls-gpsstr", orjson.dumps(payload).decode('utf-8'))
                 except:
                     log_error("notifyVis failed", "exc")
 
