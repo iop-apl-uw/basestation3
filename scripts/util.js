@@ -72,46 +72,17 @@ function dd2ddmm(dd) {
     return deg*100 + min;
 }
 
-function commGPSParser(d) {
-    var p = {};
+function positionFix(lat, lon, t) {
+    var fix =   { 
+                    pt: {
+                        lat: lat, 
+                        lon: lon,
+                    },
 
-    pieces = d.split(' ');
-    if (pieces.length != 2) 
-        return null;
+                    t: t,
+                };
 
-    colons = pieces[0].split(':');
-    gps    = pieces[1].split(',');
-    da = parseInt(gps[1].substring(0,2))
-    mo = parseInt(gps[1].substring(2,4))
-    yr = 2000 + parseInt(gps[1].substring(4,6))
-    hr = parseInt(gps[2].substring(0,2))
-    mi = parseInt(gps[2].substring(2,4))
-    se = parseInt(gps[2].substring(4,6))
-    tstr = yr + '-' + mo.zeroPad() + '-' + da.zeroPad()
-           + 'T' + hr.zeroPad() + ':' + mi.zeroPad() + ':' + se.zeroPad() + '.000Z';
-    
-    fix = { pt: { 
-                    lat: ddmm2dd(parseFloat(gps[3])),
-                    lon: ddmm2dd(parseFloat(gps[4]))
-                },
-        
-            t: Date.parse(tstr)/1000,
-          };
-
-    p['fix'] = fix;
- 
-    p['position']     = formatPos(parseFloat(gps[3])) + ',' + formatPos(parseFloat(gps[4])); 
-    p['positionTime'] = tstr.replace('T', ' ');
-    p['RH']    = colons[15];
-    p['intP']  = colons[14];
-    p['volts'] = colons[12];
-    p['pitch'] = colons[10];
-    p['depth'] = colons[11];
-    p['dive']  = colons[0];
-    p['cycle'] = colons[1];
-    p['call']  = colons[2];
-
-    return p;
+    return fix;
 }
 
 function createCookie(name,value,days) {

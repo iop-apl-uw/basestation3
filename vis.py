@@ -606,8 +606,8 @@ def attachHandlers(app: sanic.Sanic):
         message['dive'] = maxdv
         message['engplots'] = engplots
         message['sgplots'] = sgplots
-        message['engplotly'] = engplotly;
-        message['sgplotly'] = sgplotly;
+        message['engplotly'] = engplotly
+        message['sgplotly'] = sgplotly
         message['organization'] = request.app.ctx.organization
         
         message['mission'] = filterMission(glider, request) 
@@ -783,6 +783,11 @@ def attachHandlers(app: sanic.Sanic):
         results, err = await proc.communicate()
         return sanic.response.html(results.decode('utf-8', errors='ignore'))
 
+    #
+    # POST handler - to save files back to basestation
+    #
+
+    # first the safety function
     def applyControls(c, text, filename):
         forbidden = ['shutdown', 'scuttle', 'wipe', 'reboot', 'pdos']
         for nono in forbidden:
@@ -830,10 +835,6 @@ def attachHandlers(app: sanic.Sanic):
                         return status
     
         return False
-
-    #
-    # POST handler - to save files back to basestation
-    #
 
     @app.post('/save/<glider:int>/<which:str>')
     @authorized(modes=['private', 'pilot'], requirePilot=True)
@@ -888,6 +889,8 @@ def attachHandlers(app: sanic.Sanic):
     # from the basestation
     #
 
+    # run a route to receive notifications remotely. Typically only used 
+    # when running vis on a server different from the basestation proper
     @app.route('/url')
     async def urlHandler(request):
         if 'instrument_name' not in request.args:
@@ -902,14 +905,14 @@ def attachHandlers(app: sanic.Sanic):
         if status:
             content = f"status={status}"
             topic = 'status'
+            msg = { "glider": glider, "dive": dive, "content": content, "time": time.time() }
         elif gpsstr:
-            content = f"gpsstr={gpsstr}"
             topic = 'gpsstr'
+            msg = loads(request.json)
         elif files:
             content = f"files={files}" 
             topic = 'files'
-
-        msg = { "glider": glider, "dive": dive, "content": content, "time": time.time() }
+            msg = { "glider": glider, "dive": dive, "content": content, "time": time.time() }
 
         # consider whether this should go to all instances (Utils.notifyVisAsync)
         try:
@@ -1041,33 +1044,50 @@ def attachHandlers(app: sanic.Sanic):
         except Exception as e:
             sanic.log.logger.info(e)
             return sanic.response.text('oops')
-            
+           
+    async def getLatestCall(request, glider, conn=None, limit=1):
+        if conn == None:
+            dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+            myconn = await aiosqlite.connect(dbfile)
+            myconn.row_factory = rowToDict
+        else:
+            myconn = conn
+
+        row = None
+        try:
+            cur = await myconn.cursor()
+            q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT {limit};"
+            await cur.execute(q)
+            row = await cur.fetchall()
+            await cur.close()
+        except Exception as e:
+            sanic.logger.log({e})
+
+        if conn == None:
+            await myconn.close()
+
+        return row
+ 
     @app.websocket('/pos/stream/<glider:int>')
     @authorized()
     async def posStreamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int):
-        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-        conn = await aiosqlite.connect(dbfile)
-        conn.row_factory = rowToDict
-
         socket = zmq.asyncio.Context().socket(zmq.SUB)
         socket.connect(request.app.config.WATCH_IPC)
         socket.setsockopt(zmq.SUBSCRIBE, (f"{glider}-urls-gpsstr").encode('utf-8'))
 
-        prev_t = 0
-        while True:
-            try:
-                cur = await conn.cursor()
-                q = "SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
-                await cur.execute(q)
-                row = await cur.fetchone()
-                await cur.close()
-                if row and row['epoch'] > prev_t:
-                    await ws.send(dumps(row).decode('utf-8'))
-                    prev_t = row['epoch']
-            except Exception as e:
-                pass
+        # we get the first fix out of the db so the user gets the latest 
+        # position if we're between calls
 
+        row = await getLatestCall(request, glider)
+        if row:
+            await ws.send(dumps(row[0]).decode('utf-8'))
+
+        # after that we rely on the notification payload because if we're
+        # running as a remote instance the database won't be synced until
+        # much later
+        while True:
             msg = await socket.recv_multipart()
+            await ws.send(dumps(msg[1]).decode('utf-8'))
  
     @app.websocket('/stream/<which:str>/<glider:int>')
     @authorized()
@@ -1096,7 +1116,11 @@ def attachHandlers(app: sanic.Sanic):
                     await ws.send(data.decode('utf-8', errors='ignore'))
             else:
                 await commFile.seek(0, 2)
-           
+          
+            row = await getLatestCall(request, glider, limit=3)
+            for i in range(len(row)-1, -1, -1):
+                await ws.send(f"NEW={dumps(row[i]).decode('utf-8')}")
+
         (tU, _) = getTokenUser(request)
         
         prev_db_t = time.time()
@@ -1113,7 +1137,6 @@ def attachHandlers(app: sanic.Sanic):
         socket.connect(request.app.config.WATCH_IPC)
         socket.setsockopt(zmq.SUBSCRIBE, (f"{glider}-").encode('utf-8'))
 
-        cmdfilename = f'{gliderPath(glider,request)}/cmdfile'
         
         prev = ""
         while True:
@@ -1130,17 +1153,20 @@ def attachHandlers(app: sanic.Sanic):
                 data = (await commFile.read()).decode('utf-8', errors='ignore')
                 if data:
                     await ws.send(data)
-            elif 'cmdfile' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
-                async with aiofiles.open(cmdfilename, 'rb') as file:
+            elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
+                m = loads(body) 
+                
+                async with aiofiles.open(m['full'], 'rb') as file:
                     body = (await file.read()).decode('utf-8', errors='ignore')
-                    data = "CMDFILE=" + body
-                    await ws.send(data)
-            elif 'cmdfile' in topic:
+                    m.update( { "body": body } )
+                    await ws.send(f"FILE={dumps(m).decode('utf-8')}")
+            elif 'file-cmdfile' in topic:
                 directive = await summary.getCmdfileDirective(cmdfilename)
                 await ws.send(f"CMDFILE={directive}")
             elif 'urls' in topic:
-                m = loads(body)
-                await ws.send(f"NEW={glider},{m['dive']},{m['content']}")
+                # m = loads(body)
+                await ws.send(f"NEW={body}")
+
 
 
     # not protected by decorator - buildAuthTable only returns authorized missions
@@ -1150,7 +1176,6 @@ def attachHandlers(app: sanic.Sanic):
 
         sanic.log.logger.debug("watchHandler start")
         opTable = await buildAuthTable(request, mask)
-        prev_t = 0 
         await ws.send(f"START") # send something to ack the connection opened
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
@@ -1162,22 +1187,25 @@ def attachHandlers(app: sanic.Sanic):
             topic = msg[0].decode('utf-8')
             body  = msg[1].decode('utf-8')
 
-            prev_t = time.time()
-
             pieces = topic.split('-', maxsplit=1)
             glider = int(pieces[0])
             topic  = pieces[1]
 
+            m = next(filter(lambda d: d['glider'] == glider and d['path'] == '', opTable), None)
+            if m is None: # must not be authorized
+                continue
+
             if 'cmdfile' in topic:
                 cmdfile = f"sg{glider:03d}/cmdfile"
-                t = await aiofiles.os.path.getctime(cmdfile)
                 directive = await summary.getCmdfileDirective(cmdfile)
                 sanic.log.logger.debug(f"watch {glider} cmdfile modified")
-                await ws.send(f"NEW={glider:03d},cmdfile,{directive}")
+                await ws.send(f"CMDFILE={glider:03d},{directive}")
             elif 'urls' in topic:
                 m = loads(body)
-                print(f"sending {m['content']}")
-                await ws.send(f"NEW={glider},{m['content']}")
+                if 'glider' not in m:
+                    m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
+                print(m)
+                await ws.send(f"NEW={dumps(m).decode('utf-8')}")
 
     @app.listener("after_server_start")
     async def initApp(app, loop):
@@ -1349,16 +1377,9 @@ async def buildAuthTable(request, mask):
         if status == PERM_REJECT:
             continue
 
-        cmdfile = f"{gliderPath(m['glider'], request, path=m['path'])}/cmdfile"
-        if not await aiofiles.os.path.exists(cmdfile):
-            continue
-
-        path = m['path'] if m['path'] else ""
-        if m['path'] == None:
-            t = await aiofiles.os.path.getctime(cmdfile)
-            opTable.append({"mission": m['mission'] if m['mission'] else '', "glider": m['glider'], "cmdfile": t, "path": path})
-        else: 
-            opTable.append({"mission": m['mission'], "glider": m['glider'], "cmdfile": None, "path": path})
+        path    = m['path'] if m['path'] else ""
+        mission = m['mission'] if m['mission'] else ''
+        opTable.append({ "mission": mission, "glider": m['glider'], "path": path })
 
     return opTable
 
@@ -1399,12 +1420,12 @@ async def buildMissionPlotList(path):
 
 async def checkFilesystemChanges(files):
     mods = []
-    for k,t in files.items():
-        if await aiofiles.os.path.exists(k):
-            n = await aiofiles.os.path.getctime(k)
-            if n > t:
-                files[k] = n
-                mods.append(k)
+    for f in files:
+        if await aiofiles.os.path.exists(f['full']):
+            n = await aiofiles.os.path.getctime(f['full'])
+            if n > f['ctime']:
+                f['ctime'] = n
+                mods.append(f)
 
     return mods
 
@@ -1419,17 +1440,14 @@ async def notifier(config):
     os.umask(msk)
 
     missions = await buildMissionTable(None, config=config)
-    files = {}
+    files = []
     for m in missions:
         if m['path'] == None:
-            for f in ["comm.log", "cmdfile"]:
+            for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat"]:
                 fname = f"sg{m['glider']:03d}/{f}"
-                if await aiofiles.os.path.exists(fname):
-                    t = await aiofiles.os.path.getctime(fname)
-                else:
-                    t = 0
+                files.append( { "glider": m['glider'], "full": fname, "file": f, "ctime": 0 } )
 
-                files.update( { fname: t } )
+    await checkFilesystemChanges(files) # load initial mod times
 
     while True:
         stat = await inbound.poll(2000)
@@ -1440,10 +1458,7 @@ async def notifier(config):
 
         mods = await checkFilesystemChanges(files)
         for f in mods:
-            pieces = f.split('/')
-            fname = pieces[1]
-            glider = pieces[0][2:]
-            msg = [(f"{glider}-{fname}").encode('utf-8'), f"{files[f]}".encode('utf-8')]
+            msg = [(f"{f['glider']}-file-{f['file']}").encode('utf-8'), dumps(f)]
             await socket.send_multipart(msg)
 
 def backgroundWatcher(config):

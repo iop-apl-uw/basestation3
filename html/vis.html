@@ -145,14 +145,12 @@
             var newCmdfile;
             var d, pieces, lines;
             var pt, fix;
-            var prevDate, thisDate, yr, mo, da, hr, mi, se;
             var h;
-            var tstr;
-            const months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12};
             var styles = ["font-weight:bold;", "font-weight:bold; color:red;", "font-weight:bold; color:green;"]
             var bolds = {"targets":0, "science":0, "cmdfile":0, "pdoscmds.bat":0, "Connected":0, "QUIT":1, "RECOV_CODE":1, "GO":2};
 
             var line = e.data;
+            
             if (line.startsWith('START')) {
                 console.log('got START ping');
             }
@@ -165,106 +163,84 @@
             }
 {% endif %}
             else if (line.startsWith('NEW=')) {
-                console.log(line);
-                pieces = line.split('=')[1].split(',');
-                glider  = parseInt(pieces[0]);
-                newDive = parseInt(pieces[1]);
-                which   = pieces[2];
-                if (which == 'files=perdive') {
+                json = JSON.parse(line.slice(4));
+                glider = json['glider'];
+                newDive = json['dive'];
+                if ('content' in json && json['content'] == 'files=perdive') {
                     loadPlots(newDive, true);
                     buildTable(currGlider, newDive);
                 }
+                else if ('lat' in json) {
+                    if (!first) beep();
+                    
+                    connect_t = json['connected'];
+                    if (fixTimer == null) {
+                        updateTimer();
+
+                    }
+
+                    if (fixes.length == 0 || fixes.at(-1).t < json['epoch']) {
+                        console.log('pushing fix at ' + json['epoch']);
+                        fixes.push(positionFix(json['lat'], json['lon'], json['epoch']));
+                    } 
+                    if (fixTimer == null) {
+                        updateTimer();
+                    }
+                    if (fixes.length >= 2) {
+                        var sog, cog, dog, dt;
+                        dt = fixes.at(-1).t - fixes.at(-2).t;
+                        dog = haversine(fixes.at(-1).pt, fixes.at(-2).pt);
+                        cog = bearing(fixes.at(-2).pt, fixes.at(-1).pt);
+                        sog = dog/dt/0.514;
+                        $('SOG').innerHTML = sog.toFixed(2) + 'kts';
+                        $('COG').innerHTML = cog.toFixed(1) + '&deg;';
+                        $('DOG').innerHTML = dog.toFixed(0) + 'm';
+                        $('dt').innerHTML = dt.toFixed(0) + 's';
+                    }
+                    else {
+                        $('SOG').innerHTML = '0';
+                        $('COG').innerHTML = '0';
+                        $('DOG').innerHTML = '0';
+                        $('dt').innerHTML = '0';
+                    }
+
+                    $('position').innerHTML = formatPos(dd2ddmm(json['lat'])) + ',' + formatPos(dd2ddmm(json['lon']));
+                    $('positionTime').innerHTML = '@ ' + new Date(json['epoch']*1000).toISOString().replace('T', ' ').slice(0,-8);
+
+                    $('RH').innerHTML = json['RH'].toFixed(2);
+                    $('intP').innerHTML = json['intP'].toFixed(2);
+                    $('volts').innerHTML = json['volts24'].toFixed(2);
+                    $('pitch').innerHTML = json['pitch'].toFixed(1);
+                    $('depth').innerHTML = json['depth'].toFixed(1);
+                    $('dive').innerHTML = json['dive'];
+                    $('cycle').innerHTML = json['cycle'];
+                    $('call').innerHTML = json['call'];
+                }
                 else {
-                    loadStatus(currGlider, -1);
-                    console.log('unexpected NEW= response');
+                    // loadStatus(currGlider, -1);
+                    console.log('untreated NEW= response');
+                    console.log(line);
                 }
                 // loadLog(newDive);
+                first = false;
             }
 {% if runMode == 'pilot' %}
-            else if (line.startsWith('CMDFILE=')) {
-                newCmdfile = line.split('=')[1];
-                $('cmdfile').value = newCmdfile;
+            else if (line.startsWith('FILE=')) {
+                json = JSON.parse(line.slice(5));
+                $(json['file']).value = json['body'];
             }
-            else {
-                lines = line.split('\n');
+            else { // new comm.log content comes unprefixed
+                line.split('\n');
 
                 var elt = $('commlog');
-                elt.scrollTop = elt.scrollHeight;
                 for (b of Object.keys(bolds)) {
                     line = line.replaceAll(b, '<span style="' + styles[bolds[b]] + '">' + b + '</span>');
                 } 
 
-
                 elt.innerHTML += line;
-                for (d of lines) {
-                    if (d.includes('GPS')) {
-                        p = commGPSParser(d);
-                        if (p != null) {
-                            if (fixes.length == 0 || fixes.at(-1).t < p.fix.t) {
-                                console.log('pushing fix at ' + p.fix.t);
-                                fixes.push(p.fix);
-                            } 
-                            if (fixTimer == null) {
-                                updateTimer();
-                            }
-                            if (fixes.length >= 2) {
-                                var sog, cog, dog, dt;
-                                dt = fixes.at(-1).t - fixes.at(-2).t;
-                                dog = haversine(fixes.at(-1).pt, fixes.at(-2).pt);
-                                cog = bearing(fixes.at(-2).pt, fixes.at(-1).pt);
-                                sog = dog/dt/0.514;
-                                $('SOG').innerHTML = sog.toFixed(2) + 'kts';
-                                $('COG').innerHTML = cog.toFixed(1) + '&deg;';
-                                $('DOG').innerHTML = dog.toFixed(0) + 'm';
-                                $('dt').innerHTML = dt.toFixed(0) + 's';
-                            }
-                            else {
-                                $('SOG').innerHTML = '0';
-                                $('COG').innerHTML = '0';
-                                $('DOG').innerHTML = '0';
-                                $('dt').innerHTML = '0';
-                            } 
-                            
-                            $('position').innerHTML = p.position;
-                            $('positionTime').innerHTML = '@ ' + p.positionTime;
-                            $('RH').innerHTML = p.RH;
-                            $('intP').innerHTML = p.intP;
-                            $('volts').innerHTML = p.volts;
-                            $('pitch').innerHTML = p.pitch;
-                            $('depth').innerHTML = p.depth;
-                            $('dive').innerHTML = p.dive;
-                            $('cycle').innerHTML = p.cycle;
-                            $('call').innerHTML = p.call;
-                        }    
-                    }
-                    else if (d.includes('Connected at')) {
-                        if (!first) beep();
-                        pieces = d.split(' ');
-                        if (pieces.length == 8) {
-                            yr = pieces[7];
-                            mo = months[pieces[3]];
-                            da = parseInt(pieces[4]);
-                            hr = parseInt(pieces[5].split(':')[0]);
-                            mi = parseInt(pieces[5].split(':')[1]);
-                            se = parseInt(pieces[5].split(':')[2]);
-                            tstr = yr + '-' + mo.zeroPad() + '-' + da.zeroPad()
-                                   + 'T' + hr.zeroPad() + ':' + mi.zeroPad() + ':' + se.zeroPad() + '.000Z';
-                            console.log(tstr);
-                            if (pieces[6] == 'PST')
-                                connect_t = Date.parse(tstr)/1000 + 8*3600;
-                            else
-                                connect_t = Date.parse(tstr)/1000 + 7*3600;
-                            if (fixTimer == null) {
-                                updateTimer();
-                            }
-                        }
-                    }
-                }
-                console.log('last line=[' + lines.at(-1) + ']') 
-
-                first = false;
                 elt.scrollTop = elt.scrollHeight;
             }
+
 {% else %}
             else if (line.startsWith('CMDFILE=')) {
                 newDirective = line.split('=')[1];
@@ -324,10 +300,20 @@
         return false;
     }
 
-    function loadControlFile(file, dive) {
+    function loadControlFile(file) {
         fetch(`/control/${currGlider}/${file}${mission()}`)
-        .then(res => res.json())
-        .then(data => {
+        .then(res => res.text())
+        .then(text => {
+            if (text == 'none')
+                return;
+
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log(file + ' ' + text + ' ' + error);
+                return;
+            }
+
             if ('file' in data && data['file'] == file) {
                 $(file).value = data['contents'];
             }
@@ -336,7 +322,7 @@
             }
         })
         .catch(error => {
-            console.log(`${dive}-${file}-${error}`);
+            console.log(`${file}-${error}`);
         })
     }
 
@@ -1419,8 +1405,15 @@
 
     function loadPlotlyControlsXY(glider) {
         fetch(`/dbvars/${glider}${mission()}`)
-        .then(res => res.json())
-        .then(data => {
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log(text);
+                return;
+            }
+
             names = data['names'].sort();
             dv = names.indexOf('dive');
             names.splice(names.indexOf('dive'), 1);
@@ -1459,8 +1452,15 @@
 
     function loadPlotlyControlsTS(glider, dive) {
         fetch(`/timevars/${glider}/${dive}/${mission()}`)
-        .then(res => res.json())
-        .then(data => {
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log(text);
+                return;
+            }
+
             var names = data.map(v => v['var']).sort();
             dv = names.indexOf('time');
             names.splice(names.indexOf('time'), 1);
