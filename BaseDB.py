@@ -941,6 +941,9 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
 def addSession(base_opts, session, con=None):
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
+        if mycon is None:
+            log_error("Failed to open mission db")
+            return
     else:
         mycon = con
 
