@@ -12,6 +12,7 @@
 <script src="/script/plotly-latest.min.js"></script>
 <script src="/script/util.js"></script>
 <script src="/script/dialogs.js"></script>
+<script src="/script/websocket.js"></script>
 {% if runMode == 'pilot' %}
 <script src="/script/chat.js"></script>
 {% endif %}
@@ -88,23 +89,9 @@
 {% endif %}
 
     let wsocket  = null;
-    var lastSetup = 0;
     var first = true;
 
     function setupStream(glider, first, history) {
-        if (Date.now() < lastSetup + 5000) {
-            setTimeout(() => {
-                setupStream(glider, false, history);
-            }, 20000);
-            console.log('too soon');
-            return;
-        }
-
-        lastSetup = Date.now();
-
-        if (wsocket != null) {                  
-            console.log('previous stream exists');
-        }
         console.log('setting up stream');
         var loc = window.location, new_uri;
         if (loc.protocol === "https:")
@@ -127,11 +114,16 @@
         new_uri += "//" + loc.host;
         new_uri += "/stream/" + which + "/" + glider + mission();
         console.log(new_uri);
-        wsocket = new WebSocket(new_uri);
+        wsocket = new ReconnectingWebSocket(new_uri);
+        wsocket.timeoutInterval = 10000;
+        wsocket.debug = true;
+
+        wsocket.onopen = function() {
+            wsocket.url = wsocket.url.replace('init', 'restart');
+        }
 
         wsocket.onerror = function(error) {
             console.log('stream error detected');
-            wsocket.close();
         };
 
         wsocket.onclose = function(e) {
@@ -141,12 +133,10 @@
             else {
                 console.log('connection died');
             }
-            setupStream(glider, false, false);
         };
 
         var lastChat_t = 0;
 
-        var chunk = "";
         wsocket.onmessage = function(e) { 
             var pieces, content, data, i;
             var vals = {};

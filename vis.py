@@ -31,7 +31,7 @@ import base64
 import re
 import zmq
 import zmq.asyncio
-
+import Utils
 
 PERM_INVALID = -1
 PERM_REJECT = 0
@@ -911,6 +911,7 @@ def attachHandlers(app: sanic.Sanic):
 
         msg = { "glider": glider, "dive": dive, "content": content, "time": time.time() }
 
+        # consider whether this should go to all instances (Utils.notifyVisAsync)
         try:
             socket = zmq.asyncio.Context().socket(zmq.PUSH)
             socket.connect(request.app.config.NOTIFY_IPC)
@@ -998,10 +999,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute(q, values)
                 await conn.commit()
 
-                socket = zmq.asyncio.Context().socket(zmq.PUSH)
-                socket.connect(request.app.config.NOTIFY_IPC)
-                await socket.send_multipart([(f"{glider}-chat").encode('utf-8'), (f"{now}").encode('utf-8')]) 
-                socket.close()
+                await Utils.notifyVisAsync(glider, 'chat', f"{now}:{'attachment' if attach else 'none'}:{msg}")
                 return sanic.response.text('SENT')
             except aiosqlite.OperationalError as e:
                 sanic.log.logger.info(e)
@@ -1116,7 +1114,8 @@ def attachHandlers(app: sanic.Sanic):
         socket.setsockopt(zmq.SUBSCRIBE, (f"{glider}-").encode('utf-8'))
 
         cmdfilename = f'{gliderPath(glider,request)}/cmdfile'
-
+        
+        prev = ""
         while True:
             msg = await socket.recv_multipart()
             topic = msg[0].decode('utf-8')
@@ -1165,11 +1164,10 @@ def attachHandlers(app: sanic.Sanic):
 
             prev_t = time.time()
 
-            pieces = topic.split('-')
+            pieces = topic.split('-', maxsplit=1)
             glider = int(pieces[0])
-            topic  = pieces[1:]
+            topic  = pieces[1]
 
-            print(f"{glider} {topic} {body}") 
             if 'cmdfile' in topic:
                 cmdfile = f"sg{glider:03d}/cmdfile"
                 t = await aiofiles.os.path.getctime(cmdfile)
