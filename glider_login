@@ -58,9 +58,9 @@ else
 endif
 
 if (-f .connected) then
-     echo Reconnected at `date +"%a %b %d %R:%S %Z %Y"` >> comm.log
+     echo Reconnected at `date +"%a %b %d %R:%S %Z %Y"` \(${USER}\) >> comm.log
 else
-     echo Connected at `date +"%a %b %d %R:%S %Z %Y"` >> comm.log
+     echo Connected at `date +"%a %b %d %R:%S %Z %Y"` \(${USER}\) >> comm.log
 endif
 
 rm -f .connected

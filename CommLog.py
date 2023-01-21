@@ -273,8 +273,10 @@ class CommLog:
             None if no ID found
         """
         for i in reversed(range(len(self.sessions))):
+            log_debug(f"Instrument ID {self.sessions[i].sg_id}")
             if self.sessions[i].sg_id:
                 return self.sessions[i].sg_id
+        log_debug("No instrument ID found")
         return None
 
     def get_last_dive_num_and_call_counter(self):
@@ -690,6 +692,7 @@ class ConnectSession:
         self.transfered_size = {}
         self.crc_errors = {}
         self.cmd_directive = None
+        self.logout_status = None
         # Dictionary of the file with send retries with in the sesssion
         # This is a rawrcvb thing only
         self.file_retries = collections.defaultdict(int)
@@ -792,6 +795,8 @@ class ConnectSession:
             print("rh %f" % self.rh, file=fo)
         if self.temperature is not None:
             print("temperature %f" % self.temperature, file=fo)
+        if self.logout_status is not None:
+            print("logout_status (%s)" % self.logout_status, file=fo)
         if self.launch_time is not None:
             print(
                 "launch_time %s"
@@ -829,12 +834,13 @@ def crack_connect_line(input_line):
     """Parses out the time stamp from an input line
 
     The expected form of the input is:
-      XXX at Sat Jul 2 01:54:49 PDT 2005
+      XXX at Sat Jul 2 01:54:49 PDT 2005 (optional_payload)
     where XXX is Connected or Reconnected or Disconnected
+
+    There may be optional payload the end - a string enclosed in parens
 
     Returns a struct_time and timezone
     """
-    # set up logging
     log_debug(input_line)
     connect_line = input_line.split(sep=None, maxsplit=2)
     connect_ts_string = connect_line[2].lstrip().rstrip()
@@ -842,7 +848,7 @@ def crack_connect_line(input_line):
     # Split out the timezone
     cts_parts = connect_ts_string.split()
     if len(cts_parts) < 6:
-        return (None, None)
+        return (None, None, None)
     connect_ts_notz_string = "%s %s %s %s %s" % (
         cts_parts[0],
         cts_parts[1],
@@ -859,7 +865,17 @@ def crack_connect_line(input_line):
         )
     except ValueError:
         pass
-    return (connect_ts_tstruct, time_zone)
+
+    payload = None
+    try:
+        if len(cts_parts) == 7:
+            tmp = cts_parts[6].rstrip().lstrip()
+            if len(tmp) > 3 and tmp[0] == "(" and tmp[-1] == ")":
+                payload = tmp[1:-1]
+    except:
+        log_error("Failed to process connect/disconnect payload")
+
+    return (connect_ts_tstruct, time_zone, payload)
 
 
 def is_digit(val):
@@ -1100,7 +1116,7 @@ def process_comm_log(
         # Look backward through the file for the last line starting with "Connected" as starting point
         # If found, any start_pos supplied will be ignored
         if scan_back:
-            print("scanning backwards")
+            log_debug("Scanning backwards")
             try:
                 comm_log_file = open(comm_log_file_name, "rb")
             except IOError:
@@ -1117,6 +1133,9 @@ def process_comm_log(
                     curr_line = comm_log_file.readline().decode()
                     print((curr_line, curr_pos))
                     if curr_line.startswith("Connected"):
+                        log_info(
+                            f"Scan back found connected line pos:{curr_pos} {curr_line}"
+                        )
                         start_pos = curr_pos
                         comm_log_file.close()
                         break
@@ -1124,17 +1143,19 @@ def process_comm_log(
                         comm_log_file.seek(curr_pos - 2, os.SEEK_SET)
             except IOError:
                 # Didn't find a line starting with connected - fall through
-                comm_log_file.close()
+                start_pos = 0
+            comm_log_file.close()
 
         if start_pos >= 0:
             statinfo = os.stat(comm_log_file_name)
             if statinfo.st_size < start_pos:
                 # File got smaller - reparse
-                # print "Resetting starting position (%d,%d)" % (statinfo.st_size,start_pos)
+                log_info(
+                    f"File got samller - resetting starting position from ({statinfo.st_size}, {start_pos})"
+                )
                 start_pos = 0
-            elif statinfo.st_size == start_pos:
-                # Start pos is the same as filesize - nothing to do
-                return (None, start_pos, session, line_count, 0)
+
+        # Start of regular processing
         try:
             comm_log_file = open(comm_log_file_name, "rb")
         except IOError:
@@ -1143,7 +1164,7 @@ def process_comm_log(
 
         log_debug("process_comm_log starting")
         if start_pos >= 0 and statinfo.st_size > start_pos:
-            # print "Resetting to file pos %d" % start_pos
+            log_debug(f"Resetting to file pos ({statinfo.st_size}, {start_pos})")
             comm_log_file.seek(start_pos, 0)
 
         sessions = []
@@ -1200,25 +1221,41 @@ def process_comm_log(
                 continue
 
             if raw_strs[0] == "Connected":
+                # if scan_back:
+                #    log_info("In Connected")
                 if session:
                     log_warning(
                         "Found Connected with no previous Disconnect: file %s, lineno %d"
                         % (comm_log_file_name, line_count)
                     )
-                connect_ts, time_zone = crack_connect_line(raw_line)
+                connect_ts, time_zone, username = crack_connect_line(raw_line)
                 if connect_ts is None:
+                    log_warning(f"Connected line did not have a timestamp ({raw_line})")
                     continue
                 session = ConnectSession(connect_ts, time_zone)
-                # Try to deduce the glider id from the housing directory
-                # This will be updated during the call if any files are transferred
-                try:
-                    m_dir, _ = os.path.split(comm_log_file_name)
-                    _, sg_id = os.path.split(m_dir)
-                    sg_id = int(sg_id[2:])
-                except:
-                    pass
-                else:
-                    session.sg_id = sg_id
+                if (
+                    username is not None
+                    and len(username) >= 5
+                    and username.lower()[0:2] == "sg"
+                ):
+                    try:
+                        sg_id = int(username[2:5])
+                    except ValueError:
+                        pass
+                    else:
+                        session.sg_id = sg_id
+                # log_info(f"sgid:{session.sg_id} {username} {line_count}")
+                if not session.sg_id:
+                    # Try to deduce the glider id from the housing directory
+                    # This will be updated during the call if any files are transferred
+                    try:
+                        m_dir, _ = os.path.split(comm_log_file_name)
+                        _, sg_id = os.path.split(m_dir)
+                        sg_id = int(sg_id[2:])
+                    except:
+                        pass
+                    else:
+                        session.sg_id = sg_id
 
                 raw_file_lines[-1][0] = time.mktime(session.connect_ts)
 
@@ -1229,13 +1266,25 @@ def process_comm_log(
                         log_error("Connected callback failed", "exc")
                 continue
             elif raw_strs[0] == "Reconnected":
-                reconnect_ts, time_zone = crack_connect_line(raw_line)
+                reconnect_ts, time_zone, username = crack_connect_line(raw_line)
                 if reconnect_ts is None:
                     continue
                 raw_file_lines[-1][0] = time.mktime(reconnect_ts)
 
                 if session:
                     session.reconnect_ts = reconnect_ts
+                    if (
+                        username is not None
+                        and len(username) >= 5
+                        and username.lower()[0:2] == "sg"
+                    ):
+                        try:
+                            sg_id = int(username[2:5])
+                        except ValueError:
+                            pass
+                        else:
+                            session.sg_id = sg_id
+
                 else:
                     log_warning(
                         "Found ReConnected outside Connected: file %s, lineno %d "
@@ -1248,13 +1297,14 @@ def process_comm_log(
                         log_error("Reconnected callback failed", "exc")
                 continue
             elif raw_strs[0] == "Disconnected":
-                disconnect_ts, time_zone = crack_connect_line(raw_line)
+                disconnect_ts, time_zone, logout_status = crack_connect_line(raw_line)
                 if disconnect_ts is None:
                     continue
                 raw_file_lines[-1][0] = time.mktime(disconnect_ts)
 
                 if session:
                     session.disconnect_ts = disconnect_ts
+                    session.logout_status = logout_status
                     sessions.append(session)
                 else:
                     log_warning(
