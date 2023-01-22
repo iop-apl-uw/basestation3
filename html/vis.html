@@ -150,7 +150,7 @@
             var bolds = {"targets":0, "science":0, "cmdfile":0, "pdoscmds.bat":0, "Connected":0, "QUIT":1, "RECOV_CODE":1, "GO":2};
 
             var line = e.data;
-            
+            console.log(line);
             if (line.startsWith('START')) {
                 console.log('got START ping');
             }
@@ -230,8 +230,6 @@
                 $(json['file']).value = json['body'];
             }
             else { // new comm.log content comes unprefixed
-                line.split('\n');
-
                 var elt = $('commlog');
                 for (b of Object.keys(bolds)) {
                     line = line.replaceAll(b, '<span style="' + styles[bolds[b]] + '">' + b + '</span>');
@@ -1580,6 +1578,7 @@
         loadControlFile('tcm2mat.cal');
         loadControlFile('pdoscmds.bat');
         loadControlFile('sg_calib_constants.m');
+        $('selectFile').value = 'cmdfile';
 {% endif %}
         loadPlotlyControlsXY(glider);
         loadPlotlyControlsContour(glider);
