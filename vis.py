@@ -908,7 +908,11 @@ def attachHandlers(app: sanic.Sanic):
             msg = { "glider": glider, "dive": dive, "content": content, "time": time.time() }
         elif gpsstr:
             topic = 'gpsstr'
-            msg = loads(request.json)
+            try: 
+                msg = loads(request.json)
+            except Exception as e:
+                sanic.log.logger.info(f"gpsstr body: {e}")
+                msg = {}
         elif files:
             content = f"files={files}" 
             topic = 'files'
@@ -1135,7 +1139,7 @@ def attachHandlers(app: sanic.Sanic):
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
         socket.connect(request.app.config.WATCH_IPC)
-        socket.setsockopt(zmq.SUBSCRIBE, (f"{glider}-").encode('utf-8'))
+        socket.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-").encode('utf-8'))
 
         
         prev = ""
@@ -1153,6 +1157,9 @@ def attachHandlers(app: sanic.Sanic):
                 data = (await commFile.read()).decode('utf-8', errors='ignore')
                 if data:
                     await ws.send(data)
+            elif 'urls' in topic:
+                # m = loads(body)
+                await ws.send(f"NEW={body}")
             elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
                 m = loads(body) 
                 
@@ -1163,9 +1170,6 @@ def attachHandlers(app: sanic.Sanic):
             elif 'file-cmdfile' in topic:
                 directive = await summary.getCmdfileDirective(cmdfilename)
                 await ws.send(f"CMDFILE={directive}")
-            elif 'urls' in topic:
-                # m = loads(body)
-                await ws.send(f"NEW={body}")
 
 
 
@@ -1201,11 +1205,14 @@ def attachHandlers(app: sanic.Sanic):
                 sanic.log.logger.debug(f"watch {glider} cmdfile modified")
                 await ws.send(f"CMDFILE={glider:03d},{directive}")
             elif 'urls' in topic:
-                m = loads(body)
-                if 'glider' not in m:
-                    m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
-                print(m)
-                await ws.send(f"NEW={dumps(m).decode('utf-8')}")
+                print(body)
+                try:
+                    m = loads(body)
+                    if 'glider' not in m:
+                        m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
+                    await ws.send(f"NEW={dumps(m).decode('utf-8')}")
+                except Exception as e:
+                    print(e)
 
     @app.listener("after_server_start")
     async def initApp(app, loop):
@@ -1453,7 +1460,7 @@ async def notifier(config):
         stat = await inbound.poll(2000)
         if stat:
             r = await inbound.recv_multipart()
-            sanic.log.logger.info(r)
+            sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
             await socket.send_multipart(r)
 
         mods = await checkFilesystemChanges(files)

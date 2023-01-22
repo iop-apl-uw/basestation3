@@ -1724,6 +1724,7 @@ def notifyVis(glider: int, topic: str, body: str):
     for f in p.glob("sanic-*-notify.ipc"):
         socket = ctx.socket(zmq.PUSH)
         socket.connect(f"ipc://{f}")
+        log_info(f"notifying {f}:{topic}:{body}")
         socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
 

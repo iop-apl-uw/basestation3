@@ -249,7 +249,13 @@ class GliderEarlyGPSClient:
                     self.__base_opts, send_str, session.sg_id, session.dive_num
                 )
                 try:
-                    Utils.notifyVis(session.sg_id, "urls-status", "status=disconnected")
+                    msg = { 
+                            "glider": session.sg_id, 
+                            "dive": session.dive_num, 
+                            "content": "status=disconnected", 
+                            "time":time.time() 
+                          }
+                    Utils.notifyVis(instrument_id, "urls-status", orjson.dumps(msg).decode('utf-8'))
                 except:
                     log_error("notifyVis failed", "exc")
                 self.cleanup_shutdown()
