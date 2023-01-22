@@ -44,10 +44,12 @@ import sys
 import time
 import typing
 import pathlib
+import anyio
 
 import gsw
 import seawater
 import zmq
+import zmq.asyncio
 
 import numpy as np
 import scipy
@@ -1625,6 +1627,8 @@ def loadmodule(pathname):
 
 
 def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection:
+    import BaseDB
+
     """Opens a mission database file"""
     if not base_opts.mission_dir:
         log_error("mission_dir is not set")
@@ -1634,8 +1638,13 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
         return None
     db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     if not os.path.exists(db):
-        log_error(f"{db} does not exist")
-        return None
+        try:
+            log_info(f"{db} does not exist - creating")
+            BaseDB.prepDB(base_opts, dbfile=db)
+        except Exception as e:
+            log_error(f"error creating DB: {e}")
+            return None
+
     return sqlite3.connect(db)
 
 
@@ -1710,10 +1719,22 @@ def notifyVis(glider: int, topic: str, body: str):
     """
 
     p = pathlib.Path("/tmp")
-    topic = "{glider:03d}-{topic}"
+    topic = f"{glider:03d}-{topic}"
+    ctx = zmq.Context()
     for f in p.glob("sanic-*-notify.ipc"):
-        print(f"connecting to {f}")
-        socket = zmq.Context().socket(zmq.PUSH)
-        socket.connect(f)
+        socket = ctx.socket(zmq.PUSH)
+        socket.connect(f"ipc://{f}")
+        log_info(f"notifying {f}:{topic}:{body}")
         socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
+        socket.close()
+
+async def notifyVisAsync(glider: int, topic: str, body: str):
+    p = anyio.Path("/tmp")
+    topic = f"{glider:03d}-{topic}"
+    ctx = zmq.asyncio.Context()
+    async for f in p.glob("sanic-*-notify.ipc"):
+        print(f"sending {topic} {f}")
+        socket = ctx.socket(zmq.PUSH)
+        socket.connect(f"ipc://{f}")
+        await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()

@@ -101,21 +101,22 @@ def mission_volume(
                 "Could not load implied volmax from the flight model estimate", "exc"
             )
 
-    fig.add_trace(
-        {
-            "name": "Basestation volmax",
-            "x": df["dive"],
-            "y": df["implied_volmax"],
-            "yaxis": "y1",
-            "mode": "lines",
-            "line": {
-                "dash": "solid",
-                "color": "DarkMagenta",
-                "width": 1,
-            },
-            "hovertemplate": "Basestation volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
-        }
-    )
+    if df is not None:
+        fig.add_trace(
+            {
+                "name": "Basestation volmax",
+                "x": df["dive"],
+                "y": df["implied_volmax"],
+                "yaxis": "y1",
+                "mode": "lines",
+                "line": {
+                    "dash": "solid",
+                    "color": "DarkMagenta",
+                    "width": 1,
+                },
+                "hovertemplate": "Basestation volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
+            }
+        )
     if glider_df is not None:
         fig.add_trace(
             {

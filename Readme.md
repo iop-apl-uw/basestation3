@@ -79,7 +79,7 @@ to 2 packages:
 
 ## Installing python
 
-It is recommended that version 3.9.6 of python be installed along the a specific set of 
+It is recommended that version 3.10.7 of python be installed along the a specific set of 
 python support libraries.  The process is as follows:
 
 1. Install preliminaries
@@ -114,7 +114,7 @@ make install
 4. Check build and install 
 
 ``` bash
-/opt/python/3.10.7/bin/python --version
+/opt/python/3.10.7/bin/python3 --version
 ```
 
 ## Install the basestation code and python packages

@@ -151,11 +151,31 @@ def mission_energy(
                     batt_df["dive_end"],
                 )
             )
+        else:
+            scenarios.append(
+                scenario_t(
+                    "Modeled_10V",
+                    batt_df["dive"],
+                    batt_df[f"batt_capacity_10V"],
+                    batt_df["dive_time"],
+                    batt_df["dive_end"],
+                )
+            )
+            scenarios.append(
+                scenario_t(
+                    "Modeled_24V",
+                    batt_df["dive"],
+                    batt_df[f"batt_capacity_24V"],
+                    batt_df["dive_time"],
+                    batt_df["dive_end"],
+                )
+            )
+
             # TODO - comment below
             #
             # scenarios.append(
             #     scenario_t(
-            #         "Fuel Gauge",
+            #         "Fuel_Gauge",
             #         batt_df["dive"],
             #         fg_df[f"fg_batt_capacity_{univolt}"],
             #         batt_df["dive_time"],
@@ -216,7 +236,13 @@ def mission_energy(
                               f"energy_dives_back_{type_str}", 
                               float(p_dives_back));
 
-        # TODO Using the polyfit on the normailzed battery capacity for the fuel guage yields
+        p_dives_back = (
+            base_opts.mission_energy_dives_back
+            if fg_df["dive"].to_numpy()[-1] >= base_opts.mission_energy_dives_back
+            else fg_df["dive"].to_numpy()[-1]
+        )
+
+        # TODO Using the polyfit on the normalized battery capacity for the fuel guage yields
         # roughly 10% less dives then next calc (taken directly from the current matlab code)
         used_to_date = (
             fg_df["log_FG_AHR_24Vo"].to_numpy()[-1]
@@ -227,6 +253,13 @@ def mission_energy(
             + np.sum(fg_df["fg_ah_used_10V"].to_numpy()[-p_dives_back:])
         ) / 10.0
         log_info(f"avg_use:{avg_use}")
+
+        p_dives_back = (
+            base_opts.mission_energy_dives_back
+            if batt_df["dive"].to_numpy()[-1] >= base_opts.mission_energy_dives_back
+            else batt_df["dive"].to_numpy()[-1]
+        )
+
         batt_cap = max(
             batt_df["batt_Ahr_cap_24V"].to_numpy()[-1],
             batt_df["batt_Ahr_cap_10V"].to_numpy()[-1],
