@@ -1193,9 +1193,14 @@ def attachHandlers(app: sanic.Sanic):
     @app.middleware('request')
     async def checkRequest(request):
         
-        if request.app.config.RUNMODE != MODE_PRIVATE and request.app.config.FQDN not in request.headers['host']:
+        if request.app.config.RUNMODE != MODE_PRIVATE and ('FQDN' in request.app.config and request.app.config.FQDN and request.app.config.FQDN != '' and request.app.config.FQDN not in request.headers['host']):
             sanic.log.logger.info(f"request for {request.headers['host']} blocked for lack of FQDN {request.app.config.FQDN}")
-            return sanic.response.text('not found', status=404)
+            return sanic.response.text('not found', status=502)
+        if request.app.config.FORWARDED_SECRET and not request.forwarded:
+            return sanic.response.text('Not Found', status=502)
+       
+        if 'secret' in request.forwarded:
+            del request.forwarded['secret']
 
         return None
 
@@ -1484,7 +1489,7 @@ def createApp(overrides: dict) -> sanic.Sanic:
     if 'USERS_FILE' not in app.config:
         app.config.USERS_FILE = "/home/seaglider/users.dat"
     if 'FQDN' not in app.config:
-        app.config.FQDN = "seaglider.pub"
+        app.config.FQDN = None;
     if 'USER' not in app.config:
         app.config.USER = os.getlogin()
     if 'SINGLE_MISSION' not in app.config:
