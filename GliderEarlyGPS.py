@@ -57,19 +57,7 @@ class GliderEarlyGPSClient:
         self._start_pos = 0
         self._commlog_session = None
         self._commlog_linecount = 0
-        self._last_update = time.time()
-        self._last_cmdfile_mtime = 0
         self.__comm_log = None
-        # CommLog callbacks
-        self._show = "away"
-        self._status = "No status"
-        self._prefix = "No prefix"
-        self._prev_show = None
-        self._prev_status = None
-        self._prev_prefix = None
-        self._recovery_msg = None
-        self._last_cmdfile_directive = ""
-        self._last_dive_call = ""
         self._first_time = True
 
         # Callback functions for the CommLog processor
@@ -97,19 +85,34 @@ class GliderEarlyGPSClient:
                         )
                         self.cleanup_shutdown()
                 if self._first_time:
-                    log_info("First time finished - start_pos:%d" % self._start_pos)
+                    log_info(f"First time finished - start_pos:{self._start_pos}")
                     if not self.__base_opts.instrument_id:
-                        if not self.__comm_log:
-                            log_error(
-                                "comm_log processing failed - cannot set instrument_id"
+                        if (
+                            self._commlog_session is not None
+                            and self._commlog_session.sg_id is not None
+                        ):
+                            # This should work due to the code in Connect that reads the sg_id from the Connect
+                            # line, or uses the name of the mission_directory, which for an active mission should be
+                            # of the form sgXXX.
+                            log_info(
+                                f"Setting instrument_id from most recent session {self._commlog_session.sg_id}"
                             )
+                            self.__base_opts.instrument_id = self._commlog_session.sg_id
                         else:
-                            self.__base_opts.instrument_id = (
-                                self.__comm_log.get_instrument_id()
+                            log_error(
+                                f"Cannot set instrument_id ({self._commlog_session},{self._commlog_session.sg_id})"
                             )
-                            # log_info(
-                            #    f"Set instrument_id to  {self.__base_opts.instrument_id}"
-                            # )
+                        # Using self.__comm_log.get_instrument_id() here is not reliable.  The initial scan back
+                        # happens either before or after the current call's Connected has hit the comm.log - all depending
+                        # on the time it takes to launch and run the start of GliderEarlyGPS.
+                        #
+                        # If before, the comm_log object will have the previous calls session object in the
+                        # self.__comm_log.sessions (assuming the call is not the first call) and
+                        # self.__comm_log.get_instrument_id() will work as it scans the session objects.
+                        #
+                        # If after, self.__comm_log.sessions will be
+                        # empty because the session object is not added to sessions until the Disconnected is seen and in
+                        # this case
                 self._first_time = False
                 if self.__base_opts.csh_pid:
                     if not Utils.check_for_pid(self.__base_opts.csh_pid):
@@ -158,8 +161,8 @@ class GliderEarlyGPSClient:
             log_error("comm_log processing failed", "exc")
             return 1
         else:
-            if self.__comm_log is not None:
-                self._last_update = time.time()
+            if self.__comm_log is None:
+                log_warning(f"No comm_log object returned ret_val:{err_code}")
             return err_code
 
     def closeout_commlog(self):
@@ -322,6 +325,9 @@ class GliderEarlyGPSClient:
                     time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(gliderTime)),
                 )
 
+                log_info(
+                    f"Adding session to basestation ({self.__base_opts.instrument_id})"
+                )
                 BaseDB.addSession(self.__base_opts, session)
 
                 payload = session.to_message_dict()
