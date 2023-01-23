@@ -988,7 +988,7 @@
                 $('cmdfileDirective' + glider).innerHTML = d;
                 $('cmdfileDirective' + glider).style.color = d in directiveColors ? directiveColors[d] : 'black';
             }
-            else if (line.startswith('NEW=')) {
+            else if (line.startsWith('NEW=')) {
                 json = JSON.parse(line.slice(4));
                 glider = json['glider'];
                 if ( 'content' in json && json['content'] == "files=perdive") {
