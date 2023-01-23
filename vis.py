@@ -922,7 +922,7 @@ def attachHandlers(app: sanic.Sanic):
         try:
             socket = zmq.asyncio.Context().socket(zmq.PUSH)
             socket.connect(request.app.config.NOTIFY_IPC)
-            await socket.send_multipart([(f"{glider}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
+            await socket.send_multipart([(f"{glider:03d}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
             socket.close()
         except:
             return sanic.response.text('error')
@@ -1170,7 +1170,8 @@ def attachHandlers(app: sanic.Sanic):
             elif 'file-cmdfile' in topic:
                 directive = await summary.getCmdfileDirective(cmdfilename)
                 await ws.send(f"CMDFILE={directive}")
-
+            else:
+                sanic.log.logger.info(f"unhandled topic {topic}")
 
 
     # not protected by decorator - buildAuthTable only returns authorized missions
@@ -1465,7 +1466,7 @@ async def notifier(config):
 
         mods = await checkFilesystemChanges(files)
         for f in mods:
-            msg = [(f"{f['glider']}-file-{f['file']}").encode('utf-8'), dumps(f)]
+            msg = [(f"{f['glider']:03d}-file-{f['file']}").encode('utf-8'), dumps(f)]
             await socket.send_multipart(msg)
 
 def backgroundWatcher(config):
