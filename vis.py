@@ -32,6 +32,7 @@ import re
 import zmq
 import zmq.asyncio
 import Utils
+import secrets
 
 PERM_INVALID = -1
 PERM_REJECT = 0
@@ -1503,7 +1504,7 @@ def createApp(overrides: dict) -> sanic.Sanic:
     app.config.update(overrides)
 
     if 'SECRET' not in app.config:
-        app.config.SECRET = "SECRET"
+        app.config.SECRET = secrets.token_hex()
     if 'MISSIONS_FILE' not in app.config:
         app.config.MISSIONS_FILE = "/home/seaglider/missions.dat"
     if 'USERS_FILE' not in app.config:
@@ -1576,6 +1577,14 @@ if __name__ == '__main__':
 
     overrides['NOTIFY_IPC'] = f"ipc:///tmp/sanic-{os.getpid()}-notify.ipc" 
     overrides['WATCH_IPC']  = f"ipc:///tmp/sanic-{os.getpid()}-watch.ipc" 
+
+    # set a random SECRET here to be shared by all instances
+    # running on this main process. Restarting the process will
+    # mean all session tokens are invalidated 
+    # use an environment variable SANIC_SECRET to 
+    # make sessions persist across processes
+    if "SANIC_SECRET" not in os.environ:
+        overrides["SECRET"] = secrets.token_hex()
 
     loader = sanic.worker.loader.AppLoader(factory=partial(createApp, overrides))
     app = loader.load()
