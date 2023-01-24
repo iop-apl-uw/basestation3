@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -23,6 +23,9 @@
 
 """
 BaseTime.py: Contains all routines for handling time conversions
+
+Note: These routines are legacy from running the basestations .login/.logout in local time
+In the future, these will be removed.
 
 """
 from datetime import tzinfo, timedelta, datetime

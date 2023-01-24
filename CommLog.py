@@ -821,6 +821,7 @@ class ConnectSession:
             % (len(list(self.crc_errors.keys())), list(self.crc_errors.keys())),
             file=fo,
         )
+        print(self.file_stats, file=fo)
         if self.cmd_directive:
             print(f"cmdfile directive {self.cmd_directive}", file=fo)
         else:
@@ -846,31 +847,42 @@ def crack_connect_line(input_line):
     connect_line = input_line.split(sep=None, maxsplit=2)
     connect_ts_string = connect_line[2].lstrip().rstrip()
     log_debug("connect_string = (%s)" % connect_ts_string)
-    # Split out the timezone
     cts_parts = connect_ts_string.split()
-    if len(cts_parts) < 6:
-        return (None, None, None)
-    connect_ts_notz_string = "%s %s %s %s %s" % (
-        cts_parts[0],
-        cts_parts[1],
-        cts_parts[2],
-        cts_parts[3],
-        cts_parts[5],
-    )
-    time_zone = cts_parts[4]
-    # connect_ts_tstruc = time.strptime(connect_ts_notz_string, "%a %b %d %H:%M:%S %Y")
     connect_ts_tstruct = None
-    try:
-        connect_ts_tstruct = BaseTime.convert_commline_to_utc(
-            connect_ts_notz_string, time_zone
+    if len(cts_parts) <= 2:
+        # UTC ISO8601
+        time_zone = None
+        try:
+            connect_ts_tstruct = time.strptime(
+                cts_parts[0].lstrip().rstrip(), "%Y-%m-%dT%H:%M:%SZ"
+            )
+        except ValueError:
+            pass
+        else:
+            time_zone = "UTC"
+    else:
+        # Split out the timezone
+        if len(cts_parts) < 6:
+            return (None, None, None)
+        connect_ts_notz_string = "%s %s %s %s %s" % (
+            cts_parts[0],
+            cts_parts[1],
+            cts_parts[2],
+            cts_parts[3],
+            cts_parts[5],
         )
-    except ValueError:
-        pass
+        time_zone = cts_parts[4]
+        try:
+            connect_ts_tstruct = BaseTime.convert_commline_to_utc(
+                connect_ts_notz_string, time_zone
+            )
+        except ValueError:
+            pass
 
     payload = None
     try:
-        if len(cts_parts) == 7:
-            tmp = cts_parts[6].rstrip().lstrip()
+        if len(cts_parts) in (2, 7):
+            tmp = cts_parts[-1].rstrip().lstrip()
             if len(tmp) > 3 and tmp[0] == "(" and tmp[-1] == ")":
                 payload = tmp[1:-1]
     except:
@@ -1147,14 +1159,13 @@ def process_comm_log(
                 start_pos = 0
             comm_log_file.close()
 
-        if start_pos >= 0:
-            statinfo = os.stat(comm_log_file_name)
-            if statinfo.st_size < start_pos:
-                # File got smaller - reparse
-                log_info(
-                    f"File got samller - resetting starting position from ({statinfo.st_size}, {start_pos})"
-                )
-                start_pos = 0
+        statinfo = os.stat(comm_log_file_name)
+        if start_pos >= 0 and statinfo.st_size < start_pos:
+            # File got smaller - reparse
+            log_info(
+                f"File got samller - resetting starting position from ({statinfo.st_size}, {start_pos})"
+            )
+            start_pos = 0
 
         # Start of regular processing
         try:
@@ -1164,9 +1175,18 @@ def process_comm_log(
             return (None, None, None, None, 1)
 
         log_debug("process_comm_log starting")
-        if start_pos >= 0 and statinfo.st_size > start_pos:
-            log_debug(f"Resetting to file pos ({statinfo.st_size}, {start_pos})")
-            comm_log_file.seek(start_pos, 0)
+        if start_pos >= 0:
+            statinfo = os.stat(comm_log_file_name)
+            if statinfo.st_size > start_pos:
+                log_debug(f"Resetting to file pos ({statinfo.st_size}, {start_pos})")
+                if comm_log_file.seek(start_pos, 0) != start_pos:
+                    log_warning(f"Seek to {start_pos} failed")
+            elif statinfo.st_size == start_pos:
+                log_debug(
+                    f"size and start are the same ({statinfo.st_size}, {start_pos})"
+                )
+                # Start pos is the same as filesize - nothing to do
+                return (None, start_pos, session, line_count, 0)
 
         sessions = []
         raw_file_lines = []
@@ -1222,8 +1242,8 @@ def process_comm_log(
                 continue
 
             if raw_strs[0] == "Connected":
-                # if scan_back:
-                #    log_info("In Connected")
+                if scan_back:
+                    log_debug("In Connected")
                 if session:
                     log_warning(
                         "Found Connected with no previous Disconnect: file %s, lineno %d"
@@ -1441,21 +1461,41 @@ def process_comm_log(
                     # Crack the leading date
                     ts_line = raw_line.split("[")
                     ts_string = ts_line[0].lstrip().rstrip()
-                    # raw_file_lines[-1][0] = time.mktime(time.strptime(ts_string, "%a %b %d %H:%M:%S %Y"))
-                    raw_file_lines[-1][0] = time.mktime(
-                        BaseTime.convert_commline_to_utc(ts_string, session.time_zone)
-                    )
+                    # Try ISO8601 first
+                    utc_time_stamp = None
+                    try:
+                        utc_time_stamp = time.mktime(
+                            time.strptime(ts_string, "%Y-%m-%dT%H:%M:%SZ")
+                        )
+                    except ValueError:
+                        pass
+                    if utc_time_stamp:
+                        raw_file_lines[-1][0] = utc_time_stamp
+                    else:
+                        # Old version with local time
+                        raw_file_lines[-1][0] = time.mktime(
+                            BaseTime.convert_commline_to_utc(
+                                ts_string, session.time_zone
+                            )
+                        )
 
                     session.sg_id = int(sg_id_tmp[0])
 
                     # RAW or YMODEM files uploaded to the glider
                     # Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile
-                    if len(raw_strs) > 10:
-                        if raw_strs[6] == "Sending":
+                    # or
+                    # 2023-01-23T23:33:33Z [sg095] Sent 15 bytes of pdoscmds.bat
+
+                    # Find the end of the [sgXXX] tag, and work on the end of the string
+
+                    action_strs = raw_line[sgid_re.search(raw_line).end() :].split()
+
+                    if len(action_strs) > 4:
+                        if action_strs[0] == "Sending":
                             try:
-                                filename = raw_strs[10]
+                                filename = action_strs[4]
                                 session.file_stats[filename] = file_stats_nt(
-                                    int(raw_strs[7]), -1, -1, -1
+                                    int(action_strs[1]), -1, -1, -1
                                 )
                             except:
                                 log_error(
@@ -1466,19 +1506,19 @@ def process_comm_log(
                             continue
 
                         if (
-                            raw_strs[6] == "Sent"
+                            action_strs[0] == "Sent"
                             and "/YMODEM" not in raw_line
                             and "/XMODEM" not in raw_line
                         ):
                             # Raw send
                             try:
-                                filename = raw_strs[10]
+                                filename = action_strs[4]
                                 file_transfer_method[filename] = "raw"
                                 session.transfer_method[filename] = "raw"
-                                session.transfered_size[filename] = int(raw_strs[7])
+                                session.transfered_size[filename] = int(action_strs[1])
                                 session.transfer_direction[filename] = "received"
                                 session.file_stats[filename] = file_stats_nt(
-                                    -1, int(raw_strs[7]), int(raw_strs[7]), -1
+                                    -1, int(action_strs[1]), int(action_strs[1]), -1
                                 )
                             except:
                                 log_error(
@@ -1490,22 +1530,22 @@ def process_comm_log(
                             if call_back and "received" in call_back.callbacks:
                                 try:
                                     call_back.callbacks["received"](
-                                        raw_strs[10], int(raw_strs[7])
+                                        action_strs[4], int(action_strs[1])
                                     )
                                 except:
                                     log_error("received callback failed", "exc")
                             continue
 
                     # RAW or YMODEM files downloaded from the glider
-                    if len(raw_strs) >= 11:
+                    if len(action_strs) >= 5:
                         # Tue Oct  6 07:37:38 2020 [sg236] Receiving 8192 bytes of sc0041bg.x02
-                        if raw_strs[6] == "Receiving":
+                        if action_strs[0] == "Receiving":
                             try:
-                                filename = raw_strs[10]
+                                filename = action_strs[4]
                                 if filename in session.file_stats:
                                     session.file_retries[filename] += 1
                                 session.file_stats[filename] = file_stats_nt(
-                                    int(raw_strs[7]), -1, -1, -1
+                                    int(action_strs[1]), -1, -1, -1
                                 )
                             except:
                                 log_error(
@@ -1516,9 +1556,9 @@ def process_comm_log(
                             continue
 
                         # Thu Aug  4 19:49:42 2016 [sg203] Received 386 bytes of br0003lp.x03 (366.2 Bps)
-                        if raw_strs[6] == "Received" and "/YMODEM" not in raw_line:
+                        if action_strs[0] == "Received" and "/YMODEM" not in raw_line:
                             try:
-                                filename = raw_strs[10]
+                                filename = action_strs[4]
                                 if filename not in session.file_stats:
                                     log_warning(
                                         "Found Received for %s with out matching Receiving line"
@@ -1532,20 +1572,20 @@ def process_comm_log(
                                 file_transfer_method[filename] = "raw"
                                 session.transfer_method[filename] = "raw"
                                 session.transfer_direction[filename] = "sent"
-                                session.transfered_size[filename] = int(raw_strs[7])
-                                if len(raw_strs) == 11:
+                                session.transfered_size[filename] = int(action_strs[1])
+                                if len(action_strs) == 5:
                                     session.file_stats[filename] = file_stats_nt(
                                         expected_size,
-                                        int(raw_strs[7]),
-                                        int(raw_strs[7]),
+                                        int(action_strs[1]),
+                                        int(action_strs[1]),
                                         0.0,
                                     )
-                                elif len(raw_strs) == 13:
+                                elif len(action_strs) == 7:
                                     session.file_stats[filename] = file_stats_nt(
                                         expected_size,
-                                        int(raw_strs[7]),
-                                        int(raw_strs[7]),
-                                        float(raw_strs[11].lstrip("(")),
+                                        int(action_strs[1]),
+                                        int(action_strs[1]),
+                                        float(action_strs[5].lstrip("(")),
                                     )
                                 else:
                                     log_warning(
@@ -1564,7 +1604,7 @@ def process_comm_log(
                             if call_back and "transfered" in call_back.callbacks:
                                 try:
                                     call_back.callbacks["transfered"](
-                                        raw_strs[10], int(raw_strs[7])
+                                        action_strs[4], int(action_strs[1])
                                     )
                                 except:
                                     log_error("transfered callback failed", "exc")
@@ -1589,7 +1629,7 @@ def process_comm_log(
                         if filename is not None:
                             if "/YMODEM:" in raw_line:
                                 try:
-                                    transfersize = int(raw_strs[7].strip())
+                                    transfersize = int(action_strs[1].strip())
                                     bps = int(
                                         end.lstrip().split(" ")[2].strip()
                                     )  # bytes per second third string

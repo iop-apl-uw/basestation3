@@ -31,8 +31,7 @@ rm -f .connected
 if ( ! $?logout ) then
     setenv logout manual
 endif
-#echo Disconnected at `date` \(${logout}\) >>! comm.log
-echo Disconnected at `date +"%a %b %d %R:%S %Z %Y"` \(${logout}\) >>! comm.log
+echo Disconnected at `date -u +"%Y-%m-%dT%H:%M:%SZ"` \(${logout}\) >>! comm.log
 printf "\n" >>! comm.log
 printf "\n" >>! comm.log
 
@@ -47,8 +46,8 @@ endif
 printf "\n" >>! baselog.log
 printf "\n"  >>! baselog.log
 
-set base_logout_time = `date +%y%m%d%H%M%S`
-set base_logout_cmd_line = "Base.py --mission_dir `pwd` --verbose --make_dive_profiles --make_mission_profile --make_mission_timeseries --daemon --base_log `pwd`/baselog_`date +%y%m%d%H%M%S` ${GLIDER_OPTIONS}"
+set base_logout_time = `date -u +%y%m%d%H%M%S`
+set base_logout_cmd_line = "Base.py --mission_dir `pwd` --verbose --make_dive_profiles --make_mission_profile --make_mission_timeseries --daemon --base_log `pwd`/baselog_`date -u +%y%m%d%H%M%S` ${GLIDER_OPTIONS}"
 set base_logout_log = `pwd`/baselog.log
 
 if( $?RUNNER_DIR ) then
