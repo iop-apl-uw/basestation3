@@ -32,6 +32,7 @@ import re
 import zmq
 import zmq.asyncio
 import Utils
+import secrets
 
 PERM_INVALID = -1
 PERM_REJECT = 0
@@ -908,7 +909,11 @@ def attachHandlers(app: sanic.Sanic):
             msg = { "glider": glider, "dive": dive, "content": content, "time": time.time() }
         elif gpsstr:
             topic = 'gpsstr'
-            msg = loads(request.json)
+            try: 
+                msg = loads(request.json)
+            except Exception as e:
+                sanic.log.logger.info(f"gpsstr body: {e}")
+                msg = {}
         elif files:
             content = f"files={files}" 
             topic = 'files'
@@ -918,7 +923,7 @@ def attachHandlers(app: sanic.Sanic):
         try:
             socket = zmq.asyncio.Context().socket(zmq.PUSH)
             socket.connect(request.app.config.NOTIFY_IPC)
-            await socket.send_multipart([(f"{glider}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
+            await socket.send_multipart([(f"{glider:03d}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
             socket.close()
         except:
             return sanic.response.text('error')
@@ -1135,7 +1140,7 @@ def attachHandlers(app: sanic.Sanic):
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
         socket.connect(request.app.config.WATCH_IPC)
-        socket.setsockopt(zmq.SUBSCRIBE, (f"{glider}-").encode('utf-8'))
+        socket.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-").encode('utf-8'))
 
         
         prev = ""
@@ -1153,6 +1158,9 @@ def attachHandlers(app: sanic.Sanic):
                 data = (await commFile.read()).decode('utf-8', errors='ignore')
                 if data:
                     await ws.send(data)
+            elif 'urls' in topic:
+                # m = loads(body)
+                await ws.send(f"NEW={body}")
             elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
                 m = loads(body) 
                 
@@ -1163,10 +1171,8 @@ def attachHandlers(app: sanic.Sanic):
             elif 'file-cmdfile' in topic:
                 directive = await summary.getCmdfileDirective(cmdfilename)
                 await ws.send(f"CMDFILE={directive}")
-            elif 'urls' in topic:
-                # m = loads(body)
-                await ws.send(f"NEW={body}")
-
+            else:
+                sanic.log.logger.info(f"unhandled topic {topic}")
 
 
     # not protected by decorator - buildAuthTable only returns authorized missions
@@ -1201,11 +1207,14 @@ def attachHandlers(app: sanic.Sanic):
                 sanic.log.logger.debug(f"watch {glider} cmdfile modified")
                 await ws.send(f"CMDFILE={glider:03d},{directive}")
             elif 'urls' in topic:
-                m = loads(body)
-                if 'glider' not in m:
-                    m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
-                print(m)
-                await ws.send(f"NEW={dumps(m).decode('utf-8')}")
+                print(body)
+                try:
+                    m = loads(body)
+                    if 'glider' not in m:
+                        m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
+                    await ws.send(f"NEW={dumps(m).decode('utf-8')}")
+                except Exception as e:
+                    print(e)
 
     @app.listener("after_server_start")
     async def initApp(app, loop):
@@ -1219,9 +1228,14 @@ def attachHandlers(app: sanic.Sanic):
     @app.middleware('request')
     async def checkRequest(request):
         
-        if request.app.config.RUNMODE != MODE_PRIVATE and request.app.config.FQDN not in request.headers['host']:
+        if request.app.config.RUNMODE != MODE_PRIVATE and ('FQDN' in request.app.config and request.app.config.FQDN and request.app.config.FQDN != '' and request.app.config.FQDN not in request.headers['host']):
             sanic.log.logger.info(f"request for {request.headers['host']} blocked for lack of FQDN {request.app.config.FQDN}")
-            return sanic.response.text('not found', status=404)
+            return sanic.response.text('not found', status=502)
+        if request.app.config.FORWARDED_SECRET and not request.forwarded:
+            return sanic.response.text('Not Found', status=502)
+       
+        if 'secret' in request.forwarded:
+            del request.forwarded['secret']
 
         return None
 
@@ -1453,12 +1467,12 @@ async def notifier(config):
         stat = await inbound.poll(2000)
         if stat:
             r = await inbound.recv_multipart()
-            sanic.log.logger.info(r)
+            sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
             await socket.send_multipart(r)
 
         mods = await checkFilesystemChanges(files)
         for f in mods:
-            msg = [(f"{f['glider']}-file-{f['file']}").encode('utf-8'), dumps(f)]
+            msg = [(f"{f['glider']:03d}-file-{f['file']}").encode('utf-8'), dumps(f)]
             await socket.send_multipart(msg)
 
 def backgroundWatcher(config):
@@ -1491,13 +1505,13 @@ def createApp(overrides: dict) -> sanic.Sanic:
     app.config.update(overrides)
 
     if 'SECRET' not in app.config:
-        app.config.SECRET = "SECRET"
+        app.config.SECRET = secrets.token_hex()
     if 'MISSIONS_FILE' not in app.config:
         app.config.MISSIONS_FILE = "/home/seaglider/missions.dat"
     if 'USERS_FILE' not in app.config:
         app.config.USERS_FILE = "/home/seaglider/users.dat"
     if 'FQDN' not in app.config:
-        app.config.FQDN = "seaglider.pub"
+        app.config.FQDN = None;
     if 'USER' not in app.config:
         app.config.USER = os.getlogin()
     if 'SINGLE_MISSION' not in app.config:
@@ -1564,6 +1578,14 @@ if __name__ == '__main__':
 
     overrides['NOTIFY_IPC'] = f"ipc:///tmp/sanic-{os.getpid()}-notify.ipc" 
     overrides['WATCH_IPC']  = f"ipc:///tmp/sanic-{os.getpid()}-watch.ipc" 
+
+    # set a random SECRET here to be shared by all instances
+    # running on this main process. Restarting the process will
+    # mean all session tokens are invalidated 
+    # use an environment variable SANIC_SECRET to 
+    # make sessions persist across processes
+    if "SANIC_SECRET" not in os.environ:
+        overrides["SECRET"] = secrets.token_hex()
 
     loader = sanic.worker.loader.AppLoader(factory=partial(createApp, overrides))
     app = loader.load()

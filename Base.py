@@ -31,11 +31,12 @@ import cProfile
 import functools
 import glob
 import math
+import orjson
 import os
 import pprint
 import pstats
-import re
 import pdb
+import re
 import shutil
 import signal
 import stat
@@ -2253,7 +2254,8 @@ def main():
     if not base_opts.local:
         BaseDotFiles.process_urls(base_opts, 1, instrument_id, dive_num)
         try:
-            Utils.notifyVis(instrument_id, "urls-files", "files=perdive")
+            msg = { "glider": instrument_id, "dive": dive_num, "content": "files=perdive", "time":time.time() }
+            Utils.notifyVis(instrument_id, "urls-files", orjson.dumps(msg).decode('utf-8'))
         except:
             log_error("notifyVis failed", "exc")
 
@@ -2820,7 +2822,8 @@ def main():
         if not base_opts.local:
             BaseDotFiles.process_urls(base_opts, 2, instrument_id, dive_num)
             try:
-                Utils.notifyVis(instrument_id, "urls-files", "files=all")
+                msg = { "glider": instrument_id, "dive": dive_num, "content": "files=all", "time":time.time() }
+                Utils.notifyVis(instrument_id, "urls-files", orjson.dumps(msg).decode('utf-8'))
             except:
                 log_error("notifyVis failed", "exc")
 
