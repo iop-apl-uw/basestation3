@@ -910,7 +910,7 @@ def attachHandlers(app: sanic.Sanic):
         elif gpsstr:
             topic = 'gpsstr'
             try: 
-                msg = loads(request.json)
+                msg = request.json
             except Exception as e:
                 sanic.log.logger.info(f"gpsstr body: {e}")
                 msg = {}
@@ -1092,7 +1092,8 @@ def attachHandlers(app: sanic.Sanic):
         # much later
         while True:
             msg = await socket.recv_multipart()
-            await ws.send(dumps(msg[1]).decode('utf-8'))
+            sanic.log.logger.info(msg[1])
+            await ws.send(msg[1].decode('utf-8'))
  
     @app.websocket('/stream/<which:str>/<glider:int>')
     @authorized()
