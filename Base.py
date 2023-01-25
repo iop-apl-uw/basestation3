@@ -2845,14 +2845,17 @@ def main():
 
     # looked at processed_other_files list to decide if we should be more
     # granular about what is completed
+    base_completed_name_fullpath = os.path.join(
+        base_opts.mission_dir, base_completed_name
+    )
     try:
-        with open(base_completed_name, "w") as file:
+        with open(base_completed_name_fullpath, "w") as file:
             file.write(
                 "Finished processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
             )
     except:
-        log_error(f"Failed to open {base_completed_name}")
+        log_error(f"Failed to open {base_completed_name_fullpath}")
 
     log_info(
         "Finished processing "

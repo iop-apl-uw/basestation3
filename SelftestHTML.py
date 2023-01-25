@@ -105,7 +105,7 @@ for raw_line in proc.stdout:
         print('<a href="#top">top</a>*<a href="#capture">capture</a>*parameters<br>')
         insideParam = True
         print("<table>")
-        print("<tr><th></th><th>current</th><th>min</th><th>max</th></tr>")
+        print("<tr><th></th><th>parameter</th><th>current</th><th>min</th><th>max</th></tr>")
 
     elif line.find(',SUSR,N,---- Self test') > -1:
         parts = line.split(',')
@@ -128,7 +128,8 @@ for raw_line in proc.stdout:
             parts = line.split(' ')
             
             print('<td style="background-color:%s;">%s</td>' % (pcolors[parts[0]], parts[0]))
-            print("<td>%s</td>" % parts[1])
+            print("<td>%s &nbsp;</td>" % parts[1].split(',')[0])
+            print("<td>%s</td>" % parts[1].split(',')[1])
             print("<td>%s</td>" % parts[4])
             print("<td>%s</td>" % parts[6])
             print("</tr>")
