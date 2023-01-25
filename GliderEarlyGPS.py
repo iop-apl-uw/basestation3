@@ -86,33 +86,49 @@ class GliderEarlyGPSClient:
                         self.cleanup_shutdown()
                 if self._first_time:
                     log_info(f"First time finished - start_pos:{self._start_pos}")
-                    if not self.__base_opts.instrument_id:
-                        if (
-                            self._commlog_session is not None
-                            and self._commlog_session.sg_id is not None
-                        ):
-                            # This should work due to the code in Connect that reads the sg_id from the Connect
-                            # line, or uses the name of the mission_directory, which for an active mission should be
-                            # of the form sgXXX.
-                            log_info(
-                                f"Setting instrument_id from most recent session {self._commlog_session.sg_id}"
-                            )
-                            self.__base_opts.instrument_id = self._commlog_session.sg_id
-                        else:
+                    if (
+                        not self.__base_opts.instrument_id
+                        and self._commlog_session is not None
+                    ):
+                        # If the session object is set, it should contain the sg_id,
+                        # either from sg_id from the Connect line, or uses the name
+                        # of the mission_directory, which for an active mission should be
+                        # of the form sgXXX.
+                        #
+                        # This situation arises when GliderEarlyGPS launches and catches the
+                        # initial Connected line from this active session.  In that case, the
+                        # scan back will stop at the initial Connected, so the session list in the
+                        # comm.log will be empty
+                        #
+                        if self._commlog_session.sg_id is None:
                             log_error(
-                                f"Cannot set instrument_id ({self._commlog_session},{self._commlog_session.sg_id})"
+                                "Session object does not have sg_id set - not setting instrument_id"
                             )
-                        # Using self.__comm_log.get_instrument_id() here is not reliable.  The initial scan back
-                        # happens either before or after the current call's Connected has hit the comm.log - all depending
-                        # on the time it takes to launch and run the start of GliderEarlyGPS.
-                        #
-                        # If before, the comm_log object will have the previous calls session object in the
-                        # self.__comm_log.sessions (assuming the call is not the first call) and
-                        # self.__comm_log.get_instrument_id() will work as it scans the session objects.
-                        #
-                        # If after, self.__comm_log.sessions will be
-                        # empty because the session object is not added to sessions until the Disconnected is seen and in
-                        # this case
+                        else:
+                            self.__base_opts.instrument_id = self._commlog_session.sg_id
+                            log_info(
+                                f"Setting instrument_id from session object {self._commlog_session.sg_id}"
+                            )
+
+                    if (
+                        not self.__base_opts.instrument_id
+                        and self.__comm_log is not None
+                    ):
+                        # This situation arrises when GliderEarlyGPS launches fast enough
+                        # that only the previous session (not the current session) is in the log file.
+                        # In this case, the session object is None because we are outside of a session proper
+                        self.__base_opts.instrument_id = (
+                            self.__comm_log.get_instrument_id()
+                        )
+                        if self.__base_opts.instrument_id:
+                            log_info(
+                                f"Setting instrument_id from session list {self.__base_opts.instrument_id}"
+                            )
+
+                    if not self.__base_opts.instrument_id:
+                        log_error(
+                            f"Failed to set the instrument id ({self.__base_opts.instrument_id})"
+                        )
                 self._first_time = False
                 if self.__base_opts.csh_pid:
                     if not Utils.check_for_pid(self.__base_opts.csh_pid):
@@ -141,6 +157,7 @@ class GliderEarlyGPSClient:
         Returns
             error code from comm.log processing
         """
+        # log_info(f"start_pos in:{self._start_pos}")
         # pylint: disable=C0301
         try:
             (
@@ -161,9 +178,8 @@ class GliderEarlyGPSClient:
             log_error("comm_log processing failed", "exc")
             return 1
         else:
-            if self.__comm_log is None:
-                log_warning(f"No comm_log object returned ret_val:{err_code}")
             return err_code
+        # log_info(f"start_pos out:{self._start_pos}")
 
     def closeout_commlog(self):
         """
@@ -178,7 +194,8 @@ class GliderEarlyGPSClient:
 
         try:
             # (_, fo) = Utils.run_cmd_shell("date")
-            (_, fo) = Utils.run_cmd_shell('date +"%a %b %d %R:%S %Z %Y"')
+            # (_, fo) = Utils.run_cmd_shell('date +"%a %b %d %R:%S %Z %Y"')
+            (_, fo) = Utils.run_cmd_shell('date -u +"%Y-%m-%dT%H:%M:%SZ"')
         except:
             log_error("Error running date", "exc")
         else:
@@ -201,7 +218,8 @@ class GliderEarlyGPSClient:
         Utils.cleanup_lock_file(self.__base_opts, gliderearlygps_lockfile_name)
         log_info(
             "Ended processing "
-            + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            # + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            + time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time()))
         )
         # sys.exit(0)
         # pylint: disable=W0212
@@ -211,14 +229,17 @@ class GliderEarlyGPSClient:
     def callback_connected(self, connect_ts):
         """Callback for a comm.log Connected line"""
         if not self._first_time:
-            msg = "Connected: %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", connect_ts)
+            # msg = "Connected: %s" % time.strftime("%a %b %d %H:%M:%S %Z %Y", connect_ts)
+            msg = "Connected: %s" % time.strftime("%Y-%m-%dT%H:%M:%SZ", connect_ts)
             log_info(msg)
 
     def callback_reconnected(self, reconnect_ts):
         """Callback for a comm.log ReConnected line"""
         if not self._first_time:
             msg = "Reconnected: %s" % time.strftime(
-                "%a %b %d %H:%M:%S %Z %Y", reconnect_ts
+                # "%a %b %d %H:%M:%S %Z %Y", reconnect_ts
+                "%Y-%m-%dT%H:%M:%SZ",
+                reconnect_ts,
             )
             log_info(msg)
 
@@ -234,7 +255,8 @@ class GliderEarlyGPSClient:
                     logout_msg = "Did not see a logout"
 
                 msg = "Disconnected:%s %s" % (
-                    time.strftime("%a %b %d %H:%M:%S %Z %Y", session.disconnect_ts),
+                    # time.strftime("%a %b %d %H:%M:%S %Z %Y", session.disconnect_ts),
+                    time.strftime("%Y-%m-%dT%H:%M:%SZ", session.disconnect_ts),
                     logout_msg,
                 )
                 log_info(msg)
@@ -252,13 +274,15 @@ class GliderEarlyGPSClient:
                     self.__base_opts, send_str, session.sg_id, session.dive_num
                 )
                 try:
-                    msg = { 
-                            "glider": session.sg_id, 
-                            "dive": session.dive_num, 
-                            "content": "status=disconnected", 
-                            "time":time.time() 
-                          }
-                    Utils.notifyVis(instrument_id, "urls-status", orjson.dumps(msg).decode('utf-8'))
+                    msg = {
+                        "glider": session.sg_id,
+                        "dive": session.dive_num,
+                        "content": "status=disconnected",
+                        "time": time.time(),
+                    }
+                    Utils.notifyVis(
+                        session.sg_id, "urls-status", orjson.dumps(msg).decode("utf-8")
+                    )
                 except:
                     log_error("notifyVis failed", "exc")
                 self.cleanup_shutdown()
@@ -322,11 +346,11 @@ class GliderEarlyGPSClient:
                 send_str = '"%s %s %s"' % (
                     Utils.format_lat_lon_dd(gliderLat, "ddmm", True),
                     Utils.format_lat_lon_dd(gliderLon, "ddmm", False),
-                    time.strftime("%Y-%m-%dT%H:%M:%S", time.gmtime(gliderTime)),
+                    time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(gliderTime)),
                 )
 
                 log_info(
-                    f"Adding session to basestation ({self.__base_opts.instrument_id})"
+                    f"Adding session to basestation (sg{self.__base_opts.instrument_id:03d})"
                 )
                 BaseDB.addSession(self.__base_opts, session)
 
@@ -342,7 +366,11 @@ class GliderEarlyGPSClient:
                     # old school gpsstr, just the string - not used
                     # Utils.notifyVis(session.sg_id, "urls-gpsstr", f"gpsstr={send_str}")
                     # new school send the whole session as a json dict
-                    Utils.notifyVis(session.sg_id, "urls-gpsstr", orjson.dumps(payload).decode('utf-8'))
+                    Utils.notifyVis(
+                        session.sg_id,
+                        "urls-gpsstr",
+                        orjson.dumps(payload).decode("utf-8"),
+                    )
                 except:
                     log_error("notifyVis failed", "exc")
 
