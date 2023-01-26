@@ -39,3 +39,4 @@ packages/lrzsz-0.12.20/systype
 packages/lrzsz-0.12.20/testsuite/Makefile
 rawxfer/rawrcv2
 rawxfer/rawsend
+etc
