@@ -545,7 +545,7 @@ def process_pagers(
 
                     elif pagers_tag == "alerts" and "alerts" in tags_to_process:
                         if pagers_convert_msg and pagers_convert_msg != "":
-                            subject_line = "CONVERSION PROBLEMS"
+                            subject_line = "CONVERSION PROBLEMS SG{instrument_id:03d} "
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,
@@ -555,7 +555,7 @@ def process_pagers(
                                 pagers_convert_msg,
                             )
                         if crit_other_message and crit_other_message != "":
-                            subject_line = "CRITICAL ERROR IN CAPTURE"
+                            subject_line = f"CRITICAL ERROR IN CAPTURE SG{instrument_id:03d}"
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,
@@ -565,7 +565,7 @@ def process_pagers(
                                 crit_other_message,
                             )
                         if warn_message and warn_message != "":
-                            subject_line = "ALERTS FROM PROCESSING"
+                            subject_line = f"ALERTS FROM PROCESSING SG{instrument_id:03d}"
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,
@@ -577,7 +577,7 @@ def process_pagers(
 
                     elif pagers_tag == "comp" and "comp" in tags_to_process:
                         if processed_files_message and processed_files_message != "":
-                            subject_line = "Processing Complete"
+                            subject_line = f"Processing Complete SG{instrument_id:03d}"
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,
@@ -589,7 +589,7 @@ def process_pagers(
 
                     elif pagers_tag == "divetar" and "divetar" in tags_to_process:
                         if processed_files_message and processed_files_message != "":
-                            subject_line = "New Dive Tarball(s)"
+                            subject_line = f"New Dive Tarball(s) SG{instrument_id:03d}"
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,
