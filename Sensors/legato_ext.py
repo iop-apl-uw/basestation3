@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -234,6 +234,10 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
         "legatoFast_pressure": "legato_pressure",
         "legatoFast_conducTemp": "legato_conducTemp",
     }
+    if "ignore_truck_legato" in calib_constants and calib_constants["ignore_truck_legato"]:
+        for vval in ["rbr_pressure", "rbr_conduc", "rbr_conducTemp", "rbr_temp"]:
+            replace_dict[vval] = f"ignore_{vval}"
+
     return Utils.remap_column_names(replace_dict, column_names)
 
 
@@ -267,7 +271,6 @@ def remap_instrument_names(base_opts, module, current_names=None):
                 ret_val = 0
     return ret_val
 
-
 def asc2eng(base_opts, module_name, datafile=None):
     """
     Asc2eng processor
@@ -287,6 +290,7 @@ def asc2eng(base_opts, module_name, datafile=None):
     if "rbr.pressure" in datafile.columns:
         if "legato_sealevel" not in datafile.calib_consts:
             log_error("Missing legato_sealevel in sg_calib_constants - bailing out")
+            # If you get here reprocessing old missions, the old hardcoded values was 10082.0
             return -1
         else:
             sealevel = datafile.calib_consts["legato_sealevel"]
