@@ -447,7 +447,7 @@ def plot_vert_vel(
             )
             if not hm_converged:
                 log_warning(
-                    f"Unable to converge during hydro-model calculations (Dive:{dv}, Iteration:{ii})"
+                    f"Unable to converge during hydro-model calculations (Dive:{dive_nc_file.dive_number}, Iteration:{ii})"
                 )
 
             # log_info(f"Iteration {ii}, stalled_pts:{len(stalled_i)}")
