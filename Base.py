@@ -2175,6 +2175,7 @@ def main():
             last_session
             and last_session.cmd_directive
             and "QUIT" in last_session.cmd_directive
+            and not base_opts.force
         ):
             log_info("Skipping flight model due to QUIT command")
         elif skip_mission_processing_event.is_set():
