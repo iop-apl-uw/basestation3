@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -2177,7 +2177,7 @@ def load_dive_profile_data(
         if sg_ct_type == 4 and eng_f.get_col("rbr_pressure") is not None:
 
             rbr_good_press_i_v = np.logical_not(
-                np.np.isnan(eng_f.get_col("rbr_pressure"))
+                np.isnan(eng_f.get_col("rbr_pressure"))
             )
             rbr_pressure = Utils.interp1d(
                 eng_f.get_col("elaps_t")[rbr_good_press_i_v],
