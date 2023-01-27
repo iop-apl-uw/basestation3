@@ -630,7 +630,11 @@ def loadFileToDB(base_opts, cur, filename, con):
     mhead_line = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
     mhead_line = mhead_line.tobytes().decode("utf-8").split(",")
 
-    [mhead, rng, pitchd, wd, theta, dbdw] = list(map(float, mhead_line[:6]))
+    if len(mhead_line) > 4:
+        [mhead, rng, pitchd, wd, theta] = list(map(float, mhead_line[:5]))
+    if len(mhead_line) > 5:
+       dbdw = float(mhead_line[5])
+
     if len(mhead_line) > 6:
         pressureNoise = float(mhead_line[6])
 
