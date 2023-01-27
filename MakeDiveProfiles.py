@@ -3724,7 +3724,7 @@ def make_dive_profile(
             ctd_salin_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
             if eng_f.get_col("rbr_temp") is not None:
                 # Note: this assumes the rbr_pressure, if present, has been interpolated for missing points
-                unsampled_i = np.nonzero(np.np.isnan(ctd_temp_v))[0]
+                unsampled_i = np.nonzero(np.isnan(ctd_temp_v))[0]
                 QC.assert_qc(
                     QC.QC_UNSAMPLED, ctd_temp_qc, unsampled_i, "Legato unsampled"
                 )
