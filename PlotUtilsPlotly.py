@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -24,11 +24,12 @@
 
 """Supporting routines for creating plots from netCDF data
 """
-
+import io
 import os
 import json
 import warnings
 
+import brotli
 import plotly
 import plotly.graph_objects
 import plotly.io
@@ -127,8 +128,13 @@ def write_output_files(base_opts, base_file_name, fig):
 
     # For IOP site - raw div
     output_name = base_file_name + ".div"
+    if base_opts.compress_div:
+        fo_t = io.StringIO()
+    else:
+        fo_t = output_name
+
     fig.write_html(
-        file=output_name,
+        file=fo_t,
         include_plotlyjs=False,
         full_html=False,
         auto_open=False,
@@ -136,6 +142,12 @@ def write_output_files(base_opts, base_file_name, fig):
         config=std_config_dict,
         include_mathjax="cdn",
     )
+
+    if base_opts.compress_div:
+        fo_t.seek(0, 0)
+        with open(output_name, "wb") as fo:
+            fo.write(brotli.compress(fo_t.read().encode("utf-8")))
+        fo_t.close()
     ret_list.append(output_name)
 
     def save_img_file(output_fmt):
@@ -162,6 +174,12 @@ def write_output_files(base_opts, base_file_name, fig):
 
     if base_opts.save_png:
         ret_list.append(save_img_file("png"))
+
+    if base_opts.save_jpg:
+        ret_list.append(save_img_file("jpg"))
+
+    if base_opts.save_webp:
+        ret_list.append(save_img_file("webp"))
 
     if base_opts.save_svg:
         ret_list.append(save_img_file("svg"))
