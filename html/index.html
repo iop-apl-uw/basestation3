@@ -764,9 +764,9 @@
             box.classList.add('imgbox');
             img = document.createElement('img');
             if (plotWhich == 'map')
-                img.src = '/plot/png/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+                img.src = '/plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
             else
-                img.src = '/plot/png/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
+                img.src = '/plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
     
             img.classList.add('dashImg');
      
@@ -824,7 +824,7 @@
             box.classList.add('imgbox');
 
             img = document.createElement('img');
-            img.src = '/plot/png/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+            img.src = '/plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
             img.classList.add('indexImg');
      
             box.appendChild(img);

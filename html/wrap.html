@@ -1,0 +1,76 @@
+
+<script src="/script/plotly-latest.min.js"></script>
+<script src="/script/util.js"></script>
+
+<script>
+    var dive = -1;
+    var which = "";
+    var fmt = "";
+    var glider = -1;
+    var image = "";
+    var currMission = "";
+
+    function mission() {
+        if (currMission != '')
+            return `?mission=${currMission}`;
+        else
+            return '';
+    }
+
+    function loadPlot() {
+        fetch(`/plot/${fmt}/${which}/${glider}/${dive}/${image}${mission()}`)
+        .then(res => res.text())
+        .then(data => {
+            setInnerHTML(document.getElementById('mainDiv'), data);  
+        })
+        .catch(e => {
+            console.log(e);
+        });
+    }
+
+    function changeDive(dir) {
+        dive = dive + dir;
+        if (fmt == 'png' || fmt == 'webp') 
+            document.getElementById('mainImg').src = `/plot/${fmt}/${which}/${glider}/${dive}/${image}/${mission()}`
+        else 
+            loadPlot();
+    }
+
+    function init() {
+        let path = window.location.pathname.substring(1).split('/');
+        let params = new URLSearchParams(window.location.search);
+
+        fmt   = path[1];
+        which = path[2];
+        glider = parseInt(path[3]).toFixed(0);
+        dive = parseInt(path[4]);
+        image = path[5];
+
+        if (params.has('mission')) {
+            currMission = params.get('mission');
+        }
+/*
+        if (fmt == 'png' || fmt == 'webp') {
+            document.getElementById('mainImg').style.display = 'block';
+            document.getElementById('mainDiv').style.display = 'none';
+        }
+        else {
+            document.getElementById('mainImg').style.display = 'none';
+            document.getElementById('mainDiv').style.display = 'block';
+        }
+*/
+        changeDive(0);
+    }
+</script>
+
+<html>
+<body onload="init();">
+     <span onclick="changeDive(-1); return false;" style="text-decoration:none; font-size:32px;">&larr;</span>
+    <span style="font-size:32px;"> &#9863; </span> 
+    <span onclick="changeDive(1); return false;" style="text-decoration:none; font-size:32px;">&rarr;</span> 
+    <div id="mainDiv">
+    </div>
+    <img id="mainImg" style="display:none;">
+    </img>
+</body>
+</html>

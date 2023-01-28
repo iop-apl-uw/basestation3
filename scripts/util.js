@@ -15,6 +15,24 @@ Number.prototype.zeroPad = function() {
         return ('-0'+this).slice(-2);
 }
 
+function setInnerHTML(elm, html) {
+    elm.innerHTML = html;
+
+    Array.from(elm.querySelectorAll("script"))
+      .forEach( oldScriptEl => {
+        const newScriptEl = document.createElement("script");
+
+        Array.from(oldScriptEl.attributes).forEach( attr => {
+            newScriptEl.setAttribute(attr.name, attr.value)
+        });
+
+        const scriptText = document.createTextNode(oldScriptEl.innerHTML);
+        newScriptEl.appendChild(scriptText);
+
+        oldScriptEl.parentNode.replaceChild(newScriptEl, oldScriptEl);
+    });
+}
+
 function bearing(pt1, pt2) {
     var lat2 = pt2.lat*Math.PI/180;
     var lat1 = pt1.lat*Math.PI/180;
