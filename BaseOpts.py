@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -698,7 +698,7 @@ global_options_dict = {
         },
     ),
     "save_png": options_t(
-        True,
+        False,
         (
             "Base",
             "BasePlot",
@@ -707,6 +707,51 @@ global_options_dict = {
         bool,
         {
             "help": "Save PNG versions of plots (plotly output only)",
+            "section": "makeplot",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "plotting",
+        },
+    ),
+    "save_jpg": options_t(
+        False,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--save_jpg",),
+        bool,
+        {
+            "help": "Save JPEG versions of plots (plotly output only)",
+            "section": "makeplot",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "plotting",
+        },
+    ),
+    "save_webp": options_t(
+        True,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--save_webp",),
+        bool,
+        {
+            "help": "Save  versions of plots (plotly output only)",
+            "section": "makeplot",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "plotting",
+        },
+    ),
+    "compress_div": options_t(
+        True,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--compress_div",),
+        bool,
+        {
+            "help": "Save stand alone html files (plotly output only)",
             "section": "makeplot",
             "action": argparse.BooleanOptionalAction,
             "option_group": "plotting",
@@ -723,7 +768,7 @@ global_options_dict = {
         {
             "help": "Save stand alone html files (plotly output only)",
             "section": "makeplot",
-            "action": "store_true",
+            "action": argparse.BooleanOptionalAction,
             "option_group": "plotting",
         },
     ),
