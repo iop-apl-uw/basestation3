@@ -50,7 +50,7 @@ runModes = { 'public': MODE_PUBLIC, 'pilot': MODE_PILOT, 'private': MODE_PRIVATE
 modeNames = ['public', 'pilot', 'private']
 
 protectableRoutes = [
-                        'plot',     # dive plot png/div file
+                        'plot',     # dive plot webp/div file
                         'map',      # leafly map page
                         'kml',      # glider mission KML
                         'data',     # unused - data download?
@@ -341,9 +341,8 @@ def attachHandlers(app: sanic.Sanic):
  
     @app.route('/plot/<fmt:str>/<which:str>/<glider:int>/<dive:int>/<image:str>')
     @authorized()
-    @compress.compress()
     async def plotHandler(request, fmt:str, which: str, glider: int, dive: int, image: str):
-        if fmt not in ['png', 'div']:
+        if fmt not in ['png', 'webp', 'div']:
             return sanic.response.text('not found', status=404)
 
         if which == 'dv':
@@ -361,25 +360,13 @@ def attachHandlers(app: sanic.Sanic):
                 mission = f"?mission={mission}" if mission else ''
                 wrap = '?wrap=page' if mission == '' else '&wrap=page'
 
-                resp = ''
-                if fmt == 'div':
-                    resp = resp + '<script src="/script/plotly-latest.min.js"></script>'
-
-                resp = resp + '<html><head><title>%03d-%d-%s</title></head><body>' % (glider, dive, image)
-
-                if which == 'dv':
-                    resp = resp + f'<a href="/plot/{fmt}/{which}/{glider}/{dive-1}/{image}{mission}{wrap}"style="text-decoration:none; font-size:32px;">&larr;</a><span style="font-size:32px;"> &#9863; </span> <a href="/plot/{fmt}/{which}/{glider}/{dive+1}/{image}{mission}{wrap}" style="text-decoration:none; font-size:32px;">&rarr;</a>'
-
-                if fmt == 'div':
-                    async with aiofiles.open(filename, 'r') as file:
-                        div = await file.read() 
-                else:
-                    div = f'<img src="/plot/{fmt}/{which}/{glider}/{dive}/{image}{mission}">'
-
-                resp = resp + div + '</body></html>'
-                return sanic.response.html(resp)
+                filename = f'{sys.path[0]}/html/wrap.html'
+                return await sanic.response.file(filename, mime_type='text/html')
             else:
-                return await sanic.response.file(filename, mime_type='text/html' if 'fmt' == 'div' else 'image/png')
+                if fmt == 'div':
+                    return await sanic.response.file(filename, mime_type='text/html', headers={'Content-Encoding': 'br'})
+                else:
+                    return await sanic.response.file(filename, mime_type=f"image/{fmt}")
         else:
             return sanic.response.text('not found', status=404)
            
@@ -1399,27 +1386,27 @@ async def buildAuthTable(request, mask):
     return opTable
 
 async def buildDivePlotList(path, dive):
-    exts = [".png", ".div"] 
-    plots = { ".png": [], ".div": [] }
+    exts = [".webp", ".div"] 
+    plots = { ".webp": [], ".div": [] }
     p = Path(path)
     p = p / 'plots' 
     
-    async for fpath in p.glob(f"dv{dive:04d}_*.???"):
+    async for fpath in p.glob(f"dv{dive:04d}_*.*"):
         if fpath.suffix in exts:
             x = parse('dv{}_{}.{}', fpath.name)
             plot = x[1] 
             plots[fpath.suffix].append(plot)
     
-    return (plots[".png"], plots[".div"])
+    return (plots[".webp"], plots[".div"])
  
 async def buildMissionPlotList(path):
-    plots = { "eng": { ".png": [], ".div": [] }, "sg": { ".png": [], ".div": [] } }
+    plots = { "eng": { ".webp": [], ".div": [] }, "sg": { ".webp": [], ".div": [] } }
     maxdv = -1
     p = Path(path)
     p = p / 'plots' 
-    exts = ['.div', '.png']
+    exts = ['.div', '.webp']
     for prefix in ['eng', 'sg']:
-        async for fpath in p.glob(f"{prefix}_*.???"):
+        async for fpath in p.glob(f"{prefix}_*.*"):
             if prefix == 'sg' and '_section_' in fpath.name:
                 continue
 
@@ -1427,7 +1414,7 @@ async def buildMissionPlotList(path):
                 plot = '_'.join(fpath.stem.split('_')[1:])
                 plots[prefix][fpath.suffix].append(plot)
 
-    return (plots['eng']['.png'], plots['sg']['.png'], plots['eng']['.div'], plots['sg']['.div'])
+    return (plots['eng']['.webp'], plots['sg']['.webp'], plots['eng']['.div'], plots['sg']['.div'])
 
 #
 # background main task 

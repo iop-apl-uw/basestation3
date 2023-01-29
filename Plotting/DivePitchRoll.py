@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -199,7 +199,10 @@ def plot_pitch_roll(
     BaseDB.addValToDB(
         base_opts, dive_nc_file.dive_number, "implied_PITCH_GAIN", implied_gain
     )
-    BaseDB.addSlopeValToDB(base_opts, dive_nc_file.dive_number, ["implied_C_PITCH"], None)
+    try:
+        BaseDB.addSlopeValToDB(base_opts, dive_nc_file.dive_number, ["implied_C_PITCH"], None)
+    except:
+        log_error("Failed to add values to database", "exc")
 
     pitchAD_Fit = [min(pitchAD), max(pitchAD)]
     pitch_Fit = (pitchAD_Fit - implied_C) * implied_gain * pitch_cnv
