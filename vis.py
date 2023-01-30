@@ -1054,7 +1054,7 @@ def attachHandlers(app: sanic.Sanic):
             row = await cur.fetchall()
             await cur.close()
         except Exception as e:
-            sanic.logger.log({e})
+            sanic.log.logger.info(e)
 
         if conn == None:
             await myconn.close()
