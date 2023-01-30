@@ -390,7 +390,7 @@
         console.log('plotly available ' + plotly)
         if (!plotly || mobile) {
             setVisibility('mainImage');
-            $('mainImage').src = `/plot/png/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
+            $('mainImage').src = `/plot/webp/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
             $('plotlyPopperOuter').style.display = 'block';
             console.log('popper up');
             if (plotly)
@@ -402,7 +402,7 @@
             else
                 $('plotlyPopperOuter').onclick = function() 
                     { 
-                        popupImage('png', which, currDive, elt); 
+                        popupImage('webp', which, currDive, elt); 
                         return false; 
                     } 
         }
@@ -735,7 +735,7 @@
         div.classList.add('thumbDiv');
         img = document.createElement('img');
         img.classList.add('thumbImg');
-        img.src = '/plot/png/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
+        img.src = '/plot/webp/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
         img.onclick = function() { showPlot(which, p, plotly); };
         img.title = p;
         img.id = 'thumb' + p;
@@ -1788,13 +1788,13 @@
         </div>
     </div>
 
-    <div id="logfileDiv" class="hide" oncontextmenu="parameterHelp('logfile'); return false;" title="right click/long press parameter for help" style="background-color:#dddddd; text-align:left;" >
+    <div id="logfileDiv" class="hide" oncontextmenu="parameterHelp('logfile'); return false;" title="right click/long press parameter for help" style="background-color:#eeeeee; text-align:left;" >
     </div>
 
-    <div id="engfileDiv" class="hide" style="background-color:#dddddd; text-align:left;">
+    <div id="engfileDiv" class="hide" style="background-color:#eeeeee; text-align:left;">
     </div>
 
-    <div id="capfileDiv" class="hide" style="background-color:#dddddd; text-align:left;">
+    <div id="capfileDiv" class="hide" style="background-color:#eeeeee; text-align:left;">
     </div>
 </div>
 
