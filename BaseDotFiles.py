@@ -545,7 +545,7 @@ def process_pagers(
 
                     elif pagers_tag == "alerts" and "alerts" in tags_to_process:
                         if pagers_convert_msg and pagers_convert_msg != "":
-                            subject_line = "CONVERSION PROBLEMS SG{instrument_id:03d} "
+                            subject_line = f"CONVERSION PROBLEMS SG{instrument_id:03d} "
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,
@@ -555,7 +555,9 @@ def process_pagers(
                                 pagers_convert_msg,
                             )
                         if crit_other_message and crit_other_message != "":
-                            subject_line = f"CRITICAL ERROR IN CAPTURE SG{instrument_id:03d}"
+                            subject_line = (
+                                f"CRITICAL ERROR IN CAPTURE SG{instrument_id:03d}"
+                            )
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,
@@ -565,7 +567,9 @@ def process_pagers(
                                 crit_other_message,
                             )
                         if warn_message and warn_message != "":
-                            subject_line = f"ALERTS FROM PROCESSING SG{instrument_id:03d}"
+                            subject_line = (
+                                f"ALERTS FROM PROCESSING SG{instrument_id:03d}"
+                            )
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,
