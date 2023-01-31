@@ -1725,6 +1725,8 @@ def notifyVis(glider: int, topic: str, body: str):
         socket = ctx.socket(zmq.PUSH)
         socket.connect(f"ipc://{f}")
         socket.SNDTIMEO = 200
+        socket.setsockopt(zmq.SNDTIMEO, 200)
+        socket.setsockopt(zmq.LINGER, 0) # this is the important one
         log_info(f"notifying {f}:{topic}:{body}")
         socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
@@ -1738,5 +1740,7 @@ async def notifyVisAsync(glider: int, topic: str, body: str):
         socket = ctx.socket(zmq.PUSH)
         socket.connect(f"ipc://{f}")
         socket.SNDTIMEO = 200
+        socket.setsockopt(zmq.SNDTIMEO, 200)
+        socket.setsockopt(zmq.LINGER, 0) # this is the important one
         await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
