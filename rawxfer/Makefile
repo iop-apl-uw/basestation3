@@ -18,7 +18,7 @@ rawsend: rawsend.o lsyslog.o
 		$(CC) -o rawsend rawsend.o lsyslog.o
 
 install:
-	sudo cp --remove-destination rawsend /usr/local/bin/rawsend
-	sudo cp --remove-destination rawrcv2 /usr/local/bin/rawrcv2
-	sudo ln -s -f /usr/local/bin/rawrcv2 /usr/local/bin/rawrcv
-	sudo ln -s -f /usr/local/bin/rawrcv2 /usr/local/bin/rawrcvb
+	cp --remove-destination rawsend /usr/local/bin/rawsend
+	cp --remove-destination rawrcv2 /usr/local/bin/rawrcv2
+	ln -s -f /usr/local/bin/rawrcv2 /usr/local/bin/rawrcv
+	ln -s -f /usr/local/bin/rawrcv2 /usr/local/bin/rawrcvb

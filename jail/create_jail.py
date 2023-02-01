@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -21,6 +21,7 @@
 ## POSSIBILITY OF SUCH DAMAGE.
 ##
 
+import argparse
 import glob
 import pathlib
 import os
@@ -31,124 +32,222 @@ import pdb
 # pip install pylddwrap
 import lddwrap
 
-f_create = True
-
-# Needs to be run as root
+# Needs to be run as root to create jails
 
 # Note: this script does not setup glider accounts (passwd, shadow, group and shadow group)
 # See ReadMe.md for those instructions
 
-arch_lib_dir =f"{os.uname().machine}-linux-gnu"
 
-ddirs = [
-    "/bin",
-    "/dev",
-    "/etc",
-    "/home",
-    "/lib",
-    f"/lib/{arch_lib_dir}",
-    f"/lib/{arch_lib_dir}/security",
-    "/usr",
-    "/usr/bin",
-    "/usr/local",
-    "/usr/local/bin",
-    "/var",
-    "/var/log",    
-    #"/etc/pam.d",
-    "/usr/local/basestation",
-    "/usr/local/basestation3",
-    "/home/rundir",
-]
-dirs = []
-for dd in ddirs:
-    dirs.append(pathlib.Path(dd))
+class FullPaths(argparse.Action):
+    """Expand user- and relative-paths"""
 
-files_to_copy = set()
-seaglider_files = (
-    "/usr/bin/tcsh",
-    # Start glider_login/glider_logout
-    "/usr/bin/rm",
-    "/usr/bin/touch",
-    "/usr/bin/date",
-    "/usr/bin/printf",
-    "/usr/bin/pwd",
-    "/usr/bin/sleep",
-    # End glider_login/glider_logout
-    "/usr/local/bin/rawrcv2",
-    "/usr/local/bin/rawrcvb",
-    "/usr/local/bin/rawsend",
-    "/usr/local/bin/lsx",
-    "/usr/local/bin/lrx",
-    "/usr/local/bin/lsb",
-    "/usr/local/bin/lrb",
-)
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is not None:
+            setattr(namespace, self.dest, os.path.abspath(os.path.expanduser(values)))
+        else:
+            setattr(namespace, self.dest, values)
 
-for sgf in seaglider_files:
-    path = pathlib.Path(sgf)
-    files_to_copy.add(path)
-    deps = lddwrap.list_dependencies(path=path)
-    for dep in deps:
-        if dep.path:
-            files_to_copy.add(dep.path)
-            # Build a list of directories to be added to the dirs list, adding in descending order
-            parts = dep.path.parts[:-1]
-            accum = pathlib.Path(parts[0])
-            for p in parts[1:]:
-                accum = accum.joinpath(p)
-                if accum not in dirs:
-                    dirs.append(accum)
 
-pam_related_libs = [
-    f"/lib/{arch_lib_dir}/libnss_files*",
-    f"/lib/{arch_lib_dir}/libnss_compat*",
-    f"/lib/{arch_lib_dir}/libnsl*",
-    f"/lib/{arch_lib_dir}/security/*",
+# TODO - need to setup pilot/runner jail (see if that works)
+
+
+def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
+
+    jail_root = pathlib.Path(jail_root_name)
+
+    arch_lib_dir = f"{os.uname().machine}-linux-gnu"
+
+    ddirs = [
+        "/bin",
+        "/dev",
+        "/etc",
+        "/home",
+        "/home/rundir",
+        "/lib",
+        f"/lib/{arch_lib_dir}",
+        f"/lib/{arch_lib_dir}/security",
+        "/usr",
+        "/usr/bin",
+        "/usr/local",
+        "/usr/local/bin",
+        "/var",
+        "/var/log",
+        # "/etc/pam.d",
+        "/usr/local/basestation",
+        "/usr/local/basestation3",
+        "/home/rundir",
+    ]
+    dirs = []
+    for dd in ddirs:
+        dirs.append(pathlib.Path(dd))
+
+    files_to_copy = set()
+    seaglider_files = (
+        "/usr/bin/tcsh",
+        # Start glider_login/glider_logout
+        "/usr/bin/rm",
+        "/usr/bin/touch",
+        "/usr/bin/date",
+        "/usr/bin/printf",
+        "/usr/bin/pwd",
+        "/usr/bin/sleep",
+        # End glider_login/glider_logout
+        "/usr/local/bin/rawrcv2",
+        "/usr/local/bin/rawrcvb",
+        "/usr/local/bin/rawsend",
+        # For coompressed log and profile for pilot jail
+        # "/usr/local/bin/x3decode",
+        # "/usr/local/bin/log",
+        "/usr/local/bin/lsx",
+        "/usr/local/bin/lrx",
+        "/usr/local/bin/lsb",
+        "/usr/local/bin/lrb",
+    )
+
+    for script_file in [
+        "/usr/local/basestation/glider_login",
+        "/usr/local/basestation/glider_logout",
+        "/usr/local/basestation3/glider_login",
+        "/usr/local/basestation3/glider_logout",
+    ]:
+        files_to_copy.add(pathlib.Path(script_file))
+
+    for sgf in seaglider_files:
+        path = pathlib.Path(sgf)
+        files_to_copy.add(path)
+        deps = lddwrap.list_dependencies(path=path)
+        for dep in deps:
+            if dep.path:
+                files_to_copy.add(dep.path)
+                # Build a list of directories to be added to the dirs list, adding in descending order
+                parts = dep.path.parts[:-1]
+                accum = pathlib.Path(parts[0])
+                for p in parts[1:]:
+                    accum = accum.joinpath(p)
+                    if accum not in dirs:
+                        dirs.append(accum)
+
+    pam_related_libs = [
+        f"/lib/{arch_lib_dir}/libnss_files*",
+        f"/lib/{arch_lib_dir}/libnss_compat*",
+        f"/lib/{arch_lib_dir}/libnsl*",
+        f"/lib/{arch_lib_dir}/security/*",
     ]
 
-for gg in pam_related_libs:
-    for m in glob.glob(gg):
-        f_tmp = pathlib.Path(m)
-        files_to_copy.add(f_tmp)
+    for gg in pam_related_libs:
+        for m in glob.glob(gg):
+            f_tmp = pathlib.Path(m)
+            files_to_copy.add(f_tmp)
 
-tree_copy = ["/lib/terminfo", "/etc/pam.d"]
-    
-# cp /lib/aarch64-linux-gnu/libnss_files-2.31.so /home/jail/lib/aarch64-linux-gnu/libnss_files-2.31.so
-# cp /lib/aarch64-linux-gnu/libnss_files.so.2 /home/jail/lib/aarch64-linux-gnu/libnss_files.so.2
-# cp /lib/aarch64-linux-gnu/libnss_files.so /home/jail/lib/aarch64-linux-gnu/libnss_files.so
-# cp /lib/aarch64-linux-gnu/libnss_compat-2.31.so /home/jail/lib/aarch64-linux-gnu/libnss_compat-2.31.so
-# cp /lib/aarch64-linux-gnu/libnss_compat.so.2 /home/jail/lib/aarch64-linux-gnu/libnss_compat.so.2
-# cp /lib/aarch64-linux-gnu/libnss_compat.so /home/jail/lib/aarch64-linux-gnu/libnss_compat.so
-# cp /lib/aarch64-linux-gnu/libnsl-2.31.so /home/jail/lib/aarch64-linux-gnu/libnsl-2.31.so
-# cp /lib/aarch64-linux-gnu/libnsl.so.1 /home/jail/lib/aarch64-linux-gnu/libnsl.so.1
-# cp /lib/aarch64-linux-gnu/libnsl.a /home/jail/lib/aarch64-linux-gnu/libnsl.a
-# cp /lib/aarch64-linux-gnu/libnsl.so /home/jail/lib/aarch64-linux-gnu/libnsl.so
-# cp /lib/aarch64-linux-gnu/security/* /home/jail/lib/security/
-    
-jail_root = pathlib.Path("/home/jail")
+    tree_copy = ["/lib/terminfo", "/etc/pam.d"]
 
-print(f"Dirs to create {dirs}")
-print(f"Files to copy {files_to_copy}")
+    # cp /lib/aarch64-linux-gnu/libnss_files-2.31.so /home/jail/lib/aarch64-linux-gnu/libnss_files-2.31.so
+    # cp /lib/aarch64-linux-gnu/libnss_files.so.2 /home/jail/lib/aarch64-linux-gnu/libnss_files.so.2
+    # cp /lib/aarch64-linux-gnu/libnss_files.so /home/jail/lib/aarch64-linux-gnu/libnss_files.so
+    # cp /lib/aarch64-linux-gnu/libnss_compat-2.31.so /home/jail/lib/aarch64-linux-gnu/libnss_compat-2.31.so
+    # cp /lib/aarch64-linux-gnu/libnss_compat.so.2 /home/jail/lib/aarch64-linux-gnu/libnss_compat.so.2
+    # cp /lib/aarch64-linux-gnu/libnss_compat.so /home/jail/lib/aarch64-linux-gnu/libnss_compat.so
+    # cp /lib/aarch64-linux-gnu/libnsl-2.31.so /home/jail/lib/aarch64-linux-gnu/libnsl-2.31.so
+    # cp /lib/aarch64-linux-gnu/libnsl.so.1 /home/jail/lib/aarch64-linux-gnu/libnsl.so.1
+    # cp /lib/aarch64-linux-gnu/libnsl.a /home/jail/lib/aarch64-linux-gnu/libnsl.a
+    # cp /lib/aarch64-linux-gnu/libnsl.so /home/jail/lib/aarch64-linux-gnu/libnsl.so
+    # cp /lib/aarch64-linux-gnu/security/* /home/jail/lib/security/
 
-jail_root.mkdir(exist_ok=True)
+    print(f"Dirs to create {dirs}")
+    print(f"Files to copy {files_to_copy}")
 
-for dd in dirs:
-    tgt_dir = jail_root.joinpath(str(dd)[1:])
-    print(tgt_dir)
-    if f_create:
-        tgt_dir.mkdir(exist_ok=True)
-        shutil.copymode(dd, tgt_dir)
-        stat_info = os.stat(dd)
-        os.chown(tgt_dir, stat_info.st_uid, stat_info.st_gid)
+    jail_root.mkdir(exist_ok=True)
 
-for ff in files_to_copy:
-    tgt_file = jail_root.joinpath(str(ff)[1:])
-    print(ff, tgt_file)
-    if f_create:
-        shutil.copy2(ff, tgt_file)
+    for dd in dirs:
+        tgt_dir = jail_root.joinpath(str(dd)[1:])
+        print(tgt_dir)
+        if f_create:
+            tgt_dir.mkdir(exist_ok=True)
+            shutil.copymode(dd, tgt_dir)
+            stat_info = os.stat(dd)
+            os.chown(tgt_dir, stat_info.st_uid, stat_info.st_gid)
+
+    for ff in files_to_copy:
+        tgt_file = jail_root.joinpath(str(ff)[1:])
+        print(ff, tgt_file)
+        if f_create:
+            shutil.copy2(ff, tgt_file)
+
+    for tree in tree_copy:
+        tgt_tree = jail_root.joinpath(str(tree)[1:])
+        print(tree, tgt_tree)
+        if f_create:
+            shutil.copytree(tree, tgt_tree, dirs_exist_ok=True)
+
+    if glider_home_dir:
+        if glider_home_dir_target:
+            tgt_dir = jail_root.joinpath(str(glider_home_dir_target)[1:])
+        else:
+            tgt_dir = jail_root.joinpath(str(glider_home_dir)[1:])
+        print(glider_home_dir, tgt_tree)
+        if f_create:
+            tgt_dir.mkdir(exist_ok=True)
+            shutil.copymode(glider_home_dir, tgt_dir)
+            stat_info = os.stat(glider_home_dir)
+            os.chown(tgt_dir, stat_info.st_uid, stat_info.st_gid)
+        src_files = []
+        for m in glob.glob(os.path.join(glider_home_dir, "*")):
+            src_files.append(m)
+        for m in glob.glob(os.path.join(glider_home_dir, ".*")):
+            src_files.append(m)
+        for src_file in src_files:
+            tgt_file = os.path.join(tgt_dir, os.path.split(src_file)[1])
+            print(src_file, tgt_file)
+            if f_create:
+                shutil.copy(src_file, tgt_file)
+                shutil.copystat(src_file, tgt_file)
+                shutil.copymode(src_file, tgt_file)
+                stat_info = os.stat(src_file)
+                os.chown(tgt_file, stat_info.st_uid, stat_info.st_gid)
 
 
-for tree in tree_copy:
-    tgt_tree = jail_root.joinpath(str(tree)[1:])
-    print(tree, tgt_tree)
-    shutil.copytree(tree, tgt_tree, dirs_exist_ok=True)
-    
+if __name__ == "__main__":
+    ap = argparse.ArgumentParser(description=__doc__)
+    # Add verbosity arguments
+
+    # ap.add_argument(
+    #    "--verbose", default=False, action="store_true", help="enable verbose output"
+    # )
+    ap.add_argument(
+        "jail_root",
+        help="Root of the new jail",
+        action=FullPaths,
+    )
+    ap.add_argument(
+        "--create",
+        help="Create the jail",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    ap.add_argument(
+        "--glider_dir",
+        help="Path to glider directory to include in the jail",
+        action=FullPaths,
+        default=None,
+    )
+    ap.add_argument(
+        "--glider_dir_target",
+        help="Location in jail for glider directory",
+        action=FullPaths,
+        default=None,
+    )
+
+    args = ap.parse_args()
+
+    # Add option to include a glider directory in the jail
+
+    mk_jail(args.jail_root, args.glider_dir, args.glider_dir_target, args.create)
+    print(f"Jail created in {args.jail_root}")
+
+    if args.glider_dir:
+        print(
+            "You need to create/update the /etc/group, /etc/passwd and /etc/shadow in the jail"
+        )
+        print(
+            f"Update /etc/password the glider entry to have {args.jail_root} for the home directory and /sbin/chrootshell for the shell"
+        )

@@ -79,7 +79,7 @@ to 2 packages:
 
 ## Installing python
 
-It is recommended that version 3.10.7 of python be installed along the a specific set of 
+It is recommended that version 3.10.9 of python be installed along the a specific set of 
 python support libraries.  The process is as follows:
 
 1. Install preliminaries
@@ -100,10 +100,10 @@ cd /tmp/Python3.10
 3. Download python source distribution and build.  Depending on your machine, this can take a while
 
 ```
-wget https://www.python.org/ftp/python/3.10.7/Python-3.10.7.tar.xz
-tar xvf Python-3.10.7.tar.xz
-cd Python-3.10.7
-./configure --enable-optimizations --prefix /opt/python/3.10.7
+wget https://www.python.org/ftp/python/3.10.9/Python-3.10.9.tar.xz
+tar xvf Python-3.10.9.tar.xz
+cd Python-3.10.9
+./configure --enable-optimizations --prefix /opt/python/3.10.9
 make 
 
 sudo mkdir /opt/python
@@ -114,7 +114,7 @@ make install
 4. Check build and install 
 
 ``` bash
-/opt/python/3.10.7/bin/python3 --version
+/opt/python/3.10.9/bin/python3 --version
 ```
 
 ## Install the basestation code and python packages
@@ -137,7 +137,7 @@ rm -rf /opt/basestation
 then
 
 ```
-/opt/python/3.10.7/bin/python3 -m venv /opt/basestation
+/opt/python/3.10.9/bin/python3 -m venv /opt/basestation
 /opt/basestation/bin/pip install -r /usr/local/basestation3/requirements.txt
 ```
 
@@ -145,12 +145,12 @@ then
    using the command "sudo tar xvzf packages.tgz"
 6. In /usr/local/Base-3.01, run "sudo ./install_base.sh" to install the basestation code into /usr/local/basestation
 
-7. In /usr/local/Base-3.01 run "sudo ./setup_users.sh" to setup the pilot and sg000 accounts
+7. In /usr/local/Base-3.01 run "sudo ./setup_users.sh" to setup the pilot
 
 -- OR --
 
 8a. As root, create a user group called gliders
-8b. Create the following users and make /bin/csh their login shell:
+8b. Create the following users and make /usr/bin/csh their login shell:
 
 	pilot
 		- write access to all gliders directories
@@ -163,8 +163,7 @@ then
 10) Make sure you have Python installed.  See notes above for Python version issues.  
 Use 'python --version' to determine the version.
 
-There are several additional packages you will need that are not distributed with
-the basestation:
+## TODO - insert setup of /usr/local/basestation/glider_login and glider_logout
 
 ## Install lrzsz
 To maintain a log of xmodem communications progress ('comm.log') you must install

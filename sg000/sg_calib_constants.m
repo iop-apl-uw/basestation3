@@ -4,7 +4,7 @@
 % This file is an example and MUST be changed apprpriately for your vehicle.
 
 id_str = '000';
-mission_title =' 2006';
+mission_title ='No Mission Specified';
 
 mass = 52.173; % (kg) scale weight
 mass_comp = 0;
@@ -22,11 +22,3 @@ c_i = -2.35632554e-03 ;
 c_j =  2.37469252e-04 ;
 cpcor = -9.57e-08 ;
 ctcor =  3.25e-06 ;
-
-calibcomm_oxygen = 'SBE 43F s/n 0106 calibation 1 April 2006';
-Soc = 2.1921e-04;
-Boc = 0.0;
-Foffset = -825.6362;
-TCor = 0.0017;
-PCor = 1.350e-04;
-
