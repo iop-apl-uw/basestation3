@@ -910,6 +910,9 @@ def attachHandlers(app: sanic.Sanic):
         try:
             socket = zmq.asyncio.Context().socket(zmq.PUSH)
             socket.connect(request.app.config.NOTIFY_IPC)
+            socket.setsockopt(zmq.SNDTIMEO, 200)
+            socket.setsockopt(zmq.LINGER, 0)
+            socket.set
             await socket.send_multipart([(f"{glider:03d}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
             socket.close()
         except:
@@ -1053,7 +1056,7 @@ def attachHandlers(app: sanic.Sanic):
             row = await cur.fetchall()
             await cur.close()
         except Exception as e:
-            sanic.logger.log({e})
+            sanic.log.logger.info(e)
 
         if conn == None:
             await myconn.close()
@@ -1436,6 +1439,8 @@ async def notifier(config):
     ctx = zmq.asyncio.Context()
     socket = ctx.socket(zmq.PUB)
     socket.bind(config.WATCH_IPC)
+    socket.setsockopt(zmq.SNDTIMEO, 200)
+    socket.setsockopt(zmq.LINGER, 0)
 
     inbound = ctx.socket(zmq.PULL)
     inbound.bind(config.NOTIFY_IPC)
