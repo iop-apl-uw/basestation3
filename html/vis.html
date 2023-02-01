@@ -1650,6 +1650,24 @@
             $('plotRibbonBox').style.display = 'none';
     }
 
+{% if runMode == 'pilot' %}
+    var rightMode = 'grid';
+    function toggleRight() {
+        const collection = document.getElementsByClassName("plotly-graph-div"); 
+        if ($('right').style.display == 'none') {
+            $('right').style.display = rightMode;
+            $('toggleRight').innerHTML = 'Hide pilot';
+            Plotly.Plots.resize(collection[0]);
+        }
+        else {
+            rightMode = $('right').style.display;
+            $('right').style.display = 'none';
+            $('toggleRight').innerHTML = 'Show pilot';
+            Plotly.Plots.resize(collection[0]);
+        }
+    }
+{% endif %}
+        
 </script>
 
 <html>
@@ -1663,6 +1681,9 @@
 {% endif %}
     <span class="spanClick" onclick="openAboutForm(); return false;">About</span> <b>&#124;</b>
     <span class="spanClick" onclick="popupPosition(); return false;">Position</span>
+{% if runMode == 'pilot' %}
+    <span class="spanClick" id="toggleRight" style="float:right; padding-right: 10px;" onclick="toggleRight(); return false;">Hide pilot</span>
+{% endif %}
 </div>
 
 <div id="bodyView">
@@ -1858,7 +1879,7 @@
     </div>
 
     <div id="divCmdfile">
-        <div id="cmdfileEditClose" onclick="defocusEditWindow(); return false;"><b>&#10060;</b></div>
+        <div id="cmdfileEditClose" style="display:none;" onclick="defocusEditWindow(); return false;"><b>&#10060;</b></div>
         <textarea id="cmdfile" class="editFile" oncontextmenu="parameterHelp('cmdfile'); return false;">
         </textarea>
         <textarea id="targets" class="editFile" hidden="hidden"></textarea>

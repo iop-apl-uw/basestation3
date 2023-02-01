@@ -123,7 +123,7 @@
             /* position: relative; */
             display: grid;
             grid-template-columns: auto;
-            grid-template-rows: 0.55fr 50px 150px 0.45fr;
+            grid-template-rows: 0.55fr 50px 150px max-content;
             grid-template-areas:
                 "main"
                 "toolbar"
@@ -331,7 +331,7 @@
             /* position: relative; */
             display: grid;
             grid-template-rows: 100%;
-            grid-template-columns: 50px calc(95% - 50px) 70vw;
+            grid-template-columns: 50px calc(95% - 50px) max-content;
             grid-template-areas:
                 "toolbar main right";
             height: 96vh;
@@ -592,7 +592,7 @@
     #bodyView {
         /* position: relative; */
         display: grid;
-        grid-template-columns: 50px 1fr 600px;
+        grid-template-columns: 50px 1fr max-content;
         grid-template-rows: 0.98fr 205px;
         grid-template-areas:
             "toolbar main right"
