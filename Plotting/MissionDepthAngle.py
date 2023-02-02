@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -52,7 +52,7 @@ DEBUG_PDB = False
 def mission_depthangle(
     base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
 ) -> tuple[list, list]:
-    """Plots surface depth and angle """
+    """Plots surface depth and angle"""
 
     conn = Utils.open_mission_database(base_opts)
     if not conn:
@@ -109,12 +109,13 @@ def mission_depthangle(
             "xaxis": {
                 "title": "Dive Number",
                 "showgrid": True,
+                "domain": [0, 0.95],
             },
             "yaxis": {
                 "title": "Surface Maneuver Depth (m)",
                 "showgrid": True,
                 "tickformat": ".1f",
-                'autorange' : 'reversed',
+                "autorange": "reversed",
             },
             "yaxis2": {
                 "title": "Surface Maneuver Angle (deg)",
@@ -122,7 +123,7 @@ def mission_depthangle(
                 "side": "right",
                 "showgrid": False,
                 "tickformat": "-.0f",
-                'autorange' : 'reversed',
+                "autorange": "reversed",
             },
             "title": {
                 "text": title_text,
