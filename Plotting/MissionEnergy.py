@@ -92,7 +92,7 @@ def mission_energy(
         log_error("Could not open mission database")
         return ([], [])
 
-    l_annotations = []
+    #l_annotations = []
 
     if dive == None:
         clause = ''
@@ -198,17 +198,18 @@ def mission_energy(
                 else dive_col.to_numpy()[-1]
             )
 
-            y_offset += -0.02
-            l_annotations.append(
-                {
-                    "text": f"Based on {type_str} for the last {p_dives_back} dives: {dives_remaining} dives remaining ({days_remaining:.01f} days at current rate) estimated end date {end_date} ",
-                    "showarrow": False,
-                    "xref": "paper",
-                    "yref": "paper",
-                    "x": 0.0,
-                    "y": y_offset,
-                }
-            )
+            batt_est_str = f"Based on {type_str} for the last {p_dives_back} dives: {dives_remaining} dives remaining ({days_remaining:.01f} days at current rate) estimated end date {end_date} "
+            # y_offset += -0.02
+            # l_annotations.append(
+            #     {
+            #         "text": batt_est_str,
+            #         "showarrow": False,
+            #         "xref": "paper",
+            #         "yref": "paper",
+            #         "x": 0.0,
+            #         "y": y_offset,
+            #     }
+            # )
 
             end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
             BaseDB.addValToDB(base_opts, 
@@ -251,7 +252,7 @@ def mission_energy(
         avg_use = (
             np.sum(fg_df["fg_ah_used_24V"].to_numpy()[-p_dives_back:])
             + np.sum(fg_df["fg_ah_used_10V"].to_numpy()[-p_dives_back:])
-        ) / 10.0
+        ) / float(p_dives_back)
         log_info(f"avg_use:{avg_use}")
 
         p_dives_back = (
@@ -278,17 +279,18 @@ def mission_energy(
         log_info(
             f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining:{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
         )
-        y_offset += -0.02
-        l_annotations.append(
-            {
-                "text": f"Based on Fuel Gauge for the last {p_dives_back} dives: {dives_remaining:.0f} dives remaining ({days_remaining:.01f} days at current rate) estimated end date {end_date} ",
-                "showarrow": False,
-                "xref": "paper",
-                "yref": "paper",
-                "x": 0.0,
-                "y": y_offset,
-            }
-        )
+        fg_est_str = f"Based on Fuel Gauge for the last {p_dives_back} dives: {dives_remaining:.0f} dives remaining ({days_remaining:.01f} days at current rate) estimated end date {end_date} "
+        # y_offset += -0.02
+        # l_annotations.append(
+        #     {
+        #         "text": fg_est_str,
+        #         "showarrow": False,
+        #         "xref": "paper",
+        #         "yref": "paper",
+        #         "x": 0.0,
+        #         "y": y_offset,
+        #     }
+        # )
 
         end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
         BaseDB.addValToDB(base_opts, 
@@ -423,15 +425,15 @@ def mission_energy(
 
         fig.add_trace(
             {
-                "name": "Mission days/10 (FG)",
+                "name": "Mission days (FG)",
                 "x": days_df["dive"],
-                "y": days_df["energy_days_total_FG"]/10,
+                "y": days_df["energy_days_total_FG"],
                 "customdata": np.squeeze(
                     np.dstack(
                         (days_df["energy_days_total_FG"], (start_t - start) / 86400)
                     )
                 ),
-                "yaxis": "y1",
+                "yaxis": "y3",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkBlue"},
                 "hovertemplate": "Mission Days (FG)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
@@ -439,15 +441,15 @@ def mission_energy(
         )
         fig.add_trace(
             {
-                "name": "Mission days/10 (model)",
+                "name": "Mission days (model)",
                 "x": days_df["dive"],
-                "y": days_df["energy_days_total_Modeled"]/10,
+                "y": days_df["energy_days_total_Modeled"],
                 "customdata": np.squeeze(
                     np.dstack(
                         (days_df["energy_days_total_Modeled"], (start_t - start) / 86400)
                     )
                 ),
-                "yaxis": "y1",
+                "yaxis": "y3",
                 "mode": "lines",
                 "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
                 "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
@@ -527,9 +529,11 @@ def mission_energy(
         fig.update_layout(
             {
                 "xaxis": {
-                    "title": "Dive Number",
+                    #"title": "Dive Number",
+                    "title": f"Dive Number<br>{batt_est_str}<br>{fg_est_str}",
                     "showgrid": True,
                     # "side": "top"
+                    "domain": [0.0, 0.925],
                 },
                 "yaxis": {
                     "title": "energy (kJ)",
@@ -545,7 +549,17 @@ def mission_energy(
                     "showgrid": False,
                     "overlaying": "y1",
                     "side": "right",
+                    "position": 0.925,
                 },
+                "yaxis3": {
+                    "title": "Mission Days",
+                    "overlaying": "y1",
+                    "anchor": "free",
+                    "side": "right",
+                    "position": 1,
+                    "showgrid": False,
+                },
+
                 "title": {
                     "text": title_text,
                     "xanchor": "center",
@@ -556,9 +570,13 @@ def mission_energy(
                 "margin": {
                     "t": 100,
                     "b": 125 if univolt else 175,
-                    # "b": 250,
+                    #"b": 250,
                 },
-                "annotations": tuple(l_annotations),
+                "legend": {
+                    "x": 1.075,
+                    "y": 1,
+                }
+                #"annotations": tuple(l_annotations),
             },
         )
         return (
