@@ -1564,7 +1564,7 @@ if __name__ == '__main__':
             elif o in ['-m', '--mission']:
                 overrides['SINGLE_MISSION'] = a
                  
-    os.chdir(root if root is not None else '/home/seaglider')
+    os.chdir(os.path.expanduser(root) if root is not None else '/home/seaglider')
 
     # we always load RUNMODE based on startup conditions
     overrides['RUNMODE'] = runMode
