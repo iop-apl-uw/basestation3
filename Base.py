@@ -818,7 +818,13 @@ def process_file_group(
             incomplete_files.append(defrag_file_name)
             ret_val = 1
         else:
-            file_list.append(uc_file_name)
+            if os.path.getsize(uc_file_name) == 0:
+                log_error(
+                    f"File {uc_file_name} is zero sized - skipping further processing"
+                )
+                log_error("Could not get file size", "exc")
+            else:
+                file_list.append(uc_file_name)
     elif fc.is_bzip():
         uc_file_name = fc.make_uncompressed()
 
@@ -2255,8 +2261,15 @@ def main():
     if not base_opts.local:
         BaseDotFiles.process_urls(base_opts, 1, instrument_id, dive_num)
         try:
-            msg = { "glider": instrument_id, "dive": dive_num, "content": "files=perdive", "time":time.time() }
-            Utils.notifyVis(instrument_id, "urls-files", orjson.dumps(msg).decode('utf-8'))
+            msg = {
+                "glider": instrument_id,
+                "dive": dive_num,
+                "content": "files=perdive",
+                "time": time.time(),
+            }
+            Utils.notifyVis(
+                instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
+            )
         except:
             log_error("notifyVis failed", "exc")
 
@@ -2823,8 +2836,15 @@ def main():
         if not base_opts.local:
             BaseDotFiles.process_urls(base_opts, 2, instrument_id, dive_num)
             try:
-                msg = { "glider": instrument_id, "dive": dive_num, "content": "files=all", "time":time.time() }
-                Utils.notifyVis(instrument_id, "urls-files", orjson.dumps(msg).decode('utf-8'))
+                msg = {
+                    "glider": instrument_id,
+                    "dive": dive_num,
+                    "content": "files=all",
+                    "time": time.time(),
+                }
+                Utils.notifyVis(
+                    instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
+                )
             except:
                 log_error("notifyVis failed", "exc")
 
