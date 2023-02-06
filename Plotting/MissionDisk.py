@@ -88,6 +88,9 @@ def mission_disk(
 
     # l_annotations = []
 
+    sd_free_est = ""
+    sc_free_est = ""
+
     if "SD_free" in df.columns:
         fig.add_trace(
             {
@@ -106,7 +109,7 @@ def mission_disk(
 
         m, b = np.polyfit(df["dive"].to_numpy(), df["SD_free"].to_numpy(), 1)
 
-        sd_free_est = f"based on SD free, {-b/m:.0f} dives until full"
+        sd_free_est = f"<br>based on SD free, {-b/m:.0f} dives until full"
         # y_offset += -0.02
         # l_annotations.append(
         #     {
@@ -171,7 +174,7 @@ def mission_disk(
         )
 
         m, b = np.polyfit(df["dive"].to_numpy(), df[v].to_numpy(), 1)
-        sc_free_est = f"based on {nm}, {-b/m:.0f} dives until full"
+        sc_free_est = f"<br>based on {nm}, {-b/m:.0f} dives until full"
         # y_offset += -0.02
         # l_annotations.append(
         #     {
@@ -188,7 +191,7 @@ def mission_disk(
         {
             "xaxis": {
                 # "title": "Dive Number",
-                "title": f"Dive Number<br>{sd_free_est}<br>{sc_free_est}",
+                "title": f"Dive Number{sd_free_est}{sc_free_est}",
                 "showgrid": True,
                 "domain": [0, 0.95],
             },
