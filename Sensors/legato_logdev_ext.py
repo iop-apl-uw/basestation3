@@ -81,6 +81,23 @@ def init_logger(module_name, init_dict=None):
                 },
                 BaseNetCDF.nc_scalar,
             ],  # always scalar
+            f"{BaseNetCDF.nc_sg_cal_prefix}legato_sealevel": [
+                False,
+                "d",
+                {
+                    "description": "Assumed value pressure reading at sealevel",
+                    "units": "dbar * 1000",
+                },
+                BaseNetCDF.nc_scalar,
+            ],
+            f"{BaseNetCDF.nc_sg_cal_prefix}legato_config": [
+                False,
+                "d",
+                {
+                    "description": "Bitfield describing the legato configuration when run as a logdev",
+                },
+                BaseNetCDF.nc_scalar,
+            ],
             "log_RB_RECORDABOVE": [
                 False,
                 "d",
@@ -110,6 +127,24 @@ def init_logger(module_name, init_dict=None):
                 False,
                 "d",
                 {"description": "Sampling rate (seconds)"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "log_RB_UPLOADMAX": [
+                False,
+                "d",
+                {"description": "Max upload size (bytes)"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "log_RB_STARTS": [
+                False,
+                "d",
+                {"description": "Numbers of times started"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "log_RB_NDIVE": [
+                False,
+                "d",
+                {"description": "Dive multiplier"},
                 BaseNetCDF.nc_scalar,
             ],
             "legato_time": [
