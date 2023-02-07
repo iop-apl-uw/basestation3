@@ -67,14 +67,13 @@ ctcor =  3.25e-06 ;
 
 % iRobot/Kongsberg/HII followed differnt naming conventions for wetlabs column names.  If wetlabs data is to
 % be propagated to the netcdf file, the columns must be remapped per the basestation system of naming
+% See the list below for the canonical instrument names and calibration constant names
 
 %PARAM remap_wetlabs_eng_cols="oldval1:newval1,oldval2:newval2"
 
 % Example
 % remap_wetlabs_eng_cols = "wlbbfl2_BB1ref:wlbbfl2_ref700nm,wlbbfl2_BB1sig:wlbbfl2_sig700nm,wlbbfl2_FL1ref:wlbbfl2_ref695nm,wlbbfl2_FL1sig:wlbbfl2_sig695nm,wlbbfl2_FL2ref:wlbbfl2_ref460nm,wlbbfl2_FL2sig:wlbbfl2_sig460nm" 
 % where the channels are 700nm, Chl and CDOM
-
-% TODO - point to docs with full name set and synonyms
 
 % If present, the basestation will add additional columns to apply the "standard" correction to
 % the wetlabs data per the cal sheet. Format for these entries is:
@@ -85,8 +84,156 @@ ctcor =  3.25e-06 ;
 % <instrument>_<channelname>_scale_factor = <scale_factor>;
 
 % Example
-%
+
 % wlbbfl2_sig695nm_dark_counts = 49.0;
 % wlbbfl2_sig695nm_max_counts = 4130.0;
 % wlbbfl2_sig695nm_resolution_counts = 1.0;
 % wlbbfl2_sig695nm_scale_factor = 0.0121;
+
+% Here is the complete list of canonical names and associated calibration constants for WETLabs instruments
+
+%PARAM wlbb2fl_sig470nm_dark_counts = 0.0; % For blue scattering channel
+%PARAM wlbb2fl_sig470nm_scale_factor = 0.0; % For blue scattering channel
+%PARAM wlbb2fl_sig470nm_resolution_counts = 0.0; % For blue scattering channel
+%PARAM wlbb2fl_sig470nm_max_counts = 0.0; % For blue scattering channel
+%PARAM wlbb2fl_sig532nm_dark_counts = 0.0; % For green scattering channel
+%PARAM wlbb2fl_sig532nm_scale_factor = 0.0; % For green scattering channel
+%PARAM wlbb2fl_sig532nm_resolution_counts = 0.0; % For green scattering channel
+%PARAM wlbb2fl_sig532nm_max_counts = 0.0; % For green scattering channel
+%PARAM wlbb2fl_sig700nm_dark_counts = 0.0; % For red scattering channel
+%PARAM wlbb2fl_sig700nm_scale_factor = 0.0; % For red scattering channel
+%PARAM wlbb2fl_sig700nm_resolution_counts = 0.0; % For red scattering channel
+%PARAM wlbb2fl_sig700nm_max_counts = 0.0; % For red scattering channel
+%PARAM wlbb2fl_sig880nm_dark_counts = 0.0; % For infrared scattering channel
+%PARAM wlbb2fl_sig880nm_scale_factor = 0.0; % For infrared scattering channel
+%PARAM wlbb2fl_sig880nm_resolution_counts = 0.0; % For infrared scattering channel
+%PARAM wlbb2fl_sig880nm_max_counts = 0.0; % For infrared scattering channel
+%PARAM wlbb2fl_sig460nm_dark_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbb2fl_sig460nm_scale_factor = 0.0; % For CDOM fluorescence channel
+%PARAM wlbb2fl_sig460nm_resolution_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbb2fl_sig460nm_max_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbb2fl_sig530nm_dark_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbb2fl_sig530nm_scale_factor = 0.0; % For uranine fluorescence channel
+%PARAM wlbb2fl_sig530nm_resolution_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbb2fl_sig530nm_max_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbb2fl_sig570nm_dark_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbb2fl_sig570nm_scale_factor = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbb2fl_sig570nm_resolution_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbb2fl_sig570nm_max_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbb2fl_sig680nm_dark_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbb2fl_sig680nm_scale_factor = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbb2fl_sig680nm_resolution_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbb2fl_sig680nm_max_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbb2fl_sig695nm_dark_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbb2fl_sig695nm_scale_factor = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbb2fl_sig695nm_resolution_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbb2fl_sig695nm_max_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbbfl2_sig470nm_dark_counts = 0.0; % For blue scattering channel
+%PARAM wlbbfl2_sig470nm_scale_factor = 0.0; % For blue scattering channel
+%PARAM wlbbfl2_sig470nm_resolution_counts = 0.0; % For blue scattering channel
+%PARAM wlbbfl2_sig470nm_max_counts = 0.0; % For blue scattering channel
+%PARAM wlbbfl2_sig532nm_dark_counts = 0.0; % For green scattering channel
+%PARAM wlbbfl2_sig532nm_scale_factor = 0.0; % For green scattering channel
+%PARAM wlbbfl2_sig532nm_resolution_counts = 0.0; % For green scattering channel
+%PARAM wlbbfl2_sig532nm_max_counts = 0.0; % For green scattering channel
+%PARAM wlbbfl2_sig700nm_dark_counts = 0.0; % For red scattering channel
+%PARAM wlbbfl2_sig700nm_scale_factor = 0.0; % For red scattering channel
+%PARAM wlbbfl2_sig700nm_resolution_counts = 0.0; % For red scattering channel
+%PARAM wlbbfl2_sig700nm_max_counts = 0.0; % For red scattering channel
+%PARAM wlbbfl2_sig880nm_dark_counts = 0.0; % For infrared scattering channel
+%PARAM wlbbfl2_sig880nm_scale_factor = 0.0; % For infrared scattering channel
+%PARAM wlbbfl2_sig880nm_resolution_counts = 0.0; % For infrared scattering channel
+%PARAM wlbbfl2_sig880nm_max_counts = 0.0; % For infrared scattering channel
+%PARAM wlbbfl2_sig460nm_dark_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbbfl2_sig460nm_scale_factor = 0.0; % For CDOM fluorescence channel
+%PARAM wlbbfl2_sig460nm_resolution_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbbfl2_sig460nm_max_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbbfl2_sig530nm_dark_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbbfl2_sig530nm_scale_factor = 0.0; % For uranine fluorescence channel
+%PARAM wlbbfl2_sig530nm_resolution_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbbfl2_sig530nm_max_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbbfl2_sig570nm_dark_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbbfl2_sig570nm_scale_factor = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbbfl2_sig570nm_resolution_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbbfl2_sig570nm_max_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbbfl2_sig680nm_dark_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbbfl2_sig680nm_scale_factor = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbbfl2_sig680nm_resolution_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbbfl2_sig680nm_max_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbbfl2_sig695nm_dark_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbbfl2_sig695nm_scale_factor = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbbfl2_sig695nm_resolution_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbbfl2_sig695nm_max_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbb3_sig470nm_dark_counts = 0.0; % For blue scattering channel
+%PARAM wlbb3_sig470nm_scale_factor = 0.0; % For blue scattering channel
+%PARAM wlbb3_sig470nm_resolution_counts = 0.0; % For blue scattering channel
+%PARAM wlbb3_sig470nm_max_counts = 0.0; % For blue scattering channel
+%PARAM wlbb3_sig532nm_dark_counts = 0.0; % For green scattering channel
+%PARAM wlbb3_sig532nm_scale_factor = 0.0; % For green scattering channel
+%PARAM wlbb3_sig532nm_resolution_counts = 0.0; % For green scattering channel
+%PARAM wlbb3_sig532nm_max_counts = 0.0; % For green scattering channel
+%PARAM wlbb3_sig700nm_dark_counts = 0.0; % For red scattering channel
+%PARAM wlbb3_sig700nm_scale_factor = 0.0; % For red scattering channel
+%PARAM wlbb3_sig700nm_resolution_counts = 0.0; % For red scattering channel
+%PARAM wlbb3_sig700nm_max_counts = 0.0; % For red scattering channel
+%PARAM wlbb3_sig880nm_dark_counts = 0.0; % For infrared scattering channel
+%PARAM wlbb3_sig880nm_scale_factor = 0.0; % For infrared scattering channel
+%PARAM wlbb3_sig880nm_resolution_counts = 0.0; % For infrared scattering channel
+%PARAM wlbb3_sig880nm_max_counts = 0.0; % For infrared scattering channel
+%PARAM wlbb3_sig460nm_dark_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbb3_sig460nm_scale_factor = 0.0; % For CDOM fluorescence channel
+%PARAM wlbb3_sig460nm_resolution_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbb3_sig460nm_max_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlbb3_sig530nm_dark_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbb3_sig530nm_scale_factor = 0.0; % For uranine fluorescence channel
+%PARAM wlbb3_sig530nm_resolution_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbb3_sig530nm_max_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlbb3_sig570nm_dark_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbb3_sig570nm_scale_factor = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbb3_sig570nm_resolution_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbb3_sig570nm_max_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlbb3_sig680nm_dark_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbb3_sig680nm_scale_factor = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbb3_sig680nm_resolution_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbb3_sig680nm_max_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlbb3_sig695nm_dark_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbb3_sig695nm_scale_factor = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbb3_sig695nm_resolution_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlbb3_sig695nm_max_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlfl3_sig470nm_dark_counts = 0.0; % For blue scattering channel
+%PARAM wlfl3_sig470nm_scale_factor = 0.0; % For blue scattering channel
+%PARAM wlfl3_sig470nm_resolution_counts = 0.0; % For blue scattering channel
+%PARAM wlfl3_sig470nm_max_counts = 0.0; % For blue scattering channel
+%PARAM wlfl3_sig532nm_dark_counts = 0.0; % For green scattering channel
+%PARAM wlfl3_sig532nm_scale_factor = 0.0; % For green scattering channel
+%PARAM wlfl3_sig532nm_resolution_counts = 0.0; % For green scattering channel
+%PARAM wlfl3_sig532nm_max_counts = 0.0; % For green scattering channel
+%PARAM wlfl3_sig700nm_dark_counts = 0.0; % For red scattering channel
+%PARAM wlfl3_sig700nm_scale_factor = 0.0; % For red scattering channel
+%PARAM wlfl3_sig700nm_resolution_counts = 0.0; % For red scattering channel
+%PARAM wlfl3_sig700nm_max_counts = 0.0; % For red scattering channel
+%PARAM wlfl3_sig880nm_dark_counts = 0.0; % For infrared scattering channel
+%PARAM wlfl3_sig880nm_scale_factor = 0.0; % For infrared scattering channel
+%PARAM wlfl3_sig880nm_resolution_counts = 0.0; % For infrared scattering channel
+%PARAM wlfl3_sig880nm_max_counts = 0.0; % For infrared scattering channel
+%PARAM wlfl3_sig460nm_dark_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlfl3_sig460nm_scale_factor = 0.0; % For CDOM fluorescence channel
+%PARAM wlfl3_sig460nm_resolution_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlfl3_sig460nm_max_counts = 0.0; % For CDOM fluorescence channel
+%PARAM wlfl3_sig530nm_dark_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlfl3_sig530nm_scale_factor = 0.0; % For uranine fluorescence channel
+%PARAM wlfl3_sig530nm_resolution_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlfl3_sig530nm_max_counts = 0.0; % For uranine fluorescence channel
+%PARAM wlfl3_sig570nm_dark_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlfl3_sig570nm_scale_factor = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlfl3_sig570nm_resolution_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlfl3_sig570nm_max_counts = 0.0; % For phycoerythrin/rhodamine fluorescence channel
+%PARAM wlfl3_sig680nm_dark_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlfl3_sig680nm_scale_factor = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlfl3_sig680nm_resolution_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlfl3_sig680nm_max_counts = 0.0; % For phycocyanin fluorescence channel
+%PARAM wlfl3_sig695nm_dark_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlfl3_sig695nm_scale_factor = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlfl3_sig695nm_resolution_counts = 0.0; % For chlorophyll fluorescence channel
+%PARAM wlfl3_sig695nm_max_counts = 0.0; % For chlorophyll fluorescence channel
+
