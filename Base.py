@@ -2175,7 +2175,7 @@ def main():
         last_session = comm_log.last_surfacing()
         if base_opts.skip_flight_model:
             log_info("Skipping flight model processing per directive")
-        elif last_session and last_session.recov_code:
+        elif last_session and last_session.recov_code and not base_opts.force:
             log_info(f"Skipping flight model due to recovery {last_session.recov_code}")
         elif (
             last_session
