@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -77,7 +77,7 @@ def plot_CTW(
             log_error("Could not find the magvar for plot_CTW", "exc")
     except:
         log_error("Problems in plot_CTW", "exc")
-        return None
+        return ([], [])
 
     desired_head = mhead[0]
     north_disp_cum = np.cumsum(north_disp)
@@ -229,7 +229,7 @@ def plot_CTW(
 
     return (
         [fig],
-        PlotUtilsPlotly.write_output_files(base_opts, "dv%04d_ctw" % (dive_nc_file.dive_number,), fig),
+        PlotUtilsPlotly.write_output_files(
+            base_opts, "dv%04d_ctw" % (dive_nc_file.dive_number,), fig
+        ),
     )
-
-
