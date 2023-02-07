@@ -423,38 +423,43 @@ def mission_energy(
                         }
                     )
 
-        fig.add_trace(
-            {
-                "name": "Mission days (FG)",
-                "x": days_df["dive"],
-                "y": days_df["energy_days_total_FG"],
-                "customdata": np.squeeze(
-                    np.dstack(
-                        (days_df["energy_days_total_FG"], (start_t - start) / 86400)
-                    )
-                ),
-                "yaxis": "y3",
-                "mode": "lines",
-                "line": {"dash": "dot", "width": 1, "color": "DarkBlue"},
-                "hovertemplate": "Mission Days (FG)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
-            }
-        )
-        fig.add_trace(
-            {
-                "name": "Mission days (model)",
-                "x": days_df["dive"],
-                "y": days_df["energy_days_total_Modeled"],
-                "customdata": np.squeeze(
-                    np.dstack(
-                        (days_df["energy_days_total_Modeled"], (start_t - start) / 86400)
-                    )
-                ),
-                "yaxis": "y3",
-                "mode": "lines",
-                "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
-                "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
-            }
-        )        
+        # In the case of mission reprocessing, the energy_days_total* columns are not
+        # repopulated in the database, so added these traces to the energy plots are
+        # meaningless
+        if days_df["energy_days_total_FG"].count() > 1:
+            fig.add_trace(
+                {
+                    "name": "Mission days (FG)",
+                    "x": days_df["dive"],
+                    "y": days_df["energy_days_total_FG"],
+                    "customdata": np.squeeze(
+                        np.dstack(
+                            (days_df["energy_days_total_FG"], (start_t - start) / 86400)
+                        )
+                    ),
+                    "yaxis": "y3",
+                    "mode": "lines",
+                    "line": {"dash": "dot", "width": 1, "color": "DarkBlue"},
+                    "hovertemplate": "Mission Days (FG)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
+                }
+            )
+        if days_df["energy_days_total_Modeled"].count() > 1:            
+            fig.add_trace(
+                {
+                    "name": "Mission days (model)",
+                    "x": days_df["dive"],
+                    "y": days_df["energy_days_total_Modeled"],
+                    "customdata": np.squeeze(
+                        np.dstack(
+                            (days_df["energy_days_total_Modeled"], (start_t - start) / 86400)
+                        )
+                    ),
+                    "yaxis": "y3",
+                    "mode": "lines",
+                    "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
+                    "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
+                }
+            )        
         if univolt:
             fig.add_trace(
                 {
