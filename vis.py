@@ -293,7 +293,9 @@ def gliderPath(glider, request, path=None):
         return f'sg{glider:03d}/{path}'
     else:
         m = matchMission(glider, request)
-        if m and 'path' in m and m['path']:
+        if m and 'abs' in m and m['abs']:
+            return m['abs'] 
+        elif m and 'path' in m and m['path']:
             return f"sg{glider:03d}/{m['path']}"
         else:
             return f'sg{glider:03d}'
@@ -1270,7 +1272,8 @@ async def buildMissionTable(app, config=None):
 
     if 'SINGLE_MISSION' in config and config.SINGLE_MISSION:
         sanic.log.logger.info(f'building table for single mission {config.SINGLE_MISSION}')
-        x = { 'missions': { config.SINGLE_MISSION: {} } }
+        pieces = config.SINGLE_MISSION.split(':')
+        x = { 'missions': { pieces[0]: { 'abs': pieces[1] } } }
     else: 
         if await aiofiles.os.path.exists(config.MISSIONS_FILE):
             async with aiofiles.open(config.MISSIONS_FILE, "r") as f:
@@ -1288,7 +1291,7 @@ async def buildMissionTable(app, config=None):
     if 'controls' not in x:
         x['controls'] = {}
 
-    missionDictKeys = [ "glider", "path", "mission", "users", "pilotusers", "groups", "pilotgroups", 
+    missionDictKeys = [ "glider", "path", "abs", "mission", "users", "pilotusers", "groups", "pilotgroups", 
                         "started", "ended", "planned", 
                         "orgname", "orglink", "contact", "email", 
                         "project", "link", "comment", "reason", "endpoints"
