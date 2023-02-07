@@ -176,8 +176,10 @@ async def displayTables(fname):
     print("</td>")
 
     print("<td>") # row 4, col 2 
-    if 'XPDR_PINGS' in L:
+    if 'XPDR_PINGS' in L and isinstance(L['XPDR_PINGS'], (list, tuple)):
         print("&#8226 Transponder ping count: %d" % L['XPDR_PINGS'][0])
+    elif 'XPDR_PINGS' in L:
+        print("&#8226 Transponder ping count: %d" % L['XPDR_PINGS'])
     ms = -1
     print("</td>")
 
@@ -220,7 +222,7 @@ async def displayTables(fname):
                     R = p[4]
 
         print("&#8226 bottom range %s m at %s m, depth %.0f m (%.0f m grid)" %
-             (rng, dep, dep + rng, L['D_GRID'][0]))
+             (rng, dep, dep + rng, L['D_GRID']))
         if m > -1:
             print("(m = %.2f, R^2 = %.2f)" % (m, R))
     print("</td>")
