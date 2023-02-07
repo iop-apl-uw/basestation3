@@ -86,7 +86,7 @@ ctcor =  3.25e-06 ;
 
 % Example
 %
-% wlbb2fl_sig695nm_dark_counts = 49.0;
-% wlbb2fl_sig695nm_max_counts = 4130.0;
-% wlbb2fl_sig695nm_resolution_counts = 1.0;
-% wlbb2fl_sig695nm_scale_factor = 0.0121;
+% wlbbfl2_sig695nm_dark_counts = 49.0;
+% wlbbfl2_sig695nm_max_counts = 4130.0;
+% wlbbfl2_sig695nm_resolution_counts = 1.0;
+% wlbbfl2_sig695nm_scale_factor = 0.0121;
