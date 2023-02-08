@@ -273,7 +273,7 @@ def processGC(dive, cur, nci):
             if math.fabs(dAD) > 2:
                 pitch_rate = dAD / nci.variables['gc_pitch_secs'][i]
 
-        if nci.variables['gc_vbd_secs'][i] > 0.5:
+        if nci.variables['gc_vbd_secs'][i] > 0.5 and "gc_vbd_ad_start" in nci.variables:
             dAD = nci.variables['gc_vbd_ad'][i] - nci.variables['gc_vbd_ad_start'][i]
             if math.fabs(dAD) > 2:
                 vbd_rate = dAD / nci.variables['gc_vbd_secs'][i]
@@ -281,6 +281,16 @@ def processGC(dive, cur, nci):
 
                 if rate > 0:
                     vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
+
+        if "gc_flags" in nci.variables:
+            flag_val = f"{nci.variables['gc_flags'][i]},"
+        else:
+            flag_val = "NULL,"
+
+        if "gc_roll_ctl" in nci.variables:
+            gc_roll_ctl = f"{nci.variables['gc_roll_ctl'][i]},"
+        else:
+            gc_roll_ctl = "NULL,"
 
         cur.execute("INSERT INTO gc(dive," \
                                      "st_secs," \
@@ -317,13 +327,13 @@ def processGC(dive, cur, nci):
                                      f"{nci.variables['gc_depth'][i]}," \
                                      f"{nci.variables['gc_ob_vertv'][i]}," \
                                      f"{nci.variables['gc_end_secs'][i]}," \
-                                     f"{nci.variables['gc_flags'][i]}," \
+                                     f"{flag_val}" \
                                      f"{nci.variables['gc_pitch_ctl'][i]}," \
                                      f"{nci.variables['gc_pitch_secs'][i]}," \
                                      f"{nci.variables['gc_pitch_i'][i]}," \
                                      f"{nci.variables['gc_pitch_ad'][i]}," \
                                      f"{pitch_rate}," \
-                                     f"{nci.variables['gc_roll_ctl'][i]}," \
+                                     f"{gc_roll_ctl}"\
                                      f"{nci.variables['gc_roll_secs'][i]}," \
                                      f"{nci.variables['gc_roll_i'][i]}," \
                                      f"{nci.variables['gc_roll_ad'][i]}," \
@@ -495,16 +505,17 @@ def loadFileToDB(base_opts, cur, filename, con):
     else:
         avail10 = 0
 
-    [sdcap, sdfree] = list(
-        map(int, nci.variables["log_SDSIZE"][:].tobytes().decode("utf-8").split(","))
-    )
-    [sdfiles, sddirs] = list(
-        map(int, nci.variables["log_SDFILEDIR"][:].tobytes().decode("utf-8").split(","))
-    )
-
-    insertColumn(dive, cur, "SD_free", sdfree, "INTEGER")
-    insertColumn(dive, cur, "SD_files", sdfiles, "INTEGER")
-    insertColumn(dive, cur, "SD_dirs", sddirs, "INTEGER")
+    if "log_SDSIZE" in nci.variables:
+        [sdcap, sdfree] = list(
+            map(int, nci.variables["log_SDSIZE"][:].tobytes().decode("utf-8").split(","))
+        )
+        insertColumn(dive, cur, "SD_free", sdfree, "INTEGER")
+    if "log_SDFILEDIR" in nci.variables:
+        [sdfiles, sddirs] = list(
+            map(int, nci.variables["log_SDFILEDIR"][:].tobytes().decode("utf-8").split(","))
+        )
+        insertColumn(dive, cur, "SD_files", sdfiles, "INTEGER")
+        insertColumn(dive, cur, "SD_dirs", sddirs, "INTEGER")
 
     insertColumn(dive, cur, "batt_volts_10V", v10, "FLOAT")
     insertColumn(dive, cur, "batt_volts_24V", v24, "FLOAT")

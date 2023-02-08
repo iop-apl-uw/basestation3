@@ -69,13 +69,25 @@ def mission_int_sensors(
     df = None
     try:
         df = pd.read_sql_query(
-            f"SELECT dive,log_HUMID,log_INTERNAL_PRESSURE,log_TEMP from dives {clause} ORDER BY dive ASC",
+            f"SELECT dive,log_HUMID,log_INTERNAL_PRESSURE from dives {clause} ORDER BY dive ASC",
             conn,
         ).sort_values("dive")
     except:
         log_error("Could not fetch needed columns", "exc")
         conn.close()
         return ([], [])
+
+    df_int_temperature = None
+    try:
+        df_int_temperature = pd.read_sql_query(
+            f"SELECT dive,log_TEMP from dives {clause} ORDER BY dive ASC",
+            conn,
+        ).sort_values("dive")
+    except pd.errors.DatabaseError as e:
+        if e.args[0].endswith("no such column: log_TEMP"):
+            pass
+        else:
+            log_error("Unexpected error fetching log_TEMP", "exc")
 
     for v in ["log_INTERNAL_PRESSURE", "log_HUMID"]:
         m, b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
@@ -117,22 +129,22 @@ def mission_int_sensors(
             "hovertemplate": "Relative Humidity<br>Dive %{x:.0f}<br>RH %{y:.2f} percent<extra></extra>",
         }
     )
-
-    fig.add_trace(
-        {
-            "name": "Temperature",
-            "x": df["dive"],
-            "y": df["log_TEMP"],
-            "yaxis": "y3",
-            "mode": "lines",
-            "line": {
-                "dash": "solid",
-                "color": "Red",
-                "width": 1,
-            },
-            "hovertemplate": "Temperature<br>Dive %{x:.0f}<br>T %{y:.2f}C<extra></extra>",
-        }
-    )
+    if df_int_temperature is not None:
+        fig.add_trace(
+            {
+                "name": "Temperature",
+                "x": df_int_temperature["dive"],
+                "y": df_int_temperature["log_TEMP"],
+                "yaxis": "y3",
+                "mode": "lines",
+                "line": {
+                    "dash": "solid",
+                    "color": "Red",
+                    "width": 1,
+                },
+                "hovertemplate": "Temperature<br>Dive %{x:.0f}<br>T %{y:.2f}C<extra></extra>",
+            }
+        )
 
     title_text = f"{mission_str}<br>Internal Sensors"
 
