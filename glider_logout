@@ -21,7 +21,7 @@
 ##
 
 if(! $?PYTHON_BINARY ) then
-    set PYTHON_BINARY = /usr/local/bin/python3.9
+    set PYTHON_BINARY = /opt/basestation/bin/python
 endif
 
 # A glider just logged out properly
