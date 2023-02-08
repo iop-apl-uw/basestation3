@@ -242,13 +242,13 @@ def mission_map(
     plt.plot(df['lon'].to_numpy(), df['lat'].to_numpy(), color='lightsalmon', alpha=1, marker='.', markersize=4, transform=ccrs.PlateCarree(), linestyle='None')
     plt.plot(rdf['lon'].to_numpy(), rdf['lat'].to_numpy(), color='red', marker='+', transform=ccrs.PlateCarree(), linestyle='None')
 
-    output_name = "eng_mission_map.png"
+    output_name = "eng_mission_map.webp"
 
     if base_opts.plot_directory is not None:
         output_name = os.path.join(base_opts.plot_directory, output_name)
 
     ret_list = [output_name]
-    plt.savefig(output_name, format="png", bbox_inches='tight')
+    plt.savefig(output_name, format="webp", bbox_inches='tight')
     
     return ([], ret_list)
 # fmt: on
