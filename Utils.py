@@ -45,6 +45,7 @@ import time
 import typing
 import pathlib
 import anyio
+import warnings
 
 import gsw
 import seawater
@@ -1657,20 +1658,28 @@ def dive_var_trend(base_opts, dive_col, y_col):
         else dive_col[-1]
     )
 
-    m, b = np.polyfit(dive_col[-p_dives_back:], y_col[-p_dives_back:], 1)
+    with warnings.catch_warnings():
+        # For very small number of dives, we get
+        # RankWarning: Polyfit may be poorly conditioned
+        warnings.simplefilter("ignore", np.RankWarning)
+        m, b = np.polyfit(dive_col[-p_dives_back:], y_col[-p_dives_back:], 1)
     return (m, b)
 
 
 def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
     """Estimate endurace from normalized remaining battery capacity"""
     # print(dive_col)
+
     p_dives_back = (
         base_opts.mission_energy_dives_back
         if dive_col[-1] >= base_opts.mission_energy_dives_back
         else dive_col[-1]
     )
-
-    m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
+    with warnings.catch_warnings():
+        # For very small number of dives, we get
+        # RankWarning: Polyfit may be poorly conditioned
+        warnings.simplefilter("ignore", np.RankWarning)
+        m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
     log_info(f"m:{m} b:{b}")
     lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)
     dives_remaining = lastdive_num - dive_col[-1]
@@ -1726,10 +1735,11 @@ def notifyVis(glider: int, topic: str, body: str):
         socket.connect(f"ipc://{f}")
         socket.SNDTIMEO = 200
         socket.setsockopt(zmq.SNDTIMEO, 200)
-        socket.setsockopt(zmq.LINGER, 0) # this is the important one
+        socket.setsockopt(zmq.LINGER, 0)  # this is the important one
         log_info(f"notifying {f}:{topic}:{body}")
         socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
+
 
 async def notifyVisAsync(glider: int, topic: str, body: str):
     p = anyio.Path("/tmp")
@@ -1741,6 +1751,6 @@ async def notifyVisAsync(glider: int, topic: str, body: str):
         socket.connect(f"ipc://{f}")
         socket.SNDTIMEO = 200
         socket.setsockopt(zmq.SNDTIMEO, 200)
-        socket.setsockopt(zmq.LINGER, 0) # this is the important one
+        socket.setsockopt(zmq.LINGER, 0)  # this is the important one
         await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
