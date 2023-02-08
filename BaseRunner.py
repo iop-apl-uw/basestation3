@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -23,9 +23,11 @@
 
 """Run processing on behalf of glider accounts"""
 
+import argparse
 import os
 import pathlib
 import pdb
+import shutil
 import signal
 import stat
 import subprocess
@@ -54,7 +56,6 @@ base_runner_lockfile_name = ".base_runner_lockfile"
 previous_runner_time_out = 10
 
 known_scripts = ("BaseLogin.py", "GliderEarlyGPS.py", "Base.py")
-python_version = "/usr/local/bin/python3.9"
 
 dog_stroke_interval = 10
 inotify_read_timeout = 5 * 1000  # In milliseconds
@@ -76,6 +77,15 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Glider Account Processing",
         additional_arguments={
+            "python_version": BaseOpts.options_t(
+                "/opt/basestation/bin/python",
+                ("BaseRunner",),
+                ("--python_version",),
+                str,
+                {
+                    "help": "path to python executable",
+                },
+            ),
             "watch_dir": BaseOpts.options_t(
                 None,
                 ("BaseRunner",),
@@ -94,6 +104,16 @@ def main():
                 {
                     "help": "Root of the seaglider jail, if used",
                     "action": BaseOpts.FullPathTrailingSlashAction,
+                },
+            ),
+            "archive": BaseOpts.options_t(
+                False,
+                ("BaseRunner",),
+                ("--archive",),
+                str,
+                {
+                    "help": "Archive off run files",
+                    "action": argparse.BooleanOptionalAction,
                 },
             ),
         },
@@ -169,7 +189,7 @@ def main():
                     # Prepend the basestation directory and add on the python version
                     script, tail = cmd_line.split(" ", 1)
                     full_path_script = os.path.join(basestation_dir, script)
-                    cmd_line = f"{python_version} {full_path_script} {tail}"
+                    cmd_line = f"{base_opts.python_version} {full_path_script} {tail}"
 
                     if base_opts.jail_root:
                         # Convert to the path outside the jail
@@ -189,22 +209,43 @@ def main():
                     # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
                     cmd_line += f" >> {log_file} 2>&1"
                     log_info(f"Running {cmd_line}")
-                    subprocess.run(
+                    completed_process = subprocess.run(
                         cmd_line,
                         shell=True,
                         env=my_env,
                         start_new_session=True,
                     )
+                    if completed_process.returncode:
+                        log_warning(f"{cmd_line} returned {completed_process.returncode}", "exc")
             except KeyboardInterrupt:
                 exit_event.set()
             except:
                 log_error(f"Error processing {run_file}", "exc")
             finally:
+                log_info("Cleanup")
                 if os.path.exists(run_file):
-                    try:
-                        os.unlink(run_file)
-                    except:
-                        log_critical(f"Failed to remove {run_file}", "exc")
+                    f_archive_failed = False
+                    if base_opts.archive:
+                        archive_dir = os.path.join(base_opts.mission_dir, "archive")
+                        if not os.path.exists(archive_dir):
+                            try:
+                                os.mkdir(archive_dir)
+                            except:
+                                log_error(f"Failed to create {archive_dir}", "exc")
+                                f_archive_failed = True
+                        if not f_archive_failed:
+                            try:
+                                shutil.move(run_file, archive_dir)
+                            except:
+                                log_error(f"Failed to move {run_file} to {archive_dir}", "exc")
+                                f_archive_failed = True
+                            else:
+                                log_info(f"Archived {run_file}")
+                    if not base_opts.archive or f_archive_failed:
+                        try:
+                            os.unlink(run_file)
+                        except:
+                            log_critical(f"Failed to remove {run_file}", "exc")
 
     log_info("Shutdown signal received")
 
