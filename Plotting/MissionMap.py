@@ -60,7 +60,28 @@ from cartopy.mpl.ticker import LatitudeFormatter,LongitudeFormatter
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
-class MyFormatter(LatitudeFormatter):
+class MyLatFormatter(LatitudeFormatter):
+    def _get_dms(self, x):
+        self._precision = 6
+        x = np.asarray(x, 'd')
+        degs = np.round(x, self._precision).astype('i')
+        y = (x - degs) * 60
+        mins = y
+        secs = 0
+        return x, degs, mins, secs
+
+    def _format_minutes(self, mn):
+        out = f'{mn:05.2f}'
+        if out[3:5] == '00':
+            out = out[0:2]
+        elif out[4] == '0':
+            out = out[0:4]
+        return f'{out}{self._minute_symbol}'
+
+    def _format_seconds(self, sec):
+        return ''
+
+class MyLonFormatter(LongitudeFormatter):
     def _get_dms(self, x):
         self._precision = 6
         x = np.asarray(x, 'd')
@@ -182,8 +203,8 @@ def mission_map(
     xt = g.xlocator.tick_values(ll_lon,ur_lon)
     yt = g.ylocator.tick_values(ll_lat,ur_lat)
     
-    g.yformatter = MyFormatter(dms=True)
-    g.xformatter = MyFormatter(dms=True)
+    g.yformatter = MyLatFormatter(dms=True)
+    g.xformatter = MyLonFormatter(dms=True)
 
     xp = []
     yp = []
