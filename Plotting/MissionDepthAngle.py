@@ -50,9 +50,12 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_depthangle(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Plots surface depth and angle"""
+
+    if not generate_plots:
+        return ([], [])
 
     conn = Utils.open_mission_database(base_opts)
     if not conn:

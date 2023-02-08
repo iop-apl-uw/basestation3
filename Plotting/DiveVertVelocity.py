@@ -174,7 +174,9 @@ def run_hydro(dv, buoy, vehicle_pitch_degrees_v, calib_consts):
 # TODO typing.List(plotly.fig)
 @plotdivesingle
 def plot_vert_vel(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots various measures of vetical velocity and estimates volmax and C_VBD"""
     # There is a significant difference in what MDP is creating for vertical velocity and what is done below.
@@ -195,6 +197,8 @@ def plot_vert_vel(
     if "vert_speed" not in dive_nc_file.variables:
         log_error("Not HDM output in plot - skipping")
         return ([], [])
+
+    log_info("Starting dive_vert_vel")
 
     f_analysis = True
     f_use_glider_abc = False
@@ -527,7 +531,10 @@ def plot_vert_vel(
     )
     try:
         BaseDB.addSlopeValToDB(
-            base_opts, dive_nc_file.dive_number, ["implied_volmax", "implied_C_VBD"], None
+            base_opts,
+            dive_nc_file.dive_number,
+            ["implied_volmax", "implied_C_VBD"],
+            None,
         )
     except:
         log_error("Failed to add values to database", "exc")
@@ -542,6 +549,9 @@ def plot_vert_vel(
     diff_w = abs(vert_speed_press - vert_speed_hdm)
     upwelling_descent = diff_w[0:max_depth_sample_index]
     upwelling_ascent = diff_w[max_depth_sample_index:]
+
+    if not generate_plots:
+        return ([], [])
 
     fig = plotly.graph_objects.Figure()
     fig.add_trace(

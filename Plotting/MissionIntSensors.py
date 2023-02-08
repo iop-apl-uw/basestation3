@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -41,7 +41,7 @@ import PlotUtilsPlotly
 import Utils
 import BaseDB
 
-from BaseLog import log_error
+from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
 
 
@@ -51,17 +51,17 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_int_sensors(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Plots internal pressure, RH, temp"""
-
+    log_info("Starting mission_int_sensors")
     conn = Utils.open_mission_database(base_opts)
     if not conn:
         log_error("Could not open mission database")
         return ([], [])
 
     if dive == None:
-        clause = ''
+        clause = ""
     else:
         clause = f"WHERE dive <= {dive}"
 
@@ -69,17 +69,35 @@ def mission_int_sensors(
     df = None
     try:
         df = pd.read_sql_query(
-            f"SELECT dive,log_HUMID,log_INTERNAL_PRESSURE,log_TEMP from dives {clause} ORDER BY dive ASC",
+            f"SELECT dive,log_HUMID,log_INTERNAL_PRESSURE from dives {clause} ORDER BY dive ASC",
             conn,
         ).sort_values("dive")
     except:
         log_error("Could not fetch needed columns", "exc")
+        conn.close()
         return ([], [])
 
+    df_int_temperature = None
+    try:
+        df_int_temperature = pd.read_sql_query(
+            f"SELECT dive,log_TEMP from dives {clause} ORDER BY dive ASC",
+            conn,
+        ).sort_values("dive")
+    except pd.errors.DatabaseError as e:
+        if e.args[0].endswith("no such column: log_TEMP"):
+            pass
+        else:
+            log_error("Unexpected error fetching log_TEMP", "exc")
+
     for v in ["log_INTERNAL_PRESSURE", "log_HUMID"]:
-        m,b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
+        m, b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
         BaseDB.addValToDB(base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m)
-        
+
+    if not generate_plots:
+        log_info("Returning")
+        conn.close()
+        return ([], [])
+
     fig.add_trace(
         {
             "name": "Internl Pressure",
@@ -111,22 +129,22 @@ def mission_int_sensors(
             "hovertemplate": "Relative Humidity<br>Dive %{x:.0f}<br>RH %{y:.2f} percent<extra></extra>",
         }
     )
-
-    fig.add_trace(
-        {
-            "name": "Temperature",
-            "x": df["dive"],
-            "y": df["log_TEMP"],
-            "yaxis": "y3",
-            "mode": "lines",
-            "line": {
-                "dash": "solid",
-                "color": "Red",
-                "width": 1,
-            },
-            "hovertemplate": "Temperature<br>Dive %{x:.0f}<br>T %{y:.2f}C<extra></extra>",
-        }
-    )
+    if df_int_temperature is not None:
+        fig.add_trace(
+            {
+                "name": "Temperature",
+                "x": df_int_temperature["dive"],
+                "y": df_int_temperature["log_TEMP"],
+                "yaxis": "y3",
+                "mode": "lines",
+                "line": {
+                    "dash": "solid",
+                    "color": "Red",
+                    "width": 1,
+                },
+                "hovertemplate": "Temperature<br>Dive %{x:.0f}<br>T %{y:.2f}C<extra></extra>",
+            }
+        )
 
     title_text = f"{mission_str}<br>Internal Sensors"
 
@@ -175,6 +193,7 @@ def mission_int_sensors(
             },
         },
     )
+    conn.close()
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

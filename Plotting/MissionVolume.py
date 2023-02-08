@@ -27,10 +27,6 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import collections
-import pdb
-import sys
-import traceback
 import typing
 import sqlite3
 
@@ -55,9 +51,12 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_volume(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Plots various estimates for volmax"""
+
+    if not generate_plots:
+        return ([], [])
 
     conn = Utils.open_mission_database(base_opts)
     if not conn:

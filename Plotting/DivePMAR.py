@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -124,7 +124,9 @@ def pmar_create_stats_lines(dive_nc_file, ch_tag, plot_type):
 
 @plotdivesingle
 def plot_PMAR(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots PMAR data"""
 
@@ -133,7 +135,7 @@ def plot_PMAR(
         if "pmar_" in v:
             pmar_present = True
 
-    if not pmar_present:
+    if not pmar_present or not generate_plots:
         return ([], [])
 
     # Plot the base values

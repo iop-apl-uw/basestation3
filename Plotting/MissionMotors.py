@@ -57,9 +57,13 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_motors(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Plots mission motor GC data"""
+
+    if not generate_plots:
+        return ([], [])
+
     log_info("Starting mission_motors")
 
     conn = Utils.open_mission_database(base_opts)

@@ -63,9 +63,12 @@ def headingDiff(hdg1, hdg2):
 
 @plotdivesingle
 def plot_pitch_roll(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots pitch and roll regressions"""
+    log_info("Starting dive_pitch_roll")
 
     if "eng_pitchAng" not in dive_nc_file.variables:
         log_error("No compass in nc - skipping")
@@ -147,7 +150,11 @@ def plot_pitch_roll(
         gc_x = np.transpose(gc_x).ravel()
 
         f = scipy.interpolate.interp1d(
-            gc_t, gc_x, kind="linear", bounds_error=False, fill_value=(gc_x[0], gc_x[-1]) # "extrapolate"
+            gc_t,
+            gc_x,
+            kind="linear",
+            bounds_error=False,
+            fill_value=(gc_x[0], gc_x[-1]),  # "extrapolate"
         )
         pitchAD = f(sg_time)
         pitch_control = (pitchAD - c_pitch) * pitch_cnv
@@ -159,7 +166,11 @@ def plot_pitch_roll(
         gc_x = np.transpose(gc_x).ravel()
 
         f = scipy.interpolate.interp1d(
-            gc_t, gc_x, kind="linear", bounds_error=False, fill_value=(gc_x[0], gc_x[-1]) # "extrapolate"
+            gc_t,
+            gc_x,
+            kind="linear",
+            bounds_error=False,
+            fill_value=(gc_x[0], gc_x[-1]),  # "extrapolate"
         )
         rollAD = f(sg_time)
         roll_control = (rollAD - c_roll_dive) * roll_cnv
@@ -194,99 +205,102 @@ def plot_pitch_roll(
     implied_gain = fit.slope / pitch_cnv
 
     log_info(f"implied_cpitch {implied_C}, implied_pitchgain {implied_gain}")
-    
+
     BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "implied_C_PITCH", implied_C)
     BaseDB.addValToDB(
         base_opts, dive_nc_file.dive_number, "implied_PITCH_GAIN", implied_gain
     )
     try:
-        BaseDB.addSlopeValToDB(base_opts, dive_nc_file.dive_number, ["implied_C_PITCH"], None)
+        BaseDB.addSlopeValToDB(
+            base_opts, dive_nc_file.dive_number, ["implied_C_PITCH"], None
+        )
     except:
         log_error("Failed to add values to database", "exc")
-
-    pitchAD_Fit = [min(pitchAD), max(pitchAD)]
-    pitch_Fit = (pitchAD_Fit - implied_C) * implied_gain * pitch_cnv
 
     figs_list = []
     file_list = []
 
-    #
-    # pitch plot
-    #
+    if generate_plots:
+        pitchAD_Fit = [min(pitchAD), max(pitchAD)]
+        pitch_Fit = (pitchAD_Fit - implied_C) * implied_gain * pitch_cnv
 
-    fig = plotly.graph_objects.Figure()
-    fig.add_trace(
-        {
-            "x": pitchAD,
-            "y": vehicle_pitch_degrees_v,
-            "name": "Pitch control/Pitch",
-            "type": "scatter",
-            "mode": "markers",
-            "marker": {
-                "symbol": "triangle-down",
-                "color": "DarkBlue",
-            },
-            # "mode": "lines",
-            # "line": {"dash": "solid", "color": "Blue"},
-            "hovertemplate": "PitchAD<br>%{x:.0f}<br>%{y:.2f} deg<br><extra></extra>",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": pitchAD_Fit,
-            "y": pitch_Fit,
-            "name": "linfit C_PITCH, PITCH_GAIN",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "Red"},
-            "hovertemplate": f"Fit C_PITCH={implied_C:.0f} PITCH_GAIN={implied_gain:.2f}<br><extra></extra>",
-        }
-    )
+        #
+        # pitch plot
+        #
 
-    mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = f"{mission_dive_str}<br>Pitch control vs Pitch"
-    fit_line = f"Best fit pitch regression implies C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm"
-
-    fig.update_layout(
-        {
-            "xaxis": {
-                "title": f"pitch control (counts)<br>{fit_line}",
-                "showgrid": True,
-                # "side": "top"
-            },
-            "yaxis": {
-                "title": "pitch (deg)",
-                "showgrid": True,
-                # "autorange": "reversed",
-                # "range": [
-                #     max(
-                #         depth_dive.max() if len(depth_dive) > 0 else 0,
-                #         depth_climb.max() if len(depth_climb) > 0 else 0,
-                #     ),
-                #     0,
-                # ],
-            },
-            "title": {
-                "text": title_text,
-                "xanchor": "center",
-                "yanchor": "top",
-                "x": 0.5,
-                "y": 0.95,
-            },
-            "margin": {
-                "t": 100,
-                "b": 125,
-            },
-        }
-    )
-
-    figs_list.append(fig)
-    file_list.append(
-        PlotUtilsPlotly.write_output_files(
-            base_opts,
-            "dv%04d_pitch" % (dive_nc_file.dive_number,),
-            fig,
+        fig = plotly.graph_objects.Figure()
+        fig.add_trace(
+            {
+                "x": pitchAD,
+                "y": vehicle_pitch_degrees_v,
+                "name": "Pitch control/Pitch",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-down",
+                    "color": "DarkBlue",
+                },
+                # "mode": "lines",
+                # "line": {"dash": "solid", "color": "Blue"},
+                "hovertemplate": "PitchAD<br>%{x:.0f}<br>%{y:.2f} deg<br><extra></extra>",
+            }
         )
-    )
+        fig.add_trace(
+            {
+                "x": pitchAD_Fit,
+                "y": pitch_Fit,
+                "name": "linfit C_PITCH, PITCH_GAIN",
+                "mode": "lines",
+                "line": {"dash": "solid", "color": "Red"},
+                "hovertemplate": f"Fit C_PITCH={implied_C:.0f} PITCH_GAIN={implied_gain:.2f}<br><extra></extra>",
+            }
+        )
+
+        mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
+        title_text = f"{mission_dive_str}<br>Pitch control vs Pitch"
+        fit_line = f"Best fit pitch regression implies C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm"
+
+        fig.update_layout(
+            {
+                "xaxis": {
+                    "title": f"pitch control (counts)<br>{fit_line}",
+                    "showgrid": True,
+                    # "side": "top"
+                },
+                "yaxis": {
+                    "title": "pitch (deg)",
+                    "showgrid": True,
+                    # "autorange": "reversed",
+                    # "range": [
+                    #     max(
+                    #         depth_dive.max() if len(depth_dive) > 0 else 0,
+                    #         depth_climb.max() if len(depth_climb) > 0 else 0,
+                    #     ),
+                    #     0,
+                    # ],
+                },
+                "title": {
+                    "text": title_text,
+                    "xanchor": "center",
+                    "yanchor": "top",
+                    "x": 0.5,
+                    "y": 0.95,
+                },
+                "margin": {
+                    "t": 100,
+                    "b": 125,
+                },
+            }
+        )
+
+        figs_list.append(fig)
+        file_list.append(
+            PlotUtilsPlotly.write_output_files(
+                base_opts,
+                "dv%04d_pitch" % (dive_nc_file.dive_number,),
+                fig,
+            )
+        )
 
     #
     # roll calculations
@@ -323,218 +337,39 @@ def plot_pitch_roll(
     # roll plot
     #
 
-    fig = plotly.graph_objects.Figure()
-    fig.add_trace(
-        {
-            "x": rollAD[iwn].ravel(),
-            "y": vehicle_roll_degrees_v[iwn].ravel(),
-            "name": "Dive roll control/roll",
-            "type": "scatter",
-            "mode": "markers",
-            "marker": {
-                "symbol": "triangle-down",
-                "color": "DarkBlue",
-            },
-            "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg<br><extra></extra>",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": rollAD[iwp].ravel(),
-            "y": vehicle_roll_degrees_v[iwp].ravel(),
-            "name": "Climb roll control/roll",
-            "type": "scatter",
-            "mode": "markers",
-            "marker": {
-                "symbol": "triangle-up",
-                "color": "Red",
-            },
-            "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg<br><extra></extra>",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": rollAD_Fit_dive,
-            "y": roll_Fit_dive,
-            "name": "linfit C_ROLL_DIVE",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "DarkBlue"},
-            "hovertemplate": f"Fit C_ROLL_DIVE={c_roll_dive_imp:.0f}<extra></extra>",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": rollAD_Fit_climb,
-            "y": roll_Fit_climb,
-            "name": "linfit C_ROLL_CLIMB",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "Red"},
-            "hovertemplate": f"Fit C_ROLL_CLIMB={c_roll_climb_imp:.0f}<extra></extra>",
-        }
-    )
-
-    mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = f"{mission_dive_str}<br>Roll control vs Roll"
-    fit_line = f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad"
-
-    fig.update_layout(
-        {
-            "xaxis": {
-                "title": f"roll control (counts)<br>{fit_line}",
-                "showgrid": True,
-                # "side": "top"
-            },
-            "yaxis": {
-                "title": "roll (deg)",
-                "showgrid": True,
-                # "autorange": "reversed",
-                # "range": [
-                #     max(
-                #         depth_dive.max() if len(depth_dive) > 0 else 0,
-                #         depth_climb.max() if len(depth_climb) > 0 else 0,
-                #     ),
-                #     0,
-                # ],
-            },
-            "title": {
-                "text": title_text,
-                "xanchor": "center",
-                "yanchor": "top",
-                "x": 0.5,
-                "y": 0.95,
-            },
-            "margin": {
-                "t": 100,
-                "b": 125,
-            },
-        }
-    )
-
-    figs_list.append(fig)
-    file_list.append(
-        PlotUtilsPlotly.write_output_files(
-            base_opts,
-            "dv%04d_roll" % (dive_nc_file.dive_number,),
-            fig,
-        )
-    )
-
-    #
-    # roll rate
-    #
-
-    n = len(roll_control)
-    i = 0
-    centered = False
-    centeredAD_d = []
-    centeredRate_d = []
-    centeredAD_c = []
-    centeredRate_c = []
-
-    while i < n:
-        if centered is False and abs(roll_control[i]) < 5:
-            centered = True
-            centered_start_t = sg_time[i]
-            centered_start_head = vehicle_head_degrees_v[i]
-            centeredAD = rollAD[i]
-            centeredN = 1
-        elif centered is True and abs(roll_control[i]) > 5:
-            centered = False
-            if pitch_control[i] < 0 and centeredN > 1:
-                centeredAD_d.append(centeredAD / centeredN)
-                centeredRate_d.append(
-                    headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
-                    / (sg_time[i - 1] - centered_start_t)
-                )
-            elif centeredN > 1:
-                centeredAD_c.append(centeredAD / centeredN)
-                centeredRate_c.append(
-                    headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
-                    / (sg_time[i - 1] - centered_start_t)
-                )
-
-        elif centered:
-            centeredAD = centeredAD + rollAD[i]
-            centeredN = centeredN + 1
-
-        i = i + 1
-
-    ADs = []
-    if len(centeredAD_d) > 1:
-        fitd = scipy.stats.linregress(centeredAD_d, centeredRate_d)
-        c_roll_dive_imp = -fitd.intercept / fitd.slope
-        ADs = ADs + centeredAD_d + [c_roll_dive_imp]
-    else:
-        fitd = False
-
-    if len(centeredAD_c) > 1:
-        fitc = scipy.stats.linregress(centeredAD_c, centeredRate_c)
-        c_roll_climb_imp = -fitc.intercept / fitc.slope
-        ADs = ADs + centeredAD_c + [c_roll_climb_imp]
-    else:
-        fitc = False
-
-    if fitc or fitd:
-        rollAD_Fit = np.array([max([0,min(ADs)]), min([max(ADs), 4096])])
-
-    if fitd is not False:
-        roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit
-    else:
-        roll_Fit_dive = []
-
-    if fitc is not False:
-        roll_Fit_climb = fitc.intercept + fitc.slope * rollAD_Fit
-    else:
-        roll_Fit_climb = []
-
-    #    turnRate = Utils.ctr_1st_diff(vehicle_head_degrees_v, sg_time - start_time)
-    #
-    #    ircd = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control < 0))
-    #    ircc = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control > 0))
-    #
-    #    fitd = scipy.stats.linregress( rollAD[ircd].ravel(), turnRate[ircd].ravel() )
-    #    c_roll_dive_imp = -fitd.intercept / fitd.slope
-    #
-    #    fitc = scipy.stats.linregress( rollAD[ircc].ravel(), turnRate[ircc].ravel() )
-    #    c_roll_climb_imp = -fitc.intercept / fitc.slope
-
-    #
-    # roll rate plot
-    #
-
-    fig = plotly.graph_objects.Figure()
-    fig.add_trace(
-        {
-            "x": centeredAD_d,
-            "y": centeredRate_d,
-            "name": "Roll control/turn rate",
-            "type": "scatter",
-            "mode": "markers",
-            "marker": {
-                "symbol": "triangle-down",
-                "color": "DarkBlue",
-            },
-            "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": centeredAD_c,
-            "y": centeredRate_c,
-            "name": "Roll control/turn rate",
-            "type": "scatter",
-            "mode": "markers",
-            "marker": {
-                "symbol": "triangle-up",
-                "color": "Red",
-            },
-            "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
-        }
-    )
-    if len(roll_Fit_dive):
+    if generate_plots:
+        fig = plotly.graph_objects.Figure()
         fig.add_trace(
             {
-                "x": rollAD_Fit,
+                "x": rollAD[iwn].ravel(),
+                "y": vehicle_roll_degrees_v[iwn].ravel(),
+                "name": "Dive roll control/roll",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-down",
+                    "color": "DarkBlue",
+                },
+                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg<br><extra></extra>",
+            }
+        )
+        fig.add_trace(
+            {
+                "x": rollAD[iwp].ravel(),
+                "y": vehicle_roll_degrees_v[iwp].ravel(),
+                "name": "Climb roll control/roll",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-up",
+                    "color": "Red",
+                },
+                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg<br><extra></extra>",
+            }
+        )
+        fig.add_trace(
+            {
+                "x": rollAD_Fit_dive,
                 "y": roll_Fit_dive,
                 "name": "linfit C_ROLL_DIVE",
                 "mode": "lines",
@@ -542,10 +377,9 @@ def plot_pitch_roll(
                 "hovertemplate": f"Fit C_ROLL_DIVE={c_roll_dive_imp:.0f}<extra></extra>",
             }
         )
-    if len(roll_Fit_climb):
         fig.add_trace(
             {
-                "x": rollAD_Fit,
+                "x": rollAD_Fit_climb,
                 "y": roll_Fit_climb,
                 "name": "linfit C_ROLL_CLIMB",
                 "mode": "lines",
@@ -554,41 +388,222 @@ def plot_pitch_roll(
             }
         )
 
-    mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = f"{mission_dive_str}<br>Roll control vs turn rate while centered"
-    fit_line = f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad"
+        mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
+        title_text = f"{mission_dive_str}<br>Roll control vs Roll"
+        fit_line = f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad"
 
-    fig.update_layout(
-        {
-            "xaxis": {
-                "title": f"roll control (counts)<br>{fit_line}",
-                "showgrid": True,
-            },
-            "yaxis": {
-                "title": "turn rate (deg/s)",
-                "showgrid": True,
-            },
-            "title": {
-                "text": title_text,
-                "xanchor": "center",
-                "yanchor": "top",
-                "x": 0.5,
-                "y": 0.95,
-            },
-            "margin": {
-                "t": 100,
-                "b": 125,
-            },
-        }
-    )
-
-    figs_list.append(fig)
-    file_list.append(
-        PlotUtilsPlotly.write_output_files(
-            base_opts,
-            "dv%04d_roll_rate" % (dive_nc_file.dive_number,),
-            fig,
+        fig.update_layout(
+            {
+                "xaxis": {
+                    "title": f"roll control (counts)<br>{fit_line}",
+                    "showgrid": True,
+                    # "side": "top"
+                },
+                "yaxis": {
+                    "title": "roll (deg)",
+                    "showgrid": True,
+                    # "autorange": "reversed",
+                    # "range": [
+                    #     max(
+                    #         depth_dive.max() if len(depth_dive) > 0 else 0,
+                    #         depth_climb.max() if len(depth_climb) > 0 else 0,
+                    #     ),
+                    #     0,
+                    # ],
+                },
+                "title": {
+                    "text": title_text,
+                    "xanchor": "center",
+                    "yanchor": "top",
+                    "x": 0.5,
+                    "y": 0.95,
+                },
+                "margin": {
+                    "t": 100,
+                    "b": 125,
+                },
+            }
         )
-    )
 
+        figs_list.append(fig)
+        file_list.append(
+            PlotUtilsPlotly.write_output_files(
+                base_opts,
+                "dv%04d_roll" % (dive_nc_file.dive_number,),
+                fig,
+            )
+        )
+
+    #
+    # roll rate
+    #
+    if generate_plots:
+        n = len(roll_control)
+        i = 0
+        centered = False
+        centeredAD_d = []
+        centeredRate_d = []
+        centeredAD_c = []
+        centeredRate_c = []
+
+        while i < n:
+            if centered is False and abs(roll_control[i]) < 5:
+                centered = True
+                centered_start_t = sg_time[i]
+                centered_start_head = vehicle_head_degrees_v[i]
+                centeredAD = rollAD[i]
+                centeredN = 1
+            elif centered is True and abs(roll_control[i]) > 5:
+                centered = False
+                if pitch_control[i] < 0 and centeredN > 1:
+                    centeredAD_d.append(centeredAD / centeredN)
+                    centeredRate_d.append(
+                        headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
+                        / (sg_time[i - 1] - centered_start_t)
+                    )
+                elif centeredN > 1:
+                    centeredAD_c.append(centeredAD / centeredN)
+                    centeredRate_c.append(
+                        headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
+                        / (sg_time[i - 1] - centered_start_t)
+                    )
+
+            elif centered:
+                centeredAD = centeredAD + rollAD[i]
+                centeredN = centeredN + 1
+
+            i = i + 1
+
+        ADs = []
+        if len(centeredAD_d) > 1:
+            fitd = scipy.stats.linregress(centeredAD_d, centeredRate_d)
+            c_roll_dive_imp = -fitd.intercept / fitd.slope
+            ADs = ADs + centeredAD_d + [c_roll_dive_imp]
+        else:
+            fitd = False
+
+        if len(centeredAD_c) > 1:
+            fitc = scipy.stats.linregress(centeredAD_c, centeredRate_c)
+            c_roll_climb_imp = -fitc.intercept / fitc.slope
+            ADs = ADs + centeredAD_c + [c_roll_climb_imp]
+        else:
+            fitc = False
+
+        if fitc or fitd:
+            rollAD_Fit = np.array([max([0, min(ADs)]), min([max(ADs), 4096])])
+
+        if fitd is not False:
+            roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit
+        else:
+            roll_Fit_dive = []
+
+        if fitc is not False:
+            roll_Fit_climb = fitc.intercept + fitc.slope * rollAD_Fit
+        else:
+            roll_Fit_climb = []
+
+        #    turnRate = Utils.ctr_1st_diff(vehicle_head_degrees_v, sg_time - start_time)
+        #
+        #    ircd = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control < 0))
+        #    ircc = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control > 0))
+        #
+        #    fitd = scipy.stats.linregress( rollAD[ircd].ravel(), turnRate[ircd].ravel() )
+        #    c_roll_dive_imp = -fitd.intercept / fitd.slope
+        #
+        #    fitc = scipy.stats.linregress( rollAD[ircc].ravel(), turnRate[ircc].ravel() )
+        #    c_roll_climb_imp = -fitc.intercept / fitc.slope
+
+        #
+        # roll rate plot
+        #
+
+        fig = plotly.graph_objects.Figure()
+        fig.add_trace(
+            {
+                "x": centeredAD_d,
+                "y": centeredRate_d,
+                "name": "Roll control/turn rate",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-down",
+                    "color": "DarkBlue",
+                },
+                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
+            }
+        )
+        fig.add_trace(
+            {
+                "x": centeredAD_c,
+                "y": centeredRate_c,
+                "name": "Roll control/turn rate",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-up",
+                    "color": "Red",
+                },
+                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
+            }
+        )
+        if len(roll_Fit_dive):
+            fig.add_trace(
+                {
+                    "x": rollAD_Fit,
+                    "y": roll_Fit_dive,
+                    "name": "linfit C_ROLL_DIVE",
+                    "mode": "lines",
+                    "line": {"dash": "solid", "color": "DarkBlue"},
+                    "hovertemplate": f"Fit C_ROLL_DIVE={c_roll_dive_imp:.0f}<extra></extra>",
+                }
+            )
+        if len(roll_Fit_climb):
+            fig.add_trace(
+                {
+                    "x": rollAD_Fit,
+                    "y": roll_Fit_climb,
+                    "name": "linfit C_ROLL_CLIMB",
+                    "mode": "lines",
+                    "line": {"dash": "solid", "color": "Red"},
+                    "hovertemplate": f"Fit C_ROLL_CLIMB={c_roll_climb_imp:.0f}<extra></extra>",
+                }
+            )
+
+        mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
+        title_text = f"{mission_dive_str}<br>Roll control vs turn rate while centered"
+        fit_line = f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad"
+
+        fig.update_layout(
+            {
+                "xaxis": {
+                    "title": f"roll control (counts)<br>{fit_line}",
+                    "showgrid": True,
+                },
+                "yaxis": {
+                    "title": "turn rate (deg/s)",
+                    "showgrid": True,
+                },
+                "title": {
+                    "text": title_text,
+                    "xanchor": "center",
+                    "yanchor": "top",
+                    "x": 0.5,
+                    "y": 0.95,
+                },
+                "margin": {
+                    "t": 100,
+                    "b": 125,
+                },
+            }
+        )
+
+        figs_list.append(fig)
+        file_list.append(
+            PlotUtilsPlotly.write_output_files(
+                base_opts,
+                "dv%04d_roll_rate" % (dive_nc_file.dive_number,),
+                fig,
+            )
+        )
+    # log_info("Leaving dive_pitch_roll")
     return (figs_list, file_list)

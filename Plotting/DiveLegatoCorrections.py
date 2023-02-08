@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -37,7 +37,6 @@ import seawater
 if typing.TYPE_CHECKING:
     import BaseOpts
 
-import Globals
 import PlotUtils
 import PlotUtilsPlotly
 import QC
@@ -48,9 +47,14 @@ from Plotting import plotdivesingle
 
 @plotdivesingle
 def plot_legato_corrections(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plot showing results for legato thermal-inertia correction"""
+    if not generate_plots:
+        return ([], [])
+
     try:
         if "legato_temp" in dive_nc_file.variables:
             legato_temp = dive_nc_file.variables["legato_temp"][:]

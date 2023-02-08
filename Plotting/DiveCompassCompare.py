@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -39,7 +39,6 @@ import seawater
 if typing.TYPE_CHECKING:
     import BaseOpts
 
-import Globals
 import PlotUtils
 import PlotUtilsPlotly
 import Utils
@@ -483,11 +482,13 @@ def plot_compass_compare(
 
 @plotdivesingle
 def plot_compare_aux(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots comparision of truc with with aux compass"""
 
-    if "auxCompass_time" not in dive_nc_file.variables:
+    if "auxCompass_time" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
     return plot_compass_compare(
         dive_nc_file,
@@ -503,10 +504,12 @@ def plot_compare_aux(
 
 @plotdivesingle
 def plot_compare_auxb(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots comparision of truc with with auxb compass"""
-    if "auxB_time" not in dive_nc_file.variables:
+    if "auxB_time" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
     return plot_compass_compare(
         dive_nc_file,
@@ -522,10 +525,12 @@ def plot_compare_auxb(
 
 @plotdivesingle
 def plot_compare_cp(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots comparision of truck compass with with logdev adcp compass"""
-    if "cp_time" not in dive_nc_file.variables:
+    if "cp_time" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
     return plot_compass_compare(
         dive_nc_file,
@@ -541,10 +546,12 @@ def plot_compare_cp(
 
 @plotdivesingle
 def plot_compare_ad2cp(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots comparision of truck compass with with logdev adcp compass"""
-    if "ad2cp_time" not in dive_nc_file.variables:
+    if "ad2cp_time" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
 
     return plot_compass_compare(

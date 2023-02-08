@@ -82,25 +82,24 @@ line_lookup = {
 
 @plotmissionsingle
 def mission_energy(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+        base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Plots mission energy consumption and projections"""
-    log_info("Starting mission_energy")
+    log_info(f"Starting mission_energy {dive}")
 
     conn = Utils.open_mission_database(base_opts)
     if not conn:
         log_error("Could not open mission database")
         return ([], [])
-
     #l_annotations = []
 
-    if dive == None:
+    if dive is None:
         clause = ''
     else:
         clause = f"WHERE dive <= {dive}"
 
     res = conn.cursor().execute('PRAGMA table_info(dives)')
-    columns = [i[1] for i in res]
+    #unused columns = [i[1] for i in res]
 
     try:
         # capacity 10V and 24V are normalized battery availability
@@ -156,7 +155,7 @@ def mission_energy(
                 scenario_t(
                     "Modeled_10V",
                     batt_df["dive"],
-                    batt_df[f"batt_capacity_10V"],
+                    batt_df["batt_capacity_10V"],
                     batt_df["dive_time"],
                     batt_df["dive_end"],
                 )
@@ -165,7 +164,7 @@ def mission_energy(
                 scenario_t(
                     "Modeled_24V",
                     batt_df["dive"],
-                    batt_df[f"batt_capacity_24V"],
+                    batt_df["batt_capacity_24V"],
                     batt_df["dive_time"],
                     batt_df["dive_end"],
                 )
@@ -182,7 +181,7 @@ def mission_energy(
             #     )
             # )
 
-        y_offset = -0.08
+        #y_offset = -0.08
         for type_str, dive_col, cap_col, dive_time, dive_end in scenarios:
             dives_remaining, days_remaining, end_date = Utils.estimate_endurance(
                 base_opts,
@@ -210,38 +209,43 @@ def mission_energy(
             #         "y": y_offset,
             #     }
             # )
-
+            
             end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               f"energy_dives_remain_{type_str}", 
-                              float(dives_remaining))
+                              float(dives_remaining), conn)
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               f"energy_dives_total_{type_str}", 
-                              float(dives_remaining + dive_col.to_numpy()[-1]))
+                              float(dives_remaining + dive_col.to_numpy()[-1]), conn)
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               f"energy_days_remain_{type_str}", 
-                              days_remaining);
+                              days_remaining, conn);
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               f"energy_days_total_{type_str}", 
-                              (end_t - start)/86400);
+                              (end_t - start)/86400, conn);
             BaseDB.addValToDB(base_opts, 
                               int(batt_df["dive"].to_numpy()[-1]), 
                               f"energy_end_time_{type_str}", 
-                              end_t)
+                              end_t, conn)
             BaseDB.addValToDB(base_opts, 
                               int(batt_df["dive"].to_numpy()[-1]), 
                               f"energy_dives_back_{type_str}", 
-                              float(p_dives_back));
+                              float(p_dives_back), conn);
 
         p_dives_back = (
             base_opts.mission_energy_dives_back
             if fg_df["dive"].to_numpy()[-1] >= base_opts.mission_energy_dives_back
             else fg_df["dive"].to_numpy()[-1]
         )
+        days_df_modeled = pd.read_sql_query(
+            f"SELECT dive,energy_days_total_Modeled FROM dives {clause} ORDER BY dive ASC", 
+            conn,
+        ).sort_values("dive")
+
 
         # TODO Using the polyfit on the normalized battery capacity for the fuel guage yields
         # roughly 10% less dives then next calc (taken directly from the current matlab code)
@@ -249,75 +253,79 @@ def mission_energy(
             fg_df["log_FG_AHR_24Vo"].to_numpy()[-1]
             + fg_df["log_FG_AHR_10Vo"].to_numpy()[-1]
         )
-        avg_use = (
-            np.sum(fg_df["fg_ah_used_24V"].to_numpy()[-p_dives_back:])
-            + np.sum(fg_df["fg_ah_used_10V"].to_numpy()[-p_dives_back:])
-        ) / float(p_dives_back)
-        log_info(f"avg_use:{avg_use}")
+        days_df_fg = None
+        fg_est_str = ""
 
-        p_dives_back = (
-            base_opts.mission_energy_dives_back
-            if batt_df["dive"].to_numpy()[-1] >= base_opts.mission_energy_dives_back
-            else batt_df["dive"].to_numpy()[-1]
-        )
+        if used_to_date > 0.0:
+            avg_use = (
+                np.sum(fg_df["fg_ah_used_24V"].to_numpy()[-p_dives_back:])
+                + np.sum(fg_df["fg_ah_used_10V"].to_numpy()[-p_dives_back:])
+            ) / float(p_dives_back)
+            log_info(f"avg_use:{avg_use}")
 
-        batt_cap = max(
-            batt_df["batt_Ahr_cap_24V"].to_numpy()[-1],
-            batt_df["batt_Ahr_cap_10V"].to_numpy()[-1],
-        )
-        dives_remaining = (
-            batt_cap * (1.0 - base_opts.mission_energy_reserve_percent) - used_to_date
-        ) / avg_use
-        secs_remaining = dives_remaining * np.mean(
-            batt_df["dive_time"].to_numpy()[-p_dives_back:]
-        )
-        end_date = time.strftime(
-            "%Y-%m-%dT%H:%M:%SZ",
-            time.gmtime(batt_df["dive_end"].to_numpy()[-1] + secs_remaining),
-        )
-        days_remaining = secs_remaining / (24.0 * 3600.0)
-        log_info(
-            f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining:{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
-        )
-        fg_est_str = f"Based on Fuel Gauge for the last {p_dives_back} dives: {dives_remaining:.0f} dives remaining ({days_remaining:.01f} days at current rate) estimated end date {end_date} "
-        # y_offset += -0.02
-        # l_annotations.append(
-        #     {
-        #         "text": fg_est_str,
-        #         "showarrow": False,
-        #         "xref": "paper",
-        #         "yref": "paper",
-        #         "x": 0.0,
-        #         "y": y_offset,
-        #     }
-        # )
+            p_dives_back = (
+                base_opts.mission_energy_dives_back
+                if batt_df["dive"].to_numpy()[-1] >= base_opts.mission_energy_dives_back
+                else batt_df["dive"].to_numpy()[-1]
+            )
 
-        end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
-        BaseDB.addValToDB(base_opts, 
-                          int(dive_col.to_numpy()[-1]), 
-                          "energy_dives_remain_FG", 
-                          dives_remaining)
-        BaseDB.addValToDB(base_opts, 
-                          int(dive_col.to_numpy()[-1]), 
-                          "energy_dives_total_FG", 
-                          dives_remaining + int(dive_col.to_numpy()[-1]))
-        BaseDB.addValToDB(base_opts, 
-                          int(dive_col.to_numpy()[-1]), 
-                          "energy_days_remain_FG", 
-                          days_remaining);
-        BaseDB.addValToDB(base_opts, 
-                          int(dive_col.to_numpy()[-1]), 
-                          "energy_end_time_FG", 
-                          end_t)
-        BaseDB.addValToDB(base_opts, 
-                          int(dive_col.to_numpy()[-1]), 
-                          "energy_days_total_FG", 
-                          (end_t - start)/86400);
+            batt_cap = max(
+                batt_df["batt_Ahr_cap_24V"].to_numpy()[-1],
+                batt_df["batt_Ahr_cap_10V"].to_numpy()[-1],
+            )
+            dives_remaining = (
+                batt_cap * (1.0 - base_opts.mission_energy_reserve_percent) - used_to_date
+            ) / avg_use
+            secs_remaining = dives_remaining * np.mean(
+                batt_df["dive_time"].to_numpy()[-p_dives_back:]
+            )
+            end_date = time.strftime(
+                "%Y-%m-%dT%H:%M:%SZ",
+                time.gmtime(batt_df["dive_end"].to_numpy()[-1] + secs_remaining),
+            )
+            days_remaining = secs_remaining / (24.0 * 3600.0)
+            log_info(
+                f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining:{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
+            )
+            fg_est_str = f"Based on Fuel Gauge for the last {p_dives_back} dives: {dives_remaining:.0f} dives remaining ({days_remaining:.01f} days at current rate) estimated end date {end_date} "
+            # y_offset += -0.02
+            # l_annotations.append(
+            #     {
+            #         "text": fg_est_str,
+            #         "showarrow": False,
+            #         "xref": "paper",
+            #         "yref": "paper",
+            #         "x": 0.0,
+            #         "y": y_offset,
+            #     }
+            # )
 
-        days_df = pd.read_sql_query(
-            f"SELECT dive,energy_days_total_Modeled,energy_days_total_FG FROM dives {clause} ORDER BY dive ASC", 
-            conn,
-        ).sort_values("dive")
+            end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              "energy_dives_remain_FG", 
+                              dives_remaining, conn)
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              "energy_dives_total_FG", 
+                              dives_remaining + int(dive_col.to_numpy()[-1]), conn)
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              "energy_days_remain_FG", 
+                              days_remaining, conn);
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              "energy_end_time_FG", 
+                              end_t, conn)
+            BaseDB.addValToDB(base_opts, 
+                              int(dive_col.to_numpy()[-1]), 
+                              "energy_days_total_FG", 
+                              (end_t - start)/86400,conn)
+
+            days_df_fg = pd.read_sql_query(
+                f"SELECT dive,energy_days_total_FG FROM dives {clause} ORDER BY dive ASC", 
+                conn,
+            ).sort_values("dive")
 
 
         # Find the device and sensor columnns for power consumption
@@ -360,6 +368,10 @@ def mission_energy(
         sensor_joules_df = pd.read_sql_query(
             f"SELECT dive,{','.join(sensor_joule_cols)} from dives", conn
         ).sort_values("dive")
+
+        if not generate_plots:
+            conn.close()
+            return ([], [])
 
         fig = plotly.graph_objects.Figure()
 
@@ -423,18 +435,16 @@ def mission_energy(
                         }
                     )
 
-        # In the case of mission reprocessing, the energy_days_total* columns are not
-        # repopulated in the database, so added these traces to the energy plots are
-        # meaningless
-        if days_df["energy_days_total_FG"].count() > 1:
+
+        if days_df_fg is not None:
             fig.add_trace(
                 {
                     "name": "Mission days (FG)",
-                    "x": days_df["dive"],
-                    "y": days_df["energy_days_total_FG"],
+                    "x": days_df_fg["dive"],
+                    "y": days_df_fg["energy_days_total_FG"],
                     "customdata": np.squeeze(
                         np.dstack(
-                            (days_df["energy_days_total_FG"], (start_t - start) / 86400)
+                            (days_df_fg["energy_days_total_FG"], (start_t - start) / 86400)
                         )
                     ),
                     "yaxis": "y3",
@@ -443,23 +453,22 @@ def mission_energy(
                     "hovertemplate": "Mission Days (FG)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
                 }
             )
-        if days_df["energy_days_total_Modeled"].count() > 1:            
-            fig.add_trace(
-                {
-                    "name": "Mission days (model)",
-                    "x": days_df["dive"],
-                    "y": days_df["energy_days_total_Modeled"],
-                    "customdata": np.squeeze(
-                        np.dstack(
-                            (days_df["energy_days_total_Modeled"], (start_t - start) / 86400)
-                        )
-                    ),
-                    "yaxis": "y3",
-                    "mode": "lines",
-                    "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
-                    "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
-                }
-            )        
+        fig.add_trace(
+            {
+                "name": "Mission days (model)",
+                "x": days_df_modeled["dive"],
+                "y": days_df_modeled["energy_days_total_Modeled"],
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (days_df_modeled["energy_days_total_Modeled"], (start_t - start) / 86400)
+                    )
+                ),
+                "yaxis": "y3",
+                "mode": "lines",
+                "line": {"dash": "dot", "width": 1, "color": "DarkGrey"},
+                "hovertemplate": "Mission days (model)<br>Dive %{x:.0f}<br>Mission days %{customdata[0]:.1f}<br>Mission day %{customdata[1]:.1f}<extra></extra>",
+            }
+        )        
         if univolt:
             fig.add_trace(
                 {
@@ -584,6 +593,7 @@ def mission_energy(
                 #"annotations": tuple(l_annotations),
             },
         )
+        conn.close()
         return (
             [fig],
             PlotUtilsPlotly.write_output_files(
@@ -599,5 +609,6 @@ def mission_energy(
             traceback.print_exc()
             pdb.post_mortem(traceb)
         log_error("Could not fetch needed columns", "exc")
+        conn.close()
         return ([], [])
 # fmt: on

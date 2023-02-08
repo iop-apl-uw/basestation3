@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -43,7 +43,9 @@ mission_plot_funcs = {}
 
 # pylint: disable=unused-argument
 def plot_dive_single(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file_name: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file_name: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Signature for per-dive plotting routines"""
     return ([], [])
@@ -51,7 +53,7 @@ def plot_dive_single(
 
 # pylint: disable=unused-argument
 def plot_mission_single(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Signature for whole mission plotting routines"""
     return ([], [])

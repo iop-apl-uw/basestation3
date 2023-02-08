@@ -238,10 +238,13 @@ def insertColumn(dive, cur, col, val, db_type):
     """Insert the specified column"""
     try:
         cur.execute(f"ALTER TABLE dives ADD COLUMN {col} {db_type};")
-    except:
-        pass
-
-
+    except sqlite3.OperationalError as er:
+        if er.args[0].startswith("duplicate column name"):
+            pass
+        else:
+            log_error(f"Error inserting column {col} - skipping", "exc")
+            return
+        
     if db_type == "TEXT":
         cur.execute(f"UPDATE dives SET {col} = '{val}' WHERE dive={dive};")
     else:
@@ -270,7 +273,7 @@ def processGC(dive, cur, nci):
             if math.fabs(dAD) > 2:
                 pitch_rate = dAD / nci.variables['gc_pitch_secs'][i]
 
-        if nci.variables['gc_vbd_secs'][i] > 0.5:
+        if nci.variables['gc_vbd_secs'][i] > 0.5 and "gc_vbd_ad_start" in nci.variables:
             dAD = nci.variables['gc_vbd_ad'][i] - nci.variables['gc_vbd_ad_start'][i]
             if math.fabs(dAD) > 2:
                 vbd_rate = dAD / nci.variables['gc_vbd_secs'][i]
@@ -278,6 +281,16 @@ def processGC(dive, cur, nci):
 
                 if rate > 0:
                     vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
+
+        if "gc_flags" in nci.variables:
+            flag_val = f"{nci.variables['gc_flags'][i]},"
+        else:
+            flag_val = "NULL,"
+
+        if "gc_roll_ctl" in nci.variables:
+            gc_roll_ctl = f"{nci.variables['gc_roll_ctl'][i]},"
+        else:
+            gc_roll_ctl = "NULL,"
 
         cur.execute("INSERT INTO gc(dive," \
                                      "st_secs," \
@@ -314,13 +327,13 @@ def processGC(dive, cur, nci):
                                      f"{nci.variables['gc_depth'][i]}," \
                                      f"{nci.variables['gc_ob_vertv'][i]}," \
                                      f"{nci.variables['gc_end_secs'][i]}," \
-                                     f"{nci.variables['gc_flags'][i]}," \
+                                     f"{flag_val}" \
                                      f"{nci.variables['gc_pitch_ctl'][i]}," \
                                      f"{nci.variables['gc_pitch_secs'][i]}," \
                                      f"{nci.variables['gc_pitch_i'][i]}," \
                                      f"{nci.variables['gc_pitch_ad'][i]}," \
                                      f"{pitch_rate}," \
-                                     f"{nci.variables['gc_roll_ctl'][i]}," \
+                                     f"{gc_roll_ctl}"\
                                      f"{nci.variables['gc_roll_secs'][i]}," \
                                      f"{nci.variables['gc_roll_i'][i]}," \
                                      f"{nci.variables['gc_roll_ad'][i]}," \
@@ -492,16 +505,17 @@ def loadFileToDB(base_opts, cur, filename, con):
     else:
         avail10 = 0
 
-    [sdcap, sdfree] = list(
-        map(int, nci.variables["log_SDSIZE"][:].tobytes().decode("utf-8").split(","))
-    )
-    [sdfiles, sddirs] = list(
-        map(int, nci.variables["log_SDFILEDIR"][:].tobytes().decode("utf-8").split(","))
-    )
-
-    insertColumn(dive, cur, "SD_free", sdfree, "INTEGER")
-    insertColumn(dive, cur, "SD_files", sdfiles, "INTEGER")
-    insertColumn(dive, cur, "SD_dirs", sddirs, "INTEGER")
+    if "log_SDSIZE" in nci.variables:
+        [sdcap, sdfree] = list(
+            map(int, nci.variables["log_SDSIZE"][:].tobytes().decode("utf-8").split(","))
+        )
+        insertColumn(dive, cur, "SD_free", sdfree, "INTEGER")
+    if "log_SDFILEDIR" in nci.variables:
+        [sdfiles, sddirs] = list(
+            map(int, nci.variables["log_SDFILEDIR"][:].tobytes().decode("utf-8").split(","))
+        )
+        insertColumn(dive, cur, "SD_files", sdfiles, "INTEGER")
+        insertColumn(dive, cur, "SD_dirs", sddirs, "INTEGER")
 
     insertColumn(dive, cur, "batt_volts_10V", v10, "FLOAT")
     insertColumn(dive, cur, "batt_volts_24V", v24, "FLOAT")
@@ -738,12 +752,13 @@ def loadFileToDB(base_opts, cur, filename, con):
 
     addSlopeValToDB(base_opts, dive, slopeVars, con)
 
-def updateDBFromPlots(base_opts, ncfs):
+def updateDBFromPlots(base_opts, ncfs, run_dive_plots=True):
     """Update the database with the output of plotting routines that generate db columns"""
 
-    base_opts.dive_plots = ["plot_vert_vel", "plot_pitch_roll"]
-    dive_plots_dict = BasePlot.get_dive_plots(base_opts)
-    BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs)
+    #base_opts.dive_plots = ["plot_vert_vel", "plot_pitch_roll"]
+    if run_dive_plots:
+        dive_plots_dict = BasePlot.get_dive_plots(base_opts)
+        BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs, generate_plots=False)
 
     sg_calib_file_name = os.path.join(
         base_opts.mission_dir, "sg_calib_constants.m"
@@ -751,12 +766,12 @@ def updateDBFromPlots(base_opts, ncfs):
     calib_consts = getSGCalibrationConstants(sg_calib_file_name)
     mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
 
-    base_opts.mission_plots = ["mission_energy", "mission_int_sensors"]
+    #base_opts.mission_plots = ["mission_energy", "mission_int_sensors"]
     mission_plots_dict = BasePlot.get_mission_plots(base_opts)
 
     for n in ncfs:
         dive = int(os.path.basename(n)[4:8])
-        BasePlot.plot_mission(base_opts, mission_plots_dict, mission_str, dive=dive)
+        BasePlot.plot_mission(base_opts, mission_plots_dict, mission_str, dive=dive, generate_plots=False)
 
 def updateDBFromFileExistence(base_opts, ncfs, con):
     for n in ncfs:
@@ -816,48 +831,44 @@ def updateDBFromFM(base_opts, ncfs, con):
 
         cur.close()
 
-def rebuildDB(base_opts, from_cli=False):
+def rebuildDB(base_opts):
     """Rebuild the database from scratch"""
     log_info("rebuilding database")
     con = Utils.open_mission_database(base_opts)
-    with con:
-        cur = con.cursor()
-        cur.execute("DROP TABLE IF EXISTS dives;")
-        cur.execute("DROP TABLE IF EXISTS gc;")
-        cur.execute("CREATE TABLE dives(dive INT);")
-        cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
+    cur = con.cursor()
+    cur.execute("DROP TABLE IF EXISTS dives;")
+    cur.execute("DROP TABLE IF EXISTS gc;")
+    cur.execute("CREATE TABLE dives(dive INT);")
+    cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
 
-        # patt = path + "/p%03d????.nc" % sg
-        patt = os.path.join(
-            base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.nc"
-        )
-        ncfs = []
-        for filename in glob.glob(patt):
-            ncfs.append(filename)
-        ncfs = sorted(ncfs)
-        for filename in ncfs:
-            loadFileToDB(base_opts, cur, filename, con)
-        cur.close()
-
-    if from_cli:
-        updateDBFromPlots(base_opts, ncfs)
+    # patt = path + "/p%03d????.nc" % sg
+    patt = os.path.join(
+        base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.nc"
+    )
+    ncfs = []
+    for filename in glob.glob(patt):
+        ncfs.append(filename)
+    ncfs = sorted(ncfs)
+    for filename in ncfs:
+        loadFileToDB(base_opts, cur, filename, con)
+    cur.close()
     updateDBFromFM(base_opts, ncfs, con)
     updateDBFromFileExistence(base_opts, ncfs, con)
+    con.close()
+    updateDBFromPlots(base_opts, ncfs)
 
 
-def loadDB(base_opts, filename, from_cli=False):
+def loadDB(base_opts, filename, run_dive_plots=True):
     """Load a single netcdf file into the database"""
     con = Utils.open_mission_database(base_opts)
-    with con:
-        cur = con.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
-        loadFileToDB(base_opts, cur, filename, con)
-        cur.close()
-
-    if from_cli:
-        updateDBFromPlots(base_opts, [filename])
+    cur = con.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
+    loadFileToDB(base_opts, cur, filename, con)
+    cur.close()
     updateDBFromFM(base_opts, [filename], con)
     updateDBFromFileExistence(base_opts, [filename], con)
+    con.close()
+    updateDBFromPlots(base_opts, [filename], run_dive_plots=run_dive_plots)    
 
 def prepDB(base_opts, dbfile=None):
     if dbfile is None:
@@ -865,12 +876,11 @@ def prepDB(base_opts, dbfile=None):
     else:
         con = sqlite3.connect(dbfile)
 
-    with con:
-        cur = con.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
-        cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
-        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));")
-        cur.close()
+    cur = con.cursor()
+    cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
+    cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
+    cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));")
+    cur.close()
 
     con.close()
 
@@ -1048,9 +1058,9 @@ def main():
     if base_opts.subparser_name == "addncfs":
         if base_opts.netcdf_files:
             for ncf in base_opts.netcdf_files:
-                loadDB(base_opts, ncf, from_cli=True)
+                loadDB(base_opts, ncf)
         else:
-            rebuildDB(base_opts, from_cli=True)
+            rebuildDB(base_opts)
     elif base_opts.subparser_name == "addval":
         addValToDB(base_opts, base_opts.dive_num, base_opts.value_name, base_opts.value)
     else:
