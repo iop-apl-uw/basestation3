@@ -20,7 +20,10 @@ async def displayTables(fname):
     async with aiofiles.open(fname, 'r') as file:
         async for line in file:
             line = line.rstrip()
-            if not line.startswith('$'):
+            if line.startswith('version'):
+                version = float(line.split(':')[1])
+                continue
+            elif not line.startswith('$'):
                 continue
 
             pieces = line.split(',')
@@ -428,51 +431,73 @@ async def displayTables(fname):
         print("<td>-</td>") # t
         print("<td>-</td>") # phase
 
+        if version >= 67: 
+            k_vbd = 1
+            k_pit = 2
+            k_rol = 3
+            vbd_ad_inc = 2 
+            retries_inc = 0
+        else:
+            k_pit = 1
+            k_rol = 2 
+            k_vbd = 3
+            vbd_ad_inc = 0
+            retries_inc = 1
+
         print("<td>-</td>") # pitch ctl
-        print("<td>%s</td>" % ("-" if L['SM_GC'][2] == 0 else L['SM_GC'][2])) # pitch t
-        print("<td>%s</td>" % ("-" if L['SM_GC'][5] == 0 else L['SM_GC'][5])) # pitch A
-        print("<td>%s</td>" % ("-" if L['SM_GC'][10] == 0 else L['SM_GC'][10])) # pitch pos
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_pit] == 0 else L['SM_GC'][k_pit])) # pitch t
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_pit + 3] == 0 else L['SM_GC'][k_pit +3])) # pitch A
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_pit + 6 + vbd_ad_inc] == 0 else L['SM_GC'][k_pit+ 6 +vbd_ad_inc])) # pitch pos
         # pitch rate
-        if (L['SM_GC'][1] > 0):
-            x = (L['SM_GC'][10] - GC[last_real_GC - 1][23])/L['SM_GC'][2]
+        if (L['SM_GC'][k_pit] > 0):
+            x = (L['SM_GC'][k_pit + 6 + vbd_ad_inc] - GC[last_real_GC - 1][23])/L['SM_GC'][k_pit]
             print("<td>%.1f</td>" % x)
         else:
             print("<td>-</td>")
 
-        print("<td>%s</td>" % ("-" if L['SM_GC'][3] == 0 else L['SM_GC'][3])) # roll t
-        print("<td>%s</td>" % ("-" if L['SM_GC'][6] == 0 else L['SM_GC'][6])) # roll A
-        print("<td>%s</td>" % ("-" if L['SM_GC'][11] == 0 else L['SM_GC'][11])) # roll AD
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_rol] == 0 else L['SM_GC'][k_rol])) # roll t
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_rol + 3] == 0 else L['SM_GC'][k_rol + 3])) # roll A
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_rol + 6 + vbd_ad_inc] == 0 else L['SM_GC'][k_rol + 6 + vbd_ad_inc])) # roll AD
 
         # roll rate
-        if (L['SM_GC'][2] > 0):
-            x = (L['SM_GC'][11] - GC[last_real_GC - 1][24])/L['SM_GC'][3]
+        if (L['SM_GC'][k_rol] > 0):
+            x = (L['SM_GC'][k_rol + 6 + vbd_ad_inc] - GC[last_real_GC - 1][24])/L['SM_GC'][k_rol]
             print("<td>%.1f</td>" % x)
         else:
             print("<td>-</td>")
 
         print("<td>-</td>") # VBD ctl
-        print("<td>%s</td>" % ("-" if L['SM_GC'][1] == 0 else L['SM_GC'][1])) # VBD t
-        print("<td>%s</td>" % ("-" if L['SM_GC'][4] == 0 else L['SM_GC'][4])) # VBD A
-        print("<td>%s</td>" % ("-" if L['SM_GC'][7] == 0 else L['SM_GC'][7])) # VBD pos
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_vbd] == 0 else L['SM_GC'][k_vbd])) # VBD t
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_vbd + 3] == 0 else L['SM_GC'][k_vbd + 3])) # VBD A
+        print("<td>%s</td>" % ("-" if L['SM_GC'][k_vbd + 6 + vbd_ad_inc] == 0 else L['SM_GC'][k_vbd + 6 + vbd_ad_inc])) # VBD pos
 
         # VBD rate and effic
-        if (L['SM_GC'][1] > 0):
-            rate = (L['SM_GC'][7] - GC[last_real_GC - 1][20])/L['SM_GC'][1]
+        if (L['SM_GC'][k_vbd] > 0):
+            rate = (L['SM_GC'][k_vbd + 6 + vbd_ad_inc] - GC[last_real_GC - 1][20])/L['SM_GC'][k_vbd]
             print("<td>%.1f</td>" % rate)
             rate = -rate/4.0767
-            x = 0.01*L['SM_GC'][0]*rate/L['SM_GC'][4]/24
+            x = 0.01*L['SM_GC'][0]*rate/L['SM_GC'][k_vbd + 3]/24
             print("<td>%.3f</td>" % x)
         else:
             print("<td>-</td>")
             print("<td>-</td>")
 
-        print("<td>%s</td>" % ("-" if L['SM_GC'][13] == 0 else L['SM_GC'][13])) # pitch errors
-        print("<td>%s</td>" % ("-" if L['SM_GC'][14] == 0 else L['SM_GC'][14])) # roll errors
-        print("<td>%s</td>" % ("-" if L['SM_GC'][12] == 0 else L['SM_GC'][13])) # pitch errors
+        if version >= 67:
+            print("<td>%s</td>" % ("-" if L['SM_GC'][13] == 0 else L['SM_GC'][13])) # pitch errors
+            print("<td>%s</td>" % ("-" if L['SM_GC'][14] == 0 else L['SM_GC'][14])) # roll errors
+            print("<td>%s</td>" % ("-" if L['SM_GC'][12] == 0 else L['SM_GC'][12])) # VBD errors
 
-        print("<td>%s</td>" % ("-" if L['SM_GC'][16] == 0 else L['SM_GC'][16])) # pitch V
-        print("<td>%s</td>" % ("-" if L['SM_GC'][17] == 0 else L['SM_GC'][17])) # roll V
-        print("<td>%s</td>" % ("-" if L['SM_GC'][15] == 0 else L['SM_GC'][15])) # VBD V
+            print("<td>%s</td>" % ("-" if L['SM_GC'][16] == 0 else L['SM_GC'][16])) # pitch V
+            print("<td>%s</td>" % ("-" if L['SM_GC'][17] == 0 else L['SM_GC'][17])) # roll V
+            print("<td>%s</td>" % ("-" if L['SM_GC'][15] == 0 else L['SM_GC'][15])) # VBD V
+        else:
+            print("<td>%s</td>" % ("-" if L['SM_GC'][14] == 0 else L['SM_GC'][14])) # pitch errors
+            print("<td>%s</td>" % ("-" if L['SM_GC'][16] == 0 else L['SM_GC'][16])) # roll errors
+            print("<td>%s</td>" % ("-" if L['SM_GC'][18] == 0 else L['SM_GC'][18])) # VBD errors
+
+            print("<td>%s</td>" % ("-" if L['SM_GC'][19] == 0 else L['SM_GC'][16])) # pitch V
+            print("<td>%s</td>" % ("-" if L['SM_GC'][20] == 0 else L['SM_GC'][20])) # roll V
+            print("<td>%s</td>" % ("-" if L['SM_GC'][21] == 0 else L['SM_GC'][21])) # VBD V
 
         print("</tr>")
 

@@ -1525,7 +1525,7 @@ if __name__ == '__main__':
     runMode = MODE_PRIVATE
     port = 20001
     ssl = False
-    certPath = "/etc/letsencrypt/live/www.seaglider.pub"
+    certPath = os.getenv("SANIC_CERTPATH") 
 
     overrides = {}
 
@@ -1566,8 +1566,13 @@ if __name__ == '__main__':
                 overrides['INSPECTOR'] = True
             elif o in ['-m', '--mission']:
                 overrides['SINGLE_MISSION'] = a
+                pieces = a.split(':')
+                if len(pieces) != 2:
+                    print("-m sgNNN:/abs/mission/path")
+                    sys.exit(1)
                  
-    os.chdir(os.path.expanduser(root) if root is not None else '/home/seaglider')
+    if root is not None:
+        os.chdir(os.path.expanduser(root))
 
     # we always load RUNMODE based on startup conditions
     overrides['RUNMODE'] = runMode

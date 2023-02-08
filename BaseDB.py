@@ -232,25 +232,35 @@ def processTimeSeries(dive, cur, nci):
         except:
             log_error(f"Problems processing {nc_var}", "exc")
 
-
-# fmt: off
-def insertColumn(dive, cur, col, val, db_type):
-    """Insert the specified column"""
+def addColumn(cur, col, db_type):
     try:
         cur.execute(f"ALTER TABLE dives ADD COLUMN {col} {db_type};")
     except sqlite3.OperationalError as er:
         if er.args[0].startswith("duplicate column name"):
-            pass
+            pass 
         else:
             log_error(f"Error inserting column {col} - skipping", "exc")
-            return
-        
+            return False
+
+    return True
+
+# fmt: off
+def insertColumn(dive, cur, col, val, db_type):
+    """Insert the specified column"""
+    if not addColumn(cur, col, db_type):
+        return
+
     if db_type == "TEXT":
         cur.execute(f"UPDATE dives SET {col} = '{val}' WHERE dive={dive};")
     else:
         if math.isnan(val):
             val = 'NULL'
         cur.execute(f"UPDATE dives SET {col} = {val} WHERE dive={dive};")
+
+
+def checkTableExists(cur, table):
+    cur.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name='{table}'")
+    return cur.fetchone() is not None
 
 def processGC(dive, cur, nci):
     cur.execute("CREATE TABLE IF NOT EXISTS gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
@@ -831,6 +841,38 @@ def updateDBFromFM(base_opts, ncfs, con):
 
         cur.close()
 
+# we enforce some minimum schema so that vis requests 
+# can know that they will succeed
+
+def createDivesTable(cur):
+    if checkTableExists(cur, 'dives'):
+        return
+
+    cur.execute("CREATE TABLE dives(dive INT);")
+    columns = [ 'log_start','log_D_TGT','log_D_GRID','log__CALLS',
+                'log__SM_DEPTHo','log__SM_ANGLEo','log_HUMID','log_TEMP',
+                'log_INTERNAL_PRESSURE', 
+                'depth_avg_curr_east','depth_avg_curr_north',
+                'max_depth',
+                'pitch_dive','pitch_climb',
+                'batt_volts_10V','batt_volts_24V',
+                'batt_capacity_24V','batt_capacity_10V',
+                'total_flight_time_s',
+                'avg_latitude','avg_longitude',
+                'magnetic_variation','mag_heading_to_target',
+                'meters_to_target',
+                'GPS_north_displacement_m','GPS_east_displacement_m',
+                'flight_avg_speed_east','flight_avg_speed_north',
+                'dog_efficiency','alerts','criticals','capture','error_count' ]
+
+    for c in columns:
+        addColumn(cur, c, 'FLOAT');
+
+    columns = [ 'target_name ']
+    for c in columns:
+        addColumn(cur, c, 'TEXT');
+    
+ 
 def rebuildDB(base_opts):
     """Rebuild the database from scratch"""
     log_info("rebuilding database")
@@ -838,7 +880,7 @@ def rebuildDB(base_opts):
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS dives;")
     cur.execute("DROP TABLE IF EXISTS gc;")
-    cur.execute("CREATE TABLE dives(dive INT);")
+    createDivesTable(cur)
     cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
 
     # patt = path + "/p%03d????.nc" % sg
@@ -862,7 +904,7 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     """Load a single netcdf file into the database"""
     con = Utils.open_mission_database(base_opts)
     cur = con.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
+    createDivesTable(cur)
     loadFileToDB(base_opts, cur, filename, con)
     cur.close()
     updateDBFromFM(base_opts, [filename], con)
