@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -63,7 +63,10 @@ def get_mission_plots(base_opts: BaseOpts.BaseOptions) -> dict:
 
 
 def plot_dives(
-    base_opts: BaseOpts.BaseOptions, dive_plot_dict: dict, dive_nc_file_names: list
+    base_opts: BaseOpts.BaseOptions,
+    dive_plot_dict: dict,
+    dive_nc_file_names: list,
+    generate_plots=True,
 ) -> tuple[list:list]:
     """
     Create per-dive related plots
@@ -85,7 +88,9 @@ def plot_dives(
             log_debug(f"Trying Dive Plot :{plot_name}")
             try:
                 dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
-                fig_list, file_list = plot_func(base_opts, dive_ncf)
+                fig_list, file_list = plot_func(
+                    base_opts, dive_ncf, generate_plots=generate_plots
+                )
             except KeyboardInterrupt:
                 return (figs, output_files)
             except:
@@ -99,7 +104,11 @@ def plot_dives(
 
 
 def plot_mission(
-    base_opts: BaseOpts.BaseOptions, mission_plot_dict: dict, mission_str: list, dive=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_plot_dict: dict,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
 ) -> tuple[list:list]:
     """
     Create per-dive related plots
@@ -120,7 +129,9 @@ def plot_mission(
             if dive == None:
                 fig_list, file_list = plot_func(base_opts, mission_str)
             else:
-                fig_list, file_list = plot_func(base_opts, mission_str, dive=dive)
+                fig_list, file_list = plot_func(
+                    base_opts, mission_str, dive=dive, generate_plots=generate_plots
+                )
         except Exception as e:
             log_error(f"{plot_name} failed {e}", "exc")
         else:

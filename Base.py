@@ -2219,11 +2219,13 @@ def main():
 
     # Add netcdf files to mission sql database
     if base_opts.add_sqllite:
+        log_info("Starting netcdf load to db")
         for ncf in nc_files_created:
             try:
-                BaseDB.loadDB(base_opts, ncf)
+                BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
             except:
                 log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
+        log_info("netcdf load to db done")
 
     # Run and dive extensions
     processed_file_names = []
@@ -2236,10 +2238,12 @@ def main():
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Per-dive plotting
+    log_info("Starting per-dive plots")
     plot_dict = BasePlot.get_dive_plots(base_opts)
     _, output_files = BasePlot.plot_dives(base_opts, plot_dict, nc_files_created)
     for output_file in output_files:
         processed_other_files.append(output_file)
+    log_info("Per-dive plots complete")
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(

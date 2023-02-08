@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -45,14 +45,19 @@ from Plotting import plotdivesingle
 
 @plotdivesingle
 def plot_COG(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots the glider course over ground"""
 
-    if not (
-        "latitude" in dive_nc_file.variables
-        and "longitude" in dive_nc_file.variables
-        and "log_gps_lat" in dive_nc_file.variables
+    if (
+        not (
+            "latitude" in dive_nc_file.variables
+            and "longitude" in dive_nc_file.variables
+            and "log_gps_lat" in dive_nc_file.variables
+        )
+        or not generate_plots
     ):
         return ([], [])
 

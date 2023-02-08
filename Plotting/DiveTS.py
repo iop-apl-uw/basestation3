@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -37,7 +37,6 @@ import seawater
 if typing.TYPE_CHECKING:
     import BaseOpts
 
-import Globals
 import PlotUtils
 import PlotUtilsPlotly
 import QC
@@ -48,11 +47,13 @@ from Plotting import plotdivesingle
 
 @plotdivesingle
 def plot_TS(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots TS Data"""
 
-    if "temperature" not in dive_nc_file.variables:
+    if "temperature" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
 
     ret_plots = []
@@ -134,7 +135,7 @@ def plot_TS(
                 if good_mask is not None:
                     pressure = pressure[good_mask]
 
-            if not not base_opts.use_gsw:
+            if base_opts.use_gsw:
                 avg_longitude = dive_nc_file.variables["avg_longitude"].getValue()
                 avg_latitude = dive_nc_file.variables["avg_latitude"].getValue()
 

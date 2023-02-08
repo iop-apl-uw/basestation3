@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -92,11 +92,15 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
 
 @plotmissionsingle
 def mission_map(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+        base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Plots mission map"""
-    log_info("Starting mission_map")
 
+    if not generate_plots:
+        return ([], [])
+
+    log_info("Starting mission_map")
+    
     conn = Utils.open_mission_database(base_opts)
     if not conn:
         log_error("Could not open mission database")

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -42,7 +42,6 @@ import PlotUtils
 import PlotUtilsPlotly
 
 from BaseLog import (
-    log_error,
     log_info,
 )
 from Plotting import plotdivesingle
@@ -50,16 +49,13 @@ from Plotting import plotdivesingle
 
 @plotdivesingle
 def plot_mag(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plot for compass mag calibration"""
-    if "eng_mag_x" not in dive_nc_file.variables:
-        log_error("No compass mag in nc - skipping")
+    if "eng_mag_x" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
-
-    #    if "log_IRON" not in dive_nc_file.variables:
-    #        log_error(f"No IRON in nc - skipping")
-    #        return []
 
     pitch = dive_nc_file.variables["eng_pitchAng"][:] * math.pi / 180.0
     roll = dive_nc_file.variables["eng_rollAng"][:] * math.pi / 180.0

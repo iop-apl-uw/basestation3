@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -45,15 +45,18 @@ from Plotting import plotdivesingle
 
 @plotdivesingle
 def plot_legato_pressure(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots the raw legato pressure, the ctd_pressure (smoothed) and locations for the
     interpolated points
     """
 
-    if ("legato_pressure" not in dive_nc_file.variables) and (
-        "eng_rbr_pressure" not in dive_nc_file.variables
-    ):
+    if (
+        "legato_pressure" not in dive_nc_file.variables
+        and "eng_rbr_pressure" not in dive_nc_file.variables
+    ) or not generate_plots:
         return ([], [])
 
     try:

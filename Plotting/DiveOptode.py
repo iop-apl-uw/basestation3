@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -54,10 +54,14 @@ def find_matching_time(ncf, nc_var):
 
 @plotdivesingle
 def plot_optode(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots optode data and sat O2"""
 
+    if not generate_plots:
+        return ([], [])
     optode_type = None
     is_scicon = False
     if "aa4831_time" in dive_nc_file.variables:
