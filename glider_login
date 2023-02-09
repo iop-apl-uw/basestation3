@@ -29,7 +29,7 @@ umask 2
 touch comm.log
 
 if(! $?PYTHON_BINARY ) then
-    set PYTHON_BINARY = /usr/local/bin/python3.9
+    set PYTHON_BINARY = /opt/basestation/bin/python
 endif
 set runner_timeout = 2
 
