@@ -2222,7 +2222,10 @@ def main():
         log_info("Starting netcdf load to db")
         for ncf in nc_files_created:
             try:
-                BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                if base_opts.force:
+                    BaseDB.rebuildDB(base_opts)
+                else:
+                    BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
             except:
                 log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
         log_info("netcdf load to db done")
