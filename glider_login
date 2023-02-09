@@ -89,6 +89,8 @@ if( $?RUNNER_DIR ) then
           break
       endif
   end
+  # Wait for a second to let the BaseLogin to update the prompt with files to be uploaded
+  sleep 1
 else
     $PYTHON_BINARY $BASESTATION_PATH/${base_login_cmd_line}  >>&!  ${base_login_log}
 endif
