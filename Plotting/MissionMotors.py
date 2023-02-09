@@ -189,8 +189,7 @@ def mission_motors(
 
         pumpdf = vdf[vdf["vbd_rate"] < 0]
         bleeddf = vdf[vdf["vbd_rate"] > 0]
-        print(len(pumpdf))
-        print(len(bleeddf))
+        
         fig.add_trace(
             {
                 "x": pumpdf["dive"],
