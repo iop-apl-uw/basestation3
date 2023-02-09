@@ -715,10 +715,14 @@ class ConnectSession:
             "epoch": time.mktime(self.gps_fix.datetime),
             "RH": self.rh,
             "intP": self.int_press,
+            "temp": self.temperature,
             "volts10": self.volt_10V,
             "volts24": self.volt_24V,
             "pitch": self.obs_pitch,
             "depth": self.depth,
+            "pitchAD": self.pitch_ad,
+            "rollAD": self.roll_ad,
+            "vbdAD": self.vbd_ad,
         }
 
     def dump_contents(self, fo):
