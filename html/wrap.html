@@ -30,10 +30,16 @@
 
     function changeDive(dir) {
         dive = dive + dir;
-        if (fmt == 'png' || fmt == 'webp') 
+        if (fmt == 'png' || fmt == 'webp') {
             document.getElementById('mainImg').src = `/plot/${fmt}/${which}/${glider}/${dive}/${image}/${mission()}`
-        else 
+            document.getElementById('mainImg').style.display = 'block';
+            document.getElementById('mainDiv').style.display = 'none';
+        }
+        else {
             loadPlot();
+            document.getElementById('mainImg').style.display = 'none';
+            document.getElementById('mainDiv').style.display = 'block';
+        }
     }
 
     function init() {
