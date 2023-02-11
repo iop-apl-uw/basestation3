@@ -7,13 +7,21 @@
 {% endif %}
 
 <link rel="stylesheet" href="/script/base.css" />
+<link rel="stylesheet" href="/script/plottool.css" />
 
 <script src="/script/plotly-latest.min.js"></script>
 <script src="/script/util.js"></script>
 <script src="/script/dialogs.js"></script>
+<script src="/script/websocket.js"></script>
 {% if runMode == 'pilot' %}
 <script src="/script/chat.js"></script>
 {% endif %}
+<style>
+    .hide {
+        display: none !important;
+    }
+</style>
+
 <script>
 
     var mobile = false;
@@ -81,23 +89,9 @@
 {% endif %}
 
     let wsocket  = null;
-    var lastSetup = 0;
     var first = true;
 
     function setupStream(glider, first, history) {
-        if (Date.now() < lastSetup + 5000) {
-            setTimeout(() => {
-                setupStream(glider, false, history);
-            }, 20000);
-            console.log('too soon');
-            return;
-        }
-
-        lastSetup = Date.now();
-
-        if (wsocket != null) {                  
-            console.log('previous stream exists');
-        }
         console.log('setting up stream');
         var loc = window.location, new_uri;
         if (loc.protocol === "https:")
@@ -111,19 +105,25 @@
         else if (history)
             which = 'history';
         
-        new_uri += "//" + loc.host;
-        new_uri += "/stream/" + which + "/" + glider + mission();
-        console.log(new_uri);
-        wsocket = new WebSocket(new_uri);
-
 {% if runMode == 'pilot' %}
         if (first || history) {
             $('chatContent').innerHTML = '';
         }
 {% endif %}
+
+        new_uri += "//" + loc.host;
+        new_uri += "/stream/" + which + "/" + glider + mission();
+        console.log(new_uri);
+        wsocket = new ReconnectingWebSocket(new_uri);
+        wsocket.timeoutInterval = 10000;
+        wsocket.debug = true;
+
+        wsocket.onopen = function() {
+            wsocket.url = wsocket.url.replace('init', 'restart');
+        }
+
         wsocket.onerror = function(error) {
             console.log('stream error detected');
-            wsocket.close();
         };
 
         wsocket.onclose = function(e) {
@@ -133,12 +133,10 @@
             else {
                 console.log('connection died');
             }
-            setupStream(glider, false, false);
         };
 
         var lastChat_t = 0;
 
-        var chunk = "";
         wsocket.onmessage = function(e) { 
             var pieces, content, data, i;
             var vals = {};
@@ -147,14 +145,12 @@
             var newCmdfile;
             var d, pieces, lines;
             var pt, fix;
-            var prevDate, thisDate, yr, mo, da, hr, mi, se;
             var h;
-            var tstr;
-            const months = {'Jan': 1, 'Feb': 2, 'Mar': 3, 'Apr': 4, 'May': 5, 'Jun':6, 'Jul':7, 'Aug':8, 'Sep':9, 'Oct':10, 'Nov':11, 'Dec':12};
             var styles = ["font-weight:bold;", "font-weight:bold; color:red;", "font-weight:bold; color:green;"]
             var bolds = {"targets":0, "science":0, "cmdfile":0, "pdoscmds.bat":0, "Connected":0, "QUIT":1, "RECOV_CODE":1, "GO":2};
 
             var line = e.data;
+            console.log(line);
             if (line.startsWith('START')) {
                 console.log('got START ping');
             }
@@ -162,132 +158,87 @@
             else if (line.startsWith('CHAT=')) {
                 msgs = JSON.parse(line.slice(5));
                 for (m of msgs) {
-                    var txt = '';
-                    thisDate = new Date(1000*m['timestamp']).toISOString();
-                    prevDate = new Date(1000*lastChat_t).toISOString();
-                    if (thisDate.slice(0,10) != prevDate.slice(0,10)) {
-                        txt = txt + `[${thisDate.slice(0,10)}]<br>`;
-                    } 
-                    txt = txt + `<b>${m['user']}</b> ${thisDate.slice(11,16)}<br>`
-                    txt = txt + '&nbsp;' + m['message'] + '<br>';
-                 
-                    h = document.createElement('div');
-                    h.innerHTML = chatMarkdown(glider, txt);
-                    $('chatContent').appendChild(h);
-                
-                    if (m.attachment && m.attachment.length > 0) {
-                        h = new Image();
-                        h.src = `data:${m.mime};base64,${m.attachment}`;
-                        h.style.maxWidth = '260px';
-                        $('chatContent').appendChild(h);
-                        h.onclick = function() { $('modalImgDiv').style.display = "block"; $('modalImg').src = this.src; return false; }
-                    }
-                    lastChat_t = m['timestamp'];
-                    $('chatContent').scrollTo(0, $('chatContent').scrollHeight);
+                    chatLoadMessage(glider, m);
                 }                 
             }
 {% endif %}
             else if (line.startsWith('NEW=')) {
-                console.log(line);
-                pieces = line.split('=')[1].split(',');
-                glider  = parseInt(pieces[0]);
-                newDive = parseInt(pieces[1]);
-                which   = pieces[2];
-                if (which == 'files=perdive') {
+                json = JSON.parse(line.slice(4));
+                glider = json['glider'];
+                newDive = json['dive'];
+                if ('content' in json && json['content'] == 'files=perdive') {
                     loadPlots(newDive, true);
                     buildTable(currGlider, newDive);
                 }
+                else if ('lat' in json) {
+                    if (!first) beep();
+                    
+                    connect_t = json['connected'];
+                    if (fixTimer == null) {
+                        updateTimer();
+
+                    }
+
+                    if (fixes.length == 0 || fixes.at(-1).t < json['epoch']) {
+                        console.log('pushing fix at ' + json['epoch']);
+                        fixes.push(positionFix(json['lat'], json['lon'], json['epoch']));
+                    } 
+                    if (fixTimer == null) {
+                        updateTimer();
+                    }
+                    if (fixes.length >= 2) {
+                        var sog, cog, dog, dt;
+                        dt = fixes.at(-1).t - fixes.at(-2).t;
+                        dog = haversine(fixes.at(-1).pt, fixes.at(-2).pt);
+                        cog = bearing(fixes.at(-2).pt, fixes.at(-1).pt);
+                        sog = dog/dt/0.514;
+                        $('SOG').innerHTML = sog.toFixed(2) + 'kts';
+                        $('COG').innerHTML = cog.toFixed(1) + '&deg;';
+                        $('DOG').innerHTML = dog.toFixed(0) + 'm';
+                        $('dt').innerHTML = dt.toFixed(0) + 's';
+                    }
+                    else {
+                        $('SOG').innerHTML = '0';
+                        $('COG').innerHTML = '0';
+                        $('DOG').innerHTML = '0';
+                        $('dt').innerHTML = '0';
+                    }
+
+                    $('position').innerHTML = formatPos(dd2ddmm(json['lat'])) + ',' + formatPos(dd2ddmm(json['lon']));
+                    $('positionTime').innerHTML = '@ ' + new Date(json['epoch']*1000).toISOString().replace('T', ' ').slice(0,-8);
+
+                    $('RH').innerHTML = json['RH'].toFixed(2);
+                    $('intP').innerHTML = json['intP'].toFixed(2);
+                    $('volts').innerHTML = json['volts24'].toFixed(2);
+                    $('pitch').innerHTML = json['pitch'].toFixed(1);
+                    $('depth').innerHTML = json['depth'].toFixed(1);
+                    $('dive').innerHTML = json['dive'];
+                    $('cycle').innerHTML = json['cycle'];
+                    $('call').innerHTML = json['call'];
+                }
                 else {
-                    loadStatus(currGlider, -1);
-                    console.log('unexpected NEW= response');
+                    // loadStatus(currGlider, -1);
+                    console.log('untreated NEW= response');
+                    console.log(line);
                 }
                 // loadLog(newDive);
+                first = false;
             }
 {% if runMode == 'pilot' %}
-            else if (line.startsWith('CMDFILE=')) {
-                newCmdfile = line.split('=')[1];
-                $('cmdfile').value = newCmdfile;
+            else if (line.startsWith('FILE=')) {
+                json = JSON.parse(line.slice(5));
+                $(json['file']).value = json['body'];
             }
-            else {
-                lines = line.split('\n');
-
+            else { // new comm.log content comes unprefixed
                 var elt = $('commlog');
-                elt.scrollTop = elt.scrollHeight;
                 for (b of Object.keys(bolds)) {
                     line = line.replaceAll(b, '<span style="' + styles[bolds[b]] + '">' + b + '</span>');
                 } 
 
-
                 elt.innerHTML += line;
-                for (d of lines) {
-                    if (d.includes('GPS')) {
-                        p = commGPSParser(d);
-                        if (p != null) {
-                            if (fixes.length == 0 || fixes.at(-1).t < p.fix.t) {
-                                console.log('pushing fix at ' + p.fix.t);
-                                fixes.push(p.fix);
-                            } 
-                            if (fixTimer == null) {
-                                updateTimer();
-                            }
-                            if (fixes.length >= 2) {
-                                var sog, cog, dog, dt;
-                                dt = fixes.at(-1).t - fixes.at(-2).t;
-                                dog = haversine(fixes.at(-1).pt, fixes.at(-2).pt);
-                                cog = bearing(fixes.at(-2).pt, fixes.at(-1).pt);
-                                sog = dog/dt/0.514;
-                                $('SOG').innerHTML = sog.toFixed(2) + 'kts';
-                                $('COG').innerHTML = cog.toFixed(1) + '&deg;';
-                                $('DOG').innerHTML = dog.toFixed(0) + 'm';
-                                $('dt').innerHTML = dt.toFixed(0) + 's';
-                            }
-                            else {
-                                $('SOG').innerHTML = '0';
-                                $('COG').innerHTML = '0';
-                                $('DOG').innerHTML = '0';
-                                $('dt').innerHTML = '0';
-                            } 
-                            
-                            $('position').innerHTML = p.position;
-                            $('positionTime').innerHTML = '@ ' + p.positionTime;
-                            $('RH').innerHTML = p.RH;
-                            $('intP').innerHTML = p.intP;
-                            $('volts').innerHTML = p.volts;
-                            $('pitch').innerHTML = p.pitch;
-                            $('depth').innerHTML = p.depth;
-                            $('dive').innerHTML = p.dive;
-                            $('cycle').innerHTML = p.cycle;
-                            $('call').innerHTML = p.call;
-                        }    
-                    }
-                    else if (d.includes('Connected at')) {
-                        if (!first) beep();
-                        pieces = d.split(' ');
-                        if (pieces.length == 8) {
-                            yr = pieces[7];
-                            mo = months[pieces[3]];
-                            da = parseInt(pieces[4]);
-                            hr = parseInt(pieces[5].split(':')[0]);
-                            mi = parseInt(pieces[5].split(':')[1]);
-                            se = parseInt(pieces[5].split(':')[2]);
-                            tstr = yr + '-' + mo.zeroPad() + '-' + da.zeroPad()
-                                   + 'T' + hr.zeroPad() + ':' + mi.zeroPad() + ':' + se.zeroPad() + '.000Z';
-                            console.log(tstr);
-                            if (pieces[6] == 'PST')
-                                connect_t = Date.parse(tstr)/1000 + 8*3600;
-                            else
-                                connect_t = Date.parse(tstr)/1000 + 7*3600;
-                            if (fixTimer == null) {
-                                updateTimer();
-                            }
-                        }
-                    }
-                }
-                console.log('last line=[' + lines.at(-1) + ']') 
-
-                first = false;
                 elt.scrollTop = elt.scrollHeight;
             }
+
 {% else %}
             else if (line.startsWith('CMDFILE=')) {
                 newDirective = line.split('=')[1];
@@ -347,10 +298,20 @@
         return false;
     }
 
-    function loadControlFile(file, dive) {
+    function loadControlFile(file) {
         fetch(`/control/${currGlider}/${file}${mission()}`)
-        .then(res => res.json())
-        .then(data => {
+        .then(res => res.text())
+        .then(text => {
+            if (text == 'none')
+                return;
+
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log(file + ' ' + text + ' ' + error);
+                return;
+            }
+
             if ('file' in data && data['file'] == file) {
                 $(file).value = data['contents'];
             }
@@ -359,7 +320,7 @@
             }
         })
         .catch(error => {
-            console.log(`${dive}-${file}-${error}`);
+            console.log(`${file}-${error}`);
         })
     }
 
@@ -417,39 +378,19 @@
     function setVisibility(elt) {
         const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
         for (var d of divs) {
-            if (d != elt) $(d).setAttribute('hidden', '');
+            if (d != elt) $(d).classList.add('hide');
         }
-        $(elt).removeAttribute('hidden');
+        $(elt).classList.remove('hide');
         $('plotlyPopperOuter').style.display = 'none';
     }
 
-    function setInnerHTML(elm, html) {
-        elm.innerHTML = html;
-          
-        Array.from(elm.querySelectorAll("script"))
-          .forEach( oldScriptEl => {
-            const newScriptEl = document.createElement("script");
-            
-            Array.from(oldScriptEl.attributes).forEach( attr => {
-                newScriptEl.setAttribute(attr.name, attr.value) 
-            });
-              
-            const scriptText = document.createTextNode(oldScriptEl.innerHTML);
-            newScriptEl.appendChild(scriptText);
-            
-            oldScriptEl.parentNode.replaceChild(newScriptEl, oldScriptEl);
-        });
-    }
-
-    function changeTab(which) {
-    }
 
     function showPlot(which, elt, plotly) {
         console.log('showing ' + elt);
         console.log('plotly available ' + plotly)
         if (!plotly || mobile) {
             setVisibility('mainImage');
-            $('mainImage').src = `/plot/png/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
+            $('mainImage').src = `/plot/webp/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
             $('plotlyPopperOuter').style.display = 'block';
             console.log('popper up');
             if (plotly)
@@ -461,7 +402,7 @@
             else
                 $('plotlyPopperOuter').onclick = function() 
                     { 
-                        popupImage('png', which, currDive, elt); 
+                        popupImage('webp', which, currDive, elt); 
                         return false; 
                     } 
         }
@@ -794,7 +735,7 @@
         div.classList.add('thumbDiv');
         img = document.createElement('img');
         img.classList.add('thumbImg');
-        img.src = '/plot/png/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
+        img.src = '/plot/webp/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
         img.onclick = function() { showPlot(which, p, plotly); };
         img.title = p;
         img.id = 'thumb' + p;
@@ -1421,17 +1362,23 @@
 
     function loadPlotlyControlsContour(glider) {
         fetch(`/provars/${glider}${mission()}`)
-        .then(res => res.json())
-        .then(data => {
-            names = data['names'].sort();
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);  
+                names = data['names'].sort();
 
-            emptySelect($('selPlotlyContour'));
-            for (n of names) {
-                let optX = document.createElement('option');
-                optX.value = n;
-                optX.innerHTML = n;
-                let optY = document.createElement('option');
-                $('selPlotlyContour').appendChild(optX);
+                emptySelect($('selPlotlyContour'));
+                for (n of names) {
+                    let optX = document.createElement('option');
+                    optX.value = n;
+                    optX.innerHTML = n;
+                    let optY = document.createElement('option');
+                    $('selPlotlyContour').appendChild(optX);
+                }
+            } catch(e) {
+                console.log('provars ' + e);
+                console.log(data);
             }
         })
         .catch(error => {
@@ -1442,8 +1389,15 @@
 
     function loadPlotlyControlsXY(glider) {
         fetch(`/dbvars/${glider}${mission()}`)
-        .then(res => res.json())
-        .then(data => {
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log(text);
+                return;
+            }
+
             names = data['names'].sort();
             dv = names.indexOf('dive');
             names.splice(names.indexOf('dive'), 1);
@@ -1482,8 +1436,15 @@
 
     function loadPlotlyControlsTS(glider, dive) {
         fetch(`/timevars/${glider}/${dive}/${mission()}`)
-        .then(res => res.json())
-        .then(data => {
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log(text);
+                return;
+            }
+
             var names = data.map(v => v['var']).sort();
             dv = names.indexOf('time');
             names.splice(names.indexOf('time'), 1);
@@ -1525,11 +1486,17 @@
             $('chkMissionPlots').checked = false;
             console.log('unchecking mission');
             loadPlotlyControlsTS(currGlider, currDive);
+            $('labelY').innerHTML = 'Y:';
+            $('labelZ').innerHTML = 'Z:';
+            $('selPlotlyX2').disabled = false;
         }
         else if (id == 'chkMissionPlots' && $(id).checked) {
             $('chkTimeseriesPlots').checked = false;
             console.log('unchecking ts');
             loadPlotlyControlsXY(currGlider);
+            $('selPlotlyX2').disabled = true;
+            $('labelY').innerHTML = '-:';
+            $('labelZ').innerHTML = 'Y:';
         }
 
         if ($('chkMissionPlots').checked == false 
@@ -1597,6 +1564,7 @@
         loadControlFile('tcm2mat.cal');
         loadControlFile('pdoscmds.bat');
         loadControlFile('sg_calib_constants.m');
+        $('selectFile').value = 'cmdfile';
 {% endif %}
         loadPlotlyControlsXY(glider);
         loadPlotlyControlsContour(glider);
@@ -1688,6 +1656,24 @@
             $('plotRibbonBox').style.display = 'none';
     }
 
+{% if runMode == 'pilot' %}
+    var rightMode = 'grid';
+    function toggleRight() {
+        const collection = document.getElementsByClassName("plotly-graph-div"); 
+        if ($('right').style.display == 'none') {
+            $('right').style.display = rightMode;
+            $('toggleRight').innerHTML = 'Hide pilot';
+            Plotly.Plots.resize(collection[0]);
+        }
+        else {
+            rightMode = $('right').style.display;
+            $('right').style.display = 'none';
+            $('toggleRight').innerHTML = 'Show pilot';
+            Plotly.Plots.resize(collection[0]);
+        }
+    }
+{% endif %}
+        
 </script>
 
 <html>
@@ -1701,6 +1687,9 @@
 {% endif %}
     <span class="spanClick" onclick="openAboutForm(); return false;">About</span> <b>&#124;</b>
     <span class="spanClick" onclick="popupPosition(); return false;">Position</span>
+{% if runMode == 'pilot' %}
+    <span class="spanClick" id="toggleRight" style="float:right; padding-right: 10px;" onclick="toggleRight(); return false;">Hide pilot</span>
+{% endif %}
 </div>
 
 <div id="bodyView">
@@ -1727,9 +1716,9 @@
 <div id="main">
     <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
     <div id="plotlyPopperOuter">&#x2922;</div>
-    <img id="mainImage" style="mix-blend-mode:multiply;" hidden="hidden">
-    <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;"></div>
-    <table rules="groups" id="mainTable" hidden="hidden" > 
+    <img id="mainImage" style="mix-blend-mode:multiply;" class="hide">
+    <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;" class="hide"></div>
+    <table rules="groups" id="mainTable" class="hide">
 
         <colgroup span=4><col><col><col><col></colgroup>
         <colgroup span=6><col><col><col><col><col><col><col></colgroup>
@@ -1764,73 +1753,75 @@
         </tbody>
     </table>
 
-    <div id="logDiv" hidden="hidden"></div>
-    <div id="notificationsDiv" hidden="hidden" style="margin-left:20px; text-align:left;"></div>
+    <div id="logDiv" class="hide"></div>
+    <div id="notificationsDiv" style="margin-left:20px; text-align:left;" class="hide"></div>
     
     
-    <div id="plotlyDiv" hidden="hidden">
-        <div id="plotyConfigDiv" style="display:flex;">
-            <div style="float:left;">
-                <span style="vertical-align:top;">X:</span><select id="selPlotlyX" style="vertical-align:top; width:240px;"></select> <br>
-                <span style="vertical-align:top;">Y:</span><select id="selPlotlyX2" style="vertical-align:top; width:240px;"></select> <br>
-                <input type="checkbox" checked id="chkMissionPlots" style="vertical-align:top;" onclick="switchControls(this.id);"><span style="vertical-align:top;">whole mission</span>
-                <input type="checkbox" id="chkTimeseriesPlots" style="vertical-align:top;" onclick="switchControls(this.id);"><span style="vertical-align:top;">dive time series</span><br>
+    <div id="plotlyDiv" class="hide">
+        <div id="plotyConfigXYDiv">
+            <span id="labelX">X:</span><select id="selPlotlyX"></select><br>
+            <span id="labelY">-:</span><select id="selPlotlyX2" disabled></select> <br>
+            <input type="checkbox" checked id="chkMissionPlots" onclick="switchControls(this.id);"><label for="chkMissionPlots">whole mission</label>
+            <input type="checkbox" id="chkTimeseriesPlots" onclick="switchControls(this.id);"><label for="chkTimeseriesPlots">dive time series</label><br>
+        </div>
+        <div id="plotlyConfigZDiv">
+            <span id="labelZ">Y:</span><select id="selPlotlyY" multiple size="4"> </select>
+        </div>
+        <div id="plotlyConfigXYZButtons">
+            <button id="btnPlotlyPlot" onclick="doPlotlyPlot('plot');">plot</button>
+            <button id="btnPlotlyTable" onclick="doPlotlyPlot('table');">table</button><br>
+            <button id="btnPlotlyCSV" onclick="doPlotlyPlot('csv');">export</button>
+        </div>
+        <div id="plotlyConfigContour"> <!-- style="float:right;"> -->
+            <div id="plotlyConfigContourValue">value:<select id="selPlotlyContour"> </select></div><br>
+            <div id="plotlyConfigStrides">
+                profile stride
+                <select style="vertical-align:top;" id="selPlotlyProfileStride">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                </select>
+                bin stride
+                <select style="vertical-align:top;" id="selPlotlyZStride">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="4">4</option>
+                    <option value="5" selected>5</option>
+                    <option value="6">6</option>
+                    <option value="7">7</option>
+                    <option value="8">8</option>
+                    <option value="9">9</option>
+                    <option value="10">10</option>
+                </select>
+                <input type="checkbox" checked id="chkFillGaps"><label for="chkFillGaps">fill gaps</label><br>
             </div>
-            <span style="vertical-align:top; margin-left:8px;" >Z:</span><select id="selPlotlyY" multiple size="4" style="width:300px;"> </select>
-            <div style="margin-left:8px;">
-                <button id="btnPlotlyPlot" style="vertical-align:top;" onclick="doPlotlyPlot('plot');">plot</button>
-                <button id="btnPlotlyTable" style="vertical-align:top;" onclick="doPlotlyPlot('table');">table</button><br>
-                <button id="btnPlotlyCSV" style="vertical-align:top;" onclick="doPlotlyPlot('csv');">export</button>
-            </div>
-            <div style="margin-left:40px;"> <!-- style="float:right;"> -->
-                <span style="vertical-align:top;">value:<select id="selPlotlyContour" style="vertical-align:top;"> </select></span><br>
-                <div style="vertical-align:top; margin-top:4px; margin-bottom:4px;">
-                    profile stride
-                    <select style="vertical-align:top;" id="selPlotlyProfileStride">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5" selected>5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                        <option value="20">20</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                    bin stride
-                    <select style="vertical-align:top;" id="selPlotlyZStride">
-                        <option value="1">1</option>
-                        <option value="2">2</option>
-                        <option value="3">3</option>
-                        <option value="4">4</option>
-                        <option value="5" selected>5</option>
-                        <option value="6">6</option>
-                        <option value="7">7</option>
-                        <option value="8">8</option>
-                        <option value="9">9</option>
-                        <option value="10">10</option>
-                    </select>
-                    <input type="checkbox" checked id="chkFillGaps" style="vertical-align:top;"><span style="vertical-align:top;">fill gaps</span><br>
-                </div>
-                <button id="btnPlotlyContour" style="vertical-align:top;" onclick="doPlotlyProfiles('contour');">contour</button>
-                <button id="btnPlotlyProfiles" style="vertical-align:top;" onclick="doPlotlyProfiles('profiles');">profiles</button>
+            <div id="plotlyConfigContourButtons">
+                <button id="btnPlotlyContour" onclick="doPlotlyProfiles('contour');">contour</button>
+                <button id="btnPlotlyProfiles" onclick="doPlotlyProfiles('profiles');">profiles</button>
             </div>
         </div>
-        <div id="plotlyPlotDiv" style="height:90%; width:100%; position:absolute; bottom:0;">
+        <div id="plotlyPlotDiv">
         </div>
     </div>
 
-    <div id="logfileDiv" hidden="hidden" oncontextmenu="parameterHelp('logfile'); return false;" title="right click/long press parameter for help" style="background-color:#dddddd; text-align:left;" >
+    <div id="logfileDiv" class="hide" oncontextmenu="parameterHelp('logfile'); return false;" title="right click/long press parameter for help" style="background-color:#eeeeee; text-align:left;" >
     </div>
 
-    <div id="engfileDiv" hidden="hidden" style="background-color:#dddddd; text-align:left;">
+    <div id="engfileDiv" class="hide" style="background-color:#eeeeee; text-align:left;">
     </div>
 
-    <div id="capfileDiv" hidden="hidden" style="background-color:#dddddd; text-align:left;">
+    <div id="capfileDiv" class="hide" style="background-color:#eeeeee; text-align:left;">
     </div>
 </div>
 
@@ -1894,7 +1885,7 @@
     </div>
 
     <div id="divCmdfile">
-        <div id="cmdfileEditClose" onclick="defocusEditWindow(); return false;"><b>&#10060;</b></div>
+        <div id="cmdfileEditClose" style="display:none;" onclick="defocusEditWindow(); return false;"><b>&#10060;</b></div>
         <textarea id="cmdfile" class="editFile" oncontextmenu="parameterHelp('cmdfile'); return false;">
         </textarea>
         <textarea id="targets" class="editFile" hidden="hidden"></textarea>

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -44,13 +44,16 @@ from Plotting import plotdivesingle
 
 @plotdivesingle
 def plot_ocr504i(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots raw output from Satlantic ocr504i"""
 
-    if ("ocr504i_time" not in dive_nc_file.variables) and (
-        "eng_ocr504i" not in dive_nc_file.variables
-    ):
+    if (
+        "ocr504i_time" not in dive_nc_file.variables
+        and "eng_ocr504i" not in dive_nc_file.variables
+    ) or not generate_plots:
         return ([], [])
 
     scicon = "ocr504i_time" in dive_nc_file.variables

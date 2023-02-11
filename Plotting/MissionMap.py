@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -60,7 +60,28 @@ from cartopy.mpl.ticker import LatitudeFormatter,LongitudeFormatter
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
-class MyFormatter(LatitudeFormatter):
+class MyLatFormatter(LatitudeFormatter):
+    def _get_dms(self, x):
+        self._precision = 6
+        x = np.asarray(x, 'd')
+        degs = np.round(x, self._precision).astype('i')
+        y = (x - degs) * 60
+        mins = y
+        secs = 0
+        return x, degs, mins, secs
+
+    def _format_minutes(self, mn):
+        out = f'{mn:05.2f}'
+        if out[3:5] == '00':
+            out = out[0:2]
+        elif out[4] == '0':
+            out = out[0:4]
+        return f'{out}{self._minute_symbol}'
+
+    def _format_seconds(self, sec):
+        return ''
+
+class MyLonFormatter(LongitudeFormatter):
     def _get_dms(self, x):
         self._precision = 6
         x = np.asarray(x, 'd')
@@ -92,11 +113,15 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
 
 @plotmissionsingle
 def mission_map(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+        base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Plots mission map"""
-    log_info("Starting mission_map")
 
+    if not generate_plots:
+        return ([], [])
+
+    log_info("Starting mission_map")
+    
     conn = Utils.open_mission_database(base_opts)
     if not conn:
         log_error("Could not open mission database")
@@ -178,8 +203,8 @@ def mission_map(
     xt = g.xlocator.tick_values(ll_lon,ur_lon)
     yt = g.ylocator.tick_values(ll_lat,ur_lat)
     
-    g.yformatter = MyFormatter(dms=True)
-    g.xformatter = MyFormatter(dms=True)
+    g.yformatter = MyLatFormatter(dms=True)
+    g.xformatter = MyLonFormatter(dms=True)
 
     xp = []
     yp = []
@@ -242,13 +267,13 @@ def mission_map(
     plt.plot(df['lon'].to_numpy(), df['lat'].to_numpy(), color='lightsalmon', alpha=1, marker='.', markersize=4, transform=ccrs.PlateCarree(), linestyle='None')
     plt.plot(rdf['lon'].to_numpy(), rdf['lat'].to_numpy(), color='red', marker='+', transform=ccrs.PlateCarree(), linestyle='None')
 
-    output_name = "eng_mission_map.png"
+    output_name = "eng_mission_map.webp"
 
     if base_opts.plot_directory is not None:
         output_name = os.path.join(base_opts.plot_directory, output_name)
 
     ret_list = [output_name]
-    plt.savefig(output_name, format="png", bbox_inches='tight')
+    plt.savefig(output_name, format="webp", bbox_inches='tight')
     
     return ([], ret_list)
 # fmt: on

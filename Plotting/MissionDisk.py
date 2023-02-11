@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -51,24 +51,30 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_disk(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
-    """Plots disk stats """
+    """Plots disk stats"""
+
+    if not generate_plots:
+        return ([], [])
 
     conn = Utils.open_mission_database(base_opts)
     if not conn:
         log_error("Could not open mission database")
         return ([], [])
 
-    res = conn.cursor().execute('PRAGMA table_info(dives)')
+    res = conn.cursor().execute("PRAGMA table_info(dives)")
     columns = [i[1] for i in res]
 
-    qcols = list(filter(lambda x: x.startswith("SD_") or x.endswith("_FREEKB"), columns) or x.endswith("_FREE"))
+    qcols = list(
+        filter(lambda x: x.startswith("SD_") or x.endswith("_FREEKB"), columns)
+        or x.endswith("_FREE")
+    )
 
     if len(qcols) == 0:
         return ([], [])
 
-    qstr = ",".join(qcols);
+    qstr = ",".join(qcols)
 
     fig = plotly.graph_objects.Figure()
     df = None
@@ -83,7 +89,10 @@ def mission_disk(
 
     y_offset = -0.08
 
-    l_annotations = []
+    # l_annotations = []
+
+    sd_free_est = ""
+    sc_free_est = ""
 
     if "SD_free" in df.columns:
         fig.add_trace(
@@ -101,19 +110,20 @@ def mission_disk(
             }
         )
 
-        m,b = np.polyfit(df["dive"].to_numpy(), df["SD_free"].to_numpy(), 1)
+        m, b = np.polyfit(df["dive"].to_numpy(), df["SD_free"].to_numpy(), 1)
 
-        y_offset += -0.02
-        l_annotations.append(
-            {
-                "text": f"based on SD free, {-b/m:.0f} dives until full",
-                "showarrow": False,
-                "xref": "paper",
-                "yref": "paper",
-                "x": 0.0,
-                "y": y_offset,
-            }
-        )   
+        sd_free_est = f"<br>based on SD free, {-b/m:.0f} dives until full"
+        # y_offset += -0.02
+        # l_annotations.append(
+        #     {
+        #         "text": sd_free_est,
+        #         "showarrow": False,
+        #         "xref": "paper",
+        #         "yref": "paper",
+        #         "x": 0.0,
+        #         "y": y_offset,
+        #     }
+        # )
 
     if "SD_files" in df.columns:
         fig.add_trace(
@@ -150,8 +160,8 @@ def mission_disk(
     for v in list(df.columns.values):
         if not v.endswith("FREEKB"):
             continue
-        
-        nm = v.replace('log_', '')
+
+        nm = v.replace("log_", "")
         fig.add_trace(
             {
                 "name": nm,
@@ -166,27 +176,27 @@ def mission_disk(
             }
         )
 
-        m,b = np.polyfit(df["dive"].to_numpy(), df[v].to_numpy(), 1)
-
-        y_offset += -0.02
-        l_annotations.append(
-            {
-                "text": f"based on {nm}, {-b/m:.0f} dives until full",
-                "showarrow": False,
-                "xref": "paper",
-                "yref": "paper",
-                "x": 0.0,
-                "y": y_offset,
-            }
-        )   
-
-
+        m, b = np.polyfit(df["dive"].to_numpy(), df[v].to_numpy(), 1)
+        sc_free_est = f"<br>based on {nm}, {-b/m:.0f} dives until full"
+        # y_offset += -0.02
+        # l_annotations.append(
+        #     {
+        #         "text": sc_free_est,
+        #         "showarrow": False,
+        #         "xref": "paper",
+        #         "yref": "paper",
+        #         "x": 0.0,
+        #         "y": y_offset,
+        #     }
+        # )
 
     fig.update_layout(
         {
             "xaxis": {
-                "title": "Dive Number",
+                # "title": "Dive Number",
+                "title": f"Dive Number{sd_free_est}{sc_free_est}",
                 "showgrid": True,
+                "domain": [0, 0.95],
             },
             "yaxis": {
                 "title": "free space (kB)",
@@ -214,7 +224,7 @@ def mission_disk(
             "margin": {
                 "b": 120,
             },
-            "annotations": tuple(l_annotations),
+            # "annotations": tuple(l_annotations),
         },
     )
     return (

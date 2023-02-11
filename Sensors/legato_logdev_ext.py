@@ -57,7 +57,7 @@ def init_logger(module_name, init_dict=None):
         return -1
 
     # Already provided by legato_ext.py
-    
+
     # BaseNetCDF.register_sensor_dim_info(
     #     BaseNetCDF.nc_legato_data_info,
     #     "legato_data_point",
@@ -81,6 +81,23 @@ def init_logger(module_name, init_dict=None):
                 },
                 BaseNetCDF.nc_scalar,
             ],  # always scalar
+            f"{BaseNetCDF.nc_sg_cal_prefix}legato_sealevel": [
+                False,
+                "d",
+                {
+                    "description": "Assumed value pressure reading at sealevel",
+                    "units": "dbar * 1000",
+                },
+                BaseNetCDF.nc_scalar,
+            ],
+            f"{BaseNetCDF.nc_sg_cal_prefix}legato_config": [
+                False,
+                "d",
+                {
+                    "description": "Bitfield describing the legato configuration when run as a logdev",
+                },
+                BaseNetCDF.nc_scalar,
+            ],
             "log_RB_RECORDABOVE": [
                 False,
                 "d",
@@ -110,6 +127,24 @@ def init_logger(module_name, init_dict=None):
                 False,
                 "d",
                 {"description": "Sampling rate (seconds)"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "log_RB_UPLOADMAX": [
+                False,
+                "d",
+                {"description": "Max upload size (bytes)"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "log_RB_STARTS": [
+                False,
+                "d",
+                {"description": "Numbers of times started"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "log_RB_NDIVE": [
+                False,
+                "d",
+                {"description": "Dive multiplier"},
                 BaseNetCDF.nc_scalar,
             ],
             "legato_time": [
@@ -233,7 +268,7 @@ def process_data_files(
 
         if "legato_sealevel" not in calib_consts:
             log_error("Missing legato_sealevel in sg_calib_constants - bailing out")
-            return ([], {})
+            return 1
         else:
             sealevel = calib_consts["legato_sealevel"] / 1000.0
 
@@ -250,7 +285,7 @@ def process_data_files(
                 f"Legato config {legato_config} too large - use {legato_default_config}"
             )
 
-        datfile = open(fc.mk_base_datfile_name(), "rb")
+        datfile = open(fc.full_filename(), "rb")
         engfile = open(fc.mk_base_engfile_name(), "w")
 
         engfile.write("%columns: legato.time")

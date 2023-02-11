@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -27,10 +27,6 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import collections
-import pdb
-import sys
-import traceback
 import typing
 import sqlite3
 
@@ -52,11 +48,15 @@ from Plotting import plotmissionsingle
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
+
 @plotmissionsingle
 def mission_volume(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
 ) -> tuple[list, list]:
     """Plots various estimates for volmax"""
+
+    if not generate_plots:
+        return ([], [])
 
     conn = Utils.open_mission_database(base_opts)
     if not conn:
@@ -64,62 +64,63 @@ def mission_volume(
         return ([], [])
 
     cur = conn.cursor()
-    res = cur.execute('PRAGMA table_info(dives)')
+    res = cur.execute("PRAGMA table_info(dives)")
     columns = [i[1] for i in res]
 
     fig = plotly.graph_objects.Figure()
     df = None
-    if 'implied_volmax' in columns:
+    if "implied_volmax" in columns:
         try:
             df = pd.read_sql_query(
                 "SELECT dive,implied_volmax from dives",
                 conn,
             ).sort_values("dive")
-        except (pd.io.sql.DatabaseError,sqlite3.OperationalError):
+        except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
             log_error("Could not fetch needed columns", "exc")
             return ([], [])
 
     glider_df = None
-    if 'implied_volmax_glider' in columns:
+    if "implied_volmax_glider" in columns:
         try:
             glider_df = pd.read_sql_query(
                 "SELECT dive,implied_volmax_glider from dives",
                 conn,
             ).sort_values("dive")
-        except (sqlite3.OperationalError,pd.io.sql.DatabaseError):
+        except (sqlite3.OperationalError, pd.io.sql.DatabaseError):
             log_warning("Could not load implied volmax from the glider estimate", "exc")
 
     flight_df = None
-    if 'implied_volmax_fm' in columns:
+    if "implied_volmax_fm" in columns:
         try:
             flight_df = pd.read_sql_query(
                 "SELECT dive,implied_volmax_fm from dives",
                 conn,
             ).sort_values("dive")
-        except (sqlite3.OperationalError,pd.io.sql.DatabaseError):
+        except (sqlite3.OperationalError, pd.io.sql.DatabaseError):
             log_warning(
                 "Could not load implied volmax from the flight model estimate", "exc"
             )
 
-    fig.add_trace(
-        {
-            "name": "Basestation volmax",
-            "x": df["dive"],
-            "y": df["implied_volmax"],
-            "yaxis": "y1",
-            "mode": "lines",
-            "line": {
-                "dash": "solid",
-                "color": "DarkMagenta",
-                "width": 1,
-            },
-            "hovertemplate": "Basestation volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
-        }
-    )
+    if df is not None:
+        fig.add_trace(
+            {
+                "name": "Basestation Volmax",
+                "x": df["dive"],
+                "y": df["implied_volmax"],
+                "yaxis": "y1",
+                "mode": "lines",
+                "line": {
+                    "dash": "solid",
+                    "color": "DarkMagenta",
+                    "width": 1,
+                },
+                "hovertemplate": "Basestation Volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
+            }
+        )
     if glider_df is not None:
         fig.add_trace(
             {
-                "name": "Glider volmax",
+                "name": "Glider On Board Volmax",
                 "x": glider_df["dive"],
                 "y": glider_df["implied_volmax_glider"],
                 "yaxis": "y1",
@@ -129,14 +130,14 @@ def mission_volume(
                     "color": "DarkBlue",
                     "width": 1,
                 },
-                "hovertemplate": "Glider volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
+                "hovertemplate": "Glider Volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
             }
         )
 
     if flight_df is not None:
         fig.add_trace(
             {
-                "name": "Flight Model volmax",
+                "name": "Flight Model Volmax",
                 "x": flight_df["dive"],
                 "y": flight_df["implied_volmax_fm"],
                 "yaxis": "y1",
@@ -146,20 +147,20 @@ def mission_volume(
                     "color": "Dark Green",
                     "width": 1,
                 },
-                "hovertemplate": "FM volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
+                "hovertemplate": "FM Volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
             }
         )
 
-    title_text = f"{mission_str}<br>Volmax estimates"
+    title_text = f"{mission_str}<br>Volmax Estimates"
 
     fig.update_layout(
         {
             "xaxis": {
-                "title": "Dive Number",
+                "title": "Dive",
                 "showgrid": True,
             },
             "yaxis": {
-                "title": "volmax (cc)",
+                "title": "Volmax (cc)",
                 "showgrid": True,
                 "tickformat": "d",
             },

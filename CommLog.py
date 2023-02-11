@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -28,9 +28,11 @@ Commlog.py: Contains all routines for extracting data from a glider's comm logfi
     Intended to be called from another module (Base.py) OR stand-alone (to generate glider tracking data info).
 """
 
+import argparse
 import cProfile
 import collections
 import inspect
+import json
 import math
 import os
 import pdb
@@ -39,6 +41,7 @@ import re
 import sys
 import time
 import traceback
+import copy
 
 import BaseOpts
 import BaseTime
@@ -54,6 +57,7 @@ from BaseLog import (
     log_error,
     log_critical,
 )
+import BaseDB
 
 DEBUG_PDB = False  # Set to True to enter debugger on exceptions
 
@@ -269,8 +273,10 @@ class CommLog:
             None if no ID found
         """
         for i in reversed(range(len(self.sessions))):
+            log_debug(f"Instrument ID {self.sessions[i].sg_id}")
             if self.sessions[i].sg_id:
                 return self.sessions[i].sg_id
+        log_debug("No instrument ID found")
         return None
 
     def get_last_dive_num_and_call_counter(self):
@@ -667,6 +673,7 @@ class ConnectSession:
         self.volt_24V = None
         self.int_press = None
         self.rh = None
+        self.temperature = None
         self.launch_time = None
         self.eop_code = None
         self.recov_code = None
@@ -685,9 +692,34 @@ class ConnectSession:
         self.transfered_size = {}
         self.crc_errors = {}
         self.cmd_directive = None
+        self.logout_status = None
         # Dictionary of the file with send retries with in the sesssion
         # This is a rawrcvb thing only
         self.file_retries = collections.defaultdict(int)
+
+    def to_dict(self):
+        """Converts session object to a dict"""
+        x = copy.deepcopy(self)
+        x.gps_fix = vars(x.gps_fix)
+        return vars(x)
+
+    def to_message_dict(self):
+        """Creates a dict from a subset of the session object for use in db operations"""
+        return {
+            "connected": time.mktime(self.connect_ts),
+            "dive": self.dive_num,
+            "cycle": self.call_cycle,
+            "call": self.calls_made,
+            "lat": Utils.ddmm2dd(self.gps_fix.lat),
+            "lon": Utils.ddmm2dd(self.gps_fix.lon),
+            "epoch": time.mktime(self.gps_fix.datetime),
+            "RH": self.rh,
+            "intP": self.int_press,
+            "volts10": self.volt_10V,
+            "volts24": self.volt_24V,
+            "pitch": self.obs_pitch,
+            "depth": self.depth,
+        }
 
     def dump_contents(self, fo):
         """Dumps out the session contents, used when called manually"""
@@ -762,6 +794,10 @@ class ConnectSession:
             print("int_press %f" % self.int_press, file=fo)
         if self.rh is not None:
             print("rh %f" % self.rh, file=fo)
+        if self.temperature is not None:
+            print("temperature %f" % self.temperature, file=fo)
+        if self.logout_status is not None:
+            print("logout_status (%s)" % self.logout_status, file=fo)
         if self.launch_time is not None:
             print(
                 "launch_time %s"
@@ -785,6 +821,7 @@ class ConnectSession:
             % (len(list(self.crc_errors.keys())), list(self.crc_errors.keys())),
             file=fo,
         )
+        print(self.file_stats, file=fo)
         if self.cmd_directive:
             print(f"cmdfile directive {self.cmd_directive}", file=fo)
         else:
@@ -799,37 +836,59 @@ def crack_connect_line(input_line):
     """Parses out the time stamp from an input line
 
     The expected form of the input is:
-      XXX at Sat Jul 2 01:54:49 PDT 2005
+      XXX at Sat Jul 2 01:54:49 PDT 2005 (optional_payload)
     where XXX is Connected or Reconnected or Disconnected
+
+    There may be optional payload the end - a string enclosed in parens
 
     Returns a struct_time and timezone
     """
-    # set up logging
     log_debug(input_line)
     connect_line = input_line.split(sep=None, maxsplit=2)
     connect_ts_string = connect_line[2].lstrip().rstrip()
     log_debug("connect_string = (%s)" % connect_ts_string)
-    # Split out the timezone
     cts_parts = connect_ts_string.split()
-    if len(cts_parts) < 6:
-        return (None, None)
-    connect_ts_notz_string = "%s %s %s %s %s" % (
-        cts_parts[0],
-        cts_parts[1],
-        cts_parts[2],
-        cts_parts[3],
-        cts_parts[5],
-    )
-    time_zone = cts_parts[4]
-    # connect_ts_tstruc = time.strptime(connect_ts_notz_string, "%a %b %d %H:%M:%S %Y")
     connect_ts_tstruct = None
-    try:
-        connect_ts_tstruct = BaseTime.convert_commline_to_utc(
-            connect_ts_notz_string, time_zone
+    if len(cts_parts) <= 2:
+        # UTC ISO8601
+        time_zone = None
+        try:
+            connect_ts_tstruct = time.strptime(
+                cts_parts[0].lstrip().rstrip(), "%Y-%m-%dT%H:%M:%SZ"
+            )
+        except ValueError:
+            pass
+        else:
+            time_zone = "UTC"
+    else:
+        # Split out the timezone
+        if len(cts_parts) < 6:
+            return (None, None, None)
+        connect_ts_notz_string = "%s %s %s %s %s" % (
+            cts_parts[0],
+            cts_parts[1],
+            cts_parts[2],
+            cts_parts[3],
+            cts_parts[5],
         )
-    except ValueError:
-        pass
-    return (connect_ts_tstruct, time_zone)
+        time_zone = cts_parts[4]
+        try:
+            connect_ts_tstruct = BaseTime.convert_commline_to_utc(
+                connect_ts_notz_string, time_zone
+            )
+        except ValueError:
+            pass
+
+    payload = None
+    try:
+        if len(cts_parts) in (2, 7):
+            tmp = cts_parts[-1].rstrip().lstrip()
+            if len(tmp) > 3 and tmp[0] == "(" and tmp[-1] == ")":
+                payload = tmp[1:-1]
+    except:
+        log_error("Failed to process connect/disconnect payload")
+
+    return (connect_ts_tstruct, time_zone, payload)
 
 
 def is_digit(val):
@@ -842,6 +901,7 @@ def is_digit(val):
         return True
 
 
+# pylint: disable=unused-argument
 def crack_counter_line(
     base_opts, session, raw_strs, comm_log_file_name, line_count, raw_line
 ):
@@ -854,7 +914,7 @@ def crack_counter_line(
     # Check for valid counter
     cnt_vals = raw_strs[0].split(":")
 
-    if len(cnt_vals) >= 3 and len(cnt_vals) <= 16:
+    if len(cnt_vals) >= 3 and len(cnt_vals) <= 17:
         for i in range(len(cnt_vals)):
             cnt_vals[i] = cnt_vals[i].lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
@@ -866,6 +926,9 @@ def crack_counter_line(
             # First - counter line with optional GPS string on end
             # Final - counter line with logout at end
             #
+            # 67.00 (r6718) First: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, last_open_error,
+            #       pitch_ad, roll_ad, vbd_ad, angle, depth, temperature, v10, v24, int_press, rh
+            # 67.00 (r6718) Final: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, status
             # 66.10 First: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, last_open_error,
             #       pitch_ad, roll_ad, vbd_ad, angle, depth, v10, v24, int_press, rh
             # 66.10 Final: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, status
@@ -891,72 +954,101 @@ def crack_counter_line(
             # 65.01 First and Final: dive_num, callsMade, cnt_NoComm
             # 65.00 First and Final: dive_num, callsMade, cnt_NoComm
 
-            if len(cnt_vals) == 16 and Utils.is_float(cnt_vals[15]):
+            def convert_f(counter_vals, position, cnv_type):
+
+                try:
+                    return cnv_type(counter_vals[position])
+                except ValueError:
+                    log_error(
+                        f"Failed to convert {counter_vals[position]} to {str(cnv_type)} line_num:{line_count}, position:{position}"
+                    )
+                    return None
+
+            if len(cnt_vals) == 17 and Utils.is_float(cnt_vals[16]):
                 # Version 66.09 - 66.10 First counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
-                session.reboot_count = int(cnt_vals[5])
-                session.last_call_error = int(cnt_vals[6])
-                session.pitch_ad = int(cnt_vals[7])
-                session.roll_ad = int(cnt_vals[8])
-                session.vbd_ad = int(cnt_vals[9])
-                session.obs_pitch = float(cnt_vals[10])
-                session.depth = float(cnt_vals[11])
-                session.volt_10V = float(cnt_vals[12])
-                session.volt_24V = float(cnt_vals[13])
-                session.int_press = float(cnt_vals[14])
-                session.rh = float(cnt_vals[15])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
+                session.last_call_error = convert_f(cnt_vals, 6, int)
+                session.pitch_ad = convert_f(cnt_vals, 7, int)
+                session.roll_ad = convert_f(cnt_vals, 8, int)
+                session.vbd_ad = convert_f(cnt_vals, 9, int)
+                session.obs_pitch = convert_f(cnt_vals, 10, float)
+                session.depth = convert_f(cnt_vals, 11, float)
+                session.temperature = convert_f(cnt_vals, 12, float)
+                session.volt_10V = convert_f(cnt_vals, 13, float)
+                session.volt_24V = convert_f(cnt_vals, 14, float)
+                session.int_press = convert_f(cnt_vals, 15, float)
+                session.rh = convert_f(cnt_vals, 16, float)
+            elif len(cnt_vals) == 16 and Utils.is_float(cnt_vals[15]):
+                # Version 66.09 - 66.10 First counter
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
+                session.last_call_error = convert_f(cnt_vals, 6, int)
+                session.pitch_ad = convert_f(cnt_vals, 7, int)
+                session.roll_ad = convert_f(cnt_vals, 8, int)
+                session.vbd_ad = convert_f(cnt_vals, 9, int)
+                session.obs_pitch = convert_f(cnt_vals, 10, float)
+                session.depth = convert_f(cnt_vals, 11, float)
+                session.volt_10V = convert_f(cnt_vals, 12, float)
+                session.volt_24V = convert_f(cnt_vals, 13, float)
+                session.int_press = convert_f(cnt_vals, 14, float)
+                session.rh = convert_f(cnt_vals, 15, float)
             elif len(cnt_vals) == 10 and Utils.is_integer(cnt_vals[9]):
                 # Version 66.08 First counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
-                session.reboot_count = int(cnt_vals[5])
-                session.last_call_error = int(cnt_vals[6])
-                session.pitch_ad = int(cnt_vals[7])
-                session.roll_ad = int(cnt_vals[8])
-                session.vbd_ad = int(cnt_vals[9])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
+                session.last_call_error = convert_f(cnt_vals, 6, int)
+                session.pitch_ad = convert_f(cnt_vals, 7, int)
+                session.roll_ad = convert_f(cnt_vals, 8, int)
+                session.vbd_ad = convert_f(cnt_vals, 9, int)
             elif len(cnt_vals) == 7 and Utils.is_integer(cnt_vals[6]):
                 # Version 66.08 - 66.10 Final counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
-                session.reboot_count = int(cnt_vals[5])
-                session.this_call_error = int(cnt_vals[6])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
+                session.this_call_error = convert_f(cnt_vals, 6, int)
             elif len(cnt_vals) == 6 and Utils.is_integer(cnt_vals[5]):
                 # Version 66.06 - 66.07 counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
-                session.reboot_count = int(cnt_vals[5])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
             elif len(cnt_vals) == 5 and Utils.is_integer(cnt_vals[4]):
                 # Version 66.05 counter
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
-                session.mission_num = int(cnt_vals[4])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
             elif len(cnt_vals) == 4 and Utils.is_integer(cnt_vals[3]):
                 # Version 66.00 - 66.04
-                session.dive_num = int(cnt_vals[0])
-                session.call_cycle = int(cnt_vals[1])
-                session.calls_made = int(cnt_vals[2])
-                session.no_comm = int(cnt_vals[3])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
             else:
                 # Version 65 counter
                 log_info("Version 65 counter (%s)" % raw_strs[0])
-                session.dive_num = int(cnt_vals[0])
-                session.calls_made = int(cnt_vals[1])
-                session.no_comm = int(cnt_vals[2])
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.calls_made = convert_f(cnt_vals, 1, int)
+                session.no_comm = convert_f(cnt_vals, 2, int)
 
             # if(session.calls_made == 0):
             #    print cnt_vals
@@ -1014,6 +1106,7 @@ def crack_counter_line(
 
     return False
 
+
 def process_comm_log(
     comm_log_file_name,
     base_opts,
@@ -1036,7 +1129,7 @@ def process_comm_log(
         # Look backward through the file for the last line starting with "Connected" as starting point
         # If found, any start_pos supplied will be ignored
         if scan_back:
-            print("scanning backwards")
+            log_debug("Scanning backwards")
             try:
                 comm_log_file = open(comm_log_file_name, "rb")
             except IOError:
@@ -1053,6 +1146,9 @@ def process_comm_log(
                     curr_line = comm_log_file.readline().decode()
                     print((curr_line, curr_pos))
                     if curr_line.startswith("Connected"):
+                        log_info(
+                            f"Scan back found connected line pos:{curr_pos} {curr_line}"
+                        )
                         start_pos = curr_pos
                         comm_log_file.close()
                         break
@@ -1060,17 +1156,18 @@ def process_comm_log(
                         comm_log_file.seek(curr_pos - 2, os.SEEK_SET)
             except IOError:
                 # Didn't find a line starting with connected - fall through
-                comm_log_file.close()
-
-        if start_pos >= 0:
-            statinfo = os.stat(comm_log_file_name)
-            if statinfo.st_size < start_pos:
-                # File got smaller - reparse
-                # print "Resetting starting position (%d,%d)" % (statinfo.st_size,start_pos)
                 start_pos = 0
-            elif statinfo.st_size == start_pos:
-                # Start pos is the same as filesize - nothing to do
-                return (None, start_pos, session, line_count, 0)
+            comm_log_file.close()
+
+        statinfo = os.stat(comm_log_file_name)
+        if start_pos >= 0 and statinfo.st_size < start_pos:
+            # File got smaller - reparse
+            log_info(
+                f"File got samller - resetting starting position from ({statinfo.st_size}, {start_pos})"
+            )
+            start_pos = 0
+
+        # Start of regular processing
         try:
             comm_log_file = open(comm_log_file_name, "rb")
         except IOError:
@@ -1078,9 +1175,18 @@ def process_comm_log(
             return (None, None, None, None, 1)
 
         log_debug("process_comm_log starting")
-        if start_pos >= 0 and statinfo.st_size > start_pos:
-            # print "Resetting to file pos %d" % start_pos
-            comm_log_file.seek(start_pos, 0)
+        if start_pos >= 0:
+            statinfo = os.stat(comm_log_file_name)
+            if statinfo.st_size > start_pos:
+                log_debug(f"Resetting to file pos ({statinfo.st_size}, {start_pos})")
+                if comm_log_file.seek(start_pos, 0) != start_pos:
+                    log_warning(f"Seek to {start_pos} failed")
+            elif statinfo.st_size == start_pos:
+                log_debug(
+                    f"size and start are the same ({statinfo.st_size}, {start_pos})"
+                )
+                # Start pos is the same as filesize - nothing to do
+                return (None, start_pos, session, line_count, 0)
 
         sessions = []
         raw_file_lines = []
@@ -1136,25 +1242,41 @@ def process_comm_log(
                 continue
 
             if raw_strs[0] == "Connected":
+                if scan_back:
+                    log_debug("In Connected")
                 if session:
                     log_warning(
                         "Found Connected with no previous Disconnect: file %s, lineno %d"
                         % (comm_log_file_name, line_count)
                     )
-                connect_ts, time_zone = crack_connect_line(raw_line)
+                connect_ts, time_zone, username = crack_connect_line(raw_line)
                 if connect_ts is None:
+                    log_warning(f"Connected line did not have a timestamp ({raw_line})")
                     continue
                 session = ConnectSession(connect_ts, time_zone)
-                # Try to deduce the glider id from the housing directory
-                # This will be updated during the call if any files are transferred
-                try:
-                    m_dir, _ = os.path.split(comm_log_file_name)
-                    _, sg_id = os.path.split(m_dir)
-                    sg_id = int(sg_id[2:])
-                except:
-                    pass
-                else:
-                    session.sg_id = sg_id
+                if (
+                    username is not None
+                    and len(username) >= 5
+                    and username.lower()[0:2] == "sg"
+                ):
+                    try:
+                        sg_id = int(username[2:5])
+                    except ValueError:
+                        pass
+                    else:
+                        session.sg_id = sg_id
+                # log_info(f"sgid:{session.sg_id} {username} {line_count}")
+                if not session.sg_id:
+                    # Try to deduce the glider id from the housing directory
+                    # This will be updated during the call if any files are transferred
+                    try:
+                        m_dir, _ = os.path.split(comm_log_file_name)
+                        _, sg_id = os.path.split(m_dir)
+                        sg_id = int(sg_id[2:])
+                    except:
+                        pass
+                    else:
+                        session.sg_id = sg_id
 
                 raw_file_lines[-1][0] = time.mktime(session.connect_ts)
 
@@ -1165,13 +1287,25 @@ def process_comm_log(
                         log_error("Connected callback failed", "exc")
                 continue
             elif raw_strs[0] == "Reconnected":
-                reconnect_ts, time_zone = crack_connect_line(raw_line)
+                reconnect_ts, time_zone, username = crack_connect_line(raw_line)
                 if reconnect_ts is None:
                     continue
                 raw_file_lines[-1][0] = time.mktime(reconnect_ts)
 
                 if session:
                     session.reconnect_ts = reconnect_ts
+                    if (
+                        username is not None
+                        and len(username) >= 5
+                        and username.lower()[0:2] == "sg"
+                    ):
+                        try:
+                            sg_id = int(username[2:5])
+                        except ValueError:
+                            pass
+                        else:
+                            session.sg_id = sg_id
+
                 else:
                     log_warning(
                         "Found ReConnected outside Connected: file %s, lineno %d "
@@ -1184,13 +1318,14 @@ def process_comm_log(
                         log_error("Reconnected callback failed", "exc")
                 continue
             elif raw_strs[0] == "Disconnected":
-                disconnect_ts, time_zone = crack_connect_line(raw_line)
+                disconnect_ts, time_zone, logout_status = crack_connect_line(raw_line)
                 if disconnect_ts is None:
                     continue
                 raw_file_lines[-1][0] = time.mktime(disconnect_ts)
 
                 if session:
                     session.disconnect_ts = disconnect_ts
+                    session.logout_status = logout_status
                     sessions.append(session)
                 else:
                     log_warning(
@@ -1326,21 +1461,41 @@ def process_comm_log(
                     # Crack the leading date
                     ts_line = raw_line.split("[")
                     ts_string = ts_line[0].lstrip().rstrip()
-                    # raw_file_lines[-1][0] = time.mktime(time.strptime(ts_string, "%a %b %d %H:%M:%S %Y"))
-                    raw_file_lines[-1][0] = time.mktime(
-                        BaseTime.convert_commline_to_utc(ts_string, session.time_zone)
-                    )
+                    # Try ISO8601 first
+                    utc_time_stamp = None
+                    try:
+                        utc_time_stamp = time.mktime(
+                            time.strptime(ts_string, "%Y-%m-%dT%H:%M:%SZ")
+                        )
+                    except ValueError:
+                        pass
+                    if utc_time_stamp:
+                        raw_file_lines[-1][0] = utc_time_stamp
+                    else:
+                        # Old version with local time
+                        raw_file_lines[-1][0] = time.mktime(
+                            BaseTime.convert_commline_to_utc(
+                                ts_string, session.time_zone
+                            )
+                        )
 
                     session.sg_id = int(sg_id_tmp[0])
 
                     # RAW or YMODEM files uploaded to the glider
                     # Thu Aug  4 19:48:52 2016 [sg203] Sent 192 bytes of cmdfile
-                    if len(raw_strs) > 10:
-                        if raw_strs[6] == "Sending":
+                    # or
+                    # 2023-01-23T23:33:33Z [sg095] Sent 15 bytes of pdoscmds.bat
+
+                    # Find the end of the [sgXXX] tag, and work on the end of the string
+
+                    action_strs = raw_line[sgid_re.search(raw_line).end() :].split()
+
+                    if len(action_strs) > 4:
+                        if action_strs[0] == "Sending":
                             try:
-                                filename = raw_strs[10]
+                                filename = action_strs[4]
                                 session.file_stats[filename] = file_stats_nt(
-                                    int(raw_strs[7]), -1, -1, -1
+                                    int(action_strs[1]), -1, -1, -1
                                 )
                             except:
                                 log_error(
@@ -1351,19 +1506,19 @@ def process_comm_log(
                             continue
 
                         if (
-                            raw_strs[6] == "Sent"
+                            action_strs[0] == "Sent"
                             and "/YMODEM" not in raw_line
                             and "/XMODEM" not in raw_line
                         ):
                             # Raw send
                             try:
-                                filename = raw_strs[10]
+                                filename = action_strs[4]
                                 file_transfer_method[filename] = "raw"
                                 session.transfer_method[filename] = "raw"
-                                session.transfered_size[filename] = int(raw_strs[7])
+                                session.transfered_size[filename] = int(action_strs[1])
                                 session.transfer_direction[filename] = "received"
                                 session.file_stats[filename] = file_stats_nt(
-                                    -1, int(raw_strs[7]), int(raw_strs[7]), -1
+                                    -1, int(action_strs[1]), int(action_strs[1]), -1
                                 )
                             except:
                                 log_error(
@@ -1375,22 +1530,22 @@ def process_comm_log(
                             if call_back and "received" in call_back.callbacks:
                                 try:
                                     call_back.callbacks["received"](
-                                        raw_strs[10], int(raw_strs[7])
+                                        action_strs[4], int(action_strs[1])
                                     )
                                 except:
                                     log_error("received callback failed", "exc")
                             continue
 
                     # RAW or YMODEM files downloaded from the glider
-                    if len(raw_strs) >= 11:
+                    if len(action_strs) >= 5:
                         # Tue Oct  6 07:37:38 2020 [sg236] Receiving 8192 bytes of sc0041bg.x02
-                        if raw_strs[6] == "Receiving":
+                        if action_strs[0] == "Receiving":
                             try:
-                                filename = raw_strs[10]
+                                filename = action_strs[4]
                                 if filename in session.file_stats:
                                     session.file_retries[filename] += 1
                                 session.file_stats[filename] = file_stats_nt(
-                                    int(raw_strs[7]), -1, -1, -1
+                                    int(action_strs[1]), -1, -1, -1
                                 )
                             except:
                                 log_error(
@@ -1401,9 +1556,9 @@ def process_comm_log(
                             continue
 
                         # Thu Aug  4 19:49:42 2016 [sg203] Received 386 bytes of br0003lp.x03 (366.2 Bps)
-                        if raw_strs[6] == "Received" and "/YMODEM" not in raw_line:
+                        if action_strs[0] == "Received" and "/YMODEM" not in raw_line:
                             try:
-                                filename = raw_strs[10]
+                                filename = action_strs[4]
                                 if filename not in session.file_stats:
                                     log_warning(
                                         "Found Received for %s with out matching Receiving line"
@@ -1417,20 +1572,20 @@ def process_comm_log(
                                 file_transfer_method[filename] = "raw"
                                 session.transfer_method[filename] = "raw"
                                 session.transfer_direction[filename] = "sent"
-                                session.transfered_size[filename] = int(raw_strs[7])
-                                if len(raw_strs) == 11:
+                                session.transfered_size[filename] = int(action_strs[1])
+                                if len(action_strs) == 5:
                                     session.file_stats[filename] = file_stats_nt(
                                         expected_size,
-                                        int(raw_strs[7]),
-                                        int(raw_strs[7]),
+                                        int(action_strs[1]),
+                                        int(action_strs[1]),
                                         0.0,
                                     )
-                                elif len(raw_strs) == 13:
+                                elif len(action_strs) == 7:
                                     session.file_stats[filename] = file_stats_nt(
                                         expected_size,
-                                        int(raw_strs[7]),
-                                        int(raw_strs[7]),
-                                        float(raw_strs[11].lstrip("(")),
+                                        int(action_strs[1]),
+                                        int(action_strs[1]),
+                                        float(action_strs[5].lstrip("(")),
                                     )
                                 else:
                                     log_warning(
@@ -1449,7 +1604,7 @@ def process_comm_log(
                             if call_back and "transfered" in call_back.callbacks:
                                 try:
                                     call_back.callbacks["transfered"](
-                                        raw_strs[10], int(raw_strs[7])
+                                        action_strs[4], int(action_strs[1])
                                     )
                                 except:
                                     log_error("transfered callback failed", "exc")
@@ -1474,7 +1629,7 @@ def process_comm_log(
                         if filename is not None:
                             if "/YMODEM:" in raw_line:
                                 try:
-                                    transfersize = int(raw_strs[7].strip())
+                                    transfersize = int(action_strs[1].strip())
                                     bps = int(
                                         end.lstrip().split(" ")[2].strip()
                                     )  # bytes per second third string
@@ -1525,7 +1680,7 @@ def process_comm_log(
                                 session.transfer_method[filename] = "xmodem"
                                 file_transfer_method[filename] = "xmodem"
                             file_transfered = []
-                            if file_crc_errors != []:
+                            if file_crc_errors:
                                 session.crc_errors[filename] = file_crc_errors
                                 file_crc_errors = []
 
@@ -1563,7 +1718,7 @@ def process_comm_log(
                         file_transfered.append(file_transfered_nt(0, 0))
                         files_transfered[filename] = file_transfered
                         file_transfered = []
-                        if file_crc_errors != []:
+                        if file_crc_errors:
                             session.crc_errors[filename] = file_crc_errors
                             file_crc_errors = []
                         continue
@@ -1844,46 +1999,79 @@ class TestCommLogCallback:
 
 
 def main():
-    import BaseDB
-
     """main - main entry point"""
     base_opts = BaseOpts.BaseOptions(
         "Test entry for comm.log processing",
         additional_arguments={
-            "comm_log": BaseOpts.options_t(
-                None,
+            "dump_last": BaseOpts.options_t(
+                False,
                 ("CommLog",),
-                ("comm_log",),
+                ("--dump_last",),
                 str,
                 {
-                    "help": "comm.log file to process",
-                    "action": BaseOpts.FullPathAction,
+                    "help": "Dump the last comm.log session",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "dump_all": BaseOpts.options_t(
+                False,
+                ("CommLog",),
+                ("--dump_all",),
+                str,
+                {
+                    "help": "Dump the last comm.log session",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "init_db": BaseOpts.options_t(
+                False,
+                ("CommLog",),
+                ("--init_db",),
+                str,
+                {
+                    "help": "Initialize database with sessions",
+                    "action": argparse.BooleanOptionalAction,
                 },
             ),
         },
     )
-    BaseLogger(base_opts)  # initializes BaseLog
+    BaseLogger(base_opts)
 
-    if base_opts.comm_log is None:
+    comm_log_path = os.path.join(base_opts.mission_dir, "comm.log")
+    if not os.path.exists(comm_log_path):
+        log_error(f"{comm_log_path} does not exist")
         return 1
 
-    
-    # comm_log, pos, session, cnt, n = process_comm_log(base_opts.comm_log, base_opts, scan_back=True)
-    (comm_log, pos, session, _, _) = process_comm_log(base_opts.comm_log, base_opts) # , scan_back=True)
+    (comm_log, _, session, _, _) = process_comm_log(comm_log_path, base_opts)
 
     if not base_opts.instrument_id:
         base_opts.instrument_id = comm_log.get_instrument_id()
 
-    BaseDB.prepDB(base_opts)
+    if base_opts.init_db:
+        BaseDB.prepDB(base_opts)
 
-    print(f"{len(comm_log.sessions)} sessions")
-    if len(comm_log.sessions):
+        if not comm_log.sessions:
+            print("No sessions")
+        else:
+            try:
+                se = comm_log.sessions[-1]
+                print(json.dumps(se.to_message_dict()))
+            except:
+                log_error("Couldn't dump last session", "exc")
+
+            print(f"{len(comm_log.sessions)} sessions")
+            for session in comm_log.sessions:
+                BaseDB.addSession(base_opts, session)
+
+    if base_opts.dump_last:
+        if not comm_log.sessions:
+            print("No sessions")
+        else:
+            comm_log.sessions[-1].dump_contents(sys.stdout)
+
+    if base_opts.dump_all:
         for session in comm_log.sessions:
-            BaseDB.addSession(base_opts, session)
-    else:
-        print("no sessions")
-
-    print(session)
+            session.dump_contents(sys.stdout)
 
     # for ii in range(len(comm_log.sessions)):
     #     for k in comm_log.sessions[ii].file_stats.keys():

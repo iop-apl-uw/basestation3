@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -38,7 +38,6 @@ import seawater
 if typing.TYPE_CHECKING:
     import BaseOpts
 
-import Globals
 import PlotUtils
 import PlotUtilsPlotly
 from Plotting import plotdivesingle
@@ -46,13 +45,16 @@ from Plotting import plotdivesingle
 
 @plotdivesingle
 def plot_legato_data(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots raw legato columns along with optode temp (if available)"""
 
-    if ("legato_temp" not in dive_nc_file.variables) and (
-        "eng_rbr_temp" not in dive_nc_file.variables
-    ):
+    if (
+        "legato_temp" not in dive_nc_file.variables
+        and "eng_rbr_temp" not in dive_nc_file.variables
+    ) or not generate_plots:
         return ([], [])
 
     if "legato_temp" in dive_nc_file.variables:

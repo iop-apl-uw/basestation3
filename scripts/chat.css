@@ -143,12 +143,14 @@
     */
         min-width: 300px;
         min-height: 300px;
-        position: fixed;
+        position: absolute;
         z-index: 1000;
         overflow: auto;
         background-color: rgba(128,128,128,0.8);
-        padding: 100px;
+        padding: 10px;
         cursor: pointer;
+        top: 5vh;
+        left: 10vw;
     }
 
     #modalImg {
@@ -211,7 +213,7 @@
       background-color: #dddddd;
       color: #000;
       cursor: pointer;
-      overflow-y: auto;
+      overflow: scroll;
     }
 
     #chatInput {
@@ -275,18 +277,20 @@
     */
         min-width: 300px;
         min-height: 300px;
-        position: fixed;
+        position: absolute;
+        top: 5vh;
+        left: 10vw;
         z-index: 1000;
         overflow: auto;
         background-color: rgba(128,128,128,0.8);
-        padding: 100px;
+        padding: 10px;
         cursor: pointer;
     }
 
     #modalImg {
         margin: auto;
         display: block;
-        max-width: 90%;
+        max-width: 70vw;
     }
 
     #modalImgClose {

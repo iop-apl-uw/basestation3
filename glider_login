@@ -40,7 +40,7 @@ endif
 printf "\n" >>! glider_early_gps.log
 printf "\n" >>! glider_early_gps.log
 
-set glider_early_gps_time = `date +%y%m%d%H%M%S`
+set glider_early_gps_time = `date -u +%y%m%d%H%M%S`
 set glider_early_gps_cmd_line = "GliderEarlyGPS.py --daemon --mission_dir `pwd` --verbose --base_log `pwd`/glider_early_gps_${glider_early_gps_time} --csh_pid $$"
 set glider_early_gps_log = `pwd`/glider_early_gps.log
 if( $?RUNNER_DIR ) then
@@ -58,9 +58,9 @@ else
 endif
 
 if (-f .connected) then
-     echo Reconnected at `date +"%a %b %d %R:%S %Z %Y"` >> comm.log
+     echo Reconnected at `date -u +"%Y-%m-%dT%H:%M:%SZ"` \(${USER}\) >> comm.log
 else
-     echo Connected at `date +"%a %b %d %R:%S %Z %Y"` >> comm.log
+     echo Connected at `date -u +"%Y-%m-%dT%H:%M:%SZ"` \(${USER}\) >> comm.log
 endif
 
 rm -f .connected
@@ -75,7 +75,7 @@ else
 endif
 
 # Signal the glider what files are waiting for upload
-set base_login_time = `date +%y%m%d%H%M%S`
+set base_login_time = `date -u +%y%m%d%H%M%S`
 set base_login_cmd_line = "BaseLogin.py --mission_dir `pwd` --verbose --base_log `pwd`/baselog_login_${base_login_time}"
 set base_login_log = `pwd`/baselog.log
 
@@ -89,6 +89,8 @@ if( $?RUNNER_DIR ) then
           break
       endif
   end
+  # Wait for a second to let the BaseLogin to update the prompt with files to be uploaded
+  sleep 1
 else
     $PYTHON_BINARY $BASESTATION_PATH/${base_login_cmd_line}  >>&!  ${base_login_log}
 endif

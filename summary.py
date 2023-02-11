@@ -74,11 +74,15 @@ async def collectSummary(glider, path):
         directive    = ongoing_session.cmd_directive
     elif session and session.cmd_directive:
         directive    = session.cmd_directive
+    else:
+        directive = 'unknown'
 
     if ongoing_session and ongoing_session.calls_made:
         calls   = ongoing_session.calls_made
     elif session and session.cmd_directive:
         calls   = session.calls_made
+    else:
+        calls = 0
 
     logout = False
     shutdown = False

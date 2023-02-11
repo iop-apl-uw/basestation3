@@ -34,8 +34,8 @@ import math
 import os
 import pprint
 import pstats
-import re
 import pdb
+import re
 import shutil
 import signal
 import stat
@@ -48,6 +48,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+import orjson
 
 import BaseDB
 import BaseDotFiles
@@ -817,7 +819,13 @@ def process_file_group(
             incomplete_files.append(defrag_file_name)
             ret_val = 1
         else:
-            file_list.append(uc_file_name)
+            if os.path.getsize(uc_file_name) == 0:
+                log_error(
+                    f"File {uc_file_name} is zero sized - skipping further processing"
+                )
+                log_error("Could not get file size", "exc")
+            else:
+                file_list.append(uc_file_name)
     elif fc.is_bzip():
         uc_file_name = fc.make_uncompressed()
 
@@ -2168,12 +2176,13 @@ def main():
         last_session = comm_log.last_surfacing()
         if base_opts.skip_flight_model:
             log_info("Skipping flight model processing per directive")
-        elif last_session and last_session.recov_code:
+        elif last_session and last_session.recov_code and not base_opts.force:
             log_info(f"Skipping flight model due to recovery {last_session.recov_code}")
         elif (
             last_session
             and last_session.cmd_directive
             and "QUIT" in last_session.cmd_directive
+            and not base_opts.force
         ):
             log_info("Skipping flight model due to QUIT command")
         elif skip_mission_processing_event.is_set():
@@ -2211,11 +2220,19 @@ def main():
 
     # Add netcdf files to mission sql database
     if base_opts.add_sqllite:
-        for ncf in nc_files_created:
+        log_info("Starting netcdf load to db")
+        if base_opts.force:
             try:
-                BaseDB.loadDB(base_opts, ncf)
+                BaseDB.rebuildDB(base_opts)
             except:
-                log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
+                log_error("Failed to rebuild mission sqllite db", "exc")
+        else:
+            for ncf in nc_files_created:
+                try:
+                    BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                except:
+                    log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
+            log_info("netcdf load to db done")
 
     # Run and dive extensions
     processed_file_names = []
@@ -2228,10 +2245,12 @@ def main():
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Per-dive plotting
+    log_info("Starting per-dive plots")
     plot_dict = BasePlot.get_dive_plots(base_opts)
     _, output_files = BasePlot.plot_dives(base_opts, plot_dict, nc_files_created)
     for output_file in output_files:
         processed_other_files.append(output_file)
+    log_info("Per-dive plots complete")
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
@@ -2252,6 +2271,18 @@ def main():
     # Process the urls file for the first pass (before mission profile, timeseries, etc).
     if not base_opts.local:
         BaseDotFiles.process_urls(base_opts, 1, instrument_id, dive_num)
+        try:
+            msg = {
+                "glider": instrument_id,
+                "dive": dive_num,
+                "content": "files=perdive",
+                "time": time.time(),
+            }
+            Utils.notifyVis(
+                instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
+            )
+        except:
+            log_error("notifyVis failed", "exc")
 
     # Check for sighup here
     if skip_mission_processing_event.is_set():
@@ -2815,6 +2846,18 @@ def main():
         # Process the urls file for the second time
         if not base_opts.local:
             BaseDotFiles.process_urls(base_opts, 2, instrument_id, dive_num)
+            try:
+                msg = {
+                    "glider": instrument_id,
+                    "dive": dive_num,
+                    "content": "files=all",
+                    "time": time.time(),
+                }
+                Utils.notifyVis(
+                    instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
+                )
+            except:
+                log_error("notifyVis failed", "exc")
 
     # Optionally: Clean up intermediate (working) files here
     if base_opts.clean:
@@ -2834,14 +2877,17 @@ def main():
 
     # looked at processed_other_files list to decide if we should be more
     # granular about what is completed
+    base_completed_name_fullpath = os.path.join(
+        base_opts.mission_dir, base_completed_name
+    )
     try:
-        with open(base_completed_name, "w") as file:
+        with open(base_completed_name_fullpath, "w") as file:
             file.write(
                 "Finished processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
             )
     except:
-        log_error(f"Failed to open {base_completed_name}")
+        log_error(f"Failed to open {base_completed_name_fullpath}")
 
     log_info(
         "Finished processing "

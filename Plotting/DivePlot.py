@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -64,7 +64,9 @@ def clock_compass(heading):
 
 @plotdivesingle
 def plot_diveplot(
-    base_opts: BaseOpts.BaseOptions, dive_nc_file: scipy.io._netcdf.netcdf_file
+    base_opts: BaseOpts.BaseOptions,
+    dive_nc_file: scipy.io._netcdf.netcdf_file,
+    generate_plots=True,
 ) -> tuple[list, list]:
     """Plots most of the glider engineering data"""
     # pylint: disable=unused-argument
@@ -72,7 +74,7 @@ def plot_diveplot(
     # TODO: Make Hovertips show AD counts as well as eng units
 
     # Preliminaries
-    if "gc_st_secs" not in dive_nc_file.variables:
+    if "gc_st_secs" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
 
     try:

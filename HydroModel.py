@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -107,6 +107,7 @@ def find_stalled(speed_v, vehicle_pitch_degrees_v, num_rows, calib_consts):
 # flightvec0 goes from 0 to 15 
 loop_count = 21 # bin_fit 'glideslope' goes from 1 to 20
 loop_count = 41 # TestData/sg144_ps_022613/p144* dives have a few points that take a while to converge but they do...
+loop_count = 61 # TestData/SG236_Shilshole_2022_11_18 dives took around 45-50 to converge
 def glide_slope(w_cm_s_v, vehicle_pitch_rad_v, calib_consts):
     """
     Compute the glide slope, base on observed vertical velocity (pressure change), vehicle pitch,

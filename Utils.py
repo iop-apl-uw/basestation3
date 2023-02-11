@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -43,9 +43,14 @@ import sqlite3
 import sys
 import time
 import typing
+import pathlib
+import anyio
+import warnings
 
 import gsw
 import seawater
+import zmq
+import zmq.asyncio
 
 import numpy as np
 import scipy
@@ -301,21 +306,24 @@ def flatten(inlist, ltype=(list, tuple), maxint=sys.maxsize):
         pass
     return inlist
 
+
 def haversine(lat0, lon0, lat1, lon1):
+    """Distance between to positions, using the haversine method"""
     R = 6378137.0
-    lat0 = lat0*math.pi/180
-    lat1 = lat1*math.pi/180
-    lon0 = lon0*math.pi/180
-    lon1 = lon1*math.pi/180
+    lat0 = lat0 * math.pi / 180
+    lat1 = lat1 * math.pi / 180
+    lon0 = lon0 * math.pi / 180
+    lon1 = lon1 * math.pi / 180
 
-    sdlat_2 = math.sin(0.5*(lat0 - lat1))
-    sdlon_2 = math.sin(0.5*(lon0 - lon1))
+    sdlat_2 = math.sin(0.5 * (lat0 - lat1))
+    sdlon_2 = math.sin(0.5 * (lon0 - lon1))
 
-    a = sdlat_2*sdlat_2 + math.cos(lat0)*math.cos(lat1)*sdlon_2*sdlon_2
+    a = sdlat_2 * sdlat_2 + math.cos(lat0) * math.cos(lat1) * sdlon_2 * sdlon_2
     if a >= 1 or a <= 0:
         return 0
 
-    return 2.0*R*math.asin(math.sqrt(a))
+    return 2.0 * R * math.asin(math.sqrt(a))
+
 
 def ddmm2dd(x):
     """Converts a lat/long from ddmm.mmm to dd.dddd
@@ -1620,6 +1628,8 @@ def loadmodule(pathname):
 
 
 def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection:
+    import BaseDB
+
     """Opens a mission database file"""
     if not base_opts.mission_dir:
         log_error("mission_dir is not set")
@@ -1629,8 +1639,13 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
         return None
     db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
     if not os.path.exists(db):
-        log_error(f"{db} does not exist")
-        return None
+        try:
+            log_info(f"{db} does not exist - creating")
+            BaseDB.prepDB(base_opts, dbfile=db)
+        except Exception as e:
+            log_error(f"error creating DB: {e}")
+            return None
+
     return sqlite3.connect(db)
 
 
@@ -1643,20 +1658,28 @@ def dive_var_trend(base_opts, dive_col, y_col):
         else dive_col[-1]
     )
 
-    m, b = np.polyfit(dive_col[-p_dives_back:], y_col[-p_dives_back:], 1)
+    with warnings.catch_warnings():
+        # For very small number of dives, we get
+        # RankWarning: Polyfit may be poorly conditioned
+        warnings.simplefilter("ignore", np.RankWarning)
+        m, b = np.polyfit(dive_col[-p_dives_back:], y_col[-p_dives_back:], 1)
     return (m, b)
 
 
 def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
     """Estimate endurace from normalized remaining battery capacity"""
     # print(dive_col)
+
     p_dives_back = (
         base_opts.mission_energy_dives_back
         if dive_col[-1] >= base_opts.mission_energy_dives_back
         else dive_col[-1]
     )
-
-    m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
+    with warnings.catch_warnings():
+        # For very small number of dives, we get
+        # RankWarning: Polyfit may be poorly conditioned
+        warnings.simplefilter("ignore", np.RankWarning)
+        m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
     log_info(f"m:{m} b:{b}")
     lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)
     dives_remaining = lastdive_num - dive_col[-1]
@@ -1695,3 +1718,39 @@ def extract_calib_consts(dive_nc_file):
                 )  # string comments
 
     return calib_consts
+
+
+def notifyVis(glider: int, topic: str, body: str):
+    """
+    Check for vis.py processes to notify - each main process
+    creates a socket in /tmp so we just glob through there and
+    send notices via zmq
+    """
+
+    p = pathlib.Path("/tmp")
+    topic = f"{glider:03d}-{topic}"
+    ctx = zmq.Context()
+    for f in p.glob("sanic-*-notify.ipc"):
+        socket = ctx.socket(zmq.PUSH)
+        socket.connect(f"ipc://{f}")
+        socket.SNDTIMEO = 200
+        socket.setsockopt(zmq.SNDTIMEO, 200)
+        socket.setsockopt(zmq.LINGER, 0)  # this is the important one
+        log_info(f"notifying {f}:{topic}:{body}")
+        socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
+        socket.close()
+
+
+async def notifyVisAsync(glider: int, topic: str, body: str):
+    p = anyio.Path("/tmp")
+    topic = f"{glider:03d}-{topic}"
+    ctx = zmq.asyncio.Context()
+    async for f in p.glob("sanic-*-notify.ipc"):
+        print(f"sending {topic} {f}")
+        socket = ctx.socket(zmq.PUSH)
+        socket.connect(f"ipc://{f}")
+        socket.SNDTIMEO = 200
+        socket.setsockopt(zmq.SNDTIMEO, 200)
+        socket.setsockopt(zmq.LINGER, 0)  # this is the important one
+        await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
+        socket.close()

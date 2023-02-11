@@ -123,7 +123,7 @@
             /* position: relative; */
             display: grid;
             grid-template-columns: auto;
-            grid-template-rows: 0.55fr 50px 150px 0.45fr;
+            grid-template-rows: 0.55fr 50px 150px max-content;
             grid-template-areas:
                 "main"
                 "toolbar"
@@ -161,7 +161,7 @@
             z-index: 3;
             grid-area: main;
             overflow:auto; 
-            background-color:#bbbbbb; 
+            background-color:#dddddd; 
             text-align:center;
             position: relative;
         }
@@ -211,7 +211,7 @@
             height: 150px;
             display: flex;
             overflow-x:scroll; 
-            background-color:#bbbbbb;
+            background-color:#dddddd;
             gap: 0px;
         }
 
@@ -231,7 +231,7 @@
             box-sizing:border-box; 
             border:1px solid black; 
             white-space:pre;
-            background-color:#bbbbbb;
+            background-color:#dddddd;
             min-width: 80vw;
         }
 
@@ -241,7 +241,7 @@
             font-size: 10px; 
             box-sizing:border-box; 
             border:1px solid black; 
-            background-color:#bbbbbb;
+            background-color:#dddddd;
             min-width: 80vw;
         }
 
@@ -291,7 +291,7 @@
             row-gap: 5px;
             opacity: 1;
             border: 1px solid black;
-            background-color:#bbbbbb;
+            background-color:#dddddd;
         }
 
         .editFile {
@@ -299,7 +299,7 @@
             /* width:100%; */
             /* height:100%; */
             box-sizing:border-box; 
-            background-color:#bbbbbb;
+            background-color:#dddddd;
             border: 1px solid black;
         }
         
@@ -331,7 +331,7 @@
             /* position: relative; */
             display: grid;
             grid-template-rows: 100%;
-            grid-template-columns: 50px calc(95% - 50px) 70vw;
+            grid-template-columns: 50px calc(95% - 50px) max-content;
             grid-template-areas:
                 "toolbar main right";
             height: 96vh;
@@ -373,7 +373,7 @@
             width: 100%;
             height: 100%;
             overflow:auto; 
-            background-color:#bbbbbb; 
+            background-color:#dddddd; 
             text-align:center;
             flex-shrink: 0;
             flex-grow: 1; 
@@ -442,7 +442,7 @@
             max-height: 185px;
             display: flex;
             overflow-x:scroll; 
-            background-color:#bbbbbb;
+            background-color:#dddddd;
         }
 
         #right {
@@ -467,7 +467,7 @@
             box-sizing:border-box; 
             border:1px solid black; 
             white-space:pre;
-            background-color:#bbbbbb;
+            background-color:#dddddd;
             grid-area: commlog;
             height: 100%;
             min-width: 60vw;
@@ -479,7 +479,7 @@
             font-size: 10px; 
             box-sizing:border-box; 
             border:1px solid black; 
-            background-color:#bbbbbb;
+            background-color:#dddddd;
             grid-area: status;
             height: 100%;
             min-width: 60vw;
@@ -534,7 +534,7 @@
             position: relative;
             border: 1px solid black;
             opacity: 1.0;
-            background-color:#bbbbbb;
+            background-color:#dddddd;
         }
 
         .editFile {
@@ -542,7 +542,7 @@
             /* width:100%; */
             /* height:100%; */
             box-sizing:border-box; 
-            background-color:#bbbbbb;
+            background-color:#dddddd;
             border: 1px solid black;
         }
         
@@ -592,7 +592,7 @@
     #bodyView {
         /* position: relative; */
         display: grid;
-        grid-template-columns: 50px 1fr 600px;
+        grid-template-columns: 50px 1fr max-content;
         grid-template-rows: 0.98fr 205px;
         grid-template-areas:
             "toolbar main right"
@@ -626,7 +626,7 @@
 
     #main {
 	    overflow:auto; 
-	    background-color:#bbbbbb; 
+	    background-color:#dddddd; 
 	    text-align:center;
         grid-area: main;
         position: relative;
@@ -653,7 +653,7 @@
         max-height: 185px;
         display: flex;
         overflow-x:scroll; 
-        background-color:#bbbbbb;
+        background-color:#dddddd;
     }
 
     #right {
@@ -674,7 +674,7 @@
         box-sizing:border-box; 
         border:1px solid black; 
         white-space:pre;
-        background-color:#bbbbbb;
+        background-color:#dddddd;
         grid-area: commlog;
     }
 
@@ -683,7 +683,7 @@
         font-size: 10px; 
         box-sizing:border-box; 
         border:1px solid black; 
-        background-color:#bbbbbb;
+        background-color:#dddddd;
         grid-area: status;
         height: 240px;
         max-height: 240px;
@@ -720,7 +720,7 @@
         /* width:100%; */
         /* height:100%; */
         box-sizing:border-box; 
-        background-color:#bbbbbb;
+        background-color:#dddddd;
         border: 1px solid black;
     }
     
