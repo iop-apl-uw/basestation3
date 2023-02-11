@@ -588,7 +588,7 @@ global_options_dict = {
     ),
     #
     "home_dir": options_t(
-        None,
+        "/home",
         ("Commission",),
         ("--home_dir",),
         str,
@@ -606,7 +606,7 @@ global_options_dict = {
         },
     ),
     "glider_group": options_t(
-        None,
+        "gliders",
         ("Commission",),
         ("--glider_group",),
         str,
@@ -615,7 +615,7 @@ global_options_dict = {
         },
     ),
     "home_dir_group": options_t(
-        None,
+        "gliders",
         ("Commission",),
         ("--home_dir_group",),
         str,

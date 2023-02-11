@@ -100,16 +100,6 @@ def main():
 
     glider_id = base_opts.glider_id
 
-    if base_opts.home_dir is None:
-        glider_home_dir = "/home"
-    else:
-        glider_home_dir = base_opts.home_dir
-
-    if base_opts.glider_group is None:
-        glider_group = "gliders"
-    else:
-        glider_group = base_opts.glider_group
-
     sg000 = "sg000"
 
     if base_opts.glider_password is None:
@@ -119,8 +109,8 @@ def main():
 
     glider = "sg%03d" % glider_id
 
-    glider_path = "%s/%s" % (glider_home_dir, glider)
-    sg000_path = "%s/%s" % (glider_home_dir, sg000)
+    glider_path = "%s/%s" % (base_opts.home_dir, glider)
+    sg000_path = "%s/%s" % (base_opts.home_dir, sg000)
     initial_files = (
         ".login",
         ".logout",
@@ -137,23 +127,20 @@ def main():
     # be gliders rather than letting useradd create a new unique group
     syscall(
         '/usr/sbin/useradd -d %s -c "Seaglider %s" -g %s -G %s -m -k %s %s'
-        % (glider_path, glider_id, glider_group, glider_group, sg000_path, glider)
+        % (glider_path, glider_id, base_opts.glider_group, base_opts.glider_group, sg000_path, glider)
     )
     syscall(
         "chmod g+rwxs,o+rx %s" % glider_path
     )  # Let group members have full privies, read-only otherwise
 
-    if base_opts.home_dir_group is None:
-        syscall("chgrp %s %s" % (glider_group, glider_path))
-    else:
-        syscall("chgrp %s %s" % (base_opts.home_dir_group, glider_path))
+    syscall("chgrp %s %s" % (base_opts.home_dir_group, glider_path))
 
     for file_name in initial_files:
         full_file_name = os.path.join(sg000_path, file_name)
         full_dst_file_name = os.path.join(glider_path, file_name)
         shutil.copyfile(full_file_name, full_dst_file_name)
         syscall("chown %s %s" % (glider, full_dst_file_name))
-    syscall("chown pilot %s/cmdfile" % glider_path)
+    #syscall("chown pilot %s/cmdfile" % glider_path)
     # syscall("echo %s | passwd %s --stdin" % (pwd, glider))
     syscall("echo %s:%s | chpasswd" % (glider, pwd))
     syscall("chsh -s /usr/bin/tcsh %s" % glider)

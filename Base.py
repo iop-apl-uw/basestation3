@@ -31,7 +31,6 @@ import cProfile
 import functools
 import glob
 import math
-import orjson
 import os
 import pprint
 import pstats
@@ -49,6 +48,8 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+
+import orjson
 
 import BaseDB
 import BaseDotFiles
@@ -2220,15 +2221,18 @@ def main():
     # Add netcdf files to mission sql database
     if base_opts.add_sqllite:
         log_info("Starting netcdf load to db")
-        for ncf in nc_files_created:
+        if base_opts.force:
             try:
-                if base_opts.force:
-                    BaseDB.rebuildDB(base_opts)
-                else:
-                    BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                BaseDB.rebuildDB(base_opts)
             except:
-                log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
-        log_info("netcdf load to db done")
+                log_error("Failed to rebuild mission sqllite db", "exc")
+        else:
+            for ncf in nc_files_created:
+                try:
+                    BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                except:
+                    log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
+            log_info("netcdf load to db done")
 
     # Run and dive extensions
     processed_file_names = []

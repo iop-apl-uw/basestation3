@@ -292,6 +292,17 @@ def processGC(dive, cur, nci):
                 if rate > 0:
                     vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
 
+        # bigger thresholds for duration and move size
+        # for meaningful efficiency on TT8
+        elif math.fabs(nci.variables['gc_vbd_secs'][i]) > 0.5 and "gc_vbd_pot1_ad_start" in nci.variables and "gc_vbd_pot2_ad_start" in nci.variables:
+            dAD = nci.variables['gc_vbd_ad'][i] - (nci.variables['gc_vbd_pot1_ad_start'][i] + nci.variables['gc_vbd_pot1_ad_start'][i])*0.5
+            if math.fabs(dAD) > 10:
+                vbd_rate = dAD / math.fabs(nci.variables['gc_vbd_secs'][i])
+                rate = vbd_rate*nci.variables['log_VBD_CNV'].getValue()
+
+                if rate > 0 and nci.variables['gc_vbd_secs'][i] > 10:
+                    vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
+
         if "gc_flags" in nci.variables:
             flag_val = f"{nci.variables['gc_flags'][i]},"
         else:

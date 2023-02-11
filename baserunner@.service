@@ -1,21 +1,42 @@
 #
-# Installing
-# - repalce username with the user account setup that will run the basestation
-# scripts (must be in the "gliders" group)
+# General
 #
-# If already installed
+# This is the template systemd service file for a service that will
+# exectute the basestation code that is normally run out of glider_login and glider_logout.
+# Typically, this is for jailed glider accounts, but may be used for
+# unjailed accounts.
+#
+# In the notes below, username is the account name (usually a pilot's account)
+# that the basestation conversion process will be running under. The glider's
+# home directory must be group owned by a group this user is in (typically "gliders")
+# and the group permissions must be +rwx.
+#
+# If updating:
 #
 # sudo systemctl stop baserunner@username.service
 #
 # Installation or update
 #
 # sudo cp baserunner@.service /etc/systemd/system/baserunner@.service
+#
+# Replace the following strings below:
+# 
+# {glider_jail_root} - the root of the gliders jail, if using a jail.  Otherwise "/" for the root of the filesystem
+# {user_homedir} - Fully qualified path the username home directory
+# {rundir} - Fully qualified path the rundirectory.  This must match the location set in /usr/local/basesation/glider_login
+# and /usr/local/basesation/glider_logout.  See the ReadMe.md for more discussion on the setup of these files.
+# 
 # sudo systemctl daemon-reload
 # sudo systemctl enable baserunner@username.service
 # sudo systemctl start baserunner@username.service
 # sudo systemctl status baserunner@username.service
+#
+#
+# Note: as an alternative, this maybe run as a systemd user service.
+# Please see https://www.unixsysadmin.com/systemd-user-services/ for futher setup details
+# 
 [Unit]
-Description=Seaglider runner process for jailed accounts
+Description=Seaglider runner process for glider accounts
 After=network.target
 # No limit on number of times to retry - not clear if needed
 #StartLimitIntervalSec=0
@@ -26,8 +47,7 @@ After=network.target
 # Not entirely clear we need this
 Environment=PYTHONUNBUFFERED=true
 User=%i
-ExecStart=/usr/local/bin/python3.9 /usr/local/basestation3/BaseRunner.py --jail_root /home/jail --base_log /var/log/baserunner.log /home/jail/home/rundir 
-#ExecStart=/usr/local/bin/python3.9 /home/gbs/work/git/basestation3/BaseRunner.py --jail_root /home/jail --base_log /var/log/baserunner.log /home/jail/home/rundir 
+ExecStart=/opt/basestation/bin/python /usr/local/basestation3/BaseRunner.py --jail_root {glider_jail_root} --base_log {user_homedir}/baserunner.log {rundir}
 WatchdogSec=30
 Restart=always
 RuntimeMaxSec=86400
