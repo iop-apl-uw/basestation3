@@ -366,7 +366,10 @@ def attachHandlers(app: sanic.Sanic):
                 return await sanic.response.file(filename, mime_type='text/html')
             else:
                 if fmt == 'div':
-                    return await sanic.response.file(filename, mime_type='text/html', headers={'Content-Encoding': 'br'})
+                    async with aiofiles.open(filename, 'rb') as f:
+                        cont = await f.read()
+                    
+                    return sanic.response.raw(cont, headers={'Content-type': 'text/html', 'Content-Encoding': 'br'})
                 else:
                     return await sanic.response.file(filename, mime_type=f"image/{fmt}")
         else:
