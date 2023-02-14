@@ -2176,9 +2176,7 @@ def load_dive_profile_data(
         eng_f.remap_engfile_columns()
         if sg_ct_type == 4 and eng_f.get_col("rbr_pressure") is not None:
 
-            rbr_good_press_i_v = np.logical_not(
-                np.isnan(eng_f.get_col("rbr_pressure"))
-            )
+            rbr_good_press_i_v = np.logical_not(np.isnan(eng_f.get_col("rbr_pressure")))
             rbr_pressure = Utils.interp1d(
                 eng_f.get_col("elaps_t")[rbr_good_press_i_v],
                 eng_f.get_col("rbr_pressure")[rbr_good_press_i_v],
@@ -4341,6 +4339,7 @@ def make_dive_profile(
             temp_raw_v = ctd_temp_v[valid_gpctd_i_v]
             cond_raw_v = ctd_cond_v[valid_gpctd_i_v]
             ctd_press_v = ctd_press_v[valid_gpctd_i_v]
+            ctd_depth_m_v = ctd_depth_m_v[valid_gpctd_i_v]
             # pylint: disable=possibly-unused-variable
             if "gpctd_oxygen" in results_d:
                 # See code in sbe43_ext.py
