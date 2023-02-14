@@ -264,6 +264,23 @@ def plot_vert_vel(
         vert_speed_hdm_ctd = vert_speed_hdm_ctd[inds]
         buoy_ctd = buoy_ctd[inds]
         density_ctd = density_ctd[inds]
+        isurf = np.nonzero(
+            np.logical_and.reduce(
+                (
+                    ctd_depth < 1.5,
+                    ctd_depth > 0.5,
+                )
+            )
+        )[0]
+        if len(isurf) > 1:
+            density_1m = np.nanmean(density_ctd[isurf])/1000
+            depth_1m = np.nanmean(ctd_depth[isurf])
+        else:
+            isurf = np.argmin(ctd_depth)
+            density_1m = density_ctd[isurf]/1000
+            depth_1m = ctd_depth[isurf]
+            
+        print(density_1m, depth_1m)
     except:
         log_error(
             "Could not fetch needed variables - skipping vertical velocity plot", "exc"
@@ -512,9 +529,15 @@ def plot_vert_vel(
 
     implied_max_maxbuoy = -(implied_cvbd - vbd_max) / vbd_cnts_per_cc * (rho0 / 1000)
     implied_max_smcc = -(implied_cvbd - vbd_min) / vbd_cnts_per_cc
+    print(mass, rho0, density_1m)
+    implied_min_smcc_surf = 1000*mass*(1/density_1m - 1000/rho0) + 150
+    print(implied_min_smcc_surf)
 
     log_info(
         f"implied_cvbd {implied_cvbd:.0f}, implied_volmax {implied_volmax:.1f}, implied_max_smcc {implied_max_smcc:.1f}, implied_max_maxbuoy {implied_max_maxbuoy:.1f}"
+    )
+    log_info(
+        f"min SM_CC {implied_min_smcc_surf:.1f} based on density {density_1m:.5f} at {depth_1m:.2f}m and 150cc to raise the antenna"
     )
 
     BaseDB.addValToDB(
@@ -528,6 +551,9 @@ def plot_vert_vel(
     )
     BaseDB.addValToDB(
         base_opts, dive_nc_file.dive_number, "implied_max_SM_CC", implied_max_smcc
+    )
+    BaseDB.addValToDB(
+        base_opts, dive_nc_file.dive_number, "min_SM_CC", implied_min_smcc_surf
     )
     try:
         BaseDB.addSlopeValToDB(
@@ -658,7 +684,7 @@ def plot_vert_vel(
         )
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth"
-    fit_line = f"Best Fit VBD bias={min_bias:.0f}cc Implies C_VBD={implied_cvbd:.0f}ad volmax={implied_volmax:.0f}cc max SM_CC={implied_max_smcc:.0f}cc max MAX_BUOY={implied_max_maxbuoy:.0f}cc"
+    fit_line = f"Best Fit VBD bias={min_bias:.0f}cc implies: C_VBD={implied_cvbd:.0f}ad, volmax={implied_volmax:.0f}cc, max MAX_BUOY={implied_max_maxbuoy:.0f}cc<br>max SM_CC={implied_max_smcc:.0f}cc, min SM_CC {implied_min_smcc_surf:.1f} (based on density {density_1m:.5f} at {depth_1m:.2f}m and antenna 150cc)"
 
     fig.update_layout(
         {
