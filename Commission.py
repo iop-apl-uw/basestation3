@@ -88,6 +88,42 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Creates the user accounts and populates home directories for new gliders (Run as root)",
         additional_arguments={
+            "home_dir": BaseOpts.options_t(
+                "/home",
+                ("Commission",),
+                ("--home_dir",),
+                str,
+                {
+                    "help": "home directory base, used by Commission.py",
+                },
+            ),
+            "glider_password": BaseOpts.options_t(
+                None,
+                ("Commission",),
+                ("--glider_password",),
+                str,
+                {
+                    "help": "glider password, used by Commission.py",
+                },
+            ),
+            "glider_group": BaseOpts.options_t(
+                "gliders",
+                ("Commission",),
+                ("--glider_group",),
+                str,
+                {
+                    "help": "glider group, used by Commission.py",
+                },
+            ),
+            "home_dir_group": BaseOpts.options_t(
+                "gliders",
+                ("Commission",),
+                ("--home_dir_group",),
+                str,
+                {
+                    "help": "home dir group, used by Commission.py",
+                },
+            ),
             "glider_id": BaseOpts.options_t(
                 None,
                 ("Commission",),
@@ -105,6 +141,15 @@ def main():
                 {
                     "help": "Root of the jail to commision the glider in",
                     "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "uid": BaseOpts.options_t(
+                None,
+                ("Commission",),
+                ("--uid",),
+                int,
+                {
+                    "help": "UID for the glider",
                 },
             ),
         },
@@ -145,14 +190,19 @@ def main():
 
     # Adding "-g <group> -G <group>" forces the initial group (lowercase g) to
     # be gliders rather than letting useradd create a new unique group
+    if base_opts.uid:
+        uid_str = f"-u {base_opts.uid}"
+    else:
+        uid_str = ""
     syscall(
-        '/usr/sbin/useradd -d %s -c "Seaglider %s" -g %s -G %s -m -k %s %s'
+        '/usr/sbin/useradd -d %s -c "Seaglider %s" -g %s -G %s -m -k %s %s %s'
         % (
             glider_path,
             glider_id,
             base_opts.glider_group,
             base_opts.glider_group,
             sg000_path,
+            uid_str,
             glider,
         )
     )
@@ -173,8 +223,10 @@ def main():
     syscall("chsh -s /usr/bin/tcsh %s" % glider)
     if base_opts.glider_jail:
         # More the home directory
-        syscall(f"mv {glider_path} {os.path.join(base_opts.glider_jail, glider_path[1:])}")
-        
+        syscall(
+            f"mv {glider_path} {os.path.join(base_opts.glider_jail, glider_path[1:])}"
+        )
+
         # Deal with the jailed passwd file
         pd = pwd.getpwnam(glider)
         pwd_str = f"{pd.pw_name}:{pd.pw_passwd}:{pd.pw_uid}:{pd.pw_gid}:{pd.pw_gecos}:{pd.pw_dir}:{pd.pw_shell}"
