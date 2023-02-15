@@ -62,7 +62,6 @@ def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
         "/dev",
         "/etc",
         "/home",
-        "/home/rundir",
         "/lib",
         f"/lib/{arch_lib_dir}",
         f"/lib/{arch_lib_dir}/security",
@@ -75,7 +74,6 @@ def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
         # "/etc/pam.d",
         "/usr/local/basestation",
         "/usr/local/basestation3",
-        "/home/rundir",
     ]
     dirs = []
     for dd in ddirs:
@@ -92,6 +90,7 @@ def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
         "/usr/bin/pwd",
         "/usr/bin/sleep",
         # End glider_login/glider_logout
+        "/usr/local/bin/rawrcv",
         "/usr/local/bin/rawrcv2",
         "/usr/local/bin/rawrcvb",
         "/usr/local/bin/rawsend",
