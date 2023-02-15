@@ -172,6 +172,9 @@ def main():
     syscall("echo %s:%s | chpasswd" % (glider, passwd))
     syscall("chsh -s /usr/bin/tcsh %s" % glider)
     if base_opts.glider_jail:
+        # More the home directory
+        syscall(f"mv {glider_path} {os.path.join(base_opts.glider_jail, glider_path[1:])}")
+        
         # Deal with the jailed passwd file
         pd = pwd.getpwnam(glider)
         pwd_str = f"{pd.pw_name}:{pd.pw_passwd}:{pd.pw_uid}:{pd.pw_gid}:{pd.pw_gecos}:{pd.pw_dir}:{pd.pw_shell}"
@@ -185,6 +188,8 @@ def main():
                         f"Entry already exists in {jail_pwd} for {glider} - bailing out"
                     )
                     return 1
+        except FileNotFoundError:
+            pass
         except:
             log_error(f"Could not open {jail_pwd}", "exc")
             return 0
