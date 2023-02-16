@@ -1369,16 +1369,8 @@ def process_extensions(
         0 - success
         1 - failure
     """
-    ret_val = 0
-    extension_directory = base_opts.basestation_directory
-    extensions_file_name = os.path.join(base_opts.mission_dir, extension_file_name)
-    if not os.path.exists(extensions_file_name):
-        log_info(
-            "No %s file found - skipping %s processing"
-            % (extension_file_name, extension_file_name)
-        )
-        return 0
-    else:
+
+    def process_one_extension_file(extensions_file_name):
         log_info(f"Starting processing on {extension_file_name} section(s):{sections}")
         cp = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes="#")
         cp.optionxform = str
@@ -1393,7 +1385,7 @@ def process_extensions(
                 "Could not open %s (%s) - skipping %s processing"
                 % (extensions_file_name, extension_file_name, exception.args)
             )
-            ret_val = 1
+            return 1
         else:
             for section in sections:
                 if cp.has_section(section):
@@ -1407,14 +1399,14 @@ def process_extensions(
                         extension_elts = extension_line.split(" ")
                         # First element - extension name, with .py file extension
                         extension_module_name = os.path.join(
-                            extension_directory, extension_elts[0]
+                            base_opts.basestation_directory, extension_elts[0]
                         )
                         extension_module = Utils.loadmodule(extension_module_name)
                         if extension_module is None:
                             log_error(
                                 f"Error loading {extension_module_name} - skipping"
                             )
-                            ret_val = 1
+                            return 1
                         else:
                             try:
                                 # Invoke the extension
@@ -1440,9 +1432,19 @@ def process_extensions(
                                     "Error running %s - return %d"
                                     % (extension_module_name, extension_ret_val)
                                 )
-                                ret_val = 1
-
+                                return 1
         log_info(f"Finished processing on {extension_file_name}")
+        return 0
+
+    ret_val = 0
+    for extensions_file_name in (
+        os.path.join(base_opts.basestation_etc, ".extensions"),
+        os.path.join(base_opts.mission_dir, ".extensions"),
+    ):
+        if not os.path.exists(extensions_file_name):
+            log_info(f"No .extensions file {extensions_file_name} found")
+            continue
+        ret_val |= process_one_extension_file(extensions_file_name)
 
     return ret_val
 
