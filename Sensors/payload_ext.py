@@ -159,7 +159,7 @@ def process_data_files(base_opts, module_name, calib_consts, fc, processed_logge
                     log_error("Could not write to %s" % fc.mk_base_engfile_name(), 'exc')
                     return 1
 
-            processed_logger_eng_files.append(fc.mk_base_engfile_name())                
+        processed_logger_eng_files.append(fc.mk_base_engfile_name())
         return ret_val
     else:
         # These should be non-existant
@@ -236,11 +236,11 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         ## # to is CF card at the end of a half profile.  For now, there isn't much
         ## # to be done.  As a hack, the last N observations are chucked
         ## # N is at most 22 samples without O2 and 18 samples with O2
-        ## if(len(ef['data'].keys()) > 3):
-        ##     chucked_samples = -18
-        ## else:
-        ##     chucked_samples = -22
-        ## log_info("Chucked samples = %d" % abs(chucked_samples))
+        if(len(ef['data'].keys()) > 3):
+            chucked_samples = -18
+        else:
+            chucked_samples = -22
+        log_info("Chucked samples = %d" % abs(chucked_samples))
 
         # Note: this logic assumes that the O2 column appears in both or neither profile
         if('gpcdt.O2' in list(ef['data'].keys())):
@@ -263,8 +263,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
         data_vectors[cast] = {}
         for h in data_headers:
-            ## data_vectors[cast][h] = ef['data'][h][:chucked_samples]
-            data_vectors[cast][h] = ef['data'][h]
+            data_vectors[cast][h] = ef['data'][h][:chucked_samples]
+            #data_vectors[cast][h] = ef['data'][h]
 
     #print time.strftime("%d %b %Y %H:%M:%S", time.gmtime(data_vectors[1]['gpctd.Time'][0]))
     #print time.strftime("%d %b %Y %H:%M:%S", time.gmtime(data_vectors[2]['gpctd.Time'][0]))

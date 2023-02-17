@@ -62,7 +62,6 @@ def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
         "/dev",
         "/etc",
         "/home",
-        "/home/rundir",
         "/lib",
         f"/lib/{arch_lib_dir}",
         f"/lib/{arch_lib_dir}/security",
@@ -75,7 +74,6 @@ def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
         # "/etc/pam.d",
         "/usr/local/basestation",
         "/usr/local/basestation3",
-        "/home/rundir",
     ]
     dirs = []
     for dd in ddirs:
@@ -92,6 +90,7 @@ def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
         "/usr/bin/pwd",
         "/usr/bin/sleep",
         # End glider_login/glider_logout
+        "/usr/local/bin/rawrcv",
         "/usr/local/bin/rawrcv2",
         "/usr/local/bin/rawrcvb",
         "/usr/local/bin/rawsend",
@@ -245,9 +244,12 @@ if __name__ == "__main__":
     print(f"Jail created in {args.jail_root}")
 
     if args.glider_dir:
+        jailed_passwd = os.path.join(args.jail_root, "/etc/passwd")
+        jailed_group = os.path.join(args.jail_root, "/etc/group")
         print(
-            "You need to create/update the /etc/group, /etc/passwd and /etc/shadow in the jail"
+            f"{jailed_passwd} and {jailed_group} are not created by this script - they updated by Commission.py for new gliders"
         )
+        print("For existing gliders, you need to do the updates yourself")
         print(
-            f"Update /etc/password the glider entry to have {args.jail_root} for the home directory and /sbin/chrootshell for the shell"
+            f"Not that for the jail to work, entries /etc/password for glider accounts must have {args.jail_root} for the home directory and /sbin/chrootshell for the shell"
         )

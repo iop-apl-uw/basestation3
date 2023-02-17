@@ -126,14 +126,13 @@ make install
 4. Install the required python libraries
 
 ```
+rm -rf /opt/basestation
+```
+then
+```
 sudo mkdir /opt/basestation
 sudo chown user:gliders /opt/basestation
 ```
-or
-```
-rm -rf /opt/basestation
-```
-
 then
 
 ```

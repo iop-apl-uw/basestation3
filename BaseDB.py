@@ -292,6 +292,17 @@ def processGC(dive, cur, nci):
                 if rate > 0:
                     vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
 
+        # bigger thresholds for duration and move size
+        # for meaningful efficiency on TT8
+        elif math.fabs(nci.variables['gc_vbd_secs'][i]) > 0.5 and "gc_vbd_pot1_ad_start" in nci.variables and "gc_vbd_pot2_ad_start" in nci.variables:
+            dAD = nci.variables['gc_vbd_ad'][i] - (nci.variables['gc_vbd_pot1_ad_start'][i] + nci.variables['gc_vbd_pot1_ad_start'][i])*0.5
+            if math.fabs(dAD) > 10:
+                vbd_rate = dAD / math.fabs(nci.variables['gc_vbd_secs'][i])
+                rate = vbd_rate*nci.variables['log_VBD_CNV'].getValue()
+
+                if rate > 0 and nci.variables['gc_vbd_secs'][i] > 10:
+                    vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
+
         if "gc_flags" in nci.variables:
             flag_val = f"{nci.variables['gc_flags'][i]},"
         else:
@@ -921,7 +932,7 @@ def prepDB(base_opts, dbfile=None):
     cur = con.cursor()
     cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
     cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
-    cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));")
+    cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
     cur.close()
 
     con.close()
@@ -1005,9 +1016,9 @@ def addSession(base_opts, session, con=None):
 
     try:
         cur = mycon.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, PRIMARY KEY (dive,cycle,call));")
-        cur.execute("INSERT OR IGNORE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,volts10,volts24,pitch,depth) \
-                     VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :volts10, :volts24, :pitch, :depth);",
+        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
+        cur.execute("INSERT OR IGNORE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD) \
+                     VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD);",
                     session.to_message_dict())
         mycon.commit()
     except Exception as e:

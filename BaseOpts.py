@@ -587,42 +587,6 @@ global_options_dict = {
         },
     ),
     #
-    "home_dir": options_t(
-        None,
-        ("Commission",),
-        ("--home_dir",),
-        str,
-        {
-            "help": "home directory base, used by Commission.py",
-        },
-    ),
-    "glider_password": options_t(
-        None,
-        ("Commission",),
-        ("--glider_password",),
-        str,
-        {
-            "help": "glider password, used by Commission.py",
-        },
-    ),
-    "glider_group": options_t(
-        None,
-        ("Commission",),
-        ("--glider_group",),
-        str,
-        {
-            "help": "glider group, used by Commission.py",
-        },
-    ),
-    "home_dir_group": options_t(
-        None,
-        ("Commission",),
-        ("--home_dir_group",),
-        str,
-        {
-            "help": "home dir group, used by Commission.py",
-        },
-    ),
     #
     "target_dir": options_t(
         None,

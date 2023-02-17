@@ -78,7 +78,7 @@ def mission_motors(
         # capacity 10V and 24V are normalized battery availability
 
         df = pd.read_sql_query(
-            "SELECT dive,roll_rate,roll_i,pitch_rate,pitch_i,vbd_rate,vbd_i,depth,vbd_eff,pitch_volts,roll_volts,vbd_volts from gc",
+            "SELECT dive,roll_rate,roll_i,pitch_rate,pitch_i,vbd_rate,vbd_i,vbd_secs,depth,vbd_eff,pitch_volts,roll_volts,vbd_volts from gc",
             conn,
         ).sort_values("dive")
 
@@ -189,6 +189,7 @@ def mission_motors(
 
         pumpdf = vdf[vdf["vbd_rate"] < 0]
         bleeddf = vdf[vdf["vbd_rate"] > 0]
+        
         fig.add_trace(
             {
                 "x": pumpdf["dive"],
@@ -201,7 +202,7 @@ def mission_motors(
                     "symbol": "triangle-down",
                     "color": "Blue",
                 },
-                "hovertemplate": "Dive %{x:.0f}<br>Current %{y:.2f}A<br>Depth %{meta:.2f} m<extra></extra>",
+                "hovertemplate": "Dive %{x:.0f}<br>Current %{y:.2f}A<br>Depth %{meta[0]:.2f} m<extra></extra>",
             },
             secondary_y=False,
         )
@@ -281,7 +282,7 @@ def mission_motors(
             {
                 "x": pumpdf["dive"],
                 "y": pumpdf["vbd_eff"],
-                "meta": pumpdf["depth"],
+                "meta": np.stack((pumpdf["depth"], pumpdf["vbd_secs"]), axis=-1),
                 "name": "VBD Efficiency",
                 "type": "scatter",
                 "mode": "markers",
@@ -293,7 +294,7 @@ def mission_motors(
                     },
                     "colorscale": "Jet",
                 },
-                "hovertemplate": "VBD Efficiency<br>Dive %{x:.0f}<br>%{y:.2f} Efficiency<br>Depth %{meta:.2f} m<br><extra></extra>",
+                "hovertemplate": "VBD Efficiency<br>Dive %{x:.0f}<br>%{y:.2f} Efficiency<br>Depth %{meta[0]:.2f} m<br>%{meta[1]:.1f} secs<extra></extra>",
             }
         )
 

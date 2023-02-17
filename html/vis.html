@@ -1362,17 +1362,23 @@
 
     function loadPlotlyControlsContour(glider) {
         fetch(`/provars/${glider}${mission()}`)
-        .then(res => res.json())
-        .then(data => {
-            names = data['names'].sort();
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);  
+                names = data['names'].sort();
 
-            emptySelect($('selPlotlyContour'));
-            for (n of names) {
-                let optX = document.createElement('option');
-                optX.value = n;
-                optX.innerHTML = n;
-                let optY = document.createElement('option');
-                $('selPlotlyContour').appendChild(optX);
+                emptySelect($('selPlotlyContour'));
+                for (n of names) {
+                    let optX = document.createElement('option');
+                    optX.value = n;
+                    optX.innerHTML = n;
+                    let optY = document.createElement('option');
+                    $('selPlotlyContour').appendChild(optX);
+                }
+            } catch(e) {
+                console.log('provars ' + e);
+                console.log(data);
             }
         })
         .catch(error => {
