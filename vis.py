@@ -1506,9 +1506,9 @@ def createApp(overrides: dict) -> sanic.Sanic:
     if 'SECRET' not in app.config:
         app.config.SECRET = secrets.token_hex()
     if 'MISSIONS_FILE' not in app.config:
-        app.config.MISSIONS_FILE = "/home/seaglider/missions.dat"
+        app.config.MISSIONS_FILE = "missions.dat"
     if 'USERS_FILE' not in app.config:
-        app.config.USERS_FILE = "/home/seaglider/users.dat"
+        app.config.USERS_FILE = "users.dat"
     if 'FQDN' not in app.config:
         app.config.FQDN = None;
     if 'USER' not in app.config:
@@ -1574,6 +1574,9 @@ if __name__ == '__main__':
                     print("-m sgNNN:/abs/mission/path")
                     sys.exit(1)
                  
+    if root is None:
+        root = '/home/seaglider'
+
     if root is not None:
         os.chdir(os.path.expanduser(root))
 
