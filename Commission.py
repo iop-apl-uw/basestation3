@@ -245,12 +245,19 @@ def main():
         except:
             log_error(f"Could not open {jail_pwd}", "exc")
             return 0
+        leading_newline = ""
         try:
-            fo = open(jail_pwd, "a")
-            log_info(f"Writing {pwd_str} to {jail_pwd}")
-            fo.write(pwd_str)
-            fo.write("\n")
-            fo.close()
+            with open(jail_pwd, "r") as fi:
+                buffer = fi.read()
+                if isinstance(buffer, str) and not buffer.endswith("\n"):
+                    leading_newline = "\n"
+        except:
+            log_error(f"Could not read {jail_pwd}", "exc")
+            return 1
+        try:
+            with open(jail_pwd, "a") as fo:
+                log_info(f"Writing {pwd_str} to {jail_pwd}")
+                fo.write(f"{leading_newline}{pwd_str}\n")
         except:
             log_error(f"Could not write to {jail_pwd}", "exc")
             return 1
