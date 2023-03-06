@@ -391,7 +391,7 @@
         console.log('plotly available ' + plotly)
         if (!plotly || mobile) {
             setVisibility('mainImage');
-            $('mainImage').src = `/plot/webp/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
+            $('mainImage').src = `plot/webp/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
             $('plotlyPopperOuter').style.display = 'block';
             console.log('popper up');
             if (plotly)
