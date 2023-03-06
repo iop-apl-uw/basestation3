@@ -40,11 +40,15 @@ async def collectSummary(glider, path):
     cmdfile     = f'{path}/cmdfile'
     calibfile   = f'{path}/sg_calib_constants.m'
 
-    statinfo = await aiofiles.os.stat(commlogfile)
-    if statinfo.st_size < 10000:
-        start = 0
-    else:
-        start = statinfo.st_size - 10000
+    try:
+        statinfo = await aiofiles.os.stat(commlogfile)
+        if statinfo.st_size < 10000:
+            start = 0
+        else:
+            start = statinfo.st_size - 10000
+    except Exception as e:
+        print(e)
+        return {}
 
     processor = aiofiles.os.wrap(CommLog.process_comm_log)
     (commlog, commlog_pos, ongoing_session, _, _) = await processor(commlogfile, {}, start_pos=start)

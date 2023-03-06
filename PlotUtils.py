@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -192,17 +192,29 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
         (ncf.variables["gc_pitch_ad_start"][:], ncf.variables["gc_pitch_ad"][:])
     )
 
-    if "gc_vbd_ad_start" in ncf.variables:
-        # RevE
-        vbd_start = ncf.variables["gc_vbd_ad_start"][:]
+    try:
+        vbd_lp_ignore = ncf.variables["$VBD_LP_IGNORE"].getValue()
+    except KeyError:
+        vbd_lp_ignore = 0  # both available
+
+    if vbd_lp_ignore == 0:
+        gc_start_vbd_ad_v = (
+            np.array(ncf.variables["gc_vbd_pot1_ad_start"][:])
+            + np.array(ncf.variables["gc_vbd_pot2_ad_start"][:])
+        ) / 2
+        gc_vbd_ad = (
+            np.array(ncf.variables["gc_vbd_pot1_ad"][:])
+            + np.array(ncf.variables["gc_vbd_pot2_ad"][:])
+        ) / 2
+    elif vbd_lp_ignore == 1:  # ignore pot1?
+        gc_start_vbd_ad_v = np.array(ncf.variables["gc_vbd_pot2_ad_start"][:])
+        gc_vbd_ad = np.array(ncf.variables["gc_vbd_pot2_ad"][:])
+    elif vbd_lp_ignore == 2:  # ignore pot2?
+        gc_start_vbd_ad_v = np.array(ncf.variables["gc_vbd_pot1_ad_start"][:])
+        gc_vbd_ad = np.array(ncf.variables["gc_vbd_pot1_ad"][:])
     else:
-        # Recent RevB
-        pot1 = ncf.variables["gc_vbd_pot1_ad_start"][:]
-        pot2 = ncf.variables["gc_vbd_pot2_ad_start"][:]
-        vbd_start = np.zeros(np.size(pot1))
-        for ii in range(np.size(vbd_start)):
-            vbd_start[ii] = np.nanmean((pot1[ii], pot2[ii]))
-    gc_vbd_pos = np.concatenate((vbd_start, ncf.variables["gc_vbd_ad"][:]))
+        log_error("Unknown value for $VBD_LP_IGNORE: {vbd_lp_ignore}")
+    gc_vbd_pos = np.concatenate((gc_start_vbd_ad_v, gc_vbd_ad))
 
     gc_time = np.concatenate(
         (
