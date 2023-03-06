@@ -181,8 +181,11 @@ async def collectSummary(glider, path):
     out['enduranceEndT'] = data['log_gps_time'] + data['energy_days_remain_Modeled']*86400;
     out['enduranceDays'] = data['energy_days_remain_Modeled']
     out['enduranceDives'] = data['energy_dives_remain_Modeled']
-    out['missionStart'] = start['log_gps2_time']
-    
+    try:
+        out['missionStart'] = start['log_gps2_time']
+    except:
+        out['missionStart'] = 0
+ 
     return out
 
 if __name__ == "__main__":

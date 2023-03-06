@@ -1,15 +1,15 @@
 {% if runMode == 'pilot' %}
-<link rel="shortcut icon" href="/script/images/SGX_square_transparent.ico"/>
-<link rel="apple-touch-icon" href="/script/images/SGX_square_transparent_72.png"/>
-<link sizes="72x72" rel="apple-touch-icon" href="/script/images/SGX_square_transparent_72.png"/>
-<link sizes="114x114" rel="apple-touch-icon" href="/script/images/SGX_square_transparent_114.png"/>
-<link sizes="144x144" rel="apple-touch-icon" href="/script/images/SGX_square_transparent_144.png"/>
-<link rel="manifest" href="/manifest.json">
+<link rel="shortcut icon" href="script/images/SGX_square_transparent.ico"/>
+<link rel="apple-touch-icon" href="script/images/SGX_square_transparent_72.png"/>
+<link sizes="72x72" rel="apple-touch-icon" href="script/images/SGX_square_transparent_72.png"/>
+<link sizes="114x114" rel="apple-touch-icon" href="script/images/SGX_square_transparent_114.png"/>
+<link sizes="144x144" rel="apple-touch-icon" href="script/images/SGX_square_transparent_144.png"/>
+<link rel="manifest" href="manifest.json">
 {% endif %}
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<link rel="stylesheet" href="/script/dialogs.css" />
+<link rel="stylesheet" href="script/dialogs.css" />
 
 <style>
     a:link,.spanClick           {color:#0000ff; text-decoration:none}
@@ -357,8 +357,8 @@
     }
 
 </style>
-<script src="/script/util.js"></script>
-<script src="/script/dialogs.js"></script>
+<script src="script/util.js"></script>
+<script src="script/dialogs.js"></script>
 <script>
 
     var gliders = [];
@@ -496,7 +496,7 @@
         console.log(glider);
         var indicators = [];
 
-        fetch(`/summary/${glider.glider}${mission(glider)}`)
+        fetch(`summary/${glider.glider}${mission(glider)}`)
         .then(res => res.text())
         .then(data => {
             data = data.replaceAll('NaN', 'null');
@@ -504,7 +504,7 @@
  
             t.classList.add('tile');
             t.style.scrollSnapAlign = 'center';
-            t.onclick = function() { window.open(`/${data.mission.glider}${mission(glider)}`, `${data.mission.glider}`); };
+            t.onclick = function() { window.open(`./${data.mission.glider}${mission(glider)}`, `${data.mission.glider}`); };
            
             var h, txt, box, barBatt, chartBatt, spanBatt, header;
             var barNext, chartNext, spanNex;
@@ -764,9 +764,9 @@
             box.classList.add('imgbox');
             img = document.createElement('img');
             if (plotWhich == 'map')
-                img.src = '/plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+                img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
             else
-                img.src = '/plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
+                img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
     
             img.classList.add('dashImg');
      
@@ -783,11 +783,11 @@
     function createTile(glider, t) {
         console.log(glider);
 
-        fetch(`/summary/${glider.glider}${mission(glider)}`)
+        fetch(`summary/${glider.glider}${mission(glider)}`)
         .then(res => res.json())
         .then(data => {
             t.classList.add('tile');
-            t.onclick = function() { window.open(`/${glider.glider}${mission(glider)}`, `${glider.glider}`); };
+            t.onclick = function() { window.open(`./${glider.glider}${mission(glider)}`, `${glider.glider}`); };
            
             var h, txt, box, header;
             if (glider.mission == '')
@@ -824,7 +824,7 @@
             box.classList.add('imgbox');
 
             img = document.createElement('img');
-            img.src = '/plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+            img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
             img.classList.add('indexImg');
      
             box.appendChild(img);
@@ -890,7 +890,7 @@
 
         clearTiles('main');
 
-        fetch(`/missions/1`)
+        fetch(`missions/1`)
         .then(res => res.json())
         .then(data => {
             var glider, t;
@@ -959,8 +959,10 @@
         else
             new_uri = "ws:";
 
-        new_uri += "//" + loc.host;
+        path = loc.pathname.split('/').slice(0,-1).join('/');
+        new_uri += "//" + loc.host + path;
         new_uri += "/watch/mask";
+
         wsocket = new WebSocket(new_uri);
 
         wsocket.onerror = function(error) {
@@ -1027,9 +1029,9 @@
     <div id="navLinks">
         <script>
             if (window.location.pathname.includes("dash"))
-                document.write('<a href="/" target="index">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+                document.write('<a href="./" target="index">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
             else
-                document.write('Index <b>&#124;</b> <a href="/dash" target="dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+                document.write('Index <b>&#124;</b> <a href="dash" target="dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
         </script>
     </div>
 

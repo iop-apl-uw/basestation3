@@ -77,37 +77,37 @@
     }
 
     #btnDiveUp {
-        background: url("/script/images/up-icon.png");
+        background: url("images/up-icon.png");
     }
     #btnDiveDown {
-        background: url("/script/images/down-icon.png");
+        background: url("images/down-icon.png");
     }
     #btnDiveTable {
-        background: url("/script/images/table-icon.png");
-    }
+        background: url("images/table-icon.png");
+    } 
     #btnLogTable {
-        background: url("/script/images/log-table-icon.png");
+        background: url("images/log-table-icon.png");
     }
     #btnLogFile {
-        background: url("/script/images/log-icon.png");
+        background: url("images/log-icon.png");
     }
     #btnPlotTool {
-        background: url("/script/images/chart-icon.png");
+        background: url("images/chart-icon.png");
     }
     #btnNotifications {
-        background: url("/script/images/notification-icon.png");
+        background: url("images/notification-icon.png");
     }
     #btnCapFile {
-        background: url("/script/images/cap-none-icon.png");
+        background: url("images/cap-none-icon.png");
     }
     #btnEngFile {
-        background: url("/script/images/eng-icon.png");
+        background: url("images/eng-icon.png");
     } 
     #btnMap {
-        background: url("/script/images/globe-icon.png"); 
+        background: url("images/globe-icon.png"); 
     } 
     #btnSelftest {
-        background: url("/script/images/selftest-icon.png"); 
+        background: url("images/selftest-icon.png"); 
     } 
 
 /* mobile device */
