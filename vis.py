@@ -282,7 +282,7 @@ def matchMission(gld, request, mission=None):
 
         mission = request.args['mission'][0]
 
-    return next(filter(lambda d: d['glider'] == gld and (d['mission'] == mission or (mission == None and d['path'] == None)), request.app.ctx.missionTable), None)
+    return next(filter(lambda d: d['glider'] == int(gld) and (d['mission'] == mission or (mission == None and d['path'] == None)), request.app.ctx.missionTable), None)
 
 def filterMission(gld, request, mission=None):
     m = matchMission(gld, request, mission)    
@@ -1121,9 +1121,12 @@ def attachHandlers(app: sanic.Sanic):
             else:
                 await commFile.seek(0, 2)
           
-            row = await getLatestCall(request, glider, limit=3)
-            for i in range(len(row)-1, -1, -1):
-                await ws.send(f"NEW={dumps(row[i]).decode('utf-8')}")
+            try:
+                row = await getLatestCall(request, glider, limit=3)
+                for i in range(len(row)-1, -1, -1):
+                    await ws.send(f"NEW={dumps(row[i]).decode('utf-8')}")
+            except:
+                pass
 
         (tU, _) = getTokenUser(request)
         
