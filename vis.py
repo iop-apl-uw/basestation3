@@ -588,7 +588,10 @@ def attachHandlers(app: sanic.Sanic):
                 except aiosqlite.OperationalError:
                     return sanic.response.text('no table')
 
-                maxdv = (await cur.fetchone())[0]
+                try:
+                    maxdv = (await cur.fetchone())[0]
+                except:
+                    maxdv = 0
         else:
             return sanic.response.text('file not found')
 
