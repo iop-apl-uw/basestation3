@@ -230,7 +230,8 @@
         else
             new_uri = "ws:";
 
-        new_uri += "//" + loc.host;
+        path = loc.pathname.split('/').slice(0,-2).join('/');
+        new_uri += "//" + loc.host + path;
         new_uri += "/pos/stream/" + glider + (mission ? "?" + mission : "");
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
@@ -305,7 +306,7 @@
     function loadPosition(glider, mission) {
         console.log('polling');
         let m = mission ? '&' + mission : '';
-        fetch(`/pos/poll/${glider}?t=${currentEpoch}${m}`)
+        fetch(`poll/${glider}?t=${currentEpoch}${m}`)
         .then(res => res.text())
         .then(text => {
             console.log(text);

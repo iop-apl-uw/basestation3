@@ -251,6 +251,8 @@ def main():
                 buffer = fi.read()
                 if isinstance(buffer, str) and not buffer.endswith("\n"):
                     leading_newline = "\n"
+        except FileNotFoundError:
+            pass
         except:
             log_error(f"Could not read {jail_pwd}", "exc")
             return 1
@@ -299,7 +301,7 @@ def main():
                             break
                     else:
                         log_info(
-                            "Found group {gp.gr_name} in {jail_grp}, {glider} not included - will add"
+                            f"Found group {gp.gr_name} in {jail_grp}, {glider} not included - will add"
                         )
                         grp_lines[ii] = f"{ll.rstrip()},{glider}"
                         f_update = True

@@ -40,11 +40,15 @@ async def collectSummary(glider, path):
     cmdfile     = f'{path}/cmdfile'
     calibfile   = f'{path}/sg_calib_constants.m'
 
-    statinfo = await aiofiles.os.stat(commlogfile)
-    if statinfo.st_size < 10000:
-        start = 0
-    else:
-        start = statinfo.st_size - 10000
+    try:
+        statinfo = await aiofiles.os.stat(commlogfile)
+        if statinfo.st_size < 10000:
+            start = 0
+        else:
+            start = statinfo.st_size - 10000
+    except Exception as e:
+        print(e)
+        return {}
 
     processor = aiofiles.os.wrap(CommLog.process_comm_log)
     (commlog, commlog_pos, ongoing_session, _, _) = await processor(commlogfile, {}, start_pos=start)
@@ -177,8 +181,11 @@ async def collectSummary(glider, path):
     out['enduranceEndT'] = data['log_gps_time'] + data['energy_days_remain_Modeled']*86400;
     out['enduranceDays'] = data['energy_days_remain_Modeled']
     out['enduranceDives'] = data['energy_dives_remain_Modeled']
-    out['missionStart'] = start['log_gps2_time']
-    
+    try:
+        out['missionStart'] = start['log_gps2_time']
+    except:
+        out['missionStart'] = 0
+ 
     return out
 
 if __name__ == "__main__":

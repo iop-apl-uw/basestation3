@@ -1,20 +1,20 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
 
-<link rel="stylesheet" href="/script/dialogs.css" />
+<link rel="stylesheet" href="script/dialogs.css" />
 {% if runMode == 'pilot' %}
-<link rel="stylesheet" href="/script/chat.css" />
-<link rel="manifest" href="/manifest.json">
+<link rel="stylesheet" href="script/chat.css" />
+<link rel="manifest" href="manifest.json">
 {% endif %}
 
-<link rel="stylesheet" href="/script/base.css" />
-<link rel="stylesheet" href="/script/plottool.css" />
+<link rel="stylesheet" href="script/base.css" />
+<link rel="stylesheet" href="script/plottool.css" />
 
-<script src="/script/plotly-latest.min.js"></script>
-<script src="/script/util.js"></script>
-<script src="/script/dialogs.js"></script>
-<script src="/script/websocket.js"></script>
+<script src="script/plotly-latest.min.js"></script>
+<script src="script/util.js"></script>
+<script src="script/dialogs.js"></script>
+<script src="script/websocket.js"></script>
 {% if runMode == 'pilot' %}
-<script src="/script/chat.js"></script>
+<script src="script/chat.js"></script>
 {% endif %}
 <style>
     .hide {
@@ -111,7 +111,8 @@
         }
 {% endif %}
 
-        new_uri += "//" + loc.host;
+        path = loc.pathname.split('/').slice(0,-1).join('/');
+        new_uri += "//" + loc.host + path;
         new_uri += "/stream/" + which + "/" + glider + mission();
         console.log(new_uri);
         wsocket = new ReconnectingWebSocket(new_uri);
@@ -266,7 +267,7 @@
         json['file'] = file;
         json['contents'] = $(file).value; 
 
-        fetch(`/save/${currGlider}/${file}${mission()}`, 
+        fetch(`save/${currGlider}/${file}${mission()}`, 
         {
             method: 'POST',
             headers: {
@@ -299,7 +300,7 @@
     }
 
     function loadControlFile(file) {
-        fetch(`/control/${currGlider}/${file}${mission()}`)
+        fetch(`control/${currGlider}/${file}${mission()}`)
         .then(res => res.text())
         .then(text => {
             if (text == 'none')
@@ -360,19 +361,19 @@
         else
             m = m + '&wrap=page';
 
-        window.open('/plot/' + ext + '/' + which + '/' + currGlider + '/' + dive + '/' + elt + m, `${currGlider}-${dive}-${elt}`);
+        window.open('plot/' + ext + '/' + which + '/' + currGlider + '/' + dive + '/' + elt + m, `${currGlider}-${dive}-${elt}`);
     }
 
     function popupSelftest() {
-        window.open('/selftest/' + currGlider + mission(), currGlider + '-selftest');
+        window.open('selftest/' + currGlider + mission(), currGlider + '-selftest');
     }
 
     function popupMap() {
-        window.open('/map/' + currGlider + mission(), currGlider + '-map');
+        window.open('map/' + currGlider + mission(), currGlider + '-map');
     }
 
     function popupPosition() {
-        window.open('/pos/' + currGlider + mission(), currGlider + '-position');
+        window.open('pos/' + currGlider + mission(), currGlider + '-position');
     }
 
     function setVisibility(elt) {
@@ -390,7 +391,7 @@
         console.log('plotly available ' + plotly)
         if (!plotly || mobile) {
             setVisibility('mainImage');
-            $('mainImage').src = `/plot/webp/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
+            $('mainImage').src = `plot/webp/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
             $('plotlyPopperOuter').style.display = 'block';
             console.log('popper up');
             if (plotly)
@@ -411,7 +412,7 @@
             $('plotlyPopperOuter').style.display = 'block';
             console.log('popper up');
 
-            fetch(`/plot/div/${which}/${currGlider}/${currDive}/${elt}${mission()}`)
+            fetch(`plot/div/${which}/${currGlider}/${currDive}/${elt}${mission()}`)
             .then(res => res.text())
             .then(data => {
                 setInnerHTML($('mainDiv'), data);
@@ -570,7 +571,7 @@
         console.log("building table");
 
     
-        q = `/db/${glider}/${dive}${mission()}`
+        q = `db/${glider}/${dive}${mission()}`
         if (dive  == -1) {
             clearTable();
         }
@@ -674,7 +675,7 @@
     }
 
     function loadStatus(glider, dive) {
-        fetch(`/status/${glider}${mission()}`)
+        fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
             console.log(text);
@@ -735,7 +736,7 @@
         div.classList.add('thumbDiv');
         img = document.createElement('img');
         img.classList.add('thumbImg');
-        img.src = '/plot/webp/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
+        img.src = 'plot/webp/' + which + '/' + currGlider + '/' + currDive + '/' + p + mission();
         img.onclick = function() { showPlot(which, p, plotly); };
         img.title = p;
         img.id = 'thumb' + p;
@@ -752,7 +753,7 @@
     }
 
     function loadLog(dive) {
-        fetch(`/log/${currGlider}/${dive}${mission()}`)
+        fetch(`log/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
             $('logDiv').innerHTML = 'Dive ' + dive + '<br>';
@@ -764,11 +765,11 @@
     }
 
     function loadFile(dive, ext, div) {
-        fetch(`/file/${ext}/${currGlider}/${dive}${mission()}`)
+        fetch(`file/${ext}/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
             if (data == 'none' && ext == 'cap') {
-                $('btnCapFile').style.backgroundImage = "url('/script/images/cap-none-icon.png')";
+                $('btnCapFile').style.backgroundImage = "url('script/images/cap-none-icon.png')";
                 $(div).innerHTML = 'no capture file'; 
             }
             else {
@@ -791,11 +792,11 @@
                         } 
                         $(div).innerHTML = '<pre>' + txt + '</pre>';
                         
-                        $('btnCapFile').style.backgroundImage = "url('/script/images/cap-crit-icon.png')";
+                        $('btnCapFile').style.backgroundImage = "url('script/images/cap-crit-icon.png')";
                     }
                     else {
                         $(div).innerHTML = '<pre>' + data + '</pre>';
-                        $('btnCapFile').style.backgroundImage = "url('/script/images/cap-icon.png')";
+                        $('btnCapFile').style.backgroundImage = "url('script/images/cap-icon.png')";
                     }
                 }
                 else {
@@ -813,7 +814,7 @@
         var html;
         var pieces;
         var deltas;
-        let urls = [`/alerts/${currGlider}/${dive}${mission()}`, `/deltas/${currGlider}/${dive}${mission()}`];
+        let urls = [`alerts/${currGlider}/${dive}${mission()}`, `deltas/${currGlider}/${dive}${mission()}`];
         let notify = false;
 
         let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
@@ -851,9 +852,9 @@
         }        
 
         if (notify) 
-            $('btnNotifications').style.backgroundImage = "url('/script/images/notification-active-icon.png')";
+            $('btnNotifications').style.backgroundImage = "url('script/images/notification-active-icon.png')";
         else
-            $('btnNotifications').style.backgroundImage = "url('/script/images/notification-icon.png')";
+            $('btnNotifications').style.backgroundImage = "url('script/images/notification-icon.png')";
     }
  
     function jumpScroll(n) {
@@ -892,7 +893,7 @@
         loadFile(dive, 'cap', 'capfileDiv');
         loadNotifications(dive);
 
-        fetch(`/plots/${currGlider}/${dive}${mission()}`)
+        fetch(`plots/${currGlider}/${dive}${mission()}`)
         .then(res => res.json())
         .then(resp => {
             var links = [];
@@ -1108,7 +1109,7 @@
         }
             
         if (str) {
-            window.open('/parms#' + str, 'parms');
+            window.open('parms#' + str, 'parms');
         }
     }
 
@@ -1123,7 +1124,7 @@
         $('btnPlotlyContour').style.backgroundColor = 'yellow';
         $('btnPlotlyProfiles').style.backgroundColor = 'yellow';
 
-        fetch(`/pro/${currGlider}/${x}/0/-1/${stride}/${zStride}${mission()}`)
+        fetch(`pro/${currGlider}/${x}/0/-1/${stride}/${zStride}${mission()}`)
         .then(res => res.text())
         .then(data => {
             data = data.replaceAll('NaN', 'null');
@@ -1214,16 +1215,16 @@
 
         if ($('chkMissionPlots').checked) {
             if (x2 == '-')
-                query = `/query/${currGlider}/${x},${y.join(',')}${mission()}`;
+                query = `query/${currGlider}/${x},${y.join(',')}${mission()}`;
             else
-                query = `/query/${currGlider}/${x},${x2},${y.join(',')}${mission()}`;
+                query = `query/${currGlider}/${x},${x2},${y.join(',')}${mission()}`;
             mode = 0;
         }
         else {
             if (x2 == '-')
-                query = `/time/${currGlider}/${currDive}/${x},${y.join(',')}${mission()}`;
+                query = `time/${currGlider}/${currDive}/${x},${y.join(',')}${mission()}`;
             else
-                query = `/time/${currGlider}/${currDive}/${x},${x2},${y.join(',')}${mission()}`;
+                query = `time/${currGlider}/${currDive}/${x},${x2},${y.join(',')}${mission()}`;
 
             mode = 1;
         }
@@ -1361,7 +1362,7 @@
     }
 
     function loadPlotlyControlsContour(glider) {
-        fetch(`/provars/${glider}${mission()}`)
+        fetch(`provars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
             try {
@@ -1388,7 +1389,7 @@
     }
 
     function loadPlotlyControlsXY(glider) {
-        fetch(`/dbvars/${glider}${mission()}`)
+        fetch(`dbvars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
             try {
@@ -1435,7 +1436,7 @@
     }
 
     function loadPlotlyControlsTS(glider, dive) {
-        fetch(`/timevars/${glider}/${dive}/${mission()}`)
+        fetch(`timevars/${glider}/${dive}/${mission()}`)
         .then(res => res.text())
         .then(text => {
             try {
@@ -1518,7 +1519,7 @@
         document.body.style.transform = scale;     // General
 
         if (path.length >= 1) {
-            glider = path[0];
+            glider = path[path.length - 1]
             console.log(glider);
         }
 
@@ -1546,11 +1547,11 @@
             console.log('invalid request - specify glider');
             return;
         }
-
+/*
         if (path.length > 1) {
             window.history.replaceState('object or string', 'Title', `/${glider}`);
         }
-
+*/
         currGlider = glider;
         console.log(glider);
         window.name = glider;
@@ -1680,8 +1681,8 @@
 <body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif';">
 
 <div id="navLinks">
-    <a href="/" target="index">Index</a> <b>&#124;</b> 
-    <a href="/dash" target="dash"> Dashboard </a> <b>&#124;</b> 
+    <a href="./" target="index">Index</a> <b>&#124;</b> 
+    <a href="dash" target="dash"> Dashboard </a> <b>&#124;</b> 
 {% if runMode == 'pilot' %}
     <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
 {% endif %}
