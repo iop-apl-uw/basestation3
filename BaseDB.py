@@ -874,7 +874,9 @@ def createDivesTable(cur):
                 'meters_to_target',
                 'GPS_north_displacement_m','GPS_east_displacement_m',
                 'flight_avg_speed_east','flight_avg_speed_north',
-                'dog_efficiency','alerts','criticals','capture','error_count' ]
+                'dog_efficiency','alerts','criticals','capture','error_count',
+                'energy_dives_remain_Modeled','energy_days_remain_Modeled',
+                'energy_end_time_Modeled' ]
 
     for c in columns:
         addColumn(cur, c, 'FLOAT');
@@ -930,13 +932,39 @@ def prepDB(base_opts, dbfile=None):
         con = sqlite3.connect(dbfile)
 
     cur = con.cursor()
-    cur.execute("CREATE TABLE IF NOT EXISTS dives(dive INT);")
+    createDivesTable(cur)
     cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
     cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
     cur.close()
 
     con.close()
 
+def saveFlightDB(base_opts, mat_d, con=None):
+    if con is None:
+        mycon = Utils.open_mission_database(base_opts)
+    else:
+        mycon = con
+
+    cur = mycon.cursor()
+    cur.execute("DROP TABLE IF EXISTS flight;")
+    cur.execute("CREATE TABLE flight (idx INTEGER PRIMARY KEY AUTOINCREMENT, dive INTEGER, pitch_d FLOAT, bottom_rho0 FLOAT, bottom_press FLOAT, hd_a FLOAT, hd_b FLOAT, vbdbias FLOAT, median_vbdbias FLOAT, abs_compress FLOAT, w_rms_vbdbias FLOAT);")
+    for k, val in enumerate(mat_d['dive_nums']):
+        cur.execute("INSERT INTO flight (dive, pitch_d, bottom_rho0, bottom_press, hd_a, hd_b, vbdbias, median_vbdbias, abs_compress, w_rms_vbdbias) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
+                mat_d['dive_nums'],
+                mat_d['dives_pitch_d'],
+                mat_d['dives_bottom_rho0'],
+                mat_d['dives_bottom_press'],
+                mat_d['dives_hd_a'],
+                mat_d['dives_hd_b'],
+                mat_d['dives_vbdbias'],
+                mat_d['dives_median_vbdbias'],
+                mat_d['dives_abs_compress'],
+                mat_d['dives_w_rms_vbdbias'])
+ 
+    if con is None:
+        cur.close()
+        mycon.close()
+    
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
     if con is None:
