@@ -28,7 +28,6 @@
 """
 
 # TODO Review help strings - mark all extensions as extensions not command line
-# TODO Review option_t.group for all options (make sure there are module names in them)
 # TODO Final pass - remove all command-line help from docstrings, check that all base_opts.members are covered, any required arguments are marked as sch
 # TODO Compare Base.py help vs help output
 # TODO Write a script to generate all the help output into files in help directory
@@ -361,7 +360,7 @@ global_options_dict = {
     #
     "profile": options_t(
         False,
-        "bdkpt",
+        None,
         ("--profile",),
         bool,
         {"action": "store_true", "help": "Profiles time to process"},
@@ -369,7 +368,7 @@ global_options_dict = {
     #
     "ver_65": options_t(
         False,
-        "bm",
+        None,
         ("--ver_65",),
         bool,
         {
@@ -399,17 +398,8 @@ global_options_dict = {
             "help": "Which half of the profile to use - 1 down, 2 up, 3 both, 4 combine down and up",
         },
     ),
-    "interval": options_t(
-        0,
-        "i",
-        ("--interval",),
-        int,
-        {
-            "help": "Interval in seconds between checks",
-        },
-    ),
     "daemon": options_t(
-        None,
+        False,
         ("Base", "GliderEarlyGPS", "GliderTrack"),
         ("--daemon",),
         bool,
@@ -425,8 +415,8 @@ global_options_dict = {
         },
     ),
     "ignore_lock": options_t(
-        None,
-        "bgij",
+        False,
+        ("Base",),
         ("--ignore_lock",),
         bool,
         {
@@ -454,7 +444,7 @@ global_options_dict = {
         },
     ),
     "local": options_t(
-        None,
+        False,
         ("Base",),
         ("--local",),
         bool,
@@ -464,7 +454,7 @@ global_options_dict = {
         },
     ),
     "clean": options_t(
-        None,
+        False,
         ("Base",),
         ("--clean",),
         bool,
@@ -502,7 +492,7 @@ global_options_dict = {
     ),
     #
     "force": options_t(
-        None,
+        False,
         (
             "Base",
             "MakeDiveProfiles",
@@ -516,7 +506,7 @@ global_options_dict = {
         },
     ),
     "reprocess": options_t(
-        None,
+        False,
         ("Base",),
         ("--reprocess",),
         int,
@@ -533,7 +523,7 @@ global_options_dict = {
         },
     ),
     "make_mission_profile": options_t(
-        None,
+        False,
         (
             "Base",
             "Reprocess",
@@ -546,7 +536,7 @@ global_options_dict = {
         },
     ),
     "make_mission_timeseries": options_t(
-        None,
+        False,
         ("Base", "Reprocess"),
         ("--make_mission_timeseries",),
         bool,
@@ -556,7 +546,7 @@ global_options_dict = {
         },
     ),
     "skip_flight_model": options_t(
-        None,
+        False,
         ("Base",),
         ("--skip_flight_model",),
         bool,
@@ -567,22 +557,22 @@ global_options_dict = {
     ),
     #
     "reprocess_plots": options_t(
-        None,
+        False,
         ("Reprocess",),
         ("--reprocess_plots",),
         bool,
         {
-            "help": "Force reprocessing of plots (Reprocess.py only)",
+            "help": "Force reprocessing of plots",
             "action": "store_true",
         },
     ),
     "reprocess_flight": options_t(
-        None,
+        False,
         ("Reprocess",),
         ("--reprocess_flight",),
         bool,
         {
-            "help": "Force reprocessing of flight (Reprocess.py only)",
+            "help": "Force reprocessing of flight",
             "action": "store_true",
         },
     ),
@@ -632,7 +622,7 @@ global_options_dict = {
         {
             "help": "Plot raw tmicl and pmar data,if available",
             "action": "store_true",
-            "section": "makeplot",
+            "section": "plotting",
             "option_group": "plotting",
         },
     ),
@@ -647,7 +637,7 @@ global_options_dict = {
         bool,
         {
             "help": "Save SVG versions of plots (matplotlib output only)",
-            "section": "makeplot",
+            "section": "plotting",
             "action": "store_true",
             "option_group": "plotting",
         },
@@ -662,7 +652,7 @@ global_options_dict = {
         bool,
         {
             "help": "Save PNG versions of plots (plotly output only)",
-            "section": "makeplot",
+            "section": "plotting",
             "action": argparse.BooleanOptionalAction,
             "option_group": "plotting",
         },
@@ -677,7 +667,7 @@ global_options_dict = {
         bool,
         {
             "help": "Save JPEG versions of plots (plotly output only)",
-            "section": "makeplot",
+            "section": "plotting",
             "action": argparse.BooleanOptionalAction,
             "option_group": "plotting",
         },
@@ -692,7 +682,7 @@ global_options_dict = {
         bool,
         {
             "help": "Save  versions of plots (plotly output only)",
-            "section": "makeplot",
+            "section": "plotting",
             "action": argparse.BooleanOptionalAction,
             "option_group": "plotting",
         },
@@ -707,7 +697,7 @@ global_options_dict = {
         bool,
         {
             "help": "Save stand alone html files (plotly output only)",
-            "section": "makeplot",
+            "section": "plotting",
             "action": argparse.BooleanOptionalAction,
             "option_group": "plotting",
         },
@@ -722,7 +712,7 @@ global_options_dict = {
         bool,
         {
             "help": "Save stand alone html files (plotly output only)",
-            "section": "makeplot",
+            "section": "plotting",
             "action": argparse.BooleanOptionalAction,
             "option_group": "plotting",
         },
@@ -737,7 +727,7 @@ global_options_dict = {
         bool,
         {
             "help": "Plot the freezing point in TS diagrams",
-            "section": "makeplot",
+            "section": "plotting",
             "option_group": "plotting",
             "action": "store_true",
         },
@@ -752,7 +742,7 @@ global_options_dict = {
         bool,
         {
             "help": "Use glider pressure for legato debug plots",
-            "section": "makeplot",
+            "section": "plotting",
             "action": "store_true",
             "option_group": "plotting",
         },
@@ -768,7 +758,7 @@ global_options_dict = {
         FullPath,
         {
             "help": "Override default plot directory location",
-            "section": "makeplot",
+            "section": "plotting",
             "action": FullPathAction,
             "option_group": "plotting",
         },
@@ -783,7 +773,7 @@ global_options_dict = {
         float,
         {
             "help": "Maximum value for pmar logavg plots y-range",
-            "section": "makeplot",
+            "section": "plotting",
             "range": [0.0, 1e10],
             "option_group": "plotting",
         },
@@ -798,9 +788,24 @@ global_options_dict = {
         float,
         {
             "help": "Minimum value for pmar logavg plots y-range",
-            "section": "makeplot",
+            "section": "plotting",
             "range": [0.0, 1e10],
             "option_group": "plotting",
+        },
+    ),
+    "flip_ad2cp": options_t(
+        True,
+        (
+            "Base",
+            "BasePlot",
+        ),
+        ("--flip_ad2cp",),
+        bool,
+        {
+            "help": "Rotate the pitch/roll/heading for the adc2p compass output plot",
+            "section": "plotting",
+            "option_group": "plotting",
+            "action": argparse.BooleanOptionalAction,
         },
     ),
     # Core plotting routines
@@ -1196,7 +1201,10 @@ global_options_dict = {
     ),
     "simplencf_bin_width": options_t(
         None,
-        ("SimpleNetCDF",),
+        (
+            "Base",
+            "SimpleNetCDF",
+        ),
         ("--simplencf_bin_width",),
         float,
         {
@@ -1205,8 +1213,11 @@ global_options_dict = {
         },
     ),
     "simplencf_compress_output": options_t(
-        None,
-        ("SimpleNetCDF",),
+        False,
+        (
+            "Base",
+            "SimpleNetCDF",
+        ),
         ("--simplencf_compress_output",),
         bool,
         {
@@ -1243,8 +1254,6 @@ class CustomFormatter(
     argparse.ArgumentDefaultsHelpFormatter, argparse.RawDescriptionHelpFormatter
 ):
     """Allow for multiple formatters for help"""
-
-    pass
 
 
 class BaseOptions:
@@ -1309,7 +1318,8 @@ class BaseOptions:
         )
         cp_default = {}
         for k, v in options_dict.items():
-            setattr(self, k, v.default_val)  # Set the default for the object
+            if v.group is None or calling_module in v.group:
+                setattr(self, k, v.default_val)  # Set the default for the object
             # cp_default[k] = v.default_val
             cp_default[k] = None
 
@@ -1409,7 +1419,6 @@ class BaseOptions:
 
         self._ap = ap
 
-        # self._opts, self._args = ap.parse_known_args()
         if alt_cmdline is not None:
             self._opts = ap.parse_args(alt_cmdline.split())
         else:
@@ -1418,7 +1427,21 @@ class BaseOptions:
         if "subparser_name" in self._opts:
             self.subparser_name = self._opts.subparser_name
 
-        # handle the config file first, then see if any args trump them
+        # Change from previous - config file trumps command line
+        # Two reasons:
+        # 1) Change to display default values in the --help messages by setting the default value
+        #    means there is now way to determine if a option was a default or explictly set.  Thus
+        #    the config file values would be overridden in the event there was a non-None default value
+        # 2) In practical terms, current useage is - set a master set of command line options for all gliders
+        #    on a basestation, but customize with the config file in each glider directory.  Given the previous
+        #    setup, this is not possible to override a global command line option.
+
+        # Initialize the object with the results of the command line parse
+        for opt in dir(self._opts):
+            if opt in options_dict.keys():
+                setattr(self, opt, getattr(self._opts, opt))
+
+        # Process the config file, updating the object
         if self._opts.config_file_name is not None:
             try:
                 cp.read(self._opts.config_file_name)
@@ -1436,7 +1459,16 @@ class BaseOptions:
                                 section_name = v.kwargs["section"]
                             else:
                                 section_name = "base"
-                            value = cp.get(section_name, k)
+                            if v.var_type == bool:
+                                try:
+                                    value = cp.getboolean(section_name, k)
+                                except ValueError as exc:
+                                    raise "Could not convert %s from %s to boolean" % (
+                                        k,
+                                        self.config_file_name,
+                                    ) from exc
+                            else:
+                                value = cp.get(section_name, k)
                             # if value == v.default_val:
                             if value is None:
                                 continue
@@ -1463,10 +1495,16 @@ class BaseOptions:
 
                                 setattr(self, k, val)
 
-        # Anything set on the command line trumps
-        for opt in dir(self._opts):
-            if opt in options_dict.keys() and getattr(self._opts, opt) is not None:
-                setattr(self, opt, getattr(self._opts, opt))
+        # Previous version anything set on the command line or via default value trumps config file
+        # for opt in dir(self._opts):
+        #    if opt in options_dict.keys() and getattr(self._opts, opt) is not None:
+        #        setattr(self, opt, getattr(self._opts, opt))
+
+        # DEBUG - dump the objects contents
+        # for opt in dir(self):
+        #    if opt in options_dict.keys():
+        #        value = getattr(self, opt)
+        #        print(f"{opt}:{value}")
 
 
 if __name__ == "__main__":
