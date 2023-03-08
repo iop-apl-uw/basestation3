@@ -554,7 +554,6 @@ def plot_compare_ad2cp(
     if "ad2cp_time" not in dive_nc_file.variables or not generate_plots:
         return ([], [])
 
-    log_info(base_opts.flip_ad2cp)
     return plot_compass_compare(
         dive_nc_file,
         "ADCPCompass",
