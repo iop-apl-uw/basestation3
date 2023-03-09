@@ -1510,10 +1510,10 @@ class BaseOptions:
         #        setattr(self, opt, getattr(self._opts, opt))
 
         # DEBUG - dump the objects contents
-        for opt in dir(self):
-            if opt in options_dict.keys():
-                value = getattr(self, opt)
-                print(f"{opt}:{value}")
+        # for opt in dir(self):
+        #     if opt in options_dict.keys():
+        #         value = getattr(self, opt)
+        #         print(f"{opt}:{value}")
 
 
 if __name__ == "__main__":
