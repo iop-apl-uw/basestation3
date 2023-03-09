@@ -232,17 +232,19 @@ def processTimeSeries(dive, cur, nci):
         except:
             log_error(f"Problems processing {nc_var}", "exc")
 
+
 def addColumn(cur, col, db_type):
     try:
         cur.execute(f"ALTER TABLE dives ADD COLUMN {col} {db_type};")
     except sqlite3.OperationalError as er:
         if er.args[0].startswith("duplicate column name"):
-            pass 
+            pass
         else:
             log_error(f"Error inserting column {col} - skipping", "exc")
             return False
 
     return True
+
 
 # fmt: off
 def insertColumn(dive, cur, col, val, db_type):
@@ -1061,7 +1063,7 @@ def main():
         "cmdline entry for basestation network file processing",
         additional_arguments={
             "netcdf_files": BaseOpts.options_t(
-                None,
+                [],
                 ("BaseDB",),
                 ("netcdf_files",),
                 str,
@@ -1073,7 +1075,7 @@ def main():
                 },
             ),
             "dive_num": BaseOpts.options_t(
-                None,
+                0,
                 ("BaseDB",),
                 ("dive_num",),
                 int,
@@ -1083,7 +1085,7 @@ def main():
                 },
             ),
             "value_name": BaseOpts.options_t(
-                None,
+                "",
                 ("BaseDB",),
                 ("value_name",),
                 str,
@@ -1093,7 +1095,7 @@ def main():
                 },
             ),
             "value": BaseOpts.options_t(
-                None,
+                0,
                 ("BaseDB",),
                 ("value",),
                 int,

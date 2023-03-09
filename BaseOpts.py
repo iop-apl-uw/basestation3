@@ -321,12 +321,16 @@ global_options_dict = {
         0,
         (
             "Base",
+            "BaseDB",
             "BasePlot",
+            "CommLog",
             "GliderEarlyGPS",
             "FligthModel",
             "MakeDiveProfiles",
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
+            "MakePlotMission",
+            "MoveData",
         ),
         (
             "-i",
@@ -760,6 +764,7 @@ global_options_dict = {
         None,
         (
             "Base",
+            "BaseDB",
             "BasePlot",
             "MakeMissionEngPlots",
         ),
@@ -822,6 +827,7 @@ global_options_dict = {
         dive_plot_list,
         (
             "Base",
+            "BaseDB",
             "BasePlot",
         ),
         ("--dive_plots",),
@@ -838,6 +844,7 @@ global_options_dict = {
         mission_plot_list,
         (
             "Base",
+            "BaseDB",
             "BasePlot",
         ),
         ("--mission_plots",),
@@ -872,6 +879,7 @@ global_options_dict = {
         0.15,
         (
             "Base",
+            "BaseDB",
             "BasePlot",
         ),
         ("--mission_energy_reserve_percent",),
@@ -885,6 +893,7 @@ global_options_dict = {
         10,
         (
             "Base",
+            "BaseDB",
             "BasePlot",
         ),
         ("--mission_energy_dives_back",),
@@ -898,6 +907,7 @@ global_options_dict = {
         10,
         (
             "Base",
+            "BaseDB",
             "BasePlot",
         ),
         ("--mission_trends_dives_back",),
