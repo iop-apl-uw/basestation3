@@ -104,7 +104,7 @@ def write_output_files(base_opts, base_file_name, fig):
         "scrollZoom": True,
     }
 
-    if base_opts.plot_directory is None:
+    if not base_opts.plot_directory:
         log_warning("plot_directory not specified - bailing out")
         return []
 
