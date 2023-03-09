@@ -78,6 +78,13 @@ def generate_range_action(arg, min_val, max_val):
 
 def FullPath(x):
     """Expand user- and relative-paths"""
+    # This catches the case for a nargs=? argument that is FullPath type and the argument
+    # is not specified on the command line.  In this case, the default value is returned,
+    # but since our default is and empty stirng, it gets run through this helper and converted
+    # - so, don't do that.
+    if x == "":
+        return x
+
     if isinstance(x, list):
         return list(map(lambda y: os.path.abspath(os.path.expanduser(y)), x))
     else:
@@ -146,14 +153,14 @@ class options_t:
 
 global_options_dict = {
     "config_file_name": options_t(
-        None,
+        None,  # Okay to be None - this is never added to the options object, just used by the argparse
         None,
         ("--config", "-c"),
         FullPath,
         {"help": "script configuration file", "action": FullPathAction},
     ),
     "base_log": options_t(
-        None,
+        "",
         None,
         ("--base_log",),
         str,
@@ -216,7 +223,7 @@ global_options_dict = {
     ),
     #
     "mission_dir": options_t(
-        None,
+        "",
         (
             "Base",
             "BaseDB",
@@ -288,7 +295,7 @@ global_options_dict = {
     ),
     #
     "magcalfile": options_t(
-        None,
+        "",
         (
             "Base",
             "MakeDiveProfiles",
@@ -301,7 +308,7 @@ global_options_dict = {
         },
     ),
     "auxmagcalfile": options_t(
-        None,
+        "",
         ("Base", "MakeDiveProfiles"),
         ("--auxmagcalfile",),
         str,
@@ -315,6 +322,7 @@ global_options_dict = {
         (
             "Base",
             "BasePlot",
+            "GliderEarlyGPS",
             "FligthModel",
             "MakeDiveProfiles",
             "MakeMissionProfile",
@@ -416,7 +424,7 @@ global_options_dict = {
     ),
     "ignore_lock": options_t(
         False,
-        ("Base",),
+        ("Base", "GliderEarlyGPS"),
         ("--ignore_lock",),
         bool,
         {
@@ -464,8 +472,8 @@ global_options_dict = {
         },
     ),
     "reply_addr": options_t(
-        None,
-        ("Base",),
+        "",
+        ("Base", "BaseDotFiles", "BaseSMS", "BaseSMS_IMAP", "GliderEarlyGPS"),
         ("--reply_addr",),
         str,
         {
@@ -473,8 +481,8 @@ global_options_dict = {
         },
     ),
     "domain_name": options_t(
-        None,
-        ("Base",),
+        "",
+        ("Base", "BaseDotFiles", "BaseSMS", "BaseSMS_IMAP", "GliderEarlyGPS"),
         ("--domain_name",),
         str,
         {
@@ -482,8 +490,8 @@ global_options_dict = {
         },
     ),
     "web_file_location": options_t(
-        None,
-        ("Base",),
+        "",
+        ("Base", "MakeKML"),
         ("--web_file_location",),
         str,
         {
@@ -579,8 +587,8 @@ global_options_dict = {
     #
     #
     "target_dir": options_t(
-        None,
-        ("MoveData",),
+        "",
+        ("MoveData", "MakeDiveProfile", "Reprocess"),
         ("--target_dir", "-t"),
         FullPath,
         {
@@ -595,8 +603,9 @@ global_options_dict = {
     # group = parser.add_mutually_exclusive_group(required=True)
     # group.add_argument('--mission_dir', )
     "netcdf_filename": options_t(
-        None,
+        "",
         (
+            "Base",
             "GliderDAC",
             "SimpleNetCDF",
             "StripNetCDF",
@@ -900,7 +909,7 @@ global_options_dict = {
     ),
     # End plotting related
     "strip_list": options_t(
-        None,
+        ["tmicl_", "pmar_"],
         ("StripNetCDF",),
         ("--strip_list",),
         str,
@@ -908,7 +917,7 @@ global_options_dict = {
     ),
     # KML related
     "paam_data_directory": options_t(
-        None,
+        "",
         (
             "Base",
             "MakeKML",
@@ -1117,7 +1126,7 @@ global_options_dict = {
         },
     ),
     "gliderdac_base_config": options_t(
-        None,
+        "",
         (
             "Base",
             "GliderDAC",
@@ -1131,7 +1140,7 @@ global_options_dict = {
         },
     ),
     "gliderdac_project_config": options_t(
-        None,
+        "",
         (
             "Base",
             "GliderDAC",
@@ -1145,7 +1154,7 @@ global_options_dict = {
         },
     ),
     "gliderdac_deployment_config": options_t(
-        None,
+        "",
         (
             "Base",
             "GliderDAC",
@@ -1159,7 +1168,7 @@ global_options_dict = {
         },
     ),
     "gliderdac_directory": options_t(
-        None,
+        "",
         (
             "Base",
             "GliderDAC",
@@ -1200,7 +1209,7 @@ global_options_dict = {
         },
     ),
     "simplencf_bin_width": options_t(
-        None,
+        0.0,
         (
             "Base",
             "SimpleNetCDF",
@@ -1226,7 +1235,7 @@ global_options_dict = {
         },
     ),
     "network_log_decompressor": options_t(
-        None,
+        "",
         (
             "Base",
             "BaseNetwork",
@@ -1465,7 +1474,7 @@ class BaseOptions:
                                 except ValueError as exc:
                                     raise "Could not convert %s from %s to boolean" % (
                                         k,
-                                        self.config_file_name,
+                                        self._opts.config_file_name,
                                     ) from exc
                             else:
                                 value = cp.get(section_name, k)
@@ -1480,7 +1489,7 @@ class BaseOptions:
                             except ValueError as exc:
                                 raise "Could not convert %s from %s to requested type" % (
                                     k,
-                                    self.config_file_name,
+                                    self._opts.config_file_name,
                                 ) from exc
                             else:
                                 if (
@@ -1501,10 +1510,10 @@ class BaseOptions:
         #        setattr(self, opt, getattr(self._opts, opt))
 
         # DEBUG - dump the objects contents
-        # for opt in dir(self):
-        #    if opt in options_dict.keys():
-        #        value = getattr(self, opt)
-        #        print(f"{opt}:{value}")
+        for opt in dir(self):
+            if opt in options_dict.keys():
+                value = getattr(self, opt)
+                print(f"{opt}:{value}")
 
 
 if __name__ == "__main__":

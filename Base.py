@@ -1526,7 +1526,7 @@ def main():
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     # Check for required "options"
-    if base_opts.mission_dir is None:
+    if not base_opts.mission_dir:
         print((main.__doc__))
         log_critical("Dive directory must be supplied. See Base.py -h")
         return 1
