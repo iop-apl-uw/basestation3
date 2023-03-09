@@ -430,6 +430,9 @@ def cleanup_lock_file(base_opts, base_lockfile_name):
     lock_file_name = os.path.expanduser(
         os.path.join(base_opts.mission_dir, base_lockfile_name)
     )
+    if not os.path.exists(lock_file_name):
+        log_info(f"lock_file {lock_file_name} does not exist - no removal needed")
+        return 0
     try:
         os.remove(lock_file_name)
     except:
@@ -1612,6 +1615,10 @@ def loadmodule(pathname):
         return sys.modules[name]
     except:
         pass
+
+    if not os.path.exists(pathname):
+        log_error(f"Module {pathname} does not exists - skipping")
+        return None
 
     # If any of the following calls raises an exception,
     # there's a problem we can't handle -- let the caller handle it.

@@ -1381,13 +1381,14 @@ def correct_heading(
             contents = abc = pqrc = None
 
     # Search for a recently uploaded version?
-    if magcal_filename is not None and magcal_filename.lower() == "search":
+
+    if magcal_filename and magcal_filename.lower() == "search":
         magcal_filename = Utils.find_recent_basestation_file(
             mission_dir, magcalfile_root_name, True
         )
 
     # correction requested - override
-    if magcal_filename is not None:  # they want to supply or override any contents
+    if magcal_filename:  # they want to supply or override any contents
         if not os.path.exists(magcal_filename):
             log_warning(
                 "MagCalFile %s does not exist" % magcal_filename, alert="MAGCAL"
@@ -3188,10 +3189,7 @@ def make_dive_profile(
 
         if auxcompass_present:
             # Correct the heading?
-            if (
-                base_opts.auxmagcalfile is not None
-                or "auxmagcalfile_contents" in globals_d
-            ):
+            if base_opts.auxmagcalfile or "auxmagcalfile_contents" in globals_d:
                 # Now see if we can actually correct headings
                 try:
                     try:
@@ -3370,7 +3368,7 @@ def make_dive_profile(
             vehicle_pitch_degrees_v = np.negative(vehicle_pitch_degrees_v)
 
         # Correct the heading?
-        if (base_opts.magcalfile is not None) or ("magcalfile_contents" in globals_d):
+        if base_opts.magcalfile or ("magcalfile_contents" in globals_d):
             Mx = eng_f.get_col("mag_x")
             My = eng_f.get_col("mag_y")
             Mz = eng_f.get_col("mag_z")

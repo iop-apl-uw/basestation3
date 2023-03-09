@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -265,7 +265,7 @@ def main(
 
     if not base_opts.mission_dir and base_opts.netcdf_filename:
         dive_nc_file_names = [base_opts.netcdf_filename]
-        if base_opts.gliderdac_directory is None:
+        if not base_opts.gliderdac_directory:
             base_opts.gliderdac_directory = os.path.join(
                 os.path.split(dive_nc_file_names[0])[0], "gliderdac"
             )
@@ -275,7 +275,7 @@ def main(
         elif not dive_nc_file_names:
             # Collect up the possible files
             dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
-        if base_opts.gliderdac_directory is None:
+        if not base_opts.gliderdac_directory:
             base_opts.gliderdac_directory = os.path.join(
                 base_opts.mission_dir, "gliderdac"
             )

@@ -1129,6 +1129,10 @@ def process_comm_log(
     if not known_commlog_files:
         known_commlog_files = ["cmdfile", "science", "targets", "pdoscmds.bat"]
 
+    if not os.path.exists(comm_log_file_name):
+        log_error(f"{comm_log_file_name} does not exist")
+        return (None, None, None, None, 1)
+
     try:
         # Look backward through the file for the last line starting with "Connected" as starting point
         # If found, any start_pos supplied will be ignored

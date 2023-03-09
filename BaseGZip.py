@@ -285,7 +285,7 @@ def main():
         "Decompresses files from the glider to stdout",
         additional_arguments={
             "compressed_file": BaseOpts.options_t(
-                None,
+                "",
                 ("BaseGZip",),
                 ("compressed_file",),
                 str,

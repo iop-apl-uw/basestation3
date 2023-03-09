@@ -388,7 +388,7 @@ def main():
         "comm.log processor launched as soon as the glider connects",
         additional_arguments={
             "comm_log": BaseOpts.options_t(
-                None,
+                "",
                 ("GliderEarlyGPS",),
                 ("comm_log",),
                 str,

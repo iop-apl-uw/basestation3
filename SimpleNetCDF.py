@@ -353,10 +353,16 @@ def main(
             master_time = nci.variables[master_time_name][:]
             max_depth_i = np.argmax(master_depth)
             t_down = NetCDFUtils.interp1_extend(
-                master_depth[:max_depth_i], master_time[:max_depth_i], bin_centers
+                master_depth[:max_depth_i],
+                master_time[:max_depth_i],
+                bin_centers,
+                fill_value="extrapolate",
             )
             t_up = NetCDFUtils.interp1_extend(
-                master_depth[max_depth_i:], master_time[max_depth_i:], bin_centers[::-1]
+                master_depth[max_depth_i:],
+                master_time[max_depth_i:],
+                bin_centers[::-1],
+                fill_value="extrapolate",
             )
             ttime = create_nc_var(nco, "time")
             ttime[0, :] = t_down

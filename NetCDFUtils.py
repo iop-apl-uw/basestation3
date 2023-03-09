@@ -33,11 +33,12 @@ import scipy.interpolate
 from scipy.stats import binned_statistic
 
 
-def interp1_extend(t1, data, t2):
+def interp1_extend(t1, data, t2, fill_value=np.nan):
     """Interpolates t1/data onto t2, extending t1/data to cover the range
     of t2
     """
     # add 'nearest' data item to the ends of data and t1
+
     if (t1[0] <= t1[-1] and t2[0] < t1[0]) or (t1[0] > t1[-1] and t2[0] > t1[0]):
         # Copy the first value below the interpolation range
         data = np.append(np.array([data[0]]), data)
@@ -48,7 +49,7 @@ def interp1_extend(t1, data, t2):
         data = np.append(data, np.array([data[-1]]))
         t1 = np.append(t1, np.array([t2[-1]]))
 
-    return scipy.interpolate.interp1d(t1, data)(t2)
+    return scipy.interpolate.interp1d(t1, data, fill_value=fill_value)(t2)
 
 
 def bindata(x, y, bins, sigma=False):
