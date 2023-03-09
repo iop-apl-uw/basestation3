@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 ##
-## Copyright (c) 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1240,7 +1240,7 @@ def main(
             "cmdline entry for basestation network file processing",
             additional_arguments={
                 "log_in_file": BaseOpts.options_t(
-                    None,
+                    "",
                     ("BaseNetwork",),
                     ("log_in_file",),
                     str,
@@ -1251,7 +1251,7 @@ def main(
                     },
                 ),
                 "log_out_file": BaseOpts.options_t(
-                    None,
+                    "",
                     ("BaseNetwork",),
                     ("log_out_file",),
                     str,
@@ -1263,7 +1263,7 @@ def main(
                     },
                 ),
                 "pro_in_file": BaseOpts.options_t(
-                    None,
+                    "",
                     ("BaseNetwork",),
                     ("pro_in_file",),
                     str,
@@ -1274,7 +1274,7 @@ def main(
                     },
                 ),
                 "pro_out_file": BaseOpts.options_t(
-                    None,
+                    "",
                     ("BaseNetwork",),
                     ("pro_out_file",),
                     str,
@@ -1286,7 +1286,7 @@ def main(
                     },
                 ),
                 "network_files": BaseOpts.options_t(
-                    None,
+                    "",
                     ("BaseNetwork",),
                     ("network_files",),
                     str,
@@ -1298,7 +1298,7 @@ def main(
                     },
                 ),
                 "netcdf_files": BaseOpts.options_t(
-                    None,
+                    "",
                     ("BaseNetwork",),
                     ("netcdf_files",),
                     str,

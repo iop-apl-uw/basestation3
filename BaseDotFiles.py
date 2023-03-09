@@ -1466,7 +1466,7 @@ def main():
         "cmdline entry for basestation dot file processing",
         additional_arguments={
             "basedotfiles_action": BaseOpts.options_t(
-                None,
+                (),
                 ("BaseDotFiles",),
                 ("basedotfiles_action",),
                 str,
@@ -1476,7 +1476,7 @@ def main():
                 },
             ),
             "ftp_files": BaseOpts.options_t(
-                None,
+                [],
                 ("BaseDotFiles",),
                 ("ftp_files",),
                 str,

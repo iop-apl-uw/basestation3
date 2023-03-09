@@ -134,7 +134,7 @@ def setup_plot_directory(base_opts: BaseOpts.BaseOptions) -> int:
         1 for failure
 
     """
-    if base_opts.plot_directory is None:
+    if not base_opts.plot_directory:
         base_opts.plot_directory = os.path.join(base_opts.mission_dir, "plots")
 
     if not os.path.exists(base_opts.plot_directory):

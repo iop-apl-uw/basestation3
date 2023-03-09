@@ -761,7 +761,7 @@ global_options_dict = {
         },
     ),
     "plot_directory": options_t(
-        None,
+        "",
         (
             "Base",
             "BaseDB",
