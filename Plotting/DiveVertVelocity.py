@@ -287,7 +287,7 @@ def plot_vert_vel(
         )
         return ([], [])
 
-    w_desired = np.fabs(float(mhead[2]))
+    w_desired = np.fabs(float(mhead[3]))
 
     # We do this interpolation to recover the original hydro model output - done on sg_data_points basis - so
     # as to not clutter the plot with odd interpolation artifacts and to provide the pilot with a picture that

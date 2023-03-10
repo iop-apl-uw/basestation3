@@ -55,7 +55,11 @@ async def collectSummary(glider, path):
     if len(commlog.sessions) == 0:
         session = None
     else:
-        session = commlog.sessions[-1]
+        i = len(commlog.sessions) - 1
+        while i >= 0 and commlog.sessions[i].gps_fix is None: 
+            i = i - 1;
+
+        session = commlog.sessions[i]
    
     if ongoing_session and ongoing_session.connect_ts:
         connected    = time.mktime(ongoing_session.connect_ts)

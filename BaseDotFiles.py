@@ -1406,7 +1406,7 @@ def process_extensions(
                             log_error(
                                 f"Error loading {extension_module_name} - skipping"
                             )
-                            return 1
+                            continue
                         else:
                             try:
                                 # Invoke the extension
@@ -1466,7 +1466,7 @@ def main():
         "cmdline entry for basestation dot file processing",
         additional_arguments={
             "basedotfiles_action": BaseOpts.options_t(
-                None,
+                (),
                 ("BaseDotFiles",),
                 ("basedotfiles_action",),
                 str,
@@ -1476,7 +1476,7 @@ def main():
                 },
             ),
             "ftp_files": BaseOpts.options_t(
-                None,
+                [],
                 ("BaseDotFiles",),
                 ("ftp_files",),
                 str,
