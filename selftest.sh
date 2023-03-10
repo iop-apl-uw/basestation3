@@ -137,6 +137,13 @@ cat "$base"/sg"$1"/"$fname".cap
 
 echo ""
 echo ------------------------------
-echo "Parameter comparison"
-echo
-/usr/local/bin/compare.py RevE "$base"/sg"$1"/"$fname".cap 
+set test = `grep '$ID' "$base"/sg"$1"/"$fname".cap`
+if ( "$test" == "" ) then
+    echo "Parameter comparison to log file"
+    echo
+    /usr/local/bin/compare.py RevE "$base"/sg"$1"/"$fname".log
+else
+    echo "Parameter comparison to capture file"
+    echo
+    /usr/local/bin/compare.py RevE "$base"/sg"$1"/"$fname".cap 
+endif
