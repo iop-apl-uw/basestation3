@@ -29,8 +29,9 @@ endif
 echo "--------------------------------------------"
 set glider = `basename $fname | cut -b3-5`
 set testnum = `basename $fname | cut -b6-9`
-set date = `grep HGPS,N,set $fname | cut -f4 -d, | cut -f2-3 -d' '`
-echo $fname $glider $testnum $date
+set date = `grep "RTC time" $fname | cut -f3-8 -d' '`
+set filedate = `ls -l $fname | awk '{print $6,$7,$8}'`
+echo $fname \("$filedate"\) $glider \#"$testnum" $date
 echo "--------------------------------------------"
 echo "Summary of comm.log (snippet) for most recent test capture"
 echo
@@ -139,11 +140,21 @@ echo ""
 echo ------------------------------
 set test = `grep '$ID' "$base"/sg"$1"/"$fname".cap`
 if ( "$test" == "" ) then
-    echo "Parameter comparison to log file"
+    echo "Parameter comparison to log file $fname.log"
     echo
     /usr/local/bin/compare.py RevE "$base"/sg"$1"/"$fname".log
 else
-    echo "Parameter comparison to capture file"
+    echo "Parameter comparison to capture file $fname.cap"
     echo
     /usr/local/bin/compare.py RevE "$base"/sg"$1"/"$fname".cap 
 endif
+
+if ( -f "$base"/sg"$1"/p"$1"0000.prm ) then
+    set date = `ls -l "$base"/sg"$1"/p"$1"0000.prm | awk '{print $6,$7,$8}'`
+    echo ""
+    echo ------------------------------
+    echo Parameter comparison to prm file p"$1"0000.prm \("$date"\)
+    echo
+    /usr/local/bin/compare.py RevE "$base"/sg"$1"/p"$1"0000.prm
+endif
+
