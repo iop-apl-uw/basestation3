@@ -269,7 +269,7 @@ def mission_map(
 
     output_name = "eng_mission_map.webp"
 
-    if not base_opts.plot_directory:
+    if base_opts.plot_directory:
         output_name = os.path.join(base_opts.plot_directory, output_name)
 
     ret_list = [output_name]

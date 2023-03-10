@@ -166,6 +166,7 @@ global_options_dict = {
         str,
         {
             "help": "basestation log file, records all levels of notifications",
+            "action": FullPathAction,
         },
     ),
     "debug": options_t(
@@ -390,11 +391,7 @@ global_options_dict = {
     ),
     "bin_width": options_t(
         1.0,
-        (
-            "Base",
-            "MakeDiveProfiles",
-            "MakeMissionProfile",
-        ),
+        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission"),
         ("--bin_width",),
         float,
         {
@@ -403,7 +400,7 @@ global_options_dict = {
     ),
     "which_half": options_t(
         WhichHalf(3),
-        ("Base", "MakeDiveProfiles", "MakeMissionProfile"),
+        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission"),
         ("--which_half",),
         WhichHalf,
         {
@@ -438,7 +435,7 @@ global_options_dict = {
     ),
     "use_gsw": options_t(
         True,
-        ("Base", "BasePlot", "MakeDiveProfiles"),
+        ("Base", "BasePlot", "MakeDiveProfiles", "Reprocess"),
         ("--use_gsw",),
         bool,
         {

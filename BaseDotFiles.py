@@ -1406,7 +1406,7 @@ def process_extensions(
                             log_error(
                                 f"Error loading {extension_module_name} - skipping"
                             )
-                            return 1
+                            continue
                         else:
                             try:
                                 # Invoke the extension

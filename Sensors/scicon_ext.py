@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -86,7 +86,7 @@ def process_adcp_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_e
     # Run the convertor
     convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "sc2mat")
     if not os.path.isfile(convertor):
-        log_error("Convertor %s does not exits - not processing %s" % (convertor, scicon_file))
+        log_error("Convertor %s does not exit - not processing %s" % (convertor, scicon_file))
         return 1
     if not os.access(convertor, os.X_OK):
         log_error("Convertor (%s) is not marked as executable - not processing %s" % (convertor, scicon_file))

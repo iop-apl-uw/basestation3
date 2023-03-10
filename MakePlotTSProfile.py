@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2021-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2021-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -434,14 +434,12 @@ def main(
     if profile_file_names or ncdf_file_names:
         if profile_file_names:
             # These files come from the scicon profile sub-directory
-            pd = os.path.split(
-                os.path.split(profile_file_names[0])[0]
-            )[0]
+            pd = os.path.split(os.path.split(profile_file_names[0])[0])[0]
         else:
             pd = os.path.split(ncdf_file_names[0])[0]
         pd = os.path.join(pd, "plots")
 
-        if base_opts.plot_directory is None:
+        if not base_opts.plot_directory:
             base_opts.plot_directory = pd
         if not os.path.exists(base_opts.plot_directory):
             try:
