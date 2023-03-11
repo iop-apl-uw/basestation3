@@ -950,19 +950,20 @@ def saveFlightDB(base_opts, mat_d, con=None):
     cur = mycon.cursor()
     cur.execute("DROP TABLE IF EXISTS flight;")
     cur.execute("CREATE TABLE flight (idx INTEGER PRIMARY KEY AUTOINCREMENT, dive INTEGER, pitch_d FLOAT, bottom_rho0 FLOAT, bottom_press FLOAT, hd_a FLOAT, hd_b FLOAT, vbdbias FLOAT, median_vbdbias FLOAT, abs_compress FLOAT, w_rms_vbdbias FLOAT);")
-    for k, val in enumerate(mat_d['dive_nums']):
+    for k in range(len(mat_d['dive_nums'])):
         cur.execute("INSERT INTO flight (dive, pitch_d, bottom_rho0, bottom_press, hd_a, hd_b, vbdbias, median_vbdbias, abs_compress, w_rms_vbdbias) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", 
-                mat_d['dive_nums'],
-                mat_d['dives_pitch_d'],
-                mat_d['dives_bottom_rho0'],
-                mat_d['dives_bottom_press'],
-                mat_d['dives_hd_a'],
-                mat_d['dives_hd_b'],
-                mat_d['dives_vbdbias'],
-                mat_d['dives_median_vbdbias'],
-                mat_d['dives_abs_compress'],
-                mat_d['dives_w_rms_vbdbias'])
+                (mat_d['dive_nums'][k],
+                 mat_d['dives_pitch_d'][k],
+                 mat_d['dives_bottom_rho0'][k],
+                 mat_d['dives_bottom_press'][k],
+                 mat_d['dives_hd_a'][k],
+                 mat_d['dives_hd_b'][k],
+                 mat_d['dives_vbdbias'][k],
+                 mat_d['dives_median_vbdbias'][k],
+                 mat_d['dives_abs_compress'][k],
+                 mat_d['dives_w_rms_vbdbias'][k]))
  
+    cur.execute("COMMIT")
     if con is None:
         cur.close()
         mycon.close()

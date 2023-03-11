@@ -50,6 +50,7 @@ import stat
 import pdb
 import traceback
 import numpy as np
+import BaseDB
 
 DEBUG_PDB = "darwin" in sys.platform
 
@@ -532,7 +533,7 @@ def cleanse_sg_calib_constants(sg_calib_file_name):
 
 
 # Dump/checkpoint the flight database by pickling
-def save_flight_database(dump_mat=False):
+def save_flight_database(base_opts, dump_mat=False):
     global flight_dive_data_d, flight_dive_data_filename, flight_dive_nums
     if flight_dive_data_filename is not None and flight_dive_data_d is not None:
         flight_dive_data_d['last_updated'] = time.time()
@@ -573,6 +574,7 @@ def save_flight_database(dump_mat=False):
                 mat_d['dives_median_vbdbias'] = [dd.median_vbdbias for dd in dds]
                 mat_d['dives_abs_compress'] = [dd.abs_compress for dd in dds]
                 mat_d['dives_w_rms_vbdbias'] = [dd.w_rms_vbdbias for dd in dds]
+                BaseDB.saveFlightDB(base_opts, mat_d)
             # dump the ab_grid_cache values and arrays
             ab_grid_cache_d = flight_dive_data_d['ab_grid_cache']
             dives = list(ab_grid_cache_d.keys())
@@ -1746,7 +1748,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                     load_dive_data(base_opts, dive_data) # update our db object with current values from updated nc file by side effect
                 except KeyError:
                     pass
-            save_flight_database() # record this issue and updated filetimes in history
+            save_flight_database(base_opts) # record this issue and updated filetimes in history
             return 1
 
         log_debug("Started FM processing %d at %s" %(reprocess_count, time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))))
@@ -1914,7 +1916,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                         log_info('New mean abs_compress = %g (%.3f,%d)' % (new_abs_compress, (1 - abs(new_abs_compress/old_abs_compress)), len(abs_compress_values)))
 
                 # At this point we have a new or updated dive.
-                save_flight_database() # checkpoint updated dive data
+                save_flight_database(base_opts) # checkpoint updated dive data
                 # if dives come in out of order (comms problems, yoyo dives, under ice, etc)
                 # we need to flush grid cache entries involving this reprocessed dive, if any, to recompute the grids going forward
                 flush_ab_grid_cache(dive_num, ab_grid_cache_d)
@@ -2235,7 +2237,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                                  predicted_hd_a, predicted_hd_b, predicted_hd_ab_trusted) 
 
             # save any updated ab_grid_cache and dive_data values (make available for possible reprocess below)
-            save_flight_database() 
+            save_flight_database(base_opts) 
             # continue the main for loop for each dive number in update_flight_dive_nums
 
         # Done processing all known dives
@@ -2260,7 +2262,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 dd = flight_dive_data_d[vbd_dive_num] # ensured
                 # update dive_data with median value (to be used when computing grid)
                 dd.median_vbdbias = dive_median_vbdbias
-            save_flight_database()
+            save_flight_database(base_opts)
 
         # rebuild summary plots
         if generate_figures and len(flight_dive_nums) > 1: # wait until you have 2 dives so xlim/ylim don't complain
@@ -2474,7 +2476,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 if compare[0] or compare[1]:
                     dd.recompute_vbdbias_abs_compress = True 
                 reprocess_dives.append(d_n)
-        save_flight_database(dump_mat=True) # save any updated data before reprocessing
+        save_flight_database(base_opts, dump_mat=True) # save any updated data before reprocessing
         reprocess_dives = sorted(Utils.unique(reprocess_dives))
         # A note on reprocessing.  We can really only do this with coupled changes in MDP that request the FM data
         # via get_flight_parameters() above.  For older basestations in order to reprocess dives we would have to
@@ -2498,7 +2500,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 dd.nc_volmax = dd.volmax
                 dd.nc_vbdbias = dd.vbdbias
                 dd.nc_abs_compress = dd.abs_compress
-            save_flight_database(dump_mat=False) # save any updated data before reprocessing
+            save_flight_database(base_opts, dump_mat=False) # save any updated data before reprocessing
 
             if enable_reprocessing_dives:
                 log_info('Reprocess dives: %s' % reprocess_dives)
@@ -2542,7 +2544,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                         log_error(f"Consult {reprocess_log} for futher details")
                         enable_reprocessing_dives = False # don't do this again...
                         dd.dive_data_ok = False # skip this dive until it is reprocessed by someone else
-                save_flight_database(dump_mat=False) # save any updated data after reprocessing
+                save_flight_database(base_opts, dump_mat=False) # save any updated data after reprocessing
 
 
     # BREAK done with reprocessing dives
@@ -2868,7 +2870,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         flight_dive_data_d['ac_max'] = ac_max_start
         flight_dive_data_d['ac_min_press'] = 500 # [dbar] this is where we can start seeing the impact, otherwise use the default
         #DEBUG pfdd(True) #  display initial defaults in the log file
-        save_flight_database()
+        save_flight_database(base_opts)
 
     if deck_dives: # test this after the DB is saved
         log_error('Unable to run flight model on deck dives!')
@@ -2949,7 +2951,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             ret_val = process_dive(base_opts, None, updated_dives_d, alert_dive_num, exit_event=exit_event)
             log_debug("Done processing remaining dives")
 
-    save_flight_database() # save any updated history, ab_grid_cache, and dive_data values
+    save_flight_database(base_opts) # save any updated history, ab_grid_cache, and dive_data values
 
     if not ret_val and len(grid_dive_sets):
         # now that everything is buttoned up try solving these grids the user is interested in
