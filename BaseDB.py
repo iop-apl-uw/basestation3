@@ -162,75 +162,48 @@ def getVarNames(nci):
 # depth_time
 # depth_depth
 
-# Mapping from name to arbitrary ordinal
-time_series_variables = {
-    0: "temperature_raw",
-    1: "temperature_raw_qc",
-    2: "conductivity_raw",
-    3: "conductivity_raw_qc",
-    4: "salinity_raw",
-    5: "salinity_raw_qc",
-    6: "temperature",
-    7: "temperature_qc",
-    8: "conductivity",
-    9: "conductivity_qc",
-    10: "salinity",
-    11: "salinity_qc",
-}
-
-
 def processTimeSeries(dive, cur, nci):
     """Inserts timeseries data into db"""
 
     cur.execute("COMMIT")
 
     cur.execute(
-        "CREATE TABLE IF NOT EXISTS observation_type(observation_id INTEGER PRIMARY KEY, observation_name TEXT);"
+        "CREATE TABLE IF NOT EXISTS observationVars(name TEXT PRIMARY KEY);"
     )
-
-    res = cur.execute("SELECT observation_name FROM observation_type")
-    if res.fetchone() is None:
-        for obs_id, name in time_series_variables.items():
-            cur.execute(
-                "INSERT INTO observation_type (observation_id, observation_name) VALUES (?,?)",
-                (obs_id, name),
-            )
 
     cur.execute(
-        "CREATE TABLE IF NOT EXISTS observations(idx INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "dive INTEGER, observation FLOAT, observation_time FLOAT, obs_type INTEGER,"
-        "FOREIGN KEY(obs_type) REFERENCES observation_type(observation_id))"
+        "CREATE TABLE IF NOT EXISTS observations(varIdx INTEGER, value FLOAT, epoch FLOAT, PRIMARY KEY (varIdx, epoch));"
     )
 
-    cur.execute(f"DELETE FROM observations WHERE dive={dive};")
+    for k in nci.variables.keys():
+        if len(nci.variables[k].dimensions) and '_data_point' in nci.variables[k].dimensions[0] and 'time' not in k and 'eng_' not in k:
+            cur.execute(f"INSERT OR IGNORE INTO observationVars (name) VALUES ('{k}')")
+            cur.execute(f"SELECT rowid FROM observationVars WHERE name='{k}';")
+            varIdx = cur.fetchone()[0]
+            try:
+                nc_var = nci.variables[k][:]
+                nc_dim = nci.variables[k].dimensions[0]
+                for k, v in nci.variables.items():
+                    var_t = []
+                    if (
+                        "time" in k[-4:]
+                        and len(nci.variables[k].dimensions)
+                        and "_data_point" in nci.variables[k].dimensions[0]
+                        and nc_dim == nci.variables[k].dimensions[0]
+                    ):
+                        var_t = nci.variables[k][:]
+                        break
 
-    for obs_idx, tv in time_series_variables.items():
-        if tv not in nci.variables:
-            continue
-        try:
-            nc_var = nci.variables[tv][:]
-            nc_dim = nci.variables[tv].dimensions[0]
-            for k, v in nci.variables.items():
-                var_t = []
-                if (
-                    "time" in k[-4:]
-                    and len(nci.variables[k].dimensions)
-                    and "_data_point" in nci.variables[k].dimensions[0]
-                    and nc_dim == nci.variables[k].dimensions[0]
-                ):
-                    var_t = nci.variables[k][:]
-                    break
-
-            if len(var_t):
-                for ii in range(numpy.size(var_t)):
-                    cur.execute(
-                        "INSERT INTO observations(dive, observation, observation_time, obs_type) VALUES (?,?,?,?)",
-                        (dive, nc_var[ii], var_t[ii], obs_idx),
-                    )
-            else:
-                log_error(f"no time variable found for {tv}({nc_dim})")
-        except:
-            log_error(f"Problems processing {nc_var}", "exc")
+                if len(var_t):
+                    for ii in range(numpy.size(var_t)):
+                        cur.execute(
+                            "INSERT INTO observations(varIdx, value, epoch) VALUES (?,?,?) ON CONFLICT(varIdx,epoch) DO UPDATE SET value=?",
+                            [varIdx, nc_var[ii], var_t[ii], nc_var[ii]]
+                        )
+                else:
+                    log_error(f"no time variable found for {k}({nc_dim})")
+            except:
+                log_error(f"Problems processing {nc_var}", "exc")
 
 
 def addColumn(cur, col, db_type):
