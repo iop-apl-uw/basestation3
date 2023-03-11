@@ -67,6 +67,7 @@ import FileMgr
 import FlightModel
 import LogFile
 import MakeDiveProfiles
+import MakeKML
 import MakeMissionProfile
 import MakeMissionTimeSeries
 import PlotUtils
@@ -2354,6 +2355,17 @@ def main():
             _, output_files = BasePlot.plot_mission(base_opts, plot_dict, mission_str)
             for output_file in output_files:
                 processed_other_files.append(output_file)
+
+            # Generate KML
+            try:
+                if not base_opts.skip_kml:
+                    MakeKML.main(
+                        base_opts,
+                        calib_consts,
+                        processed_other_files,
+                    )
+            except:
+                log_error("Failed to generate KML", "exc")
 
             # Invoke extensions, if any
             BaseDotFiles.process_extensions(

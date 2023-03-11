@@ -328,6 +328,7 @@ global_options_dict = {
             "GliderEarlyGPS",
             "FligthModel",
             "MakeDiveProfiles",
+            "MakeKML",
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
             "MakePlotMission",
@@ -561,6 +562,16 @@ global_options_dict = {
         bool,
         {
             "help": "Skip running flight model system (FMS)",
+            "action": "store_true",
+        },
+    ),
+    "skip_kml": options_t(
+        False,
+        ("Base",),
+        ("--skip_kml",),
+        bool,
+        {
+            "help": "Skip generation of the KML output",
             "action": "store_true",
         },
     ),
