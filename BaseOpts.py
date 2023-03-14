@@ -426,7 +426,7 @@ global_options_dict = {
     ),
     "ignore_lock": options_t(
         False,
-        ("Base", "GliderEarlyGPS"),
+        ("Base", "BaseRunner", "GliderEarlyGPS"),
         ("--ignore_lock",),
         bool,
         {
