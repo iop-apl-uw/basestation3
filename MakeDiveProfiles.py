@@ -136,7 +136,7 @@ sb_ct_type_map = {
 }
 
 
-def sg_config_constants(calib_consts, log_deepglider=0, has_gpctd=False):
+def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=False):
     """Update, by side effect, critical calibration and control constants
     with default values if not supplied
     Input:
@@ -157,7 +157,7 @@ def sg_config_constants(calib_consts, log_deepglider=0, has_gpctd=False):
     # basis.  These overrides should be defined in the sg_calib_constants
     # file.
     def update_calib_consts(config, assert_in_globals=False):
-        for (var, default_value) in list(config.items()):
+        for var, default_value in list(config.items()):
             try:
                 previous_value = calib_consts[var]  # override?
                 if var not in flight_variables and var not in [
@@ -415,6 +415,23 @@ def sg_config_constants(calib_consts, log_deepglider=0, has_gpctd=False):
         "mass": mass,
     }  # mass in case it is an SGX
     glider_type = FlightModel.get_FM_defaults(fm_consts)
+    if base_opts.skip_flight_model:
+        user_supplied_vals = ["volmax", "hd_a", "hd_b", "hd_c"]
+        user_optional_vals = [
+            "glider_length",
+            "hd_s",
+            "abs_compress",
+            "therm_expan",
+            "temp_ref",
+        ]
+        for val in user_supplied_vals:
+            if val in fm_consts:
+                del fm_consts[val]
+        for val in user_optional_vals:
+            if val in calib_consts:
+                del fm_consts[val]
+
+    #    pdb.set_trace()
     config.update(fm_consts)
 
     config.update(
@@ -854,7 +871,6 @@ def cond_anomaly(
                         a.anomaly_positive_sum > np.abs(a.anomaly_negative_sum)
                         or np.abs(a.anomaly_sum) / a.max_excursion() < 0.10
                     ):  # or are we close enough
-
                         if a.max_excursion() > acceptable_anomaly_threshold:
                             a.finalize(
                                 "conductivity anomaly", ct_depth_m_v, None
@@ -869,7 +885,7 @@ def cond_anomaly(
                             )
                             vertical_anomaly_distance = a.extent()
                             if vertical_anomaly_distance < nearby_snot_distance:
-                                suspect_anomalies_v.append(a)  #% emit for suggestion
+                                suspect_anomalies_v.append(a)  # % emit for suggestion
                             else:
                                 log_warning("Weak resolved anomaly skipped: %s" % a)
                         a = Anomaly()  # regardless, start a new one
@@ -1257,7 +1273,7 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
         "cal_temperature": 25.0,
     }
 
-    for (var, default_value) in list(default_values.items()):
+    for var, default_value in list(default_values.items()):
         try:
             default_value = kistler_cnf[var]  # override?
         except KeyError:
@@ -1707,9 +1723,7 @@ def load_dive_profile_data(
                     # IMPORTANT NOTE: if we don't .copy() all vectors then when we (re)open the nc file for write below
                     # the underlying data is mapped out and crashes python and the debugger!
                     # (This is critical for raw data that is retained by the caller; not so much for results, etc. that are rebuilt)
-                    for (dive_nc_varname, nc_var) in list(
-                        dive_nc_file.variables.items()
-                    ):
+                    for dive_nc_varname, nc_var in list(dive_nc_file.variables.items()):
                         nc_typecode = nc_var.typecode()
                         nc_string = nc_typecode == "c"
                         nc_is_scalar = (
@@ -2156,6 +2170,7 @@ def load_dive_profile_data(
         # NOTE: MDP does this step later on a copy of the explicit variables used for saving
         if apply_sg_config_constants:
             sg_config_constants(
+                base_opts,
                 calib_consts,
                 getattr(log_f.data, "$DEEPGLIDER", 0),
                 ("gpctd_time" in results_d),
@@ -2176,7 +2191,6 @@ def load_dive_profile_data(
         # regardless of source, remap these column names
         eng_f.remap_engfile_columns()
         if sg_ct_type == 4 and eng_f.get_col("rbr_pressure") is not None:
-
             rbr_good_press_i_v = np.logical_not(np.isnan(eng_f.get_col("rbr_pressure")))
             rbr_pressure = Utils.interp1d(
                 eng_f.get_col("elaps_t")[rbr_good_press_i_v],
@@ -2512,7 +2526,8 @@ def make_dive_profile(
     BaseLogger.self.startStringCapture()
 
     # Ask FlightModel for its ideas on flight model values
-    FlightModel.get_flight_parameters(dive_num, base_opts, explicit_calib_consts)
+    if not base_opts.skip_flight_model:
+        FlightModel.get_flight_parameters(dive_num, base_opts, explicit_calib_consts)
 
     # if False:  # DEBUG
     #     # See if there is an fm.m and read it (was used for matlab hill climbing via reprocessing)
@@ -2533,7 +2548,10 @@ def make_dive_profile(
         explicit_calib_consts.copy()
     )  # copy the explicit constants, which we write below
     sg_config_constants(
-        calib_consts, log_f.data.get("$DEEPGLIDER", 0), ("gpctd_time" in results_d)
+        base_opts,
+        calib_consts,
+        log_f.data.get("$DEEPGLIDER", 0),
+        ("gpctd_time" in results_d),
     )  # update copy with defaults
     for fv in flight_variables:
         log_info("FM: %s=%g" % (fv, calib_consts[fv]))
@@ -2799,7 +2817,6 @@ def make_dive_profile(
     processing_error = 0  # assume all is well
     skipped_profile = 0  # assume not skipped
     try:
-
         id_str = calib_consts["id_str"]
         mission_title = calib_consts["mission_title"]
         log_debug("id_str = %s, mission_title = %s" % (id_str, mission_title))
@@ -5091,7 +5108,7 @@ def make_dive_profile(
             # if there were unsampled points these will be NaN (mocha/2010.07.sanjuan/sg033 dive 30)
             # in that case the ctr1stdiffderiv will propagate NaNs adjacent locations in dTdt and hence into temp
             bad_dTdt_i_v = [i for i in range(ctd_np) if np.isnan(dTemp_dt_v[i])]
-            dTemp_dt_v[bad_dTdt_i_v] = 0  #% no 1st order lag here
+            dTemp_dt_v[bad_dTdt_i_v] = 0  # % no 1st order lag here
             del bad_dTdt_i_v  # done with this intermediate
 
             temp_cor_v += (
@@ -6928,7 +6945,7 @@ def make_dive_profile(
 
         # Handle GC arrays
         # Create the GC dimension
-        for (gc_var, gc_values) in list(log_f.gc_data.items()):
+        for gc_var, gc_values in list(log_f.gc_data.items()):
             BaseNetCDF.create_nc_var(
                 nc_dive_file,
                 BaseNetCDF.nc_gc_prefix + gc_var,
@@ -6938,7 +6955,7 @@ def make_dive_profile(
             )
         # Create GC state, if any
         if len(log_f.gc_state_data["secs"]) > 0:
-            for (gc_state_var, gc_state_values) in list(log_f.gc_state_data.items()):
+            for gc_state_var, gc_state_values in list(log_f.gc_state_data.items()):
                 BaseNetCDF.create_nc_var(
                     nc_dive_file,
                     BaseNetCDF.nc_gc_state_prefix + gc_state_var,

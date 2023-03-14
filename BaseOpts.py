@@ -557,11 +557,11 @@ global_options_dict = {
     ),
     "skip_flight_model": options_t(
         False,
-        ("Base",),
+        ("Base", "Reprocess.py"),
         ("--skip_flight_model",),
         bool,
         {
-            "help": "Skip running flight model system (FMS)",
+            "help": "Skip running flight model system (FMS) - honor all sg_calib_constants.m variables",
             "action": "store_true",
         },
     ),
@@ -583,16 +583,6 @@ global_options_dict = {
         bool,
         {
             "help": "Force reprocessing of plots",
-            "action": "store_true",
-        },
-    ),
-    "reprocess_flight": options_t(
-        False,
-        ("Reprocess",),
-        ("--reprocess_flight",),
-        bool,
-        {
-            "help": "Force reprocessing of flight",
             "action": "store_true",
         },
     ),

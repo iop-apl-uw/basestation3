@@ -49,6 +49,7 @@ from Plotting import plotdivesingle
 
 import pdb
 
+
 #
 # Utilities
 #
@@ -273,13 +274,13 @@ def plot_vert_vel(
             )
         )[0]
         if len(isurf) > 1:
-            density_1m = np.nanmean(density_ctd[isurf])/1000
+            density_1m = np.nanmean(density_ctd[isurf]) / 1000
             depth_1m = np.nanmean(ctd_depth[isurf])
         else:
             isurf = np.argmin(ctd_depth)
-            density_1m = density_ctd[isurf]/1000
+            density_1m = density_ctd[isurf] / 1000
             depth_1m = ctd_depth[isurf]
-            
+
         print(density_1m, depth_1m)
     except:
         log_error(
@@ -349,7 +350,7 @@ def plot_vert_vel(
 
         # Extract the calib constants, then fill in any missing ones with defaults
         calib_consts = Utils.extract_calib_consts(dive_nc_file)
-        MakeDiveProfiles.sg_config_constants(calib_consts)
+        MakeDiveProfiles.sg_config_constants(base_opts, calib_consts)
 
         log_info(
             "Basestation: hd_a:%f hd_b:%f hd_c:%f mass:%.3f rho:%.1f"
@@ -530,7 +531,7 @@ def plot_vert_vel(
     implied_max_maxbuoy = -(implied_cvbd - vbd_max) / vbd_cnts_per_cc * (rho0 / 1000)
     implied_max_smcc = -(implied_cvbd - vbd_min) / vbd_cnts_per_cc
     print(mass, rho0, density_1m)
-    implied_min_smcc_surf = 1000*mass*(1/density_1m - 1000/rho0) + 150
+    implied_min_smcc_surf = 1000 * mass * (1 / density_1m - 1000 / rho0) + 150
     print(implied_min_smcc_surf)
 
     log_info(

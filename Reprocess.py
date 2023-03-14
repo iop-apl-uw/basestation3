@@ -320,7 +320,7 @@ def main():
     all_dive_nc_file_names.extend(dive_nc_file_names)
     all_dive_nc_file_names = sorted(Utils.unique(all_dive_nc_file_names))
     if len(all_dive_nc_file_names):
-        if base_opts.reprocess_flight:
+        if not base_opts.skip_flight_model
             log_info(
                 "Started FLIGHT processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))

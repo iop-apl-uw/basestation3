@@ -347,6 +347,7 @@ def pfdd(verbose=False):
 # Side-effects: Sets several globals, including flight_dive_data_d and possibly the db filename
 def load_flight_database(base_opts,sg_calib_constants_d,verify=False,create_db=False):
     global flight_dive_data_d, flight_directory, flight_dive_data_filename, ab_grid_cache_d, restart_cache_d
+    pdb.set_trace()
     if flight_dive_data_d is not None:
         return False
 
