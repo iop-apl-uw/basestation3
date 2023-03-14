@@ -28,6 +28,11 @@ static int      num_beams;
 static int      num_cells;
 static int      count;
 static int      countAtt;
+static int      countBurst;
+
+unsigned short burstBeams;    
+unsigned short burstCells;
+unsigned short burst_cellSize;
 
 static double **beamv[4];
 static double	*temperature;
@@ -50,6 +55,15 @@ static double   *magZAtt;
 static double g_cellSize[1] = {0};
 static double g_blanking[1] = {0};
 static double g_soundspeed[1] = {0};
+static double g_burstSize[1] = {0};
+
+static double *tBurst;
+static double *pressureBurst;
+static double *pitchBurst;
+static double *rollBurst;
+static double *headingBurst;
+static double  **corr = NULL;
+
 
 static int 
 architecture ( )
@@ -253,6 +267,7 @@ WriteMatlab(char *fname)
 //            tm.tm_hour, tm.tm_min, tm.tm_sec, hsec, 
 //            tm.tm_mon + 1, tm.tm_mday, tm.tm_year + 1900);
    fprintf(stderr, "%s: %d ensembles\n", fname, count);
+   fprintf(stderr, "%s: %d burst pings\n", fname, countBurst);
    fprintf(stderr, "%s: %d attitude records\n", fname, countAtt);
 
    MatlabDoubleVector(g_blanking, 1, "blanking", out);
@@ -283,6 +298,14 @@ WriteMatlab(char *fname)
       MatlabDoubleVector(magZAtt, countAtt, "magZAtt", out);
    }
 
+   if (countBurst > 0) {
+      MatlabDoubleVector(pressureBurst, countBurst, "pressureBurst", out);
+      MatlabDoubleVector(headingBurst, countBurst, "headingBurst", out);
+      MatlabDoubleVector(pitchBurst, countBurst, "pitchBurst", out);
+      MatlabDoubleVector(rollBurst, countBurst, "rollBurst", out);
+      MatlabDoubleVector(tBurst, countBurst, "timeBurst", out);
+      MatlabDoubleMatrix(corr, burstCells, countBurst, "corrBurst", out);
+   }
    fclose(out);
 
    exit (0);
@@ -303,8 +326,6 @@ main(int argc, char *argv[])
     unsigned char  sync1;
     long tell;
     unsigned char  buff[65536];
-    unsigned short numBeams;    
-    unsigned short numCells;
     unsigned short cellSize;
     unsigned short blanking;
     unsigned short soundSpeed;
@@ -314,14 +335,19 @@ main(int argc, char *argv[])
     unsigned int   pressureAvg;
     short          temperatureAvg;
     unsigned short headingAvg;
+    unsigned short headingInstant;
     short          pitchAvg;
+    short          pitchInstant;
     short          rollAvg;
+    short          rollInstant;
     unsigned short batteryAvg;
     short          hVel[65536];
+    unsigned char  hCorr[65536];
     short          magnHxHyHz[3];
 
     count = 0;
     countAtt = 0;
+    countBurst = 0;
     max_count = max_countAtt = 200000;
 
     setenv("TZ", "", 1); // null string is UTC
@@ -414,6 +440,18 @@ main(int argc, char *argv[])
                 g_soundspeed[0] = soundSpeed;
                 continue;
             }
+            if (sync == 0xa5a2) {
+
+                fread(&burstBeams, sizeof(unsigned short), 1, fp);
+                fread(&burstCells, sizeof(unsigned short), 1, fp);
+                fread(&burst_cellSize, sizeof(unsigned short), 1, fp);
+	            tell = ftell(fp);
+                printf("after burst meta tell = %ld, count = %d\n", tell, count);
+                g_burstSize[0] = burst_cellSize;
+                printf("0xa5a2 record: %d %d\n", burstBeams, burstCells);
+                continue;
+            }
+
 
             if (sync == 0xa5a3) {
                 fread(&epoch, sizeof(int), 1, fp);
@@ -449,66 +487,97 @@ main(int argc, char *argv[])
                 continue;
             }
 
-            if (sync != 0xa5a5) {
-                if (sync == 0x2025) {
-                    printf("%% ");    
-                    while(fread(&c, sizeof(char), 1, fp) == 1 && c != 10) {
-                        printf("%c", c);
-                    }
-                    printf("\n");
+            if (sync == 0x2025) {
+                printf("%% ");    
+                while(fread(&c, sizeof(char), 1, fp) == 1 && c != 10) {
+                    printf("%c", c);
                 }
-                else {
-                    printf("skipping 1 %x\n", sync);
-                }
+                printf("\n");
                 continue;
             }
 
-            fread(&epoch, sizeof(int), 1, fp);
-            fread(&pressureInstant, sizeof(unsigned int), 1, fp);
+            if (sync == 0xa5a6) {
+                fread(&epoch, sizeof(int), 1, fp);
+                fread(&pressureInstant, sizeof(unsigned int), 1, fp);
+                fread(&headingInstant, sizeof(unsigned short), 1, fp);
+                fread(&pitchInstant, sizeof(short), 1, fp);
+                fread(&rollInstant, sizeof(short), 1, fp);
 
-            scale = pow(10.0, velocityScaling);
-            printf("0xa5a5 record: %d %d %d %u %f\n", num_beams, num_cells, epoch, pressureInstant, scale); 
+                printf("0xa5a6 record: %d %u\n", epoch, pressureInstant);
 
-            fread(&pressureAvg, sizeof(unsigned int), 1, fp);
-            fread(&temperatureAvg, sizeof(short), 1, fp);
-            fread(&headingAvg, sizeof(unsigned short), 1, fp);
-            fread(&pitchAvg, sizeof(short), 1, fp);
-            fread(&rollAvg, sizeof(short), 1, fp);
-            fread(&batteryAvg, sizeof(unsigned short), 1, fp);
-
-             if (count == 0) {
-                for (j = 0 ; j < 4 ; j++) {
-                    beamv[j] = Darray(num_cells, max_count);
+                if (countBurst == 0) {
+                    corr = Darray(burstCells, max_count);
+                    tBurst = Dvector(max_count);
+                    pressureBurst = Dvector(max_count);
+                    headingBurst  = Dvector(max_count);
+                    pitchBurst    = Dvector(max_count);
+                    rollBurst     = Dvector(max_count);
                 }
-                t           = Dvector(max_count);
-                pressure    = Dvector(max_count); 
-                pitch       = Dvector(max_count); 
-                roll        = Dvector(max_count); 
-                heading     = Dvector(max_count); 
-                temperature = Dvector(max_count); 
-                battery     = Dvector(max_count); 
+
+                tBurst[countBurst]        = epoch;
+                pressureBurst[countBurst] = pressureInstant*0.001;
+                headingBurst[countBurst]  = headingInstant*0.01;
+                pitchBurst[countBurst]    = pitchInstant*0.01;
+                rollBurst[countBurst]     = rollInstant*0.01;
+                fread(hCorr, sizeof(unsigned char), burstCells * burstBeams, fp);
+                for (i = 0 ; i < burstCells ; i++)
+                    corr[i][countBurst] = hCorr[i];
+
+                countBurst ++;
+                continue;
             }
 
-            pressure[count]    = pressureAvg*0.001;
-            temperature[count] = temperatureAvg*0.01;
-            heading[count]     = headingAvg*0.01;
-            pitch[count]       = pitchAvg*0.01;
-            roll[count]        = rollAvg*0.01;
-            battery[count]     = batteryAvg*0.001;
+            if (sync == 0xa5a5) {
+                fread(&epoch, sizeof(int), 1, fp);
+                fread(&pressureInstant, sizeof(unsigned int), 1, fp);
 
-            t[count] = epoch;
-        
-            fread(hVel, sizeof(short), num_beams*num_cells, fp);
+                scale = pow(10.0, velocityScaling);
+                printf("0xa5a5 record: %d %d %d %u %f\n", num_beams, num_cells, epoch, pressureInstant, scale); 
 
-        
-            for (i = 0 ; i < num_cells ; i ++) {
-                for (j = 0 ; j < num_beams ; j ++) {
-                    beamv[j][i][count] = scale*hVel[j*num_cells + i];
-                } 
+                fread(&pressureAvg, sizeof(unsigned int), 1, fp);
+                fread(&temperatureAvg, sizeof(short), 1, fp);
+                fread(&headingAvg, sizeof(unsigned short), 1, fp);
+                fread(&pitchAvg, sizeof(short), 1, fp);
+                fread(&rollAvg, sizeof(short), 1, fp);
+                fread(&batteryAvg, sizeof(unsigned short), 1, fp);
+
+                 if (count == 0) {
+                    for (j = 0 ; j < 4 ; j++) {
+                        beamv[j] = Darray(num_cells, max_count);
+                    }
+                    t           = Dvector(max_count);
+                    pressure    = Dvector(max_count); 
+                    pitch       = Dvector(max_count); 
+                    roll        = Dvector(max_count); 
+                    heading     = Dvector(max_count); 
+                    temperature = Dvector(max_count); 
+                    battery     = Dvector(max_count); 
+                }
+
+                pressure[count]    = pressureAvg*0.001;
+                temperature[count] = temperatureAvg*0.01;
+                heading[count]     = headingAvg*0.01;
+                pitch[count]       = pitchAvg*0.01;
+                roll[count]        = rollAvg*0.01;
+                battery[count]     = batteryAvg*0.001;
+
+                t[count] = epoch;
+            
+                fread(hVel, sizeof(short), num_beams*num_cells, fp);
+
+            
+                for (i = 0 ; i < num_cells ; i ++) {
+                    for (j = 0 ; j < num_beams ; j ++) {
+                        beamv[j][i][count] = scale*hVel[j*num_cells + i];
+                    } 
+                }
+                count ++;
+                tell = ftell(fp);
+                // printf("tell = %ld, count = %d\n", tell, count);
+                continue;
             }
-            count ++;
-	        tell = ftell(fp);
-            // printf("tell = %ld, count = %d\n", tell, count);
+
+            printf("skipping 1 %x\n", sync);
         }
         fclose(fp);
     }  
