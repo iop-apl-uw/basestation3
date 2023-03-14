@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2015, 2016, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2015, 2016, 2020, 2021, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -51,7 +51,7 @@ def main():
     ret_val = 0
 
     base_opts = BaseOpts.BaseOptions("Basestation script invoked at glider login time")
-    BaseLogger(base_opts)  # initializes BaseLog
+    BaseLogger(base_opts, include_time=True)  # initializes BaseLog
 
     # log_info("Started processing " + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())))
 

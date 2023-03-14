@@ -131,3 +131,4 @@ from . import MissionIntSensors
 from . import MissionDepthAngle
 from . import MissionMap
 from . import MissionDisk
+from . import MissionCommLog

@@ -31,7 +31,6 @@ import cProfile
 import functools
 import glob
 import math
-import orjson
 import os
 import pprint
 import pstats
@@ -50,6 +49,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+import orjson
+
 import BaseDB
 import BaseDotFiles
 import BaseGZip
@@ -66,6 +67,7 @@ import FileMgr
 import FlightModel
 import LogFile
 import MakeDiveProfiles
+import MakeKML
 import MakeMissionProfile
 import MakeMissionTimeSeries
 import PlotUtils
@@ -1525,7 +1527,7 @@ def main():
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     # Check for required "options"
-    if base_opts.mission_dir is None:
+    if not base_opts.mission_dir:
         print((main.__doc__))
         log_critical("Dive directory must be supplied. See Base.py -h")
         return 1
@@ -2220,15 +2222,18 @@ def main():
     # Add netcdf files to mission sql database
     if base_opts.add_sqllite:
         log_info("Starting netcdf load to db")
-        for ncf in nc_files_created:
+        if base_opts.force:
             try:
-                if base_opts.force:
-                    BaseDB.rebuildDB(base_opts)
-                else:
-                    BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                BaseDB.rebuildDB(base_opts)
             except:
-                log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
-        log_info("netcdf load to db done")
+                log_error("Failed to rebuild mission sqllite db", "exc")
+        else:
+            for ncf in nc_files_created:
+                try:
+                    BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
+                except:
+                    log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
+            log_info("netcdf load to db done")
 
     # Run and dive extensions
     processed_file_names = []
@@ -2350,6 +2355,17 @@ def main():
             _, output_files = BasePlot.plot_mission(base_opts, plot_dict, mission_str)
             for output_file in output_files:
                 processed_other_files.append(output_file)
+
+            # Generate KML
+            try:
+                if not base_opts.skip_kml:
+                    MakeKML.main(
+                        base_opts,
+                        calib_consts,
+                        processed_other_files,
+                    )
+            except:
+                log_error("Failed to generate KML", "exc")
 
             # Invoke extensions, if any
             BaseDotFiles.process_extensions(

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2012, 2013, 2015, 2016, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -34,7 +34,6 @@ import BaseDotFiles
 import BaseOpts
 import Globals
 from BaseLog import BaseLogger, log_info, log_error
-
 
 
 def process_ftp(
@@ -97,7 +96,7 @@ def main():
                 },
             ),
             "file_spec": BaseOpts.options_t(
-                None,
+                "",
                 ("FTPPush",),
                 ("file_spec",),
                 str,
@@ -125,7 +124,12 @@ def main():
         files_to_send.append(os.path.abspath(os.path.expanduser(m)))
 
     BaseDotFiles.process_ftp(
-        base_opts, files_to_send, None, None, Globals.known_ftp_tags, ftp_type=f".{base_opts.ftp_type}"
+        base_opts,
+        files_to_send,
+        None,
+        None,
+        Globals.known_ftp_tags,
+        ftp_type=f".{base_opts.ftp_type}",
     )
 
     log_info(

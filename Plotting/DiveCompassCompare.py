@@ -563,7 +563,7 @@ def plot_compare_ad2cp(
         "ad2cp_roll",
         "ad2cp_pressure",
         base_opts,
-        flip_pitch=True,
-        flip_roll=True,
-        flip_heading=True,
+        flip_pitch=base_opts.flip_ad2cp,
+        flip_roll=base_opts.flip_ad2cp,
+        flip_heading=base_opts.flip_ad2cp,
     )

@@ -87,8 +87,8 @@ def plot_pitch_roll(
         # )
 
         c_pitch = dive_nc_file.variables["log_C_PITCH"].getValue()
+        pitch_gain = dive_nc_file.variables["log_PITCH_GAIN"].getValue()
         # unused
-        # pitch_gain = dive_nc_file.variables["log_PITCH_GAIN"].getValue()
         # if "log_IMPLIED_C_PITCH" in dive_nc_file.variables:
         #     c_pitch_implied = float(
         #         dive_nc_file.variables["log_IMPLIED_C_PITCH"][:]
@@ -189,16 +189,17 @@ def plot_pitch_roll(
 
     xmax = 3.5
     xmin = -3.5
-    inds = np.nonzero(
-        np.logical_and.reduce(
-            (
-                pitch_control < xmax,
-                pitch_control > xmin,
-                roll_control < 10,
-                roll_control > -10,
-            )
+    in_fit = np.logical_and.reduce(
+        (
+            pitch_control < xmax,
+            pitch_control > xmin,
+            roll_control < 10,
+            roll_control > -10,
         )
-    )[0]
+    )
+
+    inds = np.nonzero(in_fit)[0]
+    outside_inds = np.nonzero(np.logical_not(in_fit))[0]
 
     fit = scipy.stats.linregress(pitchAD[inds], vehicle_pitch_degrees_v[inds])
     implied_C = -fit.intercept / fit.slope
@@ -229,11 +230,46 @@ def plot_pitch_roll(
         #
 
         fig = plotly.graph_objects.Figure()
+
+        pitch_template = "PitchAD %{x:.0f}<br>obs pitch %{y:.2f} deg<br>pitch ctrl %{customdata[0]:.2f} cm<br>roll ctrl %{customdata[1]:.2f} deg<extra></extra>"
         fig.add_trace(
             {
-                "x": pitchAD,
-                "y": vehicle_pitch_degrees_v,
-                "name": "Pitch control/Pitch",
+                "x": pitchAD[outside_inds],
+                "y": vehicle_pitch_degrees_v[outside_inds],
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (
+                            np.transpose(pitch_control[outside_inds]),
+                            np.transpose(roll_control[outside_inds]),
+                        )
+                    )
+                ),
+                "name": "Pitch control/Pitch (not used in fit)",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-up",
+                    "color": "LightBlue",
+                },
+                # "mode": "lines",
+                # "line": {"dash": "solid", "color": "Blue"},
+                "hovertemplate": pitch_template,
+            }
+        )
+
+        fig.add_trace(
+            {
+                "x": pitchAD[inds],
+                "y": vehicle_pitch_degrees_v[inds],
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (
+                            np.transpose(pitch_control[inds]),
+                            np.transpose(roll_control[inds]),
+                        )
+                    )
+                ),
+                "name": "Pitch control/Pitch (used in fit)",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
@@ -242,7 +278,7 @@ def plot_pitch_roll(
                 },
                 # "mode": "lines",
                 # "line": {"dash": "solid", "color": "Blue"},
-                "hovertemplate": "PitchAD<br>%{x:.0f}<br>%{y:.2f} deg<br><extra></extra>",
+                "hovertemplate": pitch_template,
             }
         )
         fig.add_trace(
@@ -259,6 +295,9 @@ def plot_pitch_roll(
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Pitch control vs Pitch"
         fit_line = f"Best fit pitch regression implies C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm"
+        fit_line += (
+            f"<br>Current C_PITCH={c_pitch:.0f}ad PITCH_GAIN={pitch_gain:.0f}deg/cm"
+        )
 
         fig.update_layout(
             {

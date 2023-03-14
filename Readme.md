@@ -90,6 +90,12 @@ libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev zlib1g-dev ope
 python3-dev python3-setuptools wget libgdbm-compat-dev uuid-dev liblzma-dev
 
 ```
+
+Further details on build pre-requisites are available here:
+```
+https://devguide.python.org/getting-started/setup-building/#build-dependencies
+```
+
 2. Prepare to build
 
 ``` 
@@ -126,14 +132,13 @@ make install
 4. Install the required python libraries
 
 ```
+rm -rf /opt/basestation
+```
+then
+```
 sudo mkdir /opt/basestation
 sudo chown user:gliders /opt/basestation
 ```
-or
-```
-rm -rf /opt/basestation
-```
-
 then
 
 ```

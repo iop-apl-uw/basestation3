@@ -3,7 +3,7 @@
 
 
 ##
-## Copyright (c) 2006, 2007, 2012, 2013, 2015, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2012, 2013, 2015, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -31,12 +31,15 @@ Commission.py: Sets up a new glider account on a basestation.
 
 """
 
+import grp
 import os
+import pwd
 import subprocess
 import sys
 import shutil
+
 import BaseOpts
-from BaseLog import BaseLogger, log_critical
+from BaseLog import BaseLogger, log_critical, log_error, log_info
 
 
 def syscall(command):
@@ -85,6 +88,42 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Creates the user accounts and populates home directories for new gliders (Run as root)",
         additional_arguments={
+            "home_dir": BaseOpts.options_t(
+                "/home",
+                ("Commission",),
+                ("--home_dir",),
+                str,
+                {
+                    "help": "home directory base, used by Commission.py",
+                },
+            ),
+            "glider_password": BaseOpts.options_t(
+                None,
+                ("Commission",),
+                ("--glider_password",),
+                str,
+                {
+                    "help": "glider password, used by Commission.py",
+                },
+            ),
+            "glider_group": BaseOpts.options_t(
+                "gliders",
+                ("Commission",),
+                ("--glider_group",),
+                str,
+                {
+                    "help": "glider group, used by Commission.py",
+                },
+            ),
+            "home_dir_group": BaseOpts.options_t(
+                "gliders",
+                ("Commission",),
+                ("--home_dir_group",),
+                str,
+                {
+                    "help": "home dir group, used by Commission.py",
+                },
+            ),
             "glider_id": BaseOpts.options_t(
                 None,
                 ("Commission",),
@@ -94,33 +133,42 @@ def main():
                     "help": "serial number of glider to commission (no leading sg)",
                 },
             ),
+            "glider_jail": BaseOpts.options_t(
+                None,
+                ("Commission",),
+                ("--jail",),
+                str,
+                {
+                    "help": "Root of the jail to commision the glider in",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "uid": BaseOpts.options_t(
+                None,
+                ("Commission",),
+                ("--uid",),
+                int,
+                {
+                    "help": "UID for the glider",
+                },
+            ),
         },
     )
     BaseLogger(base_opts)  # initializes BaseLog
 
     glider_id = base_opts.glider_id
 
-    if base_opts.home_dir is None:
-        glider_home_dir = "/home"
-    else:
-        glider_home_dir = base_opts.home_dir
-
-    if base_opts.glider_group is None:
-        glider_group = "gliders"
-    else:
-        glider_group = base_opts.glider_group
-
     sg000 = "sg000"
 
     if base_opts.glider_password is None:
-        pwd = generate_password(glider_id)
+        passwd = generate_password(glider_id)
     else:
-        pwd = base_opts.glider_password
+        passwd = base_opts.glider_password
 
     glider = "sg%03d" % glider_id
 
-    glider_path = "%s/%s" % (glider_home_dir, glider)
-    sg000_path = "%s/%s" % (glider_home_dir, sg000)
+    glider_path = "%s/%s" % (base_opts.home_dir, glider)
+    sg000_path = "%s/%s" % (base_opts.home_dir, sg000)
     initial_files = (
         ".login",
         ".logout",
@@ -133,31 +181,148 @@ def main():
         ".extensions",
     )
 
+    if base_opts.glider_jail:
+        if not os.path.exists(base_opts.glider_jail):
+            log_error(f"Jail dir {base_opts.glider_jail} does not exsist - bailing out")
+            return 1
+        else:
+            log_info(f"Jail location ({base_opts.glider_jail})")
+
     # Adding "-g <group> -G <group>" forces the initial group (lowercase g) to
     # be gliders rather than letting useradd create a new unique group
+    if base_opts.uid:
+        uid_str = f"-u {base_opts.uid}"
+    else:
+        uid_str = ""
     syscall(
-        '/usr/sbin/useradd -d %s -c "Seaglider %s" -g %s -G %s -m -k %s %s'
-        % (glider_path, glider_id, glider_group, glider_group, sg000_path, glider)
+        '/usr/sbin/useradd -d %s -c "Seaglider %s" -g %s -G %s -m -k %s %s %s'
+        % (
+            glider_path,
+            glider_id,
+            base_opts.glider_group,
+            base_opts.glider_group,
+            sg000_path,
+            uid_str,
+            glider,
+        )
     )
     syscall(
         "chmod g+rwxs,o+rx %s" % glider_path
     )  # Let group members have full privies, read-only otherwise
 
-    if base_opts.home_dir_group is None:
-        syscall("chgrp %s %s" % (glider_group, glider_path))
-    else:
-        syscall("chgrp %s %s" % (base_opts.home_dir_group, glider_path))
+    syscall("chgrp %s %s" % (base_opts.home_dir_group, glider_path))
 
     for file_name in initial_files:
         full_file_name = os.path.join(sg000_path, file_name)
         full_dst_file_name = os.path.join(glider_path, file_name)
         shutil.copyfile(full_file_name, full_dst_file_name)
         syscall("chown %s %s" % (glider, full_dst_file_name))
-    syscall("chown pilot %s/cmdfile" % glider_path)
-    # syscall("echo %s | passwd %s --stdin" % (pwd, glider))
-    syscall("echo %s:%s | chpasswd" % (glider, pwd))
+    # syscall("chown pilot %s/cmdfile" % glider_path)
+    # syscall("echo %s | passwd %s --stdin" % (passwd, glider))
+    syscall("echo %s:%s | chpasswd" % (glider, passwd))
     syscall("chsh -s /usr/bin/tcsh %s" % glider)
-    print("Account %s created in %s with password %s" % (glider, glider_path, pwd))
+    if base_opts.glider_jail:
+        # More the home directory
+        syscall(
+            f"mv {glider_path} {os.path.join(base_opts.glider_jail, glider_path[1:])}"
+        )
+
+        # Deal with the jailed passwd file
+        pd = pwd.getpwnam(glider)
+        pwd_str = f"{pd.pw_name}:{pd.pw_passwd}:{pd.pw_uid}:{pd.pw_gid}:{pd.pw_gecos}:{pd.pw_dir}:{pd.pw_shell}"
+        jail_pwd = os.path.join(base_opts.glider_jail, "etc/passwd")
+        log_info(f"Jail password file {jail_pwd}")
+        try:
+            fi = open(jail_pwd, "r")
+            for ll in fi.readlines():
+                if ll.split(":")[0].startswith(glider):
+                    log_error(
+                        f"Entry already exists in {jail_pwd} for {glider} - bailing out"
+                    )
+                    return 1
+        except FileNotFoundError:
+            pass
+        except:
+            log_error(f"Could not open {jail_pwd}", "exc")
+            return 0
+        leading_newline = ""
+        try:
+            with open(jail_pwd, "r") as fi:
+                buffer = fi.read()
+                if isinstance(buffer, str) and not buffer.endswith("\n"):
+                    leading_newline = "\n"
+        except FileNotFoundError:
+            pass
+        except:
+            log_error(f"Could not read {jail_pwd}", "exc")
+            return 1
+        try:
+            with open(jail_pwd, "a") as fo:
+                log_info(f"Writing {pwd_str} to {jail_pwd}")
+                fo.write(f"{leading_newline}{pwd_str}\n")
+        except:
+            log_error(f"Could not write to {jail_pwd}", "exc")
+            return 1
+
+        gp = grp.getgrgid(pd.pw_gid)
+        jail_grp = os.path.join(base_opts.glider_jail, "etc/group")
+        # grp.struct_group(gr_name='gliders', gr_passwd='x', gr_gid=1002, gr_mem=['sg095', 'gbs', 'sg080'])
+        grp_str = f"{gp.gr_name}:{gp.gr_passwd}:{gp.gr_gid}:"
+        for member in gp.gr_mem:
+            grp_str = f"{grp_str}{member},"
+        if grp_str.endswith(","):
+            grp_str = grp_str[:-1]
+
+        # Deal with the jailed group file
+        try:
+            with open(jail_grp, "r") as fi:
+                grp_lines = fi.readlines()
+        except FileNotFoundError:
+            try:
+                with open(jail_grp, "w") as fo:
+                    fo.write(f"{grp_str}\n")
+            except:
+                log_error(f"Failed to create {jail_grp} - jail will not work", "exc")
+        except:
+            log_error(f"Could not open {jail_grp} - not updating", "exc")
+        else:
+            f_update = False
+            f_already_in = False
+            for ii in range(len(grp_lines)):
+                ll = grp_lines[ii]
+                splits = ll.split(":")
+                if splits[0].startswith(gp.gr_name):
+                    for pw_name in splits[3].split(","):
+                        if pw_name == glider:
+                            log_info(
+                                f"{glider} already in {jail_grp} group {gp.gr_name}"
+                            )
+                            f_already_in = True
+                            break
+                    else:
+                        log_info(
+                            f"Found group {gp.gr_name} in {jail_grp}, {glider} not included - will add"
+                        )
+                        grp_lines[ii] = f"{ll.rstrip()},{glider}"
+                        f_update = True
+            if not f_already_in and not f_update:
+                log_info(f"Did not find group {gp.gr_name} in {jail_grp} - will add")
+                grp_lines.append(f"{grp_str}\n")
+                f_update = True
+            if f_update:
+                try:
+                    with open(jail_grp, "w") as fo:
+                        for ll in grp_lines:
+                            fo.write(ll)
+                except:
+                    log_error(f"Error updating {jail_grp}")
+        print(
+            "You must manually change the gliders entry in /etc/password to look like this"
+        )
+        jail_pwd_str = f"{pd.pw_name}:{pd.pw_passwd}:{pd.pw_uid}:{pd.pw_gid}:{pd.pw_gecos}:{base_opts.glider_jail}:/sbin/chrootshell"
+        print(jail_pwd_str)
+
+    print("Account %s created in %s with password %s" % (glider, glider_path, passwd))
     return 0
 
 

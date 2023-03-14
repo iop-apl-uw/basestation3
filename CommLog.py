@@ -715,10 +715,14 @@ class ConnectSession:
             "epoch": time.mktime(self.gps_fix.datetime),
             "RH": self.rh,
             "intP": self.int_press,
+            "temp": self.temperature,
             "volts10": self.volt_10V,
             "volts24": self.volt_24V,
             "pitch": self.obs_pitch,
             "depth": self.depth,
+            "pitchAD": self.pitch_ad,
+            "rollAD": self.roll_ad,
+            "vbdAD": self.vbd_ad,
         }
 
     def dump_contents(self, fo):
@@ -1124,6 +1128,10 @@ def process_comm_log(
 
     if not known_commlog_files:
         known_commlog_files = ["cmdfile", "science", "targets", "pdoscmds.bat"]
+
+    if not os.path.exists(comm_log_file_name):
+        log_error(f"{comm_log_file_name} does not exist")
+        return (None, None, None, None, 1)
 
     try:
         # Look backward through the file for the last line starting with "Connected" as starting point

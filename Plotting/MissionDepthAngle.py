@@ -117,7 +117,7 @@ def mission_depthangle(
             "yaxis": {
                 "title": "Surface Maneuver Depth (m)",
                 "showgrid": True,
-                "tickformat": ".1f",
+                "tickformat": ".2f",
                 "autorange": "reversed",
             },
             "yaxis2": {

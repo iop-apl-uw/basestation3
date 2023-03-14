@@ -1,6 +1,6 @@
 
-<script src="/script/plotly-latest.min.js"></script>
-<script src="/script/util.js"></script>
+<script src="../../../../../script/plotly-latest.min.js"></script>
+<script src="../../../../../script/util.js"></script>
 
 <script>
     var dive = -1;
@@ -18,7 +18,7 @@
     }
 
     function loadPlot() {
-        fetch(`/plot/${fmt}/${which}/${glider}/${dive}/${image}${mission()}`)
+        fetch(`../../../../../plot/${fmt}/${which}/${glider}/${dive}/${image}${mission()}`)
         .then(res => res.text())
         .then(data => {
             setInnerHTML(document.getElementById('mainDiv'), data);  
@@ -31,7 +31,7 @@
     function changeDive(dir) {
         dive = dive + dir;
         if (fmt == 'png' || fmt == 'webp') {
-            document.getElementById('mainImg').src = `/plot/${fmt}/${which}/${glider}/${dive}/${image}/${mission()}`
+            document.getElementById('mainImg').src = `../../../../../plot/${fmt}/${which}/${glider}/${dive}/${image}/${mission()}`
             document.getElementById('mainImg').style.display = 'block';
             document.getElementById('mainDiv').style.display = 'none';
         }
@@ -45,12 +45,14 @@
     function init() {
         let path = window.location.pathname.substring(1).split('/');
         let params = new URLSearchParams(window.location.search);
-
-        fmt   = path[1];
-        which = path[2];
-        glider = parseInt(path[3]).toFixed(0);
-        dive = parseInt(path[4]);
-        image = path[5];
+        let n = path.length;   
+      
+        console.log(path);
+        fmt   = path[path.length-5];
+        which = path[path.length-4];
+        glider = parseInt(path[path.length-3]).toFixed(0);
+        dive = parseInt(path[path.length-2]);
+        image = path[path.length - 1];
 
         if (params.has('mission')) {
             currMission = params.get('mission');

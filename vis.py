@@ -282,7 +282,7 @@ def matchMission(gld, request, mission=None):
 
         mission = request.args['mission'][0]
 
-    return next(filter(lambda d: d['glider'] == gld and (d['mission'] == mission or (mission == None and d['path'] == None)), request.app.ctx.missionTable), None)
+    return next(filter(lambda d: d['glider'] == int(gld) and (d['mission'] == mission or (mission == None and d['path'] == None)), request.app.ctx.missionTable), None)
 
 def filterMission(gld, request, mission=None):
     m = matchMission(gld, request, mission)    
@@ -366,7 +366,10 @@ def attachHandlers(app: sanic.Sanic):
                 return await sanic.response.file(filename, mime_type='text/html')
             else:
                 if fmt == 'div':
-                    return await sanic.response.file(filename, mime_type='text/html', headers={'Content-Encoding': 'br'})
+                    async with aiofiles.open(filename, 'rb') as f:
+                        cont = await f.read()
+                    
+                    return sanic.response.raw(cont, headers={'Content-type': 'text/html', 'Content-Encoding': 'br'})
                 else:
                     return await sanic.response.file(filename, mime_type=f"image/{fmt}")
         else:
@@ -585,7 +588,10 @@ def attachHandlers(app: sanic.Sanic):
                 except aiosqlite.OperationalError:
                     return sanic.response.text('no table')
 
-                maxdv = (await cur.fetchone())[0]
+                try:
+                    maxdv = (await cur.fetchone())[0]
+                except:
+                    maxdv = 0
         else:
             return sanic.response.text('file not found')
 
@@ -1115,9 +1121,12 @@ def attachHandlers(app: sanic.Sanic):
             else:
                 await commFile.seek(0, 2)
           
-            row = await getLatestCall(request, glider, limit=3)
-            for i in range(len(row)-1, -1, -1):
-                await ws.send(f"NEW={dumps(row[i]).decode('utf-8')}")
+            try:
+                row = await getLatestCall(request, glider, limit=3)
+                for i in range(len(row)-1, -1, -1):
+                    await ws.send(f"NEW={dumps(row[i]).decode('utf-8')}")
+            except:
+                pass
 
         (tU, _) = getTokenUser(request)
         
@@ -1503,9 +1512,9 @@ def createApp(overrides: dict) -> sanic.Sanic:
     if 'SECRET' not in app.config:
         app.config.SECRET = secrets.token_hex()
     if 'MISSIONS_FILE' not in app.config:
-        app.config.MISSIONS_FILE = "/home/seaglider/missions.dat"
+        app.config.MISSIONS_FILE = "missions.dat"
     if 'USERS_FILE' not in app.config:
-        app.config.USERS_FILE = "/home/seaglider/users.dat"
+        app.config.USERS_FILE = "users.dat"
     if 'FQDN' not in app.config:
         app.config.FQDN = None;
     if 'USER' not in app.config:
@@ -1571,6 +1580,9 @@ if __name__ == '__main__':
                     print("-m sgNNN:/abs/mission/path")
                     sys.exit(1)
                  
+    if root is None:
+        root = '/home/seaglider'
+
     if root is not None:
         os.chdir(os.path.expanduser(root))
 
