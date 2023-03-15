@@ -415,8 +415,8 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
         "mass": mass,
     }  # mass in case it is an SGX
     glider_type = FlightModel.get_FM_defaults(fm_consts)
-    if base_opts.skip_flight_model:
-        user_supplied_vals = ["volmax", "hd_a", "hd_b", "hd_c"]
+    if base_opts.ignore_flight_model:
+        user_supplied_vals = ["volmax", "rho0", "hd_a", "hd_b", "hd_c"]
         user_optional_vals = [
             "glider_length",
             "hd_s",
@@ -2101,7 +2101,9 @@ def load_dive_profile_data(
             if ncf_file_time:
                 log_debug("Updating variables from %s" % sg_calib_file_name)
             local_calib_consts = CalibConst.getSGCalibrationConstants(
-                sg_calib_file_name, suppress_required_error=True
+                sg_calib_file_name,
+                suppress_required_error=True,
+                ignore_fm_tags=not base_opts.ignore_flight_model,
             )
             if not local_calib_consts:
                 raise RuntimeError("Could not process %s" % sg_calib_file_name)
@@ -2526,7 +2528,7 @@ def make_dive_profile(
     BaseLogger.self.startStringCapture()
 
     # Ask FlightModel for its ideas on flight model values
-    if not base_opts.skip_flight_model:
+    if not base_opts.ignore_flight_model:
         FlightModel.get_flight_parameters(dive_num, base_opts, explicit_calib_consts)
 
     # if False:  # DEBUG
@@ -2554,7 +2556,8 @@ def make_dive_profile(
         ("gpctd_time" in results_d),
     )  # update copy with defaults
     for fv in flight_variables:
-        log_info("FM: %s=%g" % (fv, calib_consts[fv]))
+        src_tag = "SGC" if base_opts.ignore_flight_model else "FM"
+        log_info("%s: %s=%g" % (src_tag, fv, calib_consts[fv]))
 
     auxcompass_present = auxpressure_present = False
 
@@ -2614,7 +2617,7 @@ def make_dive_profile(
                     f"{auxpressure_name}_pressureCounts",
                     np.mean(auxPress_counts_v),
                 ),
-                alert=True,
+                alert="Bad AuxPressure",
             )
             use_auxpressure = use_auxcompass = False
 
@@ -2769,7 +2772,7 @@ def make_dive_profile(
     )
 
     QC.qc_log_stop()
-    # qc_log_start(os.path.join(path, 'qclog_%d.pckl' % (dive_num, )))
+    # QC.qc_log_start(os.path.join(path, "qclog_%d.pckl" % (dive_num,)))
 
     dive_directives = (
         directives.dump_string()
@@ -7388,7 +7391,9 @@ def main():
         dive_list.append(base_path)
 
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
-    calib_consts = CalibConst.getSGCalibrationConstants(sg_calib_file_name)
+    calib_consts = CalibConst.getSGCalibrationConstants(
+        sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
+    )
     if not calib_consts:
         log_warning("Could not process %s" % sg_calib_file_name)
         return 1

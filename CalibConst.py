@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2008, 2009, 2011, 2012, 2014, 2015, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2008, 2009, 2011, 2012, 2014, 2015, 2018, 2019, 2020, 2021, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -30,11 +30,14 @@ import re
 import sys
 
 
-from BaseLog import BaseLogger, log_error, log_debug
+from BaseLog import BaseLogger, log_error, log_debug, log_warning
 from BaseNetCDF import nc_sg_cal_prefix, nc_var_metadata
+from Globals import ignore_tags, ignore_tag
 
 
-def getSGCalibrationConstants(calib_filename, suppress_required_error=False):
+def getSGCalibrationConstants(
+    calib_filename, suppress_required_error=False, ignore_fm_tags=True
+):
     """Parses a matlab .m file for name = value pairs
     Returns a dictionary of the constant names and values
     """
@@ -91,8 +94,9 @@ def getSGCalibrationConstants(calib_filename, suppress_required_error=False):
         # log_debug("parsing: " + line)
 
         # remove line comments
-
-        if comment.search(line):
+        m = comment.search(line)
+        if m:
+            comment_str = m.group(0)
             line, _ = comment.split(line)
 
         # Handle lines like hd_a = 4.3e-3; hd_b = 2.4e-5; hd_c = 5.7e-6;
@@ -105,6 +109,15 @@ def getSGCalibrationConstants(calib_filename, suppress_required_error=False):
                 key = key.strip()  # remove whitespace
                 if override.search(key):
                     # this skips any override struct assignments used for IOP
+                    continue
+
+                if ignore_fm_tags and key in ignore_tags:
+                    if ignore_tag not in comment_str:
+                        log_warning(
+                            f"{key} value ignored due to using FMS data (add % FM_ignore to suppress this warning)",
+                            alert=f"calib const {key}",
+                            max_count=-1,
+                        )
                     continue
                 key = key.replace(
                     ".", "_"
@@ -134,6 +147,7 @@ def getSGCalibrationConstants(calib_filename, suppress_required_error=False):
                 else:
                     try:
                         # We take all numerics, declared or not...
+                        # pylint: disable=eval-used
                         value = float(eval(value, None, eval_locals))
                     except:
                         # Non-numeric value of an unknown variable
@@ -180,6 +194,7 @@ def dump(in_filename, fo):
 
 if __name__ == "__main__":
     import BaseOpts
+
     base_opts = BaseOpts.BaseOptions(
         "Test entry for sg_calib_constants.m processing",
         additional_arguments={

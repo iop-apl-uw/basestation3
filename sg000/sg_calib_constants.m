@@ -11,7 +11,16 @@ mass = 52.173; % (kg) scale weight
 % Optional
 %PARAM mass_comp = 0;
 
-% NOTE: FlightModel will supply volmax, vbdbias, hd_a, hd_b, hd_c, hd_s, rho0, abs_compress, therm_expan, temp_ref
+% NOTE:
+% FlightModel will supply
+%
+%  volmax, vbdbias, hd_a, hd_b, hd_c, hd_s, rho0, abs_compress, therm_expan, temp_ref
+%
+% ignoring any settings here and issue a warning, unless
+% --skip_flight_model is set, in which case processing will use these
+% variables. To suppress warnings about these variables, insert FM_ignore anywhere in a comment on the same
+% line as the variable
+% 
 
 %
 % Seabird un-pumped CT
