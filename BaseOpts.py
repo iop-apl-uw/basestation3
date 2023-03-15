@@ -391,7 +391,7 @@ global_options_dict = {
     ),
     "bin_width": options_t(
         1.0,
-        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission"),
+        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission", "BaseDB"),
         ("--bin_width",),
         float,
         {
