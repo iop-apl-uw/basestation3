@@ -128,7 +128,7 @@ for raw_line in proc.stdout:
             parts = line.split(' ')
             
             print('<td style="background-color:%s;">%s</td>' % (pcolors[parts[0]], parts[0]))
-            print("<td>%s &nbsp;</td>" % parts[1].split(',')[0])
+            print('<td><a href="../parms#%s">%s</a> &nbsp;</td>' % (parts[1].split(',')[0][1:], parts[1].split(',')[0]))
             print("<td>%s</td>" % parts[1].split(',')[1])
             print("<td>%s</td>" % parts[4])
             print("<td>%s</td>" % parts[6])
