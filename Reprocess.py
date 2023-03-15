@@ -58,6 +58,8 @@ import BaseOpts
 import FileMgr
 import FlightModel
 import MakeDiveProfiles
+import MakeMissionProfile
+import MakeMissionTimeSeries
 import MakeKML
 import QC
 import Sensors
@@ -100,13 +102,23 @@ def main():
         "Command line driver for reprocessing per-dive and other nc files",
         additional_arguments={
             "dive_specs": BaseOpts.options_t(
-                None,
+                "",
                 ("Reprocess",),
                 ("dive_specs",),
                 str,
                 {
                     "help": "dive numbers to reprocess - either single dive nums or a range in the form X:Y",
                     "nargs": "*",
+                },
+            ),
+            "called_from_fm": BaseOpts.options_t(
+                False,
+                ("Reprocess",),
+                ("--called_from_fm",),
+                bool,
+                {
+                    "help": "Indicates the caller was FlightModel.py",
+                    "action": "store_true",
                 },
             ),
         },
@@ -195,7 +207,9 @@ def main():
         log_error(f"Directory {base_path} does not exist -- exiting")
 
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
-    calib_consts = getSGCalibrationConstants(sg_calib_file_name)
+    calib_consts = getSGCalibrationConstants(
+        sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
+    )
     if not calib_consts:
         log_warning(f"Could not process {sg_calib_file_name}")
         return 1
@@ -224,7 +238,7 @@ def main():
         dive_list, base_opts, instrument_id, init_dict
     )
 
-    if base_opts.reprocess_flight:
+    if not base_opts.skip_flight_model and not base_opts.called_from_fm:
         flight_dir = os.path.join(base_opts.mission_dir, "flight")
         flight_dir_backup = os.path.join(
             base_opts.mission_dir, f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
@@ -298,139 +312,143 @@ def main():
             dives_processed.append(dive_num)
         del temp_ret_val
 
+    log_info(f"Dives processed = {dives_processed}")
+    log_info(f"Dives failed to process = {dives_not_processed}")
+
+    if not base_opts.called_from_fm:
+        # Now update other related files for each file we processed
+        dive_nc_file_names = sorted(Utils.unique(dive_nc_file_names))
+
+        # CONSIDER process .extensions here using something like:
+        #
+        # from Globals import known_mailer_tags, known_ftp_tags
+        # process_extensions('.extensions', ["dive", "global", "mission"], base_opts, sg_calib_file_name, dive_nc_file_names,  \
+        #                    dive_nc_file_names, [], Base.known_mailer_tags, Base.known_ftp_tags, None)
+        #
+        # This would replace the explicit calls to MakePlots
+
+        # Now update all composite files using all available nc files
+        all_dive_nc_file_names.extend(dive_nc_file_names)
+        all_dive_nc_file_names = sorted(Utils.unique(all_dive_nc_file_names))
+        if len(all_dive_nc_file_names):
+            if not base_opts.skip_flight_model:
+                log_info(
+                    "Started FLIGHT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+                FlightModel.main(
+                    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+                )
+                log_info(
+                    "Finished FLIGHT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+            else:
+                log_info(
+                    "Skipping FLIGHT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+
+            if base_opts.make_mission_profile:
+                log_info(
+                    "Started MMP processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+                MakeMissionProfile.make_mission_profile(
+                    all_dive_nc_file_names, base_opts
+                )
+                log_info(
+                    "Finished MMP processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+            else:
+                log_info(
+                    "Skipping MMP processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+
+            if base_opts.make_mission_timeseries:
+                log_info(
+                    "Started MMT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+                MakeMissionTimeSeries.make_mission_timeseries(
+                    all_dive_nc_file_names, base_opts
+                )
+                log_info(
+                    "Finished MMT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+            else:
+                log_info(
+                    "Skipping MMT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+
+            if base_opts.make_mission_timeseries or base_opts.make_mission_profile:
+                log_info(
+                    "Started KML processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+                MakeKML.main(base_opts, calib_consts, [])
+                log_info(
+                    "Finished KML processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+            else:
+                log_info(
+                    "Skipping KML processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+
+            # if base_opts.reprocess_plots:
+            #     log_info(
+            #         "Started PLOT processing "
+            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            #     )
+            #     # MakePlot.main(
+            #     #    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+            #     # )
+            #     MakePlot2.main(
+            #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+            #     )
+            #     MakePlot3.main(
+            #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+            #     )
+            #     MakePlot4.main(
+            #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
+            #     )
+
+            #     log_info(
+            #         "Finished PLOT processing "
+            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            #     )
+            # else:
+            #     log_info(
+            #         "Skipping PLOT processing "
+            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            #     )
+
+            # if process_NODC:
+            #     log_info(
+            #         "Started NODC processing "
+            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            #     )
+            #     NODC.process_nc_files(base_opts, all_dive_nc_file_names, enable_ftp=False)
+            #     log_info(
+            #         "Finished NODC processing "
+            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            #     )
+            # else:
+            #     log_info(
+            #         "Skipping NODC processing "
+            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+            #     )
+
     log_info(
         "Finished processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
-    log_info(f"Dives processed = {dives_processed}")
-    log_info(f"Dives failed to process = {dives_not_processed}")
-
-    # Now update other related files for each file we processed
-    dive_nc_file_names = sorted(Utils.unique(dive_nc_file_names))
-
-    # CONSIDER process .extensions here using something like:
-    #
-    # from Globals import known_mailer_tags, known_ftp_tags
-    # process_extensions('.extensions', ["dive", "global", "mission"], base_opts, sg_calib_file_name, dive_nc_file_names,  \
-    #                    dive_nc_file_names, [], Base.known_mailer_tags, Base.known_ftp_tags, None)
-    #
-    # This would replace the explicit calls to MakePlots
-
-    # Now update all composite files using all available nc files
-    all_dive_nc_file_names.extend(dive_nc_file_names)
-    all_dive_nc_file_names = sorted(Utils.unique(all_dive_nc_file_names))
-    if len(all_dive_nc_file_names):
-        if base_opts.reprocess_flight:
-            log_info(
-                "Started FLIGHT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-            FlightModel.main(
-                instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            )
-            log_info(
-                "Finished FLIGHT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-        else:
-            log_info(
-                "Skipping FLIGHT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-
-        if base_opts.make_mission_profile:
-            log_info(
-                "Started MMP processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-            MakeDiveProfiles.make_mission_profile(all_dive_nc_file_names, base_opts)
-            log_info(
-                "Finished MMP processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-        else:
-            log_info(
-                "Skipping MMP processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-
-        if base_opts.make_mission_timeseries:
-            log_info(
-                "Started MMT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-            MakeDiveProfiles.make_mission_timeseries(all_dive_nc_file_names, base_opts)
-            log_info(
-                "Finished MMT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-        else:
-            log_info(
-                "Skipping MMT processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-
-        if base_opts.make_mission_timeseries or base_opts.make_mission_profile:
-            log_info(
-                "Started KML processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-            MakeKML.main(
-                instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            )
-            log_info(
-                "Finished KML processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-        else:
-            log_info(
-                "Skipping KML processing "
-                + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
-
-        # if base_opts.reprocess_plots:
-        #     log_info(
-        #         "Started PLOT processing "
-        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-        #     )
-        #     # MakePlot.main(
-        #     #    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-        #     # )
-        #     MakePlot2.main(
-        #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-        #     )
-        #     MakePlot3.main(
-        #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-        #     )
-        #     MakePlot4.main(
-        #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-        #     )
-
-        #     log_info(
-        #         "Finished PLOT processing "
-        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-        #     )
-        # else:
-        #     log_info(
-        #         "Skipping PLOT processing "
-        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-        #     )
-
-        # if process_NODC:
-        #     log_info(
-        #         "Started NODC processing "
-        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-        #     )
-        #     NODC.process_nc_files(base_opts, all_dive_nc_file_names, enable_ftp=False)
-        #     log_info(
-        #         "Finished NODC processing "
-        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-        #     )
-        # else:
-        #     log_info(
-        #         "Skipping NODC processing "
-        #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-        #     )
 
     return ret_val
 
