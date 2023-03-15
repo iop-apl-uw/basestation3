@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -91,5 +91,7 @@ known_mailer_tags = [
     "mission_ts",
     "mission_pro",
     "bz2",
+    "kml",
+    "kmz",
 ]
 known_ftp_tags = known_mailer_tags

@@ -77,6 +77,11 @@ DEBUG_PDB = "darwin" in sys.platform
 # Configuration
 mail_server = "localhost"
 
+# Former extensions, now directly supported by the basestation - skip if found in .extensions file
+extensions_to_skip = {
+    "MakeKML.py": "KML generation is no longer an extension - see --skip_kml option to control generation"
+}
+
 # Centeralized approach
 # 1) Start with .pagers
 # 2) Separate out message dispatch from lookup
@@ -1398,6 +1403,12 @@ def process_extensions(
                         )
                         extension_elts = extension_line.split(" ")
                         # First element - extension name, with .py file extension
+                        if extension_elts[0] in extensions_to_skip.keys():
+                            log_warning(
+                                f"Skipping processing of {extension_elts[0]} - {extensions_to_skip[extension_elts[0]]}"
+                            )
+                            continue
+
                         extension_module_name = os.path.join(
                             base_opts.basestation_directory, extension_elts[0]
                         )

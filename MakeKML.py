@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1105,15 +1105,9 @@ def extractGPSPositions(dive_nc_file_name, dive_num):
 
 # pylint: disable=unused-argument
 def main(
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
+    base_opts,
+    calib_consts,
+    processed_other_files,
 ):
     """Command line app for creating kml/kmz files
 
@@ -1125,27 +1119,15 @@ def main(
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    if base_opts is None:
+    if not base_opts:
         base_opts = BaseOpts.BaseOptions("Command line app for creating kml/kmz files")
     BaseLogger(base_opts)  # initializes BaseLog
-
-    if known_mailer_tags is not None:
-        known_mailer_tags.append("kml")
-        known_mailer_tags.append("kmz")
-
-    if known_ftp_tags is not None:
-        known_ftp_tags.append("kml")
-        known_ftp_tags.append("kmz")
 
     processing_start_time = time.time()
     log_info(
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
-    log_info(f"Config name = {base_opts.config_file_name}")
-
-    if sg_calib_file_name is None:
-        sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
     paam_compare_dict = {}
 
@@ -1162,7 +1144,9 @@ def main(
     zip_kml = base_opts.compress_output
 
     # Read sg_calib_constants file
-    calib_consts = getSGCalibrationConstants(sg_calib_file_name)
+    if not calib_consts:
+        sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
+        calib_consts = getSGCalibrationConstants(sg_calib_file_name)
     if not calib_consts:
         log_error(
             "Could not process %s - skipping creation of KML/KMZ file"
@@ -1170,8 +1154,7 @@ def main(
         )
         return 1
 
-    if not dive_nc_file_names:
-        dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
+    dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
 
     (comm_log, _, _, _, _) = CommLog.process_comm_log(
         os.path.join(base_opts.mission_dir, "comm.log"), base_opts
@@ -1185,16 +1168,16 @@ def main(
         log_critical("No matching netCDF files or comm.log found - exiting")
         return 1
 
-    if instrument_id is None:
+    if not base_opts.instrument_id:
         if comm_log is not None:
-            instrument_id = comm_log.get_instrument_id()
+            base_opts.instrument_id = comm_log.get_instrument_id()
         if (
-            (instrument_id is None or instrument_id < 0)
+            (base_opts.instrument_id is None or base_opts.instrument_id < 0)
             and dive_nc_file_names
             and len(dive_nc_file_names) > 0
         ):
-            instrument_id = FileMgr.get_instrument_id(dive_nc_file_names[0])
-        if instrument_id is None or instrument_id < 0:
+            base_opts.instrument_id = FileMgr.get_instrument_id(dive_nc_file_names[0])
+        if base_opts.instrument_id is None or base_opts.instrument_id < 0:
             log_error("Could not get instrument id - bailing out")
             return 1
 
@@ -1202,11 +1185,17 @@ def main(
     mission_title_raw = calib_consts["mission_title"]
 
     if True:
-        mission_kml_file_name_base = "sg%03d.kml" % (instrument_id)
-        mission_kmz_file_name_base = "sg%03d.kmz" % (instrument_id)
+        mission_kml_file_name_base = "sg%03d.kml" % (base_opts.instrument_id)
+        mission_kmz_file_name_base = "sg%03d.kmz" % (base_opts.instrument_id)
     else:
-        mission_kml_file_name_base = "sg%03d_%s.kml" % (instrument_id, mission_title)
-        mission_kmz_file_name_base = "sg%03d_%s.kmz" % (instrument_id, mission_title)
+        mission_kml_file_name_base = "sg%03d_%s.kml" % (
+            base_opts.instrument_id,
+            mission_title,
+        )
+        mission_kmz_file_name_base = "sg%03d_%s.kmz" % (
+            base_opts.instrument_id,
+            mission_title,
+        )
 
     mission_kml_name = os.path.join(base_opts.mission_dir, mission_kml_file_name_base)
 
@@ -1218,8 +1207,8 @@ def main(
         return 1
 
     printHeader(
-        "SG%03d %s" % (instrument_id, mission_title_raw),
-        "SG%03d %s" % (instrument_id, mission_title_raw),
+        "SG%03d %s" % (base_opts.instrument_id, mission_title_raw),
+        "SG%03d %s" % (base_opts.instrument_id, mission_title_raw),
         base_opts.color,
         fo,
     )
@@ -1251,7 +1240,7 @@ def main(
     dive_gps_positions = {}
     fo.write(
         '<Folder id="SG%0.3dDives">\n<name>SG%0.3d Dives</name>\n'
-        % (instrument_id, instrument_id)
+        % (base_opts.instrument_id, base_opts.instrument_id)
     )
 
     # Pull out the GPS positions
@@ -1274,13 +1263,17 @@ def main(
     dive0_positions = [i for i in surface_positions if i.dive_num == 0]
     if len(dive0_positions):
         dive_num = 0
-        fo.write('    <Folder id="SG%03d dive %03d">\n' % (instrument_id, dive_num))
-        fo.write("    <name>SG%03d dive %03d</name>\n" % (instrument_id, dive_num))
+        fo.write(
+            '    <Folder id="SG%03d dive %03d">\n' % (base_opts.instrument_id, dive_num)
+        )
+        fo.write(
+            "    <name>SG%03d dive %03d</name>\n" % (base_opts.instrument_id, dive_num)
+        )
 
         for position in dive0_positions:
             try:
                 ballon_pairs = []
-                ballon_pairs.append(("Seaglider", "SG%03d" % instrument_id))
+                ballon_pairs.append(("Seaglider", "SG%03d" % base_opts.instrument_id))
                 ballon_pairs.append(
                     (
                         "Dive/CallCycle",
@@ -1299,7 +1292,7 @@ def main(
                 ballon_pairs.append(("Lon", f"{position.gps_fix_lon:.4f}"))
                 printDivePlacemark(
                     "SG%03d %d:%d"
-                    % (instrument_id, position.dive_num, position.call_cycle),
+                    % (base_opts.instrument_id, position.dive_num, position.call_cycle),
                     "GPS fix at %s"
                     % (
                         time.strftime(
@@ -1330,7 +1323,10 @@ def main(
 
         if len(dive0_positions) > 1:
             fo.write("    <Placemark>\n")
-            fo.write("        <name>SG%03d Drift Track 0 </name>\n" % (instrument_id,))
+            fo.write(
+                "        <name>SG%03d Drift Track 0 </name>\n"
+                % (base_opts.instrument_id,)
+            )
             fo.write("        <styleUrl>#SeagliderDriftTrackPoly</styleUrl>\n")
             fo.write("        <LineString>\n")
             fo.write("            <extrude>0</extrude>\n")
@@ -1372,15 +1368,21 @@ def main(
             except:
                 paam_dict = None
 
-            fo.write('    <Folder id="SG%03d dive %03d">\n' % (instrument_id, dive_num))
-            fo.write("    <name>SG%03d dive %03d</name>\n" % (instrument_id, dive_num))
+            fo.write(
+                '    <Folder id="SG%03d dive %03d">\n'
+                % (base_opts.instrument_id, dive_num)
+            )
+            fo.write(
+                "    <name>SG%03d dive %03d</name>\n"
+                % (base_opts.instrument_id, dive_num)
+            )
 
             # To get the old behaviour, replace True with last_dive
             # dive_gps_positions[dive_num]
             printDive(
                 base_opts,
                 dive_nc_file_name,
-                instrument_id,
+                base_opts.instrument_id,
                 dive_num,
                 False,
                 paam_dict,
@@ -1399,7 +1401,9 @@ def main(
             for position in non_plotted_positions:
                 try:
                     ballon_pairs = []
-                    ballon_pairs.append(("Seaglider", "SG%03d" % instrument_id))
+                    ballon_pairs.append(
+                        ("Seaglider", "SG%03d" % base_opts.instrument_id)
+                    )
                     ballon_pairs.append(
                         (
                             "Dive/CallCycle",
@@ -1419,7 +1423,11 @@ def main(
                     ballon_pairs.append(("Lon", f"{position.gps_fix_lon:.4f}"))
                     printDivePlacemark(
                         "SG%03d %d:%d"
-                        % (instrument_id, position.dive_num, position.call_cycle),
+                        % (
+                            base_opts.instrument_id,
+                            position.dive_num,
+                            position.call_cycle,
+                        ),
                         "GPS fix at %s"
                         % (
                             time.strftime(
@@ -1497,7 +1505,7 @@ def main(
                 fo.write("    <Placemark>\n")
                 fo.write(
                     "        <name>SG%03d Drift Track %d </name>\n"
-                    % (instrument_id, dive_num)
+                    % (base_opts.instrument_id, dive_num)
                 )
                 fo.write("        <styleUrl>#SeagliderDriftTrackPoly</styleUrl>\n")
                 fo.write("        <LineString>\n")
@@ -1532,16 +1540,20 @@ def main(
                     i for i in surface_positions if i.dive_num == dive_num
                 ]
                 fo.write(
-                    '    <Folder id="SG%03d dive %03d">\n' % (instrument_id, dive_num)
+                    '    <Folder id="SG%03d dive %03d">\n'
+                    % (base_opts.instrument_id, dive_num)
                 )
                 fo.write(
-                    "    <name>SG%03d dive %03d</name>\n" % (instrument_id, dive_num)
+                    "    <name>SG%03d dive %03d</name>\n"
+                    % (base_opts.instrument_id, dive_num)
                 )
 
                 for position in non_plotted_positions:
                     try:
                         ballon_pairs = []
-                        ballon_pairs.append(("Seaglider", "SG%03d" % instrument_id))
+                        ballon_pairs.append(
+                            ("Seaglider", "SG%03d" % base_opts.instrument_id)
+                        )
                         ballon_pairs.append(
                             (
                                 "Dive/CallCycle",
@@ -1561,7 +1573,11 @@ def main(
                         ballon_pairs.append(("Lon", f"{position.gps_fix_lon:.4f}"))
                         printDivePlacemark(
                             "SG%03d %d:%d"
-                            % (instrument_id, position.dive_num, position.call_cycle),
+                            % (
+                                base_opts.instrument_id,
+                                position.dive_num,
+                                position.call_cycle,
+                            ),
                             "GPS fix at %s"
                             % (
                                 time.strftime(
@@ -1594,7 +1610,7 @@ def main(
         if last_surface_position:
             try:
                 ballon_pairs = []
-                ballon_pairs.append(("Seaglider", "SG%03d" % instrument_id))
+                ballon_pairs.append(("Seaglider", "SG%03d" % base_opts.instrument_id))
                 ballon_pairs.append(
                     (
                         "Dive/CallCycle",
@@ -1617,9 +1633,9 @@ def main(
                 ballon_pairs.append(("Lat", f"{last_surface_position.gps_fix_lat:.4f}"))
                 ballon_pairs.append(("Lon", f"{last_surface_position.gps_fix_lon:.4f}"))
                 # printDivePlacemark("Last reported position SG%03d %d:%d"
-                #                   % (instrument_id, last_surface_position.dive_num, last_surface_position.call_cycle),
+                #                   % (base_opts.instrument_id, last_surface_position.dive_num, last_surface_position.call_cycle),
                 printDivePlacemark(
-                    "SG%03d" % (instrument_id),
+                    "SG%03d" % (base_opts.instrument_id),
                     "Last GPS fix at %s"
                     % (
                         time.strftime(
@@ -1652,7 +1668,7 @@ def main(
 
         tgt_name = None
 
-        if logfiles != []:
+        if logfiles:
             logfiles = Utils.unique(logfiles)
             logfiles = sorted(logfiles)
             log_file = LogFile.parse_log_file(logfiles[-1])
@@ -1679,14 +1695,14 @@ def main(
             for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
                 targets.append(match)
 
-        if targets != [] and not base_opts.proposed_targets:
+        if targets and not base_opts.proposed_targets:
             targets = Utils.unique(targets)
             targets = sorted(targets, key=functools.cmp_to_key(cmp_function))
             printTargets(
                 tgt_name,
                 base_opts.targets == "current",
                 targets[0],
-                instrument_id,
+                base_opts.instrument_id,
                 base_opts.target_radius,
                 fo,
                 tgt_lon=tgt_lon,
@@ -1700,7 +1716,7 @@ def main(
                     tgt_name,
                     base_opts.targets == "current",
                     target_file_name,
-                    instrument_id,
+                    base_opts.instrument_id,
                     base_opts.target_radius,
                     fo,
                     tgt_lon=tgt_lon,
@@ -1736,7 +1752,7 @@ def main(
     # Write out the network link file
     if base_opts.web_file_location:
         networklink_kml_name = os.path.join(
-            base_opts.mission_dir, "sg%03d_network.kml" % instrument_id
+            base_opts.mission_dir, "sg%03d_network.kml" % base_opts.instrument_id
         )
         try:
             fo = open(networklink_kml_name, "w")
@@ -1752,7 +1768,7 @@ def main(
                 url = os.path.join(
                     base_opts.web_file_location, mission_kml_file_name_base
                 )
-            writeNetworkKML(fo, "SG%03d Track" % instrument_id, url)
+            writeNetworkKML(fo, "SG%03d Track" % base_opts.instrument_id, url)
             fo.close()
 
     log_info(
@@ -1787,7 +1803,7 @@ if __name__ == "__main__":
             stats.sort_stats("time", "calls")
             stats.print_stats()
         else:
-            retval = main()
+            retval = main(None, None, [])
     except SystemExit:
         pass
     except Exception:
