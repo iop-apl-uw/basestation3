@@ -436,7 +436,7 @@ global_options_dict = {
     ),
     "use_gsw": options_t(
         True,
-        ("Base", "BasePlot", "MakeDiveProfiles", "Reprocess"),
+        ("Base", "BasePlot", "FlightModel", "MakeDiveProfiles", "Reprocess"),
         ("--use_gsw",),
         bool,
         {
@@ -517,7 +517,7 @@ global_options_dict = {
     ),
     "reprocess": options_t(
         False,
-        ("Base",),
+        ("Base", "MakeDiveProfiles", "Reprocess"),
         ("--reprocess",),
         int,
         {"help": "Forces reprocessing of a specific dive number "},
@@ -555,13 +555,31 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    # DOC Skips running the flight model system.  FMS is still consulted for flight
+    # DOC values such as volmax hd_a, hd_b, hd_c etc. - if there is a previous previous estimates
+    # DOC in flight, those are used - otherwise the system defaults are used.  Normally, this option
+    # DOC is used when calling Reprocess.py or MakeDiveProfiles.py during post pocessing to regenerated
+    # DOC netcdf files with already generated data in the flight directory
     "skip_flight_model": options_t(
         False,
-        ("Base",),
+        ("Base", "FlightModel", "Reprocess"),
         ("--skip_flight_model",),
         bool,
         {
-            "help": "Skip running flight model system (FMS)",
+            "help": "Skip running flight model system (FMS) - honor all sg_calib_constants.m variables",
+            "action": "store_true",
+        },
+    ),
+    # DOC FMS is not consulted for flight variables.  The user must supply
+    # DOC volmax, vbdbias, hd_a, hd_b, hd_c and optionally hd_s, rho0, abs_compress, therm_expan, temp_ref
+    # in sg_calib_constants.m.
+    "ignore_flight_model": options_t(
+        False,
+        ("Base", "FlightModel", "MakeDiveProfiles", "Reprocess"),
+        ("--ignore_flight_model",),
+        bool,
+        {
+            "help": "Ignore values derived from FlightModel - honor all sg_calib_constants.m variables.  Setting this option implies --skip_flight_model",
             "action": "store_true",
         },
     ),
@@ -586,21 +604,10 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
-    "reprocess_flight": options_t(
-        False,
-        ("Reprocess",),
-        ("--reprocess_flight",),
-        bool,
-        {
-            "help": "Force reprocessing of flight",
-            "action": "store_true",
-        },
-    ),
-    #
     #
     "target_dir": options_t(
         "",
-        ("MoveData", "MakeDiveProfile", "Reprocess"),
+        ("MoveData", "MakeDiveProfiles", "Reprocess"),
         ("--target_dir", "-t"),
         FullPath,
         {
@@ -1521,6 +1528,14 @@ class BaseOptions:
                                         raise f"{val} outside of range {min_val} {max_val}"
 
                                 setattr(self, k, val)
+
+        # Update any options that affect other options
+        if (
+            hasattr(self, "ignore_flight_model")
+            and hasattr(self, "skip_flight_model")
+            and self.ignore_flight_model
+        ):
+            self.skip_flight_model = True
 
         # Previous version anything set on the command line or via default value trumps config file
         # for opt in dir(self._opts):
