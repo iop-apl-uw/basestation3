@@ -1141,14 +1141,14 @@ def compute_buoyancy(vbdbias, abs_compress, # these variables can be varied by v
     # so remove vol_comp to compute that effect and then add vol_comp to get total volume
     # We use vol_comp_ref since we want the assumed volume of the uncompressed hull on the reference surface
     vol_hull = vbdc - vol_comp_ref
-    vol = vol_hull*exp(-abs_compress*press + therm_expan_term)
+    vol = vol_hull # *exp(-abs_compress*press + therm_expan_term)
     if dump_checkpoint_data_matfiles:
         dive_data_d['vol_hull'] = vol_hull;
         dive_data_d['vol_hull_compress'] = vol;
     vol = vol + vol_comp
 
-    density_insitu = dive_data_d['density_insitu']
-    # density_insitu = dive_data_d['density']
+    # density_insitu = dive_data_d['density_insitu']
+    density_insitu = dive_data_d['density']
 
     buoyancy = g_per_kg*(density_insitu*vol*(m_per_cm**3) - flight_consts_d['mass'])
     pitch = dive_data_d['pitch']
