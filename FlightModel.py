@@ -50,7 +50,6 @@ import stat
 import pdb
 import traceback
 import numpy as np
-import BaseDB
 import re
 from Globals import flight_variables, ignore_tag, ignore_tags
 
@@ -84,7 +83,7 @@ assumption_variables = ['mass', 'mass_comp', # from ballasting and expected apog
 # see load_dive_data() these are the vectors we collect for each dive to compute various flight model parameters
 # deliberately NOT vol_comp, vol_comp_ref, and therm_expan_term, which are computed and cached
 # if compare_velo is non-zero we add 'velo_speed' to this list below
-dive_data_vector_names = ['w', 'pressure', 'temperature', 'density_insitu', 'displaced_volume', 'pitch'] 
+dive_data_vector_names = ['w', 'pressure', 'temperature', 'density_insitu', 'density', 'displaced_volume', 'pitch'] 
 
 # CONTROL PARAMETERS
 enable_reprocessing_dives = True # CONTROL Normally True but if False we don't spend time updating the dives
@@ -575,7 +574,6 @@ def save_flight_database(base_opts, dump_mat=False):
                 mat_d['dives_median_vbdbias'] = [dd.median_vbdbias for dd in dds]
                 mat_d['dives_abs_compress'] = [dd.abs_compress for dd in dds]
                 mat_d['dives_w_rms_vbdbias'] = [dd.w_rms_vbdbias for dd in dds]
-                BaseDB.saveFlightDB(base_opts, mat_d)
             # dump the ab_grid_cache values and arrays
             ab_grid_cache_d = flight_dive_data_d['ab_grid_cache']
             dives = list(ab_grid_cache_d.keys())
@@ -775,6 +773,24 @@ def dump_fm_values(dive_data):
         fh.write('hd_c = %g;\n' % flight_dive_data_d['hd_c'])
         fh.write('hd_s = %g;\n' % hd_s)
         fh.write('therm_expan = %g;\ntemp_ref = %g;\n' % (flight_dive_data_d['therm_expan'], flight_dive_data_d['temp_ref']))
+
+        volmax = flight_dive_data_d['volmax'] - dive_data.vbdbias
+        fh.write('volmax = %g;\n' % volmax)
+        
+        therm_term = flight_dive_data_d['therm_expan']*(dive_data.bottom_temp - flight_dive_data_d['temp_ref'])
+        volmax_apogee = volmax*exp(-dive_data.abs_compress*dive_data.bottom_press + therm_term)
+        fh.write('volmax_apogee = %g;\n' % volmax_apogee)
+
+        therm_term = flight_dive_data_d['therm_expan']*(4 - flight_dive_data_d['temp_ref'])
+        volmax_ocean = volmax*exp(-dive_data.abs_compress*990 + therm_term)
+        fh.write('volmax_ocean = %g;\n' % volmax_ocean)
+
+        volmax_scaled = volmax*dive_data.bottom_pden/dive_data.bottom_rho0
+        fh.write('volmax_scaled = %g;\n' % volmax_scaled)
+
+        volmax_apogee_scaled = volmax_apogee*dive_data.bottom_pden/dive_data.bottom_rho0
+        fh.write('volmax_apogee_scaled = %g;\n' % volmax_apogee_scaled)
+
         # rho0? glider_length?
         fh.close()
     except:
@@ -894,8 +910,10 @@ def load_dive_data(base_opts, dive_data):
         try:
             if not base_opts.use_gsw:
                 density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
+                density = seawater.pden(salinity_raw, temperature_raw, press, 0)
             else:
                 density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
+                density = Utils.pdensity(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
         except:
             log_error(f"Failed density calculation for {dive_num} - skipping", "exc")
             return None
@@ -1051,8 +1069,14 @@ def load_dive_data(base_opts, dive_data):
             data_d['temperature'] = temperature_raw[valid_i] # for compressee and hull thermal expansion
             density_insitu = density_insitu[valid_i]
             data_d['density_insitu'] = density_insitu # for buoyancy calculations (kg/m^3)
+            dive_data.bottom_temp = min(data_d['temperature'])
+
+            density = density[valid_i]
+            data_d['density'] = density # for buoyancy calculations (kg/m^3)
             # deliberately over the valid points
             dive_data.bottom_rho0 = max(density_insitu)
+            dive_data.bottom_pden = max(density)
+
             eng_vbd_cc = eng_vbd_cc[valid_i]
             if compare_velo:
                 if n_velo:
@@ -1124,6 +1148,7 @@ def compute_buoyancy(vbdbias, abs_compress, # these variables can be varied by v
     vol = vol + vol_comp
 
     density_insitu = dive_data_d['density_insitu']
+    # density_insitu = dive_data_d['density']
 
     buoyancy = g_per_kg*(density_insitu*vol*(m_per_cm**3) - flight_consts_d['mass'])
     pitch = dive_data_d['pitch']
@@ -1448,8 +1473,10 @@ def load_dive_data_DAC(dive_data):
         salinity_raw = dive_nc_file.variables['salinity_raw'][:]
         if not base_opts.use_gsw:
             density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
+            density = seawater.pden(salinity_raw, temperature_raw, press, 0)
         else:
             density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
+            density = Utils.pdensity(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
         
         # use the values in the log file, not the pilot's fiction in sg_calib_constants.h
         # this is what the glider used
@@ -1474,6 +1501,7 @@ def load_dive_data_DAC(dive_data):
         data_d['pressure'] = press # for compression and compressee
         data_d['temperature'] = temperature_raw # for compressee and hull thermal expansion
         data_d['density_insitu'] = density_insitu # for buoyancy calculations (kg/m^3)
+        data_d['density'] = density # for buoyancy calculations (kg/m^3)
         
         volmax = flight_dive_data_d['volmax'] # assume this is already calculated
         vbd0 = volmax + vbd_neutral  # [cc] volume when at neutral

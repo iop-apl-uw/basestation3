@@ -1424,6 +1424,11 @@ def density(salinity, temperature, pressure, longitude, latitude):
     )
     return dens
 
+def pdensity(salinity, temperature, pressure, longitude, latitude):
+    salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
+    cons_temp = gsw.CT_from_t(salinity_absolute, temperature, pressure)
+    dens = 1000 + gsw.density.sigma0(salinity_absolute, cons_temp)
+    return dens
 
 def ptemp(salinity, temperature, pressure, longitude, latitude, pref=0.0):
     """Computes potential temperature using the gsw toolbox"""
