@@ -55,12 +55,14 @@ from BaseLog import (
 from CalibConst import getSGCalibrationConstants
 import BaseNetCDF
 import BaseOpts
+import BasePlot
 import FileMgr
 import FlightModel
 import MakeDiveProfiles
 import MakeMissionProfile
 import MakeMissionTimeSeries
 import MakeKML
+import PlotUtils
 import QC
 import Sensors
 import TraceArray
@@ -219,6 +221,9 @@ def main():
     except:
         # base_opts always supplies a default (0)
         instrument_id = int(base_opts.instrument_id)
+    else:
+        if not base_opts.instrument_id:
+            base_opts.instrument_id = instrument_id
     if instrument_id == 0:
         log_warning("Unable to determine instrument id; assuming 0")
 
@@ -401,33 +406,32 @@ def main():
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
                 )
 
-            # if base_opts.reprocess_plots:
-            #     log_info(
-            #         "Started PLOT processing "
-            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            #     )
-            #     # MakePlot.main(
-            #     #    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            #     # )
-            #     MakePlot2.main(
-            #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            #     )
-            #     MakePlot3.main(
-            #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            #     )
-            #     MakePlot4.main(
-            #         instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-            #     )
+            if base_opts.reprocess_plots:
 
-            #     log_info(
-            #         "Finished PLOT processing "
-            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            #     )
-            # else:
-            #     log_info(
-            #         "Skipping PLOT processing "
-            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            #     )
+                log_info(
+                    "Started PLOT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+                if PlotUtils.setup_plot_directory(base_opts):
+                    log_error(
+                        "Failed to setup plot directory - not plots being generated"
+                    )
+
+                plot_dict = BasePlot.get_dive_plots(base_opts)
+                BasePlot.plot_dives(base_opts, plot_dict, all_dive_nc_file_names)
+                mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
+                plot_dict = BasePlot.get_mission_plots(base_opts)
+                BasePlot.plot_mission(base_opts, plot_dict, mission_str)
+
+                log_info(
+                    "Finished PLOT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+            else:
+                log_info(
+                    "Skipping PLOT processing "
+                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
 
             # if process_NODC:
             #     log_info(

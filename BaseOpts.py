@@ -333,6 +333,7 @@ global_options_dict = {
             "MakeMissionTimeSeries",
             "MakePlotMission",
             "MoveData",
+            "Reprocess",
         ),
         (
             "-i",
@@ -641,10 +642,7 @@ global_options_dict = {
     # Plotting related
     "plot_raw": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--plot_raw",),
         bool,
         {
@@ -659,6 +657,7 @@ global_options_dict = {
         (
             "Base",
             "BasePlot",
+            "Reprocess",
             "MakeMissionEngPlot",
         ),
         ("--save_svg",),
@@ -672,10 +671,7 @@ global_options_dict = {
     ),
     "save_png": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--save_png",),
         bool,
         {
@@ -687,10 +683,7 @@ global_options_dict = {
     ),
     "save_jpg": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--save_jpg",),
         bool,
         {
@@ -702,10 +695,7 @@ global_options_dict = {
     ),
     "save_webp": options_t(
         True,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--save_webp",),
         bool,
         {
@@ -717,10 +707,7 @@ global_options_dict = {
     ),
     "compress_div": options_t(
         True,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--compress_div",),
         bool,
         {
@@ -732,10 +719,7 @@ global_options_dict = {
     ),
     "full_html": options_t(
         "darwin" in sys.platform,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--full_html",),
         bool,
         {
@@ -747,10 +731,7 @@ global_options_dict = {
     ),
     "plot_freeze_pt": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--plot_freeze_pt",),
         bool,
         {
@@ -762,10 +743,7 @@ global_options_dict = {
     ),
     "plot_legato_use_glider_pressure": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--plot_legato_use_glider_pressure",),
         bool,
         {
@@ -777,12 +755,7 @@ global_options_dict = {
     ),
     "plot_directory": options_t(
         "",
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-            "MakeMissionEngPlots",
-        ),
+        ("Base", "BaseDB", "BasePlot", "MakeMissionEngPlots", "Reprocess"),
         ("--plot_directory",),
         FullPath,
         {
@@ -794,10 +767,7 @@ global_options_dict = {
     ),
     "pmar_logavg_max": options_t(
         1e2,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--pmar_logavg_max",),
         float,
         {
@@ -809,10 +779,7 @@ global_options_dict = {
     ),
     "pmar_logavg_min": options_t(
         1e-4,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--pmar_logavg_min",),
         float,
         {
@@ -824,10 +791,7 @@ global_options_dict = {
     ),
     "flip_ad2cp": options_t(
         True,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--flip_ad2cp",),
         bool,
         {
@@ -844,6 +808,7 @@ global_options_dict = {
             "Base",
             "BaseDB",
             "BasePlot",
+            "Reprocess",
         ),
         ("--dive_plots",),
         str,
@@ -857,11 +822,7 @@ global_options_dict = {
     ),
     "mission_plots": options_t(
         mission_plot_list,
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-        ),
+        ("Base", "BaseDB", "BasePlot", "Reprocess"),
         ("--mission_plots",),
         str,
         {
@@ -877,10 +838,7 @@ global_options_dict = {
             "dives",
             "mission",
         ],
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--plot_types",),
         str,
         {
@@ -892,11 +850,7 @@ global_options_dict = {
     ),
     "mission_energy_reserve_percent": options_t(
         0.15,
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-        ),
+        ("Base", "BaseDB", "BasePlot", "Reprocess"),
         ("--mission_energy_reserve_percent",),
         float,
         {
@@ -906,11 +860,7 @@ global_options_dict = {
     ),
     "mission_energy_dives_back": options_t(
         10,
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-        ),
+        ("Base", "BaseDB", "BasePlot", "Reprocess"),
         ("--mission_energy_dives_back",),
         int,
         {
@@ -920,11 +870,7 @@ global_options_dict = {
     ),
     "mission_trends_dives_back": options_t(
         10,
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-        ),
+        ("Base", "BaseDB", "BasePlot", "Reprocess"),
         ("--mission_trends_dives_back",),
         int,
         {
