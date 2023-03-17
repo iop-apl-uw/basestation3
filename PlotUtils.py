@@ -193,7 +193,7 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
     )
 
     try:
-        vbd_lp_ignore = ncf.variables["$VBD_LP_IGNORE"].getValue()
+        vbd_lp_ignore = ncf.variables["log_VBD_LP_IGNORE"].getValue()
     except KeyError:
         vbd_lp_ignore = 0  # both available
 
