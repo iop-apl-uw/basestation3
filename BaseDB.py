@@ -53,6 +53,8 @@ import Utils
 from CalibConst import getSGCalibrationConstants
 import Globals
 import MakeMissionProfile
+import scipy.interpolate
+import scipy.stats
 
 from BaseLog import (
     BaseLogger,
@@ -103,42 +105,85 @@ def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
 
     return data
 
-def timeSeriesToProfile(base_opts, var, profileStart, profileStop, profileStride, binSize):
+def binData(cur, q, bins, var):
+    cur.execute( "SELECT observations.epoch,observations.value " 
+                 "FROM observations,observationVars " 
+                 "WHERE observationVars.rowid = observations.varIdx AND " 
+                f"observationvars.name = '{var}' AND " 
+                f"{q} "
+                 "ORDER BY observations.epoch ASC" )
+    res = cur.fetchall()
+    ev = [ f['epoch'] for f in res ]
+    v  = [ f['value'] for f in res ]
+    if len(v) == 0:
+        return None
+
+    cur.execute( "SELECT observations.epoch,observations.value " 
+                 "FROM observations,observationVars " 
+                 "WHERE observationVars.rowid = observations.varIdx AND " 
+                 "observationvars.name = 'depth' AND " 
+                f"{q} "
+                 "ORDER BY observations.epoch ASC" )
+    res = cur.fetchall()
+    ed = [ f['epoch'] for f in res ]
+    d  = [ f['value'] for f in res ]
+
+    if len(d) == 0:
+        return None
+
+    var_d = numpy.interp(ev, ed, d)            
+    data_binned = scipy.stats.binned_statistic(numpy.array(var_d,dtype='float64'), numpy.array(v, dtype='float64'), statistic='mean', bins=bins)
+     
+    return data_binned.statistic
+
+        
+def timeSeriesToProfile(base_opts, var, which, profileStart, profileStop, profileStride, binSize):
     con = Utils.open_mission_database(base_opts)
     with con:
         con.row_factory = rowToDict
         cur = con.cursor()
 
+        message = {}
+        message[var] = []
+        top = 10000
+        bot = 0
+        bins = [ *range(0, 995, binSize) ]
         for p in range(profileStart, profileStop + 1, profileStride):
-            cur.execute( "SELECT start_of_climb_time,log_gps2_time from dives WHERE dive = ?;", (p))
+            print(p)
+            cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
             res = cur.fetchone()
-            t0 = res[0] + res[1]
-            t1 = res[1] 
-            cur.execute( "SELECT observations.epoch,observations.value " 
-                         "FROM observations,observationVars " 
-                         "WHERE observationVars.rowid = observations.varIdx AND " 
-                        f"observationvars.name = '{var}' AND " 
-                        f"observations.epoch > {t0} AND " 
-                        f"observations.epoch < {t1} AND " 
-                         "ORDER BY observations.epoch ASC" )
-            res = cur.fetchall()
-            ev = [ f['epoch'] for f in res ]
-            v = [f ['epoch'] for f in res ]
-            cur.execute( "SELECT observations.epoch,observations.value " 
-                         "FROM observations,observationVars " 
-                         "WHERE observationVars.rowid = observations.varIdx AND " 
-                        f"observationvars.name = 'depth' AND " 
-                        f"observations.epoch > {t0} AND " 
-                        f"observations.epoch < {t1} AND " 
-                         "ORDER BY observations.epoch ASC" )
-            res = cur.fetchall()
-            ev = [ f['epoch'] for f in res ]
-            v = [f ['epoch'] for f in res ]
-           
-            message[p]['epoch'] = [ f['epoch'] for f in res ]
-            message[p]['value'] = [ f['value'] for f in res ]
-            message[p]['dive']  = [ f['dive']  for f in res ]
-    
+            if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
+                continue
+
+            t1 = res['log_gps2_time'] + res['start_of_climb_time']
+            t0 = res['log_gps2_time'] 
+            t2 = res['log_gps_time']
+
+            if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
+                q = f"observations.epoch > {t0} AND observations.epoch < {t1}"
+                d = binData(cur, q, bins, var)
+
+                if d is not None:
+                    message[var].append(d)
+
+            if which in (Globals.WhichHalf.up, Globals.WhichHalf.both):
+                q = f"observations.epoch > {t1} AND observations.epoch < {t2}"
+                d = binData(cur, q, bins, var)
+
+                if d is not None:
+                    message[var].append(d)
+
+            if which == Globals.WhichHalf.combine:
+                q = f"observations.epoch > {t0} AND observations.epoch < {t2}"
+                d = binData(cur, q, bins, var)
+
+                if d is not None:
+                    message[var].append(d)
+
+        message['depth'] = bins
+
+        return message
+
 def extractBinnedProfiles(base_opts, var, profileStart, profileStop, profileStride, zStride):
     con = Utils.open_mission_database(base_opts)
     with con:
@@ -280,7 +325,6 @@ def extractTimeSeries(base_opts, plot_vars, diveStart, diveEnd):
             message[p]['value'] = [ f['value'] for f in res ]
             message[p]['dive']  = [ f['dive']  for f in res ]
 
-    print(message)
      
 def processTimeSeries(base_opts, cur, nci):
     """Inserts timeseries data into db"""
@@ -865,7 +909,7 @@ def loadFileToDB(base_opts, cur, filename, con):
 
     processGC(dive, cur, nci)
 
-    # processTimeSeries(base_opts, cur, nci)
+    processTimeSeries(base_opts, cur, nci)
     # processBinnedProfiles(base_opts, dive, cur, nci)
     addSlopeValToDB(base_opts, dive, slopeVars, con)
 
@@ -1266,7 +1310,11 @@ def main():
 
     # extractBinnedProfiles(base_opts, "temperature", 100, 105, 1, 3)
     # extractTimeSeries(base_opts, ["temperature"], 0, 10000)
-
+    x = timeSeriesToProfile(base_opts, "temperature", Globals.WhichHalf.both, 2, 448, 1, 5)
+    print(len(x['temperature']))
+    print(len(x['depth']))
+    # print(x)
+ 
 if __name__ == "__main__":
     retval = 1
 
