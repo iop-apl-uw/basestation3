@@ -707,16 +707,16 @@ def attachHandlers(app: sanic.Sanic):
             data['names'] = names
             return sanic.response.json(data)
 
-    @app.route('/pro/<glider:int>/<which:str>/<first:int>/<last:int>/<stride:int>/<zStride:int>')
+    @app.route('/pro/<glider:int>/<whichVar:str>/<whichProfiles:int>/<first:int>/<last:int>/<stride:int>/<top:int>/<bot:int>/<binSize:int>')
     @authorized()
     @compress.compress()
-    async def proHandler(request, glider:int, which:str, first:int, last:int, stride:int, zStride:int):
+    async def proHandler(request, glider:int, whichVar:str, whichProfiles:int, first:int, last:int, stride:int, top:int, bot:int, binSize:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
         with sqlite3.connect(dbfile) as conn:
-            data = BaseDB.timeSeriesToProfile(None, which, 3, first, last, stride, 0, 990, 5, conn)
+            data = BaseDB.timeSeriesToProfile(None, whichVar, whichProfiles, first, last, stride, top, bot, binSize, conn)
             return sanic.response.json(data)
 
 

@@ -138,7 +138,7 @@ def binData(cur, q, bins, var):
 
         
 def timeSeriesToProfile(base_opts, var, which, 
-                        profileStart, profileStop, profileStride, 
+                        diveStart, diveStop, diveStride, 
                         binStart, binStop, binSize, con=None):
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
@@ -154,7 +154,7 @@ def timeSeriesToProfile(base_opts, var, which,
     message['which'] = []
 
     bins = [ *range(binStart, binStop + int(binSize/2), binSize) ]
-    for p in range(profileStart, profileStop + 1, profileStride):
+    for p in range(diveStart, diveStop + 1, diveStride):
         cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
         res = cur.fetchone()
         if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
@@ -170,7 +170,7 @@ def timeSeriesToProfile(base_opts, var, which,
 
             if d is not None:
                 message[var].append(d.tolist())
-                message['dive'].append(p)
+                message['dive'].append(p + 0.25)
                 message['which'].append(1)
 
         if which in (Globals.WhichHalf.up, Globals.WhichHalf.both):
@@ -179,7 +179,7 @@ def timeSeriesToProfile(base_opts, var, which,
 
             if d is not None:
                 message[var].append(d.tolist())
-                message['dive'].append(p)
+                message['dive'].append(p + 0.75)
                 message['which'].append(2)
 
         if which == Globals.WhichHalf.combine:
@@ -188,7 +188,7 @@ def timeSeriesToProfile(base_opts, var, which,
 
             if d is not None:
                 message[var].append(d.tolist())
-                message['dive'].append(p)
+                message['dive'].append(p + 0.5)
                 message['which'].append(4)
 
     message['depth'] = bins
