@@ -9,6 +9,7 @@ import sys
 from zipfile import ZipFile
 from io import BytesIO
 from anyio import Path
+import sqlite3
 import aiosqlite
 import aiofiles
 import asyncio
@@ -23,8 +24,6 @@ from types import SimpleNamespace
 import yaml
 import LogHTML
 import summary
-import ExtractBinnedProfiles
-import ExtractTimeseries
 import multiprocessing
 import getopt
 import base64
@@ -33,6 +32,7 @@ import zmq
 import zmq.asyncio
 import Utils
 import secrets
+import BaseDB
 
 PERM_INVALID = -1
 PERM_REJECT = 0
@@ -693,7 +693,6 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def dbvarsHandler(request, glider:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
@@ -708,52 +707,58 @@ def attachHandlers(app: sanic.Sanic):
             data['names'] = names
             return sanic.response.json(data)
 
-    @app.route('/provars/<glider:int>')
-    @authorized()
-    async def provarsHandler(request, glider:int):
-        p = Path(gliderPath(glider,request))
-        async for ncfile in p.glob(f'sg{glider:03d}*profile.nc'):
-            data = {}
-            data['names'] = ExtractBinnedProfiles.getVarNames(ncfile)
-            return sanic.response.json(data)
-         
-        return sanic.response.text('oops')
-
     @app.route('/pro/<glider:int>/<which:str>/<first:int>/<last:int>/<stride:int>/<zStride:int>')
     @authorized()
     @compress.compress()
     async def proHandler(request, glider:int, which:str, first:int, last:int, stride:int, zStride:int):
-        p = Path(gliderPath(glider,request))
-        async for ncfile in p.glob(f'sg{glider:03d}*profile.nc'):
-            data = ExtractBinnedProfiles.extractVar(ncfile, which, first, last, stride, zStride)
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        if not await aiofiles.os.path.exists(dbfile):
+            return sanic.response.text('no db')
+
+        with sqlite3.connect(dbfile) as conn:
+            data = BaseDB.timeSeriesToProfile(None, which, 3, first, last, stride, 0, 990, 5, conn)
             return sanic.response.json(data)
 
-        return sanic.response.text('oops')
 
-    @app.route('/timevars/<glider:int>/<dive:int>')
+    @app.route('/timevars/<glider:int>')
     @authorized()
-    async def timeSeriesVarsHandler(request, glider:int,dive:int):
-        ncfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.nc'
-        if await aiofiles.os.path.exists(ncfile):
-            data = ExtractTimeseries.getVarNames(ncfile)
-            return sanic.response.json(data)
-        else: 
-            return sanic.response.text('oops')
+    async def timeSeriesVarsHandler(request, glider:int):
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        if not await aiofiles.os.path.exists(dbfile):
+            return sanic.response.text('no db')
 
+        async with aiosqlite.connect(dbfile) as conn:
+            conn.row_factory = lambda cursor, row: row[0]
+            cur = await conn.cursor()
+            await cur.execute("SELECT * FROM observationVars ORDER BY name ASC;")
+            data = await cur.fetchall()
+            return sanic.response.json(data)
+        
     @app.route('/time/<glider:int>/<dive:int>/<which:str>')
     @authorized()
     @compress.compress()
     async def timeSeriesHandler(request, glider:int, dive:int, which:str):
-        ncfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.nc'
-        if await aiofiles.os.path.exists(ncfile):
-            data = ExtractTimeseries.extractVars(ncfile, which.split(','))
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        if not await aiofiles.os.path.exists(dbfile):
+            return sanic.response.text('no db')
+
+        whichVars = which.split(',')
+        dbVars = whichVars
+        if 'time' in dbVars:
+            dbVars.remove('time')
+
+        msg = {}
+        with sqlite3.connect(dbfile) as conn:
+            data = BaseDB.extractTimeSeries(None, dbVars, dive, dive, conn)
             return sanic.response.json(data)
-        else:
-            return sanic.response.text('oops')
 
     @app.route('/query/<glider:int>/<queryVars:str>')
     @authorized()
     async def queryHandler(request, glider, queryVars):
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        if not await aiofiles.os.path.exists(dbfile):
+            return sanic.response.text('no db')
+
         queryVars = queryVars.rstrip(',')
         pieces = queryVars.split(',')
         if pieces[0] == 'dive':
@@ -761,11 +766,16 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = f"SELECT {queryVars} FROM dives"
 
-        async with aiosqlite.connect(f'{gliderPath(glider,request)}/sg{glider:03d}.db') as conn:
-            conn.row_factory = rowToDict
+        async with aiosqlite.connect(dbfile) as conn:
+            # conn.row_factory = rowToDict
             cur = await conn.cursor()
             await cur.execute(q)
-            data = await cur.fetchall()
+            d = await cur.fetchall()
+            data = {}
+            print(cur.description)
+            for i in range(len(cur.description)):
+                data[cur.description[i][0]] = [ f[i] for f in d ]
+
             return sanic.response.json(data)
 
     @app.route('/selftest/<glider:int>')
@@ -931,6 +941,9 @@ def attachHandlers(app: sanic.Sanic):
     async def getChatMessages(request, glider, t, conn=None):
         if conn == None:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+            if not await aiofiles.os.path.exists(dbfile):
+                return (None, time.time())
+
             myconn = await aiosqlite.connect(dbfile)
             myconn.row_factory = rowToDict
         else:
@@ -990,6 +1003,8 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('oops')
 
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        if not await aiofiles.os.path.exists(dbfile):
+            return sanic.response.text('no db')
 
         now = time.time()
  
@@ -1033,6 +1048,9 @@ def attachHandlers(app: sanic.Sanic):
         # nmea = 'format' in request.args and request.args['format'][0] == 'nmea'
 
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        if not await aiofiles.os.path.exists(dbfile):
+            return sanic.response.text('no db')
+
         try:
             conn = await aiosqlite.connect(dbfile)
             conn.row_factory = rowToDict
@@ -1051,6 +1069,9 @@ def attachHandlers(app: sanic.Sanic):
     async def getLatestCall(request, glider, conn=None, limit=1):
         if conn == None:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+            if not await aiofiles.os.path.exists(dbfile):
+                return None
+
             myconn = await aiosqlite.connect(dbfile)
             myconn.row_factory = rowToDict
         else:
@@ -1133,12 +1154,15 @@ def attachHandlers(app: sanic.Sanic):
         prev_db_t = time.time()
         if tU and request.app.config.RUNMODE > MODE_PUBLIC:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-            conn = await aiosqlite.connect(dbfile)
-            conn.row_factory = rowToDict 
-            if which == 'history' or which == 'init':
-                (rows, prev_db_t) = await getChatMessages(request, glider, 0, conn)
-                if rows:
-                    await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
+            if await aiofiles.os.path.exists(dbfile):
+                conn = await aiosqlite.connect(dbfile)
+                conn.row_factory = rowToDict 
+                if which == 'history' or which == 'init':
+                    (rows, prev_db_t) = await getChatMessages(request, glider, 0, conn)
+                    if rows:
+                        await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
+            else:
+                conn = None
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
         socket.connect(request.app.config.WATCH_IPC)
@@ -1152,9 +1176,14 @@ def attachHandlers(app: sanic.Sanic):
             body  = msg[1].decode('utf-8')
 
             if 'chat' in topic and tU and request.app.config.RUNMODE > MODE_PUBLIC:
-                (rows, prev_db_t) = await getChatMessages(request, glider, prev_db_t, conn)
-                if rows:
-                    await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
+                if conn == None and await aiofiles.os.path.exists(dbfile):
+                    conn = await aiosqlite.connect(dbfile)
+                    conn.row_factory = rowToDict 
+                    
+                if conn:
+                    (rows, prev_db_t) = await getChatMessages(request, glider, prev_db_t, conn)
+                    if rows:
+                        await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
             elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
                 data = (await commFile.read()).decode('utf-8', errors='ignore')
@@ -1616,6 +1645,6 @@ if __name__ == '__main__':
         sanic.Sanic.serve(primary=app, app_loader=loader)
         #app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
     else:
-        app.prepare(host="0.0.0.0", port=port, access_log=True, debug=False, fast=True)
+        app.prepare(host="0.0.0.0", port=port, access_log=True, debug=True, fast=True)
         sanic.Sanic.serve(primary=app, app_loader=loader)
         # app.run(host='0.0.0.0', port=port, access_log=True, debug=True, fast=True)

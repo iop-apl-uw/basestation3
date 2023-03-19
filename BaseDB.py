@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+# /usr/bin/env python
 # -*- python-fmt -*-
 
 ##
@@ -137,195 +137,128 @@ def binData(cur, q, bins, var):
     return data_binned.statistic
 
         
-def timeSeriesToProfile(base_opts, var, which, profileStart, profileStop, profileStride, binSize):
-    con = Utils.open_mission_database(base_opts)
-    with con:
-        con.row_factory = rowToDict
-        cur = con.cursor()
+def timeSeriesToProfile(base_opts, var, which, 
+                        profileStart, profileStop, profileStride, 
+                        binStart, binStop, binSize, con=None):
+    if con is None:
+        mycon = Utils.open_mission_database(base_opts)
+    else:
+        mycon = con
 
-        message = {}
-        message[var] = []
-        top = 10000
-        bot = 0
-        bins = [ *range(0, 995, binSize) ]
-        for p in range(profileStart, profileStop + 1, profileStride):
-            print(p)
-            cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
-            res = cur.fetchone()
-            if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
-                continue
+    mycon.row_factory = rowToDict
+    cur = mycon.cursor()
 
-            t1 = res['log_gps2_time'] + res['start_of_climb_time']
-            t0 = res['log_gps2_time'] 
-            t2 = res['log_gps_time']
-
-            if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
-                q = f"observations.epoch > {t0} AND observations.epoch < {t1}"
-                d = binData(cur, q, bins, var)
-
-                if d is not None:
-                    message[var].append(d)
-
-            if which in (Globals.WhichHalf.up, Globals.WhichHalf.both):
-                q = f"observations.epoch > {t1} AND observations.epoch < {t2}"
-                d = binData(cur, q, bins, var)
-
-                if d is not None:
-                    message[var].append(d)
-
-            if which == Globals.WhichHalf.combine:
-                q = f"observations.epoch > {t0} AND observations.epoch < {t2}"
-                d = binData(cur, q, bins, var)
-
-                if d is not None:
-                    message[var].append(d)
-
-        message['depth'] = bins
-
-        return message
-
-def extractBinnedProfiles(base_opts, var, profileStart, profileStop, profileStride, zStride):
-    con = Utils.open_mission_database(base_opts)
-    with con:
-        con.row_factory = rowToDict
-        cur = con.cursor()
-        cur.execute( "SELECT profiles.firstBin,profiles.lastBin,profiles.binSize,profiles.data,"
-                     "profilesMeta.dive,profilesMeta.direction,profilesMeta.epoch,profilesMeta.lat,profilesMeta.lon "
-                     "FROM profiles,profilesMeta,observationVars "
-                     "WHERE metaIdx=profilesMeta.rowid AND "
-                     "varIdx=observationVars.rowid AND "
-                    f"observationVars.name='{var}' AND "
-                    f"profilesMeta.dive <= {profileStop} AND "
-                    f"profilesMeta.dive >= {profileStart} "
-                     "ORDER BY profilesMeta.epoch ASC")
-        res = cur.fetchall()
-        message = {}
-        for v in ['lat', 'lon', 'epoch', 'dive']:
-            message[v] = [ f[v] for f in res ][::profileStride]
-
-        tops = [ f['firstBin'] for f in res ][::profileStride]
-        bots = [ f['lastBin'] for f in res ][::profileStride]
-
-        message[var]     = [ numpy.load(io.BytesIO(zlib.decompress(f['data']))).tolist()[::zStride] for f in res ][::profileStride]
-        message['depth'] = [ *range(int(min(tops)), int(max(bots)) + 1, zStride*int(res[0]['binSize'])) ]
-
-        print(json.dumps(message))
-        return message
-        
-def processBinnedProfiles(base_opts, dive, cur, nci):
-    """Inserts binned profiles into db"""
-
-    cur.execute(
-        "CREATE TABLE IF NOT EXISTS profilesMeta(dive INTEGER, direction INTEGER, epoch FLOAT, lat FLOAT, lon FLOAT, PRIMARY KEY(dive,direction));"
-    )
-
-    cur.execute(
-        "CREATE TABLE IF NOT EXISTS profiles(metaIdx INTEGER, varIdx INTEGER, firstBin FLOAT, lastBin FLOAT, binSize FLOAT, data BLOB, PRIMARY KEY (metaIdx, varIdx));"
-    )
-
-    start_of_climb = nci.variables["start_of_climb_time"].getValue() + nci.variables["time"][0]
-    diveMetaDone = False
-    climbMetaDone = False
-    for k in nci.variables.keys():
-        if len(nci.variables[k].dimensions) \
-           and '_data_point' in nci.variables[k].dimensions[0] \
-           and 'time' not in k \
-           and 'eng_' not in k \
-           and '_qc' not in k \
-           and 'depth' not in k:
-
-            cur.execute(f"INSERT OR IGNORE INTO observationVars (name) VALUES ('{k}')")
-            cur.execute(f"SELECT rowid FROM observationVars WHERE name='{k}';")
-            varIdx = cur.fetchone()[0]
-            try:
-                nc_var = nci.variables[k][:]
-                nc_dim = nci.variables[k].dimensions[0]
-                var_t = []
-                var_d = []
-                for kk, v in nci.variables.items():
-                    if (
-                        "time" in kk[-4:]
-                        and len(nci.variables[kk].dimensions)
-                        and "_data_point" in nci.variables[kk].dimensions[0]
-                        and nc_dim == nci.variables[kk].dimensions[0]
-                    ):
-                        var_t = nci.variables[kk][:]
-
-                    if (
-                        "depth" in kk[-5:]
-                        and len(nci.variables[kk].dimensions)
-                        and "_data_point" in nci.variables[kk].dimensions[0]
-                        and nc_dim == nci.variables[kk].dimensions[0]
-                    ):
-                        var_d = nci.variables[kk][:]
-
-                    if len(var_t) > 0 and len(var_d) > 0: 
-                        break
-            except:
-                continue
- 
-            if len(var_t) and len(var_d):
-                if not diveMetaDone:
-                    i = numpy.where( nci.variables["eng_elaps_t"][:] < start_of_climb )
-
-                    la = numpy.nanmean(nci.variables["latitude"][i])
-                    lo = numpy.nanmean(nci.variables["longitude"][i])
-                    ti = numpy.nanmean(nci.variables["time"][i])
-
-                    cur.execute("INSERT INTO profilesMeta (dive,direction,epoch,lat,lon) VALUES (?,?,?,?,?) ON CONFLICT (dive,direction) DO UPDATE SET epoch=?,lat=?,lon=?", (dive, 1, ti, la, lo, ti, la, lo))
-                    cur.execute(f"SELECT rowid FROM profilesMeta WHERE dive={dive} and direction=1;")
-                    diveIdx = cur.fetchone()[0]
-
-                if not climbMetaDone:
-                    i = numpy.where( nci.variables["eng_elaps_t"][:] > start_of_climb )
-
-                    la = numpy.nanmean(nci.variables["latitude"][i])
-                    lo = numpy.nanmean(nci.variables["longitude"][i])
-                    ti = numpy.nanmean(nci.variables["time"][i])
-
-                    cur.execute("INSERT INTO profilesMeta (dive,direction,epoch,lat,lon) VALUES (?,?,?,?,?) ON CONFLICT (dive,direction) DO UPDATE SET epoch=?,lat=?,lon=?", (dive, 2, ti, la, lo, ti, la, lo))
-                    cur.execute(f"SELECT rowid FROM profilesMeta WHERE dive={dive} and direction=2;")
-                    climbIdx = cur.fetchone()[0]
-
-                for which in [Globals.WhichHalf.down, Globals.WhichHalf.up]:
-
-                    if which == Globals.WhichHalf.down:
-                        i = numpy.where(var_t < start_of_climb)
-                        idx = diveIdx
-                    else:
-                        i = numpy.where(var_t > start_of_climb)
-                        idx = climbIdx
- 
-                    (n_obs, depth_binned, data_binned) = MakeMissionProfile.bin_data(base_opts.bin_width, which, True, var_d[i], [ nc_var[i] ]) 
-                    f = io.BytesIO()
-                    numpy.save(f, data_binned[0])
-                    compressed = zlib.compress(f.getbuffer())
-
-                    cur.execute("INSERT INTO profiles (metaIdx, varIdx, firstBin, lastBin, binSize, data) VALUES (?,?,?,?,?,?) ON CONFLICT(metaIdx,varIdx) DO UPDATE SET firstBin=?,lastBin=?,binSize=?,data=?", (idx, varIdx, depth_binned[0], depth_binned[-1], base_opts.bin_width, compressed, depth_binned[0], depth_binned[-1], base_opts.bin_width, compressed))
-
-def extractTimeSeries(base_opts, plot_vars, diveStart, diveEnd):
-    con = Utils.open_mission_database(base_opts)
     message = {}
-    with con:
-        con.row_factory = rowToDict
-        cur = con.cursor()
-        for p in plot_vars:
-            message[p] = {}
-            cur.execute( "SELECT observations.epoch,observations.value,dives.dive " 
-                         "FROM observations,observationVars,dives " 
-                         "WHERE observationVars.rowid = observations.varIdx AND " 
-                        f"observationvars.name = '{p}' AND " 
-                         "observations.epoch > dives.log_gps2_time AND " 
-                         "observations.epoch < dives.log_gps_time AND " 
-                        f"dives.dive >= {diveStart} AND "
-                        f"dives.dive <= {diveEnd} "
-                         "ORDER BY observations.epoch ASC" )
-            res = cur.fetchall()
-            message[p]['epoch'] = [ f['epoch'] for f in res ]
-            message[p]['value'] = [ f['value'] for f in res ]
-            message[p]['dive']  = [ f['dive']  for f in res ]
+    message[var] = []
+    message['dive'] = []
+    message['which'] = []
 
-     
+    bins = [ *range(binStart, binStop + int(binSize/2), binSize) ]
+    for p in range(profileStart, profileStop + 1, profileStride):
+        cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
+        res = cur.fetchone()
+        if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
+            continue
+
+        t1 = res['log_gps2_time'] + res['start_of_climb_time']
+        t0 = res['log_gps2_time'] 
+        t2 = res['log_gps_time']
+
+        if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
+            q = f"observations.epoch > {t0} AND observations.epoch < {t1}"
+            d = binData(cur, q, bins, var)
+
+            if d is not None:
+                message[var].append(d.tolist())
+                message['dive'].append(p)
+                message['which'].append(1)
+
+        if which in (Globals.WhichHalf.up, Globals.WhichHalf.both):
+            q = f"observations.epoch > {t1} AND observations.epoch < {t2}"
+            d = binData(cur, q, bins, var)
+
+            if d is not None:
+                message[var].append(d.tolist())
+                message['dive'].append(p)
+                message['which'].append(2)
+
+        if which == Globals.WhichHalf.combine:
+            q = f"observations.epoch > {t0} AND observations.epoch < {t2}"
+            d = binData(cur, q, bins, var)
+
+            if d is not None:
+                message[var].append(d.tolist())
+                message['dive'].append(p)
+                message['which'].append(4)
+
+    message['depth'] = bins
+
+    cur.close()
+    if con is None:
+        mycon.close()
+
+    return message
+
+def extractTimeSeries(base_opts, plot_vars, diveStart, diveEnd, con=None):
+    if con == None:
+        mycon = Utils.open_mission_database(base_opts)
+    else:
+        mycon = con
+
+    x = {}
+
+    con.row_factory = rowToDict
+    cur = con.cursor()
+    base_epoch = None
+    base_epoch_len = 0
+
+    for p in plot_vars:
+        x[p] = {}
+        cur.execute("SELECT dive,log_gps2_time,log_gps_time FROM dives WHERE dive = ? OR dive = ? ORDER BY dive ASC;", (diveStart, diveEnd))
+        res = cur.fetchall()
+        t0 = res[0]['log_gps2_time']
+        t1 = res[len(res) - 1]['log_gps_time'] 
+
+        cur.execute( "SELECT observations.epoch,observations.value "
+                     "FROM observations,observationVars " 
+                     "WHERE observationVars.rowid = observations.varIdx AND " 
+                    f"observationvars.name = '{p}' AND " 
+                    f"observations.epoch > {t0} AND "
+                    f"observations.epoch < {t1} "
+                     "ORDER BY observations.epoch ASC" )
+        # this is one query, but is brutally slow
+        #cur.execute( "SELECT observations.epoch,observations.value,dives.dive " 
+        #             "FROM observations,observationVars,dives " 
+        #             "WHERE observationVars.rowid = observations.varIdx AND " 
+        #            f"observationvars.name = '{p}' AND " 
+        #             "observations.epoch > dives.log_gps2_time AND " 
+        #             "observations.epoch < dives.log_gps_time AND " 
+        #            f"dives.dive >= {diveStart} AND "
+        #            f"dives.dive <= {diveEnd} "
+        #             "ORDER BY observations.epoch ASC" )
+        res = cur.fetchall()
+        x[p]['epoch'] = [ f['epoch'] for f in res ]
+        x[p]['value'] = [ f['value'] for f in res ]
+        if len(x[p]['epoch']) > base_epoch_len:
+            base_epoch_len = len(x[p]['epoch'])
+            base_epoch = p
+   
+    message = {}
+    message['epoch'] = x[base_epoch]['epoch']
+    message['time'] = [ m - message['epoch'][0] for m in message['epoch'] ]
+    message[base_epoch] = x[base_epoch]['value']
+    for p in plot_vars:
+        if p == base_epoch:
+            continue
+
+        message[p] = numpy.interp(message['epoch'], x[p]['epoch'], x[p]['value']).tolist()
+
+    cur.close()
+    if con == None:
+        mycon.close() 
+    
+    return message
+ 
 def processTimeSeries(base_opts, cur, nci):
     """Inserts timeseries data into db"""
 
@@ -1310,8 +1243,10 @@ def main():
 
     # extractBinnedProfiles(base_opts, "temperature", 100, 105, 1, 3)
     # extractTimeSeries(base_opts, ["temperature"], 0, 10000)
-    x = timeSeriesToProfile(base_opts, "temperature", Globals.WhichHalf.both, 2, 448, 1, 5)
-    print(len(x['temperature']))
+
+    
+    x = timeSeriesToProfile(base_opts, "aa4831_O2", Globals.WhichHalf.both, 2, 448, 1, 0, 990, 5)
+    print(len(x['aa4831_O2']))
     print(len(x['depth']))
     # print(x)
  
