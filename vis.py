@@ -458,7 +458,8 @@ def attachHandlers(app: sanic.Sanic):
         allowed = ['https://api.opentopodata.org/v1/gebco2020',
                    'https://marine.weather.gov/MapClick.php',
                    'https://iop.apl.washington.edu/', 
-                   'https://usicecenter.gov/File/DownloadCurrent?pId',
+                   'https://usicecenter.gov/File/DownloadCurrent',
+                   'https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src',
                   ]
 
         found = False
@@ -478,6 +479,52 @@ def attachHandlers(app: sanic.Sanic):
                     body = await response.read()
                     return sanic.response.raw(body)
         
+    @app.route('/kmz/<url:path>')
+    @authorized(check=AUTH_ENDPOINT)
+    async def kmzHandler(request, url):
+        allowed = [
+                   'https://usicecenter.gov/File/DownloadCurrent',
+                  ]
+
+        found = False
+        for x in allowed:
+            if url.startswith(x):
+                found = True
+                break
+
+        if found == False:
+            return sanic.response.text(f"Page not found: {request.path}", status=404)
+
+        kmz = None
+              
+        if request.args and len(request.args) > 0:
+            url = url + '?' + request.query_string
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as response:
+                if response.status == 200:
+                    kmz = await response.read()
+
+        if kmz == None:
+            return sanic.response.text(f"Page not found: {request.path}", status=404)
+
+        nm = None
+        try:
+            zip = ZipFile(BytesIO(kmz))
+            print(zip.namelist())
+            for x in zip.namelist():
+                if '.kml' in x:
+                    nm = x
+                    break
+        except Exception as e:
+            print(f'exception {e}')
+            pass
+
+        if nm == None:
+            return sanic.response.text('not found')
+ 
+        kml = zip.open(nm).read()
+        return sanic.response.raw(kml)
+
     @app.route('/plots/<glider:int>/<dive:int>')
     @authorized()
     async def plotsHandler(request, glider:int, dive:int):
