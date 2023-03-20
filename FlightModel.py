@@ -44,7 +44,6 @@ import scipy.optimize # fminbound
 from HydroModel import hydro_model
 import seawater
 import gsw
-from flight_data import *
 import copy # must be after numpy (and flight_data) import, since numpy has its own 'copy'
 import stat
 import pdb
@@ -264,6 +263,60 @@ if generate_figures:
     import matplotlib.pyplot as plt
     import BaseColorMaps
     # from mpl_toolkits.basemap import Basemap
+
+
+class flight_data: # deliberately no (object) so we can pickle these puppies
+    def __init__(self, dive_num):
+        self.dive_num = dive_num
+        self.last_updated = 0 # seconds since Jan 1, 1970 when nc file was created/updated
+        self.start_time = 0 # seconds since Jan 1, 1970 when dive started
+        self.pitch_d = 0 # the absolute value of the integer pitch desired for this dive
+        # assumed min and max pitch attained for 'most' of the dive (to deal with auto pitch adjust)
+        self.min_pitch = None
+        self.max_pitch = None
+        self.bottom_rho0 = nan # the bottom density recorded for this dive
+        self.bottom_press = nan # the bottom pressure recorded for this dive
+        self.dive_data_ok = None # unknown; else True, the data is available or False, there was some issue (see load_dive_data())
+        self.n_valid = 0 # how many valid points will this dive provide
+        # values of parameters from nc file
+        # these could come from many places, initially sg_calib_constants.  but we don't care.
+        # what we do care about is whether we they differ from our estimates in which case we trigger reprocessing
+        # which should update the nc files to our calculations
+        self.nc_volmax = 0
+        # if a/b change we need to recompute vbdbias and abs_compress, otherwise skip it
+        self.recompute_vbdbias_abs_compress = True
+        self.nc_vbdbias = nan
+        self.nc_hd_a = 0
+        self.nc_hd_b = 0
+        self.nc_abs_compress = nan
+
+        # what was onboard for estimating flight parameters for this dive
+        self.log_HD_A = 0
+        self.log_HD_B = 0
+        self.log_HD_C = 0
+
+        # estimated parameters for this dive from FlightModel.py
+        self.hd_ab_trusted = False # whether the a/b values come from a trusted or untrusted estimate
+        self.hd_a = 0
+        self.hd_b = 0
+        self.volmax = nan
+        self.vbdbias = nan # critical for this to start as nan
+        self.median_vbdbias = nan
+        self.abs_compress = nan
+        self.w_rms_vbdbias = nan # w_rms at vbdbias (and abs_compress)
+
+
+
+    def __repr__(self):
+        return "<Dive %d pitch_d: %.1f p: %.1fdbar vbias: %.1fcc (%.1fcc) abs_compress=%g RMS%s=%5.4fcm/s>" % (self.dive_num,
+                                                                                                               self.pitch_d,
+                                                                                                               self.bottom_press,
+                                                                                                               self.vbdbias,
+                                                                                                               self.nc_vbdbias,
+                                                                                                               self.abs_compress,
+                                                                                                               't' if self.hd_ab_trusted else '',
+                                                                                                               self.w_rms_vbdbias)
+    
 
 def estimate_volmax(mass,density,vbd_adjust=660):
     # Estimate of volmax given mass of the vehicle and an insitu density measurement or estimate
@@ -764,7 +817,7 @@ def dump_fm_values(dive_data):
         fh.write('volmax = %g;\n' % flight_dive_data_d['volmax'])
         fh.write('vbdbias = %g; %% vbdbias w rms = %.2f cm/s\n' % (dive_data.vbdbias, dive_data.w_rms_vbdbias))
         volmax_biased = flight_dive_data_d['volmax'] - dive_data.vbdbias
-        fh.write('volmax_biased = %g;\n' % volmax)
+        fh.write('volmax_biased = %g;\n' % volmax_biased)
         fh.write('abs_compress = %g;\n' % dive_data.abs_compress)
         fh.write('hd_a = %g;\n' % dive_data.hd_a)
         fh.write('hd_b = %g;\n' % dive_data.hd_b)
