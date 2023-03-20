@@ -2203,6 +2203,7 @@ def main():
             last_session
             and last_session.cmd_directive
             and "QUIT" in last_session.cmd_directive
+            and last_session.dive_num > FlightModel.early_volmax_adjust
             and not base_opts.force
         ):
             log_info("Skipping flight model due to QUIT command")
