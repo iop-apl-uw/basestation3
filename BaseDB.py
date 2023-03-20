@@ -1258,7 +1258,8 @@ def main():
             os.path.join(base_opts.mission_dir, "comm.log"),
             base_opts,
         )
-        base_opts.instrument_id = comm_log.get_instrument_id()
+        if comm_log:
+            base_opts.instrument_id = comm_log.get_instrument_id()
 
     if not base_opts.instrument_id:
         _, tail = os.path.split(base_opts.mission_dir[:-1])
@@ -1266,7 +1267,7 @@ def main():
             log_error("Can't figure out the instrument id - bailing out")
             return
         try:
-            base_opts.instrument_id = int(tail[:-3])
+            base_opts.instrument_id = int(tail[-3:])
         except:
             log_error("Can't figure out the instrument id - bailing out")
             return
