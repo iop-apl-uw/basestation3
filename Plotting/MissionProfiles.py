@@ -36,6 +36,9 @@ import os
 import yaml
 import BaseDB
 import Globals
+import cmocean
+import numpy
+
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     import BaseOpts
@@ -61,6 +64,28 @@ def getValue(x, v, sk, vk, fallback):
         y = fallback
 
     return y
+
+def cmocean_to_plotly(cmapname, pl_entries):
+    maps = { "thermal": cmocean.cm.thermal, "haline": cmocean.cm.haline, "solar": cmocean.cm.solar,
+             "ice": cmocean.cm.ice, "gray": cmocean.cm.gray, "oxy": cmocean.cm.oxy, "deep": cmocean.cm.deep,
+             "dense": cmocean.cm.dense, "algae": cmocean.cm.algae, "matter": cmocean.cm.matter,
+             "turbid": cmocean.cm.turbid, "speed": cmocean.cm.speed, "amp": cmocean.cm.amp,
+             "tempo": cmocean.cm.tempo, "phase": cmocean.cm.phase, "balance": cmocean.cm.balance, 
+             "delta": cmocean.cm.delta, "curl": cmocean.cm.curl }
+
+    if cmapname in maps:
+        cmap = maps[cmapname]
+    else:
+        cmap = cmocean.cm.thermal
+
+    h = 1.0/(pl_entries-1)
+    pl_colorscale = []
+
+    for k in range(pl_entries):
+        C = list(map(numpy.uint8, numpy.array(cmap(k*h)[:3])*255))
+        pl_colorscale.append([k*h, 'rgb'+str((C[0], C[1], C[2]))])
+
+    return pl_colorscale
 
 @plotmissionsingle
 def mission_profiles(
@@ -116,6 +141,7 @@ def mission_profiles(
             binZ = getValue(x, 'bin',    sk, vk, 5)
             flip = getValue(x, 'flip',   sk, vk, False)
             whch = getValue(x, 'which',  sk, vk, 4)
+            cmap = getValue(x, 'colormap', sk, vk, 'thermal')
 
             if stop == -1 or stop >= latest:
                 stop = latest
@@ -141,6 +167,7 @@ def mission_profiles(
                 y=d['depth'],
                 z=d[vk],
                 contours_coloring='heatmap',
+                colorscale=cmocean_to_plotly(cmap, 100),
                 connectgaps=True,
                 contours={
                             "coloring": "heatmap",
@@ -155,7 +182,7 @@ def mission_profiles(
                 )
             )
 
-            title_text = f"{mission_str}<br>{vk}"
+            title_text = f"{mission_str}<br>{vk}<br>section {sk}: {start}-{stop}"
             
             fig.update_layout(
                 {
