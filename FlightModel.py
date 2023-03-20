@@ -145,7 +145,7 @@ flush_ab_grid_cache_entries = [] # DEBUG which dives to flush and force recomput
 # Thus the minimum adjustment is 1 (so we if we start at 1 we'll adjust using dive 2)
 
 # NOTE: if you expect to set/override these parameters in a cnf file they must be all lower-case!!
-early_volmax_adjust = 4 # PARAMETER number of dives: adjust volmax and re-tare vbdbias values over the 'first' N dives (was 10)
+early_volmax_adjust = 10 # PARAMETER number of dives: adjust volmax and re-tare vbdbias values over the 'first' N dives (was 10)
 FM_default_rho0 = 1027.5 # assume constant for all missions; the scales velocity in hydro_model().  Matches MDP
 
 sg_hd_s = -0.25 # CONSTANT how drag scales by shape for the Seaglider shape (Hubbard, 1990)
