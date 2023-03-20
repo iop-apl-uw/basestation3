@@ -1555,7 +1555,9 @@ def main():
 
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
-    calib_consts = CalibConst.getSGCalibrationConstants(sg_calib_file_name)
+    calib_consts = CalibConst.getSGCalibrationConstants(
+        sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
+    )
     if not calib_consts:
         log_warning(f"Could not process {sg_calib_file_name}")
 
@@ -1953,6 +1955,24 @@ def main():
         or base_opts.make_mission_profile
         or base_opts.make_mission_timeseries
     ):
+        if not base_opts.skip_flight_model and base_opts.force:
+            # Start with a fresh flight directory
+            flight_dir = os.path.join(base_opts.mission_dir, "flight")
+            flight_dir_backup = os.path.join(
+                base_opts.mission_dir, f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
+            )
+            if os.path.exists(flight_dir):
+                log_info(
+                    f"Backing up {flight_dir} to {flight_dir_backup} due to --force option"
+                )
+                try:
+                    shutil.move(flight_dir, flight_dir_backup)
+                except:
+                    log_error(
+                        "Failed to move %s to %s - profiles will use existing flight model data"
+                        % (flight_dir, flight_dir_backup),
+                        "exc",
+                    )
 
         # Process network files to netcdf
         network_files_to_process = []
@@ -2220,19 +2240,19 @@ def main():
         dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
 
     # Add netcdf files to mission sql database
-    if base_opts.add_sqllite:
+    if base_opts.add_sqlite:
         log_info("Starting netcdf load to db")
         if base_opts.force:
             try:
                 BaseDB.rebuildDB(base_opts)
             except:
-                log_error("Failed to rebuild mission sqllite db", "exc")
+                log_error("Failed to rebuild mission sqlite db", "exc")
         else:
             for ncf in nc_files_created:
                 try:
                     BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
                 except:
-                    log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
+                    log_error(f"Failed to add {ncf} to mission sqlite db", "exc")
             log_info("netcdf load to db done")
 
     # Run and dive extensions

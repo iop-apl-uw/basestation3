@@ -212,13 +212,13 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
         },
     ),
-    "add_sqllite": options_t(
+    "add_sqlite": options_t(
         True,
         ("Base",),
-        ("--add_sqllite",),
+        ("--add_sqlite",),
         bool,
         {
-            "help": "Add netcdf files to mission sqllite db",
+            "help": "Add netcdf files to mission sqlite db",
             "action": argparse.BooleanOptionalAction,
         },
     ),
@@ -333,6 +333,7 @@ global_options_dict = {
             "MakeMissionTimeSeries",
             "MakePlotMission",
             "MoveData",
+            "Reprocess",
         ),
         (
             "-i",
@@ -392,7 +393,7 @@ global_options_dict = {
     ),
     "bin_width": options_t(
         1.0,
-        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission"),
+        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission", "BaseDB"),
         ("--bin_width",),
         float,
         {
@@ -426,7 +427,7 @@ global_options_dict = {
     ),
     "ignore_lock": options_t(
         False,
-        ("Base", "GliderEarlyGPS"),
+        ("Base", "BaseRunner", "GliderEarlyGPS"),
         ("--ignore_lock",),
         bool,
         {
@@ -436,7 +437,7 @@ global_options_dict = {
     ),
     "use_gsw": options_t(
         True,
-        ("Base", "BasePlot", "MakeDiveProfiles", "Reprocess"),
+        ("Base", "BasePlot", "FlightModel", "MakeDiveProfiles", "Reprocess"),
         ("--use_gsw",),
         bool,
         {
@@ -517,7 +518,7 @@ global_options_dict = {
     ),
     "reprocess": options_t(
         False,
-        ("Base",),
+        ("Base", "MakeDiveProfiles", "Reprocess"),
         ("--reprocess",),
         int,
         {"help": "Forces reprocessing of a specific dive number "},
@@ -555,13 +556,31 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    # DOC Skips running the flight model system.  FMS is still consulted for flight
+    # DOC values such as volmax hd_a, hd_b, hd_c etc. - if there is a previous previous estimates
+    # DOC in flight, those are used - otherwise the system defaults are used.  Normally, this option
+    # DOC is used when calling Reprocess.py or MakeDiveProfiles.py during post pocessing to regenerated
+    # DOC netcdf files with already generated data in the flight directory
     "skip_flight_model": options_t(
         False,
-        ("Base",),
+        ("Base", "FlightModel", "Reprocess"),
         ("--skip_flight_model",),
         bool,
         {
-            "help": "Skip running flight model system (FMS)",
+            "help": "Skip running flight model system (FMS) - honor all sg_calib_constants.m variables",
+            "action": "store_true",
+        },
+    ),
+    # DOC FMS is not consulted for flight variables.  The user must supply
+    # DOC volmax, vbdbias, hd_a, hd_b, hd_c and optionally hd_s, rho0, abs_compress, therm_expan, temp_ref
+    # in sg_calib_constants.m.
+    "ignore_flight_model": options_t(
+        False,
+        ("Base", "FlightModel", "MakeDiveProfiles", "Reprocess", "BaseDB"),
+        ("--ignore_flight_model",),
+        bool,
+        {
+            "help": "Ignore values derived from FlightModel - honor all sg_calib_constants.m variables.  Setting this option implies --skip_flight_model",
             "action": "store_true",
         },
     ),
@@ -586,21 +605,10 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
-    "reprocess_flight": options_t(
-        False,
-        ("Reprocess",),
-        ("--reprocess_flight",),
-        bool,
-        {
-            "help": "Force reprocessing of flight",
-            "action": "store_true",
-        },
-    ),
-    #
     #
     "target_dir": options_t(
         "",
-        ("MoveData", "MakeDiveProfile", "Reprocess"),
+        ("MoveData", "MakeDiveProfiles", "Reprocess"),
         ("--target_dir", "-t"),
         FullPath,
         {
@@ -634,10 +642,7 @@ global_options_dict = {
     # Plotting related
     "plot_raw": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--plot_raw",),
         bool,
         {
@@ -652,6 +657,7 @@ global_options_dict = {
         (
             "Base",
             "BasePlot",
+            "Reprocess",
             "MakeMissionEngPlot",
         ),
         ("--save_svg",),
@@ -665,10 +671,7 @@ global_options_dict = {
     ),
     "save_png": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--save_png",),
         bool,
         {
@@ -680,10 +683,7 @@ global_options_dict = {
     ),
     "save_jpg": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--save_jpg",),
         bool,
         {
@@ -695,10 +695,7 @@ global_options_dict = {
     ),
     "save_webp": options_t(
         True,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--save_webp",),
         bool,
         {
@@ -710,10 +707,7 @@ global_options_dict = {
     ),
     "compress_div": options_t(
         True,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--compress_div",),
         bool,
         {
@@ -725,10 +719,7 @@ global_options_dict = {
     ),
     "full_html": options_t(
         "darwin" in sys.platform,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--full_html",),
         bool,
         {
@@ -740,10 +731,7 @@ global_options_dict = {
     ),
     "plot_freeze_pt": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--plot_freeze_pt",),
         bool,
         {
@@ -755,10 +743,7 @@ global_options_dict = {
     ),
     "plot_legato_use_glider_pressure": options_t(
         False,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--plot_legato_use_glider_pressure",),
         bool,
         {
@@ -770,12 +755,7 @@ global_options_dict = {
     ),
     "plot_directory": options_t(
         "",
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-            "MakeMissionEngPlots",
-        ),
+        ("Base", "BaseDB", "BasePlot", "MakeMissionEngPlots", "Reprocess"),
         ("--plot_directory",),
         FullPath,
         {
@@ -787,10 +767,7 @@ global_options_dict = {
     ),
     "pmar_logavg_max": options_t(
         1e2,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--pmar_logavg_max",),
         float,
         {
@@ -802,10 +779,7 @@ global_options_dict = {
     ),
     "pmar_logavg_min": options_t(
         1e-4,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--pmar_logavg_min",),
         float,
         {
@@ -817,10 +791,7 @@ global_options_dict = {
     ),
     "flip_ad2cp": options_t(
         True,
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--flip_ad2cp",),
         bool,
         {
@@ -837,6 +808,7 @@ global_options_dict = {
             "Base",
             "BaseDB",
             "BasePlot",
+            "Reprocess",
         ),
         ("--dive_plots",),
         str,
@@ -850,11 +822,7 @@ global_options_dict = {
     ),
     "mission_plots": options_t(
         mission_plot_list,
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-        ),
+        ("Base", "BaseDB", "BasePlot", "Reprocess"),
         ("--mission_plots",),
         str,
         {
@@ -870,10 +838,7 @@ global_options_dict = {
             "dives",
             "mission",
         ],
-        (
-            "Base",
-            "BasePlot",
-        ),
+        ("Base", "BasePlot", "Reprocess"),
         ("--plot_types",),
         str,
         {
@@ -885,11 +850,7 @@ global_options_dict = {
     ),
     "mission_energy_reserve_percent": options_t(
         0.15,
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-        ),
+        ("Base", "BaseDB", "BasePlot", "Reprocess"),
         ("--mission_energy_reserve_percent",),
         float,
         {
@@ -899,11 +860,7 @@ global_options_dict = {
     ),
     "mission_energy_dives_back": options_t(
         10,
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-        ),
+        ("Base", "BaseDB", "BasePlot", "Reprocess"),
         ("--mission_energy_dives_back",),
         int,
         {
@@ -913,11 +870,7 @@ global_options_dict = {
     ),
     "mission_trends_dives_back": options_t(
         10,
-        (
-            "Base",
-            "BaseDB",
-            "BasePlot",
-        ),
+        ("Base", "BaseDB", "BasePlot", "Reprocess"),
         ("--mission_trends_dives_back",),
         int,
         {
@@ -1521,6 +1474,14 @@ class BaseOptions:
                                         raise f"{val} outside of range {min_val} {max_val}"
 
                                 setattr(self, k, val)
+
+        # Update any options that affect other options
+        if (
+            hasattr(self, "ignore_flight_model")
+            and hasattr(self, "skip_flight_model")
+            and self.ignore_flight_model
+        ):
+            self.skip_flight_model = True
 
         # Previous version anything set on the command line or via default value trumps config file
         # for opt in dir(self._opts):

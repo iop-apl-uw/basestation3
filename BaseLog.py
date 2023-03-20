@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006, 2007, 2011, 2012, 2015, 2017, 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -302,16 +302,22 @@ log_warning_max_count = collections.defaultdict(int)
 def log_warning(s, loc=BaseLogger.warning_loc, alert=None, max_count=None):
     """Report string to baselog as a WARNING
     Input:
-    s - string
+    s - string to be logged
+    alert - string indicating the class of alert this warning should be assigned to
+    max_count - maximum number of times this warning should be issued.
+                if a positive value, the count is indexed by the module name and line number
+                if a negative value, the count is indexed by the module name, line number andwarning string
     """
     s = __log_caller_info(s, loc)
 
     if max_count:
         k = s.split(":")[0]
+        if max_count < 0:
+            k = f"{k}:{s}"
         log_warning_max_count[k] += 1
-        if log_warning_max_count[k] == max_count:
+        if log_warning_max_count[k] == abs(max_count):
             s += " (Max message count exceeded)"
-        elif log_warning_max_count[k] > max_count:
+        elif log_warning_max_count[k] > abs(max_count):
             return
 
     if alert:

@@ -50,6 +50,9 @@ import stat
 import pdb
 import traceback
 import numpy as np
+import re
+from Globals import flight_variables, ignore_tag, ignore_tags
+
 
 DEBUG_PDB = "darwin" in sys.platform
 
@@ -75,16 +78,12 @@ assumption_variables = ['mass', 'mass_comp', # from ballasting and expected apog
                         'max_stall_speed', 'min_stall_speed', 'min_stall_angle', # for hydro_model
                         ]
 # variables needed for w_rms_func()
-flight_variables = ['volmax',  # this is vehicle-specific; computed based on observed data over various dives
-                    'abs_compress', # this can be vehicle-specific or dive-specific; compute mean based on observed data over various dives
-                    'hd_a', 'hd_b', 'vbdbias', # these are dive-specific; computed based on observed dive data and assumed (a/b) over related dives
-                    'rho0', 'glider_length', 'hd_c', 'hd_s', 'therm_expan', 'temp_ref', # various constants based on vehicle type assumptions and calculations
-                    ]
+
 
 # see load_dive_data() these are the vectors we collect for each dive to compute various flight model parameters
 # deliberately NOT vol_comp, vol_comp_ref, and therm_expan_term, which are computed and cached
 # if compare_velo is non-zero we add 'velo_speed' to this list below
-dive_data_vector_names = ['w', 'pressure', 'temperature', 'density_insitu', 'displaced_volume', 'pitch'] 
+dive_data_vector_names = ['w', 'pressure', 'temperature', 'density_insitu', 'density', 'displaced_volume', 'pitch'] 
 
 # CONTROL PARAMETERS
 enable_reprocessing_dives = True # CONTROL Normally True but if False we don't spend time updating the dives
@@ -450,89 +449,91 @@ def load_flight_database(base_opts,sg_calib_constants_d,verify=False,create_db=F
     return True
 
 # Make a copy of sg_calib_constants.m and comment out any lines referencing a flight variable
-def cleanse_sg_calib_constants(sg_calib_file_name):
-    global flight_directory
-    save_sg_calib_file_name = '%s.orig' % sg_calib_file_name
-    if os.path.exists(save_sg_calib_file_name):
-        return
-    shutil.copyfile(sg_calib_file_name, save_sg_calib_file_name) # back it up
-    ignore_tag = 'FM_ignore' # if we have already ignored the line, don't do it again (in case of copy)
-    ignore_tags = ['vbdbias_drift', 'override.'] # other problem children
-    ignore_tags.extend(flight_variables)
-    changed_lines = 0
-
-    # See if anything needs changing
-    fi = open(sg_calib_file_name, "r")
-    for sg_line in fi:
-        if not sg_line.find(ignore_tag) >= 0: # not already ignored (from past version)
-            for tag in ignore_tags:
-                if sg_line.find(tag) >= 0:
-                    changed_lines += 1
-                    break
-    fi.close()
-    if changed_lines == 0:
-        # No lines need changing - proceed
-        log_info("%s needs no cleaning" % sg_calib_file_name)
-        return
-
-    log_info("%s contains lines needing to cleansed" % sg_calib_file_name)
-    changed_lines = 0
-    if not os.access(sg_calib_file_name, os.W_OK):
-        log_error("No write access to %s - fix permissions" % sg_calib_file_name)
+# def cleanse_sg_calib_constants(sg_calib_file_name):
+#     global flight_directory
+#     save_sg_calib_file_name = '%s.orig' % sg_calib_file_name
+#     if os.path.exists(save_sg_calib_file_name):
+#         return
+#     shutil.copyfile(sg_calib_file_name, save_sg_calib_file_name) # back it up
+#     changed_lines = 0
     
-    changed_lines = 0
-    try:
-        fh1 = open(save_sg_calib_file_name, "r")
-        fh2 = open(sg_calib_file_name, "w")
-        for sg_line in fh1:
-            if not sg_line.find(ignore_tag) >= 0: # not already ignored (from past version)
-                for tag in ignore_tags:
-                    if sg_line.find(tag) >= 0:
-                        sg_line = '%% %s %s' % (ignore_tag, sg_line)
-                        changed_lines += 1
-                        break
-            fh2.write(sg_line)
-        if False:
-            fh2.write('sbect_modes = 1;') # speed up reprocessing
-        fh2.close()
-        fh1.close()
-        if changed_lines:
-            changed_lines = 'FlightModel commented out %d lines in sg_calib_constants.m' % changed_lines
-            log_alert('SGC', changed_lines) # use SGC rather than FM since we might have other FM alerts
-            log_warning(changed_lines)
-    except:
-        # Typically we are running as the glider and it might not have write access
-        # to sg_calib_constants.m (unlike pilot) if it is owned by pilot:gliders, but no g+w or even a+w prives.
-        # We cannot run FM unless sg_calib_constants is cleansed since our ideas will be overwritten by sgc
-        # An alternative would be to force flush any explicit flight variables in sgc before we set ours
-        # but eventually the files would be accompanied by a poisoning sgc...
+#     comment = re.compile(r"%.*")  # % and anything after it, to a newline
+    
+#     # See if anything needs changing
+#     fi = open(sg_calib_file_name, "r")
+#     for sg_line in fi:
+#         if not sg_line.find(ignore_tag) >= 0: # not already ignored (from past version)
+#             # Make sure we are not flagging something in a comment
+#             if comment.search(sg_line):
+#                 sg_line, _ = comment.split(sg_line)
+#             for tag in ignore_tags:
+#                 if sg_line.find(tag) >= 0:
+#                     changed_lines += 1
+#                     break
+#     fi.close()
+#     if changed_lines == 0:
+#         # No lines need changing - proceed
+#         log_info("%s needs no cleaning" % sg_calib_file_name)
+#         return
 
-        # Put this in the log file to make things abundently clear
-        log_error("Failed to cleanse sg_calib_constants - trying fallback strategy", 'exc')
+#     log_info("%s contains lines needing to cleansed" % sg_calib_file_name)
+#     changed_lines = 0
+#     if not os.access(sg_calib_file_name, os.W_OK):
+#         log_error("No write access to %s - fix permissions" % sg_calib_file_name)
+    
+#     changed_lines = 0
+#     try:
+#         fh1 = open(save_sg_calib_file_name, "r")
+#         fh2 = open(sg_calib_file_name, "w")
+#         for sg_line in fh1:
+#             if not sg_line.find(ignore_tag) >= 0: # not already ignored (from past version)
+#                 for tag in ignore_tags:
+#                     if sg_line.find(tag) >= 0:
+#                         sg_line = '%% %s %s' % (ignore_tag, sg_line)
+#                         changed_lines += 1
+#                         break
+#             fh2.write(sg_line)
+#         if False:
+#             fh2.write('sbect_modes = 1;') # speed up reprocessing
+#         fh2.close()
+#         fh1.close()
+#         if changed_lines:
+#             changed_lines = 'FlightModel commented out %d lines in sg_calib_constants.m' % changed_lines
+#             log_alert('SGC', changed_lines) # use SGC rather than FM since we might have other FM alerts
+#             log_warning(changed_lines)
+#     except:
+#         # Typically we are running as the glider and it might not have write access
+#         # to sg_calib_constants.m (unlike pilot) if it is owned by pilot:gliders, but no g+w or even a+w prives.
+#         # We cannot run FM unless sg_calib_constants is cleansed since our ideas will be overwritten by sgc
+#         # An alternative would be to force flush any explicit flight variables in sgc before we set ours
+#         # but eventually the files would be accompanied by a poisoning sgc...
+
+#         # Put this in the log file to make things abundently clear
+#         log_error("Failed to cleanse sg_calib_constants - trying fallback strategy", 'exc')
         
-        try:
-            os.remove(save_sg_calib_file_name)
-        except:
-            log_error("Unable to remove %s" % save_sg_calib_file_name, 'exc')
+#         try:
+#             os.remove(save_sg_calib_file_name)
+#         except:
+#             log_error("Unable to remove %s" % save_sg_calib_file_name, 'exc')
             
-        if flight_directory is not None: # this should always be True since this fn is called only after reinitialization
-            log_warning("Falling back on removing %s and starting from scratch" % flight_directory)
-            try:
-                # force the system to restart and try overwriting sg_calib_constants.m again
-                shutil.rmtree(flight_directory)
-            except:
-                log_error("Unable to remove %s" % flight_directory, 'exc')
-            else:
-                # Subsequent code assumes this directory already exists
-                os.mkdir(flight_directory)
-        alert = 'Unable to cleanse sg_calib_constants.m; if owned by pilot, change protections to g+w'
-        log_alert('FM', alert)
-        #raise RuntimeError, alert
-        return
+#         if flight_directory is not None: # this should always be True since this fn is called only after reinitialization
+#             log_warning("Falling back on removing %s and starting from scratch" % flight_directory)
+#             try:
+#                 # force the system to restart and try overwriting sg_calib_constants.m again
+#                 shutil.rmtree(flight_directory)
+#             except:
+#                 log_error("Unable to remove %s" % flight_directory, 'exc')
+#             else:
+#                 # Subsequent code assumes this directory already exists
+#                 os.mkdir(flight_directory)
+#         alert = 'Unable to cleanse sg_calib_constants.m; if owned by pilot, change protections to g+w'
+#         log_alert('FM', alert)
+#         #raise RuntimeError, alert
+#         return
 
 
 # Dump/checkpoint the flight database by pickling
-def save_flight_database(dump_mat=False):
+def save_flight_database(base_opts, dump_mat=False):
     global flight_dive_data_d, flight_dive_data_filename, flight_dive_nums
     if flight_dive_data_filename is not None and flight_dive_data_d is not None:
         flight_dive_data_d['last_updated'] = time.time()
@@ -762,6 +763,8 @@ def dump_fm_values(dive_data):
         fh.write('%% %s\n' % glider_mission_string)
         fh.write('volmax = %g;\n' % flight_dive_data_d['volmax'])
         fh.write('vbdbias = %g; %% vbdbias w rms = %.2f cm/s\n' % (dive_data.vbdbias, dive_data.w_rms_vbdbias))
+        volmax_biased = flight_dive_data_d['volmax'] - dive_data.vbdbias
+        fh.write('volmax_biased = %g;\n' % volmax)
         fh.write('abs_compress = %g;\n' % dive_data.abs_compress)
         fh.write('hd_a = %g;\n' % dive_data.hd_a)
         fh.write('hd_b = %g;\n' % dive_data.hd_b)
@@ -772,6 +775,7 @@ def dump_fm_values(dive_data):
         fh.write('hd_c = %g;\n' % flight_dive_data_d['hd_c'])
         fh.write('hd_s = %g;\n' % hd_s)
         fh.write('therm_expan = %g;\ntemp_ref = %g;\n' % (flight_dive_data_d['therm_expan'], flight_dive_data_d['temp_ref']))
+
         # rho0? glider_length?
         fh.close()
     except:
@@ -891,10 +895,12 @@ def load_dive_data(base_opts, dive_data):
         try:
             if not base_opts.use_gsw:
                 density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
+                density = seawater.pden(salinity_raw, temperature_raw, press, 0)
             else:
                 density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
+                density = Utils.pdensity(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
         except:
-            log_error(f"Failed density calculation for {dive_num} - skipping")
+            log_error(f"Failed density calculation for {dive_num} - skipping", "exc")
             return None
         
         # use the values in the log file, not the pilot's fiction in sg_calib_constants.h
@@ -1048,8 +1054,14 @@ def load_dive_data(base_opts, dive_data):
             data_d['temperature'] = temperature_raw[valid_i] # for compressee and hull thermal expansion
             density_insitu = density_insitu[valid_i]
             data_d['density_insitu'] = density_insitu # for buoyancy calculations (kg/m^3)
+            dive_data.bottom_temp = min(data_d['temperature'])
+
+            density = density[valid_i]
+            data_d['density'] = density # for buoyancy calculations (kg/m^3)
             # deliberately over the valid points
             dive_data.bottom_rho0 = max(density_insitu)
+            dive_data.bottom_pden = max(density)
+
             eng_vbd_cc = eng_vbd_cc[valid_i]
             if compare_velo:
                 if n_velo:
@@ -1114,13 +1126,14 @@ def compute_buoyancy(vbdbias, abs_compress, # these variables can be varied by v
     # so remove vol_comp to compute that effect and then add vol_comp to get total volume
     # We use vol_comp_ref since we want the assumed volume of the uncompressed hull on the reference surface
     vol_hull = vbdc - vol_comp_ref
-    vol = vol_hull*exp(-abs_compress*press + therm_expan_term)
+    vol = vol_hull # *exp(-abs_compress*press + therm_expan_term)
     if dump_checkpoint_data_matfiles:
         dive_data_d['vol_hull'] = vol_hull;
         dive_data_d['vol_hull_compress'] = vol;
     vol = vol + vol_comp
 
-    density_insitu = dive_data_d['density_insitu']
+    # density_insitu = dive_data_d['density_insitu']
+    density_insitu = dive_data_d['density']
 
     buoyancy = g_per_kg*(density_insitu*vol*(m_per_cm**3) - flight_consts_d['mass'])
     pitch = dive_data_d['pitch']
@@ -1338,10 +1351,10 @@ def solve_ab_grid(base_opts, dive_set,reprocess_count,dive_num=None):
         # NOTE we used to cache this data in a dive_cache_d but not really worth it?
         dive_data_d = load_dive_data(base_opts, dd) # load data
         if dd.dive_data_ok is False:
-            log_error("Dive %d is marked as not okay - skipping grid solution!" % dive_set_num, alert=True)
+            log_error("Dive %d is marked as not okay - skipping grid solution!" % dive_set_num, alert="FM Grid Solution")
             return (None, None, None)
         if not dive_data_d:
-            log_error("Failed to load dive %d data - skipping grid solution!" % dive_set_num, alert=True)
+            log_error("Failed to load dive %d data - skipping grid solution!" % dive_set_num, alert="FM Grid Solution")
             return (None, None, None)
         if compare_velo and not dive_data_d['n_velo']:
             n_velo = False # a dive is missing velo points
@@ -1445,8 +1458,10 @@ def load_dive_data_DAC(dive_data):
         salinity_raw = dive_nc_file.variables['salinity_raw'][:]
         if not base_opts.use_gsw:
             density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
+            density = seawater.pden(salinity_raw, temperature_raw, press, 0)
         else:
             density_insitu = Utils.density(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
+            density = Utils.pdensity(salinity_raw, temperature_raw, press, dive_nc_file.variables["avg_longitude"].getValue(), dive_nc_file.variables["avg_latitude"].getValue())
         
         # use the values in the log file, not the pilot's fiction in sg_calib_constants.h
         # this is what the glider used
@@ -1471,6 +1486,7 @@ def load_dive_data_DAC(dive_data):
         data_d['pressure'] = press # for compression and compressee
         data_d['temperature'] = temperature_raw # for compressee and hull thermal expansion
         data_d['density_insitu'] = density_insitu # for buoyancy calculations (kg/m^3)
+        data_d['density'] = density # for buoyancy calculations (kg/m^3)
         
         volmax = flight_dive_data_d['volmax'] # assume this is already calculated
         vbd0 = volmax + vbd_neutral  # [cc] volume when at neutral
@@ -1746,7 +1762,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                     load_dive_data(base_opts, dive_data) # update our db object with current values from updated nc file by side effect
                 except KeyError:
                     pass
-            save_flight_database() # record this issue and updated filetimes in history
+            save_flight_database(base_opts) # record this issue and updated filetimes in history
             return 1
 
         log_debug("Started FM processing %d at %s" %(reprocess_count, time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))))
@@ -1914,7 +1930,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                         log_info('New mean abs_compress = %g (%.3f,%d)' % (new_abs_compress, (1 - abs(new_abs_compress/old_abs_compress)), len(abs_compress_values)))
 
                 # At this point we have a new or updated dive.
-                save_flight_database() # checkpoint updated dive data
+                save_flight_database(base_opts) # checkpoint updated dive data
                 # if dives come in out of order (comms problems, yoyo dives, under ice, etc)
                 # we need to flush grid cache entries involving this reprocessed dive, if any, to recompute the grids going forward
                 flush_ab_grid_cache(dive_num, ab_grid_cache_d)
@@ -2235,7 +2251,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                                  predicted_hd_a, predicted_hd_b, predicted_hd_ab_trusted) 
 
             # save any updated ab_grid_cache and dive_data values (make available for possible reprocess below)
-            save_flight_database() 
+            save_flight_database(base_opts) 
             # continue the main for loop for each dive number in update_flight_dive_nums
 
         # Done processing all known dives
@@ -2260,7 +2276,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 dd = flight_dive_data_d[vbd_dive_num] # ensured
                 # update dive_data with median value (to be used when computing grid)
                 dd.median_vbdbias = dive_median_vbdbias
-            save_flight_database()
+            save_flight_database(base_opts)
 
         # rebuild summary plots
         if generate_figures and len(flight_dive_nums) > 1: # wait until you have 2 dives so xlim/ylim don't complain
@@ -2474,7 +2490,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 if compare[0] or compare[1]:
                     dd.recompute_vbdbias_abs_compress = True 
                 reprocess_dives.append(d_n)
-        save_flight_database(dump_mat=True) # save any updated data before reprocessing
+        save_flight_database(base_opts, dump_mat=True) # save any updated data before reprocessing
         reprocess_dives = sorted(Utils.unique(reprocess_dives))
         # A note on reprocessing.  We can really only do this with coupled changes in MDP that request the FM data
         # via get_flight_parameters() above.  For older basestations in order to reprocess dives we would have to
@@ -2498,7 +2514,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 dd.nc_volmax = dd.volmax
                 dd.nc_vbdbias = dd.vbdbias
                 dd.nc_abs_compress = dd.abs_compress
-            save_flight_database(dump_mat=False) # save any updated data before reprocessing
+            save_flight_database(base_opts, dump_mat=False) # save any updated data before reprocessing
 
             if enable_reprocessing_dives:
                 log_info('Reprocess dives: %s' % reprocess_dives)
@@ -2513,7 +2529,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 
                 #TODO - need to evaluate the merit of a launch vs direct invokation
                 reprocess_log = os.path.join(flight_directory, 'Reprocess_%04d_%.f.log' % (max(flight_dive_nums), time.time()))
-                Utils.run_cmd_shell('%s %s --force -v --mission_dir %s %s  > %s 2>&1' %
+                Utils.run_cmd_shell('%s %s --force -v --called_from_fm --mission_dir %s %s  > %s 2>&1' %
                                     (sys.executable,
                                      os.path.join(base_opts.basestation_directory, 'Reprocess.py'),
                                      mission_directory, dives, reprocess_log))
@@ -2542,7 +2558,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                         log_error(f"Consult {reprocess_log} for futher details")
                         enable_reprocessing_dives = False # don't do this again...
                         dd.dive_data_ok = False # skip this dive until it is reprocessed by someone else
-                save_flight_database(dump_mat=False) # save any updated data after reprocessing
+                save_flight_database(base_opts, dump_mat=False) # save any updated data after reprocessing
 
 
     # BREAK done with reprocessing dives
@@ -2633,7 +2649,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         old_basestation = True
         dump_fm_files = True # let the pilot know what values we find, per-dive
 
-    sg_calib_constants_d = getSGCalibrationConstants(sg_calib_file_name, suppress_required_error=True)
+    sg_calib_constants_d = getSGCalibrationConstants(sg_calib_file_name)
     if(not sg_calib_constants_d or 'id_str' not in sg_calib_constants_d):
         log_error("Could not process %s" % sg_calib_file_name)
         return 1
@@ -2735,11 +2751,11 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         dive_nc_file.close()
 
         if old_basestation:
-            MakeDiveProfiles.sg_config_constants(sg_calib_constants_d,None,{})
+            MakeDiveProfiles.sg_config_constants(base_opts, sg_calib_constants_d,None,{})
             glider_type = get_FM_defaults(sg_calib_constants_d)
         else:
             # the new sg_config_constants calls  get_FM_defaults recursively and returns glider_type
-            glider_type = MakeDiveProfiles.sg_config_constants(sg_calib_constants_d,log_deepglider,has_gpctd)
+            glider_type = MakeDiveProfiles.sg_config_constants(base_opts, sg_calib_constants_d,log_deepglider,has_gpctd)
         
     # (re)load or create the flight model db and ensure the assumptions of sg_calib_constants_d haven't changed
     flight_dive_data_d = None # reset and try loading again
@@ -2761,7 +2777,12 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
 
 
     if reinitialized:
-        if enable_reprocessing_dives:
+        # 2023/03/15 GBS - we now handle the sg_calib_constants.m file by filter out flight variables
+        # see Globals.py for the list - see CalibConsts.m for the filter code.  Default logic is to
+        # filter out the variables (issuing warnings/alerts) (unless the user appends a comment containing
+        # FM_ignore.  
+        
+        #if enable_reprocessing_dives:
             # since we can reprocess on a per-dive basis, rewrite sgc so it don't pollute/override FM parameters
             # but allow the pilot to then edit the file to update other (i.e., sensor) parameters without issue.
             # Otherwise don't touch the file
@@ -2770,7 +2791,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             # So perhaps the better part of valour is to always rewrite the sgc file?
             # NO: In order to get into this state they must be running FM under an old basestation so we couldn't
             # rewrite with FM data per dive anyway, even if they reprocess by hand.
-            cleanse_sg_calib_constants(sg_calib_file_name)
+            #cleanse_sg_calib_constants(sg_calib_file_name)
         
         # Override whatever the pilot might have provided for FM parameters with our defaults
         # do this once when the db is being created and cache in flight_dive_data_d
@@ -2868,7 +2889,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
         flight_dive_data_d['ac_max'] = ac_max_start
         flight_dive_data_d['ac_min_press'] = 500 # [dbar] this is where we can start seeing the impact, otherwise use the default
         #DEBUG pfdd(True) #  display initial defaults in the log file
-        save_flight_database()
+        save_flight_database(base_opts)
 
     if deck_dives: # test this after the DB is saved
         log_error('Unable to run flight model on deck dives!')
@@ -2949,7 +2970,7 @@ def main(instrument_id=None, base_opts=None, sg_calib_file_name=None, dive_nc_fi
             ret_val = process_dive(base_opts, None, updated_dives_d, alert_dive_num, exit_event=exit_event)
             log_debug("Done processing remaining dives")
 
-    save_flight_database() # save any updated history, ab_grid_cache, and dive_data values
+    save_flight_database(base_opts) # save any updated history, ab_grid_cache, and dive_data values
 
     if not ret_val and len(grid_dive_sets):
         # now that everything is buttoned up try solving these grids the user is interested in
@@ -2998,7 +3019,7 @@ def cmdline_main():
 def process_directory(base_opts):
     nc_files_created = None
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
-    sg_calib_constants_d = getSGCalibrationConstants(sg_calib_file_name, suppress_required_error=True)
+    sg_calib_constants_d = getSGCalibrationConstants(sg_calib_file_name)
     if(not sg_calib_constants_d):
         log_error("Could not process %s" % sg_calib_file_name)
         return 1

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -100,14 +100,12 @@ if nc_qc_type != "Q":  # encoding QC values as integers?
 
 
 def initialize_qc(length, qc_tag=QC_GOOD):
-    """Create a QC vector of the given length
-    """
+    """Create a QC vector of the given length"""
     return qc_tag * np.ones(length)
 
 
 def trump_qc(qc):
-    """Determine what qc existing values would trump (and hence not change) qc
-    """
+    """Determine what qc existing values would trump (and hence not change) qc"""
     # Implement QC preference rules
     # If an existing qc value is already set to a trump value, don't override it
     trump_qc_v = []  # no trump
@@ -126,8 +124,7 @@ def trump_qc(qc):
 
 
 def update_qc(qc, previous_qc=QC_NO_CHANGE):
-    """Update a scalar QC value, respecting preference order.
-    """
+    """Update a scalar QC value, respecting preference order."""
     return previous_qc if previous_qc in trump_qc(qc) else qc
 
 
@@ -182,8 +179,7 @@ def assert_qc(qc, qc_v, indices_v, reason):
 
 
 def report_qc(tag, qc_v):  # pylint: disable=unused-argument
-    """Debugging report on the state of a QC variable
-    """
+    """Debugging report on the state of a QC variable"""
     return  # disable
 
     # DEBUGGING
@@ -728,8 +724,7 @@ def interpolate_data_qc(
 
 
 def encode_to_str(x):
-    """ Encodes a QC vector as a string
-    """
+    """Encodes a QC vector as a string"""
     ret_val = ""
     for v in x:
         ret_val += chr(int(v) + nc_qc_character_base)
@@ -790,8 +785,7 @@ def decode_qc(qc_v):
 
 
 class ProfileDirectives:
-    """ Processing of profile directives
-    """
+    """Processing of profile directives"""
 
     comment = re.compile(r"%.*")  # % and anything after it, to a newline
     no_prefix = "no_"
@@ -891,8 +885,7 @@ class ProfileDirectives:
     # print all functions in a single string (for dumping to nc file)
     # just append the saved strings AND their comments?
     def dump_string(self):
-        """Form composite string of comments and functions for this instance
-        """
+        """Form composite string of comments and functions for this instance"""
         sstring = ""
         for line in self.lines:
             sstring += line + "\n"
@@ -908,8 +901,7 @@ class ProfileDirectives:
         return None
 
     def parse_file(self, filename):
-        """Parse comments and functions from filename
-        """
+        """Parse comments and functions from filename"""
 
         try:
             file = open(filename)
@@ -923,8 +915,7 @@ class ProfileDirectives:
         return None
 
     def eval_function(self, function_tag, absent_predicate_value=False):
-        """Evaluate and return the indices for a specific function, if present in the directives
-        """
+        """Evaluate and return the indices for a specific function, if present in the directives"""
 
         indices = []
         f = function_tag
@@ -942,8 +933,7 @@ class ProfileDirectives:
         return indices
 
     def eval_arg(self, arg):  # pylint: disable=no-self-use
-        """ Runs eval on class arg
-        """
+        """Runs eval on class arg"""
         try:
             value = eval("self." + arg)  # pylint: disable=eval-used
         except:
@@ -955,8 +945,7 @@ class ProfileDirectives:
         return value
 
     def eval_set(self, function_tag, indices=None):
-        """ Evals a list
-        """
+        """Evals a list"""
         if not indices:
             indices = []
         statements = []
@@ -979,8 +968,7 @@ class ProfileDirectives:
         return indices
 
     def eval_range(self, statement):
-        """ Evals a range
-        """
+        """Evals a range"""
         args = statement[2:]
         if len(args) >= 1:
             index_name = args[0]
@@ -1093,8 +1081,7 @@ class ProfileDirectives:
             return value
 
     def suggest(self, suggestion):
-        """Emits a suggestion
-        """
+        """Emits a suggestion"""
         # TODO: Potential bug here - assume the reviewed have been added via eval
         if not self.reviewed:
             if self.dive_num:
@@ -1109,16 +1096,14 @@ class ProfileDirectives:
 
 
 def qc_log_start(file_name):
-    """ Start QC logging file
-    """
+    """Start QC logging file"""
     global f_qclog  # pylint: disable=global-statement
-    f_qclog = open(file_name, "w")
+    f_qclog = open(file_name, "wb")
     return
 
 
 def qc_log_stop():
-    """ Stop QC logging file
-    """
+    """Stop QC logging file"""
     global f_qclog  # pylint: disable=global-statement
     if f_qclog:
         f_qclog.close()
@@ -1127,15 +1112,14 @@ def qc_log_stop():
 
 
 def qc_log(value):
-    """ Add to  QC log
-    """
+    """Add to  QC log"""
     if f_qclog:
         pickle.dump(value, f_qclog)
     return
 
 
 def smooth_legato_pressure(legato_pressure, legato_time, n_stddevs=2.0, max_dz_dt=0.5):
-    """ Detects cases where the pressure signal spikes and
+    """Detects cases where the pressure signal spikes and
     replaces them with an interpolated value
 
     Returns:
@@ -1167,7 +1151,12 @@ def smooth_legato_pressure(legato_pressure, legato_time, n_stddevs=2.0, max_dz_d
 
     press = np.delete(legato_pressure.copy(), bad_points)
     lg_time = np.delete(legato_time.copy(), bad_points)
-    f = interp1d(lg_time, press, bounds_error=False, fill_value="extrapolate",)
+    f = interp1d(
+        lg_time,
+        press,
+        bounds_error=False,
+        fill_value="extrapolate",
+    )
 
     smoothed_press = legato_pressure.copy()
     final_bad_points = []
@@ -1184,6 +1173,11 @@ def smooth_legato_pressure(legato_pressure, legato_time, n_stddevs=2.0, max_dz_d
             bad_points_reduced.remove(pp)
             press = np.delete(legato_pressure.copy(), bad_points_reduced)
             lg_time = np.delete(legato_time.copy(), bad_points_reduced)
-            f = interp1d(lg_time, press, bounds_error=False, fill_value="extrapolate",)
+            f = interp1d(
+                lg_time,
+                press,
+                bounds_error=False,
+                fill_value="extrapolate",
+            )
 
     return (smoothed_press, np.array(final_bad_points, dtype=np.int64))

@@ -95,3 +95,21 @@ known_mailer_tags = [
     "kmz",
 ]
 known_ftp_tags = known_mailer_tags
+
+# Flight model related - here to avoid circular ref during load
+flight_variables = [
+    "volmax",  # this is vehicle-specific; computed based on observed data over various dives
+    "abs_compress",  # this can be vehicle-specific or dive-specific; compute mean based on observed data over various dives
+    "hd_a",
+    "hd_b",
+    "vbdbias",  # these are dive-specific; computed based on observed dive data and assumed (a/b) over related dives
+    "rho0",
+    "glider_length",
+    "hd_c",
+    "hd_s",
+    "therm_expan",
+    "temp_ref",  # various constants based on vehicle type assumptions and calculations
+]
+ignore_tag = "FM_ignore"  # if we have already ignored the line, don't do it again (in case of copy)
+ignore_tags = ["vbdbias_drift", "override."]  # other problem children
+ignore_tags.extend(flight_variables)
