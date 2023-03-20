@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -157,61 +157,24 @@ def main():
             log_critical("Unable to create directory: " + base_opts.target_dir)
             return 1
 
-    #
-    # Get glider version and instrument id from CommLog
-    #
-
-    software_version = None
-    instrument_id = None
-
-    try:
-        log_debug("base_opts.mission_dir: " + base_opts.mission_dir)
-        comm_log = os.path.join(base_opts.mission_dir, "comm.log")
-
-        (commlog, _, _, _, _) = CommLog.process_comm_log(
-            comm_log, base_opts
-        )  # returns a CommLog object
-        if commlog is None:
-            return 1
-
-        instrument_id = commlog.get_instrument_id()
-        log_debug("sg_id from commlog: " + str(instrument_id))
-
-        if commlog.last_complete_surfacing().software_version:
-            software_version = float(commlog.last_complete_surfacing().software_version)
-            log_debug("software_version: " + str(software_version))
-
-    except SystemExit:
-        log_warning("failed to process comm log: " + comm_log)
-
-    if instrument_id is None:
-        if base_opts.instrument_id is not None:
-            instrument_id = int(base_opts.instrument_id)
-        else:
-            instrument_id = (
-                0  # yes, cheating, but instrumentID isn't needed for MoveData
-            )
-
-    if software_version:
-        software_version = int(software_version)
-    if software_version is None:
-        log_warning("glider software version not specified in " + comm_log)
-        if base_opts.ver_65:
-            software_version = 65
-        else:
-            software_version = 66
-            log_warning(
-                "Glider software version not listed in comm.log or options; assumed to be 66."
-            )
-
-    if not (
-        (software_version == 65) or (software_version >= 66)
-    ):  # we only handle these two versions
-        log_critical(
-            "Glider version must be 65 or 66 (%s). Check %s"
-            % (software_version, comm_log)
+    if not base_opts.instrument_id:
+        (comm_log, _, _, _, _) = CommLog.process_comm_log(
+            os.path.join(base_opts.mission_dir, "comm.log"),
+            base_opts,
         )
-        return 1
+        if comm_log:
+            base_opts.instrument_id = comm_log.get_instrument_id()
+
+    if not base_opts.instrument_id:
+        _, tail = os.path.split(base_opts.mission_dir[:-1])
+        if tail[-5:-3] != "sg":
+            log_error("Can't figure out the instrument id - bailing out")
+            return 1
+        try:
+            base_opts.instrument_id = int(tail[-3:])
+        except:
+            log_error("Can't figure out the instrument id - bailing out")
+            return 1
 
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
@@ -242,13 +205,12 @@ def main():
     moveFiles("targets", base_opts.mission_dir, base_opts.target_dir, copy=True)
     moveFiles("science", base_opts.mission_dir, base_opts.target_dir, copy=True)
     moveFiles("pdoscmds.bat", base_opts.mission_dir, base_opts.target_dir, copy=True)
-    moveFiles("comm.log", base_opts.mission_dir, base_opts.target_dir, copy=True)
 
     #
     # Move files
     #
 
-    if software_version == 65:
+    if base_opts.ver_65:
         moveFiles(
             Const.raw_data_file_prefix + "*.*",
             base_opts.mission_dir,
@@ -279,12 +241,12 @@ def main():
         moveFiles(Const.convert_log, base_opts.mission_dir, base_opts.target_dir)
         moveFiles("convert_*", base_opts.mission_dir, base_opts.target_dir)
 
-    if software_version >= 66:
+    if not base_opts.ver_65:
 
         # Move raw seaglider files and files generated during basestation2 processing
 
         fc = FileMgr.FileCollector(
-            base_opts.mission_dir, instrument_id
+            base_opts.mission_dir, base_opts.instrument_id
         )  # look at all glider files in current directory
 
         moveFileList(fc.get_pre_proc_files(), base_opts.target_dir)
@@ -304,7 +266,7 @@ def main():
     moveFiles("sections.yml", base_opts.mission_dir, base_opts.target_dir)
 
     # Files common to both versions of the basestation
-    moveFiles(comm_log, base_opts.mission_dir, base_opts.target_dir)
+    moveFiles("comm.log", base_opts.mission_dir, base_opts.target_dir)
     moveFiles(
         "history.log", base_opts.mission_dir, base_opts.target_dir
     )  # shell command history
@@ -316,19 +278,19 @@ def main():
     )  # any pilot directives or suggestions
     moveFiles(Const.logfiles, base_opts.mission_dir, base_opts.target_dir)
     moveFiles(
-        "p%03d*.tar.bz2" % instrument_id, base_opts.mission_dir, base_opts.target_dir
+        "p%03d*.tar.bz2" % base_opts.instrument_id, base_opts.mission_dir, base_opts.target_dir
     )
     moveFiles(
-        "pt%03d*.tar.bz2" % instrument_id, base_opts.mission_dir, base_opts.target_dir
+        "pt%03d*.tar.bz2" % base_opts.instrument_id, base_opts.mission_dir, base_opts.target_dir
     )
-    moveFiles("sg%03d.kmz" % instrument_id, base_opts.mission_dir, base_opts.target_dir)
+    moveFiles("sg%03d.kmz" % base_opts.instrument_id, base_opts.mission_dir, base_opts.target_dir)
     moveFiles(
-        "sg%03d_network.kml" % instrument_id,
+        "sg%03d_network.kml" % base_opts.instrument_id,
         base_opts.mission_dir,
         base_opts.target_dir,
     )
     moveFiles(
-        "sg%03d_*.ncdf" % instrument_id, base_opts.mission_dir, base_opts.target_dir
+        "sg%03d_*.ncdf" % base_opts.instrument_id, base_opts.mission_dir, base_opts.target_dir
     )
 
     # Move backup and recovery versions but NOT main versions of known_files from loggers
