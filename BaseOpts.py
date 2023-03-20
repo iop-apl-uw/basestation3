@@ -212,13 +212,13 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
         },
     ),
-    "add_sqllite": options_t(
+    "add_sqlite": options_t(
         True,
         ("Base",),
-        ("--add_sqllite",),
+        ("--add_sqlite",),
         bool,
         {
-            "help": "Add netcdf files to mission sqllite db",
+            "help": "Add netcdf files to mission sqlite db",
             "action": argparse.BooleanOptionalAction,
         },
     ),
@@ -393,7 +393,7 @@ global_options_dict = {
     ),
     "bin_width": options_t(
         1.0,
-        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission", "BaseDB"),
+        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission"),
         ("--bin_width",),
         float,
         {
@@ -576,7 +576,7 @@ global_options_dict = {
     # DOC in sg_calib_constants.m.
     "ignore_flight_model": options_t(
         False,
-        ("Base", "FlightModel", "MakeDiveProfiles", "Reprocess"),
+        ("Base", "FlightModel", "MakeDiveProfiles", "Reprocess", "BaseDB"),
         ("--ignore_flight_model",),
         bool,
         {

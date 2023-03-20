@@ -2241,19 +2241,19 @@ def main():
         dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
 
     # Add netcdf files to mission sql database
-    if base_opts.add_sqllite:
+    if base_opts.add_sqlite:
         log_info("Starting netcdf load to db")
         if base_opts.force:
             try:
                 BaseDB.rebuildDB(base_opts)
             except:
-                log_error("Failed to rebuild mission sqllite db", "exc")
+                log_error("Failed to rebuild mission sqlite db", "exc")
         else:
             for ncf in nc_files_created:
                 try:
                     BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
                 except:
-                    log_error(f"Failed to add {ncf} to mission sqllite db", "exc")
+                    log_error(f"Failed to add {ncf} to mission sqlite db", "exc")
             log_info("netcdf load to db done")
 
     # Run and dive extensions

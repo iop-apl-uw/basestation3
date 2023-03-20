@@ -168,6 +168,10 @@
                 glider = json['glider'];
                 newDive = json['dive'];
                 if ('content' in json && json['content'] == 'files=perdive') {
+                    if (newDive > maxDive) {
+                        maxDive = newDive;
+                        updateMaxDive();
+                    }
                     loadPlots(newDive, true);
                     buildTable(currGlider, newDive);
                 }
@@ -257,6 +261,17 @@
     var controlFileDive = {};
 
     var numPages = 0;
+
+    function updateMaxDive() {
+        var v1 = $('txtPlotlyFirstDive').value;
+        var v2 = $('txtPlotlyLastDive').value;
+
+        $('txtPlotlyFirstDive').max = maxDive;
+        $('txtPlotlyLastDive').max = maxDive;
+
+        $('txtPlotlyFirstDive').value = v1;
+        $('txtPlotlyLastDive').value = maxDive;
+    }
 
 {% if runMode == 'pilot' %}
     function saveControl(force) {
@@ -694,14 +709,17 @@
             currTitle = data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
                 currDive = maxDive = parseInt(data['dive']);
+                
                 loadPlots(currDive, false);
                 // loadLog(currDive);
+                updateMaxDive();
             }
             else if (dive > 0 && dive < parseInt(data['dive'])) {
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
                 loadPlots(currDive, false);
                 // loadLog(currDive);
+                updateMaxDive();
             }
             engplotlyplots = data['engplotly'];
             engplots = data['engplots'];
@@ -1113,18 +1131,28 @@
         }
     }
 
+    function transpose(matrix) {
+        return matrix[0].map((col, i) => matrix.map(row => row[i]));
+    }
+
     function doPlotlyProfiles(which) {
         let x = $('selPlotlyContour').value;
-        var stride = $('selPlotlyProfileStride').value;
-        var zStride = $('selPlotlyZStride').value;
-    
+        var binSize = $('selPlotlyZStride').value;
+   
+        let whichProf =  document.querySelector('input[name="plotlyWhichProfiles"]:checked').value; 
+        let first = $('txtPlotlyFirstDive').value;
+        let last = $('txtPlotlyLastDive').value;
+        let step = $('selPlotlyDiveStride').value;
+        let top  = $('txtPlotlyTopDepth').value;
+        let bot  = $('txtPlotlyBotDepth').value;
+ 
         $('btnPlotlyContour').disabled = true;
         $('btnPlotlyProfiles').disabled = true;
         var def  = $('btnPlotlyContour').style.backgroundColor;
         $('btnPlotlyContour').style.backgroundColor = 'yellow';
         $('btnPlotlyProfiles').style.backgroundColor = 'yellow';
 
-        fetch(`pro/${currGlider}/${x}/0/-1/${stride}/${zStride}${mission()}`)
+        fetch(`pro/${currGlider}/${x}/${whichProf}/${first}/${last}/${step}/${top}/${bot}/${binSize}${mission()}`)
         .then(res => res.text())
         .then(data => {
             data = data.replaceAll('NaN', 'null');
@@ -1134,6 +1162,7 @@
                 var d = [{
                     z: data[x],
                     y: data['depth'],
+                    x: data['dive'],
                     type: 'contour',
                     /// xaxis: 'profile',
                     // yaxis: 'depth',
@@ -1151,7 +1180,7 @@
                 var layout = { 
                                 font:       {size: 12},
                                 margin: { t:20, l:80, r:80, b:80 },
-                                xaxis: { title: 'profile/' + stride },
+                                xaxis: { title: 'dive' },
                                 yaxis: { title: 'depth', autorange: 'reversed' },
                                 plot_bgcolor: "#cccccc",
                                 paper_bgcolor: "#bbbbbb",
@@ -1236,11 +1265,12 @@
             currElt = 'plotly-' + which;
             data = data.replaceAll('NaN', 'null');
             data = JSON.parse(data);
+            console.log(data);
             if (which == 'plot' && x2 == '-') {
                 var d = [];
-                var xd = mode == 0 ? data.map(v => v[x]) : data[x];
+                var xd = data[x];
                 for (var i = 0 ; i < y.length ; i++) {
-                    var yd = mode ==  0 ? data.map(v => v[y[i]]) : data[y[i]];
+                    var yd = data[y[i]];
                     d.push({
                             x: xd,
                             y: yd,
@@ -1263,10 +1293,10 @@
             }
             else if (which == 'plot') {
                 var d = [];
-                var xd = mode == 0 ? data.map(v => v[x]) : data[x];
-                var xd2 = mode == 0 ? data.map(v => v[x2]) : data[x2];
+                var xd = data[x];
+                var xd2 = data[x2];
                 for (var i = 0 ; i < y.length ; i++) {
-                    var yd = mode == 0 ? data.map(v => v[y[i]]) : data[y[i]];
+                    var yd = data[y[i]];
                     d.push({
                             x: xd,
                             y: xd2,
@@ -1297,10 +1327,14 @@
             else if (which == 'table') {
                 var values = [];
                 var headers = [];
-                values.push(mode == 0 ? data.map(v => v[x]) : data[x]);
+                values.push(data[x]);
                 headers.push([x]);
+                if (x2 != '-') {
+                    values.push(data[x2]);
+                    headers.push([x2]);
+                }
                 for (var i = 0 ; i < y.length ; i++) {
-                    values.push(mode == 0 ? data.map(v => v[y[i]]) : data[y[i]]);
+                    values.push(data[y[i]]);
                     headers.push([y[i]]);
                 }
 
@@ -1333,12 +1367,12 @@
 
                 console.log(d); 
                 var o = []; 
-                o.push(mode == 0 ? data.map(v => v[x]) : data[x]);
+                o.push(data[x]);
                 if (x2 != '-') 
-                    o.push(mode == 0 ? data.map(v => v[x2]) : data[x2]);
+                    o.push(data[x2]);
 
                 for (var i = 0 ; i < y.length ; i++)
-                    o.push(mode == 0 ? data.map(v => v[y[i]]) : data[y[i]]);
+                    o.push(data[y[i]]);
 
                 output = o[0].map((_, colIndex) => o.map(row => row[colIndex]).join(','));
                 console.log(output);
@@ -1362,12 +1396,12 @@
     }
 
     function loadPlotlyControlsContour(glider) {
-        fetch(`provars/${glider}${mission()}`)
+        fetch(`timevars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
             try {
-                data = JSON.parse(text);  
-                names = data['names'].sort();
+                var names = JSON.parse(text);  
+                names.splice(names.indexOf('time'), 1);
 
                 emptySelect($('selPlotlyContour'));
                 for (n of names) {
@@ -1436,17 +1470,17 @@
     }
 
     function loadPlotlyControlsTS(glider, dive) {
-        fetch(`timevars/${glider}/${dive}/${mission()}`)
+        fetch(`timevars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
             try {
-                data = JSON.parse(text);
+                 data = JSON.parse(text);
             } catch (error) {
                 console.log(text);
                 return;
             }
 
-            var names = data.map(v => v['var']).sort();
+            var names = data;
             dv = names.indexOf('time');
             names.splice(names.indexOf('time'), 1);
             names = ['time'].concat(names);
@@ -1489,15 +1523,15 @@
             loadPlotlyControlsTS(currGlider, currDive);
             $('labelY').innerHTML = 'Y:';
             $('labelZ').innerHTML = 'Z:';
-            $('selPlotlyX2').disabled = false;
+            // $('selPlotlyX2').disabled = false;
         }
         else if (id == 'chkMissionPlots' && $(id).checked) {
             $('chkTimeseriesPlots').checked = false;
             console.log('unchecking ts');
             loadPlotlyControlsXY(currGlider);
-            $('selPlotlyX2').disabled = true;
-            $('labelY').innerHTML = '-:';
-            $('labelZ').innerHTML = 'Y:';
+            // $('selPlotlyX2').disabled = true;
+            $('labelY').innerHTML = 'Y:';
+            $('labelZ').innerHTML = 'Z:';
         }
 
         if ($('chkMissionPlots').checked == false 
@@ -1761,12 +1795,12 @@
     <div id="plotlyDiv" class="hide">
         <div id="plotyConfigXYDiv">
             <span id="labelX">X:</span><select id="selPlotlyX"></select><br>
-            <span id="labelY">-:</span><select id="selPlotlyX2" disabled></select> <br>
+            <span id="labelY">Y:</span><select id="selPlotlyX2"></select> <br>
             <input type="checkbox" checked id="chkMissionPlots" onclick="switchControls(this.id);"><label for="chkMissionPlots">whole mission</label>
             <input type="checkbox" id="chkTimeseriesPlots" onclick="switchControls(this.id);"><label for="chkTimeseriesPlots">dive time series</label><br>
         </div>
         <div id="plotlyConfigZDiv">
-            <span id="labelZ">Y:</span><select id="selPlotlyY" multiple size="4"> </select>
+            <span id="labelZ">Z:</span><select id="selPlotlyY" multiple size="4"> </select>
         </div>
         <div id="plotlyConfigXYZButtons">
             <button id="btnPlotlyPlot" onclick="doPlotlyPlot('plot');">plot</button>
@@ -1776,40 +1810,42 @@
         <div id="plotlyConfigContour"> <!-- style="float:right;"> -->
             <div id="plotlyConfigContourValue">value:<select id="selPlotlyContour"> </select></div><br>
             <div id="plotlyConfigStrides">
-                profile stride
-                <select style="vertical-align:top;" id="selPlotlyProfileStride">
-                    <option value="1">1</option>
-                    <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
-                    <option value="5" selected>5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                </select>
-                bin stride
+                depth: top <input id="txtPlotlyTopDepth" maxlength=4 type="number" min=1 max=9999 style="width: 5em;" value=0> 
+                       bot <input id="txtPlotlyBotDepth" maxlength=4 type="number" min=2 max=9999 style="width: 5em;" value=990>
+                bin
                 <select style="vertical-align:top;" id="selPlotlyZStride">
                     <option value="1">1</option>
                     <option value="2">2</option>
-                    <option value="3">3</option>
-                    <option value="4">4</option>
                     <option value="5" selected>5</option>
-                    <option value="6">6</option>
-                    <option value="7">7</option>
-                    <option value="8">8</option>
-                    <option value="9">9</option>
                     <option value="10">10</option>
+                    <option value="20">20</option>
                 </select>
-                <input type="checkbox" checked id="chkFillGaps"><label for="chkFillGaps">fill gaps</label><br>
+            </div>
+            <div id="plotlyConfigContourDives">
+                dives: first <input id="txtPlotlyFirstDive" maxlength=4 type="number" min=1 max=9999 style="width: 5em;" value=1> 
+                       last <input id="txtPlotlyLastDive" maxlength=4 type="number" min=2 max=9999 style="width: 5em;" value=9999>
+                       step <select style="vertical-align:top;" id="selPlotlyDiveStride">
+                                <option value="1" selected>1</option>
+                                <option value="2">2</option>
+                                <option value="5">5</option>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                            </select>
+            </div>
+            <div id="plotlyConfigWhichProfiles">
+                <input type="radio" id="radPlotlyDives" name="plotlyWhichProfiles" value="1"> 
+                <label for="radPlotlyDives">dives</label>
+                <input type="radio" id="radPlotlyClimbs" name="plotlyWhichProfiles" value="2"> 
+                <label for="radPlotlyClimbs">climbs</label>
+                <input type="radio" id="radPlotlyBoth" name="plotlyWhichProfiles" value="3" checked> 
+                <label for="radPlotlyBoth">both</label>
+                <input type="radio" id="radPlotlyCombine" name="plotlyWhichProfiles" value="4"> 
+                <label for="radPlotlyCombine">combine</label>
             </div>
             <div id="plotlyConfigContourButtons">
                 <button id="btnPlotlyContour" onclick="doPlotlyProfiles('contour');">contour</button>
                 <button id="btnPlotlyProfiles" onclick="doPlotlyProfiles('profiles');">profiles</button>
+                <input type="checkbox" checked id="chkFillGaps"><label for="chkFillGaps">fill gaps</label><br>
             </div>
         </div>
         <div id="plotlyPlotDiv">

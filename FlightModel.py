@@ -763,6 +763,8 @@ def dump_fm_values(dive_data):
         fh.write('%% %s\n' % glider_mission_string)
         fh.write('volmax = %g;\n' % flight_dive_data_d['volmax'])
         fh.write('vbdbias = %g; %% vbdbias w rms = %.2f cm/s\n' % (dive_data.vbdbias, dive_data.w_rms_vbdbias))
+        volmax_biased = flight_dive_data_d['volmax'] - dive_data.vbdbias
+        fh.write('volmax_biased = %g;\n' % volmax)
         fh.write('abs_compress = %g;\n' % dive_data.abs_compress)
         fh.write('hd_a = %g;\n' % dive_data.hd_a)
         fh.write('hd_b = %g;\n' % dive_data.hd_b)
@@ -773,23 +775,6 @@ def dump_fm_values(dive_data):
         fh.write('hd_c = %g;\n' % flight_dive_data_d['hd_c'])
         fh.write('hd_s = %g;\n' % hd_s)
         fh.write('therm_expan = %g;\ntemp_ref = %g;\n' % (flight_dive_data_d['therm_expan'], flight_dive_data_d['temp_ref']))
-
-        volmax = flight_dive_data_d['volmax'] - dive_data.vbdbias
-        fh.write('volmax = %g;\n' % volmax)
-        
-        therm_term = flight_dive_data_d['therm_expan']*(dive_data.bottom_temp - flight_dive_data_d['temp_ref'])
-        volmax_apogee = volmax*exp(-dive_data.abs_compress*dive_data.bottom_press + therm_term)
-        fh.write('volmax_apogee = %g;\n' % volmax_apogee)
-
-        therm_term = flight_dive_data_d['therm_expan']*(4 - flight_dive_data_d['temp_ref'])
-        volmax_ocean = volmax*exp(-dive_data.abs_compress*990 + therm_term)
-        fh.write('volmax_ocean = %g;\n' % volmax_ocean)
-
-        volmax_scaled = volmax*dive_data.bottom_pden/dive_data.bottom_rho0
-        fh.write('volmax_scaled = %g;\n' % volmax_scaled)
-
-        volmax_apogee_scaled = volmax_apogee*dive_data.bottom_pden/dive_data.bottom_rho0
-        fh.write('volmax_apogee_scaled = %g;\n' % volmax_apogee_scaled)
 
         # rho0? glider_length?
         fh.close()
