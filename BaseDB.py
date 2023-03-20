@@ -107,25 +107,35 @@ def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
     return data
 
 def binData(cur, q, bins, var):
-    cur.execute( "SELECT observations.epoch,observations.value " 
-                 "FROM observations,observationVars " 
-                 "WHERE observationVars.rowid = observations.varIdx AND " 
-                f"observationvars.name = '{var}' AND " 
-                f"{q} "
-                 "ORDER BY observations.epoch ASC" )
-    res = cur.fetchall()
+    try:
+        cur.execute( "SELECT observations.epoch,observations.value " 
+                     "FROM observations,observationVars " 
+                     "WHERE observationVars.rowid = observations.varIdx AND " 
+                    f"observationvars.name = '{var}' AND " 
+                    f"{q} "
+                     "ORDER BY observations.epoch ASC" )
+        res = cur.fetchall()
+    except sqlite3.Error as e:
+        log_infp(f"database error {e}")
+        return None
+
     ev = [ f['epoch'] for f in res ]
     v  = [ f['value'] for f in res ]
     if len(v) == 0:
         return None
 
-    cur.execute( "SELECT observations.epoch,observations.value " 
-                 "FROM observations,observationVars " 
-                 "WHERE observationVars.rowid = observations.varIdx AND " 
-                 "observationvars.name = 'depth' AND " 
-                f"{q} "
-                 "ORDER BY observations.epoch ASC" )
-    res = cur.fetchall()
+    try:
+        cur.execute( "SELECT observations.epoch,observations.value " 
+                     "FROM observations,observationVars " 
+                     "WHERE observationVars.rowid = observations.varIdx AND " 
+                     "observationvars.name = 'depth' AND " 
+                    f"{q} "
+                     "ORDER BY observations.epoch ASC" )
+        res = cur.fetchall()
+    except sqlite3.Error as e:
+        log_info(f"database error")
+        return None
+
     ed = [ f['epoch'] for f in res ]
     d  = [ f['value'] for f in res ]
 
@@ -173,9 +183,13 @@ def timeSeriesToProfile(base_opts, var, which,
    
     i = 0
     for p in dives:
-        cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
-        res = cur.fetchone()
-        if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
+        try:
+            cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
+            res = cur.fetchone()
+            if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
+                continue
+        except sqlite3.Error as e:
+            log_info(f"dive {p} database error {e}")
             continue
 
         t1 = res['log_gps2_time'] + res['start_of_climb_time']
@@ -240,29 +254,42 @@ def extractTimeSeries(base_opts, plot_vars, diveStart, diveEnd, con=None):
 
     for p in plot_vars:
         x[p] = {}
-        cur.execute("SELECT dive,log_gps2_time,log_gps_time FROM dives WHERE dive = ? OR dive = ? ORDER BY dive ASC;", (diveStart, diveEnd))
-        res = cur.fetchall()
-        t0 = res[0]['log_gps2_time']
-        t1 = res[len(res) - 1]['log_gps_time'] 
+        try:
+            cur.execute("SELECT dive,log_gps2_time,log_gps_time FROM dives WHERE dive = ? OR dive = ? ORDER BY dive ASC;", (diveStart, diveEnd))
+            res = cur.fetchall()
+        except sqlite3.Error as e:
+            log_info(f"timeseries db error dive {p}: {e}")
+            continue
 
-        cur.execute( "SELECT observations.epoch,observations.value "
-                     "FROM observations,observationVars " 
-                     "WHERE observationVars.rowid = observations.varIdx AND " 
-                    f"observationvars.name = '{p}' AND " 
-                    f"observations.epoch > {t0} AND "
-                    f"observations.epoch < {t1} "
-                     "ORDER BY observations.epoch ASC" )
-        # this is one query, but is brutally slow
-        #cur.execute( "SELECT observations.epoch,observations.value,dives.dive " 
-        #             "FROM observations,observationVars,dives " 
-        #             "WHERE observationVars.rowid = observations.varIdx AND " 
-        #            f"observationvars.name = '{p}' AND " 
-        #             "observations.epoch > dives.log_gps2_time AND " 
-        #             "observations.epoch < dives.log_gps_time AND " 
-        #            f"dives.dive >= {diveStart} AND "
-        #            f"dives.dive <= {diveEnd} "
-        #             "ORDER BY observations.epoch ASC" )
-        res = cur.fetchall()
+        if len(res) >= 1:
+            t0 = res[0]['log_gps2_time']
+            t1 = res[len(res) - 1]['log_gps_time'] 
+        else:
+            continue
+
+        try:
+            cur.execute( "SELECT observations.epoch,observations.value "
+                         "FROM observations,observationVars " 
+                         "WHERE observationVars.rowid = observations.varIdx AND " 
+                        f"observationvars.name = '{p}' AND " 
+                        f"observations.epoch > {t0} AND "
+                        f"observations.epoch < {t1} "
+                         "ORDER BY observations.epoch ASC" )
+            # this is one query, but is brutally slow
+            #cur.execute( "SELECT observations.epoch,observations.value,dives.dive " 
+            #             "FROM observations,observationVars,dives " 
+            #             "WHERE observationVars.rowid = observations.varIdx AND " 
+            #            f"observationvars.name = '{p}' AND " 
+            #             "observations.epoch > dives.log_gps2_time AND " 
+            #             "observations.epoch < dives.log_gps_time AND " 
+            #            f"dives.dive >= {diveStart} AND "
+            #            f"dives.dive <= {diveEnd} "
+            #             "ORDER BY observations.epoch ASC" )
+            res = cur.fetchall()
+        except sqlite3.Error as e:
+            log_info(f"database error {p}: {e}")
+            continue
+
         x[p]['epoch'] = [ f['epoch'] for f in res ]
         x[p]['value'] = [ f['value'] for f in res ]
         if len(x[p]['epoch']) > base_epoch_len:
