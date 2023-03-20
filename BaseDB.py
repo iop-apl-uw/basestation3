@@ -186,7 +186,7 @@ def timeSeriesToProfile(base_opts, var, which,
         try:
             cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
             res = cur.fetchone()
-            if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
+            if res == None or res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
                 continue
         except sqlite3.Error as e:
             log_info(f"dive {p} database error {e}")
