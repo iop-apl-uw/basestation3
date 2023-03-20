@@ -573,7 +573,7 @@ global_options_dict = {
     ),
     # DOC FMS is not consulted for flight variables.  The user must supply
     # DOC volmax, vbdbias, hd_a, hd_b, hd_c and optionally hd_s, rho0, abs_compress, therm_expan, temp_ref
-    # in sg_calib_constants.m.
+    # DOC in sg_calib_constants.m.
     "ignore_flight_model": options_t(
         False,
         ("Base", "FlightModel", "MakeDiveProfiles", "Reprocess"),
@@ -581,6 +581,18 @@ global_options_dict = {
         bool,
         {
             "help": "Ignore values derived from FlightModel - honor all sg_calib_constants.m variables.  Setting this option implies --skip_flight_model",
+            "action": "store_true",
+        },
+    ),
+    # DOC Used in re-processing glider test missions for the purpose of generating a volmax compatible with previous
+    # DOC regression scripts.
+    "fm_isopycnal": options_t(
+        False,
+        ("Base", "Reprocess", "FlightModel"),
+        ("--fm_isopycnal",),
+        bool,
+        {
+            "help": "Run flight model using potential density (instead of in-situ) and ignore compressibilty and thermal effects",
             "action": "store_true",
         },
     ),
