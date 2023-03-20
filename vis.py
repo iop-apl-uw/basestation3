@@ -717,7 +717,8 @@ def attachHandlers(app: sanic.Sanic):
 
         with sqlite3.connect(dbfile) as conn:
             data = BaseDB.timeSeriesToProfile(None, whichVar, whichProfiles, first, last, stride, top, bot, binSize, conn)
-            return sanic.response.json(data)
+            out = BaseDB.dumps(data) # need customer serialized for the numpy array
+            return sanic.response.raw(out, headers={ 'Content-type': 'application/json' })
 
 
     @app.route('/timevars/<glider:int>')
@@ -1451,8 +1452,8 @@ async def buildMissionPlotList(path):
     exts = ['.div', '.webp']
     for prefix in ['eng', 'sg']:
         async for fpath in p.glob(f"{prefix}_*.*"):
-            if prefix == 'sg' and '_section_' in fpath.name:
-                continue
+            # if prefix == 'sg' and '_section_' in fpath.name:
+            #    continue
 
             if fpath.suffix in exts:
                 plot = '_'.join(fpath.stem.split('_')[1:])

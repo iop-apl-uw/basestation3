@@ -40,6 +40,7 @@ import warnings
 import io
 import zlib
 import json
+from json import JSONEncoder
 
 import numpy
 import pandas as pd
@@ -134,9 +135,18 @@ def binData(cur, q, bins, var):
     var_d = numpy.interp(ev, ed, d)            
     data_binned = scipy.stats.binned_statistic(numpy.array(var_d,dtype='float64'), numpy.array(v, dtype='float64'), statistic='mean', bins=bins)
      
-    return data_binned.statistic
+    return numpy.transpose(data_binned.statistic)
 
-        
+class NumpyArrayEncoder(JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, numpy.ndarray):
+            return obj.tolist()
+
+        return JSONEncoder.default(self, obj)    
+   
+def dumps(d):
+    return json.dumps(d, cls=NumpyArrayEncoder)
+ 
 def timeSeriesToProfile(base_opts, var, which, 
                         diveStart, diveStop, diveStride, 
                         binStart, binStop, binSize, con=None):
@@ -154,7 +164,15 @@ def timeSeriesToProfile(base_opts, var, which,
     message['which'] = []
 
     bins = [ *range(binStart, binStop + int(binSize/2), binSize) ]
-    for p in range(diveStart, diveStop + 1, diveStride):
+    dives = range(diveStart, diveStop + 1, diveStride)
+
+    if which == Globals.WhichHalf.both:
+        arr = numpy.zeros((len(bins) - 1, len(dives)*2))
+    else:
+        arr = numpy.zeros((len(bins) - 1, len(dives)))
+   
+    i = 0
+    for p in dives:
         cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
         res = cur.fetchone()
         if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
@@ -167,31 +185,39 @@ def timeSeriesToProfile(base_opts, var, which,
         if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
             q = f"observations.epoch > {t0} AND observations.epoch < {t1}"
             d = binData(cur, q, bins, var)
-
+            
             if d is not None:
-                message[var].append(d.tolist())
+                # message[var].append(d.tolist())
+                arr[:,i] = d
                 message['dive'].append(p + 0.25)
                 message['which'].append(1)
+                i = i + 1
 
         if which in (Globals.WhichHalf.up, Globals.WhichHalf.both):
             q = f"observations.epoch > {t1} AND observations.epoch < {t2}"
             d = binData(cur, q, bins, var)
 
             if d is not None:
-                message[var].append(d.tolist())
+                # message[var].append(d.tolist())
+                arr[:,i] = d
                 message['dive'].append(p + 0.75)
                 message['which'].append(2)
+                i = i + 1
 
         if which == Globals.WhichHalf.combine:
             q = f"observations.epoch > {t0} AND observations.epoch < {t2}"
             d = binData(cur, q, bins, var)
-
+            
             if d is not None:
-                message[var].append(d.tolist())
+                # message[var].append(d.tolist())
+                arr[:,i] = d
                 message['dive'].append(p + 0.5)
                 message['which'].append(4)
+                i = i + 1
 
     message['depth'] = bins
+    message[var] = arr[:,0:i]
+
 
     cur.close()
     if con is None:
