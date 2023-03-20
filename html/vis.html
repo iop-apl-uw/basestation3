@@ -975,6 +975,21 @@
             links.push('sg');
             sgplots.sort();
             for (p of sgplots) {
+                if (p.includes('section_000')) {
+                    addPlot('section', p, x, sgplotlyplots.includes(p));
+                    links.push(p in subs ? subs[p] : p);
+                    x+= 200;
+
+                    if (!first && setCurr) {
+                        first = true;
+                        currElt = p;
+                    }
+
+                    idx = sgplots.indexOf(p);
+                    sgplots.splice(idx, 1); 
+                }
+            }
+            for (p of sgplots) {
                 addPlot('section', p, x, sgplotlyplots.includes(p));
                 links.push(p in subs ? subs[p] : p);
                 x += 200;
