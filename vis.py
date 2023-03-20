@@ -585,8 +585,8 @@ def attachHandlers(app: sanic.Sanic):
                 cur = await conn.cursor()
                 try:
                     await cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
-                except aiosqlite.OperationalError:
-                    return sanic.response.text('no table')
+                except aiosqlite.OperationalError as e:
+                    return sanic.response.text(f'no table {e}')
 
                 try:
                     maxdv = (await cur.fetchone())[0]
@@ -681,8 +681,8 @@ def attachHandlers(app: sanic.Sanic):
             cur = await conn.cursor()
             try:
                 await cur.execute(q)
-            except aiosqlite.OperationalError:
-                return sanic.response.text('no table')
+            except aiosqlite.OperationalError as e:
+                return sanic.response.text(f'no table {e}')
 
             data = await cur.fetchall()
             # r = [dict((cur.description[i][0], value) \
@@ -701,8 +701,8 @@ def attachHandlers(app: sanic.Sanic):
             cur = await conn.cursor()
             try:
                 await cur.execute('select * from dives')
-            except aiosqlite.OperationalError:
-                return sanic.response.text('no table')
+            except aiosqlite.OperationalError as e:
+                return sanic.response.text(f'no table {e}')
             names = list(map(lambda x: x[0], cur.description))
             data = {}
             data['names'] = names
