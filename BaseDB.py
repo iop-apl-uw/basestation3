@@ -73,6 +73,7 @@ slopeVars = [
                 "batt_volts_24V",
                 "log_IMPLIED_C_VBD",
                 "implied_volmax_glider",
+                "implied_volmax_fm",
                 "batt_capacity_10V",
                 "batt_capacity_24V",
             ]
@@ -315,8 +316,6 @@ def extractTimeSeries(base_opts, plot_vars, diveStart, diveEnd, con=None):
 def processTimeSeries(base_opts, cur, nci):
     """Inserts timeseries data into db"""
 
-    cur.execute("COMMIT")
-
     cur.execute(
         "CREATE TABLE IF NOT EXISTS observationVars(name TEXT PRIMARY KEY);"
     )
@@ -500,7 +499,7 @@ def processGC(dive, cur, nci):
                                      f"{nci.variables['gc_roll_volts'][i]}," \
                                      f"{nci.variables['gc_vbd_volts'][i]});")
 
-def loadFileToDB(base_opts, cur, filename, con):
+def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     """Process single netcdf file into the database"""
     gpsVars = [ "time", "lat", "lon", "magvar", "hdop", "first_fix_time", "final_fix_time" ]
 
@@ -895,6 +894,10 @@ def loadFileToDB(base_opts, cur, filename, con):
 
     processGC(dive, cur, nci)
 
+    updateDBFromFM(base_opts, [filename], cur)
+    updateDBFromFileExistence(base_opts, [filename], con)
+    updateDBFromPlots(base_opts, [filename], run_dive_plots=run_dive_plots)
+
     processTimeSeries(base_opts, cur, nci)
     # processBinnedProfiles(base_opts, dive, cur, nci)
     addSlopeValToDB(base_opts, dive, slopeVars, con)
@@ -947,40 +950,36 @@ def updateDBFromFileExistence(base_opts, ncfs, con):
         addValToDB(base_opts, dv, "criticals", critcount, con)
         addValToDB(base_opts, dv, "capture", cap, con)
 
-def updateDBFromFM(base_opts, ncfs, con):
+def updateDBFromFM(base_opts, ncfs, cur):
     """Update the database with the output of flight model"""
 
     flight_dir = os.path.join(base_opts.mission_dir, "flight")
-    with con:
-        cur = con.cursor()
 
-        for ncf in ncfs:
-            try:
-                with contextlib.closing(Utils.open_netcdf_file(ncf)) as nci:
-                    fm_file = os.path.join(flight_dir, f"fm_{nci.dive_number:04d}.m")
-                    if not os.path.exists(fm_file):
-                        continue
-                    fm_dict = CalibConst.getSGCalibrationConstants(
-                        fm_file, suppress_required_error=True, ignore_fm_tags=False
+    for ncf in ncfs:
+        try:
+            with contextlib.closing(Utils.open_netcdf_file(ncf)) as nci:
+                fm_file = os.path.join(flight_dir, f"fm_{nci.dive_number:04d}.m")
+                if not os.path.exists(fm_file):
+                    continue
+                fm_dict = CalibConst.getSGCalibrationConstants(
+                    fm_file, suppress_required_error=True, ignore_fm_tags=False
+                )
+                if "volmax" in fm_dict and "vbdbias" in fm_dict:
+                    fm_volmax = fm_dict["volmax"] - fm_dict["vbdbias"]
+                    insertColumn(
+                        nci.dive_number,
+                        cur,
+                        "implied_volmax_fm",
+                        fm_volmax,
+                        "FLOAT",
                     )
-                    if "volmax" in fm_dict and "vbdbias" in fm_dict:
-                        fm_volmax = fm_dict["volmax"] - fm_dict["vbdbias"]
-                        insertColumn(
-                            nci.dive_number,
-                            cur,
-                            "fm_implied_volmax",
-                            fm_volmax,
-                            "FLOAT",
-                        )
-                        addSlopeValToDB(base_opts, nci.dive_number, ["implied_volmax_fm"], con)
-                    if "hd_a" in fm_dict:
-                        insertColumn(nci.dive_number, cur, "fm_implied_hd_a", fm_dict["hd_a"], "FLOAT")
-                    if "hd_b" in fm_dict:
-                        insertColumn(nci.dive_number, cur, "fm_implied_hd_b", fm_dict["hd_b"], "FLOAT")
-            except:
-                log_error(f"Problem opening FM data associated with {ncf}")
+                if "hd_a" in fm_dict:
+                    insertColumn(nci.dive_number, cur, "fm_implied_hd_a", fm_dict["hd_a"], "FLOAT")
+                if "hd_b" in fm_dict:
+                    insertColumn(nci.dive_number, cur, "fm_implied_hd_b", fm_dict["hd_b"], "FLOAT")
+        except:
+            log_error(f"Problem opening FM data associated with {ncf}")
 
-        cur.close()
 
 # we enforce some minimum schema so that vis requests 
 # can know that they will succeed
@@ -992,7 +991,7 @@ def createDivesTable(cur):
     cur.execute("CREATE TABLE dives(dive INT);")
     columns = [ 'log_start','log_D_TGT','log_D_GRID','log__CALLS',
                 'log__SM_DEPTHo','log__SM_ANGLEo','log_HUMID','log_TEMP',
-                'log_INTERNAL_PRESSURE', 
+                'log_INTERNAL_PRESSURE', 'log_IMPLIED_C_VBD',
                 'depth_avg_curr_east','depth_avg_curr_north',
                 'max_depth',
                 'pitch_dive','pitch_climb',
@@ -1006,7 +1005,7 @@ def createDivesTable(cur):
                 'flight_avg_speed_east','flight_avg_speed_north',
                 'dog_efficiency','alerts','criticals','capture','error_count',
                 'energy_dives_remain_Modeled','energy_days_remain_Modeled',
-                'energy_end_time_Modeled' ]
+                'energy_end_time_Modeled', 'implied_volmax_fm', 'implied_volmax_glider' ]
 
     for c in columns:
         addColumn(cur, c, 'FLOAT');
@@ -1023,6 +1022,8 @@ def rebuildDB(base_opts):
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS dives;")
     cur.execute("DROP TABLE IF EXISTS gc;")
+    cur.execute("DROP TABLE IF EXISTS observations;")
+    cur.execute("DROP TABLE IF EXISTS observationVars;")
     createDivesTable(cur)
     cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
 
@@ -1035,12 +1036,9 @@ def rebuildDB(base_opts):
         ncfs.append(filename)
     ncfs = sorted(ncfs)
     for filename in ncfs:
-        loadFileToDB(base_opts, cur, filename, con)
+        loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False)
     cur.close()
-    updateDBFromFM(base_opts, ncfs, con)
-    updateDBFromFileExistence(base_opts, ncfs, con)
     con.close()
-    updateDBFromPlots(base_opts, ncfs)
 
 
 def loadDB(base_opts, filename, run_dive_plots=True):
@@ -1048,12 +1046,9 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     con = Utils.open_mission_database(base_opts)
     cur = con.cursor()
     createDivesTable(cur)
-    loadFileToDB(base_opts, cur, filename, con)
+    loadFileToDB(base_opts, cur, filename, con, run_dive_plots=run_dive_plots)
     cur.close()
-    updateDBFromFM(base_opts, [filename], con)
-    updateDBFromFileExistence(base_opts, [filename], con)
     con.close()
-    updateDBFromPlots(base_opts, [filename], run_dive_plots=run_dive_plots)    
 
 def prepDB(base_opts, dbfile=None):
     if dbfile is None:
