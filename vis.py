@@ -33,6 +33,7 @@ import zmq.asyncio
 import Utils
 import secrets
 import BaseDB
+import ExtractTimeseries
 
 PERM_INVALID = -1
 PERM_REJECT = 0
@@ -758,36 +759,32 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     @compress.compress()
     async def proHandler(request, glider:int, whichVar:str, whichProfiles:int, first:int, last:int, stride:int, top:int, bot:int, binSize:int):
-        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-        if not await aiofiles.os.path.exists(dbfile):
+        ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
+        if not await aiofiles.os.path.exists(ncfilename):
             return sanic.response.text('no db')
 
-        with sqlite3.connect(dbfile) as conn:
-            data = BaseDB.timeSeriesToProfile(None, whichVar, whichProfiles, first, last, stride, top, bot, binSize, conn)
-            out = BaseDB.dumps(data) # need customer serialized for the numpy array
-            return sanic.response.raw(out, headers={ 'Content-type': 'application/json' })
+        data = ExtractTimeseries.timeSeriesToProfile(whichVar, whichProfiles, first, last, stride, top, bot, binSize, ncfilename)
+        out = ExtractTimeseries.dumps(data[0]) # need custom serializer for the numpy array
+        return sanic.response.raw(out, headers={ 'Content-type': 'application/json' })
 
 
     @app.route('/timevars/<glider:int>')
     @authorized()
     async def timeSeriesVarsHandler(request, glider:int):
-        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-        if not await aiofiles.os.path.exists(dbfile):
+        ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
+        if not await aiofiles.os.path.exists(ncfilename):
             return sanic.response.text('no db')
 
-        async with aiosqlite.connect(dbfile) as conn:
-            conn.row_factory = lambda cursor, row: row[0]
-            cur = await conn.cursor()
-            await cur.execute("SELECT * FROM observationVars ORDER BY name ASC;")
-            data = await cur.fetchall()
-            return sanic.response.json(data)
+        names = ExtractTimeseries.getVarNames(ncfilename)
+        names = [ f['var'] for f in names ]
+        return sanic.response.json(names)
         
     @app.route('/time/<glider:int>/<dive:int>/<which:str>')
     @authorized()
     @compress.compress()
     async def timeSeriesHandler(request, glider:int, dive:int, which:str):
-        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-        if not await aiofiles.os.path.exists(dbfile):
+        ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
+        if not await aiofiles.os.path.exists(ncfilename):
             return sanic.response.text('no db')
 
         whichVars = which.split(',')
@@ -795,10 +792,8 @@ def attachHandlers(app: sanic.Sanic):
         if 'time' in dbVars:
             dbVars.remove('time')
 
-        msg = {}
-        with sqlite3.connect(dbfile) as conn:
-            data = BaseDB.extractTimeSeries(None, dbVars, dive, dive, conn)
-            return sanic.response.json(data)
+        data = ExtractTimeseries.extractVars(ncfilename, dbVars, dive, dive)
+        return sanic.response.json(data)
 
     @app.route('/query/<glider:int>/<queryVars:str>')
     @authorized()

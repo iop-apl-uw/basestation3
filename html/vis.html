@@ -1298,7 +1298,7 @@
                                 font:       {size: 12},
                                 margin: { t:20, l:80, r:80, b:80 },
                                 xaxis: { title: x },
-                                yaxis: { title: y[0], autorange: y[0].includes('depth') ? 'reversed' : true },
+                                yaxis: { title: y[0], autorange: y[0].includes('depth') || y[0].includes('pressure') ? 'reversed' : true },
                                 title: { text: mode == 1 ? `Dive ${currDive} ${y[0]}` : '', y:0.95, x:0.5},
                                 plot_bgcolor: "#cccccc",
                                 paper_bgcolor: "#bbbbbb",
@@ -1332,7 +1332,7 @@
                                 font:       {size: 12},
                                 margin: { t:20, l:80, r:80, b:80 },
                                 xaxis: { title: x },
-                                yaxis: { title: x2, autorange: x2.includes('depth') ? 'reversed' : true },
+                                yaxis: { title: x2, autorange: x2.includes('depth') || x2.includes('pressure') ? 'reversed' : true },
                                 plot_bgcolor: "#cccccc",
                                 paper_bgcolor: "#bbbbbb",
                              };

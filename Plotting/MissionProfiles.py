@@ -38,6 +38,7 @@ import BaseDB
 import Globals
 import cmocean
 import numpy
+import ExtractTimeseries
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -129,8 +130,16 @@ def mission_profiles(
     figs = []
     outs = []
 
-    for vk in list(x['variables'].keys()):
+    ncname = Utils.get_mission_timeseries_name(base_opts)
 
+    try:
+        nci = Utils.open_netcdf_file(ncname, "r")
+    except:
+        print(f"Unable to open {ncname}")
+        return ([], [])
+
+    for vk in list(x['variables'].keys()):
+        prev_x = None
         for sk in list(x['sections'].keys()):
 
             start = getValue(x, 'start', sk, vk, 1)
@@ -156,10 +165,9 @@ def mission_profiles(
 
             fig = plotly.graph_objects.Figure()
  
-            d = BaseDB.timeSeriesToProfile(None, vk, whch,
+            (d, prev_x) = ExtractTimeseries.timeSeriesToProfile(vk, whch,
                                            start, stop, step,
-                                           top, bott, binZ, 
-                                           conn)
+                                           top, bott, binZ, None, nci=nci, x=prev_x)
 
 
             fig.add_trace(plotly.graph_objects.Contour(
