@@ -339,7 +339,7 @@ def write_figure(basename,delete=False):
         if os.path.exists(figure_output_name):
             os.remove(figure_output_name)
     else:
-        plt.savefig(figure_output_name,  format='png')
+        plt.savefig(figure_output_name,  format='webp')
 
     if plots_directory:
         plots_figure_output_name = os.path.join(plots_directory, basename)
@@ -1686,7 +1686,7 @@ def solve_ab_DAC(base_opts, dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
                           r'Best fit ${w}_{rms}$'],
                         loc='upper right', fancybox=True, prop=font, numpoints=1)
         lg.get_frame().set_alpha(0.5)
-        write_figure('dv%04d_DAC.png' % dive_num)
+        write_figure('dv%04d_DAC.webp' % dive_num)
         plt.clf()
     return True
 
@@ -1697,7 +1697,7 @@ def flush_ab_grid_cache(dive_num, ab_grid_cache_d):
         W_misfit_RMS, ia, ib, min_misfit, prev_dive_set, prev_pitch_d_diff = cache_entry
         if dive_num in prev_dive_set:
             del ab_grid_cache_d[ab_grid_cache_dive]
-            write_figure('dv%04d_ab.png' % ab_grid_cache_dive, delete=True)
+            write_figure('dv%04d_ab.webp' % ab_grid_cache_dive, delete=True)
 
 def update_restart_cache(dive_num, mr_dives_pitches, mr_index, mr_n_inserted, last_W_misfit_RMS_dive_num, last_ab_committed_dive_num,
                          predicted_hd_a, predicted_hd_b, predicted_hd_ab_trusted):
@@ -2215,7 +2215,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                         plt.plot(hd_a_grid[a_i], hd_b_grid[b_i], 'kx', markersize=fig_markersize)
 
                 # Add pitch_diff as an indication of constraint?
-                write_figure('dv%04d_ab.png' % dive_num)
+                write_figure('dv%04d_ab.webp' % dive_num)
                 plt.clf()
 
                 # BUG: we compute DAC for dives in the dive set under the assumption that the current ia/ib will be their minimum
@@ -2422,7 +2422,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 plt.ylabel('Implied C_VBD (AD counts)')
                 
 
-            write_figure('eng_FM_vbdbias.png')
+            write_figure('eng_FM_vbdbias.webp')
             plt.clf()
 
 
@@ -2450,7 +2450,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 ax = plt.gca()
                 ax.grid(True)
 
-                write_figure('eng_FM_abs_compress.png')
+                write_figure('eng_FM_abs_compress.webp')
                 plt.clf()
             
             # a/b history figure based on ab_grid_cache entries
@@ -2522,7 +2522,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
             ax = plt.gca()
             ax.grid(True)
 
-            write_figure('eng_FM_ab_dives.png')
+            write_figure('eng_FM_ab_dives.webp')
             plt.clf()
 
         # Determine which dives need to be reprocessed because of flight parameter changes
