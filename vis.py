@@ -776,7 +776,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('no db')
 
         names = ExtractTimeseries.getVarNames(ncfilename)
-        names = [ f['var'] for f in names ]
+        names = sorted([ f['var'] for f in names ])
         return sanic.response.json(names)
         
     @app.route('/time/<glider:int>/<dive:int>/<which:str>')

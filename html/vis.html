@@ -1415,8 +1415,15 @@
         .then(res => res.text())
         .then(text => {
             try {
-                var names = JSON.parse(text);  
-                names.splice(names.indexOf('time'), 1);
+                var allnames = JSON.parse(text);  
+                console.log(allnames);
+                var names = [] 
+                for (var i = 0 ; i < allnames.length ; i++) {
+                    if (!allnames[i].includes('time') && !allnames[i].includes('depth')) {
+                        names.push(allnames[i]); 
+                        console.log(allnames[i]);
+                    }
+                }
 
                 emptySelect($('selPlotlyContour'));
                 for (n of names) {
