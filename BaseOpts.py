@@ -580,6 +580,7 @@ global_options_dict = {
             "Base",
             "FlightModel",
             "MakeDiveProfiles",
+            "MakeMissionProfile",
             "MakeMissionTimeSeries",
             "Reprocess",
             "BaseDB",
