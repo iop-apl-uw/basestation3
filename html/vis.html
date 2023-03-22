@@ -39,6 +39,12 @@
     var sgplots = [];
     var sgplotlyplots = [];
 
+    var startX = null;
+    var startY = null;
+    var startZ = null;
+    var startOp = null;
+    var lastDive = null;
+
 {% if runMode == 'pilot' %}
     var fixes = [];
     var connect_t = 0;
@@ -263,14 +269,15 @@
     var numPages = 0;
 
     function updateMaxDive() {
-        var v1 = $('txtPlotlyFirstDive').value;
         var v2 = $('txtPlotlyLastDive').value;
 
-        $('txtPlotlyFirstDive').max = maxDive;
-        $('txtPlotlyLastDive').max = maxDive;
-
-        $('txtPlotlyFirstDive').value = v1;
-        $('txtPlotlyLastDive').value = maxDive;
+        if (lastDive) {
+            $('txtPlotlyLastDive').value = lastDive;
+            lastDive = null;
+        }
+        else {
+            $('txtPlotlyLastDive').value = maxDive;
+        }
     }
 
 {% if runMode == 'pilot' %}
@@ -631,6 +638,7 @@
 
     function showTable() {
         setVisibility('mainTable'); 
+        currElt = 'table';
     }
 
     function showPlotly() {
@@ -693,7 +701,7 @@
         fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
-            console.log(text);
+            // console.log(text);
             if (text.includes("authorization failed")) {
                 openLoginForm(window.location.reload.bind(window.location));
                 return;
@@ -726,7 +734,6 @@
             sgplots = data['sgplots'];
             sgplotlyplots = data['sgplotly'];
             buildTable(glider, -1);
-            console.log(data);
             loadAbout(data.mission, data.organization);
         })
         .catch(error => {
@@ -883,6 +890,14 @@
         return false;
     }
 
+    function selectMultiple(id, selections) {
+        console.log('select multiple');
+        for (var i = 0 ; i < $(id).options.length ; i++) {
+            $(id).options[i].selected = selections.indexOf($(id).options[i].value) >= 0;
+            console.log($(id).options[i] + ' = ' + $(id).options[i].selected);
+        }
+    }
+
     function loadPlots(dive, setCurr) {
         var plots;
         var img;
@@ -1010,8 +1025,15 @@
                 showCap();
             else if (currElt == 'notifications')
                 showNotifications();
-            else if (currElt.includes('plotly'))
-                doPlotlyPlot(currElt.split('-')[1]);
+            else if (currElt == 'table')
+                showTable();
+            else if (currElt.includes('plotly')) {
+                var w = currElt.split('-')[1];
+                if (w == 'plot' || w == 'table')
+                    doPlotlyPlot(w);
+                else if (w == 'profiles' || w == 'contour')
+                    doPlotlyProfiles(w);
+            }
             else if (engplots.includes(currElt))
                 showPlot('eng', currElt, engplotlyplots.includes(currElt));
             else if (sgplots.includes(currElt))
@@ -1173,6 +1195,7 @@
             data = data.replaceAll('NaN', 'null');
             data = JSON.parse(data);
             // console.log(data[x]);
+            currElt = 'plotly-' + which;
             if (which == 'contour') {
                 var d = [{
                     z: data[x],
@@ -1254,8 +1277,17 @@
         let x = $('selPlotlyX').value;
         let x2 = $('selPlotlyX2').value;
         // let y = $('selPlotlyY').value;
-        let y = [...$('selPlotlyY').selectedOptions].map(option => option.value);
+        var y = []; 
+        // = [...$('selPlotlyY').selectedOptions].map(option => option.value);
         var query;
+
+        for (var i = 0 ; i < $('selPlotlyY').options.length ; i++) {
+            if ($('selPlotlyY').options[i].selected)
+                y.push($('selPlotlyY').options[i].value);
+        }
+
+ 
+        console.log('do plotly, mode = ' + which);
 
         if ($('chkMissionPlots').checked) {
             if (x2 == '-')
@@ -1399,6 +1431,8 @@
                 a.setAttribute('download', y[0] + '.csv'); 
                 a.click();
             }
+            selectMultiple('selPlotlyY', y.join(','));
+            console.log(y);
         })
         .catch(error => {
             console.log('plotly ' + error);
@@ -1411,17 +1445,16 @@
     }
 
     function loadPlotlyControlsContour(glider) {
+        console.log('loading contour controls');
         fetch(`timevars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
             try {
                 var allnames = JSON.parse(text);  
-                console.log(allnames);
                 var names = [] 
                 for (var i = 0 ; i < allnames.length ; i++) {
                     if (!allnames[i].includes('time') && !allnames[i].includes('depth')) {
                         names.push(allnames[i]); 
-                        console.log(allnames[i]);
                     }
                 }
 
@@ -1432,6 +1465,12 @@
                     optX.innerHTML = n;
                     let optY = document.createElement('option');
                     $('selPlotlyContour').appendChild(optX);
+                }
+
+                if (startOp && (startOp == 'contour' || startOp == 'profiles')) {
+                    doPlotlyProfiles(startOp); 
+                    showPlotly();
+                    startOp = null;
                 }
             } catch(e) {
                 console.log('provars ' + e);
@@ -1445,6 +1484,7 @@
     }
 
     function loadPlotlyControlsXY(glider) {
+        console.log('loading XY controls');
         fetch(`dbvars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
@@ -1484,6 +1524,26 @@
                 $('selPlotlyX2').appendChild(optX2);
                 $('selPlotlyY').appendChild(optY);
             }
+            if ($('chkMissionPlots').checked) {
+                if (startX) {
+                    $('selPlotlyX').value = startX;
+                    startX = null;
+                }
+                if (startY) {
+                    $('selPlotlyX2').value = startY;
+                    startY = null;
+                }
+                if (startZ) {
+                    selectMultiple('selPlotlyY', startZ.split(','));
+                    $('selPlotlyContour').value = startZ;
+                    startZ = null;
+                }
+                if (startOp && (startOp == 'plot' || startOp == 'table' || startOp == 'csv')) {
+                    doPlotlyPlot(startOp);
+                    showPlotly();
+                    startOp = null;
+                }
+            }
         })
         .catch(error => {
             console.log('dbvars ' + error);
@@ -1492,6 +1552,7 @@
     }
 
     function loadPlotlyControlsTS(glider, dive) {
+        console.log('loading TS controls');
         fetch(`timevars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
@@ -1530,6 +1591,27 @@
                 $('selPlotlyX').appendChild(optX);
                 $('selPlotlyX2').appendChild(optX2);
                 $('selPlotlyY').appendChild(optY);
+            }
+            if ($('chkTimeseriesPlots').checked) {
+                if (startX) {
+                    $('selPlotlyX').value = startX;
+                    startX = null;
+                }
+                if (startY) {
+                    $('selPlotlyX2').value = startY;
+                    startY = null;
+                }
+                if (startZ) {
+                    selectMultiple('selPlotlyY', startZ.split(','));
+                    $('selPlotlyContour').value = startZ;
+                    console.log('selected ' + startZ);
+                    startZ = null;
+                }
+                if (startOp && (startOp == 'plot' || startOp == 'table' || startOp == 'csv')) {
+                    doPlotlyPlot(startOp);
+                    showPlotly();
+                    startOp = null;
+                }
             }
         })
         .catch(error => {
@@ -1596,7 +1678,7 @@
         if (params.has('order')) {
             createCookie("order", params.get('order'), 180);
         }
-        
+       
 
         if (glider == -1) {
             alert('invalid request - specify glider');
@@ -1635,6 +1717,57 @@
             $('modalImgDiv').style.display = "none";
         }
 {% endif %}
+
+        if (params.has('bin')) {
+            $('selPlotlyZStride').value = params.get('bin');
+        }
+        if (params.has('top')) {
+            $('txtPlotlyTopDepth').value = params.get('top');
+        }
+        if (params.has('bottom')) {
+            $('txtPlotlyBotDepth').value = params.get('bottom');
+        }
+        if (params.has('first')) {
+            $('txtPlotlyFirstDive').value = params.get('first');
+        }
+        if (params.has('last')) {
+            $('txtPlotlyLastDive').value = params.get('last');
+            lastDive = params.get('last');
+        }
+        if (params.has('step')) {
+            $('selPlotlyDiveStride').value = params.get('step');
+        }
+        if (params.has('op')) {
+             startOp = params.get('op');
+        }
+
+        if (params.has('mission')) { 
+            $('chkMissionPlots').checked = true;
+            switchControls('chkMissionPlots');
+        }
+        else if (params.has('dive')) {
+            $('chkTimeseriesPlots').checked = true;
+            switchControls('chkTimeseriesPlots');
+        }
+
+        if (params.has('dives'))
+            $('radPlotlyDives').checked = true;
+        else if (params.has('climbs'))
+            $('radPlotlyClimbs').checked = true;
+        else if (params.has('both'))
+            $('radPlotlyBoth').checked = true;
+        else if (params.has('combined'))
+            $('radPlotlyCombine').checked = true;
+
+        if (params.has('x')) {
+            startX = params.get('x');
+        }
+        if (params.has('y')) {
+            startY = params.get('y');
+        }
+        if (params.has('z')) {
+            startZ = params.get('z');
+        }
 
         document.onkeydown = function (event) {
             const excl = ['input', 'textarea'];
@@ -1822,7 +1955,7 @@
             <input type="checkbox" id="chkTimeseriesPlots" onclick="switchControls(this.id);"><label for="chkTimeseriesPlots">dive time series</label><br>
         </div>
         <div id="plotlyConfigZDiv">
-            <span id="labelZ">Z:</span><select id="selPlotlyY" multiple size="4"> </select>
+            <span id="labelZ">Z:</span><select id="selPlotlyY" class="select-checkbox" multiple size="4"> </select>
         </div>
         <div id="plotlyConfigXYZButtons">
             <button id="btnPlotlyPlot" onclick="doPlotlyPlot('plot');">plot</button>
