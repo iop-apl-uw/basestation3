@@ -397,7 +397,7 @@
             legend.onAdd = function (map) {
                 console.log('adding legend');
                 var div = L.DomUtil.create('div', 'wind legend');
-                div.innerHTML = '<img src="/script/images/OWM_windscale.png">';
+                div.innerHTML = '<img src="../script/images/OWM_windscale.png">';
                 return div;
             };
 
@@ -526,7 +526,7 @@
                                                 fetchElevation: false,
                                             });
                 reticle.addTo(map); 
-                L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '/script/images/reticle.png', false);
+                L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '../script/images/reticle.png', false);
             } 
 
             // layer control
@@ -590,7 +590,7 @@
 
             document.title = glider + ' - map';
             for (var i = first ; i < path.length ; i++) 
-                urls.push('/kml/' + path[i] + mission);
+                urls.push('../kml/' + path[i] + mission);
 
             loadGliderKML(map, layerControl, urls, tail);
             loadGliderDAC(map, layerControl, path[first]); 
