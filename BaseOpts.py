@@ -578,6 +578,7 @@ global_options_dict = {
         False,
         (
             "Base",
+            "BasePlot",
             "FlightModel",
             "MakeDiveProfiles",
             "MakeMissionProfile",
