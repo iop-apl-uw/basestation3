@@ -8,6 +8,7 @@ WETlabs_ext.py,init_sensor,asc2eng,remap_engfile_columns_netcdf,sensor_data_proc
 payload_ext.py,init_logger,process_data_files
 sailct_ext.py,init_logger,asc2eng,process_data_files
 pmar_ext.py,init_logger,process_tar_members,sensor_data_processing
+tmicl_ext.py,init_logger,process_tar_members
 scicon_ext.py,init_logger,process_tar_members
 cp_ext.py,init_logger,process_data_files
 # Legato as a logdev - must follow legato_ext.py

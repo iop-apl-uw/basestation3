@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -357,7 +357,7 @@ def init_sensor(module_name, init_dict=None):
             data_var = "%s_%s" % (canonical_instrument, canonical_column)
             eng_data_var = "%s%s" % (nc_sg_eng_prefix, data_var)
             md = [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": nc_nan,
@@ -370,7 +370,7 @@ def init_sensor(module_name, init_dict=None):
 
             scicon_data_var = "%s" % data_var
             md = [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": nc_nan,
@@ -396,7 +396,7 @@ def init_sensor(module_name, init_dict=None):
                         % name
                     )
                 md = [
-                    True,
+                    "f",
                     "d",
                     {
                         "_FillValue": nc_nan,
@@ -505,6 +505,7 @@ def init_sensor(module_name, init_dict=None):
 # If you are converting from eng for the first time, we go directly to canonical
 # Every current output column name needs to have an entry that goes to the new canonical name
 # so that old nc files can be converted as well.  The cost of legacy
+
 
 # pylint: disable=unused-argument
 def asc2eng(base_opts, module_name, datafile=None):

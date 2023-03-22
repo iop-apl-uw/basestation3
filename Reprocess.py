@@ -319,7 +319,10 @@ def main():
             log_info("Skipped processing dive %d" % dive_num)
         else:
             dives_processed.append(dive_num)
-            dive_nc_file_names.append(nc_file_created)
+            # If MDP does nothing (success w/o force option for example), it returns None
+            # - don't add to list
+            if nc_file_created:
+                dive_nc_file_names.append(nc_file_created)
         del temp_ret_val
 
     log_info(f"Dives processed = {dives_processed}")

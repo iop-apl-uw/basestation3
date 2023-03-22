@@ -112,7 +112,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_gpctd_data_info,),
             ],
             "gpctd_pressure": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_pressure",
@@ -122,7 +122,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_gpctd_data_info,),
             ],
             "gpctd_conductivity": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_electrical_conductivity",
@@ -132,7 +132,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_gpctd_data_info,),
             ],
             "gpctd_temperature": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_temperature",
@@ -142,7 +142,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_gpctd_data_info,),
             ],
             "gpctd_oxygen": [
-                True,
+                "f",
                 "d",
                 {"units": "Hz", "description": "Pumped SBE43 O2 frequency"},
                 (BaseNetCDF.nc_gpctd_data_info,),
@@ -269,9 +269,7 @@ def process_data_files(
                 try:
                     fo.write(f"%{l}\n")
                 except:
-                    log_error(
-                        f"Could not write to {fc.mk_base_engfile_name()}", "exc"
-                    )
+                    log_error(f"Could not write to {fc.mk_base_engfile_name()}", "exc")
                     return 1
 
         processed_logger_eng_files.append(fc.mk_base_engfile_name())
