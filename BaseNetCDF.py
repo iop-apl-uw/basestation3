@@ -2154,13 +2154,13 @@ nc_var_metadata = {
         (nc_sg_data_info,),
     ],
     "eng_head": [
-        False,
+        True,
         "d",
         {"description": "Vehicle heading (magnetic)", "units": "degrees"},
         (nc_sg_data_info,),
     ],
     "eng_pitchAng": [
-        False,
+        True,
         "d",
         {"description": "Vehicle pitch", "units": "degrees"},
         (nc_sg_data_info,),
@@ -2665,7 +2665,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "sound_velocity": [
-        False,
+        True,
         "d",
         {
             "standard_name": "speed_of_sound_in_sea_water",
@@ -2695,7 +2695,7 @@ nc_var_metadata = {
     ],
     # Based on eng data (pitch, depth) only
     "speed_gsm": [
-        False,
+        True,
         "d",
         {"description": "Vehicle speed based on gsm", "units": "cm/s"},
         (nc_ctd_results_info,),
@@ -2707,13 +2707,13 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "horz_speed_gsm": [
-        False,
+        True,
         "d",
         {"description": "Vehicle horizontal speed based on gsm", "units": "cm/s"},
         (nc_ctd_results_info,),
     ],
     "vert_speed_gsm": [
-        False,
+        True,
         "d",
         {"description": "Vehicle vertical speed based on gsm", "units": "cm/s"},
         (nc_ctd_results_info,),
@@ -2749,7 +2749,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "speed": [
-        False,
+        True,
         "d",
         {"description": "Vehicle speed based on hdm", "units": "cm/s"},
         (nc_ctd_results_info,),
@@ -2761,13 +2761,13 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "horz_speed": [
-        False,
+        True,
         "d",
         {"description": "Vehicle horizontal speed based on hdm", "units": "cm/s"},
         (nc_ctd_results_info,),
     ],
     "vert_speed": [
-        False,
+        True,
         "d",
         {"description": "Vehicle vertical speed based on hdm", "units": "cm/s"},
         (nc_ctd_results_info,),

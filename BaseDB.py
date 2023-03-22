@@ -37,10 +37,6 @@ import time
 import traceback
 import math
 import warnings
-import io
-import zlib
-import json
-from json import JSONEncoder
 
 import numpy
 import pandas as pd
@@ -53,9 +49,6 @@ import PlotUtils
 import Utils
 from CalibConst import getSGCalibrationConstants
 import Globals
-import MakeMissionProfile
-import scipy.interpolate
-import scipy.stats
 
 from BaseLog import (
     BaseLogger,
@@ -73,6 +66,7 @@ slopeVars = [
                 "batt_volts_24V",
                 "log_IMPLIED_C_VBD",
                 "implied_volmax_glider",
+                "implied_volmax_fm",
                 "batt_capacity_10V",
                 "batt_capacity_24V",
             ]
@@ -98,237 +92,6 @@ def getVarNames(nci):
             nc_vars.append({"var": k, "dim": nci.variables[k].dimensions[0]})
 
     return nc_vars
-
-def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
-    data = {}
-    for idx, col in enumerate(cursor.description):
-        data[col[0]] = row[idx]
-
-    return data
-
-def binData(cur, q, bins, var):
-    cur.execute( "SELECT observations.epoch,observations.value " 
-                 "FROM observations,observationVars " 
-                 "WHERE observationVars.rowid = observations.varIdx AND " 
-                f"observationvars.name = '{var}' AND " 
-                f"{q} "
-                 "ORDER BY observations.epoch ASC" )
-    res = cur.fetchall()
-    ev = [ f['epoch'] for f in res ]
-    v  = [ f['value'] for f in res ]
-    if len(v) == 0:
-        return None
-
-    cur.execute( "SELECT observations.epoch,observations.value " 
-                 "FROM observations,observationVars " 
-                 "WHERE observationVars.rowid = observations.varIdx AND " 
-                 "observationvars.name = 'depth' AND " 
-                f"{q} "
-                 "ORDER BY observations.epoch ASC" )
-    res = cur.fetchall()
-    ed = [ f['epoch'] for f in res ]
-    d  = [ f['value'] for f in res ]
-
-    if len(d) == 0:
-        return None
-
-    var_d = numpy.interp(ev, ed, d)            
-    data_binned = scipy.stats.binned_statistic(numpy.array(var_d,dtype='float64'), numpy.array(v, dtype='float64'), statistic='mean', bins=bins)
-     
-    return numpy.transpose(data_binned.statistic)
-
-class NumpyArrayEncoder(JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, numpy.ndarray):
-            return obj.tolist()
-
-        return JSONEncoder.default(self, obj)    
-   
-def dumps(d):
-    return json.dumps(d, cls=NumpyArrayEncoder)
- 
-def timeSeriesToProfile(base_opts, var, which, 
-                        diveStart, diveStop, diveStride, 
-                        binStart, binStop, binSize, con=None):
-    if con is None:
-        mycon = Utils.open_mission_database(base_opts)
-    else:
-        mycon = con
-
-    mycon.row_factory = rowToDict
-    cur = mycon.cursor()
-
-    message = {}
-    message[var] = []
-    message['dive'] = []
-    message['which'] = []
-
-    bins = [ *range(binStart, binStop + int(binSize/2), binSize) ]
-    dives = range(diveStart, diveStop + 1, diveStride)
-
-    if which == Globals.WhichHalf.both:
-        arr = numpy.zeros((len(bins) - 1, len(dives)*2))
-    else:
-        arr = numpy.zeros((len(bins) - 1, len(dives)))
-   
-    i = 0
-    for p in dives:
-        cur.execute( f"SELECT start_of_climb_time,log_gps2_time,log_gps_time from dives WHERE dive = {p};")
-        res = cur.fetchone()
-        if res['log_gps2_time'] is None or res['start_of_climb_time'] is None or res['log_gps_time'] is None:
-            continue
-
-        t1 = res['log_gps2_time'] + res['start_of_climb_time']
-        t0 = res['log_gps2_time'] 
-        t2 = res['log_gps_time']
-
-        if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
-            q = f"observations.epoch > {t0} AND observations.epoch < {t1}"
-            d = binData(cur, q, bins, var)
-            
-            if d is not None:
-                # message[var].append(d.tolist())
-                arr[:,i] = d
-                message['dive'].append(p + 0.25)
-                message['which'].append(1)
-                i = i + 1
-
-        if which in (Globals.WhichHalf.up, Globals.WhichHalf.both):
-            q = f"observations.epoch > {t1} AND observations.epoch < {t2}"
-            d = binData(cur, q, bins, var)
-
-            if d is not None:
-                # message[var].append(d.tolist())
-                arr[:,i] = d
-                message['dive'].append(p + 0.75)
-                message['which'].append(2)
-                i = i + 1
-
-        if which == Globals.WhichHalf.combine:
-            q = f"observations.epoch > {t0} AND observations.epoch < {t2}"
-            d = binData(cur, q, bins, var)
-            
-            if d is not None:
-                # message[var].append(d.tolist())
-                arr[:,i] = d
-                message['dive'].append(p + 0.5)
-                message['which'].append(4)
-                i = i + 1
-
-    message['depth'] = bins
-    message[var] = arr[:,0:i]
-
-
-    cur.close()
-    if con is None:
-        mycon.close()
-
-    return message
-
-def extractTimeSeries(base_opts, plot_vars, diveStart, diveEnd, con=None):
-    if con == None:
-        mycon = Utils.open_mission_database(base_opts)
-    else:
-        mycon = con
-
-    x = {}
-
-    con.row_factory = rowToDict
-    cur = con.cursor()
-    base_epoch = None
-    base_epoch_len = 0
-
-    for p in plot_vars:
-        x[p] = {}
-        cur.execute("SELECT dive,log_gps2_time,log_gps_time FROM dives WHERE dive = ? OR dive = ? ORDER BY dive ASC;", (diveStart, diveEnd))
-        res = cur.fetchall()
-        t0 = res[0]['log_gps2_time']
-        t1 = res[len(res) - 1]['log_gps_time'] 
-
-        cur.execute( "SELECT observations.epoch,observations.value "
-                     "FROM observations,observationVars " 
-                     "WHERE observationVars.rowid = observations.varIdx AND " 
-                    f"observationvars.name = '{p}' AND " 
-                    f"observations.epoch > {t0} AND "
-                    f"observations.epoch < {t1} "
-                     "ORDER BY observations.epoch ASC" )
-        # this is one query, but is brutally slow
-        #cur.execute( "SELECT observations.epoch,observations.value,dives.dive " 
-        #             "FROM observations,observationVars,dives " 
-        #             "WHERE observationVars.rowid = observations.varIdx AND " 
-        #            f"observationvars.name = '{p}' AND " 
-        #             "observations.epoch > dives.log_gps2_time AND " 
-        #             "observations.epoch < dives.log_gps_time AND " 
-        #            f"dives.dive >= {diveStart} AND "
-        #            f"dives.dive <= {diveEnd} "
-        #             "ORDER BY observations.epoch ASC" )
-        res = cur.fetchall()
-        x[p]['epoch'] = [ f['epoch'] for f in res ]
-        x[p]['value'] = [ f['value'] for f in res ]
-        if len(x[p]['epoch']) > base_epoch_len:
-            base_epoch_len = len(x[p]['epoch'])
-            base_epoch = p
-   
-    message = {}
-    message['epoch'] = x[base_epoch]['epoch']
-    message['time'] = [ m - message['epoch'][0] for m in message['epoch'] ]
-    message[base_epoch] = x[base_epoch]['value']
-    for p in plot_vars:
-        if p == base_epoch:
-            continue
-
-        message[p] = numpy.interp(message['epoch'], x[p]['epoch'], x[p]['value']).tolist()
-
-    cur.close()
-    if con == None:
-        mycon.close() 
-    
-    return message
- 
-def processTimeSeries(base_opts, cur, nci):
-    """Inserts timeseries data into db"""
-
-    cur.execute("COMMIT")
-
-    cur.execute(
-        "CREATE TABLE IF NOT EXISTS observationVars(name TEXT PRIMARY KEY);"
-    )
-
-    cur.execute(
-        "CREATE TABLE IF NOT EXISTS observations(varIdx INTEGER, value FLOAT, epoch FLOAT, PRIMARY KEY (varIdx, epoch));"
-    )
-
-    
-    for k in nci.variables.keys():
-        if len(nci.variables[k].dimensions) and '_data_point' in nci.variables[k].dimensions[0] and 'time' not in k and 'eng_' not in k:
-            cur.execute(f"INSERT OR IGNORE INTO observationVars (name) VALUES ('{k}')")
-            cur.execute(f"SELECT rowid FROM observationVars WHERE name='{k}';")
-            varIdx = cur.fetchone()[0]
-            try:
-                nc_var = nci.variables[k][:]
-                nc_dim = nci.variables[k].dimensions[0]
-                var_t = []
-                for kk, v in nci.variables.items():
-                    if (
-                        "time" in kk[-4:]
-                        and len(nci.variables[kk].dimensions)
-                        and "_data_point" in nci.variables[kk].dimensions[0]
-                        and nc_dim == nci.variables[kk].dimensions[0]
-                    ):
-                        var_t = nci.variables[kk][:]
-                        break
-
-                if len(var_t):
-                    for ii in range(numpy.size(var_t)):
-                        cur.execute(
-                            "INSERT INTO observations(varIdx, value, epoch) VALUES (?,?,?) ON CONFLICT(varIdx,epoch) DO UPDATE SET value=?",
-                            [varIdx, nc_var[ii], var_t[ii], nc_var[ii]]
-                        )
-                else:
-                    log_error(f"no time variable found for {k}({nc_dim})")
-            except:
-                log_error(f"Problems processing {nc_var}", "exc")
-
 
 def addColumn(cur, col, db_type):
     try:
@@ -473,7 +236,7 @@ def processGC(dive, cur, nci):
                                      f"{nci.variables['gc_roll_volts'][i]}," \
                                      f"{nci.variables['gc_vbd_volts'][i]});")
 
-def loadFileToDB(base_opts, cur, filename, con):
+def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     """Process single netcdf file into the database"""
     gpsVars = [ "time", "lat", "lon", "magvar", "hdop", "first_fix_time", "final_fix_time" ]
 
@@ -868,8 +631,10 @@ def loadFileToDB(base_opts, cur, filename, con):
 
     processGC(dive, cur, nci)
 
-    processTimeSeries(base_opts, cur, nci)
-    # processBinnedProfiles(base_opts, dive, cur, nci)
+    updateDBFromFM(base_opts, [filename], cur)
+    updateDBFromFileExistence(base_opts, [filename], con)
+    updateDBFromPlots(base_opts, [filename], run_dive_plots=run_dive_plots)
+
     addSlopeValToDB(base_opts, dive, slopeVars, con)
 
 def updateDBFromPlots(base_opts, ncfs, run_dive_plots=True):
@@ -920,40 +685,36 @@ def updateDBFromFileExistence(base_opts, ncfs, con):
         addValToDB(base_opts, dv, "criticals", critcount, con)
         addValToDB(base_opts, dv, "capture", cap, con)
 
-def updateDBFromFM(base_opts, ncfs, con):
+def updateDBFromFM(base_opts, ncfs, cur):
     """Update the database with the output of flight model"""
 
     flight_dir = os.path.join(base_opts.mission_dir, "flight")
-    with con:
-        cur = con.cursor()
 
-        for ncf in ncfs:
-            try:
-                with contextlib.closing(Utils.open_netcdf_file(ncf)) as nci:
-                    fm_file = os.path.join(flight_dir, f"fm_{nci.dive_number:04d}.m")
-                    if not os.path.exists(fm_file):
-                        continue
-                    fm_dict = CalibConst.getSGCalibrationConstants(
-                        fm_file, suppress_required_error=True, ignore_fm_tags=False
+    for ncf in ncfs:
+        try:
+            with contextlib.closing(Utils.open_netcdf_file(ncf)) as nci:
+                fm_file = os.path.join(flight_dir, f"fm_{nci.dive_number:04d}.m")
+                if not os.path.exists(fm_file):
+                    continue
+                fm_dict = CalibConst.getSGCalibrationConstants(
+                    fm_file, suppress_required_error=True, ignore_fm_tags=False
+                )
+                if "volmax" in fm_dict and "vbdbias" in fm_dict:
+                    fm_volmax = fm_dict["volmax"] - fm_dict["vbdbias"]
+                    insertColumn(
+                        nci.dive_number,
+                        cur,
+                        "implied_volmax_fm",
+                        fm_volmax,
+                        "FLOAT",
                     )
-                    if "volmax" in fm_dict and "vbdbias" in fm_dict:
-                        fm_volmax = fm_dict["volmax"] - fm_dict["vbdbias"]
-                        insertColumn(
-                            nci.dive_number,
-                            cur,
-                            "fm_implied_volmax",
-                            fm_volmax,
-                            "FLOAT",
-                        )
-                        addSlopeValToDB(base_opts, nci.dive_number, ["implied_volmax_fm"], con)
-                    if "hd_a" in fm_dict:
-                        insertColumn(nci.dive_number, cur, "fm_implied_hd_a", fm_dict["hd_a"], "FLOAT")
-                    if "hd_b" in fm_dict:
-                        insertColumn(nci.dive_number, cur, "fm_implied_hd_b", fm_dict["hd_b"], "FLOAT")
-            except:
-                log_error(f"Problem opening FM data associated with {ncf}")
+                if "hd_a" in fm_dict:
+                    insertColumn(nci.dive_number, cur, "fm_implied_hd_a", fm_dict["hd_a"], "FLOAT")
+                if "hd_b" in fm_dict:
+                    insertColumn(nci.dive_number, cur, "fm_implied_hd_b", fm_dict["hd_b"], "FLOAT")
+        except:
+            log_error(f"Problem opening FM data associated with {ncf}")
 
-        cur.close()
 
 # we enforce some minimum schema so that vis requests 
 # can know that they will succeed
@@ -965,7 +726,7 @@ def createDivesTable(cur):
     cur.execute("CREATE TABLE dives(dive INT);")
     columns = [ 'log_start','log_D_TGT','log_D_GRID','log__CALLS',
                 'log__SM_DEPTHo','log__SM_ANGLEo','log_HUMID','log_TEMP',
-                'log_INTERNAL_PRESSURE', 
+                'log_INTERNAL_PRESSURE', 'log_IMPLIED_C_VBD',
                 'depth_avg_curr_east','depth_avg_curr_north',
                 'max_depth',
                 'pitch_dive','pitch_climb',
@@ -979,7 +740,7 @@ def createDivesTable(cur):
                 'flight_avg_speed_east','flight_avg_speed_north',
                 'dog_efficiency','alerts','criticals','capture','error_count',
                 'energy_dives_remain_Modeled','energy_days_remain_Modeled',
-                'energy_end_time_Modeled' ]
+                'energy_end_time_Modeled', 'implied_volmax_fm', 'implied_volmax_glider' ]
 
     for c in columns:
         addColumn(cur, c, 'FLOAT');
@@ -996,6 +757,8 @@ def rebuildDB(base_opts):
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS dives;")
     cur.execute("DROP TABLE IF EXISTS gc;")
+    cur.execute("DROP TABLE IF EXISTS observations;")
+    cur.execute("DROP TABLE IF EXISTS observationVars;")
     createDivesTable(cur)
     cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
 
@@ -1008,12 +771,9 @@ def rebuildDB(base_opts):
         ncfs.append(filename)
     ncfs = sorted(ncfs)
     for filename in ncfs:
-        loadFileToDB(base_opts, cur, filename, con)
+        loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False)
     cur.close()
-    updateDBFromFM(base_opts, ncfs, con)
-    updateDBFromFileExistence(base_opts, ncfs, con)
     con.close()
-    updateDBFromPlots(base_opts, ncfs)
 
 
 def loadDB(base_opts, filename, run_dive_plots=True):
@@ -1021,12 +781,9 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     con = Utils.open_mission_database(base_opts)
     cur = con.cursor()
     createDivesTable(cur)
-    loadFileToDB(base_opts, cur, filename, con)
+    loadFileToDB(base_opts, cur, filename, con, run_dive_plots=run_dive_plots)
     cur.close()
-    updateDBFromFM(base_opts, [filename], con)
-    updateDBFromFileExistence(base_opts, [filename], con)
     con.close()
-    updateDBFromPlots(base_opts, [filename], run_dive_plots=run_dive_plots)    
 
 def prepDB(base_opts, dbfile=None):
     if dbfile is None:
@@ -1231,7 +988,8 @@ def main():
             os.path.join(base_opts.mission_dir, "comm.log"),
             base_opts,
         )
-        base_opts.instrument_id = comm_log.get_instrument_id()
+        if comm_log:
+            base_opts.instrument_id = comm_log.get_instrument_id()
 
     if not base_opts.instrument_id:
         _, tail = os.path.split(base_opts.mission_dir[:-1])
@@ -1239,7 +997,7 @@ def main():
             log_error("Can't figure out the instrument id - bailing out")
             return
         try:
-            base_opts.instrument_id = int(tail[:-3])
+            base_opts.instrument_id = int(tail[-3:])
         except:
             log_error("Can't figure out the instrument id - bailing out")
             return
@@ -1267,15 +1025,6 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    # extractBinnedProfiles(base_opts, "temperature", 100, 105, 1, 3)
-    # extractTimeSeries(base_opts, ["temperature"], 0, 10000)
-
-    
-    x = timeSeriesToProfile(base_opts, "aa4831_O2", Globals.WhichHalf.both, 2, 448, 1, 0, 990, 5)
-    print(len(x['aa4831_O2']))
-    print(len(x['depth']))
-    # print(x)
- 
 if __name__ == "__main__":
     retval = 1
 

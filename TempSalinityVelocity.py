@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ## 
-## Copyright (c) 2006, 2007, 2008, 2009, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the 
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -92,7 +92,7 @@ def load_thermal_inertia_modes(base_opts,num_modes=5,force=False,cell_type='SGgu
             import numpy
             import scipy.io # for loadmat
             from scipy.interpolate import RectBivariateSpline
-            base_dir = base_opts.basestation_directory
+            base_dir = os.path.join(base_opts.basestation_directory, "tsv_mat")
             # Explicitly bind filename for any error report below
             filename = os.path.join(base_dir, "Bim%s" % cell_type)
             data_d = scipy.io.loadmat(filename)

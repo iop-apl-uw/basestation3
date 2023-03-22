@@ -1,16 +1,21 @@
 <html>
     <head>
-        <link rel="stylesheet" href="/script/leaflet.css" />
-        <link rel="stylesheet" href="/script/leaflet-ruler.css" />
-        <link rel="stylesheet" href="/script/leaflet-reticle.css" />
-        <link rel="stylesheet" href="/script/Control.Coordinates.css" />
-        <script src="/script/leaflet.js"></script>
-        <script src="/script/leaflet-ruler.js"></script>
-        <script src="/script/L.KML.js"></script>
-        <script src="/script/Control.Coordinates.js"></script>
-        <script src="/script/leaflet-reticle.js"></script>
-        <script src="/script/leaflet-kmz-src.js"></script>
-        <script src="/script/leaflet-svg-shape-markers.min.js"></script>
+        <link rel="stylesheet" href="../script/leaflet.css" />
+        <link rel="stylesheet" href="../script/leaflet-ruler.css" />
+<!--
+        <link rel="stylesheet" href="../script/leaflet-reticle.css" />
+-->
+        <link rel="stylesheet" href="../proxy/https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src/leaflet-reticle.css">
+        <link rel="stylesheet" href="../script/Control.Coordinates.css" />
+        <script src="../script/leaflet.js"></script>
+        <script src="../script/leaflet-ruler.js"></script>
+        <script src="../script/L.KML.js"></script>
+        <script src="../script/Control.Coordinates.js"></script>
+<!--
+        <script src="../script/leaflet-reticle.js"></script>
+-->
+        <script src="../proxy/https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src/leaflet-reticle.js"></script>
+        <script src="../script/leaflet-svg-shape-markers.min.js"></script>
 
         <style>
             .leaflet-toggle{
@@ -93,8 +98,8 @@
             async function fetchWeather(latlng, popup, map) {
                 var url1 = "https://marine-api.open-meteo.com/v1/marine?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=wave_height";
                 var url2 = "https://api.open-meteo.com/v1/forecast?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=windspeed_10m,pressure_msl,precipitation,visibility";
-                var url3 = `/proxy/https://api.opentopodata.org/v1/gebco2020?locations=${latlng.lat.toFixed(4)},${latlng.lng.toFixed(4)}`;
-                var url5 = `/proxy/https://marine.weather.gov/MapClick.php?lat=${latlng.lat.toFixed(4)}&lon=${latlng.lng.toFixed(4)}&unit=0&lg=english&FcstType=text&TextType=1`; 
+                var url3 = `../proxy/https://api.opentopodata.org/v1/gebco2020?locations=${latlng.lat.toFixed(4)},${latlng.lng.toFixed(4)}`;
+                var url5 = `../proxy/https://marine.weather.gov/MapClick.php?lat=${latlng.lat.toFixed(4)}&lon=${latlng.lng.toFixed(4)}&unit=0&lg=english&FcstType=text&TextType=1`; 
                 // Promise.all does bomb if anything bombs - but is faster ...
                 let resp = await Promise.all([
                                                 fetch(url1).then(response => response.json()),
@@ -142,7 +147,7 @@
                 const types = ["triangle", "circle", "square", "triangle"];
                 const colors = ["#ff0000", "#00ff00", "#0000ff", "#ff00ff"];
 
-                let url = '/proxy/https://iop.apl.washington.edu/chart/sa_assets.php?mission=' + sa;
+                let url = '../proxy/https://iop.apl.washington.edu/chart/sa_assets.php?mission=' + sa;
 
                 fetch(url)
                 .then(resp => resp.json())
@@ -211,6 +216,19 @@
                 });
             }
 
+            async function loadKML(map, layerControl, urls, names) {
+                var kml;
+                var parser; 
+
+                let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
+                for (var i = 0 ; i < urls.length ; i++) {
+                    kmltext = resp[i];
+                    parser = new DOMParser();
+                    kml = parser.parseFromString(kmltext, 'text/xml');
+                    ly = new L.KML(kml, { });
+                    layerControl.addOverlay(ly, names[i]); 
+                }
+            }
             async function loadGliderKML(map, layerControl, urls, tail) {
                 var kml;
                 var parser;
@@ -223,7 +241,7 @@
                     parser = new DOMParser();
                     kml = parser.parseFromString(kmltext, 'text/xml');
                     let ctr = null;
-                    track = new L.KML(kml, { 
+                    track = new L.KML(kml, {
                                             iconOptions: {
                                                 iconSize: [16,16],
                                             }
@@ -501,14 +519,16 @@
 
             // reticle
 
-            reticle = L.control.reticle({
-                                            mapId: "map",
-                                            metric: true,
-                                            fetchElevation: false,
-                                        });
-            reticle.addTo(map); 
-            L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '/script/images/reticle.png', false);
-            
+            if (typeof L.control.reticle !== 'undefined') {
+                reticle = L.control.reticle({
+                                                mapId: "map",
+                                                metric: true,
+                                                fetchElevation: false,
+                                            });
+                reticle.addTo(map); 
+                L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '/script/images/reticle.png', false);
+            } 
+
             // layer control
 
             var baseLayers = {
@@ -523,7 +543,7 @@
                 "SST (MODIS 8-day day)": sst,
                 "sea ice (AMSRU2 12km)": seaIce,
                 "Chlorophyll-A (Aqua MODIS L2)": chlA,
-                "AIS": ais,
+                "AIS (does not auto-update)": ais,
                 "chart marks": chart,
                 "wind": wind,
             }
@@ -533,14 +553,20 @@
 
             // ice edge first
 
-            kmz = L.kmzLayer();
-            kmz.on('load', function(e) {
-                layerControl.addOverlay(e.layer, e.name);
-            });
+            //kmz = L.kmzLayer();
+            //kmz.on('load', function(e) {
+            //    layerControl.addOverlay(e.layer, e.name);
+            //});
 
             // we have to proxy these or we run into CORS problems
-            kmz.load('/proxy/https://usicecenter.gov/File/DownloadCurrent?pId=14', 'Arctic ice edge');
-            kmz.load('/proxy/https://usicecenter.gov/File/DownloadCurrent?pId=22', 'Antarctic ice edge');
+            //kmz.load('../proxy/https://usicecenter.gov/File/DownloadCurrent?pId=14', 'Arctic ice edge');
+            //kmz.load('../proxy/https://usicecenter.gov/File/DownloadCurrent?pId=22', 'Antarctic ice edge');
+
+            var urls = [];
+            urls.push('../kmz/https://usicecenter.gov/File/DownloadCurrent?pId=14');
+            urls.push('../kmz/https://usicecenter.gov/File/DownloadCurrent?pId=22');
+            names = ['Arctic ice edge', 'Antarctic ice edge']
+            loadKML(map, layerControl, urls, names);
 
             // KML and snap to KML
 
@@ -557,7 +583,7 @@
             var path = window.location.pathname.split('/');
             var first = path.indexOf('map') + 1;
             var glider = path[first];
-            var urls = [];
+            urls = [];
 
             var mission = params.has('mission') ? '?mission=' + params.get('mission') : '';
             var tail = params.has('tail') ? parseInt(params.get('tail')) : -1;

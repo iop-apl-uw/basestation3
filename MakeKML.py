@@ -590,7 +590,6 @@ def printDive(
     instrument_id,
     dive_num,
     last_dive,
-    paam_dict,
     fo,
 ):
     """Processes a dive
@@ -795,43 +794,6 @@ def printDive(
         fo.write("        </LineString>\n")
         fo.write("    </Placemark>\n")
 
-    # Plot the PAAM data
-    if paam_dict:
-        for p in list(paam_dict.keys()):
-            for t_index in range(len(time_vals) - 1):
-                if p >= time_vals[t_index] and p <= time_vals[t_index + 1]:
-                    if paam_dict[p][1] < 9999.0:
-                        if (paam_dict[p][1] / float(depth[t_index])) < 0.95 or (
-                            paam_dict[p][1] / float(depth[t_index]) > 1.05
-                        ):
-                            log_warning(
-                                "PAAM depth more then 5%% different (%.2f:%.2f)"
-                                % (paam_dict[p][1], float(depth[t_index]))
-                            )
-                    fo.write("    <Placemark>\n")
-                    fo.write(
-                        "        <name>Detection:%s %.2fm</name>\n"
-                        % (paam_dict[p][0], paam_dict[p][1])
-                    )
-                    fo.write("        <styleUrl>#paamDetection</styleUrl>\n")
-                    fo.write(
-                        "        <description>Detect time:%s\nDive:%03d</description>\n"
-                        % (paam_dict[p][2], dive_num)
-                    )
-                    fo.write("        <Point>\n")
-                    fo.write("        <altitudeMode>absolute</altitudeMode>\n")
-                    fo.write(
-                        "        <coordinates>%f,%f,%f</coordinates>\n"
-                        % (
-                            float(lon[t_index]),
-                            float(lat[t_index]),
-                            -float(depth[t_index]),
-                        )
-                    )
-                    fo.write("        </Point>\n")
-                    fo.write("    </Placemark>\n")
-                    break
-
     try:
         dog, cog = Utils.bearing(gps_lat_start, gps_lon_start, gps_lat_end, gps_lon_end)
     except:
@@ -1012,52 +974,6 @@ def writeNetworkKML(fo, name, url):
     fo.write("</kml>\n")
 
 
-def process_paam_data(paam_data_directory, percent_ici):
-    """Collect data from PAAM stats files"""
-    paam_compare_dict = {}
-    if os.path.exists(paam_data_directory):
-        for g in ("%s/data?/dive???/compare.stats", "%s/dive???/compare.stats"):
-            for m in glob.glob(g % (paam_data_directory)):
-                log_debug(f"Processing {m}")
-                try:
-                    fi = open(m, "r")
-                except:
-                    log_error(f"Could not read {m} = skiping")
-                else:
-                    root, _ = os.path.split(m)
-                    _, dive = os.path.split(root)
-                    dive_num = int(dive[4:7])
-                    paam_compare_dict[dive_num] = {}
-
-                    for line in fi:
-                        log_debug(f"Processing {m}:({line})")
-                        splits = line.split(",")
-                        time_split = splits[0].split("_")
-                        start_time = time.mktime(
-                            time.strptime(
-                                f"{time_split[1]}{time_split[2]}", "%y%m%d%H%M%S"
-                            )
-                        )
-                        try:
-                            if (float(splits[1]) != 0.0) and (
-                                (float(splits[2]) / float(splits[1])) > percent_ici
-                            ):
-                                text = "%.2f%% ICI (%d total)" % (
-                                    (float(splits[2]) / float(splits[1]) * 100.0),
-                                    int(splits[1]),
-                                )
-                                paam_compare_dict[dive_num][start_time] = (
-                                    text,
-                                    float(splits[7]),
-                                    f"{time_split[1]}_{time_split[2]} UTC",
-                                )
-                        except:
-                            log_info(f"Could not process {m}:({line}) - skipping")
-                    fi.close()
-
-    return paam_compare_dict
-
-
 def extractGPSPositions(dive_nc_file_name, dive_num):
     """A hack - printDive does this and reads many more variables.  This needs to be expanded and
     printDive needs to work off the data structure this feeds OR it needs to be determined that we can have
@@ -1128,18 +1044,6 @@ def main(
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
-
-    paam_compare_dict = {}
-
-    # Collect the paam data, if available
-    if base_opts.paam_data_directory:
-        log_info("Processing PAAM data")
-        base_opts.paam_data_directory = os.path.abspath(
-            os.path.expanduser(base_opts.paam_data_directory)
-        )
-        paam_compare_dict = process_paam_data(
-            base_opts.paam_data_directory, base_opts.paam_ici_percentage
-        )
 
     zip_kml = base_opts.compress_output
 
@@ -1363,10 +1267,6 @@ def main(
             #    last_dive = True
             # else:
             #    last_dive = False
-            try:
-                paam_dict = paam_compare_dict[dive_num]
-            except:
-                paam_dict = None
 
             fo.write(
                 '    <Folder id="SG%03d dive %03d">\n'
@@ -1385,7 +1285,6 @@ def main(
                 base_opts.instrument_id,
                 dive_num,
                 False,
-                paam_dict,
                 fo,
             )
 
@@ -1657,7 +1556,6 @@ def main(
 
     # Find the current target
     if base_opts.targets != "none":
-
         tgt_name = tgt_lat = tgt_lon = tgt_radius = None
 
         # TODO - this needs to be replaced with processing the .nc files

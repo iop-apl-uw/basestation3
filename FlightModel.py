@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -44,7 +44,6 @@ import scipy.optimize # fminbound
 from HydroModel import hydro_model
 import seawater
 import gsw
-from flight_data import *
 import copy # must be after numpy (and flight_data) import, since numpy has its own 'copy'
 import stat
 import pdb
@@ -145,7 +144,7 @@ flush_ab_grid_cache_entries = [] # DEBUG which dives to flush and force recomput
 # Thus the minimum adjustment is 1 (so we if we start at 1 we'll adjust using dive 2)
 
 # NOTE: if you expect to set/override these parameters in a cnf file they must be all lower-case!!
-early_volmax_adjust = 4 # PARAMETER number of dives: adjust volmax and re-tare vbdbias values over the 'first' N dives (was 10)
+early_volmax_adjust = 10 # PARAMETER number of dives: adjust volmax and re-tare vbdbias values over the 'first' N dives (was 10)
 FM_default_rho0 = 1027.5 # assume constant for all missions; the scales velocity in hydro_model().  Matches MDP
 
 sg_hd_s = -0.25 # CONSTANT how drag scales by shape for the Seaglider shape (Hubbard, 1990)
@@ -265,6 +264,60 @@ if generate_figures:
     import BaseColorMaps
     # from mpl_toolkits.basemap import Basemap
 
+
+class flight_data: # deliberately no (object) so we can pickle these puppies
+    def __init__(self, dive_num):
+        self.dive_num = dive_num
+        self.last_updated = 0 # seconds since Jan 1, 1970 when nc file was created/updated
+        self.start_time = 0 # seconds since Jan 1, 1970 when dive started
+        self.pitch_d = 0 # the absolute value of the integer pitch desired for this dive
+        # assumed min and max pitch attained for 'most' of the dive (to deal with auto pitch adjust)
+        self.min_pitch = None
+        self.max_pitch = None
+        self.bottom_rho0 = nan # the bottom density recorded for this dive
+        self.bottom_press = nan # the bottom pressure recorded for this dive
+        self.dive_data_ok = None # unknown; else True, the data is available or False, there was some issue (see load_dive_data())
+        self.n_valid = 0 # how many valid points will this dive provide
+        # values of parameters from nc file
+        # these could come from many places, initially sg_calib_constants.  but we don't care.
+        # what we do care about is whether we they differ from our estimates in which case we trigger reprocessing
+        # which should update the nc files to our calculations
+        self.nc_volmax = 0
+        # if a/b change we need to recompute vbdbias and abs_compress, otherwise skip it
+        self.recompute_vbdbias_abs_compress = True
+        self.nc_vbdbias = nan
+        self.nc_hd_a = 0
+        self.nc_hd_b = 0
+        self.nc_abs_compress = nan
+
+        # what was onboard for estimating flight parameters for this dive
+        self.log_HD_A = 0
+        self.log_HD_B = 0
+        self.log_HD_C = 0
+
+        # estimated parameters for this dive from FlightModel.py
+        self.hd_ab_trusted = False # whether the a/b values come from a trusted or untrusted estimate
+        self.hd_a = 0
+        self.hd_b = 0
+        self.volmax = nan
+        self.vbdbias = nan # critical for this to start as nan
+        self.median_vbdbias = nan
+        self.abs_compress = nan
+        self.w_rms_vbdbias = nan # w_rms at vbdbias (and abs_compress)
+
+
+
+    def __repr__(self):
+        return "<Dive %d pitch_d: %.1f p: %.1fdbar vbias: %.1fcc (%.1fcc) abs_compress=%g RMS%s=%5.4fcm/s>" % (self.dive_num,
+                                                                                                               self.pitch_d,
+                                                                                                               self.bottom_press,
+                                                                                                               self.vbdbias,
+                                                                                                               self.nc_vbdbias,
+                                                                                                               self.abs_compress,
+                                                                                                               't' if self.hd_ab_trusted else '',
+                                                                                                               self.w_rms_vbdbias)
+    
+
 def estimate_volmax(mass,density,vbd_adjust=660):
     # Estimate of volmax given mass of the vehicle and an insitu density measurement or estimate
     # This estimate just has to get us within +/-1000cc; we'll adjust it based on vbdbias calculations per dive later
@@ -286,7 +339,7 @@ def write_figure(basename,delete=False):
         if os.path.exists(figure_output_name):
             os.remove(figure_output_name)
     else:
-        plt.savefig(figure_output_name,  format='png')
+        plt.savefig(figure_output_name,  format='webp')
 
     if plots_directory:
         plots_figure_output_name = os.path.join(plots_directory, basename)
@@ -764,7 +817,7 @@ def dump_fm_values(dive_data):
         fh.write('volmax = %g;\n' % flight_dive_data_d['volmax'])
         fh.write('vbdbias = %g; %% vbdbias w rms = %.2f cm/s\n' % (dive_data.vbdbias, dive_data.w_rms_vbdbias))
         volmax_biased = flight_dive_data_d['volmax'] - dive_data.vbdbias
-        fh.write('volmax_biased = %g;\n' % volmax)
+        fh.write('volmax_biased = %g;\n' % volmax_biased)
         fh.write('abs_compress = %g;\n' % dive_data.abs_compress)
         fh.write('hd_a = %g;\n' % dive_data.hd_a)
         fh.write('hd_b = %g;\n' % dive_data.hd_b)
@@ -1090,7 +1143,7 @@ def load_dive_data(base_opts, dive_data):
     return data_d
 
 # Used by w_rms_func() and solve_ab_DAC()
-def compute_buoyancy(vbdbias, abs_compress, # these variables can be varied by various FM search routines
+def compute_buoyancy(base_opts, vbdbias, abs_compress, # these variables can be varied by various FM search routines
                      dive_data_d):
 
     # compute buoyancy using given vbdbias (and, implicitly, the computed volmax)
@@ -1126,14 +1179,18 @@ def compute_buoyancy(vbdbias, abs_compress, # these variables can be varied by v
     # so remove vol_comp to compute that effect and then add vol_comp to get total volume
     # We use vol_comp_ref since we want the assumed volume of the uncompressed hull on the reference surface
     vol_hull = vbdc - vol_comp_ref
-    vol = vol_hull # *exp(-abs_compress*press + therm_expan_term)
+    vol = vol_hull
+    if not base_opts.fm_isopycnal:
+        vol *= exp(-abs_compress*press + therm_expan_term)
     if dump_checkpoint_data_matfiles:
         dive_data_d['vol_hull'] = vol_hull;
         dive_data_d['vol_hull_compress'] = vol;
     vol = vol + vol_comp
+    if base_opts.fm_isopycnal:
+        density_insitu = dive_data_d['density']
+    else:
+        density_insitu = dive_data_d['density_insitu']
 
-    # density_insitu = dive_data_d['density_insitu']
-    density_insitu = dive_data_d['density']
 
     buoyancy = g_per_kg*(density_insitu*vol*(m_per_cm**3) - flight_consts_d['mass'])
     pitch = dive_data_d['pitch']
@@ -1143,13 +1200,13 @@ def compute_buoyancy(vbdbias, abs_compress, # these variables can be varied by v
     
 # Compute the RMS difference between observed and predicted 'w' given a set of flight constants
 # returns w_rms_func_bad when hydro_model fails to converge or there are too many points stalled or otherwise bad
-def w_rms_func(vbdbias,a,b,abs_compress, # these variables can be varied by various FM search routines
+def w_rms_func(base_opts, vbdbias,a,b,abs_compress, # these variables can be varied by various FM search routines
                      dive_data_d,return_components=False):
     global flight_consts_d, HIST, compare_velo
     # override from our current search variables
     flight_consts_d['hd_a'] = a
     flight_consts_d['hd_b'] = b
-    buoyancy, pitch, w, vol = compute_buoyancy(vbdbias, abs_compress, dive_data_d)
+    buoyancy, pitch, w, vol = compute_buoyancy(base_opts, vbdbias, abs_compress, dive_data_d)
     hm_converged, hdm_speed_cm_s_v, hdm_glide_angle_rad_v, fv_stalled_i_v = hydro_model(buoyancy, pitch, flight_consts_d)
     hdm_w_speed_cm_s_v = hdm_speed_cm_s_v*sin(hdm_glide_angle_rad_v) # could delay this until we see if enough valid points are around
     if dump_checkpoint_data_matfiles:  # DEBUG for dumping solve_ab mat files of combined data
@@ -1265,7 +1322,7 @@ def solve_vbdbias_abs_compress(base_opts, dive_data):
     # 20 times between -1000 and 1000 (2000/100) so no real time savings
     HIST = []
     for vbdbias in linspace(vmin, vmax, coarse_step+1):
-        w_rms = w_rms_func(vbdbias, hd_a, hd_b, abs_compress, dive_data_d)
+        w_rms = w_rms_func(base_opts, vbdbias, hd_a, hd_b, abs_compress, dive_data_d)
         #DEBUG print "%d %.2f" % (vbdbias,w_rms) # DEBUG (see HIST)
         if w_rms is not w_rms_func_bad:
             if min_w_rms is None or w_rms < min_w_rms:
@@ -1280,9 +1337,9 @@ def solve_vbdbias_abs_compress(base_opts, dive_data):
         # But see the BUG in fminbound() outlined below!
         vmin = min_w_rms_vbdbias-2*vbdbias_increment
         vmax = min_w_rms_vbdbias+2*vbdbias_increment
-        vbdbias = scipy.optimize.fminbound(lambda vbdbias: w_rms_func(vbdbias, hd_a, hd_b, abs_compress, dive_data_d),
+        vbdbias = scipy.optimize.fminbound(lambda vbdbias: w_rms_func(base_opts, vbdbias, hd_a, hd_b, abs_compress, dive_data_d),
                                            vmin, vmax, xtol=1) # 1cc tolerance
-        min_w_rms_vbdbias = w_rms_func(vbdbias, hd_a, hd_b, abs_compress, dive_data_d)
+        min_w_rms_vbdbias = w_rms_func(base_opts, vbdbias, hd_a, hd_b, abs_compress, dive_data_d)
         if min_w_rms_vbdbias <= max_w_rms_vbdbias:
             dive_data.vbdbias = vbdbias
             dive_data.median_vbdbias = vbdbias # updated below
@@ -1313,7 +1370,7 @@ def solve_vbdbias_abs_compress(base_opts, dive_data):
         min_w_rms_ac = None
         min_w_rms = None
         for ac in linspace(ac_min, ac_max, coarse_step+1):
-            w_rms = w_rms_func(vbdbias, hd_a, hd_b, ac, dive_data_d)
+            w_rms = w_rms_func(base_opts, vbdbias, hd_a, hd_b, ac, dive_data_d)
             if w_rms is not w_rms_func_bad:
                 if min_w_rms is None or w_rms < min_w_rms:
                     min_w_rms_ac = ac
@@ -1323,10 +1380,10 @@ def solve_vbdbias_abs_compress(base_opts, dive_data):
             HIST = []
             ac_min = min_w_rms_ac-2*ac_increment
             ac_max = min_w_rms_ac+2*ac_increment
-            abs_compress = scipy.optimize.fminbound(lambda ac: w_rms_func(vbdbias, hd_a, hd_b, ac, dive_data_d),
+            abs_compress = scipy.optimize.fminbound(lambda ac: w_rms_func(base_opts, vbdbias, hd_a, hd_b, ac, dive_data_d),
                                                     ac_min, ac_max, xtol=ac_increment/10)
     dive_data.abs_compress = abs_compress # default or updated
-    min_w_rms_abs_compress = w_rms_func(vbdbias, hd_a, hd_b, abs_compress, dive_data_d)
+    min_w_rms_abs_compress = w_rms_func(base_opts, vbdbias, hd_a, hd_b, abs_compress, dive_data_d)
     dive_data.w_rms_vbdbias = min_w_rms_abs_compress # reflect min of both vbdbias and abs_compress
     dive_data.recompute_vbdbias_abs_compress = False # done for this a/b combination
     return True
@@ -1382,7 +1439,7 @@ def solve_ab_grid(base_opts, dive_set,reprocess_count,dive_num=None):
     for grid_a, ia in zip(hd_a_grid, list(range(na))):
         for grid_b, ib in zip(hd_b_grid, list(range(nb))):
             # explicitly zero vbdbias since the dive-by-dive vbdbias has already been applied to combined_data_d
-            w_rms = w_rms_func(0, grid_a, grid_b, abs_compress, combined_data_d)
+            w_rms = w_rms_func(base_opts, 0, grid_a, grid_b, abs_compress, combined_data_d)
             W_misfit_RMS[ib, ia] = w_rms
             if w_rms is not w_rms_func_bad and w_rms < min_w_rms:
                 min_w_rms = w_rms
@@ -1396,7 +1453,7 @@ def solve_ab_grid(base_opts, dive_set,reprocess_count,dive_num=None):
     if dump_checkpoint_data_matfiles:
         global flight_directory
         # solve this at the min location to update any saved buoyancy/w_stdy/etc. in combined_data_d
-        w_rms = w_rms_func(0, hd_a_grid[min_ia], hd_b_grid[min_ib], abs_compress, combined_data_d)
+        w_rms = w_rms_func(base_opts, 0, hd_a_grid[min_ia], hd_b_grid[min_ib], abs_compress, combined_data_d)
         mat_d = {}
         mat_d['dive_num'] = dive_num
         mat_d['dive_set'] = array(dive_set)
@@ -1508,7 +1565,7 @@ def load_dive_data_DAC(dive_data):
 # call only of dd.DAC_ok is True
 # Note that the DAC exploration does NOT make use of the velo data or compare_velo
 # we assume the min_ia, min_ib reflects that if engaged
-def solve_ab_DAC(dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
+def solve_ab_DAC(base_opts, dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
     global hd_a_grid, hd_b_grid
     global generate_figures, font, HD_A, HD_B, w_misfit_rms_levels, glider_mission_string
 
@@ -1519,7 +1576,7 @@ def solve_ab_DAC(dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
     vbdbias = dd.vbdbias
     abs_compress = dd.abs_compress # else use mean?
     # do this once...
-    buoyancy, pitch, w, vol = compute_buoyancy(vbdbias, abs_compress, dive_data_d)
+    buoyancy, pitch, w, vol = compute_buoyancy(base_opts, vbdbias, abs_compress, dive_data_d)
 
     # load_dive_data_DAC() ensures these are present
     ctd_delta_time_s_v = dive_data_d['delta_time_s']
@@ -1629,7 +1686,7 @@ def solve_ab_DAC(dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
                           r'Best fit ${w}_{rms}$'],
                         loc='upper right', fancybox=True, prop=font, numpoints=1)
         lg.get_frame().set_alpha(0.5)
-        write_figure('dv%04d_DAC.png' % dive_num)
+        write_figure('dv%04d_DAC.webp' % dive_num)
         plt.clf()
     return True
 
@@ -1640,7 +1697,7 @@ def flush_ab_grid_cache(dive_num, ab_grid_cache_d):
         W_misfit_RMS, ia, ib, min_misfit, prev_dive_set, prev_pitch_d_diff = cache_entry
         if dive_num in prev_dive_set:
             del ab_grid_cache_d[ab_grid_cache_dive]
-            write_figure('dv%04d_ab.png' % ab_grid_cache_dive, delete=True)
+            write_figure('dv%04d_ab.webp' % ab_grid_cache_dive, delete=True)
 
 def update_restart_cache(dive_num, mr_dives_pitches, mr_index, mr_n_inserted, last_W_misfit_RMS_dive_num, last_ab_committed_dive_num,
                          predicted_hd_a, predicted_hd_b, predicted_hd_ab_trusted):
@@ -1860,28 +1917,35 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 # We could avoid this (and the reprocessing it typically implies) without loss of accuracy.
                 if not flight_dive_data_d.get('final_volmax_found', False): # use get in case we access old dbs
                     early_vbdbias = []
+                    early_vbdbias_d_n = []
                     for d_n in flight_dive_nums:
                         if d_n == 1:
                             # Skip the actual first dive to take care of bubbles and compressee adjustment for DG
                             continue
                         try:
                             dd = flight_dive_data_d[d_n]
-                            if ~isnan(dd.vbdbias):
+                            #TODO - consider additional criteria
+                            # and ~isnan(dd.bottom_press) and dd.bottom_press > 90.0:
+                            if ~isnan(dd.vbdbias): 
                                 early_vbdbias.append(dd.vbdbias)
                         except KeyError:
                             pass # not done yet or missing
+                        else:
+                            early_vbdbias_d_n.append(d_n)
                     if len(early_vbdbias) >= early_volmax_adjust: # sufficient dives?
                         early_vbdbias = mean(early_vbdbias)
                         flight_dive_data_d['volmax'] -= early_vbdbias
                         new_volmax = flight_dive_data_d['volmax']
-                        log_info('Final volmax estimate: %.0fcc (adjusting previous dives by %.2fcc)' % (new_volmax, -early_vbdbias))
+                        log_info('Final volmax estimate: %.0fcc from dives %s (adjusting previous dives by %.2fcc)' % (new_volmax, early_vbdbias_d_n, -early_vbdbias))
                         # Adjust all existing volmax and vbdbias values wrt the new assumed volmax
                         # Below we will see that both values changed from the nc files and force reprocessing
+                        avg_volmax = []
                         for d_n in flight_dive_nums:
                             dd = flight_dive_data_d[d_n]
                             if ~isnan(dd.vbdbias):
                                 dd.vbdbias -= early_vbdbias
                                 dd.volmax = new_volmax
+                                avg_volmax.append(dd.volmax - dd.vbdbias)
                                 dump_fm_values(dd)
                                 data_d = load_dive_data(base_opts, dd)
                                 if data_d is not None:
@@ -1889,6 +1953,9 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                                     flight_dive_data_d['C_VBD'] = data_d['C_VBD']
                                     flight_dive_data_d['VBD_CNV'] = data_d['VBD_CNV']
                         flight_dive_data_d['final_volmax_found'] = True
+                        log_info(f"New avg volmax (bias included) {np.nanmean(avg_volmax):.2f}")
+                    else:
+                        log_info(f"Early bias dives so far {early_vbdbias_d_n}")
 
                 log_info("%s" % dive_data)
                 dump_fm_values(dive_data)
@@ -2148,14 +2215,14 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                         plt.plot(hd_a_grid[a_i], hd_b_grid[b_i], 'kx', markersize=fig_markersize)
 
                 # Add pitch_diff as an indication of constraint?
-                write_figure('dv%04d_ab.png' % dive_num)
+                write_figure('dv%04d_ab.webp' % dive_num)
                 plt.clf()
 
                 # BUG: we compute DAC for dives in the dive set under the assumption that the current ia/ib will be their minimum
                 # but this could be false if we assign the dive to the previous min a/b below
                 if generate_dac_figures: # implicitly generate_figures and compute_ab_grid
                     for d_n in dive_set:
-                        solve_ab_DAC(d_n, W_misfit_RMS, ia, ib, min_misfit)
+                        solve_ab_DAC(base_opts, d_n, W_misfit_RMS, ia, ib, min_misfit)
             
             # Determine if predicted_a/b need updating
             if last_W_misfit_RMS is None:
@@ -2355,7 +2422,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 plt.ylabel('Implied C_VBD (AD counts)')
                 
 
-            write_figure('eng_FM_vbdbias.png')
+            write_figure('eng_FM_vbdbias.webp')
             plt.clf()
 
 
@@ -2383,7 +2450,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
                 ax = plt.gca()
                 ax.grid(True)
 
-                write_figure('eng_FM_abs_compress.png')
+                write_figure('eng_FM_abs_compress.webp')
                 plt.clf()
             
             # a/b history figure based on ab_grid_cache entries
@@ -2455,7 +2522,7 @@ def process_dive(base_opts,new_dive_num,updated_dives_d,alert_dive_num=None, exi
             ax = plt.gca()
             ax.grid(True)
 
-            write_figure('eng_FM_ab_dives.png')
+            write_figure('eng_FM_ab_dives.webp')
             plt.clf()
 
         # Determine which dives need to be reprocessed because of flight parameter changes

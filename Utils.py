@@ -57,6 +57,7 @@ import scipy
 
 import Globals
 import BaseNetCDF
+import CalibConst
 
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
@@ -1731,6 +1732,35 @@ def extract_calib_consts(dive_nc_file):
 
     return calib_consts
 
+def get_mission_timeseries_name(base_opts, direc=None):
+    if base_opts:
+        mydir = base_opts.mission_dir
+    elif direc:
+        mydir = direc
+    else:
+        mydir = './'
+
+    sg_calib_file_name = os.path.join(mydir, "sg_calib_constants.m")
+
+    # Read sg_calib_constants file
+    calib_consts = CalibConst.getSGCalibrationConstants(sg_calib_file_name)
+
+    # calib_consts is set; figure out filename, etc.
+    try:
+        instrument_id = int(calib_consts["id_str"])
+    except:
+        instrument_id = int(base_opts.instrument_id)
+
+    if instrument_id == 0:
+        log_warning("Unable to determine instrument id; assuming 0")
+
+    platform_id = "SG%03d" % instrument_id
+
+    mission_title = ensure_basename(calib_consts["mission_title"])
+    return os.path.join(
+        mydir,
+        "sg%03d_%s_timeseries.nc" % (instrument_id, mission_title),
+    )
 
 def notifyVis(glider: int, topic: str, body: str):
     """

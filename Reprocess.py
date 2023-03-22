@@ -243,7 +243,11 @@ def main():
         dive_list, base_opts, instrument_id, init_dict
     )
 
-    if not base_opts.skip_flight_model and not base_opts.called_from_fm:
+    if (
+        base_opts.backup_flight
+        and not base_opts.skip_flight_model
+        and not base_opts.called_from_fm
+    ):
         flight_dir = os.path.join(base_opts.mission_dir, "flight")
         flight_dir_backup = os.path.join(
             base_opts.mission_dir, f"flight_{time.strftime('%Y%m%d_%H%M%S')}"
@@ -288,7 +292,7 @@ def main():
         log_debug(f"logger_eng_files = {logger_eng_files[dive_path]}")
 
         try:
-            (temp_ret_val, _) = MakeDiveProfiles.make_dive_profile(
+            (temp_ret_val, nc_file_created) = MakeDiveProfiles.make_dive_profile(
                 base_opts.force,
                 dive_num,
                 eng_file_name,
@@ -315,6 +319,10 @@ def main():
             log_info("Skipped processing dive %d" % dive_num)
         else:
             dives_processed.append(dive_num)
+            # If MDP does nothing (success w/o force option for example), it returns None
+            # - don't add to list
+            if nc_file_created:
+                dive_nc_file_names.append(nc_file_created)
         del temp_ret_val
 
     log_info(f"Dives processed = {dives_processed}")
@@ -323,14 +331,6 @@ def main():
     if not base_opts.called_from_fm:
         # Now update other related files for each file we processed
         dive_nc_file_names = sorted(Utils.unique(dive_nc_file_names))
-
-        # CONSIDER process .extensions here using something like:
-        #
-        # from Globals import known_mailer_tags, known_ftp_tags
-        # process_extensions('.extensions', ["dive", "global", "mission"], base_opts, sg_calib_file_name, dive_nc_file_names,  \
-        #                    dive_nc_file_names, [], Base.known_mailer_tags, Base.known_ftp_tags, None)
-        #
-        # This would replace the explicit calls to MakePlots
 
         # Now update all composite files using all available nc files
         all_dive_nc_file_names.extend(dive_nc_file_names)
@@ -341,6 +341,9 @@ def main():
                     "Started FLIGHT processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
                 )
+                # TODO - dive_nc_file_names needs to be augmented by the list of new netcdf files created in flightmodel
+                # TODO - same issue appears to be in the main call from Base to FligthModel - it does not appear that
+                # TODO - FM returns any updated dives
                 FlightModel.main(
                     instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
                 )
@@ -390,7 +393,7 @@ def main():
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
                 )
 
-            if base_opts.make_mission_timeseries or base_opts.make_mission_profile:
+            if not base_opts.skip_kml:
                 log_info(
                     "Started KML processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
@@ -407,7 +410,6 @@ def main():
                 )
 
             if base_opts.reprocess_plots:
-
                 log_info(
                     "Started PLOT processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
@@ -418,7 +420,7 @@ def main():
                     )
 
                 plot_dict = BasePlot.get_dive_plots(base_opts)
-                BasePlot.plot_dives(base_opts, plot_dict, all_dive_nc_file_names)
+                BasePlot.plot_dives(base_opts, plot_dict, dive_nc_file_names)
                 mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
                 plot_dict = BasePlot.get_mission_plots(base_opts)
                 BasePlot.plot_mission(base_opts, plot_dict, mission_str)

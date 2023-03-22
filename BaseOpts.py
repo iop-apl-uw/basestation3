@@ -494,7 +494,7 @@ global_options_dict = {
     ),
     "web_file_location": options_t(
         "",
-        ("Base", "MakeKML"),
+        ("Base", "Reprocess", "MakeKML"),
         ("--web_file_location",),
         str,
         {
@@ -573,7 +573,7 @@ global_options_dict = {
     ),
     # DOC FMS is not consulted for flight variables.  The user must supply
     # DOC volmax, vbdbias, hd_a, hd_b, hd_c and optionally hd_s, rho0, abs_compress, therm_expan, temp_ref
-    # in sg_calib_constants.m.
+    # DOC in sg_calib_constants.m.
     "ignore_flight_model": options_t(
         False,
         ("Base", "FlightModel", "MakeDiveProfiles", "Reprocess", "BaseDB"),
@@ -584,9 +584,32 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    # DOC Used in re-processing glider test missions for the purpose of generating a volmax compatible with previous
+    # DOC regression scripts.
+    "fm_isopycnal": options_t(
+        False,
+        ("Base", "Reprocess", "FlightModel"),
+        ("--fm_isopycnal",),
+        bool,
+        {
+            "help": "Run flight model using potential density (instead of in-situ) and ignore compressibilty and thermal effects",
+            "action": "store_true",
+        },
+    ),
+    # DOC Moving the flight directory out of the way initiates a clean slate for subsequent processing
+    "backup_flight": options_t(
+        False,
+        ("Base", "Reprocess"),
+        ("--backup_flight",),
+        bool,
+        {
+            "help": "Back up flight directory prior to run",
+            "action": "store_true",
+        },
+    ),
     "skip_kml": options_t(
         False,
-        ("Base",),
+        ("Base", "Reprocess"),
         ("--skip_kml",),
         bool,
         {
@@ -887,40 +910,11 @@ global_options_dict = {
         {"help": "Prefixes of dimensions and variables to strip", "nargs": "+"},
     ),
     # KML related
-    "paam_data_directory": options_t(
-        "",
-        (
-            "Base",
-            "MakeKML",
-        ),
-        ("--paam_data_directory",),
-        FullPath,
-        {
-            "help": "Directory with PAAM whale detections",
-            "action": FullPathAction,
-            "section": "makekml",
-            "option_group": "kml generation",
-        },
-    ),
-    "paam_ici_percentage": options_t(
-        0.25,
-        (
-            "Base",
-            "MakeKML",
-        ),
-        ("--paam_ici_percentage",),
-        float,
-        {
-            "help": "Threshold for displaying a detection in paam data",
-            "range": [0.0, 1.0],
-            "section": "makekml",
-            "option_group": "kml generation",
-        },
-    ),
     "skip_points": options_t(
         10,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--skip_points",),
@@ -936,6 +930,7 @@ global_options_dict = {
         "00ffff",
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--color",),
@@ -950,6 +945,7 @@ global_options_dict = {
         "all",
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--targets",),
@@ -965,6 +961,7 @@ global_options_dict = {
         True,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--surface_track",),
@@ -980,6 +977,7 @@ global_options_dict = {
         False,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--subsurface_track",),
@@ -1010,6 +1008,7 @@ global_options_dict = {
         False,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--proposed_targets",),
@@ -1025,6 +1024,7 @@ global_options_dict = {
         True,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--target_radius",),
@@ -1040,6 +1040,7 @@ global_options_dict = {
         True,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--compress_output",),
@@ -1055,6 +1056,7 @@ global_options_dict = {
         True,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--plot_dives",),
@@ -1070,6 +1072,7 @@ global_options_dict = {
         False,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--simplified",),
@@ -1085,6 +1088,7 @@ global_options_dict = {
         False,
         (
             "Base",
+            "Reprocess",
             "MakeKML",
         ),
         ("--use_glider_target",),

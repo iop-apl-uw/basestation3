@@ -6,32 +6,19 @@ aa3830_ext.py,init_sensor,asc2eng,remap_engfile_columns_netcdf,sensor_data_proce
 aa4330_ext.py,init_sensor,asc2eng,sensor_data_processing,remap_engfile_columns_netcdf
 WETlabs_ext.py,init_sensor,asc2eng,remap_engfile_columns_netcdf,sensor_data_processing,remap_instrument_names
 payload_ext.py,init_logger,process_data_files
-# Non-licensed sensors below 
 sailct_ext.py,init_logger,asc2eng,process_data_files
-aquadopp_ext.py,init_logger,process_data_files
-mib_ext.py,init_logger,process_tar_members,process_payload_files
-paam_ext.py,init_logger,process_tar_members
-tmicl_ext.py,init_logger,process_tar_members
 pmar_ext.py,init_logger,process_tar_members,sensor_data_processing
-brb_ext.py,init_logger,process_log_files,process_payload_files
-#NOTYET lab_ext.py,init_logger
+tmicl_ext.py,init_logger,process_tar_members
 scicon_ext.py,init_logger,process_tar_members
 cp_ext.py,init_logger,process_data_files
-edison_ext.py,init_logger,process_tar_members
-
-# From Vendor setups
-
 # Legato as a logdev - must follow legato_ext.py
 legato_logdev_ext.py,init_logger,process_data_files,eng_file_reader
-
 # Place all cnf files at the end of this file!
-
 scct.cnf,init_sensor,asc2eng
 mag.cnf,init_sensor,asc2eng
 qsp2150.cnf,init_sensor,asc2eng
 #ocr504i.cnf,init_sensor
 ocr504i_scicon.cnf,add_netcdf_meta
-#redox_scicon.cnf,add_netcdf_meta
 #ad2cp.cnf,init_logger,process_data_files
 echo.cnf,init_logger,process_data_files
 irrad.cnf,init_sensor,asc2eng

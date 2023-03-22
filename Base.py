@@ -130,6 +130,7 @@ previous_conversion_time_out = 30  # Time to wait for previous conversion to com
 
 # Utility functions
 
+
 # urllib override to prevent username/passwd prompting on stdin
 def my_prompt_user_passwd(self, host, realm):
     """
@@ -160,7 +161,6 @@ def read_processed_files(glider_dir, instrument_id):
         return (files_dict, pdos_logfiles_dict)
 
     with open(processed_dive_file_name, "r") as processed_dives_file:
-
         for raw_line in processed_dives_file:
             raw_line = raw_line.rstrip()
             if raw_line == "":
@@ -227,7 +227,6 @@ def write_processed_dives(glider_dir, files_dict, pdos_logfiles_dict):
     items = sorted(files_dict.items())
 
     with open(processed_dive_file_name, "w") as processed_dive_file:
-
         processed_dive_file.write(
             "# This file contains the dives that have been"
             " processed and the times they were processed\n"
@@ -1320,7 +1319,6 @@ def expunge_secrets_st(selftest_name):
     pub.close()
 
     if private_keys_found:
-
         try:
             pvt = open(pvt_name, "wb")
         except IOError:
@@ -1955,7 +1953,7 @@ def main():
         or base_opts.make_mission_profile
         or base_opts.make_mission_timeseries
     ):
-        if not base_opts.skip_flight_model and base_opts.force:
+        if not base_opts.skip_flight_model and base_opts.backup_flight:
             # Start with a fresh flight directory
             flight_dir = os.path.join(base_opts.mission_dir, "flight")
             flight_dir_backup = os.path.join(
@@ -2203,6 +2201,7 @@ def main():
             last_session
             and last_session.cmd_directive
             and "QUIT" in last_session.cmd_directive
+            and last_session.dive_num > FlightModel.early_volmax_adjust
             and not base_opts.force
         ):
             log_info("Skipping flight model due to QUIT command")
