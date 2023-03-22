@@ -1,9 +1,10 @@
 #! /usr/bin/env python
+# -*- python-fmt -*-
 
-## 
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019 by University of Washington.  All rights reserved.
 ##
-## This file contains proprietary information and remains the 
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2023 by University of Washington.  All rights reserved.
+##
+## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
 ## or reproduction is prohibited except as permitted by express written
 ## license agreement with the University of Washington.
@@ -24,19 +25,21 @@
 aa3830 basestation sensor extension
 """
 
-import sys
-from numpy import *
-from QC import *
-from BaseNetCDF import *
-from BaseLog import *
-import Utils
-nc_aa3830_data_info = 'aa3830_data_info' # from eng/scicon
-nc_dim_aa3830_data_point = 'aa3830_data_point'
-nc_aa3830_data_time = 'aa3830_time'
+import numpy as np
 
-nc_aa3830_results_info = 'aa3830_results_info'
-nc_dim_aa3830_results = 'aa3830_result_data_point'
-nc_aa3830_time_var = 'aanderaa3830_results_time'
+import BaseNetCDF
+import QC
+import Utils
+
+from BaseLog import log_error, log_warning, log_debug
+
+nc_aa3830_data_info = "aa3830_data_info"  # from eng/scicon
+nc_dim_aa3830_data_point = "aa3830_data_point"
+nc_aa3830_data_time = "aa3830_time"
+
+nc_aa3830_results_info = "aa3830_results_info"
+nc_dim_aa3830_results = "aa3830_result_data_point"
+nc_aa3830_time_var = "aanderaa3830_results_time"
 
 
 def init_sensor(module_name, init_dict=None):
@@ -48,113 +51,300 @@ def init_sensor(module_name, init_dict=None):
          0 - success (data found and processed)
     """
 
-    if(init_dict == None):
+    if init_dict is None:
         log_error("No datafile supplied for init_sensors - version mismatch?")
         return -1
 
-    register_sensor_dim_info(nc_aa3830_data_info, nc_dim_aa3830_data_point, nc_aa3830_data_time, 'chemical', 'aa3830')
-    register_sensor_dim_info(nc_aa3830_results_info, nc_dim_aa3830_results, nc_aa3830_time_var, False, 'aa3830')
+    BaseNetCDF.register_sensor_dim_info(
+        nc_aa3830_data_info,
+        nc_dim_aa3830_data_point,
+        nc_aa3830_data_time,
+        "chemical",
+        "aa3830",
+    )
+    BaseNetCDF.register_sensor_dim_info(
+        nc_aa3830_results_info,
+        nc_dim_aa3830_results,
+        nc_aa3830_time_var,
+        False,
+        "aa3830",
+    )
     init_dict[module_name] = {
-        'netcdf_metadata_adds' : {
+        "netcdf_metadata_adds": {
             # AA3830 (and some AA4330) optode coefficients
-            'sg_cal_calibcomm_optode': [False, 'c', {}, nc_scalar], # aa3830 and aa4330
-            'sg_cal_optode_C00Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C01Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C02Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C03Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C10Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C11Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C12Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C13Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C20Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C21Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C22Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C23Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C30Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C31Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C32Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C33Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C40Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C41Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C42Coef': [False, 'd', {}, nc_scalar],
-            'sg_cal_optode_C43Coef': [False, 'd', {}, nc_scalar],
-
+            "sg_cal_calibcomm_optode": [
+                False,
+                "c",
+                {},
+                BaseNetCDF.nc_scalar,
+            ],  # aa3830 and aa4330
+            "sg_cal_optode_C00Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C01Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C02Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C03Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C10Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C11Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C12Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C13Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C20Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C21Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C22Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C23Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C30Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C31Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C32Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C33Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C40Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C41Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C42Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+            "sg_cal_optode_C43Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
             # instrument
-            'aa3830': [False, 'c', {'long_name':'underway optode','nodc_name':'optode','make_model':'Aanderaa 3830'}, nc_scalar], # always scalar
+            "aa3830": [
+                False,
+                "c",
+                {
+                    "long_name": "underway optode",
+                    "nodc_name": "optode",
+                    "make_model": "Aanderaa 3830",
+                },
+                BaseNetCDF.nc_scalar,
+            ],  # always scalar
             # AA3830 sensor inputs
             # NOTE since we have ml/l this is a volume fraction we have 1e-3 ml/l
             # The new correction will change this to umoles/m^3 so that will change the name to mole_concentration_of_dissolved_molecular_oxygen_in_sea_water
-             # Add instrument explicitly for eng file data since they all share the same dim info
-            'eng_aa3830_O2': [True, 'd', {'_FillValue':nc_nan, 'units':'micromoles/L', 'description':'Dissolved oxygen as reported by the instument, based on on-board calibration data, assuming optode temperature but without depth or salinity correction', 'instrument':'aa3830'}, (nc_sg_data_info,)],
-            'eng_aa3830_temp': [True, 'd', {'_FillValue':nc_nan, 'standard_name':'temperature_of_sensor_for_oxygen_in_sea_water', 'units':'degrees_Celsius', 'description':'As reported by the instrument', 'instrument':'aa3830'}, (nc_sg_data_info,)],
-            'eng_aa3830_dphase': [True, 'd', {'_FillValue':nc_nan, 'description':'As reported by the instrument', 'instrument':'aa3830'}, (nc_sg_data_info,)],
-            'eng_aa3830_bphase': [True, 'd', {'_FillValue':nc_nan, 'description':'As reported by the instrument', 'instrument':'aa3830'}, (nc_sg_data_info,)],
-
+            # Add instrument explicitly for eng file data since they all share the same dim info
+            "eng_aa3830_O2": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "units": "micromoles/L",
+                    "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data, assuming optode temperature but without depth or salinity correction",
+                    "instrument": "aa3830",
+                },
+                (BaseNetCDF.nc_sg_data_info,),
+            ],
+            "eng_aa3830_temp": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "standard_name": "temperature_of_sensor_for_oxygen_in_sea_water",
+                    "units": "degrees_Celsius",
+                    "description": "As reported by the instrument",
+                    "instrument": "aa3830",
+                },
+                (BaseNetCDF.nc_sg_data_info,),
+            ],
+            "eng_aa3830_dphase": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "description": "As reported by the instrument",
+                    "instrument": "aa3830",
+                },
+                (BaseNetCDF.nc_sg_data_info,),
+            ],
+            "eng_aa3830_bphase": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "description": "As reported by the instrument",
+                    "instrument": "aa3830",
+                },
+                (BaseNetCDF.nc_sg_data_info,),
+            ],
             # from scicon eng file
-            nc_aa3830_data_time: [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'AA3830 time in GMT epoch format'}, (nc_aa3830_data_info,)],
-            'aa3830_O2': [True, 'd', {'_FillValue':nc_nan, 'units':'micromoles/L', 'description':'Dissolved oxygen as reported by the instument, based on on-board calibration data, assuming optode temperature but without depth or salinity correction'}, (nc_aa3830_data_info,)],
-            'aa3830_temp': [True, 'd', {'_FillValue':nc_nan, 'standard_name':'temperature_of_sensor_for_oxygen_in_sea_water', 'units':'degrees_Celsius', 'description':'As reported by the instrument'}, (nc_aa3830_data_info,)],
-            'aa3830_dphase': [True, 'd', {'_FillValue':nc_nan, 'description':'As reported by the instrument'}, (nc_aa3830_data_info,)],
-            'aa3830_bphase': [True, 'd', {'_FillValue':nc_nan, 'description':'As reported by the instrument'}, (nc_aa3830_data_info,)],
-                        
+            nc_aa3830_data_time: [
+                True,
+                "d",
+                {
+                    "standard_name": "time",
+                    "units": "seconds since 1970-1-1 00:00:00",
+                    "description": "AA3830 time in GMT epoch format",
+                },
+                (nc_aa3830_data_info,),
+            ],
+            "aa3830_O2": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "units": "micromoles/L",
+                    "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data, assuming optode temperature but without depth or salinity correction",
+                },
+                (nc_aa3830_data_info,),
+            ],
+            "aa3830_temp": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "standard_name": "temperature_of_sensor_for_oxygen_in_sea_water",
+                    "units": "degrees_Celsius",
+                    "description": "As reported by the instrument",
+                },
+                (nc_aa3830_data_info,),
+            ],
+            "aa3830_dphase": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "description": "As reported by the instrument",
+                },
+                (nc_aa3830_data_info,),
+            ],
+            "aa3830_bphase": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "description": "As reported by the instrument",
+                },
+                (nc_aa3830_data_info,),
+            ],
             # derived results
             # Why, oh why, didn't we name these aa3830_dissolved_oxygen etc?
-            nc_aa3830_time_var: [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'time for Aanderaa 3830 in GMT epoch format'}, (nc_aa3830_results_info,)],
-            'aanderaa3830_dissolved_oxygen': [True, 'd', {'_FillValue':nc_nan, 'standard_name':'mole_concentration_of_dissolved_molecular_oxygen_in_sea_water', 'units':'micromoles/kg', 'description':'Oxygen concentration, calculated from optode dphase, corrected for salinity'}, (nc_aa3830_results_info,)],
-            'aanderaa3830_dissolved_oxygen_qc': [False, nc_qc_type, {'units':'qc_flag', 'description':'Whether to trust each optode dissolved oxygen value'}, (nc_aa3830_results_info,)],
-            'aanderaa3830_instrument_dissolved_oxygen': [True, 'd', {'_FillValue':nc_nan, 'units':'micromoles/kg', 'description':'Dissolved oxygen concentration reported from optode corrected for salinity'}, (nc_aa3830_results_info,)],
-            'aanderaa3830_qc': [False, nc_qc_type, {'units':'qc_flag', 'description':'Whether to trust the Aanderaa 3880 results'}, nc_scalar],
-            'aanderaa3830_drift_gain': [False, 'd', {'description':'Drift gain correction for the Aanderaa 3880'}, nc_scalar],
-            'aa3830_ontime_a': [False, 'd', {'description':'aa3830 total time turned on dive', 'units' : 'secs'}, nc_scalar],
-            'aa3830_samples_a': [False, 'i', {'description':'aa3830 total number of samples taken dive'}, nc_scalar],
-            'aa3830_timeouts_a': [False, 'i', {'description':'aa3830 total number of samples timed out on dive'}, nc_scalar],
-            'aa3830_ontime_b': [False, 'd', {'description':'aa3830 total time turned on climb', 'units' : 'secs'}, nc_scalar],
-            'aa3830_samples_b': [False, 'i', {'description':'aa3830 total number of samples taken climb'}, nc_scalar],
-            'aa3830_timeouts_b': [False, 'i', {'description':'aa3830 total number of samples timed out on climb'}, nc_scalar],
+            nc_aa3830_time_var: [
+                True,
+                "d",
+                {
+                    "standard_name": "time",
+                    "units": "seconds since 1970-1-1 00:00:00",
+                    "description": "time for Aanderaa 3830 in GMT epoch format",
+                },
+                (nc_aa3830_results_info,),
+            ],
+            "aanderaa3830_dissolved_oxygen": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "standard_name": "mole_concentration_of_dissolved_molecular_oxygen_in_sea_water",
+                    "units": "micromoles/kg",
+                    "description": "Oxygen concentration, calculated from optode dphase, corrected for salinity",
+                },
+                (nc_aa3830_results_info,),
+            ],
+            "aanderaa3830_dissolved_oxygen_qc": [
+                False,
+                QC.nc_qc_type,
+                {
+                    "units": "qc_flag",
+                    "description": "Whether to trust each optode dissolved oxygen value",
+                },
+                (nc_aa3830_results_info,),
+            ],
+            "aanderaa3830_instrument_dissolved_oxygen": [
+                True,
+                "d",
+                {
+                    "_FillValue": BaseNetCDF.nc_nan,
+                    "units": "micromoles/kg",
+                    "description": "Dissolved oxygen concentration reported from optode corrected for salinity",
+                },
+                (nc_aa3830_results_info,),
+            ],
+            "aanderaa3830_qc": [
+                False,
+                QC.nc_qc_type,
+                {
+                    "units": "qc_flag",
+                    "description": "Whether to trust the Aanderaa 3880 results",
+                },
+                BaseNetCDF.nc_scalar,
+            ],
+            "aanderaa3830_drift_gain": [
+                False,
+                "d",
+                {"description": "Drift gain correction for the Aanderaa 3880"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "aa3830_ontime_a": [
+                False,
+                "d",
+                {"description": "aa3830 total time turned on dive", "units": "secs"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "aa3830_samples_a": [
+                False,
+                "i",
+                {"description": "aa3830 total number of samples taken dive"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "aa3830_timeouts_a": [
+                False,
+                "i",
+                {"description": "aa3830 total number of samples timed out on dive"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "aa3830_ontime_b": [
+                False,
+                "d",
+                {"description": "aa3830 total time turned on climb", "units": "secs"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "aa3830_samples_b": [
+                False,
+                "i",
+                {"description": "aa3830 total number of samples taken climb"},
+                BaseNetCDF.nc_scalar,
+            ],
+            "aa3830_timeouts_b": [
+                False,
+                "i",
+                {"description": "aa3830 total number of samples timed out on climb"},
+                BaseNetCDF.nc_scalar,
+            ],
         }
     }
     return 0
 
+
+# pylint: disable=unused-argument
 def asc2eng(base_opts, module_name, datafile=None):
     """
     asc2eng processor
-    
+
     returns:
     -1 - error in processing
      0 - success (data found and processed)
      1 - no data found to process
-     """
+    """
 
-    if(datafile is None):
+    if datafile is None:
         log_error("No datafile supplied for asc2eng conversion - version mismatch?")
         return -1
 
     # Old name
-    aa3830_O2 = datafile.remove_col('O2')
-    aa3830_temp = datafile.remove_col('temp')
-    aa3830_dphase = datafile.remove_col('dphase')
+    aa3830_O2 = datafile.remove_col("O2")
+    aa3830_temp = datafile.remove_col("temp")
+    aa3830_dphase = datafile.remove_col("dphase")
 
     # New name
-    if(aa3830_O2 is None):
-        aa3830_O2 = datafile.remove_col('aa3830.O2')
-        aa3830_temp = datafile.remove_col('aa3830.temp')
-        aa3830_dphase = datafile.remove_col('aa3830.dphase')
+    if aa3830_O2 is None:
+        aa3830_O2 = datafile.remove_col("aa3830.O2")
+        aa3830_temp = datafile.remove_col("aa3830.temp")
+        aa3830_dphase = datafile.remove_col("aa3830.dphase")
 
-    if(aa3830_O2 is not None):
+    if aa3830_O2 is not None:
         aa3830_O2 = aa3830_O2 / 100.0
         aa3830_temp = (aa3830_temp / 100.0) - 10.0
         aa3830_dphase = aa3830_dphase / 100.0
-        datafile.eng_cols.append('aa3830.O2')
-        datafile.eng_cols.append('aa3830.temp')
-        datafile.eng_cols.append('aa3830.dphase')
-        datafile.eng_dict['aa3830.O2'] = aa3830_O2
-        datafile.eng_dict['aa3830.temp'] = aa3830_temp
-        datafile.eng_dict['aa3830.dphase'] = aa3830_dphase
+        datafile.eng_cols.append("aa3830.O2")
+        datafile.eng_cols.append("aa3830.temp")
+        datafile.eng_cols.append("aa3830.dphase")
+        datafile.eng_dict["aa3830.O2"] = aa3830_O2
+        datafile.eng_dict["aa3830.temp"] = aa3830_temp
+        datafile.eng_dict["aa3830.dphase"] = aa3830_dphase
         return 0
 
     return 1
 
-        
+
 def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_names=None):
     """
     Called from MakeDiveProfiles.py to remap column headers from older .eng files to
@@ -164,13 +354,11 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
     0 - match found and processed
     1 - no match found
     """
-    replace_dict = {
-        'O2' : 'aa3830_O2',
-        'temp' : 'aa3830_temp',
-        'dphase' : 'aa3830_dphase'
-        }
+    replace_dict = {"O2": "aa3830_O2", "temp": "aa3830_temp", "dphase": "aa3830_dphase"}
     return Utils.remap_column_names(replace_dict, column_names)
 
+
+# pylint: disable=unused-argument
 def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=None):
     """
     Called from MakeDiveProfiles.py to do sensor specific processing
@@ -185,92 +373,141 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
      0 - data found and processed
      1 - no appropriate data found
     """
-    if(l == None or eng_f==None or calib_consts==None or 'results_d' not in l):
+    if l is None or eng_f is None or calib_consts is None or "results_d" not in l:
         log_error("Missing arguments for sensor_data_processing - version mismatch?")
         return -1
-    aa3830_instrument_metadata_d = fetch_instrument_metadata(nc_aa3830_data_info)
-    if 'ancillary_variables' in aa3830_instrument_metadata_d:
-        del aa3830_instrument_metadata_d['ancillary_variables'] # eliminate
+    aa3830_instrument_metadata_d = BaseNetCDF.fetch_instrument_metadata(
+        nc_aa3830_data_info
+    )
+    if "ancillary_variables" in aa3830_instrument_metadata_d:
+        del aa3830_instrument_metadata_d["ancillary_variables"]  # eliminate
 
     required_vars_present = True
     try:
-        results_d = l['results_d']
-        nc_info_d = l['nc_info_d']
+        results_d = l["results_d"]
+        nc_info_d = l["nc_info_d"]
 
-        sg_np = l['sg_np']
-        sg_epoch_time_s_v = l['sg_epoch_time_s_v']
+        sg_np = l["sg_np"]
+        sg_epoch_time_s_v = l["sg_epoch_time_s_v"]
 
         # these should be ctd_np long
-        ctd_np = l['ctd_np']
-        ctd_epoch_time_s_v = l['ctd_epoch_time_s_v']
-        temp_cor_v = l['temp_cor_v']
-        temp_cor_qc_v = l['temp_cor_qc_v']
-        salin_cor_v = l['salin_cor_v']
-        salin_cor_qc_v = l['salin_cor_qc_v']
-        ctd_depth_m_v = l['ctd_depth_m_v']
-        ctd_density_v = l['density_insitu_v'] 
-        ancillary_variables = 'temperature salinity ctd_depth density_insitu'
+        # ctd_np = l["ctd_np"]
+        ctd_epoch_time_s_v = l["ctd_epoch_time_s_v"]
+        temp_cor_v = l["temp_cor_v"]
+        temp_cor_qc_v = l["temp_cor_qc_v"]
+        salin_cor_v = l["salin_cor_v"]
+        salin_cor_qc_v = l["salin_cor_qc_v"]
+        ctd_depth_m_v = l["ctd_depth_m_v"]
+        ctd_density_v = l["density_insitu_v"]
+        ancillary_variables = "temperature salinity ctd_depth density_insitu"
     except KeyError:
         required_vars_present = False
-        
-    (eng_aa3830_present, aa3830_o2_v) = eng_f.find_col(['O2', 'aa3830_O2'])
+
+    (eng_aa3830_present, aa3830_o2_v) = eng_f.find_col(["O2", "aa3830_O2"])
     if eng_aa3830_present:
         if not required_vars_present:
-            log_error("Missing variables for aa3830 eng correction - bailing out", 'exc')
+            log_error(
+                "Missing variables for aa3830 eng correction - bailing out", "exc"
+            )
             return -1
-        (ignore, aa3830_dphase_v)  = eng_f.find_col(['dphase', 'aa3830_dphase'])
-        #UNUSED (ignore, aa3830_tempc_v)   = eng_f.find_col(['temp','aa3830_temp']) # use CTD temp instead
+        (_, aa3830_dphase_v) = eng_f.find_col(["dphase", "aa3830_dphase"])
+        # UNUSED (ignore, aa3830_tempc_v)   = eng_f.find_col(['temp','aa3830_temp']) # use CTD temp instead
         ancillary_variables = ancillary_variables + " eng_aa3830_dphase eng_aa3830_O2"
         aa3830_time_s_v = sg_epoch_time_s_v
         aa3830_np = sg_np
-        aa3830_results_dim = nc_mdp_data_info[nc_sg_data_info]
+        aa3830_results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_sg_data_info]
     else:
         try:
             # See if we have data from scicon
-            aa3830_o2_v = results_d['aa3830_O2']
-            aa3830_dphase_v = results_d['aa3830_dphase']
-            #UNUSED aa3830_tempc_v = results_d['aa3830_temp'] # use CTD temp instead
-            aa3830_time_s_v = results_d['aa3830_time']
+            aa3830_o2_v = results_d["aa3830_O2"]
+            aa3830_dphase_v = results_d["aa3830_dphase"]
+            # UNUSED aa3830_tempc_v = results_d['aa3830_temp'] # use CTD temp instead
+            aa3830_time_s_v = results_d["aa3830_time"]
             ancillary_variables = ancillary_variables + " aa3830_dphase aa3830_O2"
-            aa3830_results_dim = nc_mdp_data_info[nc_aa3830_data_info]
+            aa3830_results_dim = BaseNetCDF.nc_mdp_data_info[nc_aa3830_data_info]
             aa3830_np = len(aa3830_time_s_v)
             # We have all the optode data.  Do we have the rest?
             if not required_vars_present:
-                log_error("Missing variables for aa3830 scicon correction - bailing out", 'exc')
+                log_error(
+                    "Missing variables for aa3830 scicon correction - bailing out",
+                    "exc",
+                )
                 return -1
 
         except KeyError:
-            return 1 # No data to process
+            return 1  # No data to process
 
     # MDP automatically asserts instrument when writing
     # DEAD results_d['aa3830'] = 'aa3830' # instrument CONSIDER add calibcomm_oxygen
 
     # We have data from the instrument
     # First expand some other data we need for conversions to O2 concentration:
-    if aa3830_results_dim != nc_info_d[nc_ctd_results_info]:
+    if aa3830_results_dim != nc_info_d[BaseNetCDF.nc_ctd_results_info]:
         # interpolate the CTD data we need
-        temp_cor_v = Utils.interp1d(ctd_epoch_time_s_v, temp_cor_v, aa3830_time_s_v, kind='linear')
-        temp_cor_qc_v = Utils.interp1d(ctd_epoch_time_s_v, temp_cor_qc_v, aa3830_time_s_v, kind='nearest')
-        salin_cor_v = Utils.interp1d(ctd_epoch_time_s_v, salin_cor_v, aa3830_time_s_v, kind='linear')
-        salin_cor_qc_v = Utils.interp1d(ctd_epoch_time_s_v, salin_cor_qc_v, aa3830_time_s_v, kind='nearest')
-        ctd_depth_m_v = Utils.interp1d(ctd_epoch_time_s_v, ctd_depth_m_v, aa3830_time_s_v, kind='linear')
-        ctd_density_v = Utils.interp1d(ctd_epoch_time_s_v, ctd_density_v, aa3830_time_s_v, kind='linear')
+        temp_cor_v = Utils.interp1d(
+            ctd_epoch_time_s_v, temp_cor_v, aa3830_time_s_v, kind="linear"
+        )
+        temp_cor_qc_v = Utils.interp1d(
+            ctd_epoch_time_s_v, temp_cor_qc_v, aa3830_time_s_v, kind="nearest"
+        )
+        salin_cor_v = Utils.interp1d(
+            ctd_epoch_time_s_v, salin_cor_v, aa3830_time_s_v, kind="linear"
+        )
+        salin_cor_qc_v = Utils.interp1d(
+            ctd_epoch_time_s_v, salin_cor_qc_v, aa3830_time_s_v, kind="nearest"
+        )
+        ctd_depth_m_v = Utils.interp1d(
+            ctd_epoch_time_s_v, ctd_depth_m_v, aa3830_time_s_v, kind="linear"
+        )
+        ctd_density_v = Utils.interp1d(
+            ctd_epoch_time_s_v, ctd_density_v, aa3830_time_s_v, kind="linear"
+        )
 
-
-    assign_dim_info_dim_name(nc_info_d, nc_aa3830_results_info, aa3830_results_dim)
-    assign_dim_info_size(nc_info_d, nc_aa3830_results_info, aa3830_np)
-    aa3830_instrument_metadata_d['ancillary_variables'] = ancillary_variables # checkpoint
+    BaseNetCDF.assign_dim_info_dim_name(
+        nc_info_d, nc_aa3830_results_info, aa3830_results_dim
+    )
+    BaseNetCDF.assign_dim_info_size(nc_info_d, nc_aa3830_results_info, aa3830_np)
+    aa3830_instrument_metadata_d[
+        "ancillary_variables"
+    ] = ancillary_variables  # checkpoint
 
     # We have all variables needed; do we have the optode calibration constants?
     try:
-        C0_coef = [calib_consts['optode_C00Coef'], calib_consts['optode_C01Coef'], calib_consts['optode_C02Coef'], calib_consts['optode_C03Coef']]
-        C1_coef = [calib_consts['optode_C10Coef'], calib_consts['optode_C11Coef'], calib_consts['optode_C12Coef'], calib_consts['optode_C13Coef']]
-        C2_coef = [calib_consts['optode_C20Coef'], calib_consts['optode_C21Coef'], calib_consts['optode_C22Coef'], calib_consts['optode_C23Coef']]
-        C3_coef = [calib_consts['optode_C30Coef'], calib_consts['optode_C31Coef'], calib_consts['optode_C32Coef'], calib_consts['optode_C33Coef']]
-        C4_coef = [calib_consts['optode_C40Coef'], calib_consts['optode_C41Coef'], calib_consts['optode_C42Coef'], calib_consts['optode_C43Coef']]
+        C0_coef = [
+            calib_consts["optode_C00Coef"],
+            calib_consts["optode_C01Coef"],
+            calib_consts["optode_C02Coef"],
+            calib_consts["optode_C03Coef"],
+        ]
+        C1_coef = [
+            calib_consts["optode_C10Coef"],
+            calib_consts["optode_C11Coef"],
+            calib_consts["optode_C12Coef"],
+            calib_consts["optode_C13Coef"],
+        ]
+        C2_coef = [
+            calib_consts["optode_C20Coef"],
+            calib_consts["optode_C21Coef"],
+            calib_consts["optode_C22Coef"],
+            calib_consts["optode_C23Coef"],
+        ]
+        C3_coef = [
+            calib_consts["optode_C30Coef"],
+            calib_consts["optode_C31Coef"],
+            calib_consts["optode_C32Coef"],
+            calib_consts["optode_C33Coef"],
+        ]
+        C4_coef = [
+            calib_consts["optode_C40Coef"],
+            calib_consts["optode_C41Coef"],
+            calib_consts["optode_C42Coef"],
+            calib_consts["optode_C43Coef"],
+        ]
         ancillary_variables = ancillary_variables + " sg_cal_optode_C**Coef"
     except KeyError:
-        log_warning("Optode data found but calibration constant(s) missing - skipping optode corrections")
+        log_warning(
+            "Optode data found but calibration constant(s) missing - skipping optode corrections"
+        )
         return 0
 
     # reverse is destructive so call this once before use in functions below so they can be called multiple times if need be
@@ -284,52 +521,100 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
     # The optode apparently drifts from its calibration when exposed to air but then stops drifting in (sea)water.  Investigation shows this is captured by a gain rather
     # than additive drift, that is, the drift is proportional to the O2 signal. Johnson et al. compute the gain by comparing the output of the sensor in air with the expected
     # O2 concentration given temperature and pressure.
-    drift_gain = 1.0 # assume no drift
+    drift_gain = 1.0  # assume no drift
     try:
         # See defns in aa4330_ext.py
-        optode_st_calphase = calib_consts['optode_st_calphase'] # use calphase so we can compute O2 based on foil or SVU in case of aa4330
-        optode_st_temp     = calib_consts['optode_st_temp'] # optode temperature typically but could be from CT
-        optode_st_slp      = calib_consts['optode_st_slp']  # sealevel pressure from a local weather station or NCEP means
+        optode_st_calphase = calib_consts[
+            "optode_st_calphase"
+        ]  # use calphase so we can compute O2 based on foil or SVU in case of aa4330
+        optode_st_temp = calib_consts[
+            "optode_st_temp"
+        ]  # optode temperature typically but could be from CT
+        optode_st_slp = calib_consts[
+            "optode_st_slp"
+        ]  # sealevel pressure from a local weather station or NCEP means
     except KeyError:
         pass
     else:
-        st_oxygen_sat_sea_water_um_kg_v, st_oxygen_sat_fresh_water_um_kg_v, st_oxygen_sat_salinity_adjustment_v = Utils.compute_oxygen_saturation(optode_st_temp, 0)
-        optode_st_o2 = aa3830_dphase_oxygen(optode_st_calphase, optode_st_temp, C0_coef, C1_coef, C2_coef, C3_coef, C4_coef)
-        drift_gain = (st_oxygen_sat_fresh_water_um_kg_v/1013.25)/(optode_st_o2/optode_st_slp)
-        log_debug("Optode drift gain = %f" % drift_gain)
+        (
+            _,
+            st_oxygen_sat_fresh_water_um_kg_v,
+            _,
+        ) = Utils.compute_oxygen_saturation(optode_st_temp, 0)
+        optode_st_o2 = aa3830_dphase_oxygen(
+            optode_st_calphase,
+            optode_st_temp,
+            C0_coef,
+            C1_coef,
+            C2_coef,
+            C3_coef,
+            C4_coef,
+        )
+        drift_gain = (st_oxygen_sat_fresh_water_um_kg_v / 1013.25) / (
+            optode_st_o2 / optode_st_slp
+        )
+        log_debug(f"Optode drift gain = {drift_gain:f}")
 
-    aa3830_instrument_dissolved_oxygen_v =  aa3830_correct_oxygen(aa3830_time_s_v, aa3830_o2_v, temp_cor_v, salin_cor_v, ctd_depth_m_v, ctd_density_v, drift_gain)
-    results_d.update({
-        nc_aa3830_time_var: aa3830_time_s_v,
-        'aanderaa3830_instrument_dissolved_oxygen': aa3830_instrument_dissolved_oxygen_v,
-        })
+    aa3830_instrument_dissolved_oxygen_v = aa3830_correct_oxygen(
+        aa3830_time_s_v,
+        aa3830_o2_v,
+        temp_cor_v,
+        salin_cor_v,
+        ctd_depth_m_v,
+        ctd_density_v,
+        drift_gain,
+    )
+    results_d.update(
+        {
+            nc_aa3830_time_var: aa3830_time_s_v,
+            "aanderaa3830_instrument_dissolved_oxygen": aa3830_instrument_dissolved_oxygen_v,
+        }
+    )
 
-    aa3830_dphase_oxygen_v = aa3830_dphase_oxygen(aa3830_dphase_v, temp_cor_v, C0_coef, C1_coef, C2_coef, C3_coef, C4_coef)
+    aa3830_dphase_oxygen_v = aa3830_dphase_oxygen(
+        aa3830_dphase_v, temp_cor_v, C0_coef, C1_coef, C2_coef, C3_coef, C4_coef
+    )
     # NOTE: Wherever ctd_density_v (and temp/salin_cor_v) is QC_BAD we have NaN hence NaN in the dissolved_oxygen_v results
     # This *happens* to overlap with the oxygen_qc var above but might not
     # TODO We should explicitly look at the QC_BAD spots and nail those point
-    aa3830_dissolved_oxygen_v =  aa3830_correct_oxygen(aa3830_time_s_v, aa3830_dphase_oxygen_v, temp_cor_v, salin_cor_v, ctd_depth_m_v, ctd_density_v, drift_gain)
+    aa3830_dissolved_oxygen_v = aa3830_correct_oxygen(
+        aa3830_time_s_v,
+        aa3830_dphase_oxygen_v,
+        temp_cor_v,
+        salin_cor_v,
+        ctd_depth_m_v,
+        ctd_density_v,
+        drift_gain,
+    )
 
     # Calculate the oxygen qc
-    aa3830_oxygen_qc_v = initialize_qc(aa3830_np, QC_GOOD)
+    aa3830_oxygen_qc_v = QC.initialize_qc(aa3830_np, QC.QC_GOOD)
     # TODO we have seen timed out optode; can/should we distinguish it as QC_MISSING?
-    assert_qc(QC_UNSAMPLED, aa3830_oxygen_qc_v, [i for i in range(aa3830_np) if isnan(aa3830_dphase_v[i])], 'unsampled aa3830 oyxgen')
+    QC.assert_qc(
+        QC.QC_UNSAMPLED,
+        aa3830_oxygen_qc_v,
+        [i for i in range(aa3830_np) if np.isnan(aa3830_dphase_v[i])],
+        "unsampled aa3830 oyxgen",
+    )
     # NOTE: see comment in aa4330 about bad samples observed on scicon; we may need a similar test here but wait until we have an actual example
 
     ## NOTE: we use CTD temperature, not aa3830_tempc_v, and we use insitu density, not potential density
-    inherit_qc(temp_cor_qc_v, aa3830_oxygen_qc_v, "temperature", "optode oxygen")
-    inherit_qc(salin_cor_qc_v, aa3830_oxygen_qc_v, "salinity", "optode oxygen")
-    aa3830_qc = QC_GOOD
+    QC.inherit_qc(temp_cor_qc_v, aa3830_oxygen_qc_v, "temperature", "optode oxygen")
+    QC.inherit_qc(salin_cor_qc_v, aa3830_oxygen_qc_v, "salinity", "optode oxygen")
+    aa3830_qc = QC.QC_GOOD
 
-    aa3830_instrument_metadata_d['ancillary_variables'] = ancillary_variables # update
-    results_d.update({
-        'aanderaa3830_dissolved_oxygen': aa3830_dissolved_oxygen_v,
-        'aanderaa3830_dissolved_oxygen_qc': aa3830_oxygen_qc_v,
-        'aanderaa3830_qc': aa3830_qc,
-        'aanderaa3830_drift_gain': drift_gain,
-        })
-    
+    aa3830_instrument_metadata_d["ancillary_variables"] = ancillary_variables  # update
+    results_d.update(
+        {
+            "aanderaa3830_dissolved_oxygen": aa3830_dissolved_oxygen_v,
+            "aanderaa3830_dissolved_oxygen_qc": aa3830_oxygen_qc_v,
+            "aanderaa3830_qc": aa3830_qc,
+            "aanderaa3830_drift_gain": drift_gain,
+        }
+    )
+
     return 1
+
 
 #
 # Utility functions
@@ -346,17 +631,20 @@ def aa3830_dphase_oxygen(dphase_v, temp_v, C0_coef, C1_coef, C2_coef, C3_coef, C
     Returns:
         vector of oxygen concentration (uM/L)
     """
-    C0 = polyval(C0_coef, temp_v)
-    C1 = polyval(C1_coef, temp_v)
-    C2 = polyval(C2_coef, temp_v)
-    C3 = polyval(C3_coef, temp_v)
-    C4 = polyval(C4_coef, temp_v)
+    C0 = np.polyval(C0_coef, temp_v)
+    C1 = np.polyval(C1_coef, temp_v)
+    C2 = np.polyval(C2_coef, temp_v)
+    C3 = np.polyval(C3_coef, temp_v)
+    C4 = np.polyval(C4_coef, temp_v)
     coeffs = [C0, C1, C2, C3, C4]
     coeffs.reverse()
-    oxygen_v = polyval(coeffs, dphase_v) # uM/L
+    oxygen_v = np.polyval(coeffs, dphase_v)  # uM/L
     return oxygen_v
 
-def aa3830_correct_oxygen(time_v, oxygen_v, temp_v, salin_v, depth_v, density_v, drift_gain):
+
+def aa3830_correct_oxygen(
+    time_v, oxygen_v, temp_v, salin_v, depth_v, density_v, drift_gain
+):
     """Corrects the oxygen reading for Salinity and Depth
 
     Input:
@@ -371,12 +659,18 @@ def aa3830_correct_oxygen(time_v, oxygen_v, temp_v, salin_v, depth_v, density_v,
     Returns:
         vector of corrected oxygen concentrations (uM/kg)
     """
-    ignore, ignore, oxygen_sat_salinity_adjustment_v = Utils.compute_oxygen_saturation(temp_v, salin_v) # get scale factor
-    oxygen_v = oxygen_v * oxygen_sat_salinity_adjustment_v # scale for salinity ml/L
+    _, _, oxygen_sat_salinity_adjustment_v = Utils.compute_oxygen_saturation(
+        temp_v, salin_v
+    )  # get scale factor
+    oxygen_v = oxygen_v * oxygen_sat_salinity_adjustment_v  # scale for salinity ml/L
     # NOTE: CCE used 4% as the response factor
-    oxygen_v = oxygen_v * (1.0 + ((0.032 * depth_v) / 1000.0)) # compensate for pressure (3.2% lower response in 1km of water)
+    oxygen_v = oxygen_v * (
+        1.0 + ((0.032 * depth_v) / 1000.0)
+    )  # compensate for pressure (3.2% lower response in 1km of water)
     # Account for slow diffusion of O2 across silicone light shield membrane (empirically about 30s)
-    oxygen_v = oxygen_v + 30*Utils.ctr_1st_diff(oxygen_v, time_v)
-    oxygen_v = oxygen_v/(density_v/1000.0) # (uM/L)/(g/L/g/kg) == (uM/L)/(kg/L)== uM/kg
+    oxygen_v = oxygen_v + 30 * Utils.ctr_1st_diff(oxygen_v, time_v)
+    oxygen_v = oxygen_v / (
+        density_v / 1000.0
+    )  # (uM/L)/(g/L/g/kg) == (uM/L)/(kg/L)== uM/kg
     oxygen_v *= drift_gain
     return oxygen_v
