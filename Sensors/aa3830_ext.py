@@ -114,7 +114,7 @@ def init_sensor(module_name, init_dict=None):
             # The new correction will change this to umoles/m^3 so that will change the name to mole_concentration_of_dissolved_molecular_oxygen_in_sea_water
             # Add instrument explicitly for eng file data since they all share the same dim info
             "eng_aa3830_O2": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -125,7 +125,7 @@ def init_sensor(module_name, init_dict=None):
                 (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_aa3830_temp": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -137,7 +137,7 @@ def init_sensor(module_name, init_dict=None):
                 (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_aa3830_dphase": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -147,7 +147,7 @@ def init_sensor(module_name, init_dict=None):
                 (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_aa3830_bphase": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -168,7 +168,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_aa3830_data_info,),
             ],
             "aa3830_O2": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -178,7 +178,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_aa3830_data_info,),
             ],
             "aa3830_temp": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -189,7 +189,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_aa3830_data_info,),
             ],
             "aa3830_dphase": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -198,7 +198,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_aa3830_data_info,),
             ],
             "aa3830_bphase": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -219,7 +219,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_aa3830_results_info,),
             ],
             "aanderaa3830_dissolved_oxygen": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -239,7 +239,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_aa3830_results_info,),
             ],
             "aanderaa3830_instrument_dissolved_oxygen": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,

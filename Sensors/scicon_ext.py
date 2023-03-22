@@ -242,9 +242,9 @@ def init_logger(module_name, init_dict=None):
 
     # Aux compass/pressure sensor
     for auxname, aux_data_info in (('auxCompass', nc_auxcompass_data_info), ('auxB', nc_auxb_data_info)):
-        scicon_metadata_adds[f'{auxname}_hdg'] = [True, 'd', {'standard_name':'heading', 'units':'degrees', 'description':' '}, (aux_data_info,)]
-        scicon_metadata_adds[f'{auxname}_pit'] = [True, 'd', {'standard_name':'pitch', 'units':'degrees', 'description':' '}, (aux_data_info,)]
-        scicon_metadata_adds[f'{auxname}_rol'] = [True, 'd', {'standard_name':'roll', 'units':'degrees', 'description':' '}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_hdg'] = ["f", 'd', {'standard_name':'heading', 'units':'degrees', 'description':' '}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_pit'] = ["f", 'd', {'standard_name':'pitch', 'units':'degrees', 'description':' '}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_rol'] = ["f", 'd', {'standard_name':'roll', 'units':'degrees', 'description':' '}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_Mx'] = [False, 'd', {'units':'counts', 'description':'Magnetometer X'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_My'] = [False, 'd', {'units':'counts', 'description':'Magnetometer Y'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_Mz'] = [False, 'd', {'units':'counts', 'description':'Magnetometer Z'}, (aux_data_info,)]
@@ -252,8 +252,8 @@ def init_logger(module_name, init_dict=None):
         scicon_metadata_adds[f'{auxname}_Ay'] = [False, 'd', {'units':'counts', 'description':'Accelerometer Y'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_Az'] = [False, 'd', {'units':'counts', 'description':'Accelerometer Z'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_pressureCounts'] = [False, 'd', {'units':'counts', 'description':'Uncorrected sea-water pressure in instruments counts'}, (aux_data_info,)]
-        scicon_metadata_adds[f'{auxname}_press'] = [True, 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Uncorrected sea-water pressure'}, (aux_data_info,)]
-        scicon_metadata_adds[f'{auxname}_depth'] = [True, 'd', {'standard_name':'depth', 'axis':'Z', 'units':'meters', 'positive':'down', 'description':'Depth below the surface, corrected for average latitude'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_press'] = ["f", 'd', {'standard_name':'sea_water_pressure', 'units':'dbar', 'description':'Uncorrected sea-water pressure'}, (aux_data_info,)]
+        scicon_metadata_adds[f'{auxname}_depth'] = ["f", 'd', {'standard_name':'depth', 'axis':'Z', 'units':'meters', 'positive':'down', 'description':'Depth below the surface, corrected for average latitude'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_time'] = [True, 'd', {'standard_name':'time', 'units':'seconds since 1970-1-1 00:00:00', 'description':'Pressure sensor time in GMT epoch format'}, (aux_data_info,)]
         scicon_metadata_adds[f'{auxname}_xform'] = [False, 'c', {'description':f'{auxname} Accelerometer scaling matrix and offset '}, nc_scalar]
         scicon_metadata_adds[f'{auxname}_tcm2mat'] = [False, 'c', {'description':f'{auxname} Pitch/Roll coefficients, Magnetometer scaling matrix and offset'}, nc_scalar]

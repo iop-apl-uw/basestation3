@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -198,7 +198,7 @@ def init_sensor(module_name, init_dict=None):
         eng_o2_var = "%s_O2" % instrument
         md_var = "%s%s" % (nc_sg_eng_prefix, eng_o2_var)
         meta_data_adds[md_var] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,
@@ -220,7 +220,7 @@ def init_sensor(module_name, init_dict=None):
             (nc_sg_data_info,),
         ]
         meta_data_adds["%s%s_Temp" % eng_tuple] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,
@@ -268,7 +268,7 @@ def init_sensor(module_name, init_dict=None):
         ]
         scicon_o2_var = "%s_O2" % instrument
         meta_data_adds[scicon_o2_var] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,
@@ -280,7 +280,7 @@ def init_sensor(module_name, init_dict=None):
             (data_info,),
         ]
         meta_data_adds["%s_airsat" % instrument] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,
@@ -291,7 +291,7 @@ def init_sensor(module_name, init_dict=None):
         ]
         # NOTE scicon renaming: not, e.g., aa4330_Temp
         meta_data_adds["%s_temp" % instrument] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,
@@ -302,7 +302,7 @@ def init_sensor(module_name, init_dict=None):
             (data_info,),
         ]
         meta_data_adds["%s_calphase" % instrument] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,
@@ -313,7 +313,7 @@ def init_sensor(module_name, init_dict=None):
         ]
         scicon_tcphase_var = "%s_tcphase" % instrument
         meta_data_adds[scicon_tcphase_var] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,
@@ -337,7 +337,7 @@ def init_sensor(module_name, init_dict=None):
         ]
         results_do_var = "aander%s_dissolved_oxygen" % instrument
         meta_data_adds[results_do_var] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,
@@ -359,7 +359,7 @@ def init_sensor(module_name, init_dict=None):
         ]
         results_instrument_do_var = "aander%s_instrument_dissolved_oxygen" % instrument
         meta_data_adds[results_instrument_do_var] = [
-            True,
+            "f",
             "d",
             {
                 "_FillValue": nc_nan,

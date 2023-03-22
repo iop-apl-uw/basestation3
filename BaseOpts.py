@@ -576,7 +576,14 @@ global_options_dict = {
     # DOC in sg_calib_constants.m.
     "ignore_flight_model": options_t(
         False,
-        ("Base", "FlightModel", "MakeDiveProfiles", "Reprocess", "BaseDB"),
+        (
+            "Base",
+            "FlightModel",
+            "MakeDiveProfiles",
+            "MakeMissionTimeSeries",
+            "Reprocess",
+            "BaseDB",
+        ),
         ("--ignore_flight_model",),
         bool,
         {

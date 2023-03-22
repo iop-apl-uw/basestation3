@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2012, 2016, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2012, 2016, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -52,6 +52,7 @@ from BaseLog import (
     log_error,
     log_debug,
 )
+
 
 # NOTE this is the closest to a ARGO trajectory data set, a set of dives (cycles)
 # with the data presented as 1-D arrays of each measurement concatentated together
@@ -591,6 +592,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 value,
                 mmt_var_aux,
                 del_attrs,
+                f_timeseries=True,
             )
 
         except KeyError:
@@ -608,6 +610,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         (BaseNetCDF.nc_dim_trajectory_info,),
         True,
         mission_nc_dive_d["dive_number"],
+        f_timeseries=True,
     )  # alias
 
     for var in dive_vars:
@@ -619,6 +622,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             mission_nc_dive_d[var],
             None,
             del_attrs,
+            f_timeseries=True,
         )
 
     BaseNetCDF.create_nc_var(
@@ -628,6 +632,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         False,
         "%s %s" % (platform_var, platform_id),
         {"call_sign": platform_id},
+        f_timeseries=True,
     )
     for instrument_var in Utils.unique(instrument_vars):
         BaseNetCDF.create_nc_var(
@@ -636,6 +641,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             BaseNetCDF.nc_scalar,
             False,
             instrument_var,
+            f_timeseries=True,
         )
 
     mission_timeseries_file.sync()
