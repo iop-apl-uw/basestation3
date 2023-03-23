@@ -2200,7 +2200,12 @@ glider_mission_string = None
 # the local variable dive_num MUST be maintained as the prevailing dive number
 # if you loop over other dives use d_n as the iterator variable
 def process_dive(
-    base_opts, new_dive_num, updated_dives_d, alert_dive_num=None, exit_event=None
+    base_opts,
+    new_dive_num,
+    updated_dives_d,
+    nc_files_created,
+    alert_dive_num=None,
+    exit_event=None,
 ):
     global flight_dive_data_d, flight_directory, mission_directory, nc_path_format, flight_consts_d, angles, HIST, enable_reprocessing_dives, generate_dac_figures
     global glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, ab_grid_cache_d, restart_cache_d
@@ -3553,6 +3558,7 @@ def process_dive(
                             dives_reprocessed = True
                             updated_dives_d[d_n] = nc_time
                             log_info(f"Dive {d_n} sucesfully processed")
+                            nc_files_created.append(dive_nc_file_name)
                         else:
                             reprocess_error = (
                                 "Dive %d reprocessed but nc file was not updated?"
@@ -3588,15 +3594,9 @@ def process_dive(
 
 # Called as an extension or via cmdline_main() below
 def main(
-    instrument_id=None,
-    base_opts=None,
-    sg_calib_file_name=None,
-    dive_nc_file_names=None,
-    nc_files_created=None,
-    processed_other_files=None,
-    known_mailer_tags=None,
-    known_ftp_tags=None,
-    processed_file_names=None,
+    base_opts,
+    sg_calib_file_name,
+    nc_files_created,
     exit_event=None,
 ):
     """Basestation support for evaluating flight model parameters from dive data
@@ -4060,6 +4060,7 @@ def main(
             base_opts,
             new_dive_num,
             updated_dives_d,
+            nc_files_created,
             alert_dive_num,
             exit_event=exit_event,
         )
@@ -4073,7 +4074,12 @@ def main(
             # in case there are no new dives but some dives were updated (via external reprocessing)
             log_debug(f"Processing remaining dives {list(updated_dives_d.keys())}")
             ret_val = process_dive(
-                base_opts, None, updated_dives_d, alert_dive_num, exit_event=exit_event
+                base_opts,
+                None,
+                updated_dives_d,
+                nc_files_created,
+                alert_dive_num,
+                exit_event=exit_event,
             )
             log_debug("Done processing remaining dives")
 
@@ -4130,7 +4136,7 @@ def cmdline_main():
 
 def process_directory(base_opts):
     """Can be called from multiprocessing scheme"""
-    nc_files_created = None
+    nc_files_created = []
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
     sg_calib_constants_d = getSGCalibrationConstants(sg_calib_file_name)
     if not sg_calib_constants_d:
@@ -4147,10 +4153,9 @@ def process_directory(base_opts):
     try:
         # run like an extension
         return main(
-            instrument_id=instrument_id,
-            base_opts=base_opts,
-            sg_calib_file_name=sg_calib_file_name,
-            nc_files_created=nc_files_created,
+            base_opts,
+            sg_calib_file_name,
+            nc_files_created,
         )
     except KeyboardInterrupt:
         if DEBUG_PDB:
