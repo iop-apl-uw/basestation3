@@ -2,7 +2,9 @@
 
 <link rel="stylesheet" href="script/dialogs.css" />
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
 <link rel="stylesheet" href="script/chat.css" />
+{% endif %}
 <link rel="manifest" href="manifest.json">
 {% endif %}
 
@@ -281,6 +283,7 @@
     }
 
 {% if runMode == 'pilot' %}
+{% if noSave != false %}
     function saveControl(force) {
         var json = {};
         var file = $('selectFile').value;
@@ -320,6 +323,7 @@
 
         return false;
     }
+{% endif %}
 
     function loadControlFile(file) {
         fetch(`control/${currGlider}/${file}${mission()}`)
@@ -1873,7 +1877,9 @@
     <a href="./" target="index">Index</a> <b>&#124;</b> 
     <a href="dash" target="dash"> Dashboard </a> <b>&#124;</b> 
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
     <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
+{% endif %}
 {% endif %}
     <span class="spanClick" onclick="openAboutForm(); return false;">About</span> <b>&#124;</b>
     <span class="spanClick" onclick="popupPosition(); return false;">Position</span>
@@ -2087,11 +2093,13 @@
         <textarea id="tcm2mat.cal" class="editFile" hidden="hidden"></textarea>
         <textarea id="sg_calib_constants.m" class="editFile" hidden="hidden"></textarea>
         <div id="fileButtons">
+{% if noSave == false %}
             <button id="btnSave" type="button" onclick="saveControl(0);" style="margin-left:2px;">Save</button>
             <button id="btnForce" type="button" onclick="saveControl(1);">Force</button>
             <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
             <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
             <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>
+{% endif %}
             <select id="selectFile" onchange="changeFile()">
                 <option value="cmdfile" selected>cmdfile</option>
                 <option value="targets">targets</option>
@@ -2112,7 +2120,9 @@
 
 {% include "dialogs.html" %}
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
 {% include "chat.html" %}
+{% endif %}
 {% endif %}
 
 </body>
