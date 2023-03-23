@@ -114,9 +114,11 @@
             which = 'history';
         
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
         if (first || history) {
             $('chatContent').innerHTML = '';
         }
+{% endif %}
 {% endif %}
 
         path = loc.pathname.split('/').slice(0,-1).join('/');

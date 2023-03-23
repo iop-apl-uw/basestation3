@@ -690,14 +690,15 @@
     }
 
     #statusTable {
-        table-layout:fixed; 
+        table-layout:auto; 
+        width: 100%;
     }
 
     .statusTableLabel {
-        width: 60px;
+        width: 15%;
     }
     .statusTableValue {
-        width: 130px;
+        width: 18%;
     }
 
     #divCmdfile {
