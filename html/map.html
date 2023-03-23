@@ -49,7 +49,7 @@
             }
         </style>
     </head>
-    <body onunload="saveState();">
+    <body onunload="saveBounds();">
         <div style="width: 100vw; height: 100vh" id="map"></div>
         <script type="text/javascript">
             function reckon(pt, range, az) 
@@ -230,7 +230,7 @@
                     layerControl.addOverlay(ly, names[i]); 
                 }
             }
-            async function loadGliderKML(map, layerControl, urls, tail, saveBounds) {
+            async function loadGliderKML(map, layerControl, urls, tail, lastBounds) {
                 var kml;
                 var parser;
 
@@ -292,8 +292,8 @@
 
                     // Adjust map to show the kml for the first glider
                     if (i == 0) {
-                        if (saveBounds)
-                            map.fitBounds(saveBounds);
+                        if (lastBounds)
+                            map.fitBounds(lastBounds);
                         else {
                             const bounds = track.getBounds();
                             map.fitBounds(bounds);
@@ -313,12 +313,14 @@
                 return buffText;
             }
 
-            function saveState() {
-                localStorage.setItem('itemsBounds', map.getBounds().toBBoxString());
+            function saveBounds() {
+                var bounds = map.getBounds().toBBoxString();
+                localStorage.setItem('latest', bounds);
+                localStorage.setItem('' + glider, bounds);
             }
 
-            function loadState() {
-                let x = localStorage.getItem('itemsBounds');
+            function loadBounds(which) {
+                let x = localStorage.getItem(which);
                 if (x) {
                     [west, south, east, north] = x.split(',').map(parseFloat);
                     let bounds = new L.LatLngBounds(new L.LatLng(south, west), new L.LatLng(north, east));
@@ -374,9 +376,9 @@
 
             // Make basemap
             const map = new L.Map('map', { center: new L.LatLng(47.5, -122.3), zoom: 11 });
-            let saveBounds = loadState();
-            if (saveBounds)
-                map.fitBounds(saveBounds);
+            let last = loadBounds('latest');
+            if (last)
+                map.fitBounds(last);
 
             const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 1.0 });
             const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
@@ -618,7 +620,8 @@
             for (var i = first ; i < path.length ; i++) 
                 urls.push('../kml/' + path[i] + mission);
 
-            loadGliderKML(map, layerControl, urls, tail, saveBounds);
+            lastBounds = loadBounds('' + glider);
+            loadGliderKML(map, layerControl, urls, tail, lastBounds);
             loadGliderDAC(map, layerControl, path[first]); 
            
             if (params.has('sa')) {
