@@ -35,6 +35,8 @@ echo Disconnected at `date -u +"%Y-%m-%dT%H:%M:%SZ"` \(${logout}\) >>! comm.log
 printf "\n" >>! comm.log
 printf "\n" >>! comm.log
 
+set runner_timeout = 2
+
 if(! $?GLIDER_OPTIONS ) then
     set GLIDER_OPTIONS = ""
 endif
