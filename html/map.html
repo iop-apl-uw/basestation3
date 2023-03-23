@@ -49,7 +49,7 @@
             }
         </style>
     </head>
-    <body>
+    <body onunload="saveState();">
         <div style="width: 100vw; height: 100vh" id="map"></div>
         <script type="text/javascript">
             function reckon(pt, range, az) 
@@ -84,6 +84,7 @@
                 var zero = min < 10 ? '0' : '';
                 return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
             }
+
 
             function removeTags(str, tag) {
                 const reStr = `<${tag}.*>.*?<\\\/${tag}>`;
@@ -229,7 +230,7 @@
                     layerControl.addOverlay(ly, names[i]); 
                 }
             }
-            async function loadGliderKML(map, layerControl, urls, tail) {
+            async function loadGliderKML(map, layerControl, urls, tail, saveBounds) {
                 var kml;
                 var parser;
 
@@ -291,9 +292,13 @@
 
                     // Adjust map to show the kml for the first glider
                     if (i == 0) {
-                        const bounds = track.getBounds();
-                        map.fitBounds(bounds);
-                        if (ctr) map.panTo(ctr);
+                        if (saveBounds)
+                            map.fitBounds(saveBounds);
+                        else {
+                            const bounds = track.getBounds();
+                            map.fitBounds(bounds);
+                            if (ctr) map.panTo(ctr);
+                        }
                     }
                 }
             }
@@ -306,6 +311,23 @@
                     buffText += i + ' lat=' +  dd2ddmm(latA).toFixed(3) + ' lon=' + dd2ddmm(lonA).toFixed(3) + ' radius=2000 goto=' + (i < points.length ? i+1 : i) + '\n';
                 }
                 return buffText;
+            }
+
+            function saveState() {
+                localStorage.setItem('itemsBounds', map.getBounds().toBBoxString());
+            }
+
+            function loadState() {
+                let x = localStorage.getItem('itemsBounds');
+                if (x) {
+                    [west, south, east, north] = x.split(',').map(parseFloat);
+                    let bounds = new L.LatLngBounds(new L.LatLng(south, west), new L.LatLng(north, east));
+                    return bounds;
+                }
+                else {
+                    return null;
+                }
+                
             }
 
         </script>
@@ -352,6 +374,10 @@
 
             // Make basemap
             const map = new L.Map('map', { center: new L.LatLng(47.5, -122.3), zoom: 11 });
+            let saveBounds = loadState();
+            if (saveBounds)
+                map.fitBounds(saveBounds);
+
             const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 1.0 });
             const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
 
@@ -592,7 +618,7 @@
             for (var i = first ; i < path.length ; i++) 
                 urls.push('../kml/' + path[i] + mission);
 
-            loadGliderKML(map, layerControl, urls, tail);
+            loadGliderKML(map, layerControl, urls, tail, saveBounds);
             loadGliderDAC(map, layerControl, path[first]); 
            
             if (params.has('sa')) {
