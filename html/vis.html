@@ -283,7 +283,7 @@
     }
 
 {% if runMode == 'pilot' %}
-{% if noSave != false %}
+{% if noSave == false %}
     function saveControl(force) {
         var json = {};
         var file = $('selectFile').value;
