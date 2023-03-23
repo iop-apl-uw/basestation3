@@ -385,7 +385,7 @@ def attachHandlers(app: sanic.Sanic):
         if runMode == MODE_PRIVATE:
             runMode = MODE_PILOT
 
-        return {"runMode": modeNames[runMode]}
+        return {"runMode": modeNames[runMode], "noSave": request.app.config.NO_SAVE, "noChat": request.app.config.NO_CHAT}
 
     @app.route('/dash')
     @authorized(check=AUTH_ENDPOINT)
@@ -888,6 +888,11 @@ def attachHandlers(app: sanic.Sanic):
     @app.post('/save/<glider:int>/<which:str>')
     @authorized(modes=['private', 'pilot'], requirePilot=True)
     async def saveHandler(request, glider:int, which:str):
+        # the no save command line flag allows one more layer
+        # of protection
+        if request.app.config.NO_SAVE:
+            return sanic.response.text('not allowed')
+
         validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
 
         message = request.json
@@ -1018,6 +1023,9 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/chat/history/<glider:int>')
     @authorized(modes=['private', 'pilot'])
     async def chatHistoryHandler(request, glider:int):
+        if request.app.config.NO_CHAT:
+            return sanic.response.text('not allowed')
+
         (tU, _) = getTokenUser(request)
         if tU == False:
             return sanic.response.text('authorization failed')
@@ -1028,6 +1036,9 @@ def attachHandlers(app: sanic.Sanic):
     @app.post('/chat/send/<glider:int>')
     @authorized(modes=['private', 'pilot'])
     async def chatHandler(request, glider:int):
+        if request.app.config.NO_CHAT:
+            return sanic.response.text('not allowed')
+
         # we could have gotten here by virtue of no restrictions specified for this glider/mission,
         # but chat only worked if someone is logged in, so we check that we have a user
         (tU, _) = getTokenUser(request)
@@ -1607,6 +1618,8 @@ if __name__ == '__main__':
     port = 20001
     ssl = False
     certPath = os.getenv("SANIC_CERTPATH") 
+    noSave = False
+    noChat = False
 
     overrides = {}
 
@@ -1621,7 +1634,7 @@ if __name__ == '__main__':
                 runMode = MODE_PILOT
     else:
         try:
-            opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:si', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector"])
+            opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:si', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "nosave", "nochat", "inspector"])
         except getopt.GetoptError as err:
             print(err)
             sys.exit(1)
@@ -1639,6 +1652,10 @@ if __name__ == '__main__':
                 overrides['MISSIONS_FILE'] = a
             elif o in ['-u', '--usersfile']:
                 overrides['USERS_FILE'] = a
+            elif o in ['--nosave']:
+                noSave = True
+            elif o in ['--nochat']:
+                noChat = True
             elif o in ['-c', '--certs']:
                 certPath = a
             elif o in ['-s', '--ssl']:
@@ -1660,6 +1677,8 @@ if __name__ == '__main__':
 
     # we always load RUNMODE based on startup conditions
     overrides['RUNMODE'] = runMode
+    overrides['NO_SAVE'] = noSave
+    overrides['NO_CHAT'] = noChat
 
     overrides['NOTIFY_IPC'] = f"ipc:///tmp/sanic-{os.getpid()}-notify.ipc" 
     overrides['WATCH_IPC']  = f"ipc:///tmp/sanic-{os.getpid()}-watch.ipc" 
