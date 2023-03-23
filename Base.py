@@ -2211,13 +2211,20 @@ def main():
             # Run FlightModel here and before mission processing so combined data reflects best flight model results
             # Run before alert processing occurs so FM complaints are reported to the pilot
             try:
+                fm_nc_files_created = []
                 FlightModel.main(
-                    base_opts=base_opts,
-                    sg_calib_file_name=sg_calib_file_name,
+                    base_opts,
+                    sg_calib_file_name,
+                    fm_nc_files_created,
                     exit_event=skip_mission_processing_event,
                 )
             except:
                 log_critical("FlightModel failed", "exc")
+            else:
+                fm_nc_files_created = list(set(fm_nc_files_created))
+                log_info(f"FM files updated {fm_nc_files_created}")
+                nc_files_created += fm_nc_files_created
+                nc_files_created = sorted(nc_files_created)
 
     # Run extension scripts for any new logger files
     # TODO GBS - combine ALL logger lists and invoke the extension with the complete list

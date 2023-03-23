@@ -34,14 +34,15 @@ These specifications can be mixed, e.g., 45 77 89:120 452
 If no specification is given all the available dives are reprocessed
 When building MMP, MMT, KML, etc. these are rebuild from all files
 """
-
 import cProfile
 import pstats
 import glob
 import os
+import pdb
 import shutil
 import sys
 import time
+import traceback
 
 # import NODC
 from BaseLog import (
@@ -67,6 +68,8 @@ import QC
 import Sensors
 import TraceArray
 import Utils
+
+DEBUG_PDB = "darwin" in sys.platform
 
 
 def main():
@@ -341,12 +344,24 @@ def main():
                     "Started FLIGHT processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
                 )
-                # TODO - dive_nc_file_names needs to be augmented by the list of new netcdf files created in flightmodel
-                # TODO - same issue appears to be in the main call from Base to FligthModel - it does not appear that
-                # TODO - FM returns any updated dives
-                FlightModel.main(
-                    instrument_id, base_opts, sg_calib_file_name, all_dive_nc_file_names
-                )
+                nc_files_created = []
+                try:
+                    FlightModel.main(base_opts, sg_calib_file_name, nc_files_created)
+                except:
+                    log_error("Flight model failed", "exc")
+                    if DEBUG_PDB:
+                        _, _, tb = sys.exc_info()
+                        traceback.print_exc()
+                        pdb.post_mortem(tb)
+                else:
+                    nc_files_created = list(set(nc_files_created))
+                    log_info(f"FM files updated {nc_files_created}")
+                    all_dive_nc_file_names.extend(nc_files_created)
+                    all_dive_nc_file_names = sorted(
+                        Utils.unique(all_dive_nc_file_names)
+                    )
+                    dive_nc_file_names.extend(nc_files_created)
+                    dive_nc_file_names = sorted(Utils.unique(dive_nc_file_names))
                 log_info(
                     "Finished FLIGHT processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))

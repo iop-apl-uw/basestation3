@@ -363,17 +363,16 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
             ]
         eng_SBE43_present = True
     else:
-        log_error("SBE43 on scicon NYI")
-        return 1
-        # try:
-        #     sbe43_o2_freq = results_d["sbe43_o2Freq"]  # try from scicon
-        #     sbe43_time_s_v = results_d["sbe43_time"]
-        #     sbe43_results_dim = BaseNetCDF.nc_mdp_data_info[
-        #         BaseNetCDF.nc_sbe43_data_info
-        #     ]
-        #     eng_SBE43_present = True
-        # except KeyError:
-        #     return 1  # nothing to do....
+        # TODO SBE43 on scicon NYI
+        try:
+            sbe43_o2_freq = results_d["sbe43_o2Freq"]  # try from scicon
+            sbe43_time_s_v = results_d["sbe43_time"]
+            sbe43_results_dim = BaseNetCDF.nc_mdp_data_info[
+                BaseNetCDF.nc_sbe43_data_info
+            ]
+            eng_SBE43_present = True
+        except KeyError:
+            return 1  # nothing to do....
 
     if eng_SBE43_present:
         sbe43_np = len(sbe43_time_s_v)

@@ -38,6 +38,7 @@ import zipfile
 
 import numpy as np
 
+import Utils
 import BaseNetCDF
 import BaseOpts
 from BaseLog import (
@@ -53,7 +54,6 @@ from CalibConst import getSGCalibrationConstants
 import MakeDiveProfiles
 
 import CommLog
-import Utils
 import LogFile
 
 make_kml_conf = None
