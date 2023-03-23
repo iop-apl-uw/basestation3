@@ -75,17 +75,18 @@ def timeSeriesToProfile(var, which,
   
     if x == None:
         x = extractProfileVars(None, ['ctd_time', 'ctd_depth', var], nci=nci)
- 
+
     i = 0
     for p in dives:
 
         t0 = nci.variables['start_time'][p-1]
         t1 = nci.variables['deepest_sample_time'][p-1]
         t2 = nci.variables['end_time'][p-1]
-
+    
         if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
             ixs = (x['ctd_time'] > t0) &(x['ctd_time'] < t1)
-            d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
+            if sum(1 for x in ixs if x) > 0:
+                d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
             
             if d is not None:
@@ -96,7 +97,8 @@ def timeSeriesToProfile(var, which,
 
         if which in (Globals.WhichHalf.up, Globals.WhichHalf.both):
             ixs = (x['ctd_time'] > t1) & (x['ctd_time'] < t2)
-            d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
+            if sum(1 for x in ixs if x) > 0:
+                d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
 
             if d is not None:
@@ -107,7 +109,8 @@ def timeSeriesToProfile(var, which,
 
         if which == Globals.WhichHalf.combine:
             ixs = (x['ctd_time'] > t0) & (x['ctd_time'] < t2)
-            d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
+            if sum(1 for x in ixs if x) > 0:
+                d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
             
             if d is not None:
