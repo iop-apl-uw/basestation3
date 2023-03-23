@@ -825,7 +825,7 @@ def attachHandlers(app: sanic.Sanic):
     async def selftestHandler(request, glider:int):
         cmd = f"{sys.path[0]}/SelftestHTML.py"
         proc = await asyncio.create_subprocess_exec(
-            cmd, f"{glider:03d}", 
+            cmd, f"{glider:03d}", gliderPath(glider, request), 
             stdout=asyncio.subprocess.PIPE, 
             stderr=asyncio.subprocess.PIPE
         )
