@@ -151,6 +151,8 @@ def mission_profiles(
             flip = getValue(x, 'flip',   sk, vk, False)
             whch = getValue(x, 'which',  sk, vk, 4)
             cmap = getValue(x, 'colormap', sk, vk, 'thermal')
+            zmin = getValue(x, 'min', sk, vk, None)
+            zmax = getValue(x, 'max', sk, vk, None)
 
             if stop == -1 or stop >= latest:
                 stop = latest
@@ -169,26 +171,34 @@ def mission_profiles(
                                            start, stop, step,
                                            top, bott, binZ, None, nci=nci, x=prev_x)
 
+            
+            contours={
+                        "coloring": "heatmap",
+                        "showlabels": True,
+                        "labelfont": 
+                        {
+                            "family": "Raleway",
+                            "size": 12,
+                            "color": "white"
+                        }
+                     }
 
-            fig.add_trace(plotly.graph_objects.Contour(
-                x=d['dive'],
-                y=d['depth'],
-                z=d[vk],
-                contours_coloring='heatmap',
-                colorscale=cmocean_to_plotly(cmap, 100),
-                connectgaps=True,
-                contours={
-                            "coloring": "heatmap",
-                            "showlabels": True,
-                            "labelfont": 
-                            {
-                                "family": "Raleway",
-                                "size": 12,
-                                "color": "white"
-                            }
-                         }
-                )
-            )
+            props = {
+                        'x': d['dive'],
+                        'y': d['depth'],
+                        'z': d[vk],
+                        'contours_coloring': 'heatmap',
+                        'colorscale':        cmocean_to_plotly(cmap, 100),
+                        'connectgaps':       True,
+                        'contours':          contours
+                    }
+
+            if zmin is not None:
+                props['zmin'] = zmin
+            if zmax is not None:
+                props['zmax'] = zmax
+
+            fig.add_trace(plotly.graph_objects.Contour( **props ) )
 
             title_text = f"{mission_str}<br>{vk}<br>section {sk}: {start}-{stop}"
             
