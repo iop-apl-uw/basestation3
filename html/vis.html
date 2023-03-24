@@ -61,7 +61,7 @@
         let params = new URLSearchParams(window.location.search);
         let path = window.location.href.split('?')[0];
         if (params && params.has('mission'))
-            link = path + '?mission=' + params.get('mission') + permalink;
+            link = path + '?mission=' + params.get('mission') + '&' + permalink;
         else
             link = path + '?' + permalink;
 
