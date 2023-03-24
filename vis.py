@@ -404,15 +404,24 @@ def attachHandlers(app: sanic.Sanic):
         filename = f'{sys.path[0]}/html/map.html'
         return await sanic.response.file(filename, mime_type='text/html')
 
-    @app.route('/map/<glider:int>/<extras:path>')
+    @app.route('/mapdata/<glider:int>')
     @authorized()
-    async def multimapHandler(request, glider:int, extras):
-        filename = f'{sys.path[0]}/html/map.html'
-        return await sanic.response.file(filename, mime_type='text/html')
+    async def mapdataHandler(request, glider:int):
+        mission = matchMission(glider, request) 
+        if mission:
+            message = {}
+            for k in ['sa', 'kml', 'also']:
+                if k in mission:
+                    message[k] = mission[k]
 
-    @app.route('/kml/<glider:int>')
+            return sanic.response.json(message)
+
+        else:
+            return sanic.response.text('not found')
+
+    @app.route('/gliderkml/<glider:int>')
     @authorized()
-    async def kmlHandler(request, glider:int):
+    async def gliderkmlHandler(request, glider:int):
         filename = f'{gliderPath(glider,request)}/sg{glider}.kmz'
         async with aiofiles.open(filename, 'rb') as file:
             zip = ZipFile(BytesIO(await file.read()))
@@ -464,6 +473,11 @@ def attachHandlers(app: sanic.Sanic):
                   ]
 
         found = False
+        if url.startswith('http:/') and not url.startswith('http://'):
+            url = re.sub('http:/', 'http://', url)
+        elif url.startswith('https:/') and not url.startswith('https://'):
+            url = re.sub('https:/', 'https://', url)
+ 
         for x in allowed:
             if url.startswith(x):
                 found = True
@@ -480,14 +494,19 @@ def attachHandlers(app: sanic.Sanic):
                     body = await response.read()
                     return sanic.response.raw(body)
         
-    @app.route('/kmz/<url:path>')
+    @app.route('/proxykmz/<url:path>')
     @authorized(check=AUTH_ENDPOINT)
-    async def kmzHandler(request, url):
+    async def proxykmzHandler(request, url):
         allowed = [
                    'https://usicecenter.gov/File/DownloadCurrent',
                   ]
 
         found = False
+        if url.startswith('http:/') and not url.startswith('http://'):
+            url = re.sub('http:/', 'http://', url)
+        elif url.startswith('https:/') and not url.startswith('https://'):
+            url = re.sub('https:/', 'https://', url)
+ 
         for x in allowed:
             if url.startswith(x):
                 found = True
@@ -1386,7 +1405,8 @@ async def buildMissionTable(app, config=None):
     missionDictKeys = [ "glider", "path", "abs", "mission", "users", "pilotusers", "groups", "pilotgroups", 
                         "started", "ended", "planned", 
                         "orgname", "orglink", "contact", "email", 
-                        "project", "link", "comment", "reason", "endpoints"
+                        "project", "link", "comment", "reason", "endpoints",
+                        "sa", "also", "kml", 
                       ]
     
     dflts         = None
