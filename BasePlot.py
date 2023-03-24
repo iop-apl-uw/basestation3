@@ -186,6 +186,12 @@ def main():
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
+    if base_opts.nice:
+        try:
+            os.nice(base_opts.nice)
+        except:
+            log_error("Setting nice to %d failed" % base_opts.nice)
+
     required_plotly_version = "4.9.0"
     if Utils.normalize_version(plotly.__version__) < Utils.normalize_version(
         required_plotly_version
