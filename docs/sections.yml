@@ -1,0 +1,46 @@
+---
+
+# inheritance priority order (highest to lowest) is 
+# sections, variables, defaults
+
+defaults:
+  top: 0
+  bottom: 990
+  bin: 5
+  step: 1
+
+variables: 
+  temperature: { colormap: thermal, min: 3, max: 20 }
+  salinity: { colormap: haline, min: 31.5, max: 34.5 }
+  wlbb2fl_sig470nm: { top: 0, bottom: 400, colormap: algae }
+  wlbb2fl_sig695nm: { top: 0, bottom: 400, colormap: algae }
+  wlbb2fl_sig700nm: { top: 0, bottom: 400, colormap: algae }
+
+# section name 000 is special for vis all 000 sections
+# presented ahead of the rest of the sections
+# in the ribbon
+#
+# section numbers are quoted below because we need them
+# to be a name for sorting and yaml will strip leading
+# zeros off a plain integer and the alpha sort won't
+# come out right
+  
+sections:
+  "000": {start: 1, stop: -1, step: 5}
+  "001": {start: 1, stop: 34 }
+  "002": {start: 35, stop: 72, flip: true }
+  "003": {start: 73, stop: 121 }
+  "004": {start: 122, stop: 163, flip: true }
+  "005": {start: 164, stop: 211 }
+  "006": {start: 212, stop: 254, flip: true }
+  "007": {start: 255, stop: 306 }
+  "008": {start: 307, stop: 371, flip: true }
+  "009": {start: 372, stop: 414 }
+  "010": {start: 415, stop: 457, flip: true }
+  "011": {start: 458, stop: 510 }
+  "012": {start: 511, stop: 566, flip: true }
+  "013": {start: 567, stop: 626 }
+  "014": {start: 627, stop: 663, flip: true }
+  "015": {start: 664, stop: 722 }
+  "016": {start: 723, stop: 756, flip: true }
+  "017": {start: 757, stop: 999 }
