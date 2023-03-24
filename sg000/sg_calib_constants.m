@@ -80,6 +80,9 @@ ctcor =  3.25e-06 ;
 
 %PARAM remap_wetlabs_eng_cols="oldval1:newval1,oldval2:newval2"
 
+% Note - in the "oldval", any "." should be converted to "_".
+% So, if the column in the .eng file is "wlbb2fl.BB1ref", use "wlbb2fl_BB1ref" as value for the oldval.
+
 % Example
 % remap_wetlabs_eng_cols = "wlbbfl2_BB1ref:wlbbfl2_ref700nm,wlbbfl2_BB1sig:wlbbfl2_sig700nm,wlbbfl2_FL1ref:wlbbfl2_ref695nm,wlbbfl2_FL1sig:wlbbfl2_sig695nm,wlbbfl2_FL2ref:wlbbfl2_ref460nm,wlbbfl2_FL2sig:wlbbfl2_sig460nm" 
 % where the channels are 700nm, Chl and CDOM
