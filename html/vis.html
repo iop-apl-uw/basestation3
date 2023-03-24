@@ -1717,11 +1717,13 @@
         $('chkTimeseriesPlots').checked = false;
 
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
         dragElement($('chatDiv'));
         $('attachImage').addEventListener('change', attachImageChange);
         $('modalImgClose').onclick = function() {
             $('modalImgDiv').style.display = "none";
         }
+{% endif %}
 {% endif %}
 
         if (params.has('bin')) {
@@ -1776,9 +1778,11 @@
         }
 
         document.onkeydown = function (event) {
+            console.log('onkeydown 0');
             const excl = ['input', 'textarea'];
             if (excl.includes(event.target.tagName.toLowerCase()))
                 return;
+            console.log('onkeydown 1');
 
             console.log(event);
             console.log(event.target);
