@@ -47,6 +47,8 @@
     var startOp = null;
     var lastDive = null;
 
+    var permalink = null;
+
 {% if runMode == 'pilot' %}
     var fixes = [];
     var connect_t = 0;
@@ -54,6 +56,17 @@
     var fixTimer = null;
 {% endif %}
 
+    function showPermalink() {
+        var link;
+        let params = new URLSearchParams(window.location.search);
+        let path = window.location.href.split('?')[0];
+        if (params && params.has('mission'))
+            link = path + '?mission=' + params.get('mission') + permalink;
+        else
+            link = path + '?' + permalink;
+
+        alert(link);
+    }
 
     function startFlash() {
         isFlashing = true;
@@ -411,6 +424,7 @@
         }
         $(elt).classList.remove('hide');
         $('plotlyPopperOuter').style.display = 'none';
+        $('plotlyPermalink').style.display = 'none';
     }
 
 
@@ -455,6 +469,7 @@
             });
         }
         currElt = elt;
+        console.log(currElt);
     }
 
     function addTableRow(d) 
@@ -1195,6 +1210,15 @@
         $('btnPlotlyContour').style.backgroundColor = 'yellow';
         $('btnPlotlyProfiles').style.backgroundColor = 'yellow';
 
+        permalink = `z=${x}&op=${which}`;
+        permalink += `&first=${first}`;
+        permalink += `&last=${last}`;
+        permalink += `&top=${top}`;
+        permalink += `&step=${step}`;
+        permalink += `&bottom=${bot}`;
+        permalink += `&bin=${binSize}`;
+        permalink += `&which=${whichProf}`;
+
         fetch(`pro/${currGlider}/${x}/${whichProf}/${first}/${last}/${step}/${top}/${bot}/${binSize}${mission()}`)
         .then(res => res.text())
         .then(data => {
@@ -1202,6 +1226,8 @@
             data = JSON.parse(data);
             // console.log(data[x]);
             currElt = 'plotly-' + which;
+            console.log(currElt);
+            $('plotlyPermalink').style.display = 'block';
             if (which == 'contour') {
                 var d = [{
                     z: data[x],
@@ -1295,19 +1321,28 @@
  
         console.log('do plotly, mode = ' + which);
 
+        permalink = `x=${x}&z=${y.join(',')}&op=${which}`;
         if ($('chkMissionPlots').checked) {
-            if (x2 == '-')
+            permalink += '&wholemission';
+            if (x2 == '-') {
                 query = `query/${currGlider}/${x},${y.join(',')}${mission()}`;
-            else
+            }
+            else {
                 query = `query/${currGlider}/${x},${x2},${y.join(',')}${mission()}`;
+                permalink += `&y=${x2}`;
+            }
             mode = 0;
+
         }
         else {
-            if (x2 == '-')
+            permalink += '&divetimeseries';
+            if (x2 == '-') { 
                 query = `time/${currGlider}/${currDive}/${x},${y.join(',')}${mission()}`;
-            else
+            }
+            else {
                 query = `time/${currGlider}/${currDive}/${x},${x2},${y.join(',')}${mission()}`;
-
+                permalink += `&y=${x2}`;
+            }
             mode = 1;
         }
 
@@ -1316,9 +1351,11 @@
         .then(res => res.text())
         .then(data => {
             currElt = 'plotly-' + which;
+            console.log(currElt);
             data = data.replaceAll('NaN', 'null');
             data = JSON.parse(data);
             console.log(data);
+            $('plotlyPermalink').style.display = 'block';
             if (which == 'plot' && x2 == '-') {
                 var d = [];
                 var xd = data[x];
@@ -1745,13 +1782,14 @@
         }
         if (params.has('op')) {
              startOp = params.get('op');
+             currElt = 'plotly-' + startOp;
         }
 
-        if (params.has('mission')) { 
+        if (params.has('wholemission')) { 
             $('chkMissionPlots').checked = true;
             switchControls('chkMissionPlots');
         }
-        else if (params.has('dive')) {
+        else if (params.has('divetimeseries')) {
             $('chkTimeseriesPlots').checked = true;
             switchControls('chkTimeseriesPlots');
         }
@@ -1914,6 +1952,7 @@
 <div id="main">
     <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
     <div id="plotlyPopperOuter">&#x2922;</div>
+    <div id="plotlyPermalink" onclick="showPermalink();">&#x1F517;</div>
     <img id="mainImage" style="mix-blend-mode:multiply;" class="hide">
     <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;" class="hide"></div>
     <table rules="groups" id="mainTable" class="hide">

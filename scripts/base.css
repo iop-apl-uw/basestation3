@@ -75,6 +75,16 @@
         font-size: 2rem;
         font-weight: bold;
     }
+    #plotlyPermalink {
+        display: none;
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        z-index: 10;
+        font-size: 2rem;
+        font-weight: bold;
+        color: "black";
+    }
 
     #btnDiveUp {
         background: url("images/up-icon.png");
