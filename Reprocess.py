@@ -129,7 +129,7 @@ def main():
         },
     )
 
-    BaseLogger(base_opts)  # initializes BaseLog
+    BaseLogger(base_opts, include_time=True)  # initializes BaseLog
 
     Utils.check_versions()
 

@@ -3534,11 +3534,12 @@ def process_dive(
                     "Reprocess_%04d_%.f.log" % (max(flight_dive_nums), time.time()),
                 )
                 Utils.run_cmd_shell(
-                    "%s %s --force -v --called_from_fm --mission_dir %s %s  > %s 2>&1"
+                    "%s %s --force -v --called_from_fm --mission_dir %s --nice %d %s  > %s 2>&1"
                     % (
                         sys.executable,
                         os.path.join(base_opts.basestation_directory, "Reprocess.py"),
                         mission_directory,
+                        base_opts.nice,
                         dives,
                         reprocess_log,
                     )
@@ -4127,7 +4128,7 @@ def cmdline_main():
         "Command line driver for updateing flight model data"
     )
 
-    BaseLogger(base_opts)  # initializes BaseLog
+    BaseLogger(base_opts, include_time=True)  # initializes BaseLog
 
     mission_directory = base_opts.mission_dir
 
