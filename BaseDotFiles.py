@@ -79,7 +79,9 @@ mail_server = "localhost"
 
 # Former extensions, now directly supported by the basestation - skip if found in .extensions file
 extensions_to_skip = {
-    "MakeKML.py": "KML generation is no longer an extension - see --skip_kml option to control generation"
+    "MakeKML.py": "KML generation is no longer an extension - see --skip_kml option to control generation",
+    "MakePlotMission.py": "MakePlotMission is now part of the plotting package",
+    "MakeMissionEngPlots.py": "MakePlotMission is now part of the plotting package",
 }
 
 # Centeralized approach
