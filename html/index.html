@@ -824,7 +824,11 @@
             box.classList.add('imgbox');
 
             img = document.createElement('img');
-            img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+            if (plotWhich == 'map')
+                img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+            else
+                img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
+            
             img.classList.add('indexImg');
      
             box.appendChild(img);
@@ -874,19 +878,21 @@
     }
 
     function loadTable() {
+        let params = new URLSearchParams(window.location.search);
+
 {% if runMode == 'pilot' %}
         window.name = 'dash';
         document.title = 'dash';
-
-        let params = new URLSearchParams(window.location.search);
-        if (params.has('plot'))
-            plotWhich = params.get('plot');
 
         nextGauges = [];
 {% else %}
         window.name = 'index';
         document.title = 'index';
+        plotWhich = 'map';
+
 {% endif %}
+        if (params.has('plot'))
+            plotWhich = params.get('plot');
 
         clearTiles('main');
 
