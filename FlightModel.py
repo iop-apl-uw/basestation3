@@ -2768,10 +2768,8 @@ def process_dive(
                     # Don't change too much away from existing a (typically the
                     # default) except to move away from small values.
                     # predicted_hd_a is prevailing value before adoptiong new grid value
-                    log_warning(
-                        "The lambda expression below is tripping 'Cell variable W_misfit_RMS defined in loop (cell-var-from-loop)' from pylint - needs be debugged and potentially rewriten"
-                    )
 
+                    # pylint: disable=cell-var-from-loop
                     x_a_i = list(
                         filter(
                             lambda a: W_misfit_RMS[ib, a] <= ab_tolerance
@@ -2779,6 +2777,7 @@ def process_dive(
                             range(len(hd_a_grid)),
                         )
                     )
+
                     if len(x_a_i):
                         x_a_i = x_a_i[0]
                         if x_a_i != ia:
