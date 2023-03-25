@@ -174,7 +174,7 @@ def checkEndpoint(request, e):
             allowAccess = True
 
         if not allowAccess:
-            sanic.log.logger.info(f"rejecting {url}: user auth required")
+            sanic.log.logger.info(f"rejecting {request.path}: user auth required")
             return PERM_REJECT # so we respond "auth failed"
 
     return PERM_VIEW # don't make a distinction view/pilot at this level
@@ -433,28 +433,30 @@ def attachHandlers(app: sanic.Sanic):
     # all endpoints) or at the endpoint level with something like
     # users: [download] or groups: [download] and build
     # users.dat appropriately
+    #
+    # curl -c cookies.txt -X POST http://myhost/auth \
+    # -H "Content-type: application/json" \
+    # -d '{"username": "joeuser", "password": "abc123"}'
+    #
+    # curl -b cookies.txt http://myhost/data/nc/237/12 \
+    # --output p2370012.nc
+    #
     @app.route('/data/<which:str>/<glider:int>/<dive:int>')
     @authorized()
-    async def dataHandler(request, file:str):
+    async def dataHandler(request, which:str, glider:int, dive:int):
         path = gliderPath(glider,request)
 
-        if which == 'dive':
-            filename = 'p{glider:03d}{dive:04d}.nc'
-        elif which == 'profiles':
-            p = Path(path)
-            async for ncfile in p.glob(f'sg{glider:03d}*profile.nc'):
-                filename = ncfile
-                break
-        elif which == 'timeseries':
-            p = Path(path)
-            async for ncfile in p.glob(f'sg{glider:03d}*timeseries.nc'):
-                filename = ncfile
-                break
+        if which == 'nc' or which == 'ncfb':
+            filename = f'p{glider:03d}{dive:04d}.{which}'
+        else:
+            sanic.log.logger.info(f'invalid filetype requested {which}')
+            return sanic.response.text('not found', status=404)
 
         fullname = f"{path}/{filename}"           
         if await aiofiles.os.path.exists(fullname):
             return await sanic.response.file(fullname, filename=filename, mime_type='application/x-netcdf4')
         else:
+            sanic.log.logger.info(f'{fullname} not found')
             return sanic.response.text('not found', status=404)
 
     @app.route('/proxy/<url:path>')
