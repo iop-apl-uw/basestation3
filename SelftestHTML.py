@@ -18,7 +18,7 @@ def format(line):
 
     print(line + "<br>")
 
-if len(sys.argv) != 2:
+if len(sys.argv) < 2:
     sys.exit(1)
 
 try:
@@ -26,16 +26,22 @@ try:
 except:
     sys.exit(1)
 
-base = '/home/seaglider' # for iopbase
-# base = "/server/work1/seaglider/www/selftests" # for website
+if len(sys.argv) == 3:
+    base = sys.argv[2]
+else:
+    base = f'/home/seaglider/sg{sgnum:03d}' # for iopbase
+    # base = "/server/work1/seaglider/www/selftests" # for website
 
-selftestFiles = sorted(glob.glob(base + '/sg%03d/pt*.cap' % sgnum), reverse=True)
+selftestFiles = sorted(glob.glob(base + '/pt*.cap'), reverse=True)
 
 if len(selftestFiles) == 0:
     print("no selftest files found")
     sys.exit(1)
 
-proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], sys.argv[1]], stdout=subprocess.PIPE)
+if len(sys.argv) == 3:
+    proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], sys.argv[1], sys.argv[2]], stdout=subprocess.PIPE)
+else:
+    proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], sys.argv[1]], stdout=subprocess.PIPE)
 
 pcolors = {"[crit]": "red", "[warn]": "yellow", "[sers]": "orange"}
 rcolors = ["#cccccc", "#eeeeee"]

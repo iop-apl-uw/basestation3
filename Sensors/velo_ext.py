@@ -71,7 +71,7 @@ def init_sensor(module_name, init_dict=None):
             "sg_cal_velo_A": [False, "d", {}, BaseNetCDF.nc_scalar],
             "sg_cal_velo_B": [False, "d", {}, BaseNetCDF.nc_scalar],
             "eng_velo_c0": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -82,7 +82,7 @@ def init_sensor(module_name, init_dict=None):
                 (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_velo_c1": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -93,7 +93,7 @@ def init_sensor(module_name, init_dict=None):
                 (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_velo_c2": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -104,7 +104,7 @@ def init_sensor(module_name, init_dict=None):
                 (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_velo_c3": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -136,7 +136,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_velo_results_info,),
             ],
             "velo_speed": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,
@@ -147,7 +147,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_velo_results_info,),
             ],
             "velo_speed_std": [
-                True,
+                "f",
                 "d",
                 {
                     "_FillValue": BaseNetCDF.nc_nan,

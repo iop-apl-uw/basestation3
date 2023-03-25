@@ -252,8 +252,8 @@ L.Util.extend(L.KML, {
 				var l = this['parse' + tag.replace(/gx:/, '')](el[i], xml, opts);
                 if (tag.replace(/gx:/, '') == 'Point') {
                     if ('icon' in opts && 'options' in opts['icon']) { 
-                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://maps.google.com/mapfiles/kml/shapes', '/script/images');
-                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://iop.apl.washington.edu', '/script');
+                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://maps.google.com/mapfiles/kml/shapes', '../script/images');
+                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://iop.apl.washington.edu', '../script');
                         if (opts['icon']['options']['iconUrl'].includes('marker')) {
                             opts['icon']['options']['iconSize'] = [8,8];
                             opts['icon']['options']['iconAnchor'] = [4,4];
@@ -332,7 +332,7 @@ L.Util.extend(L.KML, {
 		var ll = el[0].childNodes[0].nodeValue.split(',');
         
         if (!('icon' in options)) {
-            options['icon'] = new L.KMLIcon({ iconSize: [16,16], iconUrl: '/script/images/marker-icon.png', shadowUrl: null, iconAnchor: [8,8] });
+            options['icon'] = new L.KMLIcon({ iconSize: [16,16], iconUrl: '../script/images/marker-icon.png', shadowUrl: null, iconAnchor: [8,8] });
         }
 		marker = new L.KMLMarker(new L.LatLng(ll[1], ll[0]), options);
         return marker;
@@ -444,7 +444,7 @@ L.Util.extend(L.KML, {
 
 L.KMLIcon = L.Icon.extend({
 	options: {
-        iconUrl: '/script/images/marker-icon.png',
+        iconUrl: '../script/images/marker-icon.png',
         shadowUrl: null,
 		iconSize: [16, 16],
 		iconAnchor: [8, 8],

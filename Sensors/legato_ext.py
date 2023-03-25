@@ -67,7 +67,7 @@ def init_sensor(module_name, init_dict=None):
             ],  # always scalar
             # legato via truck
             "eng_rbr_conduc": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_electrical_conductivity",
@@ -77,7 +77,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_sg_data_info,),
             ],
             "eng_rbr_temp": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_temperature",
@@ -96,7 +96,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_sg_data_info,),
             ],
             "eng_rbr_pressure": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_pressure",
@@ -117,7 +117,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_legato_data_info,),
             ],
             "legato_conduc": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_electrical_conductivity",
@@ -127,7 +127,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_legato_data_info,),
             ],
             "legato_temp": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_temperature",
@@ -146,7 +146,7 @@ def init_sensor(module_name, init_dict=None):
                 (nc_legato_data_info,),
             ],
             "legato_pressure": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_pressure",
@@ -234,7 +234,10 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
         "legatoFast_pressure": "legato_pressure",
         "legatoFast_conducTemp": "legato_conducTemp",
     }
-    if "ignore_truck_legato" in calib_constants and calib_constants["ignore_truck_legato"]:
+    if (
+        "ignore_truck_legato" in calib_constants
+        and calib_constants["ignore_truck_legato"]
+    ):
         for vval in ["rbr_pressure", "rbr_conduc", "rbr_conducTemp", "rbr_temp"]:
             replace_dict[vval] = f"ignore_{vval}"
 
@@ -270,6 +273,7 @@ def remap_instrument_names(base_opts, module, current_names=None):
                 current_names[current_names.index(oldname)] = v
                 ret_val = 0
     return ret_val
+
 
 def asc2eng(base_opts, module_name, datafile=None):
     """

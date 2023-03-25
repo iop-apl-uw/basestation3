@@ -174,7 +174,7 @@ def checkEndpoint(request, e):
             allowAccess = True
 
         if not allowAccess:
-            sanic.log.logger.info(f"rejecting {url}: user auth required")
+            sanic.log.logger.info(f"rejecting {request.path}: user auth required")
             return PERM_REJECT # so we respond "auth failed"
 
     return PERM_VIEW # don't make a distinction view/pilot at this level
@@ -385,7 +385,7 @@ def attachHandlers(app: sanic.Sanic):
         if runMode == MODE_PRIVATE:
             runMode = MODE_PILOT
 
-        return {"runMode": modeNames[runMode]}
+        return {"runMode": modeNames[runMode], "noSave": request.app.config.NO_SAVE, "noChat": request.app.config.NO_CHAT}
 
     @app.route('/dash')
     @authorized(check=AUTH_ENDPOINT)
@@ -404,15 +404,24 @@ def attachHandlers(app: sanic.Sanic):
         filename = f'{sys.path[0]}/html/map.html'
         return await sanic.response.file(filename, mime_type='text/html')
 
-    @app.route('/map/<glider:int>/<extras:path>')
+    @app.route('/mapdata/<glider:int>')
     @authorized()
-    async def multimapHandler(request, glider:int, extras):
-        filename = f'{sys.path[0]}/html/map.html'
-        return await sanic.response.file(filename, mime_type='text/html')
+    async def mapdataHandler(request, glider:int):
+        mission = matchMission(glider, request) 
+        if mission:
+            message = {}
+            for k in ['sa', 'kml', 'also']:
+                if k in mission:
+                    message[k] = mission[k]
 
-    @app.route('/kml/<glider:int>')
+            return sanic.response.json(message)
+
+        else:
+            return sanic.response.text('not found')
+
+    @app.route('/gliderkml/<glider:int>')
     @authorized()
-    async def kmlHandler(request, glider:int):
+    async def gliderkmlHandler(request, glider:int):
         filename = f'{gliderPath(glider,request)}/sg{glider}.kmz'
         async with aiofiles.open(filename, 'rb') as file:
             zip = ZipFile(BytesIO(await file.read()))
@@ -424,28 +433,30 @@ def attachHandlers(app: sanic.Sanic):
     # all endpoints) or at the endpoint level with something like
     # users: [download] or groups: [download] and build
     # users.dat appropriately
+    #
+    # curl -c cookies.txt -X POST http://myhost/auth \
+    # -H "Content-type: application/json" \
+    # -d '{"username": "joeuser", "password": "abc123"}'
+    #
+    # curl -b cookies.txt http://myhost/data/nc/237/12 \
+    # --output p2370012.nc
+    #
     @app.route('/data/<which:str>/<glider:int>/<dive:int>')
     @authorized()
-    async def dataHandler(request, file:str):
+    async def dataHandler(request, which:str, glider:int, dive:int):
         path = gliderPath(glider,request)
 
-        if which == 'dive':
-            filename = 'p{glider:03d}{dive:04d}.nc'
-        elif which == 'profiles':
-            p = Path(path)
-            async for ncfile in p.glob(f'sg{glider:03d}*profile.nc'):
-                filename = ncfile
-                break
-        elif which == 'timeseries':
-            p = Path(path)
-            async for ncfile in p.glob(f'sg{glider:03d}*timeseries.nc'):
-                filename = ncfile
-                break
+        if which == 'nc' or which == 'ncfb':
+            filename = f'p{glider:03d}{dive:04d}.{which}'
+        else:
+            sanic.log.logger.info(f'invalid filetype requested {which}')
+            return sanic.response.text('not found', status=404)
 
         fullname = f"{path}/{filename}"           
         if await aiofiles.os.path.exists(fullname):
             return await sanic.response.file(fullname, filename=filename, mime_type='application/x-netcdf4')
         else:
+            sanic.log.logger.info(f'{fullname} not found')
             return sanic.response.text('not found', status=404)
 
     @app.route('/proxy/<url:path>')
@@ -464,6 +475,11 @@ def attachHandlers(app: sanic.Sanic):
                   ]
 
         found = False
+        if url.startswith('http:/') and not url.startswith('http://'):
+            url = re.sub('http:/', 'http://', url)
+        elif url.startswith('https:/') and not url.startswith('https://'):
+            url = re.sub('https:/', 'https://', url)
+ 
         for x in allowed:
             if url.startswith(x):
                 found = True
@@ -480,14 +496,19 @@ def attachHandlers(app: sanic.Sanic):
                     body = await response.read()
                     return sanic.response.raw(body)
         
-    @app.route('/kmz/<url:path>')
+    @app.route('/proxykmz/<url:path>')
     @authorized(check=AUTH_ENDPOINT)
-    async def kmzHandler(request, url):
+    async def proxykmzHandler(request, url):
         allowed = [
                    'https://usicecenter.gov/File/DownloadCurrent',
                   ]
 
         found = False
+        if url.startswith('http:/') and not url.startswith('http://'):
+            url = re.sub('http:/', 'http://', url)
+        elif url.startswith('https:/') and not url.startswith('https://'):
+            url = re.sub('https:/', 'https://', url)
+ 
         for x in allowed:
             if url.startswith(x):
                 found = True
@@ -825,7 +846,7 @@ def attachHandlers(app: sanic.Sanic):
     async def selftestHandler(request, glider:int):
         cmd = f"{sys.path[0]}/SelftestHTML.py"
         proc = await asyncio.create_subprocess_exec(
-            cmd, f"{glider:03d}", 
+            cmd, f"{glider:03d}", gliderPath(glider, request), 
             stdout=asyncio.subprocess.PIPE, 
             stderr=asyncio.subprocess.PIPE
         )
@@ -888,6 +909,11 @@ def attachHandlers(app: sanic.Sanic):
     @app.post('/save/<glider:int>/<which:str>')
     @authorized(modes=['private', 'pilot'], requirePilot=True)
     async def saveHandler(request, glider:int, which:str):
+        # the no save command line flag allows one more layer
+        # of protection
+        if request.app.config.NO_SAVE:
+            return sanic.response.text('not allowed')
+
         validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
 
         message = request.json
@@ -1018,6 +1044,9 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/chat/history/<glider:int>')
     @authorized(modes=['private', 'pilot'])
     async def chatHistoryHandler(request, glider:int):
+        if request.app.config.NO_CHAT:
+            return sanic.response.text('not allowed')
+
         (tU, _) = getTokenUser(request)
         if tU == False:
             return sanic.response.text('authorization failed')
@@ -1028,6 +1057,9 @@ def attachHandlers(app: sanic.Sanic):
     @app.post('/chat/send/<glider:int>')
     @authorized(modes=['private', 'pilot'])
     async def chatHandler(request, glider:int):
+        if request.app.config.NO_CHAT:
+            return sanic.response.text('not allowed')
+
         # we could have gotten here by virtue of no restrictions specified for this glider/mission,
         # but chat only worked if someone is logged in, so we check that we have a user
         (tU, _) = getTokenUser(request)
@@ -1375,7 +1407,8 @@ async def buildMissionTable(app, config=None):
     missionDictKeys = [ "glider", "path", "abs", "mission", "users", "pilotusers", "groups", "pilotgroups", 
                         "started", "ended", "planned", 
                         "orgname", "orglink", "contact", "email", 
-                        "project", "link", "comment", "reason", "endpoints"
+                        "project", "link", "comment", "reason", "endpoints",
+                        "sa", "also", "kml", 
                       ]
     
     dflts         = None
@@ -1607,6 +1640,8 @@ if __name__ == '__main__':
     port = 20001
     ssl = False
     certPath = os.getenv("SANIC_CERTPATH") 
+    noSave = False
+    noChat = False
 
     overrides = {}
 
@@ -1621,7 +1656,7 @@ if __name__ == '__main__':
                 runMode = MODE_PILOT
     else:
         try:
-            opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:si', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector"])
+            opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:si', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "nosave", "nochat", "inspector"])
         except getopt.GetoptError as err:
             print(err)
             sys.exit(1)
@@ -1639,6 +1674,10 @@ if __name__ == '__main__':
                 overrides['MISSIONS_FILE'] = a
             elif o in ['-u', '--usersfile']:
                 overrides['USERS_FILE'] = a
+            elif o in ['--nosave']:
+                noSave = True
+            elif o in ['--nochat']:
+                noChat = True
             elif o in ['-c', '--certs']:
                 certPath = a
             elif o in ['-s', '--ssl']:
@@ -1660,6 +1699,8 @@ if __name__ == '__main__':
 
     # we always load RUNMODE based on startup conditions
     overrides['RUNMODE'] = runMode
+    overrides['NO_SAVE'] = noSave
+    overrides['NO_CHAT'] = noChat
 
     overrides['NOTIFY_IPC'] = f"ipc:///tmp/sanic-{os.getpid()}-notify.ipc" 
     overrides['WATCH_IPC']  = f"ipc:///tmp/sanic-{os.getpid()}-watch.ipc" 

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1967,7 +1967,7 @@ nc_var_metadata = {
         (f"{nc_gc_msg_prefix}NEWHEAD_info",),
     ],
     "gc_msg_NEWHEAD_depth": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "depth",
@@ -1978,7 +1978,7 @@ nc_var_metadata = {
         (f"{nc_gc_msg_prefix}NEWHEAD_info",),
     ],
     "gc_msg_NEWHEAD_heading": [
-        True,
+        "f",
         "d",
         {
             "description": "New vehicle heading (true)",
@@ -2154,13 +2154,13 @@ nc_var_metadata = {
         (nc_sg_data_info,),
     ],
     "eng_head": [
-        True,
+        "f",
         "d",
         {"description": "Vehicle heading (magnetic)", "units": "degrees"},
         (nc_sg_data_info,),
     ],
     "eng_pitchAng": [
-        True,
+        "f",
         "d",
         {"description": "Vehicle pitch", "units": "degrees"},
         (nc_sg_data_info,),
@@ -2341,7 +2341,7 @@ nc_var_metadata = {
         (nc_sg_data_info,),
     ],
     "pressure": [
-        True,
+        "f",
         "d",
         {
             "units": "dbar",
@@ -2350,7 +2350,7 @@ nc_var_metadata = {
         (nc_sg_data_info,),
     ],
     "depth": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "depth",
@@ -2404,7 +2404,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "ctd_depth": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "depth",
@@ -2416,7 +2416,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "ctd_pressure": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "sea_water_pressure",
@@ -2433,7 +2433,7 @@ nc_var_metadata = {
     ],
     # TODO: parse the field and test in MMP and MMT if all are included...
     "temperature_raw": [
-        True,
+        "f",
         "d",
         {
             "units": "degrees_Celsius",
@@ -2442,13 +2442,13 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "conductivity_raw": [
-        True,
+        "f",
         "d",
         {"units": "S/m", "description": "Uncorrected conductivity"},
         (nc_ctd_results_info,),
     ],
     "salinity_raw": [
-        True,
+        "f",
         "d",
         {
             "units": "PSU",
@@ -2482,7 +2482,7 @@ nc_var_metadata = {
     ],
     # CT adjusted values (missing values are marked in parallel _qc variable as QC_MISSING)
     "temperature": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "sea_water_temperature",
@@ -2492,7 +2492,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "conductivity": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "sea_water_electrical_conductivity",
@@ -2502,7 +2502,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "salinity": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "sea_water_salinity",
@@ -2512,7 +2512,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "conservative_temperature": [
-        True,
+        "f",
         "d",
         {
             "units": "degrees_Celsius",
@@ -2521,13 +2521,13 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "absolute_salinity": [
-        True,
+        "f",
         "d",
         {"units": "g/kg", "description": "Absolute salinity per TEOS-10"},
         (nc_ctd_results_info,),
     ],
     "gsw_sigma0": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "sea_water_sigma_theta",
@@ -2537,7 +2537,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "gsw_sigma3": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "sea_water_sigma_theta",
@@ -2547,7 +2547,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "gsw_sigma4": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "sea_water_sigma_theta",
@@ -2665,7 +2665,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "sound_velocity": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "speed_of_sound_in_sea_water",
@@ -2695,7 +2695,7 @@ nc_var_metadata = {
     ],
     # Based on eng data (pitch, depth) only
     "speed_gsm": [
-        True,
+        "f",
         "d",
         {"description": "Vehicle speed based on gsm", "units": "cm/s"},
         (nc_ctd_results_info,),
@@ -2707,13 +2707,13 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "horz_speed_gsm": [
-        True,
+        "f",
         "d",
         {"description": "Vehicle horizontal speed based on gsm", "units": "cm/s"},
         (nc_ctd_results_info,),
     ],
     "vert_speed_gsm": [
-        True,
+        "f",
         "d",
         {"description": "Vehicle vertical speed based on gsm", "units": "cm/s"},
         (nc_ctd_results_info,),
@@ -2749,7 +2749,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "speed": [
-        True,
+        "f",
         "d",
         {"description": "Vehicle speed based on hdm", "units": "cm/s"},
         (nc_ctd_results_info,),
@@ -2761,13 +2761,13 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "horz_speed": [
-        True,
+        "f",
         "d",
         {"description": "Vehicle horizontal speed based on hdm", "units": "cm/s"},
         (nc_ctd_results_info,),
     ],
     "vert_speed": [
-        True,
+        "f",
         "d",
         {"description": "Vehicle vertical speed based on hdm", "units": "cm/s"},
         (nc_ctd_results_info,),
@@ -2829,7 +2829,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "depth_avg_curr_east": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "eastward_sea_water_velocity",
@@ -2839,7 +2839,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "depth_avg_curr_north": [
-        True,
+        "f",
         "d",
         {
             "standard_name": "northward_sea_water_velocity",
@@ -2906,7 +2906,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "latitude_gsm": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -2916,7 +2916,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "longitude_gsm": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -2926,7 +2926,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "latitude": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -2938,7 +2938,7 @@ nc_var_metadata = {
         (nc_ctd_results_info,),
     ],
     "longitude": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -2998,7 +2998,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "dissolved_oxygen_sat": [
-        True,
+        "f",
         "d",
         {
             "units": "micromoles/kg",
@@ -3027,14 +3027,14 @@ nc_var_metadata = {
     ],
     # make_mission_profile()
     # over all the dives collected (nc_dim_dives)
-    "GPS2_lat": [True, "d", {}, nc_scalar],
-    "GPS2_lon": [True, "d", {}, nc_scalar],
-    "GPS2_time": [True, "d", {}, nc_scalar],
-    "GPSEND_lat": [True, "d", {}, nc_scalar],
-    "GPSEND_lon": [True, "d", {}, nc_scalar],
-    "GPSEND_time": [True, "d", {}, nc_scalar],
+    "GPS2_lat": ["f", "d", {}, nc_scalar],
+    "GPS2_lon": ["f", "d", {}, nc_scalar],
+    "GPS2_time": ["f", "d", {}, nc_scalar],
+    "GPSEND_lat": ["f", "d", {}, nc_scalar],
+    "GPSEND_lon": ["f", "d", {}, nc_scalar],
+    "GPSEND_time": ["f", "d", {}, nc_scalar],
     "mean_latitude": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -3045,7 +3045,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "mean_longitude": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -3073,7 +3073,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "obs_bin": [
-        True,
+        "f",
         "d",
         {"description": "Number of CT observations for this bin"},
         nc_scalar,
@@ -3102,18 +3102,18 @@ nc_var_metadata = {
     ],
     "hour": [
         True,
-        "d",
+        "i",
         {
-            "_FillValue": nc_nan,
+            "_FillValue": -1,
             "description": "Decimal hour of the day of the [D] - zero based",
         },
         nc_scalar,
     ],  # BUG? why not mv:-1?
     "dd": [
         True,
-        "d",
+        "i",
         {
-            "_FillValue": nc_nan,
+            "_FillValue": -1,
             "description": "Decimal day of the year of the [D] - zero based",
         },
         nc_scalar,
@@ -3152,7 +3152,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "start_latitude": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -3163,7 +3163,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "end_latitude": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -3174,7 +3174,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "start_longitude": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -3185,7 +3185,7 @@ nc_var_metadata = {
         nc_scalar,
     ],
     "end_longitude": [
-        True,
+        "f",
         "d",
         {
             "_FillValue": nc_nan,
@@ -3436,6 +3436,7 @@ def create_nc_var(
     value=None,
     additional_meta_data_d=None,
     remove_meta_data=None,
+    f_timeseries=False,
 ):
     """Given a netCDF variable name, construct a netCDF variable, with the
     specified dimension of the type and missing value specified in the var metadata
@@ -3475,6 +3476,8 @@ def create_nc_var(
         )  # default scalar metadata with nc_data_type explicitly None -- see below
 
     include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
+    if f_timeseries and isinstance(include_in_mission_profile, str):
+        nc_data_type = include_in_mission_profile
     if nc_data_type is None:
         if value is None:
             log_error(

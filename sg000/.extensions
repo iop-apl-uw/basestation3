@@ -7,9 +7,7 @@
 # Extensions listed in this section are run after all dive files have been processed
 # (include netcdf creation) and before whole mission processing has occured.
 [dive]
-MakeKML.py
 # Extensions listed in this section are run after whole mission processing has occured.
 [mission]
-MakeMissionEngPlots.py
-MakePlotMission.py
+
 

@@ -2,7 +2,9 @@
 
 <link rel="stylesheet" href="script/dialogs.css" />
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
 <link rel="stylesheet" href="script/chat.css" />
+{% endif %}
 <link rel="manifest" href="manifest.json">
 {% endif %}
 
@@ -45,6 +47,8 @@
     var startOp = null;
     var lastDive = null;
 
+    var permalink = null;
+
 {% if runMode == 'pilot' %}
     var fixes = [];
     var connect_t = 0;
@@ -52,6 +56,17 @@
     var fixTimer = null;
 {% endif %}
 
+    function showPermalink() {
+        var link;
+        let params = new URLSearchParams(window.location.search);
+        let path = window.location.href.split('?')[0];
+        if (params && params.has('mission'))
+            link = path + '?mission=' + params.get('mission') + '&' + permalink;
+        else
+            link = path + '?' + permalink;
+
+        alert(link);
+    }
 
     function startFlash() {
         isFlashing = true;
@@ -112,9 +127,11 @@
             which = 'history';
         
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
         if (first || history) {
             $('chatContent').innerHTML = '';
         }
+{% endif %}
 {% endif %}
 
         path = loc.pathname.split('/').slice(0,-1).join('/');
@@ -281,6 +298,7 @@
     }
 
 {% if runMode == 'pilot' %}
+{% if noSave == false %}
     function saveControl(force) {
         var json = {};
         var file = $('selectFile').value;
@@ -320,6 +338,7 @@
 
         return false;
     }
+{% endif %}
 
     function loadControlFile(file) {
         fetch(`control/${currGlider}/${file}${mission()}`)
@@ -405,6 +424,7 @@
         }
         $(elt).classList.remove('hide');
         $('plotlyPopperOuter').style.display = 'none';
+        $('plotlyPermalink').style.display = 'none';
     }
 
 
@@ -449,6 +469,7 @@
             });
         }
         currElt = elt;
+        console.log(currElt);
     }
 
     function addTableRow(d) 
@@ -852,7 +873,7 @@
             deltas = { 'parm': [], 'file': [] };
         }
 
-        html = "<h3>alerts</h3><p>";
+        html = `Dive ${dive}<p><h3>alerts</h3><p>`;
         if (alerts != "not found") {
             html += alerts;
             notify = true;
@@ -888,14 +909,6 @@
             $('thumb' + plotList[n]).click();
         }
         return false;
-    }
-
-    function selectMultiple(id, selections) {
-        console.log('select multiple');
-        for (var i = 0 ; i < $(id).options.length ; i++) {
-            $(id).options[i].selected = selections.indexOf($(id).options[i].value) >= 0;
-            console.log($(id).options[i] + ' = ' + $(id).options[i].selected);
-        }
     }
 
     function loadPlots(dive, setCurr) {
@@ -1189,6 +1202,15 @@
         $('btnPlotlyContour').style.backgroundColor = 'yellow';
         $('btnPlotlyProfiles').style.backgroundColor = 'yellow';
 
+        permalink = `z=${x}&op=${which}`;
+        permalink += `&first=${first}`;
+        permalink += `&last=${last}`;
+        permalink += `&top=${top}`;
+        permalink += `&step=${step}`;
+        permalink += `&bottom=${bot}`;
+        permalink += `&bin=${binSize}`;
+        permalink += `&which=${whichProf}`;
+
         fetch(`pro/${currGlider}/${x}/${whichProf}/${first}/${last}/${step}/${top}/${bot}/${binSize}${mission()}`)
         .then(res => res.text())
         .then(data => {
@@ -1196,6 +1218,8 @@
             data = JSON.parse(data);
             // console.log(data[x]);
             currElt = 'plotly-' + which;
+            console.log(currElt);
+            $('plotlyPermalink').style.display = 'block';
             if (which == 'contour') {
                 var d = [{
                     z: data[x],
@@ -1277,31 +1301,39 @@
         let x = $('selPlotlyX').value;
         let x2 = $('selPlotlyX2').value;
         // let y = $('selPlotlyY').value;
-        var y = []; 
-        // = [...$('selPlotlyY').selectedOptions].map(option => option.value);
+        var y = [...$('selPlotlyY').selectedOptions].map(option => option.value);
         var query;
 
-        for (var i = 0 ; i < $('selPlotlyY').options.length ; i++) {
-            if ($('selPlotlyY').options[i].selected)
-                y.push($('selPlotlyY').options[i].value);
-        }
+        //for (var i = 0 ; i < $('selPlotlyY').options.length ; i++) {
+        //    if ($('selPlotlyY').options[i].selected)
+        //        y.push($('selPlotlyY').options[i].value);
+        //}
 
  
         console.log('do plotly, mode = ' + which);
 
+        permalink = `x=${x}&z=${y.join(',')}&op=${which}`;
         if ($('chkMissionPlots').checked) {
-            if (x2 == '-')
+            permalink += '&wholemission';
+            if (x2 == '-') {
                 query = `query/${currGlider}/${x},${y.join(',')}${mission()}`;
-            else
+            }
+            else {
                 query = `query/${currGlider}/${x},${x2},${y.join(',')}${mission()}`;
+                permalink += `&y=${x2}`;
+            }
             mode = 0;
+
         }
         else {
-            if (x2 == '-')
+            permalink += '&divetimeseries';
+            if (x2 == '-') { 
                 query = `time/${currGlider}/${currDive}/${x},${y.join(',')}${mission()}`;
-            else
+            }
+            else {
                 query = `time/${currGlider}/${currDive}/${x},${x2},${y.join(',')}${mission()}`;
-
+                permalink += `&y=${x2}`;
+            }
             mode = 1;
         }
 
@@ -1310,9 +1342,11 @@
         .then(res => res.text())
         .then(data => {
             currElt = 'plotly-' + which;
+            console.log(currElt);
             data = data.replaceAll('NaN', 'null');
             data = JSON.parse(data);
             console.log(data);
+            $('plotlyPermalink').style.display = 'block';
             if (which == 'plot' && x2 == '-') {
                 var d = [];
                 var xd = data[x];
@@ -1431,7 +1465,6 @@
                 a.setAttribute('download', y[0] + '.csv'); 
                 a.click();
             }
-            selectMultiple('selPlotlyY', y.join(','));
             console.log(y);
         })
         .catch(error => {
@@ -1534,7 +1567,6 @@
                     startY = null;
                 }
                 if (startZ) {
-                    selectMultiple('selPlotlyY', startZ.split(','));
                     $('selPlotlyContour').value = startZ;
                     startZ = null;
                 }
@@ -1602,7 +1634,6 @@
                     startY = null;
                 }
                 if (startZ) {
-                    selectMultiple('selPlotlyY', startZ.split(','));
                     $('selPlotlyContour').value = startZ;
                     console.log('selected ' + startZ);
                     startZ = null;
@@ -1711,11 +1742,13 @@
         $('chkTimeseriesPlots').checked = false;
 
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
         dragElement($('chatDiv'));
         $('attachImage').addEventListener('change', attachImageChange);
         $('modalImgClose').onclick = function() {
             $('modalImgDiv').style.display = "none";
         }
+{% endif %}
 {% endif %}
 
         if (params.has('bin')) {
@@ -1739,13 +1772,14 @@
         }
         if (params.has('op')) {
              startOp = params.get('op');
+             currElt = 'plotly-' + startOp;
         }
 
-        if (params.has('mission')) { 
+        if (params.has('wholemission')) { 
             $('chkMissionPlots').checked = true;
             switchControls('chkMissionPlots');
         }
-        else if (params.has('dive')) {
+        else if (params.has('divetimeseries')) {
             $('chkTimeseriesPlots').checked = true;
             switchControls('chkTimeseriesPlots');
         }
@@ -1770,9 +1804,11 @@
         }
 
         document.onkeydown = function (event) {
+            console.log('onkeydown 0');
             const excl = ['input', 'textarea'];
             if (excl.includes(event.target.tagName.toLowerCase()))
                 return;
+            console.log('onkeydown 1');
 
             console.log(event);
             console.log(event.target);
@@ -1873,7 +1909,9 @@
     <a href="./" target="index">Index</a> <b>&#124;</b> 
     <a href="dash" target="dash"> Dashboard </a> <b>&#124;</b> 
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
     <span class="spanClick" onclick="chatShow(); return false;">Chat</span> <b>&#124;</b>
+{% endif %}
 {% endif %}
     <span class="spanClick" onclick="openAboutForm(); return false;">About</span> <b>&#124;</b>
     <span class="spanClick" onclick="popupPosition(); return false;">Position</span>
@@ -1906,6 +1944,7 @@
 <div id="main">
     <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
     <div id="plotlyPopperOuter">&#x2922;</div>
+    <div id="plotlyPermalink" onclick="showPermalink();">&#x1F517;</div>
     <img id="mainImage" style="mix-blend-mode:multiply;" class="hide">
     <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;" class="hide"></div>
     <table rules="groups" id="mainTable" class="hide">
@@ -2087,11 +2126,13 @@
         <textarea id="tcm2mat.cal" class="editFile" hidden="hidden"></textarea>
         <textarea id="sg_calib_constants.m" class="editFile" hidden="hidden"></textarea>
         <div id="fileButtons">
+{% if noSave == false %}
             <button id="btnSave" type="button" onclick="saveControl(0);" style="margin-left:2px;">Save</button>
             <button id="btnForce" type="button" onclick="saveControl(1);">Force</button>
             <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
             <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
             <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>
+{% endif %}
             <select id="selectFile" onchange="changeFile()">
                 <option value="cmdfile" selected>cmdfile</option>
                 <option value="targets">targets</option>
@@ -2112,7 +2153,9 @@
 
 {% include "dialogs.html" %}
 {% if runMode == 'pilot' %}
+{% if noChat == false %}
 {% include "chat.html" %}
+{% endif %}
 {% endif %}
 
 </body>

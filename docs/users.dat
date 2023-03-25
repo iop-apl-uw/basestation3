@@ -1,3 +1,5 @@
 ---
+# generate passwords "python3 /usr/local/basestation3/mkpass.py abc123"
+# then paste the resulting hashed string here
 #user: { password=hashedString, groups=[group1,group2] }
 guest: { groups: [basic,guest,analysts], password: $5$rounds=535000$5I5iOtEZRoObh.En$xh7kyEnCimU.FY.FvOBzYve70NMGQol0RbgFUQZKWU8 }

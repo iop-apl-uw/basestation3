@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2006-2012, 2016, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2006-2012, 2016, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -263,7 +263,6 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
             # Bin the up profile
             # for j in xrange(bin_index[max_depth_sample_index] + 1):
             for j in range(bin_index[max_depth_sample_index]):
-
                 obs_bin_tuple = np.where(bin_up_index == j)
                 num_obs_bin = len(obs_bin_tuple[0])
                 obs_up_bin[j] = num_obs_bin
@@ -898,7 +897,13 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     #     aux_attrs = {nc_coordinates: "dive_number"}  # DEAD
     # YUCK! We reuse this variable name, which normally is part of ctd_results_info
     mission_nc_var_d["depth"] = BaseNetCDF.create_nc_var(
-        mission_profile_file, "depth", (BaseNetCDF.nc_dim_depth,), True, None, aux_attrs
+        mission_profile_file,
+        "depth",
+        (BaseNetCDF.nc_dim_depth,),
+        True,
+        None,
+        aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["depth"][:] = mission_nc_dive_d[max_depth_dive_num]["profiles"][
         max_depth_index
@@ -925,6 +930,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         None,
+        f_timeseries=True,
     )
     mission_nc_var_d["trajectory"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -933,6 +939,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         None,
+        f_timeseries=True,
     )
     mission_nc_var_d["year"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -941,6 +948,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["month"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -949,6 +957,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["date"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -957,6 +966,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d[BaseNetCDF.nc_sg_time_var] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -965,6 +975,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["hour"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -973,6 +984,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["dd"] = BaseNetCDF.create_nc_var(
         mission_profile_file, "dd", (BaseNetCDF.nc_dim_profile,), True, None, aux_attrs
@@ -984,6 +996,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["latitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -992,6 +1005,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["start_time"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1000,6 +1014,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["end_time"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1008,6 +1023,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["start_latitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1016,6 +1032,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["end_latitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1024,6 +1041,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["start_longitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1032,6 +1050,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
     mission_nc_var_d["end_longitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1040,6 +1059,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
+        f_timeseries=True,
     )
 
     # Create all the nc vars, possibly adding instrument info and coordinates?
@@ -1053,6 +1073,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             (BaseNetCDF.nc_dim_profile, BaseNetCDF.nc_dim_depth),
             True,
             None,
+            f_timeseries=True,
         )
     # Always add the platform variable
     BaseNetCDF.create_nc_var(
@@ -1062,6 +1083,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         False,
         "%s %s" % (platform_var, platform_id),
         {"call_sign": platform_id},
+        f_timeseries=True,
     )
     # If we don't add to instrument_vars above this is DEAD
     for instrument_var in Utils.unique(instrument_vars):
@@ -1071,6 +1093,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             BaseNetCDF.nc_scalar,
             False,
             instrument_var,
+            f_timeseries=True,
         )
 
     # handle scalar variables in two steps: first create arrays to hold the concatenated values, then creatte the nc variable with possible coercion applied to values

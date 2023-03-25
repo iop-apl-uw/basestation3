@@ -49,7 +49,7 @@
             }
         </style>
     </head>
-    <body>
+    <body onunload="saveBounds();">
         <div style="width: 100vw; height: 100vh" id="map"></div>
         <script type="text/javascript">
             function reckon(pt, range, az) 
@@ -84,6 +84,7 @@
                 var zero = min < 10 ? '0' : '';
                 return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
             }
+
 
             function removeTags(str, tag) {
                 const reStr = `<${tag}.*>.*?<\\\/${tag}>`;
@@ -143,20 +144,22 @@
                      .openOn(map);
             }
 
-            function loadSA(map, layerControl, sa) {
+            async function loadSA(map, layerControl, urls, labels) {
                 const types = ["triangle", "circle", "square", "triangle"];
                 const colors = ["#ff0000", "#00ff00", "#0000ff", "#ff00ff"];
 
-                let url = '../proxy/https://iop.apl.washington.edu/chart/sa_assets.php?mission=' + sa;
+                let resp = await Promise.all(urls.map(url => fetch(url).then(resp => resp.json())));
+                for (var i = 0 ; i < urls.length ; i++) {
+                    data = resp[i];
 
-                fetch(url)
-                .then(resp => resp.json())
-                .then(data => {
                     var short;
                     var html;
                     var ctr = [0,0];
                     var nctr;
                     var assetMarkers = [];
+                    var newLayer;
+
+                    console.log(data);
                     for (d of data) {
                         if (d['id'].length > 8)
                             short = "..." + d['id'].slice(-5);
@@ -181,30 +184,71 @@
                         ctr[0] += d.lon;
                         ctr[1] += d.lat; 
                         nctr ++;
+
                     } 
-                    let newLayer = L.layerGroup(assetMarkers);
-                    layerControl.addOverlay(newLayer, sa); 
+                    newLayer = L.layerGroup(assetMarkers);
+                    layerControl.addOverlay(newLayer, labels[i]); 
                     newLayer.addTo(map);
-                })
-                .catch(e => {
-                    console.log('sa ' + url + ' error ' + e);
-                });
+                }
+            }
+            
+            function loadAlso(map, layerControl, also, tail) {
+                var pcs;
+                var gliders = [];
+                var missions = [];
+                for (var i = 0 ; i < also.length ; i++)  {
+                    pcs = ('' + also[i]).split('/');
+                    gliders.push(pcs[0]);
+                    if (pcs.length == 2)
+                        missions.push(pcs[1]);
+                    else
+                        missions.push('');
+                }
+
+                loadGliderKML(map, layerControl, gliders, missions, tail, null, false);
             }
 
-            function loadGliderDAC(map, layerControl, glider) {
-                let  url = `/query/${glider}/dive,avg_latitude,avg_longitude,depth_avg_curr_north,depth_avg_curr_east`;
+            function loadExtras(map, layerControl, glider, mission, tail) {
+                let  url = `../mapdata/${glider}${mission}`;
 
                 fetch(url)
                 .then(resp => resp.json()) 
-                .then(data => {
+                .then(d => {
+                    console.log(d);
+                    if ('kml' in d && d.kml) {
+                        loadKML(map, layerControl, d.kml, d.kml);
+                    }   
+                    if ('sa' in d && d.sa) {
+                        var labels = [];
+                        for (var i = 0 ; i < d.sa.length ; i++)
+                            if (d.sa[i].length > 18)
+                                labels.push("..." + d.sa[i].slice(-15));
+                            else
+                                labels.push(d.sa[i]);
+
+                        loadSA(map, layerControl, d.sa, labels);
+                    }
+                    if ('also' in d && d.also) {
+                        loadAlso(map, layerControl, d.also, tail);
+                    }
+                })
+                .catch(e => {
+                    console.log('extras ' + e);
+                });
+            }
+            function loadGliderDAC(map, layerControl, glider, mission) {
+                let  url = `../query/${glider}/dive,avg_latitude,avg_longitude,depth_avg_curr_north,depth_avg_curr_east${mission}`;
+
+                fetch(url)
+                .then(resp => resp.json()) 
+                .then(d => {
                     var v = [];
                     var line; 
-
-                    for (d of data) {
-                        [m,dir] = xy2magdir(d.depth_avg_curr_east, d.depth_avg_curr_north);
-                        [elat, elon] = reckon([d.avg_latitude, d.avg_longitude], 20000*m, dir);                        
-                        line = L.polyline([[d.avg_latitude, d.avg_longitude], [elat, elon]], {});
-                        line.bindTooltip(`dive ${d.dive}<br>${m.toFixed(3)}@${dir.toFixed(1)}&deg;`, {});
+                    for (var i = 0 ; i < d.dive.length ; i++) {
+                        [m,dir] = xy2magdir(d.depth_avg_curr_east[i], d.depth_avg_curr_north[i]);
+                        [elat, elon] = reckon([d.avg_latitude[i], d.avg_longitude[i]], 20000*m, dir);                        
+                        line = L.polyline([[d.avg_latitude[i], d.avg_longitude[i]], [elat, elon]], {});
+                        line.bindTooltip(`dive ${d.dive[i]}<br>${m.toFixed(3)}@${dir.toFixed(1)}&deg;`, {});
                         v.push(line);
                     }
                     let newLayer = L.layerGroup(v);
@@ -229,12 +273,17 @@
                     layerControl.addOverlay(ly, names[i]); 
                 }
             }
-            async function loadGliderKML(map, layerControl, urls, tail) {
+            async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, ctr) {
                 var kml;
                 var parser;
+                var i;
+
+                var urls = [];
+                for (i = 0 ; i < gliders.length ; i++)                
+                    urls.push('../gliderkml/' + gliders[i] + missions[i]);
 
                 let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
-                for (var i = 0 ; i < urls.length ; i++) {
+                for (i = 0 ; i < urls.length ; i++) {
                     kmltext = resp[i]; 
 
                     // Create new kml overlay
@@ -267,7 +316,7 @@
                             console.log('looking for dive layers');
                             var dv, mx = -1;
                             track._layers[k].eachLayer(function(layer) {
-                                if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${glider} dive `)) {
+                                if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${gliders[i]} dive `)) {
                                     dv = parseInt(layer.layerID.split(' ')[2]);
                                     if (dv > mx)
                                         mx = dv; 
@@ -276,7 +325,7 @@
                             console.log('latest dive is ' + mx);
 
                             track._layers[k].eachLayer(function(layer) {
-                                if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${glider} dive `)) {
+                                if (layer.hasOwnProperty('layerID') && layer.layerID.startsWith(`SG${gliders[i]} dive `)) {
                                     dv = parseInt(layer.layerID.split(' ')[2]);
                                     if (dv < mx - tail) {
                                         track._layers[k].removeLayer(layer);
@@ -290,10 +339,14 @@
                     }
 
                     // Adjust map to show the kml for the first glider
-                    if (i == 0) {
-                        const bounds = track.getBounds();
-                        map.fitBounds(bounds);
-                        if (ctr) map.panTo(ctr);
+                    if (i == 0 && ctr) {
+                        if (lastBounds)
+                            map.fitBounds(lastBounds);
+                        else {
+                            const bounds = track.getBounds();
+                            map.fitBounds(bounds);
+                            if (ctr) map.panTo(ctr);
+                        }
                     }
                 }
             }
@@ -306,6 +359,25 @@
                     buffText += i + ' lat=' +  dd2ddmm(latA).toFixed(3) + ' lon=' + dd2ddmm(lonA).toFixed(3) + ' radius=2000 goto=' + (i < points.length ? i+1 : i) + '\n';
                 }
                 return buffText;
+            }
+
+            function saveBounds() {
+                var bounds = map.getBounds().toBBoxString();
+                localStorage.setItem('latest', bounds);
+                localStorage.setItem('' + glider, bounds);
+            }
+
+            function loadBounds(which) {
+                let x = localStorage.getItem(which);
+                if (x) {
+                    [west, south, east, north] = x.split(',').map(parseFloat);
+                    let bounds = new L.LatLngBounds(new L.LatLng(south, west), new L.LatLng(north, east));
+                    return bounds;
+                }
+                else {
+                    return null;
+                }
+                
             }
 
         </script>
@@ -352,6 +424,10 @@
 
             // Make basemap
             const map = new L.Map('map', { center: new L.LatLng(47.5, -122.3), zoom: 11 });
+            let last = loadBounds('latest');
+            if (last)
+                map.fitBounds(last);
+
             const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 1.0 });
             const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
 
@@ -397,7 +473,7 @@
             legend.onAdd = function (map) {
                 console.log('adding legend');
                 var div = L.DomUtil.create('div', 'wind legend');
-                div.innerHTML = '<img src="/script/images/OWM_windscale.png">';
+                div.innerHTML = '<img src="../script/images/OWM_windscale.png">';
                 return div;
             };
 
@@ -526,7 +602,7 @@
                                                 fetchElevation: false,
                                             });
                 reticle.addTo(map); 
-                L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '/script/images/reticle.png', false);
+                L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '../script/images/reticle.png', false);
             } 
 
             // layer control
@@ -563,8 +639,8 @@
             //kmz.load('../proxy/https://usicecenter.gov/File/DownloadCurrent?pId=22', 'Antarctic ice edge');
 
             var urls = [];
-            urls.push('../kmz/https://usicecenter.gov/File/DownloadCurrent?pId=14');
-            urls.push('../kmz/https://usicecenter.gov/File/DownloadCurrent?pId=22');
+            urls.push('../proxykmz/https://usicecenter.gov/File/DownloadCurrent?pId=14');
+            urls.push('../proxykmz/https://usicecenter.gov/File/DownloadCurrent?pId=22');
             names = ['Arctic ice edge', 'Antarctic ice edge']
             loadKML(map, layerControl, urls, names);
 
@@ -583,21 +659,30 @@
             var path = window.location.pathname.split('/');
             var first = path.indexOf('map') + 1;
             var glider = path[first];
-            urls = [];
 
             var mission = params.has('mission') ? '?mission=' + params.get('mission') : '';
             var tail = params.has('tail') ? parseInt(params.get('tail')) : -1;
 
             document.title = glider + ' - map';
-            for (var i = first ; i < path.length ; i++) 
-                urls.push('/kml/' + path[i] + mission);
 
-            loadGliderKML(map, layerControl, urls, tail);
-            loadGliderDAC(map, layerControl, path[first]); 
-           
+            lastBounds = loadBounds('' + glider);
+            loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true);
+            loadGliderDAC(map, layerControl, path[first], mission); 
+          
+            loadExtras(map, layerControl, glider, mission, tail);
+
+            if (params.has('also')) {
+                loadAlso(map, layerControl, params.get('also').split(','), tail);
+            }
+
             if (params.has('sa')) {
                 let sa = params.get('sa'); 
-                loadSA(map, layerControl, sa);
+                urls = []
+                var labels = []
+                console.log(sa);
+                urls.push('../proxy/https://iop.apl.washington.edu/chart/sa_assets.php?mission=' + sa);
+                labels.push(sa);
+                loadSA(map, layerControl, urls, labels);
             }
 
         </script>

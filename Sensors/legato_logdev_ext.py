@@ -158,7 +158,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_conductivity": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_electrical_conductivity",
@@ -168,7 +168,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_temperature": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_temperature",
@@ -178,7 +178,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_pressure": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "pressure",
@@ -188,7 +188,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_sea_pressure": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "sea_water_pressure",
@@ -198,7 +198,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_depth": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "depth",
@@ -208,7 +208,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_salinity": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "salinity",
@@ -218,7 +218,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_counts": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "counts",
@@ -228,7 +228,7 @@ def init_logger(module_name, init_dict=None):
                 (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_cond_cell_temp": [
-                True,
+                "f",
                 "d",
                 {
                     "standard_name": "cond_cell_temp",
@@ -265,7 +265,6 @@ def process_data_files(
         1 - failure
     """
     if fc.is_down_data() or fc.is_up_data():
-
         if "legato_sealevel" not in calib_consts:
             log_error("Missing legato_sealevel in sg_calib_constants - bailing out")
             return 1
