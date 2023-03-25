@@ -49,7 +49,17 @@ from BaseLog import (
 )
 from Plotting import plotdivesingle
 
+class pitchFitClass:
+    def __init__(self):
+        pass
 
+    def fitfun_shift_fixed(self, x, ctr, gain):
+        y = gain*(x[:,0]*self.cnv - ctr*self.cnv - x[:,1]*self.shift)
+        return y
+
+    def fitfun_shift_solved(self, x, ctr, gain, shift):
+        return gain*(x[:,0]*self.cnv - ctr*self.cnv - x[:,1]*shift)
+        
 def headingDiff(hdg1, hdg2):
     """Computes difference in two headings with wraparound"""
     diff = hdg2 - hdg1
@@ -103,6 +113,9 @@ def plot_pitch_roll(
         # unused pitch_max = dive_nc_file.variables["log_PITCH_MAX"].getValue()
         pitch_cnv = dive_nc_file.variables["log_PITCH_CNV"].getValue()
         roll_cnv = dive_nc_file.variables["log_ROLL_CNV"].getValue()
+        vbd_cnv = dive_nc_file.variables["log_VBD_CNV"].getValue()
+        vbd_shift = dive_nc_file.variables["log_PITCH_VBD_SHIFT"].getValue()
+        c_vbd = dive_nc_file.variables["log_C_VBD"].getValue()
         c_roll_dive = dive_nc_file.variables["log_C_ROLL_DIVE"].getValue()
         c_roll_climb = dive_nc_file.variables["log_C_ROLL_CLIMB"].getValue()
 
@@ -143,6 +156,9 @@ def plot_pitch_roll(
         GC_roll_AD_start = dive_nc_file.variables["gc_roll_ad_start"][:]
         GC_roll_AD_end = dive_nc_file.variables["gc_roll_ad"][:]
 
+        GC_vbd_AD_start = dive_nc_file.variables["gc_vbd_ad_start"][:]
+        GC_vbd_AD_end = dive_nc_file.variables["gc_vbd_ad"][:]
+
         # unused nGC = len(GC_st_secs) * 2
         gc_t = np.concatenate((GC_st_secs, GC_end_secs))
         gc_t = np.transpose(gc_t).ravel()
@@ -176,6 +192,19 @@ def plot_pitch_roll(
         roll_control = (rollAD - c_roll_dive) * roll_cnv
         roll_control[iwp] = (rollAD[iwp] - c_roll_climb) * roll_cnv
         # unused pitch_control_slope = 1.0 / pitch_cnv
+
+        gc_x = np.concatenate((GC_vbd_AD_start, GC_vbd_AD_end))
+        gc_x = np.transpose(gc_x).ravel()
+
+        f = scipy.interpolate.interp1d(
+            gc_t,
+            gc_x,
+            kind="linear",
+            bounds_error=False,
+            fill_value=(gc_x[0], gc_x[-1]),  # "extrapolate"
+        )
+        vbdAD = f(sg_time)
+        vbd_control = (vbdAD - c_vbd) * vbd_cnv
 
     except:
         log_error(
@@ -217,6 +246,19 @@ def plot_pitch_roll(
         )
     except:
         log_error("Failed to add values to database", "exc")
+
+    inst = pitchFitClass()
+    inst.cnv = pitch_cnv
+    inst.shift = vbd_shift
+    
+    c0 = scipy.optimize.curve_fit(inst.fitfun_shift_fixed, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain ])
+    c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ])
+
+    ctr0 = c0[0][0]
+    gain0 = c0[0][1]
+    ctr1 = c1[0][0]
+    gain1 = c1[0][1]
+    shift1 = c1[0][2]
 
     figs_list = []
     file_list = []
@@ -288,15 +330,17 @@ def plot_pitch_roll(
                 "name": "linfit C_PITCH, PITCH_GAIN",
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "Red"},
-                "hovertemplate": f"Fit C_PITCH={implied_C:.0f} PITCH_GAIN={implied_gain:.2f}<br><extra></extra>",
+                "hovertemplate": f"Fit w/o VBD shift C_PITCH={implied_C:.0f} PITCH_GAIN={implied_gain:.2f}<br><extra></extra>",
             }
         )
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Pitch control vs Pitch"
-        fit_line = f"Best fit pitch regression implies C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm"
+        fit_line = f"<br>Linear regression (w/o VBD shift): C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm<br>"
+        fit_line += f"Nonlinear regression w/ VBD shift fixed: C_PITCH={ctr0:.0f}ad PITCH_GAIN={gain0:.2f}deg/cm<br>"
+        fit_line += f"Nonlinear regression w/ VBD shift: C_PITCH={ctr1:.0f}ad PITCH_GAIN={gain1:.2f}deg/cm PITCH_VBD_SHIFT={shift1:.5f}cm/cc<br>"
         fit_line += (
-            f"<br>Current C_PITCH={c_pitch:.0f}ad PITCH_GAIN={pitch_gain:.0f}deg/cm"
+            f"Current C_PITCH={c_pitch:.0f}ad PITCH_GAIN={pitch_gain:.0f}deg/cm PITCH_VBD_SHIFT={vbd_shift:.5f}cm/cc"
         )
 
         fig.update_layout(
