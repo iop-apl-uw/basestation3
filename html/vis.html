@@ -911,14 +911,6 @@
         return false;
     }
 
-    function selectMultiple(id, selections) {
-        console.log('select multiple');
-        for (var i = 0 ; i < $(id).options.length ; i++) {
-            $(id).options[i].selected = selections.indexOf($(id).options[i].value) >= 0;
-            console.log($(id).options[i] + ' = ' + $(id).options[i].selected);
-        }
-    }
-
     function loadPlots(dive, setCurr) {
         var plots;
         var img;
@@ -1309,14 +1301,13 @@
         let x = $('selPlotlyX').value;
         let x2 = $('selPlotlyX2').value;
         // let y = $('selPlotlyY').value;
-        var y = []; 
-        // = [...$('selPlotlyY').selectedOptions].map(option => option.value);
+        var y = [...$('selPlotlyY').selectedOptions].map(option => option.value);
         var query;
 
-        for (var i = 0 ; i < $('selPlotlyY').options.length ; i++) {
-            if ($('selPlotlyY').options[i].selected)
-                y.push($('selPlotlyY').options[i].value);
-        }
+        //for (var i = 0 ; i < $('selPlotlyY').options.length ; i++) {
+        //    if ($('selPlotlyY').options[i].selected)
+        //        y.push($('selPlotlyY').options[i].value);
+        //}
 
  
         console.log('do plotly, mode = ' + which);
@@ -1474,7 +1465,6 @@
                 a.setAttribute('download', y[0] + '.csv'); 
                 a.click();
             }
-            selectMultiple('selPlotlyY', y.join(','));
             console.log(y);
         })
         .catch(error => {
@@ -1577,7 +1567,6 @@
                     startY = null;
                 }
                 if (startZ) {
-                    selectMultiple('selPlotlyY', startZ.split(','));
                     $('selPlotlyContour').value = startZ;
                     startZ = null;
                 }
@@ -1645,7 +1634,6 @@
                     startY = null;
                 }
                 if (startZ) {
-                    selectMultiple('selPlotlyY', startZ.split(','));
                     $('selPlotlyContour').value = startZ;
                     console.log('selected ' + startZ);
                     startZ = null;
