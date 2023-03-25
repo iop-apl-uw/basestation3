@@ -252,7 +252,7 @@ def plot_pitch_roll(
     inst.shift = vbd_shift
     
     c0 = scipy.optimize.curve_fit(inst.fitfun_shift_fixed, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain ])
-    c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ])
+    c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ], bounds=([100, 5, 0.0005], [4000, 75, 0.005]))
 
     ctr0 = c0[0][0]
     gain0 = c0[0][1]
