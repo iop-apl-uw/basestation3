@@ -91,12 +91,15 @@ def plot_diveplot(
             gc_vbd_pos,
         ) = PlotUtils.extract_gc_moves(dive_nc_file)
 
+        apogee_time = None;
         if gc_pitch_pos is not None:
             eng_pitch_pos = gc_pitch_pos * 10.0
             eng_pitch_time = gc_pitch_time / 60.0
+            apogee_time = min(eng_pitch_time[eng_pitch_pos > 0])
         elif "eng_pitchCtl" in dive_nc_file.variables:
             eng_pitch_pos = dive_nc_file.variables["eng_pitchCtl"][:] * 10.0
             eng_pitch_time = eng_time
+            apogee_time = min(eng_pitch_time[eng_pitch_pos > 0])
         else:
             log_error("Pitch position not available")
             eng_pitch_pos = eng_pitch_time = None
@@ -139,6 +142,13 @@ def plot_diveplot(
             .split(",")[0]
         )
         desired_heading = clock_compass(np.zeros(len(eng_time)) + tmp)
+
+        desired_pitch = float(
+            dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
+            .tobytes()
+            .decode("utf-8")
+            .split(",")[2]
+        ) 
 
         eng_pitch_ang = dive_nc_file.variables["eng_pitchAng"][:]
         eng_roll_ang = dive_nc_file.variables["eng_rollAng"][:]
@@ -200,6 +210,9 @@ def plot_diveplot(
     except:
         log_error("Could not process diveplot", "exc")
         return ([], [])
+
+    if not apogee_time:
+        apogee_time = depth_time[np.argmax(depth)]
 
     # Data conversions
     dz_dt = Utils.ctr_1st_diff(-depth * 100, depth_time - start_time)
@@ -342,6 +355,21 @@ def plot_diveplot(
             "mode": "lines",
             "line": {"dash": "solid", "color": "Green"},
             "hovertemplate": "Pitch Up<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "y": [desired_pitch, desired_pitch, -desired_pitch, -desired_pitch],
+            "x": [eng_time[0], apogee_time, apogee_time + 1, eng_time[-1]],
+            # "legendgroup": "attitude",
+            "name": "Pitch desired (deg)",
+            "type": "scatter",
+            "xaxis": "x1",
+            "yaxis": "y1",
+            "mode": "lines",
+            "line": {"dash": "dot", "color": "Green"},
+            "hovertemplate": "Pitch desired<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
         }
     )
 
