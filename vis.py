@@ -312,6 +312,7 @@ def attachHandlers(app: sanic.Sanic):
     app.static('/favicon.ico', f'{sys.path[0]}/html/favicon.ico', name='favicon.ico')
     app.static('/parms', f'{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
     app.static('/script', f'{sys.path[0]}/scripts', name='script')
+    app.static('/help', f'{sys.path[0]}/html/help.html', name='help')
     app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
     app.static('/manifest.json', f'{sys.path[0]}/scripts/manifest.json', name='manifest')
 
