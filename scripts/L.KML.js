@@ -293,7 +293,7 @@ L.Util.extend(L.KML, {
     for (i = 0; i < el.length; i++) {
       for (j = 0; j < el[i].childNodes.length; j++) {
         descr = descr + el[i].childNodes[j].nodeValue;
-        descr = descr.replace(/"https:\/\/iop\.apl\.washington\.edu\/seaglider\/divegallery\.php\?dive=([0-9]+)\&glider=([0-9]+)"/, '"/$2/$1" target="$2"');
+        descr = descr.replace(/"https:\/\/iop\.apl\.washington\.edu\/seaglider\/divegallery\.php\?dive=([0-9]+)\&glider=([0-9]+)"/, '"../$2?dive=$1" target="$2"');
       }
     }
 
