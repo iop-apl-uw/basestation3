@@ -321,6 +321,9 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.text("Page not found: {}".format(request.path), status=404)
 
     @app.post('/auth')
+    # description: user authorization 
+    # payload: (JSON) username, password
+    # returns: none on success (sets cookie with authorization token)
     async def authHandler(request):
         username = request.json.get("username", None).lower()
         password = request.json.get("password", None)
@@ -338,12 +341,18 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.text('authorization failed') 
 
     @app.route('/user')
+    # description: checks whether current session user is valid
+    # returns: YES is user is valid
     @authorized(modes=['pilot','private'], check=AUTH_ENDPOINT)
     async def userHandler(request):
         (tU, tG) = getTokenUser(request)
         return sanic.response.text('YES' if tU else 'NO')
  
     @app.route('/plot/<fmt:str>/<which:str>/<glider:int>/<dive:int>/<image:str>')
+    # description: get a plot image
+    # args: fmt=png|webp|div, which=dv|eng|sg
+    # returns: image data (webp, png or plotly div)
+    # parameters: mission
     @authorized()
     async def plotHandler(request, fmt:str, which: str, glider: int, dive: int, image: str):
         if fmt not in ['png', 'webp', 'div']:
@@ -380,6 +389,9 @@ def attachHandlers(app: sanic.Sanic):
     # we don't protect this so they get a blank page with a login option even
     # if not authorized
     @app.route('/<glider:int>')
+    # description: main page for glider
+    # parameters: mission, plot (starting plot), dive (starting dive), order (plot ribbon order), plot tool values: x,y,z,first,last,step,top,bottom,bin,wholemission|divetimeseries,dives|climbs|both|combine, op (contour,profiles,plot,table,csv)
+    # returns: HTML page
     @app.ext.template("vis.html")
     async def mainHandler(request, glider:int):
         runMode = request.app.config.RUNMODE
@@ -389,23 +401,35 @@ def attachHandlers(app: sanic.Sanic):
         return {"runMode": modeNames[runMode], "noSave": request.app.config.NO_SAVE, "noChat": request.app.config.NO_CHAT}
 
     @app.route('/dash')
+    # description: dashboard (engineering diagnostic) view of index (all missions) page
+    # parameters: plot (which plot to include in tiles, default=diveplot)
+    # returns: HTML page
     @authorized(check=AUTH_ENDPOINT)
     @app.ext.template("index.html")
     async def dashHandler(request):
         return {"runMode": "pilot"}
 
     @app.route('/')
+    # description: "public" index (all missions) page
+    # parameters: plot (which plot to include in tiles, default=map)
+    # returns: HTML page
     @app.ext.template("index.html")
     async def indexHandler(request):
         return {"runMode": "public"}
 
     @app.route('/map/<glider:int>')
+    # description: map tool
+    # parameters: mission, tail (number of dives back to show in glider track), also (additional gliders to plot), sa (URL for SA to load)
+    # returns: HTML page
     @authorized()
     async def mapHandler(request, glider:int):
         filename = f'{sys.path[0]}/html/map.html'
         return await sanic.response.file(filename, mime_type='text/html')
 
     @app.route('/mapdata/<glider:int>')
+    # description: get map configation (also, sa, kml from missions.dat)
+    # parameters: mission
+    # returns: JSON dict with configuration variables
     @authorized()
     async def mapdataHandler(request, glider:int):
         mission = matchMission(glider, request) 
@@ -421,6 +445,9 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('not found')
 
     @app.route('/gliderkml/<glider:int>')
+    # description: get glider KML
+    # parameters: mission
+    # returns: KML
     @authorized()
     async def gliderkmlHandler(request, glider:int):
         filename = f'{gliderPath(glider,request)}/sg{glider}.kmz'
@@ -443,6 +470,9 @@ def attachHandlers(app: sanic.Sanic):
     # --output p2370012.nc
     #
     @app.route('/data/<which:str>/<glider:int>/<dive:int>')
+    # description: download raw data
+    # parameters: mission
+    # returns: netCDF file
     @authorized()
     async def dataHandler(request, which:str, glider:int, dive:int):
         path = gliderPath(glider,request)
@@ -460,12 +490,14 @@ def attachHandlers(app: sanic.Sanic):
             sanic.log.logger.info(f'{fullname} not found')
             return sanic.response.text('not found', status=404)
 
-    @app.route('/proxy/<url:path>')
     # This is not a great idea to leave this open as a public proxy server,
     # but we need it for all layers to work with public maps at the moment.
     # Need to evaluate what we lose if we turn proxy off or find another solution.
     # Or limit the dictionary of what urls can be proxied ...
     # NOAA forecast, NIC ice edges, iop SA list, opentopo GEBCO bathy
+    @app.route('/proxy/<url:path>')
+    # description: proxy requests for map tool
+    # returns: contents from requested URL
     @authorized(check=AUTH_ENDPOINT)
     async def proxyHandler(request, url):
         allowed = ['https://api.opentopodata.org/v1/gebco2020',
@@ -498,6 +530,8 @@ def attachHandlers(app: sanic.Sanic):
                     return sanic.response.raw(body)
         
     @app.route('/proxykmz/<url:path>')
+    # description: proxy and unzip network KMZ sources
+    # returns: KML from KMZ downloaded from requested URL
     @authorized(check=AUTH_ENDPOINT)
     async def proxykmzHandler(request, url):
         allowed = [
@@ -549,6 +583,9 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.raw(kml)
 
     @app.route('/plots/<glider:int>/<dive:int>')
+    # description: list of plots available for dive
+    # parameters: mission
+    # returns: JSON dict of available plots, sorted by type
     @authorized()
     async def plotsHandler(request, glider:int, dive:int):
         (dvplots, plotlyplots) = await buildDivePlotList(gliderPath(glider,request), dive)
@@ -562,6 +599,9 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.json(message)
 
     @app.route('/log/<glider:int>/<dive:int>')
+    # description: formatted glider log 
+    # parameters: mission
+    # returns: summary version of log file in HTML format
     @authorized()
     async def logHandler(request, glider:int, dive:int):
         filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
@@ -569,6 +609,10 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.html(s)
 
     @app.route('/file/<ext:str>/<glider:int>/<dive:int>')
+    # description: processed glider basestation files
+    # args: ext=eng|log|cap
+    # parameters: mission
+    # returns: raw eng, log, or cap file
     @authorized()
     async def logengcapFileHandler(request, ext:str, glider: int, dive: int):
         filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.{ext}'
@@ -581,6 +625,9 @@ def attachHandlers(app: sanic.Sanic):
                 return sanic.response.text('not found', status=404)
            
     @app.route('/alerts/<glider:int>/<dive:int>')
+    # description: basestation alerts file
+    # parameters: mission
+    # returns: raw alerts file from basestation (HTML format)
     @authorized()
     async def alertsHandler(request, glider: int, dive: int):
         filename = f'{gliderPath(glider,request)}/alert_message.html.{dive:d}'
@@ -590,6 +637,9 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('not found')
      
     @app.route('/deltas/<glider:int>/<dive:int>')
+    # description: list of changes between dives
+    # parameters: mission
+    # returns: JSON formatted dict of control file changes
     @authorized()
     async def deltasHandler(request, glider: int, dive: int):
         cmdfile = f'{gliderPath(glider,request)}/cmdfile.{dive:d}'
@@ -633,12 +683,18 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.json(message)
 
     @app.route('/missions/<mask:str>')
+    # description: list of missions
+    # args: mask is unused
+    # returns: JSON formatted dict of missions and mission config
     async def missionsHandler(request, mask:int):
         table = await buildAuthTable(request, mask)
         msg = { "missions": table, "organization": request.app.ctx.organization }
         return sanic.response.json(msg)
      
     @app.route('/summary/<glider:int>')
+    # description: summary status of glider
+    # parameters: mission
+    # returns: JSON formatted dict of glider engineering status variables
     @authorized()
     async def summaryHandler(request, glider:int):
         msg = await summary.collectSummary(glider, gliderPath(glider,request))
@@ -647,6 +703,9 @@ def attachHandlers(app: sanic.Sanic):
 
     # this does setup and is generally only called once at page load
     @app.route('/status/<glider:int>')
+    # description: glider latest dive number and visualization config (mission.dat variables, mission plots)
+    # parameters: mission
+    # returns: JSON formatted dict of configuration
     @authorized()
     async def statusHandler(request, glider:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
@@ -680,6 +739,10 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.json(message)
 
     @app.route('/control/<glider:int>/<which:str>')
+    # description: glider control files
+    # args: which=cmdfile|targets|science|scicon.sch|tcm2mat.cal|pdoscmds.bat|sg_calib_constants.m
+    # parameters: mission
+    # returns: latest version of glider control file
     @authorized()
     async def controlHandler(request, glider:int, which:str):
         ok = ["cmdfile", "targets", "science", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
@@ -733,6 +796,9 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.json(message)
 
     @app.route('/db/<glider:int>/<dive:int>')
+    # description: query database for common engineering variables
+    # parameters: mission
+    # returns: JSON dict of engineering variables
     @authorized()
     async def dbHandler(request, glider:int, dive:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
@@ -760,6 +826,9 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.json(data)
 
     @app.route('/dbvars/<glider:int>')
+    # description: list of per dive database variables
+    # parameters: mission
+    # returns: JSON list of variable names
     @authorized()
     async def dbvarsHandler(request, glider:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
@@ -778,6 +847,10 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.json(data)
 
     @app.route('/pro/<glider:int>/<whichVar:str>/<whichProfiles:int>/<first:int>/<last:int>/<stride:int>/<top:int>/<bot:int>/<binSize:int>')
+    # description: extract bin averaged profiles
+    # args: whichProfiles=1(dives)|2(climbs)|3(both)|4(combine)
+    # parameters: mission
+    # returns: compressed JSON dict of binned profiles
     @authorized()
     @compress.compress()
     async def proHandler(request, glider:int, whichVar:str, whichProfiles:int, first:int, last:int, stride:int, top:int, bot:int, binSize:int):
@@ -791,6 +864,9 @@ def attachHandlers(app: sanic.Sanic):
 
 
     @app.route('/timevars/<glider:int>')
+    # description: list of timeseries variables
+    # parameters: mission
+    # returns: JSON list of variable names
     @authorized()
     async def timeSeriesVarsHandler(request, glider:int):
         ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
@@ -802,6 +878,9 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.json(names)
         
     @app.route('/time/<glider:int>/<dive:int>/<which:str>')
+    # description: extract timeseries data from netCDF
+    # parameters: mission
+    # returns: compressed JSON dict of timeseries data
     @authorized()
     @compress.compress()
     async def timeSeriesHandler(request, glider:int, dive:int, which:str):
@@ -818,6 +897,10 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.json(data)
 
     @app.route('/query/<glider:int>/<queryVars:str>')
+    # description: query per dive database for arbitrary variables
+    # args: queryVars=comma separated list
+    # parameters: mission
+    # returns: JSON dict of query results
     @authorized()
     async def queryHandler(request, glider, queryVars):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
@@ -844,6 +927,9 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.json(data)
 
     @app.route('/selftest/<glider:int>')
+    # description: selftest review
+    # parameters: mission
+    # returns: HTML format summary of latest selftest results
     async def selftestHandler(request, glider:int):
         cmd = f"{sys.path[0]}/SelftestHTML.py"
         proc = await asyncio.create_subprocess_exec(
@@ -908,6 +994,11 @@ def attachHandlers(app: sanic.Sanic):
         return False
 
     @app.post('/save/<glider:int>/<which:str>')
+    # description: save glider control file
+    # args: which=cmdfile|targets|science|scicon.sch|tcm2mat.cal|pdoscmds.bat|sg_calib_constants.m
+    # payload: (JSON) file, contents
+    # parameters: mission
+    # returns: validator results and/or error message  
     @authorized(modes=['private', 'pilot'], requirePilot=True)
     async def saveHandler(request, glider:int, which:str):
         # the no save command line flag allows one more layer
@@ -960,14 +1051,13 @@ def attachHandlers(app: sanic.Sanic):
             except Exception as e:
                 return sanic.response.text(f"error saving {which}, {str(e)}")
                 
-    #
-    # web socket (real-time streams), including the get handler for notifications
-    # from the basestation
-    #
-
-    # run a route to receive notifications remotely. Typically only used 
+    # The get handler for notifications from the basestation.
+    # Run a route to receive notifications remotely. Typically only used 
     # when running vis on a server different from the basestation proper
     @app.route('/url')
+    # description: .urls notification handler (used when vis server is different from basestation server)
+    # parameters: instrument_name, dive, files (), status (), gpsstr ()
+    # returns: 'ok' or 'error'
     async def urlHandler(request):
         if 'instrument_name' not in request.args:
             return sanic.response.text('error')
@@ -1043,6 +1133,9 @@ def attachHandlers(app: sanic.Sanic):
         return (None, time.time())
 
     @app.route('/chat/history/<glider:int>')
+    # description: chat history from database
+    # parameters: mission
+    # returns: JSON dict of chat history
     @authorized(modes=['private', 'pilot'])
     async def chatHistoryHandler(request, glider:int):
         if request.app.config.NO_CHAT:
@@ -1056,6 +1149,10 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.json(rows)
 
     @app.post('/chat/send/<glider:int>')
+    # description: POST a message to chat
+    # parameters: mission
+    # payload: (form) attachment, message
+    # returns: JSON dict of chat history
     @authorized(modes=['private', 'pilot'])
     async def chatHandler(request, glider:int):
         if request.app.config.NO_CHAT:
@@ -1106,12 +1203,18 @@ def attachHandlers(app: sanic.Sanic):
             # await conn.close()
 
     @app.route('/pos/<glider:int>')
+    # description: position display
+    # parameters: mission
+    # returns: HTML page with position display
     @authorized()
     async def posHandler(request, glider:int):
         filename = f'{sys.path[0]}/html/pos.html'
         return await sanic.response.file(filename, mime_type='text/html')
 
     @app.route('/pos/poll/<glider:int>')
+    # description: get latest glider position
+    # parameters: mission
+    # returns: JSON dict of glider position
     @authorized()
     async def posPollHandler(request: sanic.Request, glider:int):
         if 't' in request.args and len(request.args['t'][0]) > 0:
@@ -1168,7 +1271,13 @@ def attachHandlers(app: sanic.Sanic):
 
         return row
  
+    #
+    # web socket (real-time streams), 
+    #
+
     @app.websocket('/pos/stream/<glider:int>')
+    # description: stream real-time position updates
+    # parameters: mission
     @authorized()
     async def posStreamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int):
         socket = zmq.asyncio.Context().socket(zmq.SUB)
@@ -1191,6 +1300,8 @@ def attachHandlers(app: sanic.Sanic):
             await ws.send(msg[1].decode('utf-8'))
  
     @app.websocket('/stream/<which:str>/<glider:int>')
+    # description: stream real-time glider information (comm.log, chat, cmdfile changed, glider calling, etc.)
+    # parameters: mission
     @authorized()
     async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
         filename = f'{gliderPath(glider,request)}/comm.log'
@@ -1284,7 +1395,9 @@ def attachHandlers(app: sanic.Sanic):
 
     # not protected by decorator - buildAuthTable only returns authorized missions
     @app.websocket('/watch/<mask:str>')
-    # @authorized(protections=['pilot'])
+    # description: stream real-time glider summary state (call status, cmdfile directive)
+    # parameters: mission
+    ## @authorized(protections=['pilot'])
     async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
 
         sanic.log.logger.debug("watchHandler start")
