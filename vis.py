@@ -684,7 +684,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/missions/<mask:str>')
     # description: list of missions
-    # arg: mask is unused
+    # args: mask is unused
     # returns: JSON formatted dict of missions and mission config
     async def missionsHandler(request, mask:int):
         table = await buildAuthTable(request, mask)
