@@ -411,7 +411,10 @@ def process_pagers(
                             fmt = pagers_tag[len(tag) :]
                             pagers_tag = tag
                             break
-
+                        
+                    if fmt == "":
+                        fmt = "ddmm"
+                        
                     if pagers_tag not in known_tags:
                         log_error(
                             "Unknown tag (%s) on line (%s) in %s - skipping"
