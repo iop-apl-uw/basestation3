@@ -680,6 +680,7 @@
 
             // humidity
             h = document.createElement('div');
+            h.title = `humidity slope ${data.humiditySlope.toFixed(2)}/dv`;
             h.classList.add('indicator');
             h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
             h.classList.add(thresh(data.humiditySlope, 0.2, 0.05));
