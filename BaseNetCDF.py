@@ -1838,6 +1838,7 @@ nc_var_metadata = {
     "log_SENSORS": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_SENSOR_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_SENSOR_SECS": [False, "c", {}, nc_scalar],  # Multi-valued string
+    "log_SHORTING_PLUG":[False, "d", {}, nc_scalar], # From Kongsberg firmware
     "log_SIM_PITCH": [False, "d", {}, nc_scalar],
     "log_SIM_W": [False, "d", {}, nc_scalar],
     "log_SMARTDEVICE1": [False, "d", {}, nc_scalar],
