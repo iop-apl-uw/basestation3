@@ -247,42 +247,48 @@ def plot_compass_compare(
     )
     roll_diff_mean = np.mean(roll_interp - second_compass_roll_ang[filter_i_v])
 
-    l_annotations = [
-        {
-            "text": f"Heading Differnce Mean:{head_diff_mean:.2f} deg RMS:{head_rms:.3f} deg",
-            "showarrow": False,
-            "xref": "paper",
-            "yref": "paper",
-            "align": "left",
-            "xanchor": "left",
-            "valign": "top",
-            "x": 0,
-            "y": -0.04,
-        },
-        {
-            "text": f"Pitch Differnce Mean:{pitch_diff_mean:.2f} deg RMS:{pitch_rms:.3f} deg",
-            "showarrow": False,
-            "xref": "paper",
-            "yref": "paper",
-            "align": "left",
-            "xanchor": "left",
-            "valign": "top",
-            "x": 0,
-            "y": -0.06,
-        },
-        {
-            "text": f"Roll Differnce Mean:{roll_diff_mean:.2f} deg RMS:{roll_rms:.3f} deg",
-            "showarrow": False,
-            "xref": "paper",
-            "yref": "paper",
-            "align": "left",
-            "xanchor": "left",
-            "valign": "top",
-            "x": 0,
-            "y": -0.08,
-        },
-    ]
-    fig.update_layout({"annotations": tuple(l_annotations)})
+    # l_annotations = [
+    #     {
+    #         "text": f"Heading Differnce Mean:{head_diff_mean:.2f} deg RMS:{head_rms:.3f} deg",
+    #         "showarrow": False,
+    #         "xref": "paper",
+    #         "yref": "paper",
+    #         "align": "left",
+    #         "xanchor": "left",
+    #         "valign": "top",
+    #         "x": 0,
+    #         "y": -0.04,
+    #     },
+    #     {
+    #         "text": f"Pitch Differnce Mean:{pitch_diff_mean:.2f} deg RMS:{pitch_rms:.3f} deg",
+    #         "showarrow": False,
+    #         "xref": "paper",
+    #         "yref": "paper",
+    #         "align": "left",
+    #         "xanchor": "left",
+    #         "valign": "top",
+    #         "x": 0,
+    #         "y": -0.06,
+    #     },
+    #     {
+    #         "text": f"Roll Differnce Mean:{roll_diff_mean:.2f} deg RMS:{roll_rms:.3f} deg",
+    #         "showarrow": False,
+    #         "xref": "paper",
+    #         "yref": "paper",
+    #         "align": "left",
+    #         "xanchor": "left",
+    #         "valign": "top",
+    #         "x": 0,
+    #         "y": -0.08,
+    #     },
+    # ]
+    # fig.update_layout({"annotations": tuple(l_annotations)})
+
+    rms_line = (
+        f"Heading Differnce Mean:{head_diff_mean:.2f} deg RMS:{head_rms:.3f} deg<br>"
+        f"Pitch Differnce Mean:{pitch_diff_mean:.2f} deg RMS:{pitch_rms:.3f} deg<br>"
+        f"Roll Differnce Mean:{roll_diff_mean:.2f} deg RMS:{roll_rms:.3f} deg"
+    )
 
     depth = (depth * -1.0) / zscl
     depth_time = (depth_time - start_time) / 60.0
@@ -432,7 +438,7 @@ def plot_compass_compare(
     fig.update_layout(
         {
             "xaxis": {
-                "title": "Time (minutes)",
+                "title": "Time (minutes)<br>" + rms_line,
                 "showgrid": True,
                 #'range' : [depth_time[0], depth_time[-1]],
                 "range": [0, depth_time[-1]],
