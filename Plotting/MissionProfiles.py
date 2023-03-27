@@ -103,10 +103,12 @@ def mission_profiles(
     with open(section_file_name, "r") as f:
         x = yaml.safe_load(f.read())
 
-    if not 'variables' in x or len(x['variables']) == 0:
+    if not "variables" in x or len(x["variables"]) == 0:
+        log_error(f"No 'variables' key found in {section_file_name} - not plotting")
         return ([], [])
 
-    if not 'sections' in x or len(x['sections']) == 0:
+    if not "sections" in x or len(x["sections"]) == 0:
+        log_error(f"No 'sections' key found in {section_file_name} - not plotting")
         return ([], [])
 
     conn = Utils.open_mission_database(base_opts)
