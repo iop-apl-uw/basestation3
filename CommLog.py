@@ -95,7 +95,7 @@ def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
     # log_info("GPS_lat_lon_and_recov dive_prefix:%s dive_num:%s calls_made:%s call_cycle:%s" %
     # (str(dive_prefix), str(session.dive_num), str(session.calls_made), str(session.call_cycle)))
 
-    if dive_prefix is not None:
+    if dive_prefix:
         prefix = "dive:%s calls_made:%s call_cycle:%s " % (
             str(session.dive_num),
             str(session.calls_made),
@@ -924,7 +924,6 @@ def crack_counter_line(
 
         # Looks like a counter line
         if is_digit(cnt_vals[0]) and is_digit(cnt_vals[1]) and is_digit(cnt_vals[2]):
-
             # Differences in counter lines
             #
             # First - counter line with optional GPS string on end
@@ -959,7 +958,6 @@ def crack_counter_line(
             # 65.00 First and Final: dive_num, callsMade, cnt_NoComm
 
             def convert_f(counter_vals, position, cnv_type):
-
                 try:
                     return cnv_type(counter_vals[position])
                 except ValueError:
@@ -1956,7 +1954,7 @@ class TestCommLogCallback:
 
     def __init__(self):
         self.cmds = {}
-        for (name, val) in inspect.getmembers(self):
+        for name, val in inspect.getmembers(self):
             if inspect.ismethod(val) and name.startswith(self.cmd_prefix):
                 self.cmds[name[len(self.cmd_prefix) :]] = val
 
