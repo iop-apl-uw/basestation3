@@ -1090,7 +1090,7 @@ def TSV_iterative(base_opts, elapsed_time_s_v, start_of_climb_i,
         log_warning("Excessive thermal-inertia temperature variance (%.2fC) -- recomputing without thermal-inertia calculations" % max_temp_c_diff)
         directives.suggest("no_correct_thermal_inertia_effects %% high temperature correction %.2fC" % max_temp_c_diff);
         
-        return TSV_iterative(elapsed_time_s_v, start_of_climb_i,
+        return TSV_iterative(base_opts, elapsed_time_s_v, start_of_climb_i,
                              # measurements, corrected
                              temp_init_cor_v, temp_init_cor_qc_v,
                              cond_init_cor_v, cond_init_cor_qc_v,
