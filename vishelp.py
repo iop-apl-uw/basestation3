@@ -26,13 +26,11 @@ for line in f:
     elif handler:
         handler = None
 
-
+show = ['description', 'args', 'payload', 'parameters', 'returns']
 for k in sorted(api.keys()):
     print(f"{api[k]['method']} {api[k]['syntax']}")
-    for m in api[k].keys():
-        if m in ['syntax', 'method']:
-            continue
-
-        print(f"    {m:11s}: {api[k][m]}")
+    for m in show:
+        if m in api[k]:
+            print(f"    {m:11s}: {api[k][m]}")
 
     print()
