@@ -285,9 +285,9 @@ def plot_compass_compare(
     # fig.update_layout({"annotations": tuple(l_annotations)})
 
     rms_line = (
-        f"Heading Differnce Mean:{head_diff_mean:.2f} deg RMS:{head_rms:.3f} deg<br>"
-        f"Pitch Differnce Mean:{pitch_diff_mean:.2f} deg RMS:{pitch_rms:.3f} deg<br>"
-        f"Roll Differnce Mean:{roll_diff_mean:.2f} deg RMS:{roll_rms:.3f} deg"
+        f"Heading Difference Mean:{head_diff_mean:.2f} deg RMS:{head_rms:.3f} deg<br>"
+        f"Pitch Difference Mean:{pitch_diff_mean:.2f} deg RMS:{pitch_rms:.3f} deg<br>"
+        f"Roll Difference Mean:{roll_diff_mean:.2f} deg RMS:{roll_rms:.3f} deg"
     )
 
     depth = (depth * -1.0) / zscl
