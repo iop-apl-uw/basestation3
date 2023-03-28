@@ -133,7 +133,7 @@
             /* position: relative; */
             display: grid;
             grid-template-columns: auto;
-            grid-template-rows: 0.55fr 50px 150px max-content;
+            grid-template-rows: 0.55fr 50px 150px 0.45fr;
             grid-template-areas:
                 "main"
                 "toolbar"
