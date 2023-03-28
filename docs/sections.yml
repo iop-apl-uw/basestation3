@@ -2,12 +2,24 @@
 
 # inheritance priority order (highest to lowest) is 
 # sections, variables, defaults
+#
+# available colormaps (from cmocean): 
+#   thermal, haline, solar, ice, gray, oxy, deep, dense, algae, 
+#   matter, turbid, speed, amp, tempo, phase, balance, delta, curl
+
+# basics for all section 0-990m, every dive (step=1) and 5m bins
 
 defaults:
   top: 0
   bottom: 990
   bin: 5
   step: 1
+
+# specifying min and max will clamp the colorscale 
+# for easier comparison across sections
+
+# only plot 0-400m for optical sections (sensor is generally
+# turned off below that)
 
 variables: 
   temperature: { colormap: thermal, min: 3, max: 20 }
@@ -16,15 +28,21 @@ variables:
   wlbb2fl_sig695nm: { top: 0, bottom: 400, colormap: algae }
   wlbb2fl_sig700nm: { top: 0, bottom: 400, colormap: algae }
 
-# section name 000 is special for vis all 000 sections
-# presented ahead of the rest of the sections
-# in the ribbon
+# Section name 000 is special for vis. All 000 sections
+# are presented ahead of the rest of the sections
+# in the ribbon.
 #
 # section numbers are quoted below because we need them
 # to be a name for sorting and yaml will strip leading
 # zeros off a plain integer and the alpha sort won't
 # come out right
-  
+#
+# start: 1, stop -1 = dive 1 - latest
+#
+# flip: true means the section x axis is reversed
+# so that when comparison multiple repeat back-and-forth
+# sections they are oriented the same geographically
+
 sections:
   "000": {start: 1, stop: -1, step: 5}
   "001": {start: 1, stop: 34 }
