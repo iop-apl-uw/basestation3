@@ -1747,6 +1747,26 @@ def createApp(overrides: dict) -> sanic.Sanic:
 
     return app
 
+def usage():
+    print("vis.py glider mission visualization server")
+    print("  --mission=|-m      [sgNNN:/abs/mission/path] run in single mission mode")
+    print("  --mode=|-o         private|pilot|public")
+    print("  --port=|-p         portNumber (ex. 20000)")
+    print("  --root=|-r         baseDirectory (ex. /home/seaglider)")
+    print("  --domain=|-d       fully-qualified-domain-name (optional)")
+    print("  --missionsfile=|-f missions.dat file (default ROOT/missions.dat)")
+    print("  --usersfile=|-u    users.dat file (default ROOT/users.dat)")
+    print("  --certs=|-c        certificate file for SSL")
+    print("  --ssl|-s           boolean enable SSL")
+    print("  --inspector|-i     boolean enable SANIC inspector")
+    print("  --nochat           boolean run without chat support")
+    print("  --nosave           boolean run without save support")
+    print()
+    print("  Environment variables: ")
+    print("    SANIC_CERTPATH, SANIC_ROOTDIR, SANIC_SECRET, ")
+    print("    SANIC_MISSIONS_FILE, SANIC_USERS_FILE, SANIC_FQDN, ")
+    print("    SANIC_USER, SANIC_SINGLE_MISSION")
+
 if __name__ == '__main__':
 
     root = os.getenv('SANIC_ROOTDIR')
@@ -1759,51 +1779,44 @@ if __name__ == '__main__':
 
     overrides = {}
 
-    if len(sys.argv) == 2:
-        if sys.argv[1] == "public":
-            port = 443
-            runMode = MODE_PUBLIC
-            ssl = True
-        else:
-            port = int(sys.argv[1])
-            if port == 443:
-                runMode = MODE_PILOT
-    else:
-        try:
-            opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:si', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "nosave", "nochat", "inspector"])
-        except getopt.GetoptError as err:
-            print(err)
-            sys.exit(1)
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:sih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector", "help", "nosave", "nochat"])
+    except getopt.GetoptError as err:
+        print(err)
+        sys.exit(1)
 
-        for o,a in opts:
-            if o in ['-p', '--port']:
-                port = int(a)
-            elif o in ['-o', '--mode']:
-                runMode = runModes[a]
-            elif o in ['-r', '--root']:
-                root = a
-            elif o in ['-d', '--domain']:
-                overrides['FQDN'] = a
-            elif o in ['-f', '--missionsfile']:
-                overrides['MISSIONS_FILE'] = a
-            elif o in ['-u', '--usersfile']:
-                overrides['USERS_FILE'] = a
-            elif o in ['--nosave']:
-                noSave = True
-            elif o in ['--nochat']:
-                noChat = True
-            elif o in ['-c', '--certs']:
-                certPath = a
-            elif o in ['-s', '--ssl']:
-                ssl = True
-            elif o in ['-i', '--inspector']:
-                overrides['INSPECTOR'] = True
-            elif o in ['-m', '--mission']:
-                overrides['SINGLE_MISSION'] = a
-                pieces = a.split(':')
-                if len(pieces) != 2:
-                    print("-m sgNNN:/abs/mission/path")
-                    sys.exit(1)
+    for o,a in opts:
+        if o in ['-p', '--port']:
+            port = int(a)
+        elif o in ['-o', '--mode']:
+            runMode = runModes[a]
+        elif o in ['-r', '--root']:
+            root = a
+        elif o in ['-d', '--domain']:
+            overrides['FQDN'] = a
+        elif o in ['-f', '--missionsfile']:
+            overrides['MISSIONS_FILE'] = a
+        elif o in ['-u', '--usersfile']:
+            overrides['USERS_FILE'] = a
+        elif o in ['--nosave']:
+            noSave = True
+        elif o in ['--nochat']:
+            noChat = True
+        elif o in ['-c', '--certs']:
+            certPath = a
+        elif o in ['-s', '--ssl']:
+            ssl = True
+        elif o in ['-i', '--inspector']:
+            overrides['INSPECTOR'] = True
+        elif o in ['-m', '--mission']:
+            overrides['SINGLE_MISSION'] = a
+            pieces = a.split(':')
+            if len(pieces) != 2:
+                print("-m sgNNN:/abs/mission/path")
+                sys.exit(1)
+        elif o in ['-h', '--help']:
+            usage()
+            sys.exit(1)
                  
     if root is None:
         root = '/home/seaglider'
