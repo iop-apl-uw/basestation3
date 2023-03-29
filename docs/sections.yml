@@ -22,11 +22,12 @@ defaults:
 # turned off below that)
 
 variables: 
-  temperature: { colormap: thermal, min: 3, max: 20 }
+  temperature: { colormap: thermal, min: 3, max: 20, , units: '$^{\circ}C$' }
   salinity: { colormap: haline, min: 31.5, max: 34.5 }
-  wlbb2fl_sig470nm: { top: 0, bottom: 400, colormap: algae }
-  wlbb2fl_sig695nm: { top: 0, bottom: 400, colormap: algae }
-  wlbb2fl_sig700nm: { top: 0, bottom: 400, colormap: algae }
+  wlbb2fl_sig470nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: '$m^\{-1\}sr^\{-1\}$' }
+  wlbb2fl_sig695nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: '${\mu}g/l$' }
+  wlbb2fl_sig700nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: '$m^{-1}sr^{-1}$' }
+  aanderaa4831_dissolved_oxygen: { top: 0, bottom: 1000, colormap: oxy, units: '${\mu}mol/kg$' }
 
 # Section name 000 is special for vis. All 000 sections
 # are presented ahead of the rest of the sections

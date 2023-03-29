@@ -30,7 +30,7 @@ Independent of how vis.py is being accessed, it can be run in one of three modes
        from the web app. Pilot specific endpoints in the API
        (save, chat) are disabled.   
 
-Any of the instances can be configured using config files (missions.dat, users.dat)
+Any of the instances can be configured using config files (missions.yml, users.yml)
 or to operate on just a single mission using the -m command-line flag.
 
 To run in private mode, establish an ssh tunnel when connecting to your basestation:
@@ -41,7 +41,7 @@ To run in private mode, establish an ssh tunnel when connecting to your basestat
 
     browser: http://localhost:20001/217
 
-Authentication, enabled fesatures, and permissions are highly configurable via missions.dat. 
+Authentication, enabled fesatures, and permissions are highly configurable via missions.yml. 
 Always test a publicly available running instance to make sure that permissions are
 appropriate and that features are not being exposed in unintended ways. 
 

@@ -427,7 +427,7 @@ def attachHandlers(app: sanic.Sanic):
         return await sanic.response.file(filename, mime_type='text/html')
 
     @app.route('/mapdata/<glider:int>')
-    # description: get map configation (also, sa, kml from missions.dat)
+    # description: get map configation (also, sa, kml from missions.yml)
     # parameters: mission
     # returns: JSON dict with configuration variables
     @authorized()
@@ -460,7 +460,7 @@ def attachHandlers(app: sanic.Sanic):
     # Protect at the mission level (which protects that mission at 
     # all endpoints) or at the endpoint level with something like
     # users: [download] or groups: [download] and build
-    # users.dat appropriately
+    # users.yml appropriately
     #
     # curl -c cookies.txt -X POST http://myhost/auth \
     # -H "Content-type: application/json" \
@@ -1732,9 +1732,9 @@ def createApp(overrides: dict) -> sanic.Sanic:
     if 'SECRET' not in app.config:
         app.config.SECRET = secrets.token_hex()
     if 'MISSIONS_FILE' not in app.config:
-        app.config.MISSIONS_FILE = "missions.dat"
+        app.config.MISSIONS_FILE = "missions.yml"
     if 'USERS_FILE' not in app.config:
-        app.config.USERS_FILE = "users.dat"
+        app.config.USERS_FILE = "users.yml"
     if 'FQDN' not in app.config:
         app.config.FQDN = None;
     if 'USER' not in app.config:
@@ -1755,8 +1755,8 @@ def usage():
     print("  --port=|-p         portNumber (ex. 20000)")
     print("  --root=|-r         baseDirectory (ex. /home/seaglider)")
     print("  --domain=|-d       fully-qualified-domain-name (optional)")
-    print("  --missionsfile=|-f missions.dat file (default ROOT/missions.dat)")
-    print("  --usersfile=|-u    users.dat file (default ROOT/users.dat)")
+    print("  --missionsfile=|-f missions.yml file (default ROOT/missions.yml)")
+    print("  --usersfile=|-u    users.yml file (default ROOT/users.yml)")
     print("  --certs=|-c        certificate file for SSL")
     print("  --ssl|-s           boolean enable SSL")
     print("  --inspector|-i     boolean enable SANIC inspector")
