@@ -373,10 +373,11 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                                 # for gliders where the CTD has been moved from scicon to the truck (or back) via the new tailboards,
                                 # a new set of vectors must be constructed, with a new dimension that is different
                                 # then the others
+                                # TODO - new vector for combined instrument needs to be created
                                 if dive_nc_varname not in ctd_vars:
                                     raise RuntimeError(
-                                        "Differing dim_info %s vs %s"
-                                        % (old_dim_name, dim_name)
+                                        "Differing dim_info %s vs %s ncfile:%s"
+                                        % (old_dim_name, dim_name, dive_nc_profile_name)
                                     )
                                 rename_ctd_dim = True
                                 log_debug(
