@@ -140,6 +140,10 @@ def mission_profiles(
         print(f"Unable to open {ncname}")
         return ([], [])
 
+    # Simple hack for case where the most recent dives aren't in the timeseries file
+    # (due to processing errors typically)
+    latest = min(nci.variables["dive_number"][-1], latest)
+
     for vk in list(x['variables'].keys()):
         prev_x = None
         for sk in list(x['sections'].keys()):
