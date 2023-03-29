@@ -536,6 +536,7 @@ def attachHandlers(app: sanic.Sanic):
     async def proxykmzHandler(request, url):
         allowed = [
                    'https://usicecenter.gov/File/DownloadCurrent',
+                   'https://iop.apl.washington.edu/seaglider_ssh',
                   ]
 
         found = False
