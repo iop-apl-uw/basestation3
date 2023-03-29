@@ -76,6 +76,9 @@ def timeSeriesToProfile(var, which,
     if x == None:
         x = extractProfileVars(None, ['ctd_time', 'ctd_depth', var], nci=nci)
 
+    nan = numpy.empty((len(bins) - 1, ))
+    nan[:] = numpy.nan
+
     i = 0
     for p in dives:
 
@@ -88,9 +91,12 @@ def timeSeriesToProfile(var, which,
             if sum(1 for x in ixs if x) > 0:
                 d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
-            
-            if d is not None:
-                arr[:,i] = d.T
+
+                if d is not None:
+                    arr[:,i] = d.T
+                else:
+                    arr[:,i] = nan
+
                 message['dive'].append(p + 0.25)
                 message['which'].append(1)
                 i = i + 1
@@ -101,8 +107,11 @@ def timeSeriesToProfile(var, which,
                 d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
 
-            if d is not None:
-                arr[:,i] = d.T
+                if d is not None:
+                    arr[:,i] = d.T
+                else:
+                    arr[:,i] = nan
+
                 message['dive'].append(p + 0.75)
                 message['which'].append(2)
                 i = i + 1
@@ -113,8 +122,11 @@ def timeSeriesToProfile(var, which,
                 d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
             
-            if d is not None:
-                arr[:,i] = d.T
+                if d is not None:
+                    arr[:,i] = d.T
+                else:
+                    arr[:,i] = nan
+
                 message['dive'].append(p + 0.5)
                 message['which'].append(4)
                 i = i + 1

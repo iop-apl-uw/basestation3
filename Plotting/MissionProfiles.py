@@ -160,6 +160,7 @@ def mission_profiles(
             zmin = getValue(x, 'min', sk, vk, None)
             zmax = getValue(x, 'max', sk, vk, None)
             units = getValue(x, 'units', sk, vk, None)
+            fill  = getValue(x, 'fill', sk, vk, False)
 
             if stop == -1 or stop >= latest:
                 stop = latest
@@ -196,7 +197,7 @@ def mission_profiles(
                         'z': d[vk],
                         'contours_coloring': 'heatmap',
                         'colorscale':        cmocean_to_plotly(cmap, 100),
-                        'connectgaps':       True,
+                        'connectgaps':       fill,
                         'contours':          contours,
                         "colorbar": {
                             "title": {
