@@ -1,5 +1,3 @@
-<!DOCTYPE html>
-
 <script src="../../../../../script/plotly-latest.min.js"></script>
 <script src="../../../../../script/util.js"></script>
 
@@ -73,13 +71,13 @@
 </script>
 
 <html>
-<body onload="init();">
+<body onload="init();" style="min-height: 100vh;">
      <span onclick="changeDive(-1); return false;" style="text-decoration:none; font-size:32px;">&larr;</span>
     <span style="font-size:32px;"> &#9863; </span> 
     <span onclick="changeDive(1); return false;" style="text-decoration:none; font-size:32px;">&rarr;</span> 
-    <div id="mainDiv">
+    <div id="mainDiv" style="height: 100vh;" >
     </div>
-    <img id="mainImg" style="display:none;">
+    <img id="mainImg" style="display:none; height: 100%;">
     </img>
 </body>
 </html>
