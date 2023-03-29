@@ -103,10 +103,12 @@ def mission_profiles(
     with open(section_file_name, "r") as f:
         x = yaml.safe_load(f.read())
 
-    if not 'variables' in x or len(x['variables']) == 0:
+    if not "variables" in x or len(x["variables"]) == 0:
+        log_error(f"No 'variables' key found in {section_file_name} - not plotting")
         return ([], [])
 
-    if not 'sections' in x or len(x['sections']) == 0:
+    if not "sections" in x or len(x["sections"]) == 0:
+        log_error(f"No 'sections' key found in {section_file_name} - not plotting")
         return ([], [])
 
     conn = Utils.open_mission_database(base_opts)
@@ -153,6 +155,7 @@ def mission_profiles(
             cmap = getValue(x, 'colormap', sk, vk, 'thermal')
             zmin = getValue(x, 'min', sk, vk, None)
             zmax = getValue(x, 'max', sk, vk, None)
+            units = getValue(x, 'units', sk, vk, None)
 
             if stop == -1 or stop >= latest:
                 stop = latest
@@ -180,7 +183,7 @@ def mission_profiles(
                             "family": "Raleway",
                             "size": 12,
                             "color": "white"
-                        }
+                        },
                      }
 
             props = {
@@ -190,7 +193,15 @@ def mission_profiles(
                         'contours_coloring': 'heatmap',
                         'colorscale':        cmocean_to_plotly(cmap, 100),
                         'connectgaps':       True,
-                        'contours':          contours
+                        'contours':          contours,
+                        "colorbar": {
+                            "title": {
+                                "text": units,
+                                "side": "top",
+                            },
+                            # "thickness": 0.02,
+                            # "thicknessmode": "fraction",
+                        },
                     }
 
             if zmin is not None:
@@ -201,14 +212,22 @@ def mission_profiles(
             fig.add_trace(plotly.graph_objects.Contour( **props ) )
 
             title_text = f"{mission_str}<br>{vk}<br>section {sk}: {start}-{stop}"
-            
+ 
             fig.update_layout(
                 {
                     "xaxis": {
                         "title": "dive",
+                        # "title": units,
                         "showgrid": False,
                         "autorange": "reversed" if flip else True,
                     },
+                    "xaxis2": {
+                        "title": units,
+                        "showgrid": False,
+                        "side": "top",
+                        "overlaying": "x1",
+                    },
+
                     "yaxis": {
                         "title": "depth",
                         "showgrid": False,

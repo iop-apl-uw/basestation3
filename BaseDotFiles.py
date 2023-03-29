@@ -412,6 +412,9 @@ def process_pagers(
                             pagers_tag = tag
                             break
 
+                    if fmt == "":
+                        fmt = "ddmm"
+
                     if pagers_tag not in known_tags:
                         log_error(
                             "Unknown tag (%s) on line (%s) in %s - skipping"
@@ -453,6 +456,14 @@ def process_pagers(
                                 dive_prefix = True
                             fmt = fmts[0]
 
+                        # GBS - 2023/03/27
+                        # Due to a long standing bug in CommLog.py:GPS_lat_lon_and_recov, the
+                        # divenum formatting has been in place for all these messages.
+                        # The bug in CommLog has been fixed, but at this point, its seems more
+                        # useful to have the diveprefix on all these messages
+                        dive_prefix = True
+
+                        log_debug(f"fmt:{fmt} dive_prefix:{dive_prefix}")
                         if comm_log:
                             (
                                 gps_message,
