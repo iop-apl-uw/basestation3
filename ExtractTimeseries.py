@@ -74,7 +74,10 @@ def timeSeriesToProfile(var, which,
         arr = numpy.zeros((len(bins) - 1, len(dives)))
   
     if x == None:
-        x = extractProfileVars(None, ['ctd_time', 'ctd_depth', var], nci=nci)
+        x = extractVarTimeDepth(None, var, nci=nci)
+
+    nan = numpy.empty((len(bins) - 1, ))
+    nan[:] = numpy.nan
 
     i = 0
     for p in dives:
@@ -84,40 +87,52 @@ def timeSeriesToProfile(var, which,
         t2 = nci.variables['end_time'][p-1]
     
         if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
-            ixs = (x['ctd_time'] > t0) &(x['ctd_time'] < t1)
+            ixs = (x['time'] > t0) &(x['time'] < t1)
+            message['dive'].append(p + 0.25)
+            message['which'].append(1)
+            d = None
             if sum(1 for x in ixs if x) > 0:
-                d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
+                d = scipy.stats.binned_statistic(x['depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
-            
+
             if d is not None:
                 arr[:,i] = d.T
-                message['dive'].append(p + 0.25)
-                message['which'].append(1)
-                i = i + 1
+            else:
+                arr[:,i] = nan
+
+            i = i + 1
 
         if which in (Globals.WhichHalf.up, Globals.WhichHalf.both):
-            ixs = (x['ctd_time'] > t1) & (x['ctd_time'] < t2)
+            ixs = (x['time'] > t1) & (x['time'] < t2)
+            message['dive'].append(p + 0.5)
+            message['which'].append(4)
+            d = None
             if sum(1 for x in ixs if x) > 0:
-                d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
+                d = scipy.stats.binned_statistic(x['depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
 
             if d is not None:
                 arr[:,i] = d.T
-                message['dive'].append(p + 0.75)
-                message['which'].append(2)
-                i = i + 1
+            else:
+                arr[:,i] = nan
+
+            i = i + 1
 
         if which == Globals.WhichHalf.combine:
-            ixs = (x['ctd_time'] > t0) & (x['ctd_time'] < t2)
+            ixs = (x['time'] > t0) & (x['time'] < t2)
+            message['dive'].append(p + 0.5)
+            message['which'].append(4)
+            d = None
             if sum(1 for x in ixs if x) > 0:
-                d = scipy.stats.binned_statistic(x['ctd_depth'][ixs],
+                d = scipy.stats.binned_statistic(x['depth'][ixs],
                                              x[var][ixs], statistic='mean', bins=bins).statistic
-            
+                
             if d is not None:
                 arr[:,i] = d.T
-                message['dive'].append(p + 0.5)
-                message['which'].append(4)
-                i = i + 1
+            else:
+                arr[:,i] = nan
+
+            i = i + 1
 
     message['depth'] = bins
     message[var] = arr[:,0:i]
@@ -194,7 +209,7 @@ def extractVars(nc_filename, varNames, dive1, diveN, nci=None):
 
     return message
 
-def extractProfileVars(nc_filename, plot_vars, nci=None):
+def extractVarTimeDepth(nc_filename, varname, nci=None):
     if nci == None:
         try:
             nci = Utils.open_netcdf_file(nc_filename, "r")
@@ -203,30 +218,34 @@ def extractProfileVars(nc_filename, plot_vars, nci=None):
             return None
 
     message = {}
+    var = nci.variables[varname][:]
+    dim = nci.variables[varname].dimensions[0]
 
-    for p in plot_vars:
-        try:
-            var = nci.variables[p][:]
-            dim = nci.variables[p].dimensions[0]
-            if dim != 'ctd_data_point':
-                for k in nci.variables.keys():
-                    var_t = []
-                    if 'time' in k[-4:] and len(nci.variables[k].dimensions) and '_data_point' in nci.variables[k].dimensions[0] and dim == nci.variables[k].dimensions[0]:
-                        var_t = nci.variables[k][:]
-                        break
+    if dim == 'ctd_data_point':
+        message['depth'] = nci.variables['ctd_depth'][:]
+        message['time'] = nci.variables['ctd_time'][:]
+        message[varname] = nci.variables[varname][:]
+        return message
 
-                if len(var_t):
-                    f = scipy.interpolate.interp1d(
-                        var_t, var, kind="linear", bounds_error=False, fill_value="extrapolate"
-                    )
-                    var = f(nci.variables['ctd_time'][:])
-                else:
-                    print(f'no t found for {p}({dim})');
-                    var = []
+    try:
+        var_t = None
+        for k in nci.variables.keys():
+            if 'time' in k[-4:] and len(nci.variables[k].dimensions) and '_data_point' in nci.variables[k].dimensions[0] and dim == nci.variables[k].dimensions[0]:
+                var_t = nci.variables[k][:]
+                break
 
-            message[p] = var
-        except:
-            print(f"Could not extract variable {p}")
+        if (var_t is not None) and (len(var_t)):
+            f = scipy.interpolate.interp1d(
+                nci.variables['ctd_time'][:], nci.variables['ctd_depth'][:], kind="linear", bounds_error=False
+            )
+            message['depth'] = f(var_t)
+            message['time'] = var_t
+            message[varname] = nci.variables[varname][:]
+        else:
+            print(f'no t found for {varname}({dim})');
+
+    except Exception as e:
+        print(f"Could not extract variable {varname}, {e}")
 
     return message
 

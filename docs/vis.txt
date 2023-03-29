@@ -1,3 +1,55 @@
+Running the server:
+
+vis.py can be run in multiple ways.
+    
+    1. On a publicly accessible port (80 or 443) with or without SSL 
+       as both server and web app. 
+    2. As a web app on a port that is reverse proxied behind another
+       server (nginx or apache) running on 80 or 443. Generally the server  
+       provides SSL and the app instance runs plain http.
+    3. As a web app running on a non-privileged port that is accessible via
+       ssh tunnel. This is generally how a pilot would run their
+       own private instances with all of their standard privileges.
+
+Independent of how vis.py is being accessed, it can be run in one of three modes.
+
+    1. private mode - generally intended only for use when running over an
+       ssh tunnel. The app runs with the privileges of the invoking
+       user and all functionality is exposed and available (chat, ability
+       to change control files). App level authentication rules can 
+       still be applied. 
+    2. pilot mode - intended to provide a piloting interface over a
+       web interface. Authentication is provided at the app level
+       and additional layers of authentication can be provided at the 
+       reverse proxy level. Visually, this adds the status panel,
+       comm.log viewer, and control file editor to the main display.
+       Chat/log is available. Chat and save buttons can be separately
+       disabled for a "public" view that still preserves the pilot
+       display panels.
+    3. public mode - removes the three pilot panels and chat 
+       from the web app. Pilot specific endpoints in the API
+       (save, chat) are disabled.   
+
+Any of the instances can be configured using config files (missions.yml, users.yml)
+or to operate on just a single mission using the -m command-line flag.
+
+To run in private mode, establish an ssh tunnel when connecting to your basestation:
+
+    desktop# ssh -L 20001:localhost:20001 my.basestation.edu
+        ...
+    basetation# /opt/basestation/bin/python3 /usr/local/basestation3/vis.py -m sg217:/home/seaglider/sg217 -p 20001
+
+    browser: http://localhost:20001/217
+
+Authentication, enabled fesatures, and permissions are highly configurable via missions.yml. 
+Always test a publicly available running instance to make sure that permissions are
+appropriate and that features are not being exposed in unintended ways. 
+
+
+
+The web app:
+
+
 on desktop, shortcut keys can be used to move through dives and plots in the ribbon: 
 
     wasd: W up a dive, A down a dive
