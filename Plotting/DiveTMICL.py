@@ -198,7 +198,6 @@ def plot_TMICL(
                 "x1",
             ),
         ):
-
             # figure(num=None, figsize=(1024, 768), dpi=100)
             if p.dive_data is None and p.climb_data is None:
                 continue
@@ -213,7 +212,6 @@ def plot_TMICL(
 
             # Plot sigvar vs depth
             if p.dive_data is not None and tmicl_depth_dive is not None:
-
                 fig.add_trace(
                     {
                         "y": tmicl_depth_dive,
@@ -308,7 +306,6 @@ def plot_TMICL(
     # Plot logavg
     for ch in ("ch0", "ch1", "shear", "temp", "temp0", "temp1"):
         for cast in ("a", "b", "c", "d"):
-
             if f"tmicl_logavg_{ch}_{cast}_time" not in dive_nc_file.variables:
                 continue
             try:
@@ -328,7 +325,10 @@ def plot_TMICL(
 
             try:
                 ttime = dive_nc_file.variables["time"][:]
-                depth = dive_nc_file.variables["depth"][:]
+                if "depth" in dive_nc_file.variables:
+                    depth = dive_nc_file.variables["depth"][:]
+                else:
+                    depth = dive_nc_file.variables["eng_depth"][:] / 100.0
             except KeyError as e:
                 log_warning(f"Could not find variable {e.args[0]} - skipping this plot")
                 continue
