@@ -1666,6 +1666,21 @@ async def checkFilesystemChanges(files):
 
     return mods
 
+async def configWatcher(app):
+    socket = zmq.asyncio.Context().socket(zmq.SUB)
+    socket.connect(app.config.WATCH_IPC)
+    socket.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
+    while True:
+        msg = await socket.recv_multipart()
+        sanic.log.logger.info(msg[1])
+        topic = msg[0].decode('utf-8')
+        if 'missions' in topic:
+            await buildMissionTable(app)
+        elif 'users' in topic:
+            await buildUserTable(app)
+
+        # app.m.name.restart() 
+
 async def notifier(config):
     msk = os.umask(0o000)
     ctx = zmq.asyncio.Context()
@@ -1679,7 +1694,10 @@ async def notifier(config):
     os.umask(msk)
 
     missions = await buildMissionTable(None, config=config)
-    files = []
+    files = [ ]
+    for f in [ 'missions.yml', 'users.yml' ]:
+        files.append( { 'glider': 0, 'full': f, 'file': f, 'ctime': 0 } )
+
     for m in missions:
         if m['path'] == None:
             for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat"]:
@@ -1707,7 +1725,7 @@ def backgroundWatcher(config):
 
 async def mainProcessReady(app):
     print('main process ready')
-    app.manager.manage("backgroundWatcher", backgroundWatcher, { "config": app.config } )
+    app.manager.manage("backgroundWatcher", backgroundWatcher, { "config": app.config })
 
 async def mainProcessStop(app):
     os.remove(app.config.WATCH_IPC[6:])
@@ -1745,6 +1763,8 @@ def createApp(overrides: dict) -> sanic.Sanic:
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
     attachHandlers(app)
+
+    app.add_task(configWatcher)
 
     return app
 
