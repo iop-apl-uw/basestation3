@@ -103,6 +103,18 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         "pressure",
         "depth",
         "time",
+        "speed_gsm",
+        "horz_speed_gsm",
+        "vert_speed_gsm",
+        "speed",
+        "horz_speed",
+        "vert_speed",
+        "sound_velocity",
+        "conservative_temperature",
+        "absolute_salinity",
+        "gsw_sigma0",
+        "gsw_sigma3",
+        "gsw_sigma4",
     )
 
     rename_ctd_dim = False
@@ -148,6 +160,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         "end_latitude",
         "start_longitude",
         "end_longitude",
+        "speed_gsm",
     ]
     mission_nc_dive_d = (
         {}
@@ -162,6 +175,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         mission_nc_dive_d[var] = []
 
     unknown_vars = {}
+    total_dive_vars = set()
     for dive_nc_profile_name in dive_nc_profile_names:
         log_debug("Processing %s" % dive_nc_profile_name)
         try:  # RuntimeError
@@ -373,11 +387,18 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                                 # for gliders where the CTD has been moved from scicon to the truck (or back) via the new tailboards,
                                 # a new set of vectors must be constructed, with a new dimension that is different
                                 # then the others
-                                # TODO - new vector for combined instrument needs to be created
+
+                                # Note: this logic does not deal with the case where the CTD is from scicon->truck->scicon or the inverse.
+
                                 if dive_nc_varname not in ctd_vars:
                                     raise RuntimeError(
-                                        "Differing dim_info %s vs %s ncfile:%s"
-                                        % (old_dim_name, dim_name, dive_nc_profile_name)
+                                        "Differing dim_info %s vs %s for %s in ncfile:%s"
+                                        % (
+                                            old_dim_name,
+                                            dim_name,
+                                            dive_nc_varname,
+                                            dive_nc_profile_name,
+                                        )
                                     )
                                 rename_ctd_dim = True
                                 log_debug(
@@ -432,7 +453,9 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             # now initialize or extend the vector values for these variables
             # BUG: this assumes that if you declare True for include_in_mission_profile in BaseNetCDF.nc_var_metadata
             # that the variable will *always* have values written out, even if nans or whatever
-            for temp_dive_varname in list(temp_dive_vars.keys()):
+            # See hack below for a fix for one corner case
+
+            for temp_dive_varname in temp_dive_vars:
                 try:
                     # append this dive data to the accumulating list
                     mission_nc_var_d[temp_dive_varname] = np.array(
@@ -446,6 +469,35 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                     mission_nc_var_d[temp_dive_varname] = temp_dive_vars[
                         temp_dive_varname
                     ][:].copy()
+                total_dive_vars.add(temp_dive_varname)
+
+            # log_info(
+            #    f"{dive_nc_profile_name} : {total_dive_vars - set(temp_dive_vars)}"
+            # )
+
+            # This code is designed to catch the specific case that there are missing vectors
+            # from a dimension in a dive, but other vectors have been updated (see BUG: above)
+            #
+            # This code assumes the vector was present in earlier dives and does not handle new vecotrs
+            # being added mid-mission - as in moving the CTD from scicon to truck (and potentially back)
+            for missing_varname in total_dive_vars - set(temp_dive_vars):
+                _, nc_data_type, _, mdp_dim_info = BaseNetCDF.nc_var_metadata[
+                    missing_varname
+                ]
+                # Nothing in this dim was updated from this file
+                if mdp_dim_info not in extended_dim_names:
+                    continue
+
+                log_info(
+                    f"{missing_varname} mission from {dive_nc_profile_name} - adding empty vector"
+                )
+
+                missing_var_size = nc_info_d[nc_info_d[mdp_dim_info]]
+                missing_var = np.zeros(missing_var_size, dtype=nc_data_type)
+
+                mission_nc_var_d[missing_varname] = np.array(
+                    np.append(mission_nc_var_d[missing_varname], missing_var)
+                )
 
         except KeyboardInterrupt:
             log_error("Keyboard interrupt - breaking out")
@@ -474,6 +526,9 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         # A good deal of this is a hack.  In the event that the SBECT migrated from one dimension to
         # another, we need to cons up a new dimension and migrate the relevent variables over there.
         # The dive number, time, depth and pressure variables are dropped in this case to simplify the above code
+
+        # Note - this code assumes that the of the CTD is one-way (scicon to truck). A move back will result
+        # in the contributions to this new dimension end up getting dropped from the timeseries file
         dropped_vars = []
         for var in list(mission_nc_var_d.keys()):
             if (
