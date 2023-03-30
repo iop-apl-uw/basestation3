@@ -82,9 +82,15 @@ def timeSeriesToProfile(var, which,
     i = 0
     for p in dives:
 
-        t0 = nci.variables['start_time'][p-1]
-        t1 = nci.variables['deepest_sample_time'][p-1]
-        t2 = nci.variables['end_time'][p-1]
+        idx = numpy.where(nci.variables['dive_number'][:] == p)[0]
+        if len(idx) == 0:
+            t0 = 0
+            t1 = -1
+            t2 = -1
+        else:
+            t0 = nci.variables['start_time'][idx]
+            t1 = nci.variables['deepest_sample_time'][idx]
+            t2 = nci.variables['end_time'][idx]
     
         if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
             ixs = (x['time'] > t0) &(x['time'] < t1)
