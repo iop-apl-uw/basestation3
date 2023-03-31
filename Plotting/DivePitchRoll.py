@@ -492,7 +492,10 @@ def plot_pitch_roll(
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Roll control vs Roll"
-        fit_line = f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad"
+        fit_line = (
+            f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad<br>"
+            f"Current values C_ROLL_DIVE={c_roll_dive:.0f}ad C_ROLL_CLIMB={c_roll_climb:.0f}ad"
+        )
 
         fig.update_layout(
             {
@@ -673,8 +676,10 @@ def plot_pitch_roll(
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Roll control vs turn rate while centered"
-        fit_line = f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad"
-
+        fit_line = (
+            f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad<br>"
+            f"Current values C_ROLL_DIVE={c_roll_dive:.0f}ad C_ROLL_CLIMB={c_roll_climb:.0f}ad"
+        )
         fig.update_layout(
             {
                 "xaxis": {
