@@ -497,9 +497,11 @@
         row.style.backgroundColor = colors[i];
         cell = row.insertCell(0);
         
-        alerts = 'alerts' in d && d['alerts'] > 0 ? 'a' : '';
+        alerts  = 'alerts'  in d && d['alerts']  > 0 ? 'a' : '';
         capture = 'capture' in d && d['capture'] > 0 ? 'c' : '';
-        cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>' + alerts + capture;
+        changes = 'changes' in d && d['changes'] > 0 ? 'p' : '';
+ 
+        cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>' + changes + alerts + capture;
         cell.style.textAlign = 'left';
         // cell.appendChild(text);
 
@@ -1247,7 +1249,7 @@
         }
         else {
             var v = window.getSelection().toString();
-            var h = $(which).innerHTML;
+            var h = $('logfileDiv').innerHTML; // we look in logfile to see if this is a valid parameter name
             var i = h.indexOf(v);
             if (i > 0 && h[i-1] == '$' && h[i + v.length] == ',') {
                 str = v;
