@@ -46,9 +46,6 @@ import sys              # System-specific parameters and functions.
 # File mode creation mask of the daemon.
 UMASK = 0
 
-# Default working directory for the daemon.
-WORKDIR = "/Users/gbs/work/tmp"
-
 # Default maximum for the number of available file descriptors.
 MAXFD = 1024
 
