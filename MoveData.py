@@ -265,6 +265,10 @@ def main():
     moveFiles("sg???.db", base_opts.mission_dir, base_opts.target_dir)
     moveFiles("sections.yml", base_opts.mission_dir, base_opts.target_dir)
 
+    moveFiles("targedit.log", base_opts.mission_dir, base_opts.target_dir)
+    moveFiles("sciedit.log", base_opts.mission_dir, base_opts.target_dir)
+    moveFiles("cmdedit.log", base_opts.mission_dir, base_opts.target_dir)
+
     # Files common to both versions of the basestation
     moveFiles("comm.log", base_opts.mission_dir, base_opts.target_dir)
     moveFiles(
