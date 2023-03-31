@@ -197,7 +197,7 @@ def mission_energy(
                 else dive_col.to_numpy()[-1]
             )
 
-            batt_est_str = f"Based on {type_str} for the last {p_dives_back} dives: {dives_remaining} dives remaining ({days_remaining:.01f} days at current rate) estimated end date {end_date} "
+            batt_est_str = f"Based on {type_str} for the last {p_dives_back} dives: {dives_remaining} dives remaining ({days_remaining:.01f} days at curr rate) to {100*base_opts.mission_energy_reserve_percent:.0f}% reserve. Estimated end date {end_date} "
             # y_offset += -0.02
             # l_annotations.append(
             #     {
@@ -287,7 +287,7 @@ def mission_energy(
             log_info(
                 f"Used to date:{used_to_date:.2f} avg_use:{avg_use:.2f} batt_cap:{batt_cap:.2f} dives_remaining:{dives_remaining:.0f}, days_remaining:{days_remaining:.2f}"
             )
-            fg_est_str = f"Based on Fuel Gauge for the last {p_dives_back} dives: {dives_remaining:.0f} dives remaining ({days_remaining:.01f} days at current rate) estimated end date {end_date} "
+            fg_est_str = f"Based on Fuel Gauge for the last {p_dives_back} dives: {dives_remaining:.0f} dives remaining ({days_remaining:.01f} days at current rate) to {100*base_opts.mission_energy_reserve_percent:.0f}% reserve. Estimated end date {end_date} "
             # y_offset += -0.02
             # l_annotations.append(
             #     {
