@@ -95,12 +95,8 @@ def cmp_function(a, b):
     b_dive = None
     a_counter = None
     b_counter = None
-    a_is_plain = ".plain" in a
-    _, a_base = os.path.split(a.replace(".plain", ""))
-    b_is_plain = ".plain" in b
-    _, b_base = os.path.split(b.replace(".plain", ""))
-    a_split = a_base.split(".")
-    b_split = b_base.split(".")
+    a_split = a.split(".")
+    b_split = b.split(".")
 
     a_dive = int(a_split[1])
     b_dive = int(b_split[1])
@@ -124,12 +120,7 @@ def cmp_function(a, b):
         elif a_counter < b_counter:
             return 1
         else:
-            if a_is_plain and not b_is_plain:
-                return -1
-            elif not a_is_plain and b_is_plain:
-                return 1
-            else:
-                return 0
+            return 0
 
 
 def printHeader(name, description, glider_color, fo):
@@ -1587,8 +1578,6 @@ def main(
         for glob_expr in (
             "targets.[0-9]*",
             "targets.[0-9]*.[0-9]*",
-            "targets.plain.[0-9]*",
-            "targets.plain.[0-9]*.[0-9]*",
         ):
             for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
                 targets.append(match)
