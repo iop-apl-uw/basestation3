@@ -1838,7 +1838,7 @@ nc_var_metadata = {
     "log_SENSORS": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_SENSOR_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_SENSOR_SECS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_SHORTING_PLUG":[False, "d", {}, nc_scalar], # From Kongsberg firmware
+    "log_SHORTING_PLUG": [False, "d", {}, nc_scalar],  # From Kongsberg firmware
     "log_SIM_PITCH": [False, "d", {}, nc_scalar],
     "log_SIM_W": [False, "d", {}, nc_scalar],
     "log_SMARTDEVICE1": [False, "d", {}, nc_scalar],
@@ -3568,10 +3568,12 @@ def create_nc_var(
             else:
                 nc_var[:] = value  # array
         except ValueError as exception:
-            log_error(f"Unable to assign value to nc var {var_name} ({exception.args})")
+            log_error(
+                f"Unable to assign value to nc var {var_name} {var_dims} ({exception.args})"
+            )
             return None
         except:
-            log_error(f"Unable to assign value to nc var {var_name}")
+            log_error(f"Unable to assign value to nc var {var_name} {var_dims}")
             return None
 
     # update the metadata on variable
