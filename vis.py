@@ -657,16 +657,12 @@ def attachHandlers(app: sanic.Sanic):
 
                 message['parm'] = await cur.fetchall()
 
+                try:
+                    await cur.execute(f"SELECT * FROM files WHERE dive={dive} ORDER BY file ASC;")
+                except aiosqlite.OperationalError as e:
+                    return sanic.response.text(f'db error {e}')
 
-        files = ["science", "targets", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat"]
-        for f in files:
-            filename = f'{gliderPath(glider,request)}/{f}.{dive}'
-
-            if await aiofiles.os.path.exists(filename):
-                async with aiofiles.open(filename, 'r') as file:
-                    c = await file.read() 
-
-                message['file'].append({ "file": f, "contents":c }) 
+                message['file'] = await cur.fetchall()
 
         return sanic.response.json(message)
 
@@ -794,7 +790,7 @@ def attachHandlers(app: sanic.Sanic):
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,batt_volts_10V,batt_volts_24V,batt_capacity_24V,batt_capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north,dog_efficiency,alerts,criticals,capture,error_count,(SELECT COUNT(dive) FROM changes where changes.dive=dives.dive) as changes FROM dives"
+        q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,batt_volts_10V,batt_volts_24V,batt_capacity_24V,batt_capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north,dog_efficiency,alerts,criticals,capture,error_count,(SELECT COUNT(dive) FROM changes where changes.dive=dives.dive) as changes, (SELECT COUNT(dive) FROM files where files.dive=dives.dive) as files FROM dives"
 
         if dive > -1:
             q = q + f" WHERE dive={dive};"
@@ -814,24 +810,30 @@ def attachHandlers(app: sanic.Sanic):
             #       for i, value in enumerate(row)) for row in data]
             return sanic.response.json(data)
 
-    @app.route('/changes/<glider:int>/<dive:int>/<sort:str>')
-    # description: query database for parameter changes
-    # args: dive=-1 returns entire history
+    @app.route('/changes/<glider:int>/<dive:int>/<which:str>/<sort:str>')
+    # description: query database for parameter or control file changes
+    # args: dive=-1 returns entire history, which=parms|files, sort=dive|parm|file
     # parameters: mission
-    # returns: JSON dict of changes [{(dive,parm,oldval,newval}]
-    async def changesHandler(request, glider:int, dive:int, sort:str):
+    # returns: JSON dict of changes [{(dive,parm,oldval,newval}] or [{dive,file,fullname,contents}]
+    async def changesHandler(request, glider:int, dive:int, which:str, sort:str):
+        if (which not in ['parms', 'files']) or (sort not in ['dive', 'file', 'parm']):
+            return sanic.response.text('no db')
+           
+        db   = { 'parms': 'changes', 'files': 'files' } 
+        col2 = which[0:-1]
+
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        q = "SELECT * FROM changes"
+        q = f"SELECT * FROM {db[which]}"
 
         if dive > -1:
-            q = q + f" WHERE dive={dive} ORDER BY parm ASC;"
-        elif sort == 'parm':
-            q = q + " ORDER BY parm,dive ASC;"
+            q = q + f" WHERE dive={dive} ORDER BY {col2} ASC;"
+        elif sort  == 'dive':
+            q = q + f" ORDER BY dive,{col2} ASC;"
         else:
-            q = q + " ORDER BY dive,parm ASC;"
+            q = q + f" ORDER BY {col2},dive ASC;"
 
         async with aiosqlite.connect(dbfile) as conn:
             conn.row_factory = rowToDict # not async but called from async fetchall

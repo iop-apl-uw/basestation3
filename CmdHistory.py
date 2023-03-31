@@ -54,21 +54,6 @@ def parameterChanges(dive, logname, cmdname):
 
     return changes
 
-def cmdHistory(path, glider, first, last):
-    changes = []
-
-    for i in range(first, last+1):
-        logname = f'{path}p{glider:03d}{i:04d}.log'
-        cmdname = f'{path}cmdfile.{i}'
-        r = glob.glob(f'{cmdname}.*')
-        if len(r) > 0:
-            mx = max( [ x.split('.')[-1] for x in r ] )
-            cmdname = f'{path}cmdfile.{i}.{mx}'
-
-        changes = changes + parameterChanges(i, logname, cmdname)
-
-    return changes
-
 if __name__ == "__main__":
     if len(sys.argv < 2):
         sys.exit(1)

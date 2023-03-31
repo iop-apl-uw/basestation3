@@ -802,6 +802,7 @@ def prepDB(base_opts, dbfile=None):
     cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
     cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
     cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
+    cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
     cur.close()
 
     con.close()
@@ -911,6 +912,64 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
 
     if con is None:
         mycon.close()
+
+def logControlFile(base_opts, dive, filename, fullname, con=None):
+    if con is None:
+        mycon = Utils.open_mission_database(base_opts)
+        if mycon is None:
+            log_error("Failed to open mission db")
+            return
+    else:
+        mycon = con
+
+    try:
+        cur = mycon.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
+    except Exception as e:
+        log_error("{e} could not create files table")
+        return
+
+    pathed = os.path.join(base_opts.mission_dir, fullname)
+    if not os.path.exists(pathed):
+        return
+
+    with open(pathed, 'r') as f:
+        contents = f.read()
+
+    try:
+        cur.execute("REPLACE INTO files(dive,file,fullname,contents) VALUES(?,?,?,?);", (dive, filename, fullname, contents))
+    except Exception as e:
+        log_error(f"{e} inserting file")
+
+    mycon.commit()
+    cur.close()
+
+    if con is None:
+        mycon.close()
+
+def rebuildControlHistory(base_opts):
+    con = Utils.open_mission_database(base_opts)
+
+    path = base_opts.mission_dir;
+
+    cur = con.cursor()
+    cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
+    maxdv = cur.fetchone()[0]
+
+    for i in range(1, maxdv + 1):
+        for which in ['targets', 'science', 'scicon.sch', 'pdoscmds.bat', 'tcm2mat.cal']:
+            fullname = f'{which}.{i}'
+            cmdname = os.path.join(path, fullname)
+            r = glob.glob(f'{cmdname}.*')
+            if len(r) > 0:
+                mx = max( [ x.split('.')[-1] for x in r ] )
+                fullname = f'{which}.{i}.{mx}'
+                cmdname = os.path.join(path, fullname)
+                
+            if os.path.exists(cmdname):
+                logControlFile(base_opts, i, which, fullname, con=con)
+
+    con.close()
 
 def logParameterChanges(base_opts, dive_num, cmdname, con=None):
     if con is None:
