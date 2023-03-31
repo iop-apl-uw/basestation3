@@ -2082,6 +2082,7 @@ def main():
 
                     BaseDB.logParameterChanges(base_opts, int(session.dive_num), cmdname)
 
+        BaseDB.rebuildControlHistory(base_opts)
 
     if base_opts.dump_last:
         if not comm_log.sessions:

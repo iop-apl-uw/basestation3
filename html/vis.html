@@ -197,7 +197,7 @@
                     }
                     loadPlots(newDive, true);
                     buildTable(currGlider, newDive);
-                    buildChangelog(currGlider, 'dive');
+                    buildChangelog(3);
                 }
                 else if ('lat' in json) {
                     if (!first) beep();
@@ -496,12 +496,18 @@
         i = $('mainTable').rows.length % 2;
         row.style.backgroundColor = colors[i];
         cell = row.insertCell(0);
-        
-        alerts  = 'alerts'  in d && d['alerts']  > 0 ? 'a' : '';
-        capture = 'capture' in d && d['capture'] > 0 ? 'c' : '';
-        changes = 'changes' in d && d['changes'] > 0 ? 'p' : '';
+       
+        if ('criticals' in d &&  d['criticals'] > 0)
+            color = 'red';
+        else
+            color = 'black';
+
+        alerts  = 'alerts'  in d && d['alerts']  > 0 ? '<b title="alerts">a</b>' : '';
+        capture = 'capture' in d && d['capture'] > 0 ? `<b title="capture file" style="color:${color}">c</b>` : '';
+        changes = 'changes' in d && d['changes'] > 0 ? '<b title="parameter changes">p</b>' : '';
+        files   = 'files' in d && d['files'] > 0 ? '<b title="control files">f</b>' : '';
  
-        cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>' + changes + alerts + capture;
+        cell.innerHTML = '<a href="#" onclick="loadPlots(' + d['dive'] + ', false);">' + d['dive'] + '</a>' + changes + files + alerts + capture;
         cell.style.textAlign = 'left';
         // cell.appendChild(text);
 
@@ -612,70 +618,98 @@
         cell.appendChild(text);
     }
 
-    function buildChangelog() {
+    function buildChangelog(which) {
         var glider = currGlider;
-        var q;
+        var q, sort;
+        var prev, c, cols;
+
         console.log("building table");
   
-        var sort = document.querySelector('input[name="changelogSort"]:checked').value;
- 
-        q = `changes/${glider}/-1/${sort}${mission()}`
-        if (dive  == -1) {
-            clearTable();
-        }
 
         const colors = ["#cccccc", "#eeeeee"];
  
-        fetch(q)
-        .then(res => res.text())
-        .then(text => {
-            try {
-                data = JSON.parse(text);
-            } catch (error) {
-                console.log('buildChangelog ' + error);
-                console.log(text);
-                return;
-            }
+        if (which == 1 || which == 3) {
+            sort = document.querySelector('input[name="changelogSortParm"]:checked').value;
+            q = `changes/${glider}/-1/parms/${sort}${mission()}`
 
-            var prev;
-            var c = 0;
-            var cols;
-            if (sort == 'dive') {
-                prev = -1;
-                cols = ['dive', 'parm'];
-            }
-            else {
-                prev = '';
-                cols = ['parm', 'dive'];
-            }
-            
-            txt = '<table id="changeTable">';
-            for (d of data) {
-                if (d[cols[0]] != prev) 
-                    c = (c == 0 ? 1 : 0);
+            fetch(q)
+            .then(res => res.text())
+            .then(text => {
+                try {
+                    data = JSON.parse(text);
+                } catch (error) {
+                    console.log('buildChangelog ' + error);
+                    console.log(text);
+                    return;
+                }
 
-                txt += '<tr style="background-color: ' + colors[c] + '";>';
-
-                if (d[cols[0]] != prev) {
-                    txt += '<td>' + d[cols[0]] + '</td>';
-                    prev = d[cols[0]];
-                }    
-                else 
-                    txt += '<td></td>';
+                c = 0;
+                if (sort == 'dive') {
+                    prev = -1;
+                    cols = ['dive', 'parm'];
+                }
+                else {
+                    prev = '';
+                    cols = ['parm', 'dive'];
+                }
                 
-                txt += '<td>' + d[cols[1]] + '</td>';
+                txt = '<table id="changeTable">';
+                for (d of data) {
+                    if (d[cols[0]] != prev) 
+                        c = (c == 0 ? 1 : 0);
 
-                txt += '<td>' + d['oldval'] + '</td>';
-                txt += '<td><b>&#10230;</b></td>';
-                txt += '<td>' + d['newval'] + '</td></tr>';
-            }
-            txt += '</table>';
-            $('changelogTable').innerHTML = txt;
-        })
-        .catch(error => {
-            console.log(error);
-        });
-        
+                    txt += '<tr style="background-color: ' + colors[c] + '";>';
+
+                    if (d[cols[0]] != prev) {
+                        txt += '<td>' + d[cols[0]] + '</td>';
+                        prev = d[cols[0]];
+                    }    
+                    else 
+                        txt += '<td></td>';
+                    
+                    txt += '<td>' + d[cols[1]] + '</td>';
+
+                    txt += '<td>' + d['oldval'] + '</td>';
+                    txt += '<td><b>&#10230;</b></td>';
+                    txt += '<td>' + d['newval'] + '</td></tr>';
+                }
+                txt += '</table>';
+                $('changelogTable').innerHTML = txt;
+            })
+            .catch(error => {
+                console.log(error);
+            });
+        }
+        if (which == 2 || which == 3) {
+            sort = document.querySelector('input[name="changelogSortFile"]:checked').value;
+            q = `changes/${glider}/-1/files/${sort}${mission()}`
+
+            console.log('building files history');
+            fetch(q)
+            .then(res => res.text())
+            .then(text => {
+                console.log(text);
+                try {
+                    data = JSON.parse(text);
+                } catch (error) {
+                    console.log('buildChangelog ' + error);
+                    console.log(text);
+                    return;
+                }
+
+                c = 0;
+                
+                html = '';
+                for (d of data) {
+                    html += '<b>' + d['fullname'] + '</b>';
+                    html += '<div style="margin-left:40px;"><pre>' + d['contents'] + '</pre></div>';
+                }
+                $('changelogFilesContent').innerHTML = html;
+            })
+            .catch(error => {
+                console.log(error);
+            });
+        } 
     }
 
     function buildTable(glider, dive) {
@@ -829,7 +863,7 @@
             sgplots = data['sgplots'];
             sgplotlyplots = data['sgplotly'];
             buildTable(glider, -1);
-            buildChangelog(glider, 'dive');
+            buildChangelog(3);
             loadAbout(data.mission, data.organization);
         })
         .catch(error => {
@@ -960,7 +994,7 @@
             html += `<tr><td>${pieces['parm']}&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
         } 
         
-        html += "</table><p><h3>control files</h3><p>";
+        html += '</table><p><h3 onclick="showChangelog(); return false;" style="color:blue;">control files</h3><p>';
         for (i = 0 ; i < deltas['file'].length; i++) {
             html += '<b>' + deltas['file'][i]['file'] + '</b>';
             html += '<div style="margin-left:40px;"><pre>' + deltas['file'][i]['contents'] + '</pre></div>';
@@ -2072,13 +2106,25 @@
     <div id="logDiv" class="hide"></div>
     <div id="notificationsDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('notificationsDiv');" class="hide"></div>
     <div id="changelogDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('changelogDiv');" class="hide">
-        Sort by
-        <input type="radio" id="radSortDives" name="changelogSort" value="dive" checked onchange="buildChangelog();">
-        <label for="radSortDives">dive</label>
-        <input type="radio" id="radSortParms" name="changelogSort" value="parm" onchange="buildChangelog();"> 
-        <label for="radSortParms">parameter</label>
-        <p>
-        <div id="changelogTable">
+        <div id="changelogParms">
+            Sort by
+            <input type="radio" id="radSortDives" name="changelogSortParm" value="dive" checked onchange="buildChangelog(1);">
+            <label for="radSortDives">dive</label>
+            <input type="radio" id="radSortParms" name="changelogSortParm" value="parm" onchange="buildChangelog(1);"> 
+            <label for="radSortParms">parameter</label>
+            <p>
+            <div id="changelogTable">
+            </div>
+        </div>
+        <div id="changelogFiles">
+            Sort by
+            <input type="radio" id="radFileDives" name="changelogSortFile" value="dive" checked onchange="buildChangelog(2);">
+            <label for="radFileDives">dive</label>
+            <input type="radio" id="radFileParms" name="changelogSortFile" value="file" onchange="buildChangelog(2);"> 
+            <label for="radFileParms">file</label>
+            <p>
+            <div id="changelogFilesContent">
+            </div>
         </div>
     </div>
     
