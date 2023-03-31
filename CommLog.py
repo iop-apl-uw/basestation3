@@ -2068,6 +2068,14 @@ def main():
             print(f"{len(comm_log.sessions)} sessions")
             for session in comm_log.sessions:
                 BaseDB.addSession(base_opts, session)
+                if session.dive_num is not None and int(session.dive_num) > 0:
+                    if session.call_cycle == None or int(session.call_cycle) == 0:
+                        cmdname = f'cmdfile.{int(session.dive_num)}'
+                    else:
+                        cmdname = f'cmdfile.{int(session.dive_num)}.{int(session.call_cycle)}'
+
+                    BaseDB.logParameterChanges(base_opts, int(session.dive_num), cmdname)
+
 
     if base_opts.dump_last:
         if not comm_log.sessions:

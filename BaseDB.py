@@ -41,6 +41,7 @@ import warnings
 import numpy
 import pandas as pd
 
+import CmdHistory
 import BaseOpts
 import BasePlot
 import CalibConst
@@ -800,6 +801,7 @@ def prepDB(base_opts, dbfile=None):
     createDivesTable(cur)
     cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
     cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
+    cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
     cur.close()
 
     con.close()
@@ -906,6 +908,38 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
             warnings.simplefilter('ignore', numpy.RankWarning)
             m,_ = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
         addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
+
+    if con is None:
+        mycon.close()
+
+def logParameterChanges(base_opts, dive_num, cmdname, con=None):
+    if con is None:
+        mycon = Utils.open_mission_database(base_opts)
+        if mycon is None:
+            log_error("Failed to open mission db")
+            return
+    else:
+        mycon = con
+
+    try:
+        cur = mycon.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
+    except Exception as e:
+        log_error("{e} could not create changes table")
+        return
+
+    logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
+    cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
+    changes = CmdHistory.parameterChanges(dive_num, logfile, cmdfile)
+
+    for d in changes:
+        try:
+            cur.execute("REPLACE INTO changes(dive,parm,oldval,newval) VALUES(:dive, :parm, :oldval, :newval);", d)
+        except Exception as e:
+            log_error(f"{e} inserting parameter changes")
+
+    mycon.commit()
+    cur.close()
 
     if con is None:
         mycon.close()

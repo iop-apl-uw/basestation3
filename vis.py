@@ -60,7 +60,8 @@ protectableRoutes = [
                         'log',      # get log summary 
                         'file',     # get log, eng, cap file
                         'alerts',   # get alerts
-                        'deltas',   # get changes between dives
+                        'deltas',   # get changes (parameters and files) between dives
+                        'changes',  # get parameter changes
                         'summary',  # get mission summary for a glider
                         'status',   # get basic mission staus (current dive) and eng plot list
                         'control',  # get a control file (cmdfile, etc.)
@@ -643,33 +644,19 @@ def attachHandlers(app: sanic.Sanic):
     # returns: JSON formatted dict of control file changes
     @authorized()
     async def deltasHandler(request, glider: int, dive: int):
-        cmdfile = f'{gliderPath(glider,request)}/cmdfile.{dive:d}'
-        logfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
-        if not await aiofiles.os.path.exists(cmdfile) or not await aiofiles.os.path.exists(logfile):
-            return sanic.response.text('not found')
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        message = { 'dive': dive, 'parm': [], 'file': [] }
+        if await Path(dbfile).exists():
+            async with aiosqlite.connect(dbfile) as conn:
+                conn.row_factory = rowToDict # not async but called from async fetchall
+                cur = await conn.cursor()
+                try:
+                    await cur.execute(f"SELECT * FROM changes WHERE dive={dive} ORDER BY parm ASC;")
+                except aiosqlite.OperationalError as e:
+                    return sanic.response.text(f'db error {e}')
 
-        cmd = f"/usr/local/bin/validate {logfile} -c {cmdfile}"
+                message['parm'] = await cur.fetchall()
 
-        proc = await asyncio.create_subprocess_shell(
-            cmd, 
-            stdout=asyncio.subprocess.PIPE, 
-            stderr=asyncio.subprocess.PIPE
-        )
-        out, err = await proc.communicate()
-        results = out.decode('utf-8', errors='ignore') 
-
-        message = {}
-        message['dive'] = dive
-        message['parm'] = []    
-        for line in results.splitlines():
-            if "will change" in line:         
-                pieces = line.split(' ')
-                logvar = pieces[2]
-                oldval = pieces[6]
-                newval = pieces[8]
-                message['parm'].append(f'{logvar},{oldval},{newval}')
-
-        message['file'] = []
 
         files = ["science", "targets", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat"]
         for f in files:
@@ -798,6 +785,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/db/<glider:int>/<dive:int>')
     # description: query database for common engineering variables
+    # args: dive=-1 returns whole mission
     # parameters: mission
     # returns: JSON dict of engineering variables
     @authorized()
@@ -825,6 +813,37 @@ def attachHandlers(app: sanic.Sanic):
             # r = [dict((cur.description[i][0], value) \
             #       for i, value in enumerate(row)) for row in data]
             return sanic.response.json(data)
+
+    @app.route('/changes/<glider:int>/<dive:int>/<sort:str>')
+    # description: query database for parameter changes
+    # args: dive=-1 returns entire history
+    # parameters: mission
+    # returns: JSON dict of changes [{(dive,parm,oldval,newval}]
+    async def changesHandler(request, glider:int, dive:int, sort:str):
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        if not await aiofiles.os.path.exists(dbfile):
+            return sanic.response.text('no db')
+
+        q = "SELECT * FROM changes"
+
+        if dive > -1:
+            q = q + f" WHERE dive={dive} ORDER BY parm ASC;"
+        elif sort == 'parm':
+            q = q + " ORDER BY parm,dive ASC;"
+        else:
+            q = q + " ORDER BY dive,parm ASC;"
+
+        async with aiosqlite.connect(dbfile) as conn:
+            conn.row_factory = rowToDict # not async but called from async fetchall
+            cur = await conn.cursor()
+            try:
+                await cur.execute(q)
+            except aiosqlite.OperationalError as e:
+                return sanic.response.text(f'no table {e}')
+
+            data = await cur.fetchall()
+            return sanic.response.json(data)
+
 
     @app.route('/dbvars/<glider:int>')
     # description: list of per dive database variables

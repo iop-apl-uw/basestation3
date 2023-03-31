@@ -197,6 +197,7 @@
                     }
                     loadPlots(newDive, true);
                     buildTable(currGlider, newDive);
+                    buildChangelog(currGlider, 'dive');
                 }
                 else if ('lat' in json) {
                     if (!first) beep();
@@ -418,7 +419,7 @@
     }
 
     function setVisibility(elt) {
-        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
+        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv'];
         for (var d of divs) {
             if (d != elt) $(d).classList.add('hide');
         }
@@ -609,6 +610,72 @@
         cell.appendChild(text);
     }
 
+    function buildChangelog() {
+        var glider = currGlider;
+        var q;
+        console.log("building table");
+  
+        var sort = document.querySelector('input[name="changelogSort"]:checked').value;
+ 
+        q = `changes/${glider}/-1/${sort}${mission()}`
+        if (dive  == -1) {
+            clearTable();
+        }
+
+        const colors = ["#cccccc", "#eeeeee"];
+ 
+        fetch(q)
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log('buildChangelog ' + error);
+                console.log(text);
+                return;
+            }
+
+            var prev;
+            var c = 0;
+            var cols;
+            if (sort == 'dive') {
+                prev = -1;
+                cols = ['dive', 'parm'];
+            }
+            else {
+                prev = '';
+                cols = ['parm', 'dive'];
+            }
+            
+            txt = '<table id="changeTable">';
+            for (d of data) {
+                if (d[cols[0]] != prev) 
+                    c = (c == 0 ? 1 : 0);
+
+                txt += '<tr style="background-color: ' + colors[c] + '";>';
+
+                if (d[cols[0]] != prev) {
+                    txt += '<td>' + d[cols[0]] + '</td>';
+                    prev = d[cols[0]];
+                }    
+                else 
+                    txt += '<td></td>';
+                
+                txt += '<td>' + d[cols[1]] + '</td>';
+
+                txt += '<td>' + d['oldval'] + '</td>';
+                txt += '<td><b>&#10230;</b></td>';
+                txt += '<td>' + d['newval'] + '</td></tr>';
+            }
+            txt += '</table>';
+            $('changelogTable').innerHTML = txt;
+        })
+        .catch(error => {
+            console.log(error);
+        });
+        
+    }
+
     function buildTable(glider, dive) {
         var q;
         console.log("building table");
@@ -694,6 +761,11 @@
         currElt = 'notifications';
     }
 
+    function showChangelog() {
+        setVisibility('changelogDiv');
+        currElt = 'changelog';
+    }
+
     function loadAbout(mission, org) {
         var cell, t, tbody, row;
 
@@ -755,6 +827,7 @@
             sgplots = data['sgplots'];
             sgplotlyplots = data['sgplotly'];
             buildTable(glider, -1);
+            buildChangelog(glider, 'dive');
             loadAbout(data.mission, data.organization);
         })
         .catch(error => {
@@ -879,10 +952,10 @@
             notify = true;
         }
 
-        html += '<h3>parameter changes</h3><p><table style="margin-left:40px;">';
+        html += '<h3 onclick="showChangelog(); return false;" style="color:blue;">parameter changes</h3><p><table style="margin-left:40px;">';
         for (i = 0 ; i < deltas['parm'].length; i++) {
-            pieces = deltas['parm'][i].split(',');
-            html += `<tr><td>${pieces[0]}&nbsp;&nbsp;&nbsp;</td><td>${pieces[1]}</td><td> <b>&#10230;</b> <td>${pieces[2]}</td></tr>`;
+            pieces = deltas['parm'][i];
+            html += `<tr><td>${pieces['parm']}&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
         } 
         
         html += "</table><p><h3>control files</h3><p>";
@@ -1038,6 +1111,8 @@
                 showCap();
             else if (currElt == 'notifications')
                 showNotifications();
+            else if (currElt == 'changelog')
+                showChangelog();
             else if (currElt == 'table')
                 showTable();
             else if (currElt.includes('plotly')) {
@@ -1170,9 +1245,9 @@
                 str = v.substring(s, e);
             }
         }
-        else if (which == 'logfile') {
+        else {
             var v = window.getSelection().toString();
-            var h = $('logfileDiv').innerHTML;
+            var h = $(which).innerHTML;
             var i = h.indexOf(v);
             if (i > 0 && h[i-1] == '$' && h[i + v.length] == ',') {
                 str = v;
@@ -1993,7 +2068,17 @@
     </table>
 
     <div id="logDiv" class="hide"></div>
-    <div id="notificationsDiv" style="margin-left:20px; text-align:left;" class="hide"></div>
+    <div id="notificationsDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('notificationsDiv');" class="hide"></div>
+    <div id="changelogDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('changelogDiv');" class="hide">
+        Sort by
+        <input type="radio" id="radSortDives" name="changelogSort" value="dive" checked onchange="buildChangelog();">
+        <label for="radSortDives">dive</label>
+        <input type="radio" id="radSortParms" name="changelogSort" value="parm" onchange="buildChangelog();"> 
+        <label for="radSortParms">parameter</label>
+        <p>
+        <div id="changelogTable">
+        </div>
+    </div>
     
     
     <div id="plotlyDiv" class="hide">
@@ -2056,7 +2141,7 @@
         </div>
     </div>
 
-    <div id="logfileDiv" class="hide" oncontextmenu="parameterHelp('logfile'); return false;" title="right click/long press parameter for help" style="background-color:#eeeeee; text-align:left;" >
+    <div id="logfileDiv" class="hide" oncontextmenu="parameterHelp('logfileDiv'); return false;" title="right click/long press parameter for help" style="background-color:#eeeeee; text-align:left;" >
     </div>
 
     <div id="engfileDiv" class="hide" style="background-color:#eeeeee; text-align:left;">

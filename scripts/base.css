@@ -32,6 +32,21 @@
         height: 100%;
     }
 
+    #changeTable {
+        border-left: none;
+        border-right: none;
+        border-collapse: collapse;
+    }
+    #changeTable tr td:nth-child(3) {
+        padding-left: 5px;
+        text-align: right;
+    }
+    #changeTable tr td:nth-child(5) {
+        text-align: left;
+    }
+    #changeTable tr td:nth-child(1), tr td:nth-child(2) {
+        padding-right: 5px;
+    }
 
     #mainTable tbody {
         font-size:1.0rem; 
