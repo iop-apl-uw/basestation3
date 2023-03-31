@@ -226,6 +226,8 @@ def plot_vert_vel(
         log_HD_C = dive_nc_file.variables["log_HD_C"].getValue()
 
         c_vbd = dive_nc_file.variables["log_C_VBD"].getValue()
+        max_buoy = dive_nc_file.variables["log_MAX_BUOY"].getValue()
+        sm_cc = dive_nc_file.variables["log_SM_CC"].getValue()
 
         vbd_min = dive_nc_file.variables["log_VBD_MIN"].getValue()
         vbd_max = dive_nc_file.variables["log_VBD_MAX"].getValue()
@@ -685,7 +687,11 @@ def plot_vert_vel(
         )
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth"
-    fit_line = f"Best Fit VBD bias={min_bias:.0f}cc implies: C_VBD={implied_cvbd:.0f}ad, volmax={implied_volmax:.0f}cc, max MAX_BUOY={implied_max_maxbuoy:.0f}cc<br>max SM_CC={implied_max_smcc:.0f}cc, min SM_CC {implied_min_smcc_surf:.1f} (based on density {density_1m:.5f} at {depth_1m:.2f}m and antenna 150cc)"
+    fit_line = (
+        f"Best Fit VBD bias={min_bias:.0f}cc Implies: C_VBD={implied_cvbd:.0f}ad, volmax={implied_volmax:.0f}cc, max MAX_BUOY={implied_max_maxbuoy:.0f}cc<br>"
+        f"Current Settings C_VBD={c_vbd:.0f}ad MAX_BUOY={max_buoy} SM_CC={sm_cc}<br>"
+        f"Max SM_CC={implied_max_smcc:.0f}cc, min SM_CC {implied_min_smcc_surf:.1f} (based on density {density_1m:.5f} at {depth_1m:.2f}m and antenna 150cc)"
+    )
 
     fig.update_layout(
         {
