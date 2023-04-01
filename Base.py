@@ -1,25 +1,31 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
+## Copyright (c) 2023  University of Washington.
 ##
-## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
 ##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
 ##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+##
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 Base.py: Main entry point for Seaglider basestation.
@@ -1409,83 +1415,6 @@ def main():
     account.  Running this process multiple times is not detremental - no files
     from the glider are destroyed or altered as part of this processing.
 
-    Usage: Base.py [Options] --mission_dir MISSION_DIR
-
-    Options:
-      --version             show program's version number and exit
-      -h, --help            show this help message and exit
-      -c CONFIG, --config=CONFIG
-                            script configuration file
-      --base_log=BASE_LOG   basestation log file, records all levels of notifications
-      --nice=NICE           processing priority level (niceness)
-      -m MISSION_DIR, --mission_dir=MISSION_DIR
-                            dive directory
-      -v, --verbose         print status messages to stdout
-      -q, --quiet           don't print status messages to stdout
-      --debug               log/display debug messages
-      -i INSTRUMENT_ID, --instrument_id=INSTRUMENT_ID
-                            force instrument (glider) id
-      --gzip_netcdf      Do not gzip netcdf files
-      --profile             Profiles time to process
-      --ver_65              Processes Version 65 glider format
-      --bin_width=BIN_WIDTH
-                            Width of bins
-      --which_half=WHICH_HALF
-                            Which half of the profile to use - 1 down, 2 up, 3 both, 4 combine down and
-                            up
-      --dac_src=DAC_SRC     What calculation is used as the basis for glider displacement and depth
-                            averaged current: hdm - hydrodynamic model (default), gswm - glider slope
-                            observed w model
-      --daemon              Launch conversion as a daemon process
-      --ignore_lock         Ignore the lock file, if present
-      -f, --force           Forces conversion of all dives
-      --local               Performs no remote operations (no .urls, .pagers, .mailer, etc.)
-      --clean               Clean up (delete) intermediate files from working (mission) directory after
-                            processing.
-      --reply_addr=REPLY_ADDR
-                            Optional email address to be inserted into the reply to field email
-                            messages
-      --domain_name=DOMAIN_NAME
-                            Optional domain name to use for email messages
-      --web_file_location=WEB_FILE_LOCATION
-                            Optional location to prefix file locations in comp email messages
-      --make_dive_profiles  Create the common profile data products
-      --make_mission_profile
-                            Create mission profile output file
-      --make_mission_timeseries
-                            Create mission timeseries output file
-      --delete_upload_files Remove any input files (except cmdfile) after being successfully uploaded to the
-                            glider.  N.B. The check for successful upload is the file appears in the most recent
-                            completed comms session and that the size reported for upload matches the current
-                            on-disk size.
-
-    Files:
-    As the processing code runs in the user context of the glider, any files that do not have permissions
-    sufficient for the glider to gain read access will likely cause problems in processing.  If you edit
-    files, be sure to check that the permissions have not be altered such that the glider can't read them.
-
-    Input Files:
-
-    processed_files.cache   Created and maintained by the Base.py, this file is a record of the
-                            last time a file group from the glider was processed.  (A file group
-                            is the collection of fragment files that is reassembled on the basestation
-                            to make a single file from the glider)
-
-    sg_calib_constants.m    The collection of name/value pairs in matlab format that provides the core
-                            vechicle configuration information.  Note: This file is processed as faithfully
-                            as possible to the way matlab would process it. Complicated expressions on the right
-                            hand side of the name may not get correctly interpreted. It is recommended that you
-                            keep the right hand side in simple strings or constants.
-
-    comm.log                The ongoing communication record - processing doesn't even get started if this file
-                            doesn't exist.
-
-    .pagers                 These files are optional for processing, but enable useful features.  Consult
-    .mailer                 the documentation at the head of each protype file in the ~sg000 directory.
-    .urls
-    .ftp
-
-    Output Files:
 
     Returns:
         0 for success (although there may have been individual errors in
@@ -2086,39 +2015,49 @@ def main():
         if not dives_to_profile:
             log_info("No dives found to profile")
 
+    (
+        backup_dive_num,
+        backup_call_cycle,
+    ) = comm_log.get_last_dive_num_and_call_counter()
+
     # Back up all files - using the dive # and call_cycle # from the comm log
     # Do this without regard to what dives got processed
-    for i in known_files:
-        for j in ("", ".plain"):
-            known_file = f"{i}{j}"
-            backup_filename = os.path.join(base_opts.mission_dir, known_file)
-            if os.path.exists(backup_filename):
-                (
-                    backup_dive_num,
-                    backup_call_cycle,
-                ) = comm_log.get_last_dive_num_and_call_counter()
-                # backup_dive_num = comm_log.last_surfacing().dive_num
-                # backup_call_cycle = comm_log.last_surfacing().call_cycle
-                if backup_dive_num is not None:
-                    if backup_call_cycle is None or int(backup_call_cycle) == 0:
-                        backup_target_filename = "%s.%d" % (
-                            backup_filename,
-                            int(backup_dive_num),
-                        )
-                    else:
-                        backup_target_filename = "%s.%d.%d" % (
-                            backup_filename,
-                            int(backup_dive_num),
-                            int(backup_call_cycle),
-                        )
-                    log_info(
-                        f"Backing up {backup_filename} to {backup_target_filename}"
+    for known_file in known_files:
+        backup_filename = os.path.join(base_opts.mission_dir, known_file)
+        if os.path.exists(backup_filename):
+            # backup_dive_num = comm_log.last_surfacing().dive_num
+            # backup_call_cycle = comm_log.last_surfacing().call_cycle
+            if backup_dive_num is not None:
+                if backup_call_cycle is None or int(backup_call_cycle) == 0:
+                    backup_target_filename = "%s.%d" % (
+                        backup_filename,
+                        int(backup_dive_num),
                     )
-                    shutil.copyfile(backup_filename, backup_target_filename)
                 else:
-                    log_error(
-                        f"Could not find a dive number in the comm.log - not backing up file {backup_filename}"
+                    backup_target_filename = "%s.%d.%d" % (
+                        backup_filename,
+                        int(backup_dive_num),
+                        int(backup_call_cycle),
                     )
+                log_info(f"Backing up {backup_filename} to {backup_target_filename}")
+                shutil.copyfile(backup_filename, backup_target_filename)
+
+                if backup_filename != 'cmdfile':
+                    BaseDB.logControlFile(base_opts, backup_dive_num, backup_filename, backup_target_filename) 
+            else:
+                log_error(
+                    f"Could not find a dive number in the comm.log - not backing up file {backup_filename}"
+                )
+
+    if backup_dive_num is not None and int(backup_dive_num) >= 1:
+        if backup_call_cycle is None or int(backup_call_cycle) == 0:
+            cmdfile_name = f"cmdfile.{int(backup_dive_num)}"
+        else:
+            cmdfile_name = f"cmdfile.{int(backup_dive_num)}.{int(backup_call_cycle)}"
+
+        fullname = os.path.join(base_opts.mission_dir, cmdfile_name)
+        if os.path.exists(fullname):
+            BaseDB.logParameterChanges(base_opts, backup_dive_num, cmdfile_name)
 
     # Known files have been back up.
     delete_files = []

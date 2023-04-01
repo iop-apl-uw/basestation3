@@ -1,26 +1,32 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-##
-## Copyright (c) 2006, 2007, 2009, 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
-##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """Routines for creating KML files from netCDF data, comm.log and target files
 """
@@ -95,12 +101,8 @@ def cmp_function(a, b):
     b_dive = None
     a_counter = None
     b_counter = None
-    a_is_plain = ".plain" in a
-    _, a_base = os.path.split(a.replace(".plain", ""))
-    b_is_plain = ".plain" in b
-    _, b_base = os.path.split(b.replace(".plain", ""))
-    a_split = a_base.split(".")
-    b_split = b_base.split(".")
+    a_split = a.split(".")
+    b_split = b.split(".")
 
     a_dive = int(a_split[1])
     b_dive = int(b_split[1])
@@ -124,12 +126,7 @@ def cmp_function(a, b):
         elif a_counter < b_counter:
             return 1
         else:
-            if a_is_plain and not b_is_plain:
-                return -1
-            elif not a_is_plain and b_is_plain:
-                return 1
-            else:
-                return 0
+            return 0
 
 
 def printHeader(name, description, glider_color, fo):
@@ -1587,8 +1584,6 @@ def main(
         for glob_expr in (
             "targets.[0-9]*",
             "targets.[0-9]*.[0-9]*",
-            "targets.plain.[0-9]*",
-            "targets.plain.[0-9]*.[0-9]*",
         ):
             for match in glob.glob(os.path.join(base_opts.mission_dir, glob_expr)):
                 targets.append(match)

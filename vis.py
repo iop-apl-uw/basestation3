@@ -1,4 +1,31 @@
 #!/usr/bin/env python3.10
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
 from orjson import dumps,loads
 import time
@@ -60,7 +87,8 @@ protectableRoutes = [
                         'log',      # get log summary 
                         'file',     # get log, eng, cap file
                         'alerts',   # get alerts
-                        'deltas',   # get changes between dives
+                        'deltas',   # get changes (parameters and files) between dives
+                        'changes',  # get parameter changes
                         'summary',  # get mission summary for a glider
                         'status',   # get basic mission staus (current dive) and eng plot list
                         'control',  # get a control file (cmdfile, etc.)
@@ -427,7 +455,7 @@ def attachHandlers(app: sanic.Sanic):
         return await sanic.response.file(filename, mime_type='text/html')
 
     @app.route('/mapdata/<glider:int>')
-    # description: get map configation (also, sa, kml from missions.dat)
+    # description: get map configation (also, sa, kml from missions.yml)
     # parameters: mission
     # returns: JSON dict with configuration variables
     @authorized()
@@ -460,7 +488,7 @@ def attachHandlers(app: sanic.Sanic):
     # Protect at the mission level (which protects that mission at 
     # all endpoints) or at the endpoint level with something like
     # users: [download] or groups: [download] and build
-    # users.dat appropriately
+    # users.yml appropriately
     #
     # curl -c cookies.txt -X POST http://myhost/auth \
     # -H "Content-type: application/json" \
@@ -536,6 +564,7 @@ def attachHandlers(app: sanic.Sanic):
     async def proxykmzHandler(request, url):
         allowed = [
                    'https://usicecenter.gov/File/DownloadCurrent',
+                   'https://iop.apl.washington.edu/seaglider_ssh',
                   ]
 
         found = False
@@ -642,43 +671,25 @@ def attachHandlers(app: sanic.Sanic):
     # returns: JSON formatted dict of control file changes
     @authorized()
     async def deltasHandler(request, glider: int, dive: int):
-        cmdfile = f'{gliderPath(glider,request)}/cmdfile.{dive:d}'
-        logfile = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.log'
-        if not await aiofiles.os.path.exists(cmdfile) or not await aiofiles.os.path.exists(logfile):
-            return sanic.response.text('not found')
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        message = { 'dive': dive, 'parm': [], 'file': [] }
+        if await Path(dbfile).exists():
+            async with aiosqlite.connect(dbfile) as conn:
+                conn.row_factory = rowToDict # not async but called from async fetchall
+                cur = await conn.cursor()
+                try:
+                    await cur.execute(f"SELECT * FROM changes WHERE dive={dive} ORDER BY parm ASC;")
+                except aiosqlite.OperationalError as e:
+                    return sanic.response.text(f'db error {e}')
 
-        cmd = f"/usr/local/bin/validate {logfile} -c {cmdfile}"
+                message['parm'] = await cur.fetchall()
 
-        proc = await asyncio.create_subprocess_shell(
-            cmd, 
-            stdout=asyncio.subprocess.PIPE, 
-            stderr=asyncio.subprocess.PIPE
-        )
-        out, err = await proc.communicate()
-        results = out.decode('utf-8', errors='ignore') 
+                try:
+                    await cur.execute(f"SELECT * FROM files WHERE dive={dive} ORDER BY file ASC;")
+                except aiosqlite.OperationalError as e:
+                    return sanic.response.text(f'db error {e}')
 
-        message = {}
-        message['dive'] = dive
-        message['parm'] = []    
-        for line in results.splitlines():
-            if "will change" in line:         
-                pieces = line.split(' ')
-                logvar = pieces[2]
-                oldval = pieces[6]
-                newval = pieces[8]
-                message['parm'].append(f'{logvar},{oldval},{newval}')
-
-        message['file'] = []
-
-        files = ["science", "targets", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat"]
-        for f in files:
-            filename = f'{gliderPath(glider,request)}/{f}.{dive}'
-
-            if await aiofiles.os.path.exists(filename):
-                async with aiofiles.open(filename, 'r') as file:
-                    c = await file.read() 
-
-                message['file'].append({ "file": f, "contents":c }) 
+                message['file'] = await cur.fetchall()
 
         return sanic.response.json(message)
 
@@ -797,6 +808,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/db/<glider:int>/<dive:int>')
     # description: query database for common engineering variables
+    # args: dive=-1 returns whole mission
     # parameters: mission
     # returns: JSON dict of engineering variables
     @authorized()
@@ -805,7 +817,7 @@ def attachHandlers(app: sanic.Sanic):
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,batt_volts_10V,batt_volts_24V,batt_capacity_24V,batt_capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north,dog_efficiency,alerts,criticals,capture,error_count FROM dives"
+        q = "SELECT dive,log_start,log_D_TGT,log_D_GRID,log__CALLS,log__SM_DEPTHo,log__SM_ANGLEo,log_HUMID,log_TEMP,log_INTERNAL_PRESSURE,depth_avg_curr_east,depth_avg_curr_north,max_depth,pitch_dive,pitch_climb,batt_volts_10V,batt_volts_24V,batt_capacity_24V,batt_capacity_10V,total_flight_time_s,avg_latitude,avg_longitude,target_name,magnetic_variation,mag_heading_to_target,meters_to_target,GPS_north_displacement_m,GPS_east_displacement_m,flight_avg_speed_east,flight_avg_speed_north,dog_efficiency,alerts,criticals,capture,error_count,(SELECT COUNT(dive) FROM changes where changes.dive=dives.dive) as changes, (SELECT COUNT(dive) FROM files where files.dive=dives.dive) as files FROM dives"
 
         if dive > -1:
             q = q + f" WHERE dive={dive};"
@@ -824,6 +836,43 @@ def attachHandlers(app: sanic.Sanic):
             # r = [dict((cur.description[i][0], value) \
             #       for i, value in enumerate(row)) for row in data]
             return sanic.response.json(data)
+
+    @app.route('/changes/<glider:int>/<dive:int>/<which:str>/<sort:str>')
+    # description: query database for parameter or control file changes
+    # args: dive=-1 returns entire history, which=parms|files, sort=dive|parm|file
+    # parameters: mission
+    # returns: JSON dict of changes [{(dive,parm,oldval,newval}] or [{dive,file,fullname,contents}]
+    async def changesHandler(request, glider:int, dive:int, which:str, sort:str):
+        if (which not in ['parms', 'files']) or (sort not in ['dive', 'file', 'parm']):
+            return sanic.response.text('no db')
+           
+        db   = { 'parms': 'changes', 'files': 'files' } 
+        col2 = which[0:-1]
+
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        if not await aiofiles.os.path.exists(dbfile):
+            return sanic.response.text('no db')
+
+        q = f"SELECT * FROM {db[which]}"
+
+        if dive > -1:
+            q = q + f" WHERE dive={dive} ORDER BY {col2} ASC;"
+        elif sort  == 'dive':
+            q = q + f" ORDER BY dive,{col2} ASC;"
+        else:
+            q = q + f" ORDER BY {col2},dive ASC;"
+
+        async with aiosqlite.connect(dbfile) as conn:
+            conn.row_factory = rowToDict # not async but called from async fetchall
+            cur = await conn.cursor()
+            try:
+                await cur.execute(q)
+            except aiosqlite.OperationalError as e:
+                return sanic.response.text(f'no table {e}')
+
+            data = await cur.fetchall()
+            return sanic.response.json(data)
+
 
     @app.route('/dbvars/<glider:int>')
     # description: list of per dive database variables
@@ -1665,6 +1714,21 @@ async def checkFilesystemChanges(files):
 
     return mods
 
+async def configWatcher(app):
+    socket = zmq.asyncio.Context().socket(zmq.SUB)
+    socket.connect(app.config.WATCH_IPC)
+    socket.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
+    while True:
+        msg = await socket.recv_multipart()
+        sanic.log.logger.info(msg[1])
+        topic = msg[0].decode('utf-8')
+        if 'missions' in topic:
+            await buildMissionTable(app)
+        elif 'users' in topic:
+            await buildUserTable(app)
+
+        # app.m.name.restart() 
+
 async def notifier(config):
     msk = os.umask(0o000)
     ctx = zmq.asyncio.Context()
@@ -1678,7 +1742,10 @@ async def notifier(config):
     os.umask(msk)
 
     missions = await buildMissionTable(None, config=config)
-    files = []
+    files = [ ]
+    for f in [ 'missions.yml', 'users.yml' ]:
+        files.append( { 'glider': 0, 'full': f, 'file': f, 'ctime': 0 } )
+
     for m in missions:
         if m['path'] == None:
             for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat"]:
@@ -1706,7 +1773,7 @@ def backgroundWatcher(config):
 
 async def mainProcessReady(app):
     print('main process ready')
-    app.manager.manage("backgroundWatcher", backgroundWatcher, { "config": app.config } )
+    app.manager.manage("backgroundWatcher", backgroundWatcher, { "config": app.config })
 
 async def mainProcessStop(app):
     os.remove(app.config.WATCH_IPC[6:])
@@ -1731,9 +1798,9 @@ def createApp(overrides: dict) -> sanic.Sanic:
     if 'SECRET' not in app.config:
         app.config.SECRET = secrets.token_hex()
     if 'MISSIONS_FILE' not in app.config:
-        app.config.MISSIONS_FILE = "missions.dat"
+        app.config.MISSIONS_FILE = "missions.yml"
     if 'USERS_FILE' not in app.config:
-        app.config.USERS_FILE = "users.dat"
+        app.config.USERS_FILE = "users.yml"
     if 'FQDN' not in app.config:
         app.config.FQDN = None;
     if 'USER' not in app.config:
@@ -1745,7 +1812,29 @@ def createApp(overrides: dict) -> sanic.Sanic:
 
     attachHandlers(app)
 
+    app.add_task(configWatcher)
+
     return app
+
+def usage():
+    print("vis.py glider mission visualization server")
+    print("  --mission=|-m      [sgNNN:/abs/mission/path] run in single mission mode")
+    print("  --mode=|-o         private|pilot|public")
+    print("  --port=|-p         portNumber (ex. 20000)")
+    print("  --root=|-r         baseDirectory (ex. /home/seaglider)")
+    print("  --domain=|-d       fully-qualified-domain-name (optional)")
+    print("  --missionsfile=|-f missions.yml file (default ROOT/missions.yml)")
+    print("  --usersfile=|-u    users.yml file (default ROOT/users.yml)")
+    print("  --certs=|-c        certificate file for SSL")
+    print("  --ssl|-s           boolean enable SSL")
+    print("  --inspector|-i     boolean enable SANIC inspector")
+    print("  --nochat           boolean run without chat support")
+    print("  --nosave           boolean run without save support")
+    print()
+    print("  Environment variables: ")
+    print("    SANIC_CERTPATH, SANIC_ROOTDIR, SANIC_SECRET, ")
+    print("    SANIC_MISSIONS_FILE, SANIC_USERS_FILE, SANIC_FQDN, ")
+    print("    SANIC_USER, SANIC_SINGLE_MISSION")
 
 if __name__ == '__main__':
 
@@ -1759,51 +1848,44 @@ if __name__ == '__main__':
 
     overrides = {}
 
-    if len(sys.argv) == 2:
-        if sys.argv[1] == "public":
-            port = 443
-            runMode = MODE_PUBLIC
-            ssl = True
-        else:
-            port = int(sys.argv[1])
-            if port == 443:
-                runMode = MODE_PILOT
-    else:
-        try:
-            opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:si', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "nosave", "nochat", "inspector"])
-        except getopt.GetoptError as err:
-            print(err)
-            sys.exit(1)
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:sih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector", "help", "nosave", "nochat"])
+    except getopt.GetoptError as err:
+        print(err)
+        sys.exit(1)
 
-        for o,a in opts:
-            if o in ['-p', '--port']:
-                port = int(a)
-            elif o in ['-o', '--mode']:
-                runMode = runModes[a]
-            elif o in ['-r', '--root']:
-                root = a
-            elif o in ['-d', '--domain']:
-                overrides['FQDN'] = a
-            elif o in ['-f', '--missionsfile']:
-                overrides['MISSIONS_FILE'] = a
-            elif o in ['-u', '--usersfile']:
-                overrides['USERS_FILE'] = a
-            elif o in ['--nosave']:
-                noSave = True
-            elif o in ['--nochat']:
-                noChat = True
-            elif o in ['-c', '--certs']:
-                certPath = a
-            elif o in ['-s', '--ssl']:
-                ssl = True
-            elif o in ['-i', '--inspector']:
-                overrides['INSPECTOR'] = True
-            elif o in ['-m', '--mission']:
-                overrides['SINGLE_MISSION'] = a
-                pieces = a.split(':')
-                if len(pieces) != 2:
-                    print("-m sgNNN:/abs/mission/path")
-                    sys.exit(1)
+    for o,a in opts:
+        if o in ['-p', '--port']:
+            port = int(a)
+        elif o in ['-o', '--mode']:
+            runMode = runModes[a]
+        elif o in ['-r', '--root']:
+            root = a
+        elif o in ['-d', '--domain']:
+            overrides['FQDN'] = a
+        elif o in ['-f', '--missionsfile']:
+            overrides['MISSIONS_FILE'] = a
+        elif o in ['-u', '--usersfile']:
+            overrides['USERS_FILE'] = a
+        elif o in ['--nosave']:
+            noSave = True
+        elif o in ['--nochat']:
+            noChat = True
+        elif o in ['-c', '--certs']:
+            certPath = a
+        elif o in ['-s', '--ssl']:
+            ssl = True
+        elif o in ['-i', '--inspector']:
+            overrides['INSPECTOR'] = True
+        elif o in ['-m', '--mission']:
+            overrides['SINGLE_MISSION'] = a
+            pieces = a.split(':')
+            if len(pieces) != 2:
+                print("-m sgNNN:/abs/mission/path")
+                sys.exit(1)
+        elif o in ['-h', '--help']:
+            usage()
+            sys.exit(1)
                  
     if root is None:
         root = '/home/seaglider'

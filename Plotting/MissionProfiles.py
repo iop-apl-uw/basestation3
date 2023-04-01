@@ -1,26 +1,32 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-##
-## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
-##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """ Plots sections of sensor data
 """
@@ -140,6 +146,10 @@ def mission_profiles(
         print(f"Unable to open {ncname}")
         return ([], [])
 
+    # Simple hack for case where the most recent dives aren't in the timeseries file
+    # (due to processing errors typically)
+    latest = min(nci.variables["dive_number"][-1], latest)
+
     for vk in list(x['variables'].keys()):
         prev_x = None
         for sk in list(x['sections'].keys()):
@@ -155,6 +165,8 @@ def mission_profiles(
             cmap = getValue(x, 'colormap', sk, vk, 'thermal')
             zmin = getValue(x, 'min', sk, vk, None)
             zmax = getValue(x, 'max', sk, vk, None)
+            units = getValue(x, 'units', sk, vk, None)
+            fill  = getValue(x, 'fill', sk, vk, False)
 
             if stop == -1 or stop >= latest:
                 stop = latest
@@ -182,7 +194,7 @@ def mission_profiles(
                             "family": "Raleway",
                             "size": 12,
                             "color": "white"
-                        }
+                        },
                      }
 
             props = {
@@ -191,8 +203,16 @@ def mission_profiles(
                         'z': d[vk],
                         'contours_coloring': 'heatmap',
                         'colorscale':        cmocean_to_plotly(cmap, 100),
-                        'connectgaps':       True,
-                        'contours':          contours
+                        'connectgaps':       fill,
+                        'contours':          contours,
+                        "colorbar": {
+                            "title": {
+                                "text": units,
+                                "side": "top",
+                            },
+                            # "thickness": 0.02,
+                            # "thicknessmode": "fraction",
+                        },
                     }
 
             if zmin is not None:
@@ -203,14 +223,22 @@ def mission_profiles(
             fig.add_trace(plotly.graph_objects.Contour( **props ) )
 
             title_text = f"{mission_str}<br>{vk}<br>section {sk}: {start}-{stop}"
-            
+ 
             fig.update_layout(
                 {
                     "xaxis": {
                         "title": "dive",
+                        # "title": units,
                         "showgrid": False,
                         "autorange": "reversed" if flip else True,
                     },
+                    "xaxis2": {
+                        "title": units,
+                        "showgrid": False,
+                        "side": "top",
+                        "overlaying": "x1",
+                    },
+
                     "yaxis": {
                         "title": "depth",
                         "showgrid": False,

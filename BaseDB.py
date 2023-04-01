@@ -1,26 +1,32 @@
 # /usr/bin/env python
 # -*- python-fmt -*-
 
-##
-## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
-##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 # fmt: off
 
@@ -41,6 +47,7 @@ import warnings
 import numpy
 import pandas as pd
 
+import CmdHistory
 import BaseOpts
 import BasePlot
 import CalibConst
@@ -800,6 +807,8 @@ def prepDB(base_opts, dbfile=None):
     createDivesTable(cur)
     cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
     cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
+    cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
+    cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
     cur.close()
 
     con.close()
@@ -906,6 +915,96 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
             warnings.simplefilter('ignore', numpy.RankWarning)
             m,_ = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
         addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
+
+    if con is None:
+        mycon.close()
+
+def logControlFile(base_opts, dive, filename, fullname, con=None):
+    if con is None:
+        mycon = Utils.open_mission_database(base_opts)
+        if mycon is None:
+            log_error("Failed to open mission db")
+            return
+    else:
+        mycon = con
+
+    try:
+        cur = mycon.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
+    except Exception as e:
+        log_error("{e} could not create files table")
+        return
+
+    pathed = os.path.join(base_opts.mission_dir, fullname)
+    if not os.path.exists(pathed):
+        return
+
+    with open(pathed, 'r') as f:
+        contents = f.read()
+
+    try:
+        cur.execute("REPLACE INTO files(dive,file,fullname,contents) VALUES(?,?,?,?);", (dive, filename, fullname, contents))
+    except Exception as e:
+        log_error(f"{e} inserting file")
+
+    mycon.commit()
+    cur.close()
+
+    if con is None:
+        mycon.close()
+
+def rebuildControlHistory(base_opts):
+    con = Utils.open_mission_database(base_opts)
+
+    path = base_opts.mission_dir;
+
+    cur = con.cursor()
+    cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
+    maxdv = cur.fetchone()[0]
+
+    for i in range(1, maxdv + 1):
+        for which in ['targets', 'science', 'scicon.sch', 'pdoscmds.bat', 'tcm2mat.cal']:
+            fullname = f'{which}.{i}'
+            cmdname = os.path.join(path, fullname)
+            r = glob.glob(f'{cmdname}.*')
+            if len(r) > 0:
+                mx = max( [ x.split('.')[-1] for x in r ] )
+                fullname = f'{which}.{i}.{mx}'
+                cmdname = os.path.join(path, fullname)
+                
+            if os.path.exists(cmdname):
+                logControlFile(base_opts, i, which, fullname, con=con)
+
+    con.close()
+
+def logParameterChanges(base_opts, dive_num, cmdname, con=None):
+    if con is None:
+        mycon = Utils.open_mission_database(base_opts)
+        if mycon is None:
+            log_error("Failed to open mission db")
+            return
+    else:
+        mycon = con
+
+    try:
+        cur = mycon.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
+    except Exception as e:
+        log_error("{e} could not create changes table")
+        return
+
+    logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
+    cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
+    changes = CmdHistory.parameterChanges(dive_num, logfile, cmdfile)
+
+    for d in changes:
+        try:
+            cur.execute("REPLACE INTO changes(dive,parm,oldval,newval) VALUES(:dive, :parm, :oldval, :newval);", d)
+        except Exception as e:
+            log_error(f"{e} inserting parameter changes")
+
+    mycon.commit()
+    cur.close()
 
     if con is None:
         mycon.close()

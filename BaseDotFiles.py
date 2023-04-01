@@ -1,24 +1,31 @@
 # -*- python-fmt -*-
-##
-## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
-##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 BaseDotFiles.py: Processing for various configuration files that reside in the glider
@@ -411,10 +418,10 @@ def process_pagers(
                             fmt = pagers_tag[len(tag) :]
                             pagers_tag = tag
                             break
-                        
+
                     if fmt == "":
                         fmt = "ddmm"
-                        
+
                     if pagers_tag not in known_tags:
                         log_error(
                             "Unknown tag (%s) on line (%s) in %s - skipping"
@@ -456,6 +463,14 @@ def process_pagers(
                                 dive_prefix = True
                             fmt = fmts[0]
 
+                        # GBS - 2023/03/27
+                        # Due to a long standing bug in CommLog.py:GPS_lat_lon_and_recov, the
+                        # divenum formatting has been in place for all these messages.
+                        # The bug in CommLog has been fixed, but at this point, its seems more
+                        # useful to have the diveprefix on all these messages
+                        dive_prefix = True
+
+                        log_debug(f"fmt:{fmt} dive_prefix:{dive_prefix}")
                         if comm_log:
                             (
                                 gps_message,

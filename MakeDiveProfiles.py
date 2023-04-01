@@ -1,26 +1,32 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-##
-## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
-##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Issues:
 ## - .cnf based sensors need to include descriptions, units and flag for inclusion in whole mission data fields for all columns
@@ -7282,34 +7288,13 @@ def collect_nc_perdive_files(base_opts):
 def main():
     """Command line driver for creating per-dive netCDF files
 
-    usage: MakeDiveProfiles.py [options] [--mission_dir <mission_dir> | basefile]
-    where (one required):
-        basefile        - The fully qualified path to a seaglider dive without extension, e.g., /home/sg194/p1940010
-        --mission_dir   - The name of a directory, in which case all eng/log files in that directory are processed
-
-    The following standard options are supported:
-        --version             show program's version number and exit
-        -h, --help            show this help message and exit
-        -c CONFIG, --config=CONFIG
-                              script configuration file
-        --base_log=BASE_LOG   basestation log file, records all levels of notifications
-        --nice=NICE           processing priority level (niceness)
-        -v, --verbose         print status messages to stdout
-        -q, --quiet           don't print status messages to stdout
-        --debug               log/display debug messages
-        -i INSTRUMENT_ID, --instrument_id=INSTRUMENT_ID
-                              force instrument (glider) id
-        --magcalfile=CALFILE  Reprocess compass headings using calfile (tcm2mat format)
-        --gzip_netcdf         gzip netcdf files
-        --profile             Profiles time to process
-        --make_dive_profiles  Create the common profile data products
-
-    Note:
-        sg_calib_constants must be in the same directory as the file(s) being processed
-
     Returns:
         0 - success
         1 - failure
+
+    Raises:
+        Any exceptions raised are considered critical errors and not expected
+
     """
     base_opts = BaseOpts.BaseOptions(
         "Command line driver for creating per-dive netCDF files",
