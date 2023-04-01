@@ -45,7 +45,7 @@ Authentication, enabled fesatures, and permissions are highly configurable via m
 Always test a publicly available running instance to make sure that permissions are
 appropriate and that features are not being exposed in unintended ways. 
 
-
+--
 
 The web app:
 
@@ -88,3 +88,188 @@ On mobile:
 
 
 Not all features are available in all users and/or in all modes.
+
+--
+
+API / URL usage
+
+
+GET /
+    description: "public" index (all missions) page
+    parameters : plot (which plot to include in tiles, default=map)
+    returns    : HTML page
+
+GET /<glider:int>
+    description: main page for glider
+    parameters : mission, plot (starting plot), dive (starting dive), order (plot ribbon order), plot tool values
+    returns    : HTML page
+
+GET /alerts/<glider:int>/<dive:int>
+    description: basestation alerts file
+    parameters : mission
+    returns    : raw alerts file from basestation (HTML format)
+
+POST /auth
+    description: user authorization
+    payload    : (JSON) username, password
+    returns    : none on success (sets cookie with authorization token)
+
+GET /changes/<glider:int>/<dive:int>/<sort:str>
+    description: query database for parameter changes
+    args       : dive=-1 returns entire history
+    parameters : mission
+    returns    : JSON dict of changes [{(dive,parm,oldval,newval}]
+
+POST /chat/send/<glider:int>
+    description: POST a message to chat
+    payload    : (form) attachment, message
+    parameters : mission
+    returns    : JSON dict of chat history
+
+GET /control/<glider:int>/<which:str>
+    description: glider control files
+    args       : which=cmdfile|targets|science|scicon.sch|tcm2mat.cal|pdoscmds.bat|sg_calib_constants.m
+    parameters : mission
+    returns    : latest version of glider control file
+
+GET /dash
+    description: dashboard (engineering diagnostic) view of index (all missions) page
+    parameters : plot (which plot to include in tiles, default=diveplot)
+    returns    : HTML page
+
+GET /data/<which:str>/<glider:int>/<dive:int>
+    description: download raw data
+    parameters : mission
+    returns    : netCDF file
+
+GET /db/<glider:int>/<dive:int>
+    description: query database for common engineering variables
+    args       : dive=-1 returns whole mission
+    parameters : mission
+    returns    : JSON dict of engineering variables
+
+GET /dbvars/<glider:int>
+    description: list of per dive database variables
+    parameters : mission
+    returns    : JSON list of variable names
+
+GET /deltas/<glider:int>/<dive:int>
+    description: list of changes between dives
+    parameters : mission
+    returns    : JSON formatted dict of control file changes
+
+GET /file/<ext:str>/<glider:int>/<dive:int>
+    description: processed glider basestation files
+    args       : ext=eng|log|cap
+    parameters : mission
+    returns    : raw eng, log, or cap file
+
+GET /gliderkml/<glider:int>
+    description: get glider KML
+    parameters : mission
+    returns    : KML
+
+GET /log/<glider:int>/<dive:int>
+    description: formatted glider log
+    parameters : mission
+    returns    : summary version of log file in HTML format
+
+GET /map/<glider:int>
+    description: map tool
+    parameters : mission, tail (number of dives back to show in glider track), also (additional gliders to plot), sa (URL for SA to load)
+    returns    : HTML page
+
+GET /mapdata/<glider:int>
+    description: get map configation (also, sa, kml from missions.yml)
+    parameters : mission
+    returns    : JSON dict with configuration variables
+
+GET /missions/<mask:str>
+    description: list of missions
+    args       : mask is unused
+    returns    : JSON formatted dict of missions and mission config
+
+GET /plot/<fmt:str>/<which:str>/<glider:int>/<dive:int>/<image:str>
+    description: get a plot image
+    args       : fmt=png|webp|div, which=dv|eng|sg
+    parameters : mission
+    returns    : image data (webp, png or plotly div)
+
+GET /plots/<glider:int>/<dive:int>
+    description: list of plots available for dive
+    parameters : mission
+    returns    : JSON dict of available plots, sorted by type
+
+WEBSOCKET /pos/stream/<glider:int>
+    description: stream real-time position updates
+    parameters : mission
+
+GET /pro/<glider:int>/<whichVar:str>/<whichProfiles:int>/<first:int>/<last:int>/<stride:int>/<top:int>/<bot:int>/<binSize:int>
+    description: extract bin averaged profiles
+    args       : whichProfiles=1(dives)|2(climbs)|3(both)|4(combine)
+    parameters : mission
+    returns    : compressed JSON dict of binned profiles
+
+GET /proxy/<url:path>
+    description: proxy requests for map tool
+    returns    : contents from requested URL
+
+GET /proxykmz/<url:path>
+    description: proxy and unzip network KMZ sources
+    returns    : KML from KMZ downloaded from requested URL
+
+GET /query/<glider:int>/<queryVars:str>
+    description: query per dive database for arbitrary variables
+    args       : queryVars=comma separated list
+    parameters : mission
+    returns    : JSON dict of query results
+
+POST /save/<glider:int>/<which:str>
+    description: save glider control file
+    args       : which=cmdfile|targets|science|scicon.sch|tcm2mat.cal|pdoscmds.bat|sg_calib_constants.m
+    payload    : (JSON) file, contents
+    parameters : mission
+    returns    : validator results and/or error message
+
+GET /selftest/<glider:int>
+    description: selftest review
+    parameters : mission
+    returns    : HTML format summary of latest selftest results
+
+GET /status/<glider:int>
+    description: glider latest dive number and visualization config (mission.dat variables, mission plots)
+    parameters : mission
+    returns    : JSON formatted dict of configuration
+
+WEBSOCKET /stream/<which:str>/<glider:int>
+    description: stream real-time glider information (comm.log, chat, cmdfile changed, glider calling, etc.)
+    parameters : mission
+
+GET /summary/<glider:int>
+    description: summary status of glider
+    parameters : mission
+    returns    : JSON formatted dict of glider engineering status variables
+
+GET /time/<glider:int>/<dive:int>/<which:str>
+    description: extract timeseries data from netCDF
+    parameters : mission
+    returns    : compressed JSON dict of timeseries data
+
+GET /timevars/<glider:int>
+    description: list of timeseries variables
+    parameters : mission
+    returns    : JSON list of variable names
+
+GET /url
+    description: .urls notification handler (used when vis server is different from basestation server)
+    parameters : instrument_name, dive, files (), status (), gpsstr ()
+    returns    : 'ok' or 'error'
+
+GET /user
+    description: checks whether current session user is valid
+    returns    : YES is user is valid
+
+WEBSOCKET /watch/<mask:str>
+    description: stream real-time glider summary state (call status, cmdfile directive)
+    parameters : mission
+

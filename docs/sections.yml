@@ -20,14 +20,18 @@ defaults:
 
 # only plot 0-400m for optical sections (sensor is generally
 # turned off below that)
+#
+# units should be in ' single quotes for YAML escaping reasons
+# You can se mathjax $...$ for latex style formatting or
+# HTML codes (which look much better)
 
 variables: 
-  temperature: { colormap: thermal, min: 3, max: 20, , units: '$^{\circ}C$' }
-  salinity: { colormap: haline, min: 31.5, max: 34.5 }
-  wlbb2fl_sig470nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: '$m^\{-1\}sr^\{-1\}$' }
-  wlbb2fl_sig695nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: '${\mu}g/l$' }
-  wlbb2fl_sig700nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: '$m^{-1}sr^{-1}$' }
-  aanderaa4831_dissolved_oxygen: { top: 0, bottom: 1000, colormap: oxy, units: '${\mu}mol/kg$' }
+  temperature: { colormap: thermal, min: 3, max: 20, units: '&#8451;' }
+  salinity: { colormap: haline, min: 31.5, max: 34.5  }
+  wlbb2fl_sig470nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: 'm<sup>-1</sup>sr<sup>-1</sup>' }
+  wlbb2fl_sig695nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: '&mu;g&#183;l<sup>-1</sup>' }
+  wlbb2fl_sig700nm_adjusted: { top: 0, bottom: 400, colormap: algae, units: 'm<sup>-1</sup>sr<sup>-1</sup>' }
+  aanderaa4831_dissolved_oxygen: { top: 0, bottom: 1000, colormap: oxy, units: '&mu;mol&#183;kg<sup>-1</sup>' }
 
 # Section name 000 is special for vis. All 000 sections
 # are presented ahead of the rest of the sections

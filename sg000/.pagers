@@ -29,10 +29,6 @@
 # gpsddmm|recovddmm|criticalddmm       - same as above but GPS fix formated in DD MM.MM format
 # gpsddmmss|recovddmmss|criticalddmmss - same as above but GPS fix formated in DD MM SS.SS format
 #
-# Any of the above forms of gps, recov and critical may have a _divenum appended to augment which adds
-# the dive number, call cycle and calls made counts to the subject line and message body
-#
-#
 # alerts     - Notifications of
 #              -- Any problems or issues that occurred during basestation processing
 #              -- Non-critical, but important conditions the glider has encounted, such as a $WARN message

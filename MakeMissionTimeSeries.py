@@ -1,26 +1,32 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-##
-## Copyright (c) 2006-2012, 2016, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
-##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """Routines for creating mission profile from a Seaglider's dive profiles
 """
@@ -103,6 +109,18 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         "pressure",
         "depth",
         "time",
+        "speed_gsm",
+        "horz_speed_gsm",
+        "vert_speed_gsm",
+        "speed",
+        "horz_speed",
+        "vert_speed",
+        "sound_velocity",
+        "conservative_temperature",
+        "absolute_salinity",
+        "gsw_sigma0",
+        "gsw_sigma3",
+        "gsw_sigma4",
     )
 
     rename_ctd_dim = False
@@ -148,6 +166,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         "end_latitude",
         "start_longitude",
         "end_longitude",
+        "speed_gsm",
     ]
     mission_nc_dive_d = (
         {}
@@ -162,6 +181,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         mission_nc_dive_d[var] = []
 
     unknown_vars = {}
+    total_dive_vars = set()
     for dive_nc_profile_name in dive_nc_profile_names:
         log_debug("Processing %s" % dive_nc_profile_name)
         try:  # RuntimeError
@@ -373,11 +393,18 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                                 # for gliders where the CTD has been moved from scicon to the truck (or back) via the new tailboards,
                                 # a new set of vectors must be constructed, with a new dimension that is different
                                 # then the others
-                                # TODO - new vector for combined instrument needs to be created
+
+                                # Note: this logic does not deal with the case where the CTD is from scicon->truck->scicon or the inverse.
+
                                 if dive_nc_varname not in ctd_vars:
                                     raise RuntimeError(
-                                        "Differing dim_info %s vs %s ncfile:%s"
-                                        % (old_dim_name, dim_name, dive_nc_profile_name)
+                                        "Differing dim_info %s vs %s for %s in ncfile:%s"
+                                        % (
+                                            old_dim_name,
+                                            dim_name,
+                                            dive_nc_varname,
+                                            dive_nc_profile_name,
+                                        )
                                     )
                                 rename_ctd_dim = True
                                 log_debug(
@@ -432,7 +459,9 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             # now initialize or extend the vector values for these variables
             # BUG: this assumes that if you declare True for include_in_mission_profile in BaseNetCDF.nc_var_metadata
             # that the variable will *always* have values written out, even if nans or whatever
-            for temp_dive_varname in list(temp_dive_vars.keys()):
+            # See hack below for a fix for one corner case
+
+            for temp_dive_varname in temp_dive_vars:
                 try:
                     # append this dive data to the accumulating list
                     mission_nc_var_d[temp_dive_varname] = np.array(
@@ -446,6 +475,35 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                     mission_nc_var_d[temp_dive_varname] = temp_dive_vars[
                         temp_dive_varname
                     ][:].copy()
+                total_dive_vars.add(temp_dive_varname)
+
+            # log_info(
+            #    f"{dive_nc_profile_name} : {total_dive_vars - set(temp_dive_vars)}"
+            # )
+
+            # This code is designed to catch the specific case that there are missing vectors
+            # from a dimension in a dive, but other vectors have been updated (see BUG: above)
+            #
+            # This code assumes the vector was present in earlier dives and does not handle new vecotrs
+            # being added mid-mission - as in moving the CTD from scicon to truck (and potentially back)
+            for missing_varname in total_dive_vars - set(temp_dive_vars):
+                _, nc_data_type, _, mdp_dim_info = BaseNetCDF.nc_var_metadata[
+                    missing_varname
+                ]
+                # Nothing in this dim was updated from this file
+                if mdp_dim_info not in extended_dim_names:
+                    continue
+
+                log_info(
+                    f"{missing_varname} mission from {dive_nc_profile_name} - adding empty vector"
+                )
+
+                missing_var_size = nc_info_d[nc_info_d[mdp_dim_info]]
+                missing_var = np.zeros(missing_var_size, dtype=nc_data_type)
+
+                mission_nc_var_d[missing_varname] = np.array(
+                    np.append(mission_nc_var_d[missing_varname], missing_var)
+                )
 
         except KeyboardInterrupt:
             log_error("Keyboard interrupt - breaking out")
@@ -474,6 +532,9 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         # A good deal of this is a hack.  In the event that the SBECT migrated from one dimension to
         # another, we need to cons up a new dimension and migrate the relevent variables over there.
         # The dive number, time, depth and pressure variables are dropped in this case to simplify the above code
+
+        # Note - this code assumes that the of the CTD is one-way (scicon to truck). A move back will result
+        # in the contributions to this new dimension end up getting dropped from the timeseries file
         dropped_vars = []
         for var in list(mission_nc_var_d.keys()):
             if (
@@ -668,36 +729,6 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
 
 def main():
     """Command line driver for creating mission timeseries from single dive netCDF files
-
-    All netCDF files of the form pXXXYYYY.nc (where XXX is the glider ID and YYYY is the
-    dive number) from the mission directory are processed to create the mission time series.
-    The name of the timeseries may be optionally specified on the command line as a fully
-    qualified path.  If no output file is specified, the output file is created in the
-    mission directory with a standard name of the form:
-
-        sgXXX_(mission_title)_timeseries.nc
-
-    where XXX is the glider id and (mission_title) is the is the contents of the mission_title
-    field in the sg_calib_contants.m file, also located in the specified directory.
-
-    Usage: MakeMissionTimeSeries.py [Options] --mission_dir MISSION_DIR [outputfile]
-
-    Options:
-        --version             show program's version number and exit
-        -h, --help            show this help message and exit
-        -c CONFIG, --config=CONFIG
-            script configuration file
-        --base_log=BASE_LOG   basestation log file, records all levels of notifications
-        -m MISSION_DIR, --mission_dir=MISSION_DIR
-            dive directory
-        -v, --verbose         print status messages to stdout
-        -q, --quiet           don't print status messages to stdout
-        --debug               log/display debug messages
-        -i INSTRUMENT_ID, --instrument_id=INSTRUMENT_ID
-            force instrument (glider) id
-        --profile             Profiles time to process
-        --gzip_netcdf         gzip netcdf files
-        --nice                Set the process priority
 
     Returns:
         0 - success

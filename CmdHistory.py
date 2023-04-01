@@ -1,4 +1,6 @@
-#!/usr/bin/tcsh
+# /usr/bin/env python
+# -*- python-fmt -*-
+
 ## Copyright (c) 2023  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
@@ -26,49 +28,56 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-if(! $?PYTHON_BINARY ) then
-    set PYTHON_BINARY = /opt/basestation/bin/python
-endif
+import sys
+import subprocess
+import glob
+import os
 
-# A glider just logged out properly
-history -T -h >>! history.log
-rm -f .connected
-# if running manually (not at logout) set this variable
-if ( ! $?logout ) then
-    setenv logout manual
-endif
-echo Disconnected at `date -u +"%Y-%m-%dT%H:%M:%SZ"` \(${logout}\) >>! comm.log
-printf "\n" >>! comm.log
-printf "\n" >>! comm.log
+def parameterChanges(dive, logname, cmdname):
 
-set runner_timeout = 2
+    if not os.path.exists(logname) or not os.path.exists(cmdname):
+        return []
+    
+    cmd = f"/usr/local/bin/validate {logname} -c {cmdname}"
 
-if(! $?GLIDER_OPTIONS ) then
-    set GLIDER_OPTIONS = ""
-endif
+    proc = subprocess.Popen(
+          cmd,
+          shell=True,
+          stdout=subprocess.PIPE,
+          stderr=subprocess.PIPE
+    )
+    out, err = proc.communicate()
+    results = out.decode('utf-8', errors='ignore')
 
-if(! $?BASESTATION_PATH ) then
-    set BASESTATION_PATH = "/usr/local/basestation"
-endif
+    changes = []
+    for line in results.splitlines():
+        if "will change" in line:
+            pieces = line.split(' ')
+            logvar = pieces[2]
+            oldval = pieces[6]
+            newval = pieces[8]
+            changes.append(  { "dive": dive, "parm": logvar, "oldval": oldval, "newval": newval } )
 
-printf "\n" >>! baselog.log
-printf "\n"  >>! baselog.log
+    return changes
 
-set base_logout_time = `date -u +%y%m%d%H%M%S`
-set base_logout_cmd_line = "Base.py --mission_dir `pwd` --verbose --make_mission_timeseries --daemon --nice 10 --base_log `pwd`/baselog_`date -u +%y%m%d%H%M%S` ${GLIDER_OPTIONS}"
-set base_logout_log = `pwd`/baselog.log
+if __name__ == "__main__":
+    if len(sys.argv < 2):
+        sys.exit(1)
+    
+    glider = int(sys.argv[1])
 
-if( $?RUNNER_DIR ) then
-  set base_logout_run_file = ${RUNNER_DIR}/${base_logout_time}.run
-  echo `pwd` ${base_logout_log} ${base_logout_cmd_line} > ${base_logout_run_file}
-  set t_now = `date +%s`
-  while (-f ${base_logout_run_file} )
-      sleep 0.2
-      if ( `date +%s` >= ${t_now} + ${runner_timeout}) then
-          break
-      endif
-  end
-else
-    $PYTHON_BINARY $BASESTATION_PATH/${base_logout_cmd_line}  >>&!  ${base_logout_log}
-endif
+    if len(sys.argv) >= 3:
+        first = int(sys.argv[2])
+    else:
+        first = 1
+     
+    if len(sys.argv) == 4:
+        last = int(sys.argv[3])
+    else:
+        last = first
 
+    path = './'
+
+    c = cmdHistory(path, glider, first, last)
+
+    print(c)
