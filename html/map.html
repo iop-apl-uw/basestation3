@@ -266,6 +266,7 @@
 
                 let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
                 for (var i = 0 ; i < urls.length ; i++) {
+                    console.log('adding KML: ' + urls[i]);
                     kmltext = resp[i];
                     parser = new DOMParser();
                     kml = parser.parseFromString(kmltext, 'text/xml');
@@ -273,7 +274,7 @@
                     layerControl.addOverlay(ly, names[i]); 
                 }
             }
-            async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, ctr) {
+            async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, doCtr) {
                 var kml;
                 var parser;
                 var i;
@@ -339,9 +340,11 @@
                     }
 
                     // Adjust map to show the kml for the first glider
-                    if (i == 0 && ctr) {
-                        if (lastBounds)
+                    if (i == 0 && doCtr) {
+                        if (lastBounds) {
                             map.fitBounds(lastBounds);
+                            console.log('fitting to last bounds');
+                        }
                         else {
                             const bounds = track.getBounds();
                             map.fitBounds(bounds);

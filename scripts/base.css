@@ -32,6 +32,39 @@
         height: 100%;
     }
 
+    #changeTable {
+        border-left: none;
+        border-right: none;
+        border-collapse: collapse;
+    }
+    #changelogDiv {
+        display: grid;
+        overflow-y: none;
+        grid-template-columns: 0.5fr 0.5fr;
+        grid-template-rows: 100%;
+        grid-template-areas:
+            "parms files";
+        height: 100%;
+    }
+    #changelogParms {
+        overflow-y:scroll; 
+        grid-area: parms;
+    }
+    #changelogFiles {
+        overflow-y:scroll; 
+        grid-area: files;
+    }
+ 
+    #changeTable tr td:nth-child(3) {
+        padding-left: 5px;
+        text-align: right;
+    }
+    #changeTable tr td:nth-child(5) {
+        text-align: left;
+    }
+    #changeTable tr td:nth-child(1), tr td:nth-child(2) {
+        padding-right: 5px;
+    }
 
     #mainTable tbody {
         font-size:1.0rem; 
@@ -133,7 +166,7 @@
             /* position: relative; */
             display: grid;
             grid-template-columns: auto;
-            grid-template-rows: 0.55fr 50px 150px max-content;
+            grid-template-rows: 0.55fr 50px 150px 0.45fr;
             grid-template-areas:
                 "main"
                 "toolbar"

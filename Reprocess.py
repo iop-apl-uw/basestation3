@@ -1,38 +1,35 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-##
-## Copyright (c) 2006-2014, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
-##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 Rebuilds per-dive nc files from log and eng files (no comm.log or dat/asc processing)
---make_mission_timeseries and --make_mission_profile flags also honored.
-Building KML implied by --make_mission_timeseries or --make_mission_profile
-
-python Reprocess.py --force -v --mission_dir <dir> [<dive numbers>]
-where <dive_numbers> can be individual dive numbers, e.g., 45 66, etc.
-or can be a range, e.g., 45:66, which will reprocess all the dives between 45 and 66 inclusively
-These specifications can be mixed, e.g., 45 77 89:120 452
-If no specification is given all the available dives are reprocessed
-When building MMP, MMT, KML, etc. these are rebuild from all files
 """
 import cProfile
 import pstats
@@ -44,7 +41,6 @@ import sys
 import time
 import traceback
 
-# import NODC
 from BaseLog import (
     BaseLogger,
     log_debug,
@@ -74,30 +70,6 @@ DEBUG_PDB = "darwin" in sys.platform
 
 def main():
     """Command line driver for reprocessing per-dive and other nc files
-
-    usage: Reprocess.py [options] --mission_dir <mission_dir> [<dive_numbers>]
-    where:
-        --mission_dir   - The name of a directory containing the data files
-
-    The following standard options are supported:
-        --version             show program's version number and exit
-        -h, --help            show this help message and exit
-        --base_log=BASE_LOG   basestation log file, records all levels of notifications
-        --nice=NICE           processing priority level (niceness)
-        -v, --verbose         print status messages to stdout
-        -q, --quiet           don't print status messages to stdout
-        --debug               log/display debug messages
-        -i INSTRUMENT_ID, --instrument_id=INSTRUMENT_ID
-                              force instrument (glider) id
-        --magcalfile=CALFILE  Reprocess compass headings using calfile (tcm2mat format)
-        --gzip_netcdf         gzip netcdf files
-        --make_mission_profile       Create the binned product from all dives
-        --make_mission_timeseries    Create the composite product from all dives
-        --reprocess_plots     Re-run MakePlot* extensions
-        --reprocess_flight    Saves Flight directory off
-
-    Note:
-        sg_calib_constants must be in the same directory as the file(s) being processed
 
     Returns:
         0 - success
@@ -449,22 +421,6 @@ def main():
                     "Skipping PLOT processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
                 )
-
-            # if process_NODC:
-            #     log_info(
-            #         "Started NODC processing "
-            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            #     )
-            #     NODC.process_nc_files(base_opts, all_dive_nc_file_names, enable_ftp=False)
-            #     log_info(
-            #         "Finished NODC processing "
-            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            #     )
-            # else:
-            #     log_info(
-            #         "Skipping NODC processing "
-            #         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            #     )
 
     log_info(
         "Finished processing "

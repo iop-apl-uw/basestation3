@@ -156,8 +156,26 @@ def plot_pitch_roll(
         GC_roll_AD_start = dive_nc_file.variables["gc_roll_ad_start"][:]
         GC_roll_AD_end = dive_nc_file.variables["gc_roll_ad"][:]
 
-        GC_vbd_AD_start = dive_nc_file.variables["gc_vbd_ad_start"][:]
-        GC_vbd_AD_end = dive_nc_file.variables["gc_vbd_ad"][:]
+        pot1_start = dive_nc_file.variables["gc_vbd_pot1_ad_start"][:]
+        pot2_start = dive_nc_file.variables["gc_vbd_pot2_ad_start"][:]
+        pot1 = dive_nc_file.variables["gc_vbd_pot1_ad"][:]
+        pot2 = dive_nc_file.variables["gc_vbd_pot2_ad"][:]
+        try:
+            vbd_lp_ignore = dive_nc_file.variables["log_VBD_LP_IGNORE"].getValue()
+        except KeyError:
+            vbd_lp_ignore = 0  # both available
+        if vbd_lp_ignore == 0:
+            GC_vbd_AD_start = np.zeros(np.size(pot1_start))
+            GC_vbd_AD_end = np.zeros(np.size(pot1))
+            for ii in range(np.size(pot1_start)):
+                GC_vbd_AD_start[ii] = np.nanmean([pot1_start[ii], pot2_start[ii]])
+                GC_vbd_AD_end[ii] = np.nanmean([pot1[ii], pot2[ii]])
+        elif vbd_lp_ignore == 1:
+            GC_vbd_AD_start = pot2_start
+            GC_vbd_AD_end = pot2
+        elif vbd_lp_ignore == 2:
+            GC_vbd_AD_start = pot1_start
+            GC_vbd_AD_end = pot1
 
         # unused nGC = len(GC_st_secs) * 2
         gc_t = np.concatenate((GC_st_secs, GC_end_secs))
@@ -474,7 +492,10 @@ def plot_pitch_roll(
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Roll control vs Roll"
-        fit_line = f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad"
+        fit_line = (
+            f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad<br>"
+            f"Current values C_ROLL_DIVE={c_roll_dive:.0f}ad C_ROLL_CLIMB={c_roll_climb:.0f}ad"
+        )
 
         fig.update_layout(
             {
@@ -655,8 +676,10 @@ def plot_pitch_roll(
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Roll control vs turn rate while centered"
-        fit_line = f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad"
-
+        fit_line = (
+            f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad<br>"
+            f"Current values C_ROLL_DIVE={c_roll_dive:.0f}ad C_ROLL_CLIMB={c_roll_climb:.0f}ad"
+        )
         fig.update_layout(
             {
                 "xaxis": {

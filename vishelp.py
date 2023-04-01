@@ -1,4 +1,3 @@
-#!/usr/bin/tcsh
 ## Copyright (c) 2023  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
@@ -25,50 +24,39 @@
 ## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+import sys
+import re
 
-if(! $?PYTHON_BINARY ) then
-    set PYTHON_BINARY = /opt/basestation/bin/python
-endif
+f = open(sys.argv[1], 'r')
+inside = False
+rename = { "route": "GET", "post": "POST", "websocket": "WEBSOCKET"}
+handler = None
+api = {}
+for line in f:
+    if '@app.route' in line or '@app.websocket' in line or '@app.post' in line:
+        m = re.match(r"@app\.(.*)\('(.*)'\)", line.strip())
+        # print(rename[m.group(1)], m.group(2))
+        handler = m.group(2).split('/')[1]
+        if handler == '':
+            handler = 'A'
+        if handler[0:1] == '<':
+            handler = 'AA'
 
-# A glider just logged out properly
-history -T -h >>! history.log
-rm -f .connected
-# if running manually (not at logout) set this variable
-if ( ! $?logout ) then
-    setenv logout manual
-endif
-echo Disconnected at `date -u +"%Y-%m-%dT%H:%M:%SZ"` \(${logout}\) >>! comm.log
-printf "\n" >>! comm.log
-printf "\n" >>! comm.log
+        api[handler] = { 'method': rename[m.group(1)], 'syntax': m.group(2) }
+    elif handler and ' # ' in line:
+        x = line.strip()
+        field = x[2:].split(':')[0].strip()
+        text  = x[2:].split(':')[1].strip()
+        api[handler].update({ field: text })
+        # print(f"   {field:11s}: {text}")
+    elif handler:
+        handler = None
 
-set runner_timeout = 2
+show = ['description', 'args', 'payload', 'parameters', 'returns']
+for k in sorted(api.keys()):
+    print(f"{api[k]['method']} {api[k]['syntax']}")
+    for m in show:
+        if m in api[k]:
+            print(f"    {m:11s}: {api[k][m]}")
 
-if(! $?GLIDER_OPTIONS ) then
-    set GLIDER_OPTIONS = ""
-endif
-
-if(! $?BASESTATION_PATH ) then
-    set BASESTATION_PATH = "/usr/local/basestation"
-endif
-
-printf "\n" >>! baselog.log
-printf "\n"  >>! baselog.log
-
-set base_logout_time = `date -u +%y%m%d%H%M%S`
-set base_logout_cmd_line = "Base.py --mission_dir `pwd` --verbose --make_mission_timeseries --daemon --nice 10 --base_log `pwd`/baselog_`date -u +%y%m%d%H%M%S` ${GLIDER_OPTIONS}"
-set base_logout_log = `pwd`/baselog.log
-
-if( $?RUNNER_DIR ) then
-  set base_logout_run_file = ${RUNNER_DIR}/${base_logout_time}.run
-  echo `pwd` ${base_logout_log} ${base_logout_cmd_line} > ${base_logout_run_file}
-  set t_now = `date +%s`
-  while (-f ${base_logout_run_file} )
-      sleep 0.2
-      if ( `date +%s` >= ${t_now} + ${runner_timeout}) then
-          break
-      endif
-  end
-else
-    $PYTHON_BINARY $BASESTATION_PATH/${base_logout_cmd_line}  >>&!  ${base_logout_log}
-endif
-
+    print()

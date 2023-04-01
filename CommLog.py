@@ -1,26 +1,32 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-##
-## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
-##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
-##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## Copyright (c) 2023  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
 Commlog.py: Contains all routines for extracting data from a glider's comm logfile.
@@ -95,7 +101,7 @@ def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
     # log_info("GPS_lat_lon_and_recov dive_prefix:%s dive_num:%s calls_made:%s call_cycle:%s" %
     # (str(dive_prefix), str(session.dive_num), str(session.calls_made), str(session.call_cycle)))
 
-    if dive_prefix is not None:
+    if dive_prefix:
         prefix = "dive:%s calls_made:%s call_cycle:%s " % (
             str(session.dive_num),
             str(session.calls_made),
@@ -924,7 +930,6 @@ def crack_counter_line(
 
         # Looks like a counter line
         if is_digit(cnt_vals[0]) and is_digit(cnt_vals[1]) and is_digit(cnt_vals[2]):
-
             # Differences in counter lines
             #
             # First - counter line with optional GPS string on end
@@ -959,7 +964,6 @@ def crack_counter_line(
             # 65.00 First and Final: dive_num, callsMade, cnt_NoComm
 
             def convert_f(counter_vals, position, cnv_type):
-
                 try:
                     return cnv_type(counter_vals[position])
                 except ValueError:
@@ -1956,7 +1960,7 @@ class TestCommLogCallback:
 
     def __init__(self):
         self.cmds = {}
-        for (name, val) in inspect.getmembers(self):
+        for name, val in inspect.getmembers(self):
             if inspect.ismethod(val) and name.startswith(self.cmd_prefix):
                 self.cmds[name[len(self.cmd_prefix) :]] = val
 
@@ -2070,6 +2074,15 @@ def main():
             print(f"{len(comm_log.sessions)} sessions")
             for session in comm_log.sessions:
                 BaseDB.addSession(base_opts, session)
+                if session.dive_num is not None and int(session.dive_num) > 0:
+                    if session.call_cycle == None or int(session.call_cycle) == 0:
+                        cmdname = f'cmdfile.{int(session.dive_num)}'
+                    else:
+                        cmdname = f'cmdfile.{int(session.dive_num)}.{int(session.call_cycle)}'
+
+                    BaseDB.logParameterChanges(base_opts, int(session.dive_num), cmdname)
+
+        BaseDB.rebuildControlHistory(base_opts)
 
     if base_opts.dump_last:
         if not comm_log.sessions:
