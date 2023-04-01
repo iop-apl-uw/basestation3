@@ -11,11 +11,11 @@ CC = gcc
 
 all:    rawrcv2 rawsend
 
-rawrcv2: rawrcv.o lsyslog.o md5.o
-		$(CC) -o rawrcv2 rawrcv.o lsyslog.o md5.o
+rawrcv2: rawrcv.o rsyslog.o md5.o
+		$(CC) -o rawrcv2 rawrcv.o rsyslog.o md5.o
 
-rawsend: rawsend.o lsyslog.o
-		$(CC) -o rawsend rawsend.o lsyslog.o
+rawsend: rawsend.o rsyslog.o
+		$(CC) -o rawsend rawsend.o rsyslog.o
 
 install:
 	cp --remove-destination rawsend /usr/local/bin/rawsend

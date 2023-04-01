@@ -15,7 +15,7 @@
 #include <time.h>
 #include <string.h>
 
-extern void lsyslog(int prio, const char *format, ...);
+extern void rsyslog(int prio, const char *format, ...);
 
 int
 main(int argc, char *argv[])
@@ -58,7 +58,7 @@ main(int argc, char *argv[])
     if (verbose)
         fprintf(stderr, "Sending %u bytes of %s\r\n", size, fname);
     else
-        lsyslog(0, "Sending %u bytes of %s", size, fname);
+        rsyslog(0, "Sending %u bytes of %s", size, fname);
     
     tcgetattr(1, &tios);
     tcgetattr(1, &orig_tios);
@@ -88,7 +88,7 @@ main(int argc, char *argv[])
         fprintf(stderr,"\nComplete %f bytes/sec\r\n",
                 sent / (float) (end - start));
     else
-        lsyslog(0, "Sent %u bytes of %s", sent, fname);
+        rsyslog(0, "Sent %u bytes of %s", sent, fname);
 
     tcsetattr(1, TCSANOW, &orig_tios);
 

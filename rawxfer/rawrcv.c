@@ -17,7 +17,7 @@
 #include <ctype.h>
 #include "md5.h"
 
-extern void lsyslog(int prio, const char *format, ...);
+extern void rsyslog(int prio, const char *format, ...);
 
 char *
 strip(char *f)
@@ -80,7 +80,7 @@ batch(int argc, char *argv[])
     tios.c_lflag = 0; 
     tcsetattr(0, TCSANOW, &tios);
 
-    lsyslog(0, "ready to receive %d files", num_to_receive);
+    rsyslog(0, "ready to receive %d files", num_to_receive);
 
     printf("READY!"); fflush(stdout);
 
@@ -107,7 +107,7 @@ batch(int argc, char *argv[])
         }
     
         if (nread != 52) {
-            lsyslog(0, "did not receive 52 header bytes");
+            rsyslog(0, "did not receive 52 header bytes");
             return 1;
         }
 
@@ -124,16 +124,16 @@ batch(int argc, char *argv[])
         md5_in[32] = 0;
 
         //if (!isalnum(fname[0])) {
-        //    lsyslog(0, "bad filename %s", fname);
+        //    rsyslog(0, "bad filename %s", fname);
         //    return 1;
         //}
 
         strip(fname);
         if (fname[0] == 0) {
-            lsyslog(0, "bad filename");
+            rsyslog(0, "bad filename");
             return 1;
         }
-        lsyslog(0, "Receiving %u bytes of %s", size, fname);
+        rsyslog(0, "Receiving %u bytes of %s", size, fname);
 
         fp = fopen(fname, "wb");
 
@@ -166,27 +166,27 @@ batch(int argc, char *argv[])
 
         secs = (stop.tv_sec - start.tv_sec) + (stop.tv_usec - start.tv_usec)/1e6;
 
-        lsyslog(0, "Received %u bytes of %s (%.1f Bps)", nread, fname, nread/secs);
+        rsyslog(0, "Received %u bytes of %s (%.1f Bps)", nread, fname, nread/secs);
 
         fclose(fp);
 
         md5_compute(fname, md5_out);
         if (size != nread) {
             printf("E0");
-            lsyslog(0, "E0 %u %u", size, nread); 
+            rsyslog(0, "E0 %u %u", size, nread); 
         }
         // this is a redundant size check in regular raw.2
         // else if (size != size2) {
         //     printf("E1");
-        //    lsyslog(0, "E1 %u %u", size, size2);
+        //    rsyslog(0, "E1 %u %u", size, size2);
         // }
         else if (strcmp(md5_in, md5_out)) {
             printf("E2"); 
-            lsyslog(0, "E2 %s %s", md5_in, md5_out); 
+            rsyslog(0, "E2 %s %s", md5_in, md5_out); 
         }
         else {
             printf("OK");
-            lsyslog(0, "OK");
+            rsyslog(0, "OK");
             // if the receiver does not receive our OK they will
             // likely try to send the file again. Only increment
             // our count of received files for uniquely received
@@ -248,7 +248,7 @@ main(int argc, char *argv[])
     tios.c_lflag = 0; 
     tcsetattr(0, TCSANOW, &tios);
 
-    lsyslog(0, "ready to receive %s", argv[1]);
+    rsyslog(0, "ready to receive %s", argv[1]);
 
     printf("READY!"); fflush(stdout);
 
@@ -273,7 +273,7 @@ main(int argc, char *argv[])
     }
     
     if (nread != 4) {
-        lsyslog(0, "did not receive four size bytes for %s", argv[1]);
+        rsyslog(0, "did not receive four size bytes for %s", argv[1]);
         return 1;
     }
 
@@ -284,7 +284,7 @@ main(int argc, char *argv[])
     sizebuf[1] = swapbuf[2];
     sizebuf[0] = swapbuf[3];
 
-    lsyslog(0, "Receiving %u bytes of %s", size, argv[1]);
+    rsyslog(0, "Receiving %u bytes of %s", size, argv[1]);
 
     gettimeofday(&start, NULL);
    
@@ -315,7 +315,7 @@ main(int argc, char *argv[])
 
     secs = (stop.tv_sec - start.tv_sec) + (stop.tv_usec - start.tv_usec)/1e6;
 
-    lsyslog(0, "Received %u bytes of %s (%.1f Bps)", nread, argv[1], nread/secs);
+    rsyslog(0, "Received %u bytes of %s (%.1f Bps)", nread, argv[1], nread/secs);
 
     fclose(fp);
 
@@ -323,19 +323,19 @@ main(int argc, char *argv[])
         md5_compute(argv[1], md5_out);
         if (size != nread) {
             printf("E0");
-            lsyslog(0, "E0 %u %u", size, nread); 
+            rsyslog(0, "E0 %u %u", size, nread); 
         }
         else if (size != size2) {
             printf("E1");
-            lsyslog(0, "E1 %u %u", size, size2);
+            rsyslog(0, "E1 %u %u", size, size2);
         }
         else if (strcmp(md5_in, md5_out)) {
             printf("E2"); 
-            lsyslog(0, "E2 %s %s", md5_in, md5_out); 
+            rsyslog(0, "E2 %s %s", md5_in, md5_out); 
         }
         else {
             printf("OK");
-            lsyslog(0, "OK");
+            rsyslog(0, "OK");
         }
 
         fflush(stdout);
