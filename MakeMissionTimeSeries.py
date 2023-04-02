@@ -545,7 +545,8 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             ):
                 dropped_vars.append(var)
             if var in ctd_vars:
-                if new_ctd_data_point not in master_nc_info_d:
+                if (var not in dropped_vars) and (new_ctd_data_point not in master_nc_info_d):
+                    log_info(f'adding nc_info_d {var}, len {len(mission_nc_var_d[var])}')
                     master_nc_info_d[new_ctd_data_point] = len(mission_nc_var_d[var])
                     master_nc_info_d[new_ctd_data_info] = new_ctd_data_point
                     BaseNetCDF.register_sensor_dim_info(
