@@ -705,7 +705,7 @@ def updateDBFromFM(base_opts, ncfs, cur):
                 if not os.path.exists(fm_file):
                     continue
                 fm_dict = CalibConst.getSGCalibrationConstants(
-                    fm_file, suppress_required_error=True, ignore_fm_tags=False
+                    fm_file, suppress_required_error=True, ignore_fm_tags=not base_opts.ignore_flight_model
                 )
                 if "volmax" in fm_dict and "vbdbias" in fm_dict:
                     fm_volmax = fm_dict["volmax"] - fm_dict["vbdbias"]
