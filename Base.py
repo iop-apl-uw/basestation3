@@ -2042,7 +2042,7 @@ def main():
                 log_info(f"Backing up {backup_filename} to {backup_target_filename}")
                 shutil.copyfile(backup_filename, backup_target_filename)
 
-                if backup_filename != 'cmdfile':
+                if not 'cmdfile' in backup_filename:
                     BaseDB.logControlFile(base_opts, backup_dive_num, backup_filename, backup_target_filename) 
             else:
                 log_error(

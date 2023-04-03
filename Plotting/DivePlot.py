@@ -183,6 +183,20 @@ def plot_diveplot(
         except KeyError:
             pass
 
+        if "density" in dive_nc_file.variables and "log_MASS" in dive_nc_file.variables and "log_RHO" in dive_nc_file.variables:
+            eng_density = np.interp(
+                    eng_vbd_time,
+                    ctd_time,
+                    dive_nc_file.variables['density'][:]
+                )
+
+            mass = dive_nc_file.variables["log_MASS"].getValue()
+            rho  = dive_nc_file.variables["log_RHO"].getValue()
+            vol = mass/rho + eng_vbd_pos*10
+            buoy_veh = (-mass + vol*eng_density/1000) / 10 
+        else:
+            buoy_veh = None
+
         ctd_depth = None
         if "legato_pressure" in dive_nc_file.variables:
             # In this case, ctd_depth is derived from the legato, not the truck
@@ -251,6 +265,7 @@ def plot_diveplot(
     fig = plotly.graph_objects.Figure()
 
     show_label = collections.defaultdict(lambda: True)
+    
     for gc in gc_moves:
         fig.add_trace(
             {
@@ -381,6 +396,22 @@ def plot_diveplot(
 
     fig.add_trace(
         {
+            "y": eng_pitch_pos,
+            "x": eng_pitch_time,
+            # "legendgroup": "motorpositions",
+            "name": "Pitch pos (mm)",
+            "type": "scatter",
+            "xaxis": "x1",
+            "yaxis": "y1",
+            #'mode':'lines', 'line':{'dash':'longdash', 'color':Green'}
+            "mode": "lines",
+            "line": {"dash": "solid", "color": "LightGreen"},
+            "hovertemplate": "Pitch pos<br>%{y:.2f} mm<br>%{x:.2f} mins<br><extra></extra>",
+        }
+    )
+
+    fig.add_trace(
+        {
             "y": eng_roll_ang,
             "x": eng_time,
             # "legendgroup": "attitude",
@@ -391,6 +422,21 @@ def plot_diveplot(
             "mode": "lines",
             "line": {"dash": "solid", "color": "Goldenrod"},
             "hovertemplate": "Vehicle Roll<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "y": gc_roll_pos,
+            "x": eng_roll_time,
+            # "legendgroup": "motorpositions",
+            "name": "Roll pos (deg)",
+            "type": "scatter",
+            "xaxis": "x1",
+            "yaxis": "y1",
+            "mode": "lines",
+            "line": {"dash": "solid", "color": "LightGoldenrodYellow"},
+            "hovertemplate": "Roll pos<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
         }
     )
 
@@ -513,39 +559,23 @@ def plot_diveplot(
                 "hovertemplate": "Buoyancy HDM<br>%{meta:.2f} g<br>%{x:.2f} mins<br><extra></extra>",
             }
         )
-    # End Hydro Model Output
 
-    # Motor positions
-    fig.add_trace(
-        {
-            "y": eng_pitch_pos,
-            "x": eng_pitch_time,
-            # "legendgroup": "motorpositions",
-            "name": "Pitch pos (mm)",
-            "type": "scatter",
-            "xaxis": "x1",
-            "yaxis": "y1",
-            #'mode':'lines', 'line':{'dash':'longdash', 'color':Green'}
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "LightGreen"},
-            "hovertemplate": "Pitch pos<br>%{y:.2f} mm<br>%{x:.2f} mins<br><extra></extra>",
-        }
-    )
-
-    fig.add_trace(
-        {
-            "y": gc_roll_pos,
-            "x": eng_roll_time,
-            # "legendgroup": "motorpositions",
-            "name": "Roll pos (deg)",
-            "type": "scatter",
-            "xaxis": "x1",
-            "yaxis": "y1",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "LightGoldenrodYellow"},
-            "hovertemplate": "Roll pos<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
-        }
-    )
+    if buoy_veh is not None:
+        fig.add_trace(
+            {
+                "y": buoy_veh,
+                "x": eng_vbd_time,
+                "meta": buoy_veh * 10.0,
+                # "legendgroup": "HDM",
+                "name": "Buoyancy (veh) (10 g)",
+                "type": "scatter",
+                "xaxis": "x1",
+                "yaxis": "y1",
+                "mode": "lines",
+                "line": {"dash": "dot", "color": "DarkMagenta"},
+                "hovertemplate": "Buoyancy (veh)<br>%{meta:.2f} g<br>%{x:.2f} mins<br><extra></extra>",
+            }
+        )
 
     fig.add_trace(
         {
@@ -562,7 +592,6 @@ def plot_diveplot(
             "hovertemplate": "VBD pos<br>%{meta:.2f} cc<br>%{x:.2f} mins<br><extra></extra>",
         }
     )
-    # End Motor Positions
 
     fig.add_trace(
         {
@@ -624,6 +653,49 @@ def plot_diveplot(
     except:
         pass
 
+    traces = []
+    for d in fig.data:
+        traces.append(d['name'])
+
+    ctlTraces = {}
+    ctlTraces['pitch'] = ['GC Pitch', 'Pitch Up (deg)', 'Pitch desired (deg)', 'Pitch pos (mm)']
+    ctlTraces['roll'] =  ['GC Roll', 'Vehicle Roll (deg)', 'Roll pos (deg)']
+    ctlTraces['VBD'] =  ['GC VBD', 'Buoyancy HDM (10 g)', 'Buoyancy (veh) (10 g)', 'VBD pos (10 cc)']
+    ctlTraces['HDM'] = ['Horiz Speed HDM (cm/s)', 'Vert Speed HDM (cm/s)', 'Glide Angle HDM (deg)', 'Buoyancy HDM (10 g)']
+    ctlTraces['GSM'] = ['Horiz Speed GSM (cm/s)', 'Vert Speed GSM (cm/s)', 'Glide Angle GSM (deg)']
+   
+    buttons = [ dict(
+                        args=[ {'visible': True} ],
+                        args2=[ {'visible': 'legendonly'} ],
+                        label='All',
+                        method="restyle",
+                        visible=True,
+                    )
+              ]
+
+    for c in ctlTraces.keys():
+        buttons.append(dict(
+                        args=[ {'visible': True}, [i for i,x in enumerate(traces) if x in ctlTraces[c]] ],
+                        args2=[ {'visible': 'legendonly'}, [i for i,x in enumerate(traces) if x in ctlTraces[c]] ],
+                        label=c,
+                        method="restyle",
+                        visible=True,
+                      ))
+                    
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type = "buttons",
+                direction = "left",
+                buttons=buttons,
+                x=1.1,
+                y=1.07,
+                visible=True,
+                showactive=False,
+            ),
+        ]
+    )
+
     title_text = "%s %s dive %d started %s" % (
         glider_id,
         mission_name,
@@ -670,8 +742,10 @@ def plot_diveplot(
                 # "itemclick": "toggleothers",
                 # "itemdoubleclick": "toggle",
             },
+            
         }
     )
+
 
     return (
         [fig],
