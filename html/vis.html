@@ -1816,10 +1816,6 @@
             console.log(glider);
         }
 
-        if (window.matchMedia("(pointer: coarse)").matches) {
-            mobile = true;
-        }
-
         let params = new URLSearchParams(window.location.search);
         if (params.has('dive')) {
             dive = parseInt(params.get('dive'));
@@ -1833,7 +1829,34 @@
         if (params.has('order')) {
             createCookie("order", params.get('order'), 180);
         }
-       
+
+        // set mobile based on media query
+        if (window.matchMedia("(pointer: coarse)").matches) {
+            mobile = true;
+        }
+
+        // check if user has spec'd an override to mobile,
+        // if so set (or reset) the local storage for
+        // the subsequent query
+        if (params.has('mobile')) 
+            localStorage.setItem('visMode', 'mobile');
+        else if (params.has('desktop'))
+            localStorage.setItem('visMode', 'desktop');
+
+        // check local storage to see if user has a 
+        // preferred override mode - if so, set it
+        let mode = localStorage.getItem('visMode');
+        if (mode && mode == 'mobile') {
+            mobile = true; 
+        }
+        else if (mode && mode == 'desktop') {
+            mobile = false;
+        }
+
+        if (mobile) 
+            visClass = 'mobile';
+        else
+            visClass = 'desktop';
 
         if (glider == -1) {
             alert('invalid request - specify glider');
@@ -1988,6 +2011,11 @@
             }, true); 
         }
 
+        const elements = document.querySelectorAll('body *');
+
+        elements.forEach((element) => {
+            element.classList.add(visClass);
+        });
     }
 
     function defocusEditWindow() {
