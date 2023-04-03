@@ -257,7 +257,8 @@ L.Util.extend(L.KML, {
                         if (opts['icon']['options']['iconUrl'].includes('marker')) {
                             opts['icon']['options']['iconSize'] = [8,8];
                             opts['icon']['options']['iconAnchor'] = [4,4];
-                            if (place.getElementsByTagName('name')[0].childNodes[0].nodeValue.includes(' end')) {
+                            var ch = place.getElementsByTagName('name');
+                            if (ch && ch.length >= 1 && ch[0].childNodes[0].nodeValue.includes(' end')) {
                                 opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('icon', 'yellow');
                             }
                         }
@@ -293,8 +294,7 @@ L.Util.extend(L.KML, {
     for (i = 0; i < el.length; i++) {
       for (j = 0; j < el[i].childNodes.length; j++) {
         descr = descr + el[i].childNodes[j].nodeValue;
-          //descr = descr.replace(/"https:\/\/iop\.apl\.washington\.edu\/seaglider\/divegallery\.php\?dive=([0-9]+)\&glider=([0-9]+)"/, '"/$2/$1" target="$2"');
-	  descr = descr.replace(/"https:\/\/iop\.apl\.washington\.edu\/seaglider\/divegallery\.php\?dive=([0-9]+)\&glider=([0-9]+)"/, '"../$2?dive=$1" target="$2"');
+        descr = descr.replace(/"https:\/\/iop\.apl\.washington\.edu\/seaglider\/divegallery\.php\?dive=([0-9]+)\&glider=([0-9]+)"/, '"../$2?dive=$1" target="$2"');
       }
     }
 
