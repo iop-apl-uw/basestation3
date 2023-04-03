@@ -313,6 +313,7 @@ async def displayTables(fname):
     k_eff = L['GCHEAD'].index("vbd_eff")
     k_pres = L['GCHEAD'].index("depth")
     k_vbd_i = L['GCHEAD'].index("vbd_i")
+    k_vbd_v = L['GCHEAD'].index("vbd_volts")
 
     j = -1 # last row with actual GC (not STATE) data
     for i in range(GCrows):
@@ -366,7 +367,7 @@ async def displayTables(fname):
 
                 rate = rate*L['VBD_CNV'] # -4.0767;
                 if (g[k_vbd_i] > 0 and L['24V_AH'][0] > 0):
-                    x = 0.01*rate*g[k_pres]/g[k_vbd_i]/L['24V_AH'][0]
+                    x = 0.01*rate*g[k_pres]/g[k_vbd_i]/g[k_vbd_v] # L['24V_AH'][0]
                     g[k_eff] = "%.3f" % x
 
             GC[i] = g
@@ -464,12 +465,14 @@ async def displayTables(fname):
             k_rol = 3
             vbd_ad_inc = 2 
             retries_inc = 0
+            vbd_V = L['SM_GC'][15]
         else:
             k_pit = 1
             k_rol = 2 
             k_vbd = 3
             vbd_ad_inc = 0
             retries_inc = 1
+            vbd_V = L['SM_GC'][21]
 
         print("<td>-</td>") # pitch ctl
         print("<td>%s</td>" % ("-" if L['SM_GC'][k_pit] == 0 else L['SM_GC'][k_pit])) # pitch t
@@ -503,7 +506,7 @@ async def displayTables(fname):
             rate = (L['SM_GC'][k_vbd + 6 + vbd_ad_inc] - GC[last_real_GC - 1][20])/L['SM_GC'][k_vbd]
             print("<td>%.1f</td>" % rate)
             rate = -rate/4.0767
-            x = 0.01*L['SM_GC'][0]*rate/L['SM_GC'][k_vbd + 3]/24
+            x = 0.01*L['SM_GC'][0]*rate/L['SM_GC'][k_vbd + 3]/vbd_V
             print("<td>%.3f</td>" % x)
         else:
             print("<td>-</td>")
