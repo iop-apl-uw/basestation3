@@ -4106,21 +4106,6 @@ def main(
 def cmdline_main():
     """Command line driver for updateing flight model data
 
-    usage: FlightModel.py [options] [--mission_dir <mission_dir> | basefile]
-    where (one required):
-        basefile        - The fully qualified path to a seaglider dive without extension, e.g., /home/sg194/p1940010
-        --mission_dir   - The name of a directory, in which case all eng/log files in that directory are processed
-
-    The following standard options are supported:
-        --version             show program's version number and exit
-        -h, --help            show this help message and exit
-        --base_log=BASE_LOG   basestation log file, records all levels of notifications
-        -v, --verbose         print status messages to stdout
-        -q, --quiet           don't print status messages to stdout
-        --force               rebuild the flight db
-        --debug               log/display debug messages
-        -i INSTRUMENT_ID, --instrument_id=INSTRUMENT_ID
-                              force instrument (glider) id
     Note:
         sg_calib_constants must be in the same directory as the file(s) being processed
 
