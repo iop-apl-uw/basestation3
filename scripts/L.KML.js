@@ -257,7 +257,8 @@ L.Util.extend(L.KML, {
                         if (opts['icon']['options']['iconUrl'].includes('marker')) {
                             opts['icon']['options']['iconSize'] = [8,8];
                             opts['icon']['options']['iconAnchor'] = [4,4];
-                            if (place.getElementsByTagName('name')[0].childNodes[0].nodeValue.includes(' end')) {
+                            var ch = place.getElementsByTagName('name');
+                            if (ch && ch.length >= 1 && ch[0].childNodes[0].nodeValue.includes(' end')) {
                                 opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('icon', 'yellow');
                             }
                         }
