@@ -183,16 +183,19 @@ def plot_diveplot(
         except KeyError:
             pass
 
-        eng_density = np.interp(
-                eng_vbd_time,
-                ctd_time,
-                dive_nc_file.variables['density'][:]
-            )
+        if "density" in dive_nc_file.variables and "log_MASS" in dive_nc_file.variables and "log_RHO" in dive_nc_file.variables:
+            eng_density = np.interp(
+                    eng_vbd_time,
+                    ctd_time,
+                    dive_nc_file.variables['density'][:]
+                )
 
-        mass = dive_nc_file.variables["log_MASS"].getValue()
-        rho  = dive_nc_file.variables["log_RHO"].getValue()
-        vol = mass/rho + eng_vbd_pos*10
-        buoy_veh = (-mass + vol*eng_density/1000) / 10 
+            mass = dive_nc_file.variables["log_MASS"].getValue()
+            rho  = dive_nc_file.variables["log_RHO"].getValue()
+            vol = mass/rho + eng_vbd_pos*10
+            buoy_veh = (-mass + vol*eng_density/1000) / 10 
+        else:
+            buoy_veh = None
 
         ctd_depth = None
         if "legato_pressure" in dive_nc_file.variables:
