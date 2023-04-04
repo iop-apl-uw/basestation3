@@ -656,7 +656,7 @@ def updateDBFromPlots(base_opts, ncfs, run_dive_plots=True):
     sg_calib_file_name = os.path.join(
         base_opts.mission_dir, "sg_calib_constants.m"
     )
-    calib_consts = getSGCalibrationConstants(sg_calib_file_name)
+    calib_consts = getSGCalibrationConstants(sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model)
     mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
 
     #base_opts.mission_plots = ["mission_energy", "mission_int_sensors"]
