@@ -665,8 +665,8 @@ def plot_diveplot(
     ctlTraces['GSM'] = ['Horiz Speed GSM (cm/s)', 'Vert Speed GSM (cm/s)', 'Glide Angle GSM (deg)']
    
     buttons = [ dict(
-                        args=[ {'visible': True} ],
-                        args2=[ {'visible': 'legendonly'} ],
+                        args2=[ {'visible': True} ],
+                        args=[ {'visible': 'legendonly'} ],
                         label='All',
                         method="restyle",
                         visible=True,
@@ -675,8 +675,8 @@ def plot_diveplot(
 
     for c in ctlTraces.keys():
         buttons.append(dict(
-                        args=[ {'visible': True}, [i for i,x in enumerate(traces) if x in ctlTraces[c]] ],
-                        args2=[ {'visible': 'legendonly'}, [i for i,x in enumerate(traces) if x in ctlTraces[c]] ],
+                        args2=[ {'visible': True}, [i for i,x in enumerate(traces) if x in ctlTraces[c]] ],
+                        args=[ {'visible': 'legendonly'}, [i for i,x in enumerate(traces) if x in ctlTraces[c]] ],
                         label=c,
                         method="restyle",
                         visible=True,
