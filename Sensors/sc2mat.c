@@ -63,6 +63,7 @@ static double *pitchBurst;
 static double *rollBurst;
 static double *headingBurst;
 static double  **corr = NULL;
+static double  **vBurst = NULL;
 
 
 static int 
@@ -305,6 +306,7 @@ WriteMatlab(char *fname)
       MatlabDoubleVector(rollBurst, countBurst, "rollBurst", out);
       MatlabDoubleVector(tBurst, countBurst, "timeBurst", out);
       MatlabDoubleMatrix(corr, burstCells, countBurst, "corrBurst", out);
+      MatlabDoubleMatrix(vBurst, burstCells, countBurst, "velBurst", out);
    }
    fclose(out);
 
@@ -512,6 +514,7 @@ main(int argc, char *argv[])
                     headingBurst  = Dvector(max_count);
                     pitchBurst    = Dvector(max_count);
                     rollBurst     = Dvector(max_count);
+                    vBurst        = Darray(burstCells, max_count);
                 }
 
                 tBurst[countBurst]        = epoch;
@@ -519,9 +522,14 @@ main(int argc, char *argv[])
                 headingBurst[countBurst]  = headingInstant*0.01;
                 pitchBurst[countBurst]    = pitchInstant*0.01;
                 rollBurst[countBurst]     = rollInstant*0.01;
+                fread(hVel, sizeof(short), burstCells * burstBeams, fp);
+                for (i = 0 ; i < burstCells ; i++)
+                    vBurst[i][countBurst] = hVel[i];
+
                 fread(hCorr, sizeof(unsigned char), burstCells * burstBeams, fp);
                 for (i = 0 ; i < burstCells ; i++)
                     corr[i][countBurst] = hCorr[i];
+
 
                 countBurst ++;
                 continue;
