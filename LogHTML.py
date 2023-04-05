@@ -39,6 +39,9 @@ async def displayTables(fname):
     global L
     global PING
 
+    if not await aiofiles.os.path.exists(fname):
+        return
+
     L = {}
     GC = []
     PING = []
@@ -72,7 +75,10 @@ async def displayTables(fname):
                     L[key] = list(map(float, pieces[1:]))
                 except:
                     L[key] = pieces[1:]
-    
+   
+    if not 'GCHEAD' in L:
+        return
+ 
     L['GCHEAD'] = L['GCHEAD'] + ["pitch_rate", "roll_rate", "vbd_rate", "vbd_eff"]
 
     GCrows = len(GC)
