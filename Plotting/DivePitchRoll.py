@@ -126,28 +126,6 @@ def plot_pitch_roll(
         vehicle_head_degrees_v = dive_nc_file.variables["eng_head"][:]
         sg_np = dive_nc_file.dimensions["sg_data_point"]
 
-        bad_i_v = [i for i in range(sg_np) if np.isnan(vehicle_pitch_degrees_v[i])]
-        if len(bad_i_v):
-            log_warning(
-                "Compass invalid out for %d of %d points - interpolating bad points"
-                % (len(bad_i_v), sg_np)
-            )
-            nans, x = Utils.nan_helper(vehicle_pitch_degrees_v)
-            vehicle_pitch_degrees_v[nans] = np.interp(
-                x(nans), x(~nans), vehicle_pitch_degrees_v[~nans]
-            )
-
-        bad_i_v = [i for i in range(sg_np) if np.isnan(vehicle_roll_degrees_v[i])]
-        if len(bad_i_v):
-            log_warning(
-                "Compass invalid out for %d of %d points - interpolating bad points"
-                % (len(bad_i_v), sg_np)
-            )
-            nans, x = Utils.nan_helper(vehicle_roll_degrees_v)
-            vehicle_roll_degrees_v[nans] = np.interp(
-                x(nans), x(~nans), vehicle_roll_degrees_v[~nans]
-            )
-
         GC_st_secs = dive_nc_file.variables["gc_st_secs"][:]
         GC_end_secs = dive_nc_file.variables["gc_end_secs"][:]
         GC_pitch_AD_start = dive_nc_file.variables["gc_pitch_ad_start"][:]
@@ -176,6 +154,35 @@ def plot_pitch_roll(
         elif vbd_lp_ignore == 2:
             GC_vbd_AD_start = pot1_start
             GC_vbd_AD_end = pot1
+    except Exception as e:
+        log_error(
+            f"Could not fetch needed variables {e} - skipping pitch and roll plots", "exc"
+        )
+        return ([], [])
+
+    try:
+        bad_i_v = [i for i in range(sg_np) if np.isnan(vehicle_pitch_degrees_v[i])]
+        if len(bad_i_v):
+            log_warning(
+                "Compass invalid out for %d of %d points - interpolating bad points"
+                % (len(bad_i_v), sg_np)
+            )
+            nans, x = Utils.nan_helper(vehicle_pitch_degrees_v)
+            vehicle_pitch_degrees_v[nans] = np.interp(
+                x(nans), x(~nans), vehicle_pitch_degrees_v[~nans]
+            )
+
+        bad_i_v = [i for i in range(sg_np) if np.isnan(vehicle_roll_degrees_v[i])]
+        if len(bad_i_v):
+            log_warning(
+                "Compass invalid out for %d of %d points - interpolating bad points"
+                % (len(bad_i_v), sg_np)
+            )
+            nans, x = Utils.nan_helper(vehicle_roll_degrees_v)
+            vehicle_roll_degrees_v[nans] = np.interp(
+                x(nans), x(~nans), vehicle_roll_degrees_v[~nans]
+            )
+        
 
         # unused nGC = len(GC_st_secs) * 2
         gc_t = np.concatenate((GC_st_secs, GC_end_secs))
@@ -213,7 +220,13 @@ def plot_pitch_roll(
 
         gc_x = np.concatenate((GC_vbd_AD_start, GC_vbd_AD_end))
         gc_x = np.transpose(gc_x).ravel()
+    except Exception as e:
+        log_error(
+            f"Could not interp needed variables {e} - skipping pitch and roll plots", "exc"
+        )
+        return ([], [])
 
+    try:
         f = scipy.interpolate.interp1d(
             gc_t,
             gc_x,
@@ -223,12 +236,8 @@ def plot_pitch_roll(
         )
         vbdAD = f(sg_time)
         vbd_control = (vbdAD - c_vbd) * vbd_cnv
-
     except:
-        log_error(
-            "Could not fetch needed variables - skipping pitch and roll plots", "exc"
-        )
-        return ([], [])
+        vbd_control = None
 
     #
     # pitch calculations
@@ -269,9 +278,19 @@ def plot_pitch_roll(
     inst.cnv = pitch_cnv
     inst.shift = vbd_shift
     
-    c0 = scipy.optimize.curve_fit(inst.fitfun_shift_fixed, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain ])
-    # c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ], bounds=([100, 5, 0.0005], [4000, 75, 0.005]))
-    c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ])
+    c0 = [[0,0]]
+    c1 = [[0,0,0]]
+    if vbd_control is not None:
+        try:
+            c0 = scipy.optimize.curve_fit(inst.fitfun_shift_fixed, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain ])
+        except:
+            pass
+            
+        # c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ], bounds=([100, 5, 0.0005], [4000, 75, 0.005]))
+        try:
+            c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ])
+        except:
+            pass
 
     ctr0 = c0[0][0]
     gain0 = c0[0][1]
