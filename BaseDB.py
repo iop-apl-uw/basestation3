@@ -943,7 +943,7 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
         contents = f.read()
 
     try:
-        cur.execute("REPLACE INTO files(dive,file,fullname,contents) VALUES(?,?,?,?);", (dive, filename, fullname, contents))
+        cur.execute("REPLACE INTO files(dive,file,fullname,contents) VALUES(?,?,?,?);", (dive, os.path.basename(filename), os.path.basename(fullname), contents))
     except Exception as e:
         log_error(f"{e} inserting file")
 

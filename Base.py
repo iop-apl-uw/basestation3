@@ -2043,7 +2043,7 @@ def main():
                 shutil.copyfile(backup_filename, backup_target_filename)
 
                 if not 'cmdfile' in backup_filename:
-                    BaseDB.logControlFile(base_opts, backup_dive_num, backup_filename, backup_target_filename) 
+                    BaseDB.logControlFile(base_opts, backup_dive_num, os.path.basename(backup_filename), os.path.basename(backup_target_filename)) 
             else:
                 log_error(
                     f"Could not find a dive number in the comm.log - not backing up file {backup_filename}"
