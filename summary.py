@@ -78,7 +78,7 @@ async def collectSummary(glider, path):
         return {}
 
     processor = aiofiles.os.wrap(CommLog.process_comm_log)
-    (commlog, commlog_pos, ongoing_session, _, _) = await processor(commlogfile, {}, start_pos=start)
+    (commlog, commlog_pos, ongoing_session, _, _) = await processor(commlogfile, None, start_pos=start)
     if len(commlog.sessions) == 0:
         session = None
     else:

@@ -1633,7 +1633,7 @@ def process_comm_log(
                         filename = front.split(" ")[
                             -1
                         ].strip()  # last string is filename
-                        if base_opts is not None and base_opts.ver_65:
+                        if base_opts and ('ver_65' in base_opts) and base_opts.ver_65:
                             tempname = Ver65.ver_65_to_ver_66_filename(filename)
                             if tempname is not None:
                                 filename = tempname
@@ -1716,7 +1716,7 @@ def process_comm_log(
                         filename = front.split(" ")[
                             -1
                         ].strip()  # last string is filename
-                        if base_opts is not None and base_opts.ver_65:
+                        if base_opts and ('ver_65' in base_opts) and base_opts.ver_65:
                             tempname = Ver65.ver_65_to_ver_66_filename(filename)
                             if tempname is not None:
                                 filename = tempname
