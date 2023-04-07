@@ -185,6 +185,10 @@ def main():
         "sg_calib_constants.m",
         ".hushlogin",
         ".extensions",
+        ".ftp",
+        ".mailer",
+        ".pre_extensions",
+        "sections.yml"
     )
 
     if base_opts.glider_jail:
