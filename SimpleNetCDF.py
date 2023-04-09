@@ -438,13 +438,17 @@ def main(
             cp_attrs(nci.variables[var_name], vv)
 
         single_var_dims = set()
-        for var_name in single_vars:
+        single_vars_filtered = list(filter(lambda i: i in nci.variables, single_vars))
+        for var_name in list(filter(lambda i: i not in nci.variables, single_vars)):
+            log_warning(f"{var_name} not in {netcdf_in_filename} - skipping")
+
+        for var_name in single_vars_filtered:
             if nci.variables[var_name].dimensions:
                 for dim_name in nci.variables[var_name].dimensions:
                     single_var_dims.add(dim_name)
         for dim_name in single_var_dims:
             nco.createDimension(dim_name, nci.dimensions[dim_name])
-        for var_name in single_vars:
+        for var_name in single_vars_filtered:
             nco.variables[var_name] = nci.variables[var_name]
 
         # pylint: disable=protected-access
