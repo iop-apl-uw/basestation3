@@ -41,9 +41,6 @@ if (! -d $base ) then
     exit
 endif
 
-echo $base
-pwd
-
 set count = `ls "$base"/pt*.cap |& grep -v ls: | wc -l`
 if ( $count == 0 ) then
     if ( -f "$base"/comm.log ) then
