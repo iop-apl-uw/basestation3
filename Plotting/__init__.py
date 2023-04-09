@@ -141,3 +141,4 @@ from . import MissionMap
 from . import MissionDisk
 from . import MissionCommLog
 from . import MissionProfiles
+from . import MissionCallStats
