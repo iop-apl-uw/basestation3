@@ -637,6 +637,41 @@ def attachHandlers(app: sanic.Sanic):
         s = await LogHTML.captureTables(filename)
         return sanic.response.html(s)
 
+    def purgeSensitive(text):
+        out = ''
+        prior = False
+        for line in text.splitlines():
+            if 'password = ' in line: 
+                line = re.sub(r"password = .*?[^<]*", "password = ----", line)
+                sanic.log.logger.info("purging known password")
+            elif 'Current password is' in line:
+                line = re.sub(r"Current password is .*?[^<]*", "Current password is ----", line)
+                sanic.log.logger.info("purging known password")
+            elif 'Changing password to' in line:
+                line = re.sub(r"Changing password to .*?[^<]*", "Changing password to ----", line)
+                sanic.log.logger.info("purging known password change")
+            elif 'sent [' in line and prior:
+                line = re.sub(r"sent \[.*\]", "sent [----]", line)
+                prior = False
+                sanic.log.logger.info("purging sent password debugging")
+            elif 'sending password [' in line:
+                line = re.sub(r"sending password \[.*\]", "sending password [----]", line)
+                sanic.log.logger.info("purging known password debugging")
+                prior = True
+            elif 'assword' in line \
+                 and not 'Password:]' in line \
+                 and not 'no password: prompt' in line \
+                 and not 'no shell prompt' in line:
+                line = '---- deleted ----'
+                sanic.log.logger.info("purging unknown password")
+            else:
+                prior = False
+
+            out = out + line + '\n'
+
+        return out
+
+
     @app.route('/file/<ext:str>/<glider:int>/<dive:int>')
     # description: processed glider basestation files
     # args: ext=eng|log|cap
@@ -644,9 +679,17 @@ def attachHandlers(app: sanic.Sanic):
     # returns: raw eng, log, or cap file
     @authorized()
     async def logengcapFileHandler(request, ext:str, glider: int, dive: int):
+        if ext not in ['log', 'eng', 'cap']:
+            return sanic.response.text('not found', status=404)
+            
         filename = f'{gliderPath(glider,request)}/p{glider:03d}{dive:04d}.{ext}'
         if await aiofiles.os.path.exists(filename):
-            return await sanic.response.file(filename, mime_type='text/plain')
+            if ext in ['log', 'eng']:
+                return await sanic.response.file(filename, mime_type='text/plain')
+            else:
+                async with aiofiles.open(filename, 'r') as file:
+                    out = purgeSensitive(await file.read())
+                    return sanic.response.text(out)
         else:
             if ext == 'cap':
                 return sanic.response.text('none')
@@ -987,7 +1030,7 @@ def attachHandlers(app: sanic.Sanic):
             stderr=asyncio.subprocess.PIPE
         )
         results, err = await proc.communicate()
-        return sanic.response.html(results.decode('utf-8', errors='ignore'))
+        return sanic.response.html(purgeSensitive(results.decode('utf-8', errors='ignore')))
 
     #
     # POST handler - to save files back to basestation

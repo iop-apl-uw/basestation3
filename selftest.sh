@@ -41,7 +41,10 @@ if (! -d $base ) then
     exit
 endif
 
-set count = `ls "$base"/pt*.cap |& grep -v ls | wc -l`
+echo $base
+pwd
+
+set count = `ls "$base"/pt*.cap |& grep -v ls: | wc -l`
 if ( $count == 0 ) then
     if ( -f "$base"/comm.log ) then
        echo "no selftest capture present - here is what we know from comm.log"
