@@ -206,8 +206,8 @@ def mission_callstats(
     for ii in t[:: len(t) // 7]:
         divevals.append(ii)
         divetext.append(dive_nums[int(ii)])
-    divevals.append(t[-1])
-    divetext.append(dive_nums[-1])
+    # divevals.append(t[-1])
+    # divetext.append(dive_nums[-1])
 
     fig.add_trace(
         {
