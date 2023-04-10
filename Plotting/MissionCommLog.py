@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -51,10 +51,6 @@ from BaseLog import log_error
 from Plotting import plotmissionsingle
 
 
-# DEBUG_PDB = "darwin" in sys.platform
-DEBUG_PDB = False
-
-
 @plotmissionsingle
 def mission_commlog(
     base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
@@ -80,7 +76,6 @@ def mission_commlog(
         log_error("Could not fetch needed columns", "exc")
         return ([], [])
 
-
     callNum = np.arange(0, len(df["pitch"]))
 
     if "pitch" in df.columns:
@@ -88,7 +83,7 @@ def mission_commlog(
             {
                 "name": "pitch/-5",
                 "x": callNum,
-                "y": df["pitch"]/-5,
+                "y": df["pitch"] / -5,
                 "yaxis": "y2",
                 "mode": "lines",
                 "line": {
@@ -136,7 +131,7 @@ def mission_commlog(
             {
                 "name": "relative humidity/10",
                 "x": callNum,
-                "y": df["RH"]/10,
+                "y": df["RH"] / 10,
                 "yaxis": "y2",
                 "mode": "lines",
                 "line": {
@@ -180,8 +175,7 @@ def mission_commlog(
         )
 
     colors = ["red", "blue", "green"]
-    for i, a in enumerate(["pitchAD", "rollAD" ,"vbdAD"]):
-    
+    for i, a in enumerate(["pitchAD", "rollAD", "vbdAD"]):
         if a in df.columns:
             fig.add_trace(
                 {
@@ -216,7 +210,6 @@ def mission_commlog(
                 "side": "right",
                 "position": 0.925,
             },
-
             "title": {
                 "text": "CommLog counter line values",
                 "xanchor": "center",
@@ -231,7 +224,7 @@ def mission_commlog(
             "legend": {
                 "x": 1.075,
                 "y": 1,
-            }
+            },
         },
     )
     conn.close()

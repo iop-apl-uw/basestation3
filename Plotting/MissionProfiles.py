@@ -57,9 +57,6 @@ from BaseLog import log_error, log_warning
 from Plotting import plotmissionsingle
 
 
-# DEBUG_PDB = "darwin" in sys.platform
-DEBUG_PDB = False
-
 def getValue(x, v, sk, vk, fallback):
     if v in x['sections'][sk]:
         y = x['sections'][sk][v]

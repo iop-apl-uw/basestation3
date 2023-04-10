@@ -52,9 +52,6 @@ import PlotUtilsPlotly
 from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
 
-DEBUG_PDB = "darwin" in sys.platform
-# DEBUG_PDB = False
-
 call_plot_map_nt = collections.namedtuple("call_plot_map_nt", ["description", "color"])
 
 call_plot_map = {
@@ -91,7 +88,6 @@ def mission_callstats(
     # Collect stats
     files_transfered_num = []
     files_transfered = []
-    bytes_transfered = []
     secs_transfered = []
     crc_errors = []
     dive_number = []
@@ -108,7 +104,6 @@ def mission_callstats(
             if fs.bps > 0:
                 secs += fs.receivedsize / fs.bps
             nbytes += fs.receivedsize
-        bytes_transfered.append(nbytes)
         secs_transfered.append(secs)
         crc_errors.append(len(list(session.crc_errors.keys())))
         if len(list(session.crc_errors.keys())):
@@ -358,95 +353,6 @@ def mission_callstats(
             # "annotations": tuple(l_annotations),
         },
     )
-
-    # l_artists = []
-    # l_labels = []
-
-    # (pl,) = plt.plot(t, files_transfered_num, "k")
-    # l_artists.append(pl)
-    # l_labels.append("Number files downloaded (count)")
-
-    # if crc_errors_present:
-    #     (pl,) = plt.plot(t, crc_errors, "r")
-    #     l_artists.append(pl)
-    #     l_labels.append("XMODEM CRC Errors")
-
-    # ax = plt.gca()
-    # ax.xaxis.grid(True)
-    # ax.yaxis.grid(True)
-
-    # plt.ylabel("Count")
-    # plt.xlabel("Call Number")
-
-    # ax2 = plt.twinx()
-    # ax2.xaxis.set_major_locator(plt.MaxNLocator(10))
-    # # ay2 = plt.twiny()
-    # # ay2.xaxis.tick_top()
-    # # ay2.grid(True)
-
-    # (pl,) = plt.plot(t, bytes_transfered, "b")
-    # l_artists.append(pl)
-    # l_labels.append("Total downloaded (bytes)")
-
-    # for ty in list(file_type_tots.keys()):
-    #     if ty in list(call_plot_map.keys()):
-    #         (pl,) = plt.plot(t, file_type_tots[ty], color=call_plot_map[ty].color)
-    #         l_artists.append(pl)
-    #         l_labels.append(call_plot_map[ty].description)
-
-    # plt.ylabel("Bytes")
-    # ay2 = plt.twiny()
-    # ay2.xaxis.tick_top()
-    # # ay2.grid(True)
-
-    # #
-    # # An attempt to remap the x-axis to be dive number
-    # #
-    # ay2.xaxis.set_major_locator(plt.MaxNLocator(10))
-    # call_nums = ax.xaxis.get_majorticklocs()
-    # labels = []
-
-    # # if(comm_log.sessions[0].dive_num is not None):
-    # #    labels.append(comm_log.sessions[0].dive_num)
-
-    # # First and last are misleading
-    # labels.append("")
-    # if len(call_nums) > 3:
-    #     for c in call_nums[1:-1]:
-    #         if int(c) >= 0 and int(c) < len(comm_log.sessions):
-    #             dn = comm_log.sessions[int(c)].dive_num
-    #         else:
-    #             dn = None
-    #         if dn is not None:
-    #             labels.append("%d" % comm_log.sessions[int(c)].dive_num)
-    #         else:
-    #             labels.append("")
-    # # labels.append(comm_log.sessions[-1].dive_num)
-    # labels.append("")
-    # ay2.set_xticklabels(labels)
-    # plt.xlabel("Dive number")
-
-    # font = FontProperties(size="xx-small")
-
-    # lg = plt.legend(
-    #     l_artists, l_labels, loc="upper left", fancybox=True, prop=font, numpoints=1
-    # )
-
-    # lg.get_frame().set_alpha(0.5)
-
-    # plt.suptitle("%s Download Statistics vs Call Num" % (mission_dive_str,))
-    # output_name = "eng_download_stats.png"
-
-    # if base_opts.plot_directory:
-    #     output_name = os.path.join(base_opts.plot_directory, output_name)
-
-    # plt.savefig(output_name, format="png")
-    # if base_opts.save_svg:
-    #     plt.savefig(output_name.replace(".png", ".svg"), format="svg")
-    # ret_val.append(output_name)
-    # if base_opts.save_svg:
-    #     ret_val.append(output_name.replace(".png", ".svg"))
-    # plt.clf()
 
     out = (
         PlotUtilsPlotly.write_output_files(
