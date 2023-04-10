@@ -35,7 +35,6 @@ from __future__ import annotations
 
 import collections
 import os
-import sys
 import typing
 
 import plotly
@@ -55,18 +54,18 @@ from Plotting import plotmissionsingle
 call_plot_map_nt = collections.namedtuple("call_plot_map_nt", ["description", "color"])
 
 call_plot_map = {
-    "pmd": call_plot_map_nt("PMAR data", "lightgreen"),
-    "tmd": call_plot_map_nt("TMICRO data", "darkgreen"),
-    "scd": call_plot_map_nt("SCICON data", "purple"),
-    "sgd": call_plot_map_nt("SG data", "cyan"),
-    "sgk": call_plot_map_nt("SG capture", "deepskyblue"),
-    "sgl": call_plot_map_nt("SG log", "powderblue"),
+    "sgd": call_plot_map_nt("SG data", "goldenrod"),
+    "sgk": call_plot_map_nt("SG cap", "deepskyblue"),
+    "sgl": call_plot_map_nt("SG log", "orange"),
     "sgp": call_plot_map_nt("SG pdos", "saddlebrown"),
-    "std": call_plot_map_nt("SG selftest data", "lightgray"),
-    "stk": call_plot_map_nt("SG selftest cap", "darkgray"),
-    "stl": call_plot_map_nt("SG selftest log", "silver"),
-    "cpd": call_plot_map_nt("ADCP_CP data", "darkred"),
-    "esd": call_plot_map_nt("ADCP_ES data", "red"),
+    # "std": call_plot_map_nt("SG selftest data", "lightgray"),
+    # "stk": call_plot_map_nt("SG selftest cap", "darkgray"),
+    # "stl": call_plot_map_nt("SG selftest log", "silver"),
+    "pmd": call_plot_map_nt("PMAR", "lightgreen"),
+    "tmd": call_plot_map_nt("TMICRO", "darkgreen"),
+    "scd": call_plot_map_nt("SCICON", "purple"),
+    "cpd": call_plot_map_nt("ADCP_CP", "darkred"),
+    "esd": call_plot_map_nt("ADCP_ES", "red"),
 }
 
 
@@ -88,7 +87,8 @@ def mission_callstats(
     # Collect stats
     files_transfered_num = []
     files_transfered = []
-    secs_transfered = []
+    files_stats = []
+    # secs_transfered = []
     crc_errors = []
     dive_number = []
     crc_errors_present = False
@@ -97,14 +97,15 @@ def mission_callstats(
         # log_info(session.transfered_size)
         files_transfered_num.append(len(list(session.transfered_size.keys())))
         files_transfered.append(session.transfered_size)
-        secs = 0
-        nbytes = 0
-        for k in session.file_stats:
-            fs = session.file_stats[k]
-            if fs.bps > 0:
-                secs += fs.receivedsize / fs.bps
-            nbytes += fs.receivedsize
-        secs_transfered.append(secs)
+        files_stats.append(session.file_stats)
+        # secs = 0
+        # nbytes = 0
+        # for k in session.file_stats:
+        #     fs = session.file_stats[k]
+        #     if fs.bps > 0:
+        #         secs += fs.receivedsize / fs.bps
+        #     nbytes += fs.receivedsize
+        # secs_transfered.append(secs)
         crc_errors.append(len(list(session.crc_errors.keys())))
         if len(list(session.crc_errors.keys())):
             crc_errors_present = True
@@ -134,16 +135,19 @@ def mission_callstats(
 
     file_type_tots = collections.OrderedDict()
     file_type_count = collections.OrderedDict()
+    file_type_secs = collections.OrderedDict()
 
     for ft in file_types:
         file_type_tots[ft] = np.zeros(len(files_transfered_num))
         file_type_count[ft] = np.zeros(len(files_transfered_num))
+        file_type_secs[ft] = np.zeros(len(files_transfered_num))
 
     files_transfered_bytes = np.zeros(len(files_transfered_num))
+    files_transfered_secs = np.zeros(len(files_transfered_num))
 
     # Walk the list
     for ii in range(len(files_transfered)):
-        for f in list(files_transfered[ii].keys()):
+        for f in files_transfered[ii]:
             head, _ = os.path.splitext(f)
             if len(head) == 8:
                 if head[6:7] == "a" or head[6:7] == "b":
@@ -159,12 +163,24 @@ def mission_callstats(
                             file_type_tots[ty][ii] += files_transfered[ii][f]
                             files_transfered_bytes[ii] += files_transfered[ii][f]
                             file_type_count[ty][ii] += 1
+                            if files_stats[ii][f].bps > 0:
+                                tmp = (
+                                    files_stats[ii][f].receivedsize
+                                    / files_stats[ii][f].bps
+                                )
+                                file_type_secs[ty][ii] += tmp
+                                files_transfered_secs[ii] += tmp
                         else:
                             # XModem
                             for ft in files_transfered[ii][f]:
                                 file_type_tots[ty][ii] += ft.block_len
                                 files_transfered_bytes[ii] += ft.block_len
-                                file_type_count[ty][ii] += 1
+
+                            file_type_count[ty][ii] += 1
+                            if files_stats[ii][f].bps > 0:
+                                tmp = file_type_tots[ty][ii] / files_stats[ii][f].bps
+                                file_type_secs[ty][ii] += tmp
+                                files_transfered_secs[ii] += tmp
 
     fig = plotly.graph_objects.Figure()
 
@@ -206,19 +222,20 @@ def mission_callstats(
 
     fig.add_trace(
         {
-            "name": "Hidden Trace for Dive Number",
+            "name": "Total bytes transfered (bytes)",
             "x": t,
-            "y": t,
-            "xaxis": "x2",
-            "yaxis": "y1",
-            "mode": "markers",
-            "visible": False,
+            "y": files_transfered_bytes,
+            "meta": dive_number,
+            "yaxis": "y2",
+            "mode": "lines",
+            "line": {"dash": "solid", "width": 1, "color": "Black"},
+            "hovertemplate": "Total transfered<br>Call Number %{x:.0f}<br>Dive Number %{meta:.0f}<br> bytes %{y:.0f}<extra></extra>",
         }
     )
 
     fig.add_trace(
         {
-            "name": "Total files transfered",
+            "name": "Total files transfered (count)",
             "x": t,
             "y": files_transfered_num,
             "meta": dive_number,
@@ -231,14 +248,14 @@ def mission_callstats(
 
     fig.add_trace(
         {
-            "name": "Total bytes transfered",
+            "name": "Total time transfer (secs)",
             "x": t,
-            "y": files_transfered_bytes,
+            "y": files_transfered_secs,
             "meta": dive_number,
-            "yaxis": "y2",
+            "yaxis": "y3",
             "mode": "lines",
-            "line": {"dash": "solid", "width": 1, "color": "Black"},
-            "hovertemplate": "Total transfered<br>Call Number %{x:.0f}<br>Dive Number %{meta:.0f}<br> bytes %{y:.0f}<extra></extra>",
+            "line": {"dash": "dot", "width": 1, "color": "Black"},
+            "hovertemplate": "Total transfered<br>Call Number %{x:.0f}<br>Dive Number %{meta:.0f}<br> secs %{y:.0f}<extra></extra>",
         }
     )
 
@@ -299,6 +316,94 @@ def mission_callstats(
                 }
             )
 
+    for ty in file_type_secs:
+        if ty in call_plot_map:
+            fig.add_trace(
+                {
+                    "name": f"{call_plot_map[ty].description} (secs)",
+                    "x": t,
+                    "y": file_type_secs[ty],
+                    "meta": dive_number,
+                    "yaxis": "y3",
+                    "mode": "lines",
+                    "line": {
+                        "dash": "dot",
+                        "width": 1,
+                        "color": call_plot_map[ty].color,
+                    },
+                    "hovertemplate": "Call Number %{x:.0f}<br>Dive Number %{meta:.0f}<br>"
+                    + call_plot_map[ty].description
+                    + " %{y:.0f} secs<extra></extra>",
+                }
+            )
+    # Must be last for button logic to work
+    fig.add_trace(
+        {
+            "name": "Hidden Trace for Dive Number",
+            "x": t,
+            "y": t,
+            "xaxis": "x2",
+            "yaxis": "y1",
+            "mode": "markers",
+            "visible": False,
+        }
+    )
+
+    traces = []
+    for d in fig.data:
+        if not d["name"].startswith("Hidden"):
+            traces.append(d["name"])
+
+    ctlTraces = {}
+    ctlTraces["All"] = traces
+    ctlTraces["Sizes"] = [x for x in traces if x.endswith("(bytes)")]
+    ctlTraces["Counts"] = [x for x in traces if x.endswith("(count)")]
+    ctlTraces["Times"] = [x for x in traces if x.endswith("(secs)")]
+    ctlTraces["Totals"] = [x for x in traces if x.startswith("Total")]
+    for ty in file_type_count:
+        if ty in call_plot_map:
+            ctlTraces[call_plot_map[ty].description] = [
+                x for x in traces if x.startswith(call_plot_map[ty].description)
+            ]
+
+    buttons = []
+
+    for c in ctlTraces.keys():
+        buttons.append(
+            dict(
+                args=[
+                    {"visible": True},
+                    [i for i, x in enumerate(traces) if x in ctlTraces[c]],
+                ],
+                args2=[
+                    {"visible": "legendonly"},
+                    [i for i, x in enumerate(traces) if x in ctlTraces[c]],
+                ],
+                label=c,
+                method="restyle",
+                visible=True,
+            )
+        )
+
+    fig.update_layout(
+        updatemenus=[
+            {
+                "type": "buttons",
+                # "type": "dropdown",
+                "direction": "left",
+                # direction="right",
+                "buttons": buttons,
+                # x=1.1,
+                "x": 0.55,
+                "xanchor": "center",
+                "y": -0.08,
+                "visible": True,
+                "showactive": True,
+                # "foobar": True,
+            }
+        ]
+    )
+
     title_text = f"{mission_str}<br>Download Statistics vs Call Num"
     fig.update_layout(
         {
@@ -307,7 +412,7 @@ def mission_callstats(
                 "title": "Call Number",
                 "showgrid": True,
                 # "side": "top"
-                # "domain": [0.0, 0.925],
+                "domain": [0.075, 1.0],
             },
             "xaxis2": {
                 "title": "Dive Number",
@@ -318,16 +423,12 @@ def mission_callstats(
                 "tickmode": "array",
                 "tickvals": divevals,
                 "ticktext": divetext,
-                # "position": 0.925,
+                # "position": 0.0,
             },
             "yaxis": {
                 "title": "Count",
                 "showgrid": True,
-                # Fixed ratio
-                # "scaleanchor": "x",
-                # "scaleratio": (plot_lon_max - plot_lon_min)
-                # / (plot_lat_max - plot_lat_min),
-                # Fixed ratio
+                "position": 0.065,
             },
             "yaxis2": {
                 "title": "Bytes",
@@ -336,6 +437,14 @@ def mission_callstats(
                 "side": "right",
                 # "position": 0.925,
             },
+            "yaxis3": {
+                "title": "Seconds",
+                "overlaying": "y1",
+                "anchor": "free",
+                "side": "left",
+                "position": 0,
+                "showgrid": False,
+            },
             "title": {
                 "text": title_text,
                 "xanchor": "center",
@@ -343,9 +452,7 @@ def mission_callstats(
                 "x": 0.5,
                 "y": 0.95,
             },
-            "margin": {
-                "t": 150,
-            },
+            "margin": {"t": 150, "b": 150},
             "legend": {
                 "x": 1.075,
                 "y": 1,
