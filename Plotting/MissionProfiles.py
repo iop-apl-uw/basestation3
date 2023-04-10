@@ -129,11 +129,11 @@ def mission_profiles(
         latest = res[0]
         cur.close()
     except Exception as e:
-        print(e)
+        log_error("Could not fetch data", "exc")
         conn.close()
         return ([], [])
 
-    print(latest)
+    #print(latest)
  
     figs = []
     outs = []
@@ -143,7 +143,7 @@ def mission_profiles(
     try:
         nci = Utils.open_netcdf_file(ncname, "r")
     except:
-        print(f"Unable to open {ncname}")
+        log_error(f"Unable to open {ncname}", "exc")
         return ([], [])
 
     # Simple hack for case where the most recent dives aren't in the timeseries file

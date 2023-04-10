@@ -538,9 +538,9 @@ def plot_vert_vel(
 
     implied_max_maxbuoy = -(implied_cvbd - vbd_max) / vbd_cnts_per_cc * (rho0 / 1000)
     implied_max_smcc = -(implied_cvbd - vbd_min) / vbd_cnts_per_cc
-    print(mass, rho0, density_1m)
+    #print(mass, rho0, density_1m)
     implied_min_smcc_surf = 1000 * mass * (1 / density_1m - 1000 / rho0) + 150
-    print(implied_min_smcc_surf)
+    #print(implied_min_smcc_surf)
 
     log_info(
         f"implied_cvbd {implied_cvbd:.0f}, implied_volmax {implied_volmax:.1f}, implied_max_smcc {implied_max_smcc:.1f}, implied_max_maxbuoy {implied_max_maxbuoy:.1f}"
