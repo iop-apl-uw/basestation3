@@ -146,10 +146,6 @@ def mission_callstats(
 
     files_transfered_bytes = np.zeros(len(files_transfered_num))
 
-    import pdb
-
-    pdb.set_trace()
-
     # Walk the list
     for ii in range(len(files_transfered)):
         for f in list(files_transfered[ii].keys()):
