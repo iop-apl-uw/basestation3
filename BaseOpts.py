@@ -244,6 +244,7 @@ global_options_dict = {
             "GliderDAC",
             "GliderEarlyGPS",
             "GliderTrack",
+            "KKYY",
             "MakeDiveProfiles",
             "MakeKML",
             "MakeMissionEngPlots",
@@ -666,6 +667,7 @@ global_options_dict = {
         (
             "Base",
             "GliderDAC",
+            "KKYY",
             "SimpleNetCDF",
             "StripNetCDF",
             "WindRain",
