@@ -188,7 +188,8 @@ def main():
         ".ftp",
         ".mailer",
         ".pre_extensions",
-        "sections.yml"
+        "sections.yml",
+        "NODC.cnf",
     )
 
     if base_opts.glider_jail:

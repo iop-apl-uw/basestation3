@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -366,12 +366,19 @@ def update_globals_from_nodc(base_opts, globals_d, controls_d):
         if cnf_override and name in globals_d:
             nodc_defaults[name] = globals_d[name]
 
+    global_nodc_file = os.path.join(base_opts.basestation_etc, nodc_cnf_file)
+    mission_nodc_file = os.path.join(base_opts.mission_dir, nodc_cnf_file)
+
+    if not os.path.exists(global_nodc_file) and not os.path.exists(mission_nodc_file):
+        log_error(f"Neither {global_nodc_file} nor {mission_nodc_file} exits")
+        return
+
     cp = configparser.RawConfigParser(nodc_defaults)
     try:
         files = cp.read(
             [
-                os.path.join(base_opts.basestation_directory, nodc_cnf_file),
-                os.path.join(base_opts.mission_dir, nodc_cnf_file),
+                global_nodc_file,
+                mission_nodc_file,
             ]
         )
     except:
@@ -381,15 +388,25 @@ def update_globals_from_nodc(base_opts, globals_d, controls_d):
         # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
         log_warning(f"Problems reading information from {nodc_cnf_file}")  # problems...
 
-    for pair in cp.items("NODC"):
-        name, value = pair
-        globals_d[name] = value  # these are always strings
+    if cp.has_section("NODC"):
+        for pair in cp.items("NODC"):
+            name, value = pair
+            globals_d[name] = value  # these are always strings
+    else:
+        log_error(
+            f"No [NODC] section found in {global_nodc_file} or {mission_nodc_file}"
+        )
 
-    for pair in cp.items("NODC_controls"):
-        name, value = pair
-        controls_d[name] = value  # these are always strings
+    if cp.has_section("NODC_controls"):
+        for pair in cp.items("NODC_controls"):
+            name, value = pair
+            controls_d[name] = value  # these are always strings
+    else:
+        log_error(
+            f"No [NODC_controls] section found in {global_nodc_file} or {mission_nodc_file}"
+        )
 
-    return files
+    return
 
 
 def form_NODC_title(instruments, nodc_globals_d, nc_globals_d, mission_title):
