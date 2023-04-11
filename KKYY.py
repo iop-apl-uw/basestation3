@@ -44,6 +44,8 @@ import Utils
 import BaseOpts
 import MakeDiveProfiles
 import MakeMissionProfile
+import QC
+
 from BaseLog import BaseLogger, log_debug, log_warning, log_error, log_info
 from Globals import WhichHalf
 
@@ -212,6 +214,11 @@ def main(
             ctd_depth = nci.variables["ctd_depth"][:]
             temperature = nci.variables["temperature"][:]
             salinity = nci.variables["salinity"][:]
+
+            temperature_qc = QC.decode_qc(nci.variables["temperature_qc"][:])
+            temperature[temperature_qc != QC.QC_GOOD] = np.nan
+            salinity_qc = QC.decode_qc(nci.variables["salinity_qc"][:])
+            salinity[salinity_qc != QC.QC_GOOD] = np.nan
             good_points = np.logical_not(
                 np.logical_or.reduce(
                     (np.isnan(ctd_depth), np.isnan(temperature), np.isnan(salinity))
