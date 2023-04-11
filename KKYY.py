@@ -233,7 +233,6 @@ def main(
 
         # Navy file formats
         kkyy_up_file_name = os.path.splitext(dive_nc_file_name)[0] + ".up_kkyy"
-
         kkyy_down_file_name = os.path.splitext(dive_nc_file_name)[0] + ".dn_kkyy"
 
         try:
@@ -282,7 +281,7 @@ def main(
                 )
             log_debug(f"Finished processing {kkyy_up_file_name}")
             if processed_other_files is not None:
-                processed_other_files.append(kkyy_down_file_name)
+                processed_other_files.append(kkyy_up_file_name)
 
         try:
             kkyy_down_file = open(kkyy_down_file_name, "w")
