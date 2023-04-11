@@ -1,5 +1,6 @@
 # This file provides values for netCDF global attributes required and recommended
-# for deposition of Seaglider data to the National Oceanographic Data Center (NODC)
+# for deposition of Seaglider data to the National Oceanographic Data Center (NODC) 
+#
 # It also controls whether and how to send files to NODC.
 
 # -  Edit this file in the basestation directory to apply overrides to all deployments
@@ -20,9 +21,9 @@
 
 # This is the institution running the glider and processing the data
 # Default: -- see below --
-institution: Applied Physics Lab
- University of Washington
- Seattle, WA
+#institution: Applied Physics Lab
+# University of Washington
+# Seattle, WA
 
 # The name of the principal investigator
 # Default: None
