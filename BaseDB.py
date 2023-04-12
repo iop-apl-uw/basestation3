@@ -978,36 +978,39 @@ def rebuildControlHistory(base_opts):
     con.close()
 
 def logParameterChanges(base_opts, dive_num, cmdname, con=None):
-    if con is None:
-        mycon = Utils.open_mission_database(base_opts)
-        if mycon is None:
-            log_error("Failed to open mission db")
-            return
-    else:
-        mycon = con
-
     try:
-        cur = mycon.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
-    except Exception as e:
-        log_error("{e} could not create changes table")
-        return
+        if con is None:
+            mycon = Utils.open_mission_database(base_opts)
+            if mycon is None:
+                log_error("Failed to open mission db")
+                return
+        else:
+            mycon = con
 
-    logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
-    cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
-    changes = CmdHistory.parameterChanges(dive_num, logfile, cmdfile)
-
-    for d in changes:
         try:
-            cur.execute("REPLACE INTO changes(dive,parm,oldval,newval) VALUES(:dive, :parm, :oldval, :newval);", d)
+            cur = mycon.cursor()
+            cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
         except Exception as e:
-            log_error(f"{e} inserting parameter changes")
+            log_error("{e} could not create changes table")
+            return
 
-    mycon.commit()
-    cur.close()
+        logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
+        cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
+        changes = CmdHistory.parameterChanges(dive_num, logfile, cmdfile)
 
-    if con is None:
-        mycon.close()
+        for d in changes:
+            try:
+                cur.execute("REPLACE INTO changes(dive,parm,oldval,newval) VALUES(:dive, :parm, :oldval, :newval);", d)
+            except Exception as e:
+                log_error(f"{e} inserting parameter changes")
+
+        mycon.commit()
+        cur.close()
+
+        if con is None:
+            mycon.close()
+    except:
+        log_error("Failed logParameterChange", "exc")
 
 def addSession(base_opts, session, con=None):
     if con is None:
