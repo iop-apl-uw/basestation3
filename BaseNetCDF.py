@@ -370,7 +370,7 @@ def update_globals_from_nodc(base_opts, globals_d, controls_d):
     mission_nodc_file = os.path.join(base_opts.mission_dir, nodc_cnf_file)
 
     if not os.path.exists(global_nodc_file) and not os.path.exists(mission_nodc_file):
-        log_error(f"Neither {global_nodc_file} nor {mission_nodc_file} exits")
+        log_warning(f"Neither {global_nodc_file} nor {mission_nodc_file} exits")
         return
 
     cp = configparser.RawConfigParser(nodc_defaults)
@@ -393,7 +393,7 @@ def update_globals_from_nodc(base_opts, globals_d, controls_d):
             name, value = pair
             globals_d[name] = value  # these are always strings
     else:
-        log_error(
+        log_warning(
             f"No [NODC] section found in {global_nodc_file} or {mission_nodc_file}"
         )
 
