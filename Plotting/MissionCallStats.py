@@ -214,9 +214,15 @@ def mission_callstats(
     # Select some points on the graph for the dive numbers
     divevals = []
     divetext = []
-    for ii in t[:: len(t) // 7]:
-        divevals.append(ii)
-        divetext.append(dive_nums[int(ii)])
+    if len(t) > 7:
+        for ii in t[:: len(t) // 7]:
+            divevals.append(ii)
+            divetext.append(dive_nums[int(ii)])
+    else:
+        for ii in t:
+            divevals.append(ii)
+            divetext.append(dive_nums[int(ii)])
+
     # divevals.append(t[-1])
     # divetext.append(dive_nums[-1])
 
