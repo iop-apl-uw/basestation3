@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -41,7 +41,6 @@ import sys
 import time
 import typing
 import traceback
-import warnings
 
 import plotly
 import numpy as np
@@ -56,7 +55,8 @@ import Utils
 from BaseLog import BaseLogger, log_error, log_info, log_critical, log_debug
 from CalibConst import getSGCalibrationConstants
 
-DEBUG_PDB = "darwin" in sys.platform
+# DEBUG_PDB = "darwin" in sys.platform
+DEBUG_PDB = False
 
 
 def get_dive_plots(base_opts: BaseOpts.BaseOptions) -> dict:
@@ -101,6 +101,10 @@ def plot_dives(
             except KeyboardInterrupt:
                 return (figs, output_files)
             except:
+                if DEBUG_PDB:
+                    _, _, traceb = sys.exc_info()
+                    traceback.print_exc()
+                    pdb.post_mortem(traceb)
                 log_error(f"{plot_name} failed {dive_nc_file_name}", "exc")
             else:
                 for figure in fig_list:
@@ -139,8 +143,14 @@ def plot_mission(
                 fig_list, file_list = plot_func(
                     base_opts, mission_str, dive=dive, generate_plots=generate_plots
                 )
-        except Exception as e:
-            log_error(f"{plot_name} failed {e}", "exc")
+        except KeyboardInterrupt:
+            return (figs, output_files)
+        except:
+            log_error(f"{plot_name}", "exc")
+            if DEBUG_PDB:
+                _, _, traceb = sys.exc_info()
+                traceback.print_exc()
+                pdb.post_mortem(traceb)
         else:
             for figure in fig_list:
                 figs.append(figure)
@@ -281,8 +291,6 @@ if __name__ == "__main__":
     # Force to be in UTC
     os.environ["TZ"] = "UTC"
     time.tzset()
-
-    # warnings.filterwarnings("error")
 
     try:
         if "--profile" in sys.argv:
