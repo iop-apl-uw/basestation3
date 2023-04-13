@@ -39,6 +39,8 @@ import sys
 import time
 import traceback
 import typing
+import warnings
+
 import cartopy.crs as ccrs
 import cartopy
 import matplotlib.pyplot as plt
@@ -49,6 +51,7 @@ from CalibConst import getSGCalibrationConstants
 import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import xarray as xr
+
 
 import numpy as np
 import pandas as pd
@@ -201,7 +204,9 @@ def mission_map(
     fudgex = 0.12*(extent[1] - extent[0])
     fudgey = 0.12*(extent[3] - extent[2])
 
-    ax.set_extent([extent[0]-fudgex,extent[1]+fudgex,extent[2]-fudgey,extent[3]+fudgey], ccrs.PlateCarree())
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        ax.set_extent([extent[0]-fudgex,extent[1]+fudgex,extent[2]-fudgey,extent[3]+fudgey], ccrs.PlateCarree())
 
     g = ax.gridlines(draw_labels=True, x_inline=False, y_inline=False, dms=True)
     xt = g.xlocator.tick_values(ll_lon,ur_lon)
@@ -245,6 +250,13 @@ def mission_map(
         vcode[i] = 1 if i%2 == 0 else 2
 
     polygon1v = mpath.Path( path_in_data_coords.vertices, vcode)
+    # The above blows up with a ValueError on small maps
+    #
+    # try:
+    #     polygon1v = mpath.Path( path_in_data_coords.vertices, vcode)
+    # except ValueError:
+    #     log_error("mpath failed - skipping mission map")
+    #     return ([],[])
 
     ax.set_boundary(polygon1s) #masks-out unwanted part of the plot
 
