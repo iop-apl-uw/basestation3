@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import warnings
 import typing
 
 import plotly
@@ -112,7 +113,9 @@ def mission_disk(
             }
         )
 
-        m, b = np.polyfit(df["dive"].to_numpy(), df["SD_free"].to_numpy(), 1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=np.RankWarning)
+            m, b = np.polyfit(df["dive"].to_numpy(), df["SD_free"].to_numpy(), 1)
 
         sd_free_est = f"<br>based on SD free, {-b/m:.0f} dives until full"
         # y_offset += -0.02
