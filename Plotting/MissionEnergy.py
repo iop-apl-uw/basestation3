@@ -600,6 +600,7 @@ def mission_energy(
                 #"annotations": tuple(l_annotations),
             },
         )
+        conn.commit()
         conn.close()
         return (
             [fig],
@@ -616,6 +617,7 @@ def mission_energy(
             traceback.print_exc()
             pdb.post_mortem(traceb)
         log_error("Could not fetch needed columns", "exc")
+        conn.commit()
         conn.close()
         return ([], [])
 # fmt: on

@@ -785,6 +785,7 @@ def rebuildDB(base_opts):
     for filename in ncfs:
         loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False)
     cur.close()
+    con.commit()
     con.close()
 
 
@@ -795,6 +796,7 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     createDivesTable(cur)
     loadFileToDB(base_opts, cur, filename, con, run_dive_plots=run_dive_plots)
     cur.close()
+    con.commit()
     con.close()
 
 def prepDB(base_opts, dbfile=None):
@@ -811,6 +813,7 @@ def prepDB(base_opts, dbfile=None):
     cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
     cur.close()
 
+    con.commit()
     con.close()
 
 def saveFlightDB(base_opts, mat_d, con=None):
@@ -849,6 +852,7 @@ def saveFlightDB(base_opts, mat_d, con=None):
     cur.execute("COMMIT")
     if con is None:
         cur.close()
+        mycon.commit()
         mycon.close()
     
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
@@ -870,10 +874,10 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
         cur = mycon.cursor()
         log_debug(f"Loading {var_n}:{val} dive:{dive_num} to db")
         insertColumn(dive_num, cur, var_n, val, db_type)
-        mycon.commit()
 
         if con is None:
             cur.close()
+            mycon.commit()
             mycon.close()
     except:
         if DEBUG_PDB:
@@ -917,6 +921,7 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
         addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
 
     if con is None:
+        mycon.commit()
         mycon.close()
 
 def logControlFile(base_opts, dive, filename, fullname, con=None):
@@ -947,10 +952,10 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
     except Exception as e:
         log_error(f"{e} inserting file")
 
-    mycon.commit()
     cur.close()
 
     if con is None:
+        mycon.commit()
         mycon.close()
 
 def rebuildControlHistory(base_opts):
@@ -975,42 +980,40 @@ def rebuildControlHistory(base_opts):
             if os.path.exists(cmdname):
                 logControlFile(base_opts, i, which, fullname, con=con)
 
+    con.commit()
     con.close()
 
 def logParameterChanges(base_opts, dive_num, cmdname, con=None):
-    try:
-        if con is None:
-            mycon = Utils.open_mission_database(base_opts)
-            if mycon is None:
-                log_error("Failed to open mission db")
-                return
-        else:
-            mycon = con
-
-        try:
-            cur = mycon.cursor()
-            cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
-        except Exception as e:
-            log_error("{e} could not create changes table")
+    if con is None:
+        mycon = Utils.open_mission_database(base_opts)
+        if mycon is None:
+            log_error("Failed to open mission db")
             return
+    else:
+        mycon = con
 
-        logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
-        cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
-        changes = CmdHistory.parameterChanges(dive_num, logfile, cmdfile)
+    try:
+        cur = mycon.cursor()
+        cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
+    except Exception as e:
+        log_error("{e} could not create changes table")
+        return
 
-        for d in changes:
-            try:
-                cur.execute("REPLACE INTO changes(dive,parm,oldval,newval) VALUES(:dive, :parm, :oldval, :newval);", d)
-            except Exception as e:
-                log_error(f"{e} inserting parameter changes")
+    logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
+    cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
+    changes = CmdHistory.parameterChanges(dive_num, logfile, cmdfile)
 
+    for d in changes:
+        try:
+            cur.execute("REPLACE INTO changes(dive,parm,oldval,newval) VALUES(:dive, :parm, :oldval, :newval);", d)
+        except Exception as e:
+            log_error(f"{e} inserting parameter changes")
+
+    cur.close()
+
+    if con is None:
         mycon.commit()
-        cur.close()
-
-        if con is None:
-            mycon.close()
-    except:
-        log_error("Failed logParameterChange", "exc")
+        mycon.close()
 
 def addSession(base_opts, session, con=None):
     if con is None:
@@ -1027,11 +1030,11 @@ def addSession(base_opts, session, con=None):
         cur.execute("INSERT OR IGNORE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD) \
                      VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD);",
                     session.to_message_dict())
-        mycon.commit()
     except Exception as e:
         log_error(f"{e} inserting comm.log session")
 
     if con is None:
+        mycon.commit()
         mycon.close()
 
 def main():
