@@ -377,6 +377,10 @@ def mission_energy(
         ).sort_values("dive")
 
         if not generate_plots:
+            try:
+                conn.commit()
+            except Exception as e:
+                log_error(f"Failed commit, MissionEnergy {e}", "exc")
             conn.close()
             return ([], [])
 
@@ -600,7 +604,11 @@ def mission_energy(
                 #"annotations": tuple(l_annotations),
             },
         )
-        conn.commit()
+        try:
+            conn.commit()
+        except Exception as e:
+            log_error(f"Failed commit, MissionEnergy {e}", "exc")
+            
         conn.close()
         return (
             [fig],
@@ -617,7 +625,10 @@ def mission_energy(
             traceback.print_exc()
             pdb.post_mortem(traceb)
         log_error("Could not fetch needed columns", "exc")
-        conn.commit()
+        try:
+            conn.commit()
+        except Exception as e:
+            log_error(f"Failed commit, MissionEnergy {e}", "exc")
         conn.close()
         return ([], [])
 # fmt: on

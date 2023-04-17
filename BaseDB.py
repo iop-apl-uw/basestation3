@@ -785,7 +785,11 @@ def rebuildDB(base_opts):
     for filename in ncfs:
         loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False)
     cur.close()
-    con.commit()
+    try:
+        con.commit()
+    except Exception as e:
+        log_error(f"Failed commit, rebuildDB {e}", "exc")
+
     con.close()
 
 
@@ -796,7 +800,11 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     createDivesTable(cur)
     loadFileToDB(base_opts, cur, filename, con, run_dive_plots=run_dive_plots)
     cur.close()
-    con.commit()
+    try:
+        con.commit()
+    except Exception as e:
+        log_error(f"Failed commit, loadDB {e}", "exc")
+
     con.close()
 
 def prepDB(base_opts, dbfile=None):
@@ -813,7 +821,11 @@ def prepDB(base_opts, dbfile=None):
     cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
     cur.close()
 
-    con.commit()
+    try:
+        con.commit()
+    except Exception as e:
+        log_error(f"Failed commit, prepDB {e}", "exc")
+
     con.close()
 
 def saveFlightDB(base_opts, mat_d, con=None):
@@ -852,42 +864,54 @@ def saveFlightDB(base_opts, mat_d, con=None):
     cur.execute("COMMIT")
     if con is None:
         cur.close()
-        mycon.commit()
+        try:
+            mycon.commit()
+        except Exception as e:
+            log_error(f"Failed commit, saveFlightDB {e}", "exc")
+
         mycon.close()
     
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
+    if isinstance(val, int):
+        db_type = "INTEGER"
+    elif isinstance(val, float):
+        db_type = "FLOAT"
+    else:
+        log_error(f"Unknown db_type for {var_n}:{type(val)}")
+        return 1
+
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
     else:
         mycon = con
 
-    try:
-        if isinstance(val, int):
-            db_type = "INTEGER"
-        elif isinstance(val, float):
-            db_type = "FLOAT"
-        else:
-            log_error(f"Unknown db_type for {var_n}:{type(val)}")
-            return 1
+    stat = 0
 
+    try:
         cur = mycon.cursor()
         log_debug(f"Loading {var_n}:{val} dive:{dive_num} to db")
         insertColumn(dive_num, cur, var_n, val, db_type)
-
-        if con is None:
-            cur.close()
-            mycon.commit()
-            mycon.close()
+        cur.close()
     except:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
             pdb.post_mortem(traceb)
         log_error(f"Failed to add {var_n} to dive {dive_num}", "exc")
-        print(f"Failed to add {var_n} to dive {dive_num}", "exc")
-        return 1
-    return 0
+        
+        stat = 1 
+
+    if con is None:
+        try:
+            mycon.commit()
+        except Exception as e:
+            log_error(f"Failed commit, addValToDB {e}", "exc")
+            stat = 1
+
+        mycon.close()
+
+    return stat 
 
 def addSlopeValToDB(base_opts, dive_num, var, con):
     if con is None:
@@ -921,7 +945,11 @@ def addSlopeValToDB(base_opts, dive_num, var, con):
         addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
 
     if con is None:
-        mycon.commit()
+        try:
+            mycon.commit()
+        except Exception as e:
+            log_error(f"Failed commit, addSlopeValToDB {e}", "exc")
+
         mycon.close()
 
 def logControlFile(base_opts, dive, filename, fullname, con=None):
@@ -955,7 +983,10 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
     cur.close()
 
     if con is None:
-        mycon.commit()
+        try:
+            mycon.commit()
+        except Exception as e:
+            log_error(f"Failed commit, logControlFile {e}", "exc")
         mycon.close()
 
 def rebuildControlHistory(base_opts):
@@ -980,7 +1011,11 @@ def rebuildControlHistory(base_opts):
             if os.path.exists(cmdname):
                 logControlFile(base_opts, i, which, fullname, con=con)
 
-    con.commit()
+    try:
+        con.commit()
+    except Exception as e:
+        log_error(f"Failed commit, rebuildControlHistory {e}", "exc")
+
     con.close()
 
 def logParameterChanges(base_opts, dive_num, cmdname, con=None):
@@ -1012,7 +1047,11 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
     cur.close()
 
     if con is None:
-        mycon.commit()
+        try:
+            mycon.commit()
+        except Exception as e:
+            log_error(f"Failed commit, logParameterChanges {e}", "exc")
+
         mycon.close()
 
 def addSession(base_opts, session, con=None):
@@ -1034,7 +1073,11 @@ def addSession(base_opts, session, con=None):
         log_error(f"{e} inserting comm.log session")
 
     if con is None:
-        mycon.commit()
+        try:
+            mycon.commit()
+        except Exception as e:
+            log_error(f"Failed commit, addSession {e}", "exc")
+
         mycon.close()
 
 def main():
