@@ -97,15 +97,21 @@ def plot_diveplot(
             gc_vbd_pos,
         ) = PlotUtils.extract_gc_moves(dive_nc_file)
 
-        apogee_time = None;
+        apogee_time = None
         if gc_pitch_pos is not None:
             eng_pitch_pos = gc_pitch_pos * 10.0
             eng_pitch_time = gc_pitch_time / 60.0
-            apogee_time = min(eng_pitch_time[eng_pitch_pos > 0])
+            try:
+                apogee_time = min(eng_pitch_time[eng_pitch_pos > 0])
+            except ValueError:
+                pass
         elif "eng_pitchCtl" in dive_nc_file.variables:
             eng_pitch_pos = dive_nc_file.variables["eng_pitchCtl"][:] * 10.0
             eng_pitch_time = eng_time
-            apogee_time = min(eng_pitch_time[eng_pitch_pos > 0])
+            try:
+                apogee_time = min(eng_pitch_time[eng_pitch_pos > 0])
+            except ValueError:
+                pass
         else:
             log_error("Pitch position not available")
             eng_pitch_pos = eng_pitch_time = None
