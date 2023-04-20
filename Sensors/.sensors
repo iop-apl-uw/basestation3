@@ -13,6 +13,7 @@ scicon_ext.py,init_logger,process_tar_members
 cp_ext.py,init_logger,process_data_files
 # Legato as a logdev - must follow legato_ext.py
 legato_logdev_ext.py,init_logger,process_data_files,eng_file_reader
+rockland_micropod_ext.py,init_logger,process_data_files
 # Place all cnf files at the end of this file!
 scct.cnf,init_sensor,asc2eng
 mag.cnf,init_sensor,asc2eng
