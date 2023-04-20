@@ -11,5 +11,18 @@
 # Uncomment to enable KKYY file creation
 #KKYY.py
 #
+# Uncomment for simplified netcdf files
+# SimpleNetCDF.py
+#
+# Uncomment for creation of files for submission to the gliderdac
+# Note - additional configuraiton required - see gliderdac.md in the docs directory
+# GliderDAC.py
+#
+# Uncomment for creation of glider position text file (time, lat lon)
+# MakePositions.py
+#
+# Support for plotting compress TS profiles
+# MakePlotTSProfile.py
+#
 [mission]
 # Extensions listed in this section are run after whole mission processing has occured.
