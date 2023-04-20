@@ -1,7 +1,12 @@
 #! /usr/bin/env python
 
 #
-## Copyright (C) 2005, 2011, 2020 Chad J. Schroeder and 2007 by University of Washington.
+## Copyright (C) 2005  Chad J. Schroeder
+## Portions Copyright (C) 2007 by University of Washington.
+##
+## Drived from https://code.activestate.com/recipes/278731-creating-a-daemon-the-python-way/?in=user-1760491
+## Licsense noted to be PSF License (https://opensource.org/license/pythonsoftfoundation-php/)
+## 
 ##
 ## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 ## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
