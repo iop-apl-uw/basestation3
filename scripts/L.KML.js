@@ -180,8 +180,10 @@ L.Util.extend(L.KML, {
 		for (var i = 0; i < el.length; i++) {
 			if (!this._check_folder(el[i], xml)) { continue; }
 			l = this.parseFolder(el[i], style);
-            l.layerID = el[i].id;
-			if (l) { layers.push(l); }
+            if (l) {
+                l.layerID = el[i].id;
+			    layers.push(l); 
+            }
 		}
 		el = xml.getElementsByTagName('Placemark');
 		for (var j = 0; j < el.length; j++) {
