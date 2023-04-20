@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -147,6 +147,8 @@ def plot_diveplot(
         mag_var = dive_nc_file.variables["magnetic_variation"].getValue()
         heading = clock_compass(dive_nc_file.variables["eng_head"][:] + mag_var)
 
+        errband = float(dive_nc_file.variables["log_HEAD_ERRBAND"].getValue())
+
         tmp = float(
             dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
             .tobytes()
@@ -154,13 +156,19 @@ def plot_diveplot(
             .split(",")[0]
         )
         desired_heading = clock_compass(np.zeros(len(eng_time)) + tmp)
+        desired_heading_plus_errband = clock_compass(
+            np.zeros(len(eng_time)) + tmp + errband
+        )
+        desired_heading_minus_errband = clock_compass(
+            np.zeros(len(eng_time)) + tmp - errband
+        )
 
         desired_pitch = float(
             dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
             .tobytes()
             .decode("utf-8")
             .split(",")[2]
-        ) 
+        )
 
         eng_pitch_ang = dive_nc_file.variables["eng_pitchAng"][:]
         eng_roll_ang = dive_nc_file.variables["eng_rollAng"][:]
@@ -189,17 +197,19 @@ def plot_diveplot(
         except KeyError:
             pass
 
-        if "density" in dive_nc_file.variables and "log_MASS" in dive_nc_file.variables and "log_RHO" in dive_nc_file.variables:
+        if (
+            "density" in dive_nc_file.variables
+            and "log_MASS" in dive_nc_file.variables
+            and "log_RHO" in dive_nc_file.variables
+        ):
             eng_density = np.interp(
-                    eng_vbd_time,
-                    ctd_time,
-                    dive_nc_file.variables['density'][:]
-                )
+                eng_vbd_time, ctd_time, dive_nc_file.variables["density"][:]
+            )
 
             mass = dive_nc_file.variables["log_MASS"].getValue()
-            rho  = dive_nc_file.variables["log_RHO"].getValue()
-            vol = mass/rho + eng_vbd_pos*10
-            buoy_veh = (-mass + vol*eng_density/1000) / 10 
+            rho = dive_nc_file.variables["log_RHO"].getValue()
+            vol = mass / rho + eng_vbd_pos * 10
+            buoy_veh = (-mass + vol * eng_density / 1000) / 10
         else:
             buoy_veh = None
 
@@ -271,7 +281,7 @@ def plot_diveplot(
     fig = plotly.graph_objects.Figure()
 
     show_label = collections.defaultdict(lambda: True)
-    
+
     for gc in gc_moves:
         fig.add_trace(
             {
@@ -623,7 +633,39 @@ def plot_diveplot(
             "yaxis": "y2",
             "mode": "lines",
             "line": {"dash": "longdash", "color": "DarkRed"},
-            "hovertemplate": "Heading<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
+            "hovertemplate": "Desired Head<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "y": desired_heading_plus_errband,
+            "x": eng_time,
+            "name": "Desired Head+ErrBand (deg true)",
+            "type": "scatter",
+            "legendgroup": "HeadErrBand",
+            "visible": "legendonly",
+            "xaxis": "x1",
+            "yaxis": "y2",
+            "mode": "lines",
+            "line": {"dash": "longdash", "color": "orangered"},
+            "hovertemplate": "DHead+ErrBand<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "y": desired_heading_minus_errband,
+            "x": eng_time,
+            "name": "Desired Head-ErrBand (deg true)",
+            "type": "scatter",
+            "visible": "legendonly",
+            "legendgroup": "HeadErrBand",
+            "xaxis": "x1",
+            "yaxis": "y2",
+            "mode": "lines",
+            "line": {"dash": "longdash", "color": "orangered"},
+            "hovertemplate": "DHead-ErrBand<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
         }
     )
 
@@ -661,38 +703,66 @@ def plot_diveplot(
 
     traces = []
     for d in fig.data:
-        traces.append(d['name'])
+        traces.append(d["name"])
 
     ctlTraces = {}
-    ctlTraces['pitch'] = ['GC Pitch', 'Pitch Up (deg)', 'Pitch desired (deg)', 'Pitch pos (mm)']
-    ctlTraces['roll'] =  ['GC Roll', 'Vehicle Roll (deg)', 'Roll pos (deg)']
-    ctlTraces['VBD'] =  ['GC VBD', 'Buoyancy HDM (10 g)', 'Buoyancy (veh) (10 g)', 'VBD pos (10 cc)']
-    ctlTraces['HDM'] = ['Horiz Speed HDM (cm/s)', 'Vert Speed HDM (cm/s)', 'Glide Angle HDM (deg)', 'Buoyancy HDM (10 g)']
-    ctlTraces['GSM'] = ['Horiz Speed GSM (cm/s)', 'Vert Speed GSM (cm/s)', 'Glide Angle GSM (deg)']
-   
-    buttons = [ dict(
-                        args2=[ {'visible': True} ],
-                        args=[ {'visible': 'legendonly'} ],
-                        label='All',
-                        method="restyle",
-                        visible=True,
-                    )
-              ]
+    ctlTraces["pitch"] = [
+        "GC Pitch",
+        "Pitch Up (deg)",
+        "Pitch desired (deg)",
+        "Pitch pos (mm)",
+    ]
+    ctlTraces["roll"] = ["GC Roll", "Vehicle Roll (deg)", "Roll pos (deg)"]
+    ctlTraces["VBD"] = [
+        "GC VBD",
+        "Buoyancy HDM (10 g)",
+        "Buoyancy (veh) (10 g)",
+        "VBD pos (10 cc)",
+    ]
+    ctlTraces["HDM"] = [
+        "Horiz Speed HDM (cm/s)",
+        "Vert Speed HDM (cm/s)",
+        "Glide Angle HDM (deg)",
+        "Buoyancy HDM (10 g)",
+    ]
+    ctlTraces["GSM"] = [
+        "Horiz Speed GSM (cm/s)",
+        "Vert Speed GSM (cm/s)",
+        "Glide Angle GSM (deg)",
+    ]
+
+    buttons = [
+        dict(
+            args2=[{"visible": True}],
+            args=[{"visible": "legendonly"}],
+            label="All",
+            method="restyle",
+            visible=True,
+        )
+    ]
 
     for c in ctlTraces.keys():
-        buttons.append(dict(
-                        args2=[ {'visible': True}, [i for i,x in enumerate(traces) if x in ctlTraces[c]] ],
-                        args=[ {'visible': 'legendonly'}, [i for i,x in enumerate(traces) if x in ctlTraces[c]] ],
-                        label=c,
-                        method="restyle",
-                        visible=True,
-                      ))
-                    
+        buttons.append(
+            dict(
+                args2=[
+                    {"visible": True},
+                    [i for i, x in enumerate(traces) if x in ctlTraces[c]],
+                ],
+                args=[
+                    {"visible": "legendonly"},
+                    [i for i, x in enumerate(traces) if x in ctlTraces[c]],
+                ],
+                label=c,
+                method="restyle",
+                visible=True,
+            )
+        )
+
     fig.update_layout(
         updatemenus=[
             dict(
-                type = "buttons",
-                direction = "left",
+                type="buttons",
+                direction="left",
                 buttons=buttons,
                 x=1.1,
                 y=1.07,
@@ -748,10 +818,8 @@ def plot_diveplot(
                 # "itemclick": "toggleothers",
                 # "itemdoubleclick": "toggle",
             },
-            
         }
     )
-
 
     return (
         [fig],
