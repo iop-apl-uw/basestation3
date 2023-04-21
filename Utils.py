@@ -1665,7 +1665,10 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
             log_error(f"error creating DB: {e}")
             return None
 
-    return sqlite3.connect(db)
+    conn = sqlite3.connect(db)
+    conn.isolation_level = None
+    conn.cursor().execute("BEGIN")
+    return conn
 
 
 def dive_var_trend(base_opts, dive_col, y_col):
