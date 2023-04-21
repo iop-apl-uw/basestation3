@@ -63,7 +63,7 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_motors(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
 ) -> tuple[list, list]:
     """Plots mission motor GC data"""
 

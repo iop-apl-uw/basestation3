@@ -74,6 +74,7 @@ def plot_dives(
     dive_plot_dict: dict,
     dive_nc_file_names: list,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list:list]:
     """
     Create per-dive related plots
@@ -96,7 +97,7 @@ def plot_dives(
             try:
                 dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
                 fig_list, file_list = plot_func(
-                    base_opts, dive_ncf, generate_plots=generate_plots
+                    base_opts, dive_ncf, generate_plots=generate_plots, dbcon=dbcon,
                 )
             except KeyboardInterrupt:
                 return (figs, output_files)
@@ -120,6 +121,7 @@ def plot_mission(
     mission_str: list,
     dive=None,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list:list]:
     """
     Create per-dive related plots
@@ -141,7 +143,7 @@ def plot_mission(
                 fig_list, file_list = plot_func(base_opts, mission_str)
             else:
                 fig_list, file_list = plot_func(
-                    base_opts, mission_str, dive=dive, generate_plots=generate_plots
+                    base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=dbcon
                 )
         except KeyboardInterrupt:
             return (figs, output_files)

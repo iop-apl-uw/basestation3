@@ -71,7 +71,7 @@ call_plot_map = {
 
 @plotmissionsingle
 def mission_callstats(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
 ) -> tuple[list, list]:
     """Plots file transfer stats from comm.log"""
     if not generate_plots:

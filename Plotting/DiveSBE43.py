@@ -63,6 +63,7 @@ def plot_sbe43(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots sbe43 data and sat O2"""
 

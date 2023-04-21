@@ -58,6 +58,7 @@ def plot_mag(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plot for compass mag calibration"""
     if "eng_mag_x" not in dive_nc_file.variables or not generate_plots:

@@ -53,7 +53,7 @@ from Plotting import plotmissionsingle
 
 @plotmissionsingle
 def mission_commlog(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
 ) -> tuple[list, list]:
     """Plots disk stats"""
 

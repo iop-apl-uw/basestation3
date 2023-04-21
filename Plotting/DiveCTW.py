@@ -53,6 +53,7 @@ def plot_CTW(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots the glider course through the water"""
     # TODO create roll to right and left vectors

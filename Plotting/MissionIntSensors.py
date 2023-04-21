@@ -53,11 +53,16 @@ from Plotting import plotmissionsingle
 
 @plotmissionsingle
 def mission_int_sensors(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
 ) -> tuple[list, list]:
     """Plots internal pressure, RH, temp"""
     log_info("Starting mission_int_sensors")
-    conn = Utils.open_mission_database(base_opts)
+
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts)
+    else:
+        conn = dbcon
+
     if not conn:
         log_error("Could not open mission database")
         return ([], [])
@@ -95,12 +100,13 @@ def mission_int_sensors(
         m, b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
         BaseDB.addValToDB(base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m, con=conn)
 
-    try:
-        conn.commit()
-    except Exception as e:
-        log_error(f"Failed commit, MissionIntSensors {e}", "exc")
+    if dbcon == None:
+        try:
+            conn.commit()
+        except Exception as e:
+            log_error(f"Failed commit, MissionIntSensors {e}", "exc")
 
-    conn.close()
+        conn.close()
 
     if not generate_plots:
         log_info("Returning")

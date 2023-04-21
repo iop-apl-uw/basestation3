@@ -53,6 +53,7 @@ def plot_dive_single(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file_name: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Signature for per-dive plotting routines"""
     return ([], [])
@@ -60,7 +61,7 @@ def plot_dive_single(
 
 # pylint: disable=unused-argument
 def plot_mission_single(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None,
 ) -> tuple[list, list]:
     """Signature for whole mission plotting routines"""
     return ([], [])

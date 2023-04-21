@@ -56,6 +56,7 @@ def plot_TS(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots TS Data"""
 

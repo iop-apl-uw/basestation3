@@ -641,17 +641,17 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
     updateDBFromFM(base_opts, [filename], cur)
     updateDBFromFileExistence(base_opts, [filename], con)
-    updateDBFromPlots(base_opts, [filename], run_dive_plots=run_dive_plots)
+    updateDBFromPlots(base_opts, [filename], con, run_dive_plots=run_dive_plots)
 
     addSlopeValToDB(base_opts, dive, slopeVars, con)
 
-def updateDBFromPlots(base_opts, ncfs, run_dive_plots=True):
+def updateDBFromPlots(base_opts, ncfs, con, run_dive_plots=True):
     """Update the database with the output of plotting routines that generate db columns"""
 
     #base_opts.dive_plots = ["plot_vert_vel", "plot_pitch_roll"]
     if run_dive_plots:
         dive_plots_dict = BasePlot.get_dive_plots(base_opts)
-        BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs, generate_plots=False)
+        BasePlot.plot_dives(base_opts, dive_plots_dict, ncfs, generate_plots=False, dbcon=con)
 
     sg_calib_file_name = os.path.join(
         base_opts.mission_dir, "sg_calib_constants.m"
@@ -664,7 +664,7 @@ def updateDBFromPlots(base_opts, ncfs, run_dive_plots=True):
 
     for n in ncfs:
         dive = int(os.path.basename(n)[4:8])
-        BasePlot.plot_mission(base_opts, mission_plots_dict, mission_str, dive=dive, generate_plots=False)
+        BasePlot.plot_mission(base_opts, mission_plots_dict, mission_str, dive=dive, generate_plots=False, dbcon=con)
 
 def updateDBFromFileExistence(base_opts, ncfs, con):
     for n in ncfs:

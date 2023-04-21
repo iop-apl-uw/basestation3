@@ -56,6 +56,7 @@ def plot_legato_corrections(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plot showing results for legato thermal-inertia correction"""
     if not generate_plots:

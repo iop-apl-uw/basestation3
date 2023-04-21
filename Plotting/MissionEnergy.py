@@ -89,12 +89,16 @@ line_lookup = {
 
 @plotmissionsingle
 def mission_energy(
-        base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
+        base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
 ) -> tuple[list, list]:
     """Plots mission energy consumption and projections"""
     log_info(f"Starting mission_energy {dive}")
 
-    conn = Utils.open_mission_database(base_opts)
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts)
+    else:
+        conn = dbcon
+
     if not conn:
         log_error("Could not open mission database")
         return ([], [])
@@ -376,12 +380,15 @@ def mission_energy(
             f"SELECT dive,{','.join(sensor_joule_cols)} from dives", conn
         ).sort_values("dive")
 
-        if not generate_plots:
+        if dbcon == None:
             try:
                 conn.commit()
             except Exception as e:
                 log_error(f"Failed commit, MissionEnergy {e}", "exc")
+
             conn.close()
+
+        if not generate_plots:
             return ([], [])
 
         fig = plotly.graph_objects.Figure()
@@ -604,12 +611,7 @@ def mission_energy(
                 #"annotations": tuple(l_annotations),
             },
         )
-        try:
-            conn.commit()
-        except Exception as e:
-            log_error(f"Failed commit, MissionEnergy {e}", "exc")
-            
-        conn.close()
+
         return (
             [fig],
             PlotUtilsPlotly.write_output_files(

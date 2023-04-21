@@ -76,6 +76,7 @@ def plot_pitch_roll(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots pitch and roll regressions"""
     log_info("Starting dive_pitch_roll")
@@ -263,7 +264,11 @@ def plot_pitch_roll(
 
     log_info(f"implied_cpitch {implied_C}, implied_pitchgain {implied_gain}")
 
-    conn = Utils.open_mission_database(base_opts)
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts)
+    else:
+        conn = dbcon
+
     BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "implied_C_PITCH", implied_C, con=conn)
     BaseDB.addValToDB(
         base_opts, dive_nc_file.dive_number, "implied_PITCH_GAIN", implied_gain, con=conn
@@ -275,12 +280,13 @@ def plot_pitch_roll(
     except:
         log_error("Failed to add slope value to database", "exc")
 
-    try:
-        conn.commit()
-    except Exception as e:
-        log_error(f"Failed commit, DivePitchRoll {e}", "exc")
+    if dbcon == None:
+        try:
+            conn.commit()
+        except Exception as e:
+            log_error(f"Failed commit, DivePitchRoll {e}", "exc")
 
-    conn.close()
+        conn.close()
 
     inst = pitchFitClass()
     inst.cnv = pitch_cnv

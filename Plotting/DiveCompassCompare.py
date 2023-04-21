@@ -497,6 +497,7 @@ def plot_compare_aux(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots comparision of truc with with aux compass"""
 
@@ -519,6 +520,7 @@ def plot_compare_auxb(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots comparision of truc with with auxb compass"""
     if "auxB_time" not in dive_nc_file.variables or not generate_plots:
@@ -540,6 +542,7 @@ def plot_compare_cp(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots comparision of truck compass with with logdev adcp compass"""
     if "cp_time" not in dive_nc_file.variables or not generate_plots:
@@ -561,6 +564,7 @@ def plot_compare_ad2cp(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots comparision of truck compass with with logdev adcp compass"""
     if "ad2cp_time" not in dive_nc_file.variables or not generate_plots:

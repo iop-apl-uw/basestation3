@@ -73,6 +73,7 @@ def plot_diveplot(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots most of the glider engineering data"""
     # pylint: disable=unused-argument

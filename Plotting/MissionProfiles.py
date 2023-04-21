@@ -93,7 +93,7 @@ def cmocean_to_plotly(cmapname, pl_entries):
 
 @plotmissionsingle
 def mission_profiles(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True
+    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
 ) -> tuple[list, list]:
 
     if not generate_plots:

@@ -184,6 +184,7 @@ def plot_vert_vel(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots various measures of vetical velocity and estimates volmax and C_VBD"""
     # There is a significant difference in what MDP is creating for vertical velocity and what is done below.
@@ -549,7 +550,11 @@ def plot_vert_vel(
         f"min SM_CC {implied_min_smcc_surf:.1f} based on density {density_1m:.5f} at {depth_1m:.2f}m and 150cc to raise the antenna"
     )
 
-    conn = Utils.open_mission_database(base_opts)
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts)
+    else:
+        conn = dbcon
+
     BaseDB.addValToDB(
         base_opts, dive_nc_file.dive_number, "implied_C_VBD", implied_cvbd, con=conn
     )
@@ -575,12 +580,13 @@ def plot_vert_vel(
     except:
         log_error("Failed to add values to database", "exc")
 
-    try:
-        conn.commit()
-    except Exception as e:
-        log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
+    if dbcon == None:
+        try:
+            conn.commit()
+        except Exception as e:
+            log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
 
-    conn.close()
+        conn.close()
 
     # Find the deepest sample
     max_depth_sample_index = np.argmax(depth)
