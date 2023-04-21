@@ -280,14 +280,6 @@ def plot_pitch_roll(
     except:
         log_error("Failed to add slope value to database", "exc")
 
-    if dbcon == None:
-        try:
-            conn.commit()
-        except Exception as e:
-            log_error(f"Failed commit, DivePitchRoll {e}", "exc")
-
-        conn.close()
-
     inst = pitchFitClass()
     inst.cnv = pitch_cnv
     inst.shift = vbd_shift
@@ -454,14 +446,23 @@ def plot_pitch_roll(
     log_info(f"c_roll_dive {c_roll_dive_imp}, c_roll_climb {c_roll_climb_imp}")
 
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_roll_C_ROLL_DIVE", c_roll_dive_imp
+        base_opts, dive_nc_file.dive_number, "implied_roll_C_ROLL_DIVE", c_roll_dive_imp, con=conn
     )
     BaseDB.addValToDB(
         base_opts,
         dive_nc_file.dive_number,
         "implied_roll_C_ROLL_CLIMB",
-        c_roll_climb_imp,
+        c_roll_climb_imp, con=conn
     )
+
+    if dbcon == None:
+        try:
+            conn.commit()
+        except Exception as e:
+            log_error(f"Failed commit, DivePitchRoll {e}", "exc")
+
+        conn.close()
+
 
     rollAD_Fit_dive = np.array([min(rollAD), max(rollAD)])
     roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit_dive
