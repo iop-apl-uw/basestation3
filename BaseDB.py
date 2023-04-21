@@ -913,7 +913,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
 
     return stat 
 
-def addSlopeValToDB(base_opts, dive_num, var, con):
+def addSlopeValToDB(base_opts, dive_num, var, con=None):
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
     else:

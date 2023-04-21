@@ -93,11 +93,17 @@ def mission_int_sensors(
 
     for v in ["log_INTERNAL_PRESSURE", "log_HUMID"]:
         m, b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
-        BaseDB.addValToDB(base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m)
+        BaseDB.addValToDB(base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m, con=conn)
+
+    try:
+        conn.commit()
+    except Exception as e:
+        log_error(f"Failed commit, MissionIntSensors {e}", "exc")
+
+    conn.close()
 
     if not generate_plots:
         log_info("Returning")
-        conn.close()
         return ([], [])
 
     fig.add_trace(
@@ -195,7 +201,6 @@ def mission_int_sensors(
             },
         },
     )
-    conn.close()
     return (
         [fig],
         PlotUtilsPlotly.write_output_files(

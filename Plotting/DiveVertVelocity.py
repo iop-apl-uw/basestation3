@@ -549,30 +549,38 @@ def plot_vert_vel(
         f"min SM_CC {implied_min_smcc_surf:.1f} based on density {density_1m:.5f} at {depth_1m:.2f}m and 150cc to raise the antenna"
     )
 
+    conn = Utils.open_mission_database(base_opts)
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_C_VBD", implied_cvbd
+        base_opts, dive_nc_file.dive_number, "implied_C_VBD", implied_cvbd, con=conn
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_volmax", implied_volmax
+        base_opts, dive_nc_file.dive_number, "implied_volmax", implied_volmax, con=conn
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_max_MAX_BUOY", implied_max_maxbuoy
+        base_opts, dive_nc_file.dive_number, "implied_max_MAX_BUOY", implied_max_maxbuoy, con=conn
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_max_SM_CC", implied_max_smcc
+        base_opts, dive_nc_file.dive_number, "implied_max_SM_CC", implied_max_smcc, con=conn
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "min_SM_CC", implied_min_smcc_surf
+        base_opts, dive_nc_file.dive_number, "min_SM_CC", implied_min_smcc_surf, con=conn
     )
     try:
         BaseDB.addSlopeValToDB(
             base_opts,
             dive_nc_file.dive_number,
             ["implied_volmax", "implied_C_VBD"],
-            None,
+            con=conn,
         )
     except:
         log_error("Failed to add values to database", "exc")
+
+    try:
+        conn.commit()
+    except Exception as e:
+        log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
+
+    conn.close()
 
     # Find the deepest sample
     max_depth_sample_index = np.argmax(depth)

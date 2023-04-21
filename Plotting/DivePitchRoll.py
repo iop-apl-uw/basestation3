@@ -263,16 +263,24 @@ def plot_pitch_roll(
 
     log_info(f"implied_cpitch {implied_C}, implied_pitchgain {implied_gain}")
 
-    BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "implied_C_PITCH", implied_C)
+    conn = Utils.open_mission_database(base_opts)
+    BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "implied_C_PITCH", implied_C, con=conn)
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_PITCH_GAIN", implied_gain
+        base_opts, dive_nc_file.dive_number, "implied_PITCH_GAIN", implied_gain, con=conn
     )
     try:
         BaseDB.addSlopeValToDB(
-            base_opts, dive_nc_file.dive_number, ["implied_C_PITCH"], None
+            base_opts, dive_nc_file.dive_number, ["implied_C_PITCH"], con=conn
         )
     except:
-        log_error("Failed to add values to database", "exc")
+        log_error("Failed to add slope value to database", "exc")
+
+    try:
+        conn.commit()
+    except Exception as e:
+        log_error(f"Failed commit, DivePitchRoll {e}", "exc")
+
+    conn.close()
 
     inst = pitchFitClass()
     inst.cnv = pitch_cnv
