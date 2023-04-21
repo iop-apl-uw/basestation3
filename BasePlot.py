@@ -91,13 +91,18 @@ def plot_dives(
     """
     figs = []
     output_files = []
+    if dbcon == None:
+        con = Utils.open_mission_database(base_opts)
+    else:
+        con = dbcon
+
     for dive_nc_file_name in dive_nc_file_names:
         for plot_name, plot_func in dive_plot_dict.items():
             log_debug(f"Trying Dive Plot :{plot_name}")
             try:
                 dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
                 fig_list, file_list = plot_func(
-                    base_opts, dive_ncf, generate_plots=generate_plots, dbcon=dbcon,
+                    base_opts, dive_ncf, generate_plots=generate_plots, dbcon=con,
                 )
             except KeyboardInterrupt:
                 return (figs, output_files)
@@ -112,6 +117,15 @@ def plot_dives(
                     figs.append(figure)
                 for file_name in file_list:
                     output_files.append(file_name)
+
+    if dbcon == None:
+        try:
+            con.commit()
+        except Exception as e:
+            log_error(f"Failed commit, plot_dives {e}", "exc")
+
+        con.close()
+ 
     return (figs, output_files)
 
 
@@ -134,6 +148,11 @@ def plot_mission(
             list of figures created
             list of filenames created
     """
+    if dbcon == None:
+        con = Utils.open_mission_database(base_opts)
+    else:
+        con = dbcon
+
     figs = []
     output_files = []
     for plot_name, plot_func in mission_plot_dict.items():
@@ -143,7 +162,7 @@ def plot_mission(
                 fig_list, file_list = plot_func(base_opts, mission_str)
             else:
                 fig_list, file_list = plot_func(
-                    base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=dbcon
+                    base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=con
                 )
         except KeyboardInterrupt:
             return (figs, output_files)
@@ -158,6 +177,15 @@ def plot_mission(
                 figs.append(figure)
             for file_name in file_list:
                 output_files.append(file_name)
+
+    if dbcon == None:
+        try:
+            con.commit()
+        except Exception as e:
+            log_error(f"Failed commit, plot_dives {e}", "exc")
+
+        con.close()
+
     return (figs, output_files)
 
 
