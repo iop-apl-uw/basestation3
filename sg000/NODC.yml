@@ -20,10 +20,10 @@
 
 # This is the institution running the glider and processing the data
 # Default: -- see below --
-institution: >-
-  Applied Physics Lab
-  University of Washington
-  Seattle, WA
+#institution: >-
+#  Applied Physics Lab
+#  University of Washington
+#  Seattle, WA
 # Note - if you want the embedded newlines, use | instead of >- in the above
 #
 # The name of the principal investigator
