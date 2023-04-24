@@ -111,25 +111,6 @@ def bindata(x, y, bins, sigma=False):
         return (avgs, bin_count)
 
 
-def json_load_nocomments(filename_or_fp, comment="//|#", **jsonloadskw) -> "json dict":
-    """load json, skipping comment lines starting // or #
-    or white space //, or white space #
-    """
-    # filename_or_fp -- lines -- filter out comments -- bigstring -- json.loads
-
-    if hasattr(filename_or_fp, "readlines"):  # open() or file-like
-        lines = filename_or_fp.readlines()
-    else:
-        with open(filename_or_fp) as fp:
-            lines = fp.readlines()  # with \n
-    iscomment = re.compile(r"\s*(" + comment + ")").match
-    notcomment = lambda line: not iscomment(line)  # ifilterfalse
-    bigstring = "".join(filter(notcomment, lines))
-    # json.load( fp ) does loads( fp.read() ), the whole file in memory
-
-    return json.loads(bigstring, **jsonloadskw)
-
-
 def merge_dict(a, b, path=None, allow_override=False):
     "Merges dict b into dict a"
     if path is None:

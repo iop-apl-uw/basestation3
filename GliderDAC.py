@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -40,6 +40,8 @@ import time
 import traceback
 
 import gsw
+import yaml
+
 import numpy as np
 import xarray as xr
 
@@ -52,6 +54,7 @@ from BaseLog import BaseLogger, log_info, log_warning, log_error, log_debug
 
 # Local config
 DEBUG_PDB = True
+
 
 # Util functions
 def fix_ints(data_type, attrs):
@@ -174,43 +177,33 @@ def load_templates(base_opts):
         log_error("Needed config file not specified")
         return None
 
-    # Load up configuration files
-    try:
-        with open(base_opts.gliderdac_base_config, "r") as fi:
-            template = NetCDFUtils.json_load_nocomments(fi)
-    except:
-        log_error(
-            f"Could not open base config {base_opts.gliderdac_base_config}", "exc"
-        )
-        return None
-
-    try:
-        with open(base_opts.gliderdac_project_config, "r") as fi:
-            project_template = NetCDFUtils.json_load_nocomments(fi)
-    except:
-        log_error(
-            f"Could not open base config {base_opts.gliderdac_project_config}", "exc"
-        )
-        return None
-
-    try:
-        with open(base_opts.gliderdac_deployment_config, "r") as fi:
-            deployment_template = NetCDFUtils.json_load_nocomments(fi)
-    except:
-        log_error(
-            f"Could not open base config {base_opts.gliderdac_deployment_config}", "exc"
-        )
-        return None
+    templates = [{}]
+    for file_name, option_name in (
+        (base_opts.gliderdac_base_config, "gliderdac_base_config"),
+        (base_opts.gliderdac_project_config, "gliderdac_project_config"),
+        (base_opts.gliderdac_deployment_config, "gliderdac_deployment_config"),
+    ):
+        if not file_name:
+            log_warning(f"GliderDAC option --{option_name} not specified")
+            continue
+        if not os.path.exists(file_name):
+            log_info(f"{file_name} does not exist - skipping")
+            continue
+        try:
+            with open(file_name, "r") as fi:
+                templates.append(yaml.safe_load(fi.read()))
+        except:
+            log_error(f"Could not procss {file_name}", "exc")
+            return None
 
     # Merge templates together
     try:
-        reduce(
-            NetCDFUtils.merge_dict, [template, project_template, deployment_template]
-        )
+        reduce(NetCDFUtils.merge_dict, templates)
     except:
         log_error("Error merging config templates", "exc")
         return None
-    return template
+
+    return templates[0]
 
 
 def find_deepest_bin_i(depth, bin_centers, bin_width):
