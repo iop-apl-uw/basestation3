@@ -30,22 +30,21 @@
 
 """Routines and variables for creating NetCDF files for Seagliders
 """
-import configparser
+# import configparser
 import os
 import sys
 import time
 import uuid
+from functools import reduce
 
+import yaml
 import numpy as np
 
-from BaseLog import log_warning, log_error, log_debug, log_critical
+from BaseLog import log_warning, log_error, log_debug, log_critical, log_info
 import Globals
+import NetCDFUtils
 import QC
 import Utils
-
-# from BaseLog import *
-# from QC import *
-# from Globals import *
 
 nc_inf = np.array([np.inf], dtype=np.float64)[0]  # CF1.4 ensure double
 nc_nan = np.array([np.nan], dtype=np.float64)[0]  # CF1.4 ensure double
@@ -347,64 +346,84 @@ def merge_instruments(master_instruments_d, slave_instruments_d):
                 pass  # was already gone
 
 
-def update_globals_from_nodc(base_opts, globals_d, controls_d):
-    """Parse global and local NODC.cnf files, if any
-    Updates globals_d and controls_d by side-effect
-    Returns:
-    files - the list of files, if any, read
-    """
+def update_globals_from_nodc(base_opts, globals_d):
+    """Parse global and local NODC.yml files, if any and update globals_d"""
 
-    nodc_cnf_file = "NODC.cnf"
+    import pdb
+
+    nodc_cnf_file = "NODC.yml"
     # Important NOTE:
     # all the names (but NOT the values) in the name,value pairs are coerced to lowercase!
 
     # build from globals_d and declarations
-    files = []
-    nodc_defaults = {}
+    nodc_dicts = [{}]
     for name, merge_fns in list(nc_global_variables.items()):
         cnf_override, _, _ = merge_fns
         if cnf_override and name in globals_d:
-            nodc_defaults[name] = globals_d[name]
+            nodc_dicts[0][name] = globals_d[name]
 
-    global_nodc_file = os.path.join(base_opts.basestation_etc, nodc_cnf_file)
-    mission_nodc_file = os.path.join(base_opts.mission_dir, nodc_cnf_file)
+    # pdb.set_trace()
 
-    if not os.path.exists(global_nodc_file) and not os.path.exists(mission_nodc_file):
-        log_warning(f"Neither {global_nodc_file} nor {mission_nodc_file} exits")
-        return
+    for yaml_filename in (
+        os.path.join(base_opts.basestation_etc, nodc_cnf_file),
+        os.path.join(base_opts.mission_dir, nodc_cnf_file),
+    ):
+        if os.path.exists(yaml_filename):
+            try:
+                fi = open(yaml_filename, "r")
+                nodc_dicts.append(yaml.safe_load(fi.read()))
+                fi.close()
+            except:
+                log_error(f"Could not process {yaml_filename} - skipping")
 
-    cp = configparser.RawConfigParser(nodc_defaults)
+        else:
+            log_info(f"{yaml_filename} does not exist - skipping")
+
     try:
-        files = cp.read(
-            [
-                global_nodc_file,
-                mission_nodc_file,
-            ]
+        reduce(
+            lambda x, y: NetCDFUtils.merge_dict(x, y, allow_override=True), nodc_dicts
         )
     except:
-        # One way to get here is to have continuation lines on an entry like references: or acknowledgment:
-        # that are not indented by a single space AND have a colon somewhere in the line
-        # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
-        # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
-        log_warning(f"Problems reading information from {nodc_cnf_file}")  # problems...
-
-    if cp.has_section("NODC"):
-        for pair in cp.items("NODC"):
-            name, value = pair
-            globals_d[name] = value  # these are always strings
+        log_error("Error merging config templates", "exc")
     else:
-        log_warning(
-            f"No [NODC] section found in {global_nodc_file} or {mission_nodc_file}"
-        )
+        for k, v in nodc_dicts[0].items():
+            log_debug(f"Updating {k} to {v}")
+            globals_d[k] = v  # these should always strings
 
-    if cp.has_section("NODC_controls"):
-        for pair in cp.items("NODC_controls"):
-            name, value = pair
-            controls_d[name] = value  # these are always strings
-    else:
-        log_error(
-            f"No [NODC_controls] section found in {global_nodc_file} or {mission_nodc_file}"
-        )
+    # Prevoius .cnf based code
+
+    # cp = configparser.RawConfigParser(nodc_defaults)
+    # try:
+    #     files = cp.read(
+    #         [
+    #             global_nodc_file,
+    #             mission_nodc_file,
+    #         ]
+    #     )
+    # except:
+    #     # One way to get here is to have continuation lines on an entry like references: or acknowledgment:
+    #     # that are not indented by a single space AND have a colon somewhere in the line
+    #     # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
+    #     # NOTE: if there is a continuation but no space and no colon the parser skips it without complaint
+    #     log_warning(f"Problems reading information from {nodc_cnf_file}")  # problems...
+
+    # if cp.has_section("NODC"):
+    #     for pair in cp.items("NODC"):
+    #         name, value = pair
+    #         globals_d[name] = value  # these are always strings
+    # else:
+    #     log_warning(
+    #         f"No [NODC] section found in {global_nodc_file} or {mission_nodc_file}"
+    #     )
+
+    # if cp.has_section("NODC_controls"):
+    #     for pair in cp.items("NODC_controls"):
+    #         name, value = pair
+    #         controls_d[name] = value  # these are always strings
+    # else:
+    #     log_error(
+    #         f"No [NODC_controls] section found in {global_nodc_file} or {mission_nodc_file}"
+    #     )
 
     return
 
@@ -514,7 +533,7 @@ def write_nc_globals(nc_file, globals_d, base_opts):
     globals_d["nodc_template_version"] = "NODC_NetCDF_Trajectory_Template_v0.9"
     # NODC.cnf globals_d['license'] = 'These data may be redistributed and used without restriction.'
 
-    update_globals_from_nodc(base_opts, globals_d, {})
+    update_globals_from_nodc(base_opts, globals_d)
 
     for key, value in list(globals_d.items()):
         try:

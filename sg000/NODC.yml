@@ -1,18 +1,17 @@
 # This file provides values for netCDF global attributes required and recommended
-# for deposition of Seaglider data to the National Oceanographic Data Center (NODC) 
-#
-# It also controls whether and how to send files to NODC.
+# for deposition of Seaglider data to the National Oceanographic Data Center (NODC)
+# along with other organizations
 
-# -  Edit this file in the basestation directory to apply overrides to all deployments
-# -  Make a copy of this file in a deployment directory and edit to override elements 
-#    for that deployment only.
+# To provide a set of defaults for all gliders on a basestation, place a copy of this file
+# into {basesation_directory}/etc.
 
-# Comments follow # or ;
+# Make a copy of this file in a seaglider mission directory and edit to override elements 
+# for that deployment only.
+
+# Comments follow #
 # attributes are followed by :
 # Some are commented out; uncomment them to include a value in each nc file
-# Continuation lines for values must provide a prefix of at least one blank space (see institution example below)
-
-[NODC]  # Do NOT remove this line
+# Continuation lines for values follow yaml processing rules
 
 ### About the institution and scientists
 ### ------------------------------------
@@ -21,10 +20,12 @@
 
 # This is the institution running the glider and processing the data
 # Default: -- see below --
-#institution: Applied Physics Lab
-# University of Washington
-# Seattle, WA
-
+institution: >-
+  Applied Physics Lab
+  University of Washington
+  Seattle, WA
+# Note - if you want the embedded newlines, use | instead of >- in the above
+#
 # The name of the principal investigator
 # Default: None
 # creator_name: EXAMPLE - Craig Lee
@@ -99,8 +100,3 @@ keywords: Water Temperature, Conductivity, Salinity, Density, Potential Density,
 # Default: None
 # references: EXAMPLE - 
 
-[NODC_controls] # Do NOT remove this line
-
-# FTP files to NODC? [Yes/No]
-# Default: No
-ftp_files_to_nodc: No

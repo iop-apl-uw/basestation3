@@ -130,8 +130,8 @@ def json_load_nocomments(filename_or_fp, comment="//|#", **jsonloadskw) -> "json
     return json.loads(bigstring, **jsonloadskw)
 
 
-def merge_dict(a, b, path=None):
-    "merges dict b into dict a"
+def merge_dict(a, b, path=None, allow_override=False):
+    "Merges dict b into dict a"
     if path is None:
         path = []
     for key in b:
@@ -140,6 +140,8 @@ def merge_dict(a, b, path=None):
                 merge_dict(a[key], b[key], path + [str(key)])
             elif a[key] == b[key]:
                 pass  # same leaf value
+            elif allow_override:
+                a[key] = b[key]
             else:
                 raise Exception("Conflict at %s" % ".".join(path + [str(key)]))
         else:

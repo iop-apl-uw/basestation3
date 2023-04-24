@@ -12,6 +12,7 @@ scipy>=1.9.0
 # latest cartopy crashes when shapely is not built from source
 shapely --no-binary shapely
 cartopy
+PyYAML>=6.0
 # For SlackPost and InReachSend
 requests==2.24.0
 # For GliderDAC and BaseNetwork support
@@ -26,7 +27,6 @@ sdnotify
 pylddwrap
 # For visualization
 parse
-# watchdog - not anymore 
 sanic
 sanic_gzip
 aiohttp
@@ -38,14 +38,3 @@ PyJWT
 aiosqlite
 orjson
 anyio
-#
-# Below here - not included in released version
-#
-# Used in by misc tools (tools directory)
-pyproj
-# For GliderTrack support
-oct2py>=5.5.1
-# For BaseSMS
-google-auth
-google-auth-oauthlib
-google-api-python-client
