@@ -36,6 +36,7 @@ import sys
 from zipfile import ZipFile
 from io import BytesIO
 from anyio import Path
+import websockets
 import sqlite3
 import aiosqlite
 import aiofiles
@@ -1182,7 +1183,6 @@ def attachHandlers(app: sanic.Sanic):
             socket.connect(request.app.config.NOTIFY_IPC)
             socket.setsockopt(zmq.SNDTIMEO, 200)
             socket.setsockopt(zmq.LINGER, 0)
-            socket.set
             await socket.send_multipart([(f"{glider:03d}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
             socket.close()
         except:
@@ -1373,6 +1373,7 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def posStreamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int):
         socket = zmq.asyncio.Context().socket(zmq.SUB)
+        socket.setsockopt(zmq.LINGER, 0)
         socket.connect(request.app.config.WATCH_IPC)
         socket.setsockopt(zmq.SUBSCRIBE, (f"{glider}-urls-gpsstr").encode('utf-8'))
 
@@ -1387,9 +1388,15 @@ def attachHandlers(app: sanic.Sanic):
         # running as a remote instance the database won't be synced until
         # much later
         while True:
-            msg = await socket.recv_multipart()
-            sanic.log.logger.info(msg[1])
-            await ws.send(msg[1].decode('utf-8'))
+            try:
+                msg = await socket.recv_multipart()
+                sanic.log.logger.info(msg[1])
+                await ws.send(msg[1].decode('utf-8'))
+            except BaseException as e: # websockets.exceptions.ConnectionClosed:
+                sanic.log.logger.info(f'ws connection closed {e}')
+                await ws.close()
+                socket.close()
+                return
  
     @app.websocket('/stream/<which:str>/<glider:int>')
     # description: stream real-time glider information (comm.log, chat, cmdfile changed, glider calling, etc.)
@@ -1444,45 +1451,53 @@ def attachHandlers(app: sanic.Sanic):
                 conn = None
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
+        socket.setsockopt(zmq.LINGER, 0)
         socket.connect(request.app.config.WATCH_IPC)
         socket.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-").encode('utf-8'))
 
         
         prev = ""
         while True:
-            msg = await socket.recv_multipart()
-            topic = msg[0].decode('utf-8')
-            body  = msg[1].decode('utf-8')
+            try:
+                msg = await socket.recv_multipart()
+                topic = msg[0].decode('utf-8')
+                body  = msg[1].decode('utf-8')
 
-            if 'chat' in topic and tU and request.app.config.RUNMODE > MODE_PUBLIC:
-                if conn == None and await aiofiles.os.path.exists(dbfile):
-                    conn = await aiosqlite.connect(dbfile)
-                    conn.row_factory = rowToDict 
+                if 'chat' in topic and tU and request.app.config.RUNMODE > MODE_PUBLIC:
+                    if conn == None and await aiofiles.os.path.exists(dbfile):
+                        conn = await aiosqlite.connect(dbfile)
+                        conn.row_factory = rowToDict 
+                        
+                    if conn:
+                        (rows, prev_db_t) = await getChatMessages(request, glider, prev_db_t, conn)
+                        if rows:
+                            await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
+
+                elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
+                    data = (await commFile.read()).decode('utf-8', errors='ignore')
+                    if data:
+                        await ws.send(data)
+                elif 'urls' in topic:
+                    # m = loads(body)
+                    await ws.send(f"NEW={body}")
+                elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
+                    m = loads(body) 
                     
-                if conn:
-                    (rows, prev_db_t) = await getChatMessages(request, glider, prev_db_t, conn)
-                    if rows:
-                        await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
+                    async with aiofiles.open(m['full'], 'rb') as file:
+                        body = (await file.read()).decode('utf-8', errors='ignore')
+                        m.update( { "body": body } )
+                        await ws.send(f"FILE={dumps(m).decode('utf-8')}")
+                elif 'file-cmdfile' in topic:
+                    directive = await summary.getCmdfileDirective(cmdfilename)
+                    await ws.send(f"CMDFILE={directive}")
+                else:
+                    sanic.log.logger.info(f"unhandled topic {topic}")
 
-            elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
-                data = (await commFile.read()).decode('utf-8', errors='ignore')
-                if data:
-                    await ws.send(data)
-            elif 'urls' in topic:
-                # m = loads(body)
-                await ws.send(f"NEW={body}")
-            elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
-                m = loads(body) 
-                
-                async with aiofiles.open(m['full'], 'rb') as file:
-                    body = (await file.read()).decode('utf-8', errors='ignore')
-                    m.update( { "body": body } )
-                    await ws.send(f"FILE={dumps(m).decode('utf-8')}")
-            elif 'file-cmdfile' in topic:
-                directive = await summary.getCmdfileDirective(cmdfilename)
-                await ws.send(f"CMDFILE={directive}")
-            else:
-                sanic.log.logger.info(f"unhandled topic {topic}")
+            except BaseException as e: # websockets.exceptions.ConnectionClosed:
+                sanic.log.logger.info(f'ws connection closed {e}')
+                await ws.close()
+                socket.close()
+                return
 
 
     # not protected by decorator - buildAuthTable only returns authorized missions
@@ -1497,36 +1512,44 @@ def attachHandlers(app: sanic.Sanic):
         await ws.send(f"START") # send something to ack the connection opened
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
+        socket.setsockopt(zmq.LINGER, 0)
         socket.connect(request.app.config.WATCH_IPC)
         socket.setsockopt(zmq.SUBSCRIBE, b'')
+        sanic.log.logger.info('context opened')
 
         while True:
-            msg = await socket.recv_multipart()
-            topic = msg[0].decode('utf-8')
-            body  = msg[1].decode('utf-8')
+            try:
+                msg = await socket.recv_multipart()
+                topic = msg[0].decode('utf-8')
+                body  = msg[1].decode('utf-8')
 
-            pieces = topic.split('-', maxsplit=1)
-            glider = int(pieces[0])
-            topic  = pieces[1]
+                pieces = topic.split('-', maxsplit=1)
+                glider = int(pieces[0])
+                topic  = pieces[1]
 
-            m = next(filter(lambda d: d['glider'] == glider and d['path'] == '', opTable), None)
-            if m is None: # must not be authorized
-                continue
+                m = next(filter(lambda d: d['glider'] == glider and d['path'] == '', opTable), None)
+                if m is None: # must not be authorized
+                    continue
 
-            if 'cmdfile' in topic:
-                cmdfile = f"sg{glider:03d}/cmdfile"
-                directive = await summary.getCmdfileDirective(cmdfile)
-                sanic.log.logger.debug(f"watch {glider} cmdfile modified")
-                await ws.send(f"CMDFILE={glider:03d},{directive}")
-            elif 'urls' in topic:
-                print(body)
-                try:
-                    m = loads(body)
-                    if 'glider' not in m:
-                        m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
-                    await ws.send(f"NEW={dumps(m).decode('utf-8')}")
-                except Exception as e:
-                    print(e)
+                if 'cmdfile' in topic:
+                    cmdfile = f"sg{glider:03d}/cmdfile"
+                    directive = await summary.getCmdfileDirective(cmdfile)
+                    sanic.log.logger.debug(f"watch {glider} cmdfile modified")
+                    await ws.send(f"CMDFILE={glider:03d},{directive}")
+                elif 'urls' in topic:
+                    print(body)
+                    try:
+                        m = loads(body)
+                        if 'glider' not in m:
+                            m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
+                        await ws.send(f"NEW={dumps(m).decode('utf-8')}")
+                    except Exception as e:
+                        print(e)
+            except BaseException as e: # websockets.exceptions.ConnectionClosed:
+                sanic.log.logger.info(f'ws connection closed {e}')
+                await ws.close()
+                socket.close()
+                return
 
     @app.listener("after_server_start")
     async def initApp(app, loop):
@@ -1759,16 +1782,23 @@ async def checkFilesystemChanges(files):
 
 async def configWatcher(app):
     socket = zmq.asyncio.Context().socket(zmq.SUB)
+    socket.setsockopt(zmq.LINGER, 0)
     socket.connect(app.config.WATCH_IPC)
+    sanic.log.logger.info('opened context for configWatcher')
     socket.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
     while True:
-        msg = await socket.recv_multipart()
-        sanic.log.logger.info(msg[1])
-        topic = msg[0].decode('utf-8')
-        if 'missions' in topic:
-            await buildMissionTable(app)
-        elif 'users' in topic:
-            await buildUserTable(app)
+        try:
+            msg = await socket.recv_multipart()
+            sanic.log.logger.info(msg[1])
+            topic = msg[0].decode('utf-8')
+            if 'missions' in topic:
+                await buildMissionTable(app)
+            elif 'users' in topic:
+                await buildUserTable(app)
+
+        except BaseException as e: # websockets.exceptions.ConnectionClosed:
+            socket.close()
+            return
 
         # app.m.name.restart() 
 
