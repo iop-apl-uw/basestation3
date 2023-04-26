@@ -30,14 +30,37 @@
 
 """ Create a file for submission to the GliderDAC from an existing netCDF file
 """
+#
+# Notes:
+#
+# Overall, this code can produce timeseries data (--gliderdac_bin_width == 0.0) or
+# binned output (--gliderdac_bin_width > 0.0)
+#
+# netcdf files without a ctd_time or ctd_depth vector are rejected
+#
+# 1) For input timeseries vectors with associated QC vectors, only points marked QC_GOOD are
+#    accepted.  All other points are converted to nans
+# 2) If timeseries vectors are associated with multiple time basis, there is a single
+#    time basis constructed contain all observations (obviously, this can be very sparse
+#    table for a scicon instrument)
+# 3) If --gliderdac_reduce_output is set (default is True), all timeseries vectors are
+#    reduced such that all rows are contain all valid observations.  Obviously, this
+#    is only useful for CTD only profiles.
+# 4) For output, timeseries variables time, depth, latitude, longitude and pressure are
+#    marked no_qc_performed (QC_NOCHANGE) for non-nan data and missing_value (QC_MISSING)
+#    for nan.
+#    All other timeseries variables are marked good_data (QC_GOOD) for non-nan and
+#    missing_value (QC_MISSING) for nan data.
 
-from functools import reduce
+import collections
 import os
 import pdb
 import stat
 import sys
 import time
 import traceback
+
+from functools import reduce
 
 import gsw
 import yaml
@@ -55,6 +78,8 @@ from BaseLog import BaseLogger, log_info, log_warning, log_error, log_debug
 # Local config
 DEBUG_PDB = True
 
+dim_map_t = collections.namedtuple("dim_map_t", ["first_i", "last_i"])
+
 
 # Util functions
 def fix_ints(data_type, attrs):
@@ -70,7 +95,7 @@ def fix_ints(data_type, attrs):
     return new_attrs
 
 
-def create_nc_var(dso, template, var_name, data, qc_val=None):
+def create_nc_var(dso, template, var_name, data, qc_val=None, qc_missing_val=None):
     """Creates a nc variable and sets meta data
     Input:
         dso - output dataset
@@ -101,7 +126,7 @@ def create_nc_var(dso, template, var_name, data, qc_val=None):
         if inp_data == np.nan:
             inp_data = template["variables"][var_name]["attributes"]["_FillValue"]
     else:
-        inp_data[inp_data == np.nan] = template["variables"][var_name]["attributes"][
+        inp_data[np.isnan(inp_data)] = template["variables"][var_name]["attributes"][
             "_FillValue"
         ]
 
@@ -112,14 +137,20 @@ def create_nc_var(dso, template, var_name, data, qc_val=None):
     # and is there for picked up as an indexing coordinate by xarray.
 
     # QC array
+
     qc_name = f"{var_name}_qc"
-    if qc_name in template["variables"]:
+    if qc_name in template["variables"] and qc_val is not None:
         if np.ndim(data) == 0:
             qc_v = np.dtype(template["variables"][qc_name]["type"]).type(qc_val)
         else:
             qc_v = np.zeros((np.size(inp_data)), dtype="b") + np.dtype(
                 template["variables"][qc_name]["type"]
             ).type(qc_val)
+            if qc_missing_val is not None:
+                qc_v[
+                    inp_data
+                    == template["variables"][var_name]["attributes"]["_FillValue"]
+                ] = qc_missing_val
         da_q = xr.DataArray(
             qc_v,
             dims=template["variables"][qc_name]["dimensions"],
@@ -140,14 +171,13 @@ def create_nc_var(dso, template, var_name, data, qc_val=None):
     return (da, da_q)
 
 
-def load_var(
-    dci,
-    var_name,
-):
+def load_var(dci, var_name, dims_map, sort_i):
     """
     Input:
         dci - dataset
         var_name - name of the variable
+        dims_map - mapping of the dimensions to the unsorted time space
+        sort_i  - mapping of unsorted time space to sorted time space
     Returns
         var - netcdf array, with QC applied (QC_GOOD only)
     """
@@ -162,7 +192,17 @@ def load_var(
         else:
             var[qc_vals != QC.QC_GOOD] = np.nan
 
-    return var
+    if len(var) != dims_map[var.dims].last_i - dims_map[var.dims].first_i:
+        log_error(f"Mismatch in sizes for {var_name} and {dims_map[var.dims]}")
+        return None
+
+    # Create new var, same type as var that is all nan, size of sort_i and map var into this space
+    expanded_var = np.zeros(len(sort_i), var.dtype) * np.nan
+    temp_var = expanded_var.copy()
+    temp_var[dims_map[var.dims].first_i : dims_map[var.dims].last_i] = var
+    expanded_var = temp_var[sort_i]
+
+    return expanded_var
 
 
 def load_templates(base_opts):
@@ -252,10 +292,6 @@ def main(
     else:
         delayed_str = ""
 
-    # TODO: Make these configurable
-    master_time_name = "ctd_time"
-    master_depth_name = "ctd_depth"
-
     processing_start_time = time.gmtime(time.time())
     log_info(
         "Started processing "
@@ -306,23 +342,69 @@ def main(
     if not template:
         return 1
 
+    # Default timeseries variables and the name mapping
+    # Can be overridden by same names in the "config" dictionary from the template(s)
+    timeseries_vars = {
+        "temperature": "temperature",
+        "salinity": "salinity",
+        "conductivity": "conductivity",
+        "latitude": "lat",
+        "longitude": "lon",
+        "ctd_pressure": "pressure",
+    }
+
+    # Update anything overridden by config
+    if "config" in template:
+        if "timeseries_vars" in template["config"]:
+            timeseries_vars = template["config"]["timeseries_vars"]
+
     for dive_nc_file_name in dive_nc_file_names:
         log_info("Processing %s" % dive_nc_file_name)
         try:
             dsi = xr.open_dataset(dive_nc_file_name)
         except:
-            log_error(f"Errror opening {dive_nc_file_name}", "exc")
+            log_error(f"Error opening {dive_nc_file_name}", "exc")
             continue
 
         dso = xr.Dataset()
 
-        if master_time_name not in dsi or master_depth_name not in dsi:
+        if "ctd_time" not in dsi or "ctd_depth" not in dsi:
             log_error("Could not load variables - skipping", "exc")
             continue
 
-        master_depth = dsi[master_depth_name].data
-        # Xarray converts to numpy.datetime64(ns) - get it back to something useful
-        master_time = dsi[master_time_name].data.astype(np.float64) / 1000000000.0
+        # TODO: Inventory timeseries variables - construct a master time vector and interpolate missing depth points
+        time_vars = set()
+        for var_name in timeseries_vars:
+            dims = dsi[var_name].dims
+            for vv in dsi.variables:
+                if (
+                    dsi[vv].dims == dims
+                    and vv.endswith("_time")
+                    and "_results_" not in vv
+                ):
+                    time_vars.add((vv, dims))
+
+        # log_info(time_vars)
+
+        unsorted_master_time = np.zeros(0)
+        dims_map = {}
+        last_i = 0
+        for t_var, t_dim in time_vars:
+            # Xarray converts to numpy.datetime64(ns) - get it back to something useful
+            new_time_v = dsi[t_var].data.astype(np.float64) / 1000000000.0
+            dims_map[t_dim] = dim_map_t(last_i, last_i + len(new_time_v))
+            last_i += len(new_time_v)
+            unsorted_master_time = np.concatenate((unsorted_master_time, new_time_v))
+        sort_i = np.argsort(unsorted_master_time)
+        master_time = unsorted_master_time[sort_i]
+
+        master_depth = NetCDFUtils.interp1_extend(
+            dsi["ctd_time"].data.astype(np.float64) / 1000000000.0,
+            dsi["ctd_depth"].data,
+            master_time,
+        )
+
+        # log_info(dims_map)
 
         if base_opts.gliderdac_bin_width:
             max_depth = np.floor(np.nanmax(master_depth))
@@ -359,28 +441,24 @@ def main(
                 bin_centers_down[1:][::-1],
             )
 
-        timeseries_vars = {
-            "temperature": "temperature",
-            "salinity": "salinity",
-            "conductivity": "conductivity",
-            "latitude": "lat",
-            "longitude": "lon",
-            "ctd_pressure": "pressure",
-        }
-
         # Note: for non-binned, this variable is just a copy of the data straight from
         # the netcdf file
         binned_vars = {}
+        reduced_pts_i = None
         for var_name in timeseries_vars:
             log_debug(f"Adding variable {var_name}")
+            # TODO - Add master time variable here to provide the expansion on load for variables
             data = load_var(
                 dsi,
                 var_name,
+                dims_map,
+                sort_i,
             )
             if base_opts.gliderdac_bin_width:
-                max_depth_i = find_deepest_bin_i(
-                    master_depth, bin_edges, base_opts.gliderdac_bin_width
-                )
+                # Calculated above
+                # max_depth_i = find_deepest_bin_i(
+                #    master_depth, bin_edges, base_opts.gliderdac_bin_width
+                # )
 
                 var_v = np.zeros(np.size(bin_centers)) * np.nan
                 n_obs = np.zeros(np.size(bin_centers))
@@ -399,24 +477,30 @@ def main(
                 n_obs[np.size(bin_centers_down) :] = n_obs_tmp[:-1][::-1]
                 binned_vars[var_name] = (var_v, np.isfinite(var_v), n_obs)
             else:
-                binned_vars[var_name] = (data.data, np.isfinite(data))
+                # With the new remapping code, data isn't a xarray object, but a numpy object
+                # binned_vars[var_name] = (data.data, np.isfinite(data))
+                binned_vars[var_name] = (data, np.isfinite(data))
+            if reduced_pts_i is None:
+                reduced_pts_i = np.arange(len(binned_vars[var_name][0]))
 
-        # Locate the good points
-        good_pts_i = np.squeeze(
-            np.nonzero(
-                np.logical_and.reduce(
-                    [
-                        v[1]
-                        for k, v in binned_vars.items()
-                        if k not in ("latitude", "longitude", "pressure")
-                    ]
+        if base_opts.gliderdac_reduce_output:
+            # Locate the good points
+            reduced_pts_i = np.squeeze(
+                np.nonzero(
+                    np.logical_and.reduce(
+                        [
+                            v[1]
+                            for k, v in binned_vars.items()
+                            if k not in ("latitude", "longitude", "pressure")
+                        ]
+                    )
                 )
             )
-        )
+
         # Create variables with only good points, based on the mask
         reduced_vars = {}
         for var_name, val in binned_vars.items():
-            reduced_vars[var_name] = val[0][good_pts_i]
+            reduced_vars[var_name] = val[0][reduced_pts_i]
             create_nc_var(
                 dso,
                 template,
@@ -425,21 +509,22 @@ def main(
                 qc_val=QC.QC_GOOD
                 if var_name not in ("latitude", "longitude", "pressure")
                 else QC.QC_NO_CHANGE,
+                qc_missing_val=QC.QC_MISSING,
             )
             # This is just for debugging
-            if base_opts.gliderdac_bin_width and var_name == "temperature":
-                create_nc_var(dso, template, "temperature_n", val[2][good_pts_i])
+            # if base_opts.gliderdac_bin_width and var_name == "temperature":
+            #    create_nc_var(dso, template, "temperature_n", val[2][reduced_pts_i])
 
         if base_opts.gliderdac_bin_width:
-            reduced_depth = bin_centers[good_pts_i]
-            reduced_time = t_profile[good_pts_i]
+            reduced_depth = bin_centers[reduced_pts_i]
+            reduced_time = t_profile[reduced_pts_i]
             del (
                 bin_centers,
                 t_profile,
             )
         else:
-            reduced_depth = master_depth[good_pts_i]
-            reduced_time = master_time[good_pts_i]
+            reduced_depth = master_depth[reduced_pts_i]
+            reduced_time = master_time[reduced_pts_i]
 
         salinity_absolute = gsw.SA_from_SP(
             reduced_vars["salinity"],
@@ -454,7 +539,7 @@ def main(
         )
         create_nc_var(dso, template, "density", density, qc_val=QC.QC_GOOD)
 
-        del binned_vars, good_pts_i
+        del binned_vars, reduced_pts_i
 
         # Depth and time
         create_nc_var(dso, template, "depth", reduced_depth, qc_val=QC.QC_NO_CHANGE)

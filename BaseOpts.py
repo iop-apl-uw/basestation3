@@ -99,6 +99,9 @@ def FullPath(x):
 
 def FullPathTrailingSlash(x):
     """Expand user- and relative-paths and include the trailing slash"""
+    if x == "":
+        return x
+
     return FullPath(x) + "/"
 
 
@@ -1201,6 +1204,20 @@ global_options_dict = {
             "section": "gliderdac",
         },
     ),
+    "gliderdac_reduce_output": options_t(
+        True,
+        (
+            "Base",
+            "GliderDAC",
+        ),
+        ("--gliderdac_reduce",),
+        bool,
+        {
+            "help": "Reduce the output to only non-nan observations (not useful with non-CT data)",
+            "section": "gliderdac",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
     "simplencf_bin_width": options_t(
         0.0,
         (
@@ -1485,9 +1502,9 @@ class BaseOptions:
                             try:
                                 val = v.var_type(value)
                             except ValueError as exc:
-                                raise "Could not convert %s from %s to requested type" % (
-                                    k,
-                                    self._opts.config_file_name,
+                                # raise f"Could not convert {k} from {self._opts.config_file_name} to requested type" from exc
+                                raise ValueError(
+                                    f"Could not convert {k} from {self._opts.config_file_name} to requested type"
                                 ) from exc
                             else:
                                 if (
