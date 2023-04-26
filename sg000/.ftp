@@ -32,3 +32,5 @@
 ## Push out the typical per-dive files 
 #someone:passwd@someserver.apl.washington.edu/sg000/data,log,eng,cap,nc,comm
 #
+## Push out data to the GliderDAC
+#someone:passwd@gliders.ioos.us/sgxxx-YYYYMMDDTHHMM/,fnmatch_*gliderdac/*

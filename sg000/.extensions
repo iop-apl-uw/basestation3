@@ -15,7 +15,7 @@
 # SimpleNetCDF.py
 #
 # Uncomment for creation of files for submission to the gliderdac
-# Note - additional configuraiton required - see gliderdac.md in the docs directory
+# Note - additional configuraiton required - see gliderdac.md in the docs/gliderdac directory
 # GliderDAC.py
 #
 # Uncomment for creation of glider position text file (time, lat lon)

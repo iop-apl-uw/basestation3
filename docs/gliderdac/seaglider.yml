@@ -1,0 +1,615 @@
+##
+## This is a sample base glider configuration. A number of fields contain
+## example data - replace with what is appropriate for you situation.
+## 
+global_attributes:
+  Conventions: CF-1.6
+  Metadata_Conventions: CF-1.6, Unidata Dataset Discovery v1.0
+  contributor_name: Craig Lee, Geoff Shilling
+  contributor_role: Principal Investigator, Data Curator
+  creator_email: iopdata@uw.edu
+  creator_institution: University of Washington - Seattle; Applied Physics Laboratory
+  creator_name: Integrative Observational Platforms
+  creator_type: group
+  creator_url: https://iop.apl.washington.edu
+  featureType: trajectoryProfile
+  format_version: IOOS_Glider_NetCDF_v2.0.nc
+  geospatial_bounds_crs: EPSG:4326
+  geospatial_bounds_vertical_crs: EPSG:5831
+  geospatial_vertical_positive: down
+  geospatial_vertical_units: m
+  institution: University of Washington Applied Physics Laboratory
+  keywords: underwater glider, pressure, temperature, salinity, currents
+  keywords_vocabulary: GCMD Science Keywords
+  license: Creative Commons Attribution 4.0 International Public License (https://creativecommons.org/licenses/by/4.0/)
+  metadata_link: https://iop.apl.washington.edu
+  naming_authority: edu.washington.apl.iop
+  platform_institution: UW-APL
+  platform_type: Seaglider
+  processing_level: Automatic quality control procedures were applied.
+  product_version: v1
+  publisher_email: iopdata@uw.edu
+  publisher_institution: University of Washington - Seattle; Applied Physics Laboratory
+  publisher_name: Integrative Observational Platforms
+  publisher_type: group
+  publisher_url: https://iop.apl.washington.edu
+  source: Observational data from a profiling underwater glider.
+  standard_name_vocabulary: CF Standard Name Table v75
+variables:
+  conductivity:
+    attributes:
+      _FillValue: -999
+      accuracy: ' '
+      ancillary_variables: conductivity_qc
+      instrument: instrument_ctd
+      long_name: Conductivity
+      observation_type: measured
+      platform: platform
+      precision: ' '
+      resolution: ' '
+      standard_name: sea_water_electrical_conductivity
+      units: S m-1
+      valid_max: 10
+      valid_min: 0
+    dimensions: [ time ]
+    num_digits: 3
+    type: f8
+  conductivity_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: conductivity Quality Flag
+      standard_name: sea_water_electrical_conductivity status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  density:
+    attributes:
+      _FillValue: -999
+      accuracy: ' '
+      ancillary_variables: density_qc
+      instrument: instrument_ctd
+      long_name: Density
+      observation_type: calculated
+      platform: platform
+      precision: ' '
+      resolution: ' '
+      standard_name: sea_water_density
+      units: kg m-3
+      valid_max: 1040
+      valid_min: 1015
+    dimensions: [ time ]
+    num_digits: 2
+    type: f8
+  density_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: density Quality Flag
+      standard_name: sea_water_density status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  depth:
+    attributes:
+      _FillValue: -999
+      accuracy: +/- 0.05 percent
+      ancillary_variables: depth_qc
+      instrument: instrument_ctd
+      long_name: Depth
+      observation_type: calculated
+      platform: platform
+      positive: down
+      precision: 0.05 percent
+      reference_datum: sea-surface
+      resolution: 0.001 percent
+      standard_name: depth
+      units: m
+      valid_max: 2000
+      valid_min: 0
+    dimensions: [ time ]
+    num_digits: 2
+    type: f8
+  depth_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: depth Quality Flag
+      standard_name: depth status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  instrument_ctd:
+    attributes:
+      _FillValue: -999
+      comment: unpumped CTD
+      platform: platform
+      type: platform
+    dimensions: []
+    type: i4
+  lat:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: lat_qc
+      comment: Values may be interpolated between measured GPS fixes
+      coordinate_reference_frame: urn:ogc:crs:EPSG::4326
+      long_name: Latitude
+      observation_type: measured
+      platform: platform
+      reference: WGS84
+      standard_name: latitude
+      units: degrees_north
+      valid_max: 90
+      valid_min: -90
+    dimensions: [ time ]
+    num_digits: 4
+    type: f8
+  lat_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: latitude Quality Flag
+      standard_name: latitude status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  lat_uv:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: lat_uv_qc
+      comment: The depth-averaged current is an estimate of the net current measured
+        while the glider is underwater.  The value is calculated over the entire underwater
+        segment, which may consist of 1 or more dives.
+      long_name: Depth-Averaged Latitude
+      observation_type: calculated
+      platform: platform
+      standard_name: latitude
+      units: degrees_north
+      valid_max: 90
+      valid_min: -90
+    dimensions: []
+    num_digits: 4
+    type: f8
+  lat_uv_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: lat_uv Quality Flag
+      standard_name: latitude status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: []
+    type: b
+  lon:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: lon_qc
+      comment: Values may be interpolated between measured GPS fixes
+      coordinate_reference_frame: urn:ogc:crs:EPSG::4326
+      long_name: Longitude
+      observation_type: calculated
+      platform: platform
+      reference: WGS84
+      standard_name: longitude
+      units: degrees_east
+      valid_max: 180
+      valid_min: -180
+    dimensions: [ time ]
+    num_digits: 4
+    type: f8
+  lon_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: longitude Quality Flag
+      standard_name: longitude status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  lon_uv:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: lon_uv_qc
+      comment: The depth-averaged current is an estimate of the net current measured
+        while the glider is underwater.  The value is calculated over the entire underwater
+        segment, which may consist of 1 or more dives.
+      long_name: Depth-Averaged Longitude
+      observation_type: calculated
+      platform: platform
+      standard_name: longitude
+      units: degrees_east
+      valid_max: 180
+      valid_min: -180
+    dimensions: []
+    num_digits: 4
+    type: f8
+  lon_uv_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: lon_uv Quality Flag
+      standard_name: longitude status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: []
+    type: b
+  platform:
+    attributes:
+      _FillValue: -999
+      instrument: instrument_ctd
+      type: platform
+    dimensions: []
+    type: i4
+  pressure:
+    attributes:
+      _FillValue: -999
+      accuracy: +/- 0.05 percent
+      ancillary_variables: pressure_qc
+      instrument: instrument_ctd
+      long_name: Pressure
+      observation_type: measured
+      platform: platform
+      positive: down
+      precision: 0.05 percent
+      reference_datum: sea-surface
+      resolution: '0.001 percent'
+      standard_name: sea_water_pressure
+      units: dbar
+      valid_max: 2000
+      valid_min: 0
+    dimensions: [ time ]
+    num_digits: 2
+    type: f8
+  pressure_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: pressure Quality Flag
+      standard_name: sea_water_pressure status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  profile_id:
+    attributes:
+      _FillValue: -999
+      comment: Sequential profile number within the trajectory. This value is unique
+        in each file that is part of a single trajectory/deployment.
+      long_name: Profile ID
+      valid_max: '2147483647'
+      valid_min: '1'
+    dimensions: []
+    type: i4
+  profile_lat:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: profile_lat_qc
+      comment: Value is interpolated to provide an estimate of the latitude at the
+        mid-point of the profile
+      long_name: Profile Center Latitude
+      observation_type: calculated
+      platform: platform
+      standard_name: latitude
+      units: degrees_north
+      valid_max: 90
+      valid_min: -90
+    dimensions: []
+    num_digits: 4
+    type: f8
+  profile_lat_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: profile_lat Quality Flag
+      standard_name: latitude status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: []
+    type: b
+  profile_lon:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: profile_lon_qc
+      comment: Value is interpolated to provide an estimate of the longitude at the
+        mid-point of the profile
+      long_name: Profile Center Latitude
+      observation_type: calculated
+      platform: platform
+      standard_name: longitude
+      units: degrees_north
+      valid_max: 180
+      valid_min: -180
+    dimensions: []
+    num_digits: 4
+    type: f8
+  profile_lon_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: profile_lon Quality Flag
+      standard_name: longitude status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: []
+    type: b
+  profile_time:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: profile_time_qc
+      calendar: gregorian
+      comment: Timestamp corresponding to the mid-point of the profile
+      long_name: Profile Center Time
+      observation_type: calculated
+      platform: platform
+      standard_name: time
+      units: seconds since 1970-01-01T00:00:00Z
+    dimensions: []
+    num_digits: 0
+    type: f8
+  profile_time_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: profile_time Quality Flag
+      standard_name: time status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: []
+    type: b
+  salinity:
+    attributes:
+      _FillValue: -999
+      accuracy: ' '
+      ancillary_variables: salinity_qc
+      coordinates: time lon lat depth
+      instrument: instrument_ctd
+      long_name: Salinity
+      observation_type: calculated
+      platform: platform
+      precision: +/- 0.010
+      resolution: '0.001'
+      standard_name: sea_water_practical_salinity
+      units: '1'
+      valid_max: 40
+      valid_min: 0
+    dimensions: [ time ]
+    num_digits: 2
+    type: f8
+  salinity_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: salinity Quality Flag
+      standard_name: sea_water_salinity status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  temperature:
+    attributes:
+      _FillValue: -999
+      accuracy: ' '
+      ancillary_variables: temperature_qc
+      coordinates: time lon lat depth
+      instrument: instrument_ctd
+      long_name: Temperature
+      observation_type: measured
+      platform: platform
+      precision: ' '
+      resolution: ' '
+      standard_name: sea_water_temperature
+      units: Celsius
+      valid_max: 40
+      valid_min: -5
+    dimensions: [ time ]
+    num_digits: 3
+    type: f8
+  temperature_n:
+    attributes:
+      _FillValue: -999
+    dimensions: [ time ]
+    type: i2
+  temperature_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: temperature Quality Flag
+      standard_name: sea_water_temperature status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  time:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: time_qc
+      calendar: gregorian
+      long_name: Time
+      observation_type: measured
+      standard_name: time
+      units: seconds since 1970-01-01T00:00:00Z
+    dimensions: [ time ]
+    num_digits: 0
+    type: f8
+  time_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: time Quality Flag
+      standard_name: time status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  time_uv:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: time_uv_qc
+      calendar: gregorian
+      comment: The depth-averaged current is an estimate of the net current measured
+        while the glider is underwater.  The value is calculated over the entire underwater
+        segment, which may consist of 1 or more dives.
+      long_name: Depth-Averaged Time
+      observation_type: calculated
+      standard_name: time
+      units: seconds since 1970-01-01T00:00:00Z
+    dimensions: []
+    num_digits: 0
+    type: f8
+  time_uv_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: time_uv Quality Flag
+      standard_name: time status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: []
+    type: b
+  trajectory:
+    attributes:
+      cf_role: trajectory_id
+      comment: A trajectory is a single deployment of a glider and may span multiple
+        data files.
+      long_name: Trajectory/Deployment Name
+    dimensions: [traj_strlen]
+    type: c
+  u:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: u_qc
+      comment: The depth-averaged current is an estimate of the net current measured
+        while the glider is underwater.  The value is calculated over the entire underwater
+        segment, which may consist of 1 or more dives.
+      coordinates: time_uv lon_uv lat_uv
+      long_name: Depth-Averaged Eastward Sea Water Velocity
+      observation_type: calculated
+      platform: platform
+      standard_name: eastward_sea_water_velocity
+      units: m s-1
+      valid_max: 10
+      valid_min: -10
+    dimensions: []
+    num_digits: 2
+    type: f8
+  u_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: Quality Flag
+      standard_name: eastward_sea_water_velocity status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: []
+    type: b
+  v:
+    attributes:
+      _FillValue: -999
+      ancillary_variables: v_qc
+      comment: The depth-averaged current is an estimate of the net current measured
+        while the glider is underwater.  The value is calculated over the entire underwater
+        segment, which may consist of 1 or more dives.
+      coordinates: time_uv lon_uv lat_uv
+      long_name: Depth-Averaged Northward Sea Water Velocity
+      observation_type: calculated
+      platform: platform
+      standard_name: northward_sea_water_velocity
+      units: m s-1
+      valid_max: 10
+      valid_min: -10
+    dimensions: []
+    num_digits: 2
+    type: f8
+  v_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: Quality Flag
+      standard_name: northward_sea_water_velocity status_flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: []
+    type: b
+
+  # instrument_optode:
+  #   attributes:
+  #     _FillValue: -999
+  #     comment: Andera4831 Optode
+  #     platform: platform
+  #     type: platform
+  #   dimensions: []
+  #   type: i4
+  # dissolved_oxygen:
+  #   attributes:
+  #     _FillValue: -999
+  #     accuracy: 
+  #     ancillary_variables: dissolved_oxygen_qc
+  #     coordinates: time lon lat depth
+  #     instrument: instrument_optode
+  #     long_name: Dissolved_Oxygen
+  #     observation_type: measured
+  #     platform: platform
+  #     precision: 
+  #     resolution: 
+  #     standard_name: dissolved oxygen
+  #     units: micromoles/kg
+  #   dimensions: [ time ]
+  #   num_digits: 4
+  #   type: f8
+  # dissolved_oxygen_n:
+  #   attributes:
+  #     _FillValue: -999
+  #   dimensions: [ time ]
+  #   type: i2
+  # dissolved_oxygen_qc:
+  #   attributes:
+  #     _FillValue: -127
+  #     flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+  #       bad_data value_changed not_used not_used interpolated_value missing_value
+  #     flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  #     long_name: dissolved_oxygen Quality Flag
+  #     standard_name: dissolved oxgen status_flag
+  #     valid_max: 9
+  #     valid_min: 0
+  #   dimensions: [ time ]
+  #   type: b
+    

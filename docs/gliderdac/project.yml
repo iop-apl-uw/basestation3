@@ -1,0 +1,34 @@
+##
+## This is a sample mission configuration. A number of fields contain
+## example data - replace with what is appropriate for you situation.
+## 
+global_attributes:
+  acknowledgement: 'Funded by National Oceanic and Atmospheric Administration (NOAA):
+    Integrated Ocean Observing System. Supported by Integrative Observational Platforms
+    Group, Applied Physics Laboratory, University of Washington'
+  project: 'Northwest Association of Networked Ocean Observing Systems: Washington
+    Coast La Push Glider Line'
+  references: 'Lee, C.M. and D.L. Rudnick, 2018: Underwater Gliders, in Observing
+    the Oceans in Real Time. Eds. R. Venkatesan, A. Tandon, E.A. D''Asaro and M.A.
+    Atmanand, Springer. 123-140. Pelland, N.A., J.T. Sterling, M-A Lea, N.A. Bond,
+    C.M. Lee and C.C. Eriksen, 2014: Fortuitous Encounters between Seagliders and
+    Adult Female Northern Fur Seals (Callorhinus ursinus) off the Washington (USA)
+    Coast: Upper Ocean Variability and Links to Top Predator Behavior. PLOS One, DOI:
+    10.1371/journal.pone.0101268. Pelland, N. A., C.C. Eriksen, C.M. Lee, 2013: Subthermocline
+    Eddies over the Washington Continental Slope as Observed by Seagliders,2003-9.
+    Journal of Physical Oceanography, 43, 2025-2053. Perry, M.J., B.S. Sackmann,  C.C.
+    Eriksen and C.M. Lee, 2008: Seaglider Observations of Blooms and Subsurface Chlorophyll
+    Maxima off the Washington Coast. Limnology and Oceanography, 53(5, part2), 2169-2179.
+    Eriksen, C. C., T. J. Osse, R. D. Light, T. Wen, T. W. Lehman, and P. L. Sabin
+    (2001), Seaglider: A long-range autonomous underwater vehicle for oceanographic
+    research, IEEE J. Oceanic Eng., 26(4),424-436.'
+  sea_name: Coastal Waters of Washington/Oregon
+  summary: 'The La Push glider line aims to extend the time series of sustained glider-based
+    measurements off the Washington Coast that begun in 2003. Seaglider and SGX underwater
+    gliders repeatedly occupy a single section that extends offshore from the continental
+    slope to 47N, 127W. Gliders profile from the sea surface to 1000-m depth and back
+    every 6 hours while traversing the line at a speed of roughly 20 km/day. The La
+    Push line is sampled by a single glider, which is replaced as needed to maintain
+    continuous occupation of the section.'
+  title: 'Northwest Association of Networked Ocean Observing Systems: Washington Coast
+    La Push Glider Line'

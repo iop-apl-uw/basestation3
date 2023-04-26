@@ -1,0 +1,40 @@
+##
+## This is a sample glider configuration for a single deployment. A number of fields contain
+## example data - replace with what is appropriate for you situation.
+# 
+# config:
+#
+##   This section allows the addition of other instruments.  The mapping
+##   changes the internal name in the per-dive netcdf file (the key) to
+##   the output name as defined by the GliderDAC standard.  The default mapping
+##   stops with ctd_pressure:pressure.
+#
+#   timeseries_vars:
+#     temperature: temperature
+#     salinity: salinity
+#     conductivity: conductivity
+#     latitude: lat
+#     longitude: lon
+#     ctd_pressure: pressure
+#     aanderaa4831_dissolved_oxygen: dissolved_oxygen
+#
+global_attributes:
+  ctd_make_model: RBRlegato3
+  instrument: RBRlegato3
+  platform: sg249
+  wmo_id: '4803951'
+variables:
+  instrument_ctd:
+    attributes:
+      calibration_date: '2020-11-30T22:49:50Z'
+      calibration_report: ' '
+      factory_calibrated: '2020-11-30T22:49:50Z'
+      long_name: RBRlegato3 CTD
+      make_model: RBRlegato3
+      serial_number: '205607'
+  platform:
+    attributes:
+      comment: Seaglider sg249
+      id: sg249
+      long_name: Applied Physics Laboratory Seaglider sg249
+      wmo_id: 4803951
