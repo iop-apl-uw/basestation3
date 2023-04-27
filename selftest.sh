@@ -52,7 +52,7 @@ if ( $count == 0 ) then
     exit
 endif
 
-set fname = `ls "$base"/pt*.cap | sort | tail -1`
+set fname = `ls -t "$base"/pt*.cap | head -n 1`
 set capname = $fname
 
 if ($fname == "" || ! -f $fname ) then
