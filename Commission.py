@@ -189,7 +189,7 @@ def main():
         ".mailer",
         ".pre_extensions",
         "sections.yml",
-        "NODC.cnf",
+        "NODC.yml",
     )
 
     if base_opts.glider_jail:

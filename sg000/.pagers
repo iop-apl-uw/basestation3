@@ -1,4 +1,10 @@
-## .pagers file 
+## .pagers file
+##
+## A global copy of this file may be place in
+##
+## /usr/local/basestation3/etc/.extensions
+##
+## That file will be processed first, the one in the seaglider home directory second.
 #
 # This file controls the sending of short email messages from the basestation
 # that alert users (pilots, field teams, etc.) of changes in status of the glider
@@ -48,3 +54,6 @@
 #
 ## Setting up a field phone for gps updates only
 #fieldphone@mobile.att.net,gps
+#
+## Positing a message to a slack/mattermost webhook
+#https://myserver.com/mattermost/hooks/my_hook_id,slack,gpsddmm

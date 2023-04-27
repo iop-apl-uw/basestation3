@@ -1,5 +1,11 @@
 ## These are URLs to GET for each processed dive
 ##
+## A global copy of this file may be place in
+##
+## /usr/local/basestation3/etc/.extensions
+##
+## That file will be processed first, the one in the seaglider home directory second.
+##
 ## The urls are called twice during processing - the first time, after all the per-dive files have been 
 ## processed - in which case Base.py adds the arguments 
 ##

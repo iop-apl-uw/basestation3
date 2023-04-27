@@ -1,13 +1,10 @@
-* TODO
-- Note tcsh and glider group need to be installed exits
-
-Seaglider Basestation Readme
+# Seaglider Basestation Readme
 
 # Operation of the basestation
 
 The basestation operation is designed around the following philosophy:
 
-Each Seaglider has its own logon id (see "Commissioning a new glider", below).
+Each Seaglider has its own login id (see [Commissioning a new glider](#commissioning-a-new-glider))
 The glider uses this during deployments to log in and write data files to its
 home directory.  It has read and write access to its home directory only.
 Scripts run during login and logout to convert the data files into their final,
@@ -19,36 +16,69 @@ and will need to read the data for analysis.
 
 When a glider logs in, it expects to see '=' as its prompt, hence the .cshrc
 file in each glider's directory.  It also triggers the .login script, which sets
-up the .connected file.  The glider then issues lrz commands to the basestation
-to send all the fragments and files, and lsz commands to receive the cmdfile,
+up the .connected file.  The glider then issues rawrcv or lrz commands to the basestation
+to send all the fragments and files, and rawsend or lsz commands to receive the cmdfile,
 etc.  (The modified versions of lrz and lsz add throughput and error
 notifications to ~/comm.log.)  When the glider logs out the .logout script is
 triggered, which in turn runs the /usr/local/basestation/glider_logout script,
-which in turn runs the Base.py script.  The Base.py script processes any new or
+which in turn runs the /usr/local/basestation3/glider_logout script
+which in turn runs the ```Base.py``` script.  The ```Base.py``` script processes any new or
 updated dive files received from the glider and processes any directives in the
 .pagers/.mailer/.ftp/.urls files. Consult the comments at the top of the
 .pagers/.mailer/.urls file in the sg000 directory for documentation on each of
 these files.
 
-Processing options for Base.py that apply to all gliders on a single basestation
-are supplied in /usr/local/basestation/glider_logout.  Additional
-glider-specific options may be supplied the .logout script located in each
-gliders home directory be setting the environment variable GLIDER_OPTIONS.
+Processing options for ```Base.py``` that apply to all gliders on a single basestation
+are supplied in ```/usr/local/basestation/glider_logout```.  Additional
+glider-specific options may be supplied the ```.logout``` script located in each
+gliders home directory be setting the environment variable ``GLIDER_OPTIONS``, or 
+in the seagliders config file - ```sgXXX.conf``` that may optionally reside in any
+gliders home directory
 
 In addition, to assist the pilot there are a number of command line tools to
 perform additional dive processing and also to validate various glider command
-files.  Each command line tool has a plain text documentation file in the docs
-subdirectory that provides a Unix man style doc format.
+files.  Each tool provides help when invoked from the command line.  See 
+[Common Commands](#common-commands) for a list of typical commands.
 
-# Preparation of the basestation
+# Installation
 
-The description below assumes you are running some Linux variant as the
-basestation OS. This code has been tested on Ubuntu 18.04 (server).  It is
-possible to run the basestation code on OS X to reprocess Seaglider data.  No
-installation instructions are provided. The basestation code will not work on Windows.  
+## System requirements
+
+The basestation has been tested on Ubuntu 22.04.  
+
+For post processing, MacOS 13.3 has been tested.  It has not been
+tested on Microsoft Windows.  
+
+The installation instructions assume python 3.10.10.  3.9 might still work, 
+3.8 and earlier likely won't work.
+
+No explicit hardware requirements are stated, but just about anything fairly
+modern should work.  (The basestation is regularly run on raspberry pi4 with 4G
+of memory.)
+
+## Installation for post-processing
+
+In addition to the usual use of the Seaglider basestation to handle data 
+coming in real-time from a Seaglider, the basestation may be installed for
+
+re-processing of missions.  Such a use only requires the required python 
+packages be installed.  
+
+    pip install -r requirements.txt
+	
+See the section [Common Commands](#common-commands) for useful post processing 
+commands
+
+## Installation for a realtime basestation
+
+### System Prep
+
+#### Shell installation
 
 The basestation depends on csh being installed on the system.  On
 Ubuntu, "sudo apt-get install tcsh"
+
+#### System time
 
 It is strongly advised to set the basestation timezone to UTC as opposed to
 local time. The basestation software internally operates on UTC time - as does
@@ -62,33 +92,39 @@ the Seaglider software is not affected by these conversions.
 
 On Ubuntu, use "sudo dpkg-reconfigure tzdata" to set UTC as the time zone.
 
-See the release notes at the bottom for more version specific details.
+#### Gliders group
 
-This version of the code has been written to and tested against python 3.9.6.
+There needs to be a single group that all Seaglider and pilots belong to. The
+instructions below assume this is ```gliders```.  You may substitute something
+else, but ```gliders``` will keep things simple
 
-See the relevant sections in the install steps on notes on packages versions.
+    sudo addgroup gliders
+	
+Unlike previous versions of the basestation, there is no assumption of a
+dedicated pilot account.  Pilots are regular users who have are in the
+```gliders``` group.  Seaglider home directories are setup with group ownership
+as ```gliders``` and the group has read/write/execute permissions.
 
-# Notes on basestation code distribution
+#### PAM (Pluggable Authentication Modules)
+The PAM system is prone to generating a considerable ammont of output that interferes 
+with the basestation <-> Seaglider login handshaking.  In /etc/pam.d/login, locate and 
+comment out the following lines:
 
-Depending on what terms you have received the basestation code under, you will have up
-to 2 packages:
-- Base-3.01.tgz (core basestation)
-- packages.tgz (third-party code, referenced from the basestation),
-
-# Installation steps
-
+    #session    optional   pam_motd.so motd=/run/motd.dynamic
+	#session    optional   pam_motd.so noupdate
+	#session    optional   pam_lastlog.so
+	
 ## Installing python
 
-It is recommended that version 3.10.9 of python be installed along the a specific set of 
+It is recommended that version 3.10.10 of python be installed along the a specific set of 
 python support libraries.  The process is as follows:
 
-1. Install preliminaries
+### Install preliminaries
 
 ```
 sudo apt-get install -y build-essential checkinstall libreadline-dev libncursesw5-dev \
 libssl-dev libsqlite3-dev tk-dev libgdbm-dev libc6-dev libbz2-dev zlib1g-dev openssl libffi-dev libgeos-dev \
-python3-dev python3-setuptools wget libgdbm-compat-dev uuid-dev liblzma-dev
-
+python3-dev python3-setuptools wget libgdbm-compat-dev uuid-dev liblzma-dev tcsh
 ```
 
 Further details on build pre-requisites are available here:
@@ -96,7 +132,7 @@ Further details on build pre-requisites are available here:
 https://devguide.python.org/getting-started/setup-building/#build-dependencies
 ```
 
-2. Prepare to build
+### Prepare to build
 
 ``` 
 mkdir /tmp/Python3.10
@@ -106,10 +142,10 @@ cd /tmp/Python3.10
 3. Download python source distribution and build.  Depending on your machine, this can take a while
 
 ```
-wget https://www.python.org/ftp/python/3.10.9/Python-3.10.9.tar.xz
-tar xvf Python-3.10.9.tar.xz
-cd Python-3.10.9
-./configure --enable-optimizations --prefix /opt/python/3.10.9
+wget https://www.python.org/ftp/python/3.10.10/Python-3.10.10.tar.xz
+tar xvf Python-3.10.10.tar.xz
+cd Python-3.10.10
+./configure --enable-optimizations --prefix /opt/python/3.10.10
 make 
 
 sudo mkdir /opt/python
@@ -117,19 +153,23 @@ sudo chown -R user:gliders /opt/python
 make install
 ```
 
-4. Check build and install 
+### Check build and install 
 
 ``` bash
-/opt/python/3.10.9/bin/python3 --version
+/opt/python/3.10.10/bin/python3 --version
 ```
 
-## Install the basestation code and python packages
+### Install the basestation code and python packages
 
-1. If you have an existing installation of the basestation in /usr/local/basestation,
+- If you have an existing installation of the basestation in /usr/local/basestation3,
    you should back the contents up
-2. Copy the tarball Base-3.01.tgz to /usr/local
-3. Unpack the tarball using the command "sudo tar xvzf Base-3.01.tgz"
-4. Install the required python libraries
+- Clone or copy the repo to /usr/local/basestation3.  Make sure the
+  ```gliders``` group has read and execute permissions for all files
+
+```
+sudo chown -R :gliders /usr/local/basestation3
+sudo chmod -R g+rx /usr/local/basestation3
+```
 
 ```
 rm -rf /opt/basestation
@@ -142,94 +182,34 @@ sudo chown user:gliders /opt/basestation
 then
 
 ```
-/opt/python/3.10.9/bin/python3 -m venv /opt/basestation
+/opt/python/3.10.10/bin/python3 -m venv /opt/basestation
 /opt/basestation/bin/pip install -r /usr/local/basestation3/requirements.txt
 ```
 
-5. Copy the support packages tarball - packages.tgz to the /usr/local/Base-3.01 directory, and unpack,
-   using the command "sudo tar xvzf packages.tgz"
-6. In /usr/local/Base-3.01, run "sudo ./install_base.sh" to install the basestation code into /usr/local/basestation
+### Installation of other software packages
 
-7. In /usr/local/Base-3.01 run "sudo ./setup_users.sh" to setup the pilot
+There are two additional packages maintained in their own repositories that
+should be installed.  For all basestations, 
 
--- OR --
+    https://github.com/iop-apl-uw/seaglider_lrzsz
+	
+If you are using Iridium's RUDICS, 
 
-8a. As root, create a user group called gliders
-8b. Create the following users and make /usr/bin/csh their login shell:
+    https://github.com/iop-apl-uw/rudicsd
 
-	pilot
-		- write access to all gliders directories
-		- put into gliders group
-	sg000
-		- location of commissioning files for new gliders
-		- put into gliders group
-
-9. In /usr/local/Base-3.01 run "sudo ./copy_sg000.sh"
-10) Make sure you have Python installed.  See notes above for Python version issues.  
 Use 'python --version' to determine the version.
 
 ## TODO - insert setup of /usr/local/basestation/glider_login and glider_logout
 
-## Install lrzsz
-To maintain a log of xmodem communications progress ('comm.log') you must install
-modified versions of lrz and lsz in /usr/local/bin.
-
-(Note: You may need to install make on your server machine - 'sudo apt-get install make')
-
-In /usr/local/Base-3.01/packages/lrzsz-0.12.20:
-10a) Run "sudo ./build.sh"
-10b) Run "sudo make install"
-10c) Ensure that /usr/local/bin is at the head of the path for the glider accounts
-
-## Install raw send and raw recieve
-11a) In /usr/local/Base-3.01/packages unpack rawxfr.tgz by "sudo tar xvzf rawxfer.tgz"
-11b) In /usr/local/Base-3.01/packages/rawxfer build the binaries "sudo make"
-11c) Copy the binaries to /usr/local/bin "sudo cp rawrcv rawsend /usr/local/bin"
-11d) Create the following symlinks
-
-# TODO - check for the correct symlinks
-
-    ln -s /usr/local/bin/rawrcv2 /usr/local/bin/rawrcv
-    ln -s /usr/local/bin/rawrcv2 /usr/local/bin/rawrcvb
-
-## Install the optional cmdfile, science and targets validator
-
-# TODO - change to copy in binary
-
-12a) In /usr/local/Base-3.01/Validate-66.13 run 'sudo make -f Makefile.validate' to build validate binary
-12b) In /usr/local/Base-3.01 run "sudo ./install_validate.sh"
-12c) Confirm that validate, cmdedit, targedit and sciedit are installed in /usr/local/bin
-12d) As pilot, run cmdedit from a glider's home directory to confirm all is working
-
-## Install the optional gliderzip
-If you plan to upload gzipped files to the glider, install this special version of gzip. See Upload.py.
-
-13a) In /usr/local/Base-3.01/gliderzip_src build the binaries "sudo make -f Makefile.gliderzip"
-13b) Copy gliderzip to /usr/local/basestation
-
-# TODO - change upload to point to regular zip
-
-## Install optional RUDICS support
-14a) cd /usr/local/Base-3.01 and unpack via "sudo tar xvzf rudics.tgz"
-14b) Follow the instructions provided in packages/rudics/ReadMe
-
-## Configuring for login
-
-The PAM system is prone to generating a considerable ammont of output that interferes 
-with the basestation <-> Seaglider login handshaking.  In /etc/pam.d/login, locate and 
-comment out the following lines:
-
-    #session    optional   pam_motd.so motd=/run/motd.dynamic
-	#session    optional   pam_motd.so noupdate
-	#session    optional   pam_lastlog.so
-
+## TODO Install the optional cmdfile, science and targets validator
 
 # Commissioning a new glider
-As root, run:
 
-   	python /usr/local/basestation/Commission.py XXX
+    sudo /opt/basestation/bin/python /usr/local/basestation3/Commission.py XXX
 
-The glider password is set to our current, hard-to-remember password scheme:
+where ```XXX``` is the gliders 3 digit serial number.
+
+By default, the glider password is set to our current, hard-to-remember password scheme:
 
 - Drop any leading zeros from the glider id.
 - For even-numbered gliders:
@@ -240,38 +220,74 @@ The glider password is set to our current, hard-to-remember password scheme:
 E.g., glider SG074 will have the password 744680 and SG051 will have the
 password 515791.
 
-You are free to establish another password policy - just be sure your glider and
-basestation agree on what the password is.
+It is strongly suggested that generate a stronger password - just be sure your glider and
+basestation agree on what the password is.  
+
+## Additional security considertions
+
+### Limit login access
+
+In addition to a strong password, it is recommended to limit the uses that can
+login via serial line and telnet.  To do so, add the following line to
+```/etc/pam.d/login``` at the very top.   
+
+```
+auth required pam_listfile.so onerr=fail item=user sense=allow file=/etc/users.allow
+```
+
+Then create a file (user: root, glider: root)
+
+```
+/etc/users.allow
+```
+
+The file is one user name per-line.  No wildcards allowed.  So, if you had two
+gliders ```sg090``` and ```sg095``` both commissioned on your basestation, the
+file would be
+
+```
+sg090
+sg095
+```
+
+Any login from the serial line or telnet (rudics) that does not match a line in
+```/etc/users.allow``` is not accepted.
+
+### chroot jail for Seagliders
+
+The basestation has support for running the Seaglider user accounts inside a
+very limited chroot jail.  Under this scheme, the Seaglider account only has 
+access to the binaries needed to exchange file information with basestation
+server.  The actual running of the conversion process is handled by a different
+user account.  See the [Jail ReadMe.md][jail/ReadMe.md] for details.
 
 # To test the new glider account
 
 Log into the glider account via the su command:
 
-su - sg001
+    su - sg001
 
 Where sg001 is a glider you have commissioned.  You should see a prompt of the form:
 
-sg001=
+    sg001=
 
 Log out, then examine the home directory for sg001.  You should see a
 file of the form baselog_YYMMDDHHMMSS.  Check for any python
 errors (missing package XXXX) - install anything missing.
 
 # Direct modem support using mgetty
-Hook up your modem to the appropriate serial port and ensure that
-there an mgetty servicing that port.  
+If you are using a dialup modem, hook up your modem to the appropriate serial
+port and ensure that there an mgetty servicing that port.  
 
-Ubuntu 16.04:
-Ensure mgetty is installed: 'sudo apt-get install mgetty'
+Ensure mgetty is installed: ```sudo apt-get install mgetty```
 
 Look at the boot messages in dmesg that assign ttySn ports to the modems:
 
 [    2.528748] 0000:00:0c.0: ttyS4 at I/O 0xb000 (irq = 17, base_baud = 115200) is a 16550A
 [    2.548901] 0000:00:0c.0: ttyS5 at I/O 0xa800 (irq = 17, base_baud = 115200) is a 16550A
 
-Create a systemd conf file. 
-Create a systemd conf file. For example, if your modem is in /dev/ttyS0, 
-create the file "/etc/systemd/system/ttyS0.service" with the following contents:
+Next, create a systemd conf file. For example, if your modem is in /dev/ttyS0, 
+create the file ```/etc/systemd/system/ttyS0.service``` with the following contents:
 
 ```
 [Unit]
@@ -289,9 +305,9 @@ PIDFile=/var/run/agetty.pid.ttyS0
 [Install]
 WantedBy=multi-user.target
 ```
-Enable the service with "sudo systemctl enable ttyS0.service"
+Enable the service with ```sudo systemctl enable ttyS0.service```
 
-Start the event by issuing a "sudo systemctl start ttyS0.service" and confirm the
+Start the event by issuing a ```sudo systemctl start ttyS0.service``` and confirm the
 mgetty is running by consulting the process list.  Verify that the
 modem is accessible by inspecting the associated log in the directory
 /var/log/mgetty.  Call the associated phone number to verify the
@@ -299,24 +315,36 @@ basestation answers.
 
 [If you have two modems, you can use minicom to call one modem from the other.]
 
-.pagers .mailer
------------------
+# .pagers and .mailer files support
+
 The .pagers and .mailer mechanism rely on a working SMTP MTA on the basestation.
 The only two that have been tested are sendmail and postfix (with a preference
 for postfix).  Configuring a MTA is beyond the scope of this documentation as it
 can be highly dependent on local network management practice.
 
-Version specific release notes
-------------------------------
+# Additional documentation
 
-Version 3.01
-------------
+There are a number of configuration files that live in seagliders home
+directory.  Documentation for these files are provided in the sample/template
+files located in the sg000 sub-directory
+
+- [Pagers](sg000/.pagers)
+- [Mailer](sg000/.mailer)
+- [URLS](sg000/.urls)
+- [Extensions](sg000/.extensions)
+- [Early Extensions](sg000/.pre_extensions)
+- [Seaglider conf file][sg000/sg000.conf)
+- [Meta data for netcdf files][sg000/NODC.yml]
+- [Section plotting settings][sg000/sections.yml]
+- [sg_calib_constants.m][sg000/sg_calib_constants.m]
+
+# Differences from previous versions
+
 The basestation now uses the FlightModel system to continiously evaluate the glider's volume
 and hydrodynamic model parameters.  Many of the tuning parameters in sg_calib_constants.m are 
-no longer used - in fact, FligtModel will re-write the sg_calib_constants.m file to remove the
-no longer used versions.
+no longer used.  
 
-N.B. The glider's user account must have write permissions to sg_calib_constants.m
+See [FlightModel.pdf][docs/FlightModel.pdf] in the docs directory for further details.
 
-See FlightModel.pdf in the docs directory for further details.
+# Common Commands
 

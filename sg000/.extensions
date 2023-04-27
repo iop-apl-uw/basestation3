@@ -1,5 +1,12 @@
 # Basetation extensions that are to be run during glider logout processing are listed here.
 # Extensions are executed in the order listed
+#
+# A global copy of this file may be place in
+#
+# /usr/local/basestation3/etc/.extensions
+#
+# Those extensions will be run first, before those listed in the seaglider home directory
+#
 # Hash symbol marks a comment line
 #
 # Extensions outside a section are consider to be in section [mission]
