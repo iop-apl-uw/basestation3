@@ -1,18 +1,25 @@
-# Seaglider Basestation Readme
+# Seaglider Basestation Software
+
+Shore side processing software for
+[Seaglider](https://iop.apl.washington.edu/seaglider.php) buoyancy driven
+autonomous underwater vehicles, developed at the University of Washington,
+maintained and support by the [IOP group at APL-UW](https://iop.apl.washington.edu/index.php).
 
 # Operation of the basestation
 
 The basestation operation is designed around the following philosophy:
 
-Each Seaglider has its own login id (see [Commissioning a new glider](#commissioning-a-new-glider))
+Each Seaglider has its own user login account.
 The glider uses this during deployments to log in and write data files to its
 home directory.  It has read and write access to its home directory only.
 Scripts run during login and logout to convert the data files into their final,
 ASCII readable form for subsequent analysis.
 
 The pilot user has read and write access to all the seaglider home
-directories since the pilot will update cmdfiles, etc. to command the vehicle
+directories - by virtue of being in the same group as the glider -  since the
+pilot will update cmdfiles, etc. to command the vehicle 
 and will need to read the data for analysis.
+
 
 When a glider logs in, it expects to see '=' as its prompt, hence the .cshrc
 file in each glider's directory.  It also triggers the .login script, which sets
@@ -60,7 +67,6 @@ of memory.)
 
 In addition to the usual use of the Seaglider basestation to handle data 
 coming in real-time from a Seaglider, the basestation may be installed for
-
 re-processing of missions.  Such a use only requires the required python 
 packages be installed.  
 
@@ -76,7 +82,7 @@ commands
 #### Shell installation
 
 The basestation depends on csh being installed on the system.  On
-Ubuntu, "sudo apt-get install tcsh"
+Ubuntu, ```sudo apt-get install tcsh```
 
 #### System time
 
@@ -90,7 +96,7 @@ have conversions to UTC available.  In these cases, the basestation will assume
 the time is UTC and proceed (issuing a warning). Conversion and processing of
 the Seaglider software is not affected by these conversions. 
 
-On Ubuntu, use "sudo dpkg-reconfigure tzdata" to set UTC as the time zone.
+On Ubuntu, use ```sudo dpkg-reconfigure tzdata``` to set UTC as the time zone.
 
 #### Gliders group
 
@@ -139,7 +145,7 @@ mkdir /tmp/Python3.10
 cd /tmp/Python3.10
 ```
 
-3. Download python source distribution and build.  Depending on your machine, this can take a while
+Download python source distribution and build.  Depending on your machine, this can take a while
 
 ```
 wget https://www.python.org/ftp/python/3.10.10/Python-3.10.10.tar.xz
@@ -189,15 +195,9 @@ then
 ### Installation of other software packages
 
 There are two additional packages maintained in their own repositories that
-should be installed.  For all basestations, 
-
-    https://github.com/iop-apl-uw/seaglider_lrzsz
-	
-If you are using Iridium's RUDICS, 
-
-    https://github.com/iop-apl-uw/rudicsd
-
-Use 'python --version' to determine the version.
+should be installed.  
+- For all basestations, [seaglider_lrzsz](https://github.com/iop-apl-uw/seaglider_lrzsz).
+- If you are using Iridium's RUDICS, [rudicsd](https://github.com/iop-apl-uw/rudicsd).
 
 ## TODO - insert setup of /usr/local/basestation/glider_login and glider_logout
 
@@ -259,7 +259,7 @@ The basestation has support for running the Seaglider user accounts inside a
 very limited chroot jail.  Under this scheme, the Seaglider account only has 
 access to the binaries needed to exchange file information with basestation
 server.  The actual running of the conversion process is handled by a different
-user account.  See the [Jail ReadMe.md][jail/ReadMe.md] for details.
+user account.  See the [Jail ReadMe.md](jail/ReadMe.md) for details.
 
 # To test the new glider account
 
@@ -283,9 +283,10 @@ Ensure mgetty is installed: ```sudo apt-get install mgetty```
 
 Look at the boot messages in dmesg that assign ttySn ports to the modems:
 
+```
 [    2.528748] 0000:00:0c.0: ttyS4 at I/O 0xb000 (irq = 17, base_baud = 115200) is a 16550A
 [    2.548901] 0000:00:0c.0: ttyS5 at I/O 0xa800 (irq = 17, base_baud = 115200) is a 16550A
-
+```
 Next, create a systemd conf file. For example, if your modem is in /dev/ttyS0, 
 create the file ```/etc/systemd/system/ttyS0.service``` with the following contents:
 
@@ -313,14 +314,14 @@ modem is accessible by inspecting the associated log in the directory
 /var/log/mgetty.  Call the associated phone number to verify the
 basestation answers.
 
-[If you have two modems, you can use minicom to call one modem from the other.]
+(If you have two modems, you can use minicom to call one modem from the other.)
 
 # .pagers and .mailer files support
 
 The .pagers and .mailer mechanism rely on a working SMTP MTA on the basestation.
-The only two that have been tested are sendmail and postfix (with a preference
-for postfix).  Configuring a MTA is beyond the scope of this documentation as it
-can be highly dependent on local network management practice.
+The only one that has been tested is postfix.
+Configuring a MTA is beyond the scope of this documentation as it
+can be highly dependent on local network management practice. 
 
 # Additional documentation
 
@@ -333,18 +334,29 @@ files located in the sg000 sub-directory
 - [URLS](sg000/.urls)
 - [Extensions](sg000/.extensions)
 - [Early Extensions](sg000/.pre_extensions)
-- [Seaglider conf file][sg000/sg000.conf)
-- [Meta data for netcdf files][sg000/NODC.yml]
-- [Section plotting settings][sg000/sections.yml]
-- [sg_calib_constants.m][sg000/sg_calib_constants.m]
+- [Seaglider conf file](sg000/sg000.conf)
+- [Meta data for netcdf files](sg000/NODC.yml)
+- [Section plotting settings](sg000/sections.yml)
+- [sg_calib_constants.m](sg000/sg_calib_constants.m)
 
 # Differences from previous versions
 
+## FlightModel
+
+Basestation3 contains several new behaviors that users of Basestation2
+might not expect (depending on the previous version of Basestation2 used). 
+
 The basestation now uses the FlightModel system to continiously evaluate the glider's volume
 and hydrodynamic model parameters.  Many of the tuning parameters in sg_calib_constants.m are 
-no longer used.  
+no longer used.  This feature can be turned off using the options
+```--ignore_flight_model --skip_flight_model```
 
-See [FlightModel.pdf][docs/FlightModel.pdf] in the docs directory for further details.
+See [FlightModel.pdf](docs/FlightModel.pdf) in the docs directory for further
+details.
+
+## Deletion of uploaded files
+
+
 
 # Common Commands
 
