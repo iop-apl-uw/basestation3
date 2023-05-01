@@ -1147,7 +1147,7 @@ def attachHandlers(app: sanic.Sanic):
     # The get handler for notifications from the basestation.
     # Run a route to receive notifications remotely. Typically only used 
     # when running vis on a server different from the basestation proper
-    @app.route('/url')
+    @app.post('/url')
     # description: .urls notification handler (used when vis server is different from basestation server)
     # parameters: instrument_name, dive, files (), status (), gpsstr ()
     # returns: 'ok' or 'error'
@@ -1183,6 +1183,10 @@ def attachHandlers(app: sanic.Sanic):
             socket.connect(request.app.config.NOTIFY_IPC)
             socket.setsockopt(zmq.SNDTIMEO, 200)
             socket.setsockopt(zmq.LINGER, 0)
+            # these two log lines are critical - the socket send
+            # does not go out without them ....  ¯\_(ツ)_/¯
+            sanic.log.logger.info(f"sending {glider:03d}-urls-{topic}")
+            sanic.log.logger.info(f"msg={msg}")
             await socket.send_multipart([(f"{glider:03d}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
             socket.close()
         except:
@@ -1375,7 +1379,7 @@ def attachHandlers(app: sanic.Sanic):
         socket = zmq.asyncio.Context().socket(zmq.SUB)
         socket.setsockopt(zmq.LINGER, 0)
         socket.connect(request.app.config.WATCH_IPC)
-        socket.setsockopt(zmq.SUBSCRIBE, (f"{glider}-urls-gpsstr").encode('utf-8'))
+        socket.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-urls-gpsstr").encode('utf-8'))
 
         # we get the first fix out of the db so the user gets the latest 
         # position if we're between calls
@@ -1390,8 +1394,9 @@ def attachHandlers(app: sanic.Sanic):
         while True:
             try:
                 msg = await socket.recv_multipart()
-                sanic.log.logger.info(msg[1])
+                # sanic.log.logger.info(f"got msg={msg[1]}")
                 await ws.send(msg[1].decode('utf-8'))
+                # sanic.log.logger.info("ws sent")
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
                 sanic.log.logger.info(f'ws connection closed {e}')
                 await ws.close()
@@ -1537,14 +1542,13 @@ def attachHandlers(app: sanic.Sanic):
                     sanic.log.logger.debug(f"watch {glider} cmdfile modified")
                     await ws.send(f"CMDFILE={glider:03d},{directive}")
                 elif 'urls' in topic:
-                    print(body)
                     try:
                         m = loads(body)
                         if 'glider' not in m:
                             m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
                         await ws.send(f"NEW={dumps(m).decode('utf-8')}")
                     except Exception as e:
-                        print(e)
+                        sanic.log.logger.info(f"watchHandler {e}")
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
                 sanic.log.logger.info(f'ws connection closed {e}')
                 await ws.close()
