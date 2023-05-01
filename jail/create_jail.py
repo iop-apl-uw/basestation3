@@ -1,25 +1,31 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
+## Copyright (c) 2023  University of Washington.
 ##
-## Copyright (c) 2006-2023 by University of Washington.  All rights reserved.
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
 ##
-## This file contains proprietary information and remains the
-## unpublished property of the University of Washington. Use, disclosure,
-## or reproduction is prohibited except as permitted by express written
-## license agreement with the University of Washington.
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
 ##
-## THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-## AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-## ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+##
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
 ## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-## SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-## INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-## CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-## POSSIBILITY OF SUCH DAMAGE.
-##
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import argparse
 import glob
@@ -48,10 +54,11 @@ class FullPaths(argparse.Action):
             setattr(namespace, self.dest, values)
 
 
-# TODO - need to setup pilot/runner jail (see if that works)
-
-
-def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
+def mk_jail(
+    jail_root_name, glider_home_dir, glider_home_dir_target, f_create, f_update
+):
+    if f_update:
+        f_create = True
 
     jail_root = pathlib.Path(jail_root_name)
 
@@ -103,12 +110,16 @@ def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
         "/usr/local/bin/lrb",
     )
 
-    for script_file in [
-        "/usr/local/basestation/glider_login",
-        "/usr/local/basestation/glider_logout",
+    script_files = [
         "/usr/local/basestation3/glider_login",
         "/usr/local/basestation3/glider_logout",
-    ]:
+    ]
+
+    if not f_update:
+        script_files.append("/usr/local/basestation/glider_login")
+        script_files.append("/usr/local/basestation/glider_logout")
+
+    for script_file in script_files:
         files_to_copy.add(pathlib.Path(script_file))
 
     for sgf in seaglider_files:
@@ -178,7 +189,7 @@ def mk_jail(jail_root_name, glider_home_dir, glider_home_dir_target, f_create):
         if f_create:
             shutil.copytree(tree, tgt_tree, dirs_exist_ok=True)
 
-    if glider_home_dir:
+    if glider_home_dir and not f_update:
         if glider_home_dir_target:
             tgt_dir = jail_root.joinpath(str(glider_home_dir_target)[1:])
         else:
@@ -224,6 +235,12 @@ if __name__ == "__main__":
         default=False,
     )
     ap.add_argument(
+        "--update",
+        help="Update the jail",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+    )
+    ap.add_argument(
         "--glider_dir",
         help="Path to glider directory to include in the jail",
         action=FullPaths,
@@ -240,8 +257,15 @@ if __name__ == "__main__":
 
     # Add option to include a glider directory in the jail
 
-    mk_jail(args.jail_root, args.glider_dir, args.glider_dir_target, args.create)
-    print(f"Jail created in {args.jail_root}")
+    mk_jail(
+        args.jail_root,
+        args.glider_dir,
+        args.glider_dir_target,
+        args.create,
+        args.update,
+    )
+    if args.create:
+        print(f"Jail created in {args.jail_root}")
 
     if args.glider_dir:
         jailed_passwd = os.path.join(args.jail_root, "/etc/passwd")
@@ -251,5 +275,5 @@ if __name__ == "__main__":
         )
         print("For existing gliders, you need to do the updates yourself")
         print(
-            f"Not that for the jail to work, entries /etc/password for glider accounts must have {args.jail_root} for the home directory and /sbin/chrootshell for the shell"
+            f"Note that for the jail to work, entries /etc/password for glider accounts must have {args.jail_root} for the home directory and /sbin/chrootshell for the shell"
         )
