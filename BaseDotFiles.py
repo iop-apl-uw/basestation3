@@ -292,7 +292,7 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
 
                     log_debug(f"URL line ({url_line})")
                     try:
-                        url_response = requests.get(
+                        url_response = requests.post(
                             url_line,
                             verify=cert_file,
                             timeout=get_timeout,
