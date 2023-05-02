@@ -1621,12 +1621,37 @@ async def buildMissionTable(app, config=None):
         pieces = config.SINGLE_MISSION.split(':')
         x = { 'missions': { pieces[0]: { 'abs': pieces[1] } } }
     else: 
-        if await aiofiles.os.path.exists(config.MISSIONS_FILE):
-            async with aiofiles.open(config.MISSIONS_FILE, "r") as f:
+        if await aiofiles.os.path.exists(config['MISSIONS_FILE']):
+            async with aiofiles.open(config['MISSIONS_FILE'], "r") as f:
                 d = await f.read()
                 x = yaml.safe_load(d)
         else:
             x = {}
+
+    if 'includes' in x:
+        missionTable = []
+        if 'organization' in x and app:
+            app.ctx.organization = x['organization']
+
+        for group in list(x['includes'].keys()):     
+            c = { 'MISSIONS_FILE': x['includes'][group]['missions'] }
+            tbl = await buildMissionTable(None, config=c)
+            for k in tbl:
+                if 'abs' in k and k['abs']:
+                    k['abs'] = x['includes'][group]['root'] + '/' + k['abs']
+                elif 'path' in k and k['path']:
+                    k['abs'] = x['includes'][group]['root'] + f"/sg{k['glider']:03d}/{k['path']}"
+                else:
+                    k['abs'] = x['includes'][group]['root'] + f"/sg{k['glider']:03d}"
+
+
+            missionTable = missionTable + tbl
+
+        if app:
+            app.ctx.missionTable = missionTable
+
+        print(missionTable)
+        return missionTable
 
     if 'organization' not in x:
         x['organization'] = {}
@@ -1636,6 +1661,12 @@ async def buildMissionTable(app, config=None):
         x['endpoints'] = {}
     if 'controls' not in x:
         x['controls'] = {}
+
+    orgDictKeys = ["orgname", "orglink", "text", "contact", "email"]
+    for ok in orgDictKeys:
+        if ok not in x['organization'].keys():
+            x['organization'].update( { ok: None } )
+
 
     missionDictKeys = [ "glider", "path", "abs", "mission", "users", "pilotusers", "groups", "pilotgroups", 
                         "started", "ended", "planned", 
@@ -1675,6 +1706,8 @@ async def buildMissionTable(app, config=None):
                         x['missions'][k].update( { mk: mode_dflts[mk] })
                     elif dflts and mk in dflts:
                         x['missions'][k].update( { mk: dflts[mk] })
+                    elif mk in x['organization']:
+                        x['missions'][k].update( { mk: x['organization'][mk] })
                     else:
                         x['missions'][k].update( { mk: None })
 
@@ -1686,11 +1719,6 @@ async def buildMissionTable(app, config=None):
             sanic.log.logger.info(f"error on key {k}, {e}")
             continue 
        
-    orgDictKeys = ["name", "link", "text", "contact", "email"]
-    for ok in orgDictKeys:
-        if ok not in x['organization'].keys():
-            x['organization'].update( { ok: None } )
-
     endpointsDictKeys = [ "modes", "users", "groups", "requirepilot" ]
     dflts = None
     for k in list(x['endpoints'].keys()):
