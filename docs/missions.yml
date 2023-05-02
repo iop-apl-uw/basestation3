@@ -11,12 +11,12 @@
 #                 also: [ ... NNN/mission, NNN/mission (mission optional) ], 
 #
 # organization details optional
-# organization fields: link: URL, name: string, contact: string, email: string,
+# organization fields: orglink: URL, orgname: string, contact: string, email: string,
 #                      text: markdown
 #
 organization:
- link: http://iop.apl.washington.edu
- name: Seaglider Public Operations
+ orglink: http://iop.apl.washington.edu
+ orgname: Seaglider Public Operations
  contact: IOP Seaglider support team
  email: iopsg@uw.edu
  text: some markdown eventually

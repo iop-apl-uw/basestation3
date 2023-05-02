@@ -718,7 +718,7 @@ def attachHandlers(app: sanic.Sanic):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         message = { 'dive': dive, 'parm': [], 'file': [] }
         if await Path(dbfile).exists():
-            async with aiosqlite.connect(dbfile) as conn:
+            async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
                 conn.row_factory = rowToDict # not async but called from async fetchall
                 cur = await conn.cursor()
                 try:
@@ -765,7 +765,7 @@ def attachHandlers(app: sanic.Sanic):
     async def statusHandler(request, glider:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if await Path(dbfile).exists():
-            async with aiosqlite.connect(dbfile) as conn:
+            async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
                 cur = await conn.cursor()
                 try:
                     await cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
@@ -868,7 +868,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = q + " ORDER BY dive ASC;"
 
-        async with aiosqlite.connect(dbfile) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
             conn.row_factory = rowToDict # not async but called from async fetchall
             cur = await conn.cursor()
             try:
@@ -906,7 +906,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = q + f" ORDER BY {col2},dive ASC;"
 
-        async with aiosqlite.connect(dbfile) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
             conn.row_factory = rowToDict # not async but called from async fetchall
             cur = await conn.cursor()
             try:
@@ -928,7 +928,7 @@ def attachHandlers(app: sanic.Sanic):
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        async with aiosqlite.connect(dbfile) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
             cur = await conn.cursor()
             try:
                 await cur.execute('select * from dives')
@@ -1007,7 +1007,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = f"SELECT {queryVars} FROM dives"
 
-        async with aiosqlite.connect(dbfile) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
             # conn.row_factory = rowToDict
             cur = await conn.cursor()
             await cur.execute(q)
@@ -1200,7 +1200,7 @@ def attachHandlers(app: sanic.Sanic):
             if not await aiofiles.os.path.exists(dbfile):
                 return (None, time.time())
 
-            myconn = await aiosqlite.connect(dbfile)
+            myconn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
             myconn.row_factory = rowToDict
         else:
             myconn = conn
@@ -1327,7 +1327,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('no db')
 
         try:
-            conn = await aiosqlite.connect(dbfile)
+            conn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
             conn.row_factory = rowToDict
             cur = await conn.cursor()
             await cur.execute(q)
@@ -1347,7 +1347,7 @@ def attachHandlers(app: sanic.Sanic):
             if not await aiofiles.os.path.exists(dbfile):
                 return None
 
-            myconn = await aiosqlite.connect(dbfile)
+            myconn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
             myconn.row_factory = rowToDict
         else:
             myconn = conn
@@ -1446,7 +1446,7 @@ def attachHandlers(app: sanic.Sanic):
         if tU and request.app.config.RUNMODE > MODE_PUBLIC:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
             if await aiofiles.os.path.exists(dbfile):
-                conn = await aiosqlite.connect(dbfile)
+                conn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
                 conn.row_factory = rowToDict 
                 if which == 'history' or which == 'init':
                     (rows, prev_db_t) = await getChatMessages(request, glider, 0, conn)
@@ -1470,7 +1470,7 @@ def attachHandlers(app: sanic.Sanic):
 
                 if 'chat' in topic and tU and request.app.config.RUNMODE > MODE_PUBLIC:
                     if conn == None and await aiofiles.os.path.exists(dbfile):
-                        conn = await aiosqlite.connect(dbfile)
+                        conn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
                         conn.row_factory = rowToDict 
                         
                     if conn:
