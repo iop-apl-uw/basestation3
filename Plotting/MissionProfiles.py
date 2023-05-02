@@ -114,10 +114,15 @@ def mission_profiles(
         log_error(f"No 'sections' key found in {section_file_name} - not plotting")
         return ([], [])
 
-    conn = Utils.open_mission_database(base_opts)
-    if not conn:
-        log_error("Could not open mission database")
-        return ([], [])
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts, ro=True)
+        if not conn:
+            log_error("Could not open mission database")
+            return ([], [])
+
+        log_info("mission_profiles db opened (ro)")
+    else:
+        conn = dbcon
 
     try:
         cur = conn.cursor() 
@@ -127,8 +132,14 @@ def mission_profiles(
         cur.close()
     except Exception as e:
         log_error("Could not fetch data", "exc")
-        conn.close()
+        if dbcon == None:
+            conn.close()
+            log_info("mission_profiles db closed")
         return ([], [])
+
+    if dbcon == None:
+        conn.close()
+        log_info("mission_profiles db closed")
 
     #print(latest)
  

@@ -1646,7 +1646,7 @@ def loadmodule(pathname):
     return None
 
 
-def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection:
+def open_mission_database(base_opts: BaseOpts.BaseOptions, ro=False) -> sqlite3.Connection:
     import BaseDB
 
     """Opens a mission database file"""
@@ -1665,9 +1665,12 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions) -> sqlite3.Connection
             log_error(f"error creating DB: {e}")
             return None
 
-    conn = sqlite3.connect(db)
-    conn.isolation_level = None
-    conn.cursor().execute("BEGIN")
+    if ro:
+        conn = sqlite3.connect('file:' + db + '?mode=ro')
+    else:
+        conn = sqlite3.connect(db)
+        conn.isolation_level = None
+        conn.cursor().execute("BEGIN")
     return conn
 
 

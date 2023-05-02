@@ -766,6 +766,7 @@ def rebuildDB(base_opts):
     """Rebuild the database from scratch"""
     log_info("rebuilding database")
     con = Utils.open_mission_database(base_opts)
+    log_info("rebuildDB db opened")
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS dives;")
     cur.execute("DROP TABLE IF EXISTS gc;")
@@ -792,10 +793,12 @@ def rebuildDB(base_opts):
 
     con.close()
 
+    log_info("rebuildDB db closed")
 
 def loadDB(base_opts, filename, run_dive_plots=True):
     """Load a single netcdf file into the database"""
     con = Utils.open_mission_database(base_opts)
+    log_info("loadDB db opened")
     cur = con.cursor()
     createDivesTable(cur)
     loadFileToDB(base_opts, cur, filename, con, run_dive_plots=run_dive_plots)
@@ -805,13 +808,16 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     except Exception as e:
         log_error(f"Failed commit, loadDB {e}", "exc")
 
+    log_info("loadDB db closed")
     con.close()
 
 def prepDB(base_opts, dbfile=None):
     if dbfile is None:
         con = Utils.open_mission_database(base_opts)
+        log_info("prepDB db opened")
     else:
         con = sqlite3.connect(dbfile)
+        log_info("prepDB db opened direct")
 
     cur = con.cursor()
     createDivesTable(cur)
@@ -826,11 +832,13 @@ def prepDB(base_opts, dbfile=None):
     except Exception as e:
         log_error(f"Failed commit, prepDB {e}", "exc")
 
+    log_info("prepDB db closed")
     con.close()
 
 def saveFlightDB(base_opts, mat_d, con=None):
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
+        log_info("saveFlightDB db opened")
     else:
         mycon = con
 
@@ -870,6 +878,7 @@ def saveFlightDB(base_opts, mat_d, con=None):
             log_error(f"Failed commit, saveFlightDB {e}", "exc")
 
         mycon.close()
+        log_info("saveFlightDB db closed")
     
 def addValToDB(base_opts, dive_num, var_n, val, con=None):
     """Adds a single value to the dive database"""
@@ -883,6 +892,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
 
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
+        log_info("addValToDB db opened")
     else:
         mycon = con
 
@@ -910,12 +920,14 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
             stat = 1
 
         mycon.close()
+        log_info("addValToDB db closed")
 
     return stat 
 
 def addSlopeValToDB(base_opts, dive_num, var, con=None):
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
+        log_info("addSlopeValToDB db opened")
     else:
         mycon = con
 
@@ -951,6 +963,7 @@ def addSlopeValToDB(base_opts, dive_num, var, con=None):
             log_error(f"Failed commit, addSlopeValToDB {e}", "exc")
 
         mycon.close()
+        log_info("addSlopeValToDB db closed")
 
 def logControlFile(base_opts, dive, filename, fullname, con=None):
     if con is None:
@@ -958,6 +971,7 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
         if mycon is None:
             log_error("Failed to open mission db")
             return
+        log_info("logControlFile db opened")
     else:
         mycon = con
 
@@ -966,19 +980,22 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
         cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
     except Exception as e:
         log_error("{e} could not create files table")
+        if con is None:
+            mycon.close()
+            log_info("logControlFile db closed")
+            
         return
 
     pathed = os.path.join(base_opts.mission_dir, fullname)
-    if not os.path.exists(pathed):
-        return
+    if os.path.exists(pathed):
 
-    with open(pathed, 'r') as f:
-        contents = f.read()
+        with open(pathed, 'r') as f:
+            contents = f.read()
 
-    try:
-        cur.execute("REPLACE INTO files(dive,file,fullname,contents) VALUES(?,?,?,?);", (dive, os.path.basename(filename), os.path.basename(fullname), contents))
-    except Exception as e:
-        log_error(f"{e} inserting file")
+        try:
+            cur.execute("REPLACE INTO files(dive,file,fullname,contents) VALUES(?,?,?,?);", (dive, os.path.basename(filename), os.path.basename(fullname), contents))
+        except Exception as e:
+            log_error(f"{e} inserting file")
 
     cur.close()
 
@@ -988,9 +1005,11 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
         except Exception as e:
             log_error(f"Failed commit, logControlFile {e}", "exc")
         mycon.close()
+        log_info("logControlFile db closed")
 
 def rebuildControlHistory(base_opts):
     con = Utils.open_mission_database(base_opts)
+    log_info("rebuildControlHistory db opened")
 
     path = base_opts.mission_dir;
 
@@ -1016,6 +1035,7 @@ def rebuildControlHistory(base_opts):
     except Exception as e:
         log_error(f"Failed commit, rebuildControlHistory {e}", "exc")
 
+    log_info("rebuildControlHistory db closed")
     con.close()
 
 def logParameterChanges(base_opts, dive_num, cmdname, con=None):
@@ -1024,6 +1044,7 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
         if mycon is None:
             log_error("Failed to open mission db")
             return
+        log_info("logParameterChanges db opened")
     else:
         mycon = con
 
@@ -1032,6 +1053,10 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
         cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
     except Exception as e:
         log_error("{e} could not create changes table")
+        if con is None:
+            mycon.close()
+            log_info("logParameterChanges db opened")
+
         return
 
     logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
@@ -1053,6 +1078,7 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
             log_error(f"Failed commit, logParameterChanges {e}", "exc")
 
         mycon.close()
+        log_info("logParameterChanges db opened")
 
 def addSession(base_opts, session, con=None):
     if con is None:
@@ -1060,6 +1086,7 @@ def addSession(base_opts, session, con=None):
         if mycon is None:
             log_error("Failed to open mission db")
             return
+        log_info("addSession db opened")
     else:
         mycon = con
 
@@ -1079,6 +1106,7 @@ def addSession(base_opts, session, con=None):
             log_error(f"Failed commit, addSession {e}", "exc")
 
         mycon.close()
+        log_info("addSession db closed")
 
 def main():
     """Command line interface for BaseDB"""

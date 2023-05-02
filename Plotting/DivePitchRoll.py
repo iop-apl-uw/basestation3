@@ -266,6 +266,7 @@ def plot_pitch_roll(
 
     if dbcon == None:
         conn = Utils.open_mission_database(base_opts)
+        log_info("plot_pitch_roll db opened")
     else:
         conn = dbcon
 
@@ -462,6 +463,7 @@ def plot_pitch_roll(
             log_error(f"Failed commit, DivePitchRoll {e}", "exc")
 
         conn.close()
+        log_info("plot_pitch_roll db closed")
 
 
     rollAD_Fit_dive = np.array([min(rollAD), max(rollAD)])

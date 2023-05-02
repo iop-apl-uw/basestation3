@@ -60,6 +60,7 @@ def mission_int_sensors(
 
     if dbcon == None:
         conn = Utils.open_mission_database(base_opts)
+        log_info("mission_int_sensors db opened")
     else:
         conn = dbcon
 
@@ -81,7 +82,9 @@ def mission_int_sensors(
         ).sort_values("dive")
     except:
         log_error("Could not fetch needed columns", "exc")
-        conn.close()
+        if dbcon == None:
+            conn.close()
+            log_info("mission_int_sensors db closed")
         return ([], [])
 
     df_int_temperature = None
@@ -106,6 +109,7 @@ def mission_int_sensors(
         except Exception as e:
             log_error(f"Failed commit, MissionIntSensors {e}", "exc")
 
+        log_info("mission_int_sensors db closed")
         conn.close()
 
     if not generate_plots:

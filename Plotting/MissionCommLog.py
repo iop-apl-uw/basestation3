@@ -60,10 +60,14 @@ def mission_commlog(
     if not generate_plots:
         return ([], [])
 
-    conn = Utils.open_mission_database(base_opts)
-    if not conn:
-        log_error("Could not open mission database")
-        return ([], [])
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts, ro=True)
+        if not conn:
+            log_error("Could not open mission database")
+            return ([], [])
+        log_info("mission_commlog db opened (ro)")
+    else:
+        conn = dbcon
 
     fig = plotly.graph_objects.Figure()
     df = None
@@ -74,6 +78,10 @@ def mission_commlog(
         )
     except:
         log_error("Could not fetch needed columns", "exc")
+        if dbcon == None:
+            conn.close()
+            log_info("mission_commlog db closed")
+
         return ([], [])
 
     callNum = np.arange(0, len(df["pitch"]))
@@ -227,7 +235,9 @@ def mission_commlog(
             },
         },
     )
-    conn.close()
+    if dbcon == None:
+        log_info("mission_commlog db closed")
+        conn.close()
 
     return (
         [fig],

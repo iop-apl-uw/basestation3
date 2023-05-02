@@ -552,6 +552,7 @@ def plot_vert_vel(
 
     if dbcon == None:
         conn = Utils.open_mission_database(base_opts)
+        log_info("plot_vert_vel db opened")
     else:
         conn = dbcon
 
@@ -586,6 +587,7 @@ def plot_vert_vel(
         except Exception as e:
             log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
 
+        log_info("plot_vert_vel db closed")
         conn.close()
 
     # Find the deepest sample

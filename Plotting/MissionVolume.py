@@ -60,10 +60,14 @@ def mission_volume(
     if not generate_plots:
         return ([], [])
 
-    conn = Utils.open_mission_database(base_opts)
-    if not conn:
-        log_error("Could not open mission database")
-        return ([], [])
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts, ro=True)
+        if not conn:
+            log_error("Could not open mission database")
+            return ([], [])
+        log_info("mission_volume db opened (ro)") 
+    else:
+        conn = dbcon
 
     cur = conn.cursor()
     res = cur.execute("PRAGMA table_info(dives)")
@@ -78,8 +82,7 @@ def mission_volume(
                 conn,
             ).sort_values("dive")
         except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
-            log_error("Could not fetch needed columns", "exc")
-            return ([], [])
+            log_warning("Could not load implied volmax", "exc")
 
     glider_df = None
     if "implied_volmax_glider" in columns:
@@ -102,6 +105,10 @@ def mission_volume(
             log_warning(
                 "Could not load implied volmax from the flight model estimate", "exc"
             )
+
+    if dbcon == None:
+        conn.close()
+        log_info("mission_volume db closed")
 
     if df is not None:
         fig.add_trace(

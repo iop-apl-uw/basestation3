@@ -61,10 +61,14 @@ def mission_disk(
     if not generate_plots:
         return ([], [])
 
-    conn = Utils.open_mission_database(base_opts)
-    if not conn:
-        log_error("Could not open mission database")
-        return ([], [])
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts, ro=True)
+        if not conn:
+            log_error("Could not open mission database")
+            return ([], [])
+        log_info("mission_disk db opened (ro)")
+    else:
+        conn = dbcon
 
     res = conn.cursor().execute("PRAGMA table_info(dives)")
     columns = [i[1] for i in res]
@@ -88,8 +92,15 @@ def mission_disk(
         ).sort_values("dive")
     except:
         log_error("Could not fetch needed columns", "exc")
+        if dbcon == None:
+            conn.close()
+            log_info("mission_disk db closed")
         return ([], [])
 
+    if dbcon == None:
+        conn.close()
+        log_info("mission_disk db closed")
+ 
     y_offset = -0.08
 
     # l_annotations = []

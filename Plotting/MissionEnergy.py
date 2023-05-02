@@ -96,6 +96,7 @@ def mission_energy(
 
     if dbcon == None:
         conn = Utils.open_mission_database(base_opts)
+        log_info("mission_energy db opened")
     else:
         conn = dbcon
 
@@ -386,6 +387,7 @@ def mission_energy(
             except Exception as e:
                 log_error(f"Failed commit, MissionEnergy {e}", "exc")
 
+            log_info("mission_energy db closed")
             conn.close()
 
         if not generate_plots:
@@ -632,5 +634,6 @@ def mission_energy(
         except Exception as e:
             log_error(f"Failed commit, MissionEnergy {e}", "exc")
         conn.close()
+        log_info("mission_energy db closed")
         return ([], [])
 # fmt: on

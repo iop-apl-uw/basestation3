@@ -93,6 +93,7 @@ def plot_dives(
     output_files = []
     if dbcon == None:
         con = Utils.open_mission_database(base_opts)
+        log_info("plot_dives db opened")
     else:
         con = dbcon
 
@@ -125,7 +126,8 @@ def plot_dives(
             log_error(f"Failed commit, plot_dives {e}", "exc")
 
         con.close()
- 
+        log_info("plot_dives db closed") 
+
     return (figs, output_files)
 
 
@@ -150,6 +152,7 @@ def plot_mission(
     """
     if dbcon == None:
         con = Utils.open_mission_database(base_opts)
+        log_info("plot_mission db opened") 
     else:
         con = dbcon
 
@@ -185,6 +188,7 @@ def plot_mission(
             log_error(f"Failed commit, plot_dives {e}", "exc")
 
         con.close()
+        log_info("plot_mission db closed") 
 
     return (figs, output_files)
 

@@ -129,17 +129,28 @@ def mission_map(
 
     log_info("Starting mission_map")
     
-    conn = Utils.open_mission_database(base_opts)
-    if not conn:
-        log_error("Could not open mission database")
-        return ([], [])
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts, ro=True)
+        if not conn:
+            log_error("Could not open mission database")
+            return ([], [])
+        log_info("mission_map db opened (ro)")
+    else:
+        conn = dbcon
 
     try:
         df = pd.read_sql_query("SELECT dive,log_gps_lat AS lat,log_gps_lon AS lon FROM dives ORDER BY dive ASC", conn) \
                .sort_values("dive")
     except:
         log_error("database error")
+        if dbcon == None:
+            conn.close()
+            log_info("mission_map db closed")
         return([], [])
+
+    if dbcon == None:
+        conn.close()
+        log_info("mission_map db closed")
 
     ll_lon = df['lon'].min() - 0.3*(df['lon'].max() - df['lon'].min())
     ll_lat = df['lat'].min() - 0.3*(df['lat'].max() - df['lat'].min())
