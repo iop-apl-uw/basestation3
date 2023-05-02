@@ -404,7 +404,7 @@ global_options_dict = {
     ),
     "bin_width": options_t(
         1.0,
-        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission"),
+        ("Base", "MakeMissionProfile", "MakePlotMission"),
         ("--bin_width",),
         float,
         {
@@ -413,7 +413,7 @@ global_options_dict = {
     ),
     "which_half": options_t(
         WhichHalf(3),
-        ("Base", "MakeDiveProfiles", "MakeMissionProfile", "MakePlotMission"),
+        ("Base", "MakeMissionProfile", "MakePlotMission"),
         ("--which_half",),
         WhichHalf,
         {
