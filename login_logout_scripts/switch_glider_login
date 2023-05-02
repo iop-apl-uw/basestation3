@@ -1,0 +1,9 @@
+source /usr/local/basestation/check_base3
+if ${base3} == 1 then
+   set BASESTATION_PATH=/usr/local/basestation3
+   set PYTHON_BINARY=/opt/basestation/bin/python
+   source /usr/local/basestation3/glider_login
+else
+   set BASESTATION_PATH=/usr/local/basestation2
+   source /usr/local/basestation2/glider_login
+endif

@@ -1,0 +1,7 @@
+set base3 = 0
+# Gliders in the list well use basestation3 
+foreach glider ( sg000 sg001 )
+    if ( ${user} == ${glider} ) then
+        set base3 = 1
+    endif
+end

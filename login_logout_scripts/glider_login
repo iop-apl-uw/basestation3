@@ -1,0 +1,2 @@
+set BASESTATION_PATH=/usr/local/basestation3
+source /usr/local/basestation3/glider_login
