@@ -375,15 +375,15 @@ There are a number of configuration files that live in seagliders home
 directory.  Documentation for these files are provided in the sample/template
 files located in the sg000 sub-directory
 
-- [Pagers](sg000/.pagers)
-- [Mailer](sg000/.mailer)
-- [URLS](sg000/.urls)
-- [Extensions](sg000/.extensions)
-- [Early Extensions](sg000/.pre_extensions)
-- [Seaglider conf file](sg000/sg000.conf)
-- [Meta data for netcdf files](sg000/NODC.yml)
-- [Section plotting settings](sg000/sections.yml)
-- [sg_calib_constants.m](sg000/sg_calib_constants.m)
+- [Pagers](sg000/.pagers?raw=true)
+- [Mailer](sg000/.mailer?raw=true)
+- [URLS](sg000/.urls?raw=true)
+- [Extensions](sg000/.extensions?raw=true)
+- [Early Extensions](sg000/.pre_extensions?raw=true)
+- [Seaglider conf file](sg000/sg000.conf?raw=true)
+- [Meta data for netcdf files](sg000/NODC.yml?raw=true)
+- [Section plotting settings](sg000/sections.yml?raw=true)
+- [sg_calib_constants.m](sg000/sg_calib_constants.m?raw=true)
 
 # Differences from previous versions
 
@@ -397,7 +397,7 @@ and hydrodynamic model parameters.  Many of the tuning parameters in sg_calib_co
 no longer used.  This feature can be turned off using the options
 ```--ignore_flight_model --skip_flight_model```
 
-See [FlightModel.pdf](docs/FlightModel.pdf) in the docs directory for further
+See [FlightModel.pdf](docs/FlightModel.pdf?raw=true) in the docs directory for further
 details.
 
 ## Deletion of uploaded files
@@ -423,3 +423,4 @@ mission analysis.  The schema is still somewhat in flux and subject to change
 in future releases.
 
 # Common Commands
+
