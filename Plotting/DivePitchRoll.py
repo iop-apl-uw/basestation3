@@ -381,17 +381,19 @@ def plot_pitch_roll(
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Pitch control vs Pitch"
-        fit_line = f"<br>Linear regression (w/o VBD shift): C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm<br>"
-        fit_line += f"Nonlinear regression w/ VBD shift fixed: C_PITCH={ctr0:.0f}ad PITCH_GAIN={gain0:.2f}deg/cm<br>"
-        fit_line += f"Nonlinear regression w/ VBD shift: C_PITCH={ctr1:.0f}ad PITCH_GAIN={gain1:.2f}deg/cm PITCH_VBD_SHIFT={shift1:.5f}cm/cc<br>"
-        fit_line += (
-            f"Current C_PITCH={c_pitch:.0f}ad PITCH_GAIN={pitch_gain:.0f}deg/cm PITCH_VBD_SHIFT={vbd_shift:.5f}cm/cc"
-        )
+        fit_line = f"<br>     Linear (w/o VBD shift): C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm                              <br>"
+        fit_line +=    f"Nonlinear w/VBD shift fixed: C_PITCH={ctr0:.0f}ad PITCH_GAIN={gain0:.2f}deg/cm                              <br>"
+        fit_line +=    f"      Nonlinear w/VBD shift: C_PITCH={ctr1:.0f}ad PITCH_GAIN={gain1:.2f}deg/cm PITCH_VBD_SHIFT={shift1:.5f}cm/cc<br>"
+        fit_line +=    f"                  Current: C_PITCH={c_pitch:.0f}ad PITCH_GAIN={pitch_gain:.0f}deg/cm PITCH_VBD_SHIFT={vbd_shift:.5f}cm/cc."
+        
 
         fig.update_layout(
             {
                 "xaxis": {
-                    "title": f"pitch control (counts)<br>{fit_line}",
+                    "title": {
+                        "text": f"pitch control (counts)<br>{fit_line}",
+                        "font": {"family": "Courier New, Arial" },
+                    },
                     "showgrid": True,
                     # "side": "top"
                 },
@@ -530,13 +532,16 @@ def plot_pitch_roll(
         title_text = f"{mission_dive_str}<br>Roll control vs Roll"
         fit_line = (
             f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad<br>"
-            f"Current values C_ROLL_DIVE={c_roll_dive:.0f}ad C_ROLL_CLIMB={c_roll_climb:.0f}ad"
+            f"  Current values C_ROLL_DIVE={c_roll_dive:.0f}ad C_ROLL_CLIMB={c_roll_climb:.0f}ad"
         )
 
         fig.update_layout(
             {
                 "xaxis": {
-                    "title": f"roll control (counts)<br>{fit_line}",
+                    "title": {
+                        "text": f"roll control (counts)<br>{fit_line}",
+                        "font": { "family": "Courier New, Arial", }
+                    },
                     "showgrid": True,
                     # "side": "top"
                 },
@@ -643,16 +648,27 @@ def plot_pitch_roll(
         else:
             roll_Fit_climb = []
 
-        #    turnRate = Utils.ctr_1st_diff(vehicle_head_degrees_v, sg_time - start_time)
-        #
-        #    ircd = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control < 0))
-        #    ircc = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control > 0))
-        #
-        #    fitd = scipy.stats.linregress( rollAD[ircd].ravel(), turnRate[ircd].ravel() )
-        #    c_roll_dive_imp = -fitd.intercept / fitd.slope
-        #
-        #    fitc = scipy.stats.linregress( rollAD[ircc].ravel(), turnRate[ircc].ravel() )
-        #    c_roll_climb_imp = -fitc.intercept / fitc.slope
+        hdgdiff = np.concatenate((np.array([0]), np.diff(vehicle_head_degrees_v)))
+        hdgdiff = np.mod(hdgdiff, 360)
+        idw = np.where(hdgdiff > 180)
+        hdgdiff[idw] = hdgdiff[idw] - 360
+        hdgwrapped = hdgdiff[0] + np.cumsum(hdgdiff)
+        turnRate = Utils.ctr_1st_diff(hdgwrapped, sg_time) #  - start_time)
+        
+        # ircd = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control < 0))
+        # ircc = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control > 0))
+        ircd = np.where(pitch_control < 0)
+        ircc = np.where(pitch_control > 0)
+        
+        fitd = scipy.stats.linregress( rollAD[ircd].ravel(), turnRate[ircd].ravel() )
+        c_roll_dive_imp_all = -fitd.intercept / fitd.slope
+        
+        fitc = scipy.stats.linregress( rollAD[ircc].ravel(), turnRate[ircc].ravel() )
+        c_roll_climb_imp_all = -fitc.intercept / fitc.slope
+
+        rollAD_Fit_all = np.array([max([0, min(rollAD)]), min([max(rollAD), 4096])])
+        roll_Fit_climb_all = fitc.intercept + fitc.slope * rollAD_Fit_all
+        roll_Fit_dive_all = fitd.intercept + fitd.slope * rollAD_Fit_all
 
         #
         # roll rate plot
@@ -663,11 +679,11 @@ def plot_pitch_roll(
             {
                 "x": centeredAD_d,
                 "y": centeredRate_d,
-                "name": "Roll control/turn rate",
+                "name": "Roll control/turn rate (centered)",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
-                    "symbol": "triangle-down",
+                    "symbol": "circle-open",
                     "color": "DarkBlue",
                 },
                 "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
@@ -677,11 +693,11 @@ def plot_pitch_roll(
             {
                 "x": centeredAD_c,
                 "y": centeredRate_c,
-                "name": "Roll control/turn rate",
+                "name": "Roll control/turn rate (centered)",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
-                    "symbol": "triangle-up",
+                    "symbol": "circle-open",
                     "color": "Red",
                 },
                 "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
@@ -692,10 +708,10 @@ def plot_pitch_roll(
                 {
                     "x": rollAD_Fit,
                     "y": roll_Fit_dive,
-                    "name": "linfit C_ROLL_DIVE",
+                    "name": "linfit C_ROLL_DIVE (centered)",
                     "mode": "lines",
                     "line": {"dash": "solid", "color": "DarkBlue"},
-                    "hovertemplate": f"Fit C_ROLL_DIVE={c_roll_dive_imp:.0f}<extra></extra>",
+                    "hovertemplate": f"centered Fit C_ROLL_DIVE={c_roll_dive_imp:.0f}<extra></extra>",
                 }
             )
         if len(roll_Fit_climb):
@@ -703,23 +719,77 @@ def plot_pitch_roll(
                 {
                     "x": rollAD_Fit,
                     "y": roll_Fit_climb,
-                    "name": "linfit C_ROLL_CLIMB",
+                    "name": "linfit C_ROLL_CLIMB (centered)",
                     "mode": "lines",
                     "line": {"dash": "solid", "color": "Red"},
-                    "hovertemplate": f"Fit C_ROLL_CLIMB={c_roll_climb_imp:.0f}<extra></extra>",
+                    "hovertemplate": f"centered Fit C_ROLL_CLIMB={c_roll_climb_imp:.0f}<extra></extra>",
                 }
             )
+
+        fig.add_trace(
+            {
+                "x": rollAD[ircd],
+                "y": turnRate[ircd],
+                "name": "Roll control/turn rate",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-up",
+                    "color": "DarkBlue",
+                },
+                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
+            }
+        )
+        fig.add_trace(
+            {
+                "x": rollAD[ircc],
+                "y": turnRate[ircc],
+                "name": "Roll control/turn rate",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-up",
+                    "color": "Red",
+                },
+                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
+            }
+        )
+
+        fig.add_trace(
+            {
+                "x": rollAD_Fit_all,
+                "y": roll_Fit_dive_all,
+                "name": "linfit C_ROLL_DIVE all",
+                "mode": "lines",
+                "line": {"dash": "longdash", "color": "DarkBlue"},
+                "hovertemplate": f"Fit all C_ROLL_DIVE={c_roll_dive_imp_all:.0f}<extra></extra>",
+            }
+        )
+        fig.add_trace(
+            {
+                "x": rollAD_Fit_all,
+                "y": roll_Fit_climb_all,
+                "name": "linfit C_ROLL_CLIMB all",
+                "mode": "lines",
+                "line": {"dash": "longdash", "color": "Red"},
+                "hovertemplate": f"Fit all C_ROLL_CLIMB={c_roll_climb_imp_all:.0f}<extra></extra>",
+            }
+        )
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Roll control vs turn rate while centered"
         fit_line = (
-            f"Best fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad<br>"
-            f"Current values C_ROLL_DIVE={c_roll_dive:.0f}ad C_ROLL_CLIMB={c_roll_climb:.0f}ad"
+            f"Centered fit implies C_ROLL_DIVE={c_roll_dive_imp:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp:.0f}ad<br>"
+            f"     All fit implies C_ROLL_DIVE={c_roll_dive_imp_all:.0f}ad C_ROLL_CLIMB={c_roll_climb_imp_all:.0f}ad<br>"
+            f"      Current values C_ROLL_DIVE={c_roll_dive:.0f}ad C_ROLL_CLIMB={c_roll_climb:.0f}ad"
         )
         fig.update_layout(
             {
                 "xaxis": {
-                    "title": f"roll control (counts)<br>{fit_line}",
+                    "title": { 
+                        "text": f"roll control (counts)<br>{fit_line}", 
+                        "font": { "family": "Courier New, Arial" },
+                    },
                     "showgrid": True,
                 },
                 "yaxis": {
