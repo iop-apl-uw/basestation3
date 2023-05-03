@@ -530,7 +530,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
         aux_cols = df_meta.columns.split()
         from CalibConst import getSGCalibrationConstants
         sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
-        calib_consts = getSGCalibrationConstants(sg_calib_file_name)
+        calib_consts = getSGCalibrationConstants(sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model)
         if(calib_consts and f'{auxname}_coeffhex' in calib_consts):
             try:
                 sg_auxcompass_coeffhex = calib_consts[f'{auxname}_coeffhex']

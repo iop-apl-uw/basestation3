@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -817,7 +817,6 @@ def medfilt1(x=None, L=None):
     # body --------------------------------------------------------------------
 
     for i, _ in enumerate(xin):
-
         # left boundary (Lwing terms)
         if i < Lwing:
             xout[i] = np.median(xin[0 : i + Lwing + 1])  # (0 to i+Lwing)
@@ -1431,11 +1430,13 @@ def density(salinity, temperature, pressure, longitude, latitude):
     )
     return dens
 
+
 def pdensity(salinity, temperature, pressure, longitude, latitude):
     salinity_absolute = gsw.SA_from_SP(salinity, pressure, longitude, latitude)
     cons_temp = gsw.CT_from_t(salinity_absolute, temperature, pressure)
     dens = 1000 + gsw.density.sigma0(salinity_absolute, cons_temp)
     return dens
+
 
 def ptemp(salinity, temperature, pressure, longitude, latitude, pref=0.0):
     """Computes potential temperature using the gsw toolbox"""
@@ -1646,7 +1647,9 @@ def loadmodule(pathname):
     return None
 
 
-def open_mission_database(base_opts: BaseOpts.BaseOptions, ro=False) -> sqlite3.Connection:
+def open_mission_database(
+    base_opts: BaseOpts.BaseOptions, ro=False
+) -> sqlite3.Connection:
     import BaseDB
 
     """Opens a mission database file"""
@@ -1666,7 +1669,7 @@ def open_mission_database(base_opts: BaseOpts.BaseOptions, ro=False) -> sqlite3.
             return None
 
     if ro:
-        conn = sqlite3.connect('file:' + db + '?mode=ro')
+        conn = sqlite3.connect("file:" + db + "?mode=ro")
     else:
         conn = sqlite3.connect(db)
         conn.isolation_level = None
@@ -1731,7 +1734,7 @@ def extract_calib_consts(dive_nc_file):
 
     sgc_var = re.compile(f"^{BaseNetCDF.nc_sg_cal_prefix}")
 
-    for (dive_nc_varname, nc_var) in list(dive_nc_file.variables.items()):
+    for dive_nc_varname, nc_var in list(dive_nc_file.variables.items()):
         nc_is_scalar = len(nc_var.shape) == 0  # treat strings as scalars
         if sgc_var.search(dive_nc_varname):
             _, variable = sgc_var.split(dive_nc_varname)
@@ -1744,18 +1747,21 @@ def extract_calib_consts(dive_nc_file):
 
     return calib_consts
 
+
 def get_mission_timeseries_name(base_opts, direc=None):
     if base_opts:
         mydir = base_opts.mission_dir
     elif direc:
         mydir = direc
     else:
-        mydir = './'
+        mydir = "./"
 
     sg_calib_file_name = os.path.join(mydir, "sg_calib_constants.m")
 
     # Read sg_calib_constants file
-    calib_consts = CalibConst.getSGCalibrationConstants(sg_calib_file_name)
+    calib_consts = CalibConst.getSGCalibrationConstants(
+        sg_calib_file_name, not base_opts.ignore_flight_model
+    )
 
     # calib_consts is set; figure out filename, etc.
     try:
@@ -1773,6 +1779,7 @@ def get_mission_timeseries_name(base_opts, direc=None):
         mydir,
         "sg%03d_%s_timeseries.nc" % (instrument_id, mission_title),
     )
+
 
 def notifyVis(glider: int, topic: str, body: str):
     """
