@@ -1078,7 +1078,7 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
             log_error(f"Failed commit, logParameterChanges {e}", "exc")
 
         mycon.close()
-        log_info("logParameterChanges db opened")
+        log_info("logParameterChanges db closed")
 
 def addSession(base_opts, session, con=None):
     if con is None:

@@ -161,12 +161,15 @@ def plot_mission(
     for plot_name, plot_func in mission_plot_dict.items():
         log_debug(f"Trying Mission Plot: {plot_name}")
         try:
-            if dive == None:
-                fig_list, file_list = plot_func(base_opts, mission_str)
-            else:
-                fig_list, file_list = plot_func(
-                    base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=con
-                )
+            fig_list, file_list = plot_func(
+                base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=con
+            )
+            #if dive == None:
+            #    fig_list, file_list = plot_func(base_opts, mission_str, generate_plots=generate_plots, dbcon=con)
+            #else:
+            #    fig_list, file_list = plot_func(
+            #        base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=con
+            #    )
         except KeyboardInterrupt:
             return (figs, output_files)
         except:
