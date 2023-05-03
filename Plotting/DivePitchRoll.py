@@ -87,7 +87,7 @@ def plot_pitch_roll(
 
     # Preliminaries
     try:
-        # unused start_time = dive_nc_file.start_time
+        start_time = dive_nc_file.start_time
 
         # unused
         # mhead = (
@@ -589,14 +589,20 @@ def plot_pitch_roll(
         centered = False
         centeredAD_d = []
         centeredRate_d = []
+        centeredStart_t_c = []
+        centeredPitch_c = []
         centeredAD_c = []
         centeredRate_c = []
+        centeredStart_t_d = []
+        centeredPitch_d = []
 
         while i < n:
             if centered is False and abs(roll_control[i]) < 5:
                 centered = True
                 centered_start_t = sg_time[i]
                 centered_start_head = vehicle_head_degrees_v[i]
+                centered_start_head = vehicle_head_degrees_v[i]
+                centered_pitch = vehicle_pitch_degrees_v[i]
                 centeredAD = rollAD[i]
                 centeredN = 1
             elif centered is True and abs(roll_control[i]) > 5:
@@ -607,14 +613,18 @@ def plot_pitch_roll(
                         headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
                         / (sg_time[i - 1] - centered_start_t)
                     )
+                    centeredStart_t_d.append(centered_start_t)
+                    centeredPitch_d.append(centered_pitch)
                 elif centeredN > 1:
                     centeredAD_c.append(centeredAD / centeredN)
                     centeredRate_c.append(
                         headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
                         / (sg_time[i - 1] - centered_start_t)
                     )
+                    centeredStart_t_c.append(centered_start_t)
+                    centeredPitch_c.append(centered_pitch)
 
-            elif centered:
+            elif centered and abs(vehicle_pitch_degrees_v[i]) < 45:
                 centeredAD = centeredAD + rollAD[i]
                 centeredN = centeredN + 1
 
@@ -673,34 +683,47 @@ def plot_pitch_roll(
         #
         # roll rate plot
         #
+        roll_rate_template = "AvgRollAD %{x:.0f}<br>AvgRate %{y:.2f} deg/s<br>Time %{customdata[0]:.2f} min<br>PitchObs %{customdata[1]:.2f} deg<extra></extra>"
 
         fig = plotly.graph_objects.Figure()
         fig.add_trace(
             {
                 "x": centeredAD_d,
                 "y": centeredRate_d,
-                "name": "Roll control/turn rate (centered)",
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (np.transpose(centeredStart_t_d - start_time) / 60.0,
+                        np.transpose(centeredPitch_d))
+                    )
+                ),
+                "name": "Roll control/turn rate dive (centered)",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
                     "symbol": "circle-open",
                     "color": "DarkBlue",
                 },
-                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
+                "hovertemplate": roll_rate_template,
             }
         )
         fig.add_trace(
             {
                 "x": centeredAD_c,
                 "y": centeredRate_c,
-                "name": "Roll control/turn rate (centered)",
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (np.transpose(centeredStart_t_c - start_time) / 60.0,
+                         np.transpose(centeredPitch_c))
+                    )
+                ),
+                "name": "Roll control/turn rate climb (centered)",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
                     "symbol": "circle-open",
                     "color": "Red",
                 },
-                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
+                "hovertemplate": roll_rate_template,
             }
         )
         if len(roll_Fit_dive):
@@ -730,28 +753,28 @@ def plot_pitch_roll(
             {
                 "x": rollAD[ircd],
                 "y": turnRate[ircd],
-                "name": "Roll control/turn rate",
+                "name": "Roll control/turn rate dive",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
-                    "symbol": "triangle-up",
+                    "symbol": "triangle-down",
                     "color": "DarkBlue",
                 },
-                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
+                "hovertemplate": "RollAD %{x:.0f}<br>Rate %{y:.2f} deg/s<br><extra></extra>",
             }
         )
         fig.add_trace(
             {
                 "x": rollAD[ircc],
                 "y": turnRate[ircc],
-                "name": "Roll control/turn rate",
+                "name": "Roll control/turn rate climb",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
                     "symbol": "triangle-up",
                     "color": "Red",
                 },
-                "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg/s<br><extra></extra>",
+                "hovertemplate": "RollAD %{x:.0f}<br>Rate %{y:.2f} deg/s<br><extra></extra>",
             }
         )
 
