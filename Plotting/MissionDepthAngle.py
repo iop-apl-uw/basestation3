@@ -46,7 +46,7 @@ if typing.TYPE_CHECKING:
 import PlotUtilsPlotly
 import Utils
 
-from BaseLog import log_error
+from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
 
 

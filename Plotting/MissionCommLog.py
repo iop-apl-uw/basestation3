@@ -47,7 +47,7 @@ import PlotUtilsPlotly
 import Utils
 import numpy as np
 
-from BaseLog import log_error
+from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
 
 
