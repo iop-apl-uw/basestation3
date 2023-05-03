@@ -274,7 +274,6 @@ def mission_profiles(
                   ),
             outs.append(out)
 
-    conn.close()
 
     return (
         figs,

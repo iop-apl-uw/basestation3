@@ -629,11 +629,13 @@ def mission_energy(
             traceback.print_exc()
             pdb.post_mortem(traceb)
         log_error("Could not fetch needed columns", "exc")
-        try:
-            conn.commit()
-        except Exception as e:
-            log_error(f"Failed commit, MissionEnergy {e}", "exc")
-        conn.close()
-        log_info("mission_energy db closed")
+        if dbcon == None:
+            try:
+                conn.commit()
+            except Exception as e:
+                log_error(f"Failed commit, MissionEnergy {e}", "exc")
+            conn.close()
+            log_info("mission_energy db closed")
+
         return ([], [])
 # fmt: on
