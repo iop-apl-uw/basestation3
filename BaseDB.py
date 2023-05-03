@@ -747,7 +747,7 @@ def createDivesTable(cur):
                 'GPS_north_displacement_m','GPS_east_displacement_m',
                 'flight_avg_speed_east','flight_avg_speed_north',
                 'dog_efficiency','alerts','criticals','capture','error_count',
-                'energy_dives_remain_Modeled','energy_days_remain_Modeled',
+                'energy_dives_remain_Modeled','energy_days_remain_Modeled', 'energy_days_total_Modeled',
                 'energy_end_time_Modeled', 'implied_volmax_fm', 'implied_volmax_glider', 'implied_volmax',
                 'implied_volmax_fm_slope', 'implied_volmax_glider_slope', 'implied_volmax_slope',
                 "batt_volts_10V_slope", "batt_volts_24V_slope", 
@@ -1014,8 +1014,11 @@ def rebuildControlHistory(base_opts):
     path = base_opts.mission_dir;
 
     cur = con.cursor()
-    cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
-    maxdv = cur.fetchone()[0]
+    try:
+        cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
+        maxdv = cur.fetchone()[0]
+    except:
+        maxdv = -1
 
     for i in range(1, maxdv + 1):
         for which in ['targets', 'science', 'scicon.sch', 'pdoscmds.bat', 'tcm2mat.cal']:
