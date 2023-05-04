@@ -37,6 +37,8 @@ from __future__ import annotations
 import collections
 import pdb
 import sys
+import sqlite3
+import pandas
 import time
 import traceback
 import typing
@@ -119,7 +121,24 @@ def mission_energy(
             f"SELECT dive,fg_kJ_used_10V,fg_kJ_used_24V,fg_batt_capacity_10V,fg_batt_capacity_24V,fg_ah_used_10V,fg_ah_used_24V,log_FG_AHR_10Vo,log_FG_AHR_24Vo FROM dives {clause} ORDER BY dive ASC", 
             conn,
         ).sort_values("dive")
+    except pandas.errors.DatabaseError as exc:
+        if "no such column:" in repr(exc):
+            missing_col = repr(exc).split("no such column:")[1].split('"')[0]
+            log_error(f"Could not fetch {missing_col} - skipping mission_energy plot")
+        else:
+            log_error("Failed database call", "exc")
+        if dbcon == None:
+            try:
+                conn.commit()
+            except Exception as e:
+                log_error(f"Failed commit, MissionEnergy {e}", "exc")
 
+            log_info("mission_energy db closed")
+            conn.close()
+
+        return ([], [])
+
+    try:
         batt_df = pd.read_sql_query(
             f"SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V,time_seconds_on_surface,time_seconds_diving,log_gps_time AS dive_end FROM dives {clause} ORDER BY dive ASC", 
             conn,
