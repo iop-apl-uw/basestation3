@@ -53,7 +53,11 @@ from Plotting import plotmissionsingle
 
 @plotmissionsingle
 def mission_int_sensors(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots internal pressure, RH, temp"""
     log_info("Starting mission_int_sensors")
@@ -100,8 +104,13 @@ def mission_int_sensors(
             log_error("Unexpected error fetching log_TEMP", "exc")
 
     for v in ["log_INTERNAL_PRESSURE", "log_HUMID"]:
-        m, b = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
-        BaseDB.addValToDB(base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m, con=conn)
+        if len(df["dive"].to_numpy()) > 0:
+            m, b = Utils.dive_var_trend(
+                base_opts, df["dive"].to_numpy(), df[v].to_numpy()
+            )
+            BaseDB.addValToDB(
+                base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m, con=conn
+            )
 
     if dbcon == None:
         try:
