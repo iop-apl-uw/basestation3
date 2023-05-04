@@ -70,7 +70,10 @@ of memory for single glider testing)
 
 In addition to the usual use of the Seaglider basestation to handle data
 coming in real-time from a Seaglider, the basestation may be installed for
-re-processing of missions.  In addition to an appropriate version of python, 
+re-processing of missions.  In this mode, installation location is the users
+choice.  
+
+In addition to an appropriate version of python, 
 such a use only requires the required python packages be installed.
 
     pip install -r requirements.txt
@@ -119,6 +122,9 @@ comment out the following lines:
 
 ## Installing python
 
+This section applies if the required version of python has changed since the last install of 
+basestation3.  If not, skip to [Install the basestation code and python packages](#install-the-basestation-code-and-python-packages)
+
 It is recommended that version 3.10.10 of python be installed along the a specific set of
 python support libraries.  The process is as follows:
 
@@ -166,15 +172,31 @@ Replace ```<user>``` in the above your username.
 
 ### Install the basestation code and python packages
 
-- If you have an existing installation of the basestation in /usr/local/basestation3,
-   you should back the contents up
-- Clone or copy the repo to /usr/local/basestation3.  Make sure the
-  ```gliders``` group has read and execute permissions for all files
+#### Basestation source
+
+Basestation3 assumes it is installed in `/usr/local/basesation3`.
+
+If you want to install and keep up with the latest and greatest (or the very 
+leading edge), you can clone this repository to that location:
+
+`git clone https://github.com/iop-apl-uw/basestation3.git /usr/local/basestation3`
+
+Then you can update your basestation code by running a `git pull origin master` from 
+`/usr/local/basestation3` at a later time.
+
+You can also download a zip file and unzip that into `/usr/local/basestation3`. 
+
+We do designate releases from time to time and are available from the 
+[Releases](https://github.com/iop-apl-uw/basestation3/releases) page.  
+
+Next, make sure the ```gliders``` group has read and execute permissions for all files:
 
 ```
 sudo chown -R :gliders /usr/local/basestation3
 sudo chmod -R g+rx /usr/local/basestation3
 ```
+
+#### Basestation python packages
 
 ```
 rm -rf /opt/basestation
@@ -190,11 +212,10 @@ Replace ```<user>``` in the above your username. Then
 /opt/python/3.10.10/bin/python3 -m venv /opt/basestation
 /opt/basestation/bin/pip install -r /usr/local/basestation3/requirements.txt
 ```
-
 ### login/logout scripts
 
 Basestation3 differs somewhat from Basestation2, but also allows for a server
-setup that allows both versions to be installed.  For basestation3, the
+setup that that has both versions (2 and 3)  to be installed.  For basestation3, the
 ```.login``` and ```.logout``` scripts in the Seaglider home directory call
 ```/usr/local/basestation/glider_login``` and
 ```/usr/local/basestation/glider_logout``` respectively. These scripts are the
