@@ -17,34 +17,37 @@ ASCII readable form for subsequent analysis.
 
 The pilot user has read and write access to all the seaglider home
 directories - by virtue of being in the same group as the glider -  since the
-pilot will update cmdfiles, etc. to command the vehicle
+pilot will update `cmdfiles`, etc. to command the vehicle
 and will need to read the data for analysis.
 
 
-When a glider logs in, it expects to see '=' as its prompt, hence the .cshrc
-file in each glider's directory.  It also triggers the .login script, which sets
-up the .connected file.  The glider then issues rawrcv or lrz commands to the basestation
-to send all the fragments and files, and rawsend or lsz commands to receive the cmdfile,
-etc.  (The modified versions of lrz and lsz add throughput and error
-notifications to ~/comm.log.)  When the glider logs out the .logout script is
-triggered, which in turn runs the /usr/local/basestation/glider_logout script,
-which in turn runs the /usr/local/basestation3/glider_logout script
-which in turn runs the ```Base.py``` script.  The ```Base.py``` script processes any new or
+When a glider logs in, it expects to see `=` as its prompt, hence the .cshrc
+file in each glider's directory.  It also triggers the `.login` script, which sets
+up the `.connected` file.  The glider then issues `rawrcv` or `lrz` commands to the basestation
+to send all the fragments and files, and `rawsend` or `lsz` commands to receive the `cmdfile`,
+etc.  (The modified versions of `lrz` and `lsz` add throughput and error
+notifications to `~/comm.log`.)  When the glider logs out the `.logout` script is
+triggered, which in turn runs the `/usr/local/basestation/glider_logout` script,
+which in turn runs the `/usr/local/basestation3/glider_logout` script
+which in turn runs the `Base.py` script.  The `Base.py` script processes any new or
 updated dive files received from the glider and processes any directives in the
-.pagers/.mailer/.ftp/.urls files. Consult the comments at the top of the
-.pagers/.mailer/.urls file in the sg000 directory for documentation on each of
+`.pagers/.urls` in the `/usr/local/basestation3/etc` directory, then
+`.pagers/.mailer/.ftp/.urls` files located in the Seagliders home directory. 
+Consult the comments at the top of the `.pagers`/`.mailer`/`.urls/.ftp` file 
+in the `/usr/local/basestation3/sg000` directory for documentation on each of
 these files.
 
 Processing options for ```Base.py``` that apply to all gliders on a single basestation
 are supplied in ```/usr/local/basestation/glider_logout```.  Additional
 glider-specific options may be supplied the ```.logout``` script located in each
 gliders home directory be setting the environment variable ``GLIDER_OPTIONS``, or
-in the seagliders config file - ```sgXXX.conf``` that may optionally reside in any
+in the Seagliders config file - `sgXXX.conf` that may optionally reside in any
 gliders home directory
 
 In addition, to assist the pilot there are a number of command line tools to
 perform additional dive processing and also to validate various glider command
-files.  Each tool provides help when invoked from the command line.  See
+files - see [Validation of input files](#validation-of-input-files).  
+Each tool provides help when invoked from the command line.  See
 [Common Commands](#common-commands) for a list of typical commands.
 
 # Installation
@@ -247,8 +250,6 @@ should be installed.
 - For all basestations, [seaglider_lrzsz](https://github.com/iop-apl-uw/seaglider_lrzsz).
 - If you are using Iridium's RUDICS, [rudicsd](https://github.com/iop-apl-uw/rudicsd).
 
-## TODO Install the optional cmdfile, science and targets validator
-
 # Commissioning a new glider
 
     sudo /opt/basestation/bin/python /usr/local/basestation3/Commission.py XXX
@@ -369,6 +370,16 @@ The only one that has been tested is postfix.
 Configuring a MTA is beyond the scope of this documentation as it
 can be highly dependent on local network management practice.
 
+## Validation of input files
+
+Basestation3 ships with a simple file validator for ```cmdfile```,
+```science``` and ```targets``` files.  To invoke he validator, you need to
+provide a glider ```.log``` file for the validator to use as a baseline.  For
+example:
+```
+/opt/basestaiton/bin/python /usr/local/basestaion3/validate.py ~sg001/p00010001.log ~sg001/cmdfile
+```
+
 # Additional documentation
 
 There are a number of configuration files that live in seagliders home
@@ -413,7 +424,7 @@ needed for the file to be deleted.
 
 This option may be removed from ```glider_logout``` to disable this feature.
 
-## mission database
+## Mission Database
 
 Basestation3 makes use of a sqlite database to store information about the
 Seaglider mission.  The database located in the Seaglider's home directory and 
@@ -423,4 +434,60 @@ mission analysis.  The schema is still somewhat in flux and subject to change
 in future releases.
 
 # Common Commands
+
+The most common use case for Basestation3 is the processing glider data in near
+real-time.  There are a number of commands that prove useful for post
+processing glider data.
+
+Every python script that can be invoked directly has help available by
+supplying the `--help` argument.
+
+## Reprocess.py 
+
+```Reprocess.py``` starts with the `.log` and `.eng` files and can regenerate
+netcdf files, run Flight Model and generate plots. 
+
+Regenerate all netcdf files, run Flight Model and generate plots:
+
+```
+/opt/basestation/bin/python /usr/local/basestation3/Reprocess.py \
+ --mission_dir ~sg001 --force --reprocess_plots
+```
+
+Regenerate the dive 100 through 102 netcdf files, not re-running Flight Model
+
+```
+/opt/basestation/bin/python /usr/local/basestation3/Reprocess.py \
+ --mission_dir ~sg001 --force --skip_flight_model 100:102
+```
+
+## BaseDB.py
+
+The mission database is added to during the normal logout processing.  If there was ever 
+a need to regenerate the database:
+
+```
+/opt/basestation/bin/python /usr/local/basestation3/BaseDB.py \
+ --mission_dir ~sg001 addncfs
+```
+
+## BasePlot.py
+
+Any of the plots may be generated outside of the normal logout processing.  
+
+To generate all the plots for dive 100, generating stand-alone html files, in addition 
+to the normal output:
+
+```
+/opt/basestation/bin/python /usr/local/basestation3/BasePlot.py \
+ --mission_dir ~sg001  --plot_types dives --full_html p0010100.nc
+```
+
+To regenerate the whole mission plots:
+
+```
+/opt/basestation/bin/python /usr/local/basestation3/BasePlot.py \
+ --mission_dir ~sg001  --plot_types mission
+```
+
 
