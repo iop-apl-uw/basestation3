@@ -312,7 +312,7 @@ def matchMission(gld, request, mission=None):
 
         mission = request.args['mission'][0]
 
-    return next(filter(lambda d: d['glider'] == int(gld) and (d['mission'] == mission or (mission == None and d['path'] == None)), request.app.ctx.missionTable), None)
+    return next(filter(lambda d: d['glider'] == int(gld) and (d['mission'] == mission or (mission == None and (d['default'] == True or d['path'] == None))), request.app.ctx.missionTable), None)
 
 def filterMission(gld, request, mission=None):
     m = matchMission(gld, request, mission)    
@@ -1678,6 +1678,7 @@ async def buildMissionTable(app, config=None):
     dflts         = None
     mode_dflts    = None
     missions = []
+    gliders = []
     for k in list(x['missions'].keys()):
         if k == 'defaults':
             dflts = x['missions'][k]
@@ -1699,7 +1700,13 @@ async def buildMissionTable(app, config=None):
 
         try:
             glider = int(pieces[0][2:])
-            x['missions'][k].update({ "glider":glider, "path":path })
+            if glider in gliders:
+                x['missions'][k].update({ "glider":glider, "path":path, "default":False })
+            else:
+                x['missions'][k].update({ "glider":glider, "path":path, "default":True })
+
+            gliders.append(glider)
+
             for mk in missionDictKeys:
                 if mk not in x['missions'][k].keys():
                     if mode_dflts and mk in mode_dflts:
