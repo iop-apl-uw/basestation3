@@ -38,3 +38,4 @@ PyJWT
 aiosqlite
 orjson
 anyio
+pyzmq --no-binary=pyzmq
