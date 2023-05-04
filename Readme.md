@@ -64,7 +64,7 @@ The installation instructions assume python 3.10.10.  3.9 might still work,
 
 No explicit hardware requirements are stated, but just about anything fairly
 modern should work.  (The basestation is regularly run on raspberry pi4 with 4G
-of memory.)
+of memory for single glider testing)
 
 ## Installation for post-processing
 
