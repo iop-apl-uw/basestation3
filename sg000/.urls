@@ -2,7 +2,7 @@
 ##
 ## A global copy of this file may be place in
 ##
-## /usr/local/basestation3/etc/.extensions
+## /usr/local/basestation3/etc/.urls
 ##
 ## That file will be processed first, the one in the seaglider home directory second.
 ##
