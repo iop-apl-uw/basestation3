@@ -20,7 +20,6 @@ directories - by virtue of being in the same group as the glider -  since the
 pilot will update `cmdfiles`, etc. to command the vehicle
 and will need to read the data for analysis.
 
-
 When a glider logs in, it expects to see `=` as its prompt, hence the .cshrc
 file in each glider's directory.  It also triggers the `.login` script, which sets
 up the `.connected` file.  The glider then issues `rawrcv` or `lrz` commands to the basestation
@@ -176,6 +175,19 @@ Replace ```<user>``` in the above your username.
 
 Basestation3 assumes it is installed in `/usr/local/basesation3`.
 
+``` 
+sudo mkdir -p /usr/local/basestation3
+
+```
+
+Next, make sure the directory has the correct ownership and  ```gliders``` group has 
+read and execute permissions for all files:
+
+```
+sudo chown -R <user>:gliders /usr/local/basestation3
+sudo chmod -R g+rx /usr/local/basestation3
+```
+
 If you want to install and keep up with the latest and greatest (or the very 
 leading edge), you can clone this repository to that location:
 
@@ -189,12 +201,7 @@ You can also download a zip file and unzip that into `/usr/local/basestation3`.
 We do designate releases from time to time and are available from the 
 [Releases](https://github.com/iop-apl-uw/basestation3/releases) page.  
 
-Next, make sure the ```gliders``` group has read and execute permissions for all files:
 
-```
-sudo chown -R :gliders /usr/local/basestation3
-sudo chmod -R g+rx /usr/local/basestation3
-```
 
 #### Basestation python packages
 
@@ -204,7 +211,7 @@ rm -rf /opt/basestation
 then
 ```
 sudo mkdir -p /opt/basestation
-sudo chown <user>:gliders /opt/basestation
+sudo chown -R <user>:gliders /opt/basestation
 ```
 Replace ```<user>``` in the above your username. Then
 
@@ -230,8 +237,10 @@ should be installed:
 
 ``` bash
 sudo mkdir -p /usr/local/basestation
-sudo cp /usr/local/basestation3/login_logout_scripts/glider_login /usr/local/basestation/glider_login
-sudo cp /usr/local/basestation3/login_logout_scripts/glider_logout /usr/local/basestation/glider_logout
+sudo chown -R <user>:gliders /usr/local/basestation
+cp /usr/local/basestation3/login_logout_scripts/glider_login /usr/local/basestation/glider_login
+cp /usr/local/basestation3/login_logout_scripts/glider_logout /usr/local/basestation/glider_logout
+
 ```
 
 Be sure to review and edit ```/usr/local/basestation/glider_login``` and ```/usr/local/basestation/glider_logout``` any place so indicated.
@@ -398,7 +407,7 @@ Basestation3 ships with a simple file validator for ```cmdfile```,
 provide a glider ```.log``` file for the validator to use as a baseline.  For
 example:
 ```
-/opt/basestaiton/bin/python /usr/local/basestaion3/validate.py ~sg001/p00010001.log ~sg001/cmdfile
+/opt/basestation/bin/python /usr/local/basestation3/validate.py ~sg001/p00010001.log ~sg001/cmdfile
 ```
 
 # Additional documentation
