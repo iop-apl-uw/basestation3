@@ -128,8 +128,15 @@ def mission_profiles(
         cur = conn.cursor() 
         cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1;")
         res = cur.fetchone()
-        latest = res[0]
         cur.close()
+        if res:
+            latest = res[0]
+        else:
+            log_warning("No dives found")
+            if dbcon == None:
+                conn.close()
+                log_info("mission_profiles db closed")
+            return([], [])
     except Exception as e:
         log_error("Could not fetch data", "exc")
         if dbcon == None:
