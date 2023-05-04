@@ -762,7 +762,8 @@ global_options_dict = {
         },
     ),
     "full_html": options_t(
-        "darwin" in sys.platform,
+        # "darwin" in sys.platform,
+        False,
         ("Base", "BasePlot", "Reprocess"),
         ("--full_html",),
         bool,

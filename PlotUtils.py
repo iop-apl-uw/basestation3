@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -49,25 +49,6 @@ if typing.TYPE_CHECKING:
 
 from BaseLog import log_error, log_warning
 
-# Plotting configuration
-# make_plot_section = "makeplot"
-# make_plot_default_dict = {
-#     "plot_raw": [0, 0, 1],
-#     "save_svg": [0, 0, 1],
-#     "save_png": [1, 0, 1],
-#     "full_html": [1 if "darwin" in sys.platform else 0, 0, 1],
-#     "plot_directory": [None, None, None],
-#     "plot_freeze_pt": [0, 0, 1],
-#     "pmar_logavg_max": [1e2, 0.0, 1e10],
-#     "pmar_logavg_min": [1e-4, 0.0, 1e10],
-#     # MakePlot3 related
-#     # Legato debug plot
-#     "plot_legato": [0, 0, 1],
-#     # For the legato debug plot, use the glider's pressure signal instead of the sensors
-#     "plot_legato_use_glider_pressure": [0, 0, 1],
-#     # Legato raw vs smoothed pressure compare
-#     "plot_legato_compare": [0, 0, 1],
-# }
 
 #
 # Utility Routines

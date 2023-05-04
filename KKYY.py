@@ -49,7 +49,8 @@ import QC
 from BaseLog import BaseLogger, log_debug, log_warning, log_error, log_info
 from Globals import WhichHalf
 
-DEBUG_PDB = "darwin" in sys.platform
+# DEBUG_PDB = "darwin" in sys.platform
+DEBUG_PDB = False
 
 
 def print_kkyy(

@@ -50,7 +50,6 @@ import Utils
 
 from BaseLog import BaseLogger, log_info, log_warning, log_error, log_debug
 
-# Local config
 DEBUG_PDB = False
 # DEBUG_PDB = "darwin" in sys.platform
 

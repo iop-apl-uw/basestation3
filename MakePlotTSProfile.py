@@ -54,7 +54,9 @@ import BaseOpts
 import Utils
 import PlotUtilsPlotly
 
-DEBUG_PDB = "darwin" in sys.platform
+# DEBUG_PDB = "darwin" in sys.platform
+DEBUG_PDB = False
+
 
 #
 # Plots/Analysis

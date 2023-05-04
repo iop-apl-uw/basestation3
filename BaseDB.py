@@ -66,7 +66,8 @@ from BaseLog import (
     log_warning,
 )
 
-DEBUG_PDB = "darwin" in sys.platform
+#DEBUG_PDB = "darwin" in sys.platform
+DEBUG_PDB = False
 
 slopeVars = [
                 "batt_volts_10V",
