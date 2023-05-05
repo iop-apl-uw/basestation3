@@ -17,36 +17,34 @@ ASCII readable form for subsequent analysis.
 
 The pilot user has read and write access to all the seaglider home
 directories - by virtue of being in the same group as the glider -  since the
-pilot will update `cmdfiles`, etc. to command the vehicle
+pilot will update cmdfiles, etc. to command the vehicle
 and will need to read the data for analysis.
 
-When a glider logs in, it expects to see `=` as its prompt, hence the .cshrc
-file in each glider's directory.  It also triggers the `.login` script, which sets
-up the `.connected` file.  The glider then issues `rawrcv` or `lrz` commands to the basestation
-to send all the fragments and files, and `rawsend` or `lsz` commands to receive the `cmdfile`,
-etc.  (The modified versions of `lrz` and `lsz` add throughput and error
-notifications to `~/comm.log`.)  When the glider logs out the `.logout` script is
-triggered, which in turn runs the `/usr/local/basestation/glider_logout` script,
-which in turn runs the `/usr/local/basestation3/glider_logout` script
-which in turn runs the `Base.py` script.  The `Base.py` script processes any new or
+
+When a glider logs in, it expects to see '=' as its prompt, hence the .cshrc
+file in each glider's directory.  It also triggers the .login script, which sets
+up the .connected file.  The glider then issues rawrcv or lrz commands to the basestation
+to send all the fragments and files, and rawsend or lsz commands to receive the cmdfile,
+etc.  (The modified versions of lrz and lsz add throughput and error
+notifications to ~/comm.log.)  When the glider logs out the .logout script is
+triggered, which in turn runs the /usr/local/basestation/glider_logout script,
+which in turn runs the /usr/local/basestation3/glider_logout script
+which in turn runs the ```Base.py``` script.  The ```Base.py``` script processes any new or
 updated dive files received from the glider and processes any directives in the
-`.pagers/.urls` in the `/usr/local/basestation3/etc` directory, then
-`.pagers/.mailer/.ftp/.urls` files located in the Seagliders home directory. 
-Consult the comments at the top of the `.pagers`/`.mailer`/`.urls/.ftp` file 
-in the `/usr/local/basestation3/sg000` directory for documentation on each of
+.pagers/.mailer/.ftp/.urls files. Consult the comments at the top of the
+.pagers/.mailer/.urls file in the sg000 directory for documentation on each of
 these files.
 
 Processing options for ```Base.py``` that apply to all gliders on a single basestation
 are supplied in ```/usr/local/basestation/glider_logout```.  Additional
 glider-specific options may be supplied the ```.logout``` script located in each
 gliders home directory be setting the environment variable ``GLIDER_OPTIONS``, or
-in the Seagliders config file - `sgXXX.conf` that may optionally reside in any
+in the seagliders config file - ```sgXXX.conf``` that may optionally reside in any
 gliders home directory
 
 In addition, to assist the pilot there are a number of command line tools to
 perform additional dive processing and also to validate various glider command
-files - see [Validation of input files](#validation-of-input-files).  
-Each tool provides help when invoked from the command line.  See
+files.  Each tool provides help when invoked from the command line.  See
 [Common Commands](#common-commands) for a list of typical commands.
 
 # Installation
@@ -63,16 +61,13 @@ The installation instructions assume python 3.10.10.  3.9 might still work,
 
 No explicit hardware requirements are stated, but just about anything fairly
 modern should work.  (The basestation is regularly run on raspberry pi4 with 4G
-of memory for single glider testing)
+of memory.)
 
 ## Installation for post-processing
 
 In addition to the usual use of the Seaglider basestation to handle data
 coming in real-time from a Seaglider, the basestation may be installed for
-re-processing of missions.  In this mode, installation location is the users
-choice.  
-
-In addition to an appropriate version of python, 
+re-processing of missions.  In addition to an appropriate version of python, 
 such a use only requires the required python packages be installed.
 
     pip install -r requirements.txt
@@ -108,9 +103,7 @@ else, but ```gliders``` will keep things simple.
 Unlike previous versions of the basestation, there is no assumption of a
 dedicated pilot account.  Pilots are regular users who are in the
 ```gliders``` group.  Seaglider home directories are setup with group ownership
-as ```gliders``` and the group has read/write/execute permissions:
-
-	sudo adduser <user> gliders
+as ```gliders``` and the group has read/write/execute permissions.
 
 #### PAM (Pluggable Authentication Modules)
 The PAM system is prone to generating a considerable ammont of output that interferes
@@ -122,9 +115,6 @@ comment out the following lines:
 	#session    optional   pam_lastlog.so
 
 ## Installing python
-
-This section applies if the required version of python has changed since the last install of 
-basestation3.  If not, skip to [Install the basestation code and python packages](#install-the-basestation-code-and-python-packages)
 
 It is recommended that version 3.10.10 of python be installed along the a specific set of
 python support libraries.  The process is as follows:
@@ -173,39 +163,15 @@ Replace ```<user>``` in the above your username.
 
 ### Install the basestation code and python packages
 
-#### Basestation source
-
-Basestation3 assumes it is installed in `/usr/local/basesation3`.
-
-``` 
-sudo mkdir -p /usr/local/basestation3
+- If you have an existing installation of the basestation in /usr/local/basestation3,
+   you should back the contents up
+- Clone or copy the repo to /usr/local/basestation3.  Make sure the
+  ```gliders``` group has read and execute permissions for all files
 
 ```
-
-Next, make sure the directory has the correct ownership and  ```gliders``` group has 
-read and execute permissions for all files:
-
-```
-sudo chown -R <user>:gliders /usr/local/basestation3
+sudo chown -R :gliders /usr/local/basestation3
 sudo chmod -R g+rx /usr/local/basestation3
 ```
-
-If you want to install and keep up with the latest and greatest (or the very 
-leading edge), you can clone this repository to that location:
-
-`git clone https://github.com/iop-apl-uw/basestation3.git /usr/local/basestation3`
-
-Then you can update your basestation code by running a `git pull origin master` from 
-`/usr/local/basestation3` at a later time.
-
-You can also download a zip file and unzip that into `/usr/local/basestation3`. 
-
-We do designate releases from time to time and are available from the 
-[Releases](https://github.com/iop-apl-uw/basestation3/releases) page.  
-
-
-
-#### Basestation python packages
 
 ```
 rm -rf /opt/basestation
@@ -213,7 +179,7 @@ rm -rf /opt/basestation
 then
 ```
 sudo mkdir -p /opt/basestation
-sudo chown -R <user>:gliders /opt/basestation
+sudo chown <user>:gliders /opt/basestation
 ```
 Replace ```<user>``` in the above your username. Then
 
@@ -221,10 +187,11 @@ Replace ```<user>``` in the above your username. Then
 /opt/python/3.10.10/bin/python3 -m venv /opt/basestation
 /opt/basestation/bin/pip install -r /usr/local/basestation3/requirements.txt
 ```
+
 ### login/logout scripts
 
 Basestation3 differs somewhat from Basestation2, but also allows for a server
-setup that that has both versions (2 and 3)  to be installed.  For basestation3, the
+setup that allows both versions to be installed.  For basestation3, the
 ```.login``` and ```.logout``` scripts in the Seaglider home directory call
 ```/usr/local/basestation/glider_login``` and
 ```/usr/local/basestation/glider_logout``` respectively. These scripts are the
@@ -239,13 +206,11 @@ should be installed:
 
 ``` bash
 sudo mkdir -p /usr/local/basestation
-sudo chown -R <user>:gliders /usr/local/basestation
-cp /usr/local/basestation3/login_logout_scripts/glider_login /usr/local/basestation/glider_login
-cp /usr/local/basestation3/login_logout_scripts/glider_logout /usr/local/basestation/glider_logout
-
+sudo cp /usr/local/basestation3/login_logout_scripts/glider_login /usr/local/basestation/glider_login
+sudo cp /usr/local/basestation3/login_logout_scripts/glider_logout /usr/local/basestation/glider_logout
 ```
 
-Be sure to review and edit ```/usr/local/basestation/glider_login``` and ```/usr/local/basestation/glider_logout``` any make edits any place indicated.
+Be sure to review and edit ```/usr/local/basestation/glider_login``` and ```/usr/local/basestation/glider_logout``` any place so indicated.
 
 #### Basesation2
 
@@ -282,6 +247,8 @@ should be installed.
 - For all basestations, [seaglider_lrzsz](https://github.com/iop-apl-uw/seaglider_lrzsz).
 - If you are using Iridium's RUDICS, [rudicsd](https://github.com/iop-apl-uw/rudicsd).
 
+## TODO Install the optional cmdfile, science and targets validator
+
 # Commissioning a new glider
 
     sudo /opt/basestation/bin/python /usr/local/basestation3/Commission.py XXX
@@ -302,15 +269,11 @@ password 515791.
 It is strongly suggested that generate a stronger password - just be sure your glider and
 basestation agree on what the password is.
 
-Give the ```gliders``` group read/write/execute permission for the glider directory.
-
-     sudo chmod g+rwx ~sgxxx
-
 ## Additional security considertions
 
 ### Limit login access
 
-In addition to a strong password, it is recommended to limit the uses that can
+In addition to a strong password, it is recommended to limit the users that can
 login via serial line and telnet.  To do so, add the following line to
 ```/etc/pam.d/login``` at the very top.
 
@@ -318,7 +281,7 @@ login via serial line and telnet.  To do so, add the following line to
 auth required pam_listfile.so onerr=fail item=user sense=allow file=/etc/users.allow
 ```
 
-Then create a file (user: root, glider: root)
+Then create a file (user: root, group: root)
 
 ```
 /etc/users.allow
@@ -360,21 +323,16 @@ errors (missing package XXXX) - install anything missing.
 
 # Direct modem support using mgetty
 If you are using a dialup modem, hook up your modem to the appropriate serial
-port and ensure that there an mgetty servicing that port.
+port and ensure that there is an mgetty servicing that port.
 
 Ensure mgetty is installed: ```sudo apt-get install mgetty```
 
 Look at the boot messages in dmesg that assign ttySn ports to the modems:
 
-	sudo dmesg | grep ttyS
-	
-For instance, the output might read
-
 ```
-[    1.170734] 00:01: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
-[    1.205001] 00:02: ttyS1 at I/O 0x2f8 (irq = 3, base_baud = 115200) is a 16550A
+[    2.528748] 0000:00:0c.0: ttyS4 at I/O 0xb000 (irq = 17, base_baud = 115200) is a 16550A
+[    2.548901] 0000:00:0c.0: ttyS5 at I/O 0xa800 (irq = 17, base_baud = 115200) is a 16550A
 ```
-
 Next, create a systemd conf file. For example, if your modem is in /dev/ttyS0,
 create the file ```/etc/systemd/system/ttyS0.service``` with the following contents:
 
@@ -410,17 +368,6 @@ The .pagers and .mailer mechanism rely on a working SMTP MTA on the basestation.
 The only one that has been tested is postfix.
 Configuring a MTA is beyond the scope of this documentation as it
 can be highly dependent on local network management practice.
-
-## Validation of input files
-
-Basestation3 ships with a simple file validator for ```cmdfile```,
-```science``` and ```targets``` files.  To invoke he validator, you need to
-provide a glider ```.log``` file for the validator to use as a baseline  and a
-flag to specify the file type (-c, -s, or -t). For
-example:
-```
-/opt/basestation/bin/python /usr/local/basestation3/validate.py ~sg001/p00010001.log -c ~sg001/cmdfile
-```
 
 # Additional documentation
 
@@ -466,70 +413,14 @@ needed for the file to be deleted.
 
 This option may be removed from ```glider_logout``` to disable this feature.
 
-## Mission Database
+## mission database
 
 Basestation3 makes use of a sqlite database to store information about the
 Seaglider mission.  The database located in the Seaglider's home directory and 
 is named ```sgxxx.db```.  This database is primarily to support the
-visualization server ```vis.py```, but may be be used by user code for whole
+visualization server ```vis.py```, but maybe be used by user code for whole
 mission analysis.  The schema is still somewhat in flux and subject to change
 in future releases.
 
 # Common Commands
-
-The most common use case for Basestation3 is the processing of glider data in near
-real-time.  There are a number of commands that prove useful for post
-processing glider data.
-
-Every python script that can be invoked directly has help available by
-supplying the `--help` argument.
-
-## Reprocess.py 
-
-```Reprocess.py``` starts with the `.log` and `.eng` files and can regenerate
-netcdf files, run Flight Model and generate plots. 
-
-Regenerate all netcdf files, run Flight Model and generate plots:
-
-```
-/opt/basestation/bin/python /usr/local/basestation3/Reprocess.py \
- --mission_dir ~sg001 --force --reprocess_plots
-```
-
-Regenerate the dive 100 through 102 netcdf files, not re-running Flight Model
-
-```
-/opt/basestation/bin/python /usr/local/basestation3/Reprocess.py \
- --mission_dir ~sg001 --force --skip_flight_model 100:102
-```
-
-## BaseDB.py
-
-The mission database is added to during the normal logout processing.  If there was ever 
-a need to regenerate the database:
-
-```
-/opt/basestation/bin/python /usr/local/basestation3/BaseDB.py \
- --mission_dir ~sg001 addncfs
-```
-
-## BasePlot.py
-
-Any of the plots may be generated outside of the normal logout processing.  
-
-To generate all the plots for dive 100, generating stand-alone html files, in addition 
-to the normal output:
-
-```
-/opt/basestation/bin/python /usr/local/basestation3/BasePlot.py \
- --mission_dir ~sg001  --plot_types dives --full_html p0010100.nc
-```
-
-To regenerate the whole mission plots:
-
-```
-/opt/basestation/bin/python /usr/local/basestation3/BasePlot.py \
- --mission_dir ~sg001  --plot_types mission
-```
-
 
