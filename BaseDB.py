@@ -35,9 +35,10 @@
 
 import contextlib
 import glob
-import os.path
+import os
 import pdb
 import sqlite3
+import stat
 import sys
 import time
 import traceback
@@ -55,7 +56,6 @@ import CommLog
 import PlotUtils
 import Utils
 from CalibConst import getSGCalibrationConstants
-import Globals
 
 from BaseLog import (
     BaseLogger,
@@ -539,7 +539,7 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     if len(mhead_line) > 4:
         [mhead, rng, pitchd, wd, theta] = list(map(float, mhead_line[:5]))
     if len(mhead_line) > 5:
-       dbdw = float(mhead_line[5])
+        dbdw = float(mhead_line[5])
 
     if len(mhead_line) > 6:
         pressureNoise = float(mhead_line[6])
@@ -756,11 +756,11 @@ def createDivesTable(cur):
 
 
     for c in columns:
-        addColumn(cur, c, 'FLOAT');
+        addColumn(cur, c, 'FLOAT')
 
     columns = [ 'target_name ']
     for c in columns:
-        addColumn(cur, c, 'TEXT');
+        addColumn(cur, c, 'TEXT')
     
  
 def rebuildDB(base_opts):
@@ -819,6 +819,17 @@ def prepDB(base_opts, dbfile=None):
     else:
         con = sqlite3.connect(dbfile)
         log_info("prepDB db opened direct")
+        try:
+            os.chmod(
+                dbfile,
+                stat.S_IRUSR
+                | stat.S_IWUSR
+                | stat.S_IRGRP
+                | stat.S_IWGRP
+                | stat.S_IROTH
+            )
+        except:
+            log_error(f"Unable to change mode of {dbfile}", "exc")
 
     cur = con.cursor()
     createDivesTable(cur)
@@ -897,7 +908,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
     else:
         mycon = con
 
-    stat = 0
+    status = 0
 
     try:
         cur = mycon.cursor()
@@ -911,19 +922,19 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
             pdb.post_mortem(traceb)
         log_error(f"Failed to add {var_n} to dive {dive_num}", "exc")
         
-        stat = 1 
+        status = 1 
 
     if con is None:
         try:
             mycon.commit()
         except Exception as e:
             log_error(f"Failed commit, addValToDB {e}", "exc")
-            stat = 1
+            status = 1
 
         mycon.close()
         log_info("addValToDB db closed")
 
-    return stat 
+    return status 
 
 def addSlopeValToDB(base_opts, dive_num, var, con=None):
     if con is None:
