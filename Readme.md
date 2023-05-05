@@ -108,7 +108,9 @@ else, but ```gliders``` will keep things simple.
 Unlike previous versions of the basestation, there is no assumption of a
 dedicated pilot account.  Pilots are regular users who are in the
 ```gliders``` group.  Seaglider home directories are setup with group ownership
-as ```gliders``` and the group has read/write/execute permissions.
+as ```gliders``` and the group has read/write/execute permissions:
+
+	sudo adduser <user> gliders
 
 #### PAM (Pluggable Authentication Modules)
 The PAM system is prone to generating a considerable ammont of output that interferes
@@ -243,7 +245,7 @@ cp /usr/local/basestation3/login_logout_scripts/glider_logout /usr/local/basesta
 
 ```
 
-Be sure to review and edit ```/usr/local/basestation/glider_login``` and ```/usr/local/basestation/glider_logout``` any place so indicated.
+Be sure to review and edit ```/usr/local/basestation/glider_login``` and ```/usr/local/basestation/glider_logout``` any make edits any place indicated.
 
 #### Basesation2
 
@@ -299,6 +301,10 @@ password 515791.
 
 It is strongly suggested that generate a stronger password - just be sure your glider and
 basestation agree on what the password is.
+
+Give the ```gliders``` group read/write/execute permission for the glider directory.
+
+     sudo chmod g+rwx ~sgxxx
 
 ## Additional security considertions
 
@@ -360,10 +366,15 @@ Ensure mgetty is installed: ```sudo apt-get install mgetty```
 
 Look at the boot messages in dmesg that assign ttySn ports to the modems:
 
+	sudo dmesg | grep ttyS
+	
+For instance, the output might read
+
 ```
-[    2.528748] 0000:00:0c.0: ttyS4 at I/O 0xb000 (irq = 17, base_baud = 115200) is a 16550A
-[    2.548901] 0000:00:0c.0: ttyS5 at I/O 0xa800 (irq = 17, base_baud = 115200) is a 16550A
+[    1.170734] 00:01: ttyS0 at I/O 0x3f8 (irq = 4, base_baud = 115200) is a 16550A
+[    1.205001] 00:02: ttyS1 at I/O 0x2f8 (irq = 3, base_baud = 115200) is a 16550A
 ```
+
 Next, create a systemd conf file. For example, if your modem is in /dev/ttyS0,
 create the file ```/etc/systemd/system/ttyS0.service``` with the following contents:
 
@@ -404,10 +415,11 @@ can be highly dependent on local network management practice.
 
 Basestation3 ships with a simple file validator for ```cmdfile```,
 ```science``` and ```targets``` files.  To invoke he validator, you need to
-provide a glider ```.log``` file for the validator to use as a baseline.  For
+provide a glider ```.log``` file for the validator to use as a baseline  and a
+flag to specify the file type (-c, -s, or -t). For
 example:
 ```
-/opt/basestation/bin/python /usr/local/basestation3/validate.py ~sg001/p00010001.log ~sg001/cmdfile
+/opt/basestation/bin/python /usr/local/basestation3/validate.py ~sg001/p00010001.log -c ~sg001/cmdfile
 ```
 
 # Additional documentation
@@ -459,13 +471,13 @@ This option may be removed from ```glider_logout``` to disable this feature.
 Basestation3 makes use of a sqlite database to store information about the
 Seaglider mission.  The database located in the Seaglider's home directory and 
 is named ```sgxxx.db```.  This database is primarily to support the
-visualization server ```vis.py```, but maybe be used by user code for whole
+visualization server ```vis.py```, but may be be used by user code for whole
 mission analysis.  The schema is still somewhat in flux and subject to change
 in future releases.
 
 # Common Commands
 
-The most common use case for Basestation3 is the processing glider data in near
+The most common use case for Basestation3 is the processing of glider data in near
 real-time.  There are a number of commands that prove useful for post
 processing glider data.
 
