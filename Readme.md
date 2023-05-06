@@ -310,7 +310,7 @@ Give the ```gliders``` group read/write/execute permission for the glider direct
 
 ### Limit login access
 
-In addition to a strong password, it is recommended to limit the uses that can
+In addition to a strong password, it is recommended to limit the users that can
 login via serial line and telnet.  To do so, add the following line to
 ```/etc/pam.d/login``` at the very top.
 
@@ -318,7 +318,7 @@ login via serial line and telnet.  To do so, add the following line to
 auth required pam_listfile.so onerr=fail item=user sense=allow file=/etc/users.allow
 ```
 
-Then create a file (user: root, glider: root)
+Then create a file (user: root, group: root)
 
 ```
 /etc/users.allow
@@ -360,7 +360,7 @@ errors (missing package XXXX) - install anything missing.
 
 # Direct modem support using mgetty
 If you are using a dialup modem, hook up your modem to the appropriate serial
-port and ensure that there an mgetty servicing that port.
+port and ensure that there is an mgetty servicing that port.
 
 Ensure mgetty is installed: ```sudo apt-get install mgetty```
 
@@ -471,7 +471,7 @@ This option may be removed from ```glider_logout``` to disable this feature.
 Basestation3 makes use of a sqlite database to store information about the
 Seaglider mission.  The database located in the Seaglider's home directory and 
 is named ```sgxxx.db```.  This database is primarily to support the
-visualization server ```vis.py```, but may be be used by user code for whole
+visualization server ```vis.py```, but may be used by user code for whole
 mission analysis.  The schema is still somewhat in flux and subject to change
 in future releases.
 
