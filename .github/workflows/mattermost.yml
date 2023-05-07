@@ -1,4 +1,4 @@
-on: [push, pull_request]
+on: push
 
 jobs:
   build:
@@ -7,7 +7,7 @@ jobs:
     steps:
     - name: Create the Mattermost Message
       run: |
-        echo "{\"text\":\"testing github action :tada:\"}" > mattermost.json
+        echo "{\"text\":\" ${{ github.event.commits }} \"}" > mattermost.json
     - uses: mattermost/action-mattermost-notify@master
       env:
         MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
