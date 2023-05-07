@@ -7,7 +7,7 @@ jobs:
     steps:
     - name: Create the Mattermost Message
       run: |
-        commits=${{join(github.event.commits.*.message, '   ') }}
+        commits="${{join(github.event.commits.*.message, '   ') }}"
         echo "{\"text\":\" $commits \"}" > mattermost.json
     - uses: mattermost/action-mattermost-notify@master
       env:
