@@ -751,6 +751,9 @@ def createDivesTable(cur):
                 'energy_dives_remain_Modeled','energy_days_remain_Modeled', 'energy_days_total_Modeled',
                 'energy_end_time_Modeled', 'implied_volmax_fm', 'implied_volmax_glider', 'implied_volmax',
                 'implied_volmax_fm_slope', 'implied_volmax_glider_slope', 'implied_volmax_slope',
+                "batt_kJ_used_10V", "batt_kJ_used_24V",
+                "batt_ah_used_10V", "batt_ah_used_24V",
+                "fg_kJ_used_10V", "fg_kJ_used_24V",
                 "batt_volts_10V_slope", "batt_volts_24V_slope", 
                 "batt_capacity_10V_slope", "batt_capacity_24V_slope" ]
 

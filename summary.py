@@ -137,7 +137,7 @@ async def collectSummary(glider, path):
      
     mtime = await aiofiles.os.path.getctime(commlogfile) 
 
-    async with aiosqlite.connect(dbfile) as conn:
+    async with aiosqlite.connect('file:' + dbfile +'?mode=ro', uri=True) as conn:
         conn.row_factory = rowToDict
         cur = await conn.cursor()
 
