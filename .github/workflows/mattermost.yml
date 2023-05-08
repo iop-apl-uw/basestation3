@@ -7,8 +7,8 @@ jobs:
     steps:
     - name: Create the Mattermost Message
       run: |
-        commits="- ${{join(github.event.commits.*.message, '   \\n- ') }}"
-        echo "{\"text\":\" ** ${{ github.event.repository.name }} **  \\n* ${{ github.event.pusher.username }} *   \\n$commits \"}" > mattermost.json
+        commits="- ${{ join(github.event.commits.*.message, '\\n- ') }}"
+        echo "{\"text\":\" ** ${{ github.event.repository.name }} **  \\n * ${{ github.event.actor.login }} *   \\n $commits \"}" > mattermost.json
     - uses: mattermost/action-mattermost-notify@master
       env:
         MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
