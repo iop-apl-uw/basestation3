@@ -42,11 +42,15 @@ ctcor =  3.25e-06 ;
 %
 
 % Required
-%PARAM sg_ct_type = 4;  % Indicates
+%PARAM sg_ct_type = 4;  % Indicates a legato CTD
+
 %PARAM calibcomm = 'Legato s/n 0041, calibration 25 April 2016';
 
 % Required for Legato as logdev or on the truck
 %PARAM legato_sealevel = 10082.0; % Where this is sealevel presure setting.
+
+% Set to 1 to use the Seaglider pressure sensor for CTD corrections
+%PARAM legato_use_truck_pressure = 0; 
 
 % For Kongsberg/HII gliders with legato as a logdev device
 %PARAM legato_config=191;

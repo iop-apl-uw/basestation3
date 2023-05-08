@@ -370,6 +370,7 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
                 "legato_alpha": 0.08,
                 "legato_tau": 10.0,
                 "legato_ctcoeff": 0.0,
+                "legato_use_truck_pressure": 0,
             }
         )
     elif sbect_unpumped:
@@ -3775,11 +3776,23 @@ def make_dive_profile(
             )
 
             # Handle pressure spikes in legato pressure signal
-            if tmp_press_v is not None:
+            ctd_press_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+            if tmp_press_v is None or calib_consts["legato_use_truck_pressure"]:
+                # ctd_press_v = sg_press_v.copy()
+                ctd_press_v = Utils.interp1d(
+                    sg_epoch_time_s_v, sg_press_v, ctd_epoch_time_s_v, kind="linear"
+                )
+                if calib_consts["legato_use_truck_pressure"]:
+                    log_info(
+                        "Using Truck pressure sensor instead of legato pressure sensor"
+                    )
+                    # TODO - Need a ztp correction for this case
+                    pass
+                results_d.update({"ctd_pressure_qc": ctd_press_qc_v})
+            else:
                 ctd_press_v, bad_points = QC.smooth_legato_pressure(
                     tmp_press_v, ctd_epoch_time_s_v
                 )
-                ctd_press_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
                 QC.assert_qc(
                     QC.QC_INTERPOLATED,
                     ctd_press_qc_v,
@@ -3787,8 +3800,6 @@ def make_dive_profile(
                     "despiked pressure",
                 )
                 results_d.update({"ctd_pressure_qc": ctd_press_qc_v})
-            else:
-                ctd_press_v = sg_press_v.copy()
 
             if not base_opts.use_gsw:
                 ctd_salin_v = seawater.salt(
