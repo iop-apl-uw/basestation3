@@ -1749,8 +1749,10 @@ def extract_calib_consts(dive_nc_file):
 
 
 def get_mission_timeseries_name(base_opts, direc=None):
+    ignore_fm = True
     if base_opts:
         mydir = base_opts.mission_dir
+        ignore_fm = base_opts.ignore_flight_model
     elif direc:
         mydir = direc
     else:
@@ -1760,7 +1762,7 @@ def get_mission_timeseries_name(base_opts, direc=None):
 
     # Read sg_calib_constants file
     calib_consts = CalibConst.getSGCalibrationConstants(
-        sg_calib_file_name, not base_opts.ignore_flight_model
+        sg_calib_file_name, not ignore_fm
     )
 
     # calib_consts is set; figure out filename, etc.
