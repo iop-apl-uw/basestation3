@@ -140,7 +140,7 @@ def mission_energy(
 
     try:
         batt_df = pd.read_sql_query(
-            f"SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kj_used_10V,batt_kj_used_24V,time_seconds_on_surface,time_seconds_diving,log_gps_time AS dive_end FROM dives {clause} ORDER BY dive ASC", 
+            f"SELECT dive,batt_capacity_10V,batt_capacity_24V,batt_Ahr_cap_10V,batt_Ahr_cap_24V,batt_ah_10V,batt_ah_24V,batt_volts_10V,batt_volts_24V,batt_kJ_used_10V,batt_kJ_used_24V,time_seconds_on_surface,time_seconds_diving,log_gps_time AS dive_end FROM dives {clause} ORDER BY dive ASC", 
             conn,
         ).sort_values("dive")
 
@@ -536,7 +536,7 @@ def mission_energy(
                 {
                     "name": "10V Fuel Gauge",
                     "x": fg_df["dive"],
-                    "y": fg_df["fg_10V_kJ_used"],
+                    "y": fg_df["fg_kJ_used_10V"],
                     "yaxis": "y1",
                     "mode": "lines",
                     "line": {"width": 1, "color": "LightBlue"},
@@ -547,7 +547,7 @@ def mission_energy(
                 {
                     "name": "24V Fuel Gauge",
                     "x": fg_df["dive"],
-                    "y": fg_df["fg_24V_used"],
+                    "y": fg_df["fg_kJ_used_24V"],
                     "yaxis": "y1",
                     "mode": "lines",
                     "line": {"width": 1, "color": "DarkBlue"},
@@ -569,7 +569,7 @@ def mission_energy(
                 {
                     "name": "Modeled Use 24V",
                     "x": batt_df["dive"],
-                    "y": batt_df["batt_kj_used_24V"],
+                    "y": batt_df["batt_kJ_used_24V"],
                     "yaxis": "y1",
                     "mode": "lines",
                     "line": {"width": 1, "color": "DarkGrey"},
