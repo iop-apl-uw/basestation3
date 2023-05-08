@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -41,22 +41,23 @@ mission_profile_nc_fileversion = "2.71"
 mission_timeseries_nc_fileversion = "2.71"
 mission_per_dive_nc_fileversion = "2.71"
 # These document level of functionality
-basestation_version = "3.0"
+basestation_version = "3.0.0"
 quality_control_version = "1.12"
 
 # The oldest format version this code supports
 required_nc_fileversion = "2.7"  #  (August, 2011)
 
 # Version stamps for various packages
-required_python_version = (3, 9, 6)
-recommended_python_version = (3, 9, 6)
-required_numpy_version = "1.18.1"
-recommended_numpy_version = "1.18.1"
+required_python_version = (3, 10, 9)
+recommended_python_version = (3, 10, 10)
+required_numpy_version = "1.19.1"
+recommended_numpy_version = "1.19.1"
 
-required_scipy_version = "1.4.1"
-recommended_scipy_version = "1.4.1"
+required_scipy_version = "1.9.0"
+recommended_scipy_version = "1.9.0"
 # need at least 0.11.0 for proper sparse matrix support (scipy.sparse.diags)
 required_scipy_sparse_version = "1.4.1"
+
 
 # pylint: disable=E0239
 class WhichHalf(IntEnum):
