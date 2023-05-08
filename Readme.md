@@ -190,6 +190,8 @@ sudo chown -R <user>:gliders /usr/local/basestation3
 sudo chmod -R g+rx /usr/local/basestation3
 ```
 
+#### Living on the edge
+
 If you want to install and keep up with the latest and greatest (or the very 
 leading edge), you can clone this repository to that location:
 
@@ -198,12 +200,18 @@ leading edge), you can clone this repository to that location:
 Then you can update your basestation code by running a `git pull origin master` from 
 `/usr/local/basestation3` at a later time.
 
-You can also download a zip file and unzip that into `/usr/local/basestation3`. 
+You can also download a zip file and unzip that into
+`/usr/local/basestation3`. 
+
+A word of caution - the HEAD revision may not be stable and any given point in
+time.  It also may contain features or changes that are experimental on subject
+to change or removal.
+
+#### Releases
 
 We do designate releases from time to time and are available from the 
-[Releases](https://github.com/iop-apl-uw/basestation3/releases) page.  
-
-
+[Releases](https://github.com/iop-apl-uw/basestation3/releases) page.  There is
+no set schedule for these.
 
 #### Basestation python packages
 
