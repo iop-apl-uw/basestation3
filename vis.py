@@ -451,9 +451,11 @@ def attachHandlers(app: sanic.Sanic):
     # parameters: mission, tail (number of dives back to show in glider track), also (additional gliders to plot), sa (URL for SA to load)
     # returns: HTML page
     @authorized()
+    @app.ext.template("map.html")
     async def mapHandler(request, glider:int):
-        filename = f'{sys.path[0]}/html/map.html'
-        return await sanic.response.file(filename, mime_type='text/html')
+        # filename = f'{sys.path[0]}/html/map.html'
+        # return await sanic.response.file(filename, mime_type='text/html')
+        return { "weathermapAppID": request.app.config.WEATHERMAP_APPID }
 
     @app.route('/mapdata/<glider:int>')
     # description: get map configation (also, sa, kml from missions.yml)
@@ -1919,6 +1921,8 @@ def createApp(overrides: dict) -> sanic.Sanic:
         app.config.USER = os.getlogin()
     if 'SINGLE_MISSION' not in app.config:
         app.config.SINGLE_MISSION = None
+    if 'WEATHERMAP_APPID' not in app.config:
+        app.config.WEATHERMAP_APPID = ''
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 

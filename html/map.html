@@ -463,9 +463,10 @@
 
             map.addLayer(chart);
 
+{% if weathermapAppID != '' %}
             // wind
 
-            wind = L.tileLayer("https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid=b20fbf5f478d03dc8fd5541f62871c40",
+            wind = L.tileLayer("https://tile.openweathermap.org/map/wind_new/{z}/{x}/{y}.png?appid={{ weathermapAppID }}",
                                     {
                                     });
 
@@ -496,6 +497,7 @@
                 if (evt.name === 'wind')
                     this.removeControl(legend);
             });
+{% endif %}
 
             var popup = L.popup({ maxWidth:600, minWidth:400, className: 'weather-popup' });
             map.on('click', function(evt) {
@@ -624,7 +626,9 @@
                 "Chlorophyll-A (Aqua MODIS L2)": chlA,
                 "AIS (does not auto-update)": ais,
                 "chart marks": chart,
+{% if weathermapAppID != '' %}
                 "wind": wind,
+{% endif %}
             }
 
             var layerControl = L.control.layers(baseLayers, overlayLayers).addTo(map);
