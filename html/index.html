@@ -848,10 +848,10 @@
         d = $('aboutContent');
         t = document.createElement('div');
         t.classList.add('header');
-        t.innerHTML = org.name + '<br><hr>';
+        t.innerHTML = org.orgname + '<br><hr>';
         d.appendChild(t);
 
-        if ('link' in org) {
+        if ('orglink' in org) {
             t = document.createElement('div');
             t.innerHTML = `<a href="${org.link}">${org.link}</a>`;
             d.appendChild(t);
