@@ -174,6 +174,8 @@ def mission_map(
 
         if "tail" in plot_constants:
             tail = plot_constants["tail"]
+    else:
+        log_info("no sg_plot_constants.m found - using bounding box")
 
     ctrlat = df['lat'].mean()
     ctrlon = df['lon'].mean()
