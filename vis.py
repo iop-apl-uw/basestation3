@@ -1411,15 +1411,13 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
         filename = f'{gliderPath(glider,request)}/comm.log'
-        if not await aiofiles.os.path.exists(filename):
-            await ws.send('no')
-            return
 
         await ws.send(f"START") # send something to ack the connection opened
 
         sanic.log.logger.debug(f"streamHandler start {filename}")
 
-        if request.app.config.RUNMODE > MODE_PUBLIC:
+        commFile = None
+        if request.app.config.RUNMODE > MODE_PUBLIC and await aiofiles.os.path.exists(filename):
             statinfo = await aiofiles.os.stat(filename)
             if statinfo.st_size < 10000:
                 start = 0
@@ -1441,6 +1439,8 @@ def attachHandlers(app: sanic.Sanic):
                     await ws.send(f"NEW={dumps(row[i]).decode('utf-8')}")
             except:
                 pass
+        else:
+            await ws.send('no comm.log\n')
 
         (tU, _) = getTokenUser(request)
         
@@ -1481,6 +1481,9 @@ def attachHandlers(app: sanic.Sanic):
                             await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
                 elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
+                    if not commFile:
+                        commFile = await aiofiles.open(filename, 'rb')
+                        
                     data = (await commFile.read()).decode('utf-8', errors='ignore')
                     if data:
                         await ws.send(data)
