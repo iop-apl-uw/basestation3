@@ -1461,6 +1461,7 @@ def attachHandlers(app: sanic.Sanic):
         socket.setsockopt(zmq.LINGER, 0)
         socket.connect(request.app.config.WATCH_IPC)
         socket.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-").encode('utf-8'))
+        sanic.log.logger.info(f"subscribing to {glider:03d}-")
 
         
         prev = ""
@@ -1469,6 +1470,7 @@ def attachHandlers(app: sanic.Sanic):
                 msg = await socket.recv_multipart()
                 topic = msg[0].decode('utf-8')
                 body  = msg[1].decode('utf-8')
+                sanic.log.logger.info(f"topic {topic}")
 
                 if 'chat' in topic and tU and request.app.config.RUNMODE > MODE_PUBLIC:
                     if conn == None and await aiofiles.os.path.exists(dbfile):
@@ -1864,9 +1866,12 @@ async def notifier(config):
         files.append( { 'glider': 0, 'full': f, 'file': f, 'ctime': 0 } )
 
     for m in missions:
-        if m['path'] == None:
+        if m['path'] == None or m['default'] == True:
             for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat"]:
-                fname = f"sg{m['glider']:03d}/{f}"
+                if 'abs' in m and m['abs']:
+                    fname = f"{m['abs']}/{f}"
+                else:
+                    fname = f"sg{m['glider']:03d}/{f}"
                 files.append( { "glider": m['glider'], "full": fname, "file": f, "ctime": 0 } )
 
     await checkFilesystemChanges(files) # load initial mod times
@@ -1881,6 +1886,7 @@ async def notifier(config):
         mods = await checkFilesystemChanges(files)
         for f in mods:
             msg = [(f"{f['glider']:03d}-file-{f['file']}").encode('utf-8'), dumps(f)]
+            sanic.log.logger.info(f"{f['glider']:03d}-file-{f['file']}")
             await socket.send_multipart(msg)
 
 def backgroundWatcher(config):
@@ -2006,7 +2012,7 @@ if __name__ == '__main__':
             usage()
             sys.exit(1)
                  
-    if root is None:
+    if root is None and not 'SINGLE_MISSION' in overrides:
         root = '/home/seaglider'
 
     if root is not None:
