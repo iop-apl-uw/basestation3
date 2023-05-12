@@ -873,8 +873,9 @@ def setdiff(list1, list2):
     Raises:
     None
     """
-    return np.setdiff1d(np.array(list1, object), np.array(list2, object)).tolist()
 
+    #return  np.setdiff1d(np.array(list1, object), np.array(list2, object)).tolist()
+    return sorted(list(set(list1) - set(list2)))
 
 def sort_i(list1):
     """Sort a list of indices, returning a list
