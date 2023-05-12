@@ -733,9 +733,12 @@ def createDivesTable(cur):
         return
 
     cur.execute("CREATE TABLE dives(dive INT);")
-    columns = [ 'log_start','log_D_TGT','log_D_GRID','log__CALLS',
+    columns = [ 'log_glider', 'log_start','log_D_TGT','log_D_GRID','log__CALLS',
                 'log__SM_DEPTHo','log__SM_ANGLEo','log_HUMID','log_TEMP',
-                'log_INTERNAL_PRESSURE', 'log_IMPLIED_C_VBD',
+                'log_INTERNAL_PRESSURE', 'log_INTERNAL_PRESSURE_slope',
+                'log_HUMID_slope',
+                'log_IMPLIED_C_VBD',
+                'log_gps_time',  'log_gps2_time', 'log_TGT_LAT', 'log_TGT_LON', 
                 'depth_avg_curr_east','depth_avg_curr_north',
                 'max_depth',
                 'pitch_dive','pitch_climb',
@@ -747,12 +750,13 @@ def createDivesTable(cur):
                 'meters_to_target',
                 'GPS_north_displacement_m','GPS_east_displacement_m',
                 'flight_avg_speed_east','flight_avg_speed_north',
+                'distance_made_good', 'distance_to_goal', 'distance_over_ground',
                 'dog_efficiency','alerts','criticals','capture','error_count',
                 'energy_dives_remain_Modeled','energy_days_remain_Modeled', 'energy_days_total_Modeled',
                 'energy_end_time_Modeled', 'implied_volmax_fm', 'implied_volmax_glider', 'implied_volmax',
                 'implied_volmax_fm_slope', 'implied_volmax_glider_slope', 'implied_volmax_slope',
                 "batt_kJ_used_10V", "batt_kJ_used_24V",
-                "batt_ah_used_10V", "batt_ah_used_24V",
+                "batt_ah_used_10V", "batt_ah_used_24V", "batt_ah_24V", "batt_ah_10V",
                 "fg_kJ_used_10V", "fg_kJ_used_24V",
                 "batt_volts_10V_slope", "batt_volts_24V_slope", 
                 "batt_capacity_10V_slope", "batt_capacity_24V_slope" ]
