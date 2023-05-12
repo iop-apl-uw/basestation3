@@ -690,8 +690,8 @@ def attachHandlers(app: sanic.Sanic):
             if ext in ['log', 'eng']:
                 return await sanic.response.file(filename, mime_type='text/plain')
             else:
-                async with aiofiles.open(filename, 'r') as file:
-                    out = purgeSensitive(await file.read())
+                async with aiofiles.open(filename, 'rb') as file:
+                    out = purgeSensitive((await file.read()).decode('utf-8', errors="ignore"))
                     return sanic.response.text(out)
         else:
             if ext == 'cap':
