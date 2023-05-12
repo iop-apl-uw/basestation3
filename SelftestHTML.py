@@ -98,7 +98,7 @@ for raw_line in proc.stdout:
         print("</div>")
         insideMoveDump = False
 
-    if insideDir and line.find(',') > -1:
+    if insideDir and line.find(',') > -1 and line.find('is empty') == -1:
         print("</pre>")
         insideDir = False
 
