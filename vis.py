@@ -1872,18 +1872,7 @@ async def configWatcher(app):
 
         # app.m.name.restart() 
 
-async def notifier(config):
-    msk = os.umask(0o000)
-    ctx = zmq.asyncio.Context()
-    socket = ctx.socket(zmq.PUB)
-    socket.bind(config.WATCH_IPC)
-    socket.setsockopt(zmq.SNDTIMEO, 200)
-    socket.setsockopt(zmq.LINGER, 0)
-
-    inbound = ctx.socket(zmq.PULL)
-    inbound.bind(config.NOTIFY_IPC)
-    os.umask(msk)
-
+async def buildFilesWatchList(config):
     missions = await buildMissionTable(None, config=config)
     files = [ ]
     for f in [ 'missions.yml', 'users.yml' ]:
@@ -1900,6 +1889,27 @@ async def notifier(config):
 
     await checkFilesystemChanges(files) # load initial mod times
 
+    return files
+
+async def notifier(config):
+    msk = os.umask(0o000)
+    ctx = zmq.asyncio.Context()
+    socket = ctx.socket(zmq.PUB)
+    socket.bind(config.WATCH_IPC)
+    socket.setsockopt(zmq.SNDTIMEO, 200)
+    socket.setsockopt(zmq.LINGER, 0)
+
+    configWatchSocket = ctx.socket(zmq.SUB)
+    configWatchSocket.setsockopt(zmq.LINGER, 0)
+    configWatchSocket.connect(config.WATCH_IPC)
+    configWatchSocket.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
+
+    inbound = ctx.socket(zmq.PULL)
+    inbound.bind(config.NOTIFY_IPC)
+    os.umask(msk)
+
+    files = await buildFilesWatchList(config)
+
     while True:
         stat = await inbound.poll(2000)
         if stat:
@@ -1910,6 +1920,13 @@ async def notifier(config):
             r[1] = dumps(d)
             sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
             await socket.send_multipart(r)
+
+        stat = await configWatchSocket.poll(200)
+        if stat:
+            msg = await configWatchSocket.recv_multipart()
+            topic = msg[0].decode('utf-8')
+            if 'missions' in topic:
+                files = await buildFilesWatchList(config)
 
         mods = await checkFilesystemChanges(files)
         sanic.log.logger.info(mods)
