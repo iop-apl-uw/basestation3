@@ -2542,11 +2542,11 @@ def main():
                     alert_warning_msg = alert_warning_msg + f"    {alert}\n"
                 del alerts_d[alert_topic]  # clean up
                 alert_msg_file.write("</ul></p></div>\n")
-            alert_msg_file.write(f"<p>Consult {conversion_log} for details</p>\n")
+            alert_msg_file.write(f"<p>Consult {os.path.basename(conversion_log)} for details</p>\n")
 
         if alert_warning_msg:
             alert_warning_msg = (
-                alert_warning_msg + f"Consult {conversion_log} for details."
+                alert_warning_msg + f"Consult {os.path.basename(conversion_log)} for details."
             )
             log_warning(alert_warning_msg)
 
