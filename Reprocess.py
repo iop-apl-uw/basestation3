@@ -313,9 +313,9 @@ def main():
         all_dive_nc_file_names = sorted(Utils.unique(all_dive_nc_file_names))
         if len(all_dive_nc_file_names):
             if not base_opts.skip_flight_model:
+                flight_t0 = time.time()
                 log_info(
-                    "Started FLIGHT processing "
-                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                    f"Started FLIGHT processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(flight_t0))}"
                 )
                 nc_files_created = []
                 try:
@@ -335,9 +335,9 @@ def main():
                     )
                     dive_nc_file_names.extend(nc_files_created)
                     dive_nc_file_names = sorted(Utils.unique(dive_nc_file_names))
+                flight_tend = time.time()
                 log_info(
-                    "Finished FLIGHT processing "
-                    + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                    f"Finished FLIGHT processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(flight_tend))} took {flight_tend - flight_t0:.2f} secs"
                 )
             else:
                 log_info(

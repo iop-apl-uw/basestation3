@@ -128,9 +128,10 @@ dive_data_vector_names = [
 ]
 
 # CONTROL PARAMETERS
-enable_reprocessing_dives = (
-    True  # CONTROL Normally True but if False we don't spend time updating the dives
-)
+
+# Moved to option enable_reprocessing_dives = (
+#    True  # CONTROL Normally True but if False we don't spend time updating the dives
+# )
 old_basestation = False  # assume the best
 force_alerts = False  # CONTROL test alert code for each 'new' dive
 # What should be tested, if velo is available, IN ADDITION to w vs. w_stdy (hdm_speed*sin(glide_angle))
@@ -2214,7 +2215,7 @@ def process_dive(
     alert_dive_num=None,
     exit_event=None,
 ):
-    global flight_dive_data_d, flight_directory, mission_directory, nc_path_format, flight_consts_d, angles, HIST, enable_reprocessing_dives, generate_dac_figures
+    global flight_dive_data_d, flight_directory, mission_directory, nc_path_format, flight_consts_d, angles, HIST, generate_dac_figures
     global glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, ab_grid_cache_d, restart_cache_d
     global font, HD_A, HD_B, w_misfit_rms_levels, prev_w_misfit_rms_levels, glider_mission_string, generate_figures, show_implied_c_vbd
 
@@ -3511,7 +3512,7 @@ def process_dive(
         # If the deployment is not normal, you'll have to process subsets of dives, at best.
         if len(reprocess_dives) > 0:
             # update all 'changed/changing' dives with their new values as though we had reprocessed and reloaded them
-            # if not enable_reprocessing_dives then we won't reload and reprocess them and they won't retrigger the update loop
+            # if not base_opts.fm_reprocess_dives then we won't reload and reprocess them and they won't retrigger the update loop
             for d_n in reprocess_dives:
                 dd = flight_dive_data_d[d_n]
                 dd.nc_hd_a = dd.hd_a
@@ -3523,7 +3524,7 @@ def process_dive(
                 base_opts, dump_mat=False
             )  # save any updated data before reprocessing
 
-            if enable_reprocessing_dives:
+            if base_opts.fm_reprocess_dives:
                 log_info(f"Reprocess dives: {reprocess_dives}")
 
                 dives = ""
@@ -3576,7 +3577,7 @@ def process_dive(
                     if reprocess_error is not None:
                         log_error(reprocess_error % d_n)
                         log_error(f"Consult {reprocess_log} for futher details")
-                        enable_reprocessing_dives = False  # don't do this again...
+                        base_opts.fm_reprocess_dives = False  # don't do this again...
                         dd.dive_data_ok = False  # skip this dive until it is reprocessed by someone else
                 save_flight_database(
                     base_opts, dump_mat=False
@@ -3616,7 +3617,7 @@ def main(
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    global flight_dive_data_d, flight_directory, mission_directory, plots_directory, nc_path_format, flight_consts_d, compress_cnf, enable_reprocessing_dives, generate_dac_figures
+    global flight_dive_data_d, flight_directory, mission_directory, plots_directory, nc_path_format, flight_consts_d, compress_cnf, generate_dac_figures
     global dump_fm_files, old_basestation, glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, sg_hd_s, hd_s_assumed_q
     global ab_grid_cache_d, restart_cache_d, angles, grid_spacing_keys, grid_dive_sets, dump_checkpoint_data_matfiles
 
@@ -3688,7 +3689,7 @@ def main(
             "Reprocessing disabled because basestation version %s too early"
             % Globals.basestation_version
         )
-        enable_reprocessing_dives = False
+        base_opts.fm_reprocess_dives = False
         old_basestation = True
         dump_fm_files = True  # let the pilot know what values we find, per-dive
 
@@ -3697,7 +3698,7 @@ def main(
         log_error(f"Could not process {sg_calib_file_name}")
         return 1
 
-    if not enable_reprocessing_dives:
+    if not base_opts.fm_reprocess_dives:
         generate_dac_figures = (
             False  # need DAC input data from updated FM variables saved by v2.12
         )
@@ -3845,7 +3846,7 @@ def main(
             )
         dive_data_vector_names.append("velo_speed")
     if deck_dives:
-        enable_reprocessing_dives = False
+        base_opts.fm_reprocess_dives = False
 
     if reinitialized:
         # 2023/03/15 GBS - we now handle the sg_calib_constants.m file by filter out flight variables
@@ -4013,7 +4014,7 @@ def main(
         log_info(
             "CONTROL: reprocessing=%s compare_velo=%d hd_a_scale=%.2f hd_b_scale=%.2f"
             % (
-                enable_reprocessing_dives,
+                base_opts.fm_reprocess_dives,
                 compare_velo,
                 predicted_hd_a_scale,
                 predicted_hd_b_scale,

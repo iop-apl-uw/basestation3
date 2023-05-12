@@ -627,6 +627,16 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    "fm_reprocess_dives": options_t(
+        True,
+        ("Base", "FlightModel", "Reprocess"),
+        ("--fm_reprocess_dives",),
+        bool,
+        {
+            "help": "Allow FlightModel to reprocess dives when it calculates new parameters",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
     "skip_kml": options_t(
         False,
         ("Base", "Reprocess"),
