@@ -189,8 +189,9 @@
             else if (line.startsWith('NEW=')) {
                 json = JSON.parse(line.slice(4));
                 glider = json['glider'];
-                newDive = json['dive'];
-                if ('content' in json && json['content'] == 'files=perdive') {
+                if ('content' in json && json['content'] == 'files=all' && 
+                     (json['when'] == 'socket' || json['when'] == 'sync') ) {
+                    newDive = json['dive'];
                     if (newDive > maxDive) {
                         maxDive = newDive;
                         updateMaxDive();
@@ -247,8 +248,7 @@
                 }
                 else {
                     // loadStatus(currGlider, -1);
-                    console.log('untreated NEW= response');
-                    console.log(line);
+                    console.log('untreated NEW=' + line);
                 }
                 // loadLog(newDive);
                 first = false;
@@ -804,8 +804,6 @@
 
     function loadAbout(mission, org) {
         var cell, t, tbody, row;
-
-        console.log(mission);
 
         d = $('aboutContent');
         t = document.createElement('table');

@@ -1146,7 +1146,7 @@ def attachHandlers(app: sanic.Sanic):
             except Exception as e:
                 return sanic.response.text(f"error saving {which}, {str(e)}")
                 
-    # The get handler for notifications from the basestation.
+    # The get handler for http POST based notifications from the basestation.
     # Run a route to receive notifications remotely. Typically only used 
     # when running vis on a server different from the basestation proper
     @app.post('/url')
@@ -1177,7 +1177,14 @@ def attachHandlers(app: sanic.Sanic):
         elif files:
             content = f"files={files}" 
             topic = 'files'
-            msg = { "glider": glider, "dive": dive, "content": content, "time": time.time() }
+            if hasattr(request, 'json') and request.json:
+                msg = request.json
+                msg.update({ "time": time.time() } )
+                if 'when' not in msg:
+                    msg.update({ "when": "urls" } )
+                sanic.log.logger.info(f"URLS payload {msg}")
+            else:
+                msg = { "glider": glider, "dive": dive, "content": content, "time": time.time(), "when": "urls" }
 
         # consider whether this should go to all instances (Utils.notifyVisAsync)
         try:
@@ -1417,6 +1424,7 @@ def attachHandlers(app: sanic.Sanic):
         sanic.log.logger.debug(f"streamHandler start {filename}")
 
         commFile = None
+        commTell = 0
         if request.app.config.RUNMODE > MODE_PUBLIC and await aiofiles.os.path.exists(filename):
             statinfo = await aiofiles.os.stat(filename)
             if statinfo.st_size < 10000:
@@ -1432,7 +1440,9 @@ def attachHandlers(app: sanic.Sanic):
                     await ws.send(data.decode('utf-8', errors='ignore'))
             else:
                 await commFile.seek(0, 2)
-          
+         
+            commTell = await commFile.tell()
+ 
             try:
                 row = await getLatestCall(request, glider, limit=3)
                 for i in range(len(row)-1, -1, -1):
@@ -1483,12 +1493,26 @@ def attachHandlers(app: sanic.Sanic):
                             await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
                 elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
+                    sanic.log.logger.info('comm.log notified')
                     if not commFile:
                         commFile = await aiofiles.open(filename, 'rb')
-                        
-                    data = (await commFile.read()).decode('utf-8', errors='ignore')
-                    if data:
-                        await ws.send(data)
+                        sanic.log.logger.info('comm.log opened')
+                    elif os.stat(filename).st_ino != os.fstat(commFile.fileno()).st_ino: # if comm.log has changed out from under us
+                        sanic.log.logger.info('comm.log inode changed')
+                        if await aiofiles.os.path.exists(filename):
+                            if commFile:
+                                commFile.close()
+                            commFile = await aiofiles.open(filename, 'rb')
+                            await commFile.seek(commTell, 0)
+                            sanic.log.logger.info(f"comm.log re-opened, seek to {commTell}") 
+
+                    if commFile:
+                        sanic.log.logger.info(f"before read, position = {commTell}")
+                        data = (await commFile.read()).decode('utf-8', errors='ignore')
+                        commTell = await commFile.tell()
+                        sanic.log.logger.info(f"comm.log read, position = {commTell}")
+                        if data:
+                            await ws.send(data)
                 elif 'urls' in topic:
                     # m = loads(body)
                     await ws.send(f"NEW={body}")
@@ -1880,10 +1904,15 @@ async def notifier(config):
         stat = await inbound.poll(2000)
         if stat:
             r = await inbound.recv_multipart()
+            d = loads(r[1])
+            if 'when' not in d:
+                d.update({"when": "socket"})
+            r[1] = dumps(d)
             sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
             await socket.send_multipart(r)
 
         mods = await checkFilesystemChanges(files)
+        sanic.log.logger.info(mods)
         for f in mods:
             msg = [(f"{f['glider']:03d}-file-{f['file']}").encode('utf-8'), dumps(f)]
             sanic.log.logger.info(f"{f['glider']:03d}-file-{f['file']}")
