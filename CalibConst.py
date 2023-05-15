@@ -120,7 +120,7 @@ def getSGCalibrationConstants(
                 if ignore_fm_tags and key in ignore_tags:
                     if ignore_tag not in comment_str:
                         log_warning(
-                            f"{key} value ignored due to using FMS data (add % FM_ignore to suppress this warning)",
+                            f"{key} value ignored. v3 Flight Model does not use this value. Add '% FM_ignore' to sg_calib_constants.m to suppress this warning.",
                             alert=f"calib const {key}",
                             max_count=-1,
                         )

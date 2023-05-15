@@ -46,7 +46,14 @@ if len(sys.argv) != 3:
     sys.exit(1)
 
 logname = sys.argv[2]
-canonname = sys.path[0] + "/canonicals/canon_" + sys.argv[1] + ".log"
+local_canon = os.path.join(os.path.dirname(logname), '.canonicals')
+
+if os.path.exists(local_canon):
+    canonname = local_canon
+else:
+    canonname = os.path.join(sys.path[0], "canonicals/canon_" + sys.argv[1] + ".log")
+
+print(canonname)
 try:
     log = open(logname, "rb")
 except IOError:
