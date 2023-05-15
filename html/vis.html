@@ -195,10 +195,10 @@
                     if (newDive > maxDive) {
                         maxDive = newDive;
                         updateMaxDive();
+                        loadPlots(newDive, true);
+                        buildTable(currGlider, newDive);
+                        buildChangelog(3);
                     }
-                    loadPlots(newDive, true);
-                    buildTable(currGlider, newDive);
-                    buildChangelog(3);
                 }
                 else if ('lat' in json) {
                     if (!first) beep();
