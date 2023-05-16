@@ -541,3 +541,11 @@ To regenerate the whole mission plots:
 ```
 
 
+## MoveData.py
+
+```MoveData.py``` is used to clean up a Seaglider's home directory prior to
+a new deployment.
+```
+/opt/basestation/bin/python /usr/local/basestation3/MoveData.py \
+ --mission_dir ~sg001 -t <target_directory> --verbose
+```
