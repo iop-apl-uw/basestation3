@@ -245,7 +245,7 @@ minimal examples.  If you are installing basestation3 on a clean machine or do
 not want to maintain the option of running basestation2, then these scripts
 should be installed:
 
-``` bash
+```
 sudo mkdir -p /usr/local/basestation
 sudo chown -R <user>:gliders /usr/local/basestation
 cp /usr/local/basestation3/login_logout_scripts/glider_login /usr/local/basestation/glider_login
@@ -282,6 +282,15 @@ which gliders will use basestation2 and which will use basestation3
 
 The files ```/usr/local/basestation2/glider_login``` and ```/usr/local/basestation2/glider_logout```
 need to be edited.  The string ```/usr/local/basestation``` needs to be replaced with ```$BASESTATION_PATH```
+
+### Installation of raw protocol
+
+From the ```/usr/local/basestation3/rawxfr``` directory
+
+```
+make
+sudo make install
+```
 
 ### Installation of other software packages
 
