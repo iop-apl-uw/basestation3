@@ -764,7 +764,7 @@ parameter.</p>
 	<li><p>Bit 4 moor at position: This causes the glider to latch the current
 GPS position as a target and set that target as the current waypoint. 
 The glider will try to virtually moor at that position. </p>
-	<li><p>Bit 5 clear flow control bits on <span class="bold"><a href="#PHONE_DEVICE">$PHONE_DEVICE</a></span>.</p>
+	<li><p>Bit 5 clear flow control bits on <span class="bold"><a href="#PHONE_DEVICE">$PHONE_DEVICE</a></span>. Latest glider firmware always disables flow control for the cmdfile so this bit is not strictly necessary for glider safety in the event of a flow control failure on the modem. </p>
 	<li><p>Bit 6 lengthen <span class="bold"><a href="#T_RSLEEP">$T_RSLEEP</a></span> by a factor of 30 when 2x $N_NOCOMM dives miss communications .</p>
 	<li><p>Bit 7 send a SMS messages to the sms_email address configured in NVRAM. 
 The messages is identical to the GPS status line that is emitted to the comm.log on the basestation. </p>
@@ -1140,13 +1140,20 @@ the behavior of firmware prior to 3.061. [0]
 <div class="med"></div>
  <p><span class="bold"><a name="XPDR_INT">$XPDR_INT</a></span><br>
 Set the transponder interrogate frequency. Set to zero to use the 
-transponder's default value. [0]
+transponder's default value (rotary switch settings). 
+Set to -1 to disable the transponder. 
+<b>The transponder will not function as an emergency locator
+when the transponder is disabled in this way.</b> Set 
+to any value from 8.0-16.0 in 0.1 kHz steps to 
+control the interrograte frequency via software. [0]
 </p>
 
 <div class="med"></div>
  <p><span class="bold"><a name="XPDR_REP">$XPDR_REP</a></span><br>
 Set the transponder reply frequency. Set to zero to use the 
-transponder's default value. [0]
+transponder's default value (rotary switch settings). Set 
+to any value from 8.0-16.0 in 0.1 kHz steps to 
+control the reply frequency via software. [0]
 </p>
 
 
