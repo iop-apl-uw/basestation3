@@ -51,21 +51,26 @@ from BaseLog import log_error, log_warning, log_info
 from Plotting import plotmissionsingle
 
 
+# pylint: disable=unused-argument
 @plotmissionsingle
 def mission_volume(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots various estimates for volmax"""
 
     if not generate_plots:
         return ([], [])
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts, ro=True)
         if not conn:
             log_error("Could not open mission database")
             return ([], [])
-        log_info("mission_volume db opened (ro)") 
+        log_info("mission_volume db opened (ro)")
     else:
         conn = dbcon
 
@@ -74,15 +79,24 @@ def mission_volume(
     columns = [i[1] for i in res]
 
     fig = plotly.graph_objects.Figure()
-    df = None
+    volmax_df = None
     if "implied_volmax" in columns:
         try:
-            df = pd.read_sql_query(
+            volmax_df = pd.read_sql_query(
                 "SELECT dive,implied_volmax from dives",
                 conn,
             ).sort_values("dive")
         except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
             log_warning("Could not load implied volmax", "exc")
+
+    if "implied_volmax_GSM" in columns:
+        try:
+            volmax_GSM_df = pd.read_sql_query(
+                "SELECT dive,implied_volmax_GSM from dives",
+                conn,
+            ).sort_values("dive")
+        except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
+            log_warning("Could not load implied volmax GSM", "exc")
 
     glider_df = None
     if "implied_volmax_glider" in columns:
@@ -106,16 +120,16 @@ def mission_volume(
                 "Could not load implied volmax from the flight model estimate", "exc"
             )
 
-    if dbcon == None:
+    if dbcon is None:
         conn.close()
         log_info("mission_volume db closed")
 
-    if df is not None:
+    if volmax_df is not None:
         fig.add_trace(
             {
                 "name": "Basestation Volmax",
-                "x": df["dive"],
-                "y": df["implied_volmax"],
+                "x": volmax_df["dive"],
+                "y": volmax_df["implied_volmax"],
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {
@@ -124,6 +138,22 @@ def mission_volume(
                     "width": 1,
                 },
                 "hovertemplate": "Basestation Volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
+            }
+        )
+    if volmax_GSM_df is not None:
+        fig.add_trace(
+            {
+                "name": "GSM Volmax",
+                "x": volmax_GSM_df["dive"],
+                "y": volmax_GSM_df["implied_volmax_GSM"],
+                "yaxis": "y1",
+                "mode": "lines",
+                "line": {
+                    "dash": "solid",
+                    "color": "darkgoldenrod",
+                    "width": 1,
+                },
+                "hovertemplate": "GSM Volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
             }
         )
     if glider_df is not None:
