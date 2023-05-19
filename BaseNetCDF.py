@@ -752,9 +752,6 @@ def assign_dim_info_size(nc_info_d, dim_info, size):
         # this can happen for very old missions where, e.g., there is no gc_state_info ($STATE)
         # individial dives or MMP calls will have nothing assigned to the dimension
         # This causes malformed nc files
-        import pdb
-
-        pdb.set_trace()
         log_error(f"Missing dimension size to assign to {dim_info}", "parent")
         return
 
