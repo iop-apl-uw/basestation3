@@ -349,8 +349,6 @@ def merge_instruments(master_instruments_d, slave_instruments_d):
 def update_globals_from_nodc(base_opts, globals_d):
     """Parse global and local NODC.yml files, if any and update globals_d"""
 
-    import pdb
-
     nodc_cnf_file = "NODC.yml"
     # Important NOTE:
     # all the names (but NOT the values) in the name,value pairs are coerced to lowercase!
@@ -361,8 +359,6 @@ def update_globals_from_nodc(base_opts, globals_d):
         cnf_override, _, _ = merge_fns
         if cnf_override and name in globals_d:
             nodc_dicts[0][name] = globals_d[name]
-
-    # pdb.set_trace()
 
     for yaml_filename in (
         os.path.join(base_opts.basestation_etc, nodc_cnf_file),
@@ -756,6 +752,9 @@ def assign_dim_info_size(nc_info_d, dim_info, size):
         # this can happen for very old missions where, e.g., there is no gc_state_info ($STATE)
         # individial dives or MMP calls will have nothing assigned to the dimension
         # This causes malformed nc files
+        import pdb
+
+        pdb.set_trace()
         log_error(f"Missing dimension size to assign to {dim_info}", "parent")
         return
 
