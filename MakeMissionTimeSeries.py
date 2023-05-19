@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -166,7 +166,6 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         "end_latitude",
         "start_longitude",
         "end_longitude",
-        "speed_gsm",
     ]
     mission_nc_dive_d = (
         {}
@@ -545,8 +544,12 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             ):
                 dropped_vars.append(var)
             if var in ctd_vars:
-                if (var not in dropped_vars) and (new_ctd_data_point not in master_nc_info_d):
-                    log_info(f'adding nc_info_d {var}, len {len(mission_nc_var_d[var])}')
+                if (var not in dropped_vars) and (
+                    new_ctd_data_point not in master_nc_info_d
+                ):
+                    log_info(
+                        f"adding nc_info_d {var}, len {len(mission_nc_var_d[var])}"
+                    )
                     master_nc_info_d[new_ctd_data_point] = len(mission_nc_var_d[var])
                     master_nc_info_d[new_ctd_data_info] = new_ctd_data_point
                     BaseNetCDF.register_sensor_dim_info(
