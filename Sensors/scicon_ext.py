@@ -81,7 +81,6 @@ def process_adcp_dat(base_opts, scicon_file, scicon_eng_file, processed_logger_e
         0 - success
         1 - failure
     """
-
     matfile = scicon_eng_file.replace(".eng", ".mat")
     # Run the convertor
     convertor = os.path.join(os.path.join(base_opts.basestation_directory, "Sensors"), "sc2mat")
@@ -733,6 +732,9 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
     # Process adcp data if any
     data_cols = {}
+    ad2cp_single_dim_actual = []
+    ad2cp_multi_dim_actual = []
+
     if adcp_list:
         adcp_list = sorted(adcp_list, key=lambda x : x['cast'])
         log_debug(adcp_list)
@@ -747,17 +749,25 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 data_cols[col_name] = float(mf[col_name][0][0])
 
             for col_name in ad2cp_single_dim:
+                if mf[col_name][:, 0].size == 0:
+                    continue
                 if col_name in list(data_cols.keys()):
                     data_cols[col_name] = append(data_cols[col_name], mf[col_name][:, 0], axis=0)
                 else:
                     data_cols[col_name] = mf[col_name][:, 0]
+                ad2cp_single_dim_actual.append(col_name)
+
 
             try:
                 for col_name in ad2cp_multi_dim:
+                    #pdb.set_trace()
+                    if mf[col_name].size == 0:
+                        continue
                     if col_name in list(data_cols.keys()):
                         data_cols[col_name] = append(data_cols[col_name], mf[col_name].transpose(), axis=0)
                     else:
                         data_cols[col_name] = mf[col_name].transpose()
+                    ad2cp_multi_dim_actual.append(col_name)
             except:
                 log_error("Problem processing multi-dim adcp data", 'exc')
                 #data_cols.pop(col_name, None)
@@ -767,11 +777,11 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
             ret_list.append(("%s_%s" % (ad2cp_base, col_name), data_cols[col_name]))
 
         # Single dim
-        for col_name in ad2cp_single_dim:
+        for col_name in ad2cp_single_dim_actual:
             ret_list.append(("%s_%s" % (ad2cp_base, col_name), data_cols[col_name]))
 
         # Multi-dimensional data
-        for col_name in ad2cp_multi_dim:
+        for col_name in ad2cp_multi_dim_actual:
             assign_dim_info_size(nc_info_d, nc_ad2cp_cell_info, data_cols[col_name].shape[1])
             ret_list.append(("%s_%s" % (ad2cp_base, col_name), data_cols[col_name]))
 
