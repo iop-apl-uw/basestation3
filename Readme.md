@@ -292,6 +292,14 @@ make
 sudo make install
 ```
 
+### Installation of sensor extension tools
+
+From the ```/usr/local/basestation3/Sensors``` directory
+
+```
+make
+```
+
 ### Installation of other software packages
 
 There are two additional packages maintained in their own repositories that

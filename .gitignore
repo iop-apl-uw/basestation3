@@ -8,6 +8,7 @@ __pycache__
 .sms_userid
 *.o
 sc2mat
+ad2cpMAT
 x3decode_ts
 ETOPO2v2g_f4.nc
 config.py
