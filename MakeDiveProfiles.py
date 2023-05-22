@@ -2607,6 +2607,9 @@ def make_dive_profile(
             log_info("Assuming this is a deck dive")
             if not "$SIM_PITCH" in log_f.data:
                 log_f.data["$SIM_PITCH"] = 15
+            # If running the legato, use the truck simulated pressure
+            if calib_consts["sg_ct_type"] == 4:
+                calib_consts["legato_use_truck_pressure"] = 1
 
     except KeyError:
         pass
