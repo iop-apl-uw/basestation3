@@ -575,8 +575,22 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
 
 
     pressure_col_index = None
-    if(df_meta.sealevel and  'pressure' in df_meta.columns.split()):
+    if 'pressure' in df_meta.columns.split():
         pressure_col_index = df_meta.columns.split().index('pressure')
+        if df_meta.sealevel:
+            sealevel = df_meta.sealevel
+        else:
+            if 'legato' in df_meta.instrument.instr_class.lower():
+                sealevel = 10082.0
+                log_error(
+                    f"Missing sealevel in {inp_file_name} - assuming {sealevel}",
+                    alert="MISSING_SEALEVEL",
+                )
+            else:
+                log_error(
+                    f"Column 'pressure' found in {inp_file_name} - without a 'sealevel' in the header - no sealevel correction applied",
+                    alert="MISSING_SEALEVEL",
+                )
 
     line_count = 0
     for raw_line in inp_file:
@@ -641,7 +655,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
             out_cols =[(df_meta.start_time + (((float(cols[0]) / df_meta.scale_off[0].scale) + df_meta.scale_off[0].offset)/1000.0))]
             for i in range(1, len(cols)):
                 if i == pressure_col_index:
-                    out_cols.append((((cols[i] - df_meta.sealevel)/ df_meta.scale_off[i].scale) + df_meta.scale_off[i].offset))
+                    out_cols.append((((cols[i] - sealevel)/ df_meta.scale_off[i].scale) + df_meta.scale_off[i].offset))
                 else:
                     out_cols.append(((cols[i] / df_meta.scale_off[i].scale) + df_meta.scale_off[i].offset))
 
