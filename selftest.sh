@@ -84,6 +84,21 @@ grep -i warning $fname
 grep -i retr $fname | grep -v gc=
 echo ""
 echo "--------------------------------------------"
+echo "Summary of supervisor settings"
+echo
+set offcounts = `grep "HSUPER,N,offset counts =" $fname | cut -f 4,5 -d' '`
+echo "fuel gauge offset counts: $offcounts"
+if ( "$offcounts" == "0, 0" ) then
+    echo "WARNING: fuel gauge might not be calibrated for offset"
+endif
+
+set watchdog = `grep "HSUPER,N,watchdog period=" $fname | cut -f 3 -d' '`
+if ( "$watchdog" != "7" ) then
+    echo "WARNING: Watchdog "$watchdog" is not default value (7)"
+endif
+
+echo ""
+echo "--------------------------------------------"
 echo "Summary of sensor values"
 echo
 
