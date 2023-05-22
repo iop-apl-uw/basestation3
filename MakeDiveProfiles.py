@@ -134,7 +134,7 @@ flight_variables = [
 ]
 
 sb_ct_type_map = {
-    0: "origina Seabird unpumped CTD",
+    0: "original Seabird unpumped CTD",
     1: "gun-style Seabird unpumped CTD",
     2: "pumped Seabird GPCTD",
     3: "gun-style Seabird unpumped SAILCT",
@@ -3698,7 +3698,19 @@ def make_dive_profile(
 
         ctd_ancillary_variables = ""
         sg_ct_type = calib_consts["sg_ct_type"]
+
         log_info("ct_type:%s" % sb_ct_type_map[sg_ct_type])
+        # Not checking every combination, but catch a common case in the
+        # Seabird to legato migration
+        if sg_ct_type in (0, 1) and (
+            any([x.startswith("legato_") for x in results_d])
+            or any([x.startswith("rbr_") for x in results_d])
+        ):
+            log_error(
+                f"sg_ct_type={sg_ct_type}, but found legato data.  Set sg_ct_type=4; in sg_calib_constants.m to correct",
+                alert="INCORRECT_CT",
+            )
+
         sbect_unpumped = calib_consts["sbect_unpumped"]
         have_scicon_ct = False
 
