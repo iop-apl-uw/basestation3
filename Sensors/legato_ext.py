@@ -293,7 +293,10 @@ def asc2eng(base_opts, module_name, datafile=None):
     sealevel = None
     if "rbr.pressure" in datafile.columns:
         if "legato_sealevel" not in datafile.calib_consts:
-            log_error("Missing legato_sealevel in sg_calib_constants - assuming 10082")
+            log_error(
+                "Missing legato_sealevel in sg_calib_constants - assuming 10082",
+                alert="MISSING_SEALEVEL",
+            )
             sealevel = 10082.0
             # If you get here reprocessing old missions, the old hardcoded values was 10082.0
         else:
