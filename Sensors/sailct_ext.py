@@ -32,8 +32,6 @@ import shutil
 
 from BaseLog import log_error
 
-# from BaseNetCDF import *
-
 
 def init_logger(module_name, init_dict=None):
     """
