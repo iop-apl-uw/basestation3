@@ -25,7 +25,7 @@ file in each glider's directory.  It also triggers the `.login` script, which se
 up the `.connected` file.  The glider then issues `rawrcv` or `lrz` commands to the basestation
 to send all the fragments and files, and `rawsend` or `lsz` commands to receive the `cmdfile`,
 etc.  (The modified versions of `lrz` and `lsz` add throughput and error
-notifications to `~/comm.log`.)  When the glider logs out the `.logout` script is
+notifications to `<seaglider_home_dir>/comm.log`.)  When the glider logs out the `.logout` script is
 triggered, which in turn runs the `/usr/local/basestation/glider_logout` script,
 which in turn runs the `/usr/local/basestation3/glider_logout` script
 which in turn runs the `Base.py` script.  The `Base.py` script processes any new or
@@ -329,7 +329,7 @@ basestation agree on what the password is.
 
 Give the ```gliders``` group read/write/execute permission for the glider directory.
 
-     sudo chmod g+rwx ~sgxxx
+     sudo chmod g+rwx <seaglider_home_directory>
 
 ## Additional security considertions
 
@@ -368,6 +368,9 @@ very limited chroot jail.  Under this scheme, the Seaglider account only has
 access to the binaries needed to exchange file information with basestation
 server.  The actual running of the conversion process is handled by a different
 user account.  See the [Jail ReadMe.md](jail/ReadMe.md) for details.
+
+Note: when running a Seaglider account under a jail, the ```~``` expansion for 
+home directory does not work for the Seaglider account.  
 
 # To test the new glider account
 
@@ -444,7 +447,7 @@ provide a glider ```.log``` file for the validator to use as a baseline  and a
 flag to specify the file type (-c, -s, or -t). For
 example:
 ```
-/opt/basestation/bin/python /usr/local/basestation3/validate.py ~sg001/p00010001.log -c ~sg001/cmdfile
+/opt/basestation/bin/python /usr/local/basestation3/validate.py <seaglider_home_directory>/p00010001.log -c ~sg001/cmdfile
 ```
 
 # Additional documentation
@@ -518,14 +521,14 @@ Regenerate all netcdf files, run Flight Model and generate plots:
 
 ```
 /opt/basestation/bin/python /usr/local/basestation3/Reprocess.py \
- --mission_dir ~sg001 --force --reprocess_plots
+ --mission_dir <seaglider_home_directory> --force --reprocess_plots
 ```
 
 Regenerate the dive 100 through 102 netcdf files, not re-running Flight Model
 
 ```
 /opt/basestation/bin/python /usr/local/basestation3/Reprocess.py \
- --mission_dir ~sg001 --force --skip_flight_model 100:102
+ --mission_dir <seaglider_home_directory> --force --skip_flight_model 100:102
 ```
 
 ## BaseDB.py
@@ -535,7 +538,7 @@ a need to regenerate the database:
 
 ```
 /opt/basestation/bin/python /usr/local/basestation3/BaseDB.py \
- --mission_dir ~sg001 addncfs
+ --mission_dir <seaglider_home_directory> addncfs
 ```
 
 ## BasePlot.py
@@ -547,14 +550,14 @@ to the normal output:
 
 ```
 /opt/basestation/bin/python /usr/local/basestation3/BasePlot.py \
- --mission_dir ~sg001  --plot_types dives --full_html p0010100.nc
+ --mission_dir <seaglider_home_directory>  --plot_types dives --full_html p0010100.nc
 ```
 
 To regenerate the whole mission plots:
 
 ```
 /opt/basestation/bin/python /usr/local/basestation3/BasePlot.py \
- --mission_dir ~sg001  --plot_types mission
+ --mission_dir <seaglider_home_directory>  --plot_types mission
 ```
 
 
@@ -564,5 +567,5 @@ To regenerate the whole mission plots:
 a new deployment.
 ```
 /opt/basestation/bin/python /usr/local/basestation3/MoveData.py \
- --mission_dir ~sg001 -t <target_directory> --verbose
+ --mission_dir <seaglider_home_directory> -t <target_directory> --verbose
 ```
