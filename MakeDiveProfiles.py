@@ -2364,11 +2364,15 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
     """
     sgc_vars_used = ""
     sgc_values = []
-    try:
-        for sgc_var in sgc_vars:
+    missing_sgc_vars = []
+    for sgc_var in sgc_vars:
+        if sgc_var in calib_consts:
             sgc_values.append(calib_consts[sgc_var])
             sgc_vars_used = sgc_vars_used + "sg_cal_" + sgc_var + " "
-    except KeyError:
+        else:
+            missing_sgc_vars.append(sgc_var)
+
+    if missing_sgc_vars:
         sgc_values = []
         sgc_vars_used = None
 
@@ -2386,9 +2390,12 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
         if log_vars_used is None:
             raise RuntimeError(
                 True,
-                "SBECT data found but %s calibration constant(s) missing" % sbect_type,
+                f"SBECT data found but {sbect_type} calibration constant(s) missing",
             )
-        log_warning("Using CT %s calibration constants from log file" % sbect_type)
+        log_error(
+            f"Missing {missing_sgc_vars} from sg_calib_constants.m - using CT {sbect_type} calibration constants from log file",
+            alert="MISSING_SEABIRD_CAL",
+        )
         log_values.append(log_vars_used)
         return tuple(log_values)
     else:
