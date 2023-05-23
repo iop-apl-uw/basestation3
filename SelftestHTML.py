@@ -121,6 +121,16 @@ for raw_line in proc.stdout:
         print('<div id=div%d style="display: none;">' % idnum)
         idnum = idnum + 1
 
+    elif line.startswith('Meta:'):
+        i = line.find('Dated:')
+        print("<h2>")
+        if i > -1:
+            print(line[0:i+7])
+            print("<span style='background-color: pink;'>%s</span><br>" % line[i+7:-1])
+        else:
+            format(line)
+        print("</h2>")
+
     elif line.startswith('----------'):
         continue
 

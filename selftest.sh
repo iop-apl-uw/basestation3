@@ -53,6 +53,9 @@ if ( $count == 0 ) then
 endif
 
 set fname = `ls -t "$base"/pt*.cap | head -n 1`
+set capname_by_date = $fname
+
+set fname = `ls -1 "$base"/pt*.cap | tail -n 1`
 set capname = $fname
 
 if ($fname == "" || ! -f $fname ) then
@@ -64,11 +67,23 @@ set glider = `basename $fname | cut -b3-5`
 set testnum = `basename $fname | cut -b6-9`
 set date = `grep "RTC time" $fname | cut -f3-8 -d' '`
 set filedate = `ls -l $fname | awk '{print $6,$7,$8}'`
-echo $fname \("$filedate"\) $glider \#"$testnum" $date
+
+echo Meta: $fname \("$filedate"\) SG"$glider" \#"$testnum" Dated: $date
+
+if ( "$fname" != "$capname_by_date" ) then
+    echo "WARNING: there is a capture file with a newer timestamp"
+endif
+
 echo "--------------------------------------------"
 echo "Summary of comm.log (snippet) for most recent test capture"
 echo
-grep st"$testnum"k "$base"/comm.log
+set snippet = `grep st"$testnum"k "$base"/comm.log`
+if ( "$snippet" == "" ) then
+    echo "No history of this selftest number in comm.log."
+    echo "This might not be the most recent selftest."
+else
+    grep st"$testnum"k "$base"/comm.log
+endif
 echo
 echo "--------------------------------------------"
 echo "Summary of motor moves"
