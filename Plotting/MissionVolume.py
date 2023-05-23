@@ -89,6 +89,7 @@ def mission_volume(
         except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
             log_warning("Could not load implied volmax", "exc")
 
+    volmax_GSM_df = None
     if "implied_volmax_GSM" in columns:
         try:
             volmax_GSM_df = pd.read_sql_query(
