@@ -71,7 +71,11 @@ call_plot_map = {
 
 @plotmissionsingle
 def mission_callstats(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots file transfer stats from comm.log"""
     if not generate_plots:
@@ -94,6 +98,8 @@ def mission_callstats(
     crc_errors_present = False
     # rate = []
     for session in comm_log.sessions:
+        if session.dive_num is None:
+            continue
         # log_info(session.transfered_size)
         files_transfered_num.append(len(list(session.transfered_size.keys())))
         files_transfered.append(session.transfered_size)
