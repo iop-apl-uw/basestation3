@@ -102,7 +102,7 @@ for raw_line in proc.stdout:
         print("</pre>")
         insideDir = False
 
-    if insideParam and line.find('not between') == -1 and line.find('skipping') == -1: 
+    if insideParam and line.find('not between') == -1 and line.find('skipping') == -1 and line.find('canon') == -1: 
         if len(line) > 2:
             insideParam = False
             print("</table>")
