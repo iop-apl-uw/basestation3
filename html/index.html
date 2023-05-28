@@ -901,9 +901,14 @@
         .then(res => res.json())
         .then(data => {
             var glider, t;
+            var shown = [];
             loadAbout(data['organization']);
             for (g of data['missions']) {
                 glider = { glider: g.glider, mission: g.mission, path: g.path };
+                if (gliders.length > 0 && (!gliders.includes("" + glider.glider) || shown.includes(glider.glider)))
+                    continue;
+
+                shown.push(glider.glider);
                 gliderTable.push(glider);
 
                 // create div and append as blank to main
@@ -1022,6 +1027,12 @@
         document.body.style.webkitTransform =  scale;    // Chrome, Opera, Safari
         document.body.style.msTransform =   scale;       // IE 9
         document.body.style.transform = scale;     // General
+
+        let params = new URLSearchParams(window.location.search);
+
+        if (params.has('gliders')) {
+            gliders = params.get('gliders').split(',');
+        }
 
         loadTable();
         setupStream();
