@@ -607,7 +607,9 @@
             spanNext.id = 'spanNext_' + glider.glider + '_' + glider.path;
             chartNext.appendChild(spanNext);
 
-            nextGauges.push({chart:chartNext.id, bar:barNext.id, span:spanNext.id, next:data.next});
+            nextGauges.push({chart:chartNext.id, bar:barNext.id, span:spanNext.id, next:data.next, parentTile:t });
+            console.log('len = ' + nextGauges.length);
+            console.log(glider.glider);
 
             next = (data.next - Date.now()/1000);
             nextHour = parseInt('' + (next/3600));
@@ -905,9 +907,11 @@
             loadAbout(data['organization']);
             for (g of data['missions']) {
                 glider = { glider: g.glider, mission: g.mission, path: g.path };
-                if (gliders.length > 0 && (!gliders.includes("" + glider.glider) || shown.includes(glider.glider)))
+                if (gliders.length > 0 && (!gliders.includes("" + glider.glider) || shown.includes(glider.glider))) {
+                    console.log('skipping ' + glider.glider);
                     continue;
-
+                }
+                console.log('adding ' + glider.glider);
                 shown.push(glider.glider);
                 gliderTable.push(glider);
 
@@ -919,6 +923,7 @@
                 if ($(`${g.glider}_${g.path}`)) {
                     console.log('tile exists, clearing');
                     clearTiles(`${g.glider}_${g.path}`);
+                    clearGauges(`${g.glider}_${g.path}`);
                     t = $(`${g.glider}_${g.path}`);
                 }
                 else {
@@ -927,6 +932,7 @@
                     $('main').appendChild(t);
                 }
                 createTile(glider, t);
+                console.log(nextGauges.length);
             }
 
 {% if runMode == 'pilot' %}
@@ -947,6 +953,12 @@
         while($(parent).firstChild) {
             $(parent).removeChild($(parent).firstChild);
         }
+    }
+
+    function clearGauges(parent) {
+        console.log('len = ' + nextGauges.length + ' removing ' + parent);
+        nextGauges = nextGauges.filter(item => item.parentTile !== parent); 
+        console.log('len = ' + nextGauges.length);
     }
 
     let wsocket  = null;
@@ -973,7 +985,9 @@
 
         path = loc.pathname.split('/').slice(0,-1).join('/');
         new_uri += "//" + loc.host + path;
-        new_uri += "/watch/mask";
+        new_uri += "/watch";
+        if (gliders.length > 0)
+            new_uri += "?gliders=" + gliders.join(',');
 
         wsocket = new WebSocket(new_uri);
 
@@ -1009,14 +1023,15 @@
                     // the only files we care about is perdive which we use 
                     // to trigger a reload of this tile
                     clearTiles(glider + '_');
+                    clearGauges(glider + '_');
                     createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'))
                 }
                 else if ('content' in json && json['content'].startsWith('status')) {
                     // the only status message is disconnected
                     $(glider + '_').style.border = '2px solid black';
                 }
-                else if (which.startsWith('gpsstr')) {
-                    // we only get gpsstr on new connection
+                else if ('connected' in json) {
+                    // gpsstr topic payload is only one with "connected" entry
                     $(glider + '_').style.border = '2px solid magenta';
                 }
             }

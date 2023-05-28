@@ -744,7 +744,7 @@ def attachHandlers(app: sanic.Sanic):
     # args: mask is unused
     # returns: JSON formatted dict of missions and mission config
     async def missionsHandler(request, mask:int):
-        table = await buildAuthTable(request, mask)
+        table = await buildAuthTable(request)
         msg = { "missions": table, "organization": request.app.ctx.organization }
         return sanic.response.json(msg)
      
@@ -1537,14 +1537,16 @@ def attachHandlers(app: sanic.Sanic):
 
 
     # not protected by decorator - buildAuthTable only returns authorized missions
-    @app.websocket('/watch/<mask:str>')
+    @app.websocket('/watch')
     # description: stream real-time glider summary state (call status, cmdfile directive)
-    # parameters: mission
+    # parameters: mission, gliders
     ## @authorized(protections=['pilot'])
-    async def watchHandler(request: sanic.Request, ws: sanic.Websocket, mask: str):
+    async def watchHandler(request: sanic.Request, ws: sanic.Websocket):
+
+        gliders = list(map(int, request.args['gliders'][0].split(','))) if 'gliders' in request.args else None
 
         sanic.log.logger.debug("watchHandler start")
-        opTable = await buildAuthTable(request, mask)
+        opTable = await buildAuthTable(request)
         await ws.send(f"START") # send something to ack the connection opened
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
@@ -1567,6 +1569,9 @@ def attachHandlers(app: sanic.Sanic):
                 if m is None: # must not be authorized
                     continue
 
+                if gliders and not glider in gliders:
+                    continue
+ 
                 if 'cmdfile' in topic:
                     cmdfile = f"sg{glider:03d}/cmdfile"
                     directive = await summary.getCmdfileDirective(cmdfile)
@@ -1791,7 +1796,7 @@ async def buildMissionTable(app, config=None):
 
     return missions
  
-async def buildAuthTable(request, mask):
+async def buildAuthTable(request):
     opTable = []
     for m in request.app.ctx.missionTable:
         status = checkGliderMission(request, m['glider'], m['mission'])
