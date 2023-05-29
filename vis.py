@@ -318,11 +318,11 @@ def filterMission(gld, request, mission=None):
     m = matchMission(gld, request, mission)    
     return { k: m[k] for k in m.keys() & publicMissionFields } if m else None
 
-def gliderPath(glider, request, path=None):
+def gliderPath(glider, request, path=None, mission=None):
     if path:
         return f'sg{glider:03d}/{path}'
     else:
-        m = matchMission(glider, request)
+        m = matchMission(glider, request, mission)
         if m and 'abs' in m and m['abs']:
             return m['abs'] 
         elif m and 'path' in m and m['path']:
@@ -1565,7 +1565,7 @@ def attachHandlers(app: sanic.Sanic):
                 glider = int(pieces[0])
                 topic  = pieces[1]
 
-                m = next(filter(lambda d: d['glider'] == glider and d['path'] == '', opTable), None)
+                m = next(filter(lambda d: d['glider'] == glider and d['default'] == True, opTable), None)
                 if m is None: # must not be authorized
                     continue
 
@@ -1573,16 +1573,16 @@ def attachHandlers(app: sanic.Sanic):
                     continue
  
                 if 'cmdfile' in topic:
-                    cmdfile = f"sg{glider:03d}/cmdfile"
+                    cmdfile = f"{gliderPath(glider,request,mission=m['mission'])}/cmdfile"
                     directive = await summary.getCmdfileDirective(cmdfile)
                     sanic.log.logger.debug(f"watch {glider} cmdfile modified")
                     await ws.send(f"CMDFILE={glider:03d},{directive}")
                 elif 'urls' in topic:
                     try:
-                        m = loads(body)
-                        if 'glider' not in m:
-                            m.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
-                        await ws.send(f"NEW={dumps(m).decode('utf-8')}")
+                        msg = loads(body)
+                        if 'glider' not in msg:
+                            msg.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
+                        await ws.send(f"NEW={dumps(msg).decode('utf-8')}")
                     except Exception as e:
                         sanic.log.logger.info(f"watchHandler {e}")
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
@@ -1805,7 +1805,7 @@ async def buildAuthTable(request):
 
         path    = m['path'] if m['path'] else ""
         mission = m['mission'] if m['mission'] else ''
-        opTable.append({ "mission": mission, "glider": m['glider'], "path": path })
+        opTable.append({ "mission": mission, "glider": m['glider'], "path": path, "default": m['default'] })
 
     return opTable
 
