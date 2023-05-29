@@ -131,6 +131,7 @@ def mission_energy(
             try:
                 conn.commit()
             except Exception as e:
+                conn.rollback()
                 log_error(f"Failed commit, MissionEnergy {e}", "exc")
 
             log_info("mission_energy db closed")
@@ -404,6 +405,7 @@ def mission_energy(
             try:
                 conn.commit()
             except Exception as e:
+                conn.rollback()
                 log_error(f"Failed commit, MissionEnergy {e}", "exc")
 
             log_info("mission_energy db closed")
@@ -652,6 +654,7 @@ def mission_energy(
             try:
                 conn.commit()
             except Exception as e:
+                conn.rollback()
                 log_error(f"Failed commit, MissionEnergy {e}", "exc")
             conn.close()
             log_info("mission_energy db closed")

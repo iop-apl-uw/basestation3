@@ -116,6 +116,7 @@ def mission_int_sensors(
         try:
             conn.commit()
         except Exception as e:
+            conn.rollback()
             log_error(f"Failed commit, MissionIntSensors {e}", "exc")
 
         log_info("mission_int_sensors db closed")

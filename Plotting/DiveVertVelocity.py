@@ -664,6 +664,7 @@ def plot_vert_vel(
         try:
             conn.commit()
         except Exception as e:
+            conn.rollback()
             log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
 
         log_info("plot_vert_vel db closed")

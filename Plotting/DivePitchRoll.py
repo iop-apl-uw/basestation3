@@ -462,6 +462,7 @@ def plot_pitch_roll(
         try:
             conn.commit()
         except Exception as e:
+            conn.rollback()
             log_error(f"Failed commit, DivePitchRoll {e}", "exc")
 
         conn.close()

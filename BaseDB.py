@@ -797,6 +797,7 @@ def rebuildDB(base_opts):
     try:
         con.commit()
     except Exception as e:
+        con.rollback()
         log_error(f"Failed commit, rebuildDB {e}", "exc")
 
     con.close()
@@ -814,6 +815,7 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     try:
         con.commit()
     except Exception as e:
+        con.rollback()
         log_error(f"Failed commit, loadDB {e}", "exc")
 
     log_info("loadDB db closed")
@@ -849,6 +851,7 @@ def prepDB(base_opts, dbfile=None):
     try:
         con.commit()
     except Exception as e:
+        con.rollback()
         log_error(f"Failed commit, prepDB {e}", "exc")
 
     log_info("prepDB db closed")
@@ -894,6 +897,7 @@ def saveFlightDB(base_opts, mat_d, con=None):
         try:
             mycon.commit()
         except Exception as e:
+            mycon.rollbacl()
             log_error(f"Failed commit, saveFlightDB {e}", "exc")
 
         mycon.close()
@@ -935,6 +939,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
         try:
             mycon.commit()
         except Exception as e:
+            mycon.rollback()
             log_error(f"Failed commit, addValToDB {e}", "exc")
             status = 1
 
@@ -979,6 +984,7 @@ def addSlopeValToDB(base_opts, dive_num, var, con=None):
         try:
             mycon.commit()
         except Exception as e:
+            mycon.rollbacl()
             log_error(f"Failed commit, addSlopeValToDB {e}", "exc")
 
         mycon.close()
@@ -1022,6 +1028,7 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
         try:
             mycon.commit()
         except Exception as e:
+            mycon.rollback()
             log_error(f"Failed commit, logControlFile {e}", "exc")
         mycon.close()
         log_info("logControlFile db closed")
@@ -1055,6 +1062,7 @@ def rebuildControlHistory(base_opts):
     try:
         con.commit()
     except Exception as e:
+        con.rollback()
         log_error(f"Failed commit, rebuildControlHistory {e}", "exc")
 
     log_info("rebuildControlHistory db closed")
@@ -1097,6 +1105,7 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
         try:
             mycon.commit()
         except Exception as e:
+            mycon.rollback()
             log_error(f"Failed commit, logParameterChanges {e}", "exc")
 
         mycon.close()
@@ -1125,6 +1134,7 @@ def addSession(base_opts, session, con=None):
         try:
             mycon.commit()
         except Exception as e:
+            mycon.rollback()
             log_error(f"Failed commit, addSession {e}", "exc")
 
         mycon.close()
