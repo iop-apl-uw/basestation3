@@ -1799,7 +1799,7 @@ def notifyVis(glider: int, topic: str, body: str):
         socket.connect(f"ipc://{f}")
         socket.SNDTIMEO = 5000
         socket.setsockopt(zmq.SNDTIMEO, 5000)
-        socket.setsockopt(zmq.LINGER, 0)  # this is the important one
+        socket.setsockopt(zmq.LINGER, 4000)  # this is the important one
         log_info(f"notifying {f}:{topic}:{body}")
         socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()

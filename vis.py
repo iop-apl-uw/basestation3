@@ -1901,7 +1901,7 @@ async def notifier(config):
     ctx = zmq.asyncio.Context()
     socket = ctx.socket(zmq.PUB)
     socket.bind(config.WATCH_IPC)
-    socket.setsockopt(zmq.SNDTIMEO, 200)
+    socket.setsockopt(zmq.SNDTIMEO, 1000)
     socket.setsockopt(zmq.LINGER, 0)
 
     configWatchSocket = ctx.socket(zmq.SUB)

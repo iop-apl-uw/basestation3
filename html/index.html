@@ -466,6 +466,16 @@
         }
     }
 
+    function clearGauges(parentID) {
+        var i;
+        for (i = 0 ; i < nextGauges.length ; i++) {
+            if (nextGauges[i].parentTileID === parentID) {
+                nextGauges.splice(i, 1);
+                break;
+            }
+        }
+    }
+
     const directiveColors = { "GO": "green", "QUIT": "red", "RESUME": "yellow" };
     function formatDirective(d, id) {
         var color;
@@ -608,8 +618,6 @@
             chartNext.appendChild(spanNext);
 
             nextGauges.push({chart:chartNext.id, bar:barNext.id, span:spanNext.id, next:data.next, parentTileID:t.id });
-            console.log('len = ' + nextGauges.length);
-            console.log(glider.glider);
 
             next = (data.next - Date.now()/1000);
             nextHour = parseInt('' + (next/3600));
@@ -923,7 +931,9 @@
                 if ($(`${g.glider}_${g.path}`)) {
                     console.log('tile exists, clearing');
                     clearTiles(`${g.glider}_${g.path}`);
+{% if runMode == 'pilot' %}
                     clearGauges(`${g.glider}_${g.path}`);
+{% endif %}
                     t = $(`${g.glider}_${g.path}`);
                 }
                 else {
@@ -954,21 +964,6 @@
         }
     }
 
-    function clearGauges(parentID) {
-        var i;
-        console.log('len = ' + nextGauges.length + ' removing ' + parentID);
-        for (i = 0 ; i < nextGauges.length ; i++) {
-            if (nextGauges[i].parentTileID === parentID) {
-                console.log('removing ' + nextGauges[i].parentTileID);
-                nextGauges.splice(i, 1);
-                break;
-            }
-            else {
-                console.log('leaving ' + nextGauges[i].parentTileID);
-            }
-        }
-        console.log('len = ' + nextGauges.length);
-    }
 
     let wsocket  = null;
     var lastSetup = 0;
@@ -1032,7 +1027,9 @@
                     // the only files we care about is perdive which we use 
                     // to trigger a reload of this tile
                     clearTiles(glider + '_');
+{% if runMode == 'pilot' %}
                     clearGauges(glider + '_');
+{% endif %}
                     createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'))
                 }
                 else if ('content' in json && json['content'].startsWith('status')) {
