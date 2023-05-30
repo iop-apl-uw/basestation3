@@ -568,31 +568,49 @@
             t.appendChild(header);
 
             txt = document.createElement('div');
-            let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
-            txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
+            if (data.hasOwnProperty('end')) {
+                let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
+                if (data.hasOwnProperty('depth'))
+                    txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
+                else
+                    txt.innerHTML = `dive ${data.dive}, last call ${end_t}`;
+            }
+            else {
+                txt.innerHTML = `dive X ended X to Xm`;
+            }
             t.appendChild(txt);
 
             txt = document.createElement('div');
             txt.id = `${glider.glider}_directive`
 
-            txt.innerHTML = `parsed ${formatDirective(data.commDirective, "commdirective" + glider.glider)}, waiting ${formatDirective(data.cmdfileDirective, "cmdfileDirective" + glider.glider)}`;
+            if (data.hasOwnProperty('commDirective')) 
+                txt.innerHTML = `parsed ${formatDirective(data.commDirective, "commdirective" + glider.glider)}, waiting ${formatDirective(data.cmdfileDirective, "cmdfileDirective" + glider.glider)}`;
+            else
+                txt.innerHTML = `parsed X, waiting X`;
+
             t.appendChild(txt);
 
 
             txt = document.createElement('div');
-            if (data.shutdown) {
-                txt.innerHTML = '<span style="color:magenta; font-weight: bold;">powered off</span>';
-            }
-            else if (data.recovery != null) {
-                var color;
-                if (data.commDirective == 'RESUME')       color = 'black';
-                else if (data.recovery == 'QUIT_COMMAND') color = 'yellow';
-                else                                      color = 'red';
-                txt.innerHTML = `in recovery: <span style="color:${color}; font-weight: bold;">${data.recovery}</span>`;
+            if (data.hasOwnProperty('shutdown') && data.hasOwnProperty('recovery') && data.hasOwnProperty('commDirective')) {
+                if (data.shutdown) {
+                    txt.innerHTML = '<span style="color:magenta; font-weight: bold;">powered off</span>';
+                }
+                else if (data.recovery != null) {
+                    var color;
+                    if (data.commDirective == 'RESUME')       color = 'black';
+                    else if (data.recovery == 'QUIT_COMMAND') color = 'yellow';
+                    else                                      color = 'red';
+                    txt.innerHTML = `in recovery: <span style="color:${color}; font-weight: bold;">${data.recovery}</span>`;
+                }
+                else {
+                    txt.innerHTML = 'in recovery: <span style="color:green; font-weight: bold;">no</span>';
+                }
             }
             else {
-                txt.innerHTML = 'in recovery: <span style="color:green; font-weight: bold;">no</span>';
+                txt.innerHTML = 'in recovery: X';
             }
+
             t.appendChild(txt);
 
             box = document.createElement('div');
@@ -630,8 +648,13 @@
             spanBatt.id = 'spanBatt_' + glider.glider + '_' + glider.path;
             chartBatt.appendChild(spanBatt);
 
-            let endurance_t = new Date(data.enduranceEndT*1000).toISOString().replace('T', ' ').slice(0,-14);
-            setPercentBar(chartBatt.id, barBatt.id, spanBatt.id, data.capacity[1], '', `projected end ${endurance_t}`);
+            if (data.hasOwnProperty('enduranceEndT')) {
+                let endurance_t = new Date(data.enduranceEndT*1000).toISOString().replace('T', ' ').slice(0,-14);
+                setPercentBar(chartBatt.id, barBatt.id, spanBatt.id, data.capacity[1], '', `projected end ${endurance_t}`);
+            }
+            else {
+                setPercentBar(chartBatt.id, barBatt.id, spanBatt.id, 0, '', 'projected end X');
+            }
 
             box = document.createElement('div');
             box.classList.add('box');
@@ -655,14 +678,19 @@
             spanNext.id = 'spanNext_' + glider.glider + '_' + glider.path;
             chartNext.appendChild(spanNext);
 
-            nextGauges.push({chart:chartNext.id, bar:barNext.id, span:spanNext.id, next:data.next, parentTileID:t.id });
+            if (data.hasOwnProperty('next')) {
+                nextGauges.push({chart:chartNext.id, bar:barNext.id, span:spanNext.id, next:data.next, parentTileID:t.id });
 
-            next = (data.next - Date.now()/1000);
-            nextHour = parseInt('' + (next/3600));
-            nextMin  = parseInt('' + Math.abs(((next - nextHour*3600)/60)));
-            
-            let due_t = new Date(Date.now() + next*1000).toISOString().replace('T', ' ').slice(0,-8);
-            setPlusMinusBar(chartNext.id, barNext.id, spanNext.id, next/28800.0, `${nextHour.zeroPad()}:${nextMin.zeroPad()}`, `next call due ${due_t}`);
+                next = (data.next - Date.now()/1000);
+                nextHour = parseInt('' + (next/3600));
+                nextMin  = parseInt('' + Math.abs(((next - nextHour*3600)/60)));
+                
+                let due_t = new Date(Date.now() + next*1000).toISOString().replace('T', ' ').slice(0,-8);
+                setPlusMinusBar(chartNext.id, barNext.id, spanNext.id, next/28800.0, `${nextHour.zeroPad()}:${nextMin.zeroPad()}`, `next call due ${due_t}`);
+            }
+            else {
+                setPlusMinusBar(chartNext.id, barNext.id, spanNext.id, 0, '', 'next call due X');
+            }
 
             // annunciators
             h = document.createElement('div');
@@ -674,42 +702,68 @@
             // errors
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `errors<br>${data.errors + data.crits}`;
-            h.classList.add(thresh(data.errors + data.crits, 0, 0));
+            if (data.hasOwnProperty('errors') && data.hasOwnProperty('crits')) {
+                h.innerHTML = `errors<br>${data.errors + data.crits}`;
+                h.classList.add(thresh(data.errors + data.crits, 0, 0));
+            }
+            else {
+                h.innerHTML = 'errors';
+                h.classList.add('indicatorGreen');
+            }
+            
             indicators.push(h);
 
             // alerts
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `alerts<br>${data.alert ? 'yes' : 'none'}`;
-            h.classList.add(thresh(data.alert ? 1 : 0, 0, 0));
+            if (data.hasOwnProperty('alert')) {
+                h.innerHTML = `alerts<br>${data.alert ? 'yes' : 'none'}`;
+                h.classList.add(thresh(data.alert ? 1 : 0, 0, 0));
+            }
+            else {
+                h.innerHTML = 'alerts';
+                h.classList.add('indicatorGreen');
+            }
             indicators.push(h);
  
             // OG efficiency
             h = document.createElement('div');
             h.title = "over-ground efficiency (flight quality)"
             h.classList.add('indicator');
-            h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
-            h.classList.add(thresh(data.dogEfficiency, 0.25, 0.5));
+            if (data.hasOwnProperty('dogEfficiency')) {
+                h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
+                h.classList.add(thresh(data.dogEfficiency, 0.25, 0.5));
+            }
+            else {
+                h.innerHTML = 'OG eff.';
+                h.classList.add('indicatorGreen');
+            } 
             indicators.push(h);
 
             // VBD efficiency
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `VBD eff.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
-            h.classList.add(thresh(data.vbdEfficiency, 0.25, 0.4));
+            if (data.hasOwnProperty('vbdEfficiency')) {
+                h.innerHTML = `VBD eff.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
+                h.classList.add(thresh(data.vbdEfficiency, 0.25, 0.4));
+            }
+            else {
+                h.innerHTML = 'VBD eff.';
+                h.classList.add('indicatorGreen');
+            }
             indicators.push(h);
 
             // mission endurance - planned end date must be defined
             if ('mission' in data && 'planned' in data.mission && data.mission.planned) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
+
                 planned = new Date(data.mission.planned).getTime() /1000;
                 let days = (planned - data.enduranceEndT)/86400;
-                h = document.createElement('div');
                 if (days < 0)
                     h.title = `mission endurance ${-days.toFixed(0)} days beyond end-date (${data.mission.planned})`;
                 else
                     h.title = `mission endurance ${days.toFixed(0)} days short of end-date (${data.mission.planned})`;
-                h.classList.add('indicator');
                 if (days < 0)
                     h.innerHTML = `endur.<br><span>+${-days.toFixed(0)} days</span>`;
                 else
@@ -720,45 +774,75 @@
 
             // internal pressure
             h = document.createElement('div');
-            h.title = `internal pressure slope ${data.internalPressureSlope.toFixed(3)}psi/dv`;
             h.classList.add('indicator');
-            h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
-            h.classList.add(thresh(data.internalPressureSlope, 0.01, 0.005));
+            if (data.hasOwnProperty('internalPressureSlope')) {
+                h.title = `internal pressure slope ${data.internalPressureSlope.toFixed(3)}psi/dv`;
+                h.classList.add(thresh(data.internalPressureSlope, 0.01, 0.005));
+            }
+            else {
+                h.classList.add('indicatorGreen');
+            }
+            if (data.hasOwnProperty('internalPressure'))
+                h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
+            else
+                h.innerHTML = 'intern P';
+
             indicators.push(h);
 
             // humidity
             h = document.createElement('div');
-            h.title = `humidity slope ${data.humiditySlope.toFixed(2)}/dv`;
             h.classList.add('indicator');
-            h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
-            h.classList.add(thresh(data.humiditySlope, 0.2, 0.05));
+            if (data.hasOwnProperty('humiditySlope')) { 
+                h.title = `humidity slope ${data.humiditySlope.toFixed(2)}/dv`;
+                h.classList.add(thresh(data.humiditySlope, 0.2, 0.05));
+            }
+            else {
+                h.classList.add('indicatorGreen');
+            }
+            if (data.hasOwnProperty('humidity')) 
+                h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
+            else 
+                h.innerHTML = 'humid';
+            
             indicators.push(h);
 
             // volmax
             h = document.createElement('div');
             h.classList.add('indicator');
-            h.innerHTML = `volmax<br><span>${data.impliedVolmaxSlope.toFixed(1)}cc/dv</span>`;
-            h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
+            if (data.hasOwnProperty('impliedVolmaxSlope')) {
+                h.innerHTML = `volmax<br><span>${data.impliedVolmaxSlope.toFixed(1)}cc/dv</span>`;
+                h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
+            }
+            else {
+                h.innerHTML = 'volmax';
+                h.classList.add('indicatorGreen');
+            }
             indicators.push(h);
 
             // comms
             h = document.createElement('div');
             h.classList.add('indicator');
-            let callState = data.logout ? "call finished ok" : "call dropped";
-            if (data.calls == 1 && data.logout) {
-                h.title = 'calls 1, call finished ok';
-                h.innerHTML = 'comms<br>good';
-                h.classList.add('indicatorGreen');
-            }
-            else if (data.calls < 3 || data.logout == false) {
-                h.title = `calls ${data.calls}, ${callState}`;
-                h.innerHTML = 'comms<br>fair';
-                h.classList.add('indicatorYellow');
+            if (data.hasOwnProperty('logout') && data.hasOwnProperty('calls')) {
+                let callState = data.logout ? "call finished ok" : "call dropped";
+                if (data.calls == 1 && data.logout) {
+                    h.title = 'calls 1, call finished ok';
+                    h.innerHTML = 'comms<br>good';
+                    h.classList.add('indicatorGreen');
+                }
+                else if (data.calls < 3 || data.logout == false) {
+                    h.title = `calls ${data.calls}, ${callState}`;
+                    h.innerHTML = 'comms<br>fair';
+                    h.classList.add('indicatorYellow');
+                }
+                else {
+                    h.title = `calls ${data.calls}, ${callState}`;
+                    h.innerHTML = 'comms<br>poor';
+                    h.classList.add('indicatorRed');
+                }
             }
             else {
-                h.title = `calls ${data.calls}, ${callState}`;
-                h.innerHTML = 'comms<br>poor';
-                h.classList.add('indicatorRed');
+                h.innerHTML = 'comms';
+                h.classList.add('indicatorGreen');
             }
             indicators.push(h);
 
