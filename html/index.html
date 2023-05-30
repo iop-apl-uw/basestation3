@@ -130,12 +130,22 @@
                 max-width:calc(90vw - 10px);
                 max-height:calc(75vw - 10px);
                 mix-blend-mode:multiply;
+                display: block;
             }
 
             .expander {
                 width: 2vw;
                 max-width: 2vw;
                 cursor: pointer;
+            }
+
+            .commbox {
+                display: none;
+                flex-direction: column; 
+                overflow-x:none;
+                overflow-y:auto;
+                font-size: 10px;
+                white-space:pre;
             }
 
             .indicatorInsideBox {
@@ -275,6 +285,7 @@
             max-width:290px; 
             max-height:240px; 
             mix-blend-mode:multiply;
+            display: block;
         }
 
 
@@ -352,6 +363,20 @@
             width: 100%;
             margin-left: -2px;
         }
+
+        .commbox {
+            display: none;
+            flex-direction: column; 
+            overflow-x:none;
+            overflow-y:auto;
+            font-size: 10px;
+            white-space:pre;
+            max-width:290px; 
+            max-height:240px; 
+            min-width:290px; 
+            min-height:240px; 
+        }
+
 {% endif %}
 
     }
@@ -501,8 +526,21 @@
                 return 'indicatorGreen';
         }
     }
+    
+    function togglePlotComm(id) {
 
-    function createTile(glider, t) {
+        if ($('img_' + id).style.display == 'block') {
+            $('img_' + id).style.display = 'none'; 
+            $('comm_' + id).style.display = 'block'; 
+        }
+        else {
+            $('img_' + id).style.display = 'block'; 
+            $('comm_' + id).style.display = 'none'; 
+        }
+        return false;
+    }
+
+    function createTile(glider, t, commLogContent) {
         console.log(glider);
         var indicators = [];
 
@@ -735,7 +773,7 @@
                         if (count >= 5) {
                             indicators[i].setAttribute('hidden', '');
                             indicators[i].setAttribute('data-extra', '');
-                            console.log('attaching attributes');
+                            // console.log('attaching attributes');
                         }
                         if (count == 5)
                             firstExtra = indicators[i];
@@ -780,8 +818,27 @@
                 img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
     
             img.classList.add('dashImg');
-     
+            img.id = 'img_' + glider.glider + '_';
+            img.style.display = 'block';
+          
             box.appendChild(img);
+
+            comm = document.createElement('div');
+            comm.classList.add('commbox');
+            comm.id = 'comm_' + glider.glider + '_';
+            comm.style.display = 'none';
+            comm.innerHTML = commLogContent;
+            comm.scrollTop = comm.scrollHeight;
+           
+            box.appendChild(comm);
+
+            box.onclick = function()
+                   {
+                        event.stopPropagation();
+                        togglePlotComm(glider.glider + '_');
+                        return false;
+                    }
+
             t.appendChild(box);
         })
         .catch(error => {
@@ -791,7 +848,7 @@
 
 {% else %}
 
-    function createTile(glider, t) {
+    function createTile(glider, t, commLogContent) {
         console.log(glider);
 
         fetch(`summary/${glider.glider}${mission(glider)}`)
@@ -930,10 +987,10 @@
                 // this tile probably never exists here in loadTable
                 if ($(`${g.glider}_${g.path}`)) {
                     console.log('tile exists, clearing');
-                    clearTiles(`${g.glider}_${g.path}`);
 {% if runMode == 'pilot' %}
                     clearGauges(`${g.glider}_${g.path}`);
 {% endif %}
+                    clearTiles(`${g.glider}_${g.path}`);
                     t = $(`${g.glider}_${g.path}`);
                 }
                 else {
@@ -941,7 +998,7 @@
                     t.id = `${g.glider}_${g.path}`
                     $('main').appendChild(t);
                 }
-                createTile(glider, t);
+                createTile(glider, t, '');
             }
 
 {% if runMode == 'pilot' %}
@@ -1020,25 +1077,43 @@
                 $('cmdfileDirective' + glider).innerHTML = d;
                 $('cmdfileDirective' + glider).style.color = d in directiveColors ? directiveColors[d] : 'black';
             }
+{% if runMode == 'pilot' %}
+            else if (line.startsWith('COMMLOG=')) {
+                glider = line.slice(8,11);
+                body   = line.slice(12);
+                var elt = $('comm_' + parseInt(glider) + '_');
+                elt.innerHTML += body;
+                elt.scrollTop = elt.scrollHeight;
+            }
+{% endif %}
             else if (line.startsWith('NEW=')) {
                 json = JSON.parse(line.slice(4));
                 glider = json['glider'];
                 if ( 'content' in json && json['content'] == "files=perdive") {
                     // the only files we care about is perdive which we use 
                     // to trigger a reload of this tile
-                    clearTiles(glider + '_');
 {% if runMode == 'pilot' %}
                     clearGauges(glider + '_');
+                    commLog = $('comm_' + glider + '_').innerHTML;
 {% endif %}
-                    createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'))
+                    clearTiles(glider + '_');
+{% if runMode == 'pilot' %}
+                    createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'), commLog)
+{% else %}
+                    createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'), '')
+{% endif %}
                 }
                 else if ('content' in json && json['content'].startsWith('status')) {
                     // the only status message is disconnected
                     $(glider + '_').style.border = '2px solid black';
+                    $('img_' + glider + '_').style.display = 'block';
+                    $('comm_' + glider + '_').style.display = 'none';
                 }
                 else if ('connected' in json) {
                     // gpsstr topic payload is only one with "connected" entry
                     $(glider + '_').style.border = '2px solid magenta';
+                    $('comm_' + glider + '_').style.display = 'block';
+                    $('img_' + glider + '_').style.display = 'none';
                 }
             }
         }

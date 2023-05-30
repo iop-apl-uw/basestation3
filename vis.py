@@ -744,7 +744,7 @@ def attachHandlers(app: sanic.Sanic):
     # args: mask is unused
     # returns: JSON formatted dict of missions and mission config
     async def missionsHandler(request, mask:int):
-        table = await buildAuthTable(request)
+        table = await buildAuthTable(request, "")
         msg = { "missions": table, "organization": request.app.ctx.organization }
         return sanic.response.json(msg)
      
@@ -994,13 +994,18 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/query/<glider:int>/<queryVars:str>')
     # description: query per dive database for arbitrary variables
     # args: queryVars=comma separated list
-    # parameters: mission
+    # parameters: mission, format
     # returns: JSON dict of query results
     @authorized()
     async def queryHandler(request, glider, queryVars):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
+
+        if 'format' in request.args:
+            format = request.args['format'][0]
+        else:
+            format = json
 
         queryVars = queryVars.rstrip(',')
         pieces = queryVars.split(',')
@@ -1014,12 +1019,16 @@ def attachHandlers(app: sanic.Sanic):
             cur = await conn.cursor()
             await cur.execute(q)
             d = await cur.fetchall()
-            data = {}
-            print(cur.description)
-            for i in range(len(cur.description)):
-                data[cur.description[i][0]] = [ f[i] for f in d ]
+            if format == 'json':
+                data = {}
+                print(cur.description)
+                for i in range(len(cur.description)):
+                    data[cur.description[i][0]] = [ f[i] for f in d ]
 
-            return sanic.response.json(data)
+                return sanic.response.json(data)
+            else:
+                str = ''
+                
 
     @app.route('/selftest/<glider:int>')
     # description: selftest review
@@ -1546,7 +1555,7 @@ def attachHandlers(app: sanic.Sanic):
         gliders = list(map(int, request.args['gliders'][0].split(','))) if 'gliders' in request.args else None
 
         sanic.log.logger.debug("watchHandler start")
-        opTable = await buildAuthTable(request)
+        opTable = await buildAuthTable(request, None)
         await ws.send(f"START") # send something to ack the connection opened
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
@@ -1577,6 +1586,15 @@ def attachHandlers(app: sanic.Sanic):
                     directive = await summary.getCmdfileDirective(cmdfile)
                     sanic.log.logger.debug(f"watch {glider} cmdfile modified")
                     await ws.send(f"CMDFILE={glider:03d},{directive}")
+                elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
+                    msg = loads(body)
+                    filename = f"{gliderPath(glider,request,mission=m['mission'])}/comm.log"
+                    commFile = await aiofiles.open(filename, 'rb')
+                    await commFile.seek(-min([msg['delta'], 1000]), 2)
+                    data = (await commFile.read()).decode('utf-8', errors='ignore')
+                    await commFile.close()
+                    if data:
+                        await ws.send(f"COMMLOG={glider:03d},{data}")
                 elif 'urls' in topic:
                     try:
                         msg = loads(body)
@@ -1655,7 +1673,7 @@ async def buildMissionTable(app, config=None):
     if 'SINGLE_MISSION' in config and config.SINGLE_MISSION:
         sanic.log.logger.info(f'building table for single mission {config.SINGLE_MISSION}')
         pieces = config.SINGLE_MISSION.split(':')
-        x = { 'missions': { pieces[0]: { 'abs': pieces[1] } } }
+        x = { 'missions': { pieces[0]: { 'abs': pieces[1], 'default': True } } }
     else: 
         if await aiofiles.os.path.exists(config['MISSIONS_FILE']):
             async with aiofiles.open(config['MISSIONS_FILE'], "r") as f:
@@ -1796,15 +1814,15 @@ async def buildMissionTable(app, config=None):
 
     return missions
  
-async def buildAuthTable(request):
+async def buildAuthTable(request, defaultPath):
     opTable = []
     for m in request.app.ctx.missionTable:
         status = checkGliderMission(request, m['glider'], m['mission'])
         if status == PERM_REJECT:
             continue
 
-        path    = m['path'] if m['path'] else ""
-        mission = m['mission'] if m['mission'] else ''
+        path    = m['path'] if m['path'] else defaultPath
+        mission = m['mission'] if m['mission'] else defaultPath
         opTable.append({ "mission": mission, "glider": m['glider'], "path": path, "default": m['default'] })
 
     return opTable
@@ -1851,6 +1869,13 @@ async def checkFilesystemChanges(files):
             n = await aiofiles.os.path.getctime(f['full'])
             if n > f['ctime']:
                 f['ctime'] = n
+                sz = await aiofiles.os.path.getsize(f['full'])
+                if sz > f['size']:
+                    f['delta'] = sz - f['size']
+                else:
+                    f['delta'] = sz
+
+                f['size'] = sz
                 mods.append(f)
 
     return mods
@@ -1890,7 +1915,7 @@ async def buildFilesWatchList(config):
                     fname = f"{m['abs']}/{f}"
                 else:
                     fname = f"sg{m['glider']:03d}/{f}"
-                files.append( { "glider": m['glider'], "full": fname, "file": f, "ctime": 0 } )
+                files.append( { "glider": m['glider'], "full": fname, "file": f, "ctime": 0, "size": 0, "delta": 0 } )
 
     await checkFilesystemChanges(files) # load initial mod times
 
