@@ -755,7 +755,7 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def summaryHandler(request, glider:int):
         msg = await summary.collectSummary(glider, gliderPath(glider,request))
-        if not 'lat' in msg:
+        if not 'humidity' in msg:
             call = await getLatestCall(request, glider)
             if call is not None:
                 msg['lat']    = call[0]['lat']
