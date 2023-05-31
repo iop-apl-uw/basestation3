@@ -533,11 +533,18 @@
             $('img_' + id).style.display = 'none'; 
             $('comm_' + id).style.display = 'block'; 
         }
-        else {
+        else if ($('img_' + id).naturalHeight > 0) {
             $('img_' + id).style.display = 'block'; 
             $('comm_' + id).style.display = 'none'; 
         }
         return false;
+    }
+
+    function imageNotFound(evt) {
+        imgID = evt.currentTarget.id;
+        commID = imgID.replace('img_', 'comm_');
+        $(imgID).style.display = 'none'; 
+        $(commID).style.display = 'block'; 
     }
 
     function createTile(glider, t, commLogContent) {
@@ -700,58 +707,43 @@
             h.appendChild(box);
 
             // errors
-            h = document.createElement('div');
-            h.classList.add('indicator');
             if (data.hasOwnProperty('errors') && data.hasOwnProperty('crits')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
                 h.innerHTML = `errors<br>${data.errors + data.crits}`;
                 h.classList.add(thresh(data.errors + data.crits, 0, 0));
-            }
-            else {
-                h.innerHTML = 'errors';
-                h.classList.add('indicatorGreen');
+
+                indicators.push(h);
             }
             
-            indicators.push(h);
 
             // alerts
-            h = document.createElement('div');
-            h.classList.add('indicator');
             if (data.hasOwnProperty('alert')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
                 h.innerHTML = `alerts<br>${data.alert ? 'yes' : 'none'}`;
                 h.classList.add(thresh(data.alert ? 1 : 0, 0, 0));
+                indicators.push(h);
             }
-            else {
-                h.innerHTML = 'alerts';
-                h.classList.add('indicatorGreen');
-            }
-            indicators.push(h);
  
             // OG efficiency
-            h = document.createElement('div');
-            h.title = "over-ground efficiency (flight quality)"
-            h.classList.add('indicator');
             if (data.hasOwnProperty('dogEfficiency')) {
+                h = document.createElement('div');
+                h.title = "over-ground efficiency (flight quality)"
+                h.classList.add('indicator');
                 h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
                 h.classList.add(thresh(data.dogEfficiency, 0.25, 0.5));
+                indicators.push(h);
             }
-            else {
-                h.innerHTML = 'OG eff.';
-                h.classList.add('indicatorGreen');
-            } 
-            indicators.push(h);
 
             // VBD efficiency
-            h = document.createElement('div');
-            h.classList.add('indicator');
             if (data.hasOwnProperty('vbdEfficiency')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
                 h.innerHTML = `VBD eff.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
                 h.classList.add(thresh(data.vbdEfficiency, 0.25, 0.4));
+                indicators.push(h);
             }
-            else {
-                h.innerHTML = 'VBD eff.';
-                h.classList.add('indicatorGreen');
-            }
-            indicators.push(h);
 
             // mission endurance - planned end date must be defined
             if ('mission' in data && 'planned' in data.mission && data.mission.planned) {
@@ -773,56 +765,54 @@
             }
 
             // internal pressure
-            h = document.createElement('div');
-            h.classList.add('indicator');
             if (data.hasOwnProperty('internalPressureSlope')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
                 h.title = `internal pressure slope ${data.internalPressureSlope.toFixed(3)}psi/dv`;
                 h.classList.add(thresh(data.internalPressureSlope, 0.01, 0.005));
-            }
-            else {
-                h.classList.add('indicatorGreen');
-            }
-            if (data.hasOwnProperty('internalPressure'))
                 h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
-            else
-                h.innerHTML = 'intern P';
+                indicators.push(h);
+            }
+            else if (data.hasOwnProperty('internalPressure')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
+                h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
+                h.classList.add(thresh(data.internalPressure, 12, 10.5));
+                indicators.push(h);
+            }
 
-            indicators.push(h);
 
             // humidity
-            h = document.createElement('div');
-            h.classList.add('indicator');
             if (data.hasOwnProperty('humiditySlope')) { 
+                h = document.createElement('div');
+                h.classList.add('indicator');
                 h.title = `humidity slope ${data.humiditySlope.toFixed(2)}/dv`;
                 h.classList.add(thresh(data.humiditySlope, 0.2, 0.05));
-            }
-            else {
-                h.classList.add('indicatorGreen');
-            }
-            if (data.hasOwnProperty('humidity')) 
                 h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
-            else 
-                h.innerHTML = 'humid';
+                indicators.push(h);
+            }
+            else if (data.hasOwnProperty('humidity')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
+                h.classList.add(thresh(data.humidity, 60, 55));
+                h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
+                indicators.push(h);
+            }
             
-            indicators.push(h);
 
             // volmax
-            h = document.createElement('div');
-            h.classList.add('indicator');
             if (data.hasOwnProperty('impliedVolmaxSlope')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
                 h.innerHTML = `volmax<br><span>${data.impliedVolmaxSlope.toFixed(1)}cc/dv</span>`;
                 h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
+                indicators.push(h);
             }
-            else {
-                h.innerHTML = 'volmax';
-                h.classList.add('indicatorGreen');
-            }
-            indicators.push(h);
 
             // comms
-            h = document.createElement('div');
-            h.classList.add('indicator');
             if (data.hasOwnProperty('logout') && data.hasOwnProperty('calls')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
                 let callState = data.logout ? "call finished ok" : "call dropped";
                 if (data.calls == 1 && data.logout) {
                     h.title = 'calls 1, call finished ok';
@@ -839,12 +829,15 @@
                     h.innerHTML = 'comms<br>poor';
                     h.classList.add('indicatorRed');
                 }
+                indicators.push(h);
             }
-            else {
-                h.innerHTML = 'comms';
-                h.classList.add('indicatorGreen');
+            else if (data.hasOwnProperty('calls')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
+                h.innerHTML = `calls ${data.calls}`;
+                h.classList.add(thresh(data.calls, 3, 1));
+                indicators.push(h);
             }
-            indicators.push(h);
 
             var count = 0;
             var firstExta = null;
@@ -904,6 +897,7 @@
             img.classList.add('dashImg');
             img.id = 'img_' + glider.glider + '_';
             img.style.display = 'block';
+            img.addEventListener('error', imageNotFound);
           
             box.appendChild(img);
 
@@ -1190,8 +1184,10 @@
                 else if ('content' in json && json['content'].startsWith('status')) {
                     // the only status message is disconnected
                     $(glider + '_').style.border = '2px solid black';
-                    $('img_' + glider + '_').style.display = 'block';
-                    $('comm_' + glider + '_').style.display = 'none';
+                    if ($('img_' + glider + '_').naturalHeight > 0) {
+                        $('img_' + glider + '_').style.display = 'block';
+                        $('comm_' + glider + '_').style.display = 'none';
+                    }
                 }
                 else if ('connected' in json) {
                     // gpsstr topic payload is only one with "connected" entry

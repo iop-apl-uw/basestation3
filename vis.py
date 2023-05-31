@@ -757,13 +757,15 @@ def attachHandlers(app: sanic.Sanic):
         msg = await summary.collectSummary(glider, gliderPath(glider,request))
         if not 'lat' in msg:
             call = await getLatestCall(request, glider)
-            msg['lat'] = call[0]['lat']
-            msg['lon'] = call[0]['lon']
-            msg['dive'] = call[0]['dive']
-            msg['end'] = call[0]['connected']
-            msg['volts'] = [ call[0]['volts10'], call[0]['volts24'] ]
-            msg['internalPressure'] = call[0]['intP']
-            msg['humidity'] = call[0]['RH']
+            if call is not None:
+                msg['lat']    = call[0]['lat']
+                msg['lon']    = call[0]['lon']
+                msg['dive']   = call[0]['dive']
+                msg['calls']  = call[0]['call']
+                msg['end']    = call[0]['connected']
+                msg['volts']  = [ call[0]['volts10'], call[0]['volts24'] ]
+                msg['humidity'] = call[0]['RH']
+                msg['internalPressure'] = call[0]['intP']
 
         msg['mission'] = filterMission(glider, request)
         return sanic.response.json(msg)
