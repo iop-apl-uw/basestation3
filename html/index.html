@@ -840,7 +840,7 @@
             }
 
             var count = 0;
-            var firstExta = null;
+            var firstExtra = null;
              
             const classes = ["indicatorRed", "indicatorYellow", "indicatorGreen"];
             for (const c of classes) {
@@ -860,29 +860,30 @@
                 }
             }    
 
-            h = document.createElement('span');
-            h.classList.add('expander');
-            h.innerHTML = '&#9654;'; // tri right, &#9660; is tri down
-            h.onclick = function() { 
-                event.stopPropagation();
-                var extra = this.parentElement.querySelectorAll('[data-extra]'); 
+            if (firstExtra) {
+                h = document.createElement('span');
+                h.classList.add('expander');
+                h.innerHTML = '&#9654;'; // tri right, &#9660; is tri down
+                h.onclick = function() { 
+                    event.stopPropagation();
+                    var extra = this.parentElement.querySelectorAll('[data-extra]'); 
 
-                if (extra[0].hasAttribute('hidden')) {
-                    for (e of extra) {
-                        e.removeAttribute('hidden');
+                    if (extra[0].hasAttribute('hidden')) {
+                        for (e of extra) {
+                            e.removeAttribute('hidden');
+                        }
+                        this.innerHTML = '&#9660;'
                     }
-                    this.innerHTML = '&#9660;'
-                }
-                else {
-                    for (e of extra) {
-                        e.setAttribute('hidden', '');
+                    else {
+                        for (e of extra) {
+                            e.setAttribute('hidden', '');
+                        }
+                        this.innerHTML = '&#9654;'
                     }
-                    this.innerHTML = '&#9654;'
-                }
-                return true;
-            } 
-            box.insertBefore(h, firstExtra);
-
+                    return true;
+                } 
+                box.insertBefore(h, firstExtra);
+            }
 
             t.appendChild(box);
             
