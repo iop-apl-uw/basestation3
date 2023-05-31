@@ -162,7 +162,7 @@ async def collectSummary(glider, path):
 
         try:
             await cur.execute(
-                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,meters_to_target,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope,implied_volmax,implied_volmax_slope,capture,criticals,alerts,distance_made_good,distance_to_goal,dog_efficiency,distance_over_ground FROM dives ORDER BY dive DESC LIMIT 1"
+                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,log_start,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,meters_to_target,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope,implied_volmax,implied_volmax_slope,capture,criticals,alerts,distance_made_good,distance_to_goal,dog_efficiency,distance_over_ground FROM dives ORDER BY dive DESC LIMIT 1"
             )
             data = await cur.fetchone()
             data = dict(map(lambda x: (x[0], x[1] if x[1] is not None else 0), data.items()))
@@ -183,9 +183,9 @@ async def collectSummary(glider, path):
 
     out['name'] = int(data['log_glider'])
     out['dive'] = int(data['dive'])
-    out['length'] = int(data['total_flight_time_s'])
-    out['end']  = data['log_gps_time']
-    out['next'] = data['log_gps_time'] + data['total_flight_time_s']
+    out['length'] = int(data['log_gps_time']) - int(data['log_start'])
+    out['end']  = int(data['log_gps_time'])
+    out['next'] = int(data['log_gps_time']) + out['length'] # + (int(data['log_gps2_time']) - int(data['log_gps1_time]'))
 
     out['dmg'] = data['distance_made_good']
     out['dog'] = data['distance_over_ground']
@@ -225,5 +225,5 @@ async def collectSummary(glider, path):
     return out
 
 if __name__ == "__main__":
-    msg = asyncio.run(collectSummary(249, '/home/seaglider/sg249'))
+    msg = asyncio.run(collectSummary(141, '/home/seaglider/home/sg141'))
     print(msg)
