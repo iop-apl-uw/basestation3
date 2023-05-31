@@ -511,7 +511,8 @@
         cell.style.textAlign = 'left';
         // cell.appendChild(text);
 
-        date = new Date(1000*(d['log_start'] + d['total_flight_time_s']));
+        // date = new Date(1000*(d['log_start'] + d['total_flight_time_s']));
+        date = new Date(1000*(d['log_gps_time']));
         cell = row.insertCell(1); 
         text = document.createTextNode((date.getFullYear() - 2000) + '/' +
                                        (date.getMonth() + 1).zeroPad() + '/' + 
@@ -521,7 +522,7 @@
         cell.appendChild(text);
 
         cell = row.insertCell(2); 
-        text = document.createTextNode('' + (d['total_flight_time_s']/60).toFixed(0));
+        text = document.createTextNode('' + ((d['log_gps_time'] - d['log_start'])/60).toFixed(0));
         cell.appendChild(text);
 
         cell = row.insertCell(3);
@@ -542,8 +543,8 @@
         text = document.createTextNode('' + course.toFixed(1));
         cell.appendChild(text);
 
-        n = d['flight_avg_speed_north'] * d['total_flight_time_s'];
-        e = d['flight_avg_speed_east'] * d['total_flight_time_s'];
+        n = d['flight_avg_speed_north'] * d['time_seconds_diving'];
+        e = d['flight_avg_speed_east'] * d['time_seconds_diving'];
         dist = Math.sqrt(n*n + e*e);
         course = Math.atan2(e, n)*180.0/Math.PI;
         if (course < 0) {
