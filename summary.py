@@ -137,6 +137,25 @@ async def collectSummary(glider, path):
      
     mtime = await aiofiles.os.path.getctime(commlogfile) 
 
+    out = {}
+
+    cmdfileDirective = await getCmdfileDirective(cmdfile)
+
+    out['mtime']    = mtime
+    out['connect']  = connected
+    out['disconnect']  = disconnected
+    out['logout']   = logout
+    out['shutdown'] = shutdown
+
+    out['calls']    = calls
+    out['commDirective'] = directive
+    out['cmdfileDirective'] = cmdfileDirective
+    out['recovery'] = recovery
+
+    out['fix']      = time.mktime(last_GPS.datetime)
+    out['lat']      = Utils.ddmm2dd(last_GPS.lat)
+    out['lon']      = Utils.ddmm2dd(last_GPS.lon)
+
     async with aiosqlite.connect('file:' + dbfile +'?mode=ro', uri=True) as conn:
         conn.row_factory = rowToDict
         cur = await conn.cursor()
@@ -159,11 +178,9 @@ async def collectSummary(glider, path):
             start = await cur.fetchone()
         except Exception as e:
             print(e)
-            return {}
+            return out
 
-    cmdfileDirective = await getCmdfileDirective(cmdfile)
 
-    out = {}
     out['name'] = int(data['log_glider'])
     out['dive'] = int(data['dive'])
     out['length'] = int(data['total_flight_time_s'])
@@ -178,23 +195,11 @@ async def collectSummary(glider, path):
     out['vbdEfficiency'] = gc['vbd_eff']
     out['vbdVolts'] = gc['vbd_volts']
 
-    out['mtime']    = mtime
-    out['connect']  = connected
-    out['disconnect']  = disconnected
-    out['logout']   = logout
-    out['shutdown'] = shutdown
-    out['calls']    = calls
     out['depth']    = data['max_depth']
     out['grid']     = data['log_D_GRID']
-    out['fix']      = time.mktime(last_GPS.datetime)
-    out['lat']      = Utils.ddmm2dd(last_GPS.lat)
-    out['lon']      = Utils.ddmm2dd(last_GPS.lon)
     out['volts']    = [ data['batt_volts_10V'], data['batt_volts_24V'] ] 
     out['capacity'] = [ data['batt_capacity_10V'], data['batt_capacity_24V'] ]
     out['errors']   = data['error_count']
-    out['commDirective'] = directive
-    out['cmdfileDirective'] = cmdfileDirective
-    out['recovery'] = recovery
 
     out['humidity'] = data['log_HUMID']
     out['humiditySlope'] = data['log_HUMID_slope']
