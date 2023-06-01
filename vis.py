@@ -62,6 +62,7 @@ import Utils
 import secrets
 import BaseDB
 import ExtractTimeseries
+# import furl
 
 PERM_INVALID = -1
 PERM_REJECT = 0
@@ -475,18 +476,30 @@ def attachHandlers(app: sanic.Sanic):
         else:
             return sanic.response.text('not found')
 
+    # this requires that a reverse proxy provides an x-request-uri header
+    # Apache: RequestHeader add "X-REQUEST-URI" expr=%{REQUEST_SCHEME}://%{HTTP_HOST}%{REQUEST_URI}?%{QUERY_STRING}
+    # nginx: proxy_set_header X-REQUEST-URI "$scheme://$proxy_host$request_uri";
+    def getRequestURL(request):
+        fwdHost = request.headers.get('x-forwarded-host')
+        if not fwdHost:
+            return request.url
+     
+        return request.headers.get('x-request-uri') 
+        # f = furl.furl(request.url)
+        # f.scheme = 'https'
+        # f.host = fwdHost
+        # f.port = None
+        # return f.tostr()
+        
     @app.route('/kml/<glider:int>')
     # description: get glider KML
     # parameters: mission
     # returns: KML
     @authorized()
     async def kmlHandler(request, glider:int):
-        sanic.log.logger.info(request.query_args)
-        sanic.log.logger.info(request.url)
-        sanic.log.logger.info(request.path)
-        sanic.log.logger.info(request.server_path)
         if 'network' in request.args:
-            link = request.url.replace('network', 'kmz')
+            
+            link = getRequestURL(request).replace('network', 'kmz')
             t =   '<?xml version="1.0" encoding="UTF-8"?>\n'
             t +=  '<kml xmlns="http://earth.google.com/kml/2.2">\n'
             t +=  '<NetworkLink>\n'
