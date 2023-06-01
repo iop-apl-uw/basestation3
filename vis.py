@@ -1690,7 +1690,11 @@ async def buildMissionTable(app, config=None):
         if await aiofiles.os.path.exists(config['MISSIONS_FILE']):
             async with aiofiles.open(config['MISSIONS_FILE'], "r") as f:
                 d = await f.read()
-                x = yaml.safe_load(d)
+                try:
+                    x = yaml.safe_load(d)
+                except Exception as e:
+                    sanic.log.logger.info(f"mission file parse error {e}")
+                    x = {}
         else:
             x = {}
 
@@ -1722,7 +1726,7 @@ async def buildMissionTable(app, config=None):
     if 'organization' not in x:
         x['organization'] = {}
     if 'missions' not in x:
-        x['missions'] = []
+        x['missions'] = {}
     if 'endpoints' not in x:
         x['endpoints'] = {}
     if 'controls' not in x:
