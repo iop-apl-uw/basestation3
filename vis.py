@@ -475,17 +475,40 @@ def attachHandlers(app: sanic.Sanic):
         else:
             return sanic.response.text('not found')
 
-    @app.route('/gliderkml/<glider:int>')
+    @app.route('/kml/<glider:int>')
     # description: get glider KML
     # parameters: mission
     # returns: KML
     @authorized()
-    async def gliderkmlHandler(request, glider:int):
-        filename = f'{gliderPath(glider,request)}/sg{glider}.kmz'
-        async with aiofiles.open(filename, 'rb') as file:
-            zip = ZipFile(BytesIO(await file.read()))
-            kml = zip.open(f'sg{glider}.kml', 'r').read()
-            return sanic.response.raw(kml)
+    async def kmlHandler(request, glider:int):
+        sanic.log.logger.info(request.query_args)
+        sanic.log.logger.info(request.url)
+        sanic.log.logger.info(request.path)
+        sanic.log.logger.info(request.server_path)
+        if 'network' in request.args:
+            link = request.url.replace('network', 'kmz')
+            t =   '<?xml version="1.0" encoding="UTF-8"?>\n'
+            t +=  '<kml xmlns="http://earth.google.com/kml/2.2">\n'
+            t +=  '<NetworkLink>\n'
+            t += f'  <name>SG{glider:03d} Track</name>\n'
+            t +=  '  <Url>\n'
+            t += f'    <href>{link}</href>\n'
+            t +=  '    <refreshMode>onInterval</refreshMode>\n'
+            t +=  '    <refreshInterval>120</refreshInterval>\n'
+            t +=  '  </Url>\n'
+            t +=  '</NetworkLink>\n'
+            t +=  '</kml>\n'
+            return sanic.response.text(t, content_type='application/vnd.google-earth.kml')
+        elif 'kmz' in request.args:
+            filename = f'sg{glider:03d}.kmz'
+            fullname = f'{gliderPath(glider,request)}/{filename}'
+            return await sanic.response.file(fullname, filename=filename, mime_type='application/vnd.google-earth.kmz')
+        else:
+            filename = f'{gliderPath(glider,request)}/sg{glider:03d}.kmz'
+            async with aiofiles.open(filename, 'rb') as file:
+                zip = ZipFile(BytesIO(await file.read()))
+                kml = zip.open(f'sg{glider}.kml', 'r').read()
+                return sanic.response.raw(kml)
 
     # Not currently linked on a public facing page, but available.
     # Protect at the mission level (which protects that mission at 
@@ -508,7 +531,7 @@ def attachHandlers(app: sanic.Sanic):
     async def dataHandler(request, which:str, glider:int, dive:int):
         path = gliderPath(glider,request)
 
-        if which == 'nc' or which == 'ncfb':
+        if which == 'nc' or which == 'ncfb' or which == 'ncf':
             filename = f'p{glider:03d}{dive:04d}.{which}'
         else:
             sanic.log.logger.info(f'invalid filetype requested {which}')

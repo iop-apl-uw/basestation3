@@ -281,7 +281,7 @@
 
                 var urls = [];
                 for (i = 0 ; i < gliders.length ; i++)                
-                    urls.push('../gliderkml/' + gliders[i] + missions[i]);
+                    urls.push('../kml/' + gliders[i] + missions[i]);
 
                 let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
                 for (i = 0 ; i < urls.length ; i++) {
