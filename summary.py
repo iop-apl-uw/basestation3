@@ -92,6 +92,8 @@ async def collectSummary(glider, path):
         connected    = time.mktime(ongoing_session.connect_ts)
     elif session and session.connect_ts:
         connected    = time.mktime(session.connect_ts)
+    else:
+        connected = None
     
     if ongoing_session and ongoing_session.disconnect_ts:
         disconnected = time.mktime(ongoing_session.disconnect_ts)
@@ -99,11 +101,15 @@ async def collectSummary(glider, path):
         disconnected = 0
     elif session and session.disconnect_ts:
         disconnected = time.mktime(session.disconnect_ts)
+    else:
+        disconnected = None 
 
     if ongoing_session and ongoing_session.gps_fix:
         last_GPS     = ongoing_session.gps_fix
     elif session and session.gps_fix:
         last_GPS     = session.gps_fix
+    else:
+        last_GPS = None
     
     if ongoing_session and ongoing_session.cmd_directive:
         directive    = ongoing_session.cmd_directive
@@ -127,6 +133,9 @@ async def collectSummary(glider, path):
     elif session:
         logout = session.logout_seen
         shutdown = session.shutdown_seen
+    else:
+        logout = None
+        shutdown = None
 
     if ongoing_session and ongoing_session.recov_code:
         recovery    = ongoing_session.recov_code
@@ -135,27 +144,41 @@ async def collectSummary(glider, path):
     else:
         recovery = None
      
-    mtime = await aiofiles.os.path.getctime(commlogfile) 
+    try:
+        mtime = await aiofiles.os.path.getctime(commlogfile) 
+    except:
+        mtime = 0
 
     out = {}
 
-    cmdfileDirective = await getCmdfileDirective(cmdfile)
+    try:
+        cmdfileDirective = await getCmdfileDirective(cmdfile)
+    except:
+        cmdfileDirective = 'unknown'
 
-    out['mtime']    = mtime
-    out['connect']  = connected
-    out['disconnect']  = disconnected
-    out['logout']   = logout
-    out['shutdown'] = shutdown
+    try:
+        out['mtime']            = mtime
+        out['calls']            = calls
+        out['commDirective']    = directive
+        out['cmdfileDirective'] = cmdfileDirective
+        if connected is not None:
+            out['connect']  = connected
+        if disconnected is not None: 
+            out['disconnect']  = disconnected
+        if logout is not None:
+            out['logout']   = logout
+        if shutdown is not None:
+            out['shutdown'] = shutdown
+        if recovery is not None:
+            out['recovery'] = recovery
 
-    out['calls']    = calls
-    out['commDirective'] = directive
-    out['cmdfileDirective'] = cmdfileDirective
-    out['recovery'] = recovery
-
-    out['fix']      = time.mktime(last_GPS.datetime)
-    out['lat']      = Utils.ddmm2dd(last_GPS.lat)
-    out['lon']      = Utils.ddmm2dd(last_GPS.lon)
-
+        if last_GPS is not None:
+            out['fix']      = time.mktime(last_GPS.datetime)
+            out['lat']      = Utils.ddmm2dd(last_GPS.lat)
+            out['lon']      = Utils.ddmm2dd(last_GPS.lon)
+    except Exception as e:
+        print(e)
+        
     async with aiosqlite.connect('file:' + dbfile +'?mode=ro', uri=True) as conn:
         conn.row_factory = rowToDict
         cur = await conn.cursor()

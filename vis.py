@@ -793,16 +793,19 @@ def attachHandlers(app: sanic.Sanic):
         msg = await summary.collectSummary(glider, gliderPath(glider,request))
         if not 'humidity' in msg:
             call = await getLatestCall(request, glider)
-            if call is not None:
-                msg['lat']    = call[0]['lat']
-                msg['lon']    = call[0]['lon']
-                msg['dive']   = call[0]['dive']
-                msg['calls']  = call[0]['call']
-                msg['end']    = call[0]['connected']
-                msg['volts']  = [ call[0]['volts10'], call[0]['volts24'] ]
-                msg['humidity'] = call[0]['RH']
-                msg['internalPressure'] = call[0]['intP']
-
+            if call is not None and len(call) >= 1:
+                try:
+                    msg['lat']    = call[0]['lat']
+                    msg['lon']    = call[0]['lon']
+                    msg['dive']   = call[0]['dive']
+                    msg['calls']  = call[0]['call']
+                    msg['end']    = call[0]['connected']
+                    msg['volts']  = [ call[0]['volts10'], call[0]['volts24'] ]
+                    msg['humidity'] = call[0]['RH']
+                    msg['internalPressure'] = call[0]['intP']
+                except Exception as e:
+                    sanic.log.logger.info(f"summaryHandler: {e} {call[0]}")
+                    
         msg['mission'] = filterMission(glider, request)
         return sanic.response.json(msg)
 
@@ -1053,7 +1056,7 @@ def attachHandlers(app: sanic.Sanic):
         if 'format' in request.args:
             format = request.args['format'][0]
         else:
-            format = json
+            format = 'json'
 
         queryVars = queryVars.rstrip(',')
         pieces = queryVars.split(',')
@@ -1065,7 +1068,11 @@ def attachHandlers(app: sanic.Sanic):
         async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
             # conn.row_factory = rowToDict
             cur = await conn.cursor()
-            await cur.execute(q)
+            try:
+                await cur.execute(q)
+            except:
+                return sanic.response.text('error')
+
             d = await cur.fetchall()
             if format == 'json':
                 data = {}
@@ -1410,6 +1417,7 @@ def attachHandlers(app: sanic.Sanic):
     async def getLatestCall(request, glider, conn=None, limit=1):
         if conn == None:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+            sanic.log.logger.info(dbfile)
             if not await aiofiles.os.path.exists(dbfile):
                 return None
 
@@ -1422,6 +1430,7 @@ def attachHandlers(app: sanic.Sanic):
         try:
             cur = await myconn.cursor()
             q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT {limit};"
+            sanic.log.logger.info(q)
             await cur.execute(q)
             row = await cur.fetchall()
             await cur.close()
