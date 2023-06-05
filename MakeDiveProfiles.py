@@ -2201,20 +2201,23 @@ def load_dive_profile_data(
         eng_f.remap_engfile_columns()
         if sg_ct_type == 4 and eng_f.get_col("rbr_pressure") is not None:
             rbr_good_press_i_v = np.logical_not(np.isnan(eng_f.get_col("rbr_pressure")))
-            rbr_pressure = Utils.interp1d(
-                eng_f.get_col("elaps_t")[rbr_good_press_i_v],
-                eng_f.get_col("rbr_pressure")[rbr_good_press_i_v],
-                eng_f.get_col("elaps_t"),
-                kind="linear",
-            )
-            eng_f.update_col("rbr_pressure", rbr_pressure)
-            sg_depth = Utils.interp1d(
-                eng_f.get_col("elaps_t")[rbr_good_press_i_v],
-                eng_f.get_col("depth")[rbr_good_press_i_v],
-                eng_f.get_col("elaps_t"),
-                kind="linear",
-            )
-            eng_f.update_col("depth", sg_depth)
+            if len(np.squeeze(np.nonzero(rbr_good_press_i_v))) < 2:
+                log_warning("No non-nan rbr_pressure - skipping interpolation")
+            else:
+                rbr_pressure = Utils.interp1d(
+                    eng_f.get_col("elaps_t")[rbr_good_press_i_v],
+                    eng_f.get_col("rbr_pressure")[rbr_good_press_i_v],
+                    eng_f.get_col("elaps_t"),
+                    kind="linear",
+                )
+                eng_f.update_col("rbr_pressure", rbr_pressure)
+                sg_depth = Utils.interp1d(
+                    eng_f.get_col("elaps_t")[rbr_good_press_i_v],
+                    eng_f.get_col("depth")[rbr_good_press_i_v],
+                    eng_f.get_col("elaps_t"),
+                    kind="linear",
+                )
+                eng_f.update_col("depth", sg_depth)
 
         sg_np = len(eng_f.get_col(eng_f.columns[0]))
         BaseNetCDF.assign_dim_info_size(nc_info_d, BaseNetCDF.nc_sg_data_info, sg_np)
