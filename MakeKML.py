@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -487,8 +487,8 @@ def printTargets(
                 # escape_targ = value
             elif name == "finish":
                 finish_line = float(value)
-            elif name == "depth":
-                depth_limit = float(value)
+            # elif name == "depth":
+            #    depth_limit = float(value)
         target_dict[target_name] = target_tuple(
             lat, lon, radius, finish_line, depth_target, goto_targ, escape_targ
         )
@@ -500,7 +500,7 @@ def printTargets(
                 found_in_list = True
 
         if not found_in_list and active_target:
-            if active_target in target_dict.keys():
+            if active_target in target_dict:
                 curr = target_dict[active_target]
                 target_dict[active_target] = target_tuple(
                     tgt_lat,
@@ -522,7 +522,7 @@ def printTargets(
                     None,
                 )
 
-    for targ in target_dict.keys():
+    for targ in target_dict:
         if targ == active_target:
             printTarget(
                 True,
@@ -553,8 +553,8 @@ def printTargets(
     # Draw course between targets
     # TODO - special case the loop back case - same target source and dest
     if not only_active_target:
-        for targ in list(target_dict.keys()):
-            if target_dict[targ].goto_target in list(target_dict.keys()):
+        for targ in target_dict:
+            if target_dict[targ].goto_target in target_dict:
                 printTargetLine(
                     targ,
                     target_dict[targ].lat,
@@ -565,7 +565,7 @@ def printTargets(
                     False,
                     fo,
                 )
-            if target_dict[targ].escape_target in list(target_dict.keys()):
+            if target_dict[targ].escape_target in target_dict:
                 log_info(f"Escape route {targ} to {target_dict[targ].escape_target}")
                 printTargetLine(
                     targ,
@@ -1134,7 +1134,37 @@ def main(
     surface_positions = sorted(
         surface_positions, key=lambda position: position.gps_fix_time
     )
+
+    # Trim out everything prior to the most recent dive 0 (launch)
+    if len(surface_positions):
+        f_dive_0_seen = False
+        first_dive_i = 0
+        for ii in reversed(range(len(surface_positions))):
+            # log_info(f"Index:{ii} dive_num:{surface_positions[ii].dive_num}")
+            if not f_dive_0_seen:
+                if surface_positions[ii].dive_num == 0:
+                    f_dive_0_seen = True
+            else:
+                if surface_positions[ii].dive_num != 0:
+                    first_dive_i = ii + 1
+                    # log_info(f"first_dive_i:{first_dive_i}")
+                    break
+
+        surface_positions = surface_positions[first_dive_i:]
+
+    # If the most recent dive is >= 1, trim out everthing prior to Dive 0:maxCycleDive0
+    if len(surface_positions) and surface_positions[-1].dive_num != 0:
+        first_dive_i = 0
+        for ii in reversed(range(len(surface_positions))):
+            # log_info(f"Index:{ii} dive_num:{surface_positions[ii].dive_num}")
+            if surface_positions[ii].dive_num == 0:
+                first_dive_i = ii
+                # log_info(f"first_dive_i:{ii}")
+                break
+        surface_positions = surface_positions[first_dive_i:]
+
     last_surface_position = surface_positions[-1] if len(surface_positions) else None
+
     # We will see surface positions as heads of drift locations
 
     # Plot dives
@@ -1211,7 +1241,7 @@ def main(
                 log_error("Could not print surface position placemark", "exc")
 
         # Add the start of dive 1 into the mix, if available
-        if 1 in list(dive_gps_positions.keys()):
+        if 1 in dive_gps_positions:
             dive0_positions.append(
                 surface_pos(
                     dive_gps_positions[1].gps_lon_start,
@@ -1382,7 +1412,7 @@ def main(
             #     )
             # )
 
-            if dive_num + 1 in list(dive_gps_positions.keys()):
+            if dive_num + 1 in dive_gps_positions:
                 non_plotted_positions.append(
                     surface_pos(
                         dive_gps_positions[dive_num + 1].gps_lon_start,
