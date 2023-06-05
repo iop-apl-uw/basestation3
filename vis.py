@@ -116,7 +116,7 @@ compress = sanic_gzip.Compress()
 
 # making this a dict makes a set intersection simple when
 # we use it in filterMission
-publicMissionFields = {"glider", "mission", "path", 
+publicMissionFields = {"glider", "mission", "status",
                        "started", "ended", "planned",
                        "orgname", "orglink", "contact", "email",
                        "project", "link", "comment", "reason"} 
@@ -308,28 +308,27 @@ def matchMission(gld, request, mission=None):
     if mission == None and \
        request and \
        'mission' in request.args and \
-       request.args['mission'][0] != 'current' and \
        len(request.args['mission'][0]) > 0:
 
         mission = request.args['mission'][0]
 
-    return next(filter(lambda d: d['glider'] == int(gld) and (d['mission'] == mission or (mission == None and (d['default'] == True or d['path'] == None))), request.app.ctx.missionTable), None)
+    x = next(filter(lambda d: d['glider'] == int(gld) and d['mission'] == mission,  request.app.ctx.missionTable), None)
+    if x:
+        return x
+
+    x = next(filter(lambda d: d['glider'] == int(gld) and d['default'] == True, request.app.ctx.missionTable), None)
+    return x 
 
 def filterMission(gld, request, mission=None):
     m = matchMission(gld, request, mission)    
     return { k: m[k] for k in m.keys() & publicMissionFields } if m else None
 
-def gliderPath(glider, request, path=None, mission=None):
-    if path:
-        return f'sg{glider:03d}/{path}'
+def gliderPath(glider, request, mission=None):
+    m = matchMission(glider, request, mission)
+    if m and 'path' in m and m['path']:
+        return m['path']
     else:
-        m = matchMission(glider, request, mission)
-        if m and 'abs' in m and m['abs']:
-            return m['abs'] 
-        elif m and 'path' in m and m['path']:
-            return f"sg{glider:03d}/{m['path']}"
-        else:
-            return f'sg{glider:03d}'
+        return f'sg{glider:03d}'
 
 
 #
@@ -1730,7 +1729,8 @@ async def buildMissionTable(app, config=None):
     if 'SINGLE_MISSION' in config and config.SINGLE_MISSION:
         sanic.log.logger.info(f'building table for single mission {config.SINGLE_MISSION}')
         pieces = config.SINGLE_MISSION.split(':')
-        x = { 'missions': { pieces[0]: { 'abs': pieces[1], 'default': True } } }
+        glider = pieces[0].replace('sg', '').replace('SG', '')
+        x = { 'missions': [ {'glider': int(glider), 'path': pieces[1], 'status': 'active' } ] }
     else: 
         if await aiofiles.os.path.exists(config['MISSIONS_FILE']):
             async with aiofiles.open(config['MISSIONS_FILE'], "r") as f:
@@ -1752,13 +1752,10 @@ async def buildMissionTable(app, config=None):
             c = { 'MISSIONS_FILE': x['includes'][group]['missions'] }
             tbl = await buildMissionTable(None, config=c)
             for k in tbl:
-                if 'abs' in k and k['abs']:
-                    k['abs'] = x['includes'][group]['root'] + '/' + k['abs']
-                elif 'path' in k and k['path']:
-                    k['abs'] = x['includes'][group]['root'] + f"/sg{k['glider']:03d}/{k['path']}"
+                if 'path' in k and k['path']:
+                    k['path'] = x['includes'][group]['root'] + '/' + k['path']
                 else:
-                    k['abs'] = x['includes'][group]['root'] + f"/sg{k['glider']:03d}"
-
+                    k['path'] = x['includes'][group]['root'] + f"/sg{k['glider']:03d}"
 
             missionTable = missionTable + tbl
 
@@ -1776,6 +1773,14 @@ async def buildMissionTable(app, config=None):
         x['endpoints'] = {}
     if 'controls' not in x:
         x['controls'] = {}
+    if 'defaults' not in x:
+        x['defaults'] = {}
+    if 'pilotdefaults' not in x:
+        x['pilotdefaults'] = {}
+    if 'privatedefaults' not in x:
+        x['privatedefaults'] = {}
+    if 'publicdefaults' not in x:
+        x['publicdefaults'] = {}
 
     orgDictKeys = ["orgname", "orglink", "text", "contact", "email"]
     for ok in orgDictKeys:
@@ -1783,62 +1788,65 @@ async def buildMissionTable(app, config=None):
             x['organization'].update( { ok: None } )
 
 
-    missionDictKeys = [ "glider", "path", "abs", "mission", "users", "pilotusers", "groups", "pilotgroups", 
+    missionDictKeys = [ "mission", "users", "pilotusers", "groups", "pilotgroups", 
                         "started", "ended", "planned", 
                         "orgname", "orglink", "contact", "email", 
                         "project", "link", "comment", "reason", "endpoints",
                         "sa", "also", "kml", 
                       ]
     
-    dflts         = None
-    mode_dflts    = None
+    dflts         = x['defaults']
+    mode_dflts    = x[modeNames[config.RUNMODE] + 'defaults']
     missions = []
-    gliders = []
-    for k in list(x['missions'].keys()):
-        if k == 'defaults':
-            dflts = x['missions'][k]
-            del x['missions'][k]
+    gliders  = []
+    ids      = []
+    actives  = []
+    for n, m in enumerate(x['missions']):
+
+        if 'glider' not in m:
+            sanic.log.logger.info('skipping {m}')
             continue
-
-        if 'defaults' in k:
-            if k == (modeNames[config.RUNMODE] + 'defaults'):
-                mode_dflts = x['missions'][k]
-
-            del x['missions'][k]
-            continue
-
-        pieces = k.split('/')
-        if len(pieces) == 1:
-            path = None
-        else:
-            path = pieces[1]
 
         try:
-            glider = int(pieces[0][2:])
-            if glider in gliders:
-                x['missions'][k].update({ "glider":glider, "path":path, "default":False })
-            else:
-                x['missions'][k].update({ "glider":glider, "path":path, "default":True })
+            glider = int(m['glider'])
 
+            if 'path' not in m:
+                m.update({ "path": None })
+
+            if 'status' not in m:
+                m.update( {'status': 'active'} )
+
+            if m['status'] == 'active':
+                if glider in actives:
+                    sanic.log.logger.info(f'{glider} already has an active mission')
+                    continue
+                else:
+                    actives.append(glider)
+
+            m.update({ "default": (not glider in gliders) })
             gliders.append(glider)
 
             for mk in missionDictKeys:
-                if mk not in x['missions'][k].keys():
+                if mk not in m:
                     if mode_dflts and mk in mode_dflts:
-                        x['missions'][k].update( { mk: mode_dflts[mk] })
+                        m.update( { mk: mode_dflts[mk] })
                     elif dflts and mk in dflts:
-                        x['missions'][k].update( { mk: dflts[mk] })
+                        m.update( { mk: dflts[mk] })
                     elif mk in x['organization']:
-                        x['missions'][k].update( { mk: x['organization'][mk] })
+                        m.update( { mk: x['organization'][mk] })
                     else:
-                        x['missions'][k].update( { mk: None })
+                        m.update( { mk: None })
 
-            if x['missions'][k]['mission'] == None and path is not None:
-                x['missions'][k]['mission'] = path
+            # the following identifier must be unique (mission can be none, but only once)
+            missionid = f"{glider:03d}-{m['mission']}"
+            if missionid not in ids:
+                ids.append(missionid)
+                missions.append(m)
+            else:
+                sanic.log.logger.info(f'skipping duplicate {missionid}')
 
-            missions.append(x['missions'][k])
         except Exception as e:
-            sanic.log.logger.info(f"error on key {k}, {e}")
+            sanic.log.logger.info(f"error on glider {glider}, {e}")
             continue 
        
     endpointsDictKeys = [ "modes", "users", "groups", "requirepilot" ]
@@ -1884,7 +1892,7 @@ async def buildAuthTable(request, defaultPath):
 
         path    = m['path'] if m['path'] else defaultPath
         mission = m['mission'] if m['mission'] else defaultPath
-        opTable.append({ "mission": mission, "glider": m['glider'], "path": path, "default": m['default'] })
+        opTable.append({ "mission": mission, "glider": m['glider'], "path": path, "default": m['default'], "status": m['status'] })
 
     return opTable
 
@@ -1952,9 +1960,9 @@ async def configWatcher(app):
             msg = await socket.recv_multipart()
             sanic.log.logger.info(msg[1])
             topic = msg[0].decode('utf-8')
-            if 'missions' in topic:
+            if app.config['MISSIONS_FILE'] in topic:
                 await buildMissionTable(app)
-            elif 'users' in topic:
+            elif app.config['USERS_FILE'] in topic:
                 await buildUserTable(app)
 
         except BaseException as e: # websockets.exceptions.ConnectionClosed:
@@ -1966,16 +1974,17 @@ async def configWatcher(app):
 async def buildFilesWatchList(config):
     missions = await buildMissionTable(None, config=config)
     files = [ ]
-    for f in [ 'missions.yml', 'users.yml' ]:
-        files.append( { 'glider': 0, 'full': f, 'file': f, 'ctime': 0, 'size': 0, 'delta': 0 } )
+    if not config.SINGLE_MISSION:
+        for f in [ config['MISSIONS_FILE'], config['USERS_FILE'] ]:
+            files.append( { 'glider': 0, 'full': f, 'file': f, 'ctime': 0, 'size': 0, 'delta': 0 } )
 
     for m in missions:
-        if m['path'] == None or m['default'] == True:
+        if m['status'] == 'active':
             for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat"]:
-                if 'abs' in m and m['abs']:
-                    fname = f"{m['abs']}/{f}"
+                if m['path']:
+                    fname = f"{m['path']}/{f}"
                 else:
-                    fname = f"sg{m['glider']:03d}/{f}"
+                    fname = f"sg{m['glider']:03d}/{f}" 
                 files.append( { "glider": m['glider'], "full": fname, "file": f, "ctime": 0, "size": 0, "delta": 0 } )
 
     await checkFilesystemChanges(files) # load initial mod times
@@ -2016,7 +2025,7 @@ async def notifier(config):
         if stat:
             msg = await configWatchSocket.recv_multipart()
             topic = msg[0].decode('utf-8')
-            if 'missions' in topic:
+            if config['MISSIONS_FILE'] in topic:
                 files = await buildFilesWatchList(config)
 
         mods = await checkFilesystemChanges(files)

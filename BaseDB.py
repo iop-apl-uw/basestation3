@@ -734,6 +734,7 @@ def createDivesTable(cur):
 
     cur.execute("CREATE TABLE dives(dive INT);")
     columns = [ 'log_glider', 'log_start','log_D_TGT','log_D_GRID','log__CALLS',
+                'log_T_DIVE',
                 'log__SM_DEPTHo','log__SM_ANGLEo','log_HUMID','log_TEMP',
                 'log_INTERNAL_PRESSURE', 'log_INTERNAL_PRESSURE_slope',
                 'log_HUMID_slope',

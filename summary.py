@@ -179,30 +179,38 @@ async def collectSummary(glider, path):
     except Exception as e:
         print(e)
         
-    async with aiosqlite.connect('file:' + dbfile +'?mode=ro', uri=True) as conn:
+    try:
+        conn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
+    except Exception as e:
+        print(e)
+        return out
+
+    try:
         conn.row_factory = rowToDict
         cur = await conn.cursor()
+    
+        await cur.execute(
+            "select dive,log_glider,batt_volts_10v,batt_volts_24v,batt_capacity_10v,batt_capacity_24v,log_start,total_flight_time_s,log_gps_time,error_count,max_depth,log_d_grid,meters_to_target,log_d_tgt,log_t_dive,log_tgt_lat,log_tgt_lon,energy_dives_remain_modeled,energy_days_remain_modeled,energy_end_time_modeled,log_internal_pressure,log_internal_pressure_slope,log_humid,log_humid_slope,implied_volmax,implied_volmax_slope,capture,criticals,alerts,distance_made_good,distance_to_goal,dog_efficiency,distance_over_ground from dives order by dive desc limit 1"
+        )
+        data = await cur.fetchone()
+        # data = {k:v for k,v in data.items() if v is not None}
+        data = dict(map(lambda x: (x[0], x[1] if x[1] is not None else 0), data.items()))
 
-        try:
-            await cur.execute(
-                "SELECT dive,log_glider,batt_volts_10V,batt_volts_24V,batt_capacity_10V,batt_capacity_24V,log_start,total_flight_time_s,log_gps_time,error_count,max_depth,log_D_GRID,meters_to_target,log_D_TGT,log_T_DIVE,log_TGT_LAT,log_TGT_LON,energy_dives_remain_Modeled,energy_days_remain_Modeled,energy_end_time_Modeled,log_INTERNAL_PRESSURE,log_INTERNAL_PRESSURE_slope,log_HUMID,log_HUMID_slope,implied_volmax,implied_volmax_slope,capture,criticals,alerts,distance_made_good,distance_to_goal,dog_efficiency,distance_over_ground FROM dives ORDER BY dive DESC LIMIT 1"
-            )
-            data = await cur.fetchone()
-            data = dict(map(lambda x: (x[0], x[1] if x[1] is not None else 0), data.items()))
+        await cur.execute(
+            f"select pitch_volts,roll_volts,vbd_volts,vbd_eff from gc where dive={int(data['dive'])} order by vbd_eff desc limit 1",
+        )
+        gc = await cur.fetchone()
 
-            await cur.execute(
-                f"SELECT pitch_volts,roll_volts,vbd_volts,vbd_eff FROM gc WHERE dive={int(data['dive'])} ORDER BY vbd_eff DESC LIMIT 1",
-            )
-            gc = await cur.fetchone()
+        await cur.execute(
+            "SELECT log_gps2_time FROM dives WHERE dive=1",
+        )
+        start = await cur.fetchone()
+    except Exception as e:
+        print(f'database error {dbfile} {e}')
+        await conn.close()
+        return out
 
-            await cur.execute(
-                "SELECT log_gps2_time FROM dives WHERE dive=1",
-            )
-            start = await cur.fetchone()
-        except Exception as e:
-            print(e)
-            return out
-
+    await conn.close()
 
     out['name'] = int(data['log_glider'])
     out['dive'] = int(data['dive'])

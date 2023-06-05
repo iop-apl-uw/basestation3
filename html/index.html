@@ -397,15 +397,6 @@
 
     var gliderTable = [];
 
-    function missionName(gliderNum) {
-        for (tbl of gliderTable) {
-            if (tbl.glider == gliderNum && (tbl.path == '' || tbl.path == null))
-                return tbl.mission;
-        }
-        return '';
-    }
-
-
 {% if runMode == 'pilot' %}
     function setPlusMinusBar(chart, bar, span, pct, text, hover) {
         if (pct < -1)
@@ -638,7 +629,7 @@
 
             chartBatt = document.createElement('div');
             chartBatt.classList.add('chart');
-            chartBatt.id = 'chartBatt_' + glider.glider + '_' + glider.path;
+            chartBatt.id = 'chartBatt_' + glider.glider + '_' + glider.mission;
             h = document.createElement('div');
             h.appendChild(document.createTextNode('batt: '));
             h.classList.add('label');
@@ -648,11 +639,11 @@
 
             barBatt = document.createElement('div');
             barBatt.classList.add('barPercent');
-            barBatt.id = 'barBatt_' + glider.glider + '_' + glider.path;
+            barBatt.id = 'barBatt_' + glider.glider + '_' + glider.mission;
             chartBatt.appendChild(barBatt);
 
             spanBatt = document.createElement('span');
-            spanBatt.id = 'spanBatt_' + glider.glider + '_' + glider.path;
+            spanBatt.id = 'spanBatt_' + glider.glider + '_' + glider.mission;
             chartBatt.appendChild(spanBatt);
 
             if (data.hasOwnProperty('enduranceEndT')) {
@@ -668,7 +659,7 @@
 
             chartNext = document.createElement('div');
             chartNext.classList.add('chart');
-            chartNext.id = 'chartNext_' + glider.glider + '_' + glider.path;
+            chartNext.id = 'chartNext_' + glider.glider + '_' + glider.mission;
             h = document.createElement('div');
             h.appendChild(document.createTextNode('next: '));
             h.classList.add('label');
@@ -678,11 +669,11 @@
 
             barNext = document.createElement('div');
             barNext.classList.add('barPercent');
-            barNext.id = 'barNext_' + glider.glider + '_' + glider.path;
+            barNext.id = 'barNext_' + glider.glider + '_' + glider.mission;
             chartNext.appendChild(barNext);
 
             spanNext = document.createElement('span');
-            spanNext.id = 'spanNext_' + glider.glider + '_' + glider.path;
+            spanNext.id = 'spanNext_' + glider.glider + '_' + glider.mission;
             chartNext.appendChild(spanNext);
 
             if (data.hasOwnProperty('next')) {
@@ -890,13 +881,16 @@
             box = document.createElement('div');
             box.classList.add('imgbox');
             img = document.createElement('img');
-            if (plotWhich == 'map')
-                img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
-            else
-                img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
-    
+            img.alt = 'plots not available';
+            if (data.dive) {
+                if (plotWhich == 'map')
+                    img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+                else
+                    img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
+            }
+ 
             img.classList.add('dashImg');
-            img.id = 'img_' + glider.glider + '_';
+            img.id = 'img_' + glider.glider + '_' + glider.mission;
             img.style.display = 'block';
             img.addEventListener('error', imageNotFound);
           
@@ -904,7 +898,7 @@
 
             comm = document.createElement('div');
             comm.classList.add('commbox');
-            comm.id = 'comm_' + glider.glider + '_';
+            comm.id = 'comm_' + glider.glider + '_' + glider.mission;
             comm.style.display = 'none';
             comm.innerHTML = commLogContent;
             comm.scrollTop = comm.scrollHeight;
@@ -914,7 +908,7 @@
             box.onclick = function()
                    {
                         event.stopPropagation();
-                        togglePlotComm(glider.glider + '_');
+                        togglePlotComm(glider.glider + '_' + glider.mission);
                         return false;
                     }
 
@@ -1050,11 +1044,15 @@
             var shown = [];
             loadAbout(data['organization']);
             for (g of data['missions']) {
-                glider = { glider: g.glider, mission: g.mission, path: g.path };
+                glider = { glider: g.glider, mission: g.mission };
                 if (gliders.length > 0 && (!gliders.includes("" + glider.glider) || shown.includes(glider.glider))) {
                     console.log('skipping ' + glider.glider);
                     continue;
                 }
+{% if runMode == 'pilot' %}
+                if (g.status != 'active')
+                    continue;
+{% endif %}
                 console.log('adding ' + glider.glider);
                 shown.push(glider.glider);
                 gliderTable.push(glider);
@@ -1063,18 +1061,17 @@
                 // so that we can control the order independently
                 // of when then individual /summary fetches arrive
 
-                // this tile probably never exists here in loadTable
-                if ($(`${g.glider}_${g.path}`)) {
+                if ($(`${g.glider}_${g.mission}`)) {
                     console.log('tile exists, clearing');
 {% if runMode == 'pilot' %}
-                    clearGauges(`${g.glider}_${g.path}`);
+                    clearGauges(`${g.glider}_${g.mission}`);
 {% endif %}
-                    clearTiles(`${g.glider}_${g.path}`);
-                    t = $(`${g.glider}_${g.path}`);
+                    clearTiles(`${g.glider}_${g.mission}`);
+                    t = $(`${g.glider}_${g.mission}`);
                 }
                 else {
                     t = document.createElement('div');
-                    t.id = `${g.glider}_${g.path}`
+                    t.id = `${g.glider}_${g.mission}`
                     $('main').appendChild(t);
                 }
                 createTile(glider, t, '');
@@ -1168,33 +1165,34 @@
             else if (line.startsWith('NEW=')) {
                 json = JSON.parse(line.slice(4));
                 glider = json['glider'];
+                mission = json['mission'];
                 if ( 'content' in json && json['content'] == "files=perdive") {
                     // the only files we care about is perdive which we use 
                     // to trigger a reload of this tile
 {% if runMode == 'pilot' %}
-                    clearGauges(glider + '_');
-                    commLog = $('comm_' + glider + '_').innerHTML;
+                    clearGauges(glider + '_' + mission);
+                    commLog = $('comm_' + glider + '_' + mission).innerHTML;
 {% endif %}
                     clearTiles(glider + '_');
 {% if runMode == 'pilot' %}
-                    createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'), commLog)
+                    createTile({ "glider": glider, "mission": mission}, $(glider + '_' + mission), commLog)
 {% else %}
-                    createTile({ "glider": glider, "mission": missionName(glider)}, $(glider + '_'), '')
+                    createTile({ "glider": glider, "mission": mission}, $(glider + '_' + mission), '')
 {% endif %}
                 }
                 else if ('content' in json && json['content'].startsWith('status')) {
                     // the only status message is disconnected
-                    $(glider + '_').style.border = '2px solid black';
-                    if ($('img_' + glider + '_').naturalHeight > 0) {
-                        $('img_' + glider + '_').style.display = 'block';
-                        $('comm_' + glider + '_').style.display = 'none';
+                    $(glider + '_' + mission).style.border = '2px solid black';
+                    if ($('img_' + glider + '_' + mission).naturalHeight > 0) {
+                        $('img_' + glider + '_' + mission).style.display = 'block';
+                        $('comm_' + glider + '_' + mission).style.display = 'none';
                     }
                 }
                 else if ('connected' in json) {
                     // gpsstr topic payload is only one with "connected" entry
-                    $(glider + '_').style.border = '2px solid magenta';
-                    $('comm_' + glider + '_').style.display = 'block';
-                    $('img_' + glider + '_').style.display = 'none';
+                    $(glider + '_' + mission).style.border = '2px solid magenta';
+                    $('comm_' + glider + '_' + mission).style.display = 'block';
+                    $('img_' + glider + '_' + mission).style.display = 'none';
                 }
             }
         }
