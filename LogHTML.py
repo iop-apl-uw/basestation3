@@ -372,7 +372,7 @@ async def displayTables(fname):
                 g[k_vbd] = "%.1f" % rate
 
                 rate = rate*L['VBD_CNV'] # -4.0767;
-                if (g[k_vbd_i] > 0 and L['24V_AH'][0] > 0):
+                if g[k_vbd_i] > 0:
                     x = 0.01*rate*g[k_pres]/g[k_vbd_i]/g[k_vbd_v] # L['24V_AH'][0]
                     g[k_eff] = "%.3f" % x
 

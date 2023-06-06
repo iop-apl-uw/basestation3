@@ -271,7 +271,9 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
                 insertColumn(dive, cur, name, nci.variables[v][i], "FLOAT")
 
-    nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(",")
+    # this appears to do nothing
+    if 'log_24V_AH' in nci.variables:
+        nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(",")
 
     if 'depth' in nci.variables:
         dep_mx = numpy.nanmax(nci.variables["depth"][:])
@@ -384,11 +386,20 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     [v10, ah10] = list(
         map(float, nci.variables["log_10V_AH"][:].tobytes().decode("utf-8").split(","))
     )
-    [v24, ah24] = list(
-        map(float, nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(","))
-    )
-    if nci.variables["log_AH0_24V"].getValue() > 0:
-        avail24 = 1 - ah24 / nci.variables["log_AH0_24V"].getValue()
+    
+    if 'log_24V_AH' in nci.variables:
+        [v24, ah24] = list(
+            map(float, nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(","))
+        )
+    else:
+        v24 = 0
+        ah24 = 0
+
+    if 'log_AH0_24V' in nci.variables:
+        if nci.variables["log_AH0_24V"].getValue() > 0:
+            avail24 = 1 - ah24 / nci.variables["log_AH0_24V"].getValue()
+        else:
+            avail24 = 0
     else:
         avail24 = 0
 
@@ -420,9 +431,10 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     insertColumn(
         dive, cur, "batt_Ahr_cap_10V", nci.variables["log_AH0_10V"].getValue(), "FLOAT"
     )
-    insertColumn(
-        dive, cur, "batt_Ahr_cap_24V", nci.variables["log_AH0_24V"].getValue(), "FLOAT"
-    )
+    if "log_AH0_24V" in nci.variables:
+        insertColumn(
+            dive, cur, "batt_Ahr_cap_24V", nci.variables["log_AH0_24V"].getValue(), "FLOAT"
+        )
 
     try:
         data = pd.read_sql_query(
@@ -486,13 +498,13 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     insertColumn(dive, cur, "batt_kJ_used_24V", batt_kJ_used_24V, "FLOAT")
 
     if "log_FG_AHR_10Vo" in nci.variables:
-        if nci.variables["log_AH0_24V"].getValue() == 0:
+        if "log_AH0_24V" in nci.variables and nci.variables["log_AH0_24V"].getValue() == 0:
             fg_ah10 = (
                 nci.variables["log_FG_AHR_24Vo"].getValue()
                 + nci.variables["log_FG_AHR_10Vo"].getValue()
             )
             fg_ah24 = 0
-        elif nci.variables["log_AH0_10V"].getValue() == 0:
+        elif "log_FG_AHR_24Vo" in nci.variables and nci.variables["log_AH0_10V"].getValue() == 0:
             fg_ah24 = (
                 nci.variables["log_FG_AHR_24Vo"].getValue()
                 + nci.variables["log_FG_AHR_10Vo"].getValue()
@@ -500,10 +512,14 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
             fg_ah10 = 0
         else:
             fg_ah10 = nci.variables["log_FG_AHR_10Vo"].getValue()
-            fg_ah24 = nci.variables["log_FG_AHR_24Vo"].getValue()
+            if "log_FG_AHR_24Vo" in nci.variables:
+                fg_ah24 = nci.variables["log_FG_AHR_24Vo"].getValue()
 
-        if nci.variables["log_AH0_24V"].getValue() > 0:
-            fg_avail24 = 1 - fg_ah24 / nci.variables["log_AH0_24V"].getValue()
+        if "log_AH0_24V" in nci.variables:
+            if nci.variables["log_AH0_24V"].getValue() > 0:
+                fg_avail24 = 1 - fg_ah24 / nci.variables["log_AH0_24V"].getValue()
+            else:
+                fg_avail24 = 0
         else:
             fg_avail24 = 0
 
@@ -516,22 +532,23 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
             nci.variables["log_FG_AHR_10Vo"].getValue()
             - nci.variables["log_FG_AHR_10V"].getValue()
         )
-        fg_24V_AH = (
-            nci.variables["log_FG_AHR_24Vo"].getValue()
-            - nci.variables["log_FG_AHR_24V"].getValue()
-        )
+        if "log_FG_AHR_24Vo" in nci.variables:
+            fg_24V_AH = (
+                nci.variables["log_FG_AHR_24Vo"].getValue()
+                - nci.variables["log_FG_AHR_24V"].getValue()
+            )
+            insertColumn(dive, cur, "fg_ah_used_24V", fg_24V_AH, "FLOAT")
+            fg_24V_kJ = fg_24V_AH * v24 * 3600.0 / 1000.0
+            insertColumn(dive, cur, "fg_kJ_used_24V", fg_24V_kJ, "FLOAT")
+            insertColumn(dive, cur, "fg_batt_capacity_24V", fg_avail24, "FLOAT")
 
         insertColumn(dive, cur, "fg_ah_used_10V", fg_10V_AH, "FLOAT")
-        insertColumn(dive, cur, "fg_ah_used_24V", fg_24V_AH, "FLOAT")
 
         insertColumn(dive, cur, "fg_batt_capacity_10V", fg_avail10, "FLOAT")
-        insertColumn(dive, cur, "fg_batt_capacity_24V", fg_avail24, "FLOAT")
 
         fg_10V_kJ = fg_10V_AH * v10 * 3600.0 / 1000.0
-        fg_24V_kJ = fg_24V_AH * v24 * 3600.0 / 1000.0
 
         insertColumn(dive, cur, "fg_kJ_used_10V", fg_10V_kJ, "FLOAT")
-        insertColumn(dive, cur, "fg_kJ_used_24V", fg_24V_kJ, "FLOAT")
 
     mhead_line = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
     mhead_line = mhead_line.tobytes().decode("utf-8").split(",")
@@ -739,12 +756,14 @@ def createDivesTable(cur):
                 'log_INTERNAL_PRESSURE', 'log_INTERNAL_PRESSURE_slope',
                 'log_HUMID_slope',
                 'log_IMPLIED_C_VBD',
+                'log_FG_AHR_10V0', 'log_FG_AHR_24Vo',
                 'log_gps_time',  'log_gps2_time', 'log_TGT_LAT', 'log_TGT_LON', 
                 'depth_avg_curr_east','depth_avg_curr_north',
                 'max_depth',
                 'pitch_dive','pitch_climb',
                 'batt_volts_10V','batt_volts_24V',
                 'batt_capacity_24V','batt_capacity_10V',
+                'batt_Ahr_cap_10V', 'batt_Ahr_cap_24V',
                 'total_flight_time_s',
                 'avg_latitude','avg_longitude',
                 'magnetic_variation','mag_heading_to_target',
@@ -759,6 +778,8 @@ def createDivesTable(cur):
                 "batt_kJ_used_10V", "batt_kJ_used_24V",
                 "batt_ah_used_10V", "batt_ah_used_24V", "batt_ah_24V", "batt_ah_10V",
                 "fg_kJ_used_10V", "fg_kJ_used_24V",
+                "fg_batt_capacity_24V", "fg_batt_capacity_10V",
+                "fg_ah_used_24V", "fg_ah_used_10V",
                 "batt_volts_10V_slope", "batt_volts_24V_slope", 
                 "batt_capacity_10V_slope", "batt_capacity_24V_slope" ]
 
@@ -970,16 +991,17 @@ def addSlopeValToDB(base_opts, dive_num, var, con=None):
         log_error(f"{e} could not fetch {var} for slope calculation")
         return
 
-    for v in vexist:
-        if df[v].isnull().values.any():
-            continue
+    if len(df["dive"].to_numpy()) > 0:
+        for v in vexist:
+            if df[v].isnull().values.any():
+                continue
 
-        with warnings.catch_warnings():
-            # For very small number of dives, we get
-            # RankWarning: Polyfit may be poorly conditioned
-            warnings.simplefilter('ignore', numpy.RankWarning)
-            m,_ = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
-        addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
+            with warnings.catch_warnings():
+                # For very small number of dives, we get
+                # RankWarning: Polyfit may be poorly conditioned
+                warnings.simplefilter('ignore', numpy.RankWarning)
+                m,_ = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
+            addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
 
     if con is None:
         try:

@@ -388,7 +388,7 @@
 
     var gliders = [];
 
-    function mission(glider) {
+    function missionArg(glider) {
         if (glider.mission != '')
             return `?mission=${glider.mission}`;
         else
@@ -542,7 +542,7 @@
         console.log(glider);
         var indicators = [];
 
-        fetch(`summary/${glider.glider}${mission(glider)}`)
+        fetch(`summary/${glider.glider}${missionArg(glider)}`)
         .then(res => res.text())
         .then(data => {
             data = data.replaceAll('NaN', 'null');
@@ -550,7 +550,7 @@
  
             t.classList.add('tile');
             t.style.scrollSnapAlign = 'center';
-            t.onclick = function() { window.open(`./${data.mission.glider}${mission(glider)}`, `${data.mission.glider}`); };
+            t.onclick = function() { window.open(`./${data.mission.glider}${missionArg(glider)}`, `${data.mission.glider}`); };
            
             var h, txt, box, barBatt, chartBatt, spanBatt, header;
             var barNext, chartNext, spanNex;
@@ -579,10 +579,10 @@
             t.appendChild(txt);
 
             txt = document.createElement('div');
-            txt.id = `${glider.glider}_directive`
+            txt.id = `directives_${glider.glider}_${glider.mission}`
 
             if (data.hasOwnProperty('commDirective')) 
-                txt.innerHTML = `parsed ${formatDirective(data.commDirective, "commdirective" + glider.glider)}, waiting ${formatDirective(data.cmdfileDirective, "cmdfileDirective" + glider.glider)}`;
+                txt.innerHTML = `parsed ${formatDirective(data.commDirective, "commDirective_" + glider.glider + "_" + glider.mission)}, waiting ${formatDirective(data.cmdfileDirective, "cmdfileDirective_" + glider.glider + "_" + glider.mission)}`;
             else
                 txt.innerHTML = `parsed X, waiting X`;
 
@@ -884,9 +884,9 @@
             img.alt = 'plots not available';
             if (data.dive) {
                 if (plotWhich == 'map')
-                    img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+                    img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + missionArg(glider);
                 else
-                    img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
+                    img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + missionArg(glider);
             }
  
             img.classList.add('dashImg');
@@ -924,11 +924,11 @@
     function createTile(glider, t, commLogContent) {
         console.log(glider);
 
-        fetch(`summary/${glider.glider}${mission(glider)}`)
+        fetch(`summary/${glider.glider}${missionArg(glider)}`)
         .then(res => res.json())
         .then(data => {
             t.classList.add('tile');
-            t.onclick = function() { window.open(`./${glider.glider}${mission(glider)}`, `${glider.glider}`); };
+            t.onclick = function() { window.open(`./${glider.glider}${missionArg(glider)}`, `${glider.glider}`); };
            
             var h, txt, box, header;
             if (glider.mission == '')
@@ -966,9 +966,9 @@
 
             img = document.createElement('img');
             if (plotWhich == 'map')
-                img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + mission(glider);
+                img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + missionArg(glider);
             else
-                img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + mission(glider);
+                img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + missionArg(glider);
             
             img.classList.add('indexImg');
      
@@ -1046,7 +1046,7 @@
             for (g of data['missions']) {
                 glider = { glider: g.glider, mission: g.mission };
                 if (gliders.length > 0 && (!gliders.includes("" + glider.glider) || shown.includes(glider.glider))) {
-                    console.log('skipping ' + glider.glider);
+                    console.log('skipping unrequested ' + glider.glider);
                     continue;
                 }
 {% if runMode == 'pilot' %}
@@ -1146,39 +1146,46 @@
         wsocket.onmessage = function(e) {
             var line = e.data;
             console.log(line);
-            if (line.startsWith('CMDFILE=')) {
-                pieces = line.split('=')[1].split(',')
-                glider = pieces[0]
-                d = pieces[1]
-                $('cmdfileDirective' + glider).innerHTML = d;
-                $('cmdfileDirective' + glider).style.color = d in directiveColors ? directiveColors[d] : 'black';
+            try {
+                json = JSON.parse(line);
+            } catch (error) {
+                console.log('socket watch JSON error: ' + line + ' [' + error + ']');
+                return;
             }
+
+            if (!('glider' in json) || !('mission' in json) || !('what' in json)) {
+                console.log('socket watch JSON key missing: ' + line);
+                return;
+            }
+            glider = parseInt('' + json['glider']);
+            mission = json['mission'];
+
 {% if runMode == 'pilot' %}
-            else if (line.startsWith('COMMLOG=')) {
-                glider = line.slice(8,11);
-                body   = line.slice(12);
-                var elt = $('comm_' + parseInt(glider) + '_');
-                elt.innerHTML += body;
+            if (json['what'] == 'cmdfile') {
+                d = json['directive'];
+                $('cmdfileDirective_' + glider + '_' + mission).innerHTML = d;
+                $('cmdfileDirective_' + glider + '_' + mission).style.color = d in directiveColors ? directiveColors[d] : 'black';
+            }
+            else if (json['what'] == 'comm.log') {
+                var elt = $('comm_' + glider + '_' + mission);
+                elt.innerHTML += json['content'];
                 elt.scrollTop = elt.scrollHeight;
             }
+            else if (json['what'] == 'urls') {
+{% else %}
+            if (json['what'] == 'urls') {
 {% endif %}
-            else if (line.startsWith('NEW=')) {
-                json = JSON.parse(line.slice(4));
-                glider = json['glider'];
-                mission = json['mission'];
                 if ( 'content' in json && json['content'] == "files=perdive") {
                     // the only files we care about is perdive which we use 
                     // to trigger a reload of this tile
 {% if runMode == 'pilot' %}
                     clearGauges(glider + '_' + mission);
                     commLog = $('comm_' + glider + '_' + mission).innerHTML;
-{% endif %}
-                    clearTiles(glider + '_');
-{% if runMode == 'pilot' %}
-                    createTile({ "glider": glider, "mission": mission}, $(glider + '_' + mission), commLog)
 {% else %}
-                    createTile({ "glider": glider, "mission": mission}, $(glider + '_' + mission), '')
+                    commLog = '';
 {% endif %}
+                    clearTiles(glider + '_' + mission);
+                    createTile({ "glider": glider, "mission": mission}, $(glider + '_' + mission), commLog)
                 }
                 else if ('content' in json && json['content'].startsWith('status')) {
                     // the only status message is disconnected

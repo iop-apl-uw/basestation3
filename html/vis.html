@@ -466,7 +466,7 @@
                     } 
             })
             .catch(error => {
-                console.log(error);
+                console.log('show plot error'); // error);
             });
         }
         currElt = elt;
@@ -864,6 +864,9 @@
             buildTable(glider, -1);
             buildChangelog(3);
             loadAbout(data.mission, data.organization);
+            if (data.mission.status == 'active') {
+                setupStream(glider, true, true);
+            }
         })
         .catch(error => {
             console.log(error);
@@ -1871,7 +1874,7 @@
         console.log(glider);
         window.name = glider;
         loadStatus(glider, dive);
-        setupStream(glider, true, true);
+        // setupStream(glider, true, true);
 {% if runMode == 'pilot' %}
         loadControlFile('cmdfile');
         loadControlFile('science');

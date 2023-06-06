@@ -188,7 +188,8 @@ async def collectSummary(glider, path):
         )
         data = await cur.fetchone()
         # data = {k:v for k,v in data.items() if v is not None}
-        data = dict(map(lambda x: (x[0], x[1] if x[1] is not None else 0), data.items()))
+        if data:
+            data = dict(map(lambda x: (x[0], x[1] if x[1] is not None else 0), data.items()))
 
         await cur.execute(
             f"select pitch_volts,roll_volts,vbd_volts,vbd_eff from gc where dive={int(data['dive'])} order by vbd_eff desc limit 1",

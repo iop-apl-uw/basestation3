@@ -155,7 +155,8 @@ def mission_energy(
             conn,
         )["log_gps2_time"]
 
-        if batt_df["batt_Ahr_cap_24V"].iloc()[-1] == 0:
+        batt_df["batt_Ahr_cap_24V"].iloc()[-1]
+        if batt_df["batt_Ahr_cap_24V"].iloc()[-1] is None or batt_df["batt_Ahr_cap_24V"].iloc()[-1] == 0:
             univolt = "10V"
         elif batt_df["batt_Ahr_cap_10V"].iloc()[-1] == 0:
             univolt = "24V"
@@ -282,17 +283,23 @@ def mission_energy(
         # TODO Using the polyfit on the normalized battery capacity for the fuel guage yields
         # roughly 10% less dives then next calc (taken directly from the current matlab code)
         used_to_date = (
-            fg_df["log_FG_AHR_24Vo"].to_numpy()[-1]
+            (fg_df["log_FG_AHR_24Vo"].to_numpy()[-1] if fg_df["log_FG_AHR_24Vo"].to_numpy()[-1] is not None else 0)
             + fg_df["log_FG_AHR_10Vo"].to_numpy()[-1]
         )
         days_df_fg = None
         fg_est_str = ""
 
         if used_to_date > 0.0:
-            avg_use = (
-                np.sum(fg_df["fg_ah_used_24V"].to_numpy()[-p_dives_back:])
-                + np.sum(fg_df["fg_ah_used_10V"].to_numpy()[-p_dives_back:])
-            ) / float(p_dives_back)
+            if fg_df["fg_ah_used_24V"].to_numpy()[-1] is not None:
+                avg_use = (
+                    np.sum(fg_df["fg_ah_used_24V"].to_numpy()[-p_dives_back:])
+                    + np.sum(fg_df["fg_ah_used_10V"].to_numpy()[-p_dives_back:])
+                ) / float(p_dives_back)
+            else:
+                avg_use = (
+                    np.sum(fg_df["fg_ah_used_10V"].to_numpy()[-p_dives_back:])
+                ) / float(p_dives_back)
+
             log_info(f"avg_use:{avg_use}")
 
             p_dives_back = (
@@ -302,7 +309,7 @@ def mission_energy(
             )
 
             batt_cap = max(
-                batt_df["batt_Ahr_cap_24V"].to_numpy()[-1],
+                batt_df["batt_Ahr_cap_24V"].to_numpy()[-1] if batt_df["batt_Ahr_cap_24V"].to_numpy()[-1] is not None else 0,
                 batt_df["batt_Ahr_cap_10V"].to_numpy()[-1],
             )
             dives_remaining = (
@@ -515,18 +522,19 @@ def mission_energy(
                 {
                     "name": "Fuel Gauge",
                     "x": fg_df["dive"],
-                    "y": fg_df["fg_kJ_used_24V"] + fg_df["fg_kJ_used_10V"],
+                    "y": (fg_df["fg_kJ_used_24V"] if fg_df["fg_kJ_used_24V"] is not None else 0) + fg_df["fg_kJ_used_10V"],
                     "yaxis": "y1",
                     "mode": "lines",
                     "line": {"width": 1, "color": "DarkBlue"},
                     "hovertemplate": "Fuel Gauge<br>Dive %{x:.0f}<br> Energy used %{y:.2f} kJ<extra></extra>",
                 }
             )
+
             fig.add_trace(
                 {
                     "name": "Modeled",
                     "x": batt_df["dive"],
-                    "y": batt_df["batt_kJ_used_10V"] + batt_df["batt_kJ_used_24V"],
+                    "y": batt_df["batt_kJ_used_10V"] + (batt_df["batt_kJ_used_24V"] if batt_df["batt_kJ_used_24V"] is not None else 0),
                     "yaxis": "y1",
                     "mode": "lines",
                     "line": {"width": 1, "color": "DarkGrey"},
@@ -545,17 +553,18 @@ def mission_energy(
                     "hovertemplate": "Fuel Gauge 10V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
                 }
             )
-            fig.add_trace(
-                {
-                    "name": "24V Fuel Gauge",
-                    "x": fg_df["dive"],
-                    "y": fg_df["fg_kJ_used_24V"],
-                    "yaxis": "y1",
-                    "mode": "lines",
-                    "line": {"width": 1, "color": "DarkBlue"},
-                    "hovertemplate": "Fuel Gauge 24V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
-                }
-            )
+            if fg_df["fg_kJ_used_24V"][-1] is not None:
+                fig.add_trace(
+                    {
+                        "name": "24V Fuel Gauge",
+                        "x": fg_df["dive"],
+                        "y": fg_df["fg_kJ_used_24V"],
+                        "yaxis": "y1",
+                        "mode": "lines",
+                        "line": {"width": 1, "color": "DarkBlue"},
+                        "hovertemplate": "Fuel Gauge 24V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
+                    }
+                )
             fig.add_trace(
                 {
                     "name": "10V Modeled Use",
@@ -567,17 +576,18 @@ def mission_energy(
                     "hovertemplate": "Modeled Use 10V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
                 }
             )
-            fig.add_trace(
-                {
-                    "name": "Modeled Use 24V",
-                    "x": batt_df["dive"],
-                    "y": batt_df["batt_kJ_used_24V"],
-                    "yaxis": "y1",
-                    "mode": "lines",
-                    "line": {"width": 1, "color": "DarkGrey"},
-                    "hovertemplate": "Modeled Use 24V<br>Dive %{x:.0f}<br>Energy Used %{y:.2f} kJ<extra></extra>",
-                }
-            )
+            if batt_df["batt_kJ_used_24V"][-1] is not None:
+                fig.add_trace(
+                    {
+                        "name": "Modeled Use 24V",
+                        "x": batt_df["dive"],
+                        "y": batt_df["batt_kJ_used_24V"],
+                        "yaxis": "y1",
+                        "mode": "lines",
+                        "line": {"width": 1, "color": "DarkGrey"},
+                        "hovertemplate": "Modeled Use 24V<br>Dive %{x:.0f}<br>Energy Used %{y:.2f} kJ<extra></extra>",
+                    }
+                )
 
         title_text = f"{mission_str}<br>Energy Consumption and Endurance"
 

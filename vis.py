@@ -304,6 +304,10 @@ def missionFromRequest(request):
 
     return None
 
+def activeMission(gld, request):
+    x = next(filter(lambda d: d['glider'] == int(gld) and d['status'] == 'active',  request.app.ctx.missionTable), None)
+    return x
+ 
 def matchMission(gld, request, mission=None):
     if mission == None and \
        request and \
@@ -315,6 +319,9 @@ def matchMission(gld, request, mission=None):
     x = next(filter(lambda d: d['glider'] == int(gld) and d['mission'] == mission,  request.app.ctx.missionTable), None)
     if x:
         return x
+
+    if mission:
+        return None
 
     x = next(filter(lambda d: d['glider'] == int(gld) and d['default'] == True, request.app.ctx.missionTable), None)
     return x 
@@ -1226,14 +1233,17 @@ def attachHandlers(app: sanic.Sanic):
         status = request.args['status'][0] if 'status' in request.args else None
         gpsstr = request.args['gpsstr'][0] if 'gpsstr' in request.args else None
 
+        mission = m['mission'] if m['mission'] else ""
+
         if status:
             content = f"status={status}"
             topic = 'status'
-            msg = { "glider": glider, "dive": dive, "content": content, "time": time.time() }
+            msg = { "glider": glider, "dive": dive, "content": content, "time": time.time(), "mission": mission }
         elif gpsstr:
             topic = 'gpsstr'
             try: 
                 msg = request.json
+                msg.update({"mission": mission})
             except Exception as e:
                 sanic.log.logger.info(f"gpsstr body: {e}")
                 msg = {}
@@ -1242,12 +1252,12 @@ def attachHandlers(app: sanic.Sanic):
             topic = 'files'
             if hasattr(request, 'json') and request.json:
                 msg = request.json
-                msg.update({ "time": time.time() } )
+                msg.update({ "time": time.time(), "mission": mission } )
                 if 'when' not in msg:
                     msg.update({ "when": "urls" } )
                 sanic.log.logger.info(f"URLS payload {msg}")
             else:
-                msg = { "glider": glider, "dive": dive, "content": content, "time": time.time(), "when": "urls" }
+                msg = { "glider": glider, "dive": dive, "content": content, "time": time.time(), "when": "urls", "mission": mission }
 
         # consider whether this should go to all instances (Utils.notifyVisAsync)
         try:
@@ -1482,6 +1492,10 @@ def attachHandlers(app: sanic.Sanic):
     # parameters: mission
     @authorized()
     async def streamHandler(request: sanic.Request, ws: sanic.Websocket, which:str, glider:int):
+        m = matchMission(glider, request)
+        if m['status'] != 'active':
+            return sanic.response.text('inactive')
+
         filename = f'{gliderPath(glider,request)}/comm.log'
 
         await ws.send(f"START") # send something to ack the connection opened
@@ -1630,7 +1644,7 @@ def attachHandlers(app: sanic.Sanic):
                 glider = int(pieces[0])
                 topic  = pieces[1]
 
-                m = next(filter(lambda d: d['glider'] == glider and d['default'] == True, opTable), None)
+                m = next(filter(lambda d: d['glider'] == glider and d['status'] == 'active', opTable), None)
                 if m is None: # must not be authorized
                     continue
 
@@ -1641,7 +1655,14 @@ def attachHandlers(app: sanic.Sanic):
                     cmdfile = f"{gliderPath(glider,request,mission=m['mission'])}/cmdfile"
                     directive = await summary.getCmdfileDirective(cmdfile)
                     sanic.log.logger.debug(f"watch {glider} cmdfile modified")
-                    await ws.send(f"CMDFILE={glider:03d},{directive}")
+                    out = {
+                            "glider": glider, 
+                            "mission": m['mission'] if m['mission'] else '', 
+                            "what": "cmdfile",
+                            "directive": directive
+                          }
+                            
+                    await ws.send(f"{dumps(out).decode('utf-8')}")
                 elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
                     msg = loads(body)
                     filename = f"{gliderPath(glider,request,mission=m['mission'])}/comm.log"
@@ -1650,13 +1671,23 @@ def attachHandlers(app: sanic.Sanic):
                     data = (await commFile.read()).decode('utf-8', errors='ignore')
                     await commFile.close()
                     if data:
-                        await ws.send(f"COMMLOG={glider:03d},{data}")
+                        out = { 
+                                "glider": glider, 
+                                "mission": m['mission'] if m['mission'] else '', 
+                                "what": "comm.log",
+                                "content": data
+                              }
+                        await ws.send(f"{dumps(out).decode('utf-8')}")
                 elif 'urls' in topic:
                     try:
                         msg = loads(body)
+                        msg.update({ "what": "urls" })
                         if 'glider' not in msg:
                             msg.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
-                        await ws.send(f"NEW={dumps(msg).decode('utf-8')}")
+                        if 'mission' not in msg:
+                            msg.update({ "mission": m['mission'] if m['mission'] else ""} ) #
+            
+                        await ws.send(f"{dumps(msg).decode('utf-8')}")
                     except Exception as e:
                         sanic.log.logger.info(f"watchHandler {e}")
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
@@ -1976,7 +2007,7 @@ async def buildFilesWatchList(config):
     files = [ ]
     if not config.SINGLE_MISSION:
         for f in [ config['MISSIONS_FILE'], config['USERS_FILE'] ]:
-            files.append( { 'glider': 0, 'full': f, 'file': f, 'ctime': 0, 'size': 0, 'delta': 0 } )
+            files.append( { 'glider': 0, 'full': f, 'file': f, 'ctime': 0, 'size': 0, 'delta': 0, 'mission': '' } )
 
     for m in missions:
         if m['status'] == 'active':
@@ -1985,7 +2016,7 @@ async def buildFilesWatchList(config):
                     fname = f"{m['path']}/{f}"
                 else:
                     fname = f"sg{m['glider']:03d}/{f}" 
-                files.append( { "glider": m['glider'], "full": fname, "file": f, "ctime": 0, "size": 0, "delta": 0 } )
+                files.append( { "glider": m['glider'], "full": fname, "file": f, "ctime": 0, "size": 0, "delta": 0, "mission": m['mission'] if m['mission'] else "" } )
 
     await checkFilesystemChanges(files) # load initial mod times
 
@@ -2017,6 +2048,7 @@ async def notifier(config):
             d = loads(r[1])
             if 'when' not in d:
                 d.update({"when": "socket"})
+
             r[1] = dumps(d)
             sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
             await socket.send_multipart(r)
