@@ -1670,7 +1670,7 @@ def open_mission_database(
             return None
 
     if ro:
-        conn = sqlite3.connect("file:" + db + "?mode=ro")
+        conn = sqlite3.connect("file:" + db + "?mode=ro", uri=True)
     else:
         conn = sqlite3.connect(db)
         # conn.isolation_level = None
