@@ -86,7 +86,7 @@ if which == "-c": # cmdfile
             continue         
     
         else:
-            print("unknown content line {linenum}")
+            print(f"unknown content line {linenum}")
             errors = errors + 1  
 
     if not directive:
@@ -110,7 +110,7 @@ elif which == "-t": # targets
         
         pcs = line.split()
         if len(pcs) < 3:
-            print("parse error line {linenum}")
+            print(f"parse error line {linenum}")
             errors = errors + 1
             continue
  
@@ -119,7 +119,7 @@ elif which == "-t": # targets
         for x in pcs[1:]:
             flds = x.split('=')
             if len(flds) != 2:
-                print("parse error line {linenum}")
+                print(f"parse error line {linenum}")
                 errors = errors + 1            
 
             target[flds[0]] = flds[1] 
@@ -178,7 +178,7 @@ elif which == '-s':
 
         pcs = line.split()
         if len(pcs) < 4:
-            print("parse error line {linenum}")
+            print(f"parse error line {linenum}")
             errors = errors + 1
             continue
 
@@ -195,7 +195,7 @@ elif which == '-s':
         for x in pcs[1:]:
             flds = x.split('=')
             if len(flds) != 2:
-                print("parse error line {linenum}")
+                print(f"parse error line {linenum}")
                 errors = errors + 1            
 
             spec[flds[0]] = flds[1] 
