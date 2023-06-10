@@ -38,6 +38,7 @@ if(! $?PYTHON_BINARY ) then
     set PYTHON_BINARY = /opt/basestation/bin/python
 endif
 set runner_timeout = 2
+set upload_files_timeout = 5
 
 if(! $?BASESTATION_PATH ) then
     set BASESTATION_PATH = "/usr/local/basestation"
@@ -95,8 +96,15 @@ if( $?RUNNER_DIR ) then
           break
       endif
   end
-  # Wait for a second to let the BaseLogin to update the prompt with files to be uploaded
-  sleep 1
+  # Wait for the file upload_files to be created
+  set t_now = `date +%s`
+  while ( ! -f upload_files )
+      sleep 0.2
+      if ( `date +%s` >= ${t_now} + ${upload_files_timeout}) then
+          echo ERROR - upload_files timeout at `date -u +"%Y-%m-%dT%H:%M:%SZ"` \(${USER}\) >> comm.log
+          break
+      endif
+  end
 else
     $PYTHON_BINARY $BASESTATION_PATH/${base_login_cmd_line}  >>&!  ${base_login_log}
 endif
