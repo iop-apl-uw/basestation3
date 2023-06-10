@@ -58,6 +58,7 @@ import base64
 import re
 import zmq
 import zmq.asyncio
+# import urllib.parse 
 import Utils
 import secrets
 import BaseDB
@@ -505,6 +506,7 @@ def attachHandlers(app: sanic.Sanic):
     async def kmlHandler(request, glider:int):
         if 'network' in request.args:
             
+            # link = urllib.parse.quote(getRequestURL(request).replace('network', 'kmz'))
             link = getRequestURL(request).replace('network', 'kmz')
             t =   '<?xml version="1.0" encoding="UTF-8"?>\n'
             t +=  '<kml xmlns="http://earth.google.com/kml/2.2">\n'
@@ -1534,6 +1536,8 @@ def attachHandlers(app: sanic.Sanic):
         (tU, _) = getTokenUser(request)
         
         prev_db_t = time.time()
+        conn = None
+
         if tU and request.app.config.RUNMODE > MODE_PUBLIC:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
             if await aiofiles.os.path.exists(dbfile):
@@ -1610,6 +1614,9 @@ def attachHandlers(app: sanic.Sanic):
 
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
                 sanic.log.logger.info(f'ws connection closed {e}')
+                if conn:
+                    await conn.close()
+
                 await ws.close()
                 socket.close()
                 return
