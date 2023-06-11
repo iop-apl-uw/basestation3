@@ -206,6 +206,7 @@ An optional argument may be given following a comma to specify a comment that wi
 <p><span class="bold"><a name="ah0_24v">$AH0_24V</a></span><br>The capacity of the 24V (high-voltage) battery pack (AmpHr). There is some safety factor in this number, but its accuracy has been verified in post-recovery depletion testing of Seaglider battery packs. The Seaglider goes into the recovery state if the total 24V battery pack amp-hours used on a mission equals or exceeds this value. Should be set to zero in 15V common bus systems.[0]
 </p>
  
+<div class="med"></div>
 <p><span class="bold"><a name="altim_bottom_ping_range">$ALTIM_BOTTOM_PING_RANGE</a></span><br>The range (in meters) from the presumed apogee depth (the nominal depth at which the glider will begin its apogee maneuver) to ping for the bottom. With this parameter set the altimeter will only ping a maximum of once per dive. A value of 0 disables  pinging. If the configured transponder device does not have a ping function, these parameters are ignored. See also <span class="bold"><a href="#ALTIM_PING_DEPTH">$ALTIM_PING_DEPTH</a></span>. [0]
 </p>
  
@@ -317,12 +318,14 @@ is set, it will be honored to the exclusion of <span class="bold">$ALTIM_PING_DE
  
 <div class="med"></div>
 <p><span class="bold"><a name="COMM_SEQ">$COMM_SEQ</a></span><br>Bitmask specification of the sequence of files transfer to use. cmdfile is always transferred and is always the first transfer. 
+
 <ul> 
-<li>Bit 0 (1): Transfer control files other than cmdfile (targets, science, tcm2mat.cal, pdoscmds.bat, logger control files (if bit 2 also set).
-<li>Bit 1 (2): Transfer regular log and data files
-<li>Bit 2 (4): Transfer logger data files
-<li>Bit 3 (8): Transfer compact (network) packed log and profile files
+<li><p>Bit 0 (1): Transfer control files other than cmdfile (targets, science, tcm2mat.cal, pdoscmds.bat, logger control files (if bit 2 also set).</p>
+<li><p>Bit 1 (2): Transfer regular log and data files</p>
+<li><p>Bit 2 (4): Transfer logger data files</p>
+<li><p>Bit 3 (8): Transfer compact (network) packed log and profile files</p>
 </ul>
+
 <p>Sequencing is fixed. Bits only control whether files of that type will
 be transferred. Fixed sequence is cmdfile, control files, compact files
 for current dive, compact files for archived dives, regular files for
@@ -342,12 +345,14 @@ See <span class="bold"><a href="#DEVICE">$DEVICE</span>[<span class="bold">1</sp
 
 <div class="med"></div>
 <p><span class="bold"><a name="COMPASS_USE">$COMPASS_USE</a></span><br>
-This parameter was used in development to assess compass problems. It allows 
-for faking inputs and outputs in compass calibration and reporting.  For 
-normal operations, it should be set to 4, which 
-trusts inputs from the compass, uses and reports fully calibrated 
+This parameter controls the collection of magnetic data, automatic compass
+calibration and allows for faking inputs and outputs in compass calibration and reporting
+in the case of a failed sensor.  For
+normal operations, it should have at least bit 2 (=4) set which
+trusts inputs from the compass, uses and reports fully calibrated
 values, and reports raw magnetic data for tracking and calculation
-of magnetic calibrations.
+of magnetic calibrations. Add 1638, 32768, and 65536 as appropriate
+for onboard soft and hard iron use. 
 
 <ul> 
 <li><p>Bit 0 Heading source: </p>
@@ -399,15 +404,25 @@ of magnetic calibrations.
         <li><p>0 = do not report</p>
         <li><p>1 = include temperature data</p>
     </ul>
-<li><p>Bit 13 (8192) whether to report compass temperature in engineering file</p>
+<li><p>Bit 13 (8192) whether to use motherboard accelerometer for compass</p>
     <ul>
-        <li><p>0 = do not report</p>
-        <li><p>1 = include temperature data</p>
+        <li><p>0 = use bit 11 to determine active compass</p>
+        <li><p>1 = use motor controller (Rev E) or motherboard (Rev F) accelerometer for compass</p>
     </ul>
 <li><p>Bit 14 (16384) run post-dive calibration for soft and hard iron</p>
     <ul>
         <li><p>0 = do not run</p>
         <li><p>1 = run calibration accoring to </p>
+    </ul>
+<li><p>Bit 15 (32768) prefer onboard calibration result over tcm2mat.cal file when reloading coefficients</p>
+    <ul>
+        <li><p>0 = always load coefficient from tcm2mat.cal</p>
+        <li><p>1 = load coefficients from tcm2mat.aut if it exists</p>
+    </ul>
+<li><p>Bit 16 (65536) use results from latest onboard calibration and save to tcm2mat.aut if quality and coverage requirements are met. 
+    <ul>
+        <li><p>0 = do not apply results</p>
+        <li><p>1 = use and save calibration result if quality and circularity minima are met and lower than previously applied result.</p>
     </ul>
 
     <p>Calibration algorithm is controlled by additional parameters that can be set in tcm2mat.cal:</p>
@@ -419,11 +434,6 @@ of magnetic calibrations.
         <li><p>maxpts= Sets the maximum number of points to use in the calibration. Points will be evenly selected from the dive data specified by the tail value. Default 2000.</p>
     </ul>
 
-<li><p>Bit 15 (32768) apply post-dive calibration</p>
-    <ul>
-        <li><p>0 = do not apply</p>
-        <li><p>1 = use calibration result if quality and circularity minima are met and lower than previously applied result.</p>
-    </ul>
 </ul>
 
 <div class="med"></div>
@@ -464,7 +474,7 @@ For non-zero values, require a depth shallower than this value before initiating
  
 <div class="med"></div>
 
- <p><span class="bold"><a name="D_NO_BLEED">$D_NO_BLEED</a></span><br>The depth (meters) below which the Seaglider will not bleed (move oil from the bladder into the internal reservoir, making the Seaglider less buoyant) on dives. This parameter also defines the depth at which the <span class="bold"><a href="#T_NO_W">$T_NO_W</a></span> parameter takes effect. Must be greater than <<span class="bold"><a href="#LOITER_D_TOP">$LOITER_D_TOP</a></span> to bleed when above that value during a loiter. [50]</p>
+ <p><span class="bold"><a name="D_NO_BLEED">$D_NO_BLEED</a></span><br>The depth (meters) below which the Seaglider will not bleed (move oil from the bladder into the internal reservoir, making the Seaglider less buoyant) on dives. This parameter also defines the depth at which the <span class="bold"><a href="#T_NO_W">$T_NO_W</a></span> parameter takes effect. Must be greater than <span class="bold"><a href="#LOITER_D_TOP">$LOITER_D_TOP</a></span> to bleed when above that value during a loiter. [50]</p>
 
 <div class="med"></div>
 
@@ -547,8 +557,7 @@ Cumulative A-hr consumed from the 24V pack as tracked by the supervisor fuel gau
 <p class="indent"> 0: none<br>1: only store compressed files<br>2: delete splits on failed phone call<br></p>
  
 <div class="med"></div>
- <p><span class="bold"><a name="FIX_MISSING_TIMEOUT">$FIX_MISSING_TIMEOUT</a></span><br>Time in days to tolerate lack of any valid navigation fix (GPS, RAFOS, Iridium geolocation) before triggering recovery.<br>
-[0] 
+ <p><span class="bold"><a name="FIX_MISSING_TIMEOUT">$FIX_MISSING_TIMEOUT</a></span><br>Time in days to tolerate lack of any valid navigation fix (GPS, RAFOS, Iridium geolocation) before triggering recovery.[0] 
 </p>
 
 <div class="med"></div>
@@ -621,7 +630,7 @@ Temperature margin (degrees C) to apply to the freezing point  calculation, weig
 
 <div class="med"></div>
 
-<p> Bits 2 and 3 of <span class="bold">$KALMAN_USE</span> control whether to employ (0) or disable (1) the dirunal and semidiurnal components of the model, respectively.  The mean component is always determined. For example, a <span class="bold"><a name="KALMAN_USE">$KALMAN_USE</a></span> of 9 (= 8 + 1) runs the Kalman filter but disables the semidiurnal component of the model.  A <span class="bold"><a name="KALMAN_USE">$KALMAN_USE</a></span> value of 1 runs the Kalman filter with all components enabled. </p>
+<p> Bits 2 and 3 of <span class="bold">$KALMAN_USE</span> control whether to employ (0) or disable (1) the diurnal and semidiurnal components of the model, respectively.  The mean component is always determined. For example, a <span class="bold"><a name="KALMAN_USE">$KALMAN_USE</a></span> of 9 (= 8 + 1) runs the Kalman filter but disables the semidiurnal component of the model.  A <span class="bold"><a name="KALMAN_USE">$KALMAN_USE</a></span> value of 1 runs the Kalman filter with all components enabled. </p>
 
 
 <div class="med"></div>
@@ -637,10 +646,10 @@ Temperature margin (degrees C) to apply to the freezing point  calculation, weig
  <p><span class="bold"><a name="LOITER_D_TOP">$LOITER_D_TOP</a></span><br>Depth (meters) above which to always bleed during loiter. Use a negative value to specify no pumps above this depth during loiter (if for example you do not want to bleed, but if the glider is oscillating around this depth due to internal waves or drifts above this depth, but then starts coming down again, do not pump to try to stem that downward velocity if above a negative value of $LOITER_D_TOP). [0]</p>
 
 <div class="med"></div>
- <p><span class="bold"><a name="LOITER_DBDW">$LOITER_DBDW</a></span><br> <span class="bold"><a href="#DBDW">DBDWNAV_MODE</a></span> value to use during loiters. Often this will be a small value to avoid making overly large corrections while trying to hold depth. [0]</p>
+ <p><span class="bold"><a name="LOITER_DBDW">$LOITER_DBDW</a></span><br> <span class="bold"><a href="#DBDW">$DBDW</a></span> value to use during loiters. Often this will be a small value to avoid making overly large corrections while trying to hold depth. [0]</p>
 
 <div class="med"></div>
- <p><span class="bold"><a name="LOITER_N_DIVE">$LOITER_N_DIVE</a></span><br>An integer value that determines which dives the glider will loiter at apogee. For values greater than or equal 1, the rule is that when the remainder of <span class="bold"><a href="#DIVE">$DIVE</a></span> divided by <span class="bold">$LOITER_N_DIVE</span> is zero, the glider will loiter at apogee. Other dives will proceed directly from dive to climb as normal. For negative values less than -1, this logic is reversed, and values of <span class="bold"><a href="#DIVE">$DIVE</a></span> divisible by <span class="bold">$LOITER_N_DIVE/span> will not loiter; all others will loiter. A value of 0 disables loitering. [0] </p>
+ <p><span class="bold"><a name="LOITER_N_DIVE">$LOITER_N_DIVE</a></span><br>An integer value that determines which dives the glider will loiter at apogee. For values greater than or equal 1, the rule is that when the remainder of <span class="bold"><a href="#DIVE">$DIVE</a></span> divided by <span class="bold">$LOITER_N_DIVE</span> is zero, the glider will loiter at apogee. Other dives will proceed directly from dive to climb as normal. For negative values less than -1, this logic is reversed, and values of <span class="bold"><a href="#DIVE">$DIVE</a></span> divisible by <span class="bold">$LOITER_N_DIVE</span> will not loiter; all others will loiter. A value of 0 disables loitering. [0] </p>
 
 
 <div class="med"></div>
