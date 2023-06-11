@@ -352,7 +352,7 @@ normal operations, it should have at least bit 2 (=4) set which
 trusts inputs from the compass, uses and reports fully calibrated
 values, and reports raw magnetic data for tracking and calculation
 of magnetic calibrations. Add 1638, 32768, and 65536 as appropriate
-for onboard soft and hard iron use. 
+for onboard soft and hard iron use. [0]</p>
 
 <ul> 
 <li><p>Bit 0 Heading source: </p>
@@ -436,14 +436,12 @@ for onboard soft and hard iron use.
 
 </ul>
 
-<div class="med"></div>
-<p>
-A value of 40 (0x28) will calculate a pitch and roll from control positions 
-for use in the heading calibration but will report calibrated pitch and roll 
-in the data stream. A value of 680 (40 + 640) will use the control position 
-calculated attitudes for reporting as well.
-[0]
-</p>
+<p>Some useful typical values might be:</p>
+<ul>
+  <li><p>start the mission at 0x1c004 to run auto calibration every dive and accept good or improved calibrations as active</p></li>
+  <li><p>maybe change to 0xc004 to keep running the calibration algorithm to report results in the log file, but do not accept any further changes to the applied calibration. If the coefficients are re-read for any reason (a reboot for example), use the saved result from the onboard calibration.</p></li>
+  <li><p>use 0x4004 to run the onboard calibration and report results in log files, but always use the coefficients from tcm2mat.cal. </p></li>
+</ul>
  
 
 <div class="med"></div>
