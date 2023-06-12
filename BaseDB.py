@@ -805,6 +805,7 @@ def rebuildDB(base_opts):
     createDivesTable(cur)
     cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
 
+
     # patt = path + "/p%03d????.nc" % sg
     patt = os.path.join(
         base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.nc"
@@ -815,7 +816,9 @@ def rebuildDB(base_opts):
     ncfs = sorted(ncfs)
     for filename in ncfs:
         loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False)
+
     cur.close()
+
     try:
         con.commit()
     except Exception as e:
@@ -915,8 +918,8 @@ def saveFlightDB(base_opts, mat_d, con=None):
                 ))
  
     cur.execute("COMMIT")
+    cur.close()
     if con is None:
-        cur.close()
         try:
             mycon.commit()
         except Exception as e:
@@ -1030,6 +1033,7 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
     except Exception as e:
         log_error("{e} could not create files table")
         if con is None:
+            cur.close()
             mycon.close()
             log_info("logControlFile db closed")
             
@@ -1069,6 +1073,8 @@ def rebuildControlHistory(base_opts):
         maxdv = cur.fetchone()[0]
     except:
         maxdv = -1
+
+    cur.close()
 
     for i in range(1, maxdv + 1):
         for which in ['targets', 'science', 'scicon.sch', 'pdoscmds.bat', 'tcm2mat.cal']:
@@ -1151,6 +1157,7 @@ def addSession(base_opts, session, con=None):
         cur.execute("INSERT OR IGNORE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD) \
                      VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD);",
                     session.to_message_dict())
+        cur.close()
     except Exception as e:
         log_error(f"{e} inserting comm.log session")
 
