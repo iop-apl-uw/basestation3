@@ -815,7 +815,7 @@ def rebuildDB(base_opts):
         ncfs.append(filename)
     ncfs = sorted(ncfs)
     for filename in ncfs:
-        loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False)
+        loadFileToDB(base_opts, cur, filename, con, run_dive_plots=True)
 
     cur.close()
 
