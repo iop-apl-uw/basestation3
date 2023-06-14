@@ -1674,7 +1674,9 @@ def open_mission_database(
     else:
         conn = sqlite3.connect(db)
         # conn.isolation_level = None
-        # conn.cursor().execute("BEGIN")
+
+    conn.cursor().execute("PRAGMA busy_timeout=50;")
+
     return conn
 
 
