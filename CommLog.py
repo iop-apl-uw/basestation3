@@ -1352,7 +1352,7 @@ def process_comm_log(
                         log_error("Disconnected callback failed", "exc")
                 session = None
                 continue
-            elif raw_strs[0] == "shutdown" and len(raw_strs) == 1:
+            elif raw_strs[0] == "shutdown":
                 if session:
                     session.shutdown_seen = True
                 continue
