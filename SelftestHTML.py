@@ -29,6 +29,7 @@
 import sys
 import glob
 import subprocess
+import re
 
 def format(line):
     reds = ["errors", "error", "Failed", "failed", "[crit]", "timed out"]
@@ -43,6 +44,14 @@ def format(line):
             break
 
     print(line + "<br>")
+
+def motorCheck(valueToPrint, valueToCheck, minVal, maxVal):
+    if float(valueToCheck) < minVal:
+         return "<span style='background-color:yellow;'>%s</span>" % valueToPrint
+    elif float(valueToCheck) > maxVal:
+        return "<span style='background-color:orange;'>%s</span>" % valueToPrint
+    else:
+        return valueToPrint
 
 if len(sys.argv) < 2:
     sys.exit(1)
@@ -79,15 +88,21 @@ trow = 0
 #     print("could not open %s" % selftestFiles[0])
 #     sys.exit(1)
 
-print("<html><head><title>%03d-selftest</title></head><body>" % sgnum)
-
+print("<html><head><title>%03d-selftest</title>" % sgnum)
+print('<style>table.motors th,td { text-align: center; padding-left: 10px; padding-right: 10px; }</style></head><body>')
 print('<div id="top">top*<a href="#capture">capture</a>*<a href="#parameters">parameters</a><div><br>')
 
 showingRaw = False
 insideMoveDump = False
 insideDir = False
 insideParam = False
+insideMotorSummary = False
 idnum = 0
+minRates = { 'Pitch': 100, 'Roll': 300, 'Pump': 5, 'Bleed': 15 }
+maxRates = { 'Pitch': 300, 'Roll': 500, 'Pump': 10, 'Bleed': 30 }
+minCurr = { 'Pitch': 40, 'Roll': 15, 'Pump': 400, 'Bleed': 0 }
+maxCurr = { 'Pitch': 400, 'Roll': 150, 'Pump': 1000 , 'Bleed': 2000 }
+
 for raw_line in proc.stdout:
     try:
         line = raw_line.decode('utf-8').rstrip()
@@ -107,6 +122,9 @@ for raw_line in proc.stdout:
             insideParam = False
             print("</table>")
 
+    if insideMotorSummary and not (line.startswith('Pitch') or line.startswith('Roll') or line.startswith('VBD')) and line != '':
+        insideMotorSummary = False
+        print("</table>")
     
     if line.find('Reporting directory') > -1: 
         parts = line.split(',')
@@ -139,6 +157,12 @@ for raw_line in proc.stdout:
         print('<h2 id="capture" style="margin-bottom:0px;">%s</h2>' % line)
         print('<a href="#top">top</a>*capture*<a href="#parameters">parameters</a><br>')
 
+    elif line.startswith('Summary of motor moves'): 
+        print('<h2>%s</h2>' % line)
+        print('<table class="motors" rules="rows">')
+        print('<tr><th>motor</th><th>start EU</th><th>end EU</th><th>start AD</th><th>end AD</th><th>dest AD</th><th>sec</th><th>AD/sec</th><th>avg mA</th><th>max mA</th><th>avg V</th><th>min V</th></tr>')
+        insideMotorSummary = True
+
     elif line.startswith('Summary of'): 
         print('<h2>%s</h2>' % line)
 
@@ -164,6 +188,41 @@ for raw_line in proc.stdout:
         print("<h2>logger sensor test results</h2>")
         format(line)
 
+    elif insideMotorSummary:
+        if not (line.startswith('Pitch') or line.startswith('Roll') or line.startswith('VBD')) and line != '':
+            insideMotorSummary = False
+        else:
+            result = None
+            which = None
+            if line.startswith('VBD'):
+                result = re.search(r'(?P<which>[A-Za-z]+)\s+(?P<startEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<startAD>[+-]?\d+(?:\.\d+)?)\)\s+to\s+(?P<endEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<endAD>[+-]?\d+(?:\.\d+)?)\s+[^\)]+\)\s+dest\s+(?P<dest>[+-]?\d+(?:\.\d+)?)\s+(?P<time>\d+(?:\.\d+)?)s\s+(?P<avgCurr>\d+(?:\.\d+)?)mA\s+\((?P<maxCurr>\d+(?:\.\d+)?)mA\s+peak\)\s+(?P<avgVolts>\d+(?:\.\d+)?)V\s+\((?P<minVolts>\d+(?:\.\d+)?)V\)\s+(?P<rate>\d+(?:\.\d+)?)\s+AD\/sec', line)
+                if result:
+                    if float(result['dest']) > float(result['startAD']):
+                        which = 'Bleed'
+                    else:
+                        which = 'Pump'
+            else:
+                result = re.search(r'(?P<which>[A-Za-z]+)\s+(?P<startEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<startAD>[+-]?\d+(?:\.\d+)?)\)\s+to\s+(?P<endEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<endAD>[+-]?\d+(?:\.\d+)?)\)\s+dest\s+(?P<dest>[+-]?\d+(?:\.\d+)?)\s+(?P<time>\d+(?:\.\d+)?)s\s+(?P<avgCurr>\d+(?:\.\d+)?)mA\s+\((?P<maxCurr>\d+(?:\.\d+)?)mA\s+peak\)\s+(?P<avgVolts>\d+(?:\.\d+)?)V\s+\((?P<minVolts>\d+(?:\.\d+)?)V\)\s+(?P<rate>\d+(?:\.\d+)?)\s+AD\/sec', line)
+
+
+            if result:
+                if not which:
+                    which = result['which']
+
+                print(f"<tr><td>{which}</td> \
+                        <td>{result['startEU']}</td> \
+                        <td>{result['endEU']}</td> \
+                        <td>{result['startAD']}</td> \
+                        <td>{motorCheck(result['endAD'], abs(float(result['endAD']) - float(result['dest'])), 0, 100)}</td> \
+                        <td>{result['dest']}</td> \
+                        <td>{result['time']}</td> \
+                        <td>{motorCheck(result['rate'], result['rate'], minRates[which], maxRates[which])}</td> \
+                        <td>{motorCheck(result['avgCurr'], result['avgCurr'], minCurr[which], maxCurr[which])}</td> \
+                        <td>{result['maxCurr']}</td> \
+                        <td>{result['avgVolts']}</td> \
+                        <td>{result['minVolts']}</td></tr>") 
+    
+ 
     elif insideParam:
         if line.find('not between') > -1:
             print('<tr style="background-color:%s;">' % rcolors[trow % 2])
@@ -186,5 +245,3 @@ for raw_line in proc.stdout:
     
 if insideParam:
     print("</table>")
-
-print("</body></html>")

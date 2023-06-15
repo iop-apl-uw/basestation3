@@ -88,7 +88,7 @@ echo
 echo "--------------------------------------------"
 echo "Summary of motor moves"
 echo
-grep omplete $fname | cut -f4- -d, | sed 's/completed from//' | sed 's/ sec /s /' | sed 's/ took /\t/' | sed 's/  /\t/' | sed 's/ cc/cc/g' | sed 's/ deg/deg/g' | sed 's/ cm/cm/g' | sed 's/ [0-9]* ticks//' | sed 's/Vmin/V/g' | grep -v "list complete" | grep -v "call try complete" | grep -v "Measured depth:"
+grep "ompleted from" $fname | cut -f4- -d, | sed 's/completed from//' | sed 's/ sec /s /' | sed 's/ took /\t/' | sed 's/  /\t/' | sed 's/ cc/cc/g' | sed 's/ deg/deg/g' | sed 's/ cm/cm/g' | sed 's/ [0-9]* ticks//' | sed 's/Vmin/V/g' | grep -v "list complete" | grep -v "call try complete" | grep -v "Measured depth:"
 echo ""
 echo "--------------------------------------------"
 echo "Summary of failures, warnings and errors"
