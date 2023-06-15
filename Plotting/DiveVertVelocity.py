@@ -328,7 +328,7 @@ def plot_vert_vel(
             density_1m = density_ctd[isurf] / 1000
             depth_1m = ctd_depth[isurf]
 
-        print(density_1m, depth_1m)
+        #print(density_1m, depth_1m)
     except:
         log_error(
             "Could not fetch needed variables - skipping vertical velocity plot", "exc"
