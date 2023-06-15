@@ -28,6 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# fmt: off
+
 """Routines for extracting profiles from dive timeseries files
 """
 
@@ -39,6 +41,8 @@ import Globals
 import numpy
 from scipy.io import netcdf_file
 import scipy.interpolate
+
+from BaseLog import log_warning, log_error
 
 import Utils
 
@@ -64,8 +68,8 @@ def timeSeriesToProfile(var, which,
         try:
             nci = Utils.open_netcdf_file(ncfilename, "r")
         except:
-            print(f"Unable to open {ncfilename}")
-            return None
+            log_error(f"Unable to open {ncfilename}")
+            return (None, None)
 
     message = {}
     message[var] = []
@@ -82,6 +86,9 @@ def timeSeriesToProfile(var, which,
   
     if x == None:
         x = extractVarTimeDepth(None, var, nci=nci)
+
+    if x is None:
+        return (None, None)
 
     nan = numpy.empty((len(bins) - 1, ))
     nan[:] = numpy.nan
@@ -158,7 +165,7 @@ def getVarNames(nc_filename, nc_file=None):
         try:
             nc_file = Utils.open_netcdf_file(nc_filename, "r")
         except:
-            print(f"Unable to open {nc_filename}")
+            log_error(f"Unable to open {nc_filename}")
             return None
 
     vars = []
@@ -176,7 +183,7 @@ def extractVars(nc_filename, varNames, dive1, diveN, nci=None):
         try:
             nci = Utils.open_netcdf_file(nc_filename, "r")
         except:
-            print(f"Unable to open {nc_filename}")
+            log_error(f"Unable to open {nc_filename}")
             return None
 
     t0 = nci.variables['start_time'][dive1-1]
@@ -227,8 +234,12 @@ def extractVarTimeDepth(nc_filename, varname, nci=None):
         try:
             nci = Utils.open_netcdf_file(nc_filename, "r")
         except:
-            print(f"Unable to open {nc_filename}")
+            log_error(f"Unable to open {nc_filename}")
             return None
+
+    if varname not in nci.variables:
+        log_warning(f"{varname} not found")
+        return None
 
     message = {}
     var = nci.variables[varname][:]
@@ -255,10 +266,10 @@ def extractVarTimeDepth(nc_filename, varname, nci=None):
             message['time'] = var_t
             message[varname] = nci.variables[varname][:]
         else:
-            print(f'no t found for {varname}({dim})');
+            log_error(f'no time variable found for {varname}({dim})');
 
     except Exception as e:
-        print(f"Could not extract variable {varname}, {e}")
+        log_error(f"Could not extract variable {varname}, {e}")
 
     return message
 
