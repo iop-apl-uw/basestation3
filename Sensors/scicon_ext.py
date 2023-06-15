@@ -946,13 +946,13 @@ def extract_file_data(inp_file_name):
             try:
                 row.append(np.float64(raw_strs[i]))
             except:
-                log_error(
-                    "Problems converting [%s] to float from line [%s] (%s, line %d)"
+                log_warning(
+                    "Problems converting [%s] to float from line [%s] (%s, line %d) - skipping"
                     % (raw_strs[i], inp_line, inp_file_name, line_count)
                 )
                 continue
-
-        rows.append(row)
+        if row:
+            rows.append(row)
 
     if not rows:
         return None
