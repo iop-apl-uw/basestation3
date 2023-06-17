@@ -191,18 +191,48 @@
                     newLayer.addTo(map);
                 }
             }
-            
+           
+            function loadAssets(map, layerControl, assets) {
+                for (var i = 0 ; i < assets.length ; i++) {
+                    a = assets[i];
+                    var assetMarkers = [];
+                    var newLayer;
+                    var html;
+
+                    html = [ a.name, formatPos(a.lat) + "," + formatPos(a.lon)].join('<br/>');
+                    try {
+                        assetMarkers.push(L.shapeMarker([a.lat, a.lon],
+                                                        {
+                                                            shape: a.marker,
+                                                            radius: 5,
+                                                            color: a.color,
+                                                        }
+                                                       )
+                                                        .bindTooltip(a.name, { permanent: true, className: 'assetLabel' })
+                                                        .bindPopup(html));
+                    }
+                    catch(e) {
+                        console.log('assets ' + e);
+                    }
+                }
+
+                try {
+                    newLayer = L.layerGroup(assetMarkers);
+                    layerControl.addOverlay(newLayer, 'assets')
+                    newLayer.addTo(map);
+                }
+                catch(e) {
+                    console.log('assets map ' + e);
+                }
+            }
+
             function loadAlso(map, layerControl, also, tail) {
                 var pcs;
                 var gliders = [];
                 var missions = [];
                 for (var i = 0 ; i < also.length ; i++)  {
-                    pcs = ('' + also[i]).split('/');
-                    gliders.push(pcs[0]);
-                    if (pcs.length == 2)
-                        missions.push(pcs[1]);
-                    else
-                        missions.push('');
+                    gliders.push(also[i].glider);
+                    missions.push(also[i].mission);
                 }
 
                 loadGliderKML(map, layerControl, gliders, missions, tail, null, false);
@@ -216,9 +246,11 @@
                 .then(d => {
                     console.log(d);
                     if ('kml' in d && d.kml) {
+                        console.log('loading KML');
                         loadKML(map, layerControl, d.kml, d.kml);
                     }   
                     if ('sa' in d && d.sa) {
+                        console.log('loading SA');
                         var labels = [];
                         for (var i = 0 ; i < d.sa.length ; i++)
                             if (d.sa[i].length > 18)
@@ -230,6 +262,9 @@
                     }
                     if ('also' in d && d.also) {
                         loadAlso(map, layerControl, d.also, tail);
+                    }
+                    if ('assets' in d && d.assets) {
+                        loadAssets(map, layerControl, d.assets);    
                     }
                 })
                 .catch(e => {
@@ -264,24 +299,60 @@
                 var kml;
                 var parser; 
 
-                let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
-                for (var i = 0 ; i < urls.length ; i++) {
-                    console.log('adding KML: ' + urls[i]);
-                    kmltext = resp[i];
-                    parser = new DOMParser();
-                    kml = parser.parseFromString(kmltext, 'text/xml');
-                    ly = new L.KML(kml, { });
-                    layerControl.addOverlay(ly, names[i]); 
+                try {
+                    let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
+                    for (var i = 0 ; i < urls.length ; i++) {
+                        console.log('adding KML: ' + urls[i]);
+                        kmltext = resp[i];
+                        parser = new DOMParser();
+                        kml = parser.parseFromString(kmltext, 'text/xml');
+                        ly = new L.KML(kml, { });
+                        layerControl.addOverlay(ly, names[i]); 
+                    }
+                }
+                catch(e) {
+                    console.log('loadKML ' + e);
                 }
             }
+
+            var gliderKMLlayers = {};
+            function removeGliderKMLlayer(map, layerControl, glider, mission) {
+                var k;
+                var track;
+                var key = glider + '_' + mission;
+                if (key in gliderKMLlayers && gliderKMLlayers[key] != null) {
+                    track = gliderKMLlayers[key];
+                    console.log('removing ' + key);
+                    for (k of Object.keys(track._layers)) {
+                        if (track._layers[k].options.hasOwnProperty('name') 
+                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
+                            layerControl.removeLayer(track._layers[k]);
+                            console.log('removing ' + track._layers[k]);
+                        }
+                    }
+
+                    map.removeLayer(track);
+                    gliderKMLlayers[key].track = null; 
+                }
+            }
+                    
+                            
             async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, doCtr) {
                 var kml;
                 var parser;
                 var i;
 
                 var urls = [];
-                for (i = 0 ; i < gliders.length ; i++)                
-                    urls.push('../kml/' + gliders[i] + missions[i]);
+                for (i = 0 ; i < gliders.length ; i++) {                
+                    if (missions[i] == null || missions[i] == undefined || missions[i] == '') {
+                        urls.push('../kml/' + gliders[i]);
+                        missions[i] = '';
+                    }
+                    else
+                        urls.push('../kml/' + gliders[i] + '?mission=' + missions[i]);
+
+                    gliderKMLlayers[gliders[i] + '_' + missions[i]] = null;
+                }
 
                 let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
                 for (i = 0 ; i < urls.length ; i++) {
@@ -297,7 +368,11 @@
                                             }
                                         });
 
+                    // delete any existing track (in case this is a reload of this glider/mission)
+                    removeGliderKMLlayer(map, layerControl, gliders[i], missions[i]);
+
                     map.addLayer(track);
+                    gliderKMLlayers[gliders[i] + '_' + missions[i]] = track;
                     // layerControl.addOverlay(track, "KML"); // If we add controls for the dives and targets layers
                                                               // then this "KML" control only turns off the glider.
                                                               // If we don't add controls for dives and targets
@@ -309,7 +384,9 @@
                         }
                         if (track._layers[k].options.hasOwnProperty('name') 
                             && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
-                            layerControl.addOverlay(track._layers[k], track._layers[k].options.name);
+                            layerControl.addOverlay(track._layers[k], track._layers[k].options.name + ' ' + missions[i]);
+                            console.log(track._layers[k].options.name);
+                            console.log(missions[i]);
                         }
 
                         if (tail > -1 && track._layers[k].options.hasOwnProperty('name')
@@ -383,6 +460,22 @@
                 
             }
 
+            function checkLayerState(which, compare) {
+                const items = { ...localStorage }; 
+                for (k in items) {
+                    console.log(k);
+                    console.log('layerStatus_' + which);
+                    if (k == 'layerStatus_' + which) {
+                        console.log('found ' + k);
+                        console.log(localStorage[k]);
+                        console.log('compare = ' + compare);
+                        return localStorage[k] == compare;
+                    }
+                }    
+
+                return false;
+            }
+
         </script>
 
         <script type="text/javascript">
@@ -420,6 +513,8 @@
                 }
             });
 
+            let params = new URLSearchParams(window.location.search);
+
             L.control.toggle = function(opts) {
                 return new L.Control.toggle(opts);
             }
@@ -442,17 +537,47 @@
                                         opacity: 0.4,
                                     });
                            
-            map.addLayer(gebco); 
-            map.addLayer(osm);
+            if (!checkLayerState("GEBCO", "off"))
+                map.addLayer(gebco); 
+
+            console.log(Object.keys(localStorage));
+            console.log(Object.keys(localStorage).includes("baseLayer"));
+            console.log(localStorage.getItem('baseLayer'));
+
+            if (Object.keys(localStorage).includes('baseLayer') && localStorage.getItem('baseLayer') == "NOAA+Stamen")
+                map.addLayer(noaa);
+            else
+                map.addLayer(osm);
             
             // AIS
             
+
             ais = L.tileLayer("https://tiles.marinetraffic.com/ais_helpers/shiptilesingle.aspx?output=png&sat=1&grouping=shiptype&tile_size=512&legends=1&zoom={z}&X={x}&Y={y}",
                                     {
                                         tileSize: 512,
                                     });
 
-            map.addLayer(ais);
+            if (!checkLayerState("AIS", "off")) {
+                map.addLayer(ais);
+                AISoff = false;
+            }
+            else
+                AISoff = true;
+
+            
+            var aisReload = params.has('ais') ? parseInt(params.get('ais')) : 10;
+            if (aisReload > 0) {
+                if (aisReload < 10)
+                    aisReload = 10;
+
+                setInterval(function() {
+                                if (AISoff == false) {
+                                    ais.redraw();
+                                    console.log('redrawing AIS');
+                                }
+                            },
+                            aisReload*60000);
+            }
 
             // chart marks
 
@@ -461,7 +586,8 @@
                                         
                                     });
 
-            map.addLayer(chart);
+            if (!checkLayerState("chart marks", "off")) 
+                map.addLayer(chart);
 
 {% if weathermapAppID != '' %}
             // wind
@@ -470,7 +596,8 @@
                                     {
                                     });
 
-            // map.addLayer(wind); //  not on by default
+            if (checkLayerState("wind", "on")) {
+                map.addLayer(wind); //  not on by default
 
             var legend = L.control({position: 'bottomright'});
 
@@ -483,21 +610,27 @@
 
             // legend.addTo(map); // match the layer default
 
+{% endif %}
             // map event handlers
 
             //turn legend on and off as wind layer comes and goes
-            map.on('overlayadd', function(evt) {
-                console.log('overlayadd ' + evt.name);
-                if (evt.name === 'wind') {
+            map.on('baselayerchange', function(e) {
+                localStorage.setItem('baseLayer', e.name);
+            });          
+            map.on('overlayadd', function(e) {
+                localStorage.setItem('layerStatus_' + e.name, 'on');
+                if (e.name === 'wind') 
                     legend.addTo(this);
-                }
-            });
-            map.on('overlayremove', function(evt) {
-                console.log('overlayremove ' + evt.name);
-                if (evt.name === 'wind')
+                else if (e.name === 'AIS') 
+                    AISoff = false;
+            });          
+            map.on('overlayremove', function(e) {
+                localStorage.setItem('layerStatus_' + e.name, 'off');
+                if (e.name === 'wind')
                     this.removeControl(legend);
-            });
-{% endif %}
+                else if (e.name === 'AIS') 
+                    AISoff = true;
+            });          
 
             var popup = L.popup({ maxWidth:600, minWidth:400, className: 'weather-popup' });
             map.on('click', function(evt) {
@@ -506,6 +639,7 @@
                     fetchWeather(evt.latlng, popup, map);
                 }
             });
+
 
             // SSH
         
@@ -520,6 +654,9 @@
                                         opacity: 0.5,
                                     });
 
+            if (checkLayerState("SSH", "on")) 
+                map.addLayer(ssh);
+
             // SST
         
             sst = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
@@ -532,6 +669,9 @@
                                         maxZoom: 10,
                                         opacity: 1.0
                                     });
+
+            if (checkLayerState("SST (MODIS 8-day day)", "on")) 
+                map.addLayer(sst);
 
             // sea ice
 
@@ -546,6 +686,9 @@
                                         opacity: 1.0
                                     });
 
+            if (checkLayerState("sea ice", "on")) 
+                map.addLayer(seaIce);
+
             chlA = L.tileLayer("https://gibs-{s}.earthdata.nasa.gov/wmts/epsg3857/best/{layer}/default/{time}/{tileMatrixSet}/{z}/{y}/{x}.png",
                                     {
                                         layer: 'MODIS_Aqua_L2_Chlorophyll_A',
@@ -557,6 +700,9 @@
                                         opacity: 1.0
                                     });
 
+            if (checkLayerState("Chlorophyll-A (Aqua MODIS L2)", "on")) 
+                map.addLayer(chlA);
+
             // contours
             
             contours = L.tileLayer.wms("http://www.opendem.info:80/geoserver/opendem/ows?",
@@ -566,7 +712,9 @@
                                         opacity: 0.2,
                                         // tileSize: 1024,
                                     });
-            //  map.addLayer(contours); // not on by default
+
+            if (checkLayerState("contours", "on"))
+                map.addLayer(contours); // not on by default
             
             // coordinate display
 
@@ -624,7 +772,7 @@
                 "SST (MODIS 8-day day)": sst,
                 "sea ice (AMSRU2 12km)": seaIce,
                 "Chlorophyll-A (Aqua MODIS L2)": chlA,
-                "AIS (does not auto-update)": ais,
+                "AIS": ais,
                 "chart marks": chart,
 {% if weathermapAppID != '' %}
                 "wind": wind,
@@ -632,7 +780,7 @@
             }
 
             var layerControl = L.control.layers(baseLayers, overlayLayers).addTo(map);
-            
+
 
             // ice edge first
 
@@ -660,7 +808,6 @@
             // does a better job of grouping in the layers so we can
             // turn pieces on and off
 
-            let params = new URLSearchParams(window.location.search);
 
             // var glider = window.location.pathname.split('/').at(-1)
             var path = window.location.pathname.split('/');
@@ -679,7 +826,17 @@
             loadExtras(map, layerControl, glider, mission, tail);
 
             if (params.has('also')) {
-                loadAlso(map, layerControl, params.get('also').split(','), tail);
+                var p_also = params.get('also').split(',');
+                var d_also = [];
+                for (var k = 0 ; k < p_also.length  ; k++) {
+                    // old school mission spec - not path spec
+                    pieces = p_also[k].split('/');
+                    if (pieces.length == 2)
+                        d_also.push({'glider': parseInt(pieces[0]), 'mission': pieces[1]});
+                    else
+                        d_also.push({'glider': parseInt(pieces[0]), 'mission': ''});
+                }
+                loadAlso(map, layerControl, d_also, tail);
             }
 
             if (params.has('sa')) {

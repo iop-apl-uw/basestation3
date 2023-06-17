@@ -478,6 +478,17 @@ def attachHandlers(app: sanic.Sanic):
                 if k in mission:
                     message[k] = mission[k]
 
+            if 'assets' in mission:
+                a_dicts = []
+                for a in mission['assets']:
+                    if a in request.app.ctx.assets.keys():       
+                        d = request.app.ctx.assets[a]
+                        d.update( { 'name': a } )
+                        a_dicts.append(d)
+
+                if len(a_dicts):
+                    message['assets'] = a_dicts
+
             return sanic.response.json(message)
 
         else:
@@ -1397,11 +1408,17 @@ def attachHandlers(app: sanic.Sanic):
     # returns: JSON dict of glider position
     @authorized()
     async def posPollHandler(request: sanic.Request, glider:int):
+        if 'format' in request.args:
+            format = request.args['format'][0]
+        else:
+            format = 'json'
+
         if 't' in request.args and len(request.args['t'][0]) > 0:
             t = int(request.args['t'][0])
             q = f"SELECT * FROM calls WHERE epoch > {t} ORDER BY epoch DESC LIMIT 1;"
         else:
             q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+                
 
         # xurvey uses this but nothing else - easy enough to add
         # nmea = 'format' in request.args and request.args['format'][0] == 'nmea'
@@ -1418,7 +1435,10 @@ def attachHandlers(app: sanic.Sanic):
             row = await cur.fetchone()
             await cur.close()
             if row:
-                return sanic.response.json(row)
+                if format == 'json':
+                    return sanic.response.json(row)
+                elif format == 'csv':
+                    return sanic.response.text(f"{row['epoch']},{row['lat']},{row['lon']}")
             else:
                 return sanic.response.text('none')
         except Exception as e:
@@ -1819,6 +1839,8 @@ async def buildMissionTable(app, config=None):
         x['privatedefaults'] = {}
     if 'publicdefaults' not in x:
         x['publicdefaults'] = {}
+    if 'assets' not in x:
+        x['assets'] = {}
 
     orgDictKeys = ["orgname", "orglink", "text", "contact", "email"]
     for ok in orgDictKeys:
@@ -1918,6 +1940,7 @@ async def buildMissionTable(app, config=None):
         app.ctx.organization = x['organization']
         app.ctx.endpoints = x['endpoints']
         app.ctx.controls = x['controls']
+        app.ctx.assets = x['assets']
 
     return missions
  
@@ -2018,7 +2041,7 @@ async def buildFilesWatchList(config):
 
     for m in missions:
         if m['status'] == 'active':
-            for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat"]:
+            for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat", f"sg{m['glider']:03d}.kmz"]:
                 if m['path']:
                     fname = f"{m['path']}/{f}"
                 else:
