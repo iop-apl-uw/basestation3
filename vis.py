@@ -478,6 +478,11 @@ def attachHandlers(app: sanic.Sanic):
                 if k in mission:
                     message[k] = mission[k]
 
+            if 'also' in message:
+                for a in message['also']:
+                    if not 'mission' in a:
+                        a.update( { 'mission': mission['mission'] } )
+
             if 'assets' in mission:
                 a_dicts = []
                 for a in mission['assets']:
