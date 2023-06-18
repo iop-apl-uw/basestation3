@@ -249,7 +249,12 @@
             }
 
             function loadExtras(map, layerControl, glider, mission, tail) {
-                let  url = `../mapdata/${glider}${mission}`;
+                var url;
+
+                if (mission && mission != '')
+                   url = `../mapdata/${glider}?mission=${mission}`;
+                else
+                   url = `../mapdata/${glider}`;
 
                 fetch(url)
                 .then(resp => resp.json()) 
@@ -279,7 +284,12 @@
                 });
             }
             function loadGliderDAC(map, layerControl, glider, mission) {
-                let  url = `../query/${glider}/dive,avg_latitude,avg_longitude,depth_avg_curr_north,depth_avg_curr_east${mission}`;
+                var url; 
+        
+                if (mission && mission != '')
+                    url = `../query/${glider}/dive,avg_latitude,avg_longitude,depth_avg_curr_north,depth_avg_curr_east?mission=${mission}`;
+                else
+                    url = `../query/${glider}/dive,avg_latitude,avg_longitude,depth_avg_curr_north,depth_avg_curr_east`;
 
                 fetch(url)
                 .then(resp => resp.json()) 
@@ -327,6 +337,7 @@
                 var k;
                 var track;
                 var key = glider + '_' + mission;
+                console.log('maybe removing: ' + key);
                 if (key in gliderKMLlayers && gliderKMLlayers[key] != null) {
                     track = gliderKMLlayers[key];
                     console.log('removing ' + key);
@@ -360,7 +371,8 @@
 
                     gliderKMLlayers[gliders[i] + '_' + missions[i]] = null;
                 }
-
+                console.log('loading glider KML layers');
+                console.log(urls);
                 let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
                 for (i = 0 ; i < urls.length ; i++) {
                     kmltext = resp[i]; 
@@ -380,6 +392,7 @@
 
                     map.addLayer(track);
                     gliderKMLlayers[gliders[i] + '_' + missions[i]] = track;
+                    console.log('added layer: ' +gliders[i] + '_' + missions[i]);
                     // layerControl.addOverlay(track, "KML"); // If we add controls for the dives and targets layers
                                                               // then this "KML" control only turns off the glider.
                                                               // If we don't add controls for dives and targets
@@ -821,7 +834,8 @@
             var first = path.indexOf('map') + 1;
             var glider = path[first];
 
-            var mission = params.has('mission') ? '?mission=' + params.get('mission') : '';
+            // var mission = params.has('mission') ? '?mission=' + params.get('mission') : '';
+            var mission = params.has('mission') ? params.get('mission') : '';
             var tail = params.has('tail') ? parseInt(params.get('tail')) : -1;
 
             document.title = glider + ' - map';
