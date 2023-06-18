@@ -482,6 +482,15 @@ def attachHandlers(app: sanic.Sanic):
                 for a in message['also']:
                     if not 'mission' in a:
                         a.update( { 'mission': mission['mission'] } )
+                    if 'asset' in a:
+                        if a['asset'] in request.app.ctx.assets.keys():
+                            # don't copy the whole dict because maybe we have local
+                            # overrides in this per mission version
+                            for k in request.app.ctx.assets[a['asset']].keys():
+                                if not k in a.keys():
+                                    a.update({ k: request.app.ctx.assets[a['asset']][k] })
+                        else:
+                            a.pop('asset')     
 
             if 'assets' in mission:
                 a_dicts = []

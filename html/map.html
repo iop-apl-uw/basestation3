@@ -199,7 +199,7 @@
                     var newLayer;
                     var html;
 
-                    html = [ a.name, formatPos(a.lat) + "," + formatPos(a.lon)].join('<br/>');
+                    html = [ a.asset, formatPos(a.lat) + "," + formatPos(a.lon)].join('<br/>');
                     try {
                         assetMarkers.push(L.shapeMarker([a.lat, a.lon],
                                                         {
@@ -208,7 +208,7 @@
                                                             color: a.color,
                                                         }
                                                        )
-                                                        .bindTooltip(a.name, { permanent: true, className: 'assetLabel' })
+                                                        .bindTooltip(a.asset, { permanent: true, className: 'assetLabel' })
                                                         .bindPopup(html));
                     }
                     catch(e) {
@@ -230,12 +230,22 @@
                 var pcs;
                 var gliders = [];
                 var missions = [];
+                var assets = [];
                 for (var i = 0 ; i < also.length ; i++)  {
-                    gliders.push(also[i].glider);
-                    missions.push(also[i].mission);
+                    if ('glider' in also[i]) {
+                        gliders.push(also[i].glider);
+                        missions.push(also[i].mission);
+                    }
+                    else if ('asset' in also[i]) {
+                        assets.push(also[i]); 
+                    } 
+
                 }
 
-                loadGliderKML(map, layerControl, gliders, missions, tail, null, false);
+                if (assets.length)
+                    loadAssets(map, layerControl, assets);    
+                if (gliders.length)
+                    loadGliderKML(map, layerControl, gliders, missions, tail, null, false);
             }
 
             function loadExtras(map, layerControl, glider, mission, tail) {
@@ -262,9 +272,6 @@
                     }
                     if ('also' in d && d.also) {
                         loadAlso(map, layerControl, d.also, tail);
-                    }
-                    if ('assets' in d && d.assets) {
-                        loadAssets(map, layerControl, d.assets);    
                     }
                 })
                 .catch(e => {
