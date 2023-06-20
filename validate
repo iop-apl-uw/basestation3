@@ -78,7 +78,7 @@ if which == "-c": # cmdfile
  
             if not log:
                 print(f"value of {pcs[0]} will be set to {pcs[1]}")
-            elif float(pcs[1]) != float(curr[pcs[0]]):
+            elif abs(float(pcs[1]) - float(curr[pcs[0]])) > 1e-5:
                 print(f"value of {pcs[0]} will change from {float(curr[pcs[0]])} to {float(pcs[1])}")
 
             
