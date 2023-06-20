@@ -49,6 +49,8 @@ from functools import wraps,partial
 import jwt
 from passlib.hash import sha256_crypt
 from types import SimpleNamespace
+import hashlib
+import hmac
 import yaml
 import LogHTML
 import summary
@@ -1184,6 +1186,45 @@ def attachHandlers(app: sanic.Sanic):
                         return status
     
         return False
+
+    @app.post('/upload/<glider:int>')
+    # description: upload files to glider home directory
+    # parameters: mission
+    # returns: 
+    @authorized()
+    async def uploadHandler(request, glider: int):
+       
+        if 'UPLOAD_SECRET' not in app.config:
+            return sanic.response.text('no')
+
+        signature = request.headers.get('x-signature')
+        timestamp = request.headers.get('x-timestamp')
+        if abs(time.time() - float(timestamp)) > 30:
+            return sanic.response.text('no')
+
+        payload = request.body.decode('utf-8', errors='ignore')
+        secret = request.app.config.UPLOAD_SECRET
+
+        sig_string = 'v0:' + timestamp + ':' + payload
+        sig = 'v0=' + hmac.new(bytes(secret, 'utf-8'),
+                               msg=bytes(sig_string, 'utf-8'),
+                               digestmod=hashlib.sha256).hexdigest()
+
+        if not hmac.compare_digest(sig, signature):
+            return sanic.response.text('no')
+        
+        res = request.json
+        if not 'body' in res or not 'file' in res or not 'glider' in res:
+            return sanic.response.text('no')
+
+        try:
+            f = open(f"{gliderPath(glider,request)}/{res['file']}", 'wb')
+            f.write(base64.b64decode(bytes(res['body'], 'utf-8')))
+            f.close()
+        except Exception as e:
+            return sanic.response.text(f'error {e}')
+
+        return sanic.response.text('success') 
 
     @app.post('/save/<glider:int>/<which:str>')
     # description: save glider control file
