@@ -741,6 +741,44 @@ def updateDBFromFM(base_opts, ncfs, cur):
         except:
             log_error(f"Problem opening FM data associated with {ncf}")
 
+def prepCallsChangesFiles(base_opts, dbfile=None):
+    if dbfile is None:
+        con = Utils.open_mission_database(base_opts)
+        log_info("prepCallsChangesFiles db opened")
+    else:
+        con = sqlite3.connect(dbfile)
+        log_info("prepCallsChangesFiles db opened direct")
+        try:
+            os.chmod(
+                dbfile,
+                stat.S_IRUSR
+                | stat.S_IWUSR
+                | stat.S_IRGRP
+                | stat.S_IWGRP
+                | stat.S_IROTH
+            )
+        except:
+            log_error(f"Unable to change mode of {dbfile}", "exc")
+
+    cur = con.cursor()
+    # createDivesTable(cur)
+    cur.execute("DROP TABLE IF EXISTS changes;")
+    cur.execute("DROP TABLE IF EXISTS calls;")
+    cur.execute("DROP TABLE IF EXISTS files;")
+    cur.execute("CREATE TABLE calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
+    cur.execute("CREATE TABLE changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
+    cur.execute("CREATE TABLE files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
+
+    cur.close()
+
+    try:
+        con.commit()
+    except Exception as e:
+        con.rollback()
+        log_error(f"Failed commit, prepCallsChangesFiles {e}", "exc")
+
+    log_info("prepCallsChangesFiles db closed")
+    con.close()
 
 # we enforce some minimum schema so that vis requests 
 # can know that they will succeed
@@ -790,21 +828,56 @@ def createDivesTable(cur):
     columns = [ 'target_name ']
     for c in columns:
         addColumn(cur, c, 'TEXT')
-    
- 
-def rebuildDB(base_opts):
-    """Rebuild the database from scratch"""
-    log_info("rebuilding database")
-    con = Utils.open_mission_database(base_opts)
-    log_info("rebuildDB db opened")
+   
+def prepDivesGC(base_opts, dbfile=None):
+    if dbfile is None:
+        con = Utils.open_mission_database(base_opts)
+        log_info("prepDivesGC db opened")
+    else:
+        con = sqlite3.connect(dbfile)
+        log_info("prepDivesGC db opened direct")
+        try:
+            os.chmod(
+                dbfile,
+                stat.S_IRUSR
+                | stat.S_IWUSR
+                | stat.S_IRGRP
+                | stat.S_IWGRP
+                | stat.S_IROTH
+            )
+        except:
+            log_error(f"Unable to change mode of {dbfile}", "exc")
+
+
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS dives;")
     cur.execute("DROP TABLE IF EXISTS gc;")
-    cur.execute("DROP TABLE IF EXISTS observations;")
-    cur.execute("DROP TABLE IF EXISTS observationVars;")
     createDivesTable(cur)
     cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
 
+    cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
+
+    cur.close()
+
+    try:
+        con.commit()
+    except Exception as e:
+        con.rollback()
+        log_error(f"Failed commit, prepDivesGC {e}", "exc")
+
+    con.close()
+
+    log_info("prepDivesGC db closed")
+ 
+def rebuildDivesGC(base_opts):
+    """Rebuild the database from scratch"""
+    prepDivesGC(base_opts)
+
+    log_info("rebuilding database")
+    con = Utils.open_mission_database(base_opts)
+    log_info("rebuildDivesGC db opened")
+
+    cur = con.cursor()
 
     # patt = path + "/p%03d????.nc" % sg
     patt = os.path.join(
@@ -823,11 +896,11 @@ def rebuildDB(base_opts):
         con.commit()
     except Exception as e:
         con.rollback()
-        log_error(f"Failed commit, rebuildDB {e}", "exc")
+        log_error(f"Failed commit, rebuildDivesGC {e}", "exc")
 
     con.close()
 
-    log_info("rebuildDB db closed")
+    log_info("rebuildDivesGC db closed")
 
 def loadDB(base_opts, filename, run_dive_plots=True):
     """Load a single netcdf file into the database"""
@@ -846,42 +919,6 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     log_info("loadDB db closed")
     con.close()
 
-def prepDB(base_opts, dbfile=None):
-    if dbfile is None:
-        con = Utils.open_mission_database(base_opts)
-        log_info("prepDB db opened")
-    else:
-        con = sqlite3.connect(dbfile)
-        log_info("prepDB db opened direct")
-        try:
-            os.chmod(
-                dbfile,
-                stat.S_IRUSR
-                | stat.S_IWUSR
-                | stat.S_IRGRP
-                | stat.S_IWGRP
-                | stat.S_IROTH
-            )
-        except:
-            log_error(f"Unable to change mode of {dbfile}", "exc")
-
-    cur = con.cursor()
-    createDivesTable(cur)
-    cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
-    cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
-    cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
-    cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
-    cur.execute("CREATE TABLE IF NOT EXISTS gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
-    cur.close()
-
-    try:
-        con.commit()
-    except Exception as e:
-        con.rollback()
-        log_error(f"Failed commit, prepDB {e}", "exc")
-
-    log_info("prepDB db closed")
-    con.close()
 
 def saveFlightDB(base_opts, mat_d, con=None):
     if con is None:
@@ -1251,14 +1288,13 @@ def main():
             "Could not setup plots directory - plotting contributions will not be added"
         )
 
-    prepDB(base_opts)
-
     if base_opts.subparser_name == "addncfs":
         if base_opts.netcdf_files:
             for ncf in base_opts.netcdf_files:
                 loadDB(base_opts, ncf)
         else:
-            rebuildDB(base_opts)
+            rebuildDivesGC(base_opts)
+            
     elif base_opts.subparser_name == "addval":
         addValToDB(base_opts, base_opts.dive_num, base_opts.value_name, base_opts.value)
     else:

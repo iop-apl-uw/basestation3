@@ -2189,7 +2189,7 @@ def main():
         log_info("Starting netcdf load to db")
         if base_opts.force:
             try:
-                BaseDB.rebuildDB(base_opts)
+                BaseDB.rebuildDivesGC(base_opts)
             except:
                 log_error("Failed to rebuild mission sqlite db", "exc")
         else:

@@ -2060,7 +2060,7 @@ def main():
         base_opts.instrument_id = comm_log.get_instrument_id()
 
     if base_opts.init_db:
-        BaseDB.prepDB(base_opts)
+        BaseDB.prepCallsChangesFiles(base_opts)
 
         if not comm_log.sessions:
             print("No sessions")

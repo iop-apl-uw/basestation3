@@ -1664,7 +1664,8 @@ def open_mission_database(
     if not os.path.exists(db):
         try:
             log_info(f"{db} does not exist - creating")
-            BaseDB.prepDB(base_opts, dbfile=db)
+            BaseDB.prepCallsChangesFiles(base_opts, dbfile=db)
+            BaseDB.prepDivesGC(base_opts, dbfile=db)
         except Exception as e:
             log_error(f"error creating DB: {e}")
             return None
