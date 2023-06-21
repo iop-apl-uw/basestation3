@@ -35,6 +35,7 @@
 
     var currGlider = '';
     var currMission = '';
+    var currStatus = '';
 
     var engplots = [];
     var engplotlyplots = [];
@@ -416,6 +417,20 @@
 
     function popupPosition() {
         window.open('pos/' + currGlider + mission(), currGlider + '-position');
+    }
+
+    function gliderIndex() {
+        window.open('./?gliders=' + currGlider);
+    }
+
+    function missionIndex() {
+        if (!currMission || currMission == '')
+            return;
+
+        if (currStatus == 'active')
+            window.open('dash?mission=' + currMission);
+        else
+            window.open('./?mission=' + currMission);
     }
 
     function setVisibility(elt) {
@@ -866,6 +881,7 @@
             loadAbout(data.mission, data.organization);
             if (data.mission.status == 'active') {
                 setupStream(glider, true, true);
+                currStatus = 'active';
             }
         })
         .catch(error => {
@@ -1870,6 +1886,14 @@
             window.history.replaceState('object or string', 'Title', `/${glider}`);
         }
 */
+
+        if (currMission != '') {
+            $('missionIndex').removeAttribute('hidden');
+            $('missionIndexText').innerHTML = currMission;
+        }
+
+        $('gliderIndexText').innerHTML = 'SG' + glider;
+
         currGlider = glider;
         console.log(glider);
         window.name = glider;
@@ -2065,6 +2089,8 @@
 {% endif %}
     <span class="spanClick" onclick="openAboutForm(); return false;">About</span> <b>&#124;</b>
     <span class="spanClick" onclick="popupPosition(); return false;">Position</span> <b>&#124;</b>
+    <span id="missionIndex" hidden="hidden"><span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b></span>
+    <span id="gliderIndex"><span id="gliderIndexText" class="spanClick" onclick="gliderIndex(); return false;">Glider</span> <b>&#124;</b></span>
     <a href="help" target="help"> Help </a> 
 {% if runMode == 'pilot' %}
     <span class="spanClick" id="toggleRight" style="float:right; padding-right: 10px;" onclick="toggleRight(); return false;">Hide pilot</span>

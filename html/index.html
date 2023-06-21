@@ -387,6 +387,7 @@
 <script>
 
     var gliders = [];
+    var showMission = false;
 
     function missionArg(glider) {
         if (glider.mission != '')
@@ -1045,10 +1046,20 @@
             loadAbout(data['organization']);
             for (g of data['missions']) {
                 glider = { glider: g.glider, mission: g.mission };
+{% if runMode == 'pilot' %}
                 if (gliders.length > 0 && (!gliders.includes("" + glider.glider) || shown.includes(glider.glider))) {
+{% else %}
+                if (gliders.length > 0 && (!gliders.includes("" + glider.glider))) {
+{% endif %}
                     console.log('skipping unrequested ' + glider.glider);
                     continue;
                 }
+
+                if (showMission !== false && glider.mission != showMission) {
+                    console.log('skipping unrequested ' + glider.mission);
+                    continue;
+                }
+     
 {% if runMode == 'pilot' %}
                 if (g.status != 'active')
                     continue;
@@ -1214,6 +1225,10 @@
 
         if (params.has('gliders')) {
             gliders = params.get('gliders').split(',');
+        }
+
+        if (params.has('mission')) {
+            showMission = params.get('mission');
         }
 
         loadTable();
