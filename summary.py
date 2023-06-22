@@ -79,9 +79,13 @@ async def collectSummary(glider, path):
 
     processor = aiofiles.os.wrap(CommLog.process_comm_log)
     (commlog, commlog_pos, ongoing_session, _, _) = await processor(commlogfile, None, start_pos=start)
-    if len(commlog.sessions) == 0:
+
+    if not hasattr(commlog, 'sessions'):
+        return {}
+
+    if hasattr(commlog, 'sessions') and len(commlog.sessions) == 0:
         session = None
-    else:
+    elif hasattr(commlog, 'sessions'):
         i = len(commlog.sessions) - 1
         while i >= 0 and commlog.sessions[i].gps_fix is None: 
             i = i - 1;
