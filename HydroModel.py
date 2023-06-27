@@ -35,6 +35,8 @@ import Utils
 from BaseLog import *
 import warnings
 
+import builtins
+
 # from TraceArray import * # REMOVE use this only only if we are tracing/comparing computations w/ matlab
 # physical constants
 gravity = 9.82 # m/s2
@@ -199,7 +201,7 @@ def glide_slope(w_cm_s_v, vehicle_pitch_rad_v, calib_consts):
             else:
                 delta_theta = 0.
 
-            max_delta_theta = max(fabs(delta_theta), max_delta_theta)
+            max_delta_theta = builtins.max(fabs(delta_theta), max_delta_theta)
         # end of i loop, now check for any improvement in the estimates of theta_rad_v
         log_debug("GSM iteration %d max delta theta = %f" % (loop_counter, max_delta_theta))
         if max_delta_theta < 0.0001: # [rad]

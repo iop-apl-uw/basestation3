@@ -44,6 +44,9 @@ from QC import *
 import Utils 
 from TraceArray import * # REMOVE use only if we are tracing...
 
+import math
+import builtins
+
 c3515 = 4.2914 # Conductivity at S=35, T=15, P=0, mS/10cm, where conductivity ratio is 1
 kg2g = 1000.0
 cm2m = 0.01
@@ -201,7 +204,7 @@ def filter_unsteady(tau_i, r_elapsed_time_s_v, time_fine_s_v, r_dt, hdm_speed_st
         # Must do this on velocity COMPONENTS since it is a linear process
         # speed in polar coordinates is sqrt(w^2 + h^2)
 
-        tau_x = fix(max(tau_i, 1.0))/r_dt # protect trifilt; must be an integer
+        tau_x = fix(builtins.max(tau_i, 1.0))/r_dt # protect trifilt; must be an integer
         hdm_horizontal_speed_steady_cm_s_v = hdm_speed_steady_cm_s_v*cos(hdm_glide_angle_steady_rad_v)
         hdm_w_steady_cm_s_v = hdm_speed_steady_cm_s_v*sin(hdm_glide_angle_steady_rad_v)
 
