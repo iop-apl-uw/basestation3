@@ -1055,7 +1055,7 @@
                     continue;
                 }
 
-                if (showMission !== false && glider.mission != showMission) {
+                if (showMission !== false && !glider.mission.startsWith(showMission)) {
                     console.log('skipping unrequested ' + glider.mission);
                     continue;
                 }
