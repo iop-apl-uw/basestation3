@@ -4596,13 +4596,16 @@ def make_dive_profile(
         # Actually if there is a logger delay on starting the b profile we won't see this because the GC doesn't tell you when the pitch move actually started
         # Could be 20 secs or so for ADCPs. See SG653 Dabob Bay Sep 2018.  You'd have to guess about the truck sampling time and see if the first data point
         # took longer than that to show up.
-        loiter_i_v = list(
-            filter(
-                lambda i: ctd_elapsed_time_s_v[i] >= apogee_pump_vbd_end_time
-                and ctd_elapsed_time_s_v[i] <= start_of_climb_time,
-                range(ctd_np),
+        try:
+            loiter_i_v = list(
+                filter(
+                    lambda i: ctd_elapsed_time_s_v[i] >= apogee_pump_vbd_end_time
+                    and ctd_elapsed_time_s_v[i] <= start_of_climb_time,
+                    range(ctd_np),
+                )
             )
-        )
+        except NameError:
+            loiter_i_v = []
         apo_loiter_s = 0
         if len(loiter_i_v):
             apo_loiter_s = (
