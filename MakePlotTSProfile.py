@@ -89,7 +89,7 @@ def plot_ncdf_profile(ncf_file, dive_num, base_opts):
         ds["depth"],
         ds["temperature"][0],
         ds["salinity"][0],
-        dive_num,
+        ds["dive_number"],
         base_opts,
     )
 
@@ -498,9 +498,9 @@ def main(
 
         for ncdf_file_name in ncdf_file_names:
             log_info(f"Processing {ncdf_file_name}")
-            dive_num = int(os.path.split(ncdf_file_name)[1][4:8])
+            #dive_num = int(os.path.split(ncdf_file_name)[1][4:8])
             try:
-                plots = plot_ncdf_profile(ncdf_file_name, dive_num, base_opts)
+                plots = plot_ncdf_profile(ncdf_file_name, None, base_opts)
                 if processed_other_files is not None and plots is not None:
                     for p in plots:
                         processed_other_files.append(p)

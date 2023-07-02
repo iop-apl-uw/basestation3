@@ -713,6 +713,7 @@ global_options_dict = {
             "BasePlot",
             "Reprocess",
             "MakeMissionEngPlot",
+            "MakePlotTSProfile", 
         ),
         ("--save_svg",),
         bool,
@@ -725,7 +726,7 @@ global_options_dict = {
     ),
     "save_png": options_t(
         False,
-        ("Base", "BasePlot", "Reprocess"),
+        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
         ("--save_png",),
         bool,
         {
@@ -737,7 +738,7 @@ global_options_dict = {
     ),
     "save_jpg": options_t(
         False,
-        ("Base", "BasePlot", "Reprocess"),
+        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
         ("--save_jpg",),
         bool,
         {
@@ -749,7 +750,7 @@ global_options_dict = {
     ),
     "save_webp": options_t(
         True,
-        ("Base", "BasePlot", "Reprocess"),
+        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
         ("--save_webp",),
         bool,
         {
@@ -761,7 +762,7 @@ global_options_dict = {
     ),
     "compress_div": options_t(
         True,
-        ("Base", "BasePlot", "Reprocess"),
+        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
         ("--compress_div",),
         bool,
         {
@@ -774,7 +775,7 @@ global_options_dict = {
     "full_html": options_t(
         # "darwin" in sys.platform,
         False,
-        ("Base", "BasePlot", "Reprocess"),
+        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
         ("--full_html",),
         bool,
         {
@@ -810,7 +811,7 @@ global_options_dict = {
     ),
     "plot_directory": options_t(
         "",
-        ("Base", "BaseDB", "BasePlot", "MakeMissionEngPlots", "Reprocess"),
+        ("Base", "BaseDB", "BasePlot", "MakeMissionEngPlots", "MakePlotTSProfile", "Reprocess"),
         ("--plot_directory",),
         FullPath,
         {
