@@ -483,8 +483,6 @@
             function checkLayerState(which, compare) {
                 const items = { ...localStorage }; 
                 for (k in items) {
-                    console.log(k);
-                    console.log('layerStatus_' + which);
                     if (k == 'layerStatus_' + which) {
                         console.log('found ' + k);
                         console.log(localStorage[k]);
