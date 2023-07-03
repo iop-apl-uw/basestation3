@@ -417,7 +417,7 @@ def main(
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    log_debug(f"processed_other_files {processed_file_names}")
+    log_info(f"processed_other_files {processed_other_files}")
     Utils.check_versions()
 
     profile_file_names = []
@@ -426,8 +426,8 @@ def main(
     if hasattr(base_opts, "profile_filenames") and base_opts.profile_filenames:
         processed_file_names = base_opts.profile_filenames
 
-    if processed_file_names is not None:
-        for ff in processed_file_names:
+    if processed_other_files is not None:
+        for ff in processed_other_files:
             if ff.endswith(".profile"):
                 # While the glider can produce reduced profile up or down,
                 # only plot the downcast.
