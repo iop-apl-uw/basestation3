@@ -324,6 +324,19 @@ var_template = {
                 "density",
             ],
         },
+        "log_FINISH1": {
+            "type": "f4",
+            "num_digits": 3,
+            "attributes": {
+                "_FillValue": -999,
+                "comment": "End of dive stats",
+            },
+            "coord_cols": [
+                "depth",
+                "density",
+                "vbd_ctl",
+            ],
+        },
         "log_GPS": {
             "type": "f8",
             "num_digits": 4,
@@ -760,6 +773,7 @@ class log_parser:
         "$IMPLIED_C_PITCH": parser_type(float32_cnv, add_to_global_table),
         "$IMPLIED_C_VBD": parser_type(float32_cnv, add_to_global_table),
         "$FINISH": parser_type(float32_cnv, add_to_global_table),
+        "$FINISH1": parser_type(float32_cnv, add_to_global_table),
         "$GPS": parser_type(gps_cnv, add_to_global_table),
         "$GC": parser_type(float32_cnv, add_to_gc_table),
         "$MODEM": parser_type(float32_cnv, add_to_modem_table),
@@ -782,7 +796,7 @@ class log_parser:
 #
 
 
-def make_netcdf_netork_file(network_logfile, network_profile, ts_outputfile=True):
+def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=True):
     """Creates a network netcdf file, from either or both of the arguments
 
     Returns:
@@ -1017,7 +1031,7 @@ def make_netcdf_network_files(network_files, processed_files_list):
     for _, files in net_files.items():
         dive_net_files = sorted(files)
         try:
-            ncf_filename = make_netcdf_netork_file(*dive_net_files)
+            ncf_filename = make_netcdf_network_file(*dive_net_files)
         except:
             log_error(f"Failed to create cdf file from {dive_net_files}", "exc")
             ret_val = 1
@@ -1025,6 +1039,7 @@ def make_netcdf_network_files(network_files, processed_files_list):
             if ncf_filename:
                 processed_files_list.append(ncf_filename)
 
+    log_info(processed_files_list)
     return ret_val
 
 
