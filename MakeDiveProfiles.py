@@ -359,6 +359,7 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
         "GPS_position_error": 100,  # [meters]; see analysis in Bennett and Stahr, 2014
         "use_auxpressure": 1,  # Use aux pressure over truck pressure (if present)
         "use_auxcompass": 0,  # Use aux compass over truck compass (if present)
+        "use_adcppressure": 0,  # Use adcp pressure over truck pressure (if present)
         # CONSIDER add tau_i, the unsteady delay [s] used by TSV (default 20, 0 for IOP)
     }
 
@@ -2615,8 +2616,8 @@ def make_dive_profile(
             use_auxcompass = False
             results_d.update({"deck_dive": deck_dive})  # assert only if true
             log_info("Assuming this is a deck dive")
-            if not "$SIM_PITCH" in log_f.data:
-                log_f.data["$SIM_PITCH"] = 15
+            # if not "$SIM_PITCH" in log_f.data:
+            #    log_f.data["$SIM_PITCH"] = 15
             # If running the legato, use the truck simulated pressure
             if calib_consts["sg_ct_type"] == 4:
                 calib_consts["legato_use_truck_pressure"] = 1
@@ -3402,10 +3403,10 @@ def make_dive_profile(
         # Convert observed vehicle pitch from degrees to radians
         vehicle_pitch_rad_v = np.radians(vehicle_pitch_degrees_v)
 
-        if deck_dive and log_f.data["$SIM_PITCH"] > 0:
-            log_warning("$SIM_PITCH set incorrectly; inverting pitch values")
-            vehicle_pitch_rad_v = np.negative(vehicle_pitch_rad_v)
-            vehicle_pitch_degrees_v = np.negative(vehicle_pitch_degrees_v)
+        # if deck_dive and log_f.data["$SIM_PITCH"] > 0:
+        #    log_warning("$SIM_PITCH set incorrectly; inverting pitch values")
+        #    vehicle_pitch_rad_v = np.negative(vehicle_pitch_rad_v)
+        #    vehicle_pitch_degrees_v = np.negative(vehicle_pitch_degrees_v)
 
         # Correct the heading?
         if base_opts.magcalfile or ("magcalfile_contents" in globals_d):
@@ -4204,6 +4205,21 @@ def make_dive_profile(
             ###                results_d.update({f'{auxpressure_name}_press' : auxCompass_pressure_v,
             ###                                  f'{auxpressure_name}_depth' : auxCompass_depth_v})
 
+            adcp_time = None
+            adcp_pressure = None
+
+            if calib_consts["use_adcppressure"]:
+                if all(x in results_d for x in ["cp_time", "cp_pressure"]):
+                    adcp_time = "cp_time"
+                    adcp_pressure = "cp_pressure"
+                elif all(x in results_d for x in ["ad2cp_time", "ad2cp_pressure"]):
+                    adcp_time = "adcp_time"
+                    adcp_pressure = "adcp_pressure"
+                else:
+                    log_error(
+                        "use_adcppressure specified in sg_calib_constants, but no adcp pressure found"
+                    )
+
             if use_auxpressure:
                 ctd_press_v = Utils.interp1d(
                     aux_epoch_time_s_v,
@@ -4226,7 +4242,29 @@ def make_dive_profile(
                     ctd_depth_m_v = (
                         -1.0 * gsw.z_from_p(ctd_press_v, latitude, 0.0, 0.0) - zTP
                     )  # [m]
-
+            elif adcp_time:
+                ctd_press_v = Utils.interp1d(
+                    results_d[adcp_time],
+                    results_d[adcp_pressure],
+                    ctd_epoch_time_s_v,
+                    kind="linear",
+                )  # [dbar]
+                # TODO - Map pressure and depth signals to thermistor location
+                # zTP = Utils.interp1d(
+                #    compass_time, zTP, ctd_epoch_time_s_v, kind="linear"
+                # )
+                zTP = np.zeros(len(ctd_epoch_time_s_v))
+                # BUG: Really we should get pressure_sensor_depth from corrected pressure via sw_depth()
+                # then subtract zTP to get ctd_depth and the use a sw_press() routine to get ctd_press
+                # This might be close though...
+                # Negative because the CT sail is above the pressure sensor so is shallower
+                ctd_press_v = ctd_press_v - zTP * psi_per_meter * dbar_per_psi  # [dbar]
+                if not base_opts.use_gsw:
+                    ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) - zTP  # [m]
+                else:
+                    ctd_depth_m_v = (
+                        -1.0 * gsw.z_from_p(ctd_press_v, latitude, 0.0, 0.0) - zTP
+                    )  # [m]
             else:
                 # Truck pressure and depth
                 # Really we should get pressure_sensor_depth from corrected pressure via sw_depth()
