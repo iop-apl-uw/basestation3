@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2018, 2021 University of Washington.  All rights reserved.
+// Copyright (c) 2018, 2021, 2023 University of Washington.  All rights reserved.
 //
 // This file contains proprietary information and remains the 
 // unpublished property of the University of Washington. Use, disclosure,
@@ -490,7 +490,7 @@ main(int argc, char *argv[])
     setenv("TZ", "", 1); // null string is UTC
     tzset();
 
-    while ((opt = getopt(argc, argv, "v")) != -1) {
+    while ((opt = getopt(argc, argv, "v")) != (char) -1) {
         switch (opt) {
         case 'v':
             verbose = 1;
