@@ -63,7 +63,6 @@ import zmq.asyncio
 # import urllib.parse 
 import Utils
 import secrets
-import BaseDB
 import ExtractTimeseries
 # import furl
 
@@ -1482,23 +1481,22 @@ def attachHandlers(app: sanic.Sanic):
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        try:
-            conn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
-            conn.row_factory = rowToDict
-            cur = await conn.cursor()
-            await cur.execute(q)
-            row = await cur.fetchone()
-            await cur.close()
-            if row:
-                if format == 'json':
-                    return sanic.response.json(row)
-                elif format == 'csv':
-                    return sanic.response.text(f"{row['epoch']},{row['lat']},{row['lon']}")
-            else:
-                return sanic.response.text('none')
-        except Exception as e:
-            sanic.log.logger.info(e)
-            return sanic.response.text('oops')
+        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
+            try:
+                conn.row_factory = rowToDict
+                cur = await conn.cursor()
+                await cur.execute(q)
+                row = await cur.fetchone()
+                if row:
+                    if format == 'json':
+                        return sanic.response.json(row)
+                    elif format == 'csv':
+                        return sanic.response.text(f"{row['epoch']},{row['lat']},{row['lon']}")
+                else:
+                    return sanic.response.text('none')
+            except Exception as e:
+                sanic.log.logger.info(e)
+                return sanic.response.text('oops')
            
     async def getLatestCall(request, glider, conn=None, limit=1):
         if conn == None:
@@ -1545,6 +1543,7 @@ def attachHandlers(app: sanic.Sanic):
         # we get the first fix out of the db so the user gets the latest 
         # position if we're between calls
 
+        sanic.log.logger.info('posStream ws opened')
         row = await getLatestCall(request, glider)
         if row:
             await ws.send(dumps(row[0]).decode('utf-8'))
@@ -1559,7 +1558,7 @@ def attachHandlers(app: sanic.Sanic):
                 await ws.send(msg[1].decode('utf-8'))
                 # sanic.log.logger.info("ws sent")
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
-                sanic.log.logger.info(f'ws connection closed {e}')
+                sanic.log.logger.info(f'posStream ws connection closed {e}')
                 await ws.close()
                 socket.close()
                 return
@@ -1688,8 +1687,8 @@ def attachHandlers(app: sanic.Sanic):
                     sanic.log.logger.info(f"unhandled topic {topic}")
 
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
-                sanic.log.logger.info(f'ws connection closed {e}')
-                if conn:
+                sanic.log.logger.info(f'stream ws connection closed {e}')
+                if conn is not None:
                     await conn.close()
 
                 await ws.close()
@@ -1706,7 +1705,7 @@ def attachHandlers(app: sanic.Sanic):
 
         gliders = list(map(int, request.args['gliders'][0].split(','))) if 'gliders' in request.args else None
 
-        sanic.log.logger.debug("watchHandler start")
+        sanic.log.logger.info("watchHandler start")
         opTable = await buildAuthTable(request, None)
         await ws.send(f"START") # send something to ack the connection opened
 
@@ -1773,7 +1772,7 @@ def attachHandlers(app: sanic.Sanic):
                     except Exception as e:
                         sanic.log.logger.info(f"watchHandler {e}")
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
-                sanic.log.logger.info(f'ws connection closed {e}')
+                sanic.log.logger.info(f'watch ws connection closed {e}')
                 await ws.close()
                 socket.close()
                 return
