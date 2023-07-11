@@ -15,6 +15,8 @@
 <script src="script/util.js"></script>
 <script src="script/dialogs.js"></script>
 <script src="script/websocket.js"></script>
+<script src="script/tabstats.js"></script>
+
 {% if runMode == 'pilot' %}
 <script src="script/chat.js"></script>
 {% endif %}
@@ -1381,6 +1383,7 @@
                              };
                 var config = { responsive: true };
                 
+                $('plotlyPlotDiv').removeChild($('plotlyPlotDiv').firstChild);
                 Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
                 $('btnPlotlyContour').style.backgroundColor = def;
                 $('btnPlotlyContour').disabled = false;
@@ -1502,6 +1505,7 @@
                                 paper_bgcolor: "#bbbbbb",
                              };
                 var config = { responsive: true };
+                $('plotlyPlotDiv').removeChild($('plotlyPlotDiv').firstChild);
                 Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
             }
             else if (which == 'plot') {
@@ -1535,6 +1539,7 @@
                                 paper_bgcolor: "#bbbbbb",
                              };
                 var config = { responsive: true };
+                $('plotlyPlotDiv').removeChild($('plotlyPlotDiv').firstChild);
                 Plotly.newPlot($('plotlyPlotDiv'), d, layout, config);
             }
             else if (which == 'table') {
@@ -1550,7 +1555,7 @@
                     values.push(data[y[i]]);
                     headers.push([y[i]]);
                 }
-
+/*
                 var d = [{
                     type: 'table',
                     header: {
@@ -1569,7 +1574,14 @@
                         font: {family: "Arial", size: 11, color: ["black"]}
                     },
                 }];
+                $('plotlyPlotDiv').removeChild($('plotlyPlotDiv').firstChild);
                 Plotly.newPlot($('plotlyPlotDiv'), d);
+*/
+
+                t = makeDataTable('plotlyPlotDataTable', headers, values);
+                $('plotlyPlotDiv').removeChild($('plotlyPlotDiv').firstChild);
+                $('plotlyPlotDiv').append(t);
+
             }
             else if (which == 'csv') {
                 var d = [];

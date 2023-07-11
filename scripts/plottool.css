@@ -98,3 +98,35 @@
         grid-area: plot;
         width: 100%;
     }
+
+    .tabstatsFixedHeader {
+        /* width: 100vw; */
+        table-layout: fixed;
+        border-collapse: collapse;
+    }
+
+    .tabstatsFixedHeader tbody {
+        display: block;
+        width: 100%;
+        overflow: auto;
+        height: 50vh;
+    } 
+
+    .tabstatsFixedHeader thead tr {
+        display: block;
+    }
+
+    .tabstatsFixedHeader thead {
+        background: black;
+        color: #eee;
+    }
+
+    .tabstatsFixedHeader th,
+    .tabstatsFixedHeader td {
+        padding: 5px;
+        text-align: center;
+    }    
+    .tabstatsFixedHeader td + td {
+        border-left: 1px solid;
+    }    
+    
