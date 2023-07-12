@@ -222,8 +222,12 @@ async def collectSummary(glider, path):
     out['dtg'] = data['distance_to_goal']
     out['dogEfficiency'] = data['dog_efficiency']
 
-    out['vbdEfficiency'] = gc['vbd_eff']
-    out['vbdVolts'] = gc['vbd_volts']
+    if gc:
+        out['vbdEfficiency'] = gc['vbd_eff']
+        out['vbdVolts'] = gc['vbd_volts']
+    else:
+        out['vbdEfficiency'] = 0
+        out['vbdVolts'] = 0
 
     out['depth']    = data['max_depth']
     out['grid']     = data['log_D_GRID']
