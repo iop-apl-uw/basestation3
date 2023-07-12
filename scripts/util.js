@@ -69,6 +69,21 @@ function haversine(pt0, pt1) {
     return 2.0*R*Math.asin(Math.sqrt(a));
 }
 
+function formatDate(d) {
+    let yr  = d.getUTCFullYear() - 2000;
+    let mon = d.getUTCMonth() + 1;
+    let day = d.getUTCDate();
+    let h   = d.getUTCHours();
+    let m   = d.getUTCMinutes();
+
+    if (day < 10) day = "0" + day;
+    if (mon < 10) mon = "0" + mon; 
+    if (h < 10) h = "0" + h;
+    if (m < 10) m = "0" + m;
+
+    return yr + '-' + mon + '-' + day + ' ' + h + ':' + m;
+}
+
 function formatPos(ddmm) {
     var deg = Math.trunc(ddmm/100);
     var min = Math.abs(ddmm - deg*100);

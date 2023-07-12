@@ -506,7 +506,12 @@
             console.log('row exists ' + rowID);
             $(rowID).remove();
         }
-     
+    
+        for (const key in d) {
+            if (d[key] == null)
+                d[key] = 0;
+        }
+ 
         row = tbody.insertRow(1);
         row.id = rowID;
         

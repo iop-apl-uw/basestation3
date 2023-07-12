@@ -249,7 +249,7 @@
             font-weight: bold;
         }
         .position {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: bold;
         }
 
@@ -615,9 +615,12 @@
             box = document.createElement('div');
             box.classList.add('box');
 
+            var thisDate = new Date(1000*data.fix);
             txt = document.createElement('div');
             txt.classList.add('position');
-            txt.innerHTML = formatPos(dd2ddmm(data.lat)) + ',' + formatPos(dd2ddmm(data.lon));
+            txt.innerHTML = formatPos(dd2ddmm(data.lat)) + ',' + formatPos(dd2ddmm(data.lon)) + '@' + formatDate(thisDate);
+            txt.id = 'pos_' + glider.glider + '_' + glider.mission;
+
             h = document.createElement('div');
             h.appendChild(document.createTextNode('pos: '));
             h.classList.add('label');
@@ -1208,6 +1211,13 @@
                 }
                 else if ('connected' in json) {
                     // gpsstr topic payload is only one with "connected" entry
+                    console.log(json);
+                    var thisDate = new Date(1000*json.epoch);
+                    $('pos_' + glider + '_' + mission).innerHTML = 
+                        formatPos(dd2ddmm(json.lat)) + ',' 
+                        + formatPos(dd2ddmm(json.lon)) 
+                        + '@' + formatDate(thisDate);
+
                     $(glider + '_' + mission).style.border = '2px solid magenta';
                     $('comm_' + glider + '_' + mission).style.display = 'block';
                     $('img_' + glider + '_' + mission).style.display = 'none';
