@@ -405,24 +405,31 @@ def attachHandlers(app: sanic.Sanic):
         else:
             return sanic.response.text('not found', status=404)
 
-        if await aiofiles.os.path.exists(filename):
-            if 'wrap' in request.args and request.args['wrap'][0] == 'page':
-                mission = missionFromRequest(request)
-                mission = f"?mission={mission}" if mission else ''
-                wrap = '?wrap=page' if mission == '' else '&wrap=page'
+        filenames = [ filename ]
+        if 'fallback' in request.args:
+            filenames.append(f'{gliderPath(glider,request)}/plots/dv{dive:04d}_diveplot.{fmt}')
+            filenames.append(f'{gliderPath(glider,request)}/plots/dv{dive:04d}_reduced_ctd.{fmt}')
+            filenames.append(f'{gliderPath(glider,request)}/plots/eng_mission_map.{fmt}')
 
-                filename = f'{sys.path[0]}/html/wrap.html'
-                return await sanic.response.file(filename, mime_type='text/html')
-            else:
-                if fmt == 'div':
-                    async with aiofiles.open(filename, 'rb') as f:
-                        cont = await f.read()
-                    
-                    return sanic.response.raw(cont, headers={'Content-type': 'text/html', 'Content-Encoding': 'br'})
+        for filename in filenames:
+            if await aiofiles.os.path.exists(filename):
+                if 'wrap' in request.args and request.args['wrap'][0] == 'page':
+                    mission = missionFromRequest(request)
+                    mission = f"?mission={mission}" if mission else ''
+                    wrap = '?wrap=page' if mission == '' else '&wrap=page'
+
+                    filename = f'{sys.path[0]}/html/wrap.html'
+                    return await sanic.response.file(filename, mime_type='text/html')
                 else:
-                    return await sanic.response.file(filename, mime_type=f"image/{fmt}")
-        else:
-            return sanic.response.text('not found', status=404)
+                    if fmt == 'div':
+                        async with aiofiles.open(filename, 'rb') as f:
+                            cont = await f.read()
+                        
+                        return sanic.response.raw(cont, headers={'Content-type': 'text/html', 'Content-Encoding': 'br'})
+                    else:
+                        return await sanic.response.file(filename, mime_type=f"image/{fmt}")
+
+        return sanic.response.text('not found', status=404)
            
     # we don't protect this so they get a blank page with a login option even
     # if not authorized

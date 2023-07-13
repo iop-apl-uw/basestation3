@@ -887,10 +887,16 @@
             img = document.createElement('img');
             img.alt = 'plots not available';
             if (data.dive) {
-                if (plotWhich == 'map')
-                    img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + missionArg(glider);
+                var q;
+                var ma = missionArg(glider);
+                if (ma == '') 
+                    q = '?fallback=1';
                 else
-                    img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + missionArg(glider);
+                    q = ma + '&fallback=1';
+                if (plotWhich == 'map')
+                    img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + q;
+                else
+                    img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + q;
             }
  
             img.classList.add('dashImg');
@@ -969,10 +975,18 @@
             box.classList.add('imgbox');
 
             img = document.createElement('img');
-            if (plotWhich == 'map')
-                img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + missionArg(glider);
+
+            var q;
+            var ma = missionArg(glider);
+            if (ma == '') 
+                q = '?fallback=1';
             else
-                img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + missionArg(glider);
+                q = ma + '&fallback=1';
+
+            if (plotWhich == 'map')
+                img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + q;
+            else
+                img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + q;
             
             img.classList.add('indexImg');
      
