@@ -663,6 +663,89 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
     addSlopeValToDB(base_opts, dive, slopeVars, con)
 
+def loadNetworkFileToDB(base_opts, cur, filename, con):
+    """Process single network netcdf file into the database"""
+    gpsVars = [ "time", "lat", "lon", "hdop"]
+
+    try:
+        nci = Utils.open_netcdf_file(filename)
+    except:
+        log_error(f"Could not open {filename} - bailing out", "exc")
+        return
+
+    dive = nci.variables["log_DIVE"].getValue()
+    cur.execute(f"DELETE FROM dives WHERE dive={dive};")
+    cur.execute(f"INSERT INTO dives(dive) VALUES({dive});")
+    for v in list(nci.variables.keys()):
+        if not nci.variables[v].dimensions:
+            insertColumn(dive, cur, v, nci.variables[v].getValue(), "FLOAT")
+
+    if 'log_GC' in nci.variables:
+        dep_mx = numpy.nanmax(nci.variables["log_GC"][:,1])
+        insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
+    else:
+        print(f'no depth {filename}')
+
+    # Last state time is begin surface
+    insertColumn(
+        dive,
+        cur,
+        "time_seconds_diving",
+        nci.variables["log_GC_time"][-1] - nci.variables["start_time"].getValue(),
+        "FLOAT",
+    )
+
+    insertColumn(dive, cur, "log_start", nci.variables["start_time"].getValue(), "FLOAT");
+    insertColumn(dive, cur, "log_gps_lat", nci.variables["log_GPS"][1], "FLOAT");
+    insertColumn(dive, cur, "log_gps_lon", nci.variables["log_GPS"][2], "FLOAT");
+    insertColumn(dive, cur, "log_gps_hdop", nci.variables["log_GPS"][3], "FLOAT");
+    insertColumn(dive, cur, "log_gps_time", nci.variables["log_GC_time"][-1], "FLOAT")
+    insertColumn(dive, cur, "log_TGT_NAME", nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8"), "TEXT")
+
+    if 'log_24V_AH' in nci.variables:
+        v24 = nci.variables["log_24V_AH"][0]
+        ah24 = nci.variables["log_24V_AH"][1]
+    else:
+        v24 = 0
+        ah24 = 0
+
+    if 'log_10V_AH' in nci.variables:
+        v10 = nci.variables["log_10V_AH"][0]
+        ah10 = nci.variables["log_10V_AH"][1]
+    else:
+        v10 = 0
+        ah10 = 0
+
+    if "log_SDFILEDIR" in nci.variables:
+        sdfiles = nci.variables["log_SDFILEDIR"][0]
+        sddirs  = nci.variables["log_SDFILEDIR"][1]
+
+    insertColumn(dive, cur, "batt_volts_10V", v10, "FLOAT")
+    insertColumn(dive, cur, "batt_volts_24V", v24, "FLOAT")
+
+    insertColumn(dive, cur, "batt_ah_10V", ah10, "FLOAT")
+    insertColumn(dive, cur, "batt_ah_24V", ah24, "FLOAT")
+
+    mhead  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][0]
+    rng    = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][1]
+    pitchd = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][2]
+    wd     = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][3]
+    theta  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][4]
+    dbdw   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][5]
+    pressureNoise   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][6]
+
+    insertColumn(dive, cur, "mag_heading_to_target", mhead, "FLOAT")
+    insertColumn(dive, cur, "meters_to_target", rng, "FLOAT")
+
+    nm = nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8")
+    insertColumn(dive, cur, "target_name", nm, "TEXT")
+
+    if "log_IMPLIED_C_VBD" in nci.variables:
+        insertColumn(
+            dive, cur, "log_IMPLIED_C_VBD", nci.variables["log_IMPLIED_C_VBD"][0], "FLOAT"
+        )
+
+
 def updateDBFromPlots(base_opts, ncfs, con, run_dive_plots=True):
     """Update the database with the output of plotting routines that generate db columns"""
 
@@ -796,6 +879,7 @@ def createDivesTable(cur):
                 'log_IMPLIED_C_VBD',
                 'log_FG_AHR_10V0', 'log_FG_AHR_24Vo',
                 'log_gps_time',  'log_gps2_time', 'log_TGT_LAT', 'log_TGT_LON', 
+                'log_gps_lat', 'log_gps_lon', 'log_gps_hdop',
                 'depth_avg_curr_east','depth_avg_curr_north',
                 'max_depth',
                 'pitch_dive','pitch_climb',
@@ -869,11 +953,12 @@ def prepDivesGC(base_opts, dbfile=None):
 
     log_info("prepDivesGC db closed")
  
-def rebuildDivesGC(base_opts):
+def rebuildDivesGC(base_opts, ext):
     """Rebuild the database from scratch"""
     prepDivesGC(base_opts)
 
-    log_info("rebuilding database")
+    print(ext)
+    log_info(f"rebuilding database, ext={ext}")
     con = Utils.open_mission_database(base_opts)
     log_info("rebuildDivesGC db opened")
 
@@ -881,14 +966,18 @@ def rebuildDivesGC(base_opts):
 
     # patt = path + "/p%03d????.nc" % sg
     patt = os.path.join(
-        base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.nc"
+        base_opts.mission_dir, f"p{base_opts.instrument_id:03d}????.{ext}"
     )
     ncfs = []
     for filename in glob.glob(patt):
         ncfs.append(filename)
     ncfs = sorted(ncfs)
     for filename in ncfs:
-        loadFileToDB(base_opts, cur, filename, con, run_dive_plots=True)
+        print(filename)
+        if "ncdf" in filename:
+            loadNetworkFileToDB(base_opts, cur, filename, con)
+        else:
+            loadFileToDB(base_opts, cur, filename, con, run_dive_plots=True)
 
     cur.close()
 
@@ -908,7 +997,12 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     log_info("loadDB db opened")
     cur = con.cursor()
     createDivesTable(cur)
-    loadFileToDB(base_opts, cur, filename, con, run_dive_plots=run_dive_plots)
+
+    if "ncdf" in filename:
+        loadNetworkFileToDB(base_opts, cur, filename, con)
+    else:
+        loadFileToDB(base_opts, cur, filename, con, run_dive_plots=run_dive_plots)
+
     cur.close()
     try:
         con.commit()
@@ -1255,6 +1349,17 @@ def main():
                     "subparsers": ("addval",),
                 },
             ),
+            "network": BaseOpts.options_t(
+                False,
+                ("BaseDB",),
+                ("--network",),
+                bool,
+                {
+                    "help": "process network netcdf files",
+                    "action": "store_true",
+                },
+            ),
+
         },
     )
     BaseLogger(base_opts, include_time=True)
@@ -1293,8 +1398,8 @@ def main():
             for ncf in base_opts.netcdf_files:
                 loadDB(base_opts, ncf)
         else:
-            rebuildDivesGC(base_opts)
-            
+            rebuildDivesGC(base_opts, "nc" if base_opts.network == False else "ncdf")
+
     elif base_opts.subparser_name == "addval":
         addValToDB(base_opts, base_opts.dive_num, base_opts.value_name, base_opts.value)
     else:
