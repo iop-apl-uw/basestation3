@@ -422,15 +422,19 @@ def write_figure(basename, delete=False):
             os.remove(figure_output_name)
     else:
         plt.savefig(figure_output_name, format="webp")
-
     if plots_directory:
         plots_figure_output_name = os.path.join(plots_directory, basename)
         if delete:
-            if os.path.exists(plots_figure_output_name):
-                os.remove(plots_figure_output_name)
+            try
+                if os.path.exists(plots_figure_output_name):
+                    os.remove(plots_figure_output_name)
+            except:
+                log_warning(f"Failed to remove {plots_figure_output_name}", "exc")
         else:
-            shutil.copyfile(figure_output_name, plots_figure_output_name)
-
+            try:
+                shutil.copyfile(figure_output_name, plots_figure_output_name)
+            except:
+                log_warning(f"Failed to copy {figure_output_name} to {plots_figure_output_name}")
 
 # The memory burden of the various caches can grow large, especially when we were caching results from load_dive_data()
 # This function, which knows about the types we typically use in the program
