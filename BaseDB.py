@@ -858,7 +858,7 @@ def prepCallsChangesFiles(base_opts, dbfile=None):
         con.commit()
     except Exception as e:
         con.rollback()
-        log_error(f"Failed commit, prepCallsChangesFiles {e}", "exc")
+        log_error(f"Failed commit, prepCallsChangesFiles {e}", "exc", alert="DB_LOCKED")
 
     log_info("prepCallsChangesFiles db closed")
     con.close()
@@ -947,7 +947,7 @@ def prepDivesGC(base_opts, dbfile=None):
         con.commit()
     except Exception as e:
         con.rollback()
-        log_error(f"Failed commit, prepDivesGC {e}", "exc")
+        log_error(f"Failed commit, prepDivesGC {e}", "exc", alert="DB_LOCKED")
 
     con.close()
 
@@ -985,7 +985,7 @@ def rebuildDivesGC(base_opts, ext):
         con.commit()
     except Exception as e:
         con.rollback()
-        log_error(f"Failed commit, rebuildDivesGC {e}", "exc")
+        log_error(f"Failed commit, rebuildDivesGC {e}", "exc", alert="DB_LOCKED")
 
     con.close()
 
@@ -1008,7 +1008,7 @@ def loadDB(base_opts, filename, run_dive_plots=True):
         con.commit()
     except Exception as e:
         con.rollback()
-        log_error(f"Failed commit, loadDB {e}", "exc")
+        log_error(f"Failed commit, loadDB {e}", "exc", alert="DB_LOCKED")
 
     log_info("loadDB db closed")
     con.close()
@@ -1055,7 +1055,7 @@ def saveFlightDB(base_opts, mat_d, con=None):
             mycon.commit()
         except Exception as e:
             mycon.rollbacl()
-            log_error(f"Failed commit, saveFlightDB {e}", "exc")
+            log_error(f"Failed commit, saveFlightDB {e}", "exc", alert="DB_LOCKED")
 
         mycon.close()
         log_info("saveFlightDB db closed")
@@ -1097,7 +1097,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
             mycon.commit()
         except Exception as e:
             mycon.rollback()
-            log_error(f"Failed commit, addValToDB {e}", "exc")
+            log_error(f"Failed commit, addValToDB {e}", "exc", alert="DB_LOCKED")
             status = 1
 
         mycon.close()
@@ -1143,7 +1143,7 @@ def addSlopeValToDB(base_opts, dive_num, var, con=None):
             mycon.commit()
         except Exception as e:
             mycon.rollbacl()
-            log_error(f"Failed commit, addSlopeValToDB {e}", "exc")
+            log_error(f"Failed commit, addSlopeValToDB {e}", "exc", alert="DB_LOCKED")
 
         mycon.close()
         log_info("addSlopeValToDB db closed")
@@ -1188,7 +1188,7 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
             mycon.commit()
         except Exception as e:
             mycon.rollback()
-            log_error(f"Failed commit, logControlFile {e}", "exc")
+            log_error(f"Failed commit, logControlFile {e}", "exc", alert="DB_LOCKED")
         mycon.close()
         log_info("logControlFile db closed")
 
@@ -1224,7 +1224,7 @@ def rebuildControlHistory(base_opts):
         con.commit()
     except Exception as e:
         con.rollback()
-        log_error(f"Failed commit, rebuildControlHistory {e}", "exc")
+        log_error(f"Failed commit, rebuildControlHistory {e}", "exc", alert="DB_LOCKED")
 
     log_info("rebuildControlHistory db closed")
     con.close()
@@ -1267,7 +1267,7 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
             mycon.commit()
         except Exception as e:
             mycon.rollback()
-            log_error(f"Failed commit, logParameterChanges {e}", "exc")
+            log_error(f"Failed commit, logParameterChanges {e}", "exc", alert="DB_LOCKED")
 
         mycon.close()
         log_info("logParameterChanges db closed")
@@ -1297,7 +1297,7 @@ def addSession(base_opts, session, con=None):
             mycon.commit()
         except Exception as e:
             mycon.rollback()
-            log_error(f"Failed commit, addSession {e}", "exc")
+            log_error(f"Failed commit, addSession {e}", "exc", alert="DB_LOCKED")
 
         mycon.close()
         log_info("addSession db closed")

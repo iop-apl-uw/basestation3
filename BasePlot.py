@@ -124,7 +124,7 @@ def plot_dives(
             con.commit()
         except Exception as e:
             con.rollback()
-            log_error(f"Failed commit, plot_dives {e}", "exc")
+            log_error(f"Failed commit, plot_dives {e}", "exc", alert="DB_LOCKED")
 
         con.close()
         log_info("plot_dives db closed") 
@@ -190,7 +190,7 @@ def plot_mission(
             con.commit()
         except Exception as e:
             con.rollback()
-            log_error(f"Failed commit, plot_mission {e}", "exc")
+            log_error(f"Failed commit, plot_mission {e}", "exc", alert="DB_LOCKED")
 
         con.close()
         log_info("plot_mission db closed") 
