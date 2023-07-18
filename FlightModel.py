@@ -297,15 +297,16 @@ kg_per_g = 1 / g_per_kg
 flight_directory = None
 plots_directory = None
 flight_dive_data_filename = None
-flight_dive_data_d = (
-    None  # eventually a dict: dive -> <flight_data>, 'mass', etc. assumptions
-)
+# eventually a dict: dive -> <flight_data>, 'mass', etc. assumptions
+flight_dive_data_d = None
+
 mission_directory = None
-nc_path_format = None  # set once in main()
+# set once in main()
+nc_path_format = None
 compress_cnf = None
-flight_consts_d = (
-    {}
-)  # an updated copy of prevailing flight constants from flight_dive_data_d, etc. required by hydro_model()
+# an updated copy of prevailing flight constants from flight_dive_data_d, etc. required by hydro_model()
+flight_consts_d = {}
+
 HIST = []  # w_rms_func() calculation history for debugging
 
 # global pointers to entries in flight_dive_data_d structures we use
@@ -425,7 +426,7 @@ def write_figure(basename, delete=False):
     if plots_directory:
         plots_figure_output_name = os.path.join(plots_directory, basename)
         if delete:
-            try
+            try:
                 if os.path.exists(plots_figure_output_name):
                     os.remove(plots_figure_output_name)
             except:
@@ -434,7 +435,10 @@ def write_figure(basename, delete=False):
             try:
                 shutil.copyfile(figure_output_name, plots_figure_output_name)
             except:
-                log_warning(f"Failed to copy {figure_output_name} to {plots_figure_output_name}")
+                log_warning(
+                    f"Failed to copy {figure_output_name} to {plots_figure_output_name}"
+                )
+
 
 # The memory burden of the various caches can grow large, especially when we were caching results from load_dive_data()
 # This function, which knows about the types we typically use in the program
