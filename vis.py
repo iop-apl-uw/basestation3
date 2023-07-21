@@ -37,7 +37,6 @@ from zipfile import ZipFile
 from io import BytesIO
 from anyio import Path
 import websockets
-import sqlite3
 import aiosqlite
 import aiofiles
 import asyncio
@@ -797,7 +796,7 @@ def attachHandlers(app: sanic.Sanic):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         message = { 'dive': dive, 'parm': [], 'file': [] }
         if await Path(dbfile).exists():
-            async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
+            async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
                 conn.row_factory = rowToDict # not async but called from async fetchall
                 cur = await conn.cursor()
                 try:
@@ -859,7 +858,7 @@ def attachHandlers(app: sanic.Sanic):
     async def statusHandler(request, glider:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if await Path(dbfile).exists():
-            async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
+            async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
                 cur = await conn.cursor()
                 try:
                     await cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
@@ -962,7 +961,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = q + " ORDER BY dive ASC;"
 
-        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             conn.row_factory = rowToDict # not async but called from async fetchall
             cur = await conn.cursor()
             try:
@@ -1000,7 +999,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = q + f" ORDER BY {col2},dive ASC;"
 
-        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             conn.row_factory = rowToDict # not async but called from async fetchall
             cur = await conn.cursor()
             try:
@@ -1022,7 +1021,7 @@ def attachHandlers(app: sanic.Sanic):
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             cur = await conn.cursor()
             try:
                 await cur.execute('select * from dives')
@@ -1106,7 +1105,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = f"SELECT {queryVars} FROM dives"
 
-        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             # conn.row_factory = rowToDict
             cur = await conn.cursor()
             try:
@@ -1356,7 +1355,7 @@ def attachHandlers(app: sanic.Sanic):
             if not await aiofiles.os.path.exists(dbfile):
                 return (None, time.time())
 
-            myconn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
+            myconn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
             myconn.row_factory = rowToDict
         else:
             myconn = conn
@@ -1435,6 +1434,8 @@ def attachHandlers(app: sanic.Sanic):
  
         async with aiosqlite.connect(dbfile) as conn:
             cur = await conn.cursor()
+            cur.execute("PRAGMA busy_timeout=200;")
+
             try:
                 if attach:
                     q = f"INSERT INTO chat(timestamp, user, message, attachment, mime) VALUES(?, ?, ?, ?, ?)"
@@ -1488,7 +1489,7 @@ def attachHandlers(app: sanic.Sanic):
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        async with aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True) as conn:
+        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             try:
                 conn.row_factory = rowToDict
                 cur = await conn.cursor()
@@ -1512,7 +1513,7 @@ def attachHandlers(app: sanic.Sanic):
             if not await aiofiles.os.path.exists(dbfile):
                 return None
 
-            myconn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
+            myconn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
             myconn.row_factory = rowToDict
         else:
             myconn = conn
@@ -1621,15 +1622,12 @@ def attachHandlers(app: sanic.Sanic):
 
         if tU and request.app.config.RUNMODE > MODE_PUBLIC:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-            if await aiofiles.os.path.exists(dbfile):
-                conn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
-                conn.row_factory = rowToDict 
-                if which == 'history' or which == 'init':
+            if (which == 'history' or which == 'init') and await aiofiles.os.path.exists(dbfile):
+                async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+                    conn.row_factory = rowToDict 
                     (rows, prev_db_t) = await getChatMessages(request, glider, 0, conn)
                     if rows:
                         await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
-            else:
-                conn = None
 
         socket = zmq.asyncio.Context().socket(zmq.SUB)
         socket.setsockopt(zmq.LINGER, 0)
@@ -1647,14 +1645,13 @@ def attachHandlers(app: sanic.Sanic):
                 sanic.log.logger.info(f"topic {topic}")
 
                 if 'chat' in topic and tU and request.app.config.RUNMODE > MODE_PUBLIC:
-                    if conn == None and await aiofiles.os.path.exists(dbfile):
-                        conn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
-                        conn.row_factory = rowToDict 
+                    if await aiofiles.os.path.exists(dbfile):
+                        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+                            conn.row_factory = rowToDict 
                         
-                    if conn:
-                        (rows, prev_db_t) = await getChatMessages(request, glider, prev_db_t, conn)
-                        if rows:
-                            await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
+                            (rows, prev_db_t) = await getChatMessages(request, glider, prev_db_t, conn)
+                            if rows:
+                                await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
                 elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
                     sanic.log.logger.info('comm.log notified')
