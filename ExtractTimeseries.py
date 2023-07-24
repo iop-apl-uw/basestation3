@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,6 +35,7 @@
 
 import sys
 import json
+import warnings
 from json import JSONEncoder
 import Globals
 
@@ -105,15 +106,18 @@ def timeSeriesToProfile(var, which,
             t0 = nci.variables['start_time'][idx]
             t1 = nci.variables['deepest_sample_time'][idx]
             t2 = nci.variables['end_time'][idx]
-    
+
         if which in (Globals.WhichHalf.down, Globals.WhichHalf.both):
             ixs = (x['time'] > t0) &(x['time'] < t1)
             message['dive'].append(p + 0.25)
             message['which'].append(1)
             d = None
             if sum(1 for x in ixs if x) > 0:
-                d = scipy.stats.binned_statistic(x['depth'][ixs],
-                                             x[var][ixs], statistic='mean', bins=bins).statistic
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                    d = scipy.stats.binned_statistic(x['depth'][ixs],
+                                                     x[var][ixs], statistic=np.nanmean, bins=bins).statistic
 
             if d is not None:
                 arr[:,i] = d.T
@@ -128,8 +132,11 @@ def timeSeriesToProfile(var, which,
             message['which'].append(4)
             d = None
             if sum(1 for x in ixs if x) > 0:
-                d = scipy.stats.binned_statistic(x['depth'][ixs],
-                                             x[var][ixs], statistic='mean', bins=bins).statistic
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                    d = scipy.stats.binned_statistic(x['depth'][ixs],
+                                                     x[var][ixs], statistic=numpy.nanmean, bins=bins).statistic
 
             if d is not None:
                 arr[:,i] = d.T
@@ -144,8 +151,10 @@ def timeSeriesToProfile(var, which,
             message['which'].append(4)
             d = None
             if sum(1 for x in ixs if x) > 0:
-                d = scipy.stats.binned_statistic(x['depth'][ixs],
-                                             x[var][ixs], statistic='mean', bins=bins).statistic
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=RuntimeWarning)
+                    d = scipy.stats.binned_statistic(x['depth'][ixs],
+                                                     x[var][ixs], statistic=numpy.nanmean, bins=bins).statistic
                 
             if d is not None:
                 arr[:,i] = d.T
