@@ -295,9 +295,11 @@ def plot_diveplot(
                 "fillcolor": PlotUtils.gc_move_colormap[gc[2]].color,
                 "line": {
                     "dash": "solid",
+                    # proxy for line opacity - lines are needed for short moves (like pitch)
+                    "width": 0.25,
                     "color": PlotUtils.gc_move_colormap[gc[2]].color,
                 },
-                "mode": "none",  # no outter lines and ponts
+                "mode": "lines",  # lines are needed for short moves (like pitch)
                 "legendgroup": f"{PlotUtils.gc_move_colormap[gc[2]].name}_group",
                 "name": f"GC {PlotUtils.gc_move_colormap[gc[2]].name}",
                 "showlegend": show_label[PlotUtils.gc_move_colormap[gc[2]].name],
