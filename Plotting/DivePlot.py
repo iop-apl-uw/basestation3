@@ -308,11 +308,12 @@ def plot_diveplot(
         show_label[PlotUtils.gc_move_colormap[gc[2]].name] = False
 
     # Depth traces
+    valid_i = np.logical_not(np.isnan(depth))
     fig.add_trace(
         {
-            "y": depth,
-            "x": depth_time,
-            "meta": depth * zscl,
+            "y": depth[valid_i],
+            "x": depth_time[valid_i],
+            "meta": (depth * zscl)[valid_i],
             "name": f"Depth ({zscl:.0f}m)",
             "type": "scatter",
             "xaxis": "x1",
@@ -326,11 +327,12 @@ def plot_diveplot(
     )
 
     if aux_depth_name:
+        valid_i = np.logical_not(np.isnan(aux_depth))
         fig.add_trace(
             {
-                "y": aux_depth,
-                "x": aux_time,
-                "meta": aux_depth * zscl,
+                "y": aux_depth[valid_i],
+                "x": aux_time[valid_i],
+                "meta": (aux_depth * zscl)[valid_i],
                 "name": f"{aux_depth_name} Depth ({zscl:.0f}m)",
                 "type": "scatter",
                 "xaxis": "x1",
@@ -346,11 +348,12 @@ def plot_diveplot(
         )
 
     if ctd_depth is not None:
+        valid_i = np.logical_not(np.isnan(ctd_depth))
         fig.add_trace(
             {
-                "y": ctd_depth,
-                "x": ctd_time,
-                "meta": ctd_depth * zscl,
+                "y": ctd_depth[valid_i],
+                "x": ctd_time[valid_i],
+                "meta": (ctd_depth * zscl)[valid_i],
                 "name": f"Legato Depth ({zscl:.0f}m)",
                 "type": "scatter",
                 "xaxis": "x1",
@@ -366,10 +369,11 @@ def plot_diveplot(
     # End Depth traces
 
     # Vehicle attitude from compass and pressure
+    valid_i = np.logical_not(np.isnan(dz_dt))
     fig.add_trace(
         {
-            "y": dz_dt,
-            "x": depth_time,
+            "y": dz_dt[valid_i],
+            "x": depth_time[valid_i],
             # "legendgroup": "attitude",
             "name": "Vert Speed dz/dt (cm/s)",
             "type": "scatter",
@@ -381,10 +385,11 @@ def plot_diveplot(
         }
     )
 
+    valid_i = np.logical_not(np.isnan(eng_pitch_ang))
     fig.add_trace(
         {
-            "y": eng_pitch_ang,
-            "x": eng_time,
+            "y": eng_pitch_ang[valid_i],
+            "x": eng_time[valid_i],
             # "legendgroup": "attitude",
             "name": "Pitch Up (deg)",
             "type": "scatter",
@@ -411,10 +416,11 @@ def plot_diveplot(
         }
     )
 
+    valid_i = np.logical_not(np.isnan(eng_pitch_pos))
     fig.add_trace(
         {
-            "y": eng_pitch_pos,
-            "x": eng_pitch_time,
+            "y": eng_pitch_pos[valid_i],
+            "x": eng_pitch_time[valid_i],
             # "legendgroup": "motorpositions",
             "name": "Pitch pos (mm)",
             "type": "scatter",
@@ -426,11 +432,11 @@ def plot_diveplot(
             "hovertemplate": "Pitch pos<br>%{y:.2f} mm<br>%{x:.2f} mins<br><extra></extra>",
         }
     )
-
+    valid_i = np.logical_not(np.isnan(eng_roll_ang))
     fig.add_trace(
         {
-            "y": eng_roll_ang,
-            "x": eng_time,
+            "y": eng_roll_ang[valid_i],
+            "x": eng_time[valid_i],
             # "legendgroup": "attitude",
             "name": "Vehicle Roll (deg)",
             "type": "scatter",
@@ -461,10 +467,11 @@ def plot_diveplot(
 
     # Glide Slope Model Output
     if vert_speed_gsm is not None:
+        valid_i = np.logical_not(np.isnan(vert_speed_gsm))
         fig.add_trace(
             {
-                "y": vert_speed_gsm,
-                "x": ctd_time,
+                "y": vert_speed_gsm[valid_i],
+                "x": ctd_time[valid_i],
                 # "legendgroup": "GSM",
                 "name": "Vert Speed GSM (cm/s)",
                 "visible": "legendonly",
@@ -478,10 +485,11 @@ def plot_diveplot(
         )
 
     if horz_speed_gsm is not None:
+        valid_i = np.logical_not(np.isnan(horz_speed_gsm))
         fig.add_trace(
             {
-                "y": horz_speed_gsm,
-                "x": ctd_time,
+                "y": horz_speed_gsm[valid_i],
+                "x": ctd_time[valid_i],
                 # "legendgroup": "GSM",
                 "name": "Horiz Speed GSM (cm/s)",
                 "type": "scatter",
@@ -494,10 +502,11 @@ def plot_diveplot(
         )
 
     if glide_angle_gsm is not None:
+        valid_i = np.logical_not(np.isnan(glide_angle_gsm))
         fig.add_trace(
             {
-                "y": glide_angle_gsm,
-                "x": ctd_time,
+                "y": glide_angle_gsm[valid_i],
+                "x": ctd_time[valid_i],
                 # "legendgroup": "GSM",
                 "name": "Glide Angle GSM (deg)",
                 "visible": "legendonly",
@@ -513,10 +522,11 @@ def plot_diveplot(
 
     # Hydro Model Output
     if vert_speed_hdm is not None:
+        valid_i = np.logical_not(np.isnan(vert_speed_hdm))
         fig.add_trace(
             {
-                "y": vert_speed_hdm,
-                "x": ctd_time,
+                "y": vert_speed_hdm[valid_i],
+                "x": ctd_time[valid_i],
                 # "legendgroup": "HDM",
                 "name": "Vert Speed HDM (cm/s)",
                 "type": "scatter",
@@ -529,10 +539,11 @@ def plot_diveplot(
         )
 
     if horz_speed_hdm is not None:
+        valid_i = np.logical_not(np.isnan(horz_speed_hdm))
         fig.add_trace(
             {
-                "y": horz_speed_hdm,
-                "x": ctd_time,
+                "y": horz_speed_hdm[valid_i],
+                "x": ctd_time[valid_i],
                 # "legendgroup": "HDM",
                 "name": "Horiz Speed HDM (cm/s)",
                 "type": "scatter",
@@ -545,10 +556,11 @@ def plot_diveplot(
         )
 
     if glide_angle is not None:
+        valid_i = np.logical_not(np.isnan(glide_angle))
         fig.add_trace(
             {
-                "y": glide_angle,
-                "x": ctd_time,
+                "y": glide_angle[valid_i],
+                "x": ctd_time[valid_i],
                 # "legendgroup": "HDM",
                 "name": "Glide Angle HDM (deg)",
                 "type": "scatter",
@@ -561,11 +573,12 @@ def plot_diveplot(
         )
 
     if buoy is not None:
+        valid_i = np.logical_not(np.isnan(buoy))
         fig.add_trace(
             {
-                "y": buoy,
-                "x": ctd_time,
-                "meta": buoy * 10.0,
+                "y": buoy[valid_i],
+                "x": ctd_time[valid_i],
+                "meta": buoy[valid_i] * 10.0,
                 # "legendgroup": "HDM",
                 "name": "Buoyancy HDM (10 g)",
                 "type": "scatter",
@@ -578,11 +591,12 @@ def plot_diveplot(
         )
 
     if buoy_veh is not None:
+        valid_i = np.logical_not(np.isnan(buoy_veh))
         fig.add_trace(
             {
-                "y": buoy_veh,
-                "x": eng_vbd_time,
-                "meta": buoy_veh * 10.0,
+                "y": buoy_veh[valid_i],
+                "x": eng_vbd_time[valid_i],
+                "meta": buoy_veh[valid_i] * 10.0,
                 # "legendgroup": "HDM",
                 "name": "Buoyancy (veh) (10 g)",
                 "type": "scatter",
@@ -594,11 +608,12 @@ def plot_diveplot(
             }
         )
 
+    valid_i = np.logical_not(np.isnan(eng_vbd_pos))
     fig.add_trace(
         {
-            "y": eng_vbd_pos,
-            "x": eng_vbd_time,
-            "meta": eng_vbd_pos * 10,
+            "y": eng_vbd_pos[valid_i],
+            "x": eng_vbd_time[valid_i],
+            "meta": eng_vbd_pos[valid_i] * 10,
             # "legendgroup": "motorpositions",
             "name": "VBD pos (10 cc)",
             "type": "scatter",
