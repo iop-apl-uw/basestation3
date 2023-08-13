@@ -63,6 +63,7 @@ import zmq.asyncio
 import Utils
 import secrets
 import ExtractTimeseries
+import socket
 # import furl
 
 PERM_INVALID = -1
@@ -472,6 +473,30 @@ def attachHandlers(app: sanic.Sanic):
         # return await sanic.response.file(filename, mime_type='text/html')
         return { "weathermapAppID": request.app.config.WEATHERMAP_APPID }
 
+    @app.route('/map')
+    @app.ext.template("map.html")
+    async def mapBareHandler(request):
+        return { "weathermapAppID": request.app.config.WEATHERMAP_APPID }
+
+    @app.route('/mapdata')
+    async def mapdataBareHandler(request):
+        message = {}
+
+        if len(request.app.ctx.routes):
+            message['routes'] = request.app.ctx.routes;
+
+        a_dicts = []
+        for a in request.app.ctx.assets.keys():
+            d = request.app.ctx.assets[a]
+            d.update( { 'asset': a } )
+            a_dicts.append(d)
+
+        if len(a_dicts):
+            message['assets'] = a_dicts
+
+        return sanic.response.json(message)
+
+
     @app.route('/mapdata/<glider:int>')
     # description: get map configation (also, sa, kml from missions.yml)
     # parameters: mission
@@ -499,16 +524,19 @@ def attachHandlers(app: sanic.Sanic):
                         else:
                             a.pop('asset')     
 
-            if 'assets' in mission:
-                a_dicts = []
-                for a in mission['assets']:
-                    if a in request.app.ctx.assets.keys():       
-                        d = request.app.ctx.assets[a]
-                        d.update( { 'name': a } )
-                        a_dicts.append(d)
+            if len(request.app.ctx.routes):
+                message['routes'] = request.app.ctx.routes;
 
-                if len(a_dicts):
-                    message['assets'] = a_dicts
+            #if 'assets' in mission:
+            #    a_dicts = []
+            #    for a in mission['assets']:
+            #        if a in request.app.ctx.assets.keys():       
+            #            d = request.app.ctx.assets[a]
+            #            d.update( { 'name': a } )
+            #            a_dicts.append(d)
+            #
+            #    if len(a_dicts):
+            #        message['assets'] = a_dicts
 
             return sanic.response.json(message)
 
@@ -558,10 +586,13 @@ def attachHandlers(app: sanic.Sanic):
             return await sanic.response.file(fullname, filename=filename, mime_type='application/vnd.google-earth.kmz')
         else:
             filename = f'{gliderPath(glider,request)}/sg{glider:03d}.kmz'
-            async with aiofiles.open(filename, 'rb') as file:
-                zip = ZipFile(BytesIO(await file.read()))
-                kml = zip.open(f'sg{glider}.kml', 'r').read()
-                return sanic.response.raw(kml)
+            try:
+                async with aiofiles.open(filename, 'rb') as file:
+                    zip = ZipFile(BytesIO(await file.read()))
+                    kml = zip.open(f'sg{glider}.kml', 'r').read()
+                    return sanic.response.raw(kml)
+            except:
+                return sanic.response.text('no file')
 
     # Not currently linked on a public facing page, but available.
     # Protect at the mission level (which protects that mission at 
@@ -1306,7 +1337,7 @@ def attachHandlers(app: sanic.Sanic):
         status = request.args['status'][0] if 'status' in request.args else None
         gpsstr = request.args['gpsstr'][0] if 'gpsstr' in request.args else None
 
-        mission = m['mission'] if m['mission'] else ""
+        mission = activeMission(glider, request)
 
         if status:
             content = f"status={status}"
@@ -1334,16 +1365,16 @@ def attachHandlers(app: sanic.Sanic):
 
         # consider whether this should go to all instances (Utils.notifyVisAsync)
         try:
-            socket = zmq.asyncio.Context().socket(zmq.PUSH)
-            socket.connect(request.app.config.NOTIFY_IPC)
-            socket.setsockopt(zmq.SNDTIMEO, 200)
-            socket.setsockopt(zmq.LINGER, 0)
+            zsock = zmq.asyncio.Context().socket(zmq.PUSH)
+            zsock.connect(request.app.config.NOTIFY_IPC)
+            zsock.setsockopt(zmq.SNDTIMEO, 200)
+            zsock.setsockopt(zmq.LINGER, 0)
             # these two log lines are critical - the socket send
             # does not go out without them ....  ¯\_(ツ)_/¯
             sanic.log.logger.info(f"sending {glider:03d}-urls-{topic}")
             sanic.log.logger.info(f"msg={msg}")
-            await socket.send_multipart([(f"{glider:03d}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
-            socket.close()
+            await zsock.send_multipart([(f"{glider:03d}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
+            zsock.close()
         except:
             return sanic.response.text('error')
      
@@ -1543,10 +1574,10 @@ def attachHandlers(app: sanic.Sanic):
     # parameters: mission
     @authorized()
     async def posStreamHandler(request: sanic.Request, ws: sanic.Websocket, glider:int):
-        socket = zmq.asyncio.Context().socket(zmq.SUB)
-        socket.setsockopt(zmq.LINGER, 0)
-        socket.connect(request.app.config.WATCH_IPC)
-        socket.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-urls-gpsstr").encode('utf-8'))
+        zsock = zmq.asyncio.Context().socket(zmq.SUB)
+        zsock.setsockopt(zmq.LINGER, 0)
+        zsock.connect(request.app.config.WATCH_IPC)
+        zsock.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-urls-gpsstr").encode('utf-8'))
 
         # we get the first fix out of the db so the user gets the latest 
         # position if we're between calls
@@ -1561,14 +1592,14 @@ def attachHandlers(app: sanic.Sanic):
         # much later
         while True:
             try:
-                msg = await socket.recv_multipart()
+                msg = await zsock.recv_multipart()
                 # sanic.log.logger.info(f"got msg={msg[1]}")
                 await ws.send(msg[1].decode('utf-8'))
                 # sanic.log.logger.info("ws sent")
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
                 sanic.log.logger.info(f'posStream ws connection closed {e}')
                 await ws.close()
-                socket.close()
+                zsock.close()
                 return
  
     @app.websocket('/stream/<which:str>/<glider:int>')
@@ -1629,17 +1660,17 @@ def attachHandlers(app: sanic.Sanic):
                     if rows:
                         await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
-        socket = zmq.asyncio.Context().socket(zmq.SUB)
-        socket.setsockopt(zmq.LINGER, 0)
-        socket.connect(request.app.config.WATCH_IPC)
-        socket.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-").encode('utf-8'))
+        zsock = zmq.asyncio.Context().socket(zmq.SUB)
+        zsock.setsockopt(zmq.LINGER, 0)
+        zsock.connect(request.app.config.WATCH_IPC)
+        zsock.setsockopt(zmq.SUBSCRIBE, (f"{glider:03d}-").encode('utf-8'))
         sanic.log.logger.info(f"subscribing to {glider:03d}-")
 
         
         prev = ""
         while True:
             try:
-                msg = await socket.recv_multipart()
+                msg = await zsock.recv_multipart()
                 topic = msg[0].decode('utf-8')
                 body  = msg[1].decode('utf-8')
                 sanic.log.logger.info(f"topic {topic}")
@@ -1696,8 +1727,52 @@ def attachHandlers(app: sanic.Sanic):
                     await conn.close()
 
                 await ws.close()
-                socket.close()
+                zsock.close()
                 return
+
+    
+    @app.websocket('/map/stream')
+    async def mapStreamHandler(request: sanic.Request, ws: sanic.Websocket):
+        zsock = zmq.asyncio.Context().socket(zmq.SUB)
+        zsock.setsockopt(zmq.LINGER, 0)
+        zsock.connect(request.app.config.WATCH_IPC)
+        zsock.setsockopt(zmq.SUBSCRIBE, b'')
+        while True:
+            try:
+                msg = await zsock.recv_multipart()
+                topic = msg[0].decode('utf-8')
+                body  = msg[1].decode('utf-8')
+                if '-ship-' in topic: 
+                    await ws.send(body)
+                elif '-urls-gpsstr' in topic or '-files' in topic:  
+                    out = loads(body)
+                    if not 'mission' in msg:
+                        out.update( { 'mission': activeMission(msg['glider'], request) } )
+
+                    await ws.send(f"{dumps(out).decode('utf-8')}")
+
+            except BaseException as e: # websockets.exceptions.ConnectionClosed:
+                sanic.log.logger.info(f'watch ws connection closed {e}')
+                zsock.close()
+                await ws.close()
+                return
+
+    @app.route('/tile/<path:str>/<z:int>/<x:int>/<y:int>')
+    # description: download map tile
+    async def tileHandler(request, path:str, z:int, x:int, y:int):
+        path = f'{sys.path[0]}/tiles/{path}/{z}/{x}/{y}.png'
+        if await aiofiles.os.path.exists(path):
+            return await sanic.response.file(path, mime_type='image/png')
+        else:
+            return sanic.response.text('not found', status=404)
+
+    @app.route('/tile/asset/<path:str>/<z:int>/<x:int>/<y:int>')
+    async def tileSetHandler(request, path:str, z:int, x:int, y:int):
+        path = f'{sys.path[0]}/tiles/assets/{path}/{z}/{x}/{y}.png'
+        if await aiofiles.os.path.exists(path):
+            return await sanic.response.file(path, mime_type='image/png')
+        else:
+            return sanic.response.text('not found', status=404)
 
 
     # not protected by decorator - buildAuthTable only returns authorized missions
@@ -1713,15 +1788,15 @@ def attachHandlers(app: sanic.Sanic):
         opTable = await buildAuthTable(request, None)
         await ws.send(f"START") # send something to ack the connection opened
 
-        socket = zmq.asyncio.Context().socket(zmq.SUB)
-        socket.setsockopt(zmq.LINGER, 0)
-        socket.connect(request.app.config.WATCH_IPC)
-        socket.setsockopt(zmq.SUBSCRIBE, b'')
+        zsock = zmq.asyncio.Context().socket(zmq.SUB)
+        zsock.setsockopt(zmq.LINGER, 0)
+        zsock.connect(request.app.config.WATCH_IPC)
+        zsock.setsockopt(zmq.SUBSCRIBE, b'')
         sanic.log.logger.info('context opened')
 
         while True:
             try:
-                msg = await socket.recv_multipart()
+                msg = await zsock.recv_multipart()
                 topic = msg[0].decode('utf-8')
                 body  = msg[1].decode('utf-8')
 
@@ -1778,7 +1853,7 @@ def attachHandlers(app: sanic.Sanic):
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
                 sanic.log.logger.info(f'watch ws connection closed {e}')
                 await ws.close()
-                socket.close()
+                zsock.close()
                 return
 
     @app.listener("after_server_start")
@@ -1899,6 +1974,8 @@ async def buildMissionTable(app, config=None):
         x['publicdefaults'] = {}
     if 'assets' not in x:
         x['assets'] = {}
+    if 'routes' not in x:
+        x['routes'] = []
 
     orgDictKeys = ["orgname", "orglink", "text", "contact", "email"]
     for ok in orgDictKeys:
@@ -1999,6 +2076,7 @@ async def buildMissionTable(app, config=None):
         app.ctx.endpoints = x['endpoints']
         app.ctx.controls = x['controls']
         app.ctx.assets = x['assets']
+        app.ctx.routes = x['routes']
 
     return missions
  
@@ -2069,14 +2147,14 @@ async def checkFilesystemChanges(files):
     return mods
 
 async def configWatcher(app):
-    socket = zmq.asyncio.Context().socket(zmq.SUB)
-    socket.setsockopt(zmq.LINGER, 0)
-    socket.connect(app.config.WATCH_IPC)
+    zsock = zmq.asyncio.Context().socket(zmq.SUB)
+    zsock.setsockopt(zmq.LINGER, 0)
+    zsock.connect(app.config.WATCH_IPC)
     sanic.log.logger.info('opened context for configWatcher')
-    socket.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
+    zsock.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
     while True:
         try:
-            msg = await socket.recv_multipart()
+            msg = await zsock.recv_multipart()
             sanic.log.logger.info(msg[1])
             topic = msg[0].decode('utf-8')
             if app.config['MISSIONS_FILE'] in topic:
@@ -2085,7 +2163,7 @@ async def configWatcher(app):
                 await buildUserTable(app)
 
         except BaseException as e: # websockets.exceptions.ConnectionClosed:
-            socket.close()
+            zsock.close()
             return
 
         # app.m.name.restart() 
@@ -2113,10 +2191,10 @@ async def buildFilesWatchList(config):
 async def notifier(config):
     msk = os.umask(0o000)
     ctx = zmq.asyncio.Context()
-    socket = ctx.socket(zmq.PUB)
-    socket.bind(config.WATCH_IPC)
-    socket.setsockopt(zmq.SNDTIMEO, 1000)
-    socket.setsockopt(zmq.LINGER, 0)
+    zsock = ctx.socket(zmq.PUB)
+    zsock.bind(config.WATCH_IPC)
+    zsock.setsockopt(zmq.SNDTIMEO, 1000)
+    zsock.setsockopt(zmq.LINGER, 0)
 
     configWatchSocket = ctx.socket(zmq.SUB)
     configWatchSocket.setsockopt(zmq.LINGER, 0)
@@ -2129,8 +2207,16 @@ async def notifier(config):
 
     files = await buildFilesWatchList(config)
 
+    if config.SHIP_UDP is not None:
+        udpSock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        udpSock.setblocking(0)
+        udpSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
+        udpSock.bind(('', 40181))
+    else:
+        udpSock = None
+
     while True:
-        stat = await inbound.poll(2000)
+        stat = await inbound.poll(200)
         if stat:
             r = await inbound.recv_multipart()
             d = loads(r[1])
@@ -2139,7 +2225,7 @@ async def notifier(config):
 
             r[1] = dumps(d)
             sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
-            await socket.send_multipart(r)
+            await zsock.send_multipart(r)
 
         stat = await configWatchSocket.poll(200)
         if stat:
@@ -2153,8 +2239,42 @@ async def notifier(config):
         for f in mods:
             msg = [(f"{f['glider']:03d}-file-{f['file']}").encode('utf-8'), dumps(f)]
             sanic.log.logger.info(f"{f['glider']:03d}-file-{f['file']}")
-            await socket.send_multipart(msg)
+            await zsock.send_multipart(msg)
 
+        if udpSock:
+            try:
+                data = udpSock.recvfrom(1024)
+                sanic.log.logger.info(data)
+                if data:
+                    sentences = data[0].decode()
+                    msg = { 'ship': 'shipname', 'time': time.time() }
+                    for line in sentences.splitlines():
+                        if 'GGA' in line:
+                            pieces = line.split(',')
+                            msg['hhmmss'] = float(pieces[1])
+                            msg['lat'] = float(pieces[2])
+                            msg['lon'] = float(pieces[4])
+                            if (pieces[3] == 'S'):
+                                msg['lat'] = -msg['lat']
+                            if (pieces[5] == 'W'):
+                                msg['lon'] = -msg['lon']
+
+                        elif 'HDT' in line:
+                            pieces = line.split(',')
+                            msg['hdt'] = float(pieces[1])
+                        elif 'VTG' in line:
+                            pieces = line.split(',')
+                            msg['cog'] = float(pieces[1])
+                            msg['sog'] = float(pieces[5])
+                        elif 'ZDA' in line:
+                            pieces = line.split(',')
+                            msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
+
+                    await zsock.send_multipart(["000-ship-shipname".encode('utf-8'), dumps(msg)])
+            except:
+                pass
+
+                
 def backgroundWatcher(config):
     loop = asyncio.get_event_loop()
     loop.create_task(notifier(config))
@@ -2198,6 +2318,9 @@ def createApp(overrides: dict) -> sanic.Sanic:
         app.config.SINGLE_MISSION = None
     if 'WEATHERMAP_APPID' not in app.config:
         app.config.WEATHERMAP_APPID = ''
+    if 'SHIP_UDP' not in app.config:
+        print('default UDP None')
+        app.config.SHIP_UDP = None;
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
@@ -2240,7 +2363,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:sih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector", "help", "nosave", "nochat"])
+        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:sih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector", "help", "nosave", "nochat", "ship="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -2258,6 +2381,9 @@ if __name__ == '__main__':
             overrides['MISSIONS_FILE'] = a
         elif o in ['-u', '--usersfile']:
             overrides['USERS_FILE'] = a
+        elif o in ['--ship']:
+            overrides['SHIP_UDP'] = a
+            print(f'UDP {a}')
         elif o in ['--nosave']:
             noSave = True
         elif o in ['--nochat']:
