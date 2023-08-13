@@ -195,8 +195,10 @@ def extractVars(nc_filename, varNames, dive1, diveN, nci=None):
             log_error(f"Unable to open {nc_filename}")
             return None
 
-    t0 = nci.variables['start_time'][dive1-1]
-    t2 = nci.variables['end_time'][diveN-1]
+    d1 = numpy.where(nci.variables['dive_number'][:] == dive1)[0]
+    dN = numpy.where(nci.variables['dive_number'][:] == diveN)[0]
+    t0 = nci.variables['start_time'][d1]
+    t2 = nci.variables['end_time'][dN]
     base_t = None
     base_t_len = 0
     base_p = None

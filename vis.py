@@ -64,6 +64,7 @@ import Utils
 import secrets
 import ExtractTimeseries
 import socket
+import rafos
 # import furl
 
 PERM_INVALID = -1
@@ -973,6 +974,14 @@ def attachHandlers(app: sanic.Sanic):
             message['contents']= await file.read() 
 
         return sanic.response.json(message)
+
+    @app.route('/rafos/<glider:int>')
+    @authorized()
+    async def rafosHandler(request, glider:int):
+        path = gliderPath(glider, request)
+        hits  = await rafos.hitsTable(path)
+        out = ExtractTimeseries.dumps(hits) # need custom serializer for the numpy array
+        return sanic.response.raw(out, headers={ 'Content-type': 'application/json' })
 
     @app.route('/db/<glider:int>/<dive:int>')
     # description: query database for common engineering variables
