@@ -301,7 +301,7 @@ L.Util.extend(L.KML, {
     }
 
     if (name) {
-      layer.bindPopup('<h2>' + name + '</h2>' + descr, { className: 'kml-popup', minWidth: 400 });
+        layer.bindPopup('<h2>' + name + '</h2>' + descr, { className: 'kml-popup', minWidth: 400 });
     }
   },
 

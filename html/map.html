@@ -1,5 +1,7 @@
 <html>
     <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
         <link rel="stylesheet" href="../script/leaflet.css" />
         <link rel="stylesheet" href="../script/leaflet-ruler.css" />
 <!--
@@ -16,6 +18,8 @@
 -->
         <script src="../proxy/https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src/leaflet-reticle.js"></script>
         <script src="../script/leaflet-svg-shape-markers.min.js"></script>
+        <script src="../script/websocket.js"></script>
+        <script src="../script/util.js"></script>
 
         <style>
             .leaflet-toggle{
@@ -47,10 +51,34 @@
                 border: none;
                 box-shadow: none;
             }
+            #info {
+                font-family: 'Quattrocento Sans', sans-serif;
+                position: absolute;
+                font-size: 16px;
+                top: 120px;
+                right: 10px;
+                background-color: rgba(200,200,200,0.5);
+                padding: 4px;
+                display: none;
+                z-index: 700;
+            }
+
         </style>
     </head>
     <body onunload="saveBounds();">
         <div style="width: 100vw; height: 100vh" id="map"></div>
+
+        <div id="info">
+            <div id="basicInfo">
+            </div>
+            <hr>
+            <div id="rangeInfo">
+            </div>
+            <hr>
+            <div id="routeInfo">
+            </div>
+        </div>
+
         <script type="text/javascript">
             function reckon(pt, range, az) 
             {
@@ -78,6 +106,15 @@
                 return dd*100.0 + (x - dd)*60.0;
             }
 
+            function ddmm2dd(x)
+            {
+                var dd = Math.trunc(x/100);
+                var mm = x - dd*100;
+                return dd + mm/60.0;
+            }
+
+            var needLocationSetup = 0;
+
             function formatPos(dd) {
                 var deg = Math.trunc(dd);
                 var min = Math.abs(dd - deg)*60;
@@ -96,6 +133,7 @@
                       
                 return str.replace(re, '');
             }
+
             async function fetchWeather(latlng, popup, map) {
                 var url1 = "https://marine-api.open-meteo.com/v1/marine?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=wave_height";
                 var url2 = "https://api.open-meteo.com/v1/forecast?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=windspeed_10m,pressure_msl,precipitation,visibility";
@@ -142,6 +180,24 @@
                 popup.setLatLng(latlng)
                      .setContent(txt)
                      .openOn(map);
+            }
+
+            function ttgString(ttg) {
+                var str;
+
+                if (ttg < 24) {
+                    var hrs = Math.floor(ttg);
+                    var min = (ttg - hrs)*60;
+                    str = '' + hrs + 'h' + Math.floor(min) + 'm';
+                }
+                else {
+                    var days = Math.floor(ttg/24);
+                    var hrs = Math.floor(ttg - days*24);
+                    var min = (ttg - days*24 - hrs)*60;
+                    str = '' + days + 'd' + hrs + 'h' + Math.floor(min) + 'm';
+                } 
+
+                return str;
             }
 
             async function loadSA(map, layerControl, urls, labels) {
@@ -191,29 +247,405 @@
                     newLayer.addTo(map);
                 }
             }
-           
+
+            var activeRoute    = null;
+            var activeMarkIdx  = -1;
+            var activeRouteIdx = -1;
+            var activeMk       = null;
+            var markerClicked  = false;
+            var activeAsset    = null;
+            var activeAssetOriginalColor = null;
+            var activeAssetOriginalRadius = 5;
+            var activeGlider   = null;
+            var prev_shipLaLo  = null;
+            var gliderMarkers  = Object.create(null);
+            var usingLocation  = false;
+            var shipMarker = null;
+
+            function setupLocation() {
+                document.getElementById('basicInfo').innerHTML = 'Pos:';
+                // document.getElementById('basicInfo').removeEventHandler('click', setupLocation);
+
+                shipMarker = L.shapeMarker([0, 0], 
+                                           {
+                                                shape: 'arrowhead',
+                                                radius: 8,
+                                                color: 'black',
+                                                rotation: 0
+                                           });
+                shipMarker.addTo(map);
+                document.getElementById('info').style.display = 'block';
+
+                usingLocation = true;
+
+                const locID = navigator.geolocation.watchPosition(
+                    (position) => {
+                        shipMarker.setLatLng([position.coords.latitude, position.coords.longitude]);
+        
+                        const shipLaLo = shipMarker.getLatLng();
+
+                        var cog;
+                        if ('heading' in position.coords && position.coords.heading && !Number.isNaN(position.coords.heading)) {
+                            cog = position.coords.heading;
+                        }
+                        else if (prev_shipLaLo != null) {
+                            cog = bearing({lat: prev_shipLaLo['lat'], lon: prev_shipLaLo['lng']},  
+                                          {lat: shipLaLo['lat'], lon: shipLaLo['lng']});
+                        }
+                        else {
+                            cog = 0;
+                        }
+
+                        shipMarker.setRotation(cog);
+
+                        prev_shipLaLo = {...shipLaLo};
+
+                        html = [
+                          'Pos: ' + formatPos(shipLaLo['lat']) + ',' + formatPos(shipLaLo['lng']), 
+                          'COG: ' + cog.toFixed(1) + '&deg;',
+                          'SOG: ' + (position.coords.speed/0.514).toFixed(2) + ' kts',
+                        ].join('<br />');
+                        document.getElementById('basicInfo').innerHTML = html;
+
+                        if (activeGlider != null) {
+                            const lalo = activeGlider.getLatLng();
+
+                            var dist = haversine({lat: shipLaLo['lat'], lon: shipLaLo['lng']}, {lat: lalo['lat'], lon: lalo['lng']});
+                            var brng = bearing({lat: shipLaLo['lat'], lon: shipLaLo['lng']}, {lat: lalo['lat'], lon: lalo['lng']});
+                            var html;
+
+                            if (dist < 5000)
+                                html = 'Rng: ' + dist.toFixed(0) + ' m';
+                            else if (dist < 10000)
+                                html = 'Rng: ' + (dist/1852).toFixed(2) + ' nm';
+                            else if (dist < 50000)
+                                html = 'Rng: ' + (dist/1852).toFixed(1) + ' nm';
+                            else
+                                html = 'Rng: ' + (dist/1852).toFixed(0) + ' nm';
+
+                            html = html + '&nbsp;&nbsp; Brg: ' + brng.toFixed(1) + '&deg;' ;
+
+                            html = html + '<br />';
+                            html = html + 'Pos: ' + formatPos(lalo['lat']) + ',' + formatPos(lalo['lng']);
+                            document.getElementById('rangeInfo').innerHTML = html;
+                        }
+                    }, 
+                    () => { 
+                        console.log('no position'); 
+                    },
+                    { 
+                        enableHighAccuracy: true,
+                        maximumAge: 15000,
+                        timeout: 12000,
+                    }
+                );
+            }
+
+ 
+            function setupStream() {
+                var loc = window.location, new_uri;
+                if (loc.protocol === "https:")
+                    new_uri = "wss:";
+                else
+                    new_uri = "ws:";
+
+                new_uri += "//" + loc.host + '/map/stream';
+
+                var wsocket = new ReconnectingWebSocket(new_uri);
+                wsocket.timeoutInterval = 10000;
+                wsocket.debug = true;
+
+                console.log('setting up stream');
+
+                wsocket.onmessage = function(e) {
+                    var msg = JSON.parse(e.data);
+                    if ('ship' in msg && !usingLocation) {
+                        var la = ddmm2dd(msg['lat']);
+                        var lo = ddmm2dd(msg['lon']);
+                        var html;
+
+                        if (shipMarker == null)
+                            return;
+
+                        shipMarker.setLatLng([la, lo]);
+                        shipMarker.setRotation(msg['hdt']);
+
+                        html = [
+                          'Pos: ' + formatPos(la) + ',' + formatPos(lo), 
+                          'COG: ' + msg['cog'].toFixed(1) + '&deg;' + '&nbsp;&nbsp;HDT: ' + msg['hdt'].toFixed(1) + '&deg;',
+                          'SOG: ' + msg['sog'].toFixed(2) + ' kts',
+                        ].join('<br />');
+                        document.getElementById('basicInfo').innerHTML = html;
+
+                        if (activeRoute != null || activeAsset != null || activeGlider != null) {
+                            const date = new Date();
+                            var offset = date.getTimezoneOffset()*60000;
+                            var routeDistToMark;
+                            var mkLaLo;
+                            var wpTTG, wpETA;
+
+                            if (activeAsset != null || activeGlider != null) {
+                                if (activeAsset != null)
+                                    mkLaLo = activeAsset.getLatLng();
+                                else
+                                    mkLaLo = activeGlider.getLatLng();
+
+                                routeDistToMark = haversine({lat: la, lon: lo}, {lat: mkLaLo.lat, lon: mkLaLo.lng})/1852;
+                            }
+                            else if (activeRoute != null) {
+                                routeDistToMark = haversine({lat: la, lon: lo}, activeRoute[activeMarkIdx])/1852;
+                            }
+
+                            if (!isNaN(routeDistToMark))
+                                wpTTG = routeDistToMark / msg['sog']; 
+                            else
+                                wpTTG = 0;
+
+                            wpETA = new Date(Date.now() - offset + wpTTG*3600000);
+
+                            if (activeRoute != null) {
+                                var i;
+                                var routeDistToEnd = routeDistToMark;
+                                for (i = activeMarkIdx ; i < activeRoute.length - 1 ; i++)
+                                    routeDistToEnd += haversine(activeRoute[i], activeRoute[i+1])/1852;
+                            
+                                const routeTTG = (routeDistToEnd) / msg['sog'];
+                                routeETA       = new Date(Date.now() - offset + routeTTG*3600000);
+                                
+                                html = [
+                                    'DTM: ' + routeDistToMark.toFixed(1) + ' nm',
+                                    'TTM: ' + ttgString(wpTTG),
+                                    'ETA: ' + wpETA.toISOString().slice(0,16) + 'L',
+                                    'DTE: ' + routeDistToEnd.toFixed(1) + ' nm',
+                                    'TTE: ' + ttgString(routeTTG),
+                                    'ETA: ' + routeETA.toISOString().slice(0,16) + 'L',
+                                ].join('<br />');
+                            }
+                            else {
+                                html = [
+                                    'DTM: ' + routeDistToMark.toFixed(1) + ' nm',
+                                    'TTM: ' + ttgString(wpTTG),
+                                    'ETA: ' + wpETA.toISOString().slice(0,16) + 'L'
+                                ].join('<br />');
+                            }
+                            document.getElementById('routeInfo').innerHTML = html;
+                        }
+                    }
+                    else if ('connected' in msg) {
+                        // we don't actually have kml ready yet ...
+                        // loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ], -1, null, false);
+                        var key = msg['glider'] + '_' + msg['mission'];
+                        gliderMarkers[key].setLatLng([ msg['lat'], msg['lon'] ]);
+                                                                                                   // tail
+                    }
+                    else if ('content' in msg && msg['content'] == 'files=all' &&
+                             (msg['when'] == 'socket' || msg['when'] == 'sync') ) {
+
+                        loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ], -1, null, false);
+                    }
+
+                }
+            }
+
+            function setupShip(map, layerControl, shipName) {
+            
+                shipMarker = L.shapeMarker([0, 0], 
+                                           {
+                                                shape: 'arrowhead',
+                                                radius: 8,
+                                                color: 'black',
+                                                rotation: 0
+                                           });
+                // newLayer = L.layerGroup([ shipMarker ]);
+                // layerControl.addOverlay(newLayer, shipName);
+                // newLayer.addTo(map);
+                shipMarker.addTo(map);
+                document.getElementById('info').style.display = 'block';
+
+                map.on("click", function(e) {
+                    if (markerClicked) {
+                        markerClicked = false;
+                        return;
+                    }
+
+                    shipLaLo = shipMarker.getLatLng();
+                    lalo = e.latlng;         
+
+                    var dist = haversine({lat: shipLaLo['lat'], lon: shipLaLo['lng']}, {lat: lalo['lat'], lon: lalo['lng']});
+                    var brng = bearing(  {lat: shipLaLo['lat'], lon: shipLaLo['lng']}, {lat: lalo['lat'], lon: lalo['lng']});
+                    var html;
+
+                    if (dist < 5000)
+                        html = 'Rng: ' + dist.toFixed(0) + ' m';
+                    else if (dist < 10000)
+                        html = 'Rng: ' + (dist/1852).toFixed(2) + ' nm';
+                    else if (dist < 50000)
+                        html = 'Rng: ' + (dist/1852).toFixed(1) + ' nm';
+                    else
+                        html = 'Rng: ' + (dist/1852).toFixed(0) + ' nm';
+
+                    html = html + '&nbsp;&nbsp; Brg: ' + brng.toFixed(1) + '&deg;' ;
+
+                    html = html + '<br />';
+                    html = html + 'Pos: ' + formatPos(lalo['lat']) + ',' + formatPos(lalo['lng']);
+                    document.getElementById('rangeInfo').innerHTML = html;
+                });
+
+            }
+
+            function activateGlider(mk) {
+                if (mk.options.hasOwnProperty('id') && mk.options.id == "seagliderPositionHighlightState") {
+                    console.log('getting glider from kml icon ' + mk['key']);
+                    console.log(mk);
+                    mk = gliderMarkers[mk['key']];
+                    console.log('now');
+                    console.log(mk);
+                }
+                if (mk == activeGlider) {
+                    console.log('deactivating glider');
+                    activeGlider = null;
+                    document.getElementById('routeInfo').innerHTML = '';
+                    return;
+                }
+
+                console.log('activating glider');
+                activeGlider = mk;
+            }
+
+            function activateRoute(mk) {
+                console.log('activating route');
+                var route = mk['route'];
+                var i     = mk['routeIdx'];
+                var j     = mk['markIdx'];
+                if (i == activeRouteIdx && j == activeMarkIdx) {
+                    activeRoute    = null;
+                    activeMarkIdx  = -1;
+                    activeRouteIdx = -1;
+                    activeMk       = null;
+                    mk.setStyle({ color: "black", radius: 5 });
+                    document.getElementById('routeInfo').innerHTML = '';
+                    return;
+                }
+
+                if (activeMk != null) {
+                    activeMk.setStyle({ color: "black", radius: 5 });
+                }    
+                else if (activeAsset != null) {
+                    activeAsset.setStyle({ color: activeAssetOriginalColor, radius: activeAssetOriginalRadius });
+                    activeAsset = null;
+                }
+                else if (activeGlider != null) {
+                    activeGlider = null;
+                }
+
+                activeRouteIdx = i;
+                activeMarkIdx  = j; 
+                activeRoute    = route;
+                activeMk       = mk;
+                mk.setStyle({ color: "red", radius: 7 });
+            }
+    
+            function activateAsset(mk) {
+                console.log('activating asset');
+                if (mk == activeAsset) {
+                    activeAsset.setStyle({ color: activeAssetOriginalColor, radius: activeAssetOriginalRadius });
+                    activeAsset = null;
+                    document.getElementById('routeInfo').innerHTML = '';
+                    return;
+                }
+                if (activeMk != null) {
+                    activeMk.setStyle({ color: "black", radius: 5 });
+                    activeMk = null;
+                }    
+                else if (activeAsset != null) {
+                    activeAsset.setStyle({ color: activeAssetOriginalColor, radius: activeAssetOriginalRadius });
+                }
+                else if (activeGlider != null) {
+                    activeGlider = null;
+                }
+                activeRoute               = null;
+                activeAssetOriginalColor  = mk.options.color;
+                activeAssetOriginalRadius = mk.options.radius;
+                activeAsset               = mk;
+                mk.setStyle({ color: "red", radius: 7 });
+            }
+
+            function loadRoutes(map, layerControl, routes) {
+                var routeMarkers = [];
+                var mk;
+
+                for (var i = 0 ; i < routes.length ; i++) {
+                    for (var j = 0 ; j < routes[i].length ; j++) {
+                        mk = L.shapeMarker([ routes[i][j].lat, routes[i][j].lon ],              
+                                           {
+                                               shape: "square",
+                                               radius: 5,
+                                               color: "black"
+                                           });
+                        mk['routeIdx'] = i;
+                        mk['markIdx']  = j;
+                        mk['route']    = routes[i];
+
+                        mk.on('click', function(e) {
+                            markerClicked = true;
+                            activateRoute(this);
+                        });
+                        routeMarkers.push(mk);
+                    }
+                }
+
+                var newLayer = L.layerGroup(routeMarkers);
+                layerControl.addOverlay(newLayer, 'routes')
+                newLayer.addTo(map);
+            }
+ 
             function loadAssets(map, layerControl, assets) {
                 var assetMarkers = [];
+                var mk;
+                console.log(assets);
+
                 for (var i = 0 ; i < assets.length ; i++) {
                     a = assets[i];
                     var newLayer;
                     var html;
 
-                    html = [ a.asset, formatPos(a.lat) + "," + formatPos(a.lon)].join('<br/>');
-                    try {
-                        assetMarkers.push(L.shapeMarker([a.lat, a.lon],
-                                                        {
-                                                            shape: a.marker,
-                                                            radius: 5,
-                                                            color: a.color,
-                                                        }
-                                                       )
-                                                        .bindTooltip(a.asset, { permanent: true, className: 'assetLabel' })
-                                                        .bindPopup(html));
+                    if (a.type == 'fixed') {
+                        console.log('adding fixed ' + a.asset);
+                        html = [ a.asset, formatPos(a.lat) + "," + formatPos(a.lon)].join('<br/>');
+                        try {
+                            mk = L.shapeMarker([a.lat, a.lon],
+                                               {
+                                                  shape: a.marker,
+                                                  radius: 5,
+                                                  color: a.color,
+                                               }
+                                              ).bindTooltip(a.asset, { permanent: true, className: 'assetLabel' })
+                                               .bindPopup(html);
+                            assetMarkers.push(mk); 
+                            mk.on('click', function(e) {
+                                activateAsset(this); 
+                            });
+                        }
+                        catch(e) {
+                            console.log('assets ' + e);
+                        }
                     }
-                    catch(e) {
-                        console.log('assets ' + e);
+
+                    else if (a.type == 'polygon' && 'points' in a) {
+                        console.log('adding polygon ' + a.asset);
+                        var pts = [];
+                        for (var j = 0 ; j < a.points.length ; j++) {
+                            pts.push([a.points[j].lat, a.points[j].lon]);
+                        }
+                        assetMarkers.push(L.polygon(pts, { color: 'color' in a ? a.color : 'green', })
+                                           .bindTooltip(a.asset, { permanent: false, className: 'assetLabel' } ));
                     }
+                    else if (a.type == 'circle' && 'center' in a && 'radius' in a) {
+                        console.log('adding circle ' + a.asset);
+                        assetMarkers.push(L.circle([a.center.lat, a.center.lon], { radius: a.radius, color: 'color' in a ? a.color : 'green' })
+                                           .bindTooltip(a.asset, { permanent: false, className: 'assetLabel' } ));
+                    }
+
                 }
 
                 try {
@@ -224,6 +656,19 @@
                 catch(e) {
                     console.log('assets map ' + e);
                 }
+
+                for (var i = 0 ; i < assets.length ; i++) {
+                    a = assets[i];
+                    var newLayer;
+                    var html;
+
+                    if (a.type == 'tileset') {
+                        console.log('adding ' + a.asset);
+                        newLayer = L.tileLayer('../tile/asset/' + a.path + '/{z}/{x}/{y}', {tms: true, opacity: 0.7, attribution: "", minZoom: 3, maxZoom: 16});
+                        layerControl.addOverlay(newLayer, a.asset);
+                    }
+                }
+                
             }
 
             function loadAlso(map, layerControl, also, tail) {
@@ -231,16 +676,20 @@
                 var gliders = [];
                 var missions = [];
                 var assets = [];
+                console.log(also);
                 for (var i = 0 ; i < also.length ; i++)  {
                     if ('glider' in also[i]) {
                         gliders.push(also[i].glider);
                         missions.push(also[i].mission);
+                        loadGliderPosition(map, layerControl, also[i].glider, also[i].mission);
                     }
                     else if ('asset' in also[i]) {
                         assets.push(also[i]); 
                     } 
-
+                    
                 }
+
+                console.log(assets);
 
                 if (assets.length)
                     loadAssets(map, layerControl, assets);    
@@ -251,10 +700,15 @@
             function loadExtras(map, layerControl, glider, mission, tail) {
                 var url;
 
-                if (mission && mission != '')
-                   url = `../mapdata/${glider}?mission=${mission}`;
-                else
-                   url = `../mapdata/${glider}`;
+                if (glider !== null) {
+                    if (mission && mission != '')
+                       url = `../mapdata/${glider}?mission=${mission}`;
+                    else
+                       url = `../mapdata/${glider}`;
+                }
+                else {
+                    url = '../mapdata';
+                }
 
                 fetch(url)
                 .then(resp => resp.json()) 
@@ -275,8 +729,18 @@
 
                         loadSA(map, layerControl, d.sa, labels);
                     }
+                    // if glider is specified then also has a list of assets
+                    // and additional gliders
                     if ('also' in d && d.also) {
                         loadAlso(map, layerControl, d.also, tail);
+                    }
+                    // if glider is not specified then the response has a list of all assets 
+                    // in the yml file
+                    else if ('assets' in d && d.assets) {
+                        loadAssets(map, layerControl, d.assets);    
+                    }
+                    if ('routes' in d) {
+                        loadRoutes(map, layerControl, d.routes);
                     }
                 })
                 .catch(e => {
@@ -355,6 +819,42 @@
             }
                     
                             
+            async function loadGliderPosition(map, layerControl, glider, mission)  {
+                var url = '../pos/poll/' + glider;
+                if (mission && mission != '')
+                    url = url + '?mission=' + mission;
+                else
+                    mission = '';
+
+                var key = glider + '_' + mission;
+                console.log('key = ' + key);
+                fetch(url)
+                .then(resp => resp.json()) 
+                .then(d => {
+                    if (key in gliderMarkers) {
+                        gliderMarkers[key].setLatLng([ d['lat'], d['lon'] ]);
+                    }
+                    else {
+                        gliderMarkers[key] = L.shapeMarker([d.lat, d.lon],
+                                                           {
+                                                              shape: 'diamond',
+                                                              radius: 5,
+                                                              color: 'yellow',
+                                                              zIndexOffset: 100,
+                                                           }
+                                                          ).addTo(map);
+
+                        gliderMarkers[key].bringToFront();
+                        gliderMarkers[key]['key'] = key;
+                        gliderMarkers[key].on('click', function(e) {
+                            console.log('glider marker native click');
+                            markerClicked = true;
+                            activateGlider(this);
+                        });
+                        // gliderMarkers[key].bindPopup((p) => { markerClicked = true; activateGlider(p); return key });
+                    }
+                }); 
+            }
             async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, doCtr) {
                 var kml;
                 var parser;
@@ -382,10 +882,10 @@
                     kml = parser.parseFromString(kmltext, 'text/xml');
                     let ctr = null;
                     track = new L.KML(kml, {
-                                            iconOptions: {
-                                                iconSize: [16,16],
-                                            }
-                                        });
+                                                iconOptions: {
+                                                    iconSize: [16,16],
+                                                }
+                                           });
 
                     // delete any existing track (in case this is a reload of this glider/mission)
                     removeGliderKMLlayer(map, layerControl, gliders[i], missions[i]);
@@ -401,6 +901,12 @@
                     for (k of Object.keys(track._layers)) {
                         if (track._layers[k].options.hasOwnProperty('id') && track._layers[k].options.id == "seagliderPositionHighlightState") {
                             ctr = track._layers[k]._latlng;
+                            track._layers[k]['key'] = gliders[i] + '_' + missions[i];
+                            track._layers[k].on('click', function(e) {
+                                console.log('glider marker KML click');
+                                markerClicked = true;
+                                activateGlider(this);
+                            });
                         }
                         if (track._layers[k].options.hasOwnProperty('name') 
                             && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
@@ -433,7 +939,7 @@
 
                         }
 
-                        
+                            
                     }
 
                     // Adjust map to show the kml for the first glider
@@ -448,6 +954,13 @@
                             if (ctr) map.panTo(ctr);
                         }
                     }
+                }
+
+                console.log('keys');
+                console.log(Object.keys(gliderMarkers));
+                for (k of Object.keys(gliderMarkers))  {
+                    console.log('bringing ' + k + ' to front');
+                    gliderMarkers[k].bringToFront();
                 }
             }
 
@@ -493,7 +1006,13 @@
 
                 return false;
             }
-
+/*
+            var setupHandler = function(e) {
+                setupLocation(map, layerControl);
+                document.getElementById('basicInfo').innerHTML = 'Pos:');
+                document.getElementById('basicInfo').removeEventListener('click', setupHandler);
+            };
+*/
         </script>
 
         <script type="text/javascript">
@@ -545,7 +1064,8 @@
                 map.fitBounds(last);
 
             const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 1.0 });
-            const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
+            // const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
+            const noaa = new L.TileLayer('../tile/NOAA+Stamen/{z}/{x}/{y}');
 
 
             gebco = L.tileLayer.wms("https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?",
@@ -555,17 +1075,18 @@
                                         opacity: 0.4,
                                     });
                            
-            if (!checkLayerState("GEBCO", "off"))
+            if (checkLayerState("GEBCO", "on"))
                 map.addLayer(gebco); 
 
             console.log(Object.keys(localStorage));
             console.log(Object.keys(localStorage).includes("baseLayer"));
             console.log(localStorage.getItem('baseLayer'));
 
-            if (Object.keys(localStorage).includes('baseLayer') && localStorage.getItem('baseLayer') == "NOAA+Stamen")
-                map.addLayer(noaa);
-            else
+            // if (Object.keys(localStorage).includes('baseLayer') && localStorage.getItem('baseLayer') == "NOAA+Stamen")
+            if (Object.keys(localStorage).includes('baseLayer') && localStorage.getItem('baseLayer') == "OSM")
                 map.addLayer(osm);
+            else
+                map.addLayer(noaa);
             
             // AIS
             
@@ -575,14 +1096,14 @@
                                         tileSize: 512,
                                     });
 
-            if (!checkLayerState("AIS", "off")) {
-                map.addLayer(ais);
-                AISoff = false;
-            }
-            else
+            //if (!checkLayerState("AIS", "off")) {
+            //    map.addLayer(ais);
+            //    AISoff = false;
+            //}
+            //else
                 AISoff = true;
 
-            
+     
             var aisReload = params.has('ais') ? parseInt(params.get('ais')) : 10;
             if (aisReload > 0) {
                 if (aisReload < 10)
@@ -651,13 +1172,28 @@
             });          
 
             var popup = L.popup({ maxWidth:600, minWidth:400, className: 'weather-popup' });
-            map.on('click', function(evt) {
-                if (ruler._choice == false) {
-                    console.log(evt.latlng);
-                    fetchWeather(evt.latlng, popup, map);
-                }
-            });
+            //map.on('click', function(evt) {
+                //if (markerClicked) {
+                //    markerClicked = false;
+                //    return;
+                //}
 
+                //if (ruler._choice == false && evt.originalEvent.altKey) {
+                //    console.log(evt.latlng);
+                //    fetchWeather(evt.latlng, popup, map);
+                //}
+
+                //if (needLocationSetup == 1) {
+                //    console.log('setting up location');
+                //    setupLocation(map, layerControl);
+                //    needLocationSetup = 0;
+                //}
+            //});
+
+            map.on('contextmenu', function(evt) {
+                console.log(evt.latlng);
+                fetchWeather(evt.latlng, popup, map);
+            });
 
             // SSH
         
@@ -829,20 +1365,42 @@
 
             // var glider = window.location.pathname.split('/').at(-1)
             var path = window.location.pathname.split('/');
+            var glider = null;
             var first = path.indexOf('map') + 1;
-            var glider = path[first];
-
+            console.log(path);
+            console.log(path.length, first);
+            if (first <= path.length - 1) {
+                glider = path[first];
+            }
+        
             // var mission = params.has('mission') ? '?mission=' + params.get('mission') : '';
             var mission = params.has('mission') ? params.get('mission') : '';
             var tail = params.has('tail') ? parseInt(params.get('tail')) : -1;
 
-            document.title = glider + ' - map';
-
-            lastBounds = loadBounds('' + glider);
-            loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true);
-            loadGliderDAC(map, layerControl, path[first], mission); 
-          
+            if (glider !== null) {
+                document.title = glider + ' - map';
+                lastBounds = loadBounds('' + glider);
+                loadGliderPosition(map, layerControl, glider, mission);
+                loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true);
+                loadGliderDAC(map, layerControl, path[first], mission); 
+            }
+            else {
+                document.title = 'map';
+            }
+ 
             loadExtras(map, layerControl, glider, mission, tail);
+
+            if (params.has('ship')) {
+                if (params.get('ship') == 'me') {
+                    console.log('marking location setup');
+                    document.getElementById('info').style.display = 'block';
+                    document.getElementById('basicInfo').innerHTML = 'Click to start location';
+                    document.getElementById('basicInfo').addEventListener('click', setupLocation);
+                }
+                else {
+                    setupShip(map, layerControl, params.get('ship'));
+                }
+            }
 
             if (params.has('also')) {
                 var p_also = params.get('also').split(',');
@@ -867,6 +1425,8 @@
                 labels.push(sa);
                 loadSA(map, layerControl, urls, labels);
             }
+
+            setupStream();
 
         </script>
     </body>

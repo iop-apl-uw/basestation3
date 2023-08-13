@@ -8,6 +8,7 @@ http://creativecommons.org/licenses/by/3.0
 	background-color:#D8D8D8;
 	background-color:rgba(255, 255, 255, 0.8);
 	cursor:pointer;
+    margin-bottom: 20px;
 }
 .leaflet-control-coordinates,
 .leaflet-control-coordinates .uiElement input {
@@ -18,6 +19,7 @@ http://creativecommons.org/licenses/by/3.0
 
 .leaflet-control-coordinates .uiElement {
 	margin:4px;
+    margin-bottom: 20px;
 }
 
 .leaflet-control-coordinates .uiElement .labelFirst {
