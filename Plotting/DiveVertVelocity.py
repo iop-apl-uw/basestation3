@@ -558,7 +558,7 @@ def plot_vert_vel(
 
         biases = (-450, 500)
 
-        log_info(f"Starting biases {biases}")
+        # log_info(f"Starting biases {biases}")
 
         bias_w_diff = np.zeros(21)
         bias_cc = np.zeros(21)
@@ -614,7 +614,7 @@ def plot_vert_vel(
 
         iterations = ii + 1
         for ii in range(iterations):
-            log_info(f"Bias {ii} CC:{bias_cc[ii]:.1f} vert_v:{bias_w_diff[ii]:.2f}")
+            log_info(f"Bias HDM {ii} CC:{bias_cc[ii]:.1f} vert_v:{bias_w_diff[ii]:.2f}")
 
         del ii
         min_bias = bias_cc[iterations]
@@ -787,7 +787,7 @@ def plot_vert_vel(
         {
             "x": biased_model_w,
             "y": depth,
-            "name": f"{min_bias_gsm:.1f}cc biased Vert Speed GSM ",
+            "name": f"{min_bias_gsm:.1f}cc biased Vert Speed GSM",
             "mode": "lines",
             "line": {"dash": "solid", "color": "LightGreen"},
             "hovertemplate": "biased GSM<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
@@ -811,6 +811,7 @@ def plot_vert_vel(
             "mode": "lines",
             "line": {"dash": "solid", "color": "Black"},
             "hovertemplate": "Glider smoothed dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            "visible": "legendonly",
         }
     )
     fig.add_trace(
@@ -821,6 +822,7 @@ def plot_vert_vel(
             "mode": "lines",
             "line": {"dash": "solid", "color": "Violet"},
             "hovertemplate": "Smoothed dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            "visible": "legendonly",
         }
     )
     fig.add_trace(
