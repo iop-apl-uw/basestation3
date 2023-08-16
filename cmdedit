@@ -83,7 +83,7 @@ except getopt.GetoptError:
 interactive = True
 input_file = ""
 wd = os.getcwd()
-validator = "/usr/local/bin/validate"
+validator = f"{sys.path[0]}/validate"
 always_validate = False
 ignore_errors = False
 username = None
