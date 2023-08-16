@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -143,40 +143,46 @@ def compute_w_obs(elapsed_time, sample_depth):
 
 def flightModelW(bu, ph, xl, a, b, c, rho, s):
     gravity = 9.81
-    tol     = 0.001
+    tol = 0.001
 
-    w = np.sign(bu)*math.sqrt(abs(bu)/1000.0)/10
-    th = 3.14159/4.0*np.sign(bu)
+    w = np.sign(bu) * math.sqrt(abs(bu) / 1000.0) / 10
+    th = 3.14159 / 4.0 * np.sign(bu)
 
-    buoyforce = 0.001*gravity*bu
+    buoyforce = 0.001 * gravity * bu
 
-    q = pow(np.sign(bu)*buoyforce/(xl*xl*b), 1.0/(1.0 + s))
+    q = pow(np.sign(bu) * buoyforce / (xl * xl * b), 1.0 / (1.0 + s))
     alpha = 0
 
     q_old = 0
-    if bu == 0 or np.sign(bu)*np.sign(ph) <= 0:
+    if bu == 0 or np.sign(bu) * np.sign(ph) <= 0:
         return w
 
     j = 0
-    while j < 15 and abs((q - q_old)/q) > tol:
+    while j < 15 and abs((q - q_old) / q) > tol:
         q_old = q
         if abs(math.tan(th)) < 0.01 or q == 0:
             return w
 
-        param = 4.0*b*c/(a*a*pow(math.tan(th), 2.0)*pow(q, -s))
+        param = 4.0 * b * c / (a * a * pow(math.tan(th), 2.0) * pow(q, -s))
         if param > 1:
             return w
 
-        q = buoyforce*math.sin(th)/(2.0*xl*xl*b*pow(q, s))*(1.0 + math.sqrt(1.0 - param));
-        alpha = -a*math.tan(th)/(2.0*c)*(1.0 - math.sqrt(1.0 - param));
+        q = (
+            buoyforce
+            * math.sin(th)
+            / (2.0 * xl * xl * b * pow(q, s))
+            * (1.0 + math.sqrt(1.0 - param))
+        )
+        alpha = -a * math.tan(th) / (2.0 * c) * (1.0 - math.sqrt(1.0 - param))
 
-        thdeg = ph - alpha;
-        th = thdeg*3.14159/180.0;
+        thdeg = ph - alpha
+        th = thdeg * 3.14159 / 180.0
 
-        j = j +1
+        j = j + 1
 
-    umag = math.sqrt(2.0*q/rho)
-    return umag*math.sin(th)
+    umag = math.sqrt(2.0 * q / rho)
+    return umag * math.sin(th)
+
 
 def run_hydro(dv, buoy, vehicle_pitch_degrees_v, calib_consts):
     """
@@ -328,7 +334,7 @@ def plot_vert_vel(
             density_1m = density_ctd[isurf] / 1000
             depth_1m = ctd_depth[isurf]
 
-        print(density_1m, depth_1m)
+        # print(density_1m, depth_1m)
     except:
         log_error(
             "Could not fetch needed variables - skipping vertical velocity plot", "exc"
@@ -377,7 +383,6 @@ def plot_vert_vel(
     # vert_speed_press = obs_w
 
     bias_vert_speed_hdm = None
-
 
     if f_analysis:
         # Run the hydro model
@@ -448,79 +453,112 @@ def plot_vert_vel(
         buoy = 1000.0 * (-mass + density * vol * 1.0e-6)
         naive_model_w = buoy
         for k, b in enumerate(buoy):
-            naive_model_w[k] = 100*flightModelW(b, vehicle_pitch_degrees_v[k], 1.8, log_HD_A, log_HD_B, log_HD_C, rho0, -0.25)
+            naive_model_w[k] = 100 * flightModelW(
+                b,
+                vehicle_pitch_degrees_v[k],
+                1.8,
+                log_HD_A,
+                log_HD_B,
+                log_HD_C,
+                rho0,
+                -0.25,
+            )
 
         biases = [-450, 450, 0]
         w_diff = []
         low = 0
         high = 1
         biased_model_w = naive_model_w.copy()
-        for i in range(0,20):
+        for i in range(0, 20):
             vol = vol0 + vbd - biases[i]
             buoy = 1000.0 * (-mass + density * vol * 1.0e-6)
             for k, b in enumerate(buoy):
-                biased_model_w[k] = 100*flightModelW(b, vehicle_pitch_degrees_v[k], 1.8, log_HD_A, log_HD_B, log_HD_C, rho0, -0.25)
-               
+                biased_model_w[k] = 100 * flightModelW(
+                    b,
+                    vehicle_pitch_degrees_v[k],
+                    1.8,
+                    log_HD_A,
+                    log_HD_B,
+                    log_HD_C,
+                    rho0,
+                    -0.25,
+                )
+
             w_diff.append(np.average(vert_speed_press - biased_model_w))
             if i >= 2:
-                if w_diff[i]*w_diff[low] < 0:
-                    biases.append(0.5*(biases[i] + biases[low]))
+                if w_diff[i] * w_diff[low] < 0:
+                    biases.append(0.5 * (biases[i] + biases[low]))
                     high = i
                 else:
-                    biases.append(0.5*(biases[i] + biases[high]))
+                    biases.append(0.5 * (biases[i] + biases[high]))
                     low = i
 
         min_bias_gsm = biases[-1]
 
         implied_volmax_gsm = (
-            vol0 - ((c_vbd + min_bias_gsm * vbd_cnts_per_cc) - vbd_min) / vbd_cnts_per_cc
+            vol0
+            - ((c_vbd + min_bias_gsm * vbd_cnts_per_cc) - vbd_min) / vbd_cnts_per_cc
         )
         implied_cvbd_gsm = c_vbd + min_bias_gsm * vbd_cnts_per_cc
 
- 
-        # Find the VBD bias range where the hydro model converges and returns a reasonable
-        # percentage of non-stalled poings
-        log_info("VBD bias search")
-        biases_dict = {}
-        for bias in np.arange(-450, 500, 50):
-            vol = vol0 + vbd - bias
-            bias_buoy = 1000.0 * (-mass + density * vol * 1.0e-6)
-            bias_vert_speed_hdm, stalled_i, hm_converged = run_hydro(
-                dive_nc_file.dive_number,
-                bias_buoy,
-                vehicle_pitch_degrees_v,
-                calib_consts,
-            )
-            log_info(
-                f"Bias:{bias} cc, Stalled Ration:{float(len(stalled_i)) / float(len(bias_vert_speed_hdm)):.03f}, converged:{hm_converged}"
-            )
-            # TODO - check for the stalls being very asymmetric?
-            # Break the dive in two and check the failures on one profile versus the other?
+        # Prior to the addition of the GSM calculation (flightModelW above), the code below was used to
+        # improve the use of the HDM output in edge cases.  A typical example is a test
+        # dive in Shilshole where dive time and climb time were dramatically different.  The resulting
+        # profile often had the dive or climb being marked completly as stalled, and the
+        # fit would only include the "good half" - skewing the fit logic.
+        #
+        # Unfortunately, the code below sometimes is a bit too restrictive in initial grid search
+        # (the use of the converged output from the HDM being the main problem) for
+        # some open water/deep diving.  Rather then rework this further, I'm returning to the original
+        # formulation, and pilots will rely on the GSM model for initial dives/Shilshole - which was
+        # happening anyway, due to HDM not being consistenly tuned by the FMS for initial dives/Shilshole checkout
+        # missions.
 
-            # 20% stalled is a bit agressive for shallow (45m) dives, but it helps filter out solutions
-            # for asymmetric dive profiles where the down or up cast is completely eliminated due to stalling
-            # in the larger bias values
-            biases_dict[bias] = (
-                float(len(stalled_i)) / float(len(bias_vert_speed_hdm)),
-                hm_converged,
-            )
+        # # Find the VBD bias range where the hydro model converges and returns a reasonable
+        # # percentage of non-stalled poings
+        # log_info("VBD bias search")
+        # biases_dict = {}
+        # for bias in np.arange(-450, 500, 50):
+        #     vol = vol0 + vbd - bias
+        #     bias_buoy = 1000.0 * (-mass + density * vol * 1.0e-6)
+        #     bias_vert_speed_hdm, stalled_i, hm_converged = run_hydro(
+        #         dive_nc_file.dive_number,
+        #         bias_buoy,
+        #         vehicle_pitch_degrees_v,
+        #         calib_consts,
+        #     )
+        #     log_info(
+        #         f"Bias:{bias} cc, Stalled Ration:{float(len(stalled_i)) / float(len(bias_vert_speed_hdm)):.03f}, converged:{hm_converged}"
+        #     )
+        #     # TODO - check for the stalls being very asymmetric?
+        #     # Break the dive in two and check the failures on one profile versus the other?
 
-        biases = [
-            x for x in biases_dict if biases_dict[x][0] < 0.2 and biases_dict[x][1]
-        ]
-        min_val = 1.0
-        min_key = None
-        if not biases:
-            log_warning(
-                "No bias met the criteria - selecting the least worst bias based on stalls"
-            )
-            for k, v in biases_dict.items():
-                if v[0] < min_val:
-                    min_key = k
-                    min_val = v[0]
-            biases = [min_val]
+        #     # 20% stalled is a bit agressive for shallow (45m) dives, but it helps filter out solutions
+        #     # for asymmetric dive profiles where the down or up cast is completely eliminated due to stalling
+        #     # in the larger bias values
+        #     biases_dict[bias] = (
+        #         float(len(stalled_i)) / float(len(bias_vert_speed_hdm)),
+        #         hm_converged,
+        #     )
 
-        log_info(f"Starting biases {biases}")
+        # biases = [
+        #     x for x in biases_dict if biases_dict[x][0] < 0.2 and biases_dict[x][1]
+        # ]
+        # min_val = 1.0
+        # min_key = None
+        # if not biases:
+        #     log_warning(
+        #         "No bias met the criteria - selecting the least worst bias based on stalls"
+        #     )
+        #     for k, v in biases_dict.items():
+        #         if v[0] < min_val:
+        #             min_key = k
+        #             min_val = v[0]
+        #     biases = [min_val]
+
+        biases = (-450, 500)
+
+        # log_info(f"Starting biases {biases}")
 
         bias_w_diff = np.zeros(21)
         bias_cc = np.zeros(21)
@@ -550,7 +588,7 @@ def plot_vert_vel(
                 calib_consts,
             )
             if not hm_converged:
-                log_warning(
+                log_debug(
                     f"Unable to converge during hydro-model calculations (Dive:{dive_nc_file.dive_number}, Iteration:{ii})"
                 )
 
@@ -576,26 +614,26 @@ def plot_vert_vel(
 
         iterations = ii + 1
         for ii in range(iterations):
-            log_info(f"Bias {ii} CC:{bias_cc[ii]:.1f} vert_v:{bias_w_diff[ii]:.2f}")
+            log_info(f"Bias HDM {ii} CC:{bias_cc[ii]:.1f} vert_v:{bias_w_diff[ii]:.2f}")
 
         del ii
         min_bias = bias_cc[iterations]
 
     # Glide Slope output
-    #(
+    # (
     #    gsm_converged,
     #    gsm_total_speed_cm_s_v,
     #    gsm_theta_rad_v,
     #    gsm_stalled_i_v,
-    #) = HydroModel.glide_slope(
+    # ) = HydroModel.glide_slope(
     #    vert_speed_press,
     #    np.radians(
     #        vehicle_pitch_degrees_v,
     #    ),
     #    calib_consts,
-    #)
+    # )
 
-    #vert_speed_gsm = gsm_total_speed_cm_s_v * np.sin(gsm_theta_rad_v)
+    # vert_speed_gsm = gsm_total_speed_cm_s_v * np.sin(gsm_theta_rad_v)
 
     # TODO - re-implement flightvec and use that for an alternate approach (compare with hydro)
 
@@ -612,9 +650,9 @@ def plot_vert_vel(
 
     implied_max_maxbuoy = -(implied_cvbd - vbd_max) / vbd_cnts_per_cc * (rho0 / 1000)
     implied_max_smcc = -(implied_cvbd - vbd_min) / vbd_cnts_per_cc
-    #print(mass, rho0, density_1m)
+    # print(mass, rho0, density_1m)
     implied_min_smcc_surf = 1000 * mass * (1 / density_1m - 1000 / rho0) + 150
-    #print(implied_min_smcc_surf)
+    # print(implied_min_smcc_surf)
 
     log_info(
         f"implied_cvbd {implied_cvbd:.0f}, implied_volmax {implied_volmax:.1f}, implied_max_smcc {implied_max_smcc:.1f}, implied_max_maxbuoy {implied_max_maxbuoy:.1f}"
@@ -636,19 +674,39 @@ def plot_vert_vel(
         base_opts, dive_nc_file.dive_number, "implied_volmax", implied_volmax, con=conn
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_C_VBD_GSM", implied_cvbd_gsm, con=conn
+        base_opts,
+        dive_nc_file.dive_number,
+        "implied_C_VBD_GSM",
+        implied_cvbd_gsm,
+        con=conn,
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_volmax_GSM", implied_volmax_gsm, con=conn
+        base_opts,
+        dive_nc_file.dive_number,
+        "implied_volmax_GSM",
+        implied_volmax_gsm,
+        con=conn,
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_max_MAX_BUOY", implied_max_maxbuoy, con=conn
+        base_opts,
+        dive_nc_file.dive_number,
+        "implied_max_MAX_BUOY",
+        implied_max_maxbuoy,
+        con=conn,
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_max_SM_CC", implied_max_smcc, con=conn
+        base_opts,
+        dive_nc_file.dive_number,
+        "implied_max_SM_CC",
+        implied_max_smcc,
+        con=conn,
     )
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "min_SM_CC", implied_min_smcc_surf, con=conn
+        base_opts,
+        dive_nc_file.dive_number,
+        "min_SM_CC",
+        implied_min_smcc_surf,
+        con=conn,
     )
     try:
         BaseDB.addSlopeValToDB(
@@ -729,7 +787,7 @@ def plot_vert_vel(
         {
             "x": biased_model_w,
             "y": depth,
-            "name": f"{min_bias_gsm:.1f}cc biased Vert Speed GSM ",
+            "name": f"{min_bias_gsm:.1f}cc biased Vert Speed GSM",
             "mode": "lines",
             "line": {"dash": "solid", "color": "LightGreen"},
             "hovertemplate": "biased GSM<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
@@ -753,6 +811,7 @@ def plot_vert_vel(
             "mode": "lines",
             "line": {"dash": "solid", "color": "Black"},
             "hovertemplate": "Glider smoothed dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            "visible": "legendonly",
         }
     )
     fig.add_trace(
@@ -763,6 +822,7 @@ def plot_vert_vel(
             "mode": "lines",
             "line": {"dash": "solid", "color": "Violet"},
             "hovertemplate": "Smoothed dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            "visible": "legendonly",
         }
     )
     fig.add_trace(

@@ -134,6 +134,7 @@ columns_d = {
         "name": "green scattering",
         "units": scattering_units,
         "synonyms": ["sig532"],
+        "descr": "total volume green scattering coefficient using manufacturer-supplied dark counts and scaling factor",
     },
     "ref532nm": {"name": "green reference", "units": None, "synonyms": []},
     # iRobot added wlsig/ref2

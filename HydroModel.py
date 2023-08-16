@@ -1,21 +1,21 @@
 #! /usr/bin/env python
-
+# -*- python-fmt -*-
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -29,23 +29,25 @@
 
 """Contains the seaglider hydro-dynamic model
 """
-from numpy import *
 import math
-import Utils
-from BaseLog import *
 import warnings
 
-import builtins
+import numpy as np
+
+import Utils
+
+from BaseLog import log_debug
 
 # from TraceArray import * # REMOVE use this only only if we are tracing/comparing computations w/ matlab
 # physical constants
-gravity = 9.82 # m/s2
-g2kg = 0.001 # grams to kgs
-m2cm = 100 # m to cm
-cm2m = 0.01 # cm to m
+gravity = 9.82  # m/s2
+g2kg = 0.001  # grams to kgs
+m2cm = 100  # m to cm
+cm2m = 0.01  # cm to m
 
-def find_stalled(speed_v, vehicle_pitch_degrees_v, num_rows, calib_consts):
-    '''Determine where stalled
+
+def find_stalled(speed_v, vehicle_pitch_degrees_v, calib_consts):
+    """Determine where stalled
     Inputs:
     speed_v -- glider speeds
     vehicle_pitch_degrees_v -- vehicle pitch
@@ -54,14 +56,21 @@ def find_stalled(speed_v, vehicle_pitch_degrees_v, num_rows, calib_consts):
 
     Outputs:
     stalled_i_v - indices of any stall points
-    '''
+    """
     # what about speed_v[i].imag ## get the imaginary part...
-    max_stall_speed = calib_consts['max_stall_speed']
-    min_stall_angle = calib_consts['min_stall_angle']
-    min_stall_speed = calib_consts['min_stall_speed']
+    max_stall_speed = calib_consts["max_stall_speed"]
+    min_stall_angle = calib_consts["min_stall_angle"]
+    min_stall_speed = calib_consts["min_stall_speed"]
     # (speed_v >= max_stall_speed and vehicle_pitch_degrees_v < min_stall_angle) or speed_v <= min_stall_speed
-    stalled_i_v = union1d(intersect1d(where(speed_v >= max_stall_speed)[0], where(vehicle_pitch_degrees_v < min_stall_angle)[0]), where(speed_v <= min_stall_speed)[0])
+    stalled_i_v = np.union1d(
+        np.intersect1d(
+            np.where(speed_v >= max_stall_speed)[0],
+            np.where(vehicle_pitch_degrees_v < min_stall_angle)[0],
+        ),
+        np.where(speed_v <= min_stall_speed)[0],
+    )
     return stalled_i_v.tolist()
+
 
 ## NOTE: the q^(1/4) factor (at least) used below is based on the original SG shape
 ## With the new ogive fairing on DG and possibly SG this factor will change, perhaps to sqrt(q) instead.
@@ -112,20 +121,24 @@ def find_stalled(speed_v, vehicle_pitch_degrees_v, num_rows, calib_consts):
 # which is small.
 
 
-# flightvec0 goes from 0 to 15 
-loop_count = 21 # bin_fit 'glideslope' goes from 1 to 20
-loop_count = 41 # TestData/sg144_ps_022613/p144* dives have a few points that take a while to converge but they do...
-loop_count = 61 # TestData/SG236_Shilshole_2022_11_18 dives took around 45-50 to converge
+# flightvec0 goes from 0 to 15
+loop_count = 21  # bin_fit 'glideslope' goes from 1 to 20
+loop_count = 41  # TestData/sg144_ps_022613/p144* dives have a few points that take a while to converge but they do...
+loop_count = (
+    61  # TestData/SG236_Shilshole_2022_11_18 dives took around 45-50 to converge
+)
+
+
 def glide_slope(w_cm_s_v, vehicle_pitch_rad_v, calib_consts):
     """
     Compute the glide slope, base on observed vertical velocity (pressure change), vehicle pitch,
     and hydrodynamic constants.  Assumes constant bouyancy throught the dive (rho0)
 
-    Input:               
+    Input:
         w - (observed) vertical velocity cm/s
         pitch - observed vehicle pitch (radians, positive nose up)
         calib_consts - that contain
-    			hd_a, hd_b, hd_c - hydrodynamic parameters for lift, drag, and induced drag
+                        hd_a, hd_b, hd_c - hydrodynamic parameters for lift, drag, and induced drag
                         rho - density of deep water (maximum density encountered)
 
     Returns:
@@ -133,104 +146,134 @@ def glide_slope(w_cm_s_v, vehicle_pitch_rad_v, calib_consts):
         speed - total vehicle speed through the water (cm/s)
         glide angle - radians, positive nose up
         stalled_i_v - locations where stalled
-        
+
     Raises:
       Any exceptions raised are considered critical errors and not expected
     """
 
     num_rows = len(w_cm_s_v)
-    hd_a = calib_consts['hd_a']
-    hd_b = calib_consts['hd_b']
-    hd_c = calib_consts['hd_c']
-    hd_s = calib_consts['hd_s'] # how the drag scales by shape
-    rho0 = calib_consts['rho0']
+    hd_a = calib_consts["hd_a"]
+    hd_b = calib_consts["hd_b"]
+    hd_c = calib_consts["hd_c"]
+    hd_s = calib_consts["hd_s"]  # how the drag scales by shape
+    rho0 = calib_consts["rho0"]
     # No use of glider_length since not using buoyancy terms for lift/drag
 
     # Compute initial total speed (u_initial_cm_s_v) based on observed pitch and vertical velocity
-    u_initial_cm_s_v = zeros(num_rows, float)
-    pitched_i_v = where(array(vehicle_pitch_rad_v) != 0.0)[0]
-    u_initial_cm_s_v[pitched_i_v] = w_cm_s_v[pitched_i_v]/sin(vehicle_pitch_rad_v[pitched_i_v])
+    u_initial_cm_s_v = np.zeros(num_rows, float)
+    pitched_i_v = np.where(np.array(vehicle_pitch_rad_v) != 0.0)[0]
+    u_initial_cm_s_v[pitched_i_v] = w_cm_s_v[pitched_i_v] / np.sin(
+        vehicle_pitch_rad_v[pitched_i_v]
+    )
 
     # Compute constants used in hydrodynamic computations (for efficiency)
     # These are used to compute the (inverted) performance factor (param) under the sqrt in Eqn 8
     # 4/lambda*tan^2(theta), where lambda here incorporates a constant q
-    cx = 4.*hd_b*hd_c
-    cy = hd_a*hd_a*math.pow(rho0/2.0, -hd_s)
-    cz = cy/cx
-    czr = cx/cy
+    cx = 4.0 * hd_b * hd_c
+    cy = hd_a * hd_a * math.pow(rho0 / 2.0, -hd_s)
+    cz = cy / cx
+    czr = cx / cy
 
     # Compute performance factor based on constant bouyancy
     # We do this once to compute where the vehicle is flying (non-complex solns)
     # NOTE: defn: q = (rho/2)*u^2 where u is estimated total velocity
     # Thus, q^(-1/4) = (rho0/2)^(1/4)*(cm2m*u)^(2/4) = (rho0/2)^(1/4)*sqrt(cm2m*u)
-    perf_fac_v = tan(vehicle_pitch_rad_v)*tan(vehicle_pitch_rad_v)*sqrt(cm2m*fabs(u_initial_cm_s_v))*cz
+    perf_fac_v = (
+        np.tan(vehicle_pitch_rad_v)
+        * np.tan(vehicle_pitch_rad_v)
+        * np.sqrt(cm2m * np.fabs(u_initial_cm_s_v))
+        * cz
+    )
 
     # Establish (initial) masks for stall versus non-stall values
     # these are updated with additional stall points below
-    flying_v = zeros(num_rows, float) # assume all stalled
+    flying_v = np.zeros(num_rows, float)  # assume all stalled
     non_stalled_i_v = [i for i in range(num_rows) if perf_fac_v[i] > 1]
-    flying_v[non_stalled_i_v] = 1; # flying
+    flying_v[non_stalled_i_v] = 1
+    # flying
 
     # First, initialize counter and test delta
-    theta_rad_v = array(vehicle_pitch_rad_v)
+    theta_rad_v = np.array(vehicle_pitch_rad_v)
 
     # Iterate on glide angle until convergence or loop limit
-    converged = False # assume the worst
-    for loop_counter in range(loop_count): 
-        theta_prev_rad_v = array(theta_rad_v)  # Store the previous iteration
-        max_delta_theta = 0.
+    converged = False  # assume the worst
+    for loop_counter in range(loop_count):
+        theta_prev_rad_v = np.array(theta_rad_v)  # Store the previous iteration
+        max_delta_theta = 0.0
         for i in range(num_rows):
-            if(w_cm_s_v[i] * math.sin(theta_rad_v[i]) < 0.0):
-                flying_v[i] = 0 # stalled
-                
-            delta_theta = 0.
+            if w_cm_s_v[i] * math.sin(theta_rad_v[i]) < 0.0:
+                flying_v[i] = 0  # stalled
+
+            delta_theta = 0.0
             if flying_v[i]:
                 # compute non-inverted "param" for Eqn 8
-                factor = czr*(1.0/(math.tan(theta_rad_v[i])*math.tan(theta_rad_v[i])*math.sqrt(cm2m*w_cm_s_v[i]/math.sin(theta_rad_v[i]))))
+                factor = czr * (
+                    1.0
+                    / (
+                        math.tan(theta_rad_v[i])
+                        * math.tan(theta_rad_v[i])
+                        * math.sqrt(cm2m * w_cm_s_v[i] / math.sin(theta_rad_v[i]))
+                    )
+                )
                 if factor <= 1.0:
                     # flying; compute attack angle (alpha) using Eqn 8.  Eqn 7 ignored because of constant bouyancy assumption
                     # minus sign critical here
-                    alpha = (-0.5*hd_a*math.tan(theta_rad_v[i])*(1.0 - math.sqrt(1.0 - factor)))/hd_c
+                    alpha = (
+                        -0.5
+                        * hd_a
+                        * math.tan(theta_rad_v[i])
+                        * (1.0 - math.sqrt(1.0 - factor))
+                    ) / hd_c
                     # improve our guess about glide angle based on new attack angle
                     # defn: pitch = glide_angle + attack-angle
                     theta_rad_v[i] = vehicle_pitch_rad_v[i] - math.radians(alpha)
                     delta_theta = theta_prev_rad_v[i] - theta_rad_v[i]
                 else:
-                    delta_theta = 0.
-                    flying_v[i] = 0. # stalled
+                    delta_theta = 0.0
+                    flying_v[i] = 0.0  # stalled
             else:
-                delta_theta = 0.
+                delta_theta = 0.0
 
-            max_delta_theta = builtins.max(fabs(delta_theta), max_delta_theta)
+            max_delta_theta = max(np.fabs(delta_theta), max_delta_theta)
         # end of i loop, now check for any improvement in the estimates of theta_rad_v
-        log_debug("GSM iteration %d max delta theta = %f" % (loop_counter, max_delta_theta))
-        if max_delta_theta < 0.0001: # [rad]
+        log_debug(
+            "GSM iteration %d max delta theta = %f" % (loop_counter, max_delta_theta)
+        )
+        if max_delta_theta < 0.0001:  # [rad]
             converged = True
             break
     # end of loop_counter loop
 
     # NOTE this correction isn't in diveplot_func.m
     # Where model has singularities (flying_v[i] = 0), set theta_rad_v = pitch angle for computation below
-    stalled_i_v = where(flying_v == 0)[0]
+    stalled_i_v = np.where(flying_v == 0)[0]
     theta_rad_v[stalled_i_v] = vehicle_pitch_rad_v[stalled_i_v]
 
-    total_speed_cm_s_v = zeros(num_rows, float) # assume stalled everywhere....
-    pitched_i_v = where(vehicle_pitch_rad_v != 0.0)[0]
-    total_speed_cm_s_v[pitched_i_v] = fabs(w_cm_s_v[pitched_i_v]*sqrt(1. + (1./(tan(theta_rad_v[pitched_i_v])**2)))) # except here...
+    total_speed_cm_s_v = np.zeros(num_rows, float)  # assume stalled everywhere....
+    pitched_i_v = np.where(vehicle_pitch_rad_v != 0.0)[0]
+    total_speed_cm_s_v[pitched_i_v] = np.fabs(
+        w_cm_s_v[pitched_i_v]
+        * np.sqrt(1.0 + (1.0 / (np.tan(theta_rad_v[pitched_i_v]) ** 2)))
+    )  # except here...
 
     # Determine other stalls...
-    stalled_i_v = find_stalled(total_speed_cm_s_v, degrees(vehicle_pitch_rad_v), num_rows, calib_consts)
-    total_speed_cm_s_v[stalled_i_v] = 0 # mark as stall
-    theta_rad_v[stalled_i_v] = 0 # going nowhere (this nails the pitch angle assignment above)
+    stalled_i_v = find_stalled(
+        total_speed_cm_s_v, np.degrees(vehicle_pitch_rad_v), calib_consts
+    )
+    total_speed_cm_s_v[stalled_i_v] = 0  # mark as stall
+    theta_rad_v[
+        stalled_i_v
+    ] = 0  # going nowhere (this nails the pitch angle assignment above)
     return (converged, total_speed_cm_s_v, theta_rad_v, stalled_i_v)
+
 
 # CONSIDER rename hydro_model to buoyancy_pitch_model
 def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
     """Compute vehicle speed and glide angle from buoyancy and observed pitch
 
     Usage: converged,umag,theta,stalled_i_v = hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts)
- 
-    Input:               
+
+    Input:
         buoyancy_v - n_pts vector (grams, positive is upward)
         vehicle_pitch_degrees_v - observed vehicle pitch (degrees (! not radians), positive nose up)
         calib_consts - that contain
@@ -244,8 +287,8 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
         theta - glide angle in radians, positive nose up
         umag - total vehicle speed through the water (cm/s)
         stalled_i_v - locations where stalled
- 
-    Reference: 
+
+    Reference:
        flightvec0.m (CCE)
        Eriksen, C. C., et al: IEEE Journal of Oceanic Engineering, v26, no.4, October, 2001.
 
@@ -254,15 +297,15 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
 
     # Size of the vectors
     num_rows = len(buoyancy_v)
-    hd_a = calib_consts['hd_a']
-    hd_b = calib_consts['hd_b']
-    hd_c = calib_consts['hd_c']
-    hd_s = calib_consts['hd_s'] # how the drag scales by shape
-    rho0 = calib_consts['rho0']
-    glider_length = calib_consts['glider_length']
+    hd_a = calib_consts["hd_a"]
+    hd_b = calib_consts["hd_b"]
+    hd_c = calib_consts["hd_c"]
+    hd_s = calib_consts["hd_s"]  # how the drag scales by shape
+    rho0 = calib_consts["rho0"]
+    glider_length = calib_consts["glider_length"]
 
-    assert(hd_b != 0.0)
-    assert(hd_s != -1.0)
+    assert hd_b != 0.0
+    assert hd_s != -1.0
 
     # trace_comment('hd_a = %f' % hd_a);
     # trace_comment('hd_b = %f' % hd_b);
@@ -275,28 +318,30 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
 
     # Compute constants used in hydrodynamic computations (for efficiency)
     # These are used to compute the (inverted) performance factor (param) under the sqrt in Eqn 8
-    l2 = glider_length*glider_length
-    l2_hd_b2 = 2.0*l2*hd_b
-    hd_a2 = hd_a*hd_a
-    hd_bc4 = 4.0*hd_b*hd_c
-    hd_c2 = 2.0*hd_c
+    l2 = glider_length * glider_length
+    l2_hd_b2 = 2.0 * l2 * hd_b
+    hd_a2 = hd_a * hd_a
+    hd_bc4 = 4.0 * hd_b * hd_c
+    hd_c2 = 2.0 * hd_c
 
-    buoyancy_sign_v = sign(buoyancy_v) # never non-zero
-    pitched_i_v = where(array(vehicle_pitch_degrees_v) != 0.0)[0]
-    pitch_sign_v = ones(num_rows, float) # if flat, assume sign is 1.0
-    pitch_sign_v[pitched_i_v] = sign(vehicle_pitch_degrees_v[pitched_i_v])
+    buoyancy_sign_v = np.sign(buoyancy_v)  # never non-zero
+    pitched_i_v = np.where(np.array(vehicle_pitch_degrees_v) != 0.0)[0]
+    pitch_sign_v = np.ones(num_rows, float)  # if flat, assume sign is 1.0
+    pitch_sign_v[pitched_i_v] = np.sign(vehicle_pitch_degrees_v[pitched_i_v])
     # Compute points where flight is expected: where buoyancy and pitch are both up or both down
-    buoyancy_pitch_ok_v = zeros(num_rows, float)
-    buoyancy_pitch_ok_v[where(array(buoyancy_sign_v*pitch_sign_v) > 0.0)[0]] = 1.0
+    buoyancy_pitch_ok_v = np.zeros(num_rows, float)
+    buoyancy_pitch_ok_v[
+        np.where(np.array(buoyancy_sign_v * pitch_sign_v) > 0.0)[0]
+    ] = 1.0
     buoyancy_pitch_ok_v = buoyancy_pitch_ok_v.tolist()
     # compute buoyancy force from buoyancy F = ma = (g)*(g2kg)*(m/s)^2 [Newtons]
-    buoyancy_force_v = buoyancy_v*g2kg*gravity
+    buoyancy_force_v = buoyancy_v * g2kg * gravity
 
     # Initially assume the glide angle (theta) is +/-pi/4 radians (45 degrees) (climb or dive, respectively)
     # We iterate below to determine the actual glide slope
-    theta = (math.pi/4.0)*buoyancy_sign_v
-    
-    # Compute initial dynamic pressure q for vertical flight 
+    theta = (math.pi / 4.0) * buoyancy_sign_v
+
+    # Compute initial dynamic pressure q for vertical flight
     # Initial q is determined from the drag eqn. (Eqn. 2 in Eriksen et al.) by assuming attack angle alpha = 0
     # and that we are completely vertical (sin(90) = 1) so all drag, no lift
     # This always a positive quantity thanks to the buoyancy_sign_v value above
@@ -304,26 +349,28 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
     # are able to relax together to a consistent soln.
 
     # BUG: Depending on initial abc values this formulation of 'q_old' will be arbitrarily close to q below
-    # and terminate the loop after a single iteration with poor th (and q).  
+    # and terminate the loop after a single iteration with poor th (and q).
     # If the loop is forced to run at least twice, both q and th are updated and we make proper progress toward the soln.
     # In particular, this problematic initial q expression from flightvec2 triggers the problem with more regularity.
     # DEAD q = power((buoyancy_force_v*sin(theta))/(l2*hd_b), 1/(1+hd_s))
 
     # This original version, without the sin(th) term, ensures q and q_old are sufficiently different
     # that we don't stall out the loop; nevertheless we ensure two loops below to get q close first, then th
-    q = power(buoyancy_sign_v*buoyancy_force_v/(l2*hd_b), 1/(1+hd_s)) # dynamic pressure for vertical flight
+    q = np.power(
+        buoyancy_sign_v * buoyancy_force_v / (l2 * hd_b), 1 / (1 + hd_s)
+    )  # dynamic pressure for vertical flight
     # trace_array('q_init', q)
 
-    # This loop iterates the dynamic pressure (q) to get glidespeed 
+    # This loop iterates the dynamic pressure (q) to get glidespeed
     # and the attack angle (alpha) to get glideangle (theta)
     # buoyancy is taken to be an accurately known quantity and is not iterated here (but see caller)
     # We iterate a fixed number of times but break early if our max % difference is less that residual_test
-    converged = False # assume the worst
-    residual_test = 0.001   # loop completion test value
-    for j in range(loop_count): 
-        q_prev = array(q) # copy q
-        
-        # discriminant_inv is the reciprocal of the term subtracted 
+    converged = False  # assume the worst
+    residual_test = 0.001  # loop completion test value
+    for j in range(loop_count):
+        q_prev = np.array(q)  # copy q
+
+        # discriminant_inv is the reciprocal of the term subtracted
         # from 1 under the radical in the solution equations (Eqs. 7-8)
         # (lambda*tan(theta)^2/4)
         # discriminant_inv is estimated using the current theta
@@ -333,11 +380,11 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
         with warnings.catch_warnings():
             # RuntimeWarning: invalid value encountered in power occurs because q_prev has a negative value somewhere
             neg_i = q_prev < 0
-            q_prev[neg_i] = nan
+            q_prev[neg_i] = np.nan
             warnings.simplefilter("ignore")
-            scaled_drag = power(q_prev, -hd_s) 
-        tth_v = tan(theta) # compute once
-        discriminant_inv_v = hd_a2*tth_v*tth_v*scaled_drag/hd_bc4
+            scaled_drag = np.power(q_prev, -hd_s)
+        tth_v = np.tan(theta)  # compute once
+        discriminant_inv_v = hd_a2 * tth_v * tth_v * scaled_drag / hd_bc4
         # NOTE: Beware when comparing this version with flightvec(2).m
         # In those version, when stalled the entries are replaced by nan rather than 0
         # Thus in matlab you need to use nanmean, etc. and here you have to be careful because of all the zeros dragging the mean down
@@ -347,8 +394,8 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
         with warnings.catch_warnings():
             # RuntimeWarning: invalid value encountered in greater because discriminant_inv_v has a nan somewhere
             warnings.simplefilter("ignore")
-            flying_i = nonzero(buoyancy_pitch_ok_v*discriminant_inv_v > 1.0)[0] 
-        q[:] = 0.0 # assume the worst..stalled, no dynamic pressure or glide angle
+            flying_i = np.nonzero(buoyancy_pitch_ok_v * discriminant_inv_v > 1.0)[0]
+        q[:] = 0.0  # assume the worst..stalled, no dynamic pressure or glide angle
         if len(flying_i) == 0:
             # CT reported nonsensical salinities, hence buoyancy is poor
             # deployments/CCE/labrador/sep04/sg015/p0150243
@@ -363,54 +410,67 @@ def hydro_model(buoyancy_v, vehicle_pitch_degrees_v, calib_consts):
             # Report unable to converge and mark all points as stalled
             # to forestall further processing by caller
             # return umag as zero since q is zero
-            return (False, q, theta, arange(num_rows)) 
-        sqrt_discriminant = sqrt(1.0 - 1.0/discriminant_inv_v[flying_i])
+            return (False, q, theta, np.arange(num_rows))
+        sqrt_discriminant = np.sqrt(1.0 - 1.0 / discriminant_inv_v[flying_i])
         # Eq. 7 in the reference, obtained using the quadratic formula ...
         # q^(hd_s) considered to vary slowly compared to q (hd_s typically <= -1/4)
         # NOTE the q eqn use 1.0 + sqrt and the alpha eqn must use 1.0 - sqrt
-        q[flying_i] = (buoyancy_force_v[flying_i]*sin(theta[flying_i])*scaled_drag[flying_i])/(l2_hd_b2)*(1.0 + sqrt_discriminant)
+        q[flying_i] = (
+            (
+                buoyancy_force_v[flying_i]
+                * np.sin(theta[flying_i])
+                * scaled_drag[flying_i]
+            )
+            / (l2_hd_b2)
+            * (1.0 + sqrt_discriminant)
+        )
         # Eq. 8 in the reference, with critical minus sign
         # hd_a is 1/deg; hd_c is 1/deg^2 so overall alpha is in degrees
-        alpha = (-hd_a*tth_v[flying_i]/hd_c2)*(1.0 - sqrt_discriminant) # degrees
-        theta[:] = 0.0 # assume the worst..stalled # == math.radians(0.0)
+        alpha = (-hd_a * tth_v[flying_i] / hd_c2) * (1.0 - sqrt_discriminant)  # degrees
+        theta[:] = 0.0  # assume the worst..stalled # == math.radians(0.0)
         # defn: pitch  = glide + attack angles
         # glideangle is the difference between pitch and angle of attack (both in degrees)
-        theta[flying_i] = radians(vehicle_pitch_degrees_v[flying_i] - alpha)
-        max_residual = max(fabs((q[flying_i] - q_prev[flying_i])/q[flying_i]))
+        theta[flying_i] = np.radians(vehicle_pitch_degrees_v[flying_i] - alpha)
+        max_residual = max(np.fabs((q[flying_i] - q_prev[flying_i]) / q[flying_i]))
 
         # trace_array('q_%d' % j, q)
         # trace_array('th_%d' % j, theta)
         # trace_array('param_inv_%d' % j, discriminant_inv_v)
 
         log_debug("Hydro iteration %d max residual %f" % (j, max_residual))
-        if max_residual < residual_test and j >= 2: # ensure at least 2 iterations
-            converged = True;
-            break   # break out of j loop 
+        if max_residual < residual_test and j >= 2:  # ensure at least 2 iterations
+            converged = True
+            break  # break out of j loop
     # end of j loop
 
     # compute total estimated speed through the water (rename from u_mag (which is confusing with U in the paper) to total_speed_cm_s)
     # defn: q = rho0/2*(U^2 + W^2) = rho0/2*total_speed^2
-    u_mag =  m2cm*sqrt(2.0*q/rho0)
+    u_mag = m2cm * np.sqrt(2.0 * q / rho0)
     # trace_array('umag', u_mag)
     # trace_array('theta', theta) # radians
-    
+
     # NOTE flightvec_new.m and glide.m have code that looks for places where the final calc indicates a stall (theta  == 0)
     # and linearly interpolates a glide angle from the surrounding points (see sophisticated interpotation in flightvec_new.m)
     # and then interpolates q similarly (but could be at different points) after which u_mag would be be calculated
 
     # Determine other stalls...
-    stalled_i_v = find_stalled(u_mag, vehicle_pitch_degrees_v, num_rows, calib_consts)
-    buoyancy_pitch_stalled_i_v = where(array(buoyancy_pitch_ok_v) == 0.0)[0]
+    stalled_i_v = find_stalled(u_mag, vehicle_pitch_degrees_v, calib_consts)
+    buoyancy_pitch_stalled_i_v = np.where(np.array(buoyancy_pitch_ok_v) == 0.0)[0]
     buoyancy_pitch_stalled_i_v = buoyancy_pitch_stalled_i_v.tolist()
-    if (len(buoyancy_pitch_stalled_i_v)):
-        log_debug('Adding %d stalled points where pitch is opposite buoyancy forcing' % len(buoyancy_pitch_stalled_i_v))
+    if len(buoyancy_pitch_stalled_i_v):
+        log_debug(
+            "Adding %d stalled points where pitch is opposite buoyancy forcing"
+            % len(buoyancy_pitch_stalled_i_v)
+        )
         stalled_i_v.extend(buoyancy_pitch_stalled_i_v)
         stalled_i_v = Utils.sort_i(Utils.unique(stalled_i_v))
-    u_mag[stalled_i_v] = 0.0 # assume stalled (hydro model on the verge of complex soln)
-    theta[stalled_i_v] = 0.0 # going nowhere... (not NaN, which leads to bad component velocities and interpolations)
+    u_mag[
+        stalled_i_v
+    ] = 0.0  # assume stalled (hydro model on the verge of complex soln)
+    theta[
+        stalled_i_v
+    ] = 0.0  # going nowhere... (not NaN, which leads to bad component velocities and interpolations)
     # Ensure numpy arrays
-    u_mag = array(u_mag)
-    theta = array(theta)
+    u_mag = np.array(u_mag)
+    theta = np.array(theta)
     return (converged, u_mag, theta, stalled_i_v)
-
-
