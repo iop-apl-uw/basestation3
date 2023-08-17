@@ -37,7 +37,7 @@ from zipfile import ZipFile
 from io import BytesIO
 from anyio import Path
 import websockets
-import aiosqlite
+import sqlite3
 import aiofiles
 import asyncio
 import aiohttp
@@ -294,7 +294,7 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
     return decorator
 
 
-def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
+def rowToDict(cursor: sqlite3.Cursor, row: sqlite3.Row) -> dict:
     data = {}
     for idx, col in enumerate(cursor.description):
         data[col[0]] = row[idx]
@@ -828,22 +828,22 @@ def attachHandlers(app: sanic.Sanic):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         message = { 'dive': dive, 'parm': [], 'file': [] }
         if await Path(dbfile).exists():
-            async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+            with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
                 conn.row_factory = rowToDict # not async but called from async fetchall
-                cur = await conn.cursor()
+                cur = conn.cursor()
                 try:
-                    await cur.execute(f"SELECT * FROM changes WHERE dive={dive} ORDER BY parm ASC;")
-                except aiosqlite.OperationalError as e:
+                    cur.execute(f"SELECT * FROM changes WHERE dive={dive} ORDER BY parm ASC;")
+                except sqlite3.OperationalError as e:
                     return sanic.response.text(f'db error {e}')
 
-                message['parm'] = await cur.fetchall()
+                message['parm'] = cur.fetchall()
 
                 try:
-                    await cur.execute(f"SELECT * FROM files WHERE dive={dive} ORDER BY file ASC;")
-                except aiosqlite.OperationalError as e:
+                    cur.execute(f"SELECT * FROM files WHERE dive={dive} ORDER BY file ASC;")
+                except sqlite3.OperationalError as e:
                     return sanic.response.text(f'db error {e}')
 
-                message['file'] = await cur.fetchall()
+                message['file'] = cur.fetchall()
 
         return sanic.response.json(message)
 
@@ -890,15 +890,15 @@ def attachHandlers(app: sanic.Sanic):
     async def statusHandler(request, glider:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if await Path(dbfile).exists():
-            async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-                cur = await conn.cursor()
+            with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+                cur = conn.cursor()
                 try:
-                    await cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
-                except aiosqlite.OperationalError as e:
+                    cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
+                except sqlite3.OperationalError as e:
                     return sanic.response.text(f'no table {e}')
 
                 try:
-                    maxdv = (await cur.fetchone())[0]
+                    maxdv = (cur.fetchone())[0]
                 except:
                     maxdv = 0
         else:
@@ -1001,15 +1001,15 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = q + " ORDER BY dive ASC;"
 
-        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+        with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             conn.row_factory = rowToDict # not async but called from async fetchall
-            cur = await conn.cursor()
+            cur = conn.cursor()
             try:
-                await cur.execute(q)
-            except aiosqlite.OperationalError as e:
+                cur.execute(q)
+            except sqlite3.OperationalError as e:
                 return sanic.response.text(f'no table {e}')
 
-            data = await cur.fetchall()
+            data = cur.fetchall()
             # r = [dict((cur.description[i][0], value) \
             #       for i, value in enumerate(row)) for row in data]
             return sanic.response.json(data)
@@ -1039,15 +1039,15 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = q + f" ORDER BY {col2},dive ASC;"
 
-        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+        with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             conn.row_factory = rowToDict # not async but called from async fetchall
-            cur = await conn.cursor()
+            cur = conn.cursor()
             try:
-                await cur.execute(q)
-            except aiosqlite.OperationalError as e:
+                cur.execute(q)
+            except sqlite3.OperationalError as e:
                 return sanic.response.text(f'no table {e}')
 
-            data = await cur.fetchall()
+            data = cur.fetchall()
             return sanic.response.json(data)
 
 
@@ -1061,11 +1061,11 @@ def attachHandlers(app: sanic.Sanic):
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-            cur = await conn.cursor()
+        with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+            cur = conn.cursor()
             try:
-                await cur.execute('select * from dives')
-            except aiosqlite.OperationalError as e:
+                cur.execute('select * from dives')
+            except sqlite3.OperationalError as e:
                 return sanic.response.text(f'no table {e}')
             names = list(map(lambda x: x[0], cur.description))
             data = {}
@@ -1145,15 +1145,15 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = f"SELECT {queryVars} FROM dives"
 
-        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+        with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             # conn.row_factory = rowToDict
-            cur = await conn.cursor()
+            cur = conn.cursor()
             try:
-                await cur.execute(q)
+                cur.execute(q)
             except:
                 return sanic.response.text('error')
 
-            d = await cur.fetchall()
+            d = cur.fetchall()
             if format == 'json':
                 data = {}
                 print(cur.description)
@@ -1395,23 +1395,23 @@ def attachHandlers(app: sanic.Sanic):
             if not await aiofiles.os.path.exists(dbfile):
                 return (None, time.time())
 
-            myconn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
+            myconn = sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True)
             myconn.row_factory = rowToDict
         else:
             myconn = conn
     
         try:
-            cur = await myconn.cursor()
+            cur = myconn.cursor()
             q = f"SELECT * FROM chat WHERE timestamp > {t} ORDER BY timestamp;" #  DESC LIMIT 20;"
-            await cur.execute(q)
-            rows = await cur.fetchall()
-            await cur.close()
+            cur.execute(q)
+            rows = cur.fetchall()
+            cur.close()
         except Exception as e:
             sanic.log.logger.info(e)
             rows = None
 
         if conn == None:
-            await myconn.close()
+            myconn.close()
 
         if rows:
             for r in rows:
@@ -1472,8 +1472,8 @@ def attachHandlers(app: sanic.Sanic):
 
         now = time.time()
  
-        async with aiosqlite.connect(dbfile) as conn:
-            cur = await conn.cursor()
+        with sqlite3.connect(dbfile) as conn:
+            cur = conn.cursor()
             cur.execute("PRAGMA busy_timeout=200;")
 
             try:
@@ -1483,16 +1483,16 @@ def attachHandlers(app: sanic.Sanic):
                 else:
                     q = f"INSERT INTO chat(timestamp, user, message) VALUES(?, ?, ?)"
                     values = ( now, tU, msg )
-                await cur.execute(q, values)
-                await conn.commit()
+                cur.execute(q, values)
+                conn.commit()
 
                 await Utils.notifyVisAsync(glider, 'chat', f"{now}:{'attachment' if attach else 'none'}:{msg}")
                 return sanic.response.text('SENT')
-            except aiosqlite.OperationalError as e:
+            except sqlite3.OperationalError as e:
                 sanic.log.logger.info(e)
                 return sanic.response.text('oops')
 
-            await cur.close()
+            cur.close()
             # await conn.close()
 
     @app.route('/pos/<glider:int>')
@@ -1529,12 +1529,12 @@ def attachHandlers(app: sanic.Sanic):
         if not await aiofiles.os.path.exists(dbfile):
             return sanic.response.text('no db')
 
-        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+        with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             try:
                 conn.row_factory = rowToDict
-                cur = await conn.cursor()
-                await cur.execute(q)
-                row = await cur.fetchone()
+                cur = conn.cursor()
+                cur.execute(q)
+                row = cur.fetchone()
                 if row:
                     if format == 'json':
                         return sanic.response.json(row)
@@ -1553,24 +1553,24 @@ def attachHandlers(app: sanic.Sanic):
             if not await aiofiles.os.path.exists(dbfile):
                 return None
 
-            myconn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
+            myconn = sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True)
             myconn.row_factory = rowToDict
         else:
             myconn = conn
 
         row = None
         try:
-            cur = await myconn.cursor()
+            cur = myconn.cursor()
             q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT {limit};"
             sanic.log.logger.info(q)
-            await cur.execute(q)
-            row = await cur.fetchall()
-            await cur.close()
+            cur.execute(q)
+            row = cur.fetchall()
+            cur.close()
         except Exception as e:
             sanic.log.logger.info(e)
 
         if conn == None:
-            await myconn.close()
+            myconn.close()
 
         return row
  
@@ -1663,7 +1663,7 @@ def attachHandlers(app: sanic.Sanic):
         if tU and request.app.config.RUNMODE > MODE_PUBLIC:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
             if (which == 'history' or which == 'init') and await aiofiles.os.path.exists(dbfile):
-                async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+                with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
                     conn.row_factory = rowToDict 
                     (rows, prev_db_t) = await getChatMessages(request, glider, 0, conn)
                     if rows:
@@ -1686,7 +1686,7 @@ def attachHandlers(app: sanic.Sanic):
 
                 if 'chat' in topic and tU and request.app.config.RUNMODE > MODE_PUBLIC:
                     if await aiofiles.os.path.exists(dbfile):
-                        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+                        with sqlite3.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
                             conn.row_factory = rowToDict 
                         
                             (rows, prev_db_t) = await getChatMessages(request, glider, prev_db_t, conn)
@@ -1732,8 +1732,8 @@ def attachHandlers(app: sanic.Sanic):
 
             except BaseException as e: # websockets.exceptions.ConnectionClosed:
                 sanic.log.logger.info(f'stream ws connection closed {e}')
-                if conn is not None:
-                    await conn.close()
+                #if conn is not None: # conn is wrapped in with above
+                #    conn.close()
 
                 await ws.close()
                 zsock.close()
