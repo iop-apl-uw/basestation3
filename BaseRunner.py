@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -104,7 +104,7 @@ def main():
                 },
             ),
             "jail_root": BaseOpts.options_t(
-                None,
+                "",
                 ("BaseRunner",),
                 ("--jail_root",),
                 str,
@@ -117,10 +117,40 @@ def main():
                 False,
                 ("BaseRunner",),
                 ("--archive",),
-                str,
+                bool,
                 {
                     "help": "Archive off run files",
                     "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "docker_image": BaseOpts.options_t(
+                "",
+                ("BaseRunner",),
+                ("--docker_image",),
+                str,
+                {
+                    "help": "Docker image to use",
+                },
+            ),
+            "use_docker_basestation": BaseOpts.options_t(
+                False,
+                ("BaseRunner",),
+                ("--use_docker_basestation",),
+                bool,
+                {
+                    "help": "Use the basestation installed in the docker container",
+                    "action": BaseOpts.FullPathTrailingSlashAction,
+                },
+            ),
+            "docker_mount": BaseOpts.options_t(
+                None,
+                ("BaseRunner",),
+                ("--docker_mount",),
+                str,
+                {
+                    "help": "Additional mounts for the docker container",
+                    "action": "append",
+                    "nargs": "*",
                 },
             ),
         },
@@ -153,6 +183,8 @@ def main():
                 % (lock_file_pid, previous_runner_time_out)
             )
             os.kill(lock_file_pid, signal.SIGKILL)
+        else:
+            log_info(f"{lock_file_pid} responded to sighup")
 
     Utils.create_lock_file(base_opts, base_runner_lockfile_name)
 
@@ -183,19 +215,26 @@ def main():
             log_debug(f"Found {run_file}")
             try:
                 runfile_line = open(run_file, "r").readline()
-                log_info(runfile_line)
+                log_debug(runfile_line)
                 seaglider_root_dir, log_file, cmd_line = runfile_line.split(" ", 2)
                 seaglider_root_dir = seaglider_root_dir.rstrip()
                 log_file = log_file.rstrip()
                 if base_opts.jail_root and log_file.startswith(seaglider_root_dir):
                     log_file = os.path.join(base_opts.jail_root, log_file[1:])
-                log_info(f"{seaglider_root_dir}, {log_file}, {cmd_line}")
+                log_info(
+                    f"seaglider_root_dir:{seaglider_root_dir} log_file:{log_file}, cmd_line:{cmd_line}"
+                )
                 if cmd_line.split(" ", 1)[0].rstrip() not in known_scripts:
                     log_error(f"Unknown script ({cmd_line}) - skipping")
                 else:
                     # Prepend the basestation directory and add on the python version
                     script, tail = cmd_line.split(" ", 1)
-                    full_path_script = os.path.join(basestation_dir, script)
+                    if base_opts.docker_image and base_opts.use_docker_basestation:
+                        full_path_script = os.path.join(
+                            "/usr/local/basestation3", script
+                        )
+                    else:
+                        full_path_script = os.path.join(basestation_dir, script)
                     cmd_line = f"{base_opts.python_version} {full_path_script} {tail}"
 
                     if base_opts.jail_root:
@@ -208,13 +247,36 @@ def main():
                                 )
                         cmd_line = " ".join(cmd_line_parts)
 
+                    # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
+                    cmd_line += f" >> {log_file} 2>&1"
+
+                    if base_opts.docker_image:
+                        # docker run -d --volume /home/sg090:/home/sg090 --volume ~/work/git/basestation3:/usr/local/basestation3  basestation:3.10.10
+                        docker_detach = ""
+                        cmd_line_parts = cmd_line.split()
+                        if "--daemon" in cmd_line_parts:
+                            docker_detach = "-d"
+                            cmd_line_parts.pop(cmd_line_parts.index("--daemon"))
+                        cmd_line = " ".join(cmd_line_parts)
+                        if base_opts.jail_root:
+                            glider_home = os.path.join(
+                                base_opts.jail_root, seaglider_root_dir
+                            )
+                        else:
+                            glider_home = seaglider_root_dir
+                        basestation_mount = ""
+                        if not base_opts.use_docker_basestation:
+                            basestation_mount = (
+                                f"--volume {basestation_dir}:{basestation_dir}"
+                            )
+                        for m in base_opts.docker_mount:
+                            basestation_mount += f" --volume {m[0]}"
+                        cmd_line = f'docker run {docker_detach} --volume {glider_home}:{glider_home} {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
                     # May not be critical, but for now, this script when launched out of systemd is
                     # running with unbuffered stdin/stdout - no need to launch other scripts this way
                     my_env = os.environ.copy()
                     if "PYTHONUNBUFFERED" in my_env:
                         del my_env["PYTHONUNBUFFERED"]
-                    # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
-                    cmd_line += f" >> {log_file} 2>&1"
                     log_info(f"Running {cmd_line}")
                     completed_process = subprocess.run(
                         cmd_line,
@@ -223,7 +285,9 @@ def main():
                         start_new_session=True,
                     )
                     if completed_process.returncode:
-                        log_warning(f"{cmd_line} returned {completed_process.returncode}", "exc")
+                        log_warning(
+                            f"{cmd_line} returned {completed_process.returncode}", "exc"
+                        )
             except KeyboardInterrupt:
                 exit_event.set()
             except:
@@ -244,7 +308,9 @@ def main():
                             try:
                                 shutil.move(run_file, archive_dir)
                             except:
-                                log_error(f"Failed to move {run_file} to {archive_dir}", "exc")
+                                log_error(
+                                    f"Failed to move {run_file} to {archive_dir}", "exc"
+                                )
                                 f_archive_failed = True
                             else:
                                 log_info(f"Archived {run_file}")
@@ -257,6 +323,7 @@ def main():
     log_info("Shutdown signal received")
 
     Utils.cleanup_lock_file(base_opts, base_runner_lockfile_name)
+    return 0
 
 
 if __name__ == "__main__":
