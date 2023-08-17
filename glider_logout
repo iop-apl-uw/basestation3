@@ -54,7 +54,7 @@ endif
 printf "\n" >>! baselog.log
 printf "\n"  >>! baselog.log
 
-set base_logout_time = `date -u +%y%m%d%H%M%S`
+set base_logout_time = `date -u +%y%m%d%H%M%S%3N`
 set base_logout_cmd_line = "Base.py --mission_dir `pwd` --verbose --make_mission_timeseries --daemon --nice 10 --base_log `pwd`/baselog_`date -u +%y%m%d%H%M%S` ${GLIDER_OPTIONS}"
 set base_logout_log = `pwd`/baselog.log
 
