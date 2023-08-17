@@ -32,6 +32,7 @@
 # Known Issues:
 # - .pagers, .ftp, .mailer and .urls all not currently working from inside the container.
 # - vis notifications not working from inside the container.
+# - file permissions for converted files not correct
 #
 # To Build:
 # docker build -t basestation:3.10.10 .
