@@ -9,10 +9,12 @@
 -->
         <link rel="stylesheet" href="../proxy/https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src/leaflet-reticle.css">
         <link rel="stylesheet" href="../script/Control.Coordinates.css" />
+        <link rel="stylesheet" href="../script/leaflet.groupedlayercontrol.css" />
         <script src="../script/leaflet.js"></script>
         <script src="../script/leaflet-ruler.js"></script>
         <script src="../script/L.KML.js"></script>
         <script src="../script/Control.Coordinates.js"></script>
+        <script src="../script/leaflet.groupedlayercontrol.js"></script>
 <!--
         <script src="../script/leaflet-reticle.js"></script>
 -->
@@ -243,7 +245,7 @@
 
                     } 
                     newLayer = L.layerGroup(assetMarkers);
-                    layerControl.addOverlay(newLayer, labels[i]); 
+                    layerControl.addOverlay(newLayer, labels[i], "SA"); 
                     newLayer.addTo(map);
                 }
             }
@@ -608,7 +610,7 @@
                     a = assets[i];
                     var newLayer;
                     var html;
-
+                    mk = null; 
                     if (a.type == 'fixed') {
                         console.log('adding fixed ' + a.asset);
                         html = [ a.asset, formatPos(a.lat) + "," + formatPos(a.lon)].join('<br/>');
@@ -637,17 +639,24 @@
                         for (var j = 0 ; j < a.points.length ; j++) {
                             pts.push([a.points[j].lat, a.points[j].lon]);
                         }
-                        assetMarkers.push(L.polygon(pts, { color: 'color' in a ? a.color : 'green', })
-                                           .bindTooltip(a.asset, { permanent: false, className: 'assetLabel' } ));
+                        mk = L.polygon(pts, { color: 'color' in a ? a.color : 'green', });
+                        mk.bindTooltip(a.asset, { permanent: false, className: 'assetLabel' } );
+                        assetMarkers.push(mk);
                     }
                     else if (a.type == 'circle' && 'center' in a && 'radius' in a) {
                         console.log('adding circle ' + a.asset);
-                        assetMarkers.push(L.circle([a.center.lat, a.center.lon], { radius: a.radius, color: 'color' in a ? a.color : 'green' })
-                                           .bindTooltip(a.asset, { permanent: false, className: 'assetLabel' } ));
+                        mk = L.circle([a.center.lat, a.center.lon], { radius: a.radius, color: 'color' in a ? a.color : 'green' });
+                        mk.bindTooltip(a.asset, { permanent: false, className: 'assetLabel' } );
+
+                        assetMarkers.push(mk);
                     }
 
+                    if (mk) {
+                        layerControl.addOverlay(mk, a.asset, "assets");
+                        mk.addTo(map);
+                    }
                 }
-
+/*
                 try {
                     newLayer = L.layerGroup(assetMarkers);
                     layerControl.addOverlay(newLayer, 'assets')
@@ -656,7 +665,7 @@
                 catch(e) {
                     console.log('assets map ' + e);
                 }
-
+*/
                 for (var i = 0 ; i < assets.length ; i++) {
                     a = assets[i];
                     var newLayer = null;
@@ -675,7 +684,7 @@
                                                    {tms: true, opacity: 0.7, attribution: "", minZoom: minZoom, maxZoom: maxZoom});
             
                         if (newLayer)
-                            layerControl.addOverlay(newLayer, a.asset);
+                            layerControl.addOverlay(newLayer, a.asset, 'imagery');
                     }
                 }
                 
@@ -1352,20 +1361,37 @@
             }
 
             var overlayLayers = {
-                "GEBCO": gebco,
-                "contours": contours,
-                "SSH": ssh,
-                "SST (MODIS 8-day day)": sst,
-                "sea ice (AMSRU2 12km)": seaIce,
-                "Chlorophyll-A (Aqua MODIS L2)": chlA,
-                "AIS": ais,
-                "chart marks": chart,
+                "bathymetry": {
+                    "GEBCO": gebco,
+                    "contours": contours,
+                },
+                "satellite": {
+                    "SSH": ssh,
+                    "SST (MODIS 8-day day)": sst,
+                    "sea ice (AMSRU2 12km)": seaIce,
+                    "Chlorophyll-A (Aqua MODIS L2)": chlA,
+                },
+                "chart": {
+                    "AIS": ais,
+                    "chart marks": chart,
+                },
 {% if weathermapAppID != '' %}
-                "wind": wind,
+                "weather": {
+                    "wind": wind,
+                },
 {% endif %}
             }
 
-            var layerControl = L.control.layers(baseLayers, overlayLayers).addTo(map);
+            var options = {
+                groupCheckboxes: true,
+                groupsCollapsable: true,
+                // (Optional) The css class(es) used to indicated the group is expanded
+                groupsExpandedClass: "glyphicon glyphicon-chevron-down", 
+                // (Optional) The css class(es) used to indicated the group is collapsed
+                groupsCollapsedClass: "glyphicon glyphicon-chevron-right"
+            };
+
+            var layerControl = L.control.groupedLayers(baseLayers, overlayLayers, options).addTo(map);
 
 
             // ice edge first
