@@ -144,7 +144,7 @@
           this._toggleMeasure();
         }
       }
-      if (e.keyCode === 84 || e.keyCode === 116) {
+      if (e.keyCode === 84 || e.keyCode === 116 || e.keyCode == 77 || e.keyCode == 109 || e.keyCode == 82 || e.keyCode == 114) {
         var pts = null;
         if (this.options.export) {
             if (this._clickCount > 0) {
@@ -154,7 +154,7 @@
                 pts = this._prevClickedPoints;
             }
             if (pts) {
-                var txt = this.options.export(pts);
+                var txt = this.options.export(pts, e.keyCode);
                 navigator.clipboard.writeText(txt);
                 L.circleMarker(pts[0], this.options.circleMarker).bindTooltip('<pre>' + txt + '</pre> (copied to clipboard)', {sticky: true, className: 'result-tooltip'}).addTo(this._pointLayer).openTooltip();
             }

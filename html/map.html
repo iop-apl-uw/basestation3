@@ -659,13 +659,23 @@
 
                 for (var i = 0 ; i < assets.length ; i++) {
                     a = assets[i];
-                    var newLayer;
-                    var html;
-
+                    var newLayer = null;
+                    
                     if (a.type == 'tileset') {
+                        var minZoom = 'minZoom' in a ? a.minZoom : 3;
+                        var maxZoom = 'maxZoom' in a ? a.maxZoom : 16;
+
                         console.log('adding ' + a.asset);
-                        newLayer = L.tileLayer('../tile/asset/' + a.path + '/{z}/{x}/{y}', {tms: true, opacity: 0.7, attribution: "", minZoom: 3, maxZoom: 16});
-                        layerControl.addOverlay(newLayer, a.asset);
+
+                        if ('path' in a)
+                            newLayer = L.tileLayer('../tile/asset/' + a.path + '/{z}/{x}/{y}', 
+                                                   {tms: true, opacity: 0.7, attribution: "", minZoom: minZoom, maxZoom: maxZoom});
+                        else if ('url' in a)
+                            newLayer = L.tileLayer(a.url, 
+                                                   {tms: true, opacity: 0.7, attribution: "", minZoom: minZoom, maxZoom: maxZoom});
+            
+                        if (newLayer)
+                            layerControl.addOverlay(newLayer, a.asset);
                     }
                 }
                 
@@ -964,13 +974,35 @@
                 }
             }
 
-            function exportTargets(points) {
+            function exportTargets(points, fmt) {
                 var buffText = "";
-                for(var i = 1; i <= points.length ; i++) {
-                    latA = points[i-1].lat;
-                    lonA = points[i-1].lng;
-                    buffText += i + ' lat=' +  dd2ddmm(latA).toFixed(3) + ' lon=' + dd2ddmm(lonA).toFixed(3) + ' radius=2000 goto=' + (i < points.length ? i+1 : i) + '\n';
+                if (fmt == 116 || fmt == 84) { // 't' = targets
+                    for(var i = 1; i <= points.length ; i++) {
+                        latA = points[i-1].lat;
+                        lonA = points[i-1].lng;
+                        buffText += i + ' lat=' +  dd2ddmm(latA).toFixed(3) + ' lon=' + dd2ddmm(lonA).toFixed(3) + ' radius=2000 goto=' + (i < points.length ? i+1 : i) + '\n';
+                    }
                 }
+                else if (fmt == 109 || fmt == 77) { // 'm' = marks
+                    for(var i = 0; i < points.length ; i++) {
+                        latA = points[i].lat;
+                        lonA = points[i].lng;
+                        buffText += (i+1) + ': {type: fixed, lat: ' +  latA.toFixed(4) + ', lon: ' + lonA.toFixed(4) + ' }\n';
+                    }
+                }
+                else if (fmt == 114 || fmt == 82) { // 'r' = route
+                    buffText += '  - [ ';
+                    for(var i = 0; i < points.length ; i++) {
+                        latA = points[i].lat;
+                        lonA = points[i].lng;
+                        buffText += '{lat: ' +  latA.toFixed(4) + ', lon: ' + lonA.toFixed(4) + ' }';
+                        if (i < points.length - 1)
+                            buffText += ',\n      ';
+                        else
+                            buffText += ' ]\n';
+                    }
+                }
+                return buffText;
                 return buffText;
             }
 
