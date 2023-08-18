@@ -245,7 +245,7 @@
 
                     } 
                     newLayer = L.layerGroup(assetMarkers);
-                    layerControl.addOverlay(newLayer, labels[i], "SA"); 
+                    layerControl.addOverlay(newLayer, labels[i], "overlays"); 
                     newLayer.addTo(map);
                 }
             }
@@ -597,7 +597,7 @@
                 }
 
                 var newLayer = L.layerGroup(routeMarkers);
-                layerControl.addOverlay(newLayer, 'routes')
+                layerControl.addOverlay(newLayer, 'routes', 'assets')
                 newLayer.addTo(map);
             }
  
@@ -787,7 +787,7 @@
                         v.push(line);
                     }
                     let newLayer = L.layerGroup(v);
-                    layerControl.addOverlay(newLayer, `${glider} DAC`); 
+                    layerControl.addOverlay(newLayer, 'DAC', `${glider} ${mission}`); 
                     // newLayer.addTo(map); // not by default
                 })
                 .catch(e => {
@@ -807,7 +807,7 @@
                         parser = new DOMParser();
                         kml = parser.parseFromString(kmltext, 'text/xml');
                         ly = new L.KML(kml, { });
-                        layerControl.addOverlay(ly, names[i]); 
+                        layerControl.addOverlay(ly, names[i], "overlays"); 
                     }
                 }
                 catch(e) {
@@ -929,7 +929,10 @@
                         }
                         if (track._layers[k].options.hasOwnProperty('name') 
                             && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
-                            layerControl.addOverlay(track._layers[k], track._layers[k].options.name + ' ' + missions[i]);
+                            if (track._layers[k].options.name.includes('Dives')) 
+                                layerControl.addOverlay(track._layers[k], 'dives', '' + gliders[i] + ' ' + missions[i]);
+                            else
+                                layerControl.addOverlay(track._layers[k], 'targets', gliders[i] + ' ' + missions[i]);
                             console.log(track._layers[k].options.name);
                             console.log(missions[i]);
                         }
