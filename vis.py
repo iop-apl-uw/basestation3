@@ -1289,17 +1289,27 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('no')
         
         res = request.json
-        if not 'body' in res or not 'file' in res or not 'glider' in res:
+        if not 'glider' in res:
             return sanic.response.text('no')
 
-        try:
-            f = open(f"{gliderPath(glider,request)}/{res['file']}", 'wb')
-            f.write(base64.b64decode(bytes(res['body'], 'utf-8')))
-            f.close()
-        except Exception as e:
-            return sanic.response.text(f'error {e}')
-
-        return sanic.response.text('success') 
+        if 'body' in res and 'file' in res:
+            try:
+                f = open(f"{gliderPath(glider,request)}/{res['file']}", 'wb')
+                f.write(base64.b64decode(bytes(res['body'], 'utf-8')))
+                f.close()
+                return sanic.response.text('success') 
+            except Exception as e:
+                return sanic.response.text(f'error {e}')
+        elif 'event' in res:
+            try:
+                f = open(f"{gliderPath(glider,request)}/events.log", 'a')
+                f.write(res['event'])
+                f.close()
+                return sanic.response.text('success') 
+            except Exception as e:
+                return sanic.response.text(f'error {e}')
+                
+        return sanic.response.text('error') 
 
     @app.post('/save/<glider:int>/<which:str>')
     # description: save glider control file
