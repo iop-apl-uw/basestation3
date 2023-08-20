@@ -276,6 +276,7 @@
                                                 rotation: 0
                                            });
                 shipMarker.addTo(map);
+                layerControl.addOverlay(shipMarker, 'ship', "chart"); 
                 document.getElementById('info').style.display = 'block';
 
                 usingLocation = true;
@@ -462,6 +463,7 @@
                 // layerControl.addOverlay(newLayer, shipName);
                 // newLayer.addTo(map);
                 shipMarker.addTo(map);
+                layerControl.addOverlay(shipMarker, 'ship', "chart"); 
                 document.getElementById('info').style.display = 'block';
 
                 map.on("click", function(e) {
