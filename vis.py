@@ -65,7 +65,28 @@ import secrets
 import ExtractTimeseries
 import socket
 import rafos
-# import furl
+#from contextlib import asynccontextmanager
+#
+#@asynccontextmanager
+#async def aclosing(thing):
+#    try:
+#        yield thing
+#    finally:
+#        try:
+#            await thing.close()
+#            Utils.logDB("CLOSED")
+#        except ValueError:
+#            pass
+#
+
+async def checkClose(conn):
+    try:
+        await conn.close()
+        Utils.logDB("CLOSED")
+    except ValueError:
+        pass
+
+import furl
 
 PERM_INVALID = -1
 PERM_REJECT = 0
@@ -126,11 +147,6 @@ publicMissionFields = {"glider", "mission", "status",
 
 # which modes need full comm.log stream vs just change notices
 
-def logDB(msg):
-    f = open("/home/seaglider/db.log", "a")
-    f.write(f"{time.time()} {msg}\n")
-    f.close()
- 
 def getTokenUser(request):
     if request.app.config.SINGLE_MISSION:
         return (request.app.config.USER, False)
@@ -834,13 +850,13 @@ def attachHandlers(app: sanic.Sanic):
         message = { 'dive': dive, 'parm': [], 'file': [] }
         if await Path(dbfile).exists():
             async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-                logDB(f'deltas open {glider}')
+                Utils.logDB(f'deltas open {glider}')
                 conn.row_factory = rowToDict # not async but called from async fetchall
                 cur = await conn.cursor()
                 try:
                     await cur.execute(f"SELECT * FROM changes WHERE dive={dive} ORDER BY parm ASC;")
                 except aiosqlite.OperationalError as e:
-                    logDB(f'deltas close (exception) {glider}')
+                    Utils.logDB(f'deltas close (exception) {glider}')
                     return sanic.response.text(f'db error {e}')
 
                 message['parm'] = await cur.fetchall()
@@ -848,12 +864,13 @@ def attachHandlers(app: sanic.Sanic):
                 try:
                     await cur.execute(f"SELECT * FROM files WHERE dive={dive} ORDER BY file ASC;")
                 except aiosqlite.OperationalError as e:
-                    logDB(f'deltas close (exception 2) {glider}')
+                    Utils.logDB(f'deltas close (exception 2) {glider}')
                     return sanic.response.text(f'db error {e}')
 
                 message['file'] = await cur.fetchall()
+                Utils.logDB(f'deltas close {glider}')
 
-            logDB(f'deltas close {glider}')
+            await checkClose(conn)
 
         return sanic.response.json(message)
 
@@ -901,19 +918,22 @@ def attachHandlers(app: sanic.Sanic):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if await Path(dbfile).exists():
             async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-                logDB(f'status open {glider}')
+                Utils.logDB(f'status open {glider}')
                 cur = await conn.cursor()
                 try:
                     await cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
                 except aiosqlite.OperationalError as e:
-                    logDB(f'status close (exception) {glider}')
+                    Utils.logDB(f'status close (exception) {glider}')
                     return sanic.response.text(f'no table {e}')
 
                 try:
                     maxdv = (await cur.fetchone())[0]
                 except:
                     maxdv = 0
-            logDB(f'status close {glider}')
+
+                Utils.logDB(f'status close {glider}')
+            await checkClose(conn)
+            
         else:
             return sanic.response.text('file not found')
 
@@ -1015,20 +1035,23 @@ def attachHandlers(app: sanic.Sanic):
             q = q + " ORDER BY dive ASC;"
 
         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-            logDB(f'db open {glider}')
+            Utils.logDB(f'db open {glider}')
             conn.row_factory = rowToDict # not async but called from async fetchall
             cur = await conn.cursor()
             try:
                 await cur.execute(q)
             except aiosqlite.OperationalError as e:
-                logDB(f'db close (exception) {glider}')
+                Utils.logDB(f'db close (exception) {glider}')
                 return sanic.response.text(f'no table {e}')
 
             data = await cur.fetchall()
             # r = [dict((cur.description[i][0], value) \
             #       for i, value in enumerate(row)) for row in data]
 
-        logDB(f'db close {glider}')
+            Utils.logDB(f'db close {glider}')
+
+        await checkClose(conn)
+
         return sanic.response.json(data)
 
     @app.route('/changes/<glider:int>/<dive:int>/<which:str>/<sort:str>')
@@ -1057,18 +1080,19 @@ def attachHandlers(app: sanic.Sanic):
             q = q + f" ORDER BY {col2},dive ASC;"
 
         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-            logDB(f'changes open {glider}')
+            Utils.logDB(f'changes open {glider}')
             conn.row_factory = rowToDict # not async but called from async fetchall
             cur = await conn.cursor()
             try:
                 await cur.execute(q)
             except aiosqlite.OperationalError as e:
-                logDB(f'changes close (exception) {glider}')
+                Utils.logDB(f'changes close (exception) {glider}')
                 return sanic.response.text(f'no table {e}')
 
             data = await cur.fetchall()
-        logDB(f'changes close {glider}')
+            Utils.logDB(f'changes close {glider}')
 
+        await checkClose(conn)
         return sanic.response.json(data)
 
 
@@ -1083,18 +1107,19 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('no db')
 
         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-            logDB(f'dbvars open {glider}')
+            Utils.logDB(f'dbvars open {glider}')
             cur = await conn.cursor()
             try:
                 await cur.execute('select * from dives')
             except aiosqlite.OperationalError as e:
-                logDB(f'dbvars close (exception) {glider}')
+                Utils.logDB(f'dbvars close (exception) {glider}')
                 return sanic.response.text(f'no table {e}')
             names = list(map(lambda x: x[0], cur.description))
             data = {}
             data['names'] = names
 
-        logDB(f'dbvars close {glider}')
+            Utils.logDB(f'dbvars close {glider}')
+        await checkClose(conn)
         return sanic.response.json(data)
 
     @app.route('/pro/<glider:int>/<whichVar:str>/<whichProfiles:int>/<first:int>/<last:int>/<stride:int>/<top:int>/<bot:int>/<binSize:int>')
@@ -1172,12 +1197,12 @@ def attachHandlers(app: sanic.Sanic):
 
         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             # conn.row_factory = rowToDict
-            logDB(f'query open {glider}')
+            Utils.logDB(f'query open {glider}')
             cur = await conn.cursor()
             try:
                 await cur.execute(q)
             except:
-                logDB(f'query close (except) {glider}')
+                Utils.logDB(f'query close (except) {glider}')
                 return sanic.response.text('error')
 
             d = await cur.fetchall()
@@ -1187,11 +1212,11 @@ def attachHandlers(app: sanic.Sanic):
                 for i in range(len(cur.description)):
                     data[cur.description[i][0]] = [ f[i] for f in d ]
 
-                logDB(f'query close (return) {glider}')
+                Utils.logDB(f'query close (return) {glider}')
                 return sanic.response.json(data)
             else:
                 str = ''
-                logDB(f'query close (else) {glider}')
+                Utils.logDB(f'query close (else) {glider}')
                 return sanic.response.text('error')
                 
 
@@ -1436,7 +1461,7 @@ def attachHandlers(app: sanic.Sanic):
                 return (None, time.time())
 
             myconn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
-            logDB(f'getChatMessages open {glider}')
+            Utils.logDB(f'getChatMessages open {glider}')
             myconn.row_factory = rowToDict
         else:
             myconn = conn
@@ -1453,7 +1478,7 @@ def attachHandlers(app: sanic.Sanic):
 
         if conn == None:
             await myconn.close()
-            logDB(f'getChatMessages close {glider}')
+            Utils.logDB(f'getChatMessages close {glider}')
 
         if rows:
             for r in rows:
@@ -1515,7 +1540,7 @@ def attachHandlers(app: sanic.Sanic):
         now = time.time()
  
         async with aiosqlite.connect(dbfile) as conn:
-            logDB(f'chat open {glider}')
+            Utils.logDB(f'chat open {glider}')
             cur = await conn.cursor()
             cur.execute("PRAGMA busy_timeout=200;")
 
@@ -1530,11 +1555,11 @@ def attachHandlers(app: sanic.Sanic):
                 await conn.commit()
 
                 await Utils.notifyVisAsync(glider, 'chat', f"{now}:{'attachment' if attach else 'none'}:{msg}")
-                logDB(f'chat close {glider}')
+                Utils.logDB(f'chat close {glider}')
                 return sanic.response.text('SENT')
             except aiosqlite.OperationalError as e:
                 sanic.log.logger.info(e)
-                logDB(f'chat close (except) {glider}')
+                Utils.logDB(f'chat close (except) {glider}')
                 return sanic.response.text('oops')
 
 
@@ -1573,7 +1598,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('no db')
 
         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-            logDB(f'posPoll open {glider}')
+            Utils.logDB(f'posPoll open {glider}')
             try:
                 conn.row_factory = rowToDict
                 cur = await conn.cursor()
@@ -1581,17 +1606,17 @@ def attachHandlers(app: sanic.Sanic):
                 row = await cur.fetchone()
                 if row:
                     if format == 'json':
-                        logDB(f'posPoll close 1 {glider}')
+                        Utils.logDB(f'posPoll close 1 {glider}')
                         return sanic.response.json(row)
                     elif format == 'csv':
-                        logDB(f'posPoll close 2 {glider}')
+                        Utils.logDB(f'posPoll close 2 {glider}')
                         return sanic.response.text(f"{row['epoch']},{row['lat']},{row['lon']}")
                 else:
-                    logDB(f'posPoll close 3 {glider}')
+                    Utils.logDB(f'posPoll close 3 {glider}')
                     return sanic.response.text('none')
             except Exception as e:
                 sanic.log.logger.info(e)
-                logDB(f'posPoll close oops {glider}')
+                Utils.logDB(f'posPoll close oops {glider}')
                 return sanic.response.text('oops')
            
     async def getLatestCall(request, glider, conn=None, limit=1):
@@ -1602,7 +1627,7 @@ def attachHandlers(app: sanic.Sanic):
                 return None
 
             myconn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
-            logDB(f'getLatestCall open {glider}')
+            Utils.logDB(f'getLatestCall open {glider}')
             myconn.row_factory = rowToDict
         else:
             myconn = conn
@@ -1619,7 +1644,7 @@ def attachHandlers(app: sanic.Sanic):
             sanic.log.logger.info(e)
 
         if conn == None:
-            logDB(f'getLatestCall close {glider}')
+            Utils.logDB(f'getLatestCall close {glider}')
             await myconn.close()
 
         return row
@@ -1714,14 +1739,14 @@ def attachHandlers(app: sanic.Sanic):
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
             if (which == 'history' or which == 'init') and await aiofiles.os.path.exists(dbfile):
                 async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-                    logDB(f'stream 1 open {glider}')
+                    Utils.logDB(f'stream 1 open {glider}')
                     conn.row_factory = rowToDict 
                     (rows, prev_db_t) = await getChatMessages(request, glider, 0, conn)
                     if rows:
                         await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
-                logDB(f'stream 1 close {glider}')
-
+                    Utils.logDB(f'stream 1 close {glider}')
+                await checkClose(conn)
         zsock = zmq.asyncio.Context().socket(zmq.SUB)
         zsock.setsockopt(zmq.LINGER, 0)
         zsock.connect(request.app.config.WATCH_IPC)
@@ -1740,15 +1765,15 @@ def attachHandlers(app: sanic.Sanic):
                 if 'chat' in topic and tU and request.app.config.RUNMODE > MODE_PUBLIC:
                     if await aiofiles.os.path.exists(dbfile):
                         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-                            logDB(f'stream 2 open {glider}')
+                            Utils.logDB(f'stream 2 open {glider}')
                             conn.row_factory = rowToDict 
                         
                             (rows, prev_db_t) = await getChatMessages(request, glider, prev_db_t, conn)
                             if rows:
                                 await ws.send(f"CHAT={dumps(rows).decode('utf-8')}")
 
-                        logDB(f'stream 2 close {glider}')
-
+                            Utils.logDB(f'stream 2 close {glider}')
+                        await checkClose(conn)
                 elif 'comm.log' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
                     sanic.log.logger.info('comm.log notified')
                     if not commFile:
@@ -1777,12 +1802,12 @@ def attachHandlers(app: sanic.Sanic):
                     m = loads(body) 
                     
                     async with aiofiles.open(m['full'], 'rb') as file:
-                        logDB(f'stream 3 open {glider}')
+                        Utils.logDB(f'stream 3 open {glider}')
                         body = (await file.read()).decode('utf-8', errors='ignore')
                         m.update( { "body": body } )
                         await ws.send(f"FILE={dumps(m).decode('utf-8')}")
 
-                    logDB(f'stream 3 close {glider}')
+                    Utils.logDB(f'stream 3 close {glider}')
                 elif 'file-cmdfile' in topic:
                     directive = await summary.getCmdfileDirective(cmdfilename)
                     await ws.send(f"CMDFILE={directive}")

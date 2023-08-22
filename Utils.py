@@ -1672,8 +1672,10 @@ def open_mission_database(
 
     if ro:
         conn = sqlite3.connect("file:" + db + "?mode=ro", uri=True)
+        logDB(f"utils open (ro)")
     else:
         conn = sqlite3.connect(db)
+        logDB(f"utils open")
         # conn.isolation_level = None
 
     conn.cursor().execute("PRAGMA busy_timeout=200;")
@@ -1821,3 +1823,8 @@ async def notifyVisAsync(glider: int, topic: str, body: str):
         socket.setsockopt(zmq.LINGER, 0)  # this is the important one
         await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
+
+def logDB(msg):
+    f = open("/home/seaglider/home/db.log", "a")
+    f.write(f"{time.time()} {msg}\n")
+    f.close()

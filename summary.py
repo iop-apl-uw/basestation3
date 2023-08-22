@@ -178,7 +178,8 @@ async def collectSummary(glider, path):
         print(e)
         
     try:
-        conn = await aiosqlite.connect('file:' + dbfile + '?mode=ro', uri=True)
+        conn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
+        Utils.logDB(f"summary open {glider}")
     except Exception as e:
         print(e)
         return out
@@ -206,9 +207,11 @@ async def collectSummary(glider, path):
         start = await cur.fetchone()
     except Exception as e:
         print(f'database error {dbfile} {e}')
+        Utils.logDB(f"summary close (except) {glider}")
         await conn.close()
         return out
 
+    Utils.logDB(f"summary close {glider}")
     await conn.close()
 
     out['name'] = int(data['log_glider'])
