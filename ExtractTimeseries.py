@@ -117,7 +117,7 @@ def timeSeriesToProfile(var, which,
                     warnings.simplefilter("ignore", category=RuntimeWarning)
 
                     d = scipy.stats.binned_statistic(x['depth'][ixs],
-                                                     x[var][ixs], statistic=np.nanmean, bins=bins).statistic
+                                                     x[var][ixs], statistic=numpy.nanmean, bins=bins).statistic
 
             if d is not None:
                 arr[:,i] = d.T
