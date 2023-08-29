@@ -108,6 +108,7 @@ def mk_jail(
         "/usr/local/bin/lrx",
         "/usr/local/bin/lsb",
         "/usr/local/bin/lrb",
+        "/usr/bin/cat",
     )
 
     script_files = [
