@@ -267,6 +267,7 @@ def main():
         moveFiles("errors_*", base_opts.mission_dir, base_opts.target_dir)
         moveFiles("alert_message*", base_opts.mission_dir, base_opts.target_dir)
         moveFiles("SG_???_positions.txt", base_opts.mission_dir, base_opts.target_dir)
+        moveFiles("sms_messages.log", base_opts.mission_dir, base_opts.target_dir)
 
     moveFiles("sg???.db", base_opts.mission_dir, base_opts.target_dir)
     moveFiles("sections.yml", base_opts.mission_dir, base_opts.target_dir)
