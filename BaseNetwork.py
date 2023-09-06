@@ -796,7 +796,7 @@ class log_parser:
 #
 
 
-def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=True):
+def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=False):
     """Creates a network netcdf file, from either or both of the arguments
 
     Returns:
@@ -1043,7 +1043,7 @@ def make_netcdf_network_files(network_files, processed_files_list):
     return ret_val
 
 
-def make_netcdf_network_file_from_perdive(ncf_filename, ts_outputfile=True):
+def make_netcdf_network_file_from_perdive(ncf_filename, ts_outputfile=False):
     """Processes a per-dive glider netcdf file into a network ncf file"""
 
     # These match the current on-board binning routine
