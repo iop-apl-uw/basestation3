@@ -662,6 +662,7 @@ class ConnectSession:
         # CONSIDER - make this another object?  Or Lat/Lon an object?
         self.phone_fix_lat = None
         self.phone_fix_lon = None
+        self.phone_fix_datetime = None
         self.dive_num = None
         self.call_cycle = None
         self.calls_made = None
@@ -729,6 +730,9 @@ class ConnectSession:
             "pitchAD": self.pitch_ad,
             "rollAD": self.roll_ad,
             "vbdAD": self.vbd_ad,
+            "iridLat": self.phone_fix_lat,
+            "iridLon": self.phone_fix_lon,
+            "irid_t": time.mktime(self.phone_fix_datetime)
         }
 
     def dump_contents(self, fo):
@@ -1411,6 +1415,7 @@ def process_comm_log(
                         lat_lon = iridium_strs[2].lstrip().split(",")
                         session.phone_fix_lat = lat_lon[0]
                         session.phone_fix_lon = lat_lon[1]
+                        session.phone_fix_datetime = time.strptime(lat_lon[2] + lat_lon[3], "%d%m%Y%H%M%S")
                         continue
                     elif iridium_strs[0] == "Iridium geolocation":
                         lat_lon = iridium_strs[1].lstrip().split(" ")
@@ -2041,7 +2046,17 @@ def main():
                 ("--init_db",),
                 str,
                 {
-                    "help": "Initialize database with sessions",
+                    "help": "Initialize (entire) database and load sessions",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "rebuild_db": BaseOpts.options_t(
+                False,
+                ("CommLog",),
+                ("--rebuild_db",),
+                str,
+                {
+                    "help": "Rebuild sessions database",
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
@@ -2059,8 +2074,11 @@ def main():
     if not base_opts.instrument_id:
         base_opts.instrument_id = comm_log.get_instrument_id()
 
-    if base_opts.init_db:
-        BaseDB.prepCallsChangesFiles(base_opts)
+    if base_opts.init_db or base_opts.rebuild_db:
+        if base_opts.init_db:
+            BaseDB.createDB(base_opts)
+        else:
+            BaseDB.prepCallsChangesFiles(base_opts)
 
         if not comm_log.sessions:
             print("No sessions")

@@ -50,6 +50,7 @@ from BaseLog import (
     log_error,
     log_warning,
 )
+import BaseDB
 import Const
 import FileMgr
 import Sensors
@@ -378,6 +379,9 @@ def main():
 
     moveFiles("monitor_dive*log", base_opts.mission_dir, base_opts.target_dir)
     moveFiles("gps-sync*", base_opts.mission_dir, base_opts.target_dir)
+
+    # get ready for the next mission
+    BaseDB.createDB(base_opts)
 
     return 0
 

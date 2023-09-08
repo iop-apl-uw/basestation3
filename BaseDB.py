@@ -134,7 +134,7 @@ def checkTableExists(cur, table):
     return cur.fetchone() is not None
 
 def processGC(dive, cur, nci):
-    cur.execute("CREATE TABLE IF NOT EXISTS gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
+    # cur.execute("CREATE TABLE IF NOT EXISTS gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
 
     cur.execute(f"DELETE FROM gc WHERE dive={dive};")
 
@@ -825,30 +825,15 @@ def updateDBFromFM(base_opts, ncfs, cur):
             log_error(f"Problem opening FM data associated with {ncf}")
 
 def prepCallsChangesFiles(base_opts, dbfile=None):
-    if dbfile is None:
-        con = Utils.open_mission_database(base_opts)
-        log_info("prepCallsChangesFiles db opened")
-    else:
-        con = sqlite3.connect(dbfile)
-        log_info("prepCallsChangesFiles db opened direct")
-        try:
-            os.chmod(
-                dbfile,
-                stat.S_IRUSR
-                | stat.S_IWUSR
-                | stat.S_IRGRP
-                | stat.S_IWGRP
-                | stat.S_IROTH
-            )
-        except:
-            log_error(f"Unable to change mode of {dbfile}", "exc")
+    dbfile = Utils.mission_database_filename(base_opts)
+    con = sqlite3.connect(dbfile)
 
     cur = con.cursor()
     # createDivesTable(cur)
     cur.execute("DROP TABLE IF EXISTS changes;")
     cur.execute("DROP TABLE IF EXISTS calls;")
     cur.execute("DROP TABLE IF EXISTS files;")
-    cur.execute("CREATE TABLE calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
+    cur.execute("CREATE TABLE calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, sms INTEGER, iridLat FLOAT, iridLon FLOAT, irid_t FLOAT, PRIMARY KEY (dive,cycle,call));")
     cur.execute("CREATE TABLE changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
     cur.execute("CREATE TABLE files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
 
@@ -913,25 +898,10 @@ def createDivesTable(cur):
     for c in columns:
         addColumn(cur, c, 'TEXT')
    
-def prepDivesGC(base_opts, dbfile=None):
-    if dbfile is None:
-        con = Utils.open_mission_database(base_opts)
-        log_info("prepDivesGC db opened")
-    else:
-        con = sqlite3.connect(dbfile)
-        log_info("prepDivesGC db opened direct")
-        try:
-            os.chmod(
-                dbfile,
-                stat.S_IRUSR
-                | stat.S_IWUSR
-                | stat.S_IRGRP
-                | stat.S_IWGRP
-                | stat.S_IROTH
-            )
-        except:
-            log_error(f"Unable to change mode of {dbfile}", "exc")
-
+def prepDivesGC(base_opts):
+    dbfile = Utils.mission_database_filename(base_opts)
+    con = sqlite3.connect(dbfile)
+    log_info("prepDivesGC db opened direct")
 
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS dives;")
@@ -952,9 +922,69 @@ def prepDivesGC(base_opts, dbfile=None):
     con.close()
 
     log_info("prepDivesGC db closed")
+
+currentSchemaVersion = 1
+
+def checkSchema(base_opts, con):
+    if con is None:
+        # this has the potential to create a database from scratch
+        mycon = Utils.open_mission_database(base_opts)
+        if mycon is None:
+            log_error("Failed to open mission db")
+            return
+        log_info("checkSchema db opened")
+    else:
+        mycon = con
+
+
+    try:
+        ver = mycon.cursor().execute('PRAGMA user_version').fetchone()[0]
+        if ver == 0:
+            log_info("version not set, checking table existence")
+            tbls = [ x[0] for x in mycon.cursor().execute("SELECT name FROM sqlite_master where type='table';").fetchall() ]
+            need = ['calls', 'changes', 'files', 'chat', 'dives', 'gc']
+            if len([x for x in need if x in tbls]) != len(need) and con is None:
+                log_info('database not initialized or created improperly, creating')
+                mycon.close()   
+                createDB(base_opts)
+                return
+       
+        #  
+        for i in range(ver, currentSchemaVersion):
+            log_info(f"stepping DB schema from {i} to {i+1}")
+            if i == 0: # step from 0 to 1, 7-Sep-2023, just adds a valid version number
+                # belt and suspenders, don't add them and avoid exception handling
+                # if somehow the schema versioning is out of sync
+                cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(calls)').fetchall() ]
+                if 'sms' not in cols:
+                    mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN sms INTEGER;")
+                if 'iridLat' not in cols:
+                    mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN iridLat FLOAT;")
+                if 'iridLon' not in cols:
+                    mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN iridLon FLOAT;")
+                if 'irid_t' not in cols:
+                    mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN irid_t FLOAT;")
+            # elif i == 1: # step from 1 to 2
+            # elif i == 2:
+            # elif i == 3:
+        
+        mycon.cursor().execute(f'PRAGMA user_version = {currentSchemaVersion}')
+    except:
+        log_error("could not check schema", "exc")
+
+    if con is None:
+        log_info("checkSchema db closed")
+        mycon.close()
+
+def createDB(base_opts):
+    prepDivesGC(base_opts)
+    prepCallsChangesFiles(base_opts)
+    con = Utils.open_mission_database(base_opts)
+    con.cursor().execute(f'PRAGMA user_version = {currentSchemaVersion}')
+    con.close()
  
 def rebuildDivesGC(base_opts, ext):
-    """Rebuild the database from scratch"""
+    """Rebuild the database tables from scratch"""
     prepDivesGC(base_opts)
 
     print(ext)
@@ -995,8 +1025,11 @@ def loadDB(base_opts, filename, run_dive_plots=True):
     """Load a single netcdf file into the database"""
     con = Utils.open_mission_database(base_opts)
     log_info("loadDB db opened")
+
+    # createDivesTable(cur)
+    checkSchema(base_opts, con)
+
     cur = con.cursor()
-    createDivesTable(cur)
 
     if "ncdf" in filename:
         loadNetworkFileToDB(base_opts, cur, filename, con)
@@ -1158,17 +1191,21 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
     else:
         mycon = con
 
-    try:
-        cur = mycon.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
-    except Exception as e:
-        log_error("{e} could not create files table")
-        if con is None:
-            cur.close()
-            mycon.close()
-            log_info("logControlFile db closed")
-            
-        return
+    checkSchema(base_opts, mycon)
+
+#    try:
+#        cur = mycon.cursor()
+#        cur.execute("CREATE TABLE IF NOT EXISTS files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
+#    except Exception as e:
+#        log_error("{e} could not create files table")
+#        if con is None:
+#            cur.close()
+#            mycon.close()
+#            log_info("logControlFile db closed")
+#            
+#        return
+
+    cur = mycon.cursor()
 
     pathed = os.path.join(base_opts.mission_dir, fullname)
     if os.path.exists(pathed):
@@ -1239,16 +1276,19 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
     else:
         mycon = con
 
-    try:
-        cur = mycon.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
-    except Exception as e:
-        log_error("{e} could not create changes table")
-        if con is None:
-            mycon.close()
-            log_info("logParameterChanges db opened")
+    checkSchema(base_opts, mycon)
+    cur = mycon.cursor()
 
-        return
+#    try:
+#        cur = mycon.cursor()
+#        cur.execute("CREATE TABLE IF NOT EXISTS changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
+#    except Exception as e:
+#        log_error("{e} could not create changes table")
+#        if con is None:
+#            mycon.close()
+#            log_info("logParameterChanges db opened")
+#
+#        return
 
     logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
     cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
@@ -1272,7 +1312,7 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
         mycon.close()
         log_info("logParameterChanges db closed")
 
-def addSession(base_opts, session, con=None):
+def addSession(base_opts, session, con=None, sms=False):
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
         if mycon is None:
@@ -1282,12 +1322,15 @@ def addSession(base_opts, session, con=None):
     else:
         mycon = con
 
+    checkSchema(None, mycon)
+
     try:
+        d = session.to_message_dict()
+        d.update({ "sms": sms })
         cur = mycon.cursor()
-        cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, PRIMARY KEY (dive,cycle,call));")
-        cur.execute("INSERT OR IGNORE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD) \
-                     VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD);",
-                    session.to_message_dict())
+        # cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, sms INTEGER, iridLat FLOAT, iridLon FLOAT, irid_t FLOAT, PRIMARY KEY (dive,cycle,call));")
+        cur.execute("INSERT OR IGNORE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD,sms,iridLat,iridLon,irid_t) \
+                     VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD, :sms, :iridLat, :iridLon, :irid_t);", d)
         cur.close()
     except Exception as e:
         log_error(f"{e} inserting comm.log session")
@@ -1301,6 +1344,7 @@ def addSession(base_opts, session, con=None):
 
         mycon.close()
         log_info("addSession db closed")
+
 
 def main():
     """Command line interface for BaseDB"""
@@ -1359,10 +1403,34 @@ def main():
                     "action": "store_true",
                 },
             ),
+            "schema": BaseOpts.options_t(
+                False,
+                ("BaseDB",),
+                ("--schema",),
+                bool,
+                {
+                    "help": "check/update schema version",
+                    "action": "store_true",
+                },
+            ),
+            "init_db": BaseOpts.options_t(
+                False,
+                ("BaseDB",),
+                ("--init_db",),
+                bool,
+                {
+                    "help": "initialize (erase) database",
+                    "action": "store_true",
+                },
+            ),
 
         },
     )
     BaseLogger(base_opts, include_time=True)
+
+    if base_opts.schema == True:
+        checkSchema(base_opts, None)
+        return
 
     log_info(
         "Started processing "
@@ -1387,6 +1455,9 @@ def main():
         except:
             log_error("Can't figure out the instrument id - bailing out")
             return
+
+    if base_opts.init_db:
+        createDB(base_opts)
 
     if PlotUtils.setup_plot_directory(base_opts):
         log_warning(

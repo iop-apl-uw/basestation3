@@ -1648,11 +1648,7 @@ def loadmodule(pathname):
     return None
 
 
-def open_mission_database(
-    base_opts: BaseOpts.BaseOptions, ro=False
-) -> sqlite3.Connection:
-    import BaseDB
-
+def mission_database_filename(base_opts: BaseOpts.BaseOptions):
     """Opens a mission database file"""
     if not base_opts.mission_dir:
         log_error("mission_dir is not set")
@@ -1660,12 +1656,37 @@ def open_mission_database(
     if not base_opts.instrument_id:
         log_error("instrument_id is not set")
         return None
-    db = os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+
+    return os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+
+def open_mission_database(
+    base_opts: BaseOpts.BaseOptions, ro=False
+) -> sqlite3.Connection:
+    import BaseDB
+
+    db = mission_database_filename(base_opts)
+    if db == None:
+        return None
+
     if not os.path.exists(db):
         try:
             log_info(f"{db} does not exist - creating")
-            BaseDB.prepCallsChangesFiles(base_opts, dbfile=db)
-            BaseDB.prepDivesGC(base_opts, dbfile=db)
+            BaseDB.createDB(base_opts)
+
+            try:
+                os.chmod(
+                    db,
+                    stat.S_IRUSR
+                    | stat.S_IWUSR
+                    | stat.S_IRGRP
+                    | stat.S_IWGRP
+                    | stat.S_IROTH
+                )
+            except:
+                log_error(f"Unable to change mode of {dbfile}", "exc")
+
+            #BaseDB.prepCallsChangesFiles(base_opts, dbfile=db)
+            #BaseDB.prepDivesGC(base_opts, dbfile=db)
         except Exception as e:
             log_error(f"error creating DB: {e}")
             return None

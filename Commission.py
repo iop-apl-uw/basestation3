@@ -45,6 +45,7 @@ import sys
 import shutil
 
 import BaseOpts
+import BaseDB
 from BaseLog import BaseLogger, log_critical, log_error, log_info
 
 
@@ -228,6 +229,11 @@ def main():
         full_dst_file_name = os.path.join(glider_path, file_name)
         shutil.copyfile(full_file_name, full_dst_file_name)
         syscall("chown %s %s" % (glider, full_dst_file_name))
+
+    base_opts.instrument_id = glider_id
+    base_opts.mission_dir = glider_path
+    BaseDB.createDB(base_opts)
+
     # syscall("chown pilot %s/cmdfile" % glider_path)
     # syscall("echo %s | passwd %s --stdin" % (passwd, glider))
     syscall("echo %s:%s | chpasswd" % (glider, passwd))
