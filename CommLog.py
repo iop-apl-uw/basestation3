@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -400,7 +400,7 @@ class CommLog:
             fmt = fmt[1:]
         log_info(
             "Drift: %d predictions (%s) based on %d fixes"
-            % (n_fixes, fmt, n_predictions)
+            % (n_predictions, fmt, n_fixes)
         )
         last_fix = None
         most_recent_fix = None
@@ -417,6 +417,12 @@ class CommLog:
                 try:
                     if this_dive_num != dive_num:
                         break  # from a previous dive
+                    delta_time_h = (
+                        time.mktime(last_fix.datetime) - time.mktime(this_fix.datetime)
+                    ) / secs_per_hour
+                    if delta_time_h == 0:
+                        log_info("Zero time delta - repeated GPS - skipping")
+                        continue
                     last_lat = Utils.ddmm2dd(last_fix.lat)
                     last_lon = Utils.ddmm2dd(last_fix.lon)
                     this_lat = Utils.ddmm2dd(this_fix.lat)
@@ -424,9 +430,6 @@ class CommLog:
                     surface_mean_lon_fac = math.cos(
                         math.radians((last_lat + this_lat) / 2)
                     )
-                    delta_time_h = (
-                        time.mktime(last_fix.datetime) - time.mktime(this_fix.datetime)
-                    ) / secs_per_hour
                     delta_lat_d_h = (last_lat - this_lat) / delta_time_h
                     delta_lon_d_h = (
                         (last_lon - this_lon) * surface_mean_lon_fac
@@ -2094,11 +2097,15 @@ def main():
                 BaseDB.addSession(base_opts, session)
                 if session.dive_num is not None and int(session.dive_num) > 0:
                     if session.call_cycle == None or int(session.call_cycle) == 0:
-                        cmdname = f'cmdfile.{int(session.dive_num)}'
+                        cmdname = f"cmdfile.{int(session.dive_num)}"
                     else:
-                        cmdname = f'cmdfile.{int(session.dive_num)}.{int(session.call_cycle)}'
+                        cmdname = (
+                            f"cmdfile.{int(session.dive_num)}.{int(session.call_cycle)}"
+                        )
 
-                    BaseDB.logParameterChanges(base_opts, int(session.dive_num), cmdname)
+                    BaseDB.logParameterChanges(
+                        base_opts, int(session.dive_num), cmdname
+                    )
 
         BaseDB.rebuildControlHistory(base_opts)
 
