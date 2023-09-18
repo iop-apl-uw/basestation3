@@ -27,9 +27,11 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# this is a skeleton validate that does not do much
-# of anything useful. Proper validate is distributed along 
-# with glider binaries
+# this is a simple version of validate that is not as
+# feature aware as the version distributed along 
+# with glider binaries. Particularly, it does not warn
+# about parameter values and is more sensitive to 
+# proper selection of the logfile used as the reference
 
 import sys
 import os
@@ -176,33 +178,51 @@ elif which == '-s':
         if line[0] == '/':
             continue
 
-        pcs = line.split()
-        if len(pcs) < 4:
-            print(f"parse error line {linenum}")
-            errors = errors + 1
-            continue
+        # Rev E
+        if '=' in line:
+            pcs = line.split()
+            if len(pcs) < 4:
+                print(f"parse error line {linenum}")
+                errors = errors + 1
+                continue
 
-        depth = pcs[0]
-        if depth != 'loiter':
+            depth = pcs[0]
+            if depth != 'loiter':
+                try:
+                    d = float(depth)
+                except ValueError:
+                    print("invalid depth bin spec")
+                    errors = errors + 1
+                    continue
+
+            spec = { "depth": depth }
+            for x in pcs[1:]:
+                flds = x.split('=')
+                if len(flds) != 2:
+                    print(f"parse error line {linenum}")
+                    errors = errors + 1            
+
+                spec[flds[0]] = flds[1] 
+                
+        # assume Rev B
+        else:
+            pcs = line.split()
+            if len(pcs) != 4:
+                print(f"parse error line {linenum}")
+                errors = errors + 1
+                continue
+
             try:
-                d = float(depth)
+                depth = float(pcs[0])
             except ValueError:
                 print("invalid depth bin spec")
                 errors = errors + 1
                 continue
 
-        spec = { "depth": depth }
-        for x in pcs[1:]:
-            flds = x.split('=')
-            if len(flds) != 2:
-                print(f"parse error line {linenum}")
-                errors = errors + 1            
+            spec = { "depth": depth, "seconds": pcs[1], "sensors": pcs[2], "gc": pcs[3] }
 
-            spec[flds[0]] = flds[1] 
-            
-        
         if not ('sensors' in spec and 'gc' in spec and 'seconds' in spec):
-            print(f"spec {depth} is missing required fields (sensors, seconds, gc)")
+            print(f"spec {depth} is missing required fields (seconds, sensors, gc)")
             errors = errors + 1
             continue
 
