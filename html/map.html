@@ -1110,8 +1110,8 @@
                 map.fitBounds(last);
 
             const osm = new L.TileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { opacity: 1.0 });
-            // const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
-            const noaa = new L.TileLayer('../tile/NOAA+Stamen/{z}/{x}/{y}');
+            const noaa = new L.TileLayer('https://iop.apl.washington.edu/tiles/NOAA+Stamen/{z}/{x}/{y}.png');
+            // const noaa = new L.TileLayer('../tile/NOAA+Stamen/{z}/{x}/{y}');
 
 
             gebco = L.tileLayer.wms("https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?",
@@ -1128,11 +1128,10 @@
             console.log(Object.keys(localStorage).includes("baseLayer"));
             console.log(localStorage.getItem('baseLayer'));
 
-            // if (Object.keys(localStorage).includes('baseLayer') && localStorage.getItem('baseLayer') == "NOAA+Stamen")
-            if (Object.keys(localStorage).includes('baseLayer') && localStorage.getItem('baseLayer') == "OSM")
-                map.addLayer(osm);
-            else
+            if (Object.keys(localStorage).includes('baseLayer') && localStorage.getItem('baseLayer') == "NOAA+Stamen")
                 map.addLayer(noaa);
+            else
+                map.addLayer(osm);
             
             // AIS
             
