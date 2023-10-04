@@ -808,8 +808,8 @@ def printDive(
         dtg = ctg = None
 
     try:
-        nd = nc.variables["north_displacement_hdm"][:]
-        ed = nc.variables["east_displacement_hdm"][:]
+        nd = nc.variables["north_displacement"][:]
+        ed = nc.variables["east_displacement"][:]
     except:
         try:
             nd = nc.variables["north_displacement_gsm"][:]
