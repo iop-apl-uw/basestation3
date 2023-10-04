@@ -862,7 +862,7 @@ def createDivesTable(cur):
                 'log_INTERNAL_PRESSURE', 'log_INTERNAL_PRESSURE_slope',
                 'log_HUMID_slope',
                 'log_IMPLIED_C_VBD',
-                'log_FG_AHR_10V0', 'log_FG_AHR_24Vo',
+                'log_FG_AHR_10Vo', 'log_FG_AHR_24Vo',
                 'log_gps_time',  'log_gps2_time', 'log_TGT_LAT', 'log_TGT_LON', 
                 'log_gps_lat', 'log_gps_lon', 'log_gps_hdop',
                 'depth_avg_curr_east','depth_avg_curr_north',

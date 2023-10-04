@@ -879,8 +879,8 @@ def printDive(
             ballon_pairs.append(("Course over ground", f"{cog:.2f} degrees"))
             ballon_pairs.append(("Distance over ground", f"{dog:.2f} km"))
         if dtw is not None and ctw is not None:
-            ballon_pairs.append(("Course through water", f"{dtw:.2f} degrees"))
-            ballon_pairs.append(("Distance through water", f"{ctw:.2f} km"))
+            ballon_pairs.append(("Course through water", f"{ctw:.2f} degrees"))
+            ballon_pairs.append(("Distance through water", f"{dtw:.2f} km"))
         if dtg is not None and ctg is not None:
             ballon_pairs.append(("Course to go", f"{ctg:.2f} degrees"))
             ballon_pairs.append(("Distance to go", f"{dtg:.2f} km"))
