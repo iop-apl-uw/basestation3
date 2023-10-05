@@ -993,7 +993,7 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
         "w",
         encoding=encoding,
         engine="netcdf4",
-        format="netCDF4",
+        format="NETCDF3_CLASSIC",
     )
     return ncf_filename
 
