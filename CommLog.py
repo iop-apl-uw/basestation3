@@ -733,8 +733,8 @@ class ConnectSession:
             "pitchAD": self.pitch_ad,
             "rollAD": self.roll_ad,
             "vbdAD": self.vbd_ad,
-            "iridLat": self.phone_fix_lat,
-            "iridLon": self.phone_fix_lon,
+            "iridLat": Utils.ddmm2dd(self.phone_fix_lat),
+            "iridLon": Utils.ddmm2dd(self.phone_fix_lon),
             "irid_t": time.mktime(self.phone_fix_datetime)
         }
 
@@ -1416,19 +1416,19 @@ def process_comm_log(
                         if len(iridium_strs) < 3:
                             continue
                         lat_lon = iridium_strs[2].lstrip().split(",")
-                        session.phone_fix_lat = lat_lon[0]
-                        session.phone_fix_lon = lat_lon[1]
-                        session.phone_fix_datetime = time.strptime(lat_lon[2] + lat_lon[3], "%d%m%Y%H%M%S")
+                        session.phone_fix_lat = float(lat_lon[0])
+                        session.phone_fix_lon = float(lat_lon[1])
+                        session.phone_fix_datetime = time.strptime(lat_lon[2] + lat_lon[3], "%d%m%y%H%M%S")
                         continue
                     elif iridium_strs[0] == "Iridium geolocation":
                         lat_lon = iridium_strs[1].lstrip().split(" ")
                         if len(lat_lon) == 2:
-                            session.phone_fix_lat = lat_lon[0]
-                            session.phone_fix_lon = lat_lon[1]
+                            session.phone_fix_lat = float(lat_lon[0])
+                            session.phone_fix_lon = float(lat_lon[1])
                         else:
                             lat_lon = iridium_strs[1].lstrip().split(",")
-                            session.phone_fix_lat = lat_lon[0]
-                            session.phone_fix_lon = lat_lon[1]
+                            session.phone_fix_lat = float(lat_lon[0])
+                            session.phone_fix_lon = float(lat_lon[1])
                         continue
                 except:
                     pass
