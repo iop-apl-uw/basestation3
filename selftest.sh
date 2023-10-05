@@ -141,7 +141,8 @@ set Cfreq = `grep "^ct:" $fname | tail -n 1 | cut -f2 -d' '`
 set C0 = `grep sbe_cond_freq_C0 "$base"/sg_calib_constants.m | cut -f2 -d= | cut -f1 -d';'`
 
 if ($Cfreq == "") then
-    set Cfreq = `grep -A 3 %data: "$base"/pt"$1""$testnum".eng | tail -1 | cut -f12 -d' '`
+    set col = `grep columns "$base"/pt"$1""$testnum".eng | cut -f2 -d' ' | awk 'BEGIN{FS=","; OFS="\n"} {$1=$1} 1' | grep -n condFreq | cut -f1 -d:`
+    set Cfreq = `grep -A 3 %data: "$base"/pt"$1""$testnum".eng | tail -1 | cut -f"$col" -d' '`
 else if (`printf %.0f $Cfreq` > 10000) then
     set Cfreq = `echo $Cfreq/1000 | bc -l`
 endif
