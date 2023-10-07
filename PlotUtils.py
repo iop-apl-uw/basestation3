@@ -74,7 +74,7 @@ def get_mission_dive(dive_nc_file):
     elif "log_DIVE" in dive_nc_file.variables:
         dive_num = dive_nc_file.variables["log_DIVE"].getValue()
     if hasattr(dive_nc_file, "project"):
-        mission_title = getattr(dive_nc_file, "project").decode("utf-8")
+        mission_title = getattr(dive_nc_file, "project")
     elif "sg_cal_mission_title" in dive_nc_file.variables:
         mission_title = (
             dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")

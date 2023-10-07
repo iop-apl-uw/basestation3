@@ -143,7 +143,7 @@ def plot_diveplot(
             dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
         )
         dive_number = dive_nc_file.dive_number
-        start_time_string = dive_nc_file.time_coverage_start.decode()
+        start_time_string = dive_nc_file.time_coverage_start
 
         mag_var = dive_nc_file.variables["magnetic_variation"].getValue()
         heading = clock_compass(dive_nc_file.variables["eng_head"][:] + mag_var)

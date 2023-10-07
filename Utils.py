@@ -60,6 +60,7 @@ import zmq.asyncio
 
 import numpy as np
 import scipy
+import netCDF4
 
 import Globals
 import BaseNetCDF
@@ -81,7 +82,10 @@ def open_netcdf_file(
     """
     # return netcdf.netcdf_file(filename,mode,mmap=False if sys.platform == 'darwin' else mmap, version=version)
     # pylint: disable=protected-access
-    return scipy.io._netcdf.netcdf_file(filename, mode, mmap=False, version=version)
+    # return scipy.io._netcdf.netcdf_file(filename, mode, mmap=False, version=version)
+    ds = netCDF4.Dataset(filename, mode)
+    ds.set_auto_mask(False)
+    return ds
 
 
 col_ncmeta_map_type = collections.namedtuple(
@@ -874,8 +878,9 @@ def setdiff(list1, list2):
     None
     """
 
-    #return  np.setdiff1d(np.array(list1, object), np.array(list2, object)).tolist()
+    # return  np.setdiff1d(np.array(list1, object), np.array(list2, object)).tolist()
     return sorted(list(set(list1) - set(list2)))
+
 
 def sort_i(list1):
     """Sort a list of indices, returning a list
@@ -1659,6 +1664,7 @@ def mission_database_filename(base_opts: BaseOpts.BaseOptions):
 
     return os.path.join(base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}.db")
 
+
 def open_mission_database(
     base_opts: BaseOpts.BaseOptions, ro=False
 ) -> sqlite3.Connection:
@@ -1680,23 +1686,23 @@ def open_mission_database(
                     | stat.S_IWUSR
                     | stat.S_IRGRP
                     | stat.S_IWGRP
-                    | stat.S_IROTH
+                    | stat.S_IROTH,
                 )
             except:
                 log_error(f"Unable to change mode of {dbfile}", "exc")
 
-            #BaseDB.prepCallsChangesFiles(base_opts, dbfile=db)
-            #BaseDB.prepDivesGC(base_opts, dbfile=db)
+            # BaseDB.prepCallsChangesFiles(base_opts, dbfile=db)
+            # BaseDB.prepDivesGC(base_opts, dbfile=db)
         except Exception as e:
             log_error(f"error creating DB: {e}")
             return None
 
     if ro:
         conn = sqlite3.connect("file:" + db + "?mode=ro", uri=True)
-        logDB(f"utils open (ro)")
+        # logDB(f"utils open (ro)")
     else:
         conn = sqlite3.connect(db)
-        logDB(f"utils open")
+        # logDB(f"utils open")
         # conn.isolation_level = None
 
     conn.cursor().execute("PRAGMA busy_timeout=200;")
@@ -1766,7 +1772,7 @@ def extract_calib_consts(dive_nc_file):
         if sgc_var.search(dive_nc_varname):
             _, variable = sgc_var.split(dive_nc_varname)
             if nc_is_scalar:
-                calib_consts[variable] = nc_var.getValue()
+                calib_consts[variable] = nc_var.getValue().item()
             else:  # nc_string
                 calib_consts[variable] = (
                     nc_var[:].tobytes().decode("utf-8")
@@ -1844,6 +1850,7 @@ async def notifyVisAsync(glider: int, topic: str, body: str):
         socket.setsockopt(zmq.LINGER, 0)  # this is the important one
         await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
+
 
 def logDB(msg):
     f = open("/home/seaglider/home/db.log", "a")
