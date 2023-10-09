@@ -128,3 +128,21 @@ def merge_dict(a, b, path=None, allow_override=False):
         else:
             a[key] = b[key]
     return a
+
+
+def typecode_mapper(dtype):
+    """Maps a nectdf4 (numpy) type into a netcdf3 typecode"""
+    if dtype == np.dtype(np.float64):
+        return "d"
+    elif dtype == np.dtype(np.float32):
+        return "f"
+    elif dtype == np.dtype(np.int32):
+        return "i"
+    elif dtype == np.dtype("S1"):
+        return "c"
+    else:
+        # import pdb
+        # pdb.set_trace()
+        raise Exception(
+            f"Unknown dtype for mapping from netcdf4 to netcdf3 typecode {dtype}", "exc"
+        )
