@@ -1912,6 +1912,9 @@ def main():
             BaseNetwork.make_netcdf_network_files(
                 network_files_to_process, processed_other_files
             )
+            for ncf in processed_other_files:
+                if '.ncdf' in ncf:
+                    BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
 
         # Process regular files
         dives_to_profile = []  # A list of basenames to profile
