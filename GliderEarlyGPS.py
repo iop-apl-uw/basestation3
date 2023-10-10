@@ -320,6 +320,14 @@ class GliderEarlyGPSClient:
             else:
                 self.process_counter_line(session)
 
+    def callback_iridium(self, session):
+        """Callback for comm.log Iridium geolocation line"""
+        if not self._first_time:
+            if session is None:
+                log_warning("iridium callback called with empty session")
+            else:
+                BaseDB.addSession(self.__base_opts, session)
+
     def callback_ver(self, session):
         """Calback for comm.log ver= line"""
         if not self._first_time:

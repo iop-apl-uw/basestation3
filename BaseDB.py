@@ -1345,7 +1345,7 @@ def addSession(base_opts, session, con=None, sms=False):
         d.update({ "sms": sms })
         cur = mycon.cursor()
         # cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, sms INTEGER, iridLat FLOAT, iridLon FLOAT, irid_t FLOAT, PRIMARY KEY (dive,cycle,call));")
-        cur.execute("INSERT OR IGNORE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD,sms,iridLat,iridLon,irid_t) \
+        cur.execute("INSERT OR REPLACE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD,sms,iridLat,iridLon,irid_t) \
                      VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD, :sms, :iridLat, :iridLon, :irid_t);", d)
         cur.close()
     except Exception as e:

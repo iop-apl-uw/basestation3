@@ -733,9 +733,9 @@ class ConnectSession:
             "pitchAD": self.pitch_ad,
             "rollAD": self.roll_ad,
             "vbdAD": self.vbd_ad,
-            "iridLat": Utils.ddmm2dd(self.phone_fix_lat),
-            "iridLon": Utils.ddmm2dd(self.phone_fix_lon),
-            "irid_t": time.mktime(self.phone_fix_datetime)
+            "iridLat": Utils.ddmm2dd(self.phone_fix_lat) if self.phone_fix_lat else 0,
+            "iridLon": Utils.ddmm2dd(self.phone_fix_lon) if self.phone_fix_lon else 0,
+            "irid_t": time.mktime(self.phone_fix_datetime) if self.phone_fix_datetime else 0
         }
 
     def dump_contents(self, fo):
@@ -1419,6 +1419,12 @@ def process_comm_log(
                         session.phone_fix_lat = float(lat_lon[0])
                         session.phone_fix_lon = float(lat_lon[1])
                         session.phone_fix_datetime = time.strptime(lat_lon[2] + lat_lon[3], "%d%m%y%H%M%S")
+
+                        if call_back and "iridium" in call_back.callbacks:
+                            try:
+                                call_back.callbacks["iridium"](session)
+                            except:
+                                log_error("iridium callback failed", "exc")
                         continue
                     elif iridium_strs[0] == "Iridium geolocation":
                         lat_lon = iridium_strs[1].lstrip().split(" ")
