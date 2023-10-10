@@ -881,14 +881,17 @@
                 
                 loadPlots(currDive, false);
                 $('diveIndicator').innerHTML = 'dive ' + currDive;
+
                 // loadLog(currDive);
                 updateMaxDive();
             }
             else if (dive > 0 && dive < parseInt(data['dive'])) {
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
+
                 loadPlots(currDive, false);
                 $('diveIndicator').innerHTML = 'dive ' + currDive;
+
                 // loadLog(currDive);
                 updateMaxDive();
             }
@@ -1073,7 +1076,7 @@
         var cookie;
         var priority;
         var first = false;
-        const stockPriority = ["diveplot", "ctd", "ts", "vert_vel", "pitch", "roll", "roll_rate", "cog", "ctw", 
+        const stockPriority = ["diveplot", "reduced_ctd", "ctd", "ts", "vert_vel", "pitch", "roll", "roll_rate", "cog", "ctw", 
                                "wlbb2fl_Chlorophyll_fluorescence", "wlbb2fl_backscatter", "aa4831"];
        
         const subs = { "wlbb2fl_Chlorophyll_fluorescence": "Chlorophyll",
