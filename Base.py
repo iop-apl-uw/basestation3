@@ -2042,8 +2042,13 @@ def main():
                 log_info(f"Backing up {backup_filename} to {backup_target_filename}")
                 shutil.copyfile(backup_filename, backup_target_filename)
 
-                if not 'cmdfile' in backup_filename:
-                    BaseDB.logControlFile(base_opts, backup_dive_num, os.path.basename(backup_filename), os.path.basename(backup_target_filename)) 
+                if not "cmdfile" in backup_filename:
+                    BaseDB.logControlFile(
+                        base_opts,
+                        backup_dive_num,
+                        os.path.basename(backup_filename),
+                        os.path.basename(backup_target_filename),
+                    )
             else:
                 log_error(
                     f"Could not find a dive number in the comm.log - not backing up file {backup_filename}"
@@ -2189,7 +2194,7 @@ def main():
         log_info("Starting netcdf load to db")
         if base_opts.force:
             try:
-                BaseDB.rebuildDivesGC(base_opts)
+                BaseDB.rebuildDivesGC(base_opts, "nc")
             except:
                 log_error("Failed to rebuild mission sqlite db", "exc")
         else:
@@ -2542,11 +2547,14 @@ def main():
                     alert_warning_msg = alert_warning_msg + f"    {alert}\n"
                 del alerts_d[alert_topic]  # clean up
                 alert_msg_file.write("</ul></p></div>\n")
-            alert_msg_file.write(f"<p>Consult {os.path.basename(conversion_log)} for details</p>\n")
+            alert_msg_file.write(
+                f"<p>Consult {os.path.basename(conversion_log)} for details</p>\n"
+            )
 
         if alert_warning_msg:
             alert_warning_msg = (
-                alert_warning_msg + f"Consult {os.path.basename(conversion_log)} for details."
+                alert_warning_msg
+                + f"Consult {os.path.basename(conversion_log)} for details."
             )
             log_warning(alert_warning_msg)
 
