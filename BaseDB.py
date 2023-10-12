@@ -138,7 +138,7 @@ def processGC(dive, cur, nci):
 
     cur.execute(f"DELETE FROM gc WHERE dive={dive};")
 
-    for i in range(0, nci.dimensions['gc_event']):
+    for i in range(0, nci.dimensions['gc_event'].size):
         roll_rate = 0
         pitch_rate = 0
         vbd_rate = 0
@@ -263,7 +263,7 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
             if not v.startswith("sg_cal"):
                 insertColumn(dive, cur, v, nci.variables[v].getValue(), "FLOAT")
         elif len(nci.variables[v].dimensions) == 1 and nci.variables[v].dimensions[0] == 'gps_info' and '_'.join(v.split('_')[2:]) in gpsVars:
-            for i in range(0,nci.dimensions['gps_info']):
+            for i in range(0,nci.dimensions['gps_info'].size):
                 if i in (0, 1):
                     name = v.replace('gps_', f'gps{i+1}_')
                 else:

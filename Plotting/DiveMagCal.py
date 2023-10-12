@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -70,7 +70,7 @@ def plot_mag(
     fxm = dive_nc_file.variables["eng_mag_x"][:]
     fym = -dive_nc_file.variables["eng_mag_y"][:]
     fzm = -dive_nc_file.variables["eng_mag_z"][:]
-    npts = dive_nc_file.dimensions["sg_data_point"]
+    npts = dive_nc_file.dimensions["sg_data_point"].size
 
     norm = 0
     mx = 0
@@ -114,7 +114,6 @@ def plot_mag(
 
         R21_i = 0
         for i in range(0, npts):
-
             Mx_i = fxm[i] - p
             My_i = fym[i] - q
             Mz_i = fzm[i] - r

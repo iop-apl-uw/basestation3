@@ -49,17 +49,19 @@ from BaseLog import (
 )
 from Plotting import plotdivesingle
 
+
 class pitchFitClass:
     def __init__(self):
         pass
 
     def fitfun_shift_fixed(self, x, ctr, gain):
-        y = gain*(x[:,0]*self.cnv - ctr*self.cnv - x[:,1]*self.shift)
+        y = gain * (x[:, 0] * self.cnv - ctr * self.cnv - x[:, 1] * self.shift)
         return y
 
     def fitfun_shift_solved(self, x, ctr, gain, shift):
-        return gain*(x[:,0]*self.cnv - ctr*self.cnv - x[:,1]*shift)
-        
+        return gain * (x[:, 0] * self.cnv - ctr * self.cnv - x[:, 1] * shift)
+
+
 def headingDiff(hdg1, hdg2):
     """Computes difference in two headings with wraparound"""
     diff = hdg2 - hdg1
@@ -125,7 +127,7 @@ def plot_pitch_roll(
         vehicle_pitch_degrees_v = dive_nc_file.variables["eng_pitchAng"][:]
         vehicle_roll_degrees_v = dive_nc_file.variables["eng_rollAng"][:]
         vehicle_head_degrees_v = dive_nc_file.variables["eng_head"][:]
-        sg_np = dive_nc_file.dimensions["sg_data_point"]
+        sg_np = dive_nc_file.dimensions["sg_data_point"].size
 
         GC_st_secs = dive_nc_file.variables["gc_st_secs"][:]
         GC_end_secs = dive_nc_file.variables["gc_end_secs"][:]
@@ -157,7 +159,8 @@ def plot_pitch_roll(
             GC_vbd_AD_end = pot1
     except Exception as e:
         log_error(
-            f"Could not fetch needed variables {e} - skipping pitch and roll plots", "exc"
+            f"Could not fetch needed variables {e} - skipping pitch and roll plots",
+            "exc",
         )
         return ([], [])
 
@@ -183,7 +186,6 @@ def plot_pitch_roll(
             vehicle_roll_degrees_v[nans] = np.interp(
                 x(nans), x(~nans), vehicle_roll_degrees_v[~nans]
             )
-        
 
         # unused nGC = len(GC_st_secs) * 2
         gc_t = np.concatenate((GC_st_secs, GC_end_secs))
@@ -223,7 +225,8 @@ def plot_pitch_roll(
         gc_x = np.transpose(gc_x).ravel()
     except Exception as e:
         log_error(
-            f"Could not interp needed variables {e} - skipping pitch and roll plots", "exc"
+            f"Could not interp needed variables {e} - skipping pitch and roll plots",
+            "exc",
         )
         return ([], [])
 
@@ -270,9 +273,15 @@ def plot_pitch_roll(
     else:
         conn = dbcon
 
-    BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "implied_C_PITCH", implied_C, con=conn)
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_PITCH_GAIN", implied_gain, con=conn
+        base_opts, dive_nc_file.dive_number, "implied_C_PITCH", implied_C, con=conn
+    )
+    BaseDB.addValToDB(
+        base_opts,
+        dive_nc_file.dive_number,
+        "implied_PITCH_GAIN",
+        implied_gain,
+        con=conn,
     )
     try:
         BaseDB.addSlopeValToDB(
@@ -284,18 +293,28 @@ def plot_pitch_roll(
     inst = pitchFitClass()
     inst.cnv = pitch_cnv
     inst.shift = vbd_shift
-    
-    c0 = [[0,0]]
-    c1 = [[0,0,0]]
+
+    c0 = [[0, 0]]
+    c1 = [[0, 0, 0]]
     if vbd_control is not None:
         try:
-            c0 = scipy.optimize.curve_fit(inst.fitfun_shift_fixed, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain ])
+            c0 = scipy.optimize.curve_fit(
+                inst.fitfun_shift_fixed,
+                np.column_stack((pitchAD[inds], vbd_control[inds])),
+                vehicle_pitch_degrees_v[inds],
+                p0=[c_pitch, pitch_gain],
+            )
         except:
             pass
-            
+
         # c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ], bounds=([100, 5, 0.0005], [4000, 75, 0.005]))
         try:
-            c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ])
+            c1 = scipy.optimize.curve_fit(
+                inst.fitfun_shift_solved,
+                np.column_stack((pitchAD[inds], vbd_control[inds])),
+                vehicle_pitch_degrees_v[inds],
+                p0=[c_pitch, pitch_gain, vbd_shift],
+            )
         except:
             pass
 
@@ -382,17 +401,16 @@ def plot_pitch_roll(
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Pitch control vs Pitch"
         fit_line = f"<br>     Linear (w/o VBD shift): C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm                              <br>"
-        fit_line +=    f"Nonlinear w/VBD shift fixed: C_PITCH={ctr0:.0f}ad PITCH_GAIN={gain0:.2f}deg/cm                              <br>"
-        fit_line +=    f"      Nonlinear w/VBD shift: C_PITCH={ctr1:.0f}ad PITCH_GAIN={gain1:.2f}deg/cm PITCH_VBD_SHIFT={shift1:.5f}cm/cc<br>"
-        fit_line +=    f"                  Current: C_PITCH={c_pitch:.0f}ad PITCH_GAIN={pitch_gain:.0f}deg/cm PITCH_VBD_SHIFT={vbd_shift:.5f}cm/cc."
-        
+        fit_line += f"Nonlinear w/VBD shift fixed: C_PITCH={ctr0:.0f}ad PITCH_GAIN={gain0:.2f}deg/cm                              <br>"
+        fit_line += f"      Nonlinear w/VBD shift: C_PITCH={ctr1:.0f}ad PITCH_GAIN={gain1:.2f}deg/cm PITCH_VBD_SHIFT={shift1:.5f}cm/cc<br>"
+        fit_line += f"                  Current: C_PITCH={c_pitch:.0f}ad PITCH_GAIN={pitch_gain:.0f}deg/cm PITCH_VBD_SHIFT={vbd_shift:.5f}cm/cc."
 
         fig.update_layout(
             {
                 "xaxis": {
                     "title": {
                         "text": f"pitch control (counts)<br>{fit_line}",
-                        "font": {"family": "Courier New, Arial" },
+                        "font": {"family": "Courier New, Arial"},
                     },
                     "showgrid": True,
                     # "side": "top"
@@ -449,13 +467,18 @@ def plot_pitch_roll(
     log_info(f"c_roll_dive {c_roll_dive_imp}, c_roll_climb {c_roll_climb_imp}")
 
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_roll_C_ROLL_DIVE", c_roll_dive_imp, con=conn
+        base_opts,
+        dive_nc_file.dive_number,
+        "implied_roll_C_ROLL_DIVE",
+        c_roll_dive_imp,
+        con=conn,
     )
     BaseDB.addValToDB(
         base_opts,
         dive_nc_file.dive_number,
         "implied_roll_C_ROLL_CLIMB",
-        c_roll_climb_imp, con=conn
+        c_roll_climb_imp,
+        con=conn,
     )
 
     if dbcon == None:
@@ -467,7 +490,6 @@ def plot_pitch_roll(
 
         conn.close()
         log_info("plot_pitch_roll db closed")
-
 
     rollAD_Fit_dive = np.array([min(rollAD), max(rollAD)])
     roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit_dive
@@ -541,7 +563,9 @@ def plot_pitch_roll(
                 "xaxis": {
                     "title": {
                         "text": f"roll control (counts)<br>{fit_line}",
-                        "font": { "family": "Courier New, Arial", }
+                        "font": {
+                            "family": "Courier New, Arial",
+                        },
                     },
                     "showgrid": True,
                     # "side": "top"
@@ -664,17 +688,17 @@ def plot_pitch_roll(
         idw = np.where(hdgdiff > 180)
         hdgdiff[idw] = hdgdiff[idw] - 360
         hdgwrapped = hdgdiff[0] + np.cumsum(hdgdiff)
-        turnRate = Utils.ctr_1st_diff(hdgwrapped, sg_time) #  - start_time)
-        
+        turnRate = Utils.ctr_1st_diff(hdgwrapped, sg_time)  #  - start_time)
+
         # ircd = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control < 0))
         # ircc = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control > 0))
         ircd = np.where(pitch_control < 0)
         ircc = np.where(pitch_control > 0)
-        
-        fitd = scipy.stats.linregress( rollAD[ircd].ravel(), turnRate[ircd].ravel() )
+
+        fitd = scipy.stats.linregress(rollAD[ircd].ravel(), turnRate[ircd].ravel())
         c_roll_dive_imp_all = -fitd.intercept / fitd.slope
-        
-        fitc = scipy.stats.linregress( rollAD[ircc].ravel(), turnRate[ircc].ravel() )
+
+        fitc = scipy.stats.linregress(rollAD[ircc].ravel(), turnRate[ircc].ravel())
         c_roll_climb_imp_all = -fitc.intercept / fitc.slope
 
         rollAD_Fit_all = np.array([max([0, min(rollAD)]), min([max(rollAD), 4096])])
@@ -693,8 +717,10 @@ def plot_pitch_roll(
                 "y": centeredRate_d,
                 "customdata": np.squeeze(
                     np.dstack(
-                        (np.transpose(centeredStart_t_d - start_time) / 60.0,
-                        np.transpose(centeredPitch_d))
+                        (
+                            np.transpose(centeredStart_t_d - start_time) / 60.0,
+                            np.transpose(centeredPitch_d),
+                        )
                     )
                 ),
                 "name": "Roll control/turn rate dive (centered)",
@@ -713,8 +739,10 @@ def plot_pitch_roll(
                 "y": centeredRate_c,
                 "customdata": np.squeeze(
                     np.dstack(
-                        (np.transpose(centeredStart_t_c - start_time) / 60.0,
-                         np.transpose(centeredPitch_c))
+                        (
+                            np.transpose(centeredStart_t_c - start_time) / 60.0,
+                            np.transpose(centeredPitch_c),
+                        )
                     )
                 ),
                 "name": "Roll control/turn rate climb (centered)",
@@ -810,9 +838,9 @@ def plot_pitch_roll(
         fig.update_layout(
             {
                 "xaxis": {
-                    "title": { 
-                        "text": f"roll control (counts)<br>{fit_line}", 
-                        "font": { "family": "Courier New, Arial" },
+                    "title": {
+                        "text": f"roll control (counts)<br>{fit_line}",
+                        "font": {"family": "Courier New, Arial"},
                     },
                     "showgrid": True,
                 },

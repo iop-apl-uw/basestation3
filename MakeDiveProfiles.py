@@ -85,6 +85,7 @@ import FlightModel
 import LogFile
 import Globals
 import GPS
+import NetCDFUtils
 import QC
 import Sensors
 import TraceArray
@@ -1732,7 +1733,8 @@ def load_dive_profile_data(
                     # the underlying data is mapped out and crashes python and the debugger!
                     # (This is critical for raw data that is retained by the caller; not so much for results, etc. that are rebuilt)
                     for dive_nc_varname, nc_var in list(dive_nc_file.variables.items()):
-                        nc_typecode = nc_var.typecode()
+                        # scipy version: nc_typecode = nc_var.typecode()
+                        nc_typecode = NetCDFUtils.typecode_mapper(nc_var.dtype)
                         nc_string = nc_typecode == "c"
                         nc_is_scalar = (
                             len(nc_var.shape) == 0
@@ -1888,7 +1890,9 @@ def load_dive_profile_data(
                                         and nc_data_type == "c"
                                     ):  # convert a scalar to a string
                                         try:
-                                            value_string = "%g" % nc_var.getValue()
+                                            value_string = (
+                                                "%g" % nc_var.getValue().item()
+                                            )
                                             l_value_string = len(value_string)
                                             dim_name = "__%s_convert" % dive_nc_varname
                                             nc_dims = (dim_name,)
@@ -1910,7 +1914,10 @@ def load_dive_profile_data(
                                         except:
                                             log_error(
                                                 "Failed to convert %s from %g to a string"
-                                                % (dive_nc_varname, nc_var.getValue())
+                                                % (
+                                                    dive_nc_varname,
+                                                    nc_var.getValue().item(),
+                                                )
                                             )
                                             nc_var_convert = None  # oh well...
 
@@ -1945,6 +1952,7 @@ def load_dive_profile_data(
                             # so there is no way to know which given nc dim name from the file is the 'right' one to use
                             # FIX: If it is a data info we can see if the name matches and if not, use the default instead?? else punt
                             for dim in range(l_nc_dims):
+                                # likely neeeds .size method
                                 this_dim = nc_dims[dim]
                                 this_mdi = mdp_dim_info[dim]
                                 if this_mdi in BaseNetCDF.nc_data_infos:
@@ -1966,7 +1974,7 @@ def load_dive_profile_data(
                                 BaseNetCDF.assign_dim_info_size(
                                     nc_info_d,
                                     this_mdi,
-                                    dive_nc_file.dimensions[this_dim],
+                                    dive_nc_file.dimensions[this_dim].size,
                                 )
                         elif (
                             l_nc_dims
@@ -1981,7 +1989,7 @@ def load_dive_profile_data(
                         if sgc_var.search(dive_nc_varname):
                             _, variable = sgc_var.split(dive_nc_varname)
                             if nc_is_scalar:
-                                calib_consts[variable] = nc_var.getValue()
+                                calib_consts[variable] = nc_var.getValue().item()
                             else:  # nc_string
                                 calib_consts[variable] = (
                                     nc_var[:].tobytes().decode("utf-8")
@@ -2023,7 +2031,7 @@ def load_dive_profile_data(
                                         ),
                                     )
                             else:  # 'd' or 'i'
-                                value = nc_var.getValue()
+                                value = nc_var.getValue().item()
                             log_f.data[variable] = value
 
                         # Parse for gc_state_ vars before gc_ vars since they share a prefix
@@ -2080,7 +2088,7 @@ def load_dive_profile_data(
                                     nc_var[:].tobytes().decode("utf-8")
                                 )
                             elif nc_is_scalar:
-                                results_d[dive_nc_varname] = nc_var.getValue()
+                                results_d[dive_nc_varname] = nc_var.getValue().item()
                             else:
                                 results_d[dive_nc_varname] = nc_var[:].copy()
                                 try:

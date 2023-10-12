@@ -3587,9 +3587,27 @@ def create_nc_var(
                     nc_string_dim_format % size
                 )  # compute dimension name
                 nc_file.createDimension(var_dims, size)
-            nc_var = nc_file.createVariable(var_name, "c", (var_dims,))
+            nc_var = nc_file.createVariable(
+                var_name,
+                "c",
+                (var_dims,),
+                compression="zlib",
+                complevel=9,
+                fill_value=meta_data_d["_FillValue"]
+                if "_FillValue" in meta_data_d
+                else False,
+            )
         else:  # another type we know
-            nc_var = nc_file.createVariable(var_name, nc_data_type, ())
+            nc_var = nc_file.createVariable(
+                var_name,
+                nc_data_type,
+                (),
+                compression="zlib",
+                complevel=9,
+                fill_value=meta_data_d["_FillValue"]
+                if "_FillValue" in meta_data_d
+                else False,
+            )
         if value is None:
             try:  # try replacing the initial value with the fill value, if any
                 value = meta_data_d["_FillValue"]
@@ -3598,7 +3616,16 @@ def create_nc_var(
     else:  # an explicit tuple of dimensions
         # DEBUG print "create_dim: %s ('%s')" % (var_name, string.join(var_dims,','))
         log_debug(f"{var_name} {nc_data_type} {var_dims}")
-        nc_var = nc_file.createVariable(var_name, nc_data_type, var_dims)
+        nc_var = nc_file.createVariable(
+            var_name,
+            nc_data_type,
+            var_dims,
+            compression="zlib",
+            complevel=9,
+            fill_value=meta_data_d["_FillValue"]
+            if "_FillValue" in meta_data_d
+            else False,
+        )
     if value is not None:
         try:
             if var_dims == nc_scalar:
@@ -3654,7 +3681,8 @@ def create_nc_var(
         #             "[TIME]", time_var if time_var != var_name else ""
         #         )
         # BUG: netcdf.py dies if vvalue is an empty string ''
-        nc_var.__setattr__(attr_name, vvalue)  # assert the metdata attribute
+        if attr_name != "_FillValue":
+            nc_var.__setattr__(attr_name, vvalue)  # assert the metdata attribute
         # to fetch, use getattr(nc_var,attr_name) or nc_var.__getattribute__(attr_name)
 
     return nc_var

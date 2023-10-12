@@ -293,7 +293,7 @@ def plot_vert_vel(
         sg_time = dive_nc_file.variables["time"][:]
         depth = dive_nc_file.variables["depth"][:]
         vehicle_pitch_degrees_v = dive_nc_file.variables["eng_pitchAng"][:]
-        sg_np = dive_nc_file.dimensions["sg_data_point"]
+        sg_np = dive_nc_file.dimensions["sg_data_point"].size
         vbd = dive_nc_file.variables["eng_vbdCC"][:]  # - vbdbias
         # log_info("vbd")
         # print vbd
