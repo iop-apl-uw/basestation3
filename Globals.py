@@ -41,7 +41,7 @@ mission_profile_nc_fileversion = "2.71"
 mission_timeseries_nc_fileversion = "2.71"
 mission_per_dive_nc_fileversion = "2.71"
 # These document level of functionality
-basestation_version = "3.0.0"
+basestation_version = "3.0.1"
 quality_control_version = "1.12"
 
 # The oldest format version this code supports
