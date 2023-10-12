@@ -122,7 +122,7 @@ for raw_line in proc.stdout:
             insideParam = False
             print("</table>")
 
-    if insideMotorSummary and not (line.startswith('Pitch') or line.startswith('Roll') or line.startswith('VBD')) and line != '':
+    if insideMotorSummary and not (line.startswith('Pitch') or line.startswith('Roll') or line.startswith('VBD') or line.startswith('Pump')) and line != '':
         insideMotorSummary = False
         print("</table>")
     
@@ -189,11 +189,12 @@ for raw_line in proc.stdout:
         format(line)
 
     elif insideMotorSummary:
-        if not (line.startswith('Pitch') or line.startswith('Roll') or line.startswith('VBD')) and line != '':
+        if not (line.startswith('Pitch') or line.startswith('Roll') or line.startswith('VBD') or line.startswith('Pump')) and line != '':
             insideMotorSummary = False
         else:
             result = None
             which = None
+            haveDest = True
             if line.startswith('VBD'):
                 result = re.search(r'(?P<which>[A-Za-z]+)\s+(?P<startEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<startAD>[+-]?\d+(?:\.\d+)?)\)\s+to\s+(?P<endEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<endAD>[+-]?\d+(?:\.\d+)?)\s+[^\)]+\)\s+dest\s+(?P<dest>[+-]?\d+(?:\.\d+)?)\s+(?P<time>\d+(?:\.\d+)?)s\s+(?P<avgCurr>\d+(?:\.\d+)?)mA\s+\((?P<maxCurr>\d+(?:\.\d+)?)mA\s+peak\)\s+(?P<avgVolts>\d+(?:\.\d+)?)V\s+\((?P<minVolts>\d+(?:\.\d+)?)V\)\s+(?P<rate>\d+(?:\.\d+)?)\s+AD\/sec', line)
                 if result:
@@ -201,9 +202,15 @@ for raw_line in proc.stdout:
                         which = 'Bleed'
                     else:
                         which = 'Pump'
+            elif line.startswith('Pump'):
+                result = re.search(r'(?P<which>[A-Za-z]+)\s+(?P<startEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<startAD>[+-]?\d+(?:\.\d+)?)\)\s+to\s+(?P<endEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<endAD>[+-]?\d+(?:\.\d+)?)\s+[^\)]+\)\s+(?P<time>\d+(?:\.\d+)?)s\s+(?P<avgCurr>\d+(?:\.\d+)?)\s+mA\s+\((?P<maxCurr>\d+(?:\.\d+)?)\s+mA\s+peak\)\s+(?P<avgVolts>\d+(?:\.\d+)?)\s+V\s+(?P<rate>\d+(?:\.\d+)?)\s+AD\/sec', line)
+                haveDest = False
+
             else:
                 result = re.search(r'(?P<which>[A-Za-z]+)\s+(?P<startEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<startAD>[+-]?\d+(?:\.\d+)?)\)\s+to\s+(?P<endEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<endAD>[+-]?\d+(?:\.\d+)?)\)\s+dest\s+(?P<dest>[+-]?\d+(?:\.\d+)?)\s+(?P<time>\d+(?:\.\d+)?)s\s+(?P<avgCurr>\d+(?:\.\d+)?)mA\s+\((?P<maxCurr>\d+(?:\.\d+)?)mA\s+peak\)\s+(?P<avgVolts>\d+(?:\.\d+)?)V\s+\((?P<minVolts>\d+(?:\.\d+)?)V\)\s+(?P<rate>\d+(?:\.\d+)?)\s+AD\/sec', line)
-
+                if not result:
+                    result = re.search(r'(?P<which>[A-Za-z]+)\s+(?P<startEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<startAD>[+-]?\d+(?:\.\d+)?)\)\s+to\s+(?P<endEU>[+-]?\d+(?:\.\d+)?)[a-z]+\s+\((?P<endAD>[+-]?\d+(?:\.\d+)?)\)\s+(?P<time>\d+(?:\.\d+)?)s\s+(?P<avgCurr>\d+(?:\.\d+)?)\s+mA\s+\((?P<maxCurr>\d+(?:\.\d+)?)\s+mA\s+peak\)\s+(?P<avgVolts>\d+(?:\.\d+)?)\s+V\s+(?P<rate>\d+(?:\.\d+)?)\s+AD\/sec', line)
+                    haveDest = False
 
             if result:
                 if not which:
@@ -213,14 +220,14 @@ for raw_line in proc.stdout:
                         <td>{result['startEU']}</td> \
                         <td>{result['endEU']}</td> \
                         <td>{result['startAD']}</td> \
-                        <td>{motorCheck(result['endAD'], abs(float(result['endAD']) - float(result['dest'])), 0, 100)}</td> \
-                        <td>{result['dest']}</td> \
+                        <td>{motorCheck(result['endAD'], abs(float(result['endAD']) - float(result['dest'])), 0, 100) if haveDest else result['endAD']}</td> \
+                        <td>{result['dest'] if haveDest else '-'}</td> \
                         <td>{result['time']}</td> \
                         <td>{motorCheck(result['rate'], result['rate'], minRates[which], maxRates[which])}</td> \
                         <td>{motorCheck(result['avgCurr'], result['avgCurr'], minCurr[which], maxCurr[which])}</td> \
                         <td>{result['maxCurr']}</td> \
                         <td>{result['avgVolts']}</td> \
-                        <td>{result['minVolts']}</td></tr>") 
+                        <td>{result['minVolts'] if haveDest else result['avgVolts']}</td></tr>") 
     
  
     elif insideParam:
