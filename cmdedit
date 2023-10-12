@@ -138,6 +138,8 @@ except IOError:
     print("could not open comm.log in working directory")
     sys.exit(2)
 
+latest = 0
+
 p = re.compile("^[0-9].*:.*:.* GPS")
 for s in comm:
     if p.match(s):
