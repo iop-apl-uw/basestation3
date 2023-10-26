@@ -1853,6 +1853,7 @@ async def notifyVisAsync(glider: int, topic: str, body: str):
 
 
 def logDB(msg):
-    f = open("/home/seaglider/home/db.log", "a")
-    f.write(f"{time.time()} {msg}\n")
-    f.close()
+    pass
+    # f = open("/home/seaglider/home/db.log", "a")
+    # f.write(f"{time.time()} {msg}\n")
+    # f.close()
