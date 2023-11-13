@@ -674,6 +674,10 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
         return
 
     dive = nci.variables["log_DIVE"].getValue()
+    # Don't bother with dive 0 - almost nothing in there.
+    if dive == 0:
+        return
+    
     cur.execute(f"DELETE FROM dives WHERE dive={dive};")
     cur.execute(f"INSERT INTO dives(dive) VALUES({dive});")
     for v in list(nci.variables.keys()):
@@ -684,23 +688,31 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
         dep_mx = numpy.nanmax(nci.variables["log_GC"][:,1])
         insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
     else:
-        print(f'no depth {filename}')
+        log_warning(f'no depth {filename}')
 
     # Last state time is begin surface
-    insertColumn(
-        dive,
-        cur,
-        "time_seconds_diving",
-        nci.variables["log_GC_time"][-1] - nci.variables["start_time"].getValue(),
-        "FLOAT",
-    )
+    if "log_GC_time" in nci.variables:
+        insertColumn(
+            dive,
+            cur,
+            "time_seconds_diving",
+            nci.variables["log_GC_time"][-1] - nci.variables["start_time"].getValue(),
+            "FLOAT",
+        )
+        insertColumn(dive, cur, "log_gps_time", nci.variables["log_GC_time"][-1], "FLOAT")
+    else:
+        log_warning(f'gc time not in {filename}')
 
     insertColumn(dive, cur, "log_start", nci.variables["start_time"].getValue(), "FLOAT");
-    insertColumn(dive, cur, "log_gps_lat", nci.variables["log_GPS"][1], "FLOAT");
-    insertColumn(dive, cur, "log_gps_lon", nci.variables["log_GPS"][2], "FLOAT");
-    insertColumn(dive, cur, "log_gps_hdop", nci.variables["log_GPS"][3], "FLOAT");
-    insertColumn(dive, cur, "log_gps_time", nci.variables["log_GC_time"][-1], "FLOAT")
-    insertColumn(dive, cur, "log_TGT_NAME", nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8"), "TEXT")
+    if "log_GPS" in nci.variables:
+        insertColumn(dive, cur, "log_gps_lat", nci.variables["log_GPS"][1], "FLOAT");
+        insertColumn(dive, cur, "log_gps_lon", nci.variables["log_GPS"][2], "FLOAT");
+        insertColumn(dive, cur, "log_gps_hdop", nci.variables["log_GPS"][3], "FLOAT");
+    else:
+        log_warning(f'gps fixes not in {filename}')
+        
+    if 'log_TGT_NAME' in nci.variables:        
+        insertColumn(dive, cur, "log_TGT_NAME", nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8"), "TEXT")
 
     if 'log_24V_AH' in nci.variables:
         v24 = nci.variables["log_24V_AH"][0]
@@ -725,20 +737,22 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
 
     insertColumn(dive, cur, "batt_ah_10V", ah10, "FLOAT")
     insertColumn(dive, cur, "batt_ah_24V", ah24, "FLOAT")
+    
+    if "log_MHEAD_RNG_PITCHd_Wd" in nci.variables:
+        mhead  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][0]
+        rng    = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][1]
+        pitchd = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][2]
+        wd     = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][3]
+        theta  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][4]
+        dbdw   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][5]
+        pressureNoise   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][6]
 
-    mhead  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][0]
-    rng    = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][1]
-    pitchd = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][2]
-    wd     = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][3]
-    theta  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][4]
-    dbdw   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][5]
-    pressureNoise   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][6]
+        insertColumn(dive, cur, "mag_heading_to_target", mhead, "FLOAT")
+        insertColumn(dive, cur, "meters_to_target", rng, "FLOAT")
 
-    insertColumn(dive, cur, "mag_heading_to_target", mhead, "FLOAT")
-    insertColumn(dive, cur, "meters_to_target", rng, "FLOAT")
-
-    nm = nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8")
-    insertColumn(dive, cur, "target_name", nm, "TEXT")
+    if 'log_TGT_NAME' in nci.variables:        
+        nm = nci.variables["log_TGT_NAME"][:].tobytes().decode("utf-8")
+        insertColumn(dive, cur, "target_name", nm, "TEXT")
 
     if "log_IMPLIED_C_VBD" in nci.variables:
         insertColumn(
