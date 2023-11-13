@@ -1783,6 +1783,8 @@ nc_var_metadata = {
     "log_MOTHERBOARD": [False, "i", {}, nc_scalar],
     "log_NAV_DEVICE": [False, "i", {}, nc_scalar],
     "log_NAV2_DEVICE": [False, "i", {}, nc_scalar],
+    "log_NAV3_DEVICE": [False, "i", {}, nc_scalar],
+    "log_NAV4_DEVICE": [False, "i", {}, nc_scalar],
     "log_NAV_MODE": [False, "i", {}, nc_scalar],
     "log_N_FILEKB": [False, "i", {}, nc_scalar],
     "log_N_GPS": [False, "i", {}, nc_scalar],
