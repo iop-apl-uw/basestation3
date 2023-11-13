@@ -936,11 +936,14 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
         # Wrong solution - complete sorts rows and coloumns
         # data = np.sort(full_gc_table, axis=0)
 
-        # Sort the table by the first column
-        data = full_gc_table[full_gc_table[:, 0].argsort()]
+        if full_gc_table is None:
+            log_warning("Empty GC table - skipping")
+        else:
+            # Sort the table by the first column
+            data = full_gc_table[full_gc_table[:, 0].argsort()]
 
-        # Convert time to epoch time
-        create_ds_var(dso, var_template, "log_GC", data, row_coord=rc)
+            # Convert time to epoch time
+            create_ds_var(dso, var_template, "log_GC", data, row_coord=rc)
 
         # Modem and FREEZE tables
         for tab, var_name in (
