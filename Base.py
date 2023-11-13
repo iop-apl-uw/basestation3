@@ -549,10 +549,7 @@ def process_file_group(
         # No Bogue for raw xfer
         _, t = os.path.split(bogue_file)
         log_debug(f"{t} = {comm_log.find_fragment_transfer_method(t)}")
-        if (
-            comm_log.find_fragment_transfer_method(t) == "raw"
-            or comm_log.find_fragment_transfer_method(t) == "ymodem"
-        ):
+        if comm_log.find_fragment_transfer_method(t) in ("raw", "ymodem", "unknown"):
             continue
         try:
             i = file_group.index(bogue_file)
@@ -600,10 +597,7 @@ def process_file_group(
             )
         )
         if (
-            (
-                comm_log.find_fragment_transfer_method(t) == "raw"
-                or comm_log.find_fragment_transfer_method(t) == "ymodem"
-            )
+            comm_log.find_fragment_transfer_method(t) in ("raw", "ymodem", "unknown")
             and not fc.is_logger_payload()
             and not (fc.is_logger_strip_files() and fragment == last_fragment)
         ):
@@ -1913,7 +1907,7 @@ def main():
                 network_files_to_process, processed_other_files
             )
             for ncf in processed_other_files:
-                if '.ncdf' in ncf:
+                if ".ncdf" in ncf:
                     BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
 
         # Process regular files
