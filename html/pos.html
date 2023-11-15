@@ -167,6 +167,8 @@
 
         document.getElementById('poll').onchange = function() { pollMode(glider, mission); };
         document.getElementById('refresh').onclick = function() { loadPosition(glider, mission); };
+        document.title = glider +'-pos';
+        document.getElementById('gliderTitle').innerHTML = 'SG' + glider + ' pos:';
     }
 
     function nightMode() {
@@ -330,14 +332,14 @@
 
 <body class="day" onload="setup();">
 <div id="main" class="day" onclick="cancelBlink();">
-    Position:
+    <span id="gliderTitle">Position:</span>
     <input class="day" name="format" type="radio" onchange="displayPosition();" id="_ddmm" value="ddmm" checked><label for="_ddmm">dd mm.mmm</label>
     <input class="day" name="format" type="radio" onchange="displayPosition();" id="_dd" value="dd"><label for="_dd">dd.ddd</label>
     <div id="position"></div>
-    as of
-    <div id="timestamp"></div>
-    last refreshed
-    <div id="refreshed"></div>
+    most recent GPS fix as of
+    <div id="timestamp" title="time of latest reported GPS fix"></div>
+    this page last refreshed
+    <div id="refreshed" title="time when latest fix was loaded, page was loaded or basestation was polled"></div>
 
     <div style="width: 100%; display: flex; flex-direction:row; gap:20px;">
         <button class="day" id="refresh" title="query for new position">&#8635;</button>
