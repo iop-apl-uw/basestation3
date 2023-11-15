@@ -673,6 +673,8 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
         log_error(f"Could not open {filename} - bailing out", "exc")
         return
 
+    if "log_DIVE" not in nci.variables:
+        return 0
     dive = nci.variables["log_DIVE"].getValue()
     # Don't bother with dive 0 - almost nothing in there.
     if dive == 0:
