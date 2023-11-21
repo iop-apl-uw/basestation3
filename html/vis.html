@@ -52,6 +52,8 @@
 
     var permalink = null;
 
+    var divesInTable = [];
+
 {% if runMode == 'pilot' %}
     var fixes = [];
     var connect_t = 0;
@@ -509,7 +511,9 @@
             console.log('row exists ' + rowID);
             $(rowID).remove();
         }
-    
+   
+        divesInTable.push(d['dive']);
+ 
         for (const key in d) {
             if (d[key] == null)
                 d[key] = 0;
@@ -879,7 +883,7 @@
             if (dive == -1 && parseInt(data['dive']) != currDive) {
                 currDive = maxDive = parseInt(data['dive']);
                 
-                loadPlots(currDive, false);
+                loadPlots(currDive, true);
                 $('diveIndicator').innerHTML = 'dive ' + currDive;
 
                 // loadLog(currDive);
@@ -889,7 +893,7 @@
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
 
-                loadPlots(currDive, false);
+                loadPlots(currDive, true);
                 $('diveIndicator').innerHTML = 'dive ' + currDive;
 
                 // loadLog(currDive);
@@ -1296,6 +1300,10 @@
         var c = currDive;
 
         currDive += dir;
+        while (divesInTable.includes(currDive) === false && currDive < maxDive && currDive > 1) {
+            currDive += dir;
+        }
+
         if (currDive > maxDive)
             currDive = maxDive;
         else if (currDive < 1)
