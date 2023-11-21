@@ -39,3 +39,4 @@ aiosqlite
 orjson
 anyio
 pyzmq --no-binary=pyzmq
+furl
