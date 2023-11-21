@@ -443,6 +443,7 @@
         $(elt).classList.remove('hide');
         $('plotlyPopperOuter').style.display = 'none';
         $('plotlyPermalink').style.display = 'none';
+        $('diveIndicator').style.display = 'none';
     }
 
 
@@ -453,6 +454,7 @@
             setVisibility('mainImage');
             $('mainImage').src = `plot/webp/${which}/${currGlider}/${currDive}/${elt}${mission()}`;
             $('plotlyPopperOuter').style.display = 'block';
+            $('diveIndicator').style.display = 'block';
             console.log('popper up');
             if (plotly)
                 $('plotlyPopperOuter').onclick = function() 
@@ -469,6 +471,7 @@
         }
         else {
             setVisibility('mainDiv');
+            $('diveIndicator').style.display = 'block';
             $('plotlyPopperOuter').style.display = 'block';
             console.log('popper up');
 
@@ -777,6 +780,9 @@
                     coll[i].style.display = "none";
                 $('volt10_header').innerHTML = 'volts';
             }
+            if (dive == -1) {
+                highlightCurrDive(currDive);
+            }
         })
         .catch(error => {
             console.log(error);
@@ -795,21 +801,25 @@
     function showLog() {
         setVisibility('logDiv');
         currElt = 'logfile';
+        $('diveIndicator').style.display = 'block';
     }
 
     function showLogFile() {
         setVisibility('logfileDiv');
         currElt = 'logfileRaw';
+        $('diveIndicator').style.display = 'block';
     }
 
     function showEng() {
         setVisibility('engfileDiv');
         currElt = 'engfile';
+        $('diveIndicator').style.display = 'block';
     }
 
     var critLine = null;
     function showCap() {
         setVisibility('capfileDiv');
+        $('diveIndicator').style.display = 'block';
         currElt = 'capfile';
         if (critLine !== null)
             $(critLine).scrollIntoView();
@@ -817,6 +827,7 @@
 
     function showNotifications() {
         setVisibility('notificationsDiv');
+        $('diveIndicator').style.display = 'block';
         currElt = 'notifications';
     }
 
@@ -869,6 +880,7 @@
                 currDive = maxDive = parseInt(data['dive']);
                 
                 loadPlots(currDive, false);
+                $('diveIndicator').innerHTML = 'dive ' + currDive;
                 // loadLog(currDive);
                 updateMaxDive();
             }
@@ -876,6 +888,7 @@
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
                 loadPlots(currDive, false);
+                $('diveIndicator').innerHTML = 'dive ' + currDive;
                 // loadLog(currDive);
                 updateMaxDive();
             }
@@ -904,10 +917,15 @@
         plotList = []
     }
 
+    var prevHighlightID = '';
+    var prevHighlightColor = '';  
+
     function clearTable() {
         while($('mainTable').rows.length > 1) {
             $('mainTable').deleteRow(1);
         }
+        prevHighlightID = '';
+        prevHighlightColor = '';  
     }
 
     var plotList = []
@@ -936,7 +954,8 @@
         fetch(`log/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
-            $('logDiv').innerHTML = 'Dive ' + dive + '<br>';
+            // $('logDiv').innerHTML = 'Dive ' + dive + '<br>';
+            $('logDiv').innerHTML = '<br>';
             $('logDiv').innerHTML += data;
         })
         .catch(error => {
@@ -950,7 +969,7 @@
         .then(data => {
             if (data == 'none' && ext == 'cap') {
                 $('btnCapFile').style.backgroundImage = "url('script/images/cap-none-icon.png')";
-                $(div).innerHTML = 'no capture file'; 
+                $(div).innerHTML = '<br>no capture file'; 
             }
             else {
                 if (ext == 'cap') {
@@ -1007,7 +1026,8 @@
             deltas = { 'parm': [], 'file': [] };
         }
 
-        html = `Dive ${dive}<p><h3>alerts</h3><p>`;
+        // html = `Dive ${dive}<p><h3>alerts</h3><p>`;
+        html = '';
         if (alerts != "not found") {
             html += alerts;
             notify = true;
@@ -1067,11 +1087,13 @@
 
         currDive = dive; // inside the then or before plots might be actually loaded?
 
+        highlightCurrDive(dive);
         loadLog(dive);
         loadFile(dive, 'log', 'logfileDiv');
         loadFile(dive, 'eng', 'engfileDiv');
         loadFile(dive, 'cap', 'capfileDiv');
         loadNotifications(dive);
+        $('diveIndicator').innerHTML = 'dive ' + currDive;
 
         fetch(`plots/${currGlider}/${dive}${mission()}`)
         .then(res => res.json())
@@ -1255,7 +1277,18 @@
             console.log(`loadPlots - ${error}`);
         });
     }
-   
+    
+    function highlightCurrDive(dv) {
+        if ('row' + dv != prevHighlightID && $('row' + dv) != null) {
+            if (prevHighlightID != '') {
+                $(prevHighlightID).style.backgroundColor = prevHighlightColor;
+            }
+            prevHighlightColor = $('row' + currDive).style.backgroundColor;    
+            prevHighlightID = 'row' + currDive;
+            $('row' + currDive).style.backgroundColor = '#FFCC99';
+        }
+    }
+ 
     function changeDive(dir) {
         var c = currDive;
 
@@ -2138,9 +2171,11 @@
 <div id="main">
     <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
     <div id="plotlyPopperOuter">&#x2922;</div>
+    <span id="diveIndicator"></span>
     <div id="plotlyPermalink" onclick="showPermalink();">&#x1F517;</div>
     <img id="mainImage" style="mix-blend-mode:multiply;" class="hide">
-    <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;" class="hide"></div>
+    <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;" class="hide">
+    </div>
     <table rules="groups" id="mainTable" class="hide">
 
         <colgroup span=4><col><col><col><col></colgroup>
