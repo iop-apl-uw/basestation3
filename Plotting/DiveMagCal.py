@@ -39,6 +39,8 @@ import typing
 import numpy as np
 import scipy.interpolate
 import plotly.graph_objects
+import datetime
+import ppigrf
 
 if typing.TYPE_CHECKING:
     import BaseOpts
@@ -93,9 +95,9 @@ def plot_mag(
     fzm = fzm / norm
 
     P = np.zeros([4, 1])
-    P[0] = mx
-    P[1] = my
-    P[2] = mz
+    P[0] = 0 # mx
+    P[1] = 0 # my
+    P[2] = 0 # mz
     P[3] = 1
 
     converged = 0
@@ -163,14 +165,154 @@ def plot_mag(
 
         P_prev = np.copy(P)
 
+
+    Ph = P * norm
+    log_info(
+        f"hard magcal PQR = [{P.item(0):.2f},{P.item(1):.2f},{P.item(2):.2f}], converged={converged:d}, it={it:d}"
+    )
+
     fxm = fxm * norm
     fym = fym * norm
     fzm = fzm * norm
 
-    P = P * norm
-    log_info(
-        f"magcal PQR = [{P.item(0):.2f},{P.item(1):.2f},{P.item(2):.2f}], converged={converged:d}, it={it:d}"
+
+    igrf = ppigrf.igrf(dive_nc_file['log_gps_lon'][0],
+                       dive_nc_file['log_gps_lat'][0],
+                       0, datetime.datetime.fromtimestamp(dive_nc_file['log_gps_time'][0]))
+
+
+    Wf = 0.1
+    Wfh = 1.0
+    F = 1.0
+    ix = igrf[0][0][0]
+    iy = igrf[1][0][0]
+    iz = igrf[2][0][0]
+    Fh = math.sqrt(ix*ix + iy*iy)/math.sqrt(ix*ix + iy*iy + iz*iz)
+
+    norm = math.sqrt(Ph[0]*Ph[0] + Ph[1]*Ph[1] + Ph[2]*Ph[2])
+
+    P = np.zeros([12, 1])
+    P[0] = Ph[0] / norm
+    P[1] = Ph[1] / norm
+    P[2] = Ph[2] / norm
+    for j in range(4,12):
+        P[j] = 0;
+   
+    P[3] = 1;
+    P[7] = 1;
+    P[11] = 1;
+
+    fxm = fxm / norm
+    fym = fym / norm
+    fzm = fzm / norm
+
+    converged = 0
+
+    eq = np.empty([12, 1])
+    resid = np.empty([12, 1])
+
+    for it in range(0, 25):
+        Jac = np.zeros([12, 12])
+        resid = np.zeros([12, 1])
+
+        p = P[0]
+        q = P[1]
+        r = P[2]
+        a = P[3]
+        b = P[4]
+        c = P[5]
+        d = P[6]
+        e = P[7]
+        f = P[8]
+        g = P[9]
+        h = P[10]
+        k = P[11]
+
+        R21_i = 0
+        for i in range(0, npts):
+            Mx_i = fxm[i] - p
+            My_i = fym[i] - q
+            Mz_i = fzm[i] - r
+
+            pit = pitch[i]
+            rol = roll[i]
+
+            cp = math.cos(pit)
+            sp = math.sin(pit)
+            cr = math.cos(rol)
+            sr = math.sin(rol)
+
+            R11_i = cp
+            R12_i = -sp*sr
+            R13_i = -sp*cr
+            R22_i = cr
+            R23_i = -sr
+            R31_i = sp
+            R32_i = cp*sr
+            R33_i = cp*cr
+
+            eq[0] = Wf*((-2*R11_i*a - 2*R12_i*d - 2*R13_i*g)*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R21_i*a - 2*R22_i*d - 2*R23_i*g)*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R31_i*a - 2*R32_i*d - 2*R33_i*g)*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*((-2*R11_i*a - 2*R12_i*d - 2*R13_i*g)*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R21_i*a - 2*R22_i*d - 2*R23_i*g)*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[1] = Wf*((-2*R11_i*b - 2*R12_i*e - 2*R13_i*h)*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R21_i*b - 2*R22_i*e - 2*R23_i*h)*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R31_i*b - 2*R32_i*e - 2*R33_i*h)*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*((-2*R11_i*b - 2*R12_i*e - 2*R13_i*h)*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R21_i*b - 2*R22_i*e - 2*R23_i*h)*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[2] = Wf*((-2*R11_i*c - 2*R12_i*f - 2*R13_i*k)*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R21_i*c - 2*R22_i*f - 2*R23_i*k)*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R31_i*c - 2*R32_i*f - 2*R33_i*k)*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*((-2*R11_i*c - 2*R12_i*f - 2*R13_i*k)*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + (-2*R21_i*c - 2*R22_i*f - 2*R23_i*k)*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[3] = Wf*(2*R11_i*Mx_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R21_i*Mx_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R31_i*Mx_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R11_i*Mx_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R21_i*Mx_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[4] = Wf*(2*R11_i*My_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R21_i*My_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R31_i*My_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R11_i*My_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R21_i*My_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[5] = Wf*(2*R11_i*Mz_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R21_i*Mz_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R31_i*Mz_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R11_i*Mz_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R21_i*Mz_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[6] = Wf*(2*R12_i*Mx_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R22_i*Mx_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R32_i*Mx_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R12_i*Mx_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R22_i*Mx_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[7] = Wf*(2*R12_i*My_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R22_i*My_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R32_i*My_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R12_i*My_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R22_i*My_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[8] = Wf*(2*R12_i*Mz_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R22_i*Mz_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R32_i*Mz_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R12_i*Mz_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R22_i*Mz_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[9] = Wf*(2*R13_i*Mx_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R23_i*Mx_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R33_i*Mx_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R13_i*Mx_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R23_i*Mx_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[10] = Wf*(2*R13_i*My_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R23_i*My_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R33_i*My_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R13_i*My_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R23_i*My_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+            eq[11] = Wf*(2*R13_i*Mz_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R23_i*Mz_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R33_i*Mz_i*(R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i))) + Wfh*(2*R13_i*Mz_i*(R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)) + 2*R23_i*Mz_i*(R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)))
+
+            Fxi = R11_i*(a*Mx_i + b*My_i + c*Mz_i) + R12_i*(d*Mx_i + e*My_i + f*Mz_i) + R13_i*(g*Mx_i + h*My_i + k*Mz_i)
+            Fyi = R21_i*(a*Mx_i + b*My_i + c*Mz_i) + R22_i*(d*Mx_i + e*My_i + f*Mz_i) + R23_i*(g*Mx_i + h*My_i + k*Mz_i)
+            Fzi = R31_i*(a*Mx_i + b*My_i + c*Mz_i) + R32_i*(d*Mx_i + e*My_i + f*Mz_i) + R33_i*(g*Mx_i + h*My_i + k*Mz_i)
+
+            fi = Wf*(Fxi*Fxi + Fyi*Fyi + Fzi*Fzi - F*F) + Wfh*(Fxi*Fxi + Fyi*Fyi - Fh*Fh)
+
+            eqT = np.transpose(np.copy(eq))
+            Jac = Jac + eq * eqT
+            resid = resid + eq * fi
+
+        dP = np.matmul(np.linalg.inv(Jac), resid)
+        P = P - dP
+
+        if it > 0:
+            conv = 0
+
+            x = np.transpose(np.divide(dP, P_prev))
+            conv = x.dot(x.transpose())
+            if conv < 1e-6:
+                converged = 1
+                break
+
+        P_prev = np.copy(P)
+
+    fxm = fxm * norm
+    fym = fym * norm
+    fzm = fzm * norm
+    P[0] = P[0]*norm
+    P[1] = P[1]*norm
+    P[2] = P[2]*norm
+
+    abc0 = np.array(
+        [
+            [P[3][0], P[4][0], P[5][0]],
+            [P[6][0], P[7][0], P[8][0]],
+            [P[9][0], P[10][0], P[11][0]],
+        ]
     )
+
+    log_info(
+        f"hard+soft magcal PQR = [{P.item(0):.2f},{P.item(1):.2f},{P.item(2):.2f}], converged={converged:d}, it={it:d}"
+    )
+
+    abc0 = abc0 / P[3][0]
+
+    log_info(
+        f"hard+soft magcal abc = {abc0[0][0]:.3f},{abc0[0][1]:.3f},{abc0[0][2]:.3f},{abc0[1][0]:.3f},{abc0[1][1]:.3f},{abc0[1][2]:.3f},{abc0[2][0]:.3f},{abc0[2][1]:.3f},{abc0[2][2]:.3f}"
+    )
+
 
     fx = []
     fy = []
@@ -201,7 +343,7 @@ def plot_mag(
         fx_sg = []
         fy_sg = []
         doSG = True
-
+        
     doMAGCAL = False
     if "log_MAGCAL" in dive_nc_file.variables:
         iron = list(
@@ -229,7 +371,7 @@ def plot_mag(
         mc_quality = iron[13]
         mc_used = iron[14]
         doMAGCAL = True
-
+       
     for i in range(0, npts):
         c = math.cos(roll[i])
         s = math.sin(roll[i])
@@ -246,7 +388,7 @@ def plot_mag(
         fxyz = Rp @ Rr @ f
         f = np.array([fxm[i] - P[0], fym[i] - P[1], fzm[i] - P[2]])
         f.shape = (3, 1)
-        fxyz_pqr = Rp @ Rr @ f
+        fxyz_pqr = Rp @ Rr @ abc0 @ f
 
         fx.append(fxyz.item(0))
         fy.append(fxyz.item(1))
@@ -266,6 +408,11 @@ def plot_mag(
             fxyz_mc = Rp @ Rr @ abc2 @ f
             fx_mc.append(fxyz_mc.item(0))
             fy_mc.append(fxyz_mc.item(1))
+
+    minx = min([min(fx), min(fx_pqr)]);
+    maxx = max([max(fx), max(fx_pqr)]);
+    miny = min([min(fy), min(fy_pqr)]);
+    maxy = max([max(fy), max(fy_pqr)]);
 
     fig = plotly.graph_objects.Figure()
     fig.add_trace(
@@ -312,6 +459,10 @@ def plot_mag(
                 "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
             }
         )
+        minx = min([minx, min(fx_sg)]);
+        maxx = max([maxx, max(fx_sg)]);
+        miny = min([miny, min(fy_sg)]);
+        maxy = max([maxy, max(fy_sg)]);
 
     if doMAGCAL:
         fig.add_trace(
@@ -328,22 +479,31 @@ def plot_mag(
                 "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
             }
         )
+        minx = min([minx, min(fx_mc)]);
+        maxx = max([maxx, max(fx_mc)]);
+        miny = min([miny, min(fy_mc)]);
+        maxy = max([maxy, max(fy_mc)]);
 
+    minlim = min([minx, miny])
+    maxlim = max([maxx, maxy])
+    lim = max([abs(minlim), abs(maxlim)])*1.05
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     fit_line = (
-        f'calculated (blue) hard0="{P.item(0):.1f} {P.item(1):.1f} {P.item(2):.1f}"'
+        f'calculated (blue) hard0="{P.item(0):.1f} {P.item(1):.1f} {P.item(2):.1f}"<br>soft0="{abc0[0][0]:.3f} {abc0[0][1]:.3f} {abc0[0][2]:.3f} {abc0[1][0]:.3f} {abc0[1][1]:.3f} {abc0[1][2]:.3f} {abc0[2][0]:.3f} {abc0[2][1]:.3f} {abc0[2][2]:.3f}'
     )
-    title_text = f"{mission_dive_str}<br>Compass hard iron calibration<br>{fit_line}"
+    title_text = f"{mission_dive_str}<br>Compass calibration<br>{fit_line}"
 
     fig.update_layout(
         {
             "xaxis": {
                 "title": "X field",
                 "showgrid": True,
+                "range": [-lim, lim],
             },
             "yaxis": {
                 "title": "Y field",
                 "showgrid": True,
+                "range": [-lim, lim],
             },
             "title": {
                 "text": title_text,
