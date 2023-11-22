@@ -418,14 +418,24 @@ def attachHandlers(app: sanic.Sanic):
         if fmt not in ['png', 'webp', 'div']:
             return sanic.response.text('not found', status=404)
 
+        direc = int(request.args['dir'][0]) if 'dir' in request.args else 0
+
         if which == 'dv':
             filename = f'{gliderPath(glider,request)}/plots/dv{dive:04d}_{image}.{fmt}'
+            if direc != 0 and not await aiofiles.os.path.exists(filename):
+                dive = await findNextPlot(gliderPath(glider, request), f'{image}.{fmt}', dive, direc) 
+                if dive == -1:
+                    return sanic.response.text('not found', status=404)
+               
+                return sanic.response.text(f'not found, next={dive}')
+
         elif which == 'eng':
             filename = f'{gliderPath(glider,request)}/plots/eng_{image}.{fmt}'
         elif which == 'section':
             filename = f'{gliderPath(glider,request)}/plots/sg_{image}.{fmt}'
         else:
             return sanic.response.text('not found', status=404)
+
 
         filenames = [ filename ]
         if 'fallback' in request.args:
@@ -446,7 +456,7 @@ def attachHandlers(app: sanic.Sanic):
                     if fmt == 'div':
                         async with aiofiles.open(filename, 'rb') as f:
                             cont = await f.read()
-                        
+                       
                         return sanic.response.raw(cont, headers={'Content-type': 'text/html', 'Content-Encoding': 'br'})
                     else:
                         return await sanic.response.file(filename, mime_type=f"image/{fmt}")
@@ -2197,7 +2207,22 @@ async def buildDivePlotList(path, dive):
             plots[fpath.suffix].append(plot)
     
     return (plots[".webp"], plots[".div"])
- 
+
+async def findNextPlot(path, plot, dive, direc):
+    p = Path(path)
+    p = p / 'plots'
+    dives = []
+    async for fpath in p.glob(f"dv????_{plot}"):
+        x = parse('dv{}_{}.{}', fpath.name)
+        dives.append(int(x[0]))
+
+    if direc == 1:
+        x = min([v for v in dives if v >= dive] or [max(dives)])
+    else:
+        x = max([v for v in dives if v <= dive] or [min(dives)])
+
+    return x
+
 async def buildMissionPlotList(path):
     plots = { "eng": { ".webp": [], ".div": [] }, "sg": { ".webp": [], ".div": [] } }
     maxdv = -1
