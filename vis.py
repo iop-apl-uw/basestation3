@@ -65,6 +65,8 @@ import secrets
 import ExtractTimeseries
 import socket
 import rafos
+from sanic.worker.manager import WorkerManager
+
 #from contextlib import asynccontextmanager
 #
 #@asynccontextmanager
@@ -85,8 +87,6 @@ async def checkClose(conn):
         Utils.logDB("CLOSED")
     except ValueError:
         pass
-
-import furl
 
 PERM_INVALID = -1
 PERM_REJECT = 0
@@ -647,7 +647,7 @@ def attachHandlers(app: sanic.Sanic):
     async def dataHandler(request, which:str, glider:int, dive:int):
         path = gliderPath(glider,request)
 
-        if which == 'nc' or which == 'ncfb' or which == 'ncf':
+        if which == 'nc' or which == 'ncfb' or which == 'ncf' or which == 'ncdf':
             filename = f'p{glider:03d}{dive:04d}.{which}'
         else:
             sanic.log.logger.info(f'invalid filetype requested {which}')
@@ -659,6 +659,46 @@ def attachHandlers(app: sanic.Sanic):
         else:
             sanic.log.logger.info(f'{fullname} not found')
             return sanic.response.text('not found', status=404)
+
+    @app.post('/post')
+    # description: post version of proxy request handler for map tool
+    # returns: contents from requested URL
+    @authorized(check=AUTH_ENDPOINT)
+    async def postHandler(request):
+        allowed = [
+                   'https://realtime.sikuliaq.alaska.edu/realtime/map',
+                  ]
+
+        url = request.json.get('url', None)
+        found = False
+        if url.startswith('http:/') and not url.startswith('http://'):
+            url = re.sub('http:/', 'http://', url)
+        elif url.startswith('https:/') and not url.startswith('https://'):
+            url = re.sub('https:/', 'https://', url)
+ 
+        for x in allowed:
+            if url.startswith(x):
+                found = True
+                break
+
+        if found == False:
+            return sanic.response.text(f"Page not found: {request.path}", status=404)
+              
+        user     = request.json.get('user', None) 
+        password = request.json.get('password', None)
+        ssl      = request.json.get('ssl', True)
+
+        async with aiohttp.ClientSession() as session:
+            if user is not None and password is not None:
+                async with session.get(url, auth=aiohttp.BasicAuth(user, password), ssl=ssl) as response:
+                    if response.status == 200:
+                        body = await response.read()
+                        return sanic.response.raw(body)
+            else:
+                async with session.get(url, ssl=ssl) as response:
+                    if response.status == 200:
+                        body = await response.read()
+                        return sanic.response.raw(body)
 
     # This is not a great idea to leave this open as a public proxy server,
     # but we need it for all layers to work with public maps at the moment.
@@ -693,6 +733,7 @@ def attachHandlers(app: sanic.Sanic):
               
         if request.args and len(request.args) > 0:
             url = url + '?' + request.query_string
+
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status == 200:
@@ -1582,12 +1623,25 @@ def attachHandlers(app: sanic.Sanic):
         filename = f'{sys.path[0]}/html/pos.html'
         return await sanic.response.file(filename, mime_type='text/html')
 
-    @app.route('/pos/poll/<glider:int>')
+    @app.route('/pos/poll/<glider:str>')
     # description: get latest glider position
     # parameters: mission
     # returns: JSON dict of glider position
-    @authorized()
-    async def posPollHandler(request: sanic.Request, glider:int):
+    async def posPollHandler(request: sanic.Request, glider:str):
+        if ',' in glider:
+            try:
+                gliders = map(int, glider.split(','))
+            except:
+                return sanic.response.text('invalid')
+        else:
+            try:
+                gliders = [ int(glider) ]
+            except:
+                return sanic.response.text('invalid')
+
+        opTable = await buildAuthTable(request, None)
+
+
         if 'format' in request.args:
             format = request.args['format'][0]
         else:
@@ -1599,35 +1653,52 @@ def attachHandlers(app: sanic.Sanic):
         else:
             q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
                 
-
         # xurvey uses this but nothing else - easy enough to add
         # nmea = 'format' in request.args and request.args['format'][0] == 'nmea'
 
-        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-        if not await aiofiles.os.path.exists(dbfile):
-            return sanic.response.text('no db')
+        out = []
+        outs = ''
+        for glider in gliders:
+            m = next(filter(lambda d: d['glider'] == glider and d['status'] == 'active', opTable), None)
+            if m is None: # must not be authorized
+                continue
 
-        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
-            Utils.logDB(f'posPoll open {glider}')
-            try:
-                conn.row_factory = rowToDict
-                cur = await conn.cursor()
-                await cur.execute(q)
-                row = await cur.fetchone()
-                if row:
-                    if format == 'json':
-                        Utils.logDB(f'posPoll close 1 {glider}')
-                        return sanic.response.json(row)
-                    elif format == 'csv':
-                        Utils.logDB(f'posPoll close 2 {glider}')
-                        return sanic.response.text(f"{row['epoch']},{row['lat']},{row['lon']}")
-                else:
-                    Utils.logDB(f'posPoll close 3 {glider}')
-                    return sanic.response.text('none')
-            except Exception as e:
-                sanic.log.logger.info(e)
-                Utils.logDB(f'posPoll close oops {glider}')
-                return sanic.response.text('oops')
+            dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+            if not await aiofiles.os.path.exists(dbfile):
+                continue
+
+            async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+                Utils.logDB(f'posPoll open {glider}')
+                try:
+                    conn.row_factory = rowToDict
+                    cur = await conn.cursor()
+                    await cur.execute(q)
+                    row = await cur.fetchone()
+                    if row:
+                        if format == 'json':
+                            Utils.logDB(f'posPoll close 1 {glider}')
+                            row.update({"glider": glider})
+                            out.append(row)
+                        elif format == 'csv':
+                            Utils.logDB(f'posPoll close 2 {glider}')
+                            outs = outs + f"{row['epoch']},{row['lat']},{row['lon']}\n"
+                    else:
+                        Utils.logDB(f'posPoll close 3 {glider}')
+                        # return sanic.response.text('none')
+                except Exception as e:
+                    sanic.log.logger.info(e)
+                    Utils.logDB(f'posPoll close oops {glider}')
+                    return sanic.response.text('oops')
+
+        if format == 'csv':
+            return sanic.response.text(outs)
+        else:
+            if len(out) == 0: 
+                 return sanic.response.text('none')
+            elif len(out) == 1:    
+                return sanic.response.json(out[0])
+            else:
+                return sanic.response.json(out)
            
     async def getLatestCall(request, glider, conn=None, limit=1):
         if conn == None:
@@ -2327,7 +2398,7 @@ async def notifier(config):
         udpSock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         udpSock.setblocking(0)
         udpSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        udpSock.bind(('', 40181))
+        udpSock.bind(('', int(config.SHIP_UDP)))
     else:
         udpSock = None
 
@@ -2479,7 +2550,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:sih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector", "help", "nosave", "nochat", "ship="])
+        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:sih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -2497,9 +2568,11 @@ if __name__ == '__main__':
             overrides['MISSIONS_FILE'] = a
         elif o in ['-u', '--usersfile']:
             overrides['USERS_FILE'] = a
-        elif o in ['--ship']:
+        elif o in ['--shipudp']:
             overrides['SHIP_UDP'] = a
             print(f'UDP {a}')
+        elif o in ['--shipjson']:
+            override['SHIP_JSON'] = a
         elif o in ['--nosave']:
             noSave = True
         elif o in ['--nochat']:
@@ -2541,6 +2614,8 @@ if __name__ == '__main__':
     # make sessions persist across processes
     if "SANIC_SECRET" not in os.environ:
         overrides["SECRET"] = secrets.token_hex()
+
+    WorkerManager.THRESHOLD = 600 # 60 seconds up from default 30
 
     loader = sanic.worker.loader.AppLoader(factory=partial(createApp, overrides))
     app = loader.load()

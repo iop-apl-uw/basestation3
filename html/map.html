@@ -668,7 +668,21 @@
                         mk.addTo(map);
                     }
                     else if (a.type == 'json' && 'url' in a) {
-                        fetch(a.url)
+                        var obj;
+                        if ('method' in a)
+                            method = a['method'];
+                        else
+                            method = 'GET';
+
+                        if (method == 'POST' && 'payload' in a)
+                            obj = a['payload']
+
+                        fetch(a.url, 
+                                {
+                                    method: method,
+                                    body: JSON.stringify(obj),
+                                }
+                        )
                         .then(resp => resp.json()) 
                         .then(d => {
                             if ('lat' in d && 'lon' in d) {
