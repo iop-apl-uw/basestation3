@@ -14,7 +14,7 @@ shapely --no-binary shapely
 cartopy
 PyYAML>=6.0
 # For SlackPost and InReachSend
-requests==2.24.0
+requests>=2.31.0
 # For GliderDAC and BaseNetwork support
 xarray>=0.21.1
 netCDF4>=1.5.8
