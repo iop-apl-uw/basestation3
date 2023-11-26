@@ -10,6 +10,41 @@
   background-color: #777;
 }
 
+.search-div span,select,input,label {
+    vertical-align: top;
+}
+
+.search-div span {
+    text-align: right;
+}
+
+.search-div select {
+    width: 120px;
+}
+
+#searchFormInner {
+        margin: 6px;
+        display: grid;
+        grid-template-rows: min-content min-content 1fr min-content;
+        grid-template-columns: min-content 1fr min-content;
+        grid-template-areas:
+            "searchStatusLabel . searchStatus"
+            "searchProjectLabel . searchProject"
+            "searchGliderLabel . searchGlider"
+            "searchSubmitBtn . searchCancelBtn";
+        row-gap: 5px;
+        column-gap: 5px;
+}
+
+#searchStatusLabel { grid-area: searchStatusLabel; }
+#searchProjectLabel { grid-area: searchProjectLabel; }
+#searchGliderLabel { grid-area: searchGliderLabel; }
+#searchStatus { grid-area: searchStatus; }
+#searchProject { grid-area: searchProject; }
+#searchGlider { grid-area: searchGlider; }
+#searchSubmitBtn { grid-area: searchSubmitBtn; }
+#searchCancelBtn { grid-area: searchCancelBtn; }
+
 @media (pointer: coarse)  {
 
     .about-content {

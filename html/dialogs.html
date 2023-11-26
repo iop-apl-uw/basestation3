@@ -21,4 +21,21 @@
     </div>
 </div>
 
-
+<div class="form-popup" id="searchForm" style="display: none;">
+    <div class="search-div" id="searchFormInner">
+    <span id="searchStatusLabel">Status:</span> 
+    <select name="searchStatus" id="searchStatus" class="select-checkbox" multiple size="3">
+        <option value="active">active</option>
+        <option value="complete">complete</option>
+        <option value="archived">archived</option>
+    </select>
+    <span id="searchProjectLabel">Project/region:</span> 
+    <select name="searchProject" id="searchProject" class="select-checkbox" multiple> 
+    </select>
+    <span id="searchGliderLabel">Glider:</span> 
+    <select name="searchGlider" id="searchGlider" class="select-checkbox" multiple>
+    </select>
+    <button id="searchSubmitBtn" type="button" class="btn" onclick="submitSearchForm(); return false;">submit</button>
+    <button id="searchCancelBtn" type="button" class="btn cancel" onclick="closeSearchForm(); return false;">cancel</button>
+    </div>
+</div>

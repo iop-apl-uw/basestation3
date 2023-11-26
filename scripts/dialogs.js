@@ -15,6 +15,12 @@
     function openAboutForm() {
         $('aboutForm').style.display = "block";
     } 
+    function closeSearchForm() {
+        $('searchForm').style.display = "none";
+    } 
+    function openSearchForm() {
+        $('searchForm').style.display = "block";
+    } 
 
     function submitLoginForm() {
         var formData = new FormData($('formLoginForm'));
@@ -46,3 +52,25 @@
         });
 
     } 
+
+    function submitSearchForm() {
+        var url;
+
+        var stat = [...$('searchStatus').selectedOptions].map(option => option.value);
+        var project = [...$('searchProject').selectedOptions].map(option => option.value);
+        var glider = [...$('searchGlider').selectedOptions].map(option => option.value);
+
+        let p = new URLSearchParams();
+        if (stat.length > 0)
+            p.append("status", stat.join(','));
+        if (project.length > 0)
+            p.append("mission", project.join(','));
+        if (glider.length > 0)
+            p.append("gliders", glider.join(','));
+
+        searchURL = window.location.origin + window.location.pathname;
+        url = searchURL + '?' + p.toString();
+        closeSearchForm();
+        window.location.assign(url);
+    }
+
