@@ -52,6 +52,13 @@
 # {user_homedir} - Fully qualified path the username home directory
 # {rundir} - Fully qualified path the rundirectory.  This must match the location set in /usr/local/basesation/glider_login
 # and /usr/local/basesation/glider_logout.  See the ReadMe.md for more discussion on the setup of these files.
+#
+# For docker containers add:
+# --docker_image <repository>:<tag>  --docker_uid <uid> --docker_gid <gid>
+# where
+# <repository>:<tag> are the docker repository and tag - i.e. - basestation:3.10.10 (See Dockerfile)
+# <uid> is the UID of username
+# <gid> is the GID of username
 # 
 # sudo systemctl daemon-reload
 # sudo systemctl enable baserunner@username.service
@@ -59,7 +66,7 @@
 # sudo systemctl status baserunner@username.service
 #
 #
-# Note: as an alternative, this maybe run as a systemd user service.
+# Note: as an alternative, this may be run as a systemd user service.
 # Please see https://www.unixsysadmin.com/systemd-user-services/ for futher setup details
 # 
 [Unit]

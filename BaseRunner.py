@@ -132,6 +132,24 @@ def main():
                     "help": "Docker image to use",
                 },
             ),
+            "docker_uid": BaseOpts.options_t(
+                0,
+                ("BaseRunner",),
+                ("--docker_uid",),
+                int,
+                {
+                    "help": "User id to run docker image as",
+                },
+            ),
+            "docker_gid": BaseOpts.options_t(
+                0,
+                ("BaseRunner",),
+                ("--docker_gid",),
+                int,
+                {
+                    "help": "Group id to run docker image as",
+                },
+            ),
             "use_docker_basestation": BaseOpts.options_t(
                 False,
                 ("BaseRunner",),
@@ -143,7 +161,7 @@ def main():
                 },
             ),
             "docker_mount": BaseOpts.options_t(
-                None,
+                [],
                 ("BaseRunner",),
                 ("--docker_mount",),
                 str,
@@ -251,7 +269,7 @@ def main():
                     cmd_line += f" >> {log_file} 2>&1"
 
                     if base_opts.docker_image:
-                        # docker run -d --volume /home/sg090:/home/sg090 --volume ~/work/git/basestation3:/usr/local/basestation3  basestation:3.10.10
+                        # docker run -d --user 1000:1000 --volume /home/sg090:/home/sg090 --volume ~/work/git/basestation3:/usr/local/basestation3  basestation:3.10.10
                         docker_detach = ""
                         cmd_line_parts = cmd_line.split()
                         if "--daemon" in cmd_line_parts:
@@ -271,7 +289,7 @@ def main():
                             )
                         for m in base_opts.docker_mount:
                             basestation_mount += f" --volume {m[0]}"
-                        cmd_line = f'docker run {docker_detach} --volume {glider_home}:{glider_home} {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
+                        cmd_line = f'docker run {docker_detach} --user {base_opts.docker_uid}:{base_opts.docker_gid} --volume {glider_home}:{glider_home} {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
                     # May not be critical, but for now, this script when launched out of systemd is
                     # running with unbuffered stdin/stdout - no need to launch other scripts this way
                     my_env = os.environ.copy()
