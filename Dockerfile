@@ -37,6 +37,11 @@
 # To Build:
 # docker build -t basestation:3.10.10 .
 #
+# Due to docker caching, to ensure you get the latest, add the --no-cache option to the above
+# or run
+# docker system prune -f
+# to clear the cache
+#
 FROM ubuntu:22.04
 
 # install app dependencies
