@@ -63,6 +63,7 @@ base_runner_lockfile_name = ".base_runner_lockfile"
 previous_runner_time_out = 10
 
 known_scripts = ("BaseLogin.py", "GliderEarlyGPS.py", "Base.py")
+docker_scripts = "Base.py"
 
 dog_stroke_interval = 10
 inotify_read_timeout = 5 * 1000  # In milliseconds
@@ -242,12 +243,17 @@ def main():
                 log_info(
                     f"seaglider_root_dir:{seaglider_root_dir} log_file:{log_file}, cmd_line:{cmd_line}"
                 )
-                if cmd_line.split(" ", 1)[0].rstrip() not in known_scripts:
+                script_name = cmd_line.split(" ", 1)[0].rstrip()
+                if script_name not in known_scripts:
                     log_error(f"Unknown script ({cmd_line}) - skipping")
                 else:
                     # Prepend the basestation directory and add on the python version
                     script, tail = cmd_line.split(" ", 1)
-                    if base_opts.docker_image and base_opts.use_docker_basestation:
+                    if (
+                        base_opts.docker_image
+                        and base_opts.use_docker_basestation
+                        and script in docker_scripts
+                    ):
                         full_path_script = os.path.join(
                             "/usr/local/basestation3", script
                         )
@@ -268,7 +274,7 @@ def main():
                     # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
                     cmd_line += f" >> {log_file} 2>&1"
 
-                    if base_opts.docker_image:
+                    if base_opts.docker_image and script in docker_scripts:
                         # docker run -d --user 1000:1000 --volume /home/sg090:/home/sg090 --volume ~/work/git/basestation3:/usr/local/basestation3  basestation:3.10.10
                         docker_detach = ""
                         cmd_line_parts = cmd_line.split()
