@@ -1,0 +1,21 @@
+#('eng_sat1000_PARuV', [True, 'd', {'units': 'umol/m^2/sec', 'description':'PAR', '_FillValue':nc_nan}, (nc_sg_data_info,)])
+#('eng_sat1000_Timer', [True, 'd', {'_FillValue':nc_nan}, (nc_sg_data_info,)])
+#('eng_sat1000_pitch', [True, 'd', {'_FillValue':nc_nan}, (nc_sg_data_info,)])
+#('eng_sat1000_roll', [True, 'd', {'_FillValue':nc_nan}, (nc_sg_data_info,)])
+#('eng_sat1000_Temp', [True, 'd', {'_FillValue':nc_nan}, (nc_sg_data_info,)])
+name=SAT1000
+prefix=satd
+timeout=3000
+baud=9600
+warmup=1300
+voltage=10
+current=0.0178
+headerlines=1
+format="%s,%00,%01,%02,%03,%04"
+flow=0
+query=nil
+column=Timer(1000,0)
+column=PARuV(1000,0)
+column=pitch(10,0)
+column=roll(10,0)
+column=Temp(10,0)
