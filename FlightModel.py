@@ -1244,7 +1244,11 @@ def load_dive_data(base_opts, dive_data):
 
         npts = len(good_pts_i_v)
         if data_density_max_depth:
-            mdd = np.mean(abs(np.diff(depth[good_pts_i_v])))
+            tmp = abs(np.diff(depth[good_pts_i_v]))
+            if not tmp.size:
+                log_warning(f"Dive {dive_num} has no good depth data")
+                raise RuntimeError
+            mdd = np.mean(tmp)
             if mdd > data_density_max_depth:
                 log_warning(
                     "Dive %d mean data density too sparse: %d pts %.1fm "
