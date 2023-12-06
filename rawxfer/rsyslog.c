@@ -19,8 +19,9 @@ rsyslog(int priority, char *format, ...)
     vasprintf(&ptr, format, ap);
     va_end(ap);
 
-    snprintf(logname, 63, "%s/comm.log", getenv("HOME"));
-    fp = fopen(logname, "ab");
+    //snprintf(logname, 63, "%s/comm.log", getenv("HOME"));
+    //fp = fopen(logname, "ab");
+    fp = fopen("comm.log", "ab");
     if (fp == NULL) {
         syslog(priority, "rawxfer [%s] %s", getenv("USER"), ptr);
     }

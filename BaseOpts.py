@@ -343,6 +343,7 @@ global_options_dict = {
             "MakeMissionTimeSeries",
             "MakePlotMission",
             "MoveData",
+            "NewMission",
             "Reprocess",
         ),
         (
@@ -713,7 +714,7 @@ global_options_dict = {
             "BasePlot",
             "Reprocess",
             "MakeMissionEngPlot",
-            "MakePlotTSProfile", 
+            "MakePlotTSProfile",
         ),
         ("--save_svg",),
         bool,
@@ -811,7 +812,14 @@ global_options_dict = {
     ),
     "plot_directory": options_t(
         "",
-        ("Base", "BaseDB", "BasePlot", "MakeMissionEngPlots", "MakePlotTSProfile", "Reprocess"),
+        (
+            "Base",
+            "BaseDB",
+            "BasePlot",
+            "MakeMissionEngPlots",
+            "MakePlotTSProfile",
+            "Reprocess",
+        ),
         ("--plot_directory",),
         FullPath,
         {

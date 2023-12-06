@@ -20,12 +20,19 @@ directories - by virtue of being in the same group as the glider -  since the
 pilot will update `cmdfiles`, etc. to command the vehicle
 and will need to read the data for analysis.
 
+There are two ways to set up the glider home directory.  The first is to have the glider 
+read and write files from the root of its home directory.  In the second method, a filesystem 
+symlink - ```current``` - points to a sub-directory off the glider's home directory.  When 
+this symlink is setup, the glider will connect to that sub-directory before up and down loading 
+files.  All processing will occur is this sub-directory.  The script ```NewMission.py``` can be 
+used to setup this structure - ```/opt/basestation/bin/python /usr/local/basesation3/NewMission.py --help``` for more details.
+
 When a glider logs in, it expects to see `=` as its prompt, hence the .cshrc
 file in each glider's directory.  It also triggers the `.login` script, which sets
 up the `.connected` file.  The glider then issues `rawrcv` or `lrz` commands to the basestation
 to send all the fragments and files, and `rawsend` or `lsz` commands to receive the `cmdfile`,
 etc.  (The modified versions of `lrz` and `lsz` add throughput and error
-notifications to `<seaglider_home_dir>/comm.log`.)  When the glider logs out the `.logout` script is
+notifications to `comm.log`.)  When the glider logs out the `.logout` script is
 triggered, which in turn runs the `/usr/local/basestation/glider_logout` script,
 which in turn runs the `/usr/local/basestation3/glider_logout` script
 which in turn runs the `Base.py` script.  The `Base.py` script processes any new or

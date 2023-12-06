@@ -1,0 +1,241 @@
+#! /usr/bin/env python
+# -*- python-fmt -*-
+
+
+## Copyright (c) 2023  University of Washington.
+##
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+##
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+##
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+##
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+##
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+import os
+import pdb
+import shutil
+import sys
+import time
+
+import BaseOpts
+import BaseDB
+from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
+
+
+def main():
+    """Prepares a new deployment directory by setting up appropriate symlinks and stubbing out needed files
+
+    Returns:
+        0 for success
+        1 for failure
+
+    Raises:
+        Any exceptions raised are considered critical errors and not expected
+
+    """
+    # Get options
+    base_opts = BaseOpts.BaseOptions(
+        "Prepares a home directory for a new deployment by setting up symlinks, copying files and stubbing out files",
+        additional_arguments={
+            "glider_home": BaseOpts.options_t(
+                None,
+                ("NewMission",),
+                ("glider_home",),
+                BaseOpts.FullPathTrailingSlash,
+                {
+                    "help": "Seagliders home directory - NOTE: no tilda expansion done",
+                    "action": BaseOpts.FullPathTrailingSlashAction,
+                },
+            ),
+            "new_mission_dir": BaseOpts.options_t(
+                None,
+                ("NewMission",),
+                ("new_mission_dir",),
+                str,
+                {
+                    "help": "Mission directory relative to home directory",
+                },
+            ),
+        },
+    )
+
+    BaseLogger(base_opts)  # initializes BaseLog
+
+    new_mission_dir = os.path.abspath(
+        os.path.join(base_opts.glider_home, base_opts.new_mission_dir)
+    )
+    current_symlink = os.path.abspath(os.path.join(base_opts.glider_home, "current"))
+
+    if os.path.isdir(new_mission_dir):
+        log_error(f"{new_mission_dir} exists - bailing out")
+        return 1
+
+    current_mission_dir = None
+    if os.path.exists(current_symlink):
+        if not os.path.islink(current_symlink):
+            log_error(f"{current_symlink} exists and is not a symlink")
+            return 1
+        current_mission_dir = os.path.realpath(current_symlink)
+        if not os.path.isdir(current_mission_dir):
+            log_error(
+                f"{current_symlink} points to {current_mission_dir} which is not a directory"
+            )
+            return 1
+        log_info(f"Current mission directory {current_mission_dir}")
+
+    log_info(f"Setting up new mission_dir {new_mission_dir}")
+
+    # Set the owner and group - same as most recent mission or home directory
+    # The owner may fail if the script is not run by root - issues a warning and proceed
+
+    if current_mission_dir:
+        stat_st = os.stat(current_mission_dir)
+    else:
+        stat_st = os.stat(base_opts.glider_home)
+
+    uid = stat_st.st_uid
+    gid = stat_st.st_gid
+
+    os.umask(0o000)
+
+    try:
+        os.mkdir(new_mission_dir, mode=0o775)
+    except:
+        log_error(f"Failed to crete {new_mission_dir}", "exc")
+        return 1
+
+    items = [new_mission_dir]
+
+    sg_calib = None
+    if current_mission_dir:
+        sg_calib = os.path.join(current_mission_dir, "sg_calib_constants.m")
+        if not os.path.exists(sg_calib):
+            sg_calib = None
+    if not sg_calib:
+        sg_calib = os.path.join(base_opts.glider_home, "sg_calib_constants.m")
+        if not os.path.exists(sg_calib):
+            sg_calib = None
+
+    if sg_calib:
+        new_calib = os.path.join(new_mission_dir, "sg_calib_constants.m")
+        try:
+            shutil.copy(sg_calib, new_calib)
+        except:
+            log_error("Failed to propagate {sg_calib} to {new_calib}", "exc")
+        else:
+            items.append(new_calib)
+
+    new_cmdfile = os.path.join(new_mission_dir, "cmdfile")
+    try:
+        with open(new_cmdfile, "w") as fo:
+            fo.write("$QUIT\n")
+    except:
+        log_error("Failed to write {new_cmdfile}", "exc")
+    else:
+        items.append(new_cmdfile)
+
+    for dotfile in (".pagers", ".urls", ".mailer", ".ftp", ".extensions"):
+        master_dotfile = os.path.join(base_opts.glider_home, dotfile)
+        if os.path.exists(master_dotfile):
+            link_dotfile = os.path.join(new_mission_dir, dotfile)
+            try:
+                os.symlink(master_dotfile, link_dotfile)
+            except:
+                log_error("Failed to create symlink {link_dotfile}", "exc")
+            # else:
+            #    items.append(link_dotfile)
+
+    try:
+        os.unlink(current_symlink)
+    except FileNotFoundError:
+        pass
+    except:
+        log_error("Failed to unlink symlink {current_symlink} - bailing out", "exc")
+        return 1
+
+    try:
+        os.symlink(new_mission_dir, current_symlink, target_is_directory=True)
+    except:
+        log_error("Failed to create symlink {current_symlink} - bailing out", "exc")
+        return 1
+    items.append(current_symlink)
+
+    if not base_opts.instrument_id:
+        try:
+            _, tail = os.path.split(base_opts.glider_home)
+            glider_id = int(
+                os.path.split(os.path.split(base_opts.glider_home)[0])[1][2:]
+            )
+            base_opts.instrument_id = glider_id
+        except:
+            log_error("Failed to figure out instrument_id", "exc")
+
+    if base_opts.instrument_id:
+        base_opts.mission_dir = new_mission_dir
+        BaseDB.createDB(base_opts)
+        items.append(
+            os.path.join(new_mission_dir, f"sg{base_opts.instrument_id:03d}.db")
+        )
+
+    # Update permissions
+    for item in items:
+        try:
+            os.chown(item, uid, -1)
+        except PermissionError:
+            # If run as regular user, setting the UID is not permitted
+            pass
+        except:
+            log_error(
+                f"Failed to set UID on {item} to {uid}",
+                "exc",
+            )
+            return 1
+
+        try:
+            os.chown(item, -1, gid)
+        except:
+            log_error(f"Failed to set GID on {item} to {gid} - bailing out", "exc")
+            return 1
+
+        try:
+            os.chmod(item, stat_st.st_mode)
+        except:
+            log_info(
+                f"Failed to set permissions on {item}",
+                "exc",
+            )
+
+    return 0
+
+
+if __name__ == "__main__":
+    retval = 1
+
+    # Force to be in UTC
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+
+    try:
+        retval = main()
+    except Exception:
+        log_critical("Unhandled exception in main -- exiting")
+
+    sys.exit(retval)
