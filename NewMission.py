@@ -104,7 +104,7 @@ def main():
     log_info(f"Setting up new mission_dir {new_mission_dir}")
 
     # Set the owner and group - same as most recent mission or home directory
-    # The owner may fail if the script is not run by root - issues a warning and proceed
+    # The owner may fail if the script is not run by root
 
     if current_mission_dir:
         stat_st = os.stat(current_mission_dir)
@@ -160,6 +160,7 @@ def main():
                 os.symlink(master_dotfile, link_dotfile)
             except:
                 log_error("Failed to create symlink {link_dotfile}", "exc")
+            # Cannot set permissions on symlink files
             # else:
             #    items.append(link_dotfile)
 
