@@ -118,18 +118,58 @@ echo "Summary of sensor values"
 echo
 
 set press_counts = `grep Mean: $fname | tail -n 1 | cut -f2 -d: | awk '{print $1}'`
-set press_offset = `grep ,\$PRESSURE_YINT, $fname | tail -n 1 | cut -f5 -d,`
+set press_offset = `grep \$PRESSURE_YINT "$base"/pt"$1""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
+if ($press_offset == "") then
+    set press_offset = `grep "Current pressure y-intercept is" $fname | cut -f5 -d' '`
+endif
 
 if ($press_counts == "" || $press_offset == "") then
-    echo "insufficient data to check pressure parameters"
+    echo "WARNING: insufficient data to check pressure parameters"
 else
     if (`echo "$press_counts < 100000" | bc`) then
-        echo "pressure counts are low"
+        echo "WARNING pressure counts are low"
     endif
     if (`echo "$press_offset < -200" | bc` || `echo "$press_offset > -20" | bc`) then
-        echo "pressure offset out of range $press_offset"
+        echo "WARNING: pressure offset out of range $press_offset"
     endif
 endif
+
+set press_slope = `grep \$PRESSURE_SLOPE "$base"/pt"$1""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
+set gain = ""
+if ($press_slope == "") then
+    echo 'WARNING: could not check $PRESSURE_SLOPE'
+else
+    if (`echo "$press_slope > 0.000104" | bc` && `echo "$press_slope < 0.000108" | bc` ) then 
+        echo "pressure slope consistent with Kistler and HW gain 41.161 (motherboard or Rev A aux)"
+        set gain = 41 
+    else if (`echo "$press_slope > 0.000210" | bc` && `echo "$press_slope < 0.000231" | bc` ) then 
+        echo "pressure slope consistent with Kistler and HW gain 22.2 (Rev B aux)"
+        set gain = 22
+    else
+        echo 'WARNING: unrecognized $PRESSURE_SLOPE value' $press_slope '(will not guess at gain value)'
+    endif
+endif
+
+if ($gain != "" && $press_counts != "") then
+    if ($gain == "41") then
+        if (`echo "$press_counts > 1300000" | bc` && `echo "$press_counts < 1600000" | bc` ) then 
+            echo "mean counts at sealevel consistent with gain 41"
+        else
+            echo "WARNING: mean counts $press_counts not consistten with gain 41" 
+        endif
+    else if ($gain == "22") then
+        if (`echo "$press_counts > 600000" | bc` && `echo "$press_counts < 850000" | bc` ) then 
+            echo "mean counts at sealevel consistent with gain 22"
+        else
+            echo "WARNING: mean counts $press_counts not consistten with gain 22" 
+        endif
+    else
+        echo "WARNING: could not check that YINT is consistent with gain"
+    endif
+else
+    echo "WARNING: could not check that YINT is consistent with gain"
+endif
+
 
 grep "No SMS email address set" $fname
 
