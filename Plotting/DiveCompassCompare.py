@@ -74,7 +74,7 @@ def plot_compass_compare(
             dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
         )
         dive_number = dive_nc_file.dive_number
-        start_time_string = dive_nc_file.time_coverage_start.decode()
+        start_time_string = dive_nc_file.time_coverage_start
 
         gc_secs = dive_nc_file.variables["gc_st_secs"][:]
         gc_secs = np.concatenate((np.array((0.0,)), gc_secs, np.array((2000000000.0,))))
