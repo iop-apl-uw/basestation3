@@ -70,6 +70,7 @@ DEBUG_PDB = False
 
 line_type = collections.namedtuple("line_type", ("dash", "color"))
 
+
 line_lookup = {
     "VBD_pump": line_type("solid", "magenta"),
     "Pitch_motor": line_type("solid", "green"),
@@ -369,6 +370,7 @@ def mission_energy(
 
         # Find the device and sensor columnns for power consumption
         df = pd.read_sql_query("PRAGMA table_info(dives)", conn)
+        allcols = [x for x in df["name"]]
 
         device_joule_cols = df[
             np.logical_and(
@@ -379,6 +381,12 @@ def mission_energy(
         device_joules_df = pd.read_sql_query(
             f"SELECT dive,{','.join(device_joule_cols)} from dives", conn
         ).sort_values("dive")
+
+        if 'GC_pitch_joules' in allcols:
+            GCdf = pd.read_sql_query(f"SELECT dive,GC_VBD_joules,GC_pitch_joules,GC_roll_joules FROM dives {clause} ORDER BY dive ASC", conn)
+            device_joules_df["device_Pitch_motor_joules"] = GCdf["GC_pitch_joules"]
+            device_joules_df["device_VBD_pump_joules"] = GCdf["GC_VBD_joules"]
+            device_joules_df["device_Roll_motor_joules"] = GCdf["GC_roll_joules"]
 
         # RevE
         if "device_Fast_joules" in device_joule_cols:
@@ -457,6 +465,7 @@ def mission_energy(
                     energy_name = energy_col.removeprefix(energy_tag).removesuffix(
                         "_joules"
                     )
+
                     # A little convoluted, but if a db column is uninitialized, the database NULL gets
                     # converted to a nan, which is treated as non-zero
                     tmp_j = energy_joules_df[energy_col].to_numpy()

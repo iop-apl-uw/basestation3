@@ -687,6 +687,18 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
     processGC(dive, cur, nci)
 
+    # calculate better per whole dive energy numbers for the motors
+    data = pd.read_sql_query(f"SELECT vbd_i,vbd_secs,vbd_volts FROM gc WHERE dive={dive}", con)
+    VBD_J = numpy.sum(data['vbd_i'][:] * data['vbd_volts'][:] * data['vbd_secs'][:])
+    data = pd.read_sql_query(f"SELECT pitch_i,pitch_secs,pitch_volts FROM gc WHERE dive={dive}", con)
+    pitch_J = numpy.sum(data['pitch_i'][:] * data['pitch_volts'][:] * data['pitch_secs'][:])
+    data = pd.read_sql_query(f"SELECT roll_i,roll_secs,roll_volts FROM gc WHERE dive={dive}", con)
+    roll_J = numpy.sum(data['roll_i'][:] * data['roll_volts'][:] * data['roll_secs'][:])
+
+    insertColumn(dive, cur, "GC_pitch_joules", pitch_J, "FLOAT")
+    insertColumn(dive, cur, "GC_VBD_joules", VBD_J, "FLOAT")
+    insertColumn(dive, cur, "GC_roll_joules", roll_J, "FLOAT")
+
     updateDBFromFM(base_opts, [filename], cur)
     updateDBFromFileExistence(base_opts, [filename], con)
     updateDBFromPlots(base_opts, [filename], con, run_dive_plots=run_dive_plots)
@@ -934,6 +946,7 @@ def createDivesTable(cur):
                 "fg_kJ_used_10V", "fg_kJ_used_24V",
                 "fg_batt_capacity_24V", "fg_batt_capacity_10V",
                 "fg_ah_used_24V", "fg_ah_used_10V",
+                "GC_pitch_joules", "GC_VBD_joules", "GC_roll_joules",
                 "batt_volts_10V_slope", "batt_volts_24V_slope", 
                 "batt_capacity_10V_slope", "batt_capacity_24V_slope",
                 "time_seconds_on_surface","time_seconds_diving"]
