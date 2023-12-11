@@ -147,6 +147,7 @@ def main():
     for copy_file_name in (
         "sg_calib_constants.m",
         f"sg{base_opts.instrument_id:03d}.conf",
+        "cmdfile",
     ):
         copy_file_fullpath = None
         if current_mission_dir:
@@ -170,14 +171,14 @@ def main():
             else:
                 items.append(new_copy_file_fullpath)
 
-    new_cmdfile = os.path.join(new_mission_dir, "cmdfile")
-    try:
-        with open(new_cmdfile, "w") as fo:
-            fo.write("$QUIT\n")
-    except:
-        log_error("Failed to write {new_cmdfile}", "exc")
-    else:
-        items.append(new_cmdfile)
+    # new_cmdfile = os.path.join(new_mission_dir, "cmdfile")
+    # try:
+    #    with open(new_cmdfile, "w") as fo:
+    #        fo.write("$QUIT\n")
+    # except:
+    #    log_error("Failed to write {new_cmdfile}", "exc")
+    ##else:
+    #    items.append(new_cmdfile)
 
     for dotfile in (
         ".pagers",
