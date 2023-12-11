@@ -29,15 +29,15 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import argparse
 import os
-import pdb
 import shutil
 import sys
 import time
 
 import BaseOpts
 import BaseDB
-from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
+from BaseLog import BaseLogger, log_critical, log_error, log_info
 
 
 def main():
@@ -55,6 +55,16 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Prepares a home directory for a new deployment by setting up symlinks, copying files and stubbing out files",
         additional_arguments={
+            "initdb": BaseOpts.options_t(
+                True,
+                ("NewMission",),
+                ("--initdb",),
+                bool,
+                {
+                    "help": "Initializes the mission data base",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
             "glider_home": BaseOpts.options_t(
                 None,
                 ("NewMission",),
@@ -78,6 +88,16 @@ def main():
     )
 
     BaseLogger(base_opts)  # initializes BaseLog
+
+    if not base_opts.instrument_id:
+        try:
+            glider_id = int(
+                os.path.split(os.path.split(base_opts.glider_home)[0])[1][2:]
+            )
+            base_opts.instrument_id = glider_id
+        except:
+            log_error("Failed to figure out instrument_id", "exc")
+            return 1
 
     new_mission_dir = os.path.abspath(
         os.path.join(base_opts.glider_home, base_opts.new_mission_dir)
@@ -124,24 +144,31 @@ def main():
 
     items = [new_mission_dir]
 
-    sg_calib = None
-    if current_mission_dir:
-        sg_calib = os.path.join(current_mission_dir, "sg_calib_constants.m")
-        if not os.path.exists(sg_calib):
-            sg_calib = None
-    if not sg_calib:
-        sg_calib = os.path.join(base_opts.glider_home, "sg_calib_constants.m")
-        if not os.path.exists(sg_calib):
-            sg_calib = None
+    for copy_file_name in (
+        "sg_calib_constants.m",
+        f"sg{base_opts.instrument_id:03d}.conf",
+    ):
+        copy_file_fullpath = None
+        if current_mission_dir:
+            copy_file_fullpath = os.path.join(current_mission_dir, copy_file_name)
+            if not os.path.exists(copy_file_fullpath):
+                copy_file_fullpath = None
+        if not copy_file_fullpath:
+            copy_file_fullpath = os.path.join(base_opts.glider_home, copy_file_name)
+            if not os.path.exists(copy_file_fullpath):
+                copy_file_fullpath = None
 
-    if sg_calib:
-        new_calib = os.path.join(new_mission_dir, "sg_calib_constants.m")
-        try:
-            shutil.copy(sg_calib, new_calib)
-        except:
-            log_error("Failed to propagate {sg_calib} to {new_calib}", "exc")
-        else:
-            items.append(new_calib)
+        if copy_file_fullpath:
+            new_copy_file_fullpath = os.path.join(new_mission_dir, copy_file_name)
+            try:
+                shutil.copy(copy_file_fullpath, new_copy_file_fullpath)
+            except:
+                log_error(
+                    "Failed to propagate {copy_file_fullpath} to {new_copy_file_fullpath}",
+                    "exc",
+                )
+            else:
+                items.append(new_copy_file_fullpath)
 
     new_cmdfile = os.path.join(new_mission_dir, "cmdfile")
     try:
@@ -152,17 +179,24 @@ def main():
     else:
         items.append(new_cmdfile)
 
-    for dotfile in (".pagers", ".urls", ".mailer", ".ftp", ".extensions"):
+    for dotfile in (
+        ".pagers",
+        ".urls",
+        ".mailer",
+        ".ftp",
+        ".extensions",
+        ".pre_extensions",
+    ):
         master_dotfile = os.path.join(base_opts.glider_home, dotfile)
-        if os.path.exists(master_dotfile):
-            link_dotfile = os.path.join(new_mission_dir, dotfile)
-            try:
-                os.symlink(master_dotfile, link_dotfile)
-            except:
-                log_error("Failed to create symlink {link_dotfile}", "exc")
-            # Cannot set permissions on symlink files
-            # else:
-            #    items.append(link_dotfile)
+        # if os.path.exists(master_dotfile):
+        link_dotfile = os.path.join(new_mission_dir, dotfile)
+        try:
+            os.symlink(master_dotfile, link_dotfile)
+        except:
+            log_error("Failed to create symlink {link_dotfile}", "exc")
+        # Cannot set permissions on symlink files
+        # else:
+        #    items.append(link_dotfile)
 
     try:
         os.unlink(current_symlink)
@@ -173,23 +207,18 @@ def main():
         return 1
 
     try:
-        os.symlink(new_mission_dir, current_symlink, target_is_directory=True)
+        # Create the link relative to the glider_home to support the jail case
+        rel_new_mission_dir = os.path.relpath(
+            new_mission_dir, start=base_opts.glider_home
+        )
+        log_info(f"rel_new_mission_dir {rel_new_mission_dir}")
+        os.symlink(rel_new_mission_dir, current_symlink, target_is_directory=True)
     except:
-        log_error("Failed to create symlink {current_symlink} - bailing out", "exc")
+        log_error("Failed to create symlink {rel_new_mission_dir} - bailing out", "exc")
         return 1
-    items.append(current_symlink)
+    # items.append(rel_current_symlink)
 
-    if not base_opts.instrument_id:
-        try:
-            _, tail = os.path.split(base_opts.glider_home)
-            glider_id = int(
-                os.path.split(os.path.split(base_opts.glider_home)[0])[1][2:]
-            )
-            base_opts.instrument_id = glider_id
-        except:
-            log_error("Failed to figure out instrument_id", "exc")
-
-    if base_opts.instrument_id:
+    if base_opts.initdb:
         base_opts.mission_dir = new_mission_dir
         BaseDB.createDB(base_opts)
         items.append(
