@@ -314,7 +314,7 @@ def plot_mag(
     )
 
 
-    if abs(abc0[0][1]) > 0.2 or abs(abc[0][2]) > 0.2 or abs(abc[1][0]) > 0.2 or abs(abc[1][2]) > 0.2 or abs(abc[2][0]) > 0.2 or abs(abc0[2][1]) > 0.2:
+    if abs(abc0[0][1]) > 0.2 or abs(abc0[0][2]) > 0.2 or abs(abc0[1][0]) > 0.2 or abs(abc0[1][2]) > 0.2 or abs(abc0[2][0]) > 0.2 or abs(abc0[2][1]) > 0.2:
         log_info('distrusting soft-iron, using identity')
         abc0[0][1] = 0     
         abc0[0][2] = 0     
