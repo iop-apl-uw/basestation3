@@ -40,6 +40,7 @@ import scanf
 import xarray as xr
 import cmocean
 import plotly
+import matplotlib
 import matplotlib.pyplot as plt
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
@@ -55,7 +56,7 @@ from BaseLog import (
     log_warning,
 )
 
-bathy_t = collections.namedtuple("bathy_t", ("filename", "da"))
+bathy_t = collections.namedtuple("bathy_t", ("filename", "bathyname", "da"))
 
 # Constants
 METERS_PER_DEG = 111120.0
@@ -142,8 +143,23 @@ def main():
 
     BaseLogger(base_opts)
 
+    cmap = plt.cm.jet_r  # define the colormap
+    cmap = plt.cm.Greys_r
+    # extract all colors from the map
+    cmaplist = [cmap(i) for i in range(cmap.N)]
+
+    # create the new map
+    cmap = matplotlib.colors.LinearSegmentedColormap.from_list(
+        "Custom cmap", cmaplist, cmap.N
+    )
+
+    # define the bins and normalize
+    bounds = np.linspace(-1000, 0, 11)
+    norm = matplotlib.colors.BoundaryNorm(bounds, cmap.N, clip=True)
+
     bathy_data = []
     for bf in base_opts.bathy_files:
+        log_info(f"Processing {bf}")
         bd = read_bathy(bf)
         if bd is not None:
             data = bd.data
@@ -155,10 +171,20 @@ def main():
             ax.get_xaxis().set_visible(False)
             ax.get_yaxis().set_visible(False)
             plt.autoscale(tight=True)
-            plt.imshow(np.rot90(-data), cmap="gray", vmin=-1000, vmax=0, alpha=0.5)
+            plt.imshow(
+                # np.rot90(-data), cmap="gray", vmin=-1000, vmax=0, alpha=0.5, clip=True
+                np.rot90(-data),
+                cmap=cmap,
+                norm=norm,
+                # vmin=-1000,
+                # vmax=0,
+                alpha=0.5,
+                # clip=True,
+            )
             output_file = bf + ".png"
+            bathymap_short_name = os.path.split(bf)[1]
             plt.savefig(output_file, bbox_inches="tight", transparent=True)
-            bathy_data.append(bathy_t(output_file, bd))
+            bathy_data.append(bathy_t(output_file, bathymap_short_name, bd))
 
     if f_kml:
         bathy_dir = os.path.split(base_opts.bathy_files[0])[0]
@@ -170,10 +196,11 @@ def main():
             )
             fo.write("<name>Bathymaps</name>\n")
             fo.write("<Document>\n")
-            for bathy_img, da in bathy_data:
+            for bathy_img, bathy_short_name, da in bathy_data:
                 fo.write("    <GroundOverlay>\n")
+                fo.write(f"    <name>{bathy_short_name}</name>\n")
                 fo.write("      <Icon>\n")
-                fo.write(f"        <href>{bathy_img}</href>\n")
+                fo.write(f"        <href>{os.path.split(bathy_img)[1]}</href>\n")
                 fo.write("      </Icon>\n")
                 fo.write("      <LatLonBox>\n")
                 fo.write(f"          <north>{float(max(da.lat))}</north>\n")
@@ -231,3 +258,5 @@ if __name__ == "__main__":
             _, _, tb = sys.exc_info()
             traceback.print_exc()
             pdb.post_mortem(tb)
+        else:
+            log_error("Untrapped error", "exc")
