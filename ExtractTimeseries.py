@@ -63,14 +63,16 @@ def dumps(d):
  
 def timeSeriesToProfile(var, which, 
                         diveStart, diveStop, diveStride, 
-                        binStart, binStop, binSize, ncfilename, nci=None, x=None):
+                        binStart, binStop, binSize, ncfilename, extnci=None, x=None):
 
-    if nci == None:
+    if extnci == None:
         try:
             nci = Utils.open_netcdf_file(ncfilename, "r")
         except:
             log_error(f"Unable to open {ncfilename}")
             return (None, None)
+    else:
+        nci = extnci
 
     message = {}
     message[var] = []
@@ -90,6 +92,9 @@ def timeSeriesToProfile(var, which,
         x = extractVarTimeDepth(None, var, nci=nci)
 
     if x is None:
+        if extnci == None:
+            nci.close()
+
         return (None, None)
 
     nan = numpy.empty((len(bins) - 1, ))
@@ -170,16 +175,21 @@ def timeSeriesToProfile(var, which,
     message['depth'] = bins
     message[var] = arr[:,0:i]
 
+    if extnci == None:
+        nci.close()
+
     return (message, x)
 
-def getVarNames(nc_filename, nc_file=None):
+def getVarNames(nc_filename, ext_nc_file=None):
 
-    if nc_file == None:
+    if ext_nc_file == None:
         try:
             nc_file = Utils.open_netcdf_file(nc_filename, "r")
         except:
             log_error(f"Unable to open {nc_filename}")
             return None
+    else:
+        nc_file = ext_nc_file
 
     vars = []
 
@@ -187,17 +197,20 @@ def getVarNames(nc_filename, nc_file=None):
         if len(nc_file.variables[k].dimensions) and '_data_point' in nc_file.variables[k].dimensions[0] and '_dive_number' not in k:
             vars.append({'var': k, 'dim': nc_file.variables[k].dimensions[0]})
             
-    nc_file.close()
+    if ext_nc_file == None:
+        nc_file.close()
 
     return vars
 
-def extractVars(nc_filename, varNames, dive1, diveN, nci=None):
-    if nci == None:
+def extractVars(nc_filename, varNames, dive1, diveN, extnci=None):
+    if extnci == None:
         try:
             nci = Utils.open_netcdf_file(nc_filename, "r")
         except:
             log_error(f"Unable to open {nc_filename}")
             return None
+    else:
+        nci = extnci
 
     d1 = numpy.where(nci.variables['dive_number'][:] == dive1)[0]
     dN = numpy.where(nci.variables['dive_number'][:] == diveN)[0]
@@ -242,18 +255,26 @@ def extractVars(nc_filename, varNames, dive1, diveN, nci=None):
 
         message[p] = numpy.interp(base_t, x[p]['t'], x[p]['value']).tolist()
 
+    if extnci == None:
+        nci.close()
+
     return message
 
-def extractVarTimeDepth(nc_filename, varname, nci=None):
-    if nci == None:
+def extractVarTimeDepth(nc_filename, varname, extnci=None):
+    if extnci == None:
         try:
             nci = Utils.open_netcdf_file(nc_filename, "r")
         except:
             log_error(f"Unable to open {nc_filename}")
             return None
+    else:
+        nci = extnci
 
     if varname not in nci.variables:
         log_warning(f"{varname} not found")
+        if extnci == None:
+            nci.close()
+
         return None
 
     message = {}
@@ -264,6 +285,10 @@ def extractVarTimeDepth(nc_filename, varname, nci=None):
         message['depth'] = nci.variables['ctd_depth'][:]
         message['time'] = nci.variables['ctd_time'][:]
         message[varname] = nci.variables[varname][:]
+
+        if extnci == None:
+            nci.close()
+
         return message
 
     try:
@@ -285,6 +310,9 @@ def extractVarTimeDepth(nc_filename, varname, nci=None):
 
     except Exception as e:
         log_error(f"Could not extract variable {varname}, {e}")
+
+    if extnci == None:
+        nci.close()
 
     return message
 
