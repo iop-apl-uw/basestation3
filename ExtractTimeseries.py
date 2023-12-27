@@ -89,7 +89,7 @@ def timeSeriesToProfile(var, which,
         arr = numpy.zeros((len(bins) - 1, len(dives)))
   
     if x == None:
-        x = extractVarTimeDepth(None, var, nci=nci)
+        x = extractVarTimeDepth(None, var, extnci=nci)
 
     if x is None:
         if extnci == None:
