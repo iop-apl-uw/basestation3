@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -165,7 +165,7 @@ def plot_legato_data(
             "y": depth_dive,
             "x": salinity_dive,
             "meta": time_dive,
-            "name": "Salinity Dive",
+            "name": "Legato Raw Salinity Dive",
             "type": "scatter",
             "xaxis": "x1",
             "yaxis": "y1",
@@ -182,7 +182,7 @@ def plot_legato_data(
             "y": depth_climb,
             "x": salinity_climb,
             "meta": time_climb,
-            "name": "Salinity Climb",
+            "name": "Legato Raw Salinity Climb",
             "type": "scatter",
             "xaxis": "x1",
             "yaxis": "y1",
@@ -200,7 +200,7 @@ def plot_legato_data(
             "y": depth_dive,
             "x": conductivity_dive,
             "meta": time_dive,
-            "name": "Conductivity Dive",
+            "name": "Legato Raw Conductivity Dive",
             "type": "scatter",
             "xaxis": "x3",
             "yaxis": "y1",
@@ -218,7 +218,7 @@ def plot_legato_data(
             "y": depth_climb,
             "x": conductivity_climb,
             "meta": time_climb,
-            "name": "Conductivity Climb",
+            "name": "Legato Raw Conductivity Climb",
             "type": "scatter",
             "xaxis": "x3",
             "yaxis": "y1",
@@ -237,7 +237,7 @@ def plot_legato_data(
             "y": depth_dive,
             "x": temp_dive,
             "meta": time_dive,
-            "name": "Temp Dive",
+            "name": "Legato Raw Temp Dive",
             "type": "scatter",
             "xaxis": "x2",
             "yaxis": "y2",
@@ -254,7 +254,7 @@ def plot_legato_data(
             "y": depth_climb,
             "x": temp_climb,
             "meta": time_climb,
-            "name": "Temp Climb",
+            "name": "Legato Raw Temp Climb",
             "type": "scatter",
             "xaxis": "x2",
             "yaxis": "y2",
@@ -272,7 +272,7 @@ def plot_legato_data(
             "y": depth_dive,
             "x": cond_temp_dive,
             "meta": time_dive,
-            "name": "Conduc Temp Dive",
+            "name": "Legato Raw Conduc Temp Dive",
             "type": "scatter",
             "xaxis": "x2",
             "yaxis": "y2",
@@ -290,7 +290,7 @@ def plot_legato_data(
             "y": depth_climb,
             "x": cond_temp_climb,
             "meta": time_climb,
-            "name": "Conduc Temp Climb",
+            "name": "Legato Raw Conduc Temp Climb",
             "type": "scatter",
             "xaxis": "x2",
             "yaxis": "y2",
@@ -347,7 +347,9 @@ def plot_legato_data(
     # fig.update_yaxes(autorange="reversed")
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = "%s<br>Legato Temperature and Salinity vs Depth" % (mission_dive_str,)
+    title_text = "%s<br>Legato Raw Temperature and Salinity vs Depth" % (
+        mission_dive_str,
+    )
     fig.update_layout(
         {
             "xaxis": {
