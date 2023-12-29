@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -39,6 +39,8 @@ import gsw
 import plotly.graph_objects
 import scipy
 import seawater
+
+import numpy as np
 
 if typing.TYPE_CHECKING:
     import BaseOpts
@@ -73,9 +75,17 @@ def plot_legato_corrections(
             legato_time = dive_nc_file.variables["time"][:]
         else:
             return ([], [])
-    except:
+    except Exception:
         log_error("Could not load legato data found", "exc")
         return ([], [])
+
+    legato_raw_valid_i = np.logical_and.reduce(
+        (
+            np.logical_not(np.isnan(legato_temp)),
+            np.logical_not(np.isnan(legato_cond)),
+            np.logical_not(np.isnan(legato_time)),
+        )
+    )
 
     try:
         corr_temperature = dive_nc_file.variables["temperature"][:]
@@ -88,7 +98,7 @@ def plot_legato_corrections(
         ctd_press = dive_nc_file.variables["ctd_pressure"][:]
         ctd_time = dive_nc_file.variables["ctd_time"][:]
         start_time = dive_nc_file.start_time
-    except:
+    except Exception:
         log_error("Could not load corrected temperature or salinity", "exc")
         return ([], [])
 
@@ -106,9 +116,9 @@ def plot_legato_corrections(
 
     fig.add_trace(
         {
-            "name": "legato raw salinity",
-            "x": legato_time[salinity_good_i],
-            "y": legato_salinity[salinity_good_i],
+            "name": "Legato Raw Salinity",
+            "x": legato_time[legato_raw_valid_i],
+            "y": legato_salinity[legato_raw_valid_i],
             "yaxis": "y1",
             "mode": "lines+markers",
             "line": {"width": 1},
@@ -118,9 +128,9 @@ def plot_legato_corrections(
     )
     fig.add_trace(
         {
-            "name": "legato raw temp",
-            "x": legato_time[temperature_good_i],
-            "y": legato_temp[temperature_good_i],
+            "name": "Legato Raw Temp",
+            "x": legato_time[legato_raw_valid_i],
+            "y": legato_temp[legato_raw_valid_i],
             "yaxis": "y2",
             "mode": "lines+markers",
             "line": {"width": 1},
@@ -130,7 +140,7 @@ def plot_legato_corrections(
     )
     fig.add_trace(
         {
-            "name": "legato corr salinity",
+            "name": "Legato Corr Salinity",
             "x": ctd_time[salinity_good_i],
             "y": corr_salinity[salinity_good_i],
             "yaxis": "y1",
@@ -142,7 +152,7 @@ def plot_legato_corrections(
     )
     fig.add_trace(
         {
-            "name": "legato corr temp",
+            "name": "Legato Corr Temp",
             "x": ctd_time[temperature_good_i],
             "y": corr_temperature[temperature_good_i],
             "yaxis": "y2",
