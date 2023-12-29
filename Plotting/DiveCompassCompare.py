@@ -66,6 +66,8 @@ def plot_compass_compare(
     flip_heading=False,
 ):
     """Compares roll/pitch/heading of the truck compass with a secondary compass"""
+    log_debug(f"{flip_roll},{flip_pitch},{flip_heading}")
+
     # Preliminaries
     try:
         start_time = dive_nc_file.start_time
