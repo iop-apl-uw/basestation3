@@ -103,7 +103,10 @@ def plot_dives(
             try:
                 dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
                 fig_list, file_list = plot_func(
-                    base_opts, dive_ncf, generate_plots=generate_plots, dbcon=con,
+                    base_opts,
+                    dive_ncf,
+                    generate_plots=generate_plots,
+                    dbcon=con,
                 )
             except KeyboardInterrupt:
                 return (figs, output_files)
@@ -114,11 +117,10 @@ def plot_dives(
                     pdb.post_mortem(traceb)
                 log_error(f"{plot_name} failed {dive_nc_file_name}", "exc")
             else:
-                for figure in fig_list:
+                for figure in Utils.flatten(fig_list):
                     figs.append(figure)
-                for file_name in file_list:
+                for file_name in Utils.flatten(file_list):
                     output_files.append(file_name)
-
     if dbcon == None:
         try:
             con.commit()
@@ -127,7 +129,7 @@ def plot_dives(
             log_error(f"Failed commit, plot_dives {e}", "exc", alert="DB_LOCKED")
 
         con.close()
-        log_info("plot_dives db closed") 
+        log_info("plot_dives db closed")
 
     return (figs, output_files)
 
@@ -153,7 +155,7 @@ def plot_mission(
     """
     if dbcon == None:
         con = Utils.open_mission_database(base_opts)
-        log_info("plot_mission db opened") 
+        log_info("plot_mission db opened")
     else:
         con = dbcon
 
@@ -163,11 +165,15 @@ def plot_mission(
         log_debug(f"Trying Mission Plot: {plot_name}")
         try:
             fig_list, file_list = plot_func(
-                base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=con
+                base_opts,
+                mission_str,
+                dive=dive,
+                generate_plots=generate_plots,
+                dbcon=con,
             )
-            #if dive == None:
+            # if dive == None:
             #    fig_list, file_list = plot_func(base_opts, mission_str, generate_plots=generate_plots, dbcon=con)
-            #else:
+            # else:
             #    fig_list, file_list = plot_func(
             #        base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=con
             #    )
@@ -193,7 +199,7 @@ def plot_mission(
             log_error(f"Failed commit, plot_mission {e}", "exc", alert="DB_LOCKED")
 
         con.close()
-        log_info("plot_mission db closed") 
+        log_info("plot_mission db closed")
 
     return (figs, output_files)
 
