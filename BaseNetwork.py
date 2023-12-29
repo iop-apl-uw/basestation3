@@ -553,7 +553,7 @@ def convert_network_logfile(base_opts, in_file_name, out_file_name):
     log_info(f"Running {cmdline}")
     try:
         (sts, run_output) = Utils.run_cmd_shell(cmdline, timeout=10)
-    except:
+    except Exception:
         log_error(f"Error running {cmdline}", "exc")
         return None
 
@@ -565,8 +565,8 @@ def convert_network_logfile(base_opts, in_file_name, out_file_name):
 
     if sts >> 8:
         error = ""
-        for l in run_output:
-            error += l.decode()
+        for ll in run_output:
+            error += ll.decode()
         log_error(f"Error running {cmdline} - {error}")
 
         return None
@@ -590,18 +590,18 @@ def convert_network_logfile(base_opts, in_file_name, out_file_name):
                 os.path.split(in_file_name)[0],
                 f"p{int(sgid):03d}{int(divenum):04d}.nlog",
             )
-        except:
+        except Exception:
             log_error("Failed to format out_file_name", "exc")
             return None
 
     try:
         fo = open(out_file_name, "wb")
-    except:
+    except Exception:
         log_error(f"Failed to open {out_file_name}")
         return None
 
-    for l in run_output:
-        fo.write(l)
+    for ll in run_output:
+        fo.write(ll)
     fo.close()
 
     return out_file_name
@@ -649,7 +649,7 @@ def convert_network_profile(in_file_name, out_file_name):
                         os.path.split(in_file_name)[0],
                         f"p{splits[2][2:]}{splits[3][2:6]}.npro",
                     )
-        except:
+        except Exception:
             log_error("Failed to format out_file_name", "exc")
             return None
 
@@ -661,7 +661,7 @@ def convert_network_profile(in_file_name, out_file_name):
     log_info(f"Running {cmdline}")
     try:
         (sts, fo) = Utils.run_cmd_shell(cmdline, timeout=10)
-    except:
+    except Exception:
         log_error(f"Error running {cmdline}", "exc")
         return None
 
@@ -673,8 +673,8 @@ def convert_network_profile(in_file_name, out_file_name):
 
     if sts >> 8:
         error = ""
-        for l in fo:
-            error += l.decode()
+        for ll in fo:
+            error += ll.decode()
         log_error(f"Error running {cmdline} - {error}")
 
         return None
@@ -845,7 +845,7 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
                     np.full(len(data[var_name]), np.nan),
                 )
             )
-        except:
+        except Exception:
             log_error(f"Failed processing {network_profile}", "exc")
 
     if not os.path.isfile(network_logfile):
@@ -853,7 +853,7 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
     else:
         try:
             raw_network_logfile = open(network_logfile, "rb")
-        except:
+        except Exception:
             log_error(f"Failed opening {network_logfile}", "exc")
         else:
             lp = log_parser()
@@ -882,7 +882,7 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
                             else:
                                 time_string = raw_line.split(":", maxsplit=1)[1]
                             start_time = Utils.parse_time(time_string)
-                        except:
+                        except Exception:
                             log_error(
                                 f"Could not process start line {line_count} of {network_logfile} - skipping",
                                 "exc",
@@ -895,7 +895,7 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
                     log_error(
                         f"{e.args[0]} {e.args[1]} line {line_count} of {network_logfile} - skipping",
                     )
-                except:
+                except Exception:
                     log_error(
                         f"Could not process {line_count} of {network_logfile} - skipping",
                         "exc",
@@ -1035,7 +1035,7 @@ def make_netcdf_network_files(network_files, processed_files_list):
         dive_net_files = sorted(files)
         try:
             ncf_filename = make_netcdf_network_file(*dive_net_files)
-        except:
+        except Exception:
             log_error(f"Failed to create cdf file from {dive_net_files}", "exc")
             ret_val = 1
         else:
@@ -1079,26 +1079,44 @@ def make_netcdf_network_file_from_perdive(ncf_filename, ts_outputfile=False):
 
         max_depth_i = int(dsi["ctd_depth"].argmax())
         ctd_time = dsi["ctd_time"].data.astype(np.float64) / 1000000000.0
-        t_down = NetCDFUtils.interp1_extend(
-            dsi["ctd_depth"][:max_depth_i], ctd_time[:max_depth_i], bin_centers
-        )
-        t_up = NetCDFUtils.interp1_extend(
-            dsi["ctd_depth"][max_depth_i:],
-            ctd_time[max_depth_i:],
-            bin_centers[::-1],
-        )
-        time_v = np.array((t_down, t_up))
+        if not dsi["ctd_depth"][:max_depth_i].size or not ctd_time[:max_depth_i].size:
+            t_down = None
+        else:
+            t_down = NetCDFUtils.interp1_extend(
+                dsi["ctd_depth"][:max_depth_i], ctd_time[:max_depth_i], bin_centers
+            )
+        if not dsi["ctd_depth"][max_depth_i:].size or not ctd_time[max_depth_i:].size:
+            t_up = None
+        else:
+            t_up = NetCDFUtils.interp1_extend(
+                dsi["ctd_depth"][max_depth_i:],
+                ctd_time[max_depth_i:],
+                bin_centers[::-1],
+            )
+        # time_v = np.array((t_down, t_up))
+        time_v = np.array([x for x in (t_down, t_up) if x is not None])
         create_ds_var(dso, var_template, "time", time_v)
 
         for vvar in ("temperature", "salinity"):
-            binned_data_down, *_ = NetCDFUtils.bindata(
-                dsi["ctd_depth"][:max_depth_i], dsi[vvar][:max_depth_i], bin_edges
-            )
-            binned_data_up, *_ = NetCDFUtils.bindata(
-                dsi["ctd_depth"][max_depth_i:], dsi[vvar][max_depth_i:], bin_edges
-            )
+            if t_down is None:
+                binned_data_down = None
+            else:
+                binned_data_down, *_ = NetCDFUtils.bindata(
+                    dsi["ctd_depth"][:max_depth_i], dsi[vvar][:max_depth_i], bin_edges
+                )
+            if t_up is None:
+                binned_data_up = None
+            else:
+                binned_data_up, *_ = NetCDFUtils.bindata(
+                    dsi["ctd_depth"][max_depth_i:], dsi[vvar][max_depth_i:], bin_edges
+                )
             create_ds_var(
-                dso, var_template, vvar, np.array((binned_data_down, binned_data_up))
+                dso,
+                var_template,
+                vvar,
+                np.array(
+                    [x for x in (binned_data_down, binned_data_up) if x is not None]
+                ),
             )
 
         # GPS positions
@@ -1226,7 +1244,7 @@ def make_netcdf_network_file_from_perdive_files(
     for ncf_filename in ncf_filenames:
         try:
             ncf_output_filename = make_netcdf_network_file_from_perdive(ncf_filename)
-        except:
+        except Exception:
             if DEBUG_PDB:
                 _, _, tracebk = sys.exc_info()
                 traceback.print_exc()
@@ -1396,9 +1414,7 @@ if __name__ == "__main__":
 
     try:
         main()
-    except SystemExit:
-        pass
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
