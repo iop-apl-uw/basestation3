@@ -31,9 +31,11 @@
 """Routines for creating and managing the QC vectors
 """
 
+import collections
 import os
 import pickle
 import re
+
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -81,6 +83,8 @@ qc_name_d = {
     QC_INTERPOLATED: "QC_INTERPOLATED",
     QC_MISSING: "QC_MISSING",
 }
+
+qc_rev_name_d = dict((v, k) for k, v in qc_name_d.items())
 
 # Initialize QC_flag_meanings and QC_flag_values for metadata use
 sorted_QC_keys = np.sort(list(qc_name_d.keys()))
@@ -912,7 +916,7 @@ class ProfileDirectives:
 
         try:
             file = open(filename)
-        except:
+        except Exception:
             log_error(f"Unable to open {filename}")
             return None
         self.comments = []  # reset
@@ -943,7 +947,7 @@ class ProfileDirectives:
         """Runs eval on class arg"""
         try:
             value = eval("self." + arg)  # pylint: disable=eval-used
-        except:
+        except Exception:
             try:
                 value = int(arg)  # try for a number
             except ValueError:
@@ -982,7 +986,7 @@ class ProfileDirectives:
             try:
                 values = eval("self." + index_name)  # pylint: disable=eval-used
                 args = args[1:]  # strip the specifier
-            except:
+            except Exception:
                 log_warning(
                     "Missing a location in '%s'; assuming 'data_points'"
                     % "".join(statement)
@@ -1063,7 +1067,7 @@ class ProfileDirectives:
         predicate = -1  # not assigned yet
         try:
             value = eval("self." + function_tag)  # pylint: disable=eval-used
-        except:
+        except Exception:
             value = absent_predicate_value  # default
         no_function_tag = self.no_prefix + function_tag
         for function in self.functions:
@@ -1098,7 +1102,7 @@ class ProfileDirectives:
                 so = open(self.suggestions_filename, "a")
                 so.write(f"{suggestion}\n")
                 so.close()
-            except:  # unable to open or close file?
+            except Exception:  # unable to open or close file?
                 pass
 
 
@@ -1120,7 +1124,9 @@ def qc_log_stop():
 
 def qc_log(value):
     """Add to  QC log"""
+
     if f_qclog:
+        log_info(value)
         pickle.dump(value, f_qclog)
     return
 
@@ -1188,3 +1194,102 @@ def smooth_legato_pressure(legato_pressure, legato_time, n_stddevs=2.0, max_dz_d
             )
 
     return (smoothed_press, np.array(final_bad_points, dtype=np.int64))
+
+
+# QC pickle and plotting support
+qc_log_type = collections.namedtuple("qc_log_type", ["qc_str", "qc_type", "qc_points"])
+
+
+def load_qc_pickl(qc_file):
+    try:
+        fi = open(qc_file, "rb")
+    except Exception:
+        return None
+
+    ret_list = []
+    while True:
+        try:
+            x = pickle.load(fi)
+        except EOFError:
+            break
+        ret_list.append(qc_log_type(*x))
+    return ret_list
+
+
+def qc_log_list_from_history(nci):
+    """Parses the history attribute of the nci file to generate the equivelent of the qc pickle"""
+    ret_list = []
+    if not hasattr(nci, "history"):
+        return ret_list
+
+    # Looking for lines of the form
+    # 'INFO: QC.py(247): Changed (4/614) 608:611 to QC_INTERPOLATED because changed corrected temp implies changed corrected salinity',
+    qc_log_pattern = r".*Changed \((?P<chg_pts>\d*?)/(?P<tot_pts>\d*?)\)(?P<pt_rng>.*?) to (?P<qc_type>.*?) because (?P<qc_reason>.*?)$"
+
+    for ll in nci.history.splitlines():
+        values = re.search(qc_log_pattern, ll)
+        if values:
+            v = values.groupdict()
+            pts = np.array([], np.int32)
+            for r in v["pt_rng"].split():
+                if r.find(":") > -1:
+                    start, end = r.split(":")
+                    start = int(start) - 1
+                    end = int(end)
+                else:
+                    start = int(r) - 1
+                    end = start + 1
+                pts = np.append(pts, np.arange(start, end))
+            qc_type = qc_rev_name_d[v["qc_type"]]
+            ret_list.append(qc_log_type(v["qc_reason"], qc_type, pts))
+    return ret_list
+
+
+def qc_list_to_points_list(qc_log_list, max_points, is_temp):
+    """Converts a qc_log_list into a set of parallel lists with the QC reasons broken out
+    ready for use in hovertips
+
+    qc_type -
+    """
+
+    ret_list = []
+    qc_pts = set()
+    for jj in range(len(qc_log_list)):
+        ret_list.append(["" for ii in range(max_points)])
+    for jj, qc_log_line in enumerate(qc_log_list):
+        (qc_str, qc_type, qc_points) = qc_log_line
+        # Filter on what type of data - temp or salinity - is being plotted
+        # For now, leave off
+
+        # if " temp " in qc_str or " temperature " in qc_str:
+        #     has_temp = True
+        # else:
+        #     has_temp = False
+        # if (
+        #     " cond " in qc_str
+        #     or " conductivity " in qc_str
+        #     or " salin " in qc_str
+        #     or " salinity " in qc_str
+        # ):
+        #     has_cond = True
+        # else:
+        #     has_cond = False
+
+        # if not (
+        #     (has_cond and has_temp)
+        #     or (not has_cond and not has_temp)
+        #     or (is_temp and has_temp)
+        #     or (not is_temp and has_cond)
+        # ):
+        #     continue
+
+        for ii in qc_points:
+            qc_pts.add(ii)
+            qc_t = int(qc_type)
+            if qc_t in qc_name_d:
+                qc_type_name = qc_name_d[qc_t]
+            else:
+                qc_type_name = ""
+            ret_list[jj][ii] = f"{qc_str}:{qc_type_name}<br>"
+
+    return ret_list, qc_pts

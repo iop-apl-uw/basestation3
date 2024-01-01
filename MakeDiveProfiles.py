@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -188,8 +188,8 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
     # gpctd_pump_speed = 0.9151*m2cm # pump flow speed [cm/s] for continuous pumped CTD (personal communication w/ SBE)
     # 0.7957747154594769m/s 10ml/s = 1e-5m^3/s from Janzen and Creed, 2011
     gpctd_pump_speed = (
-        1e-5 / (math.pi * (sbect_r_n**2))
-    ) * m2cm  # pump flow speed [cm/s] for continuous pumped CTD (10ml/s through a 0.002m radius glass tube)
+        (1e-5 / (math.pi * (sbect_r_n**2))) * m2cm
+    )  # pump flow speed [cm/s] for continuous pumped CTD (10ml/s through a 0.002m radius glass tube)
     # there are no 'octal' problems parsing '019' as 19 under python
     sg_id_num = int(calib_consts["id_str"])  # ensured to be defined by caller
     try:
@@ -1832,9 +1832,10 @@ def load_dive_profile_data(
                         # with an updated basestation
                         if nc_typecode != nc_data_type:
                             if (
-                                nc_data_type == "Q" and nc_typecode == "c"
-                            ) or (  # QC vectors are encoded as strings
-                                nc_data_type == "d" and nc_typecode == "i"
+                                (nc_data_type == "Q" and nc_typecode == "c")
+                                or (  # QC vectors are encoded as strings
+                                    nc_data_type == "d" and nc_typecode == "i"
+                                )
                             ):  # netcdf/numpy handles i to d conversion (e.g., gc_pitch_ad was i, now d)
                                 pass
                             else:
@@ -1976,9 +1977,7 @@ def load_dive_profile_data(
                                     this_mdi,
                                     dive_nc_file.dimensions[this_dim].size,
                                 )
-                        elif (
-                            l_nc_dims
-                        ):  # expecting no array (BaseNetCDF.nc_scalar) but we have an array...
+                        elif l_nc_dims:  # expecting no array (BaseNetCDF.nc_scalar) but we have an array...
                             if nc_data_type not in ["c", "Q"]:  # ignore strings
                                 log_error(
                                     "Expecting a scalar for %s but got %s -- skipping"
@@ -2365,9 +2364,7 @@ def load_dive_profile_data(
         return (0, None, None, None, None, None, None, None, None)  # indicate we lost
 
 
-SBECT_mismatch_reported = (
-    {}
-)  # if we are reprocessing several profiles don't complain on subsequent profiles
+SBECT_mismatch_reported = {}  # if we are reprocessing several profiles don't complain on subsequent profiles
 
 
 def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
@@ -2803,11 +2800,16 @@ def make_dive_profile(
     QC.qc_log_stop()
     # QC.qc_log_start(os.path.join(path, "qclog_%d.pckl" % (dive_num,)))
 
+    pdb.set_trace()
+
     dive_directives = (
         directives.dump_string()
     )  # just the specific directives for this profile
     if dive_directives != "":
         results_d.update({"directives": dive_directives})
+
+    # TODO: Add new rules for legato
+
     # now add the default rules
     for default_directive in [
         "* no_interp_gc_temperatures",
@@ -5108,6 +5110,7 @@ def make_dive_profile(
                         # TOO AGGRESSIVE: QC.assert_qc(QC.QC_BAD,temp_cor_qc_v,warmer_points_i_v,'possible wafting warm water on dive')
                     last_i = break_i  # move along
 
+        # TODO - Need a unified check here for this correction for legato
         QC.assert_qc(
             QC.QC_BAD,
             cond_cor_qc_v,
@@ -6064,8 +6067,7 @@ def make_dive_profile(
                         - (hd_b * q**hd_s + hd_c * ald * ald) * U * V
                     )
                     dWdt = B / mass_kg + rhoxl2_2m * (
-                        hd_a * ald * U * V
-                        - (hd_b * q**hd_s + hd_c * ald * ald) * W * V
+                        hd_a * ald * U * V - (hd_b * q**hd_s + hd_c * ald * ald) * W * V
                     )
                     # log_debug('UF: %.2f %s %.3f %.3f %.2f %.2f' %(t,u,dUdt,dWdt,B,phdi))
                     return [dUdt, dWdt]
@@ -7434,7 +7436,7 @@ def main():
         glob_expr = (
             "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log",
             "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].eng",
-            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc"
+            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc",
             # "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc.gz"
         )
         for g in glob_expr:

@@ -32,7 +32,6 @@
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
-
 import typing
 
 import gsw
@@ -64,6 +63,36 @@ def plot_legato_corrections(
     if not generate_plots:
         return ([], [])
 
+    # Initial approach based on QC pickle output.  Not needed as same info can be recovered from
+    # history attribute
+
+    # qc_file = os.path.join(
+    #     base_opts.mission_dir, f"qclog_{dive_nc_file.variables['trajectory'][0]:d}.pckl"
+    # )
+
+    # qc_data = QC.load_qc_pickl(qc_file)
+    # if qc_data is None:
+    #     log_warning(f"Could not load {qc_file} - skipping QC data")
+
+    # qc_data_alt = QC.qc_log_list_from_history(dive_nc_file)
+
+    # if len(qc_data) != len(qc_data_alt):
+    #     log_warning("Diff lengths")
+    # else:
+    #     for ii in range(len(qc_data)):
+    #         qc_str, qc_type, qc_points = qc_data[ii]
+    #         qc_str_a, qc_type_a, qc_points_a = qc_data_alt[ii]
+    #         if qc_str != qc_str_a:
+    #             log_info(f"{ii}:{qc_str}{qc_str_a}")
+    #         if qc_type != qc_type_a:
+    #             log_info(f"{ii}:{qc_type}{qc_type_a}")
+    #         if not np.array_equal(qc_points, qc_points_a):
+    #             log_info(f"{ii}:{qc_points}{qc_points_a}")
+
+    # qc_data = [x for x in qc_data if "raw " not in x.qc_str]
+
+    qc_data = QC.qc_log_list_from_history(dive_nc_file)
+
     try:
         if "legato_temp" in dive_nc_file.variables:
             legato_temp = dive_nc_file.variables["legato_temp"][:]
@@ -86,6 +115,27 @@ def plot_legato_corrections(
             np.logical_not(np.isnan(legato_time)),
         )
     )
+
+    point_num = np.arange(0, legato_temp.size)
+    # These are split into salinity and temp.  At the moment,
+    # they are identical, but could change if the commented out code
+    # in QC.py is added back
+    cust_hv_txt = ["", ""]
+    cust_data = [None, None]
+    qc_pts = [None, None]
+    if qc_data:
+        for jj in range(2):
+            qc_list, qc_pts[jj] = QC.qc_list_to_points_list(
+                qc_data, legato_temp.size, bool(jj)
+            )
+            tmp_list = [np.transpose(point_num)]
+            for ii in range(len(qc_list)):
+                tmp_list.append(np.transpose(qc_list[ii]))
+                cust_hv_txt[jj] = f"{cust_hv_txt[jj]}%{{customdata[{ii+1}]}}"
+            cust_data[jj] = np.dstack((tmp_list))
+    else:
+        for jj in range(2):
+            cust_data[jj] = np.dstack((np.transpose(point_num)))
 
     try:
         corr_temperature = dive_nc_file.variables["temperature"][:]
@@ -114,28 +164,65 @@ def plot_legato_corrections(
 
     fig = plotly.graph_objects.Figure()
 
+    # Annotate QC'd points
+    if qc_pts[0]:
+        fig.add_trace(
+            {
+                "name": "QC Salin/Cond flagged",
+                "x": legato_time[list(qc_pts[0])],
+                "y": legato_salinity[list(qc_pts[0])],
+                "mode": "markers",
+                "yaxis": "y1",
+                "marker": {"symbol": "circle"},
+                "visible": True,
+                # "hovertemplate": "QC flagged<br>%{x:.2f} mins<br>%{y:.2f} PSU<extra></extra>",
+                "hovertemplate": None,
+                "hoverinfo": "skip",
+            }
+        )
+
     fig.add_trace(
         {
             "name": "Legato Raw Salinity",
             "x": legato_time[legato_raw_valid_i],
             "y": legato_salinity[legato_raw_valid_i],
+            "customdata": np.squeeze(cust_data[0]),
             "yaxis": "y1",
             "mode": "lines+markers",
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkBlue"},
-            "hovertemplate": "Raw Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<extra></extra>",
+            "hovertemplate": f"Raw Salin<br>%{{x:.2f}} min<br>%{{y:.2f}} PSU<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[0]}<extra></extra>",
         }
     )
+
+    if qc_pts[1]:
+        fig.add_trace(
+            {
+                "name": "QC Temp flagged",
+                "x": legato_time[list(qc_pts[1])],
+                "y": legato_temp[list(qc_pts[1])],
+                "yaxis": "y2",
+                "mode": "markers",
+                "marker": {"symbol": "circle"},
+                "visible": True,
+                # "hovertemplate": "QC flagged<br>%{x:.2f} mins<br>%{y:.2f} PSU<extra></extra>",
+                "hovertemplate": None,
+                "hoverinfo": "skip",
+            }
+        )
+
     fig.add_trace(
         {
             "name": "Legato Raw Temp",
             "x": legato_time[legato_raw_valid_i],
             "y": legato_temp[legato_raw_valid_i],
+            "customdata": np.squeeze(cust_data[1]),
             "yaxis": "y2",
             "mode": "lines+markers",
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkMagenta"},
-            "hovertemplate": "Raw Temp<br>%{x:.2f} min<br>%{y:.3f} C<extra></extra>",
+            # "hovertemplate": "Raw Temp<br>%{x:.2f} min<br>%{y:.3f} C<extra></extra>",
+            "hovertemplate": f"Raw Temp<br>%{{x:.2f}} min<br>%{{y:.3f}} C<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[1]}<extra></extra>",
         }
     )
     fig.add_trace(
