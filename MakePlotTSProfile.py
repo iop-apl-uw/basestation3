@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -417,7 +417,7 @@ def main(
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
-    log_info(f"processed_other_files {processed_other_files}")
+    log_debug(f"processed_other_files {processed_other_files}")
     Utils.check_versions()
 
     profile_file_names = []
@@ -498,7 +498,7 @@ def main(
 
         for ncdf_file_name in ncdf_file_names:
             log_info(f"Processing {ncdf_file_name}")
-            #dive_num = int(os.path.split(ncdf_file_name)[1][4:8])
+            # dive_num = int(os.path.split(ncdf_file_name)[1][4:8])
             try:
                 plots = plot_ncdf_profile(ncdf_file_name, None, base_opts)
                 if processed_other_files is not None and plots is not None:
