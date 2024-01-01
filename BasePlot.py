@@ -91,17 +91,17 @@ def plot_dives(
     """
     figs = []
     output_files = []
-    if dbcon == None:
+    if dbcon is None:
         con = Utils.open_mission_database(base_opts)
         log_info("plot_dives db opened")
     else:
         con = dbcon
 
     for dive_nc_file_name in dive_nc_file_names:
+        dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
         for plot_name, plot_func in dive_plot_dict.items():
             log_debug(f"Trying Dive Plot :{plot_name}")
             try:
-                dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
                 fig_list, file_list = plot_func(
                     base_opts,
                     dive_ncf,
@@ -110,7 +110,7 @@ def plot_dives(
                 )
             except KeyboardInterrupt:
                 return (figs, output_files)
-            except:
+            except Exception:
                 if DEBUG_PDB:
                     _, _, traceb = sys.exc_info()
                     traceback.print_exc()
@@ -121,7 +121,7 @@ def plot_dives(
                     figs.append(figure)
                 for file_name in Utils.flatten(file_list):
                     output_files.append(file_name)
-    if dbcon == None:
+    if dbcon is None:
         try:
             con.commit()
         except Exception as e:
@@ -153,7 +153,7 @@ def plot_mission(
             list of figures created
             list of filenames created
     """
-    if dbcon == None:
+    if dbcon is None:
         con = Utils.open_mission_database(base_opts)
         log_info("plot_mission db opened")
     else:
@@ -179,7 +179,7 @@ def plot_mission(
             #    )
         except KeyboardInterrupt:
             return (figs, output_files)
-        except:
+        except Exception:
             log_error(f"{plot_name}", "exc")
             if DEBUG_PDB:
                 _, _, traceb = sys.exc_info()
@@ -191,7 +191,7 @@ def plot_mission(
             for file_name in file_list:
                 output_files.append(file_name)
 
-    if dbcon == None:
+    if dbcon is None:
         try:
             con.commit()
         except Exception as e:
@@ -251,7 +251,7 @@ def main():
     if base_opts.nice:
         try:
             os.nice(base_opts.nice)
-        except:
+        except Exception:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     required_plotly_version = "4.9.0"
@@ -290,7 +290,7 @@ def main():
             return 1
         try:
             base_opts.instrument_id = int(tail[:-3])
-        except:
+        except Exception:
             log_error("Can't figure out the instrument id - bailing out")
             return 1
 
@@ -359,7 +359,7 @@ if __name__ == "__main__":
             retval = main()
     except SystemExit:
         pass
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
