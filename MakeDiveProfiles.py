@@ -2800,8 +2800,6 @@ def make_dive_profile(
     QC.qc_log_stop()
     # QC.qc_log_start(os.path.join(path, "qclog_%d.pckl" % (dive_num,)))
 
-    pdb.set_trace()
-
     dive_directives = (
         directives.dump_string()
     )  # just the specific directives for this profile
