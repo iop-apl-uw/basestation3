@@ -95,28 +95,35 @@ def plot_legato_corrections(
 
     try:
         if "legato_temp" in dive_nc_file.variables:
-            legato_temp = dive_nc_file.variables["legato_temp"][:]
-            legato_cond = dive_nc_file.variables["legato_conduc"][:] / 10.0
-            legato_time = dive_nc_file.variables["legato_time"][:]
+            ctd_raw_temp = dive_nc_file.variables["legato_temp"][:]
+            ctd_raw_cond = dive_nc_file.variables["legato_conduc"][:] / 10.0
+            ctd_raw_time = dive_nc_file.variables["legato_time"][:]
+            ctd_type = "Legato"
         elif "eng_rbr_temp" in dive_nc_file.variables:
-            legato_temp = dive_nc_file.variables["eng_rbr_temp"][:]
-            legato_cond = dive_nc_file.variables["eng_rbr_conduc"][:] / 10.0
-            legato_time = dive_nc_file.variables["time"][:]
+            ctd_raw_temp = dive_nc_file.variables["eng_rbr_temp"][:]
+            ctd_raw_cond = dive_nc_file.variables["eng_rbr_conduc"][:] / 10.0
+            ctd_raw_time = dive_nc_file.variables["time"][:]
+            ctd_type = "Legato"
+        elif "temperature_raw" in dive_nc_file.variables:
+            ctd_raw_temp = dive_nc_file.variables["temperature_raw"][:]
+            ctd_raw_cond = dive_nc_file.variables["conductivity_raw"][:]
+            ctd_raw_time = dive_nc_file.variables["ctd_time"][:]
+            ctd_type = "Seabird"
         else:
             return ([], [])
     except Exception:
         log_error("Could not load legato data found", "exc")
         return ([], [])
 
-    legato_raw_valid_i = np.logical_and.reduce(
+    ctd_raw_valid_i = np.logical_and.reduce(
         (
-            np.logical_not(np.isnan(legato_temp)),
-            np.logical_not(np.isnan(legato_cond)),
-            np.logical_not(np.isnan(legato_time)),
+            np.logical_not(np.isnan(ctd_raw_temp)),
+            np.logical_not(np.isnan(ctd_raw_cond)),
+            np.logical_not(np.isnan(ctd_raw_time)),
         )
     )
 
-    point_num = np.arange(0, legato_temp.size)
+    point_num = np.arange(0, ctd_raw_temp.size)
     # These are split into salinity and temp.  At the moment,
     # they are identical, but could change if the commented out code
     # in QC.py is added back
@@ -126,7 +133,7 @@ def plot_legato_corrections(
     if qc_data:
         for jj in range(2):
             qc_list, qc_pts[jj] = QC.qc_list_to_points_list(
-                qc_data, legato_temp.size, bool(jj)
+                qc_data, ctd_raw_temp.size, bool(jj)
             )
             tmp_list = [np.transpose(point_num)]
             for ii in range(len(qc_list)):
@@ -153,14 +160,14 @@ def plot_legato_corrections(
         return ([], [])
 
     ctd_time = (ctd_time - start_time) / 60.0
-    legato_time = (legato_time - start_time) / 60.0
+    ctd_raw_time = (ctd_raw_time - start_time) / 60.0
 
     if not base_opts.use_gsw:
-        legato_salinity = seawater.salt(
-            legato_cond / (seawater.constants.c3515 / 10.0), legato_temp, ctd_press
+        ctd_raw_salinity = seawater.salt(
+            ctd_raw_cond / (seawater.constants.c3515 / 10.0), ctd_raw_temp, ctd_press
         )
     else:
-        legato_salinity = gsw.SP_from_C(legato_cond * 10.0, legato_temp, ctd_press)
+        ctd_raw_salinity = gsw.SP_from_C(ctd_raw_cond * 10.0, ctd_raw_temp, ctd_press)
 
     fig = plotly.graph_objects.Figure()
 
@@ -169,11 +176,15 @@ def plot_legato_corrections(
         fig.add_trace(
             {
                 "name": "QC Salin/Cond flagged",
-                "x": legato_time[list(qc_pts[0])],
-                "y": legato_salinity[list(qc_pts[0])],
+                "x": ctd_raw_time[list(qc_pts[0])],
+                "y": ctd_raw_salinity[list(qc_pts[0])],
                 "mode": "markers",
                 "yaxis": "y1",
-                "marker": {"symbol": "circle"},
+                "marker": {
+                    "symbol": "circle",
+                    # "size": 3,
+                    "color": "Goldenrod",
+                },
                 "visible": True,
                 # "hovertemplate": "QC flagged<br>%{x:.2f} mins<br>%{y:.2f} PSU<extra></extra>",
                 "hovertemplate": None,
@@ -183,14 +194,18 @@ def plot_legato_corrections(
 
     fig.add_trace(
         {
-            "name": "Legato Raw Salinity",
-            "x": legato_time[legato_raw_valid_i],
-            "y": legato_salinity[legato_raw_valid_i],
+            "name": f"{ctd_type} Raw Salinity",
+            "x": ctd_raw_time[ctd_raw_valid_i],
+            "y": ctd_raw_salinity[ctd_raw_valid_i],
             "customdata": np.squeeze(cust_data[0]),
             "yaxis": "y1",
             "mode": "lines+markers",
             "line": {"width": 1},
-            "marker": {"symbol": "cross", "size": 3, "color": "DarkBlue"},
+            "marker": {
+                "symbol": "cross",
+                "size": 3,
+                "color": "DarkBlue",
+            },
             "hovertemplate": f"Raw Salin<br>%{{x:.2f}} min<br>%{{y:.2f}} PSU<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[0]}<extra></extra>",
         }
     )
@@ -199,11 +214,15 @@ def plot_legato_corrections(
         fig.add_trace(
             {
                 "name": "QC Temp flagged",
-                "x": legato_time[list(qc_pts[1])],
-                "y": legato_temp[list(qc_pts[1])],
+                "x": ctd_raw_time[list(qc_pts[1])],
+                "y": ctd_raw_temp[list(qc_pts[1])],
                 "yaxis": "y2",
                 "mode": "markers",
-                "marker": {"symbol": "circle"},
+                "marker": {
+                    "symbol": "circle",
+                    # "size": 3,
+                    "color": "Goldenrod",
+                },
                 "visible": True,
                 # "hovertemplate": "QC flagged<br>%{x:.2f} mins<br>%{y:.2f} PSU<extra></extra>",
                 "hovertemplate": None,
@@ -213,9 +232,9 @@ def plot_legato_corrections(
 
     fig.add_trace(
         {
-            "name": "Legato Raw Temp",
-            "x": legato_time[legato_raw_valid_i],
-            "y": legato_temp[legato_raw_valid_i],
+            "name": f"{ctd_type} Raw Temp",
+            "x": ctd_raw_time[ctd_raw_valid_i],
+            "y": ctd_raw_temp[ctd_raw_valid_i],
             "customdata": np.squeeze(cust_data[1]),
             "yaxis": "y2",
             "mode": "lines+markers",
@@ -228,10 +247,10 @@ def plot_legato_corrections(
 
     fig.add_trace(
         {
-            "name": "Legato Corr Salinity",
+            "name": f"{ctd_type} Corr Salinity",
             "x": ctd_time[salinity_good_i],
             "y": corr_salinity[salinity_good_i],
-            "customdata": np.arange(0, legato_time.size)[salinity_good_i],
+            "customdata": np.arange(0, ctd_raw_time.size)[salinity_good_i],
             "yaxis": "y1",
             "mode": "lines+markers",
             "line": {"width": 1},
@@ -241,10 +260,10 @@ def plot_legato_corrections(
     )
     fig.add_trace(
         {
-            "name": "Legato Corr Temp",
+            "name": f"{ctd_type} Corr Temp",
             "x": ctd_time[temperature_good_i],
             "y": corr_temperature[temperature_good_i],
-            "customdata": np.arange(0, legato_time.size)[temperature_good_i],
+            "customdata": np.arange(0, ctd_raw_time.size)[temperature_good_i],
             "yaxis": "y2",
             "mode": "lines+markers",
             "line": {"width": 1},
@@ -256,7 +275,7 @@ def plot_legato_corrections(
     # # Highlight differnces
     # changed_points = np.squeeze(
     #     np.nonzero(
-    #         np.abs(corr_salinity[salinity_good_i] - legato_salinity[salinity_good_i])
+    #         np.abs(corr_salinity[salinity_good_i] - ctd_raw_salinity[salinity_good_i])
     #         > 0.000001
     #     )
     # )
@@ -275,7 +294,7 @@ def plot_legato_corrections(
     # changed_points = np.squeeze(
     #     np.nonzero(
     #         np.abs(
-    #             corr_temperature[temperature_good_i] - legato_temp[temperature_good_i]
+    #             corr_temperature[temperature_good_i] - ctd_raw_temp[temperature_good_i]
     #         )
     #         > 0.0001
     #     )
@@ -294,9 +313,9 @@ def plot_legato_corrections(
     # )
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = (
-        "%s<br>Legato Raw Temp/Salinity and Corrected Temp/Salinity vs Time"
-        % (mission_dive_str,)
+    title_text = "%s<br>%s Raw Temp/Salinity and Corrected Temp/Salinity vs Time" % (
+        mission_dive_str,
+        ctd_type,
     )
 
     fig.update_layout(
@@ -342,7 +361,7 @@ def plot_legato_corrections(
         [fig],
         PlotUtilsPlotly.write_output_files(
             base_opts,
-            "dv%04d_legato_corr_compare" % dive_nc_file.dive_number,
+            "dv%04d_%s_corr_compare" % (dive_nc_file.dive_number, ctd_type.lower()),
             fig,
         ),
     )
