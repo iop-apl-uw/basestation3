@@ -225,11 +225,9 @@ def plot_ctd_corrections(
                 "yaxis": "y1",
                 "marker": {
                     "symbol": "circle",
-                    # "size": 3,
-                    "color": "Goldenrod",
+                    "color": "Cyan",
                 },
                 "visible": True,
-                # "hovertemplate": "QC flagged<br>%{x:.2f} mins<br>%{y:.2f} PSU<extra></extra>",
                 "hovertemplate": None,
                 "hoverinfo": "skip",
             }
@@ -263,11 +261,9 @@ def plot_ctd_corrections(
                 "mode": "markers",
                 "marker": {
                     "symbol": "circle",
-                    # "size": 3,
-                    "color": "Goldenrod",
+                    "color": "Cyan",
                 },
                 "visible": True,
-                # "hovertemplate": "QC flagged<br>%{x:.2f} mins<br>%{y:.2f} PSU<extra></extra>",
                 "hovertemplate": None,
                 "hoverinfo": "skip",
             }
@@ -283,7 +279,6 @@ def plot_ctd_corrections(
             "mode": "lines+markers",
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkMagenta"},
-            # "hovertemplate": "Raw Temp<br>%{x:.2f} min<br>%{y:.3f} C<extra></extra>",
             "hovertemplate": f"Raw Temp<br>%{{x:.2f}} min<br>%{{y:.3f}} C<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[0]}<extra></extra>",
         }
     )
