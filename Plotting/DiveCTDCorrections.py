@@ -32,6 +32,7 @@
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
+import collections
 import typing
 
 import gsw
@@ -48,7 +49,7 @@ import PlotUtils
 import PlotUtilsPlotly
 import QC
 
-from BaseLog import log_error
+from BaseLog import log_error, log_warning
 from Plotting import plotdivesingle
 
 
@@ -115,6 +116,15 @@ def plot_ctd_corrections(
         log_error("Could not load ctd data", "exc")
         return ([], [])
 
+    gc_secs = gc_moves = None
+    try:
+        gc_secs = dive_nc_file.variables["gc_st_secs"][:]
+        gc_secs = np.concatenate((np.array((0.0,)), gc_secs, np.array((2000000000.0,))))
+
+        gc_moves = PlotUtils.extract_gc_moves(dive_nc_file)[0]
+    except Exception:
+        log_warning("Could not extract GC data - skipping", "exc")
+
     ctd_raw_valid_i = np.logical_and.reduce(
         (
             np.logical_not(np.isnan(ctd_raw_temp)),
@@ -170,6 +180,34 @@ def plot_ctd_corrections(
         ctd_raw_salinity = gsw.SP_from_C(ctd_raw_cond * 10.0, ctd_raw_temp, ctd_press)
 
     fig = plotly.graph_objects.Figure()
+
+    if gc_moves is not None:
+        show_label = collections.defaultdict(lambda: True)
+        y_min = min(ctd_raw_salinity.min(), corr_salinity.min())
+        y_max = max(ctd_raw_salinity.max(), corr_salinity.max())
+        for gc in gc_moves:
+            fig.add_trace(
+                {
+                    "type": "scatter",
+                    "x": (gc[0] / 60.0, gc[0] / 60.0, gc[1] / 60.0, gc[1] / 60.0),
+                    "y": (y_min, y_max, y_max, y_min),
+                    "xaxis": "x1",
+                    "yaxis": "y1",
+                    "fill": "toself",
+                    "fillcolor": PlotUtils.gc_move_colormap[gc[2]].color,
+                    "line": {
+                        "dash": "solid",
+                        "color": PlotUtils.gc_move_colormap[gc[2]].color,
+                    },
+                    "mode": "none",  # no outter lines and ponts
+                    "legendgroup": f"{PlotUtils.gc_move_colormap[gc[2]].name}_group",
+                    "name": f"GC {PlotUtils.gc_move_colormap[gc[2]].name}",
+                    "showlegend": show_label[PlotUtils.gc_move_colormap[gc[2]].name],
+                    "text": f"GC {PlotUtils.gc_move_colormap[gc[2]].name}, Start {gc[0] / 60.0:.2f}mins, End {gc[1] / 60.0:.2f}mins",
+                    "hoverinfo": "text",
+                }
+            )
+            show_label[PlotUtils.gc_move_colormap[gc[2]].name] = False
 
     # Annotate QC'd points
     if qc_pts[0]:
