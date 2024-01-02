@@ -173,13 +173,16 @@ def assert_qc(qc, qc_v, indices_v, reason):
             % (len(changed_i_v), len(qc_v), elts, qc_name_d[qc], reason),
             loc="parent",
         )
+        # Since we now process this history attribute to plot the affect of the
+        # QC process, leave these as complete lines
+
         # be more succinct about QC reports; truncate string if too long
-        max_length = 50
-        if len(elts) > max_length:
-            for i in range(max_length - 3 - 1, len(elts)):
-                if elts[i] == " ":
-                    elts = f"{elts[0:i]} ..."
-                    break
+        # max_length = 50
+        # if len(elts) > max_length:
+        #     for i in range(max_length - 3 - 1, len(elts)):
+        #         if elts[i] == " ":
+        #             elts = f"{elts[0:i]} ..."
+        #             break
         log_info(
             "Changed (%d/%d) %s to %s because %s"
             % (len(changed_i_v), len(qc_v), elts, qc_name_d[qc], reason),
@@ -1226,30 +1229,38 @@ def qc_log_list_from_history(nci):
     # 'INFO: QC.py(247): Changed (4/614) 608:611 to QC_INTERPOLATED because changed corrected temp implies changed corrected salinity',
     qc_log_pattern = r".*Changed \((?P<chg_pts>\d*?)/(?P<tot_pts>\d*?)\)(?P<pt_rng>.*?) to (?P<qc_type>.*?) because (?P<qc_reason>.*?)$"
 
+    line_count = 0
     for ll in nci.history.splitlines():
-        values = re.search(qc_log_pattern, ll)
-        if values:
-            v = values.groupdict()
-            pts = np.array([], np.int32)
-            for r in v["pt_rng"].split():
-                if r.find(":") > -1:
-                    start, end = r.split(":")
-                    start = int(start) - 1
-                    end = int(end)
-                else:
-                    start = int(r) - 1
-                    end = start + 1
-                pts = np.append(pts, np.arange(start, end))
-            qc_type = qc_rev_name_d[v["qc_type"]]
-            ret_list.append(qc_log_type(v["qc_reason"], qc_type, pts))
+        line_count += 1
+        try:
+            values = re.search(qc_log_pattern, ll)
+            if values:
+                v = values.groupdict()
+                pts = np.array([], np.int32)
+                for r in v["pt_rng"].split():
+                    if r.find(":") > -1:
+                        start, end = r.split(":")
+                        start = int(start) - 1
+                        end = int(end)
+                    elif "..." in r:
+                        log_warning(
+                            f"Truncated history line {line_count}:({ll}) - some QC data missing"
+                        )
+                        continue
+                    else:
+                        start = int(r) - 1
+                        end = start + 1
+                    pts = np.append(pts, np.arange(start, end))
+                qc_type = qc_rev_name_d[v["qc_type"]]
+                ret_list.append(qc_log_type(v["qc_reason"], qc_type, pts))
+        except Exception:
+            log_error(f"Could not process history line {line_count} ({ll})", "exc")
     return ret_list
 
 
 def qc_list_to_points_list(qc_log_list, max_points, is_temp):
     """Converts a qc_log_list into a set of parallel lists with the QC reasons broken out
     ready for use in hovertips
-
-    qc_type -
     """
 
     ret_list = []
@@ -1258,6 +1269,10 @@ def qc_list_to_points_list(qc_log_list, max_points, is_temp):
         ret_list.append(["" for ii in range(max_points)])
     for jj, qc_log_line in enumerate(qc_log_list):
         (qc_str, qc_type, qc_points) = qc_log_line
+
+        if "oxygen" in qc_str:
+            continue
+
         # Filter on what type of data - temp or salinity - is being plotted
         # For now, leave off
 
