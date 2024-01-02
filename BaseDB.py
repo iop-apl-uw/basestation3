@@ -1375,7 +1375,7 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
         mycon.close()
         log_info("logParameterChanges db closed")
 
-def addSession(base_opts, session, con=None, sms=False):
+def addSession(base_opts, session, con=None, sms=0):
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
         if mycon is None:
