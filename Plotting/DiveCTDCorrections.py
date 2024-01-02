@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots legato corrections """
+"""Plots ctd corrections """
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -53,13 +53,13 @@ from Plotting import plotdivesingle
 
 
 @plotdivesingle
-def plot_legato_corrections(
+def plot_ctd_corrections(
     base_opts: BaseOpts.BaseOptions,
     dive_nc_file: scipy.io._netcdf.netcdf_file,
     generate_plots=True,
     dbcon=None,
 ) -> tuple[list, list]:
-    """Plot showing results for legato thermal-inertia correction"""
+    """Plot showing results for ctd thermal-inertia corrections"""
     if not generate_plots:
         return ([], [])
 
@@ -112,7 +112,7 @@ def plot_legato_corrections(
         else:
             return ([], [])
     except Exception:
-        log_error("Could not load legato data found", "exc")
+        log_error("Could not load ctd data", "exc")
         return ([], [])
 
     ctd_raw_valid_i = np.logical_and.reduce(

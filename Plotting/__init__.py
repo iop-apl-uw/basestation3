@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -61,7 +61,11 @@ def plot_dive_single(
 
 # pylint: disable=unused-argument
 def plot_mission_single(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None,
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Signature for whole mission plotting routines"""
     return ([], [])
@@ -126,7 +130,7 @@ from . import DivePMAR
 from . import DiveCompassCompare
 from . import DiveLegatoPressure
 from . import DiveLegatoData
-from . import DiveLegatoCorrections
+from . import DiveCTDCorrections
 from . import DiveVertVelocity
 from . import DivePitchRoll
 from . import DiveMagCal
