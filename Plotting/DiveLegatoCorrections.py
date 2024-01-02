@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -225,16 +225,18 @@ def plot_legato_corrections(
             "hovertemplate": f"Raw Temp<br>%{{x:.2f}} min<br>%{{y:.3f}} C<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[1]}<extra></extra>",
         }
     )
+
     fig.add_trace(
         {
             "name": "Legato Corr Salinity",
             "x": ctd_time[salinity_good_i],
             "y": corr_salinity[salinity_good_i],
+            "customdata": np.arange(0, legato_time.size)[salinity_good_i],
             "yaxis": "y1",
             "mode": "lines+markers",
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkGreen"},
-            "hovertemplate": "Corr Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<extra></extra>",
+            "hovertemplate": "Corr Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<br>%{customdata:d} point_num<extra></extra>",
         }
     )
     fig.add_trace(
@@ -242,11 +244,12 @@ def plot_legato_corrections(
             "name": "Legato Corr Temp",
             "x": ctd_time[temperature_good_i],
             "y": corr_temperature[temperature_good_i],
+            "customdata": np.arange(0, legato_time.size)[temperature_good_i],
             "yaxis": "y2",
             "mode": "lines+markers",
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkRed"},
-            "hovertemplate": "Corr Temp<br>%{x:.2f} min<br>%{y:.3f} C<extra></extra>",
+            "hovertemplate": "Corr Temp<br>%{x:.2f} min<br>%{y:.3f} C<br>%{customdata:d} point_num<extra></extra>",
         }
     )
 
