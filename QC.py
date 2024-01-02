@@ -1258,6 +1258,35 @@ def qc_log_list_from_history(nci):
     return ret_list
 
 
+# These classification lists tailor to the ctd correction plot
+temp_qc_list = [
+    "raw temperature spikes",
+    "raw temperature noise spikes",
+    "temperature spikes",
+    "temperature noise spikes",
+]
+cond_qc_list = [
+    "conductivity noise spikes",
+    "raw conductivity noise spikes",
+    "slow apogee CT flow",
+    "changed raw temp implies changed raw salinity",
+    "changed raw cond implies changed raw salinity",
+    "bad corrected temperature and conductivity suggests bad salinity",
+    "during VBD bleed",
+    "CT out of water",
+    "TS bad extrapolation",
+    "changed corrected temp implies changed corrected salinity",
+    "changed corrected cond implies changed corrected salinity",
+]
+skip_qc_list = [
+    "changed corrected salin implies changed speed",
+    "bad interpolation anchors",
+    "changed corrected temp implies changed speed",
+    "changed temperature implies changed aa4831 oxygen",
+    "changed salinity implies changed aa4831 oxygen",
+]
+
+
 def qc_list_to_points_list(qc_log_list, max_points, is_temp):
     """Converts a qc_log_list into a set of parallel lists with the QC reasons broken out
     ready for use in hovertips
@@ -1270,33 +1299,18 @@ def qc_list_to_points_list(qc_log_list, max_points, is_temp):
     for jj, qc_log_line in enumerate(qc_log_list):
         (qc_str, qc_type, qc_points) = qc_log_line
 
-        if "oxygen" in qc_str:
+        if qc_str in skip_qc_list:
             continue
 
-        # Filter on what type of data - temp or salinity - is being plotted
-        # For now, leave off
+        if qc_str not in temp_qc_list and qc_str not in cond_qc_list:
+            log_warning(f"Unclassified qc_str {qc_str}")
+            continue
 
-        # if " temp " in qc_str or " temperature " in qc_str:
-        #     has_temp = True
-        # else:
-        #     has_temp = False
-        # if (
-        #     " cond " in qc_str
-        #     or " conductivity " in qc_str
-        #     or " salin " in qc_str
-        #     or " salinity " in qc_str
-        # ):
-        #     has_cond = True
-        # else:
-        #     has_cond = False
+        if is_temp and qc_str not in temp_qc_list:
+            continue
 
-        # if not (
-        #     (has_cond and has_temp)
-        #     or (not has_cond and not has_temp)
-        #     or (is_temp and has_temp)
-        #     or (not is_temp and has_cond)
-        # ):
-        #     continue
+        if not is_temp and qc_str not in cond_qc_list:
+            continue
 
         for ii in qc_points:
             qc_pts.add(ii)
@@ -1308,3 +1322,10 @@ def qc_list_to_points_list(qc_log_list, max_points, is_temp):
             ret_list[jj][ii] = f"{qc_str}:{qc_type_name}<br>"
 
     return ret_list, qc_pts
+
+
+def qc_to_str(qc_var):
+    ret_list = []
+    for ii in range(qc_var.size):
+        ret_list.append(qc_name_d[qc_var[ii]])
+    return ret_list

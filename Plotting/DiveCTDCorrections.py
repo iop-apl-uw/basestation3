@@ -157,10 +157,15 @@ def plot_ctd_corrections(
     try:
         corr_temperature = dive_nc_file.variables["temperature"][:]
         corr_temperature_qc = QC.decode_qc(dive_nc_file.variables["temperature_qc"][:])
-        temperature_good_i = QC.find_qc(corr_temperature_qc, QC.only_good_qc_values)
+        corr_temperature_qc_strs = QC.qc_to_str(corr_temperature_qc)
+        # Dislay all points in plot - keep this mechanism in case we need to revert
+        # temperature_good_i = QC.find_qc(corr_temperature_qc, QC.only_good_qc_values)
+        temperature_good_i = np.arange(0, corr_temperature.size)
         corr_salinity = dive_nc_file.variables["salinity"][:]
         corr_salinity_qc = QC.decode_qc(dive_nc_file.variables["salinity_qc"][:])
-        salinity_good_i = QC.find_qc(corr_salinity_qc, QC.only_good_qc_values)
+        corr_salinity_qc_strs = QC.qc_to_str(corr_salinity_qc)
+        # salinity_good_i = QC.find_qc(corr_salinity_qc, QC.only_good_qc_values)
+        salinity_good_i = np.arange(0, corr_salinity.size)
         # Use ctd_pressure since it has already been through the legato pressure despiker
         ctd_press = dive_nc_file.variables["ctd_pressure"][:]
         ctd_time = dive_nc_file.variables["ctd_time"][:]
@@ -244,7 +249,7 @@ def plot_ctd_corrections(
                 "size": 3,
                 "color": "DarkBlue",
             },
-            "hovertemplate": f"Raw Salin<br>%{{x:.2f}} min<br>%{{y:.2f}} PSU<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[0]}<extra></extra>",
+            "hovertemplate": f"Raw Salin<br>%{{x:.2f}} min<br>%{{y:.2f}} PSU<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[1]}<extra></extra>",
         }
     )
 
@@ -279,7 +284,7 @@ def plot_ctd_corrections(
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkMagenta"},
             # "hovertemplate": "Raw Temp<br>%{x:.2f} min<br>%{y:.3f} C<extra></extra>",
-            "hovertemplate": f"Raw Temp<br>%{{x:.2f}} min<br>%{{y:.3f}} C<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[1]}<extra></extra>",
+            "hovertemplate": f"Raw Temp<br>%{{x:.2f}} min<br>%{{y:.3f}} C<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[0]}<extra></extra>",
         }
     )
 
@@ -288,12 +293,19 @@ def plot_ctd_corrections(
             "name": f"{ctd_type} Corr Salinity",
             "x": ctd_time[salinity_good_i],
             "y": corr_salinity[salinity_good_i],
-            "customdata": np.arange(0, ctd_raw_time.size)[salinity_good_i],
+            "customdata": np.squeeze(
+                np.dstack(
+                    (
+                        np.transpose(np.arange(0, ctd_raw_time.size)[salinity_good_i]),
+                        np.transpose(corr_salinity_qc_strs),
+                    )
+                )
+            ),
             "yaxis": "y1",
             "mode": "lines+markers",
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkGreen"},
-            "hovertemplate": "Corr Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<br>%{customdata:d} point_num<extra></extra>",
+            "hovertemplate": "Corr Salin<br>%{x:.2f} min<br>%{y:.2f} PSU<br>%{customdata[0]:d} point_num<br>%{customdata[1]}<extra></extra>",
         }
     )
     fig.add_trace(
@@ -301,12 +313,21 @@ def plot_ctd_corrections(
             "name": f"{ctd_type} Corr Temp",
             "x": ctd_time[temperature_good_i],
             "y": corr_temperature[temperature_good_i],
-            "customdata": np.arange(0, ctd_raw_time.size)[temperature_good_i],
+            "customdata": np.squeeze(
+                np.dstack(
+                    (
+                        np.transpose(
+                            np.arange(0, ctd_raw_time.size)[temperature_good_i]
+                        ),
+                        np.transpose(corr_temperature_qc_strs),
+                    )
+                )
+            ),
             "yaxis": "y2",
             "mode": "lines+markers",
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkRed"},
-            "hovertemplate": "Corr Temp<br>%{x:.2f} min<br>%{y:.3f} C<br>%{customdata:d} point_num<extra></extra>",
+            "hovertemplate": "Corr Temp<br>%{x:.2f} min<br>%{y:.3f} C<br>%{customdata[0]:d} point_num<br>%{customdata[1]}<extra></extra>",
         }
     )
 
