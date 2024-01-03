@@ -822,6 +822,8 @@ class ProfileDirectives:
         "bad_gps1",
         "bad_gps2",
         "bad_gps3",
+        "detect_vbd_bleed",
+        "detect_slow_apogee_flow",
     ]
 
     def __init__(self, mission_dir, dive_num, filename=None):
@@ -1264,8 +1266,12 @@ temp_qc_list = [
     "raw temperature noise spikes",
     "temperature spikes",
     "temperature noise spikes",
+    "legato temp inherit non-QC_GOOD",
+    "changed legato temp implies changed legato corrected temp",
 ]
 cond_qc_list = [
+    "conductivity spikes",
+    "raw conductivity spikes",
     "conductivity noise spikes",
     "raw conductivity noise spikes",
     "slow apogee CT flow",
@@ -1277,6 +1283,11 @@ cond_qc_list = [
     "TS bad extrapolation",
     "changed corrected temp implies changed corrected salinity",
     "changed corrected cond implies changed corrected salinity",
+    "changed corr legato temp implies changed corr legato salinity",
+    "changed corr legato temp implies changed corr legato conductivity",
+    "changed legato cond implies changed legato corrected cond",
+    "changed legato salinity implies changed legato corrected salinity",
+    "end of climb",
 ]
 skip_qc_list = [
     "changed corrected salin implies changed speed",
@@ -1284,6 +1295,7 @@ skip_qc_list = [
     "changed corrected temp implies changed speed",
     "changed temperature implies changed aa4831 oxygen",
     "changed salinity implies changed aa4831 oxygen",
+    "despiked pressure",
 ]
 
 

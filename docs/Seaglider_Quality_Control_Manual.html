@@ -403,6 +403,8 @@ function formatFootnotes(contID,noteID)
   <td class="right">Document new QC_high_freq_noise control variable.</td></tr>
 <tr><td class="left">04/21/2020</td>
   <td class="right">Reference FMS and update flight model discussion; document sbect_modes.</td></tr>
+<tr><td class="left">01/02/2023</td>
+  <td class="right">Added detect_vbd_bleed and detect_slow_apogee functions</td></tr>
 </table>
 <br>
 
@@ -1027,7 +1029,11 @@ thermocline.</span>. (False)</td></tr>
     <td class="right">Interpolate points where thermal-inertia corrections are suspect. (False)</td></tr>
 <tr><td class="left">bad_gps1|2|3</td>
     <td class="right">The first (1), second (2) or final (3) GPS fix for the profile is not trustworthy<span
-class="footnote">A <span class="quote">bad_gps3</span> directive on one profile should be paired with a <span class="quote">bad_gps1</span> directive on the subsequent profile. A <span class="quote">no_bad_gps</span><i>x</i> directive forces the system to trust GPS<i>x</i> for the specified profile(s).</span>. (False)</td></tr>
+    class="footnote">A <span class="quote">bad_gps3</span> directive on one profile should be paired with a <span class="quote">bad_gps1</span> directive on the subsequent profile. A <span class="quote">no_bad_gps</span><i>x</i> directive forces the system to trust GPS<i>x</i> for the specified profile(s).</span>. (False)</td></tr>
+    <tr><td class="left">detect_vbd_bleed</td>
+    <td class="right">detect vbd bleed and mark condutivity as bad. (False for Legato, True for all other CTDs)</td></tr>
+    <tr><td class="left">detect_slow_apogee</td>
+    <td class="right">detect slow flow through the CTD at apogee and mark condutivity as bad. (False for Legato, True for all other CTDs)</td></tr>
 </table>
 <br>
 

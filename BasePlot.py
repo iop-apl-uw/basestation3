@@ -174,6 +174,7 @@ def plot_mission(
             # if dive == None:
             #    fig_list, file_list = plot_func(base_opts, mission_str, generate_plots=generate_plots, dbcon=con)
             # else:
+
             #    fig_list, file_list = plot_func(
             #        base_opts, mission_str, dive=dive, generate_plots=generate_plots, dbcon=con
             #    )

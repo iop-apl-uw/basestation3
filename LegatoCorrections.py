@@ -38,7 +38,6 @@ import seawater
 import gsw
 
 from BaseLog import log_debug
-import Globals
 import QC
 
 
@@ -81,6 +80,8 @@ def legato_correct_ct(
     legato_temp_qc,
     legato_conduc,
     legato_conduc_qc,
+    legato_salin,
+    legato_salin_qc,
     legato_conductemp,
 ):
     """
@@ -126,12 +127,22 @@ def legato_correct_ct(
     # below.  Return vectors without _qc vector simply have NaNs for those points outside
     # the good working set
 
-    good_pts = np.logical_and(
-        legato_temp_qc == QC.QC_GOOD, legato_conduc_qc == QC.QC_GOOD
-    )
+    # good_pts = np.logical_and(
+    #    legato_temp_qc == QC.QC_GOOD, legato_conduc_qc == QC.QC_GOOD
+    # )
 
     # Check for any pressure points in the good working set that are nan
-    good_pts = np.logical_and(good_pts, np.logical_not(np.isnan(legato_press)))
+    # good_pts = np.logical_and(good_pts, np.logical_not(np.isnan(legato_press)))
+
+    # New strategy - let everything flow, only removing NaN points
+
+    good_pts = np.logical_and.reduce(
+        (
+            np.logical_not(np.isnan(legato_press)),
+            np.logical_not(np.isnan(legato_temp)),
+            np.logical_not(np.isnan(legato_conduc)),
+        )
+    )
 
     # interpolate to 1 Hz for corrections
     sample_rate = 1.0
@@ -236,39 +247,63 @@ def legato_correct_ct(
     )
 
     # Mark all non-good points as QC bad
-    corr_temperature_qc = QC.initialize_qc(len(legato_time))
-    QC.assert_qc(
-        QC.QC_BAD,
-        corr_temperature_qc,
-        np.squeeze(np.nonzero(np.logical_not(good_pts))),
-        "legato temp inherit non-QC_GOOD",
-    )
-    corr_salinity_qc = QC.initialize_qc(len(legato_time))
-    QC.inherit_qc(
-        corr_temperature_qc,
-        corr_salinity_qc,
-        "corr legato temp",
-        "corr legato salinity",
-    )
+    # corr_temperature_qc = QC.initialize_qc(len(legato_time))
+    # QC.assert_qc(
+    #     QC.QC_BAD,
+    #     corr_temperature_qc,
+    #     np.squeeze(np.nonzero(np.logical_not(good_pts))),
+    #     "legato temp inherit non-QC_GOOD",
+    # )
+    # corr_salinity_qc = QC.initialize_qc(len(legato_time))
+    # QC.inherit_qc(
+    #     corr_temperature_qc,
+    #     corr_salinity_qc,
+    #     "corr legato temp",
+    #     "corr legato salinity",
+    # )
     # QC.assert_qc(
     #     QC.QC_BAD,
     #     corr_salinity_qc,
     #     np.squeeze(np.nonzero(np.logical_not(good_pts))),
     #     "legato corrections",
     # )
-    corr_conductivity_qc = QC.initialize_qc(len(legato_time))
-    QC.inherit_qc(
-        corr_temperature_qc,
-        corr_conductivity_qc,
-        "corr legato temp",
-        "corr legato conductivity",
-    )
+    # corr_conductivity_qc = QC.initialize_qc(len(legato_time))
+    # QC.inherit_qc(
+    #     corr_temperature_qc,
+    #     corr_conductivity_qc,
+    #     "corr legato temp",
+    #     "corr legato conductivity",
+    # )
     # QC.assert_qc(
     #     QC.QC_BAD,
     #     corr_conductivity_qc,
     #     np.squeeze(np.nonzero(np.logical_not(good_pts))),
     #     "legato corrections",
     # )
+
+    corr_temperature_qc = QC.initialize_qc(len(legato_time))
+    QC.inherit_qc(
+        legato_temp_qc,
+        corr_temperature_qc,
+        "legato temp",
+        "legato corrected temp",
+    )
+
+    corr_conductivity_qc = QC.initialize_qc(len(legato_time))
+    QC.inherit_qc(
+        legato_conduc_qc,
+        corr_conductivity_qc,
+        "legato cond",
+        "legato corrected cond",
+    )
+
+    corr_salinity_qc = QC.initialize_qc(len(legato_time))
+    QC.inherit_qc(
+        legato_salin_qc,
+        corr_salinity_qc,
+        "legato salinity",
+        "legato corrected salinity",
+    )
 
     return (
         corr_pressure,

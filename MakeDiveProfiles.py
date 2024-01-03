@@ -2806,10 +2806,10 @@ def make_dive_profile(
     if dive_directives != "":
         results_d.update({"directives": dive_directives})
 
-    # TODO: Add new rules for legato
+    sg_ct_type = calib_consts["sg_ct_type"]
 
     # now add the default rules
-    for default_directive in [
+    default_directives = [
         "* no_interp_gc_temperatures",
         "* correct_thermal_inertia_effects",
         "* no_interp_suspect_thermal_inertia_salinities",
@@ -2820,7 +2820,14 @@ def make_dive_profile(
         "* interp_conductivity cond_QC_INTERPOLATED",
         "* bad_salinity salin_QC_BAD",
         "* interp_salinity salin_QC_INTERPOLATED",
-    ]:
+    ]
+
+    if sg_ct_type == 4:
+        default_directives += ["* no_detect_vbd_bleed", "* no_detect_slow_apogee_flow"]
+    else:
+        default_directives += ["* during_vbd_bleed", "* detect_slow_apogee_flow"]
+
+    for default_directive in default_directives:
         directives.parse_string(default_directive)
 
     def eval_directive(function, report=True):
@@ -2843,6 +2850,12 @@ def make_dive_profile(
     directives.interp_suspect_thermal_inertia_salinities = (
         interpolate_extreme_tmc_points
     ) = eval_directive("interp_suspect_thermal_inertia_salinities")
+
+    directives.detect_vbd_bleed = detect_vbb_bleed = eval_directive("detect_vbd_bleed")
+    directives.detect_slow_apogee_flow = detect_slow_apogee_flow = eval_directive(
+        "detect_slow_apogee_flow"
+    )
+
     # RBR TODO - Reset these based on the sb_ct_type
 
     # Don't use True and False here -- written to nc file as integers
@@ -3719,7 +3732,6 @@ def make_dive_profile(
         )  # [m]
 
         ctd_ancillary_variables = ""
-        sg_ct_type = calib_consts["sg_ct_type"]
 
         log_info("ct_type:%s" % sb_ct_type_map[sg_ct_type])
         # Not checking every combination, but catch a common case in the
@@ -5109,12 +5121,13 @@ def make_dive_profile(
                     last_i = break_i  # move along
 
         # TODO - Need a unified check here for this correction for legato
-        QC.assert_qc(
-            QC.QC_BAD,
-            cond_cor_qc_v,
-            slow_apogee_climb_pump_i_v,
-            "slow apogee CT flow",
-        )
+        if detect_slow_apogee_flow:
+            QC.assert_qc(
+                QC.QC_BAD,
+                cond_cor_qc_v,
+                slow_apogee_climb_pump_i_v,
+                "slow apogee CT flow",
+            )
         # DEAD apogee_climb_pump_i_v = None # done with this intermediate (but not slow_apogee_climb_pump_i_v)
 
         # look for points where we might have been stuck on the bottom
@@ -5297,12 +5310,13 @@ def make_dive_profile(
         #         bleed_start_i = before_bleed_start_i[-1] + 1
         #     bleed_start_i = min(bleed_start_i, dive_start_i)
 
-        QC.assert_qc(
-            QC.QC_BAD,
-            cond_cor_qc_v,
-            list(range(bleed_start_i, dive_start_i)),
-            "during VBD bleed",
-        )  # mark bad up to but not including dive_start_i
+        if detect_vbd_bleed:
+            QC.assert_qc(
+                QC.QC_BAD,
+                cond_cor_qc_v,
+                list(range(bleed_start_i, dive_start_i)),
+                "during VBD bleed",
+            )  # mark bad up to but not including dive_start_i
         # Now truth to tell we could have a slow bleed and reach D_FLARE before the bleed is complete (taking two GC cycles)
         # So strictly we are accelerating during this second GC as well but we ignore it.
 
@@ -5765,6 +5779,8 @@ def make_dive_profile(
                 temp_cor_qc_v,
                 cond_cor_v,
                 cond_cor_qc_v,
+                salin_cor_v,
+                salin_cor_qc_v,
                 ctd_condtemp_v,
             )
             # CONDSIDER: Add corr_salinity_lag_only, corr_conductivity and corr_pressure to netcdf file
