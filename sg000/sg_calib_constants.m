@@ -58,7 +58,12 @@ mass = 52.173; % (kg) scale weight
 %PARAM legato_sealevel = 10082.0; % Where this is sealevel presure setting.
 
 % Set to 1 to use the Seaglider pressure sensor for CTD corrections
-%PARAM legato_use_truck_pressure = 0; 
+%PARAM legato_use_truck_pressure = 0;
+
+% Set to 0 to disable the basestation conductivity pressure correction, in favor of the on in the instrument
+% On board correction is applied when X2, X3 and X4 are non-zero (see metadata capture from a selftest)
+% See RBR document "0013279revA Conductivity pressure correction for RBRlegato3 with RBR#0007155 top.pdf"
+%PARAM legato_cond_press_correction = 1;
 
 % For Kongsberg/HII gliders with legato as a logdev device
 %PARAM legato_config=191;
