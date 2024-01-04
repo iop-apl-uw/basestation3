@@ -373,6 +373,7 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
                 "legato_tau": 10.0,
                 "legato_ctcoeff": 0.0,
                 "legato_use_truck_pressure": 0,
+                "legato_cond_press_correction": 1,
             }
         )
     elif sbect_unpumped:
@@ -2851,7 +2852,7 @@ def make_dive_profile(
         interpolate_extreme_tmc_points
     ) = eval_directive("interp_suspect_thermal_inertia_salinities")
 
-    directives.detect_vbd_bleed = detect_vbb_bleed = eval_directive("detect_vbd_bleed")
+    directives.detect_vbd_bleed = detect_vbd_bleed = eval_directive("detect_vbd_bleed")
     directives.detect_slow_apogee_flow = detect_slow_apogee_flow = eval_directive(
         "detect_slow_apogee_flow"
     )

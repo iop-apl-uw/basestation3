@@ -37,7 +37,7 @@ import scipy.interpolate
 import seawater
 import gsw
 
-from BaseLog import log_debug
+from BaseLog import log_debug, log_info
 import QC
 
 
@@ -94,6 +94,8 @@ def legato_correct_ct(
         legato_temp_qc - QC vector for temperature
         legato_conduc - conductivity from the legato instrument
         legato_cond_qc - QC vector for cond
+        legato_salin - salinity derived from the legato instrument (currently unused)
+        legato_salin_qc - QC vector for salinity
         legato_conductemp - conductivity temp from the legato instrument
     Returns:
         corr_pressure - smoothed pressure signal used in the corrections
@@ -115,11 +117,14 @@ def legato_correct_ct(
     ctcoeff = float(sg_calib_consts_d["legato_ctcoeff"])
     tau = float(sg_calib_consts_d["legato_tau"])
     alpha = sg_calib_consts_d["legato_alpha"]
+    f_legato_cond_press_correction = sg_calib_consts_d["legato_cond_press_correction"]
     log_debug("Legato correction values")
     log_debug(f"time_lag:{time_lag:.2f} secs")
     log_debug(f"alpha:{alpha:.2f}")
     log_debug(f"tau:{tau:.2f}")
     log_debug(f"ctcoeef:{ctcoeff:.2f}")
+
+    # Previous QC approach
 
     # Incoming QC for cond is generally a superset of temp with respect to non-good
     # points.  The approach here is fairly simple - consider "good working set" to be
@@ -134,7 +139,11 @@ def legato_correct_ct(
     # Check for any pressure points in the good working set that are nan
     # good_pts = np.logical_and(good_pts, np.logical_not(np.isnan(legato_press)))
 
-    # New strategy - let everything flow, only removing NaN points
+    # New QC approach
+
+    # Legato data has been through the QC process and points annotated with
+    # QC adjustments, so flow the QC through - only removing NaN points (if any) for
+    # the calculations
 
     good_pts = np.logical_and.reduce(
         (
@@ -191,11 +200,10 @@ def legato_correct_ct(
     p2 = p2[NN // 2 : NN // 2 + len(p1)]
 
     # Correction of conductivity due to pressure (fit relative to sg180 Guam 2019)
-    # TODO: Still needs verification from RBR on correctness
-    # Looks odd - Luc worked out slope/int for native Legato conductivity - a factor of 10 off
-    # from the SI units
-    Pcorrection = np.array([3.3058e-05, 0.0488])
-    c1 = ((c1 * 10.0) - (Pcorrection[0] * p2 + Pcorrection[1])) / 10.0
+    if f_legato_cond_press_correction:
+        log_info("Applying conductivity correction for pressure")
+        Pcorrection = np.array([3.3058e-05, 0.0488])
+        c1 = ((c1 * 10.0) - (Pcorrection[0] * p2 + Pcorrection[1])) / 10.0
 
     # Morison et al, 1994; Lueck and Picklo,
     fn = 1.0 / sample_rate / 2.0
@@ -246,7 +254,7 @@ def legato_correct_ct(
         reg_time, S_lag_only, legato_time[good_pts], extend=True
     )
 
-    # Mark all non-good points as QC bad
+    # Old QC approach - Mark all non-good points as QC bad
     # corr_temperature_qc = QC.initialize_qc(len(legato_time))
     # QC.assert_qc(
     #     QC.QC_BAD,
@@ -281,6 +289,9 @@ def legato_correct_ct(
     #     "legato corrections",
     # )
 
+    # New QC approch - apply the raw QC to the final QC.
+    # If we needed to add additional QC as part of the correction, that
+    # would get merged in here.
     corr_temperature_qc = QC.initialize_qc(len(legato_time))
     QC.inherit_qc(
         legato_temp_qc,

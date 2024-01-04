@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -82,16 +82,12 @@ def nc_ISO8601_date(epoch_time):
 
 
 # These functions compare date strings for mergers
-def nc_earliest_date(
-    global_name, master_value, slave_value
-):  # pylint: disable=unused-argument
+def nc_earliest_date(global_name, master_value, slave_value):  # pylint: disable=unused-argument
     """Returns ealiest date"""
     return master_value if master_value <= slave_value else slave_value
 
 
-def nc_latest_date(
-    global_name, master_value, slave_value
-):  # pylint: disable=unused-argument
+def nc_latest_date(global_name, master_value, slave_value):  # pylint: disable=unused-argument
     """Returns ealiest date"""
     return master_value if master_value > slave_value else slave_value
 
@@ -106,9 +102,7 @@ def nc_stet(global_name, master_value, slave_value):  # pylint: disable=unused-a
     return master_value
 
 
-def nc_identical(
-    global_name, master_value, slave_value
-):  # pylint: disable=unused-argument
+def nc_identical(global_name, master_value, slave_value):  # pylint: disable=unused-argument
     if master_value != slave_value:
         log_warning(
             "NC global values for %s don't match during merge ('%s' vs. '%s') -- using '%s'"
@@ -117,9 +111,7 @@ def nc_identical(
     return nc_stet(global_name, master_value, slave_value)
 
 
-def nc_remove(
-    global_name, master_value, slave_value
-):  # pylint: disable=unused-argument
+def nc_remove(global_name, master_value, slave_value):  # pylint: disable=unused-argument
     return None  # signal to delete the entry from globals
 
 
@@ -645,9 +637,7 @@ nc_ctd_time_var = "ctd_time"
 nc_mdp_data_info = {}  # info -> dim_name or None
 nc_mdp_time_vars = {}  # registered dim_name -> time_var
 nc_mdp_instrument_vars = {}  # dim_info to instrument variable
-nc_mdp_mmt_vars = (
-    {}
-)  # registered dim_name -> constructed var to hold dive numbers in MMT
+nc_mdp_mmt_vars = {}  # registered dim_name -> constructed var to hold dive numbers in MMT
 nc_data_infos = []  # registered infos with time_vars
 # TODO add keywords for data types as well so we can compose keywords globals
 nc_instrument_to_data_kind = {}  # e.g., sbe41 => 'physical', etc.
@@ -1561,6 +1551,22 @@ nc_var_metadata = {
         False,
         "d",
         {"description": ""},
+        nc_scalar,
+    ],
+    "sg_cal_legato_use_truck_pressure": [
+        False,
+        "d",
+        {
+            "description": "Use the seaglider's pressure trace for ctd corrections (non-zero). Use the legato's pressure trace for ctd corrections (zero)."
+        },
+        nc_scalar,
+    ],
+    "sg_cal_legato_cond_press_correction": [
+        False,
+        "d",
+        {
+            "description": "Early legato units required a conductivity correction based on pressure (non-zero).  Later units do this onboard (zero)."
+        },
         nc_scalar,
     ],
     # log file header values
