@@ -1262,6 +1262,7 @@ def qc_log_list_from_history(nci):
 
 # These classification lists tailor to the ctd correction plot
 temp_qc_list = [
+    "stalls avoid thermal-inertia salinity correction",
     "raw temperature spikes",
     "raw temperature noise spikes",
     "temperature spikes",
@@ -1270,6 +1271,7 @@ temp_qc_list = [
     "changed legato temp implies changed legato corrected temp",
 ]
 cond_qc_list = [
+    "stalls avoid thermal-inertia salinity correction",
     "conductivity spikes",
     "raw conductivity spikes",
     "conductivity noise spikes",
