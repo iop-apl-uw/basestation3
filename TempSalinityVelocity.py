@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -260,9 +260,7 @@ def filter_unsteady(
             time_fine_s_v, w_stdy_fine_filt_v, r_elapsed_time_s_v
         )  # decimate
         # re-estimate speed and angle
-        hdm_speed_unsteady_cm_s_v = np.sqrt(
-            hspd_unstdy_v**2 + w_unstdy_v**2
-        )  # [cm/s]
+        hdm_speed_unsteady_cm_s_v = np.sqrt(hspd_unstdy_v**2 + w_unstdy_v**2)  # [cm/s]
         hdm_glide_angle_unsteady_deg_v = np.degrees(
             np.arctan2(w_unstdy_v, hspd_unstdy_v)
         )  # deg
@@ -1561,7 +1559,7 @@ def TSV_iterative(
             "TS bad extrapolation",
         )
 
-    if sbect_unpumped:
+    if sbect_unpumped and sb_ct_type != 4:
         QC.assert_qc(
             QC.QC_PROBABLY_BAD,
             salin_cor_qc_v,
