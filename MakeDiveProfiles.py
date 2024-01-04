@@ -2826,7 +2826,7 @@ def make_dive_profile(
     if sg_ct_type == 4:
         default_directives += ["* no_detect_vbd_bleed", "* no_detect_slow_apogee_flow"]
     else:
-        default_directives += ["* during_vbd_bleed", "* detect_slow_apogee_flow"]
+        default_directives += ["* detect_vbd_bleed", "* detect_slow_apogee_flow"]
 
     for default_directive in default_directives:
         directives.parse_string(default_directive)
