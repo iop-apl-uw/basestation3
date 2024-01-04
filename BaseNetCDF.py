@@ -1522,6 +1522,14 @@ nc_var_metadata = {
         {"description": "Whether to use aux compass sensor data"},
         nc_scalar,
     ],
+    "sg_cal_use_adcppressure": [
+        False,
+        "i",
+        {
+            "description": "Whether to use the adcp pressure sensor over the truck pressure"
+        },
+        nc_scalar,
+    ],
     "sg_cal_sbe_cond_freq_C0": [
         False,
         "d",
