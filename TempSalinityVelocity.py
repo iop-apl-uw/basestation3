@@ -1569,7 +1569,7 @@ def TSV_iterative(
 
     final_glide_angle_rad_v = np.radians(final_glide_angle_deg_v)
 
-    if ~interpolate_extreme_tmc_points and len(interp_ts_i_v):
+    if not interpolate_extreme_tmc_points and len(interp_ts_i_v):
         diff_interp_ts_i_v = np.diff(interp_ts_i_v)
         breaks_i_v = [
             i for i in range(len(diff_interp_ts_i_v)) if diff_interp_ts_i_v[i] > 1
