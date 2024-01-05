@@ -2842,6 +2842,9 @@ def make_dive_profile(
     directives.correct_thermal_inertia_effects = (
         perform_thermal_inertia_correction
     ) = eval_directive("correct_thermal_inertia_effects")
+    # For the legato, this correction is never the correct choice
+    if sg_ct_type == 4:
+        perform_thermal_inertia_correction = False
     directives.detect_conductivity_anomalies = (
         perform_cond_anomaly_check
     ) = eval_directive("detect_conductivity_anomalies")
@@ -3755,7 +3758,6 @@ def make_dive_profile(
 
         if sg_ct_type == 4:
             ## UnPumped RBR Legato data ##
-            perform_thermal_inertia_correction = False
             if set(
                 ("legato_pressure", "legato_temp", "legato_conduc", "legato_time")
             ) <= set(results_d):
