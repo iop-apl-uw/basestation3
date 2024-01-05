@@ -52,6 +52,13 @@ import QC
 from BaseLog import log_error, log_warning
 from Plotting import plotdivesingle
 
+# Experimental option - show the QC for the raw temp and salinity
+# This seems more confusing then useful as the start of this QC vector is
+# written out early in the QC process, but after some initial QC work has been done.
+#
+# Leave code turned off for now
+f_add_raw_qc = False
+
 
 @plotdivesingle
 def plot_ctd_corrections(
@@ -112,6 +119,18 @@ def plot_ctd_corrections(
             ctd_type = "Seabird"
         else:
             return ([], [])
+        if f_add_raw_qc:
+            raw_temperature_qc_strs = QC.qc_to_str(
+                QC.decode_qc(dive_nc_file.variables["temperature_raw_qc"][:]),
+                add_str="<br>",
+            )
+            raw_salinity_qc_strs = QC.qc_to_str(
+                QC.decode_qc(dive_nc_file.variables["salinity_raw_qc"][:]),
+                add_str="<br>",
+            )
+        else:
+            raw_temperature_qc_strs = ["" for x in range(ctd_raw_temp.size)]
+            raw_salinity_qc_strs = ["" for x in range(ctd_raw_cond.size)]
     except Exception:
         log_error("Could not load ctd data", "exc")
         return ([], [])
@@ -134,9 +153,7 @@ def plot_ctd_corrections(
     )
 
     point_num = np.arange(0, ctd_raw_temp.size)
-    # These are split into salinity and temp.  At the moment,
-    # they are identical, but could change if the commented out code
-    # in QC.py is added back
+    # These are split into salinity and temp.
     cust_hv_txt = ["", ""]
     cust_data = [None, None]
     qc_pts = [None, None]
@@ -145,20 +162,32 @@ def plot_ctd_corrections(
             qc_list, qc_pts[jj] = QC.qc_list_to_points_list(
                 qc_data, ctd_raw_temp.size, bool(jj)
             )
-            tmp_list = [np.transpose(point_num)]
+            tmp_list = [
+                np.transpose(point_num),
+                np.transpose(raw_salinity_qc_strs if jj else raw_temperature_qc_strs),
+            ]
             for ii in range(len(qc_list)):
                 tmp_list.append(np.transpose(qc_list[ii]))
-                cust_hv_txt[jj] = f"{cust_hv_txt[jj]}%{{customdata[{ii+1}]}}"
+                cust_hv_txt[jj] = f"{cust_hv_txt[jj]}%{{customdata[{ii+2}]}}"
             cust_data[jj] = np.dstack((tmp_list))
     else:
         for jj in range(2):
-            cust_data[jj] = np.dstack((np.transpose(point_num)))
+            cust_data[jj] = np.dstack(
+                (
+                    np.transpose(point_num),
+                    np.transpose(
+                        np.transpose(
+                            raw_salinity_qc_strs if jj else raw_temperature_qc_strs
+                        ),
+                    ),
+                )
+            )
 
     try:
         corr_temperature = dive_nc_file.variables["temperature"][:]
         corr_temperature_qc = QC.decode_qc(dive_nc_file.variables["temperature_qc"][:])
         corr_temperature_qc_strs = QC.qc_to_str(corr_temperature_qc)
-        # Dislay all points in plot - keep this mechanism in case we need to revert
+        # Display all points in plot - keep this mechanism in case we need to revert
         # temperature_good_i = QC.find_qc(corr_temperature_qc, QC.only_good_qc_values)
         temperature_good_i = np.arange(0, corr_temperature.size)
         corr_salinity = dive_nc_file.variables["salinity"][:]
@@ -247,7 +276,7 @@ def plot_ctd_corrections(
                 "size": 3,
                 "color": "DarkBlue",
             },
-            "hovertemplate": f"Raw Salin<br>%{{x:.2f}} min<br>%{{y:.2f}} PSU<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[1]}<extra></extra>",
+            "hovertemplate": f"Raw Salin<br>%{{x:.2f}} min<br>%{{y:.2f}} PSU<br>%{{customdata[0]:d}} point_num<br>%{{customdata[1]}}{cust_hv_txt[1]}<extra></extra>",
         }
     )
 
@@ -279,7 +308,7 @@ def plot_ctd_corrections(
             "mode": "lines+markers",
             "line": {"width": 1},
             "marker": {"symbol": "cross", "size": 3, "color": "DarkMagenta"},
-            "hovertemplate": f"Raw Temp<br>%{{x:.2f}} min<br>%{{y:.3f}} C<br>%{{customdata[0]:d}} point_num<br>{cust_hv_txt[0]}<extra></extra>",
+            "hovertemplate": f"Raw Temp<br>%{{x:.2f}} min<br>%{{y:.3f}} C<br>%{{customdata[0]:d}} point_num<br>%{{customdata[1]}}{cust_hv_txt[0]}<extra></extra>",
         }
     )
 

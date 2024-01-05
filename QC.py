@@ -1337,8 +1337,8 @@ def qc_list_to_points_list(qc_log_list, max_points, is_temp):
     return ret_list, qc_pts
 
 
-def qc_to_str(qc_var):
+def qc_to_str(qc_var, add_str=None):
     ret_list = []
     for ii in range(qc_var.size):
-        ret_list.append(qc_name_d[qc_var[ii]])
+        ret_list.append(f"{qc_name_d[qc_var[ii]]}{add_str if add_str else ''}")
     return ret_list
