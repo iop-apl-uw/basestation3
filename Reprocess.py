@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -110,7 +110,7 @@ def main():
     if base_opts.nice:
         try:
             os.nice(base_opts.nice)
-        except:
+        except Exception:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     ret_val = 0
@@ -136,7 +136,7 @@ def main():
         glob_expr = (
             "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].log",
             "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].eng",
-            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc"
+            "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc",
             # "p[0-9][0-9][0-9][0-9][0-9][0-9][0-9].nc.gz"
         )
         for g in glob_expr:
@@ -194,7 +194,7 @@ def main():
 
     try:
         instrument_id = int(calib_consts["id_str"])
-    except:
+    except Exception:
         # base_opts always supplies a default (0)
         instrument_id = int(base_opts.instrument_id)
     else:
@@ -232,7 +232,7 @@ def main():
             log_info(f"Backing up {flight_dir} to {flight_dir_backup}")
             try:
                 shutil.move(flight_dir, flight_dir_backup)
-            except:
+            except Exception:
                 log_error(
                     "Failed to move %s to %s - profiles will use existing flight model data"
                     % (flight_dir, flight_dir_backup),
@@ -282,7 +282,7 @@ def main():
             log_info("Interrupted by user - bailing out")
             ret_val = 1
             break
-        except:
+        except Exception:
             log_error("Error processing dive %d - skipping" % dive_num, "exc")
             temp_ret_val = 1
 
@@ -320,7 +320,7 @@ def main():
                 nc_files_created = []
                 try:
                     FlightModel.main(base_opts, sg_calib_file_name, nc_files_created)
-                except:
+                except Exception:
                     log_error("Flight model failed", "exc")
                     if DEBUG_PDB:
                         _, _, tb = sys.exc_info()

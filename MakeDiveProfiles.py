@@ -1642,7 +1642,7 @@ def load_dive_profile_data(
                     dive_nc_file = Utils.open_netcdf_file(nc_dive_file_name, "r")
                     try:
                         version = getattr(dive_nc_file, "file_version")
-                    except:
+                    except Exception:
                         version = 1.0
                     if isinstance(version, bytes):
                         version = version.decode("utf-8")
@@ -1677,7 +1677,7 @@ def load_dive_profile_data(
                         status = 2  # requires update
                     else:
                         status = 1  # looks up-to-date
-                except:  # can't open file
+                except Exception:  # can't open file
                     log_error("Unable to open %s" % nc_dive_file_name, "exc")
                     nc_file_parsable = False
                     ncf_file_exists = False
@@ -1708,7 +1708,7 @@ def load_dive_profile_data(
                     ):  # see comment in BaseNetCDF.py about dir(dive_nc_file):
                         try:
                             globals_d[global_var] = getattr(dive_nc_file, global_var)
-                        except:
+                        except Exception:
                             pass  # optional variable
                         else:
                             if isinstance(globals_d[global_var], bytes):
@@ -1876,7 +1876,7 @@ def load_dive_profile_data(
                                                     nc_data_type,
                                                 )
                                             )
-                                        except:
+                                        except Exception:
                                             log_error(
                                                 "Failed to convert %s from string '%s' to type '%s'"
                                                 % (
@@ -1913,7 +1913,7 @@ def load_dive_profile_data(
                                                 "Converted %s from type '%s' to a string"
                                                 % (dive_nc_varname, nc_typecode)
                                             )
-                                        except:
+                                        except Exception:
                                             log_error(
                                                 "Failed to convert %s from %g to a string"
                                                 % (
@@ -2065,7 +2065,7 @@ def load_dive_profile_data(
                                 instruments_d[dive_nc_varname] = getattr(
                                     nc_var, "instrument"
                                 ).decode("utf-8")
-                            except:
+                            except Exception:
                                 pass
 
                         else:
@@ -2095,7 +2095,7 @@ def load_dive_profile_data(
                                     instruments_d[dive_nc_varname] = getattr(
                                         nc_var, "instrument"
                                     ).decode("utf-8")
-                                except:
+                                except Exception:
                                     pass
 
                     dive_nc_file.close()
@@ -2269,7 +2269,7 @@ def load_dive_profile_data(
                     eng_data, nc_data = eng_file_reader(
                         file_names, nc_info_d, calib_consts
                     )
-                except:
+                except Exception:
                     log_error(
                         "Could not process %s - not including in the profile"
                         % file_type,
@@ -2316,7 +2316,7 @@ def load_dive_profile_data(
                                 (values, _) = QC.ensure_increasing_time(
                                     values, var_name, eng_file_start_time
                                 )
-                            except:
+                            except Exception:
                                 log_error("Could not process %s" % var_name, "exc")
                                 continue
                         if mdp_dim_info:
@@ -2358,7 +2358,7 @@ def load_dive_profile_data(
     except RuntimeError as exception:
         log_error(exception.args[0], "exc")
         return (0, None, None, None, None, None, None, None, None)
-    except:
+    except Exception:
         # Typically because a reader died
         # Seen when reading old-style nc files where the format of a variable has changed from version to version
         log_critical("Exception when reading data files: %s" % sys.exc_info()[0])
@@ -2657,7 +2657,7 @@ def make_dive_profile(
                 auxCompass_pressure_v = (
                     (auxPress_counts_v * aux_pressure_slope) + aux_pressure_offset
                 ) * dbar_per_psi
-            except:
+            except Exception:
                 log_error("Could not create auxB_pressure", "exc")
         else:
             # Look for pressure field in auxCompass header
@@ -2670,7 +2670,7 @@ def make_dive_profile(
                     ][:].split()
                     aux_pressure_slope = float(aux_pressure_slope)
                     aux_pressure_offset = float(aux_pressure_offset)
-                except:
+                except Exception:
                     log_error(
                         "Poorly formed auxCompass_pressure - not using auxCompassor auxPressure data",
                         "exc",
@@ -3155,7 +3155,7 @@ def make_dive_profile(
         # Fetch dflare and dsurf for bubble calculations below
         try:
             dflare = log_f.data["$D_FLARE"]  # [m]
-        except:
+        except Exception:
             dflare = 3  # meters
             log_warning("$D_FLARE missing from log; assuming %d meters" % dflare)
 
@@ -3278,7 +3278,7 @@ def make_dive_profile(
                             "exc",
                         )
                         raise
-                except:
+                except Exception:
                     pass
                 else:
                     pitch_ctl = eng_f.get_col("pitchCtl")
@@ -6854,7 +6854,7 @@ def make_dive_profile(
                     "gsw_sigma4": sigma_theta4_v,
                 }
             )
-        except:
+        except Exception:
             log_warning("Failed to calc TEOS-10 variables", "exc")
 
         ## Correct other instruments after we know salinity, etc.
@@ -6937,7 +6937,7 @@ def make_dive_profile(
         # Create the dive file
         try:
             nc_dive_file = Utils.open_netcdf_file(nc_dive_file_name, "w")
-        except:
+        except Exception:
             log_error("Unable to open %s for writing" % nc_dive_file_name, "exc")
             return (1, None)
 
@@ -6954,7 +6954,7 @@ def make_dive_profile(
                 nc_dim_name
             ):  # any registered?  normally only data infos are but see ctd_results_info
                 if (
-                    nc_dim_name in nc_info_d and not nc_dim_name in created_dims
+                    nc_dim_name in nc_info_d and nc_dim_name not in created_dims
                 ):  # do we have a size? which implies we have that data (and possibly results)
                     log_debug(
                         "Creating dimension %s (%s)"
@@ -7365,7 +7365,7 @@ def make_dive_profile(
             if os.path.exists(nc_dive_file_name_gz):
                 try:
                     os.remove(nc_dive_file_name_gz)
-                except:
+                except Exception:
                     log_error("Couldn't remove %s" % nc_dive_file_name_gz)
 
     return (processing_error, nc_dive_file_name)
@@ -7425,7 +7425,7 @@ def main():
     if base_opts.nice:
         try:
             os.nice(base_opts.nice)
-        except:
+        except Exception:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     ret_val = 0
@@ -7489,7 +7489,7 @@ def main():
 
     try:
         instrument_id = int(calib_consts["id_str"])
-    except:
+    except Exception:
         # base_opts always supplies a default (0)
         instrument_id = int(base_opts.instrument_id)
     if instrument_id == 0:
@@ -7558,7 +7558,7 @@ def main():
             log_info("Interrupted by user - bailing out")
             ret_val = 1
             break
-        except:
+        except Exception:
             if DEBUG_PDB:
                 _, _, tb = sys.exc_info()
                 traceback.print_exc()
