@@ -1157,7 +1157,7 @@ def make_netcdf_network_file_from_perdive(ncf_filename, ts_outputfile=False):
         ):
             if log_var_name not in dsi.variables:
                 continue
-            if dsi[log_var_name].data.dtype.type is np.string_:
+            if dsi[log_var_name].data.dtype.type is np.bytes_:
                 data = np.array(
                     dsi[log_var_name].data.tobytes().decode().split(","),
                     np.float32,

@@ -411,17 +411,17 @@ def TSV_iterative(
     )
     uncorrectable_i_v = Utils.union(uncorrectable_i_v, bad_speed_i_v)
 
-    salin_cor_v[uncorrectable_i_v] = np.NaN
+    salin_cor_v[uncorrectable_i_v] = np.nan
     TraceArray.trace_array(
         "uncorrectable_i", np.array(uncorrectable_i_v) + 1
     )  # +1 for matlab
     salin_init_cor_qc_v = salin_cor_qc_v  # RESET!!  we want to restart from this state
 
     valid_i_v = Utils.setdiff(full_i_v, uncorrectable_i_v)
-    salin_cor_v[uncorrectable_i_v] = np.NaN  # set once...
+    salin_cor_v[uncorrectable_i_v] = np.nan  # set once...
     # We will mark these as QC_BAD in caller
-    final_speed_cm_s_v[uncorrectable_i_v] = np.NaN
-    final_glide_angle_deg_v[uncorrectable_i_v] = np.NaN
+    final_speed_cm_s_v[uncorrectable_i_v] = np.nan
+    final_glide_angle_deg_v[uncorrectable_i_v] = np.nan
 
     # initialize for reduction below
     # actually this is from our GSM guess so this has been done and all stalls are set to 0 but just to be sure...
