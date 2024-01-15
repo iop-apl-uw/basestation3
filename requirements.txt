@@ -3,7 +3,7 @@ kaleido>=0.2.1; platform_machine != 'armv7l'
 brotlipy
 matplotlib>=3.6.0
 cmocean
-numpy>=1.19.1
+numpy>=1.19.1,<2
 #gsw==3.3.1
 gsw==3.6.16
 seawater==3.3.4
