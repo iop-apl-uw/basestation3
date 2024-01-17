@@ -1,7 +1,7 @@
 # /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -422,7 +422,8 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     [v10, ah10] = list(
         map(float, extractStr(nci.variables["log_10V_AH"]).split(","))
     )
-    
+
+    # RevF has no log_24V_AH
     if 'log_24V_AH' in nci.variables:
         [v24, ah24] = list(
             map(float, extractStr(nci.variables["log_24V_AH"]).split(","))
@@ -522,9 +523,9 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
         else:
             batt_ah_used_10V = ah10 - data[1]
-            batt_ah_used_24V = ah24 - data[0]
+            batt_ah_used_24V = (ah24 if ah24 else ah10)  - data[0]
             batt_kJ_used_10V = batt_ah_used_10V * v10 * 3600.0 / 1000.0
-            batt_kJ_used_24V = batt_ah_used_24V * v10 * 3600.0 / 1000.0
+            batt_kJ_used_24V = batt_ah_used_24V * (v24 if v24 else v10) * 3600.0 / 1000.0
 
     insertColumn(dive, cur, "batt_ah_used_10V", batt_ah_used_10V, "FLOAT")
     insertColumn(dive, cur, "batt_ah_used_24V", batt_ah_used_24V, "FLOAT")
@@ -573,7 +574,8 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
                 - nci.variables["log_FG_AHR_24V"].getValue()
             )
             insertColumn(dive, cur, "fg_ah_used_24V", fg_24V_AH, "FLOAT")
-            fg_24V_kJ = fg_24V_AH * v24 * 3600.0 / 1000.0
+            
+            fg_24V_kJ = fg_24V_AH * (v24 if v24 else v10) * 3600.0 / 1000.0
             insertColumn(dive, cur, "fg_kJ_used_24V", fg_24V_kJ, "FLOAT")
             insertColumn(dive, cur, "fg_batt_capacity_24V", fg_avail24, "FLOAT")
 
