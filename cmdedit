@@ -75,9 +75,9 @@ available options:
 progname = basename(sys.argv[0])
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hiqaf:d:u:")
+    opts, args = getopt.getopt(sys.argv[1:], "hiqaf:d:u:g:")
 except getopt.GetoptError:
-    print(f"usage: {progname} [-f file] [-q] [-i] [-d directory]")
+    print(f"usage: {progname} [-f file] [-q] [-i] [-d directory] [-g gliderID]")
     sys.exit(1)
 
 interactive = True
@@ -87,6 +87,7 @@ validator = f"{sys.path[0]}/validate"
 always_validate = False
 ignore_errors = False
 username = None
+glider = -1
 
 for o, a in opts:
     if o == "-h":
@@ -104,6 +105,8 @@ for o, a in opts:
         wd = a
     elif o == "-u":
         username = a
+    elif o == "-g":
+        glider = a
 
 if input_file == "-" and interactive:
     print("cannot run interactively with input from stdin, must use -q with -f -")
@@ -113,7 +116,17 @@ if input_file == "" and not interactive:
     print("cannot run quietly with no input file specified, must use -f with -q")
     sys.exit(1)
 
-glider = basename(wd)[2:]
+if glider == -1:
+    i = wd.find('sg')
+    if i == -1:
+        print("cannot determine glider ID")
+        sys.exit(1)
+
+    try:
+        glider = wd[i+2:i+5]
+    except:
+        print("cannot determine glider ID")
+        sys.exit(1)
 
 # Get the full path of the control file and check for write permission.
 # If it already exists I can check if I have write permission.
