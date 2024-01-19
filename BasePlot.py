@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -98,6 +98,7 @@ def plot_dives(
         con = dbcon
 
     for dive_nc_file_name in dive_nc_file_names:
+        log_info(f"Plotting {dive_nc_file_name}")
         dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
         for plot_name, plot_func in dive_plot_dict.items():
             log_debug(f"Trying Dive Plot :{plot_name}")
