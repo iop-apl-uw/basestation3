@@ -117,7 +117,7 @@ for raw_line in proc.stdout:
         print("</pre>")
         insideDir = False
 
-    if insideParam and line.find('not between') == -1 and line.find('skipping') == -1 and line.find('canon') == -1: 
+    if insideParam and line.find('not between') == -1 and line.find('skipping') == -1 and line.find('canon') == -1 and line.find('[inf]') == -1 and line.find('[unknown]') == -1: 
         if len(line) > 2:
             insideParam = False
             print("</table>")
@@ -240,6 +240,19 @@ for raw_line in proc.stdout:
             print("<td>%s</td>" % parts[1].split(',')[1])
             print("<td>%s</td>" % parts[4])
             print("<td>%s</td>" % parts[6])
+            print("</tr>")
+            trow = trow + 1
+        elif line.find('[unknown]') > -1:
+            pass 
+        elif line.find('[inf]') > -1:
+            format(line)
+            print('<tr style="background-color:%s;">' % rcolors[trow % 2])
+            parts = line.split(' ')
+            
+            print('<td>%s</td>' % parts[0])
+            print('<td><a href="../parms#%s">%s</a> &nbsp;</td>' % (parts[1].split(',')[0][1:], parts[1].split(',')[0]))
+            print("<td>%s</td>" % parts[1].split(',')[1])
+            print("<td colspan=2>%s</td>" % ' '.join(parts[2:]))
             print("</tr>")
             trow = trow + 1
         else:

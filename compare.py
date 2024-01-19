@@ -69,6 +69,7 @@ except:
 canonmin = {}
 canonmax = {}
 canonopt = {}
+canonvars = {}
 logdata = {}
 
 line_count = 0
@@ -104,18 +105,25 @@ for line in canon:
     if line[0] == '#':
         continue
 
+    opt = False
     if line.startswith("opt"):
         columns = line.split(" ")[1].split(",")
         opt = True
     else:
         columns = line.split(",")
-        opt = False
 
     key = columns[0].lstrip('$')
+
     try:
         canonmin[key] = float(columns[1])
         canonmax[key] = float(columns[2]) 
         canonopt[key] = opt
+        canonvars[key] = {}
+        if len(columns) > 3:
+            for i in range(3,len(columns)):
+                v = columns[i].split('=')
+                canonvars[key][v[0]] = float(v[1])
+
     except IndexError:
         sys.stderr.write("Could not handle %s (%s)\n" %(key, columns))
  
@@ -136,6 +144,16 @@ for key in keys:
                 status = "warn"
 
             print ("[%s] $%s,%f not between %f and %f (currently %f)" % (status, key, logdata[key], canonmin[key], canonmax[key], logdata[key]))
+        elif canonvars[key]:
+            found = False
+            for k in canonvars[key]:
+                if abs((logdata[key] - canonvars[key][k])/canonvars[key][k]) < 0.01:
+                    print ("[inf] $%s,%f set for %s" % (key, logdata[key], k))
+                    found = True
+                    break
+
+            if not found:
+                print("[inf] $%s,%f not a default value" % (key, logdata[key]) )
 
 for key in keys:
     if not key in canonmin:
