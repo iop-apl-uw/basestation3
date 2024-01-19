@@ -5182,7 +5182,7 @@ def make_dive_profile(
             ctd_delta_time_s_v[
                 stuck_i_v
             ] = 0  # not flying here so no flight elapsed time (see DAC below)
-            if sbect_unpumped:
+            if sbect_unpumped and sg_ct_type != 4:
                 # TODO really? like apogee, salin might tbe ok if we aren't in a thermocline
                 # CONSIDER drop this
                 # However, still should declare that the hdm speeds are 0 and hence bad here for DAC
