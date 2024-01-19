@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -53,7 +53,7 @@ def main():
     """
     # Get options
     base_opts = BaseOpts.BaseOptions(
-        "Prepares a home directory for a new deployment by setting up symlinks, copying files and stubbing out files",
+        "Prepares a home directory for a new deployment by setting up symlinks, copying files and stubbing out files.  Note: group ownership of the new mission directory and created files is same as the home directory",
         additional_arguments={
             "initdb": BaseOpts.options_t(
                 True,
@@ -253,6 +253,9 @@ def main():
                 f"Failed to set permissions on {item}",
                 "exc",
             )
+
+    print(f"New Mission directory {new_mission_dir}")
+    os.system(f"ls -lta {new_mission_dir}")
 
     return 0
 
