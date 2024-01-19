@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -1260,7 +1260,9 @@ def qc_log_list_from_history(nci):
     return ret_list
 
 
-# These classification lists tailor to the ctd correction plot
+# These classification lists tailored to the ctd correction plot
+# Note: these could be further reduced with more conversions to regex,
+# but left this way for now for clarity
 temp_qc_list = [
     "raw temperature spikes",
     "raw temperature noise spikes",
@@ -1289,6 +1291,15 @@ cond_qc_list = [
     "changed legato cond implies changed legato corrected cond",
     "changed legato salinity implies changed legato corrected salinity",
     "end of climb",
+    "raw salinity below bound",
+    "raw salinity exceeds bound",
+    "salinity below bound",
+    "salinity exceeds bound",
+    "bad salinity indicates conductivity issues",
+    "bad raw salinity indicates raw conductivity issues",
+    "stuck on the bottom",
+    r"uncorrectable [-+]?(?:\d*\.*\d+)m conductivity bubble on dive",
+    r"uncorrectable [-+]?(?:\d*\.*\d+)m raw conductivity bubble on dive",
 ]
 skip_qc_list = [
     "changed corrected salin implies changed speed",
@@ -1297,14 +1308,22 @@ skip_qc_list = [
     "changed temperature implies changed aa4831 oxygen",
     "changed salinity implies changed aa4831 oxygen",
     "despiked pressure",
+    "bad aa4831 oyxgen",
 ]
+
+
+def check_in_list(qc_str, qc_list):
+    """Check for inclusion of qc_str in a qc list"""
+    for skip_qc in qc_list:
+        if re.match(skip_qc, qc_str):
+            return True
+    return False
 
 
 def qc_list_to_points_list(qc_log_list, max_points, is_temp):
     """Converts a qc_log_list into a set of parallel lists with the QC reasons broken out
     ready for use in hovertips
     """
-
     ret_list = []
     qc_pts = set()
     for jj in range(len(qc_log_list)):
@@ -1312,17 +1331,19 @@ def qc_list_to_points_list(qc_log_list, max_points, is_temp):
     for jj, qc_log_line in enumerate(qc_log_list):
         (qc_str, qc_type, qc_points) = qc_log_line
 
-        if qc_str in skip_qc_list:
+        if check_in_list(qc_str, skip_qc_list):
             continue
 
-        if qc_str not in temp_qc_list and qc_str not in cond_qc_list:
+        if not check_in_list(qc_str, temp_qc_list) and not check_in_list(
+            qc_str, cond_qc_list
+        ):
             log_warning(f"Unclassified qc_str {qc_str}")
             continue
 
-        if is_temp and qc_str not in temp_qc_list:
+        if is_temp and not check_in_list(qc_str, temp_qc_list):
             continue
 
-        if not is_temp and qc_str not in cond_qc_list:
+        if not is_temp and not check_in_list(qc_str, cond_qc_list):
             continue
 
         for ii in qc_points:
