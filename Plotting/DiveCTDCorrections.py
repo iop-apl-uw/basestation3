@@ -119,6 +119,7 @@ def plot_ctd_corrections(
             ctd_type = "Seabird"
         else:
             return ([], [])
+
         if f_add_raw_qc:
             raw_temperature_qc_strs = QC.qc_to_str(
                 QC.decode_qc(dive_nc_file.variables["temperature_raw_qc"][:]),
@@ -131,6 +132,7 @@ def plot_ctd_corrections(
         else:
             raw_temperature_qc_strs = ["" for x in range(ctd_raw_temp.size)]
             raw_salinity_qc_strs = ["" for x in range(ctd_raw_cond.size)]
+
     except Exception:
         log_error("Could not load ctd data", "exc")
         return ([], [])
@@ -197,6 +199,7 @@ def plot_ctd_corrections(
         salinity_good_i = np.arange(0, corr_salinity.size)
         # Use ctd_pressure since it has already been through the legato pressure despiker
         ctd_press = dive_nc_file.variables["ctd_pressure"][:]
+        ctd_depth = dive_nc_file.variables["ctd_depth"][:]
         ctd_time = dive_nc_file.variables["ctd_time"][:]
         start_time = dive_nc_file.start_time
     except Exception:
@@ -215,10 +218,16 @@ def plot_ctd_corrections(
 
     fig = plotly.graph_objects.Figure()
 
+    rng = np.nanmax(ctd_depth) - np.nanmin(ctd_depth)
+    depth_max = np.nanmax(ctd_depth) + (0.05 * rng)
+    depth_min = np.nanmin(ctd_depth) - (0.05 * rng)
+
     if gc_moves is not None:
         show_label = collections.defaultdict(lambda: True)
-        y_min = min(ctd_raw_salinity.min(), corr_salinity.min())
-        y_max = max(ctd_raw_salinity.max(), corr_salinity.max())
+        # y_min = min(ctd_raw_salinity.min(), corr_salinity.min())
+        # y_max = max(ctd_raw_salinity.max(), corr_salinity.max())
+        y_min = depth_max
+        y_max = depth_min
         for gc in gc_moves:
             fig.add_trace(
                 {
@@ -226,7 +235,8 @@ def plot_ctd_corrections(
                     "x": (gc[0] / 60.0, gc[0] / 60.0, gc[1] / 60.0, gc[1] / 60.0),
                     "y": (y_min, y_max, y_max, y_min),
                     "xaxis": "x1",
-                    "yaxis": "y1",
+                    # "yaxis": "y1",
+                    "yaxis": "y3",
                     "fill": "toself",
                     "fillcolor": PlotUtils.gc_move_colormap[gc[2]].color,
                     "line": {
@@ -242,6 +252,23 @@ def plot_ctd_corrections(
                 }
             )
             show_label[PlotUtils.gc_move_colormap[gc[2]].name] = False
+
+    # Depth trace
+    fig.add_trace(
+        {
+            "name": "Depth",
+            "x": ctd_time,
+            "y": ctd_depth,
+            "mode": "lines+markers",
+            "marker": {"symbol": "cross", "size": 3},
+            # "line": {"dash": "solid", "color": "DarkRed"},
+            "line": {"dash": "solid", "color": "DarkGrey"},
+            "yaxis": "y3",
+            "hovertemplate": "Depth<br>%{y:.1f} meters<br>%{x:.2f} mins<br><extra></extra>",
+            "visible": "legendonly",
+            # "visible": True,
+        }
+    )
 
     # Annotate QC'd points
     if qc_pts[0]:
@@ -427,6 +454,16 @@ def plot_ctd_corrections(
                 "overlaying": "y1",
                 # "autorange": "reversed",
                 "anchor": "x",
+            },
+            "yaxis3": {
+                "title": "Depth",
+                "range": [depth_max, depth_min],
+                # "autorange": "reversed",
+                "overlaying": "y1",
+                "anchor": "free",
+                "side": "left",
+                "position": 0,
+                "showgrid": False,
             },
             "margin": {
                 "t": 150,
