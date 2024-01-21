@@ -372,6 +372,7 @@ def attachHandlers(app: sanic.Sanic):
     # consider whether any of these need to be protectable?? parms??
     app.static('/favicon.ico', f'{sys.path[0]}/html/favicon.ico', name='favicon.ico')
     app.static('/parms', f'{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
+    app.static('/ballast', f'{sys.path[0]}/html/ballast.html', name='ballast')
     app.static('/script', f'{sys.path[0]}/scripts', name='script')
     app.static('/help', f'{sys.path[0]}/html/help.html', name='help')
     app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
@@ -1263,7 +1264,7 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/query/<glider:int>/<queryVars:str>')
     # description: query per dive database for arbitrary variables
     # args: queryVars=comma separated list
-    # parameters: mission, format
+    # parameters: mission, format, limit
     # returns: JSON dict of query results
     @authorized()
     async def queryHandler(request, glider, queryVars):
@@ -1276,9 +1277,16 @@ def attachHandlers(app: sanic.Sanic):
         else:
             format = 'json'
 
+        if 'limit' in request.args:
+            limit = request.args['limit'][0]
+        else:
+            limit = False
+ 
         queryVars = queryVars.rstrip(',')
         pieces = queryVars.split(',')
-        if pieces[0] == 'dive':
+        if limit:
+            q = f"SELECT {queryVars} FROM dives ORDER BY {pieces[0]} DESC LIMIT {limit}"
+        elif pieces[0] == 'dive':
             q = f"SELECT {queryVars} FROM dives ORDER BY dive ASC"
         else:
             q = f"SELECT {queryVars} FROM dives"

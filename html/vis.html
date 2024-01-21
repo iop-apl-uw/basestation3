@@ -427,6 +427,26 @@
         window.open('./?gliders=' + currGlider);
     }
 
+    function openBallastSheet() {
+        var opts = ['limit=1'];
+        if (mission() != '')
+            opts.push(mission()) 
+
+        var q = `query/${currGlider}/dive,log_MASS,log_RHO,log_VBD_MIN,log_VBD_MAX,log_MAX_BUOY,log_C_VBD,log_VBD_CNV${formatQuery(opts)}`
+
+        fetch(q)
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+                let volmax = data['log_MASS']/data['log_RHO'] + (data['log_VBD_MIN'] - data['log_C_VBD'])*data['log_VBD_CNV'];
+                window.open(`ballast?mass=${data['log_MASS']}&volmax=${volmax}&density=${data['log_RHO']}&thrust=${-data['log_MAX_BUOY']}&min=${data['log_VBD_MIN']}&max=${data['log_VBD_MAX']}`, currGlider + '-ballast');
+            } catch (error) {
+                console.log('openBallastSheet ' + error);
+            }
+        });
+    }
+
     function missionIndex() {
         if (!currMission || currMission == '')
             return;
@@ -2154,6 +2174,7 @@
         <div class="dropdown-content">
             <span class="spanClick" onclick="popupPosition(); return false;">Position</span> 
             <span class="spanClick" onclick="openRegressionForm(); return false;">VBD regression</span> 
+            <span class="spanClick" onclick="openBallastSheet(); return false;">Ballast worksheet</span> 
         </div>
     </div>
     <span id="missionIndex" hidden="hidden"><span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b></span>
