@@ -12,6 +12,20 @@
   </form>
 </div>
 
+<div class="form-popup" id="regressionForm">
+  <form class="form-login" id="formRegressionForm">
+    <label for="dives"><b>dives</b></label>
+    <input type="text" placeholder="3-5" name="dives" required>
+    <label for="depth1"><b>min depth</b></label>
+    <input type="text" placeholder="40" name="depth1" required>
+    <label for="depth2"><b>max depth</b></label>
+    <input type="text" placeholder="140" name="depth2" required>
+    <label for="initBias"><b>init. bias</b></label>
+    <input type="text" placeholder="-50" name="initBias" value="-50">
+    <button type="submit" class="btn" onclick="submitRegressionForm(); return false;">process</button>
+    <button type="button" class="btn cancel" onclick="closeRegressionForm(); return false;">cancel</button>
+  </form>
+</div>
 
 <div class="form-popup" id="aboutForm">
     <div class="about-content">

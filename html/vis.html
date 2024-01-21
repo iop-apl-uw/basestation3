@@ -2149,7 +2149,13 @@
 {% endif %}
 {% endif %}
     <span class="spanClick" onclick="openAboutForm(); return false;">About</span> <b>&#124;</b>
-    <span class="spanClick" onclick="popupPosition(); return false;">Position</span> <b>&#124;</b>
+    <div class="dropdown">
+        <span class="spanClick droplink">Tools </span><b>&#124;</b>
+        <div class="dropdown-content">
+            <span class="spanClick" onclick="popupPosition(); return false;">Position</span> 
+            <span class="spanClick" onclick="openRegressionForm(); return false;">VBD regression</span> 
+        </div>
+    </div>
     <span id="missionIndex" hidden="hidden"><span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b></span>
     <span id="gliderIndex"><span id="gliderIndexText" class="spanClick" onclick="gliderIndex(); return false;">Glider</span> <b>&#124;</b></span>
     <a href="help" target="help"> Help </a> 

@@ -66,6 +66,7 @@ import ExtractTimeseries
 import socket
 import rafos
 from sanic.worker.manager import WorkerManager
+import RegressVBD
 
 #from contextlib import asynccontextmanager
 #
@@ -1067,6 +1068,20 @@ def attachHandlers(app: sanic.Sanic):
         out = ExtractTimeseries.dumps(hits) # need custom serializer for the numpy array
         return sanic.response.raw(out, headers={ 'Content-type': 'application/json' })
 
+    @app.route('/regress/<glider:int>/<dives:str>/<depth1:float>/<depth2:float>/<initBias:float>')
+    # description: run VBD repression over multiple dives
+    # parameters: mission
+    # returns: html of plotly results plot
+    @authorized()
+    async def regressHandler(request, glider:int, dives:str,
+                             depth1:float, depth2:float, initBias:float):
+        path = gliderPath(glider, request)
+
+        dives = RegressVBD.parseRangeList(dives)
+        
+        bias, hd, rms, vmx, c, plt = RegressVBD.regress(path, glider, dives, [depth1, depth2], initBias, 'html', True)
+        return sanic.response.html("<br>".join(plt))
+    
     @app.route('/db/<glider:int>/<dive:int>')
     # description: query database for common engineering variables
     # args: dive=-1 returns whole mission

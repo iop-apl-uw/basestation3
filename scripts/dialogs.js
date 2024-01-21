@@ -8,6 +8,9 @@
     function closeLoginForm() {
         $('loginForm').style.display = "none";
     } 
+    function closeRegressionForm() {
+        $('regressionForm').style.display = "none";
+    } 
 
     function closeAboutForm() {
         $('aboutForm').style.display = "none";
@@ -21,6 +24,24 @@
     function openSearchForm() {
         $('searchForm').style.display = "block";
     } 
+    function openRegressionForm() {
+        $('regressionForm').style.display = "block";
+    } 
+
+    function submitRegressionForm() {
+        var formData = new FormData($('formRegressionForm'));
+        console.log(formData);
+        var obj = Object.fromEntries(formData);
+        console.log(obj);
+
+        window.open('regress/' + currGlider
+                    + '/' + obj['dives']
+                    + '/' + obj['depth1']
+                    + '/' + obj['depth2']
+                    + '/' + obj['initBias']
+                    + mission()
+                    , currGlider + '-regression');
+    }
 
     function submitLoginForm() {
         var formData = new FormData($('formLoginForm'));

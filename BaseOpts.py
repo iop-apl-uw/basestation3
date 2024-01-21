@@ -261,6 +261,7 @@ global_options_dict = {
             "ValidateDirectives",
             "Ver65",
             "WindRain",
+            "RegressVBD",
         ),
         (
             "-m",
@@ -291,6 +292,7 @@ global_options_dict = {
                 "Reprocess",
                 "ValidateDirectives",
                 "Ver65",
+                "RegressVBD",
             ),
         },
     ),
@@ -345,6 +347,7 @@ global_options_dict = {
             "MoveData",
             "NewMission",
             "Reprocess",
+            "RegressVBD",
         ),
         (
             "-i",
@@ -727,7 +730,7 @@ global_options_dict = {
     ),
     "save_png": options_t(
         False,
-        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
+        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess",),
         ("--save_png",),
         bool,
         {
@@ -776,7 +779,7 @@ global_options_dict = {
     "full_html": options_t(
         # "darwin" in sys.platform,
         False,
-        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
+        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess",),
         ("--full_html",),
         bool,
         {
