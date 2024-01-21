@@ -22,6 +22,10 @@
     <input type="text" placeholder="140" name="depth2" required>
     <label for="initBias"><b>init. bias</b></label>
     <input type="text" placeholder="-50" name="initBias" value="-50">
+    <span>
+    <input type="checkbox" name="ballast" value="ballast">
+    <label for="ballast"><b>incl. ballast sheet</b></label>
+    </span>
     <button type="submit" class="btn" onclick="submitRegressionForm(); return false;">process</button>
     <button type="button" class="btn cancel" onclick="closeRegressionForm(); return false;">cancel</button>
   </form>

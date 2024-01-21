@@ -1070,16 +1070,38 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/regress/<glider:int>/<dives:str>/<depth1:float>/<depth2:float>/<initBias:float>')
     # description: run VBD repression over multiple dives
-    # parameters: mission
+    # parameters: mission, ballast
     # returns: html of plotly results plot
     @authorized()
     async def regressHandler(request, glider:int, dives:str,
                              depth1:float, depth2:float, initBias:float):
         path = gliderPath(glider, request)
 
+        ballast = True if 'ballast' in request.args else False
+        print(ballast)
+
         dives = RegressVBD.parseRangeList(dives)
         
-        bias, hd, rms, vmx, c, plt = RegressVBD.regress(path, glider, dives, [depth1, depth2], initBias, 'html', True)
+        bias, hd, rms, log, plt = RegressVBD.regress(path, glider, dives, [depth1, depth2], initBias, 'html', True)
+        if ballast:
+            async with aiofiles.open(f'{sys.path[0]}/html/ballast.html', 'r') as file:
+                ballastHTML = await file.read()
+           
+            ballastHTML = ballastHTML + \
+                          """
+                          <script>
+                          $('mass').value = {MASS};
+                          $('volmax').value = {volmax:.1f};
+                          $('min_counts').value = {VBD_MIN};
+                          $('max_counts').value = {VBD_MAX};
+                          $('thrust').value = -250;
+                          $('target_density').value = 1.0275;
+                          calculate();
+                          </script>
+                          """.format(**log)
+
+            plt.insert(0, ballastHTML)
+
         return sanic.response.html("<br>".join(plt))
     
     @app.route('/db/<glider:int>/<dive:int>')

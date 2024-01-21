@@ -1,0 +1,194 @@
+<SCRIPT LANGUAGE="JavaScript">
+
+function $(x) {
+    return document.getElementById(x)
+}
+
+var table = new Array(
+0.998120,0.998398,0.998650,0.998877,0.999080,0.999259,0.999417,0.999553,0.999669,0.999765,
+0.9998425,0.9999015,0.9999429,0.9999672,0.9999750,0.9999668,0.9999432,0.9999045,0.9998512,0.9997838,
+0.9997026,0.9996018,0.9995004,0.9993801,0.9992474,0.9991026,0.9989460,0.9987779,0.9985986,0.9984082,
+0.9982071,0.9979955,0.9977735,0.9975415,0.9972995,0.9970479,0.9967867,0.9965162,0.9962365,0.9959478,
+0.9956502,0.9953440,0.9950292,0.9947060,0.9943745,0.9940349,0.9936872,0.9933316,0.9929683,0.9925973,
+0.9922187,0.9918327,0.9914394,0.9910388,0.9906310,0.9902162,0.9897944,0.9893657,0.9889303,0.9884881,
+0.9880393,0.9875839,0.9871220,0.9866537,0.9861791,0.9856982,0.9852111,0.9847178,0.9842185,0.9837132,
+0.9832018,0.9826846,0.9821615,0.9816327,0.9810981,0.9805578,0.9800118,0.9794603,0.9789032,0.9783406,
+0.9777726,0.9771991,0.9766203,0.9760361,0.9754466,0.9748519,0.9742520,0.9736468,0.9730366,0.9724212,
+0.9718007,0.9711752,0.9705446,0.9699091,0.9692686,0.9686232,0.9679729,0.9673177,0.9666576,0.9659927,
+0.9653230,0.9646486,0.9639693,0.9632854,0.9625967,0.9619033,0.9612052,0.9605025,0.9597951,0.9590831,
+0.9583665,0.957662,0.956937,0.956207,0.955472,0.954733,0.953989,0.953240,0.952488,0.941730
+);
+
+function waterdensity(t)
+{
+   var i = Math.floor(t);
+   var p = t - i;
+   var p2m1 = p * p - 1.0;
+   var p2m4 = p2m1 - 3.0;
+   i += 10;
+   return p2m1*p*(p-2)*table[i-2]/24.0 
+          - (p-1)*p*p2m4*table[i-1]/6.0 
+          + p2m1*p2m4*table[i]/4.0 
+          - (p+1)*p*p2m4*table[i+1]/6.0 
+          + p2m1*p*(p+2)*table[i+2]/24.0;
+}
+
+function calculate()
+{
+    var VBD_min_count = parseFloat($('min_counts').value);
+    var antenna = parseFloat($('antenna_loss').value);
+    var VBD_max_count = parseFloat($('max_counts').value);
+    var mass = parseFloat($('mass').value);
+    var target_thrust_down = parseFloat($('thrust').value); 
+    var rho_target = parseFloat($('target_density').value); 
+    var volmin, volmax;
+
+
+    var target_thrust_down_cc = (target_thrust_down) / (rho_target);
+
+    volmax = parseFloat($('volmax').value);
+    volmin = volmax + (VBD_min_count - VBD_max_count)*0.2453;
+    var dmass = (rho_target*(volmin - target_thrust_down_cc) - mass)/(1 - rho_target/11.296);
+
+    console.log('volmax = ' + volmax);
+    console.log('v*r = ' + volmax*rho_target);
+
+    $('delta_Pb').value = '' + dmass;
+    $('new_mass').value = '' + (mass + dmass);
+    $('new_volmax').value = '' + (volmax + dmass/11.296);
+    var new_volmax = volmax + dmass/11.296; 
+    VBD_max_count = VBD_max_count + 0;
+    var C_VBD  = VBD_max_count + (target_thrust_down_cc/0.2453);
+    var max_buoyancy = (C_VBD - VBD_min_count)*0.2453;
+        
+    var oil_stroke = (VBD_min_count - C_VBD)/(VBD_min_count - VBD_max_count);
+    var rho_min = (mass + dmass) / (new_volmax - antenna);
+    $('C_VBD').value = '' + C_VBD;
+    $('max_buoyancy').value = '' + max_buoyancy;
+    $('neutral_stroke').value = '' + oil_stroke*100;
+    $('rho_min').value = '' + rho_min;
+}
+
+function calculateFM()
+{
+    var VBD_min_count = parseFloat($('min_counts').value);
+    var antenna = parseFloat($('antenna_loss').value);
+    var VBD_max_count = parseFloat($('max_counts').value);
+    var mass = parseFloat($('mass').value);
+    var target_thrust_down = parseFloat($('thrust').value); 
+    var rho_target = parseFloat($('target_density').value); 
+    var volmin, volmax;
+
+    var target_thrust_down_cc = (target_thrust_down) / (rho_target);
+
+    volmax = parseFloat($('volmax').value);
+
+    var abs_compress    = parseFloat($('abs_compress').value);
+    var therm_expan     = parseFloat($('therm_expan').value);
+    var temp_ref        = parseFloat($('temp_ref').value);
+    var temp_apogee     = parseFloat($('temp_apogee').value);
+    var apogee_pressure = parseFloat($('apogee_pressure').value);
+    volapogee = volmax*Math.exp(-abs_compress*apogee_pressure + therm_expan*(temp_apogee - temp_ref));
+
+    console.log('volApogee = ' + volapogee);
+    console.log('v*r = ' + volapogee*rho_target);
+    console.log('compression ratio = ' + volapogee/volmax);
+    console.log('d ratio = ' + 1.0278/1.0323);
+
+    volmin = volapogee + (VBD_min_count - VBD_max_count)*0.2453;
+    var dmass = (rho_target*(volmin - target_thrust_down_cc) - mass)/(1 - rho_target/11.296);
+
+    $('delta_Pb').value = '' + dmass;
+    $('new_mass').value = '' + (mass + dmass);
+    $('new_volmax').value = '' + (volmax + dmass/11.296);
+    var new_volmax = volmax + dmass/11.296; 
+    VBD_max_count = VBD_max_count + 0;
+    var C_VBD  = VBD_max_count + (target_thrust_down_cc/0.2453);
+    var max_buoyancy = (C_VBD - VBD_min_count)*0.2453;
+        
+    var oil_stroke = (VBD_min_count - C_VBD)/(VBD_min_count - VBD_max_count);
+    var rho_min = (mass + dmass) / (new_volmax - antenna);
+    $('C_VBD').value = '' + C_VBD;
+    $('max_buoyancy').value = '' + max_buoyancy;
+    $('neutral_stroke').value = '' + oil_stroke*100;
+    $('rho_min').value = '' + rho_min;
+    
+}
+
+function initInputs() 
+{
+    let params = new URLSearchParams(window.location.search);
+    if (params.has('mass')) 
+        $('mass').value = params.get('mass');
+    if (params.has('min')) 
+        $('min_counts').value = params.get('min');
+    if (params.has('max')) 
+        $('max_counts').value = params.get('max');
+    if (params.has('density')) 
+        $('target_density').value = params.get('density');
+    if (params.has('antenna')) 
+        $('antenna_loss').value = params.get('antenna');
+    if (params.has('thrust')) 
+        $('thrust').value = params.get('thrust');
+    if (params.has('volmax')) 
+        $('volmax').value = params.get('volmax');
+}
+
+</script>
+
+<table>
+   <tbody>
+       <tr><td align="right">VBD min counts</td>
+           <td> <input id="min_counts" size=8 maxlength=8></td></tr>
+       <tr><td align="right">VBD max counts</td>
+            <td> <input id="max_counts" size=8 maxlength=8></td></tr>
+       <tr><td align="right">scale mass (g)</td>
+           <td> <input id="mass" size=8 maxlength=8></td></tr>
+       <tr><td align="right">target thrust (g)</td>
+           <td> <input id="thrust" size=8 maxlength=8 value="-150"></td></tr>
+       <tr><td align="right">target density (g/cc)</td>
+           <td> <input id="target_density" size=8 maxlength=8 value="1.023"></td></tr>
+       <tr><td align="right">antenna volume loss (cc)</td>
+           <td> <input id="antenna_loss" size=8 maxlength=8 value="150"></td></tr>
+       <tr><td align="right">volmax (regression or model) (cc)</td>
+           <td> <input id="volmax" size=8 maxlength=8></td></tr>
+       <tr><td align="right">abs compress (model or fixed) (m^3/dbar)</td>
+           <td> <input id="abs_compress" size=12 maxlength=12></td></tr>
+       <tr><td align="right">therm expan (model or fixed) (m^3/degC)</td>
+           <td> <input id="therm_expan" size=12 maxlength=12></td></tr>
+       <tr><td align="right">ref temperature (degC)</td>
+           <td> <input id="temp_ref" size=12 maxlength=12></td></tr>
+       <tr><td align="right">apogee temperature (degC)</td>
+           <td> <input id="temp_apogee" size=12 maxlength=12></td></tr>
+       <tr><td align="right">apogee pressure (dbar)</td>
+           <td> <input id="apogee_pressure" size=12 maxlength=12></td></tr>
+       <tr><td align="right">comments</td>
+           <td> <textarea id="comment" cols=60 rows=5></textarea></td></tr>
+   </tbody>
+</table>
+
+<input name="ok" value="submit" type=button onclick="calculate();">
+<input name="FM" value="FM submit" type=button onclick="calculateFM();">
+
+<table>
+   <tbody>
+       <tr><td align="right">delta Pb (g)</td>
+            <td> <input id="delta_Pb" size=8 maxlength=8 disabled="DISABLED"></td></tr>
+       <tr><td align="right">new mass (g)</td>
+            <td> <input id="new_mass" size=8 maxlength=8 disabled="DISABLED"></td></tr>
+       <tr><td align="right">new volmax (g)</td>
+            <td> <input id="new_volmax" size=8 maxlength=8 disabled="DISABLED"></td></tr>
+       <tr><td align="right">minimum surface density (g/cc)</td>
+            <td> <input id="rho_min" size=8 maxlength=8 disabled="DISABLED"></td></tr>
+       <tr><td align="right">maximum buoyancy (cc)</td>
+            <td> <input id="max_buoyancy" size=8 maxlength=8 disabled="DISABLED"></td></tr>
+       <tr><td align="right">C_VBD</td>
+           <td> <input id="C_VBD" size=8 maxlength=8 disabled="DISABLED"></td></tr>
+       <tr><td align="right">neutral stroke (%)</td>
+           <td> <input id="neutral_stroke" size=8 maxlength=8 disabled="DISABLED"></td></tr>
+  </tbody> 
+</table>
+
+<script>
+    initInputs();
+</script>

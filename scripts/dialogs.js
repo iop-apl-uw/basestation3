@@ -30,16 +30,28 @@
 
     function submitRegressionForm() {
         var formData = new FormData($('formRegressionForm'));
-        console.log(formData);
         var obj = Object.fromEntries(formData);
-        console.log(obj);
+        var opts = []
 
+        if (mission() != '')
+            opts.push(mission());
+        if ('ballast' in obj)
+            opts.push('ballast=1');
+        
+        url = 'regress/' + currGlider
+                    + '/' + obj['dives']
+                    + '/' + obj['depth1']
+                    + '/' + obj['depth2']
+                    + '/' + obj['initBias']
+                    + formatQuery(opts);
+                    
+        console.log(url);
         window.open('regress/' + currGlider
                     + '/' + obj['dives']
                     + '/' + obj['depth1']
                     + '/' + obj['depth2']
                     + '/' + obj['initBias']
-                    + mission()
+                    + formatQuery(opts)
                     , currGlider + '-regression');
     }
 

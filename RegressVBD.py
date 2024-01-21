@@ -104,7 +104,11 @@ def w_misfit(x0, W, Vol, Dens, Pit, m, rho, vol0):
     return math.sqrt(rms/len(Vol))
 
 def getVars(fname, basis_C_VBD, basis_VBD_CNV):
-    nc = Utils.open_netcdf_file(fname)
+    try:
+        nc = Utils.open_netcdf_file(fname)
+    except:
+        print(f"could not open {fname}")
+        return 
 
     c_vbd = nc.variables["log_C_VBD"].getValue()
 
@@ -162,6 +166,14 @@ def regress(path, glider, dives, depthlims, init_bias, doplot, plot_dives):
     basis_VBD_CNV = nc.variables["log_VBD_CNV"].getValue()
     basis_VBD_MIN = nc.variables["log_VBD_MIN"].getValue()
 
+    log = { 
+            "VBD_MIN": float(nc.variables["log_VBD_MIN"].getValue()),
+            "VBD_MAX": float(nc.variables["log_VBD_MAX"].getValue()),
+            "VBD_CNV": float(nc.variables["log_VBD_CNV"].getValue()),
+            "RHO":     float(nc.variables["log_RHO"].getValue()),
+            "MASS":    float(nc.variables["log_MASS"].getValue()),
+          }
+
     vol0 = basis_MASS/basis_RHO0;
 
     mission = nc.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
@@ -208,8 +220,11 @@ def regress(path, glider, dives, depthlims, init_bias, doplot, plot_dives):
     volmax = vol0*1e6 + (basis_VBD_MIN - basis_C_VBD)*basis_VBD_CNV - bias
     c_vbd = basis_C_VBD + bias/basis_VBD_CNV
 
+    log['volmax'] = volmax;
+    log['C_VBD'] = c_vbd;
+
     if not doplot:
-        return bias, (hd_a, hd_b, hd_c), (rms_init, rms_final), volmax, c_vbd, None
+        return bias, (hd_a, hd_b, hd_c), (rms_init, rms_final), log, None
 
     bu = 1000.0 * (-basis_MASS + Dens * (vol0*1e6 + Vol - bias) * 1.0e-6)
     W_biased = getModelW(bu, Pit, hd_a, hd_b, hd_c, basis_RHO0)
@@ -300,7 +315,16 @@ def regress(path, glider, dives, depthlims, init_bias, doplot, plot_dives):
     if doplot == 'png':
         imgs = [fig.to_image(format="png")]
     elif doplot == 'html':
-        imgs = [fig.to_html()]
+        imgs = [fig.to_html(
+                            include_plotlyjs="cdn",
+                            full_html=False,
+                            validate=True,
+                            config={
+                                "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                                "scrollZoom": False,
+                            },
+                            include_mathjax="cdn",
+                           ) ]
 
     if plot_dives:
         for i in dives:
@@ -407,9 +431,19 @@ def regress(path, glider, dives, depthlims, init_bias, doplot, plot_dives):
             if doplot == 'png':
                 imgs.append(fig.to_image(format="png"))
             elif doplot == 'html':
-                imgs.append(fig.to_html())
+                imgs.append(fig.to_html(
+                                    include_plotlyjs="cdn",
+                                    full_html=False,
+                                    validate=True,
+                                    config={
+                                        "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                                        "scrollZoom": False,
+                                    },
+                                    include_mathjax="cdn",
+                                )
+                           )
 
-    return bias, (hd_a, hd_b, hd_c), (rms_init, rms_final), volmax, c_vbd, imgs
+    return bias, (hd_a, hd_b, hd_c), (rms_init, rms_final), log, imgs
 
 from itertools import chain
 
@@ -517,7 +551,7 @@ def main():
     else:
         fmt = False
 
-    bias, hd, rms, vmax, c, plt = regress(base_opts.mission_dir,
+    bias, hd, rms, log, plt = regress(base_opts.mission_dir,
                       base_opts.instrument_id,
                       parseRangeList(base_opts.dives),
                       [d0, d1],
@@ -538,8 +572,8 @@ def main():
     print(f"final RMS   = {rms[1]:.3f}")
     print(f"VBD bias    = {bias:.2f} cc")
     print(f"HD a,b,c    = [{hd[0]:.5f},{hd[1]:.5f},{hd[2]:.3e}]")
-    print(f"Implied volmax = {vmax:.1f} cc")
-    print(f"Implied C_VBD  = {c:.1f}")
+    print(f"Implied volmax = {log['volmax']:.1f} cc")
+    print(f"Implied C_VBD  = {log['C_VBD']:.1f}")
 
 if __name__ == "__main__":
     retval = 1

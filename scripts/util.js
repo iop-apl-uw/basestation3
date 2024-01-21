@@ -15,6 +15,20 @@ Number.prototype.zeroPad = function() {
         return ('-0'+this).slice(-2);
 }
 
+function formatQuery(params) {
+    var q = '';
+    if (params.length) {
+        q = '?' 
+        for (i = 0 ; i < params.length ; i++) {
+            q = q + params[i];
+            if (i < params.length - 1)
+                q = q + '&';
+        }
+    }
+
+    return q; 
+}
+
 function setInnerHTML(elm, html) {
     elm.innerHTML = html;
 
