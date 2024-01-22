@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -730,7 +730,12 @@ global_options_dict = {
     ),
     "save_png": options_t(
         False,
-        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess",),
+        (
+            "Base",
+            "BasePlot",
+            "MakePlotTSProfile",
+            "Reprocess",
+        ),
         ("--save_png",),
         bool,
         {
@@ -779,7 +784,12 @@ global_options_dict = {
     "full_html": options_t(
         # "darwin" in sys.platform,
         False,
-        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess",),
+        (
+            "Base",
+            "BasePlot",
+            "MakePlotTSProfile",
+            "Reprocess",
+        ),
         ("--full_html",),
         bool,
         {
@@ -912,7 +922,7 @@ global_options_dict = {
             "help": "Which type of plots to generate",
             "option_group": "plotting",
             "nargs": "+",
-            "choices": ["dives", "mission"],
+            "choices": ["none", "dives", "mission"],
         },
     ),
     "mission_energy_reserve_percent": options_t(

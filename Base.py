@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -115,20 +115,14 @@ logger_eng_readers = {}  # Mapping from logger prefix to eng_file readers
 
 ## Global lists and dicts
 # incomplete_files = []
-processed_logger_payload_files = (
-    {}
-)  # Dictionay of lists of files from a logger payload file, keyed by logger prefix
+processed_logger_payload_files = {}  # Dictionay of lists of files from a logger payload file, keyed by logger prefix
 # Files in these lists do not conform to normal logger basestation naming conventions
 processed_eng_and_log_files = []
 processed_selftest_eng_and_log_files = []
 processed_other_files = []
-processed_logger_eng_files = (
-    []
-)  # List of eng files from all loggers - files on this list must conform to the basestation file and
+processed_logger_eng_files = []  # List of eng files from all loggers - files on this list must conform to the basestation file and
 # dive directory naming convention
-processed_logger_other_files = (
-    []
-)  # List of all non-eng files from all loggers - files on this list do not need to
+processed_logger_other_files = []  # List of all non-eng files from all loggers - files on this list do not need to
 #    conform to basestation directory and filename convetions
 
 # Configuration
@@ -2213,12 +2207,13 @@ def main():
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Per-dive plotting
-    log_info("Starting per-dive plots")
-    plot_dict = BasePlot.get_dive_plots(base_opts)
-    _, output_files = BasePlot.plot_dives(base_opts, plot_dict, nc_files_created)
-    for output_file in output_files:
-        processed_other_files.append(output_file)
-    log_info("Per-dive plots complete")
+    if "dives" in base_opts.plot_types:
+        log_info("Starting per-dive plots")
+        plot_dict = BasePlot.get_dive_plots(base_opts)
+        _, output_files = BasePlot.plot_dives(base_opts, plot_dict, nc_files_created)
+        for output_file in output_files:
+            processed_other_files.append(output_file)
+        log_info("Per-dive plots complete")
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
@@ -2317,11 +2312,14 @@ def main():
             processed_file_names = Utils.flatten(processed_file_names)
 
             # Whole mission plotting
-            mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
-            plot_dict = BasePlot.get_mission_plots(base_opts)
-            _, output_files = BasePlot.plot_mission(base_opts, plot_dict, mission_str)
-            for output_file in output_files:
-                processed_other_files.append(output_file)
+            if "mission" in base_opts.plot_types:
+                mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
+                plot_dict = BasePlot.get_mission_plots(base_opts)
+                _, output_files = BasePlot.plot_mission(
+                    base_opts, plot_dict, mission_str
+                )
+                for output_file in output_files:
+                    processed_other_files.append(output_file)
 
             # Generate KML
             try:
@@ -2696,8 +2694,7 @@ def main():
                             with open(tar_frag_name, "wb") as fo:
                                 fo.write(
                                     buff[
-                                        ii
-                                        * base_opts.divetarballs : (ii + 1)
+                                        ii * base_opts.divetarballs : (ii + 1)
                                         * base_opts.divetarballs
                                         if (ii + 1) * base_opts.divetarballs < len(buff)
                                         else len(buff)
