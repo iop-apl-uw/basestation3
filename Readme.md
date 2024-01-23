@@ -465,6 +465,7 @@ files located in the sg000 sub-directory
 
 - [Pagers](sg000/.pagers?raw=true)
 - [Mailer](sg000/.mailer?raw=true)
+- [FTP](sg000/.ftp?raw=true)
 - [URLS](sg000/.urls?raw=true)
 - [Extensions](sg000/.extensions?raw=true)
 - [Early Extensions](sg000/.pre_extensions?raw=true)
