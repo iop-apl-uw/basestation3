@@ -37,7 +37,9 @@ import time
 
 import BaseOpts
 import BaseDB
+import Sensors
 from BaseLog import BaseLogger, log_critical, log_error, log_info
+from Globals import known_files
 
 
 def main():
@@ -88,6 +90,11 @@ def main():
     )
 
     BaseLogger(base_opts)  # initializes BaseLog
+
+    # Sensor extensions
+    (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
+    if init_ret_val > 0:
+        log_warning("Sensor initialization failed")
 
     if not base_opts.instrument_id:
         try:
@@ -144,11 +151,21 @@ def main():
 
     items = [new_mission_dir]
 
-    for copy_file_name in (
+    copy_files = [
         "sg_calib_constants.m",
+        "sg_plot_constants.m",
         f"sg{base_opts.instrument_id:03d}.conf",
-        "cmdfile",
-    ):
+    ]
+    copy_files += known_files
+
+    # Add known logger files
+    for key in list(init_dict.keys()):
+        d = init_dict[key]
+        if "known_files" in d:
+            for b in d["known_files"]:
+                copy_files.append(b)
+
+    for copy_file_name in copy_files:
         copy_file_fullpath = None
         if current_mission_dir:
             copy_file_fullpath = os.path.join(current_mission_dir, copy_file_name)
@@ -187,6 +204,9 @@ def main():
         ".ftp",
         ".extensions",
         ".pre_extensions",
+        ".pre_login",
+        ".post_dive",
+        ".post_mission",
     ):
         master_dotfile = os.path.join(base_opts.glider_home, dotfile)
         # if os.path.exists(master_dotfile):
