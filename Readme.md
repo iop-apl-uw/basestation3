@@ -474,6 +474,26 @@ files located in the sg000 sub-directory
 - [Section plotting settings](sg000/sections.yml?raw=true)
 - [sg_calib_constants.m](sg000/sg_calib_constants.m?raw=true)
 
+# Additional hook scripts
+
+Hook scripts are executable files that if present in the seagliders mission 
+directory, will be executed by the basestation.  Here is a summary of those files:
+
+| Hook Name     | When exccuted                                  | Arguments                          | Notes                                            |
+|:--------------|:-----------------------------------------------|:-----------------------------------|:-------------------------------------------------|
+| .pre_login    | During seaglider login                         | None                               | Needs to be fast - holds up login until complete |
+| .post_dive    | After all per-dive file processing is complete | None                               |                                                  |
+| .post_mission | After all file creation is complete            | List of all generated files        |                                                  |
+| .XX_ext.py    | After all logger processing is complete        | List of all processed logger files | XX is the two letter prefix for the logger       |
+
+While these files can be any executable, generally they are a shell script.  For example, where is a version of ```.post_mission``` that echos out all the newly created files
+```
+#/bin/bash
+for arg in $*; do
+ echo ${arg}
+done
+```
+
 # Differences from previous versions
 
 ## FlightModel
