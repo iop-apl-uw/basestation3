@@ -12,6 +12,7 @@
         <link rel="stylesheet" href="../script/leaflet.groupedlayercontrol.css" />
         <script src="../script/leaflet.js"></script>
         <script src="../script/leaflet-ruler.js"></script>
+        <script src="../script/leaflet-svg-shape-markers.js"></script>
         <script src="../script/L.KML.js"></script>
         <script src="../script/Control.Coordinates.js"></script>
         <script src="../script/leaflet.groupedlayercontrol.js"></script>
@@ -19,7 +20,6 @@
         <script src="../script/leaflet-reticle.js"></script>
 -->
         <script src="../proxy/https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src/leaflet-reticle.js"></script>
-        <script src="../script/leaflet-svg-shape-markers.min.js"></script>
         <script src="../script/websocket.js"></script>
         <script src="../script/util.js"></script>
 
@@ -905,7 +905,7 @@
                     console.log('removing ' + key);
                     for (k of Object.keys(track._layers)) {
                         if (track._layers[k].options.hasOwnProperty('name') 
-                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
+                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH'))) {
                             layerControl.removeLayer(track._layers[k]);
                             console.log('removing ' + track._layers[k]);
                         }
@@ -1006,12 +1006,15 @@
                                 activateGlider(this);
                             });
                         }
-                        if (track._layers[k].options.hasOwnProperty('name') 
-                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets'))) {
-                            if (track._layers[k].options.name.includes('Dives')) 
+                        if (track._layers[k].options.hasOwnProperty('name')
+                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH') )) {
+                            if (track._layers[k].options.name.includes('Dives'))
                                 layerControl.addOverlay(track._layers[k], 'dives', '' + gliders[i] + ' ' + missions[i]);
-                            else
+                            else if (track._layers[k].options.name.includes('Targets'))
                                 layerControl.addOverlay(track._layers[k], 'targets', gliders[i] + ' ' + missions[i]);
+                            else
+                                layerControl.addOverlay(track._layers[k], 'SSH', gliders[i] + ' ' + missions[i]);
+
                             map.removeLayer(track._layers[k]);
                             console.log(track._layers[k].options.name);
                             console.log(missions[i]);

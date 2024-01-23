@@ -87,7 +87,7 @@ L.Util.extend(L.KML, {
 	parseStyle: function (xml, kmlOptions) {
 		var style = {}, poptions = {}, ioptions = {}, el, id;
 
-		var attributes = {color: true, width: true, Icon: true, href: true, hotSpot: true};
+		var attributes = {color: true, width: true, Icon: true, href: true, hotSpot: true, heading: true, scale: true};
 
 		function _parse (xml) {
 			var options = {};
@@ -101,13 +101,17 @@ L.Util.extend(L.KML, {
 						options[e.attributes[j].name] = e.attributes[j].nodeValue;
 					}
 				} else {
-					var value = (e.childNodes && e.childNodes.length) ? e.childNodes[0].nodeValue : null;
-					if(!value) {
+					if(e.childNodes.length == 0) {
 						continue;
 					}
+					var value = (e.childNodes && e.childNodes.length) ? e.childNodes[0].nodeValue : null;
 					if (key === 'color') {
 						options.opacity = parseInt(value.substring(0, 2), 16) / 255.0;
 						options.color = '#' + value.substring(6, 8) + value.substring(4, 6) + value.substring(2, 4);
+                    } else if (key == 'scale') {
+                        options.scale = parseFloat(value);                 
+                    } else if (key == 'heading') {
+                        options.heading = parseFloat(value);                 
 					} else if (key === 'width') {
 						options.weight = parseInt(value);
 					} else if (key === 'Icon') {
@@ -120,6 +124,8 @@ L.Util.extend(L.KML, {
 			}
 			return options;
 		}
+
+		id = xml.getAttribute('id');
 
 		el = xml.getElementsByTagName('LineStyle');
 		if (el && el[0]) { style = _parse(el[0]); }
@@ -135,7 +141,9 @@ L.Util.extend(L.KML, {
                 iconSize: [16,16],
 				shadowUrl: null,
 				anchorRef: {x: ioptions.x, y: ioptions.y},
-				anchorType:	{x: ioptions.xunits, y: ioptions.yunits}
+				anchorType:	{x: ioptions.xunits, y: ioptions.yunits},
+                iconScale: 'scale' in ioptions ? ioptions.scale : 1,
+                iconHeading: 'heading' in ioptions ? ioptions.heading : 0,
 			};
 
 			if (typeof kmlOptions === "object" && typeof kmlOptions.iconOptions === "object") {
@@ -256,6 +264,7 @@ L.Util.extend(L.KML, {
                     if ('icon' in opts && 'options' in opts['icon']) { 
                         opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://maps.google.com/mapfiles/kml/shapes', '../script/images');
                         opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://iop.apl.washington.edu', '../script');
+                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('arrow_narrow.png', '../script/images/arrow_narrow.png');
                         if (opts['icon']['options']['iconUrl'].includes('marker')) {
                             opts['icon']['options']['iconSize'] = [8,8];
                             opts['icon']['options']['iconAnchor'] = [4,4];
@@ -263,6 +272,13 @@ L.Util.extend(L.KML, {
                             if (ch && ch.length >= 1 && ch[0].childNodes[0].nodeValue.includes(' end')) {
                                 opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('icon', 'yellow');
                             }
+                        }
+                        else if (opts['icon']['options']['iconUrl'].includes("arrow_narrow")) {
+                            let s = opts['icon']['options']['iconScale'];
+                            let h = opts['icon']['options']['iconHeading'];
+                        
+                            opts['icon']['options']['iconSize'] = [12*s,64*s];
+                            opts['icon']['options']['iconAnchor'] = [6*s,32*s];
                         }
                         else {
                             opts['icon']['options']['iconSize'] = [32,32];
@@ -334,6 +350,17 @@ L.Util.extend(L.KML, {
 		}
 		var ll = el[0].childNodes[0].nodeValue.split(',');
         
+        if ('icon' in options && 'iconUrl' in options['icon']['options'] && options['icon']['options']['iconUrl'].includes('arrow_narrow')) {
+            marker = new L.shapeMarker([ll[1],ll[0]],
+                                           {
+                                                shape: 'arrow1d',
+                                                radius: 8*options['icon']['options']['iconScale'],
+                                                color: 'black',
+                                                rotation: options['icon']['options']['iconHeading'], 
+                                           });
+            return marker
+        }
+
         if (!('icon' in options)) {
             options['icon'] = new L.KMLIcon({ iconSize: [16,16], iconUrl: '../script/images/marker-icon.png', shadowUrl: null, iconAnchor: [8,8] });
         }
@@ -453,6 +480,8 @@ L.KMLIcon = L.Icon.extend({
 		iconAnchor: [8, 8],
 		shadowSize: [16, 16],
 		shadowAnchor: [8, 8],
+        iconHeading: 0,
+        iconScale: 1,
 	},
 	_setIconStyles: function (img, name) {
 		L.Icon.prototype._setIconStyles.apply(this, [img, name]);
@@ -486,6 +515,8 @@ L.KMLMarker = L.Marker.extend({
 	options: {
 		icon: new L.KMLIcon().Default
 	}
+
+    
 });
 
 // Inspired by https://github.com/bbecquet/Leaflet.PolylineDecorator/tree/master/src
