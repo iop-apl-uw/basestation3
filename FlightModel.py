@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -3487,7 +3487,7 @@ def process_dive(
 
             if exit_event and exit_event.is_set():
                 log_info("Exit requested")
-                compare = False
+                compare = [False]
 
             if dd.dive_data_ok and any(compare):
                 log_info(" Reprocess dive %d: %s" % (d_n, compare))
