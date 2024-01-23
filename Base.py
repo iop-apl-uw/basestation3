@@ -205,7 +205,7 @@ def read_processed_files(glider_dir, instrument_id):
             | stat.S_IROTH
             | stat.S_IWOTH,
         )
-    except:
+    except Exception:
         log_error(f"Unable to change mode of {processed_dive_file_name}", "exc")
 
     log_debug("Leaving read_processed_files")
@@ -331,7 +331,7 @@ def process_dive_selftest(
                         comm_log,
                         incomplete_files,
                     )
-                except:
+                except Exception:
                     log_error(f"Could not process {fc.base_name()} - skipping", "exc")
                     ret_val = -1
                 else:
@@ -371,7 +371,7 @@ def process_dive_selftest(
                     comm_log,
                     incomplete_files,
                 )
-            except:
+            except Exception:
                 if DEBUG_PDB:
                     _, _, tb = sys.exc_info()
                     traceback.print_exc()
@@ -550,7 +550,7 @@ def process_file_group(
             file_group[i] = Bogue.Bogue(
                 bogue_file
             )  # replaces filename with bogue'd filename if bogue's syndrome was removed
-        except:
+        except Exception:
             log_error(
                 f"Exception raised in Bogue processing {bogue_file} - skipping dive processing."
             )
@@ -796,7 +796,7 @@ def process_file_group(
                         incomplete_files.append(saved_defrag_file_name)
                         ret_val = 1
 
-                except:
+                except Exception:
                     log_error(
                         f"Problems processing logger {defrag_file_name} tar data",
                         "exc",
@@ -857,7 +857,7 @@ def process_file_group(
                 log_info(f"Removing secrets from {fc.mk_base_logfile_name()}")
                 try:
                     expunge_secrets(fc.mk_base_logfile_name())
-                except:
+                except Exception:
                     log_error(f"Could not expunge secrets for {in_file_name}", "exc")
                 if not fc.is_seaglider_selftest():
                     processed_eng_and_log_files.append(fc.mk_base_logfile_name())
@@ -1350,7 +1350,7 @@ def run_extension_script(script_name, script_args):
         log_debug(f"Running ({cmdline})")
         try:
             (_, fo) = Utils.run_cmd_shell(cmdline)
-        except:
+        except Exception:
             log_error(f"Error running {cmdline}", "exc")
         else:
             for f in fo:
@@ -1438,7 +1438,7 @@ def main():
     if base_opts.nice:
         try:
             os.nice(base_opts.nice)
-        except:
+        except Exception:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     # Check for required "options"
@@ -1613,7 +1613,7 @@ def main():
     if os.path.exists(history_logfile_name):
         try:
             command_list_with_ts = CommLog.process_history_log(history_logfile_name)
-        except:
+        except Exception:
             log_error(
                 "History file processing threw an exception - no merged file produced",
                 "exc",
@@ -1882,7 +1882,7 @@ def main():
                 )
                 try:
                     shutil.move(flight_dir, flight_dir_backup)
-                except:
+                except Exception:
                     log_error(
                         "Failed to move %s to %s - profiles will use existing flight model data"
                         % (flight_dir, flight_dir_backup),
@@ -1981,7 +1981,7 @@ def main():
                     "MakeDiveProfiles caught a keyboard exception - bailing out", "exc"
                 )
                 return 1
-            except:
+            except Exception:
                 log_error(
                     f"MakeDiveProfiles raised an exception - dive profiles not created for {head}",
                     "exc",
@@ -2033,7 +2033,7 @@ def main():
                 log_info(f"Backing up {backup_filename} to {backup_target_filename}")
                 shutil.copyfile(backup_filename, backup_target_filename)
 
-                if not "cmdfile" in backup_filename:
+                if "cmdfile" not in backup_filename:
                     BaseDB.logControlFile(
                         base_opts,
                         backup_dive_num,
@@ -2119,7 +2119,7 @@ def main():
                         else:
                             try:
                                 os.unlink(known_file)
-                            except:
+                            except Exception:
                                 log_error(
                                     f"Could not remove uploaded file {known_file}"
                                 )
@@ -2153,7 +2153,7 @@ def main():
                     fm_nc_files_created,
                     exit_event=skip_mission_processing_event,
                 )
-            except:
+            except Exception:
                 log_critical("FlightModel failed", "exc")
             else:
                 fm_nc_files_created = list(set(fm_nc_files_created))
@@ -2186,13 +2186,13 @@ def main():
         if base_opts.force:
             try:
                 BaseDB.rebuildDivesGC(base_opts, "nc")
-            except:
+            except Exception:
                 log_error("Failed to rebuild mission sqlite db", "exc")
         else:
             for ncf in nc_files_created:
                 try:
                     BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
-                except:
+                except Exception:
                     log_error(f"Failed to add {ncf} to mission sqlite db", "exc")
             log_info("netcdf load to db done")
 
@@ -2244,7 +2244,7 @@ def main():
             Utils.notifyVis(
                 instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
             )
-        except:
+        except Exception:
             log_error("notifyVis failed", "exc")
 
     # Check for sighup here
@@ -2275,7 +2275,7 @@ def main():
                             failed_mission_profile = True
                         else:
                             data_product_file_names.append(mission_profile_name)
-                    except:
+                    except Exception:
                         log_error("Failed to create mission profile", "exc")
                         failed_mission_profile = True
             #
@@ -2298,7 +2298,7 @@ def main():
                             failed_mission_timeseries = True
                         else:
                             data_product_file_names.append(mission_timeseries_name)
-                    except:
+                    except Exception:
                         log_error("Failed to create mission timeseries", "exc")
                         failed_mission_timeseries = True
 
@@ -2329,7 +2329,7 @@ def main():
                         calib_consts,
                         processed_other_files,
                     )
-            except:
+            except Exception:
                 log_error("Failed to generate KML", "exc")
 
             # Invoke extensions, if any
@@ -2425,7 +2425,7 @@ def main():
 
         try:
             alert_msg_file = open(alert_msg_file_name, "w")
-        except:
+        except Exception:
             log_error("Could not open alert_msg_file_name", "exc")
             log_info("... skipping")
             alert_msg_file = None
@@ -2569,7 +2569,7 @@ def main():
                 BaseDB.addValToDB(base_opts, int(backup_dive_num), "alerts", 0)
             try:
                 os.remove(alert_msg_file_name)
-            except:
+            except Exception:
                 log_error(f"Could not remove alert message file {alert_msg_file_name}")
 
     processed_file_names = []
@@ -2661,7 +2661,7 @@ def main():
                 )
                 try:
                     tf = tarfile.open(tar_name, "w:bz2", compresslevel=9)
-                except:
+                except Exception:
                     log_error(f"Error opening {tar_name} - skipping creation", "exc")
                     continue
                 for fn in tarfile_files:
@@ -2674,7 +2674,7 @@ def main():
                     try:
                         with open(tar_name, "rb") as fi:
                             buff = fi.read()
-                    except:
+                    except Exception:
                         log_error(
                             f"Could not process {tar_name} for fragmentation - skipping",
                             "exc",
@@ -2700,7 +2700,7 @@ def main():
                                         else len(buff)
                                     ]
                                 )
-                        except:
+                        except Exception:
                             log_error(
                                 f"Could not process {tar_frag_name} for fragmentation - skipping",
                                 "exc",
@@ -2733,7 +2733,7 @@ def main():
         if tail == ".cap":
             try:
                 fi = open(p, "rb")
-            except:
+            except Exception:
                 log_error("Unable to open %s (%s) - skipping" % p, "exc")
             else:
                 cap_text = fi.read()
@@ -2745,7 +2745,7 @@ def main():
                 for ll in cap_text.splitlines():
                     try:
                         ll = ll.decode("utf-8")
-                    except:
+                    except Exception:
                         log_warning(
                             f"Could not decode line number {line_count} in {p} - skipping"
                         )
@@ -2835,7 +2835,7 @@ def main():
                 Utils.notifyVis(
                     instrument_id, "urls-files", orjson.dumps(msg).decode("utf-8")
                 )
-            except:
+            except Exception:
                 log_error("notifyVis failed", "exc")
 
     # Optionally: Clean up intermediate (working) files here
@@ -2865,7 +2865,7 @@ def main():
                 "Finished processing "
                 + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
             )
-    except:
+    except Exception:
         log_error(f"Failed to open {base_completed_name_fullpath}")
 
     log_info(
