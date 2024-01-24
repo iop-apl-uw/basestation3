@@ -963,7 +963,7 @@ global_options_dict = {
         str,
         {"help": "Prefixes of dimensions and variables to strip", "nargs": "+"},
     ),
-    # KML related
+    # MakeKML related
     "skip_points": options_t(
         10,
         (
@@ -1154,6 +1154,23 @@ global_options_dict = {
             "option_group": "kml generation",
         },
     ),
+    "merge_ssh": options_t(
+        True,
+        (
+            "Base",
+            "Reprocess",
+            "MakeKML",
+        ),
+        ("--merge_ssh",),
+        bool,
+        {
+            "help": "Merge in glider SSH kmz",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
+    # End MakeKML
     "gliderdac_base_config": options_t(
         "",
         (

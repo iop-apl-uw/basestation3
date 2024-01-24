@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 import cProfile
 import collections
 import functools
+import io
 import glob
 import math
 import os
@@ -440,7 +441,7 @@ def printTargets(
     """Proceses a target file"""
     try:
         target_file = open(target_file_name, "r")
-    except:
+    except Exception:
         log_error(
             f"Could not open {target_file_name} - skipping target processing", "exc"
         )
@@ -598,7 +599,7 @@ def printDive(
     """
     try:
         nc = Utils.open_netcdf_file(dive_nc_file_name, "r")
-    except:
+    except Exception:
         log_error(f"Could not read {dive_nc_file_name}", "exc")
         log_info("Skipping...")
         return dive_gps_position(
@@ -620,7 +621,7 @@ def printDive(
         gps_lat_end = nc.variables["log_gps_lat"][2]
         gps_lon_end = nc.variables["log_gps_lon"][2]
         gps_time_end = nc.variables["log_gps_time"][2]
-    except:
+    except Exception:
         log_error(
             f"Could not process {dive_nc_file_name} due to missing variables", "exc"
         )
@@ -674,7 +675,7 @@ def printDive(
         lat = nc.variables["latitude"][:]
         time_vals = nc.variables[BaseNetCDF.nc_ctd_time_var][:]
         num_points = len(time_vals)
-    except:
+    except Exception:
         log_warning(
             f"Could not process {dive_nc_file_name} due to missing variables", "exc"
         )
@@ -793,7 +794,7 @@ def printDive(
 
     try:
         dog, cog = Utils.bearing(gps_lat_start, gps_lon_start, gps_lat_end, gps_lon_end)
-    except:
+    except Exception:
         log_error(f"Could not process dog/cog from {dive_nc_file_name}", "exc")
         dog = cog = None
 
@@ -803,18 +804,18 @@ def printDive(
         tgt_lat = Utils.ddmm2dd(float(tgt_lat))
         tgt_lon = Utils.ddmm2dd(float(tgt_lon))
         dtg, ctg = Utils.bearing(gps_lat_end, gps_lon_end, tgt_lat, tgt_lon)
-    except:
+    except Exception:
         log_error(f"Could not process target lat/log from {dive_nc_file_name}", "exc")
         dtg = ctg = None
 
     try:
         nd = nc.variables["north_displacement"][:]
         ed = nc.variables["east_displacement"][:]
-    except:
+    except Exception:
         try:
             nd = nc.variables["north_displacement_gsm"][:]
             ed = nc.variables["east_displacement_gsm"][:]
-        except:
+        except Exception:
             log_error(
                 f"Could not find any displacements in {dive_nc_file_name} - skipping",
                 "exc",
@@ -978,7 +979,7 @@ def extractGPSPositions(dive_nc_file_name, dive_num):
     """
     try:
         nc = Utils.open_netcdf_file(dive_nc_file_name, "r")
-    except:
+    except Exception:
         log_error(f"Could not read {dive_nc_file_name}", "exc")
         log_error("Skipping...")
         return None
@@ -996,7 +997,7 @@ def extractGPSPositions(dive_nc_file_name, dive_num):
         gps_lat_end = nc.variables["log_gps_lat"][2]
         gps_lon_end = nc.variables["log_gps_lon"][2]
         gps_time_end = nc.variables["log_gps_time"][2]
-    except:
+    except Exception:
         log_error(
             f"Could not process {dive_nc_file_name} due to missing variables", "exc"
         )
@@ -1102,7 +1103,7 @@ def main(
 
     try:
         fo = open(mission_kml_name, "w")
-    except:
+    except Exception:
         log_error(f"Could not open {mission_kml_name}", "exc")
         log_info("Bailing out...")
         return 1
@@ -1237,7 +1238,7 @@ def main(
                     True,
                     ballon_pairs,
                 )
-            except:
+            except Exception:
                 log_error("Could not print surface position placemark", "exc")
 
         # Add the start of dive 1 into the mix, if available
@@ -1368,7 +1369,7 @@ def main(
                         True,
                         ballon_pairs,
                     )
-                except:
+                except Exception:
                     log_error("Could not print surface position placemark", "exc")
 
             if len(surface_positions) == 0 and dive_num in dive_gps_positions:
@@ -1518,7 +1519,7 @@ def main(
                             True,
                             ballon_pairs,
                         )
-                    except:
+                    except Exception:
                         log_error("Could not print surface position placemark", "exc")
 
                 fo.write("    </Folder>\n")
@@ -1576,7 +1577,7 @@ def main(
                     False,
                     ballon_pairs,
                 )
-            except:
+            except Exception:
                 log_error("Could not print surface position placemark", "exc")
 
     # Targets file processing
@@ -1606,7 +1607,7 @@ def main(
                     tgt_lat = Utils.ddmm2dd(float(tgt_lat))
                     tgt_lon = Utils.ddmm2dd(float(tgt_lon))
                     tgt_radius = float(log_file.data["$TGT_RADIUS"])
-            except:
+            except Exception:
                 tgt_name = tgt_lat = tgt_lon = tgt_radius = None
 
         # Display targets
@@ -1647,6 +1648,62 @@ def main(
                     tgt_radius=tgt_radius,
                 )
 
+    # Add in the SSH file in, if it exists
+    add_files = {}
+    if base_opts.merge_ssh:
+        ssh_file_name = os.path.join(
+            base_opts.mission_dir, f"sg{base_opts.instrument_id:03d}_ssh.kmz"
+        )
+
+        if os.path.exists(ssh_file_name) and zip_kml:
+            try:
+                ssh_zip_file = zipfile.ZipFile(ssh_file_name, "r")
+            except Exception:
+                log_warning(f"Error opening {ssh_file_name} - skipping")
+            else:
+                with ssh_zip_file:
+                    for ff in ssh_zip_file.filelist:
+                        try:
+                            if (
+                                ff.filename
+                                == f"sg{base_opts.instrument_id:03d}_ssh.kml"
+                            ):
+                                # This code makes some pretty hard assumptions about structure
+                                # of the ssh file
+                                contents = ssh_zip_file.read(ff)
+                                fo.write('<Folder id="SSH">\n')
+                                fo.write("<visibility>0</visibility>\n")
+                                for ll in io.BytesIO(contents).readlines():
+                                    ll = ll.decode()
+                                    if (
+                                        ll.startswith("<?xml")
+                                        or ll.startswith("<kml")
+                                        or ll.startswith("<Document>")
+                                        or ll.startswith("</Document")
+                                        or ll.startswith("</kml>")
+                                    ):
+                                        continue
+                                    if "<Placemark>" in ll:
+                                        ll = ll.replace(
+                                            "<Placemark>",
+                                            "<Placemark><visibility>0</visibility>",
+                                        )
+                                    if "<visibility>1" in ll:
+                                        ll = ll.replace(
+                                            "<visibility>1", "<visibility>0"
+                                        )
+                                    fo.write(ll)
+                                    if "<Folder" in ll:
+                                        fo.write("<visibility>0</visibility>\n")
+                                fo.write("</Folder>\n")
+                            else:
+                                add_files[ff.filename] = os.path.join(
+                                    base_opts.mission_dir, ff.filename
+                                )
+                                ssh_zip_file.extract(ff, base_opts.mission_dir)
+                        except Exception:
+                            log_error(f"Failed to handle {ff.filename}", "exc")
+
     printFooter(fo)
 
     fo.close()
@@ -1656,13 +1713,17 @@ def main(
         head, _ = os.path.splitext(mission_kml_name)
         mission_kml_zip_name = head + ".kmz"
         try:
+            if os.path.exists(mission_kml_zip_name):
+                os.unlink(mission_kml_zip_name)
             mission_kml_zip_file = zipfile.ZipFile(
                 mission_kml_zip_name, "w", zipfile.ZIP_DEFLATED
             )
             mission_kml_zip_file.write(mission_kml_name, mission_kml_file_name_base)
+            for k, v in add_files.items():
+                mission_kml_zip_file.write(v, k)
             mission_kml_zip_file.close()
             os.remove(mission_kml_name)
-        except:
+        except Exception:
             log_error(f"Could not process {mission_kml_zip_name}", "exc")
             log_info("Bailing out...")
             return 1
@@ -1679,7 +1740,7 @@ def main(
         )
         try:
             fo = open(networklink_kml_name, "w")
-        except:
+        except Exception:
             log_error(f"Could not open {networklink_kml_name}", "exc")
             log_info("Skipping...")
         else:
