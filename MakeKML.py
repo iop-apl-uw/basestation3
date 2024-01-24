@@ -705,8 +705,7 @@ def printDive(
     if base_opts.surface_track:
         fo.write("    <Placemark>\n")
         fo.write(
-            "        <name>SG%03d Dive %03d Surface Track</name>\n"
-            % (instrument_id, dive_num)
+            "        <name>SG%03d Dive %03d Track</name>\n" % (instrument_id, dive_num)
         )
         fo.write(
             "        <description>Dive started %s</description>\n"
@@ -759,8 +758,7 @@ def printDive(
     if base_opts.subsurface_track:
         fo.write("    <Placemark>\n")
         fo.write(
-            "        <name>SG%03d Dive %03d Subsurface Track</name>\n"
-            % (instrument_id, dive_num)
+            "        <name>SG%03d Dive %03d Track</name>\n" % (instrument_id, dive_num)
         )
         fo.write(
             "        <description>Dive started %s</description>\n"
