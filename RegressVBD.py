@@ -464,8 +464,7 @@ def parseRangeList(rngs):
     return sorted(set(chain(*[parseSingleRange(rng) for rng in rngs.split(',')])))
 
 def main():
-
-    base_opts = BaseOpts.BaseOptions("Command line app for VBD regression",
+    base_opts = BaseOpts.BaseOptions("Command line app for VBD regression\nTypical usage (from glider mission directory): python RegressVBD.py -m ./ -i 235 --dives 3-5 --depths 40,140 --initial_bias -50 --out results.html",
         additional_arguments={
             "dives": BaseOpts.options_t(
                 "",
