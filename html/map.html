@@ -906,6 +906,10 @@
                     for (k of Object.keys(track._layers)) {
                         if (track._layers[k].options.hasOwnProperty('name') 
                             && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH'))) {
+                            if (track._layers[k].options.name.includes('SSH')) {
+                                layerControl.removeLayer(track._layers[k]._layers[0]);
+                                layerControl.removeLayer(track._layers[k]._layers[1]);
+                            }
                             layerControl.removeLayer(track._layers[k]);
                             console.log('removing ' + track._layers[k]);
                         }
@@ -1008,14 +1012,22 @@
                         }
                         if (track._layers[k].options.hasOwnProperty('name')
                             && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH') )) {
-                            if (track._layers[k].options.name.includes('Dives'))
+                            if (track._layers[k].options.name.includes('Dives')) {
                                 layerControl.addOverlay(track._layers[k], 'dives', '' + gliders[i] + ' ' + missions[i]);
-                            else if (track._layers[k].options.name.includes('Targets'))
+                                map.removeLayer(track._layers[k]);
+                            }
+                            else if (track._layers[k].options.name.includes('Targets')) {
                                 layerControl.addOverlay(track._layers[k], 'targets', gliders[i] + ' ' + missions[i]);
-                            else
-                                layerControl.addOverlay(track._layers[k], 'SSH', gliders[i] + ' ' + missions[i]);
-
-                            map.removeLayer(track._layers[k]);
+                                map.removeLayer(track._layers[k]);
+                            }
+                            else {
+                                var kk;
+                                for (kk in track._layers[k]._layers) {
+                                    console.log(track._layers[k]._layers[kk]);
+                                    layerControl.addOverlay(track._layers[k]._layers[kk], track._layers[k]._layers[kk].options.name, gliders[i] + ' ' + missions[i]);
+                                    map.removeLayer(track._layers[k]._layers[kk]);
+                                }
+                            }
                             console.log(track._layers[k].options.name);
                             console.log(missions[i]);
                         }
