@@ -138,7 +138,7 @@ L.Util.extend(L.KML, {
 		if (ioptions.href) {
 			var iconOptions = {
 				iconUrl: ioptions.href,
-                iconSize: [16,16],
+                iconSize: [8,8],
 				shadowUrl: null,
 				anchorRef: {x: ioptions.x, y: ioptions.y},
 				anchorType:	{x: ioptions.xunits, y: ioptions.yunits},
@@ -280,6 +280,10 @@ L.Util.extend(L.KML, {
                             opts['icon']['options']['iconSize'] = [12*s,64*s];
                             opts['icon']['options']['iconAnchor'] = [6*s,32*s];
                         }
+                        else if (opts['icon']['options']['iconUrl'].includes("shaded_dot")) {
+                            opts['icon']['options']['iconSize'] = [8,8];
+                            opts['icon']['options']['iconAnchor'] = [4,4];
+                        }
                         else {
                             opts['icon']['options']['iconSize'] = [32,32];
                             opts['icon']['options']['iconAnchor'] = [16,16];
@@ -362,7 +366,7 @@ L.Util.extend(L.KML, {
         }
 
         if (!('icon' in options)) {
-            options['icon'] = new L.KMLIcon({ iconSize: [16,16], iconUrl: '../script/images/marker-icon.png', shadowUrl: null, iconAnchor: [8,8] });
+            options['icon'] = new L.KMLIcon({ iconSize: [8,8], iconUrl: '../script/images/marker-icon.png', shadowUrl: null, iconAnchor: [4,4] });
         }
 		marker = new L.KMLMarker(new L.LatLng(ll[1], ll[0]), options);
         return marker;

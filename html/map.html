@@ -439,7 +439,7 @@
                     }
                     else if ('connected' in msg) {
                         // we don't actually have kml ready yet ...
-                        // loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ], -1, null, false);
+                        // loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ], -1, null, false, true);
                         var key = msg['glider'] + '_' + msg['mission'];
                         gliderMarkers[key].setLatLng([ msg['lat'], msg['lon'] ]);
                                                                                                    // tail
@@ -447,7 +447,7 @@
                     else if ('content' in msg && msg['content'] == 'files=all' &&
                              (msg['when'] == 'socket' || msg['when'] == 'sync') ) {
 
-                        loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ], -1, null, false);
+                        loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ], -1, null, false, true);
                     }
 
                 }
@@ -792,7 +792,7 @@
                 if (assets.length)
                     loadAssets(map, layerControl, assets);    
                 if (gliders.length)
-                    loadGliderKML(map, layerControl, gliders, missions, tail, null, false);
+                    loadGliderKML(map, layerControl, gliders, missions, tail, null, false, false);
             }
 
             function loadExtras(map, layerControl, glider, mission, tail) {
@@ -957,7 +957,7 @@
                     }
                 }); 
             }
-            async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, doCtr) {
+            async function loadGliderKML(map, layerControl, gliders, missions, tail, lastBounds, doCtr, leaveFirst) {
                 var kml;
                 var parser;
                 var i;
@@ -1014,7 +1014,7 @@
                             && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH') )) {
                             if (track._layers[k].options.name.includes('Dives')) {
                                 layerControl.addOverlay(track._layers[k], 'dives', '' + gliders[i] + ' ' + missions[i]);
-                                map.removeLayer(track._layers[k]);
+                                if (i > 0 || !leaveFirst) map.removeLayer(track._layers[k]);
                             }
                             else if (track._layers[k].options.name.includes('Targets')) {
                                 layerControl.addOverlay(track._layers[k], 'targets', gliders[i] + ' ' + missions[i]);
@@ -1536,7 +1536,7 @@
                 document.title = glider + '-map';
                 lastBounds = loadBounds('' + glider);
                 loadGliderPosition(map, layerControl, glider, mission);
-                loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true);
+                loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true, true);
                 loadGliderDAC(map, layerControl, path[first], mission); 
             }
             else {
