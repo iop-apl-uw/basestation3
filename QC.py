@@ -1300,6 +1300,8 @@ cond_qc_list = [
     "stuck on the bottom",
     r"uncorrectable [-+]?(?:\d*\.*\d+)m conductivity bubble on dive",
     r"uncorrectable [-+]?(?:\d*\.*\d+)m raw conductivity bubble on dive",
+    "raw legato salinity below bound",
+    "bad raw legato salinity indicates raw legato conductivity issues",
 ]
 skip_qc_list = [
     "changed corrected salin implies changed speed",
