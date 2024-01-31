@@ -153,7 +153,7 @@ def getModelW(bu, Pit, HD_A, HD_B, HD_C, rho0):
                                 HD_A, HD_B, HD_C, rho0, -0.25)
     return W
 
-def regress(path, glider, dives, depthlims, init_bias, doplot, plot_dives):
+def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives):
 
     fname = os.path.join(path, f'p{glider:03d}{dives[-1]:04d}.nc')
     nc = Utils.open_netcdf_file(fname)
@@ -162,7 +162,7 @@ def regress(path, glider, dives, depthlims, init_bias, doplot, plot_dives):
     basis_HD_B = nc.variables["log_HD_B"].getValue()
     basis_HD_C = nc.variables["log_HD_C"].getValue()
     basis_RHO0 = nc.variables["log_RHO"].getValue()*1000
-    basis_MASS = nc.variables["log_MASS"].getValue()/1000
+    basis_MASS = (mass if mass else nc.variables["log_MASS"].getValue())/1000
     basis_VBD_CNV = nc.variables["log_VBD_CNV"].getValue()
     basis_VBD_MIN = nc.variables["log_VBD_MIN"].getValue()
 
@@ -171,7 +171,7 @@ def regress(path, glider, dives, depthlims, init_bias, doplot, plot_dives):
             "VBD_MAX": float(nc.variables["log_VBD_MAX"].getValue()),
             "VBD_CNV": float(nc.variables["log_VBD_CNV"].getValue()),
             "RHO":     float(nc.variables["log_RHO"].getValue()),
-            "MASS":    float(nc.variables["log_MASS"].getValue()),
+            "MASS":    mass if mass else float(nc.variables["log_MASS"].getValue()),
           }
 
     vol0 = basis_MASS/basis_RHO0;
@@ -495,6 +495,15 @@ def main():
                     "help": "output file name",
                 }
             ),
+            "mass": BaseOpts.options_t(
+                None,
+                ("RegressVBD",),
+                ( "--mass", ),
+                float,
+                {
+                    "help": "corrected scale mass (g)",
+                }
+            ),
             "initial_bias": BaseOpts.options_t(
                 -50,
                 ("RegressVBD",),
@@ -555,6 +564,7 @@ def main():
                       parseRangeList(base_opts.dives),
                       [d0, d1],
                       base_opts.initial_bias, 
+                      base_opts.mass,
                       fmt, True)
 
     if fmt == 'html':

@@ -26,8 +26,14 @@
     <input type="checkbox" name="ballast" value="ballast">
     <label for="ballast"><b>incl. ballast sheet</b></label>
     </span>
+    <label for="mass"><b>mass</b></label>
+    <input type="text" placeholder="72500" name="mass" id="mass">
+    <label for="density"><b>density</b></label>
+    <input type="text" placeholder="1.0275" name="density" value="1.0275" id="density">
+    <label for="thrust"><b>thrust</b></label>
+    <input type="text" placeholder="-250" name="thrust" value="-250" id="thrust">
     <button type="submit" class="btn" onclick="submitRegressionForm(); return false;">process</button>
-    <button type="button" class="btn cancel" onclick="closeRegressionForm(); return false;">cancel</button>
+    <button type="button" class="btn cancel" onclick="closeRegressionForm(); return false;">close</button>
   </form>
 </div>
 

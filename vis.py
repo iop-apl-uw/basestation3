@@ -1082,9 +1082,15 @@ def attachHandlers(app: sanic.Sanic):
         print(ballast)
 
         dives = RegressVBD.parseRangeList(dives)
+
+        mass = float(request.args['mass'][0]) if 'mass' in request.args else None
         
-        bias, hd, rms, log, plt = RegressVBD.regress(path, glider, dives, [depth1, depth2], initBias, 'html', True)
+        bias, hd, rms, log, plt = RegressVBD.regress(path, glider, dives, [depth1, depth2], initBias, mass, 'html', True)
         if ballast:
+            
+            log['thrust'] = request.args['thrust'][0] if 'thrust' in request.args else -250
+            log['density'] = request.args['density'][0] if 'density' in request.args else 1.0275
+           
             async with aiofiles.open(f'{sys.path[0]}/html/ballast.html', 'r') as file:
                 ballastHTML = await file.read()
            
@@ -1095,8 +1101,8 @@ def attachHandlers(app: sanic.Sanic):
                           $('volmax').value = {volmax:.1f};
                           $('min_counts').value = {VBD_MIN};
                           $('max_counts').value = {VBD_MAX};
-                          $('thrust').value = -250;
-                          $('target_density').value = 1.0275;
+                          $('thrust').value = {thrust};
+                          $('target_density').value = {density};
                           calculate();
                           </script>
                           """.format(**log)

@@ -25,7 +25,23 @@
         $('searchForm').style.display = "block";
     } 
     function openRegressionForm() {
-        $('regressionForm').style.display = "block";
+        var opts = ['limit=1'];
+        if (mission() != '')
+            opts.push(mission()) 
+
+        var q = `query/${currGlider}/dive,log_MASS${formatQuery(opts)}`
+
+        fetch(q)
+        .then(res => res.text())
+        .then(text => {
+            try {
+                data = JSON.parse(text);
+                $('mass').value = data['log_MASS'];
+            } catch (error) {
+                console.log('openRegressionForm ' + error);
+            }
+            $('regressionForm').style.display = "block";
+        });
     } 
 
     function submitRegressionForm() {
@@ -37,7 +53,14 @@
             opts.push(mission());
         if ('ballast' in obj)
             opts.push('ballast=1');
-        
+       
+        if ('mass' in obj && obj['mass'] != '')
+            opts.push('mass=' + obj['mass'])
+        if ('density' in obj && obj['density'] != '')
+            opts.push('density=' + obj['density'])
+        if ('thrust' in obj && obj['thrust'] != '')
+            opts.push('thrust=' + obj['thrust'])
+
         url = 'regress/' + currGlider
                     + '/' + obj['dives']
                     + '/' + obj['depth1']
