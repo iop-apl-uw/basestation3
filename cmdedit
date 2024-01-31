@@ -32,7 +32,7 @@ import tempfile
 import zlib
 
 from time import strftime, time, gmtime
-from os.path import basename
+from os.path import basename,dirname
 
 help_message = """
 usage: cmdedit [options]
@@ -83,7 +83,7 @@ except getopt.GetoptError:
 interactive = True
 input_file = ""
 wd = os.getcwd()
-validator = f"{sys.path[0]}/validate"
+validator = f"{dirname(__file__)}/validate"
 always_validate = False
 ignore_errors = False
 username = None
@@ -166,8 +166,9 @@ logfile = "-"
 
 n = latest
 while n >= 1:
-    logfile = f"{wd}/p{glider}{n:04d}.log"
-    if os.access(logfile, os.R_OK):
+    try_logfile = f"{wd}/p{glider}{n:04d}.log"
+    if os.access(try_logfile, os.R_OK):
+        logfile = try_logfile
         break
 
     n = n - 1
