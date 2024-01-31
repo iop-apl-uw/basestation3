@@ -1245,6 +1245,7 @@ def addSlopeValToDB(base_opts, dive_num, var, con=None):
         log_info("addSlopeValToDB db closed")
 
 def logControlFile(base_opts, dive, filename, fullname, con=None):
+
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
         if mycon is None:
@@ -1273,8 +1274,15 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
     pathed = os.path.join(base_opts.mission_dir, fullname)
     if os.path.exists(pathed):
 
-        with open(pathed, 'r') as f:
-            contents = f.read()
+        if 'tgz' in filename:
+            contents = ''
+        else:
+            try:
+                with open(pathed, 'r') as f:
+                    contents = f.read()
+            except Exception as e:
+                log_error('{e} reading control file for logging')
+                contents = ''
 
         try:
             cur.execute("REPLACE INTO files(dive,file,fullname,contents) VALUES(?,?,?,?);", (dive, os.path.basename(filename), os.path.basename(fullname), contents))
