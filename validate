@@ -73,7 +73,7 @@ if which == "-c": # cmdfile
 
         if line[0] == '$' and len(line.split(',')) == 2:
             pcs = line.split(',')
-            if pcs[0] not in curr:
+            if log and pcs[0] not in curr:
                 print(f"unknown parameter {pcs[0]}")
                 errors = errors + 1         
                 continue
