@@ -146,7 +146,7 @@ def main():
     )
 
     print(
-        f"SG{sg_id} Dives {first_fix[3]}:{latest_fix[3]} dist_covered:{dist_covered/1000.0:.2f}km in {time_elapsed/3600.0:.2f} hours"
+        f"SG{sg_id} Dives {first_fix[3]}:{latest_fix[3]} dist_covered:{dist_covered/1000.0:.2f} km in {time_elapsed/3600.0:.2f} hours ({(dist_covered/1000.0) / (time_elapsed/(3600.0 * 24.0)):.2f} km/day)"
     )
     print(
         f"SG{sg_id} Target {tgt_name} ({tgt_lon:.4f},{tgt_lat:.4f}) dtg:{dtg/1000.0:.2f}km ttg:{ttg/3600.0:.2f} hours ({arrival_time})"
