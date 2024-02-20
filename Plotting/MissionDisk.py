@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -54,7 +54,11 @@ from Plotting import plotmissionsingle
 
 @plotmissionsingle
 def mission_disk(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots disk stats"""
 
@@ -90,7 +94,7 @@ def mission_disk(
             f"SELECT dive,{qstr} from dives",
             conn,
         ).sort_values("dive")
-    except:
+    except Exception:
         log_error("Could not fetch needed columns", "exc")
         if dbcon == None:
             conn.close()
@@ -100,7 +104,7 @@ def mission_disk(
     if dbcon == None:
         conn.close()
         log_info("mission_disk db closed")
- 
+
     y_offset = -0.08
 
     # l_annotations = []
@@ -121,6 +125,7 @@ def mission_disk(
                     "color": "red",
                     "width": 1,
                 },
+                "hovertemplate": "Dive %{x}<br>SD free space %{y} kb<extra></extra>",
             }
         )
 
@@ -154,6 +159,7 @@ def mission_disk(
                     "color": "blue",
                     "width": 1,
                 },
+                "hovertemplate": "Dive %{x}<br>SD file count %{y}<extra></extra>",
             }
         )
 
@@ -170,6 +176,7 @@ def mission_disk(
                     "color": "cyan",
                     "width": 1,
                 },
+                "hovertemplate": "Dive %{x}<br>SD dir count %{y}<extra></extra>",
             }
         )
 
@@ -178,6 +185,12 @@ def mission_disk(
             continue
 
         nm = v.replace("log_", "")
+        sensor_tag = nm
+        try:
+            if "_" in nm:
+                sensor_tag = nm.split("_")[0]
+        except Exception:
+            pass
         fig.add_trace(
             {
                 "name": nm,
@@ -189,6 +202,7 @@ def mission_disk(
                     "dash": "solid",
                     "width": 1,
                 },
+                "hovertemplate": f"Dive %{{x}}<br>{sensor_tag} free space %{{y}} kb<extra></extra>",
             }
         )
 
