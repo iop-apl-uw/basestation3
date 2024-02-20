@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -217,11 +217,12 @@ def mission_profiles(
                         },
                      }
 
+            unit_tag = f" {units}" if units else ""
             props = {
-                        'x': d['dive'],
+                        'x': numpy.array(d['dive']) - 0.5,
                         'y': d['depth'],
                         'z': d[vk],
-                        'contours_coloring': 'heatmap',
+                         'contours_coloring': 'heatmap',
                         'colorscale':        cmocean_to_plotly(cmap, 100),
                         'connectgaps':       fill,
                         'contours':          contours,
@@ -233,6 +234,7 @@ def mission_profiles(
                             # "thickness": 0.02,
                             # "thicknessmode": "fraction",
                         },
+                        "hovertemplate" : f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z}}{unit_tag}<extra></extra>",
                     }
 
             if zmin is not None:
