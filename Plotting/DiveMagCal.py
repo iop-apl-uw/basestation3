@@ -168,7 +168,7 @@ def plot_mag(
 
     Ph = P * norm
     log_info(
-        f"hard magcal PQR = [{P.item(0):.2f},{P.item(1):.2f},{P.item(2):.2f}], converged={converged:d}, it={it:d}"
+        f"hard magcal PQR = [{Ph.item(0):.2f},{Ph.item(1):.2f},{Ph.item(2):.2f}], converged={converged:d}, it={it:d}"
     )
 
     fxm = fxm * norm
@@ -314,7 +314,7 @@ def plot_mag(
     )
 
 
-    if abs(abc0[0][1]) > 0.2 or abs(abc0[0][2]) > 0.2 or abs(abc0[1][0]) > 0.2 or abs(abc0[1][2]) > 0.2 or abs(abc0[2][0]) > 0.2 or abs(abc0[2][1]) > 0.2:
+    if not converged or abs(abc0[0][1]) > 0.2 or abs(abc0[0][2]) > 0.2 or abs(abc0[1][0]) > 0.2 or abs(abc0[1][2]) > 0.2 or abs(abc0[2][0]) > 0.2 or abs(abc0[2][1]) > 0.2:
         log_info('distrusting soft-iron, using identity')
         abc0[0][1] = 0     
         abc0[0][2] = 0     
@@ -325,6 +325,7 @@ def plot_mag(
         abc0[0][0] = 1
         abc0[1][1] = 1
         abc0[2][2] = 1
+        P = Ph
 
     fx = []
     fy = []
