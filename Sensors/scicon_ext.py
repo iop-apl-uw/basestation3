@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2015, 2017, 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2024 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -752,12 +752,20 @@ def process_tar_members(
                     ret_val = 1
                     continue
             else:
-                if ConvertDatToEng(scicon_file, scicon_eng_file, df_meta, base_opts):
+                try:
+                    if ConvertDatToEng(
+                        scicon_file, scicon_eng_file, df_meta, base_opts
+                    ):
+                        log_error(
+                            "Error converting %s to %s" % (scicon_file, scicon_eng_file)
+                        )
+                        ret_val = 1
+                        continue
+                except Exception:
                     log_error(
-                        "Error converting %s to %s" % (scicon_file, scicon_eng_file)
+                        "Error converting %s to %s" % (scicon_file, scicon_eng_file),
+                        "exc",
                     )
-                    ret_val = 1
-                    continue
                 processed_logger_eng_files.append(scicon_eng_file)
 
     return ret_val
