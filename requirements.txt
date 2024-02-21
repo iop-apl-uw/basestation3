@@ -7,7 +7,7 @@ numpy>=1.19.1,<2
 #gsw==3.3.1
 gsw==3.6.16
 seawater==3.3.4
-plotly==4.9.0
+plotly==5.19.0
 scipy>=1.9.0
 # latest cartopy crashes when shapely is not built from source
 shapely --no-binary shapely
