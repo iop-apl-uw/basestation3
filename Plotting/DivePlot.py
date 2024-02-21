@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -96,6 +96,9 @@ def plot_diveplot(
             gc_pitch_pos,
             gc_vbd_time,
             gc_vbd_pos,
+            gc_roll_pos_ad,
+            gc_pitch_pos_ad,
+            gc_vbd_pos_ad,
         ) = PlotUtils.extract_gc_moves(dive_nc_file)
 
         apogee_time = None
@@ -244,7 +247,7 @@ def plot_diveplot(
                 return ([], [])
 
         depth_time = dive_nc_file.variables["time"][:]
-    except:
+    except Exception:
         log_error("Could not process diveplot", "exc")
         return ([], [])
 
@@ -419,21 +422,31 @@ def plot_diveplot(
     )
 
     valid_i = np.logical_not(np.isnan(eng_pitch_pos))
-    fig.add_trace(
-        {
-            "y": eng_pitch_pos[valid_i],
-            "x": eng_pitch_time[valid_i],
-            # "legendgroup": "motorpositions",
-            "name": "Pitch pos (mm)",
-            "type": "scatter",
-            "xaxis": "x1",
-            "yaxis": "y1",
-            #'mode':'lines', 'line':{'dash':'longdash', 'color':Green'}
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "LightGreen"},
-            "hovertemplate": "Pitch pos<br>%{y:.2f} mm<br>%{x:.2f} mins<br><extra></extra>",
-        }
-    )
+    temp_dict = {
+        "y": eng_pitch_pos[valid_i],
+        "x": eng_pitch_time[valid_i],
+        # "legendgroup": "motorpositions",
+        "name": "Pitch pos (mm)",
+        "type": "scatter",
+        "xaxis": "x1",
+        "yaxis": "y1",
+        #'mode':'lines', 'line':{'dash':'longdash', 'color':Green'}
+        "mode": "lines",
+        "line": {"dash": "solid", "color": "LightGreen"},
+    }
+    if gc_pitch_pos_ad is not None:
+        temp_dict["customdata"] = gc_pitch_pos_ad
+        temp_dict[
+            "hovertemplate"
+        ] = "Pitch pos<br>%{y:.2f} mm<br>%{customdata:d} AD<br>%{x:.2f} mins<br><extra></extra>"
+    else:
+        temp_dict[
+            "hovertemplate"
+        ] = "Pitch pos<br>%{y:.2f} mm<br>%{x:.2f} mins<br><extra></extra>"
+
+    fig.add_trace(temp_dict)
+    del temp_dict
+
     valid_i = np.logical_not(np.isnan(eng_roll_ang))
     fig.add_trace(
         {
@@ -450,20 +463,29 @@ def plot_diveplot(
         }
     )
 
-    fig.add_trace(
-        {
-            "y": gc_roll_pos,
-            "x": eng_roll_time,
-            # "legendgroup": "motorpositions",
-            "name": "Roll pos (deg)",
-            "type": "scatter",
-            "xaxis": "x1",
-            "yaxis": "y1",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "LightGoldenrodYellow"},
-            "hovertemplate": "Roll pos<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
-        }
-    )
+    temp_dict = {
+        "y": gc_roll_pos,
+        "x": eng_roll_time,
+        # "legendgroup": "motorpositions",
+        "name": "Roll pos (deg)",
+        "type": "scatter",
+        "xaxis": "x1",
+        "yaxis": "y1",
+        "mode": "lines",
+        "line": {"dash": "solid", "color": "LightGoldenrodYellow"},
+    }
+    if gc_roll_pos_ad is not None:
+        temp_dict["customdata"] = gc_roll_pos_ad
+        temp_dict[
+            "hovertemplate"
+        ] = "Roll pos<br>%{y:.2f} deg<br>%{customdata:d} AD<br>%{x:.2f} mins<br><extra></extra>"
+    else:
+        temp_dict[
+            "hovertemplate"
+        ] = "Roll pos<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>"
+
+    fig.add_trace(temp_dict)
+    del temp_dict
 
     # End Vehicle attitude from compass and pressure
 
@@ -611,21 +633,30 @@ def plot_diveplot(
         )
 
     valid_i = np.logical_not(np.isnan(eng_vbd_pos))
-    fig.add_trace(
-        {
-            "y": eng_vbd_pos[valid_i],
-            "x": eng_vbd_time[valid_i],
-            "meta": eng_vbd_pos[valid_i] * 10,
-            # "legendgroup": "motorpositions",
-            "name": "VBD pos (10 cc)",
-            "type": "scatter",
-            "xaxis": "x1",
-            "yaxis": "y1",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "Black"},
-            "hovertemplate": "VBD pos<br>%{meta:.2f} cc<br>%{x:.2f} mins<br><extra></extra>",
-        }
-    )
+    temp_dict = {
+        "y": eng_vbd_pos[valid_i],
+        "x": eng_vbd_time[valid_i],
+        "meta": eng_vbd_pos[valid_i] * 10,
+        # "legendgroup": "motorpositions",
+        "name": "VBD pos (10 cc)",
+        "type": "scatter",
+        "xaxis": "x1",
+        "yaxis": "y1",
+        "mode": "lines",
+        "line": {"dash": "solid", "color": "Black"},
+    }
+    if gc_vbd_pos_ad is not None:
+        temp_dict["customdata"] = gc_vbd_pos_ad
+        temp_dict[
+            "hovertemplate"
+        ] = "VBD pos<br>%{meta:.2f} cc<br>%{customdata:d} AD<br>%{x:.2f} mins<br><extra></extra>"
+    else:
+        temp_dict[
+            "hovertemplate"
+        ] = "VBD pos<br>%{meta:.2f} cc<br>%{x:.2f} mins<br><extra></extra>"
+
+    fig.add_trace(temp_dict)
+    del temp_dict
 
     fig.add_trace(
         {
@@ -695,7 +726,7 @@ def plot_diveplot(
         ) / 60.0
     except KeyError:
         pass
-    except:
+    except Exception:
         log_error("Unexpected problem with NEWHEAD variables", "exc")
     else:
         fig.add_trace(
@@ -716,7 +747,7 @@ def plot_diveplot(
     try:
         glider_id = int(glider_id)
         glider_id = "SG%03d" % glider_id
-    except:
+    except Exception:
         pass
 
     traces = []

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -139,7 +139,7 @@ def setup_plot_directory(base_opts: BaseOpts.BaseOptions) -> int:
                 | stat.S_IROTH
                 | stat.S_IXOTH,
             )
-        except:
+        except Exception:
             log_error(f"Could not create {base_opts.plot_directory}", "exc")
             return 1
     return 0
@@ -212,9 +212,9 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
 
     sort_i = np.argsort(gc_time)
     gc_time = gc_time[sort_i]
-    gc_roll_pos = gc_roll_pos[sort_i]
-    gc_pitch_pos = gc_pitch_pos[sort_i]
-    gc_vbd_pos = gc_vbd_pos[sort_i]
+    gc_roll_pos_ad = gc_roll_pos[sort_i]
+    gc_pitch_pos_ad = gc_pitch_pos[sort_i]
+    gc_vbd_pos_ad = gc_vbd_pos[sort_i]
     gc_roll_time = np.copy(gc_time)
     gc_pitch_time = np.copy(gc_time)
     gc_vbd_time = np.copy(gc_time)
@@ -256,24 +256,24 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
     gc_state_time = ncf.variables["gc_state_secs"][:]
     # 1 is the code for 'end dive'
     gc_dive_end = gc_state_time[np.argwhere(gc_state_state == 1)[0]][0]
-    roll_ctr = np.zeros(len(gc_roll_pos))
+    roll_ctr = np.zeros(len(gc_roll_pos_ad))
     roll_ctr[np.argwhere(gc_roll_time <= gc_dive_end)] = ncf.variables[
         "log_C_ROLL_DIVE"
     ].getValue()
     roll_ctr[np.argwhere(gc_roll_time > gc_dive_end)] = ncf.variables[
         "log_C_ROLL_CLIMB"
     ].getValue()
-    gc_roll_pos = (gc_roll_pos - roll_ctr) * ncf.variables["log_ROLL_CNV"].getValue()
+    gc_roll_pos = (gc_roll_pos_ad - roll_ctr) * ncf.variables["log_ROLL_CNV"].getValue()
 
     # Convert pitch to eng units
     gc_pitch_pos = (
-        gc_pitch_pos - ncf.variables["log_C_PITCH"].getValue()
+        gc_pitch_pos_ad - ncf.variables["log_C_PITCH"].getValue()
     ) * ncf.variables["log_PITCH_CNV"].getValue()
 
     # Convert VBD to eng units
-    gc_vbd_pos = (gc_vbd_pos - ncf.variables["log_C_VBD"].getValue()) * ncf.variables[
-        "log_VBD_CNV"
-    ].getValue()
+    gc_vbd_pos = (
+        gc_vbd_pos_ad - ncf.variables["log_C_VBD"].getValue()
+    ) * ncf.variables["log_VBD_CNV"].getValue()
 
     eng_time = ncf.variables["time"][:] - ncf.start_time
 
@@ -311,7 +311,22 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
     )
     vbd_pos, vbd_time = build_dense_motor_vector(gc_vbd_pos, gc_vbd_time, eng_time)
 
-    return (gc_moves, roll_time, roll_pos, pitch_time, pitch_pos, vbd_time, vbd_pos)
+    roll_pos_ad, _ = build_dense_motor_vector(gc_roll_pos_ad, gc_roll_time, eng_time)
+    pitch_pos_ad, _ = build_dense_motor_vector(gc_pitch_pos_ad, gc_pitch_time, eng_time)
+    vbd_pos_ad, _ = build_dense_motor_vector(gc_vbd_pos_ad, gc_vbd_time, eng_time)
+
+    return (
+        gc_moves,
+        roll_time,
+        roll_pos,
+        pitch_time,
+        pitch_pos,
+        vbd_time,
+        vbd_pos,
+        roll_pos_ad,
+        pitch_pos_ad,
+        vbd_pos_ad,
+    )
 
 
 def add_gc_moves(
