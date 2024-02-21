@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -36,8 +36,9 @@ from __future__ import annotations
 import typing
 
 import plotly
-
 import pandas as pd
+import numpy as np
+import scipy
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -45,7 +46,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtilsPlotly
 import Utils
-import numpy as np
+
 
 from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
@@ -53,14 +54,18 @@ from Plotting import plotmissionsingle
 
 @plotmissionsingle
 def mission_commlog(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots disk stats"""
 
     if not generate_plots:
         return ([], [])
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts, ro=True)
         if not conn:
             log_error("Could not open mission database")
@@ -76,9 +81,9 @@ def mission_commlog(
             "SELECT * FROM calls ORDER BY dive,cycle,call",
             conn,
         )
-    except:
+    except Exception:
         log_error("Could not fetch needed columns", "exc")
-        if dbcon == None:
+        if dbcon is None:
             conn.close()
             log_info("mission_commlog db closed")
 
@@ -86,12 +91,53 @@ def mission_commlog(
 
     callNum = np.arange(0, len(df["pitch"]))
 
+    dive_nums = df["dive"]
+
+    # Interpolate over missing dive numbers - may not be needed
+    dive_nums_i = list(
+        filter(
+            lambda i: dive_nums[i] is not None,
+            range(len(dive_nums)),
+        )
+    )
+    dive_f = scipy.interpolate.interp1d(
+        np.array(dive_nums_i),
+        np.array(dive_nums)[dive_nums_i],
+        kind="nearest",
+        bounds_error=False,
+        fill_value=0,
+    )
+
+    for ii in callNum:
+        if dive_nums[int(ii)] is None:
+            dive_nums[int(ii)] = int(dive_f(int(ii)))
+
+    # Select some points on the graph for the dive numbers
+    divevals = []
+    divetext = []
+    if len(callNum) > 7:
+        for ii in callNum[:: len(callNum) // 7]:
+            divevals.append(ii)
+            divetext.append(dive_nums[int(ii)])
+    else:
+        for ii in callNum:
+            divevals.append(ii)
+            divetext.append(dive_nums[int(ii)])
+
     if "pitch" in df.columns:
         fig.add_trace(
             {
-                "name": "pitch/-5",
+                "name": "Pitch/-5 (deg)",
                 "x": callNum,
                 "y": df["pitch"] / -5,
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (
+                            np.transpose(dive_nums),
+                            df["pitch"],
+                        )
+                    )
+                ),
                 "yaxis": "y2",
                 "mode": "lines",
                 "line": {
@@ -99,15 +145,17 @@ def mission_commlog(
                     "color": "red",
                     "width": 1,
                 },
+                "hovertemplate": "Pitch %{customdata[1]:.1f} deg<br>Dive Num %{customdata[0]}<br>Call Num %{x}<extra></extra>",
             }
         )
 
     if "depth" in df.columns:
         fig.add_trace(
             {
-                "name": "depth",
+                "name": "Depth (m)",
                 "x": callNum,
                 "y": df["depth"],
+                "customdata": dive_nums,
                 "yaxis": "y2",
                 "mode": "lines",
                 "line": {
@@ -115,15 +163,17 @@ def mission_commlog(
                     "color": "green",
                     "width": 1,
                 },
+                "hovertemplate": "Depth %{y:.2f} m<br>Dive Num %{customdata}<br>Call Num %{x}<extra></extra>",
             }
         )
 
     if "intP" in df.columns:
         fig.add_trace(
             {
-                "name": "internal pressure",
+                "name": "Internal Pressure (psia)",
                 "x": callNum,
                 "y": df["intP"],
+                "customdata": dive_nums,
                 "yaxis": "y2",
                 "mode": "lines",
                 "line": {
@@ -131,15 +181,24 @@ def mission_commlog(
                     "color": "magenta",
                     "width": 1,
                 },
+                "hovertemplate": "Internal Pressure %{y:.2f} psia<br>Dive Num %{customdata}<br>Call Num %{x}<extra></extra>",
             }
         )
 
     if "RH" in df.columns:
         fig.add_trace(
             {
-                "name": "relative humidity/10",
+                "name": "Relative Humidity/10",
                 "x": callNum,
                 "y": df["RH"] / 10,
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (
+                            np.transpose(dive_nums),
+                            df["RH"],
+                        )
+                    )
+                ),
                 "yaxis": "y2",
                 "mode": "lines",
                 "line": {
@@ -147,15 +206,17 @@ def mission_commlog(
                     "color": "yellow",
                     "width": 2,
                 },
+                "hovertemplate": "RH %{customdata[1]:.2f} deg<br>Dive Num %{customdata[0]}<br>Call Num %{x}<extra></extra>",
             }
         )
 
     if "volts10" in df.columns:
         fig.add_trace(
             {
-                "name": "low volts",
+                "name": "Low Voltage Batt (V)",
                 "x": callNum,
                 "y": df["volts10"],
+                "customdata": dive_nums,
                 "yaxis": "y2",
                 "mode": "lines",
                 "line": {
@@ -163,15 +224,17 @@ def mission_commlog(
                     "color": "blue",
                     "width": 1,
                 },
+                "hovertemplate": "Low Voltage Batt %{y:.2f} V<br>Dive Num %{customdata}<br>Call Num %{x}<extra></extra>",
             }
         )
 
     if "volts24" in df.columns:
         fig.add_trace(
             {
-                "name": "high volts",
+                "name": "High Voltage Batt (V)",
                 "x": callNum,
                 "y": df["volts24"],
+                "customdata": dive_nums,
                 "yaxis": "y2",
                 "mode": "lines",
                 "line": {
@@ -179,17 +242,21 @@ def mission_commlog(
                     "color": "cyan",
                     "width": 1,
                 },
+                "hovertemplate": "High Voltage Batt %{y:.2f} V<br>Dive Num %{customdata}<br>Call Num %{x}<extra></extra>",
             }
         )
 
     colors = ["red", "blue", "green"]
-    for i, a in enumerate(["pitchAD", "rollAD", "vbdAD"]):
+    for i, (a, tag) in enumerate(
+        [("pitchAD", "Pitch AD"), ("rollAD", "Roll AD"), ("vbdAD", "VBD AD")]
+    ):
         if a in df.columns:
             fig.add_trace(
                 {
-                    "name": a,
+                    "name": f"{tag} position",
                     "x": callNum,
                     "y": df[a],
+                    "customdata": dive_nums,
                     "yaxis": "y1",
                     "mode": "lines",
                     "line": {
@@ -197,8 +264,21 @@ def mission_commlog(
                         "color": colors[i],
                         "width": 1,
                     },
+                    "hovertemplate": f"{tag} %{{y:d}}<br>Dive Num %{{customdata}}<br>Call Num %{{x}}<extra></extra>",
                 }
             )
+
+    fig.add_trace(
+        {
+            "name": "Hidden Trace for Dive Number",
+            "x": callNum,
+            "y": callNum,
+            "xaxis": "x2",
+            "yaxis": "y1",
+            "mode": "markers",
+            "visible": False,
+        }
+    )
 
     fig.update_layout(
         {
@@ -206,6 +286,18 @@ def mission_commlog(
                 "title": "Call number",
                 "showgrid": True,
                 "domain": [0.0, 0.925],
+                # "domain": [0.075, 1.0],
+            },
+            "xaxis2": {
+                "title": "Dive Number",
+                "showgrid": False,
+                "overlaying": "x1",
+                "side": "top",
+                "range": [min(callNum), max(callNum)],
+                "tickmode": "array",
+                "tickvals": divevals,
+                "ticktext": divetext,
+                # "position": 0.0,
             },
             "yaxis": {
                 "title": "AD value",
@@ -226,7 +318,7 @@ def mission_commlog(
                 "y": 0.95,
             },
             "margin": {
-                "t": 100,
+                "t": 150,
                 "b": 125,
             },
             "legend": {
@@ -235,7 +327,7 @@ def mission_commlog(
             },
         },
     )
-    if dbcon == None:
+    if dbcon is None:
         log_info("mission_commlog db closed")
         conn.close()
 
