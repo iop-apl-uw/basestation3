@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -29,6 +29,7 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """Plot for compass mag calibration"""
+# fmt: off
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -73,6 +74,9 @@ def plot_mag(
     fym = -dive_nc_file.variables["eng_mag_y"][:]
     fzm = -dive_nc_file.variables["eng_mag_z"][:]
     npts = dive_nc_file.dimensions["sg_data_point"].size
+    pitch_deg = dive_nc_file.variables["eng_pitchAng"][:]
+    roll_deg = dive_nc_file.variables["eng_rollAng"][:]
+    obs_num = np.arange(0,npts)
 
     norm = 0
     mx = 0
@@ -384,7 +388,7 @@ def plot_mag(
         mc_quality = iron[13]
         mc_used = iron[14]
         doMAGCAL = True
-       
+
     for i in range(0, npts):
         c = math.cos(roll[i])
         s = math.sin(roll[i])
@@ -432,6 +436,11 @@ def plot_mag(
         {
             "x": fx,
             "y": fy,
+            "customdata": np.squeeze(
+                np.dstack(
+                    (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
+                )
+            ),
             "name": "uncorrected",
             "type": "scatter",
             "mode": "markers",
@@ -439,13 +448,19 @@ def plot_mag(
                 "symbol": "triangle-down",
                 "color": "Red",
             },
-            "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+            #"hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+            "hovertemplate": "X:%{x:.0f},Y:%{y:.0f}<br>obs:%{customdata[0]},roll:%{customdata[1]:.1f},pitch:%{customdata[2]:.1f}<extra></extra>",
         }
     )
     fig.add_trace(
         {
             "x": fx_pqr,
             "y": fy_pqr,
+            "customdata": np.squeeze(
+                np.dstack(
+                    (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
+                )
+            ),
             "name": "corrected",
             "type": "scatter",
             "mode": "markers",
@@ -453,7 +468,8 @@ def plot_mag(
                 "symbol": "triangle-up",
                 "color": "DarkBlue",
             },
-            "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+            #"hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+            "hovertemplate": "X:%{x:.0f},Y:%{y:.0f}<br>obs:%{customdata[0]},roll:%{customdata[1]:.1f},pitch:%{customdata[2]:.1f}<extra></extra>",
         }
     )
 
@@ -462,6 +478,11 @@ def plot_mag(
             {
                 "x": fx_sg,
                 "y": fy_sg,
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
+                    )
+                ),
                 "name": "onboard",
                 "type": "scatter",
                 "mode": "markers",
@@ -469,7 +490,8 @@ def plot_mag(
                     "symbol": "triangle-up",
                     "color": "Magenta",
                 },
-                "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+                #"hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+                "hovertemplate": "X:%{x:.0f},Y:%{y:.0f}<br>obs:%{customdata[0]},roll:%{customdata[1]:.1f},pitch:%{customdata[2]:.1f}<extra></extra>",
             }
         )
         minx = min([minx, min(fx_sg)]);
@@ -482,6 +504,11 @@ def plot_mag(
             {
                 "x": fx_mc,
                 "y": fy_mc,
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
+                    )
+                ),
                 "name": f"autocal<br>cover={mc_cover:.0f}<br>circ={mc_quality:.2f}<br>used={mc_used:.0f}",
                 "type": "scatter",
                 "mode": "markers",
@@ -489,7 +516,8 @@ def plot_mag(
                     "symbol": "triangle-up",
                     "color": "cyan",
                 },
-                "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+                #"hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+                "hovertemplate": "X:%{x:.0f},Y:%{y:.0f}<br>obs:%{customdata[0]},roll:%{customdata[1]:.1f},pitch:%{customdata[2]:.1f}<extra></extra>",
             }
         )
         minx = min([minx, min(fx_mc)]);
@@ -517,6 +545,7 @@ def plot_mag(
                 "title": "Y field",
                 "showgrid": True,
                 "range": [-lim, lim],
+                "domain": [0.0, 0.95],
             },
             "title": {
                 "text": title_text,
