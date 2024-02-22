@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -76,6 +76,7 @@ def timeSeriesToProfile(var, which,
     message[var] = []
     message['dive'] = []
     message['which'] = []
+    message['avg_time'] = []
 
     bins = [ *range(binStart, binStop + int(binSize/2), binSize) ]
     dives = range(diveStart, diveStop + 1, diveStride)
@@ -111,6 +112,7 @@ def timeSeriesToProfile(var, which,
             ixs = (x['time'] > t0) &(x['time'] < t1)
             message['dive'].append(p + 0.25)
             message['which'].append(1)
+            message['avg_time'].append(x['time'][ixs].mean())
             d = None
             if sum(1 for x in ixs if x) > 0:
                 with warnings.catch_warnings():
@@ -130,6 +132,7 @@ def timeSeriesToProfile(var, which,
             ixs = (x['time'] > t1) & (x['time'] < t2)
             message['dive'].append(p + 0.5)
             message['which'].append(4)
+            message['avg_time'].append(x['time'][ixs].mean())
             d = None
             if sum(1 for x in ixs if x) > 0:
                 with warnings.catch_warnings():
@@ -149,6 +152,7 @@ def timeSeriesToProfile(var, which,
             ixs = (x['time'] > t0) & (x['time'] < t2)
             message['dive'].append(p + 0.5)
             message['which'].append(4)
+            message['avg_time'].append(x['time'][ixs].mean())
             d = None
             if sum(1 for x in ixs if x) > 0:
                 with warnings.catch_warnings():

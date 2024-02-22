@@ -36,6 +36,7 @@
 from __future__ import annotations
 
 import typing
+import time
 
 import plotly
 
@@ -195,7 +196,7 @@ def mission_profiles(
                 continue
 
             fig = plotly.graph_objects.Figure()
- 
+
             (d, prev_x) = ExtractTimeseries.timeSeriesToProfile(vk, whch,
                                            start, stop, step,
                                            top, bott, binZ, None, nci=nci, x=prev_x)
@@ -215,14 +216,44 @@ def mission_profiles(
                         },
                      }
 
+            # profile_times = []
+            # for tt in d['avg_time']:
+            #     profile_times.append(time.strftime("%Y-%m-%dT%H:%M", time.gmtime(tt)))
+
+            # Time axis
+            timevals = []
+            timetext = []
+
+            if (max(d['avg_time']) - min(d['avg_time'])) / 86400 > 7:
+                divisor = 10
+                fmt = "%Y-%m-%d"
+            else:
+                divisor = 7
+                fmt = "%Y-%m-%dT%H:%M"
+            incr = len(d['avg_time']) // divisor
+            if incr == 0:
+                incr = 1
+               
+            for tt in d['avg_time'][::incr]:
+                timetext.append(time.strftime(fmt, time.gmtime(tt)))
+            for dd in d['dive'][::incr]:                    
+                timevals.append(dd - 0.5)
+
+            # Trim off the ends of the range so they don't interfere with the colorbar
+            for ii in range(len(timevals)):
+                if timevals[ii] <= ((max(d['dive']) - min(d['dive'])) * 0.1) + min(d['dive']) - 0.5 or timevals[ii] == min(d['dive']) - 0.5:
+                    timetext[ii] = " "
+                if timevals[ii] >= ((max(d['dive']) - min(d['dive'])) * 0.9) + min(d['dive']) - 0.5 or timevals[ii] == max(d['dive']) - 0.5:
+                    timetext[ii] = " "
+
             unit_tag = f" {units}" if units else ""
 
             if decimals is not None:
                 z = d[vk].round(decimals=decimals)
-                format_spec = f".{decimals}f"
+                format_spec = f":.{decimals}f"
             else:
                 z = d[vk]
-                format_spec = "f"
+                format_spec = ""
             props = {
                         'x': numpy.array(d['dive']) - 0.5,
                         'y': d['depth'],
@@ -239,7 +270,7 @@ def mission_profiles(
                             # "thickness": 0.02,
                             # "thicknessmode": "fraction",
                         },
-                        "hovertemplate" : f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z:{format_spec}}}{unit_tag}<extra></extra>",
+                        "hovertemplate" : f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z{format_spec}}}{unit_tag}<extra></extra>",
                     }
 
             if zmin is not None:
@@ -249,28 +280,51 @@ def mission_profiles(
 
             fig.add_trace(plotly.graph_objects.Contour( **props ) )
 
+            fig.add_trace(
+                {
+                    "name": "Hidden Trace for Profile Time",
+                    "x": timevals,
+                    "y": numpy.zeros(len(timevals)) * numpy.nan,
+                    "xaxis": "x2",
+                    "yaxis": "y1",
+                    "mode": "markers",
+                    "showlegend": False,
+                }
+            )
+
             title_text = f"{mission_str}<br>{vk}<br>section {sk}: {start}-{stop}"
+
+            if flip:
+                timevals.reverse()
+                timetext.reverse()
+
+            #print(timevals, timetext)
  
             fig.update_layout(
                 {
                     "xaxis": {
                         "title": "dive",
-                        # "title": units,
                         "showgrid": False,
                         "autorange": "reversed" if flip else True,
                     },
                     "xaxis2": {
-                        "title": units,
+                        # The title takes up too much room
+                        #"title": "Profile Time",
+                        "title": "",
                         "showgrid": False,
-                        "side": "top",
                         "overlaying": "x1",
+                        "side": "top",
+                        "range": [max(timevals), min(timevals)] if flip else [min(timevals), max(timevals)],
+                        "tickmode": "array",
+                        "tickvals": timevals,
+                        "ticktext": timetext,
                     },
-
                     "yaxis": {
                         "title": "depth",
                         "showgrid": False,
                         "tickformat": "d",
                         "autorange": "reversed",
+                        "domain": [0, 0.95],
                     },
                     "title": {
                         "text": title_text,
