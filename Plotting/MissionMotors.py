@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2024  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -63,7 +63,11 @@ DEBUG_PDB = False
 
 @plotmissionsingle
 def mission_motors(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots mission motor GC data"""
 
@@ -124,7 +128,7 @@ def mission_motors(
                 "symbol": "triangle-down",
                 "color": "Cyan",
             },
-            "hovertemplate": "dive %{x:.0f}<br>%{y:.2f}A<br><extra></extra>",
+            "hovertemplate": "Dive %{x:.0f}<br>Roll current %{y:.2f} A<br><extra></extra>",
         },
         secondary_y=False,
     )
@@ -139,7 +143,7 @@ def mission_motors(
                 "symbol": "triangle-down",
                 "color": "Magenta",
             },
-            "hovertemplate": "dive %{x:.0f}<br>%{y:.2f}AD/s<br><extra></extra>",
+            "hovertemplate": "Dive %{x:.0f}<br>Roll rate %{y:.2f} AD/s<br><extra></extra>",
         },
         secondary_y=True,
     )
@@ -154,7 +158,7 @@ def mission_motors(
                 "symbol": "triangle-up",
                 "color": "DarkBlue",
             },
-            "hovertemplate": "dive %{x:.0f}<br>%{y:.2f}A<br><extra></extra>",
+            "hovertemplate": "Dive %{x:.0f}<br>Pitch current %{y:.2f} A<br><extra></extra>",
         }
     )
     fig.add_trace(
@@ -168,7 +172,7 @@ def mission_motors(
                 "symbol": "triangle-up",
                 "color": "Red",
             },
-            "hovertemplate": "dive %{x:.0f}<br>%{y:.2f}AD/s<br><extra></extra>",
+            "hovertemplate": "Dive %{x:.0f}<br>Pitch rate %{y:.2f} AD/s<br><extra></extra>",
         },
         secondary_y=True,
     )
@@ -214,7 +218,7 @@ def mission_motors(
 
     pumpdf = vdf[vdf["vbd_rate"] < 0]
     bleeddf = vdf[vdf["vbd_rate"] > 0]
-    
+
     fig.add_trace(
         {
             "x": pumpdf["dive"],
@@ -357,4 +361,3 @@ def mission_motors(
     )
 
     return (figs_list, file_list)
-
