@@ -36,14 +36,11 @@
 from __future__ import annotations
 
 import typing
-import sqlite3
 
 import plotly
 
 import os
 import yaml
-import BaseDB
-import Globals
 import cmocean
 import numpy
 import ExtractTimeseries
@@ -108,15 +105,15 @@ def mission_profiles(
     with open(section_file_name, "r") as f:
         x = yaml.safe_load(f.read())
 
-    if not "variables" in x or len(x["variables"]) == 0:
+    if "variables" not in x or len(x["variables"]) == 0:
         log_error(f"No 'variables' key found in {section_file_name} - not plotting")
         return ([], [])
 
-    if not "sections" in x or len(x["sections"]) == 0:
+    if "sections" not in x or len(x["sections"]) == 0:
         log_error(f"No 'sections' key found in {section_file_name} - not plotting")
         return ([], [])
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts, ro=True)
         if not conn:
             log_error("Could not open mission database")
@@ -135,18 +132,18 @@ def mission_profiles(
             latest = res[0]
         else:
             log_warning("No dives found")
-            if dbcon == None:
+            if dbcon is None:
                 conn.close()
                 log_info("mission_profiles db closed")
             return([], [])
-    except Exception as e:
+    except Exception:
         log_error("Could not fetch data", "exc")
-        if dbcon == None:
+        if dbcon is None:
             conn.close()
             log_info("mission_profiles db closed")
         return ([], [])
 
-    if dbcon == None:
+    if dbcon is None:
         conn.close()
         log_info("mission_profiles db closed")
 
@@ -159,7 +156,7 @@ def mission_profiles(
 
     try:
         nci = Utils.open_netcdf_file(ncname, "r")
-    except:
+    except Exception:
         log_error(f"Unable to open {ncname}", "exc")
         return ([], [])
 
@@ -184,6 +181,7 @@ def mission_profiles(
             zmax = getValue(x, 'max', sk, vk, None)
             units = getValue(x, 'units', sk, vk, None)
             fill  = getValue(x, 'fill', sk, vk, False)
+            decimals = getValue(x, 'decimals', sk, vk, None)
 
             if stop == -1 or stop >= latest:
                 stop = latest
@@ -218,10 +216,17 @@ def mission_profiles(
                      }
 
             unit_tag = f" {units}" if units else ""
+
+            if decimals is not None:
+                z = d[vk].round(decimals=decimals)
+                format_spec = f".{decimals}f"
+            else:
+                z = d[vk]
+                format_spec = "f"
             props = {
                         'x': numpy.array(d['dive']) - 0.5,
                         'y': d['depth'],
-                        'z': d[vk],
+                        'z': z,
                          'contours_coloring': 'heatmap',
                         'colorscale':        cmocean_to_plotly(cmap, 100),
                         'connectgaps':       fill,
@@ -234,7 +239,7 @@ def mission_profiles(
                             # "thickness": 0.02,
                             # "thicknessmode": "fraction",
                         },
-                        "hovertemplate" : f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z}}{unit_tag}<extra></extra>",
+                        "hovertemplate" : f"Dive %{{x:.0f}}<br>Depth %{{y}} meters<br>%{{z:{format_spec}}}{unit_tag}<extra></extra>",
                     }
 
             if zmin is not None:

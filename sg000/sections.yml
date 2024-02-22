@@ -17,6 +17,7 @@ defaults:
 
 # specifying min and max will clamp the colorscale 
 # for easier comparison across sections
+# specifying decimals will round output to that number of decimal places
 
 # only plot 0-400m for optical sections (sensor is generally
 # turned off below that)
