@@ -142,16 +142,20 @@ function initInputs()
            <td> <input id="min_counts" size=8 maxlength=8></td></tr>
        <tr><td align="right">VBD max counts</td>
             <td> <input id="max_counts" size=8 maxlength=8></td></tr>
-       <tr><td align="right">scale mass (g)</td>
+       <tr><td align="right">scale mass as flown in field (g)</td>
            <td> <input id="mass" size=8 maxlength=8></td></tr>
-       <tr><td align="right">target thrust (g)</td>
+       <tr><td align="right">target thrust for final ballast (g)</td>
            <td> <input id="thrust" size=8 maxlength=8 value="-150"></td></tr>
-       <tr><td align="right">target density (g/cc)</td>
+       <tr><td align="right">target density for final ballast (g/cc)</td>
            <td> <input id="target_density" size=8 maxlength=8 value="1.023"></td></tr>
        <tr><td align="right">antenna volume loss (cc)</td>
            <td> <input id="antenna_loss" size=8 maxlength=8 value="150"></td></tr>
-       <tr><td align="right">volmax (regression or model) (cc)</td>
+       <tr><td align="right">volmax from regression of field test data (cc)</td>
            <td> <input id="volmax" size=8 maxlength=8></td></tr>
+
+       <tr><td align="right"><input name="ok" value="calculate" type=button onclick="calculate();"></td></tr>
+
+       <tr><td align="right">Deepglider parameters (leave blank for SG/SGX):</td></tr>
        <tr><td align="right">abs compress (model or fixed) (m<sup>3</sup>/dbar)</td>
            <td> <input id="abs_compress" size=12 maxlength=12></td></tr>
        <tr><td align="right">therm expan (model or fixed) (m<sup>3</sup>/&deg;C)</td>
@@ -162,28 +166,37 @@ function initInputs()
            <td> <input id="temp_apogee" size=12 maxlength=12></td></tr>
        <tr><td align="right">apogee pressure (dbar)</td>
            <td> <input id="apogee_pressure" size=12 maxlength=12></td></tr>
-       <tr><td align="right">comments</td>
-           <td> <textarea id="comment" cols=60 rows=5></textarea></td></tr>
+        <tr><td align="right"><input name="FM" value="calculate Deepglider" type=button onclick="calculateFM();"></td></tr>
+
    </tbody>
 </table>
 
-<input name="ok" value="submit" type=button onclick="calculate();">
-<input name="FM" value="FM submit" type=button onclick="calculateFM();">
+<table>
+   <tbody>
+       <tr><td align="right">comments</td>
+           <td> <textarea id="comment" cols=60 rows=5></textarea></td></tr>
+
+   </tbody>
+</table>
+
 
 <table>
    <tbody>
-       <tr><td align="right">delta Pb (g)</td>
+       <tr><td align="center" colspan=2><b>Final ballast results</b></td>
+       <tr><td align="right">lead to add for final ballast (g)</td>
             <td> <input id="delta_Pb" size=8 maxlength=8 disabled="DISABLED"></td></tr>
-       <tr><td align="right">new mass (g)</td>
+       <tr><td align="right">target mass for final ballast (g)</td>
             <td> <input id="new_mass" size=8 maxlength=8 disabled="DISABLED"></td></tr>
-       <tr><td align="right">new volmax (g)</td>
+       <tr><td align="right">final scale mass after adjustments (g)</td>
+            <td> <input id="final_scale_mass" size=20 maxlength=20></td></tr>
+       <tr><td align="right">predicted volmax at final ballast (cc)</td>
             <td> <input id="new_volmax" size=8 maxlength=8 disabled="DISABLED"></td></tr>
+       <tr><td align="right">predicted C_VBD at final ballast</td>
+           <td> <input id="C_VBD" size=8 maxlength=8 disabled="DISABLED"></td></tr>
        <tr><td align="right">minimum surface density (g/cc)</td>
             <td> <input id="rho_min" size=8 maxlength=8 disabled="DISABLED"></td></tr>
        <tr><td align="right">maximum buoyancy (cc)</td>
             <td> <input id="max_buoyancy" size=8 maxlength=8 disabled="DISABLED"></td></tr>
-       <tr><td align="right">C_VBD</td>
-           <td> <input id="C_VBD" size=8 maxlength=8 disabled="DISABLED"></td></tr>
        <tr><td align="right">neutral stroke (%)</td>
            <td> <input id="neutral_stroke" size=8 maxlength=8 disabled="DISABLED"></td></tr>
   </tbody> 
