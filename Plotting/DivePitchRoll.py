@@ -391,16 +391,17 @@ def plot_pitch_roll(
                 "hovertemplate": pitch_template,
             }
         )
-        fig.add_trace(
-            {
-                "x": pitchAD_Fit,
-                "y": pitch_Fit,
-                "name": "linfit C_PITCH, PITCH_GAIN",
-                "mode": "lines",
-                "line": {"dash": "solid", "color": "Red"},
-                "hovertemplate": f"Fit w/o VBD shift C_PITCH={implied_C:.0f} PITCH_GAIN={implied_gain:.2f}<br><extra></extra>",
-            }
-        )
+        if min(pitch_Fit) > -120 and max(pitch_Fit) < 120:
+            fig.add_trace(
+                {
+                    "x": pitchAD_Fit,
+                    "y": pitch_Fit,
+                    "name": "linfit C_PITCH, PITCH_GAIN",
+                    "mode": "lines",
+                    "line": {"dash": "solid", "color": "Red"},
+                    "hovertemplate": f"Fit w/o VBD shift C_PITCH={implied_C:.0f} PITCH_GAIN={implied_gain:.2f}<br><extra></extra>",
+                }
+            )
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Pitch control vs Pitch"
@@ -422,6 +423,9 @@ def plot_pitch_roll(
                 "yaxis": {
                     "title": "pitch (deg)",
                     "showgrid": True,
+                    "autorange": True,
+                    # "autorangeoptions": dict(clipmin=-70, clipmax=70),
+                    # "range": [-70,70],
                     # "autorange": "reversed",
                     # "range": [
                     #     max(
