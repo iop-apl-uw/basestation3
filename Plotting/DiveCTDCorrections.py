@@ -133,6 +133,26 @@ def plot_ctd_corrections(
             raw_temperature_qc_strs = ["" for x in range(ctd_raw_temp.size)]
             raw_salinity_qc_strs = ["" for x in range(ctd_raw_cond.size)]
 
+        qc_line = ""
+        for raw in ("_raw", ""):
+            temperature_qc = QC.decode_qc(
+                dive_nc_file.variables[f"temperature{raw}_qc"][:]
+            )
+            salinity_qc = QC.decode_qc(dive_nc_file.variables[f"salinity{raw}_qc"][:])
+            qc_counts = {}
+            for qc_val in QC.qc_name_d.keys():
+                qc_counts[qc_val] = np.nonzero(
+                    np.logical_and(
+                        QC.find_qc(temperature_qc, [qc_val], mask=True),
+                        QC.find_qc(salinity_qc, [qc_val], mask=True),
+                    )
+                )[0].size
+            raw_str = "Raw" if raw == "_raw" else "Corrected"
+            qc_line += f"<br>QC {raw_str} Totals:"
+            for qc_val, qc_count in qc_counts.items():
+                if qc_count:
+                    qc_line += f" {QC.qc_name_d[qc_val]}:{qc_count}"
+
     except Exception:
         log_error("Could not load ctd data", "exc")
         return ([], [])
@@ -423,10 +443,7 @@ def plot_ctd_corrections(
     # )
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = "%s<br>%s Raw Temp/Salinity and Corrected Temp/Salinity vs Time" % (
-        mission_dive_str,
-        ctd_type,
-    )
+    title_text = f"{mission_dive_str}<br>{ctd_type} Raw Temp/Salinity and Corrected Temp/Salinity vs Time{qc_line}"
 
     fig.update_layout(
         {
