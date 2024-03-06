@@ -48,7 +48,7 @@ import PlotUtilsPlotly
 import Utils
 
 
-from BaseLog import log_error, log_info
+from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
 
 
@@ -74,8 +74,15 @@ def mission_commlog(
     else:
         conn = dbcon
 
+    res = conn.cursor().execute("PRAGMA table_info(calls)")
+    columns = [i[1] for i in res]
+    if not columns:
+        log_warning("No calls table - skipping")
+        return ([], [])
+
     fig = plotly.graph_objects.Figure()
     df = None
+
     try:
         df = pd.read_sql_query(
             "SELECT * FROM calls ORDER BY dive,cycle,call",

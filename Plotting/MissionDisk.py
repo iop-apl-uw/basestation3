@@ -206,7 +206,10 @@ def mission_disk(
             }
         )
 
-        m, b = np.polyfit(df["dive"].to_numpy(), df[v].to_numpy(), 1)
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=np.RankWarning)
+            m, b = np.polyfit(df["dive"].to_numpy(), df[v].to_numpy(), 1)
+
         sc_free_est = f"<br>based on {nm}, {-b/m:.0f} dives until full"
         # y_offset += -0.02
         # l_annotations.append(

@@ -262,14 +262,11 @@ def mission_map(
     for i in range(0, len(vcode)):
         vcode[i] = 1 if i%2 == 0 else 2
 
-    polygon1v = mpath.Path( path_in_data_coords.vertices, vcode)
-    # The above blows up with a ValueError on small maps
-    #
-    # try:
-    #     polygon1v = mpath.Path( path_in_data_coords.vertices, vcode)
-    # except ValueError:
-    #     log_error("mpath failed - skipping mission map")
-    #     return ([],[])
+    try:
+        polygon1v = mpath.Path( path_in_data_coords.vertices, vcode)
+    except ValueError:
+        log_warning("mpath failed - skipping mission map")
+        return ([],[])
 
     ax.set_boundary(polygon1s) #masks-out unwanted part of the plot
 

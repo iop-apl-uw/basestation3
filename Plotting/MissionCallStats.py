@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -48,7 +48,7 @@ if typing.TYPE_CHECKING:
 import CommLog
 import PlotUtilsPlotly
 
-from BaseLog import log_error, log_info
+from BaseLog import log_error, log_info, log_debug
 from Plotting import plotmissionsingle
 
 call_plot_map_nt = collections.namedtuple("call_plot_map_nt", ["description", "color"])
@@ -137,7 +137,7 @@ def mission_callstats(
                 tag = "%s%s" % (head[0:2], tmp)
                 file_types.add(tag)
 
-    log_info("File types found %s" % file_types)
+    log_debug("File types found %s" % file_types)
 
     file_type_tots = collections.OrderedDict()
     file_type_count = collections.OrderedDict()
@@ -468,7 +468,7 @@ def mission_callstats(
             "legend": {
                 "x": 1.075,
                 "y": 1,
-            }
+            },
             # "annotations": tuple(l_annotations),
         },
     )
