@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -103,7 +103,11 @@ extensions_to_skip = {
 # For some reason, this doesn't really work
 # pagers_ext = {'html' : lambda *args: send_email(*args, html_format=True)}
 pagers_ext = {
-    "html": lambda base_opts, instrument_id, email_addr, subject_line, message_body: send_email(
+    "html": lambda base_opts,
+    instrument_id,
+    email_addr,
+    subject_line,
+    message_body: send_email(
         base_opts,
         instrument_id,
         email_addr,
@@ -407,6 +411,7 @@ def process_pagers(
                     "divetar",
                     "comp",
                     "alerts",
+                    "errors",
                 ]
 
                 for pagers_tag in pagers_elts:
@@ -620,6 +625,18 @@ def process_pagers(
                     elif pagers_tag == "divetar" and "divetar" in tags_to_process:
                         if processed_files_message and processed_files_message != "":
                             subject_line = f"New Dive Tarball(s) SG{instrument_id:03d}"
+                            log_info(f"Sending {subject_line} to {email_addr}")
+                            send_func(
+                                base_opts,
+                                instrument_id,
+                                email_addr,
+                                subject_line,
+                                processed_files_message,
+                            )
+
+                    elif pagers_tag == "errors" and "errors" in tags_to_process:
+                        if processed_files_message and processed_files_message != "":
+                            subject_line = f"Warnings and Errors from SG{instrument_id:03d} conversion"
                             log_info(f"Sending {subject_line} to {email_addr}")
                             send_func(
                                 base_opts,

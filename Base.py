@@ -91,6 +91,7 @@ from BaseLog import (
     log_conversion_alerts,
     log_alert,
     log_alerts,
+    log_warn_errors,
     BaseLogger,
 )
 from Globals import known_files, known_mailer_tags, known_ftp_tags
@@ -2837,6 +2838,15 @@ def main():
                 )
             except Exception:
                 log_error("notifyVis failed", "exc")
+
+        # Notify about all WARNINGS, ERRORS and CRITICALS
+        warn_errors = log_warn_errors()
+        BaseDotFiles.process_pagers(
+            base_opts,
+            instrument_id,
+            ("errors",),
+            processed_files_message=f"From {conversion_log}\n{warn_errors.getvalue()}",
+        )
 
     # Optionally: Clean up intermediate (working) files here
     if base_opts.clean:

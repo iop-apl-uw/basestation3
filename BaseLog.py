@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -76,6 +76,9 @@ class BaseLogger:
     alerts_d = {}
     conversion_alerts_d = {}
 
+    # Stream to catch WARN-CRITICAL errors
+    warn_error_stream = StringIO()
+
     def __init__(self, opts, include_time=False):
         """
         Initializes a logging.Logger object, according to options (opts).
@@ -103,6 +106,14 @@ class BaseLogger:
             # always create a console handler
             sh = logging.StreamHandler()
             self.setHandler(sh, opts, include_time)
+
+            # Catch warning, error and critical
+
+            self.setHandler(
+                logging.StreamHandler(stream=BaseLogger.warn_error_stream),
+                None,
+                include_time,
+            )
 
             BaseLogger.is_initialized = True
             log_info("Process id = %d" % os.getpid())  # report our process id
@@ -233,6 +244,11 @@ def __log_caller_info(s, loc):
         except:
             pass
     return s
+
+
+def log_warn_errors():
+    """Fetch the stream capturing WARN/ERROR/CRITICAL"""
+    return BaseLogger.warn_error_stream
 
 
 def log_alerts():

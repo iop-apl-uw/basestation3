@@ -4,21 +4,30 @@
 ##
 ## /usr/local/basestation3/etc/.pagers
 ##
-## That file will be processed first, the one in the seaglider home directory second.
+## That file will be processed first, then one in the seaglider mission directory second.
 #
 # This file controls the sending of short email messages from the basestation
 # that alert users (pilots, field teams, etc.) of changes in status of the glider
 #
 # Each line of this file is of the format
-# smtp_mail_address[,gps[dd|ddmm|ddmmss]|alerts|recov|comp]*
+# smtp_mail_address,[html,]pager_tag[,pager_tag*]
 #
 # where:
+#
 # smtp_mail_address - a valid smtp mail address - gliderpilot@apl.washington.edu
 #                     for example
 #
-# gps        - GPS position notification 
+# html       - send the email in html format, instead of plain text
+#
+# slack      - treat the smtp_mail_address as a slack/mattermost webhook and post message using the hook
+#
+# and pager_tag is one of the below
+#
+# gps        - GPS position notification - sent as soon a GPS message appears in the comm.log
 #              Short message - suitable for mail to SMS gateways
 #              GPS fix formatted in DDMM.MM format
+#
+# lategps    - same as GPS message, but sent at the conclusion of data processing
 #
 # recov      - Notification of the glider in recovery (whatever the reason) 
 #              Short message - suitable for mail to SMS gateways
@@ -31,9 +40,13 @@
 #              Short message - suitable for mail to SMS gateways
 #              GPS fix formatted in DDMM.MM format
 #
-# gpsdd|recovdd|criticaldd             - same as above but GPS fix formated in DD.DDDD format
-# gpsddmm|recovddmm|criticalddmm       - same as above but GPS fix formated in DD MM.MM format
-# gpsddmmss|recovddmmss|criticalddmmss - same as above but GPS fix formated in DD MM SS.SS format
+# drift      - Generates an estimate of the current drift of the glider and an estimate
+#              of future positions.  Requires at least 5 GPS fixes from the same dive
+#
+#
+# gpsdd|lategpsdd|driftdd|recovdd|criticaldd                     - same as above but GPS fix formated in DD.DDDD format
+# gpsddmm|lategpsddmm|driftddmm|recovddmm|criticalddmm           - same as above but GPS fix formated in DD MM.MM format
+# gpsddmmss|lategpsddmmss|driftddmmss|recovddmmss|criticalddmmss - same as above but GPS fix formated in DD MM SS.SS format
 #
 # alerts     - Notifications of
 #              -- Any problems or issues that occurred during basestation processing
@@ -42,10 +55,13 @@
 #              -- Notification of capture files that contain critical errors
 #              Pilots should always subscribe to the level, as it is the primary way for
 #              basestation to issue errors
-
 #
 # comp       - Notification of completion of processing and a list of files resulting from 
 #              processing
+#
+# divetar    - Notification of all dive tarball files generated - see --divetarballs option to Base.py
+#
+# errors     - A list of all the warning, error and critical messages generated during conversion processing
 #
 ## Examples:
 #
