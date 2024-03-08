@@ -41,7 +41,7 @@
 
 import argparse
 
-# import collections
+import collections
 import copy
 import configparser
 import dataclasses
@@ -57,8 +57,8 @@ import Plotting
 from Globals import WhichHalf  # basestation_version
 
 # Populate default plots with every plot registered in Plotting
-dive_plot_list = Plotting.dive_plot_funcs.keys()
-mission_plot_list = Plotting.mission_plot_funcs.keys()
+dive_plot_list = list(Plotting.dive_plot_funcs.keys())
+mission_plot_list = list(Plotting.mission_plot_funcs.keys())
 
 
 def generate_range_action(arg, min_val, max_val):
@@ -127,6 +127,49 @@ class FullPathTrailingSlashAction(argparse.Action):
             setattr(namespace, self.dest, values)
 
 
+def generate_sample_conf_file(options_dict, calling_module):
+    """Generates a sample .conf file (to stdout)"""
+    sort_options_dict = dict(
+        sorted(
+            options_dict.items(),
+            key=lambda x: x[1].kwargs["section"] if "section" in x[1].kwargs else "",
+        )
+    )
+
+    seen_sections = set()
+
+    print(f"#\n# Sample conf file for {calling_module}.py\n#")
+    print(f"# Generated with python {calling_module}.py --generate_sample_conf\n#")
+    print("[base]")
+
+    for opt_n, opt_v in sort_options_dict.items():
+        if opt_n in ("config_file_name", "generate_sample_conf"):
+            continue
+        if opt_v.group is None or calling_module in opt_v.group:
+            section_name = opt_v.kwargs["section"] if "section" in opt_v.kwargs else ""
+            if section_name not in seen_sections and section_name:
+                print(f"#\n[{section_name}]")
+                seen_sections.add(section_name)
+            print(f"#\n# {opt_v.kwargs['help']}")
+            # pdb.set_trace()
+            print(f"#{opt_n} = ", end="")
+            if opt_v.var_type is bool:
+                print(f"{int(opt_v.default_val)}")
+            elif opt_v.var_type is FullPath:
+                print("<path_to_file>")
+            elif opt_v.var_type is FullPathTrailingSlash:
+                print("<path_to_directory>")
+            elif isinstance(opt_v.default_val, list):
+                # or isinstance(
+                #     opt_v.default_val, collections.abc.KeysView
+                # ):
+                for itm in opt_v.default_val:
+                    print(f"{itm},", end="")
+                print("")
+            else:
+                print(f"{opt_v.default_val}")
+
+
 # The kwargs in this type is overloaded.  Everything that is legit for argparse is allowed.
 # Additionally, there is:
 #
@@ -161,6 +204,16 @@ class options_t:
 
 
 global_options_dict = {
+    "generate_sample_conf": options_t(
+        False,
+        None,
+        ("--generate_sample_conf",),
+        bool,
+        {
+            "help": "Generates a sample conf file to stdout",
+            "action": "store_true",
+        },
+    ),
     "config_file_name": options_t(
         None,  # Okay to be None - this is never added to the options object, just used by the argparse
         None,
@@ -172,7 +225,7 @@ global_options_dict = {
         "",
         None,
         ("--base_log",),
-        str,
+        FullPath,
         {
             "help": "basestation log file, records all levels of notifications",
             "action": FullPathAction,
@@ -315,18 +368,20 @@ global_options_dict = {
             "Reprocess",
         ),
         ("--magcalfile",),
-        str,
+        FullPath,
         {
             "help": "compass cal file or search to use most recent version of tcm2mat.cal",
+            "action": FullPathAction,
         },
     ),
     "auxmagcalfile": options_t(
         "",
         ("Base", "MakeDiveProfiles"),
         ("--auxmagcalfile",),
-        str,
+        FullPath,
         {
             "help": "compass cal file or search to use most recent version of scicon.tcm",
+            "action": FullPathAction,
         },
     ),
     #
@@ -921,6 +976,7 @@ global_options_dict = {
         {
             "help": "Which type of plots to generate",
             "option_group": "plotting",
+            "section": "plotting",
             "nargs": "+",
             "choices": ["none", "dives", "mission"],
         },
@@ -1365,6 +1421,11 @@ class BaseOptions:
         else:
             options_dict = global_options_dict
 
+        if "--generate_sample_conf" in sys.argv:
+            # Generate a sample conf file and exit
+            generate_sample_conf_file(options_dict, calling_module)
+            sys.exit(0)
+
         if add_arguments is not None:
             for add_arg in add_arguments:
                 options_dict[add_arg].group.add(calling_module)
@@ -1543,31 +1604,53 @@ class BaseOptions:
                                     ) from exc
                             else:
                                 value = cp.get(section_name, k)
+                                if isinstance(v.default_val, list):
+                                    try:
+                                        value = [
+                                            x.rstrip().lstrip()
+                                            for x in value.split(",")
+                                        ]
+                                    except Exception as exc:
+                                        raise (
+                                            "Could not convert %s from %s to a list"
+                                            % (
+                                                k,
+                                                self._opts.config_file_name,
+                                            )
+                                        ) from exc
+                                elif v.var_type is FullPath:
+                                    value = FullPath(value)
+                                elif v.var_type is FullPathTrailingSlash:
+                                    value = FullPathTrailingSlash(value)
                             # if value == v.default_val:
                             if value is None:
                                 continue
-                        except:
+                        except Exception:
                             pass
                         else:
-                            try:
-                                val = v.var_type(value)
-                            except ValueError as exc:
-                                # raise f"Could not convert {k} from {self._opts.config_file_name} to requested type" from exc
-                                raise ValueError(
-                                    f"Could not convert {k} from {self._opts.config_file_name} to requested type"
-                                ) from exc
+                            if isinstance(v.default_val, list):
+                                # Code above has converted list types into an appropriate list
+                                setattr(self, k, value)
                             else:
-                                if (
-                                    "range" in v.kwargs.keys()
-                                    and isinstance(v.kwargs["range"], list)
-                                    and len(v.kwargs["range"]) == 2
-                                ):
-                                    min_val = v.kwargs["range"][0]
-                                    max_val = v.kwargs["range"][1]
-                                    if not min_val <= val <= max_val:
-                                        raise f"{val} outside of range {min_val} {max_val}"
+                                try:
+                                    val = v.var_type(value)
+                                except ValueError as exc:
+                                    # raise f"Could not convert {k} from {self._opts.config_file_name} to requested type" from exc
+                                    raise ValueError(
+                                        f"Could not convert {k} from {self._opts.config_file_name} to requested type"
+                                    ) from exc
+                                else:
+                                    if (
+                                        "range" in v.kwargs.keys()
+                                        and isinstance(v.kwargs["range"], list)
+                                        and len(v.kwargs["range"]) == 2
+                                    ):
+                                        min_val = v.kwargs["range"][0]
+                                        max_val = v.kwargs["range"][1]
+                                        if not min_val <= val <= max_val:
+                                            raise f"{val} outside of range {min_val} {max_val}"
 
-                                setattr(self, k, val)
+                                    setattr(self, k, val)
 
         # Update any options that affect other options
         if (
@@ -1595,6 +1678,7 @@ if __name__ == "__main__":
     # Force to be in UTC
     os.environ["TZ"] = "UTC"
     time.tzset()
+
     try:
         additional_args = {
             # "netcdf_filename": options_t(
@@ -1618,9 +1702,7 @@ if __name__ == "__main__":
         base_opts = BaseOptions(
             "Basestation Options Test", additional_arguments=additional_args
         )
-    except SystemExit:
-        pass
-    except:
+    except Exception:
         _, _, traceb = sys.exc_info()
         traceback.print_exc()
         pdb.post_mortem(traceb)
