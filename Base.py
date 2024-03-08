@@ -2383,6 +2383,12 @@ def main():
         alert_message_file_name = alert_message_base_name
 
     alert_msg_file_name = os.path.join(base_opts.mission_dir, alert_message_file_name)
+
+    if base_opts.base_log is not None and base_opts.base_log != "":
+        conversion_log = base_opts.base_log
+    else:
+        conversion_log = "the conversion log"
+
     if (
         dives_not_processed
         or selftests_not_processed
@@ -2419,10 +2425,6 @@ def main():
 
         # Construct the pagers_convert_msg and alter_msg_file
         pagers_convert_msg = ""
-        if base_opts.base_log is not None and base_opts.base_log != "":
-            conversion_log = base_opts.base_log
-        else:
-            conversion_log = "the conversion log"
 
         try:
             alert_msg_file = open(alert_msg_file_name, "w")
