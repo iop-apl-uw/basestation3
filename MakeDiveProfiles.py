@@ -2451,6 +2451,15 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
         return tuple(sgc_values)
 
 
+def avg_longitude(lon1, lon2):
+    """Assumes the fixes are close"""
+    if math.fabs(lon1) > 179.0 or math.fabs(lon2) > 179.0:
+        avg_lon = ((lon1 % 360.0) + (lon2 % 360.0)) / 2.0
+        return ((avg_lon + 180.0) % 360.0) - 180.0
+    else:
+        return (lon1 + lon2) / 2.0
+
+
 # TODO add None for eng_file_name, log_file_name, sg_calib_file_name
 # TODO config_file_name -- is this actually used by by anyone in this path?  it is passed around but not parsed..
 def make_dive_profile(
@@ -3074,14 +3083,6 @@ def make_dive_profile(
         log_debug("GPS1 lat = %f, lon = %f" % (GPS1.lat_dd, GPS1.lon_dd))
         log_debug("GPS2 lat = %f, lon = %f" % (GPS2.lat_dd, GPS2.lon_dd))
         log_debug("GPSE lat = %f, lon = %f" % (GPSE.lat_dd, GPSE.lon_dd))
-
-        def avg_longitude(lon1, lon2):
-            """Assumes the fixes are close"""
-            if math.fabs(lon1) > 179.0 or math.fabs(lon2) > 179.0:
-                avg_lon = ((lon1 % 360.0) + (lon2 % 360.0)) / 2.0
-                return ((avg_lon + 180.0) % 360.0) - 180.0
-            else:
-                return (lon1 + lon2) / 2.0
 
         # Compute average latitude for the dive for various pressure corrections
         # Latitude will be the mean of the start and end latitude of the dive, in decimal degrees
