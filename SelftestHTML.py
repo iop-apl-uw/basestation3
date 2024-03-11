@@ -97,6 +97,7 @@ insideMoveDump = False
 insideDir = False
 insideParam = False
 insideMotorSummary = False
+insidePre = False
 idnum = 0
 minRates = { 'Pitch': 100, 'Roll': 300, 'Pump': 5, 'Bleed': 15 }
 maxRates = { 'Pitch': 300, 'Roll': 500, 'Pump': 10, 'Bleed': 30 }
@@ -116,6 +117,10 @@ for raw_line in proc.stdout:
     if insideDir and line.find(',') > -1 and line.find('is empty') == -1:
         print("</pre>")
         insideDir = False
+
+    if insidePre and line.find('>') == 0:
+        print("</pre>")
+        insidePre = False
 
     if insideParam and line.find('not between') == -1 and line.find('skipping') == -1 and line.find('canon') == -1 and line.find('[inf]') == -1 and line.find('[unknown]') == -1: 
         if len(line) > 2:
@@ -183,6 +188,11 @@ for raw_line in proc.stdout:
     elif line.find(',SUSR,N,---- ') > -1:
         parts = line.split(',')
         print("<h2>%s</h2>" % parts[3])
+
+    elif not insidePre and (line.find('>prop') > -1 or line.find('>attach') > -1 or line.find('>scheme') > -1):
+        format(line)
+        print("<pre>")
+        insidePre = True
 
     elif line.find('>log test') > -1:
         print("<h2>logger sensor test results</h2>")
@@ -258,7 +268,7 @@ for raw_line in proc.stdout:
         else:
             format(line)
             
-    elif insideDir:
+    elif insideDir or insidePre:
         print(line)
     else:
         format(line)
