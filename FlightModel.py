@@ -137,9 +137,7 @@ force_alerts = False  # CONTROL test alert code for each 'new' dive
 # What should be tested, if velo is available, IN ADDITION to w vs. w_stdy (hdm_speed*sin(glide_angle))
 compare_velo = 3  # CONTROL 0 - ignore, even if present (default); 1 - use it and test velo vs. hdm_speed; 2 - use it and test w vs. velo*sin(glide_angle) 3 - method 1 and 2 combined
 acceptable_w_rms = 5  # PARAMETER w_rms (cm/s) must be less than this to accept solution
-grid_dive_sets = (
-    []
-)  # special sets of dives to solve a/b grids (for debugging and other analysis; see rva_solve_ab.m)
+grid_dive_sets = []  # special sets of dives to solve a/b grids (for debugging and other analysis; see rva_solve_ab.m)
 # Analysis of velocometer data suggests that the w-only solutions under-estimate hd_b by 20%
 # This parameter can be used to scale the solved predicted_hd_b just before it is delivered to MDP
 # We do it this way for several reasons:
@@ -500,7 +498,12 @@ def load_flight_database(
     Side-effects: Sets several globals, including flight_dive_data_d and possibly the db filename
     """
 
-    global flight_dive_data_d, flight_directory, flight_dive_data_filename, ab_grid_cache_d, restart_cache_d
+    global \
+        flight_dive_data_d, \
+        flight_directory, \
+        flight_dive_data_filename, \
+        ab_grid_cache_d, \
+        restart_cache_d
     if flight_dive_data_d is not None:
         return False
 
@@ -538,9 +541,7 @@ def load_flight_database(
 
     if flight_dive_data_d is not None:  # prior version exists?
         rebuild = flight_dive_data_d["fm_version"] != fm_version
-        if (
-            verify
-        ):  # have we filled sg_calib_constants_d with defaults for the assumption_variables?
+        if verify:  # have we filled sg_calib_constants_d with defaults for the assumption_variables?
             rebuild = (
                 rebuild
                 or len(
@@ -803,7 +804,11 @@ def save_flight_database(base_opts, dump_mat=False):
 
 # called from MakeDiveProfile to update sg_calib_constants_d parameters for the dive
 def get_flight_parameters(dive_num, base_opts, sg_calib_constants_d):
-    global flight_dive_data_d, flight_dive_nums, predicted_hd_a_scale, predicted_hd_b_scale
+    global \
+        flight_dive_data_d, \
+        flight_dive_nums, \
+        predicted_hd_a_scale, \
+        predicted_hd_b_scale
 
     # load or reinitialize; doesn't matter
     initialized = load_flight_database(
@@ -1002,7 +1007,13 @@ def dump_fm_values(dive_data):
 # Given a dive_data instance, open the nc file and load the vectors and other data we need for regression processing
 # make if data is ok and avoid loading again if known bad
 def load_dive_data(base_opts, dive_data):
-    global nc_path_format, angles, compare_velo, mission_directory, ignore_salinity_qc, max_speed
+    global \
+        nc_path_format, \
+        angles, \
+        compare_velo, \
+        mission_directory, \
+        ignore_salinity_qc, \
+        max_speed
     global decimation, data_density_max_depth
     data_d = None
     if dive_data.dive_data_ok is False:
@@ -1134,18 +1145,26 @@ def load_dive_data(base_opts, dive_data):
                 density_insitu = seawater.dens(salinity_raw, temperature_raw, press)
                 density = seawater.pden(salinity_raw, temperature_raw, press, 0)
             else:
+                if "avg_longitude" in dive_nc_file.variables:
+                    avg_longitude = dive_nc_file.variables["avg_longitude"].getValue()
+                else:
+                    # Older basestations didn't calcuate this value
+                    avg_longitude = MakeDiveProfiles.avg_longitude(
+                        dive_nc_file.variables["log_gps_lon"][1],
+                        dive_nc_file.variables["log_gps_lon"][2],
+                    )
                 density_insitu = Utils.density(
                     salinity_raw,
                     temperature_raw,
                     press,
-                    dive_nc_file.variables["avg_longitude"].getValue(),
+                    avg_longitude,
                     dive_nc_file.variables["avg_latitude"].getValue(),
                 )
                 density = Utils.pdensity(
                     salinity_raw,
                     temperature_raw,
                     press,
-                    dive_nc_file.variables["avg_longitude"].getValue(),
+                    avg_longitude,
                     dive_nc_file.variables["avg_latitude"].getValue(),
                 )
         except:
@@ -1260,9 +1279,7 @@ def load_dive_data(base_opts, dive_data):
             n_valid = 0
             fraction_good = 0
         else:
-            if (
-                decimation
-            ):  # DEBUG -- code to determine minimum data point density that yield good results
+            if decimation:  # DEBUG -- code to determine minimum data point density that yield good results
                 # experimentally reduce good points and see impact on results
                 good_pts_i_v = good_pts_i_v[range(0, npts, decimation)]
                 npts = len(good_pts_i_v)
@@ -1954,7 +1971,13 @@ def load_dive_data_DAC(base_opts, dive_data):
 # we assume the min_ia, min_ib reflects that if engaged
 def solve_ab_DAC(base_opts, dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
     global hd_a_grid, hd_b_grid
-    global generate_figures, font, HD_A, HD_B, w_misfit_rms_levels, glider_mission_string
+    global \
+        generate_figures, \
+        font, \
+        HD_A, \
+        HD_B, \
+        w_misfit_rms_levels, \
+        glider_mission_string
 
     dd = flight_dive_data_d[dive_num]
     dive_data_d = load_dive_data_DAC(base_opts, dd)
@@ -2227,9 +2250,33 @@ def process_dive(
     alert_dive_num=None,
     exit_event=None,
 ):
-    global flight_dive_data_d, flight_directory, mission_directory, nc_path_format, flight_consts_d, angles, HIST, generate_dac_figures
-    global glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, ab_grid_cache_d, restart_cache_d
-    global font, HD_A, HD_B, w_misfit_rms_levels, prev_w_misfit_rms_levels, glider_mission_string, generate_figures, show_implied_c_vbd
+    global \
+        flight_dive_data_d, \
+        flight_directory, \
+        mission_directory, \
+        nc_path_format, \
+        flight_consts_d, \
+        angles, \
+        HIST, \
+        generate_dac_figures
+    global \
+        glider_type, \
+        compare_velo, \
+        acceptable_w_rms, \
+        flight_dive_nums, \
+        hd_a_grid, \
+        hd_b_grid, \
+        ab_grid_cache_d, \
+        restart_cache_d
+    global \
+        font, \
+        HD_A, \
+        HD_B, \
+        w_misfit_rms_levels, \
+        prev_w_misfit_rms_levels, \
+        glider_mission_string, \
+        generate_figures, \
+        show_implied_c_vbd
 
     # unpack some operational constants
     ac_min_press = flight_dive_data_d["ac_min_press"]
@@ -2589,9 +2636,7 @@ def process_dive(
                 # INFO: FlightModel.py(822): n=6210 16s hd_a=0.00282(19) hd_b=0.01631(6) 0.813645
                 # (Pdb) jsb = solve_ab_grid(dive_set,3.5e-6)
                 # INFO: FlightModel.py(822): n=6210 16s hd_a=0.00251(18) hd_b=0.03600(11) 0.802993
-                if (
-                    True
-                ):  # TODO eliminate this if per-dive abs_compress works; move to a median like with vbdbias
+                if True:  # TODO eliminate this if per-dive abs_compress works; move to a median like with vbdbias
                     abs_compress_values = []
                     for ac_dive_num in flight_dive_nums:
                         dd = flight_dive_data_d[ac_dive_num]  # ensured
@@ -3120,9 +3165,7 @@ def process_dive(
         # Done processing all known dives
 
         # Now update median_vbdbias over all know dives
-        median_vbdbias_flight_dive_nums = (
-            []
-        )  # those dives for which we were able to calculate a vbdbias
+        median_vbdbias_flight_dive_nums = []  # those dives for which we were able to calculate a vbdbias
         median_vbdbias = []
         for d_n in flight_dive_nums:
             dd = flight_dive_data_d[d_n]
@@ -3629,9 +3672,33 @@ def main(
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
-    global flight_dive_data_d, flight_directory, mission_directory, plots_directory, nc_path_format, flight_consts_d, compress_cnf, generate_dac_figures
-    global dump_fm_files, old_basestation, glider_type, compare_velo, acceptable_w_rms, flight_dive_nums, hd_a_grid, hd_b_grid, sg_hd_s, hd_s_assumed_q
-    global ab_grid_cache_d, restart_cache_d, angles, grid_spacing_keys, grid_dive_sets, dump_checkpoint_data_matfiles
+    global \
+        flight_dive_data_d, \
+        flight_directory, \
+        mission_directory, \
+        plots_directory, \
+        nc_path_format, \
+        flight_consts_d, \
+        compress_cnf, \
+        generate_dac_figures
+    global \
+        dump_fm_files, \
+        old_basestation, \
+        glider_type, \
+        compare_velo, \
+        acceptable_w_rms, \
+        flight_dive_nums, \
+        hd_a_grid, \
+        hd_b_grid, \
+        sg_hd_s, \
+        hd_s_assumed_q
+    global \
+        ab_grid_cache_d, \
+        restart_cache_d, \
+        angles, \
+        grid_spacing_keys, \
+        grid_dive_sets, \
+        dump_checkpoint_data_matfiles
 
     if base_opts is None:
         base_opts = BaseOpts.BaseOptions(
