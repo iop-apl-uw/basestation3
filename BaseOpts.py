@@ -376,7 +376,7 @@ global_options_dict = {
     ),
     "auxmagcalfile": options_t(
         "",
-        ("Base", "MakeDiveProfiles"),
+        ("Base", "MakeDiveProfiles", "Reprocess"),
         ("--auxmagcalfile",),
         FullPath,
         {
