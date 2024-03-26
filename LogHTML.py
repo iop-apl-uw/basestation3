@@ -29,6 +29,8 @@ import sys
 import io
 from contextlib import redirect_stdout
 import aiofiles
+import aiofiles.os
+import asyncio
 
 def ctext(text, color):
     x = f'<font color="{color}">{text}</font>'
@@ -551,6 +553,8 @@ if __name__ == '__main__':
         sys.exit()
 
     print("<html><body>")
-    # displayTables(sys.argv[1])
-    print(captureTables(sys.argv[1]))
+    asyncio.run(displayTables(sys.argv[1]))
+    # print(captureTables(sys.argv[1]))
+    # out = asyncio.run(captureTables(sys.argv[1]))
+    # print(out)
     print("</body></html>")
