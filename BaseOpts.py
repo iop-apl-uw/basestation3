@@ -284,6 +284,16 @@ global_options_dict = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
+    "run_bogue": options_t(
+        False,
+        ("Base",),
+        ("--run_bogue",),
+        bool,
+        {
+            "help": "Run Bogue processing on files transferred via XMODEM",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
     #
     "mission_dir": options_t(
         "",

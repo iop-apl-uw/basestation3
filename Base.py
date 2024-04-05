@@ -544,7 +544,7 @@ def process_file_group(
         # No Bogue for raw xfer
         _, t = os.path.split(bogue_file)
         log_debug(f"{t} = {comm_log.find_fragment_transfer_method(t)}")
-        if comm_log.find_fragment_transfer_method(t) in ("raw", "ymodem", "unknown"):
+        if comm_log.find_fragment_transfer_method(t) in ("raw", "ymodem", "unknown") or base_opts.run_bogue:
             continue
         try:
             i = file_group.index(bogue_file)
