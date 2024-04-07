@@ -73,7 +73,6 @@ from BaseLog import (
     log_info,
     log_warning,
     log_critical,
-    log_alert,
 )
 import BaseMagCal
 import BaseOpts
@@ -2412,7 +2411,7 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
         if log_vars_used is not None:
             acceptable_precision = 0.8e-7  # TT8 has single-precision floats
             if sbect_type not in SBECT_mismatch_reported:
-                mismatch_alert = False
+                # mismatch_alert = False
                 for var_values in zip(sgc_vars, sgc_values, log_vars, log_values):
                     sgc_value = var_values[1]
                     log_value = var_values[3]
@@ -2427,7 +2426,7 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
                         if not np.isclose(
                             [log_value / sgc_value], [1.0], atol=acceptable_precision
                         ):
-                            mismatch_alert = True
+                            # mismatch_alert = True
                             SBECT_mismatch_reported[sbect_type] = True
                             log_warning(
                                 "SBECT %s coefficient %s (%g) differs from %s (%g) in log file (dive %d) -- using %g."
@@ -2439,14 +2438,15 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
                                     log_value,
                                     log_f.dive,
                                     sgc_value,
-                                )
+                                ),
+                                alert="SBECT_COEFFICIENT",
                             )
-                if mismatch_alert:
-                    log_alert(
-                        "SBECT",
-                        "SBECT %s coefficient(s) are mismatched between sgc and log (dive %d)!"
-                        % (type, log_f.dive),
-                    )
+                # if mismatch_alert:
+                #     log_alert(
+                #         "SBECT",
+                #         "SBECT %s coefficient(s) are mismatched between sgc and log (dive %d)!"
+                #         % (sbect_type, log_f.dive),
+                #     )
         sgc_values.append(sgc_vars_used)
         return tuple(sgc_values)
 
@@ -2653,7 +2653,7 @@ def make_dive_profile(
                     f"{auxpressure_name}_pressureCounts",
                     np.mean(auxPress_counts_v),
                 ),
-                alert="Bad AuxPressure",
+                alert="BAD_AUXPRESSURE",
             )
             use_auxpressure = use_auxcompass = False
 

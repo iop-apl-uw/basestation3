@@ -38,7 +38,7 @@ import os
 import sys
 import traceback
 from io import StringIO
-from typing import Dict, List, Tuple, DefaultDict
+from typing import DefaultDict, Dict, List, Tuple
 
 # CONSIDER make adding code location an option for debugging
 # e.g., BaseLogger.opts.log_code_location
@@ -280,7 +280,7 @@ def log_conversion_alert(key: str, msg: str, resend: str) -> None:
     conversion_alerts_d[key].append((msg, resend))
 
 
-def log_alert(key: str, s: str) -> None:
+def _log_alert(key: str, s: str) -> None:
     """Log a genreral alert"""
     if not isinstance(key, str):
         log_warning(f"{type(key)} in alerts", "exc")
@@ -303,9 +303,9 @@ def log_critical(
     Args:
         s: msg to be logged
     """
-    s = __log_caller_info(s, loc)
     if alert:
-        log_alert(alert, "CRITICAL: %s" % s)
+        _log_alert(alert, "CRITICAL: %s" % s)
+    s = __log_caller_info(s, loc)
     if BaseLogger.log:
         BaseLogger.log.critical(s)
     else:
@@ -325,6 +325,9 @@ def log_error(
     Args:
         s: msg to be logged
     """
+    if alert:
+        alert_str = f"ERROR: {s}"
+
     s = __log_caller_info(s, loc)
 
     if max_count:
@@ -336,7 +339,7 @@ def log_error(
             return
 
     if alert:
-        log_alert(alert, "ERROR: %s" % s)
+        _log_alert(alert, alert_str)
 
     if BaseLogger.log:
         BaseLogger.log.error(s)
@@ -361,6 +364,9 @@ def log_warning(
                 if a positive value, the count is indexed by the module name and line number
                 if a negative value, the count is indexed by the module name, line number andwarning string
     """
+    if alert:
+        alert_str = f"WARNING: {s}"
+
     s = __log_caller_info(s, loc)
 
     if max_count:
@@ -374,7 +380,8 @@ def log_warning(
             return
 
     if alert:
-        log_alert(alert, "WARNING: %s" % s)
+        _log_alert(alert, alert_str)
+
     if BaseLogger.log:
         BaseLogger.log.warning(s)
     else:
@@ -396,6 +403,10 @@ def log_info(
     """
     if not BaseLogger.info_enabled:
         return
+
+    if alert:
+        alert_str = f"INFO: {s}"
+
     s = __log_caller_info(s, loc)
 
     if max_count:
@@ -407,7 +418,8 @@ def log_info(
             return
 
     if alert:
-        log_alert(alert, "INFO: %s" % s)
+        _log_alert(alert, alert_str)
+
     if BaseLogger.log:
         BaseLogger.log.info(s)
     else:
@@ -429,6 +441,10 @@ def log_debug(
     """
     if not BaseLogger.debug_enabled:
         return
+
+    if alert:
+        alert_str = f"DEBUG: {s}"
+
     s = __log_caller_info(s, loc)
 
     if max_count:
@@ -440,7 +456,8 @@ def log_debug(
             return
 
     if alert:
-        log_alert(alert, "DEBUG: %s" % s)
+        _log_alert(alert, alert_str)
+
     if BaseLogger.log:
         BaseLogger.log.debug(s)
     else:

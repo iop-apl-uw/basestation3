@@ -873,7 +873,7 @@ class ProfileDirectives:
                     return None  # This line does not apply
         except ValueError:
             qc_warn_str = f"Unknown dive specifier '{dive_spec}' in '{line}'"
-            log_warning(qc_warn_str, alert=qc_warn_str, max_count=1)
+            log_warning(qc_warn_str, alert="BAD_DIVE_SPEC", max_count=1)
 
         # this function applies to all or this dive_number
         function_tag = values[1]

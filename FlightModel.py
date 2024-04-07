@@ -68,7 +68,6 @@ from BaseLog import (
     log_debug,
     log_warning,
     log_critical,
-    log_alert,
 )
 
 # DEBUG_PDB = "darwin" in sys.platform
@@ -676,8 +675,7 @@ def load_flight_database(
 #         fh1.close()
 #         if changed_lines:
 #             changed_lines = 'FlightModel commented out %d lines in sg_calib_constants.m' % changed_lines
-#             log_alert('SGC', changed_lines) # use SGC rather than FM since we might have other FM alerts
-#             log_warning(changed_lines)
+#             log_warning(changed_lines, alert='SGC') # use SGC rather than FM since we might have other FM alerts
 #     except:
 #         # Typically we are running as the glider and it might not have write access
 #         # to sg_calib_constants.m (unlike pilot) if it is owned by pilot:gliders, but no g+w or even a+w prives.
@@ -704,7 +702,7 @@ def load_flight_database(
 #                 # Subsequent code assumes this directory already exists
 #                 os.mkdir(flight_directory)
 #         alert = 'Unable to cleanse sg_calib_constants.m; if owned by pilot, change protections to g+w'
-#         log_alert('FM', alert)
+#         log_error(alert, alert='FM_CALIBCONSTS')
 #         #raise RuntimeError, alert
 #         return
 
@@ -3642,10 +3640,12 @@ def process_dive(
     # at this point we have updated vbdbias and ab for all dives
     # see if there are trends worth reporting
     if len(alerts) > 0:
-        log_alert(
-            "FM", alerts
-        )  # this replaces any previous alerts with the most-recent
-        log_warning(f"ALERT: {alerts}")  # DEBUG so you can grep in any log files
+        # log_alert(
+        #    "FM", alerts
+        # )  # this replaces any previous alerts with the most-recent
+        log_info(
+            f"FMS_ALERT: {alerts}", alert="FMS"
+        )  # DEBUG so you can grep in any log files
     # DEBUG pfdd(True) # DEBUG
     log_debug(
         "Finished FM processing "

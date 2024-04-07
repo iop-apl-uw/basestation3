@@ -89,7 +89,6 @@ from BaseLog import (
     log_debug,
     log_conversion_alert,
     log_conversion_alerts,
-    log_alert,
     log_alerts,
     log_warn_errors,
     BaseLogger,
@@ -544,7 +543,10 @@ def process_file_group(
         # No Bogue for raw xfer
         _, t = os.path.split(bogue_file)
         log_debug(f"{t} = {comm_log.find_fragment_transfer_method(t)}")
-        if comm_log.find_fragment_transfer_method(t) in ("raw", "ymodem", "unknown") or base_opts.run_bogue:
+        if (
+            comm_log.find_fragment_transfer_method(t) in ("raw", "ymodem", "unknown")
+            or base_opts.run_bogue
+        ):
             continue
         try:
             i = file_group.index(bogue_file)
@@ -2408,7 +2410,7 @@ def main():
                 incomplete_file, instrument_id
             )
             if recomendation:
-                log_alert(incomplete_file, recomendation)
+                log_info(recomendation, alert=incomplete_file)
 
         # For now, write out to a static file with the resends
         # TODO - Full feature - check for a logout. If seen, then append to or create the
@@ -2489,7 +2491,8 @@ def main():
                             % FileMgr.get_dive(incomplete_file_name)
                         )
                 if file_name in conversion_alerts_d:
-                    alert_msg_file.write("<<ul>\n")
+                    if alert_msg_file:
+                        alert_msg_file.write("<<ul>\n")
                     prev_full_msg = ""  # format the text of the alert
                     for msg, resend_cmd in conversion_alerts_d[file_name]:
                         full_msg = (
@@ -2507,10 +2510,11 @@ def main():
                     del conversion_alerts_d[
                         file_name
                     ]  # clean up after ourselves - not clear this is needed anymore
-                    alert_msg_file.write("</ul>\n")
+                    if alert_msg_file:
+                        alert_msg_file.write("</ul>\n")
                     pagers_convert_msg = pagers_convert_msg + "\n"
-                alert_msg_file.write("</p>\n")
                 if alert_msg_file:
+                    alert_msg_file.write("</p>\n")
                     if comm_log.last_surfacing().logout_seen:
                         alert_msg_file.write(
                             "<p>Glider logout seen  - transmissions from glider complete</p>\n"
