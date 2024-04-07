@@ -1,0 +1,57 @@
+[tool.mypy]
+plugins = ['numpy.typing.mypy_plugin']
+#TODO - add in sensors and extensions
+files = ['Base.py', 'MakeDiveProfiles.py', "Reprocess.py"]
+strict = true
+
+# # Much of the numerical computing stack doesn't have type annotations yet.
+[[tool.mypy.overrides]]
+ignore_missing_imports = true
+module = [
+    "gsw.*",
+    "seawater.*",
+    "netCDF4.*",
+    "scipy.*",
+]
+
+[tool.pytest.ini_options]
+pythonpath = "."
+
+[tool.ruff]
+# Turn this on and do a pass through the code base
+#line-length = 120
+output-format = 'pylint'
+
+[tool.ruff.lint]
+# Check for numpy 2 issues
+#select = ["NPY201"]
+select = [
+    # pycodestyle
+    "E",
+    # Pyflakes
+    "F",
+    # pyupgrade
+    "UP",
+    # flake8-bugbear
+    "B",
+    # flake8-simplify
+    "SIM",
+    # isort
+    "I",
+]
+ignore = [
+  # line too long - revisit after format pass to 120 columns
+  "E501",
+  # Module level import not at top of file
+  # For now - tag locations with # noqa: E402
+  #"E402",
+  # Use format specifiers instead of percent format
+  # Quite a few cases where this does not improve readability
+  "UP031",
+  # redundant-open-modes
+  "UP015",
+  # Use ternary operator
+  # Does not generally improve readability
+  "SIM108",
+]
+
