@@ -64,7 +64,7 @@ import scipy.integrate
 import gsw
 import seawater
 
-
+import BaseDotFiles
 import BaseGZip
 from BaseLog import (
     BaseLogger,
@@ -218,7 +218,7 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
         if has_gpctd:
             sg_configuration = 3
 
-    if not (sg_configuration in [0, 1, 2, 3, 4]):
+    if sg_configuration not in [0, 1, 2, 3, 4]:
         log_warning(
             "Unknown Seaglider configuration %d; assuming stock SG with original CT mount"
             % sg_configuration
@@ -7356,6 +7356,19 @@ def make_dive_profile(
         BaseNetCDF.write_nc_globals(nc_dive_file, globals_d, base_opts)
         nc_dive_file.sync()  # force write to file
         nc_dive_file.close()  # close file
+
+        BaseDotFiles.process_extensions(
+            ".extensions",
+            ("postnetcdf",),
+            base_opts,
+            sg_calib_file_name,
+            [nc_dive_file_name],
+            None,
+            None,
+            None,
+            None,
+            None,
+        )
 
         nc_dive_file_name_gz = "%s.gz" % nc_dive_file_name
         if base_opts.gzip_netcdf:

@@ -33,3 +33,6 @@
 #
 [mission]
 # Extensions listed in this section are run after whole mission processing has occured.
+[postnetcdf]
+# Extensions listed in this section are run immediately after a per-dive netcdf file has been created,
+# to allow for additional science processing.  The extension is invoked once for each file.
