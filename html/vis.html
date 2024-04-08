@@ -853,6 +853,11 @@
         setVisibility('notificationsDiv');
         $('diveIndicator').style.display = 'block';
         currElt = 'notifications';
+        if ($('btnNotifications').innerHTML != "") {
+            $('btnNotifications').style.backgroundImage = "url('script/images/notification-active-icon.png')";
+            $('btnNotifications').innerHTML = '';
+            console.log('clearing alert blink');
+        }
     }
 
     function showChangelog() {
@@ -1041,7 +1046,7 @@
         var pieces;
         var deltas;
         let urls = [`alerts/${currGlider}/${dive}${mission()}`, `deltas/${currGlider}/${dive}${mission()}`];
-        let notify = false;
+        let notify = 'none';
 
         let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
         let alerts = resp[0];
@@ -1057,7 +1062,12 @@
         html = '';
         if (alerts != "not found") {
             html += alerts;
-            notify = true;
+            if (alerts.indexOf('CRITICAL') > -1)
+                notify = 'critical';
+            else if (alerts.indexOf('ERROR') > -1)
+                notify = 'error';
+            else 
+                notify = 'notify';
         }
 
         html += '<h3 onclick="showChangelog(); return false;" style="color:blue;">parameter changes</h3><p><table style="margin-left:40px;">';
@@ -1075,13 +1085,26 @@
         $('notificationsDiv').innerHTML = html;
 
         if (deltas['file'].length > 0 || deltas['parm'].length > 0) {
-            notify = true;
+            if (notify == 'none')
+                notify = 'notify';
         }        
 
-        if (notify) 
-            $('btnNotifications').style.backgroundImage = "url('script/images/notification-active-icon.png')";
-        else
+        if (notify == 'critical')  { 
             $('btnNotifications').style.backgroundImage = "url('script/images/notification-icon.png')";
+            $('btnNotifications').innerHTML = "<img src='script/images/notification-active-flash-red.png' class='blinkfade'>";
+        }
+        else if (notify == 'error')  { 
+            $('btnNotifications').style.backgroundImage = "url('script/images/notification-icon.png')";
+            $('btnNotifications').innerHTML = "<img src='script/images/notification-active-flash.png' class='blinkfade'>";
+        }
+        else if (notify == 'notify') {
+            $('btnNotifications').style.backgroundImage = "url('script/images/notification-active-icon.png')";
+            $('btnNotifications').innerHTML = "";
+        }
+        else {
+            $('btnNotifications').style.backgroundImage = "url('script/images/notification-icon.png')";
+            $('btnNotifications').innerHTML = "";
+        }
     }
  
     function jumpScroll(n) {
@@ -2193,11 +2216,11 @@
         <button class="tool" id="btnDiveTable"     onclick="showTable();" title="dives table"></button>
         <button class="tool" id="btnDiveDown"      onclick="changeDive(-1);" title="prev dive [s,j]"></button>
         <button class="tool" id="btnNotifications" onclick="showNotifications();" title="notifications"></button>
-        <button class="tool" id="btnCapFile"       onclick="showCap();" title="notifications"></button>
+        <button class="tool" id="btnCapFile"       onclick="showCap();" title="capture file"></button>
         <button class="tool" id="btnLogTable"      onclick="showLog();" title="log summary"></button>
         <button class="tool" id="btnPlotTool"      onclick="showPlotly();" title="plot and table tool"></button>
         <button class="tool" id="btnLogFile"       onclick="showLogFile();" title="log file"></button>
-        <button class="tool" id="btnEngFile"       onclick="showEng();" title="notifications"></button>
+        <button class="tool" id="btnEngFile"       onclick="showEng();" title="engineering file"></button>
     </div>
 
     <div class="toolBottom">

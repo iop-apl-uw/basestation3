@@ -10,8 +10,24 @@
     option { background-color:#eeeeee; }
     select { background-color:#eeeeee; }
     button { background-color:#dddddd; }
-    button.tool { background-color:#dddddd; margin-top: 2px; margin-bottom: 2px; width:48px; height:48px;  border:0px; }
+    button.tool { 
+        background-color:#dddddd; 
+        margin-top: 2px; 
+        margin-bottom: 2px; 
+        width:48px; 
+        height:48px;    
+        border:0px;  
+        background-position: center;
+        background-repeat: no-repeat;
+        padding: 0px;
+    }
 
+    button.tool img {
+        position: relative;
+        left: 0px;
+        top: 0px;
+    }
+        
     input { text-transform:none; }
 
     .jumpLink {
@@ -851,3 +867,18 @@ table {
     color: #000000;
 }
 
+.blinkfade {
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
