@@ -1421,7 +1421,7 @@ def attachHandlers(app: sanic.Sanic):
 
         if 'body' in res and 'file' in res:
             try:
-                f = open(f"{gliderPath(glider,request)}/{res['file']}", 'wb')
+                f = open(f"{gliderPath(glider,request)}/{res['file']}_{timestamp}", 'wb')
                 f.write(base64.b64decode(bytes(res['body'], 'utf-8')))
                 f.close()
                 return sanic.response.text('success') 
