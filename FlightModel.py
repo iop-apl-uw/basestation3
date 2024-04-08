@@ -1741,7 +1741,7 @@ def solve_ab_grid(base_opts, dive_set, reprocess_count, dive_num=None):
             log_error(
                 "Dive %d is marked as not okay - skipping grid solution!"
                 % dive_set_num,
-                alert="FM Grid Solution",
+                alert="FM_GRID_SOLUTION",
             )
             return (None, None, None)
         if not dive_data_d:
