@@ -2418,13 +2418,36 @@ def main():
             log_info("... skipping")
             alert_msg_file = None
 
+        reboot_msg = comm_log.has_glider_rebooted()
+        (
+            _,
+            recov_code,
+            _,
+            _,
+        ) = comm_log.last_GPS_lat_lon_and_recov(None, None)
+        if recov_code != "QUIT_COMMAND":
+            recov_msg = f"In non-quit recovery {recov_code}"
+        else:
+            recov_msg = None
+
+        for msg, alert_class in (
+            (reboot_msg, "GLIDER_REBOOT"),
+            (recov_msg, "NON_QUIT_RECOVERY"),
+        ):
+            if msg:
+                alert_msg_file.write(
+                    f'<div class="{alert_class}">\n<p><a  href="/alerthelp#{alert_class}">Alert: {alert_class}</a>\n<ul>\n'
+                )
+                alert_msg_file.write(f"<li>CRITICAL: {msg}</li>\n")
+                alert_msg_file.write("</ul></div>\n")
+
         f_conversion_issues = False
         if alert_msg_file and (
             dives_not_processed
             or selftests_not_processed
             or failed_profiles
             or failed_mission_profile
-            or failed_timeseries
+            or failed_mission_timeseries
             or incomplete_files
         ):
             alert_msg_file.write(
