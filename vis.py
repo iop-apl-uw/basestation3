@@ -373,7 +373,7 @@ def attachHandlers(app: sanic.Sanic):
     # consider whether any of these need to be protectable?? parms??
     app.static('/favicon.ico', f'{sys.path[0]}/html/favicon.ico', name='favicon.ico')
     app.static('/parms', f'{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
-    app.static('/alerthelp', f'{sys.path[0]}/html/Alerts_Reference_Manual.html', name='alerts')
+    app.static('/alerthelp', f'{sys.path[0]}/html/AlertsReferenceManual.html', name='alerts')
     app.static('/ballast', f'{sys.path[0]}/html/ballast.html', name='ballast')
     app.static('/script', f'{sys.path[0]}/scripts', name='script')
     app.static('/help', f'{sys.path[0]}/html/help.html', name='help')
