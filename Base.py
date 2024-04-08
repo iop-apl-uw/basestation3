@@ -2435,38 +2435,53 @@ def main():
             log_info("... skipping")
             alert_msg_file = None
 
-        if dives_not_processed:
-            tmp = f"Dive {dives_not_processed} failed to process completely.\n\n"
-            if alert_msg_file:
-                alert_msg_file.write(f"<br>{tmp}\n")
-            pagers_convert_msg = pagers_convert_msg + tmp
-        if selftests_not_processed:
-            tmp = (
-                f"Selftest {selftests_not_processed} failed to process completely.\n\n"
+        f_conversion_issues = False
+        if alert_msg_file and (
+            dives_not_processed
+            or selftests_not_processed
+            or failed_profiles
+            or failed_mission_profile
+            or failed_timeseries
+            or incomplete_files
+        ):
+            alert_msg_file.write(
+                '<div class="CONVERSION_ISSUES">\n<p><a  href="/alerthelp#CONVERSION_ISSUES">Alert: CONVERSION_ISSUES</a>\n<ul>\n'
             )
+            f_conversion_issues = True
+
+        if dives_not_processed:
+            tmp = f"Dive {dives_not_processed} failed to process completely."
             if alert_msg_file:
-                alert_msg_file.write(f"<br>{tmp}\n")
-            pagers_convert_msg = pagers_convert_msg + tmp
+                alert_msg_file.write(f"<li>INFO: {tmp}</li>")
+            pagers_convert_msg = pagers_convert_msg + tmp + "\n\n"
+        if selftests_not_processed:
+            tmp = f"Selftest {selftests_not_processed} failed to process completely."
+            if alert_msg_file:
+                alert_msg_file.write(f"<li>INFO: {tmp}</li>")
+            pagers_convert_msg = pagers_convert_msg + tmp + "\n\n"
         if failed_profiles:
-            tmp = f"Profiles for dive {failed_profiles} had problems during processing.\n\n"
+            tmp = f"Profiles for dive {failed_profiles} had problems during processing."
             if alert_msg_file:
-                alert_msg_file.write(f"<br>{tmp}\n")
-            pagers_convert_msg = pagers_convert_msg + tmp
+                alert_msg_file.write(f"<li>INFO: {tmp}</li>")
+            pagers_convert_msg = pagers_convert_msg + tmp + "\n\n"
         if failed_mission_profile:
-            tmp = f"The mission profile {mission_profile_name} had problems during processing.\n\n"
+            tmp = f"The mission profile {mission_profile_name} had problems during processing."
             if alert_msg_file:
-                alert_msg_file.write(f"<br>{tmp}\n")
-            pagers_convert_msg = pagers_convert_msg + tmp
+                alert_msg_file.write(f"<li>INFO: {tmp}</li>")
+            pagers_convert_msg = pagers_convert_msg + tmp + "\n\n"
         if failed_mission_timeseries:
-            tmp = f"The mission timeseries {mission_timeseries_name} had problems during processing.\n\n"
+            tmp = f"The mission timeseries {mission_timeseries_name} had problems during processing."
             if alert_msg_file:
-                alert_msg_file.write(f"<br>{tmp}\n")
-            pagers_convert_msg = pagers_convert_msg + tmp
+                alert_msg_file.write(f"<li>INFO: {tmp}</li>")
+            pagers_convert_msg = pagers_convert_msg + tmp + "\n\n"
         if incomplete_files:
             pagers_convert_msg = (
                 pagers_convert_msg
                 + "The following files were not processed completely:\n"
             )
+            if alert_msg_file:
+                alert_msg_file.write("<ul>\n")
+
             for file_name in incomplete_files:
                 incomplete_file_name = os.path.abspath(
                     os.path.join(base_opts.mission_dir, file_name)
@@ -2476,23 +2491,25 @@ def main():
                 )
                 if alert_msg_file:
                     alert_msg_file.write(
-                        '<div class="%s">\n<p>File %s was not processed completely\n'
-                        % (os.path.basename(incomplete_file_name), incomplete_file_name)
+                        # '<div class="%s">\n<p>INFO: File %s was not processed completely\n'
+                        # % (os.path.basename(incomplete_file_name), incomplete_file_name)
+                        "<li>INFO: File %s was not processed completely</li>\n"
+                        % incomplete_file_name
                     )
-                    fc = FileMgr.FileCode(incomplete_file_name, instrument_id)
-                    if fc.is_seaglider_selftest():
-                        alert_msg_file.write(
-                            "<!--selftest=%d-->\n"
-                            % FileMgr.get_dive(incomplete_file_name)
-                        )
-                    else:
-                        alert_msg_file.write(
-                            "<!--diveno=%d-->\n"
-                            % FileMgr.get_dive(incomplete_file_name)
-                        )
+                    # fc = FileMgr.FileCode(incomplete_file_name, instrument_id)
+                    # if fc.is_seaglider_selftest():
+                    #     alert_msg_file.write(
+                    #         "<!--selftest=%d-->\n"
+                    #         % FileMgr.get_dive(incomplete_file_name)
+                    #     )
+                    # else:
+                    #     alert_msg_file.write(
+                    #         "<!--diveno=%d-->\n"
+                    #         % FileMgr.get_dive(incomplete_file_name)
+                    #     )
                 if file_name in conversion_alerts_d:
-                    if alert_msg_file:
-                        alert_msg_file.write("<<ul>\n")
+                    # if alert_msg_file:
+                    #    alert_msg_file.write("<ul>\n")
                     prev_full_msg = ""  # format the text of the alert
                     for msg, resend_cmd in conversion_alerts_d[file_name]:
                         full_msg = (
@@ -2510,20 +2527,26 @@ def main():
                     del conversion_alerts_d[
                         file_name
                     ]  # clean up after ourselves - not clear this is needed anymore
-                    if alert_msg_file:
-                        alert_msg_file.write("</ul>\n")
+                    # if alert_msg_file:
+                    #    alert_msg_file.write("</ul>\n")
                     pagers_convert_msg = pagers_convert_msg + "\n"
-                if alert_msg_file:
-                    alert_msg_file.write("</p>\n")
-                    if comm_log.last_surfacing().logout_seen:
-                        alert_msg_file.write(
-                            "<p>Glider logout seen  - transmissions from glider complete</p>\n"
-                        )
-                    else:
-                        alert_msg_file.write(
-                            "<p>Glider logout not seen - retransmissions from glider possible</p>\n"
-                        )
-                    alert_msg_file.write("</div>\n")
+                # alert_msg_file.write("</div>\n")
+            if alert_msg_file:
+                # alert_msg_file.write("</p>\n")
+                alert_msg_file.write("</ul>\n")
+                if comm_log.last_surfacing().logout_seen:
+                    alert_msg_file.write(
+                        # "<p>INFO: Glider logout seen  - transmissions from glider complete</p>\n"
+                        "<li>INFO: Glider logout seen  - transmissions from glider complete</li>\n"
+                    )
+                else:
+                    alert_msg_file.write(
+                        # "<p>INFO: Glider logout not seen - retransmissions from glider possible</p>\n"
+                        "<li>INFO: Glider logout not seen - retransmissions from glider possible</li>\n"
+                    )
+                alert_msg_file.write("</ul>")
+        if alert_msg_file and f_conversion_issues:
+            alert_msg_file.write("</div>\n")
 
         if pagers_convert_msg:
             if comm_log.last_surfacing().logout_seen:
@@ -2541,7 +2564,7 @@ def main():
             for alert_topic in list(alerts_d.keys()):
                 log_info("Processing " + alert_topic)
                 alert_msg_file.write(
-                    f'<div class="{Utils.ensure_basename(alert_topic)}">\n<p>Alert: {alert_topic}<ul>\n'
+                    f'<div class="{Utils.ensure_basename(alert_topic)}">\n<p><a href="/alerthelp#{alert_topic}">Alert: {alert_topic}</a>\n<ul>\n'
                 )
                 alert_warning_msg = alert_warning_msg + f"ALERT:{alert_topic}\n"
                 for alert in alerts_d[alert_topic]:
@@ -2549,9 +2572,21 @@ def main():
                     alert_warning_msg = alert_warning_msg + f"    {alert}\n"
                 del alerts_d[alert_topic]  # clean up
                 alert_msg_file.write("</ul></p></div>\n")
-            alert_msg_file.write(
-                f"<p>Consult {os.path.basename(conversion_log)} for details</p>\n"
-            )
+
+            if "baselog" in os.path.basename(conversion_log):
+                try:
+                    _, date_str = os.path.basename(conversion_log).split("_", 1)
+                except:
+                    log_error(f"Error processing {os.path.basename(conversion_log)}")
+                else:
+                    alert_msg_file.write(f"<!-- BASELOG={date_str} -->\n")
+                    alert_msg_file.write(
+                        f'<p>INFO: Consult <a href="BASELOGREF">{os.path.basename(conversion_log)}</a> for details</p>\n'
+                    )
+            else:
+                alert_msg_file.write(
+                    f"<p>INFO: Consult {os.path.basename(conversion_log)} for details</p>\n"
+                )
 
         if alert_warning_msg:
             alert_warning_msg = (
