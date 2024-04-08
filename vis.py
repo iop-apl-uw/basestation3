@@ -400,9 +400,9 @@ async def getLatestFile(glider, request, which, dive=None):
 
     if latest > -1:
         if call > -1:
-            filename = f'{filename}.{latest}.{call}'
+            filename = f'{gliderPath(glider,request)}/{which}.{latest}.{call}'
         else:
-            filename = f'{filename}.{latest}'
+            filename = f'{gliderPath(glider,request)}/{which}.{latest}'
 
     return (filename, latest, call)
 
@@ -925,12 +925,12 @@ def attachHandlers(app: sanic.Sanic):
             else:
                 return sanic.response.text('not found', status=404)
            
-    @app.route('/baselog/<glider:int>/<timestamp:string>')
+    @app.route('/baselog/<glider:int>/<timestamp:str>')
     # description: basestation baselog file
     # parameters: mission
     # returns: raw baselog file from basestation (txt)
     @authorized()
-    async def baselogHandler(request, glider: int, timestamp: string):
+    async def baselogHandler(request, glider: int, timestamp: str):
         filename = f'{gliderPath(glider,request)}/baselog_{timestamp}'
         if await aiofiles.os.path.exists(filename):
             return await sanic.response.file(filename, mime_type='text/plain')
@@ -949,19 +949,21 @@ def attachHandlers(app: sanic.Sanic):
         else:
             mission = ''
 
+        alerts = 'none'
+
         (filename, dive, call) = await getLatestFile(glider, request, 'alert_message.html', dive=dive)
-        if await aiofiles.os.path.exists(filename):
+        if filename and await aiofiles.os.path.exists(filename):
             async with aiofiles.open(filename, 'r') as file:
                 alerts = await file.read() 
 
-            t = re.match(r"BASELOG=\d+", alerts)
+            t = re.search(r"BASELOG=\d+", alerts)
             if t:
                 timestamp = t[0].split('=')[1]
                 alerts = re.sub('BASELOGREF', f'baselog/{glider}/{timestamp}{mission}', alerts)
            
             return sanic.response.text(alerts)
-        else:
-            return sanic.response.text('not found')
+
+        return sanic.response.text('not found')
      
     @app.route('/deltas/<glider:int>/<dive:int>')
     # description: list of changes between dives
