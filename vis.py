@@ -113,6 +113,7 @@ protectableRoutes = [
                         'plots',    # get list of plots for a dive
                         'log',      # get log summary 
                         'file',     # get log, eng, cap file
+                        'baselog',  # get baselog_yymmddhhmmss file
                         'alerts',   # get alerts
                         'deltas',   # get changes (parameters and files) between dives
                         'changes',  # get parameter changes
@@ -372,6 +373,7 @@ def attachHandlers(app: sanic.Sanic):
     # consider whether any of these need to be protectable?? parms??
     app.static('/favicon.ico', f'{sys.path[0]}/html/favicon.ico', name='favicon.ico')
     app.static('/parms', f'{sys.path[0]}/html/Parameter_Reference_Manual.html', name='parms')
+    app.static('/alerthelp', f'{sys.path[0]}/html/Alerts_Reference_Manual.html', name='alerts')
     app.static('/ballast', f'{sys.path[0]}/html/ballast.html', name='ballast')
     app.static('/script', f'{sys.path[0]}/scripts', name='script')
     app.static('/help', f'{sys.path[0]}/html/help.html', name='help')
@@ -881,15 +883,41 @@ def attachHandlers(app: sanic.Sanic):
             else:
                 return sanic.response.text('not found', status=404)
            
+    @app.route('/baselog/<glider:int>/<timestamp:string>')
+    # description: basestation baselog file
+    # parameters: mission
+    # returns: raw baselog file from basestation (txt)
+    @authorized()
+    async def baselogHandler(request, glider: int, timestamp: string):
+        filename = f'{gliderPath(glider,request)}/baselog_{timestamp}'
+        if await aiofiles.os.path.exists(filename):
+            return await sanic.response.file(filename, mime_type='text/plain')
+        else:
+            return sanic.response.text('not found')
+    
     @app.route('/alerts/<glider:int>/<dive:int>')
     # description: basestation alerts file
     # parameters: mission
-    # returns: raw alerts file from basestation (HTML format)
+    # returns: alerts file (with re-written links) from basestation (HTML format)
     @authorized()
     async def alertsHandler(request, glider: int, dive: int):
+        mission = missionFromRequest(request)
+        if mission:
+            mission = f'?mission={mission}'
+        else:
+            mission = ''
+
         filename = f'{gliderPath(glider,request)}/alert_message.html.{dive:d}'
         if await aiofiles.os.path.exists(filename):
-            return await sanic.response.file(filename, mime_type='text/plain')
+            async with aiofiles.open(filename, 'r') as file:
+                alerts = await file.read() 
+
+            t = re.match(r"BASELOG=\d+", alerts)
+            if t:
+                timestamp = t[0].split('=')[1]
+                alerts = re.sub('BASELOGREF', f'baselog/{glider}/{timestamp}{mission}', alerts)
+           
+            return sanic.response.text(alerts)
         else:
             return sanic.response.text('not found')
      
