@@ -2019,20 +2019,12 @@ def main():
     for known_file in known_files:
         backup_filename = os.path.join(base_opts.mission_dir, known_file)
         if os.path.exists(backup_filename):
-            # backup_dive_num = comm_log.last_surfacing().dive_num
-            # backup_call_cycle = comm_log.last_surfacing().call_cycle
             if backup_dive_num is not None:
-                if backup_call_cycle is None or int(backup_call_cycle) == 0:
-                    backup_target_filename = "%s.%d" % (
-                        backup_filename,
-                        int(backup_dive_num),
-                    )
-                else:
-                    backup_target_filename = "%s.%d.%d" % (
-                        backup_filename,
-                        int(backup_dive_num),
-                        int(backup_call_cycle),
-                    )
+                backup_target_filename = "%s.%d.%d" % (
+                    backup_filename,
+                    int(backup_dive_num),
+                    int(backup_call_cycle),
+                )
                 log_info(f"Backing up {backup_filename} to {backup_target_filename}")
                 shutil.copyfile(backup_filename, backup_target_filename)
 
@@ -2049,10 +2041,7 @@ def main():
                 )
 
     if backup_dive_num is not None and int(backup_dive_num) >= 1:
-        if backup_call_cycle is None or int(backup_call_cycle) == 0:
-            cmdfile_name = f"cmdfile.{int(backup_dive_num)}"
-        else:
-            cmdfile_name = f"cmdfile.{int(backup_dive_num)}.{int(backup_call_cycle)}"
+        cmdfile_name = f"cmdfile.{int(backup_dive_num)}.{int(backup_call_cycle)}"
 
         fullname = os.path.join(base_opts.mission_dir, cmdfile_name)
         if os.path.exists(fullname):
@@ -2367,17 +2356,11 @@ def main():
     alert_message_base_name = "alert_message.html"
     (backup_dive_num, backup_call_cycle) = comm_log.get_last_dive_num_and_call_counter()
     if backup_dive_num is not None:
-        if backup_call_cycle is None or int(backup_call_cycle) == 0:
-            alert_message_file_name = "%s.%d" % (
-                alert_message_base_name,
-                int(backup_dive_num),
-            )
-        else:
-            alert_message_file_name = "%s.%d.%d" % (
-                alert_message_base_name,
-                int(backup_dive_num),
-                int(backup_call_cycle),
-            )
+        alert_message_file_name = "%s.%d.%d" % (
+            alert_message_base_name,
+            int(backup_dive_num),
+            int(backup_call_cycle),
+        )
     else:
         log_error(
             f"Could not find a dive number in the comm.log - using {alert_message_base_name} for alerts"
