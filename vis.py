@@ -363,6 +363,48 @@ def gliderPath(glider, request, mission=None):
     else:
         return f'sg{glider:03d}'
 
+async def getLatestFile(glider, request, which, dive=None):
+    p = Path(gliderPath(glider,request))
+    latest = -1
+    call = -1;
+    filename = None
+    if dive:
+        globstr = f'{which}.{dive}*'
+    else:
+        globstr = f'{which}.*'
+
+    async for fpath in p.glob(globstr):
+        try:
+            j = parse('%s.{:d}.{:d}' % which, fpath.name)
+            if dive:
+                if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] == dive and j.fixed[1] > call:
+                    latest = j.fixed[0]
+                    call = j.fixed[1]
+                else:
+                    j = parse('%s.{:d}' % which, fpath.name)
+                    if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] == dive:
+                        latest = j.fixed[0]
+                        call = -1
+            else:
+                if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] > latest and j.fixed[1] > call:
+                    latest = j.fixed[0]
+                    call = j.fixed[1]
+                else:
+                    j = parse('%s.{:d}' % which, fpath.name)
+                    if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] > latest:
+                        latest = j.fixed[0]
+                        call = -1
+        except Exception as e:
+            sanic.log.logger.info(f"getLatesestFile: {e}")
+            continue
+
+    if latest > -1:
+        if call > -1:
+            filename = f'{filename}.{latest}.{call}'
+        else:
+            filename = f'{filename}.{latest}'
+
+    return (filename, latest, call)
 
 #
 # GET handlers - most of the API
@@ -907,7 +949,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             mission = ''
 
-        filename = f'{gliderPath(glider,request)}/alert_message.html.{dive:d}'
+        (filename, dive, call) = await getLatestFile(glider, request, 'alert_message.html', dive=dive)
         if await aiofiles.os.path.exists(filename):
             async with aiofiles.open(filename, 'r') as file:
                 alerts = await file.read() 
@@ -1052,34 +1094,14 @@ def attachHandlers(app: sanic.Sanic):
         if await aiofiles.os.path.exists(filename):
             message['file'] = which
             message['dive'] = -1
+            message['call'] = -1
         else:
-            p = Path(gliderPath(glider,request))
-            latest = -1
-            call = -1;
-            async for fpath in p.glob(f'{which}.*'):
-                try:
-                    j = parse('%s.{:d}.{:d}' % which, fpath.name)
-                    if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] > latest and j.fixed[1] > call:
-                        latest = j.fixed[0]
-                        call = j.fixed[1]
-                    else:
-                        j = parse('%s.{:d}' % which, fpath.name)
-                        if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] > latest:
-                            latest = j.fixed[0]
-                            call = -1
-                except Exception as e:
-                    sanic.log.logger.info(f"controlHandler: {e}")
-                    continue
-
-            if latest > -1:
+            (filename, dive, call) = await getLatestFile(glider, request, which)
+            if filename:
                 message['file'] = which
-                message['dive'] = latest
-                if call > -1:
-                    filename = f'{filename}.{latest}.{call}'
-                    message['call'] = call
-                else:
-                    filename = f'{filename}.{latest}'
-                    message['call'] = -1
+                message['dive'] = dive
+                message['call'] = call
+
 
         if message['file'] == "none":
             return sanic.response.text("none")
