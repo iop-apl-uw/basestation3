@@ -1287,6 +1287,12 @@
             }
         }
     }
+
+    function start() {
+        loadTable();
+        setupStream();
+    }
+
     function init() {
         var scale = 'scale(1)';
         document.body.style.webkitTransform =  scale;    // Chrome, Opera, Safari
@@ -1306,8 +1312,12 @@
             showStatus = params.get('status').split(',');
         }
 
-        loadTable();
-        setupStream();
+        if (params.has('auth')) {
+            params.delete('auth');
+            openLoginForm(start);// window.location.reload.bind(window.location));
+        }
+
+        start();
     }
 
 </script>
