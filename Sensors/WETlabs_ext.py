@@ -122,7 +122,7 @@ columns_d = {
     "sig470nm": {
         "name": "blue scattering",
         "units": scattering_units,
-        "synonyms": ["wl470sig", "470sig", "wlsig1", "redCount", "sig1"],
+        "synonyms": ["wl470sig", "470sig", "sig470", "wlsig1", "redCount", "sig1"],
         "descr": "total volume blue scattering coefficient using manufacturer-supplied dark counts and scaling factor",
     },
     "ref470nm": {
@@ -133,7 +133,7 @@ columns_d = {
     "sig532nm": {
         "name": "green scattering",
         "units": scattering_units,
-        "synonyms": ["sig532"],
+        "synonyms": ["sig532", "532sig"],
         "descr": "total volume green scattering coefficient using manufacturer-supplied dark counts and scaling factor",
     },
     "ref532nm": {"name": "green reference", "units": None, "synonyms": []},
@@ -147,6 +147,7 @@ columns_d = {
             "600sig",
             "wl700sig",
             "700sig",
+            "sig700",
             "wlsig2",
             "blueCount",
             "sig2",
