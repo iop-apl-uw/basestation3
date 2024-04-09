@@ -424,11 +424,11 @@ def main(
     ncdf_file_names = []
 
     if hasattr(base_opts, "profile_filenames") and base_opts.profile_filenames:
-        processed_file_names = base_opts.profile_filenames
-
+        processed_other_files = base_opts.profile_filenames
+    
     if processed_other_files is not None:
         for ff in processed_other_files:
-            if ff.endswith(".profile"):
+            if ff.endswith(".npro"):
                 # While the glider can produce reduced profile up or down,
                 # only plot the downcast.
                 if os.path.split(ff)[1][10:11] == "a":
