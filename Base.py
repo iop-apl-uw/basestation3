@@ -1140,13 +1140,12 @@ def check_file_fragments(
                         generate_resend(fragment, instrument_id),
                     )
 
-    if total_size != 0:
-        if size_from_fragments != total_size:
-            log_warning(
-                "Size from frags (%d) does not match logged value (%d)"
-                % (size_from_fragments, total_size)
-            )
-            ret_val = False
+    if total_size != 0 and size_from_fragments != total_size:
+        log_warning(
+            "Size from frags (%d) does not match logged value (%d)"
+            % (size_from_fragments, total_size)
+        )
+        ret_val = False
 
     return ret_val
 
@@ -1195,7 +1194,7 @@ def expunge_secrets(logfile_name):
 
     try:
         pub = open(logfile_name, "rb")
-    except IOError:
+    except OSError:
         log_error(
             f"could not open {logfile_name} for reading - skipping secret expunge"
         )
@@ -1250,12 +1249,12 @@ def expunge_secrets(logfile_name):
         base, _ = os.path.splitext(logfile_name)
         try:
             pvt = open(base + ".pvt", "w")
-        except IOError:
+        except OSError:
             log_error("could not open " + base + ".pvt" + " for writing")
             return 1
         try:
             pub = open(logfile_name, "w")
-        except IOError:
+        except OSError:
             log_error("could not open " + logfile_name + " for writing")
             return 1
 
@@ -1282,7 +1281,7 @@ def expunge_secrets_st(selftest_name):
 
     try:
         pub = open(selftest_name, "rb")
-    except IOError:
+    except OSError:
         log_error(
             f"could not open {selftest_name} for reading - skipping secret expunge"
         )
@@ -1318,12 +1317,12 @@ def expunge_secrets_st(selftest_name):
     if private_keys_found:
         try:
             pvt = open(pvt_name, "wb")
-        except IOError:
+        except OSError:
             log_error("could not open " + pvt_name + " for writing")
             return 1
         try:
             pub = open(selftest_name, "wb")
-        except IOError:
+        except OSError:
             log_error("could not open " + selftest_name + " for writing")
             return 1
 
@@ -1446,7 +1445,7 @@ def main():
 
     # Check for required "options"
     if not base_opts.mission_dir:
-        print((main.__doc__))
+        print(main.__doc__)
         log_critical("Dive directory must be supplied. See Base.py -h")
         return 1
 
@@ -1459,9 +1458,8 @@ def main():
     if PlotUtils.setup_plot_directory(base_opts):
         log_error("Failed to setup plot directory - not plots being generated")
 
-    if base_opts.daemon:
-        if Daemon.createDaemon(base_opts.mission_dir, False):
-            log_error("Could not launch as a daemon - continuing synchronously")
+    if base_opts.daemon and Daemon.createDaemon(base_opts.mission_dir, False):
+        log_error("Could not launch as a daemon - continuing synchronously")
 
     cmdline = ""
     for i in sys.argv:
@@ -1630,7 +1628,7 @@ def main():
             )
             try:
                 comm_log_merged = open(comm_log_merged_name, "w")
-            except IOError as exception:
+            except OSError as exception:
                 log_error(
                     "Could not open %s (%s) - no merged comm log created"
                     % (comm_log_merged_name, exception.args)
@@ -1745,7 +1743,7 @@ def main():
             complete_files_dict, processed_pdos_logfiles_dict = read_processed_files(
                 base_opts.mission_dir, instrument_id
             )
-        except IOError as exception:
+        except OSError as exception:
             log_critical(
                 f"Error opening processed dives conf file ({exception.args}) - exiting"
             )
@@ -1753,9 +1751,8 @@ def main():
             return 1
         if base_opts.reprocess:
             for ff in list(complete_files_dict.keys()):
-                if len(ff) > 6:
-                    if int(ff[2:6]) == base_opts.reprocess:
-                        del complete_files_dict[ff]
+                if len(ff) > 6 and int(ff[2:6]) == base_opts.reprocess:
+                    del complete_files_dict[ff]
 
     # Start with self tests
     log_info("Processing seaglider selftests")
@@ -2582,7 +2579,7 @@ def main():
             if "baselog" in os.path.basename(conversion_log):
                 try:
                     _, date_str = os.path.basename(conversion_log).split("_", 1)
-                except:
+                except Exception:
                     log_error(f"Error processing {os.path.basename(conversion_log)}")
                 else:
                     alert_msg_file.write(f"<!-- BASELOG={date_str} -->\n")
