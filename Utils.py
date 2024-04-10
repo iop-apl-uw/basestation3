@@ -83,6 +83,16 @@ def open_netcdf_file(
     # return netcdf.netcdf_file(filename,mode,mmap=False if sys.platform == 'darwin' else mmap, version=version)
     # pylint: disable=protected-access
     # return scipy.io._netcdf.netcdf_file(filename, mode, mmap=False, version=version)
+
+    # netCDF4 tries to open with a write exclusive, which will fail if some other process has
+    # the file open for read.  
+    if "w" in mode:
+        try:
+            os.remove(filename)
+        except FileNotFoundError:
+            pass
+        except:
+            log_warning("Failed to remove file before write", "exc")
     ds = netCDF4.Dataset(filename, mode)
     ds.set_auto_mask(False)
     return ds
