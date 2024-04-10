@@ -16,11 +16,12 @@ A non-quit recovery has been reported in the most recent <code>comm.log</code> s
 </p>
 
 <p><a name="AUXCOMPASS">AUXCOMPASS<br>
-
+An auxcompass data file contains no <code>%pressure</code> slope/y-intercept metadata, so the pressure data cannot be corrected.  
 </p>
 
 <p><a name="BAD_AUXPRESSURE">BAD_AUXPRESSURE<br>
-
+The mean of the auxPressure or auxCompass pressure data is less then 10.  This means the sensor has been misconfigured and the
+pressure data will not be used.
 </p>
 
 <p><a name="BAD_DIVE_SPEC">BAD_DIVE_SPEC<br>
@@ -30,66 +31,93 @@ in the docs directory for correct format.
 </p>
 
 <p><a name="CONVERSION_ISSUES">CONVERSION_ISSUES<br>
-
+There were errors duirng the processing of listed files from the Seaglider.  There are a number of reasons why these issues arise, but most
+common are not having all the file framgments uploaded, or that a file fragment was only partially uploaded.  For some cases, there will be
+recommendations made on what to fix.
 </p>
 
 <p><a name="CONVERSION_TIMEOUT">CONVERSION_TIMEOUT<br>
-
+A external conversion binary that the basestation runs to process data or eng files took too long to run and was stopped.  If this problem persists,
+contact iopsg@uw.edu to troubleshoot.
 </p>
 
 <p><a name="DB_LOCKED">DB_LOCKED<br>
-
+The sqlite mission database is locked and not updateable.  Once locked, the Seaglider's website will no longer update with new Seaglider data.
+This is an internal basestation error and should be reported to iopsg@uw.edu if it occurs.
 </p>
 
 <p><a name="FILE_RETRY">FILE_RETRY<br>
-
+One or more file fragments were uploaded multiple times in a single communications session.  This situation is an
+internal error between the basestation and Seaglider and should be reported to iopsg@uw.edu.
 </p>
 
 <p><a name="FMS">FMS<br>
-
+There are several possible Flight Model System (FMS) alerts that fall in this category:
+<ul>
+  <li>There are not enough different recent pitches for the FMS to constrain drag parameter.  You might consider a steeper pitched dive or two to help the solution</li>
+  <li>The initial estimated vehicle drag larger than expected.  Generally, this may be ignored - especially if addition sensors installed since the last deployment.</li>
+  <li>There has been a large increase in the estimated drag.  This can be something that is transient, but the drag estimates should be watched as this may indicate biofouling</li>
+  <li>The FMS system will issue suggested updates for the Seaglider's on-board <code>$HD_A</code>, <code>$HD_B</code> and <code>$HD_C</code>.  Generally, if the values are
+  considerably different from the on-board values, updating is a good idea.  Note that updating These suggestions only affect the Seaglider's on-board decisions about
+  pitch and thrust - the FMS system continues to estimate the drag coefficients independently in order to generate an estimate of the Seaglider forward velocity.
+</ul>
 </p>
 
 <p><a name="FM_GRID_SOLUTION">FM_GRID_SOLUTION<br>
-
+One or more netcdf files are not included in the Flight Model System (FMS) solution.  This usually is from the netcdf file not containing enough
+information for the FMS system.
 </p>
 
 <p><a name="FM_IGNORE">FM_IGNORE<br>
-
+One or more variables related to turning the Seaglider hydrodynamic model were found in <code>sg_calib_constants.m</code> and are not
+being used because the Flight Model System (FMS) is in use.  To supress this alert, remove, comment out, or add <code>% FM_ignore</code>
+to the lines in sg_calib_constants.m.  If you do not want to run the FMS and tune the model yourself, then add <code>--ignore_flight_model</code>
+to the command line in <code>glider_logout</code>
 </p>
 
 <p><a name="GPSROLLOVER">GPSROLLOVER<br>
-
+The GPS in the Seaglider has not been upgraded to handle the latest GPS rollover event on April 6, 2019.
 </p>
 
 <p><a name="INCORRECT_CT">INCORRECT_CT<br>
-
+RBR Legato CTD data was found, but the <code>sg_ct_type</code> varible in <code>sg_calib_contants.m</code> was not set to <code>4</code>.
 </p>
 
 <p><a name="LOGFILE_WARN">LOGFILE_WARN<br>
-
+One or more <code>$WARN</code> lines was found in the Seaglider logfile.  These messages are important warning conditions the pilot
+may need to take action on - consult the text for further details.
 </p>
 
 <p><a name="MAGCAL">MAGCAL<br>
-
+There was an error processing the supplied compass calibration file.
 </p>
 
 <p><a name="MASS_MISMATCH">MASS_MISMATCH<br>
-
+The specified mass in <code>sg_calib_constants.m</code> differs from what is on the Seaglider.  The value in  <code>sg_calib_constants.m</code> is what the basestation will use to process data.
 </p>
 
 <p><a name="MISSING_SEABIRD_CAL">MISSING_SEABIRD_CAL<br>
-
+One or more of the needed calibration coefficients for the Seabird CTD were not found in the <code>sg_calib_consts.m</code> file.
 </p>
 
 <p><a name="MISSING_SEALEVEL">MISSING_SEALEVEL<br>
-
+This alert can refer to one of two conditions.
+<ul>
+  <li>For a scicon based instrument, the alert indicates that an instrument
+reporting pressure is missing the sealevel pressure reading.  For a RBR legato, a pressure of <code>10082.0</code> is assumed.
+  For the truck sensor, no zero offset is assumed.  </li>
+  <li>For a RBR Legato being sampled by the truck, the <code>legato_sealevel</code> variable was not specified in the
+  <code>sg_calib_constants.m</code> file.
 </p>
 
 <p><a name="SBECT_COEFFICIENT">SBECT_COEFFICIENT<br>
-
+One or more of the Seabird CTD calibration coefficients differs from what was specified in the <code>sg_calib_consts.m</code> file
+and what was is on board the gliders parameters.
 </p>
 
 <p><a name="TIMEOUT">TIMEOUT<br>
-
+An instrument reported timeouts during sampling.  For a serial based device, a few timeouts per dive may be
+viewed as acceptable - more then that is a potential sign of a failing instrument.  For frequency base instruments
+any timeouts are potential sign of instrument failure.
 </p>
 </body>
