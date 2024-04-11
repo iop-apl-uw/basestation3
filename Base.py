@@ -2433,7 +2433,7 @@ def main():
         ):
             if msg:
                 alert_msg_file.write(
-                    f'<div class="{alert_class}">\n<p><a  href="/alerthelp#{alert_class}">Alert: {alert_class}</a>\n<ul>\n'
+                    f'<div class="{alert_class}">\n<p><a  href="alerthelp#{alert_class}">Alert: {alert_class}</a>\n<ul>\n'
                 )
                 alert_msg_file.write(f"<li>CRITICAL: {msg}</li>\n")
                 alert_msg_file.write("</ul></div>\n")
@@ -2448,7 +2448,7 @@ def main():
             or incomplete_files
         ):
             alert_msg_file.write(
-                '<div class="CONVERSION_ISSUES">\n<p><a  href="/alerthelp#CONVERSION_ISSUES">Alert: CONVERSION_ISSUES</a>\n<ul>\n'
+                '<div class="CONVERSION_ISSUES">\n<p><a  href="alerthelp#CONVERSION_ISSUES">Alert: CONVERSION_ISSUES</a>\n<ul>\n'
             )
             f_conversion_issues = True
 
@@ -2567,7 +2567,7 @@ def main():
             for alert_topic in list(alerts_d.keys()):
                 log_info("Processing " + alert_topic)
                 alert_msg_file.write(
-                    f'<div class="{Utils.ensure_basename(alert_topic)}">\n<p><a href="/alerthelp#{alert_topic}">Alert: {alert_topic}</a>\n<ul>\n'
+                    f'<div class="{Utils.ensure_basename(alert_topic)}">\n<p><a href="alerthelp#{alert_topic}">Alert: {alert_topic}</a>\n<ul>\n'
                 )
                 alert_warning_msg = alert_warning_msg + f"ALERT:{alert_topic}\n"
                 for alert in alerts_d[alert_topic]:
