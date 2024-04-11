@@ -32,6 +32,7 @@
 import argparse
 import os
 import sys
+
 import yaml
 
 # construct the argument parser and parse the arguments

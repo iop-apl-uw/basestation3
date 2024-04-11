@@ -6,7 +6,9 @@ rufflint:
 	-ruff check .
 
 rufffmt:
+	-ruff check --select I --fix .
 	-ruff format .
+
 
 mypy:
 	-mypy

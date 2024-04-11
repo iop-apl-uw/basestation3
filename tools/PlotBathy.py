@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,27 +33,20 @@ import pdb
 import sys
 import traceback
 
-import numpy as np
-
-# pip install scanf
-import scanf
-import xarray as xr
-import cmocean
-import plotly
 import matplotlib
 import matplotlib.pyplot as plt
+import numpy as np
+import plotly
+import scanf
+import xarray as xr
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
-import BaseDotFiles
 import BaseOpts
 from BaseLog import (
     BaseLogger,
     log_error,
-    log_critical,
     log_info,
-    log_debug,
-    log_warning,
 )
 
 bathy_t = collections.namedtuple("bathy_t", ("filename", "bathyname", "da"))
@@ -88,7 +81,7 @@ def read_bathy(path_to_bathy_map):
                 fi.readline(),
             )
             bathy_data = None
-            for jj in range(row_dim):
+            for _ in range(row_dim):
                 row = np.float32(fi.readline().split())
                 if bathy_data is None:
                     bathy_data = row
@@ -113,7 +106,7 @@ def read_bathy(path_to_bathy_map):
         )
         return da
 
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, tb = sys.exc_info()
             traceback.print_exc()
@@ -253,9 +246,9 @@ def main():
 if __name__ == "__main__":
     try:
         main()
-    except:
+    except Exception:
         if DEBUG_PDB:
-            _, _, tb = sys.exc_info()
+            _, __, tb = sys.exc_info()
             traceback.print_exc()
             pdb.post_mortem(tb)
         else:

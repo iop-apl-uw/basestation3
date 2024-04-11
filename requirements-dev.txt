@@ -3,6 +3,7 @@
 # Development related
 ## Static Typing
 mypy
+types-PyYAML
 ## Testing
 pytest
 pytest-cov

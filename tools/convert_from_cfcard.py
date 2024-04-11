@@ -31,10 +31,10 @@
 
 # To support rebuilding a deployment from scratch, ensure raw data files
 # are lower-cased (see globs in FileMgr), and that required files are present.
-import sys
-import os
 import glob
+import os
 import shutil
+import sys
 
 if __name__ == "__main__":
     # to rebuild the world

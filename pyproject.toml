@@ -12,6 +12,10 @@ module = [
     "seawater.*",
     "netCDF4.*",
     "scipy.*",
+    "xarray.*",
+    "matplotlib.*",
+    "scanf.*",
+    "shapely.*",
 ]
 
 [tool.pytest.ini_options]

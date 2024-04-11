@@ -30,18 +30,18 @@
 """Esitmate time of arrival at target based on past N days run
 """
 import argparse
-import math
-import sys
-import os
 import glob
+import math
+import os
 import pdb
+import sys
 import time
 import traceback
 
-from pyproj import Geod
-from shapely.geometry import Point, LineString
-import xarray as xr
 import numpy as np
+import xarray as xr
+from pyproj import Geod
+from shapely.geometry import LineString, Point
 
 DEBUG_PDB = False
 
