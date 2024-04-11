@@ -382,11 +382,11 @@ async def getLatestFile(glider, request, which, dive=None):
                     call = j.fixed[1]
                 else:
                     j = parse('%s.{:d}' % which, fpath.name)
-                    if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] == dive:
+                    if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] == dive and call == -1:
                         latest = j.fixed[0]
-                        call = -1
+                        call = 0
             else:
-                if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] > latest and j.fixed[1] > call:
+                if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] >= latest and j.fixed[1] > call:
                     latest = j.fixed[0]
                     call = j.fixed[1]
                 else:
@@ -395,7 +395,7 @@ async def getLatestFile(glider, request, which, dive=None):
                         latest = j.fixed[0]
                         call = -1
         except Exception as e:
-            sanic.log.logger.info(f"getLatesestFile: {e}")
+            sanic.log.logger.info(f"getLatestFile: {e}")
             continue
 
     if latest > -1:
