@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021, 2022, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021, 2022, 2023, 2024 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -1146,7 +1146,7 @@ def remap_engfile_columns_netcdf(
     """
     if column_names is None:
         log_error(
-            "Missing arguments for WETlabs remap_engfile_columns_netcdf - version mismatch?"
+            "Missing arguments for optode remap_engfile_columns_netcdf - version mismatch?"
         )
         return -1
 
