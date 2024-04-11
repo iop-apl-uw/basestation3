@@ -2525,7 +2525,7 @@ def main():
                                 pagers_convert_msg + f"        {full_msg}\n"
                             )
                             if alert_msg_file:
-                                alert_msg_file.write(f"<li>{full_msg}</li>\n")
+                                alert_msg_file.write(f"<li>INFO: {full_msg}</li>\n")
                             prev_full_msg = full_msg
                     del conversion_alerts_d[
                         file_name
