@@ -1362,6 +1362,16 @@ def run_extension_script(script_name, script_args):
         log_info(f"Extension script {script_name} not found")
 
 
+def remove_dive_from_dict(complete_files_dict, dive_num, instrument_id):
+    """Returns an updated complete_files_dict with all files from a dive_num removed"""
+    new_dict = {}
+    for k, v in complete_files_dict.items():
+        fc = FileMgr.FileCode(k, instrument_id)
+        if fc.is_seaglider_selftest() or fc.dive_number() != dive_num:
+            new_dict[k] = v
+    return new_dict
+
+
 def signal_handler_defer(signum, frame):
     """Handles SIGUSR1 signal during per-dive processing"""
     # pylint: disable=unused-argument
@@ -1856,9 +1866,15 @@ def main():
     else:
         log_warning("No dives to process")
 
-    write_processed_dives(
-        base_opts.mission_dir, complete_files_dict, processed_pdos_logfiles_dict
-    )
+    # When netcdf output is enabled, defer writing out processed files until after netcdf creation
+    if not (
+        base_opts.make_dive_profiles
+        or base_opts.make_mission_profile
+        or base_opts.make_mission_timeseries
+    ):
+        write_processed_dives(
+            base_opts.mission_dir, complete_files_dict, processed_pdos_logfiles_dict
+        )
 
     #
     # Per dive profile, netcdf and KKYY file processing
@@ -1988,10 +2004,21 @@ def main():
                 )
                 log_info("Continuing processing...")
                 failed_profiles.append(dive_num)
+                # Edit complete files dictionary to remove any files associated with this dive
+                complete_files_dict = remove_dive_from_dict(
+                    complete_files_dict, dive_num, instrument_id
+                )
             else:
+                # Edit complete files dictionary to remove any files associated with this dive
+                # if there is no ncf file generated and we didn't skip on purpose
+                if not nc_dive_file_name and retval != 2:
+                    complete_files_dict = remove_dive_from_dict(
+                        complete_files_dict, dive_num, instrument_id
+                    )
                 # Even if the processing failed, we may get a netcdf files out
                 if nc_dive_file_name:
                     nc_files_created.append(nc_dive_file_name)
+
                 if retval == 1:
                     log_error(f"Failed to create profiles for {head}")
                     failed_profiles.append(dive_num)
@@ -2002,6 +2029,10 @@ def main():
                     if nc_dive_file_name:
                         data_product_file_names.append(nc_dive_file_name)
                         nc_dive_file_names.append(nc_dive_file_name)
+
+        write_processed_dives(
+            base_opts.mission_dir, complete_files_dict, processed_pdos_logfiles_dict
+        )
 
         if not dives_to_profile:
             log_info("No dives found to profile")
