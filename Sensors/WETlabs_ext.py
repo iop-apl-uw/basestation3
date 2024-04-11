@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -652,15 +652,22 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                     % data_var
                 )
             else:
-                # scale the data and record in results
-                scaled_data = scale_factor * (data - dark_counts)
-
-                np = len(time_s_v)
-                # NOTE this could happen up to 3 times per instrument if all calib data is present
-                # but size shouldn't change per instrument so no foul
-                assign_dim_info_dim_name(nc_info_d, results_info, results_dim)
-                assign_dim_info_size(nc_info_d, results_info, np)
-                results_d.update({results_time_var: time_s_v, results_var: scaled_data})
+                try:
+                    # scale the data and record in results
+                    scaled_data = scale_factor * (data - dark_counts)
+                except Exception:
+                    log_error(
+                        f"Problem correcting {data_var} - skipping corrections", "exc"
+                    )
+                else:
+                    np = len(time_s_v)
+                    # NOTE this could happen up to 3 times per instrument if all calib data is present
+                    # but size shouldn't change per instrument so no foul
+                    assign_dim_info_dim_name(nc_info_d, results_info, results_dim)
+                    assign_dim_info_size(nc_info_d, results_info, np)
+                    results_d.update(
+                        {results_time_var: time_s_v, results_var: scaled_data}
+                    )
     return 0
 
 
