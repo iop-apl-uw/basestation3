@@ -59,6 +59,17 @@
         background-color: #ffff00;
     }
 
+    .imgtag {
+        position: absolute;
+        z-index: 1000;
+        background-color: transparent;
+        color: magenta;
+        font-size: 45px;   
+        transform: rotate(-30deg);
+        font-weight: lighter;
+    }
+
+
     @media (pointer: coarse) {
 
         @media screen and (orientation:portrait) {
@@ -118,7 +129,6 @@
                 justify-content: center;
                 flex-direction: column; 
             }
-
 
             .indexImg {
                 max-width: calc(90vw - 10px);
@@ -993,7 +1003,14 @@
                 img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + q;
             
             img.classList.add('indexImg');
-     
+
+            if (status != 'active') {
+                tag = document.createElement('div');
+                tag.classList.add('imgtag');
+                tag.innerHTML = status;
+                box.appendChild(tag);
+            }
+
             box.appendChild(img);
             t.appendChild(box);
         })
