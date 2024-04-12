@@ -1761,7 +1761,10 @@ def main():
             return 1
         if base_opts.reprocess:
             for ff in list(complete_files_dict.keys()):
-                if len(ff) > 6 and int(ff[2:6]) == base_opts.reprocess:
+                fc = FileMgr.FileCode(ff, instrument_id)
+                if (
+                    fc.is_seaglider() or fc.is_logger()
+                ) and fc.dive_number() == base_opts.reprocess:
                     del complete_files_dict[ff]
 
     # Start with self tests
