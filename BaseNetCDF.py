@@ -1650,6 +1650,7 @@ nc_var_metadata = {
     "log_DEVICE6": [False, "d", {}, nc_scalar],
     "log_DEVICES": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_DEVICE_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
+    "log_DEVICE_MAX_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_DEVICE_SECS": [False, "c", {}, nc_scalar],  # Multi-valued string
     "log_DIVE": [False, "i", {}, nc_scalar],
     "log_D_ABORT": [False, "d", {}, nc_scalar],
