@@ -951,6 +951,8 @@
         fetch(`summary/${glider.glider}${missionArg(glider)}`)
         .then(res => res.json())
         .then(data => {
+            console.log(glider);
+            console.log(data);
             t.classList.add('tile');
             t.onclick = function() { window.open(`./${glider.glider}${missionArg(glider)}`, `${glider.glider}`); };
            
@@ -1004,10 +1006,10 @@
             
             img.classList.add('indexImg');
 
-            if (status != 'active') {
+            if (glider.status != 'active') {
                 tag = document.createElement('div');
                 tag.classList.add('imgtag');
-                tag.innerHTML = status;
+                tag.innerHTML = glider.status;
                 box.appendChild(tag);
             }
 
@@ -1086,7 +1088,7 @@
                 allMissions.push(g.mission.split('_')[0])
                 allGliders.push(g.glider);
 
-                glider = { glider: g.glider, mission: g.mission };
+                glider = { glider: g.glider, mission: g.mission, status: g.status };
 {% if runMode == 'pilot' %}
                 if (gliders.length > 0 && (!gliders.includes("" + glider.glider) || shown.includes(glider.glider))) {
 {% else %}
