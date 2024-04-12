@@ -931,7 +931,26 @@ def attachHandlers(app: sanic.Sanic):
     async def baselogHandler(request, glider: int, timestamp: str):
         filename = f'{gliderPath(glider,request)}/baselog_{timestamp}'
         if await aiofiles.os.path.exists(filename):
-            return await sanic.response.file(filename, mime_type='text/plain')
+            baseout = '<html>\n'
+            trace = False
+            async with aiofiles.open(filename, 'r') as file:
+                async for line in file:
+                    if 'ERROR' in line:
+                        line = re.sub('ERROR', '<b>ERROR</b>', line)
+                    elif 'WARNING' in line:
+                        line = re.sub('WARNING', '<span style="color:blue;">WARNING</span>', line)
+                    elif line.startswith('Traceback'):
+                        baseout = baseout + '<b>\n'
+                        trace = True
+                    elif line in ['\n', '\r\n'] and trace == True:
+                        baseout = baseout + '</b>\n'
+                        trace = False 
+
+                    baseout = baseout + line.strip() + '<br>'
+    
+            baseout = baseout + '</html>\n'
+            # return await sanic.response.file(filename, mime_type='text/plain')
+            return sanic.response.html(baseout)
         else:
             return sanic.response.text('not found')
     
