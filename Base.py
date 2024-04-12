@@ -2456,7 +2456,7 @@ def main():
             _,
             _,
         ) = comm_log.last_GPS_lat_lon_and_recov(None, None)
-        if recov_code != "QUIT_COMMAND":
+        if recov_code is not None and recov_code != "QUIT_COMMAND":
             recov_msg = f"In non-quit recovery {recov_code}"
         else:
             recov_msg = None
