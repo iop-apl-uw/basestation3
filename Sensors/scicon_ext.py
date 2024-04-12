@@ -1091,6 +1091,20 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
         except UnicodeDecodeError:
             # Lots of reasons for this - mixed binary and text files a leading cause
             log_debug(f"Could not decode {inp_file_name} line {line_count} - skipping")
+
+            # In cases of garbage data, the line will get thrown out here.  Do a quick check for
+            # timeout so the status count is correct
+
+            parts = raw_line.split(b" ")
+            # Timeout lines of the form:
+            # % 32500 T-O {}
+            # % 32500 TimeOut {}
+            if (
+                len(parts) >= 3
+                and parts[0] == b"%"
+                and (parts[2] == b"T-O" or parts[2] == b"TimeOut")
+            ):
+                timeout_count += 1
             continue
 
         out_cols = None
@@ -1110,6 +1124,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
                 # if legato_error_count is None:
                 #    log_info(raw_line)
                 legato_error_count += len(m2)
+                log_debug(f"legato_error_count {legato_error_count}")
             else:
                 raw_strs = raw_line.split(":", 1)
                 if raw_strs[0] == "% columns":
