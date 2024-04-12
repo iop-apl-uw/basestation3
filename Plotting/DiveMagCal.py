@@ -41,6 +41,7 @@ import numpy as np
 import scipy.interpolate
 import plotly.graph_objects
 import datetime
+import warnings
 import ppigrf
 
 if typing.TYPE_CHECKING:
@@ -180,9 +181,15 @@ def plot_mag(
     fzm = fzm * norm
 
 
-    igrf = ppigrf.igrf(dive_nc_file['log_gps_lon'][0],
-                       dive_nc_file['log_gps_lat'][0],
-                       0, datetime.datetime.fromtimestamp(dive_nc_file['log_gps_time'][0]))
+    with warnings.catch_warnings():
+        # GBS 2024/04/12 - getting this
+        # WARNING: /opt/basestation/lib/python3.10/site-packages/ppigrf/ppigrf.py:139: FutureWarning:
+        # The 'unit' keyword in TimedeltaIndex construction is deprecated and will be removed in a future version. Use pd.to_timedelta instead.
+        # on some package combos - filter out for now
+        warnings.simplefilter('ignore', FutureWarning)
+        igrf = ppigrf.igrf(dive_nc_file['log_gps_lon'][0],
+                           dive_nc_file['log_gps_lat'][0],
+                           0, datetime.datetime.fromtimestamp(dive_nc_file['log_gps_time'][0]))
 
 
     Wf = 0.1
