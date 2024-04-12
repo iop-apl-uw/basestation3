@@ -6,7 +6,7 @@
 </head>
 <body>
 <p><a name="GLIDER_REBOOT">GLIDER_REBOOT<br>
-A glider reboot has been detected be comparing the boot count as reported in the <code>comm.log</code> file for the last two call ins.
+A glider reboot has been detected by comparing the boot count as reported in the <code>comm.log</code> file for the most recent two call ins.
 This may be an expected situation if the glider just turned on.  If this is not expected, a capture file may or may not be automatically
 uploaded.  
 </p>
@@ -55,10 +55,10 @@ internal error between the basestation and Seaglider and should be reported to i
 There are several possible Flight Model System (FMS) alerts that fall in this category:
 <ul>
   <li>There are not enough different recent pitches for the FMS to constrain drag parameter.  You might consider a steeper pitched dive or two to help the solution</li>
-  <li>The initial estimated vehicle drag larger than expected.  Generally, this may be ignored - especially if addition sensors installed since the last deployment.</li>
+  <li>The initial estimated vehicle drag is larger than expected.  Generally, this may be ignored - especially if there are additional sensors installed since the last deployment or other changes to the vehicle drag profile.</li>
   <li>There has been a large increase in the estimated drag.  This can be something that is transient, but the drag estimates should be watched as this may indicate biofouling</li>
   <li>The FMS system will issue suggested updates for the Seaglider's on-board <code>$HD_A</code>, <code>$HD_B</code> and <code>$HD_C</code>.  Generally, if the values are
-  considerably different from the on-board values, updating is a good idea.  Note that updating These suggestions only affect the Seaglider's on-board decisions about
+  considerably different from the on-board values, updating <code>$HD_A</code>, <code>$HD_B</code> is a good idea.  <code>$HD_C</code> should generally be left at its default value. Note that updating These suggestions only affect the Seaglider's on-board decisions about
   pitch and thrust - the FMS system continues to estimate the drag coefficients independently in order to generate an estimate of the Seaglider forward velocity.
 </ul>
 </p>
@@ -69,14 +69,14 @@ information for the FMS system.
 </p>
 
 <p><a name="FM_IGNORE">FM_IGNORE<br>
-One or more variables related to turning the Seaglider hydrodynamic model were found in <code>sg_calib_constants.m</code> and are not
-being used because the Flight Model System (FMS) is in use.  To supress this alert, remove, comment out, or add <code>% FM_ignore</code>
-to the lines in sg_calib_constants.m.  If you do not want to run the FMS and tune the model yourself, then add <code>--ignore_flight_model</code>
+One or more variables related to tuning the Seaglider hydrodynamic model were found in <code>sg_calib_constants.m</code> and are not
+being used because the Flight Model System (FMS) is in use.  To supress this alert, remove or comment out those values, or add <code>% FM_ignore</code>
+to the lines in sg_calib_constants.m.  If you do not want to run the FMS and prefer to tune the model yourself, then add <code>--ignore_flight_model</code>
 to the command line in <code>glider_logout</code>
 </p>
 
 <p><a name="GPSROLLOVER">GPSROLLOVER<br>
-The GPS in the Seaglider has not been upgraded to handle the latest GPS rollover event on April 6, 2019.
+The GPS in the Seaglider has not been upgraded to handle the latest GPS rollover event on April 6, 2019. Contact iopsg@uw.edu for assistance with updating your GPS firmware.
 </p>
 
 <p><a name="INCORRECT_CT">INCORRECT_CT<br>
@@ -84,7 +84,7 @@ RBR Legato CTD data was found, but the <code>sg_ct_type</code> varible in <code>
 </p>
 
 <p><a name="LOGFILE_WARN">LOGFILE_WARN<br>
-One or more <code>$WARN</code> lines was found in the Seaglider logfile.  These messages are important warning conditions the pilot
+One or more <code>$WARN</code> lines were found in the Seaglider logfile.  These messages are important warning conditions the pilot
 may need to take action on - consult the text for further details.
 </p>
 
