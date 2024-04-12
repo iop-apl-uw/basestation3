@@ -1006,7 +1006,7 @@
             
             img.classList.add('indexImg');
 
-            if (glider.status != 'active' && plotWhich == 'map') {
+            if (glider.status && glider.status != 'undefined' && glider.status != 'active' && plotWhich == 'map') {
                 tag = document.createElement('div');
                 tag.classList.add('imgtag');
                 tag.innerHTML = glider.status;
