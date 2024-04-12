@@ -199,7 +199,7 @@ def mission_profiles(
 
             (d, prev_x) = ExtractTimeseries.timeSeriesToProfile(vk, whch,
                                            start, stop, step,
-                                           top, bott, binZ, None, nci=nci, x=prev_x)
+                                           top, bott, binZ, None, extnci=nci, x=prev_x)
 
             if not d:
                 log_warning(f"Could not extract timeseries for {vk} - skipping")
