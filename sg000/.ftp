@@ -1,7 +1,14 @@
-## .ftp file 
+## .ftp file
 #
 # This file controls the sending of data products created during basestation 
 # processing via ftp.  
+#
+# A global copy of this file may be place in
+#
+# /usr/local/basestation3/etc/.ftp
+#
+# If --group_etc is specified on the Base.py command line, then a that directory will
+# also be searched for a version of this file
 #
 # Each line of this file is of the format
 # # Lines are of the form

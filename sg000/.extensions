@@ -5,6 +5,9 @@
 #
 # /usr/local/basestation3/etc/.extensions
 #
+# If --group_etc is specified on the Base.py command line, then a that directory will
+# also be searched for a version of this file
+#
 # Those extensions will be run first, before those listed in the seaglider home directory
 #
 # Hash symbol marks a comment line

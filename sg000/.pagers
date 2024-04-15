@@ -1,10 +1,11 @@
-## .pagers file
-##
-## A global copy of this file may be place in
-##
-## /usr/local/basestation3/etc/.pagers
-##
-## That file will be processed first, then one in the seaglider mission directory second.
+# .pagers file
+#
+# A global copy of this file may be place in
+#
+# /usr/local/basestation3/etc/.pagers
+#
+# If --group_etc is specified on the Base.py command line, then a that directory will
+# also be searched for a version of this file
 #
 # This file controls the sending of short email messages from the basestation
 # that alert users (pilots, field teams, etc.) of changes in status of the glider

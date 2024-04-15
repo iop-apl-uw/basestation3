@@ -44,12 +44,11 @@ import sys
 import time
 import traceback
 import warnings
-
-from email.utils import COMMASPACE, formatdate
-from email.mime.multipart import MIMEMultipart, MIMEBase
+from email import encoders
+from email.mime.multipart import MIMEBase, MIMEMultipart
 from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
-from email import encoders
+from email.utils import COMMASPACE, formatdate
 from ftplib import FTP
 
 # from ftplib import FTP_TLS
@@ -64,19 +63,18 @@ with warnings.catch_warnings():
     warnings.filterwarnings("ignore")
     import paramiko
 
-import BaseOpts
 import BaseGZip
-import Globals
+import BaseOpts
 import CommLog
+import Globals
 import Utils
-
 from BaseLog import (
     BaseLogger,
-    log_error,
-    log_warning,
-    log_info,
-    log_debug,
     log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
 )
 
 # DEBUG_PDB = "darwin" in sys.platform
@@ -222,7 +220,7 @@ def send_email_text(
             smtp = smtplib.SMTP("localhost")
         smtp.sendmail(email_send_from, email_send_to, email_msg.as_string())
         smtp.close()
-    except:
+    except Exception:
         log_error(
             "Unable to send message %s (%s) to %s"
             % (subject_line, message_body, to_email_addr),
@@ -303,7 +301,7 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
                             timeout=get_timeout,
                             json=payload,
                         )
-                    except:
+                    except Exception:
                         log_error(f"Error opening {url_line}", "exc")
                         log_error("Continuing processing...")
                     else:
@@ -315,21 +313,21 @@ def process_urls(base_opts, pass_num_or_gps, instrument_id, dive_num, payload=No
 
     for urls_file_name in (
         os.path.join(base_opts.basestation_etc, ".urls"),
+        os.path.join(base_opts.group_etc, ".urls") if base_opts.group_etc else None,
         os.path.join(base_opts.mission_dir, ".urls"),
     ):
+        if urls_file_name is None:
+            continue
         if not os.path.exists(urls_file_name):
             log_info(
                 f"No .urls file {urls_file_name} found - skipping pass {pass_num_or_gps}"
             )
             continue
         try:
-            urls_file = open(urls_file_name, "r")
-        except IOError as exception:
-            log_error(
-                f"Could not open {urls_file_name} ({exception.args}) - no urls notified"
-            )
-        else:
-            process_one_urls(urls_file)
+            with open(urls_file_name, "r") as urls_file:
+                process_one_urls(urls_file)
+        except Exception:
+            log_error(f"Could not process {urls_file_name} - no urls notified", "exc")
 
 
 def send_email(
@@ -525,7 +523,7 @@ def process_pagers(
                                         convert_f(session.volt_10V),
                                     )
                                 )
-                            except:
+                            except Exception:
                                 log_error("Problem formatting GPS message", "exc")
                             reboot_msg = None
                         else:
@@ -634,37 +632,45 @@ def process_pagers(
                                 processed_files_message,
                             )
 
-                    elif pagers_tag == "errors" and "errors" in tags_to_process:
-                        if processed_files_message and processed_files_message != "":
-                            subject_line = f"Warnings and Errors from SG{instrument_id:03d} conversion"
-                            log_info(f"Sending {subject_line} to {email_addr}")
-                            send_func(
-                                base_opts,
-                                instrument_id,
-                                email_addr,
-                                subject_line,
-                                processed_files_message,
-                            )
+                    elif (
+                        pagers_tag == "errors"
+                        and "errors" in tags_to_process
+                        and processed_files_message
+                        and processed_files_message != ""
+                    ):
+                        subject_line = (
+                            f"Warnings and Errors from SG{instrument_id:03d} conversion"
+                        )
+                        log_info(f"Sending {subject_line} to {email_addr}")
+                        send_func(
+                            base_opts,
+                            instrument_id,
+                            email_addr,
+                            subject_line,
+                            processed_files_message,
+                        )
 
         log_info(f"Finished processing on {pagers_file_name}")
 
     for pagers_file_name in (
         os.path.join(base_opts.basestation_etc, ".pagers"),
+        os.path.join(base_opts.group_etc, ".pagers") if base_opts.group_etc else None,
         os.path.join(base_opts.mission_dir, ".pagers"),
     ):
+        if pagers_file_name is None:
+            continue
         if not os.path.exists(pagers_file_name):
             log_info(
                 f"No .pagers file {pagers_file_name} found - skipping {tags_to_process}"
             )
             continue
         try:
-            pagers_file = open(pagers_file_name, "r")
-        except IOError as exception:
+            with open(pagers_file_name, "r") as pagers_file:
+                process_one_pagers(pagers_file_name, pagers_file)
+        except Exception:
             log_error(
-                f"Could not open {pagers_file_name} ({exception.args}) - no pagers notified"
+                f"Could not process {pagers_file_name} - no pagers notified", "exc"
             )
-        else:
-            process_one_pagers(pagers_file_name, pagers_file)
 
 
 def process_ftp_tags(
@@ -685,7 +691,7 @@ def process_ftp_tags(
     # Check for what file type
     try:
         ftp_tags.index("all")
-    except:
+    except Exception:
         pass
     else:
         ftp_tags = known_ftp_tags
@@ -792,7 +798,7 @@ def process_ftp_line(
     if user is None:
         try:
             auth = netrc.netrc().authenticators(host)
-        except:
+        except Exception:
             log_warning("Could not process .netrc", "exc")
         else:
             if auth is not None:
@@ -822,19 +828,19 @@ def process_ftp_line(
         ftp = FTP(timeout=30)
         connect_response = ftp.connect(host=host)
         # ftp = FTP_TLS(host)
-    except:
+    except Exception:
         log_error("Unable to connect", "exc")
         return 1  # give up
     log_info(connect_response)
     # try:
     #     ftp.prot_p()
-    # except:
+    # except Exception:
     #     log_warning("Could not go to secure - continuing", "exc")
     try:
         # ftp.set_debuglevel(2) # 2 is max level - all to stdout
         ftp.set_pasv(True)
         login_response = ftp.login(user, pwd)
-    except:
+    except Exception:
         log_error("Unable to login", "exc")
         return 1  # give up
 
@@ -846,10 +852,10 @@ def process_ftp_line(
             # but some sites protect against listing.
             # So just blindly try cd'ing to it and deal with the consequences
             ftp.cwd(i)  # try to cd to subdir
-        except:
+        except Exception:
             try:
                 ftp.mkd(i)  # Doesn't appear to exist; try to create it
-            except:
+            except Exception:
                 log_error(f"Could not make {i}", "exc")
                 return 1  # give up
             ftp.cwd(i)  # cd to what we just created
@@ -858,20 +864,20 @@ def process_ftp_line(
     for ftp_file_name_to_send in ftp_file_names_to_send:
         _, tail = os.path.split(ftp_file_name_to_send)
         try:
-            fi = open(ftp_file_name_to_send, "rb")
-        except:
+            with open(ftp_file_name_to_send, "rb") as fi:
+                log_info(f"Sending {tail}")
+                try:
+                    ftp.storbinary(f"STOR {tail}", fi)
+                except Exception:
+                    log_error(
+                        f"Unable to send {ftp_file_name_to_send} - skipping", "exc"
+                    )
+                    result = 1  # we had issues
+                else:
+                    log_info(f"Sent {ftp_file_name_to_send}")
+        except Exception:
             log_error(f"Unable to open {ftp_file_name_to_send} - skipping", "exc")
             result = 1  # we had issues
-        else:
-            log_info(f"Sending {tail}")
-            try:
-                ftp.storbinary(f"STOR {tail}", fi)
-            except:
-                log_error(f"Unable to send {ftp_file_name_to_send} - skipping", "exc")
-                result = 1  # we had issues
-            else:
-                log_info(f"Sent {ftp_file_name_to_send}")
-            fi.close()
 
     # Shutdown
     ftp.quit()
@@ -964,7 +970,7 @@ def process_sftp_line(
         client.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
         client.connect(host, username=user, password=pwd, key_filename=path_to_key)
         sftp = client.open_sftp()
-    except:
+    except Exception:
         log_error(f"Could not connect {sftp_line}", "exc")
         return 1
 
@@ -988,29 +994,9 @@ def process_ftp(
     known_ftp_tags,
     ftp_type=".ftp",
 ):
-    """Process the .ftp/.sftp file and push the data to a ftp/sftp server"""
-    ret_val = 0
-    if ftp_type not in (".ftp", ".sftp"):
-        log_error(f"Unsupported ftp type {ftp_type}")
-        return 1
+    def process_one_ftp(ftp_file, process_line):
+        """Process the .ftp/.sftp file and push the data to a ftp/sftp server"""
 
-    if ftp_type == ".ftp":
-        process_line = process_ftp_line
-    else:
-        process_line = process_sftp_line
-
-    ftp_file_name = os.path.join(base_opts.mission_dir, ftp_type)
-    if not os.path.exists(ftp_file_name):
-        log_info(f"No {ftp_type} file found - skipping {ftp_type} processing")
-        return 0
-
-    log_info(f"Starting processing on {ftp_type}")
-    try:
-        ftp_file = open(ftp_file_name, "r")
-    except IOError as exception:
-        log_error(f"Could not open {ftp_file_name} ({exception.args}) - no mail sent")
-        ret_val = 1
-    else:
         for ftp_line in ftp_file:
             try:
                 process_line(
@@ -1021,10 +1007,40 @@ def process_ftp(
                     ftp_line,
                     known_ftp_tags,
                 )
-            except:
+            except Exception:
                 log_error(f"Could not process {ftp_line} - skipping", "exc")
+
+    if ftp_type not in (".ftp", ".sftp"):
+        log_error(f"Unsupported ftp type {ftp_type}")
+        return 1
+
+    if ftp_type == ".ftp":
+        process_line = process_ftp_line
+    else:
+        process_line = process_sftp_line
+
+    log_info(f"Starting processing on {ftp_type}")
+
+    for ftp_file_name in (
+        os.path.join(base_opts.basestation_etc, ftp_type),
+        os.path.join(base_opts.group_etc, ftp_type) if base_opts.group_etc else None,
+        os.path.join(base_opts.mission_dir, ftp_type),
+    ):
+        if ftp_file_name is None:
+            continue
+        if not os.path.exists(ftp_file_name):
+            log_info(
+                f"No {ftp_type} file {ftp_file_name} file found - skipping {ftp_type} processing"
+            )
+            continue
+        try:
+            with open(ftp_file_name, "r") as ftp_file:
+                process_one_ftp(ftp_file, process_line)
+        except Exception:
+            log_error(f"Could not process {ftp_file_name} - no ftp sent", "exc")
+
     log_info(f"Finished processing on {ftp_type}")
-    return ret_val
+    return 0
 
 
 def process_mailer(
@@ -1036,151 +1052,168 @@ def process_mailer(
     mission_profile_name,
 ):
     """Process the .mailer file and send out email"""
-    mailer_file_name = os.path.join(base_opts.mission_dir, ".mailer")
-    if not os.path.exists(mailer_file_name):
-        log_info("No .mailer file found - skipping .mailer processing")
-    else:
-        log_info("Starting processing on .mailer")
-        try:
-            mailer_file = open(mailer_file_name, "r")
-        except IOError as exception:
-            log_error(
-                f"Could not open {mailer_file_name} ({exception.args}) - no mail sent"
-            )
-        else:
-            mailer_conversion_time = time.strftime(
-                "%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())
-            )
-            for mailer_line in mailer_file:
-                mailer_line = mailer_line.rstrip()
-                log_debug(f"mailer line = ({mailer_line})")
-                if mailer_line == "":
-                    continue
-                if mailer_line[0] != "#":
-                    log_info(f"Processing .mailer line ({mailer_line})")
-                    mailer_tags = mailer_line.split(",")
-                    mailer_send_to = mailer_tags[0]
-                    mailer_tags = mailer_tags[1:]
-                    mailer_send_to_list = []
-                    mailer_send_to_list.append(mailer_send_to)
 
-                    temp_tags = mailer_tags
-                    for i in range(len(temp_tags)):
-                        mailer_tags[i] = temp_tags[i].lower().rstrip().lstrip()
+    def process_one_mailer(mailer_file, mailer_file_name, mailer_conversion_time):
+        for mailer_line in mailer_file:
+            mailer_line = mailer_line.rstrip()
+            log_debug(f"mailer line = ({mailer_line})")
+            if mailer_line == "":
+                continue
+            if mailer_line[0] != "#":
+                log_info(f"Processing .mailer line ({mailer_line})")
+                mailer_tags = mailer_line.split(",")
+                mailer_send_to = mailer_tags[0]
+                mailer_tags = mailer_tags[1:]
+                mailer_send_to_list = []
+                mailer_send_to_list.append(mailer_send_to)
 
-                    # Remove the body tag, if present
-                    try:
-                        mailer_tags.index("body")
-                    except:
-                        mailer_file_in_body = False
-                    else:
-                        mailer_tags.remove("body")
-                        mailer_file_in_body = True
+                temp_tags = mailer_tags
+                for i in range(len(temp_tags)):
+                    mailer_tags[i] = temp_tags[i].lower().rstrip().lstrip()
 
-                    # Check for msgperfile
-                    try:
-                        mailer_tags.index("msgperfile")
-                    except:
-                        mailer_msg_per_file = False
-                    else:
-                        mailer_tags.remove("msgperfile")
-                        mailer_msg_per_file = True
+                # Remove the body tag, if present
+                try:
+                    mailer_tags.index("body")
+                except Exception:
+                    mailer_file_in_body = False
+                else:
+                    mailer_tags.remove("body")
+                    mailer_file_in_body = True
 
-                    # Remove the Navy header tag, if present,
-                    try:
-                        mailer_tags.index("kkyy_subject")
-                    except:
-                        mailer_subject = "SG%03d files" % (instrument_id)
-                    else:
-                        mailer_tags.remove("kkyy_subject")
-                        mailer_subject = "XBTDATA"
+                # Check for msgperfile
+                try:
+                    mailer_tags.index("msgperfile")
+                except Exception:
+                    mailer_msg_per_file = False
+                else:
+                    mailer_tags.remove("msgperfile")
+                    mailer_msg_per_file = True
 
-                    # Remove the gzip tag, if present
-                    try:
-                        mailer_tags.index("gzip")
-                    except:
+                # Remove the Navy header tag, if present,
+                try:
+                    mailer_tags.index("kkyy_subject")
+                except Exception:
+                    mailer_subject = "SG%03d files" % (instrument_id)
+                else:
+                    mailer_tags.remove("kkyy_subject")
+                    mailer_subject = "XBTDATA"
+
+                # Remove the gzip tag, if present
+                try:
+                    mailer_tags.index("gzip")
+                except Exception:
+                    mailer_gzip_file = False
+                else:
+                    mailer_tags.remove("gzip")
+                    if mailer_file_in_body:
+                        log_error("Options body and gzip incompatibile - skipping gzip")
                         mailer_gzip_file = False
                     else:
-                        mailer_tags.remove("gzip")
-                        if mailer_file_in_body:
-                            log_error(
-                                "Options body and gzip incompatibile - skipping gzip"
-                            )
-                            mailer_gzip_file = False
-                        else:
-                            mailer_gzip_file = True
+                        mailer_gzip_file = True
 
-                    # Check for what file type
-                    try:
-                        mailer_tags.index("all")
-                    except:
-                        pass
+                # Check for what file type
+                try:
+                    mailer_tags.index("all")
+                except Exception:
+                    pass
+                else:
+                    mailer_tags = known_mailer_tags
+
+                # Collect file to send into a list
+                mailer_file_names_to_send = []
+
+                for mailer_tag in mailer_tags:
+                    if mailer_tag.startswith("fnmatch_"):
+                        _, m = mailer_tag.split("_", 1)
+                        log_info(f"Match criteria ({m})")
+                        for processed_file_name in processed_file_names:
+                            # Case insenitive match since tags were already lowercased
+                            if fnmatch.fnmatchcase(processed_file_name.lower(), m):
+                                mailer_file_names_to_send.append(processed_file_name)
+                                log_info(f"Matched {processed_file_name}")
+                    elif mailer_tag not in known_mailer_tags:
+                        log_error(
+                            "Unknown tag (%s) on line (%s) in %s - skipping"
+                            % (mailer_tag, mailer_line, mailer_file_name)
+                        )
                     else:
-                        mailer_tags = known_mailer_tags
-
-                    # Collect file to send into a list
-                    mailer_file_names_to_send = []
-
-                    for mailer_tag in mailer_tags:
-                        if mailer_tag.startswith("fnmatch_"):
-                            _, m = mailer_tag.split("_", 1)
-                            log_info(f"Match criteria ({m})")
+                        if mailer_tag == "comm":
+                            mailer_file_names_to_send.append(
+                                os.path.join(base_opts.mission_dir, "comm.log")
+                            )
+                        elif (
+                            mailer_tag in ("nc", "mission_ts", "mission_pro")
+                            and mailer_file_in_body
+                        ):
+                            log_error(
+                                "Sending netCDF files in the message body not supported"
+                            )
+                            continue
+                        else:
                             for processed_file_name in processed_file_names:
-                                # Case insenitive match since tags were already lowercased
-                                if fnmatch.fnmatchcase(processed_file_name.lower(), m):
-                                    mailer_file_names_to_send.append(
-                                        processed_file_name
-                                    )
-                                    log_info(f"Matched {processed_file_name}")
-                        elif not mailer_tag in known_mailer_tags:
-                            log_error(
-                                "Unknown tag (%s) on line (%s) in %s - skipping"
-                                % (mailer_tag, mailer_line, mailer_file_name)
-                            )
-                        else:
-                            if mailer_tag == "comm":
-                                mailer_file_names_to_send.append(
-                                    os.path.join(base_opts.mission_dir, "comm.log")
-                                )
-                            elif (
-                                mailer_tag in ("nc", "mission_ts", "mission_pro")
-                                and mailer_file_in_body
-                            ):
-                                log_error(
-                                    "Sending netCDF files in the message body not supported"
-                                )
-                                continue
-                            else:
-                                for processed_file_name in processed_file_names:
-                                    if processed_file_name == mission_timeseries_name:
-                                        if mailer_tag == "mission_ts":
-                                            mailer_file_names_to_send.append(
-                                                processed_file_name
-                                            )
-                                    elif processed_file_name == mission_profile_name:
-                                        if mailer_tag == "mission_pro":
-                                            mailer_file_names_to_send.append(
-                                                processed_file_name
-                                            )
-                                    else:
-                                        _, tail = os.path.splitext(processed_file_name)
-                                        if tail.lstrip(".") == mailer_tag.lower():
-                                            mailer_file_names_to_send.append(
-                                                processed_file_name
-                                            )
+                                if processed_file_name == mission_timeseries_name:
+                                    if mailer_tag == "mission_ts":
+                                        mailer_file_names_to_send.append(
+                                            processed_file_name
+                                        )
+                                elif processed_file_name == mission_profile_name:
+                                    if mailer_tag == "mission_pro":
+                                        mailer_file_names_to_send.append(
+                                            processed_file_name
+                                        )
+                                else:
+                                    _, tail = os.path.splitext(processed_file_name)
+                                    if tail.lstrip(".") == mailer_tag.lower():
+                                        mailer_file_names_to_send.append(
+                                            processed_file_name
+                                        )
 
-                    if mailer_file_names_to_send:
-                        log_info(f"Sending {mailer_file_names_to_send}")
+                if mailer_file_names_to_send:
+                    log_info(f"Sending {mailer_file_names_to_send}")
+                else:
+                    log_info("No files found to send")
+
+                # Set up messsage here if there is only one message per recipient
+                if not mailer_msg_per_file:
+                    if not mailer_file_in_body:
+                        mailer_msg = MIMEMultipart()
                     else:
-                        log_info("No files found to send")
+                        mailer_msg = MIMENonMultipart("text", "plain")
 
-                    # Set up messsage here if there is only one message per recipient
-                    if not mailer_msg_per_file:
+                    # mailer_msg['From'] = "SG%03d" % (instrument_id)
+                    if base_opts.domain_name:
+                        mailer_msg["From"] = "Seaglider %d <sg%03d@%s>" % (
+                            instrument_id,
+                            instrument_id,
+                            base_opts.domain_name,
+                        )
+                    else:
+                        mailer_msg["From"] = "Seaglider %d <sg%03d>" % (
+                            instrument_id,
+                            instrument_id,
+                        )
+                    mailer_msg["To"] = COMMASPACE.join(list(mailer_send_to_list))
+                    mailer_msg["Date"] = formatdate(localtime=True)
+                    mailer_msg["Subject"] = mailer_subject
+                    if base_opts.reply_addr:
+                        mailer_msg["Reply-To"] = base_opts.reply_addr
+
+                    if not mailer_file_in_body:
+                        mailer_msg.attach(
+                            MIMEText(
+                                "New/Updated files as of %s conversion\n"
+                                % mailer_conversion_time
+                            )
+                        )
+                    mailer_text = ""
+
+                for mailer_file_name_to_send in mailer_file_names_to_send:
+                    if mailer_msg_per_file:
+                        # Set up message here if there are multiple messages per recipient
                         if not mailer_file_in_body:
                             mailer_msg = MIMEMultipart()
                         else:
                             mailer_msg = MIMENonMultipart("text", "plain")
-
                         # mailer_msg['From'] = "SG%03d" % (instrument_id)
                         if base_opts.domain_name:
                             mailer_msg["From"] = "Seaglider %d <sg%03d@%s>" % (
@@ -1202,167 +1235,117 @@ def process_mailer(
                         if not mailer_file_in_body:
                             mailer_msg.attach(
                                 MIMEText(
-                                    "New/Updated files as of %s conversion\n"
-                                    % mailer_conversion_time
+                                    "File %s as of %s conversion\n"
+                                    % (
+                                        mailer_file_name_to_send,
+                                        mailer_conversion_time,
+                                    )
                                 )
                             )
                         mailer_text = ""
 
-                    for mailer_file_name_to_send in mailer_file_names_to_send:
-                        if mailer_msg_per_file:
-                            # Set up message here if there are multiple messages per recipient
-                            if not mailer_file_in_body:
-                                mailer_msg = MIMEMultipart()
-                            else:
-                                mailer_msg = MIMENonMultipart("text", "plain")
-                            # mailer_msg['From'] = "SG%03d" % (instrument_id)
-                            if base_opts.domain_name:
-                                mailer_msg["From"] = "Seaglider %d <sg%03d@%s>" % (
-                                    instrument_id,
-                                    instrument_id,
-                                    base_opts.domain_name,
-                                )
-                            else:
-                                mailer_msg["From"] = "Seaglider %d <sg%03d>" % (
-                                    instrument_id,
-                                    instrument_id,
-                                )
-                            mailer_msg["To"] = COMMASPACE.join(
-                                list(mailer_send_to_list)
-                            )
-                            mailer_msg["Date"] = formatdate(localtime=True)
-                            mailer_msg["Subject"] = mailer_subject
-                            if base_opts.reply_addr:
-                                mailer_msg["Reply-To"] = base_opts.reply_addr
-
-                            if not mailer_file_in_body:
-                                mailer_msg.attach(
-                                    MIMEText(
-                                        "File %s as of %s conversion\n"
-                                        % (
-                                            mailer_file_name_to_send,
-                                            mailer_conversion_time,
-                                        )
-                                    )
-                                )
-                            mailer_text = ""
-
-                        if mailer_file_in_body:
-                            try:
-                                fi = open(mailer_file_name_to_send, "r")
+                    if mailer_file_in_body:
+                        try:
+                            with open(mailer_file_name_to_send, "r") as fi:
                                 mailer_text = mailer_text + fi.read()
-                                fi.close()
-                            except:
-                                log_error(
-                                    "Unable to include %s in mailer message - skipping"
-                                    % mailer_file_name_to_send,
-                                    "exc",
-                                )
-                                log_info("Continuing processing...")
-                        else:
-                            try:
-                                # Message as attachment
-                                _, tail = os.path.splitext(mailer_file_name_to_send)
-                                if mailer_gzip_file:
-                                    if tail.lstrip(".").lower() != "gz":
-                                        mailer_gzip_file_name_to_send = (
-                                            mailer_file_name_to_send + ".gz"
+                        except Exception:
+                            log_error(
+                                "Unable to include %s in mailer message - skipping"
+                                % mailer_file_name_to_send,
+                                "exc",
+                            )
+                            log_info("Continuing processing...")
+                    else:
+                        try:
+                            # Message as attachment
+                            _, tail = os.path.splitext(mailer_file_name_to_send)
+                            if mailer_gzip_file:
+                                if tail.lstrip(".").lower() != "gz":
+                                    mailer_gzip_file_name_to_send = (
+                                        mailer_file_name_to_send + ".gz"
+                                    )
+                                    gzip_ret_val = BaseGZip.compress(
+                                        mailer_file_name_to_send,
+                                        mailer_gzip_file_name_to_send,
+                                    )
+                                    if gzip_ret_val > 0:
+                                        log_error(
+                                            "Problem compressing %s - skipping"
+                                            % mailer_file_name_to_send
                                         )
-                                        gzip_ret_val = BaseGZip.compress(
-                                            mailer_file_name_to_send,
-                                            mailer_gzip_file_name_to_send,
-                                        )
-                                        if gzip_ret_val > 0:
-                                            log_error(
-                                                "Problem compressing %s - skipping"
-                                                % mailer_file_name_to_send
-                                            )
-                                    else:
-                                        gzip_ret_val = 0
-
-                                    if gzip_ret_val <= 0:
-                                        mailer_part = MIMEBase(
-                                            "application", "octet-stream"
-                                        )
-                                        mailer_part.set_payload(
-                                            open(
-                                                mailer_gzip_file_name_to_send, "rb"
-                                            ).read()
-                                        )
-                                        encoders.encode_base64(mailer_part)
-                                        mailer_part.add_header(
-                                            "Content-Disposition",
-                                            'attachment; filename="%s"'
-                                            % os.path.basename(
-                                                mailer_gzip_file_name_to_send
-                                            ),
-                                        )
-                                        mailer_msg.attach(mailer_part)
                                 else:
-                                    if (
-                                        tail.lstrip(".").lower() == "nc"
-                                        or tail.lstrip(".").lower() == "gz"
-                                        or tail.lstrip(".").lower() == "bz2"
-                                        or tail.lstrip(".").lower() == "mat"
-                                        or tail.lstrip(".").lower() == "ad2cp"
-                                    ):
-                                        mailer_part = MIMEBase(
-                                            "application", "octet-stream"
+                                    gzip_ret_val = 0
+
+                                if gzip_ret_val <= 0:
+                                    mailer_part = MIMEBase(
+                                        "application", "octet-stream"
+                                    )
+                                    try:
+                                        with open(
+                                            mailer_gzip_file_name_to_send, "rb"
+                                        ) as fi:
+                                            mailer_part.set_payload(fi.read())
+                                    except Exception:
+                                        log_error(
+                                            f"Unable set message payload {mailer_gzip_file_name_to_send}",
+                                            "exc",
                                         )
-                                        mailer_part.set_payload(
-                                            open(mailer_file_name_to_send, "rb").read()
-                                        )
-                                    else:
-                                        mailer_part = MIMEBase("text", "plain")
-                                        mailer_part.set_payload(
-                                            open(mailer_file_name_to_send, "r").read()
-                                        )
+
                                     encoders.encode_base64(mailer_part)
                                     mailer_part.add_header(
                                         "Content-Disposition",
                                         'attachment; filename="%s"'
-                                        % os.path.basename(mailer_file_name_to_send),
+                                        % os.path.basename(
+                                            mailer_gzip_file_name_to_send
+                                        ),
                                     )
                                     mailer_msg.attach(mailer_part)
-                            except:
-                                log_error(
-                                    f"Error processing {mailer_file_name_to_send}",
-                                    "exc",
-                                )
-                                continue
-
-                        if mailer_msg_per_file:
-                            # For multiple messages per recipient, send out message here
-                            if mailer_file_in_body:
-                                mailer_msg.set_payload(mailer_text)
-                            # Send it out
-                            if len(mailer_file_names_to_send):
-                                if base_opts.domain_name:
-                                    mailer_send_from = "sg%03d@%s" % (
-                                        instrument_id,
-                                        base_opts.domain_name,
+                            else:
+                                if (
+                                    tail.lstrip(".").lower() == "nc"
+                                    or tail.lstrip(".").lower() == "gz"
+                                    or tail.lstrip(".").lower() == "bz2"
+                                    or tail.lstrip(".").lower() == "mat"
+                                    or tail.lstrip(".").lower() == "ad2cp"
+                                ):
+                                    mailer_part = MIMEBase(
+                                        "application", "octet-stream"
                                     )
+                                    try:
+                                        with open(mailer_file_name_to_send, "rb") as fi:
+                                            mailer_part.set_payload(fi.read())
+                                    except Exception:
+                                        log_error(
+                                            f"Unable set message payload {mailer_file_name_to_send}",
+                                            "exc",
+                                        )
                                 else:
-                                    mailer_send_from = "sg%03d" % (instrument_id)
-                                try:
-                                    smtp = smtplib.SMTP(mail_server)
-                                    smtp.sendmail(
-                                        mailer_send_from,
-                                        mailer_send_to,
-                                        mailer_msg.as_string(),
-                                    )
-                                    smtp.close()
-                                except:
-                                    log_error(
-                                        "Unable to send message [%s] skipping"
-                                        % mailer_line,
-                                        "exc",
-                                    )
-                                    log_info("Continuing processing...")
-                            mailer_msg = None
+                                    mailer_part = MIMEBase("text", "plain")
+                                    try:
+                                        with open(mailer_file_name_to_send, "r") as fi:
+                                            mailer_part.set_payload(fi.read())
+                                    except Exception:
+                                        log_error(
+                                            f"Unable set message payload {mailer_file_name_to_send}",
+                                            "exc",
+                                        )
 
-                    if not mailer_msg_per_file:
-                        # For single messages per recipient, send out message here
+                                encoders.encode_base64(mailer_part)
+                                mailer_part.add_header(
+                                    "Content-Disposition",
+                                    'attachment; filename="%s"'
+                                    % os.path.basename(mailer_file_name_to_send),
+                                )
+                                mailer_msg.attach(mailer_part)
+                        except Exception:
+                            log_error(
+                                f"Error processing {mailer_file_name_to_send}",
+                                "exc",
+                            )
+                            continue
+
+                    if mailer_msg_per_file:
+                        # For multiple messages per recipient, send out message here
                         if mailer_file_in_body:
                             mailer_msg.set_payload(mailer_text)
                         # Send it out
@@ -1374,7 +1357,6 @@ def process_mailer(
                                 )
                             else:
                                 mailer_send_from = "sg%03d" % (instrument_id)
-                            log_info(f"Sending from {mailer_send_from}")
                             try:
                                 smtp = smtplib.SMTP(mail_server)
                                 smtp.sendmail(
@@ -1383,15 +1365,71 @@ def process_mailer(
                                     mailer_msg.as_string(),
                                 )
                                 smtp.close()
-                            except:
+                            except Exception:
                                 log_error(
-                                    f"Unable to send message [{mailer_line}] skipping",
+                                    "Unable to send message [%s] skipping"
+                                    % mailer_line,
                                     "exc",
                                 )
                                 log_info("Continuing processing...")
                         mailer_msg = None
 
-        log_info("Finished processing on .mailer")
+                if not mailer_msg_per_file:
+                    # For single messages per recipient, send out message here
+                    if mailer_file_in_body:
+                        mailer_msg.set_payload(mailer_text)
+                    # Send it out
+                    if len(mailer_file_names_to_send):
+                        if base_opts.domain_name:
+                            mailer_send_from = "sg%03d@%s" % (
+                                instrument_id,
+                                base_opts.domain_name,
+                            )
+                        else:
+                            mailer_send_from = "sg%03d" % (instrument_id)
+                        log_info(f"Sending from {mailer_send_from}")
+                        try:
+                            smtp = smtplib.SMTP(mail_server)
+                            smtp.sendmail(
+                                mailer_send_from,
+                                mailer_send_to,
+                                mailer_msg.as_string(),
+                            )
+                            smtp.close()
+                        except Exception:
+                            log_error(
+                                f"Unable to send message [{mailer_line}] skipping",
+                                "exc",
+                            )
+                            log_info("Continuing processing...")
+                    mailer_msg = None
+
+    log_info("Started processing on .mailer")
+    mailer_conversion_time = time.strftime(
+        "%H:%M:%S %d %b %Y %Z", time.gmtime(time.time())
+    )
+    for mailer_file_name in (
+        os.path.join(base_opts.basestation_etc, ".mailer"),
+        os.path.join(base_opts.group_etc, ".mailer") if base_opts.group_etc else None,
+        os.path.join(base_opts.mission_dir, ".mailer"),
+    ):
+        if mailer_file_name is None:
+            continue
+        if not os.path.exists(mailer_file_name):
+            log_info(
+                f"No .mailer file {mailer_file_name} file found - skipping .mailer processing"
+            )
+            continue
+
+        try:
+            with open(mailer_file_name, "r") as mailer_file:
+                process_one_mailer(
+                    mailer_file, mailer_file_name, mailer_conversion_time
+                )
+        except Exception:
+            log_error(f"Could not process {mailer_file_name} - no .mailer sent", "exc")
+
+    log_info("Finished processing on .mailer")
 
 
 def process_extensions(
@@ -1423,7 +1461,7 @@ def process_extensions(
                 cp.read_file(
                     itertools.chain(["[global]"], fi), source=extensions_file_name
                 )
-        except (IOError, PermissionError) as exception:
+        except (OSError, PermissionError) as exception:
             log_error(
                 "Could not open %s (%s) - skipping %s processing"
                 % (extensions_file_name, extension_file_name, exception.args)
@@ -1441,7 +1479,7 @@ def process_extensions(
                         )
                         extension_elts = extension_line.split(" ")
                         # First element - extension name, with .py file extension
-                        if extension_elts[0] in extensions_to_skip.keys():
+                        if extension_elts[0] in extensions_to_skip:
                             log_warning(
                                 f"Skipping processing of {extension_elts[0]} - {extensions_to_skip[extension_elts[0]]}"
                             )
@@ -1469,7 +1507,7 @@ def process_extensions(
                                     known_ftp_tags=known_ftp_tags,
                                     processed_file_names=processed_file_names,
                                 )
-                            except:
+                            except Exception:
                                 log_error(
                                     "Extension %s raised an exception"
                                     % extension_module_name,
@@ -1488,8 +1526,13 @@ def process_extensions(
     ret_val = 0
     for extensions_file_name in (
         os.path.join(base_opts.basestation_etc, ".extensions"),
+        os.path.join(base_opts.group_etc, ".extensions")
+        if base_opts.group_etc
+        else None,
         os.path.join(base_opts.mission_dir, ".extensions"),
     ):
+        if extensions_file_name is None:
+            continue
         if not os.path.exists(extensions_file_name):
             log_info(f"No .extensions file {extensions_file_name} found")
             continue
@@ -1599,7 +1642,7 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         pass
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()

@@ -3,6 +3,13 @@
 # This file controls the sending of data products created during basestation 
 # processing via email.  Mail is formatted as a MIME document and sent via SMTP
 #
+# A global copy of this file may be place in
+#
+# /usr/local/basestation3/etc/.mailer
+#
+# If --group_etc is specified on the Base.py command line, then a that directory will
+# also be searched for a version of this file
+#
 # Each line of this file is of the format
 # smtp_mail_address[,body|msgperfile|kkyy_subject|gzip] [,[fnmatch_*| eng| log| pro| bpo| csv| asc| cap| comm| dn_kkyy| up_kkyy| nc| mission_ts| mission_pro]+] | ,all
 # where:

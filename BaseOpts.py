@@ -40,18 +40,17 @@
 # TODO Figure out how to show defaults in option help (https://stackoverflow.com/questions/12151306/argparse-way-to-include-default-values-in-help)
 
 import argparse
-
 import collections
-import copy
 import configparser
+import copy
 import dataclasses
 import inspect
 import os
 import pdb
 import sys
 import time
-import typing
 import traceback
+import typing
 
 import Plotting
 from Globals import WhichHalf  # basestation_version
@@ -271,6 +270,16 @@ global_options_dict = {
         FullPathTrailingSlash,
         {
             "help": "Basestation etc dirctory (master config)",
+            "action": FullPathTrailingSlashAction,
+        },
+    ),
+    "group_etc": options_t(
+        None,  # Updated below
+        None,
+        ("--group_etc",),
+        FullPathTrailingSlash,
+        {
+            "help": "etc dirctory for a collection of Seagliders",
             "action": FullPathTrailingSlashAction,
         },
     ),
@@ -1456,6 +1465,14 @@ class BaseOptions:
                 ),
             },
         )
+        # options_dict["group_etc"] = dataclasses.replace(
+        #     options_dict["group_etc"],
+        #     **{
+        #         "default_val": FullPathTrailingSlash(
+        #             os.path.join(self.basestation_directory, "etc")
+        #         ),
+        #     },
+        # )
         cp_default = {}
         for k, v in options_dict.items():
             if v.group is None or calling_module in v.group:
