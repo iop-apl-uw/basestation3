@@ -1,4 +1,4 @@
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -31,13 +31,15 @@
 # Results are dumped in a form that could be easily modified to be
 # readable in either MATLAB or python for progreammatic comparison
 
-TRACE_DATA = [];
-TRACE_STATUS = [];
+from typing import Any
 
-def trace_results(file, tag):
+TRACE_DATA:list[Any] = [];
+TRACE_STATUS:list[Any] = [];
+
+def trace_results(file:str, tag:str)->None:
     global TRACE_DATA;
     if (trace_disabled()):
-        return
+        return None
     if (len(TRACE_DATA)):
         trace_comment('Trace file not properly closed!!')
         trace_results_stop()
@@ -61,21 +63,21 @@ def trace_results(file, tag):
     trace_comment(tag);
 
 # disable tracing
-def trace_enable():
+def trace_enable()->None:
     global TRACE_STATUS;
     TRACE_STATUS = [];
 
-def trace_disable():
+def trace_disable()->None:
     global TRACE_STATUS;
     TRACE_STATUS = [1];
 
 # is tracing enabled?
-def trace_disabled():
+def trace_disabled()->int:
     global TRACE_STATUS;
     return len(TRACE_STATUS);
 
 # stop tracing
-def trace_results_stop():
+def trace_results_stop()->None:
     global TRACE_DATA;
     if (trace_disabled()):
         trace_enable();
@@ -85,10 +87,10 @@ def trace_results_stop():
         fid.close();
         TRACE_DATA = [];
 
-def trace_array(tag, x):
+def trace_array(tag:str, x:Any)->None:
     global TRACE_DATA;
     if (trace_disabled()):
-        return
+        return None
     trace_ensure_file();
     fid = TRACE_DATA[1];
     # ignore filename in TRACE_DATA[2]
@@ -113,7 +115,7 @@ def trace_array(tag, x):
 
 
 # dump a comment to the trace file
-def trace_comment(tag):
+def trace_comment(tag:str)->None:
     global TRACE_DATA;
     if (trace_disabled()):
         return
@@ -123,7 +125,7 @@ def trace_comment(tag):
     fid.write('%s %s\n' % (comment, tag));
 
 # ensure there is a trace file
-def trace_ensure_file():
+def trace_ensure_file() -> None:
     global TRACE_DATA;
     if (len(TRACE_DATA) == 0):
         print("Run trace_results() before calling trace routines!\n");
