@@ -5,10 +5,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Create the Mattermost Message
-      run: |
-        commits="- ${{ join(github.event.commits.*.message, '\\n- ') }}"
-        echo "{\"text\":\" **${{ github.event.repository.name }}**  \\n _${{ github.event.pusher.name }}_   \\n $commits \"}" > mattermost.json
-    - uses: mattermost/action-mattermost-notify@1.1.0
+    - uses: mattermost/action-mattermost-notify@master
       env:
         MATTERMOST_WEBHOOK_URL: ${{ secrets.MATTERMOST_WEBHOOK_URL }}
+        PAYLOAD: |-
+          {
+            "text": "${{ join(github.event.commits.*.message, '\\n- ') }}",
+            "channel": "software",
+            "username": "${{ github.triggering_actor }}",
+          }
