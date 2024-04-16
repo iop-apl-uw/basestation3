@@ -214,7 +214,7 @@ def __log_caller_info(s: object, loc: str | None) -> str:
     Return:
     string with possible location information added
     """
-    s = repr(s)
+    s = str(s)
     if loc:
         try:
             # skip our local callers
