@@ -308,6 +308,7 @@ global_options_dict = {
         "",
         (
             "Base",
+            "BaseCtrlFiles",
             "BaseDB",
             "BaseDotFiles",
             "BaseLogin",
@@ -345,6 +346,7 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
             "required": (
                 "Base",
+                "BaseCtrlFiles",
                 "BaseDB",
                 "BaseDotFiles",
                 "BasePlot",
@@ -565,7 +567,14 @@ global_options_dict = {
     ),
     "reply_addr": options_t(
         "",
-        ("Base", "BaseDotFiles", "BaseSMS", "BaseSMS_IMAP", "GliderEarlyGPS"),
+        (
+            "Base",
+            "BaseCtrlFiles",
+            "BaseDotFiles",
+            "BaseSMS",
+            "BaseSMS_IMAP",
+            "GliderEarlyGPS",
+        ),
         ("--reply_addr",),
         str,
         {
@@ -574,7 +583,14 @@ global_options_dict = {
     ),
     "domain_name": options_t(
         "",
-        ("Base", "BaseDotFiles", "BaseSMS", "BaseSMS_IMAP", "GliderEarlyGPS"),
+        (
+            "Base",
+            "BaseCtrlFiles",
+            "BaseDotFiles",
+            "BaseSMS",
+            "BaseSMS_IMAP",
+            "GliderEarlyGPS",
+        ),
         ("--domain_name",),
         str,
         {
