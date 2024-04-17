@@ -735,7 +735,7 @@ def plot_vert_vel(
     depth_climb = depth[max_depth_sample_index:]
 
     # dz_dt = Utils.ctr_1st_diff(-depth * 100, depth_time - start_time)
-    diff_w = abs(vert_speed_press - vert_speed_hdm)
+    diff_w = vert_speed_press - vert_speed_hdm
     upwelling_descent = diff_w[0:max_depth_sample_index]
     upwelling_ascent = diff_w[max_depth_sample_index:]
 
@@ -828,20 +828,20 @@ def plot_vert_vel(
     fig.add_trace(
         {
             "x": upwelling_descent,
-            "y": depth,
+            "y": depth_dive,
             "name": "Upwelling Descent",
             "mode": "lines",
-            "line": {"dash": "dash", "color": "Red"},
+            "line": {"dash": "solid", "color": "Red"},
             "hovertemplate": "Upwelling Descent<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
         }
     )
     fig.add_trace(
         {
             "x": upwelling_ascent,
-            "y": depth,
+            "y": depth_climb,
             "name": "Upwelling Ascent",
             "mode": "lines",
-            "line": {"dash": "dash", "color": "Magenta"},
+            "line": {"dash": "solid", "color": "Orange"},
             "hovertemplate": "Upwelling Ascent<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
         }
     )
