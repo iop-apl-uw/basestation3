@@ -33,6 +33,7 @@ home directory (or other locations)
 
 """
 
+import copy
 import functools
 import json
 import os
@@ -59,13 +60,14 @@ DEBUG_PDB = "darwin" in sys.platform
 # DEBUG_PDB = True
 
 pagers_msgs = (
+    "lategps",
     "gps",
-    "drift",
     "recov",
     "critical",
-    "alerts",
-    "comp",
+    "drift",
     "divetar",
+    "comp",
+    "alerts",
     "errors",
 )
 
@@ -114,19 +116,29 @@ def send_slack(
     subject_line: str,
     message_body: str,
 ) -> None:
-    log_info("send_slack NYI")
-    pass
+    endpoint = send_dict["endpoint"]
+    user = send_dict["user"]
+    if "hook" not in endpoint:
+        log_error(f"Missing hook address for user:{user}, endpoint:{endpoint}")
+        return
+    else:
+        hook_url = endpoint["hook"]
 
+    msg = {"text": "%s:%s" % (subject_line, message_body)}
 
-def send_inreach(
-    base_opts: BaseOpts.BaseOptions,
-    instrument_id: int,
-    send_dict: dict,
-    subject_line: str,
-    message_body: str,
-) -> None:
-    log_info("send_inreach NYI")
-    pass
+    try:
+        response = requests.post(
+            hook_url,
+            data=json.dumps(msg),
+            headers={"Content-Type": "application/json"},
+        )
+        if response.status_code != 200:
+            log_error(
+                "Request to slack returned an error %s, the response is:%s"
+                % (response.status_code, response.text)
+            )
+    except Exception:
+        log_error("Error in post", "exc")
 
 
 def send_mattermost(
@@ -175,7 +187,18 @@ def send_mattermost(
                 % (response.status_code, response.text)
             )
     except Exception:
-        log_error("Error in post", "exc")
+        log_error(f"Error in post user:{user}, endpoint:{endpoint}", "exc")
+
+
+def send_inreach(
+    base_opts: BaseOpts.BaseOptions,
+    instrument_id: int,
+    send_dict: dict,
+    subject_line: str,
+    message_body: str,
+) -> None:
+    log_info("send_inreach NYI")
+    pass
 
 
 pagers_sendfuncs = {
@@ -263,14 +286,14 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
     pagers_updated_dict = {"subscriptions": {}, "users": {}}
     for k, v in pagers_dict.items():
         if k in pagers_msgs:
-            new_user_list = []
+            new_user_set = set()
             for user in v:
                 if user not in pagers_dict:
                     log_warning(f"User {user} (from {k}:{v}) not defined")
                 else:
-                    new_user_list.append(user)
-            if new_user_list:
-                pagers_updated_dict["subscriptions"][k] = new_user_list
+                    new_user_set.add(user)
+            if new_user_set:
+                pagers_updated_dict["subscriptions"][k] = new_user_set
         elif isinstance(v, dict):
             updated_user_dict = {}
             for sf, sf_list in pagers_dict[k].items():
@@ -411,14 +434,16 @@ def process_pagers_yml(
     # else:
     #    Code below - stash in attribute when checked
 
-    pagers_dict = load_ctrl_yml(base_opts, "pagers.yml", base_pagers_dict)
+    pagers_dict = load_ctrl_yml(
+        base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict)
+    )
     if pagers_dict is None:
         log_error("Failed to load pager(s).yml - bailing out")
         return
 
     pagers_dict = check_canonicalize_pagers_dict(pagers_dict)
 
-    dump_pagers_dict(pagers_dict)
+    # dump_pagers_dict(pagers_dict)
 
     for msg in msgs_to_process:
         if msg not in pagers_dict["subscriptions"]:

@@ -207,6 +207,7 @@ def main():
         ".pre_login",
         ".post_dive",
         ".post_mission",
+        "pagers.yml",
     ):
         master_dotfile = os.path.join(base_opts.glider_home, dotfile)
         # if os.path.exists(master_dotfile):

@@ -1,0 +1,24 @@
+# pagers.yml file
+#
+# A global copy of this file may be place in
+#
+# /usr/local/basestation3/etc/pagers.yml
+#
+# If --group_etc is specified on the Base.py command line, then a that directory will
+# also be searched for a version of this file
+#
+# All files found are merged together at processing time, stating with basestation etc, then group etc
+# and finally seaglider mission directory.  New entries are added, changed entries are overwritten
+#
+# This file controls the sending of short email messages from the basestation
+# that alert users (pilots, field teams, etc.) of changes in status of the glider
+#
+# There are two types of entries in this file - users and subscriptions
+#
+#username:
+#    status: on # [on]|off - current status 
+#    latlon: ddmm # [ddmm]|dddd|ddmmss
+#    email: [ { status: off, address: mymobilephone@mobile.att.net, format:html }, # off turns off all texts to the fieldphone
+#             { address: someone@mydomain.edu@email.edu, format: html } ]
+#
+# gps: username

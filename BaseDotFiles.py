@@ -36,6 +36,7 @@ home directory (or other locations)
 import configparser
 import fnmatch
 import itertools
+import json
 import netrc
 import os
 import pdb
@@ -90,13 +91,45 @@ extensions_to_skip = {
     "MakeMissionEngPlots.py": "MakePlotMission is now part of the plotting package",
 }
 
-# Centeralized approach
-# 1) Start with .pagers
-# 2) Separate out message dispatch from lookup
-# 3) Allow for multiple lookup functions (taking instrument_id, name and tag), returning lists.
-# 4) Possible merge or overwrite of lists from lookup routines
-# 5) One routine that sends out messages
-# 6)
+
+def post_slack(base_opts, instrument_id, slack_hook_url, subject_line, message_body):
+    """Posts to slack channel
+
+    intput
+        slack_hook_url - full url to the slack incoming hook
+        subject_line - subject line for message
+        message_body - contents of message
+
+    returns
+        0 - success
+        1 - failure
+    """
+
+    log_info(
+        "instrument_id:%s slack_hook_url:%s subject_line:%s message_body:%s"
+        % (instrument_id, slack_hook_url, subject_line, message_body)
+    )
+
+    msg = {"text": "%s:%s" % (subject_line, message_body)}
+
+    try:
+        response = requests.post(
+            slack_hook_url,
+            data=json.dumps(msg),
+            headers={"Content-Type": "application/json"},
+        )
+        if response.status_code != 200:
+            log_error(
+                "Request to slack returned an error %s, the response is:%s"
+                % (response.status_code, response.text)
+            )
+            return 1
+    except Exception:
+        log_error("Error in post", "exc")
+        return 1
+
+    return 0
+
 
 # For some reason, this doesn't really work
 # pagers_ext = {'html' : lambda *args: send_email(*args, html_format=True)}
@@ -112,23 +145,9 @@ pagers_ext = {
         subject_line,
         message_body,
         html_format=True,
-    )
+    ),
+    "slack": post_slack,
 }
-# inReach message sender
-try:
-    import InReachSend
-except ImportError:
-    pass
-else:
-    pagers_ext["inreach"] = InReachSend.send_inreach
-
-# slack post
-try:
-    import SlackPost
-except ImportError:
-    print("Failed slack import")
-else:
-    pagers_ext["slack"] = SlackPost.post_slack
 
 
 def send_email_text(
@@ -213,9 +232,9 @@ def send_email_text(
             smtp.ehlo()
             smtp.login(smtp_account, smtp_password)
             if not base_opts.reply_addr:
-                email_msg[
-                    "Reply-To"
-                ] = from_email_addr  # smtp servers often rewrite from_line to use 'Original Name <account_name@gmail.com>'
+                email_msg["Reply-To"] = (
+                    from_email_addr  # smtp servers often rewrite from_line to use 'Original Name <account_name@gmail.com>'
+                )
         else:  # linux of some sort
             smtp = smtplib.SMTP("localhost")
         smtp.sendmail(email_send_from, email_send_to, email_msg.as_string())

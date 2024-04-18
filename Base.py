@@ -57,6 +57,7 @@ import urllib.request
 
 import orjson
 
+import BaseCtrlFiles
 import BaseDB
 import BaseDotFiles
 import BaseGZip
@@ -1599,6 +1600,12 @@ def main():
                     ("alerts",),
                     pagers_convert_msg=lock_file_msg,
                 )
+                BaseCtrlFiles.process_pagers_yml(
+                    base_opts,
+                    instrument_id,
+                    ("alerts",),
+                    pagers_convert_msg=lock_file_msg,
+                )
             return 1
         else:
             log_info(
@@ -1613,6 +1620,12 @@ def main():
 
     if not base_opts.local:
         BaseDotFiles.process_pagers(
+            base_opts,
+            instrument_id,
+            ("lategps", "recov", "critical", "drift"),
+            comm_log=comm_log,
+        )
+        BaseCtrlFiles.process_pagers_yml(
             base_opts,
             instrument_id,
             ("lategps", "recov", "critical", "drift"),
@@ -2801,6 +2814,12 @@ def main():
                 ("divetar",),
                 processed_files_message=tarball_str,
             )
+            BaseCtrlFiles.process_pagers_yml(
+                base_opts,
+                instrument_id,
+                ("divetar",),
+                processed_files_message=tarball_str,
+            )
 
     # Look for capture file with critical errors
     critical_msg = ""
@@ -2874,7 +2893,24 @@ def main():
             pagers_convert_msg=pagers_convert_msg,
             processed_files_message=processed_files_msg,
         )
+        #
+        BaseCtrlFiles.process_pagers_yml(
+            base_opts, instrument_id, ("alerts",), crit_other_message=critical_msg
+        )
 
+        BaseCtrlFiles.process_pagers_yml(
+            base_opts, instrument_id, ("alerts",), warn_message=alert_warning_msg
+        )
+
+        BaseCtrlFiles.process_pagers_yml(
+            base_opts,
+            instrument_id,
+            ("alerts", "comp"),
+            comm_log=comm_log,
+            pagers_convert_msg=pagers_convert_msg,
+            processed_files_message=processed_files_msg,
+        )
+        #
         BaseDotFiles.process_ftp(
             base_opts,
             processed_file_names,
@@ -2920,6 +2956,12 @@ def main():
         # Notify about all WARNINGS, ERRORS and CRITICALS
         warn_errors = log_warn_errors()
         BaseDotFiles.process_pagers(
+            base_opts,
+            instrument_id,
+            ("errors",),
+            processed_files_message=f"From {conversion_log}\n{warn_errors.getvalue()}",
+        )
+        BaseCtrlFiles.process_pagers_yml(
             base_opts,
             instrument_id,
             ("errors",),
