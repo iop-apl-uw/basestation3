@@ -3174,14 +3174,14 @@ def make_dive_profile(
 
         dsurf = max(dsurf, dfinish)  # Use the deepest
 
-        try:
-            # in the case of yoyo dives, use this value?
-            # the problem is that we don't know, without parsing $STATE, if this dive ended subsurface or surface...
-            # since we use surface_bubble_factor to expand dsurf range below we often win but really this is a bug
-            # NOT_YET dsurf = log_f.data['$D_FINISH'] # [m]
-            pass
-        except KeyError:
-            pass
+        # try:
+        # in the case of yoyo dives, use this value?
+        # the problem is that we don't know, without parsing $STATE, if this dive ended subsurface or surface...
+        # since we use surface_bubble_factor to expand dsurf range below we often win but really this is a bug
+        # NOT_YET dsurf = log_f.data['$D_FINISH'] # [m]
+        #    pass
+        # except KeyError:
+        #    pass
 
         # Determine when various events occured during the dive and climb using the GC record
         gc_st_secs = np.array(log_f.gc_data["st_secs"])
@@ -4454,7 +4454,22 @@ def make_dive_profile(
                     or (ctd_epoch_time_s_v[i] > sg_epoch_time_s_v[-1])
                 ]
             )
+
+            # Check for bad GPCTD clock in header of eng file
+            if not [
+                i
+                for i in range(ctd_np)
+                if (ctd_epoch_time_s_v[i] >= sg_epoch_time_s_v[0])
+                and (ctd_epoch_time_s_v[i] <= sg_epoch_time_s_v[-1])
+            ]:
+                log_error(
+                    "All GPCTD data time is outside of glider data time - possible bad clock data on GPCTD",
+                    alert="BAD_GPCTD_CLOCK",
+                )
+
             valid_gpctd_i_v = Utils.setdiff(list(range(ctd_np)), bad_gpctd_i_v)
+            if not valid_gpctd_i_v:
+                raise RuntimeError(True, "No valid GPCTD data found")
 
             # Reduce the data
             ctd_epoch_time_s_v = ctd_epoch_time_s_v[valid_gpctd_i_v]

@@ -121,4 +121,10 @@ An instrument reported timeouts during sampling.  For a serial based device, a f
 viewed as acceptable - more then that is a potential sign of a failing instrument.  For frequency base instruments
 any timeouts are potential sign of instrument failure.
 </p>
+
+<p><a name="BAD_GPCTD_CLOCK">TIMEOUT<br>
+A GPCTD reports the start of the profile time in the head of its .eng files. If the internal clock on the GPCTD is not
+being set correctly (usually done by the Seaglider before each profile), this time will be incorrect - the result it the
+basestation will throw out the GPCTD data as it lies well outside the start and end of the current profile.
+</p>
 </body>
