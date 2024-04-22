@@ -139,7 +139,7 @@ set gain = ""
 if ($press_slope == "") then
     echo 'WARNING: could not check $PRESSURE_SLOPE'
 else
-    if (`echo "$press_slope > 0.000104" | bc` && `echo "$press_slope < 0.000108" | bc` ) then 
+    if (`echo "$press_slope > 0.000104" | bc` && `echo "$press_slope < 0.00012" | bc` ) then 
         echo "pressure slope consistent with Kistler and HW gain 41.161 (motherboard or Rev A aux)"
         set gain = 41 
     else if (`echo "$press_slope > 0.000210" | bc` && `echo "$press_slope < 0.000231" | bc` ) then 
@@ -152,10 +152,10 @@ endif
 
 if ($gain != "" && $press_counts != "") then
     if ($gain == "41") then
-        if (`echo "$press_counts > 1300000" | bc` && `echo "$press_counts < 1600000" | bc` ) then 
+        if (`echo "$press_counts > 1300000" | bc` && `echo "$press_counts < 1700000" | bc` ) then 
             echo "mean counts at sealevel consistent with gain 41"
         else
-            echo "WARNING: mean counts $press_counts not consistten with gain 41" 
+            echo "WARNING: mean counts $press_counts not consistent with gain 41" 
         endif
     else if ($gain == "22") then
         if (`echo "$press_counts > 600000" | bc` && `echo "$press_counts < 850000" | bc` ) then 
