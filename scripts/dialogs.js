@@ -11,6 +11,9 @@
     function closeRegressionForm() {
         $('regressionForm').style.display = "none";
     } 
+    function closeMagcalForm() {
+        $('magcalForm').style.display = "none";
+    } 
 
     function closeAboutForm() {
         $('aboutForm').style.display = "none";
@@ -23,6 +26,9 @@
     } 
     function openSearchForm() {
         $('searchForm').style.display = "block";
+    } 
+    function openMagcalForm() {
+        $('magcalForm').style.display = "block";
     } 
     function openRegressionForm() {
         var opts = ['limit=1'];
@@ -43,6 +49,24 @@
             $('regressionForm').style.display = "block";
         });
     } 
+
+    function submitMagcalForm() {
+        var formData = new FormData($('formMagcalForm'));
+        var obj = Object.fromEntries(formData);
+        var opts = []
+
+        if (mission() != '')
+            opts.push(mission());
+        if ('softiron' in obj)
+            opts.push('softiron=1');
+
+        url = 'magcal/' + currGlider
+                        + '/' + obj['dives']
+                        + formatQuery(opts);
+
+        console.log(url);
+        window.open(url, currGlider + '-magcal');
+    }
 
     function submitRegressionForm() {
         var formData = new FormData($('formRegressionForm'));
@@ -69,13 +93,7 @@
                     + formatQuery(opts);
                     
         console.log(url);
-        window.open('regress/' + currGlider
-                    + '/' + obj['dives']
-                    + '/' + obj['depth1']
-                    + '/' + obj['depth2']
-                    + '/' + obj['initBias']
-                    + formatQuery(opts)
-                    , currGlider + '-regression');
+        window.open(url, currGlider + '-regression');
     }
 
     function submitLoginForm() {

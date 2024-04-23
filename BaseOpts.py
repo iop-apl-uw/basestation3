@@ -335,6 +335,7 @@ global_options_dict = {
             "Ver65",
             "WindRain",
             "RegressVBD",
+            "Magcal",
         ),
         (
             "-m",
@@ -367,6 +368,7 @@ global_options_dict = {
                 "ValidateDirectives",
                 "Ver65",
                 "RegressVBD",
+                "Magcal",
             ),
         },
     ),
@@ -424,6 +426,7 @@ global_options_dict = {
             "NewMission",
             "Reprocess",
             "RegressVBD",
+            "Magcal",
         ),
         (
             "-i",

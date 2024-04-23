@@ -37,6 +37,19 @@
   </form>
 </div>
 
+<div class="form-popup" id="magcalForm">
+  <form class="form-login" id="formMagcalForm">
+    <label for="dives"><b>dives</b></label>
+    <input type="text" placeholder="1" name="dives" required>
+    <span>
+    <input type="checkbox" name="softiron" value="softiron" checked>
+    <label for="softiron"><b>incl. soft iron</b></label>
+    </span>
+    <button type="submit" class="btn" onclick="submitMagcalForm(); return false;">process</button>
+    <button type="button" class="btn cancel" onclick="closeMagcalForm(); return false;">close</button>
+  </form>
+</div>
+
 <div class="form-popup" id="aboutForm">
     <div class="about-content">
         <div id="aboutContent">

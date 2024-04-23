@@ -67,6 +67,7 @@ import socket
 import rafos
 from sanic.worker.manager import WorkerManager
 import RegressVBD
+import Magcal
 
 #from contextlib import asynccontextmanager
 #
@@ -1138,8 +1139,27 @@ def attachHandlers(app: sanic.Sanic):
         out = ExtractTimeseries.dumps(hits) # need custom serializer for the numpy array
         return sanic.response.raw(out, headers={ 'Content-type': 'application/json' })
 
+    @app.route('/magcal/<glider:int>/<dives:str>')
+    # description: run magcal over multiple dives
+    # parameters: mission, ballast
+    # returns: html of plotly results plot
+    @authorized()
+    async def magcalHandler(request, glider:int, dives:str):
+        path = gliderPath(glider, request)
+
+        softiron = True if 'softiron' in request.args else False
+        dives = RegressVBD.parseRangeList(dives)
+
+        hard, soft, cover, circ, plt = Magcal.magcal(path, glider, dives, softiron, 'html')
+
+        return sanic.response.html((f'<html>hard0="{hard[0]:.1f},{hard[1]:.1f},{hard[2]:.1f}"<br>'
+                                    f'soft0="{soft[0][0]:.3f},{soft[0][1]:.3f},{soft[0][2]:.3f},'
+                                    f'{soft[1][0]:.3f},{soft[1][1]:.3f},{soft[1][2]:.3f}'
+                                    f'{soft[2][0]:.3f},{soft[2][1]:.3f},{soft[2][2]:.3f}"'
+                                    '<p>') + plt) 
+
     @app.route('/regress/<glider:int>/<dives:str>/<depth1:float>/<depth2:float>/<initBias:float>')
-    # description: run VBD repression over multiple dives
+    # description: run VBD regression over multiple dives
     # parameters: mission, ballast
     # returns: html of plotly results plot
     @authorized()
