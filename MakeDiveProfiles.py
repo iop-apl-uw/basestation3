@@ -4445,6 +4445,36 @@ def make_dive_profile(
             bad_gpctd_i_v.extend(QC.bad_qc(ctd_temp_qc_v))
             bad_gpctd_i_v.extend(QC.bad_qc(ctd_cond_qc_v))
             bad_gpctd_i_v.extend(QC.bad_qc(ctd_salin_qc_v))
+
+            # Check for bad GPCTD clock in header of eng file
+            if not [
+                i
+                for i in range(ctd_np)
+                if (ctd_epoch_time_s_v[i] >= sg_epoch_time_s_v[0])
+                and (ctd_epoch_time_s_v[i] <= sg_epoch_time_s_v[-1])
+            ]:
+                # The following is to address the case seen on sg654 where the GPCTD clock
+                # was not being set by the Seaglider at the start of the profile, but was
+                # running while the GPCTD was on and the clock was latched over the power off/on
+                #
+                # If all the GPCTD payload data times are outside the time range of the glider's
+                # dive time range, all the GPCTD times are adjusted so the first GPCTD time is the
+                # start of the glider's dive time. This correction won't work (or work very well)
+                # if only the up profile is being sampled and it is dependent on what looks like
+                # the way the Kongsberg Seaglider code works - to run the GPCTD through the dive,
+                # apogee and up to the start of the climb.
+                if (
+                    "gpctd_align_start_time" in calib_consts
+                    and calib_consts["gpctd_align_start_time"]
+                ):
+                    gpctd_t_corr = sg_epoch_time_s_v[0] - ctd_epoch_time_s_v[0]
+                    ctd_epoch_time_s_v += gpctd_t_corr
+                else:
+                    log_error(
+                        "All GPCTD data time is outside of glider data time - possible bad clock data on GPCTD",
+                        alert="BAD_GPCTD_CLOCK",
+                    )
+
             # Turns out the gpctd can be left running a while after the glider takes it last data point (during surfacing); remove those points
             bad_gpctd_i_v.extend(
                 [
@@ -4454,18 +4484,6 @@ def make_dive_profile(
                     or (ctd_epoch_time_s_v[i] > sg_epoch_time_s_v[-1])
                 ]
             )
-
-            # Check for bad GPCTD clock in header of eng file
-            if not [
-                i
-                for i in range(ctd_np)
-                if (ctd_epoch_time_s_v[i] >= sg_epoch_time_s_v[0])
-                and (ctd_epoch_time_s_v[i] <= sg_epoch_time_s_v[-1])
-            ]:
-                log_error(
-                    "All GPCTD data time is outside of glider data time - possible bad clock data on GPCTD",
-                    alert="BAD_GPCTD_CLOCK",
-                )
 
             valid_gpctd_i_v = Utils.setdiff(list(range(ctd_np)), bad_gpctd_i_v)
             if not valid_gpctd_i_v:

@@ -46,6 +46,24 @@ mass = 52.173; % (kg) scale weight
 %PARAM ctcor =  3.25e-06 ;
 
 %
+% Seabird pumped CTD (payload CTD/GPCTD)
+%
+
+% The following is to address the case where the GPCTD clock
+% is not being set by the Seaglider at the start of the profile,
+% is running while the GPCTD is on and the clock is latched over the power off/on.
+% 
+% If all the GPCTD payload data times are outside the time range of the glider's
+% dive time range, all the GPCTD times are adjusted so the first GPCTD time is the
+% start of the glider's dive time. This correction won't work (or work very well)
+% if only the up profile is being sampled and is dependent on what looks like
+% the way the Kongsberg Seaglider code works - to run the GPCTD through the dive,
+% apogee and up to the start of the
+
+% gpctd_align_start_time = 1;
+
+
+%
 % Legato CTD
 %
 

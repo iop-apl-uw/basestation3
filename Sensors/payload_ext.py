@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2020, 2021, 2022, 2023, 2024 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -340,6 +340,13 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         starttime = time.mktime(
             time.strptime(c["starttime"].rstrip().lstrip(), "%d %b %Y %H:%M:%S")
         )
+
+        # if "gpctd_start_time_adjust" in calib_consts:
+        #    try:
+        #        starttime += float(calib_consts["gpctd_start_time_adjust"])
+        #    except:
+        #        log_error("Failed to update GPCTD start time", alert="BAD_GPCTD_CLOCK")
+
         reported_samples = int(c["end"]) - int(c["start"]) + 1
         interval = float(c["interval"])
         num_samples = len(ef["data"]["gpctd.Pressure"])
