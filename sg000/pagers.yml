@@ -1,5 +1,8 @@
 # pagers.yml file
 #
+# This file controls the sending of short email messages from the basestation
+# that alert users (pilots, field teams, etc.) of changes in status of the glider
+#
 # A global copy of this file may be place in
 #
 # /usr/local/basestation3/etc/pagers.yml
@@ -8,17 +11,92 @@
 # also be searched for a version of this file
 #
 # All files found are merged together at processing time, stating with basestation etc, then group etc
-# and finally seaglider mission directory.  New entries are added, changed entries are overwritten
+# and finally seaglider mission directory.
 #
-# This file controls the sending of short email messages from the basestation
-# that alert users (pilots, field teams, etc.) of changes in status of the glider
+# There are two types of entries in this file - users and subscriptions.  User definitions consist of
+# two optional fields - "latlon" and "status", followed by one or more send_funcs, each of which is a list
+# of endpoint dictionaries.
 #
-# There are two types of entries in this file - users and subscriptions
+# An endpoint is a dictionary with two optional fields - "status" and "filters" along with fields specific
+# to the send_func.
 #
-#username:
-#    status: on # [on]|off - current status 
-#    latlon: ddmm # [ddmm]|dddd|ddmmss
-#    email: [ { status: off, address: mymobilephone@mobile.att.net, format:html }, # off turns off all texts to the fieldphone
-#             { address: someone@mydomain.edu@email.edu, format: html } ]
+# For users:
+# - the "latlon" and "status", later fields over write previous values
+# - endpoints in a send_func are added.
+#
+# For subscriptions, new users are added.
+#
+# Optional Fields:
+#
+# status - can be "on" or "off".  Default is "on"
+#
+# latlon can be one of:
+# "ddmm"   - DD.DDDD format for positions
+# "dddd"   - DD MM.MM format for positions
+# "ddmmss" - DD MM SS.SS format for positions
+# Default is "ddmm"
+#
+# filters - a list of any valid subscriptions to respond to.  Default is all subscriptions.
+#
+# Valid send_funcs
+#
+# email       - dispatches email via the SMTP installation on the basestation
+# slack       - invokes a slack webhook
+# mattermost  - invokes a mattermost webhook
+#
+# Valid subscriptions
+#
+# gps        - GPS position notification - sent as soon a GPS message appears in the comm.log
+#              Short message - suitable for mail to SMS gateways
+#              GPS fix formatted in DDMM.MM format
+#
+# lategps    - same as GPS message, but sent at the conclusion of data processing
+#
+# recov      - Notification of the glider in recovery (whatever the reason) 
+#              Short message - suitable for mail to SMS gateways
+#              GPS fix formatted in DDMM.MM format
+# 
+# critical   - Notification of the glider:
+#              - Is in a non-quit recovery
+#              - Has rebooted
+#              - Has uploaded capture file with one or more critical errors
+#              Short message - suitable for mail to SMS gateways
+#              GPS fix formatted in DDMM.MM format
+#
+# drift      - Generates an estimate of the current drift of the glider and an estimate
+#              of future positions.  Requires at least 5 GPS fixes from the same dive
+# alerts     - Notifications of
+#              -- Any problems or issues that occurred during basestation processing
+#              -- Non-critical, but important conditions the glider has encounted, such as a $WARN message
+#                   in the Seaglider logfile.
+#              -- Notification of capture files that contain critical errors
+#              Pilots should always subscribe to the level, as it is the primary way for
+#              basestation to issue errors
+#
+# comp       - Notification of completion of processing and a list of files resulting from 
+#              processing
+#
+# divetar    - Notification of all dive tarball files generated - see --divetarballs option to Base.py
+#
+# errors     - A list of all the warning, error and critical messages generated during conversion processing
+#
+# Example:
+#
+# username:
+#    status: on 
+#    latlon: ddmm 
+#    # send_funcs
+#    email: [ { status: off, filters: [critical], address: mymobilephone@mobile.att.net, format:html }, 
+#             { filters["gps, alerts"], address: someone@mydomain.edu@email.edu, format: html } ]
+#
+# global:
+#    # send_funcs
+#    slack: [ { filter["gps"], hook: https://xyx.edu/hooks/gps_webhook },
+#             { filter["alerts"], hook: https://xyx.edu/hooks/alert_webhook } ]
+#    mattermost: [ { filter["gps"], hook: https://xyx.edu/hooks/gps_webhook },
+#                  { filter["alerts"], hook: https://xyx.edu/hooks/alert_webhook }
+#                  { filter["critical"], hook: https://xyx.edu/hooks/alert_webhook, mention:"@username" }
 #
 # gps: username
+# alerts: [username, global]
+# critical: [username, global]
