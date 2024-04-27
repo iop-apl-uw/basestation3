@@ -157,7 +157,9 @@ def timeSeriesToProfile(var, which,
             ixs = (x['time'] > t0) & (x['time'] < t2)
             message['dive'].append(p + 0.5)
             message['which'].append(4)
-            message['avg_time'].append(x['time'][ixs].mean())
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", category=RuntimeWarning)
+                message['avg_time'].append(x['time'][ixs].mean())
             d = None
             if sum(1 for x in ixs if x) > 0:
                 with warnings.catch_warnings():
