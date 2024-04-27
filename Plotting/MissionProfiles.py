@@ -204,7 +204,7 @@ def mission_profiles(
             if not d:
                 log_warning(f"Could not extract timeseries for {vk} - skipping")
                 continue
-            
+
             contours={
                         "coloring": "heatmap",
                         "showlabels": True,
@@ -233,9 +233,12 @@ def mission_profiles(
             incr = len(d['avg_time']) // divisor
             if incr == 0:
                 incr = 1
-               
+
             for tt in d['avg_time'][::incr]:
-                timetext.append(time.strftime(fmt, time.gmtime(tt)))
+                if numpy.isnan(tt):
+                    timetext.append("NaN")
+                else:
+                    timetext.append(time.strftime(fmt, time.gmtime(tt)))
             for dd in d['dive'][::incr]:                    
                 timevals.append(dd - 0.5)
 
