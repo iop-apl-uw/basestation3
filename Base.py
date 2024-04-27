@@ -546,7 +546,7 @@ def process_file_group(
         log_debug(f"{t} = {comm_log.find_fragment_transfer_method(t)}")
         if (
             comm_log.find_fragment_transfer_method(t) in ("raw", "ymodem", "unknown")
-            or base_opts.run_bogue
+            or not base_opts.run_bogue
         ):
             continue
         try:
