@@ -54,6 +54,9 @@
 
     var divesInTable = [];
 
+    var sectionSortMajor = 'number';
+    var sectionNumberSort = 'reverse';
+
 {% if runMode == 'pilot' %}
     var fixes = [];
     var connect_t = 0;
@@ -1121,6 +1124,45 @@
         return false;
     }
 
+    function sectionCompare(a, b) {
+        
+        if (!a.includes('_section_') && !b.includes('_section_'))
+            return a.localeCompare(b);
+        else if (a.includes('_section_') && !b.includes('_section_'))
+            return -1;
+        else if (!a.includes('_section_') && b.includes('_section_'))
+            return 1;
+        else {
+            anum = a.split('_').slice(-1)[0];
+            bnum = b.split('_').slice(-1)[0];
+            aname = a.split('_').slice(0,-2).join('_');
+            bname = b.split('_').slice(0,-2).join('_');
+            console.log(a, b, anum, bnum, aname, bname);
+            if (sectionSortMajor == 'number') {
+                if (anum == bnum) {
+                    return aname.localeCompare(bname);
+                }
+                else {
+                    if (sectionNumberSort == 'reverse')
+                        return bnum.localeCompare(anum);
+                    else
+                        return anum.localeCompare(bnum);
+                }
+            }
+            else {
+                if (aname == bname) {
+                    if (sectionNumberSort == 'reverse')
+                        return bnum.localeCompare(anum);
+                    else
+                        return anum.localeCompare(bnum);
+                }
+                else {
+                    return aname.localeCompare(bname);
+                }
+            }
+        } 
+    }
+
     function loadPlots(dive, setCurr) {
         var plots;
         var img;
@@ -1140,6 +1182,14 @@
             priority = cookie.split(",");
         else
             priority = stockPriority;
+
+        cookie = readCookie("sectionSort");
+        if (cookie != null)
+            sectionSortMajor = cookie;
+
+        cookie = readCookie("sectionNumber");
+        if (cookie != null)
+            sectionNumberSort = cookie;
 
         currDive = dive; // inside the then or before plots might be actually loaded?
 
@@ -1213,31 +1263,18 @@
             }
 
             links.push('sg');
-            sgplots.sort();
-            for (p of sgplots) {
-                if (p.includes('section_000')) {
-                    addPlot('section', p, x, sgplotlyplots.includes(p));
-                    links.push(p in subs ? subs[p] : p);
-                    x+= 200;
+            sgplots.sort(sectionCompare);
+            console.log(sgplots);
 
-                    if (!first && setCurr) {
-                        first = true;
-                        currElt = p;
-                    }
-
-                    idx = sgplots.indexOf(p);
-                    sgplots.splice(idx, 1); 
-                }
-            }
             for (p of sgplots) {
                 addPlot('section', p, x, sgplotlyplots.includes(p));
                 links.push(p in subs ? subs[p] : p);
-                x += 200;
+                x+= 200;
 
                 if (!first && setCurr) {
                     first = true;
                     currElt = p;
-                } 
+                }
             }
 
             if (currElt == 'logfile') 
@@ -1957,7 +1994,13 @@
         if (params.has('order')) {
             createCookie("order", params.get('order'), 180);
         }
-
+        if (params.has('sectionSort')) {
+            createCookie("sectionSort", params.get('sectionSort'), 180);
+        }
+        if (params.has('sectionNumber')) {
+            createCookie("sectionNumber", params.get('sectionNumber'), 180);
+        }
+ 
         // set mobile based on media query
         if (window.matchMedia("(pointer: coarse)").matches) {
             mobile = true;
