@@ -96,7 +96,7 @@ def send_email(
             log_error("Unknown email format:{endpoint['format']} - defaulting to text")
 
     log_info(
-        "Sending %s (%s) to %s" % (subject_line, message_body, endpoint["address"])
+        f"Sending email {subject_line} ({message_body}) {endpoint['address']} to {user}"
     )
 
     BaseDotFiles.send_email(
@@ -125,6 +125,8 @@ def send_slack(
         hook_url = endpoint["hook"]
 
     msg = {"text": "%s:%s" % (subject_line, message_body)}
+
+    log_info(f"Sending slack {subject_line} {message_body} {hook_url} to {user}")
 
     try:
         response = requests.post(
@@ -157,6 +159,8 @@ def send_mattermost(
         hook_url = endpoint["hook"]
 
     msg_str = f"{subject_line}:{message_body}"
+
+    log_info(f"Sending mattermost {subject_line} {message_body} {hook_url} to {user}")
 
     if "mention" in endpoint:
         if isinstance(endpoint["mention"], list):
@@ -558,9 +562,6 @@ def process_pagers_yml(
                         subject_line = None
 
                     if subject_line is not None:
-                        log_info(
-                            f"Sending {subject_line} ({gps_message}) to {si['user']}"
-                        )
                         si["send_func"](
                             base_opts,
                             instrument_id,
