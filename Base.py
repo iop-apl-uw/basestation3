@@ -2686,14 +2686,8 @@ def main():
         for processed_file_name in processed_file_names:
             if processed_file_name is None:
                 continue
-            if base_opts.web_file_location:
-                # head,tail = os.path.split(processed_file_name)
-                # p = os.path.join(base_opts.web_file_location, tail)
-                # This handles files that reside in sub-directories of the mission_dir
-                p = processed_file_name.replace(base_opts.mission_dir, "")
-                processed_files_msg += f"{p}\n"
-            else:
-                processed_files_msg += f"{os.path.abspath(processed_file_name)}\n"
+            p = processed_file_name.replace(base_opts.mission_dir, "")
+            processed_files_msg += f"{p}\n"
 
         log_info(f"Processed files msg:\n{processed_files_msg}")
     else:

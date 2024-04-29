@@ -64,8 +64,7 @@ except:
 if len(sys.argv) == 3:
     base = sys.argv[2]
 else:
-    base = f'/home/seaglider/sg{sgnum:03d}' # for iopbase
-    # base = "/server/work1/seaglider/www/selftests" # for website
+    base = f'/home/seaglider/sg{sgnum:03d}' # make a guess
 
 selftestFiles = sorted(glob.glob(base + '/pt*.cap'), reverse=True)
 

@@ -137,11 +137,11 @@ class BaseLogger:
         """
         if include_time:
             formatter = logging.Formatter(
-                "%(asctime)s: %(levelname)s: %(message)s", "%H:%M:%S %d %b %Y %Z"
+                fmt="{asctime}: {levelname}: {message}", style='{', datefmt="%H:%M:%S %d %b %Y %Z"
             )
         else:
             # Remove timestamps for easier log comparison and reading
-            formatter = logging.Formatter("%(levelname)s: %(message)s")
+            formatter = logging.Formatter(fmt="{levelname}: {message}", style='{')
 
         if opts is not None:
             if opts.debug:

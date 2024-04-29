@@ -600,13 +600,13 @@ global_options_dict = {
             "help": "Optional domain name to use for email messages",
         },
     ),
-    "web_file_location": options_t(
+    "vis_base_url": options_t(
         "",
-        ("Base", "Reprocess", "MakeKML"),
-        ("--web_file_location",),
+        ("Base", "Reprocess", "MakeKML", "BaseCtrlFiles", "CommLog", "GliderEarlyGPS"),
+        ("--vis_base_url",),
         str,
         {
-            "help": "Optional location to prefix file locations in comp email messages",
+            "help": "Base URL of visualization server for building links in KML and notifications",
         },
     ),
     #

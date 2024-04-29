@@ -71,8 +71,6 @@ pagers_msgs = (
     "errors",
 )
 
-pagers_send_funcs = ["email", "slack", "mattermost", "inreach"]
-
 
 def send_email(
     base_opts: BaseOpts.BaseOptions,
@@ -140,7 +138,7 @@ def send_slack(
                 % (response.status_code, response.text)
             )
     except Exception:
-        log_error("Error in post", "exc")
+        log_error("Error in slack post", "exc")
 
 
 def send_mattermost(
@@ -191,7 +189,116 @@ def send_mattermost(
                 % (response.status_code, response.text)
             )
     except Exception:
+        log_error(f"Error in mattermost post user:{user}, endpoint:{endpoint}", "exc")
+
+def send_ntfy(
+    base_opts: BaseOpts.BaseOptions,
+    instrument_id: int,
+    send_dict: dict,
+    subject_line: str,
+    message_body: str,
+) -> None:
+    default_priorities = { "critical": 5 }
+    tags = { 
+             "gps": "globe_with_meridians",
+             "alerts": "warning",
+             "errors": "warning",
+             "critical": "rotating_light",
+             "recov": "stop_sign",
+             "drift": "wind_face",
+           }
+
+    endpoint = send_dict["endpoint"]
+    user = send_dict["user"]
+    if "topic" not in endpoint:
+        log_error(f"Missing topic for user:{user}, endpoint:{endpoint}")
+        return
+
+    if "priority" not in endpoint:
+        priorities = default_priorities
+    else:
+        priorities = endpoint["priority"]
+
+    if 'type' in send_dict and send_dict['type'] in priorities:
+        priority = priorities[send_dict['type']]
+    else:
+        priority = 3 # 3 is ntfy default priority
+
+    msg = {
+            "title": subject_line, 
+            "message": message_body, 
+            "topic": endpoint["topic"],
+            "priority": priority,
+          }
+
+    if hasattr(base_opts, 'vis_base_url') and base_opts.vis_base_url:
+        msg['actions'] = [
+                            {
+                                "action": "view",
+                                "label": "dives",
+                                "clear": True,
+                                "url": f"{base_opts.vis_base_url}/{instrument_id}",
+                            },
+                            {
+                                "action": "view",
+                                "label": "map",
+                                "clear": True,
+                                "url": f"{base_opts.vis_base_url}/map/{instrument_id}",
+                            },
+                        ]    
+
+    if 'type' in send_dict and send_dict['type'] in tags:
+        msg['tags'] = [ tags[send_dict['type']] ]
+
+    log_info(f"ntfy:{endpoint['topic']} msg:{subject_line}+{message_body}")
+
+    try:
+        response = requests.post(
+            "https://ntfy.sh",
+            data=json.dumps(msg),
+            headers={"Content-Type": "application/json"},
+        )
+        if response.status_code != 200:
+            log_error(
+                "Request to ntfy returned an error %s, the response is:%s"
+                % (response.status_code, response.text)
+            )
+    except Exception:
+        log_error(f"Error in ntfy post user:{user}, endpoint:{endpoint}", "exc")
+
+def send_post(
+    base_opts: BaseOpts.BaseOptions,
+    instrument_id: int,
+    send_dict: dict,
+    subject_line: str,
+    message_body: str,
+) -> None:
+    endpoint = send_dict["endpoint"]
+    user = send_dict["user"]
+    if "url" not in endpoint:
+        log_error(f"Missing url address for user:{user}, endpoint:{endpoint}")
+        return
+    else:
+        url = endpoint["url"]
+
+    msg_str = f"{subject_line}:{message_body}"
+
+    log_info(f"post_url:{url} msg:{msg_str}")
+
+    try:
+        response = requests.post(
+            url,
+            data=msg_str,
+            headers={"Content-Type": "application/json"},
+        )
+        if response.status_code != 200:
+            log_error(
+                "Post request returned an error %s, the response is:%s"
+                % (response.status_code, response.text)
+            )
+    except Exception:
         log_error(f"Error in post user:{user}, endpoint:{endpoint}", "exc")
+    
 
 
 def send_inreach(
@@ -206,10 +313,12 @@ def send_inreach(
 
 
 pagers_sendfuncs = {
-    "email": send_email,
-    "slack": send_slack,
-    "inreach": send_inreach,
+    "email":      send_email,
+    "slack":      send_slack,
+    "inreach":    send_inreach,
     "mattermost": send_mattermost,
+    "post":       send_post,
+    "ntfy":       send_ntfy,
 }
 
 base_pagers_dict = {}
@@ -316,12 +425,12 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
                         log_warning(
                             f"Status not a bool {sf_list} for user {k} - resetting to True"
                         )
-                        updated_user_dict[sf] = "ddmm"
+                        updated_user_dict[sf] = True
                     else:
                         updated_user_dict[sf] = sf_list
                     continue
 
-                if sf not in pagers_send_funcs:
+                if sf not in pagers_sendfuncs:
                     log_error(
                         f"Unknown send_func type {sf} for user {k} - skipping user"
                     )
@@ -363,7 +472,7 @@ def check_canonicalize_pagers_dict(pagers_dict: dict) -> dict:
             if "latlon" not in updated_user_dict:
                 updated_user_dict["latlon"] = "ddmm"
             if "status" not in updated_user_dict:
-                updated_user_dict["latlon"] = True
+                updated_user_dict["status"] = True
 
             # Further user valdation goes here = status and latlon
             pagers_updated_dict["users"][k] = updated_user_dict
@@ -400,21 +509,29 @@ def find_send_list(pagers_dict: dict, msg: str) -> list:
                     continue
                 if "status" in endpoint:
                     f_send = endpoint["status"]
-                else:
+                elif "status" in pagers_dict["users"][user]: # should never be unset
                     f_send = pagers_dict["users"][user]["status"]
+                else:
+                    f_send = True
+
                 if f_send:
                     if "latlon" in endpoint:
                         latlon = endpoint["latlon"]
-                    else:
+                    elif "latlon" in pagers_dict["users"][user]: # should never be unset
                         latlon = pagers_dict["users"][user]["latlon"]
+                    else:
+                        latlon = 'ddmm'
+
                     send_list.append(
                         {
                             "user": user,
                             "send_func": pagers_sendfuncs[sf],
                             "endpoint": endpoint,
                             "latlon": latlon,
+                            "type": msg
                         }
                     )
+
     return send_list
 
 
@@ -584,6 +701,7 @@ def process_pagers_yml(
                         subject_line = (
                             f"CRITICAL ERROR IN CAPTURE SG{instrument_id:03d}"
                         )
+                        si["type"] = 'critical' # elevate
                         si["send_func"](
                             base_opts,
                             instrument_id,

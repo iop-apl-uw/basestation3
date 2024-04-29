@@ -48,11 +48,15 @@ if(! $?BASESTATION_PATH ) then
     set BASESTATION_PATH = "/usr/local/basestation"
 endif
 
+if(! $?GLIDER_OPTIONS ) then
+    set GLIDER_OPTIONS = ""
+endif
+
 printf "\n" >>! glider_early_gps.log
 printf "\n" >>! glider_early_gps.log
 
 set glider_early_gps_time = `date -u +%y%m%d%H%M%S`
-set glider_early_gps_cmd_line = "GliderEarlyGPS.py --daemon --mission_dir `pwd` --verbose --base_log `pwd`/glider_early_gps_${glider_early_gps_time} --config `pwd`/${user}.conf --csh_pid $$"
+set glider_early_gps_cmd_line = "GliderEarlyGPS.py --daemon ${GLIDER_OPTIONS} --mission_dir `pwd` --verbose --base_log `pwd`/glider_early_gps_${glider_early_gps_time} --config `pwd`/${user}.conf --csh_pid $$"
 set glider_early_gps_log = `pwd`/glider_early_gps.log
 if( $?RUNNER_DIR ) then
   set glider_early_gps_run_file = ${RUNNER_DIR}/${glider_early_gps_time}.run

@@ -915,13 +915,13 @@ def printDive(
             ballon_pairs.append(("Surface current dir", f"{surf_dir:.2f} degrees"))
             ballon_pairs.append(("Surface current mag", f"{surf_mag:.3f} m/s"))
 
-    ballon_pairs.append(
-        (
-            "Dive page",
-            '<a href="https://iop.apl.washington.edu/seaglider/divegallery.php?dive=%d&glider=%d">sg%03d plots</a>'
-            % (dive_num, instrument_id, instrument_id),
+    if hasattr(base_opts, 'vis_base_url') and base_opts.vis_base_url:
+        ballon_pairs.append(
+            (
+                "Dive page",
+                f'<a href="{base_opts.vis_base_url}/{instrument_id}?dive={dive_num}">sg{dive_num:03d} plots</a>',
+            )
         )
-    )
 
     printDivePlacemark(
         "SG%03d dive %03d end" % (instrument_id, dive_num),
@@ -1730,28 +1730,6 @@ def main(
     else:
         if processed_other_files is not None:
             processed_other_files.append(mission_kml_name)
-
-    # Write out the network link file
-    if base_opts.web_file_location:
-        networklink_kml_name = os.path.join(
-            base_opts.mission_dir, "sg%03d_network.kml" % base_opts.instrument_id
-        )
-        try:
-            fo = open(networklink_kml_name, "w")
-        except Exception:
-            log_error(f"Could not open {networklink_kml_name}", "exc")
-            log_info("Skipping...")
-        else:
-            if zip_kml:
-                url = os.path.join(
-                    base_opts.web_file_location, mission_kmz_file_name_base
-                )
-            else:
-                url = os.path.join(
-                    base_opts.web_file_location, mission_kml_file_name_base
-                )
-            writeNetworkKML(fo, "SG%03d Track" % base_opts.instrument_id, url)
-            fo.close()
 
     log_info(
         "Finished processing "
