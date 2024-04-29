@@ -3,11 +3,11 @@
 # This file controls the sending of short email messages from the basestation
 # that alert users (pilots, field teams, etc.) of changes in status of the glider
 #
-# A global copy of this file may be place in
+# A global copy of this file may be placed in
 #
 # /usr/local/basestation3/etc/pagers.yml
 #
-# If --group_etc is specified on the Base.py command line, then a that directory will
+# If --group_etc is specified on the Base.py command line, then that directory will
 # also be searched for a version of this file
 #
 # All files found are merged together at processing time, stating with basestation etc, then group etc
@@ -38,11 +38,21 @@
 #
 # filters - a list of any valid subscriptions to respond to.  Default is all subscriptions.
 #
-# Valid send_funcs
+# Valid send_funcs and their specific arguments (in addition to filters and status)
 #
 # email       - dispatches email via the SMTP installation on the basestation
+#               address: user@email.com # required
+#               format: html
 # slack       - invokes a slack webhook
+#               hook: https://server.com/hooks/hooktoken    # required
 # mattermost  - invokes a mattermost webhook
+#               hook: https://server.com/hooks/hooktoken    # required
+#               mention: "@user"
+# post        - sends an HTTP POST request to a URL
+#               url: https://server.com?action=postnotify
+# ntfy        - sends a message to a ntfy.sh topic
+#               topic: myntfytopicname # required
+#               priority: [ "critical": 5, "gps": 1, "alerts": 3] # override default priorities (1-5)
 #
 # Valid subscriptions
 #
@@ -88,6 +98,7 @@
 #    # send_funcs
 #    email: [ { status: off, filters: [critical], address: mymobilephone@mobile.att.net, format:html }, 
 #             { filters["gps, alerts"], address: someone@mydomain.edu@email.edu, format: html } ]
+#    ntfy: [ { filter[ gps ], topic: myntfytopic123 } ]
 #
 # global:
 #    # send_funcs
@@ -95,7 +106,7 @@
 #             { filter["alerts"], hook: https://xyx.edu/hooks/alert_webhook } ]
 #    mattermost: [ { filter["gps"], hook: https://xyx.edu/hooks/gps_webhook },
 #                  { filter["alerts"], hook: https://xyx.edu/hooks/alert_webhook }
-#                  { filter["critical"], hook: https://xyx.edu/hooks/alert_webhook, mention:"@username" }
+#                  { filter["critical"], hook: https://xyx.edu/hooks/alert_webhook, mention:"@username" } ]
 #
 # gps: username
 # alerts: [username, global]
