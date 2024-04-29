@@ -41,7 +41,7 @@ import pdb
 import sys
 import time
 import traceback
-
+import re
 import requests
 import yaml
 
@@ -246,6 +246,18 @@ def send_ntfy(
                                 "url": f"{base_opts.vis_base_url}/map/{instrument_id}",
                             },
                         ]    
+        t = re.search(r"Consult baselog_\d+", message_body)
+        if t:
+            timestamp = t[0].split('_')[1]
+            msg['actions'].append( 
+                                    {
+                                        "action": "view",
+                                        "label": "baselog",
+                                        "clear": True,
+                                        "url": f"{base_opts.vis_base_url}/baselog/{instrument_id}/{timestamp}",
+                                    }
+                                 )
+            
 
     if 'type' in send_dict and send_dict['type'] in tags:
         msg['tags'] = [ tags[send_dict['type']] ]
