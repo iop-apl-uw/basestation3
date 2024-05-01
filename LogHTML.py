@@ -167,9 +167,93 @@ async def displayTables(fname):
 
     print("</td>")
 
-    print("<td>") # row 2, col 3 
-    print("&#8226 Sensor errors: %.0f" % sum(L['ERRORS'][6:]))
-    print("</td>")
+    if len(L['ERRORS']) == 16:
+        # RevB
+        errorLabels = [
+            "buffer_overruns",
+            "spurious_interrupts",
+            "cf8FileOpenErrors",
+            "cf8FileWriteErrors",
+            "cf8FileCloseErrors",
+            "cf8FileOpenRetries",
+            "cf8FileWriteRetries",
+            "cf8FileCloseRetries",
+            "pitchErrors",
+            "rollErrors",
+            "vbdErrors",
+            "pitchRetries",
+            "rollRetries",
+            "vbdRetries",
+            "GPS_line_timeouts",
+            "sensor_timeouts",
+        ]
+        motor_errors = sum(L['ERRORS'][8:14])
+        motor_i = range(8,14)
+    # RevE - note - pre rev3049, there was not GPS_line_timeout
+    # we do not handle that possibility here
+    # last KHH version did not have pressure_timeouts (length=18 case)
+    elif len(L['ERRORS']) == 19:
+        errorLabels = [
+            "pitchErrors",
+            "rollErrors",
+            "vbdErrors",
+            "pitchRetries",
+            "rollRetries",
+            "vbdRetries",
+            "GPS_line_timeouts",
+            "compass_timeouts",
+            "pressure_timeouts",
+            "sensor_timeouts0",
+            "sensor_timeouts1",
+            "sensor_timeouts2",
+            "sensor_timeouts3",
+            "sensor_timeouts4",
+            "sensor_timeouts5",
+            "logger_timeouts0",
+            "logger_timeouts1",
+            "logger_timeouts2",
+            "logger_timeouts3",
+        ]
+        motor_errors = sum(L['ERRORS'][0:6])
+        motor_i = range(0,6) 
+    elif len(L['ERRORS']) == 18:
+        errorLabels = [
+            "pitchErrors",
+            "rollErrors",
+            "vbdErrors",
+            "pitchRetries",
+            "rollRetries",
+            "vbdRetries",
+            "GPS_line_timeouts",
+            "compass_timeouts",
+            "sensor_timeouts0",
+            "sensor_timeouts1",
+            "sensor_timeouts2",
+            "sensor_timeouts3",
+            "sensor_timeouts4",
+            "sensor_timeouts5",
+            "logger_timeouts0",
+            "logger_timeouts1",
+            "logger_timeouts2",
+            "logger_timeouts3",
+        ]
+        motor_errors = sum(L['ERRORS'][0:6])
+        motor_i = range(0,6)
+
+    sensor_errors = sum(L['ERRORS']) - motor_errors
+
+    if sensor_errors == 0:
+        print("<td>") # row 2, col 3 
+        print("&#8226 Sensor errors: %.0f" % sensor_errors)
+        print("</td>")
+    else:
+        text = ''
+        for i in range(0, len(L['ERRORS'])):
+            if i not in motor_i and L['ERRORS'][i] > 0:    
+                text = text + f"{L['ERRORS'][i]:.0f} {errorLabels[i]} &#13;"
+        print("<td>") # row 2, col 3 
+        print('&#8226 Sensor errors: %.0f (<span style="color:maroon" title="%s">details</span>)' % (sensor_errors, text))
+        print("</td>")
 
     print("</tr>")
     print("<tr>") # row 3
@@ -191,7 +275,7 @@ async def displayTables(fname):
     print("</td>")
 
     print("<td>") # row 3, col 3 
-    print("&#8226 Motor errors: %.0f" % sum(L['ERRORS'][0:6]))
+    print("&#8226 Motor errors: %.0f" % motor_errors)
     print("</td>")
 
     print("</tr>")

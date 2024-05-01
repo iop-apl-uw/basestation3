@@ -376,9 +376,9 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
             GPS_line_timeouts,
             sensor_timeouts,
         ] = errors_line
-    else:
-        if len(errors_line) >= 18:
+    elif len(errors_line) == 19:
             # RevE - note - pre rev3049, there was not GPS_line_timeout
+            # last KHH version did not have pressure_timeouts
             [
                 pitchErrors,
                 rollErrors,
@@ -397,10 +397,32 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
                 sensor_timeouts5,
                 logger_timeouts0,
                 logger_timeouts1,
-                logger_timeouts3,
-            ] = errors_line[:18]
-        if len(errors_line) == 19:
-            logger_timeouts4 = errors_line[18]
+                logger_timeouts2,
+                logger_timeouts3
+            ] = errors_line
+    elif len(errors_line) == 18:
+            # RevE - note - pre rev3049, there was not GPS_line_timeout
+            # last KHH version did not have pressure_timeouts
+            [
+                pitchErrors,
+                rollErrors,
+                vbdErrors,
+                pitchRetries,
+                rollRetries,
+                vbdRetries,
+                GPS_line_timeouts,
+                compass_timeouts,
+                sensor_timeouts0,
+                sensor_timeouts1,
+                sensor_timeouts2,
+                sensor_timeouts3,
+                sensor_timeouts4,
+                sensor_timeouts5,
+                logger_timeouts0,
+                logger_timeouts1,
+                logger_timeouts2,
+                logger_timeouts3
+            ] = errors_line
 
     errors = sum(list(map(int, extractStr(nci.variables["log_ERRORS"]).split(','))))
     insertColumn(dive, cur, "error_count", errors, "INTEGER")
