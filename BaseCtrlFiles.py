@@ -69,6 +69,7 @@ pagers_msgs = (
     "comp",
     "alerts",
     "errors",
+    "upload",
 )
 
 
@@ -206,6 +207,7 @@ def send_ntfy(
              "critical": "rotating_light",
              "recov": "stop_sign",
              "drift": "wind_face",
+             "upload": "inbox_tray",
            }
 
     endpoint = send_dict["endpoint"]
@@ -558,6 +560,7 @@ def process_pagers_yml(
     msg_prefix=None,
     crit_other_message=None,
     warn_message=None,
+    upload_message=None,
 ):
     """Processes the pagers.yml"""
 
@@ -588,6 +591,17 @@ def process_pagers_yml(
 
         for si in send_list:
             match msg:
+                case "upload":
+                    if upload_message and upload_message != "":
+                        subject_line = f"SG{instrument_id:03d} NETWORK EVENT"
+                        si["send_func"](
+                            base_opts,
+                            instrument_id,
+                            si,
+                            subject_line,
+                            upload_message,
+                        )
+                    
                 case "drift":
                     if comm_log:
                         drift_message = comm_log.predict_drift(si["latlon"])
