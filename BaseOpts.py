@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#/! /usr/bin/env python
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023, 2024  University of Washington.
@@ -1433,6 +1433,7 @@ class BaseOptions:
         additional_arguments=None,
         alt_cmdline=None,
         add_arguments=None,
+        calling_module=None,
     ):
         """
         Input:
@@ -1449,9 +1450,10 @@ class BaseOptions:
         self._subparsers = {}
         self._subparser = None
 
-        calling_module = os.path.splitext(
-            os.path.split(inspect.stack()[1].filename)[1]
-        )[0]
+        if calling_module is None:
+            calling_module = os.path.splitext(
+                os.path.split(inspect.stack()[1].filename)[1]
+            )[0]
 
         if additional_arguments is not None:
             # pre python 3.9    options_dict = {**global_options_dict, **additional_arguments}

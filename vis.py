@@ -1508,11 +1508,20 @@ def attachHandlers(app: sanic.Sanic):
         if not 'glider' in res:
             return sanic.response.text('no')
 
+        try:
+            bo = Utils.base_opts_for_mission_dir(glider, gliderPath(glider, request), 'BaseCtrlFiles')
+        except:
+            bo = None
+
         if 'body' in res and 'file' in res:
             try:
                 f = open(f"{gliderPath(glider,request)}/{res['file']}_{timestamp}", 'wb')
                 f.write(base64.b64decode(bytes(res['body'], 'utf-8')))
                 f.close()
+                if bo:
+                    msg = f"file uploaded {res['file']}"
+                    BaseCtrlFiles.process_pagers_yml(bo, glider, ("upload",), upload_message=msg)
+
                 return sanic.response.text('success') 
             except Exception as e:
                 return sanic.response.text(f'error {e}')
@@ -1521,6 +1530,9 @@ def attachHandlers(app: sanic.Sanic):
                 f = open(f"{gliderPath(glider,request)}/events.log", 'a')
                 f.write(res['event'])
                 f.close()
+                if bo:
+                    BaseCtrlFiles.process_pagers_yml(bo, glider, ("upload",), upload_message=res['event'])
+
                 return sanic.response.text('success') 
             except Exception as e:
                 return sanic.response.text(f'error {e}')
