@@ -90,6 +90,8 @@
 #
 # errors     - A list of all the warning, error and critical messages generated during conversion processing
 #
+# upload     - network file or event received
+#
 # Example:
 #
 # username:
