@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -562,7 +562,7 @@ def mission_energy(
                     "hovertemplate": "Fuel Gauge 10V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
                 }
             )
-            if fg_df["fg_kJ_used_24V"][-1] is not None:
+            if fg_df["fg_kJ_used_24V"].iloc[-1] is not None:
                 fig.add_trace(
                     {
                         "name": "24V Fuel Gauge",
@@ -585,7 +585,7 @@ def mission_energy(
                     "hovertemplate": "Modeled Use 10V<br>Dive %{x:.0f}<br>Energy used %{y:.2f} kJ<extra></extra>",
                 }
             )
-            if batt_df["batt_kJ_used_24V"][-1] is not None:
+            if batt_df["batt_kJ_used_24V"].iloc[-1] is not None:
                 fig.add_trace(
                     {
                         "name": "Modeled Use 24V",
