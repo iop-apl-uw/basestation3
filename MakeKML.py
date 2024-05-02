@@ -42,6 +42,8 @@ import pstats
 import sys
 import time
 import zipfile
+import importlib.util
+import importlib
 
 import numpy as np
 
@@ -270,15 +272,20 @@ def printHeader(name, description, glider_color, fo):
     fo.write("    </StyleMap>\n")
 
 
-def printDivePlacemark(name, description, lon, lat, depth, fo, hide_label, pairs=None):
+def printDivePlacemark(name, description, lon, lat, depth, fo, hide_label, pairs=None, style=None):
     """Places a seaglider marker on the map"""
     # Start dive place mark
     fo.write("    <Placemark>\n")
     fo.write(f"        <name>{name}</name>\n")
-    if hide_label:
-        fo.write("        <styleUrl>#seagliderPosition</styleUrl>\n")
+
+    if style:
+        fo.write(f"        <styleUrl>{style}</styleUrl>\n")
     else:
-        fo.write("        <styleUrl>#seagliderPositionHighlightState</styleUrl>\n")
+        if hide_label:
+            fo.write("        <styleUrl>#seagliderPosition</styleUrl>\n")
+        else:
+            fo.write("        <styleUrl>#seagliderPositionHighlightState</styleUrl>\n")
+
     fo.write(f"        <description>{description}</description>\n")
     if pairs:
         fo.write('        <Style><BalloonStyle><text><![CDATA[<div align="center">\n')
@@ -1702,6 +1709,20 @@ def main(
                         except Exception:
                             log_error(f"Failed to handle {ff.filename}", "exc")
 
+    if base_opts.add_kml:
+        for f in base_opts.add_kml:
+            try:
+                [modname, funcname] = f.split('.')
+                mod = Utils.loadmodule(modname + ".py")
+                if not mod:
+                    continue
+
+                func = getattr(mod, funcname)
+                add_files = add_files | func(base_opts, fo)
+            except Exception as e:
+                log_error(f"Failed to handle extension {f}, {e}")
+                continue
+ 
     printFooter(fo)
 
     fo.close()

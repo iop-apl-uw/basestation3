@@ -1248,6 +1248,19 @@ global_options_dict = {
             "option_group": "kml generation",
         },
     ),
+    "add_kml": options_t(
+        "",
+        (
+            "MakeKML",
+        ),
+        ("--add_kml",),
+        str,
+        {
+            "help": "list of python module.func that provide additional KML",
+            "nargs": "*",
+            "section": "makekml",
+        },
+    ),
     "merge_ssh": options_t(
         True,
         (
