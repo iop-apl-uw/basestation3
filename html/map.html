@@ -1011,13 +1011,18 @@
                             });
                         }
                         if (track._layers[k].options.hasOwnProperty('name')
-                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH') )) {
+                            && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH') || track._layers[k].options.name.includes('layer_') )) {
                             if (track._layers[k].options.name.includes('Dives')) {
                                 layerControl.addOverlay(track._layers[k], 'dives', '' + gliders[i] + ' ' + missions[i]);
                                 if (i > 0 || !leaveFirst) map.removeLayer(track._layers[k]);
                             }
                             else if (track._layers[k].options.name.includes('Targets')) {
                                 layerControl.addOverlay(track._layers[k], 'targets', gliders[i] + ' ' + missions[i]);
+                                map.removeLayer(track._layers[k]);
+                            }
+                            else if (track._layers[k].options.name.includes('layer_')) {
+                                var [dm, ...nm] = track._layers[k].options.name.split('_')
+                                layerControl.addOverlay(track._layers[k], nm.join('_'), gliders[i] + ' ' + missions[i]);
                                 map.removeLayer(track._layers[k]);
                             }
                             else {

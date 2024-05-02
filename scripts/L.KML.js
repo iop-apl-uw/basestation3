@@ -134,7 +134,11 @@ L.Util.extend(L.KML, {
 		if (poptions.color) { style.fillColor = poptions.color; }
 		if (poptions.opacity) { style.fillOpacity = poptions.opacity; }
 		el = xml.getElementsByTagName('IconStyle');
-		if (el && el[0]) { ioptions = _parse(el[0]); }
+		if (el && el[0]) { 
+            ioptions = _parse(el[0]); 
+            if (ioptions.color && !style.color)
+                style.color = ioptions.color;
+        }
 		if (ioptions.href) {
 			var iconOptions = {
 				iconUrl: ioptions.href,
@@ -229,7 +233,6 @@ L.Util.extend(L.KML, {
 				opts[a] = style[url][a];
 			}
 		}
-
 		il = place.getElementsByTagName('Style')[0];
 		if (il) {
 			var inlineStyle = this.parseStyle(place);
@@ -260,36 +263,6 @@ L.Util.extend(L.KML, {
 			el = place.getElementsByTagName(tag);
 			for (i = 0; i < el.length; i++) {
 				var l = this['parse' + tag.replace(/gx:/, '')](el[i], xml, opts);
-                if (tag.replace(/gx:/, '') == 'Point') {
-                    if ('icon' in opts && 'options' in opts['icon']) { 
-                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://maps.google.com/mapfiles/kml/shapes', '../script/images');
-                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('https://iop.apl.washington.edu', '../script');
-                        opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('arrow_narrow.png', '../script/images/arrow_narrow.png');
-                        if (opts['icon']['options']['iconUrl'].includes('marker')) {
-                            opts['icon']['options']['iconSize'] = [8,8];
-                            opts['icon']['options']['iconAnchor'] = [4,4];
-                            var ch = place.getElementsByTagName('name');
-                            if (ch && ch.length >= 1 && ch[0].childNodes[0].nodeValue.includes(' end')) {
-                                opts['icon']['options']['iconUrl'] = opts['icon']['options']['iconUrl'].replace('icon', 'yellow');
-                            }
-                        }
-                        else if (opts['icon']['options']['iconUrl'].includes("arrow_narrow")) {
-                            let s = opts['icon']['options']['iconScale'];
-                            let h = opts['icon']['options']['iconHeading'];
-                        
-                            opts['icon']['options']['iconSize'] = [12*s,64*s];
-                            opts['icon']['options']['iconAnchor'] = [6*s,32*s];
-                        }
-                        else if (opts['icon']['options']['iconUrl'].includes("shaded_dot")) {
-                            opts['icon']['options']['iconSize'] = [8,8];
-                            opts['icon']['options']['iconAnchor'] = [4,4];
-                        }
-                        else {
-                            opts['icon']['options']['iconSize'] = [32,32];
-                            opts['icon']['options']['iconAnchor'] = [16,16];
-                        }
-                    }
-                }
 				if (l) { layers.push(l); }
 			}
 		}
@@ -353,7 +326,36 @@ L.Util.extend(L.KML, {
 			return;
 		}
 		var ll = el[0].childNodes[0].nodeValue.split(',');
-        
+
+        if ('icon' in options && 'options' in options['icon']) { 
+            options['icon']['options']['iconUrl'] = options['icon']['options']['iconUrl'].replace('https://maps.google.com/mapfiles/kml/shapes', '../script/images');
+            options['icon']['options']['iconUrl'] = options['icon']['options']['iconUrl'].replace('https://iop.apl.washington.edu', '../script');
+            options['icon']['options']['iconUrl'] = options['icon']['options']['iconUrl'].replace('arrow_narrow.png', '../script/images/arrow_narrow.png');
+            if (options['icon']['options']['iconUrl'].includes('marker')) {
+                options['icon']['options']['iconSize'] = [8,8];
+                options['icon']['options']['iconAnchor'] = [4,4];
+                var ch = place.getElementsByTagName('name');
+                if (ch && ch.length >= 1 && ch[0].childNodes[0].nodeValue.includes(' end')) {
+                    options['icon']['options']['iconUrl'] = options['icon']['options']['iconUrl'].replace('icon', 'yellow');
+                }
+            }
+            else if (options['icon']['options']['iconUrl'].includes("arrow_narrow")) {
+                let s = options['icon']['options']['iconScale'];
+                let h = options['icon']['options']['iconHeading'];
+            
+                options['icon']['options']['iconSize'] = [12*s,64*s];
+                options['icon']['options']['iconAnchor'] = [6*s,32*s];
+            }
+            else if (options['icon']['options']['iconUrl'].includes("shaded_dot")) {
+                options['icon']['options']['iconSize'] = [8,8];
+                options['icon']['options']['iconAnchor'] = [4,4];
+            }
+            else {
+                options['icon']['options']['iconSize'] = [32,32];
+                options['icon']['options']['iconAnchor'] = [16,16];
+            }
+        }
+    
         if ('icon' in options && 'iconUrl' in options['icon']['options'] && options['icon']['options']['iconUrl'].includes('arrow_narrow')) {
             marker = new L.shapeMarker([ll[1],ll[0]],
                                            {
@@ -362,13 +364,25 @@ L.Util.extend(L.KML, {
                                                 color: 'black',
                                                 rotation: options['icon']['options']['iconHeading'], 
                                            });
-            return marker
+            return marker;
+        }
+
+        if ('icon' in options && 'iconUrl' in options['icon']['options'] && options['icon']['options']['iconUrl'].includes('shaded_dot')) {
+            marker = new L.shapeMarker([ll[1],ll[0]],
+                                           {
+                                                shape: 'circle',
+                                                radius: 8*options['icon']['options']['iconScale'],
+                                                color: options['color'],
+                                           });
+            return marker;
         }
 
         if (!('icon' in options)) {
             options['icon'] = new L.KMLIcon({ iconSize: [8,8], iconUrl: '../script/images/marker-icon.png', shadowUrl: null, iconAnchor: [4,4] });
         }
+
 		marker = new L.KMLMarker(new L.LatLng(ll[1], ll[0]), options);
+
         return marker;
 	},
 
