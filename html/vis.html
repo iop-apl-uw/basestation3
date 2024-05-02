@@ -890,7 +890,7 @@
         } 
     }
 
-    function loadStatus(glider, dive) {
+    function loadStatus(glider, dive, setCurr) {
         fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
@@ -911,17 +911,17 @@
             if (dive == -1 && parseInt(data['dive']) != currDive) {
                 currDive = maxDive = parseInt(data['dive']);
                 
-                loadPlots(currDive, true);
+                loadPlots(currDive, setCurr);
                 $('diveIndicator').innerHTML = 'dive ' + currDive;
 
                 // loadLog(currDive);
                 updateMaxDive();
             }
-            else if (dive > 0 && dive < parseInt(data['dive'])) {
+            else if (dive > 0 && dive <= parseInt(data['dive'])) {
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
 
-                loadPlots(currDive, true);
+                loadPlots(currDive, setCurr);
                 $('diveIndicator').innerHTML = 'dive ' + currDive;
 
                 // loadLog(currDive);
@@ -1970,6 +1970,7 @@
         let path = window.location.pathname.substring(1).split('/');
         let glider = -1;
         let dive = -1;
+        let gotCurr = false;
 
         var scale = 'scale(1.0)';
         document.body.style.webkitTransform =  scale;    // Chrome, Opera, Safari
@@ -1990,6 +1991,7 @@
         }
         if (params.has('plot')) {
             currElt = params.get('plot');
+            gotCurr = true;
         }
         if (params.has('order')) {
             createCookie("order", params.get('order'), 180);
@@ -2050,7 +2052,7 @@
         currGlider = glider;
         console.log(glider);
         window.name = glider;
-        loadStatus(glider, dive);
+        loadStatus(glider, dive, !gotCurr);
         // setupStream(glider, true, true);
 {% if runMode == 'pilot' %}
         loadControlFile('cmdfile');
