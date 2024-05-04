@@ -37,6 +37,7 @@ import pdb
 import sys
 import time
 import traceback
+import warnings
 
 import numpy as np
 
@@ -49,6 +50,8 @@ from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
 
 DEBUG_PDB = False
 # DEBUG_PDB = "darwin" in sys.platform
+if DEBUG_PDB:
+    warnings.filterwarnings("error")
 
 var_metadata = collections.namedtuple(
     "var_metadata",
@@ -419,9 +422,12 @@ def main(
                     binned_data_up, n_obs_up, *_ = NetCDFUtils.bindata(
                         depth[max_depth_i:], data[max_depth_i:], bin_edges
                     )
-                    obs_max = max(
-                        np.nanmax(binned_data_down), np.nanmax(binned_data_up)
-                    )
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", category=RuntimeWarning)
+                        obs_max = max(
+                            np.nanmax(binned_data_down), np.nanmax(binned_data_up)
+                        )
+
                     if obs_max <= np.iinfo(np.int8).max:
                         n_obs_type = np.int8
                     elif obs_max <= np.iinfo(np.int16).max:
@@ -438,8 +444,11 @@ def main(
                     n_obs.setncattr(
                         "description", "Number of observations for each bin"
                     )
-                    n_obs[0, :] = n_obs_down
-                    n_obs[1, :] = n_obs_up
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore", category=RuntimeWarning)
+
+                        n_obs[0, :] = n_obs_down
+                        n_obs[1, :] = n_obs_up
 
                     vv = nco.createVariable(
                         var_name,
