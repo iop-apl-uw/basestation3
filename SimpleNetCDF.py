@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,9 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Create simpler per-dive netCDF files
-"""
-
+"""Create simpler per-dive netCDF files"""
 
 import bz2
 import collections
@@ -47,8 +45,7 @@ import MakeDiveProfiles
 import NetCDFUtils
 import QC
 import Utils
-
-from BaseLog import BaseLogger, log_info, log_warning, log_error, log_debug
+from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
 
 DEBUG_PDB = False
 # DEBUG_PDB = "darwin" in sys.platform
@@ -161,10 +158,14 @@ def create_nc_var(ncf, var_name):
         nc_var
     """
     nc_var = ncf.createVariable(
-        var_name, new_nc_vars[var_name].dtype, new_nc_vars[var_name].dimensions
+        var_name,
+        new_nc_vars[var_name].dtype,
+        new_nc_vars[var_name].dimensions,
+        compression="zlib",
+        complevel=9,
     )
     for a, v in new_nc_vars[var_name].attrs.items():
-        nc_var.__setattr__(a, v)
+        nc_var.setncattr(a, v)
     return nc_var
 
 
@@ -191,7 +192,7 @@ def load_var(
         var_q = ncf.variables[var_meta.qc_name][:]
         try:
             qc_vals = QC.decode_qc(var_q)
-        except:
+        except Exception:
             log_warning(f"Could not decode QC for {var_name} - not applying")
         else:
             # This code doesn't work - find_qc for the mask needs to be fixed and propagated to
@@ -219,10 +220,9 @@ def cp_attrs(in_var, out_var):
     """Copies the netcdf attributes from the in_var
     to the out_var
     """
-    # pylint: disable=protected-access
-    for a in list(in_var._attributes.keys()):
-        out_var.__setattr__(a, in_var._attributes[a])
-    # pylint: enable=protected-access
+    for a in in_var.ncattrs():
+        if a != "_FillValue":
+            out_var.setncattr(a, in_var.getncattr(a))
 
 
 def main(
@@ -262,219 +262,237 @@ def main(
         f"Started processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(time.time()))}"
     )
 
-    log_info(
-        f"bin_width:{base_opts.simplencf_bin_width}, compress_output:{base_opts.simplencf_compress_output}"
-    )
-
-    if base_opts.netcdf_filename:
-        dive_nc_file_names = [base_opts.netcdf_filename]
-    elif base_opts.mission_dir:
-        if nc_files_created is not None:
-            dive_nc_file_names = nc_files_created
-        elif not dive_nc_file_names:
-            # Collect up the possible files
-            dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
+    if base_opts.simplencf_bin_width < 0:
+        simplencf_bin_widths = [0.0, np.abs(base_opts.simplencf_bin_width)]
     else:
-        log_error("Either mission_dir or netcdf_file must be specified")
-        return 1
+        simplencf_bin_widths = [base_opts.simplencf_bin_width]
 
-    for dive_nc_file_name in dive_nc_file_names:
-        log_info("Processing %s" % dive_nc_file_name)
+    for simplencf_bin_width in simplencf_bin_widths:
+        log_info(
+            f"bin_width:{simplencf_bin_width}, compress_output:{base_opts.simplencf_compress_output}"
+        )
 
-        netcdf_in_filename = dive_nc_file_name
-        head = os.path.splitext(netcdf_in_filename)[0]
-        if base_opts.simplencf_bin_width:
-            netcdf_out_filename = "%s.ncfb" % (head)
+        if base_opts.netcdf_filename:
+            dive_nc_file_names = [base_opts.netcdf_filename]
+        elif base_opts.mission_dir:
+            if nc_files_created is not None:
+                dive_nc_file_names = nc_files_created
+            elif not dive_nc_file_names:
+                # Collect up the possible files
+                dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(
+                    base_opts
+                )
         else:
-            netcdf_out_filename = "%s.ncf" % (head)
-
-        log_info("Output file = %s" % netcdf_out_filename)
-
-        if not os.path.exists(netcdf_in_filename):
-            sys.stderr.write("File %s does not exists\n" % netcdf_in_filename)
+            log_error("Either mission_dir or netcdf_file must be specified")
             return 1
 
-        nci = Utils.open_netcdf_file(netcdf_in_filename, "r")
-        nco = Utils.open_netcdf_file(netcdf_out_filename, "w")
-        if (
-            master_time_name not in nci.variables
-            or master_depth_name not in nci.variables
-        ):
-            log_error("Could not load variables - skipping", "exc")
-            continue
+        for dive_nc_file_name in dive_nc_file_names:
+            log_info("Processing %s" % dive_nc_file_name)
 
-        for var_name, var_meta in nc_meta.items():
-            if var_name not in nci.variables:
-                continue
-            new_dimension = var_meta.dimension
-            new_time = var_meta.time_name
-            if var_meta.dimension not in nci.dimensions:
-                new_dimension = "sg_data_point"
-            if var_meta.time_name not in nci.variables:
-                new_time = "time"
-            nc_meta[var_name] = var_metadata(
-                var_meta.qc_name, new_time, var_meta.depth_name, new_dimension
-            )
-
-        nc_dims = set()
-        nc_vars = set()
-        for var_name, var_meta in nc_meta.items():
-            if var_name not in nci.variables:
-                continue
-
-            nc_dims.add(var_meta.dimension)
-            nc_vars.add(var_name)
-            nc_vars.add(var_meta.time_name)
-
-        if not base_opts.simplencf_bin_width:
-            # If not binning, copy over dimensions and variables,
-            # converting the doubles to floats
-            for d in nc_dims:
-                log_debug(f"Adding dimesion {d}")
-                nco.createDimension(d, nci.dimensions[d])
-            # pylint: disable=protected-access
-        else:
-            master_depth = nci.variables[master_depth_name][:]
-            max_depth = np.floor(np.nanmax(master_depth))
-            bin_centers = np.arange(
-                0.0, max_depth + 0.01, base_opts.simplencf_bin_width
-            )
-            # This is actually bin edges, so one more point then actual bins
-            bin_edges = np.arange(
-                -base_opts.simplencf_bin_width / 2.0,
-                max_depth + base_opts.simplencf_bin_width / 2.0 + 0.01,
-                base_opts.simplencf_bin_width,
-            )
-            # Do this to ensure everything is caught in the binned statistic
-            bin_edges[0] = -20.0
-            bin_edges[-1] = max_depth + 50.0
-
-            # Create the depth vector and time vector (down/up)
-            nco.createDimension(depth_dimension_name, len(bin_centers))
-            nco.createDimension(profile_dimension_name, 2)
-            depth = create_nc_var(nco, "depth")
-            depth._attributes["description"] = (
-                depth._attributes["description"] + " - center of bin"
-            )
-            depth[0, :] = bin_centers
-            depth[1, :] = bin_centers
-            profile = create_nc_var(nco, "profile")
-            # profile[:] = np.array((ord("a"), ord("b")), np.byte)
-            profile[:] = np.array((0, 1), np.int16)
-
-            # Set the time variable for the depth vector
-            master_time = nci.variables[master_time_name][:]
-            max_depth_i = np.argmax(master_depth)
-            t_down = NetCDFUtils.interp1_extend(
-                master_depth[:max_depth_i],
-                master_time[:max_depth_i],
-                bin_centers,
-                fill_value="extrapolate",
-            )
-            t_up = NetCDFUtils.interp1_extend(
-                master_depth[max_depth_i:],
-                master_time[max_depth_i:],
-                bin_centers[::-1],
-                fill_value="extrapolate",
-            )
-            ttime = create_nc_var(nco, "time")
-            ttime[0, :] = t_down
-            ttime[1, :] = t_up
-
-        for var_name in nc_vars:
-            var_meta = nc_meta[var_name]
-            log_debug(f"Adding variable {var_name}")
-            data, depth = load_var(
-                nci,
-                var_name,
-                var_meta,
-                master_time_name,
-                master_depth_name,
-            )
-            if not base_opts.simplencf_bin_width:
-                vv = nco.createVariable(
-                    var_name, np.float32, nci.variables[var_name].dimensions
-                )
-                if "time" in var_name:
-                    nco.variables[var_name] = nci.variables[var_name]
-                    vv[:] = data
-                else:
-                    # Reduce to float for data fields
-                    vv[:] = data.astype(np.float32)
+            netcdf_in_filename = dive_nc_file_name
+            head = os.path.splitext(netcdf_in_filename)[0]
+            if simplencf_bin_width:
+                netcdf_out_filename = "%s.ncfb" % (head)
             else:
-                if "time" in var_name or "depth" in var_name:
+                netcdf_out_filename = "%s.ncf" % (head)
+
+            log_info("Output file = %s" % netcdf_out_filename)
+
+            if not os.path.exists(netcdf_in_filename):
+                sys.stderr.write("File %s does not exists\n" % netcdf_in_filename)
+                return 1
+
+            nci = Utils.open_netcdf_file(netcdf_in_filename, "r")
+            nco = Utils.open_netcdf_file(netcdf_out_filename, "w")
+            if (
+                master_time_name not in nci.variables
+                or master_depth_name not in nci.variables
+            ):
+                log_error("Could not load variables - skipping", "exc")
+                continue
+
+            for var_name, var_meta in nc_meta.items():
+                if var_name not in nci.variables:
                     continue
-                max_depth_i = np.argmax(depth)
-                binned_data_down, n_obs_down, *_ = NetCDFUtils.bindata(
-                    depth[:max_depth_i], data[:max_depth_i], bin_edges
+                new_dimension = var_meta.dimension
+                new_time = var_meta.time_name
+                if var_meta.dimension not in nci.dimensions:
+                    new_dimension = "sg_data_point"
+                if var_meta.time_name not in nci.variables:
+                    new_time = "time"
+                nc_meta[var_name] = var_metadata(
+                    var_meta.qc_name, new_time, var_meta.depth_name, new_dimension
                 )
-                binned_data_up, n_obs_up, *_ = NetCDFUtils.bindata(
-                    depth[max_depth_i:], data[max_depth_i:], bin_edges
-                )
-                obs_max = max(np.nanmax(binned_data_down), np.nanmax(binned_data_up))
-                if obs_max <= np.iinfo(np.int8).max:
-                    n_obs_type = np.int8
-                elif obs_max <= np.iinfo(np.int16).max:
-                    n_obs_type = np.int16
-                else:
-                    n_obs_type = np.int32
 
-                n_obs = nco.createVariable(
-                    f"{var_name}_num_obs",
-                    n_obs_type,
-                    (profile_dimension_name, depth_dimension_name),
-                )
-                n_obs.__setattr__("description", "Number of observations for each bin")
-                n_obs[0, :] = n_obs_down
-                n_obs[1, :] = n_obs_up
+            nc_dims = set()
+            nc_vars = set()
+            for var_name, var_meta in nc_meta.items():
+                if var_name not in nci.variables:
+                    continue
 
-                vv = nco.createVariable(
-                    var_name, np.float32, (profile_dimension_name, depth_dimension_name)
-                )
-                vv[0, :] = binned_data_down
-                vv[1, :] = binned_data_up
+                nc_dims.add(var_meta.dimension)
+                nc_vars.add(var_name)
+                nc_vars.add(var_meta.time_name)
 
-            cp_attrs(nci.variables[var_name], vv)
-
-        single_var_dims = set()
-        single_vars_filtered = list(filter(lambda i: i in nci.variables, single_vars))
-        for var_name in list(filter(lambda i: i not in nci.variables, single_vars)):
-            log_warning(f"{var_name} not in {netcdf_in_filename} - skipping")
-
-        for var_name in single_vars_filtered:
-            if nci.variables[var_name].dimensions:
-                for dim_name in nci.variables[var_name].dimensions:
-                    single_var_dims.add(dim_name)
-        for dim_name in single_var_dims:
-            nco.createDimension(dim_name, nci.dimensions[dim_name])
-        for var_name in single_vars_filtered:
-            nco.variables[var_name] = nci.variables[var_name]
-
-        # pylint: disable=protected-access
-        for a in list(nci._attributes.keys()):
-            if not (base_opts.simplencf_bin_width and a == "history"):
-                nco.__setattr__(a, nci._attributes[a])
-        # pylint: enable=protected-access
-
-        nci.close()
-        nco.sync()
-        nco.close()
-
-        if processed_other_files is not None:
-            processed_other_files.append(netcdf_out_filename)
-
-        if base_opts.simplencf_compress_output:
-            netcdf_out_filename_bzip = netcdf_out_filename + ".bz2"
-            try:
-                with open(netcdf_out_filename, "rb") as fi, bz2.open(
-                    netcdf_out_filename_bzip, "wb"
-                ) as fo:
-                    fo.write(fi.read())
-            except:
-                log_error("Could not write out bz output", "exc")
+            if not simplencf_bin_width:
+                # If not binning, copy over dimensions and variables,
+                # converting the doubles to floats
+                for d in nc_dims:
+                    log_debug(f"Adding dimesion {d}")
+                    nco.createDimension(d, nci.dimensions[d].size)
+                # pylint: disable=protected-access
             else:
-                if processed_other_files is not None:
-                    processed_other_files.append(netcdf_out_filename_bzip)
+                master_depth = nci.variables[master_depth_name][:]
+                max_depth = np.floor(np.nanmax(master_depth))
+                bin_centers = np.arange(0.0, max_depth + 0.01, simplencf_bin_width)
+                # This is actually bin edges, so one more point then actual bins
+                bin_edges = np.arange(
+                    -simplencf_bin_width / 2.0,
+                    max_depth + simplencf_bin_width / 2.0 + 0.01,
+                    simplencf_bin_width,
+                )
+                # Do this to ensure everything is caught in the binned statistic
+                bin_edges[0] = -20.0
+                bin_edges[-1] = max_depth + 50.0
+
+                # Create the depth vector and time vector (down/up)
+                nco.createDimension(depth_dimension_name, len(bin_centers))
+                nco.createDimension(profile_dimension_name, 2)
+                depth = create_nc_var(nco, "depth")
+                depth.description += " - center of bin"
+                depth[0, :] = bin_centers
+                depth[1, :] = bin_centers
+                profile = create_nc_var(nco, "profile")
+                # profile[:] = np.array((ord("a"), ord("b")), np.byte)
+                profile[:] = np.array((0, 1), np.int16)
+
+                # Set the time variable for the depth vector
+                master_time = nci.variables[master_time_name][:]
+                max_depth_i = np.argmax(master_depth)
+                t_down = NetCDFUtils.interp1_extend(
+                    master_depth[:max_depth_i],
+                    master_time[:max_depth_i],
+                    bin_centers,
+                    fill_value="extrapolate",
+                )
+                t_up = NetCDFUtils.interp1_extend(
+                    master_depth[max_depth_i:],
+                    master_time[max_depth_i:],
+                    bin_centers[::-1],
+                    fill_value="extrapolate",
+                )
+                ttime = create_nc_var(nco, "time")
+                ttime[0, :] = t_down
+                ttime[1, :] = t_up
+
+            for var_name in nc_vars:
+                var_meta = nc_meta[var_name]
+                log_debug(f"Adding variable {var_name}")
+                data, depth = load_var(
+                    nci,
+                    var_name,
+                    var_meta,
+                    master_time_name,
+                    master_depth_name,
+                )
+                if not simplencf_bin_width:
+                    vv = nco.createVariable(
+                        var_name,
+                        np.float32,
+                        nci.variables[var_name].dimensions,
+                        compression="zlib",
+                        complevel=9,
+                    )
+                    if "time" in var_name:
+                        nco.variables[var_name] = nci.variables[var_name]
+                        vv[:] = data
+                    else:
+                        # Reduce to float for data fields
+                        vv[:] = data.astype(np.float32)
+                else:
+                    if "time" in var_name or "depth" in var_name:
+                        continue
+                    max_depth_i = np.argmax(depth)
+                    binned_data_down, n_obs_down, *_ = NetCDFUtils.bindata(
+                        depth[:max_depth_i], data[:max_depth_i], bin_edges
+                    )
+                    binned_data_up, n_obs_up, *_ = NetCDFUtils.bindata(
+                        depth[max_depth_i:], data[max_depth_i:], bin_edges
+                    )
+                    obs_max = max(
+                        np.nanmax(binned_data_down), np.nanmax(binned_data_up)
+                    )
+                    if obs_max <= np.iinfo(np.int8).max:
+                        n_obs_type = np.int8
+                    elif obs_max <= np.iinfo(np.int16).max:
+                        n_obs_type = np.int16
+                    else:
+                        n_obs_type = np.int32
+
+                    n_obs = nco.createVariable(
+                        f"{var_name}_num_obs",
+                        n_obs_type,
+                        (profile_dimension_name, depth_dimension_name),
+                        fill_value=-1,
+                    )
+                    n_obs.setncattr(
+                        "description", "Number of observations for each bin"
+                    )
+                    n_obs[0, :] = n_obs_down
+                    n_obs[1, :] = n_obs_up
+
+                    vv = nco.createVariable(
+                        var_name,
+                        np.float32,
+                        (profile_dimension_name, depth_dimension_name),
+                        fill_value=np.nan,
+                        compression="zlib",
+                        complevel=9,
+                    )
+                    vv[0, :] = binned_data_down
+                    vv[1, :] = binned_data_up
+
+                cp_attrs(nci.variables[var_name], vv)
+
+            single_var_dims = set()
+            single_vars_filtered = list(
+                filter(lambda i: i in nci.variables, single_vars)
+            )
+            for var_name in list(filter(lambda i: i not in nci.variables, single_vars)):
+                log_warning(f"{var_name} not in {netcdf_in_filename} - skipping")
+
+            for var_name in single_vars_filtered:
+                if nci.variables[var_name].dimensions:
+                    for dim_name in nci.variables[var_name].dimensions:
+                        single_var_dims.add(dim_name)
+            for dim_name in single_var_dims:
+                nco.createDimension(dim_name, nci.dimensions[dim_name].size)
+            for var_name in single_vars_filtered:
+                nco.variables[var_name] = nci.variables[var_name]
+
+            for a in nci.ncattrs():
+                if not (simplencf_bin_width and a == "history"):
+                    nco.setncattr(a, nci.getncattr(a))
+
+            nci.close()
+            nco.sync()
+            nco.close()
+
+            if processed_other_files is not None:
+                processed_other_files.append(netcdf_out_filename)
+
+            if base_opts.simplencf_compress_output:
+                netcdf_out_filename_bzip = netcdf_out_filename + ".bz2"
+                try:
+                    with open(netcdf_out_filename, "rb") as fi, bz2.open(
+                        netcdf_out_filename_bzip, "wb"
+                    ) as fo:
+                        fo.write(fi.read())
+                except Exception:
+                    log_error("Could not write out bz output", "exc")
+                else:
+                    if processed_other_files is not None:
+                        processed_other_files.append(netcdf_out_filename_bzip)
 
     log_info(
         "Finished processing "
@@ -489,7 +507,7 @@ if __name__ == "__main__":
         retval = main()
     except SystemExit:
         pass
-    except:
+    except Exception:
         if DEBUG_PDB:
             extype, value, tb = sys.exc_info()
             traceback.print_exc()
