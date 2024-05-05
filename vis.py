@@ -400,9 +400,12 @@ async def getLatestFile(glider, request, which, dive=None):
                     if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] == dive and call == -1:
                         latest = j.fixed[0]
             else:
-                if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] >= latest and j.fixed[1] > call:
-                    latest = j.fixed[0]
-                    call = j.fixed[1]
+                if j and hasattr(j, 'fixed') and len(j.fixed) == 2:
+                    if  j.fixed[0] > latest:
+                        latest = j.fixed[0]
+                        call = j.fixed[1]
+                    elif j.fixed[0] == latest and j.fixed[1] > call:
+                        call = j.fixed[1]
                 else:
                     j = parse('%s.{:d}' % which, fpath.name)
                     if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] > latest:
