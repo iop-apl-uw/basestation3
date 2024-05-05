@@ -155,6 +155,7 @@ def main():
         "sg_calib_constants.m",
         "sg_plot_constants.m",
         f"sg{base_opts.instrument_id:03d}.conf",
+        "sections.yml",
     ]
     copy_files += known_files
 
