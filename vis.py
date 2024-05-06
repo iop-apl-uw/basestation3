@@ -60,6 +60,7 @@ import re
 import zmq
 import zmq.asyncio
 # import urllib.parse 
+import BaseOpts
 import Utils
 import secrets
 import ExtractTimeseries
@@ -69,7 +70,6 @@ from sanic.worker.manager import WorkerManager
 import RegressVBD
 import Magcal
 import BaseCtrlFiles
-import BaseOpts
 
 #from contextlib import asynccontextmanager
 #
@@ -84,17 +84,6 @@ import BaseOpts
 #        except ValueError:
 #            pass
 #
-
-def base_opts_for_mission_dir(instrument_id, mission_dir, module_name):
-    cnf_file = os.path.join(mission_dir, f"sg{instrument_id:03d}.conf")
-
-    base_opts = BaseOpts.BaseOptions(
-        "",
-        alt_cmdline=f"-c {cnf_file} -m {mission_dir}",
-        calling_module=module_name,
-    )
-
-    return base_opts
 
 async def checkClose(conn):
     try:
@@ -376,6 +365,18 @@ def gliderPath(glider, request, mission=None):
         return m['path']
     else:
         return f'sg{glider:03d}'
+
+
+def baseOpts(instrument_id, mission_dir, module_name):
+    cnf_file = os.path.join(mission_dir, f'sg{instrument_id:03d}.conf')
+ 
+    base_opts = BaseOpts.BaseOptions(
+        "",
+        alt_cmdline = f"-c {cnf_file} -m {mission_dir}",
+        calling_module=module_name,
+    )
+
+    return base_opts
 
 async def getLatestFile(glider, request, which, dive=None):
     p = Path(gliderPath(glider,request))
@@ -1522,7 +1523,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('no')
 
         try:
-            bo = base_opts_for_mission_dir(glider, gliderPath(glider, request), 'BaseCtrlFiles')
+            bo = baseOpts(glider, gliderPath(glider, request), 'BaseCtrlFiles')
         except:
             bo = None
 
