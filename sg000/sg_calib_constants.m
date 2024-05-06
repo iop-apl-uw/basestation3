@@ -45,6 +45,10 @@ mass = 52.173; % (kg) scale weight
 %PARAM cpcor = -9.57e-08 ;
 %PARAM ctcor =  3.25e-06 ;
 
+% Optional - if installed, use the adcp's pressure sensor instead of the truck pressure sensor
+% as the basis of ctd_pressure
+%PARAM use_adcppressure = 0;
+
 %
 % Seabird pumped CTD (payload CTD/GPCTD)
 %

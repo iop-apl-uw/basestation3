@@ -4237,8 +4237,8 @@ def make_dive_profile(
                     adcp_time = "cp_time"
                     adcp_pressure = "cp_pressure"
                 elif all(x in results_d for x in ["ad2cp_time", "ad2cp_pressure"]):
-                    adcp_time = "adcp_time"
-                    adcp_pressure = "adcp_pressure"
+                    adcp_time = "ad2cp_time"
+                    adcp_pressure = "ad2cp_pressure"
                 else:
                     log_error(
                         "use_adcppressure specified in sg_calib_constants, but no adcp pressure found"
