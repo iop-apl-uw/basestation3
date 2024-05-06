@@ -26,11 +26,11 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 CC = gcc
-
+CFLAGS = --signed-char 
 all: sc2mat ad2cpMAT
 
 sc2mat: sc2mat.o
-	$(CC) -o sc2mat sc2mat.o -lm
+	$(CC) --signed-char -o sc2mat sc2mat.o -lm
 
 ad2cpMAT: ad2cpMAT.o
-	$(CC) -o ad2cpMAT ad2cpMAT.o -lm
+	$(CC) --signed-char -o ad2cpMAT ad2cpMAT.o -lm
