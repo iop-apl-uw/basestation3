@@ -1711,6 +1711,7 @@ def main(
 
     if base_opts.add_kml:
         for f in base_opts.add_kml:
+            log_info(f"processing extension {f}")
             try:
                 [modname, funcname] = f.split('.')
                 mod = Utils.loadmodule(modname + ".py")

@@ -1249,9 +1249,11 @@ global_options_dict = {
         },
     ),
     "add_kml": options_t(
-        "",
+        [],
         (
-            "Base", "MakeKML", "Reprocess",
+            "Base",
+            "Reprocess",
+            "MakeKML",
         ),
         ("--add_kml",),
         str,
@@ -1259,6 +1261,7 @@ global_options_dict = {
             "help": "list of python module.func that provide additional KML",
             "nargs": "*",
             "section": "makekml",
+            "option_group": "kml generation",
         },
     ),
     "merge_ssh": options_t(
