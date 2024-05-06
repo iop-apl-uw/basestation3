@@ -1251,7 +1251,7 @@ global_options_dict = {
     "add_kml": options_t(
         "",
         (
-            "MakeKML",
+            "MakeKML","Reprocess",
         ),
         ("--add_kml",),
         str,
