@@ -1,5 +1,5 @@
 #!/usr/bin/env python3.10
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -69,6 +69,7 @@ from sanic.worker.manager import WorkerManager
 import RegressVBD
 import Magcal
 import BaseCtrlFiles
+import BaseOpts
 
 #from contextlib import asynccontextmanager
 #
@@ -83,6 +84,17 @@ import BaseCtrlFiles
 #        except ValueError:
 #            pass
 #
+
+def base_opts_for_mission_dir(instrument_id, mission_dir, module_name):
+    cnf_file = os.path.join(mission_dir, f"sg{instrument_id:03d}.conf")
+
+    base_opts = BaseOpts.BaseOptions(
+        "",
+        alt_cmdline=f"-c {cnf_file} -m {mission_dir}",
+        calling_module=module_name,
+    )
+
+    return base_opts
 
 async def checkClose(conn):
     try:
@@ -1510,7 +1522,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('no')
 
         try:
-            bo = Utils.base_opts_for_mission_dir(glider, gliderPath(glider, request), 'BaseCtrlFiles')
+            bo = base_opts_for_mission_dir(glider, gliderPath(glider, request), 'BaseCtrlFiles')
         except:
             bo = None
 

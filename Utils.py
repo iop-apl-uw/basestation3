@@ -67,10 +67,10 @@ import BaseNetCDF
 import CalibConst
 
 # Avoid circular input for type checking
-#if typing.TYPE_CHECKING:
-#    import BaseOpts
+if typing.TYPE_CHECKING:
+    import BaseOpts
 
-import BaseOpts
+# import BaseOpts
 
 from BaseLog import log_debug, log_error, log_warning, log_info, log_critical
 
@@ -87,7 +87,7 @@ def open_netcdf_file(
     # return scipy.io._netcdf.netcdf_file(filename, mode, mmap=False, version=version)
 
     # netCDF4 tries to open with a write exclusive, which will fail if some other process has
-    # the file open for read.  
+    # the file open for read.
     if "w" in mode:
         try:
             os.remove(filename)
@@ -194,13 +194,11 @@ def read_cnf_file(
                 else:
                     # Confirm format
                     if tmp.nc_var_name.startswith("register_sensor_dim_info") or (
-                        (
-                            len(tmp.nc_meta_str) == 4
-                            and isinstance(tmp.nc_meta_str[0], bool)
-                            and isinstance(tmp.nc_meta_str[1], str)
-                            and isinstance(tmp.nc_meta_str[2], dict)
-                            and isinstance(tmp.nc_meta_str[3], tuple)
-                        )
+                        len(tmp.nc_meta_str) == 4
+                        and isinstance(tmp.nc_meta_str[0], bool)
+                        and isinstance(tmp.nc_meta_str[1], str)
+                        and isinstance(tmp.nc_meta_str[2], dict)
+                        and isinstance(tmp.nc_meta_str[3], tuple)
                     ):
                         nc_meta_dict[tmp.nc_var_name] = tmp.nc_meta_str
                     else:
@@ -241,16 +239,18 @@ def read_cnf_file(
 
     return (cnf_dict, nc_meta_dict)
 
-def base_opts_for_mission_dir(instrument_id, mission_dir, module_name):
-    cnf_file = os.path.join(mission_dir, f'sg{instrument_id:03d}.conf')
- 
-    base_opts = BaseOpts.BaseOptions(
-        "",
-        alt_cmdline = f"-c {cnf_file} -m {mission_dir}",
-        calling_module=module_name,
-    )
 
-    return base_opts
+# def base_opts_for_mission_dir(instrument_id, mission_dir, module_name):
+#     cnf_file = os.path.join(mission_dir, f"sg{instrument_id:03d}.conf")
+
+#     base_opts = BaseOpts.BaseOptions(
+#         "",
+#         alt_cmdline=f"-c {cnf_file} -m {mission_dir}",
+#         calling_module=module_name,
+#     )
+
+#     return base_opts
+
 
 def unique(s):
     """Return a list of the elements in s, but without duplicates."""
