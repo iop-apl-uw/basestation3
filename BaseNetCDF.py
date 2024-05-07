@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines and variables for creating NetCDF files for Seagliders
-"""
+"""Routines and variables for creating NetCDF files for Seagliders"""
+
 # import configparser
 import os
 import sys
@@ -468,19 +468,19 @@ def write_nc_globals(nc_file, globals_d, base_opts):
     # Use only the most specific keywords
     # TODO add Oxygen if O2 sensor
     # TODO what about Ocean Currents, Upwelling/Downwelling?
-    globals_d[
-        "keywords_vocabulary"
-    ] = "NASA/GCMD Earth Science Keywords Version 6.0.0.0"
+    globals_d["keywords_vocabulary"] = (
+        "NASA/GCMD Earth Science Keywords Version 6.0.0.0"
+    )
     # The truck w/ a CTD provides these
-    globals_d[
-        "keywords"
-    ] = "Water Temperature, Conductivity, Salinity, Density, Potential Density, Potential Temperature"
+    globals_d["keywords"] = (
+        "Water Temperature, Conductivity, Salinity, Density, Potential Density, Potential Temperature"
+    )
     globals_d["processing_level"] = Globals.quality_control_version
     # TODO Submit updated docs/SQCM.html to NODC.DataOfficer@noaa.gov for archival
     # List accession URL to Seaglider_Quality_Control_Manual.html versions here
-    globals_d[
-        "references"
-    ] = "http://data.nodc.noaa.gov/accession/0092291"  # v1.10, archived 7/18/2012
+    globals_d["references"] = (
+        "http://data.nodc.noaa.gov/accession/0092291"  # v1.10, archived 7/18/2012
+    )
 
     # caller sets history and date_issued as appropriate
     # we set date_created if apparently for the first time
@@ -505,15 +505,15 @@ def write_nc_globals(nc_file, globals_d, base_opts):
     # globals_d['base_station_micro_version'] = Utils.get_svn_version()
     globals_d["base_station_micro_version"] = 0
     globals_d["quality_control_version"] = Globals.quality_control_version
-    globals_d[
-        "Metadata_Conventions"
-    ] = nc_metadata_convention_version  # globals metadata conventions
-    globals_d[
-        "Conventions"
-    ] = nc_variables_convention_version  # variable metadata conventions
-    globals_d[
-        "standard_name_vocabulary"
-    ] = nc_variables_convention_version  # variable metadata conventions
+    globals_d["Metadata_Conventions"] = (
+        nc_metadata_convention_version  # globals metadata conventions
+    )
+    globals_d["Conventions"] = (
+        nc_variables_convention_version  # variable metadata conventions
+    )
+    globals_d["standard_name_vocabulary"] = (
+        nc_variables_convention_version  # variable metadata conventions
+    )
     # See http://www.nodc.noaa.gov/data/formats/netcdf and the trajectory template in particular:
     # http://www.nodc.noaa.gov/data/formats/netcdf/trajectoryIncomplete.cdl
     globals_d["featureType"] = "trajectory"
@@ -3516,6 +3516,11 @@ def create_nc_var(
         nc_var_metadata - dictionary for netcdf variables metadata
         nc_char_dims - dictionary of character dimensions currently in use by nc_file
     """
+
+    if var_name in nc_file.variables:
+        log_debug(f"{var_name} already defined")
+        return nc_file.variables[var_name]
+
     try:
         md = nc_var_metadata[var_name]
     except KeyError:
