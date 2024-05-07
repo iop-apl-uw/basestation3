@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -40,6 +40,7 @@ import collections
 import inspect
 import json
 import math
+import io
 import os
 import pdb
 import pstats
@@ -735,8 +736,16 @@ class ConnectSession:
             "vbdAD": self.vbd_ad,
             "iridLat": Utils.ddmm2dd(self.phone_fix_lat) if self.phone_fix_lat else 0,
             "iridLon": Utils.ddmm2dd(self.phone_fix_lon) if self.phone_fix_lon else 0,
-            "irid_t": time.mktime(self.phone_fix_datetime) if self.phone_fix_datetime else 0
+            "irid_t": time.mktime(self.phone_fix_datetime)
+            if self.phone_fix_datetime
+            else 0,
         }
+
+    def __repr__(self):
+        x = io.StringIO()
+        self.dump_contents(x)
+        x.seek(0)
+        return x.read()
 
     def dump_contents(self, fo):
         """Dumps out the session contents, used when called manually"""
@@ -1418,7 +1427,9 @@ def process_comm_log(
                         lat_lon = iridium_strs[2].lstrip().split(",")
                         session.phone_fix_lat = float(lat_lon[0])
                         session.phone_fix_lon = float(lat_lon[1])
-                        session.phone_fix_datetime = time.strptime(lat_lon[2] + lat_lon[3], "%d%m%y%H%M%S")
+                        session.phone_fix_datetime = time.strptime(
+                            lat_lon[2] + lat_lon[3], "%d%m%y%H%M%S"
+                        )
 
                         if call_back and "iridium" in call_back.callbacks:
                             try:

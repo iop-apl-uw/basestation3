@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2024  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -31,6 +31,7 @@
 """Contains all routines for extracting data from a glider's comm logfile.
 """
 
+import io
 import sys
 import time
 from enum import IntEnum
@@ -233,14 +234,30 @@ class GPSFix:
             )
             print("       Lat %f" % self.lat, file=fo)
             print("       Lat %f" % self.lon, file=fo)
-            print(" First Fix %d" % self.first_fix_time, file=fo)
+            print(
+                " First Fix %s" % int(self.first_fix_time)
+                if self.first_fix_time
+                else "None",
+                file=fo,
+            )
             print(" HDOP      %f" % self.hdop, file=fo)
             print(" HPE       %f" % self.HPE, file=fo)
-            print(" Final Fix %d" % self.final_fix_time, file=fo)
+            print(
+                " Final Fix %s" % int(self.final_fix_time)
+                if self.final_fix_time
+                else "None",
+                file=fo,
+            )
             if self.magvar:
                 print("   Mag Var %f" % self.magvar, file=fo)
         else:
             print("Invalid GPS fix", file=fo)
+
+    def __repr__(self):
+        x = io.StringIO()
+        self.dump(x)
+        x.seek(0)
+        return x.read()
 
 
 # if __name__ == '__main__':
