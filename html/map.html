@@ -4,6 +4,7 @@
 
         <link rel="stylesheet" href="../script/leaflet.css" />
         <link rel="stylesheet" href="../script/leaflet-ruler.css" />
+        <link rel="stylesheet" href="../script/easy-button.css" />
 <!--
         <link rel="stylesheet" href="../script/leaflet-reticle.css" />
 -->
@@ -12,6 +13,7 @@
         <link rel="stylesheet" href="../script/leaflet.groupedlayercontrol.css" />
         <script src="../script/leaflet.js"></script>
         <script src="../script/leaflet-ruler.js"></script>
+        <script src="../script/easy-button.js"></script>
         <script src="../script/leaflet-svg-shape-markers.js"></script>
         <script src="../script/L.KML.js"></script>
         <script src="../script/Control.Coordinates.js"></script>
@@ -1455,6 +1457,7 @@
                 L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '../script/images/reticle.png', false);
             } 
 
+
             // layer control
 
             var baseLayers = {
@@ -1543,6 +1546,14 @@
                 loadGliderPosition(map, layerControl, glider, mission);
                 loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true, true);
                 loadGliderDAC(map, layerControl, path[first], mission); 
+
+                L.easyButton('<img src="../script/images/diveplot_icon.png">', function(){
+                    if (mission != '')
+                        window.location.href = '../' + glider + '?mission=' + mission;
+                    else
+                        window.location.href = '../' + glider;
+                }).addTo(map);
+
             }
             else {
                 document.title = 'map';
