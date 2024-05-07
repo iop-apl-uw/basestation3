@@ -28,8 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines for creating KML files from netCDF data, comm.log and target files
-"""
+"""Routines for creating KML files from netCDF data, comm.log and target files"""
 
 import cProfile
 import collections
@@ -37,13 +36,15 @@ import functools
 import io
 import glob
 import math
+import re
 import os
 import pstats
 import sys
 import time
 import zipfile
-import importlib.util
-import importlib
+import pdb
+# import importlib.util
+# import importlib
 
 import numpy as np
 
@@ -84,7 +85,7 @@ dive_gps_position = collections.namedtuple(
 )
 surface_pos = collections.namedtuple(
     "surface_pos",
-    ["gps_fix_lon", "gps_fix_lat", "gps_fix_time", "dive_num", "call_cycle"],
+    ["gps_fix_lon", "gps_fix_lat", "gps_fix_time", "dive_num", "call_cycle", "sms"],
 )
 
 m_per_deg = 111120.0
@@ -272,7 +273,9 @@ def printHeader(name, description, glider_color, fo):
     fo.write("    </StyleMap>\n")
 
 
-def printDivePlacemark(name, description, lon, lat, depth, fo, hide_label, pairs=None, style=None):
+def printDivePlacemark(
+    name, description, lon, lat, depth, fo, hide_label, pairs=None, style=None
+):
     """Places a seaglider marker on the map"""
     # Start dive place mark
     fo.write("    <Placemark>\n")
@@ -922,7 +925,7 @@ def printDive(
             ballon_pairs.append(("Surface current dir", f"{surf_dir:.2f} degrees"))
             ballon_pairs.append(("Surface current mag", f"{surf_mag:.3f} m/s"))
 
-    if hasattr(base_opts, 'vis_base_url') and base_opts.vis_base_url:
+    if hasattr(base_opts, "vis_base_url") and base_opts.vis_base_url:
         ballon_pairs.append(
             (
                 "Dive page",
@@ -1133,8 +1136,107 @@ def main(
                         time.mktime(session.gps_fix.datetime),
                         session.dive_num,
                         session.call_cycle,
+                        None,
                     )
                 )
+
+    # If there is a sms_message.log, process that
+    sms_log_filename = os.path.join(base_opts.mission_dir, "sms_messages.log")
+    if os.path.exists(sms_log_filename):
+        try:
+            with open(sms_log_filename, "r") as fi:
+                for ll in fi.readlines():
+                    try:
+                        connect_ts = time.strptime(
+                            re.search(r"^.*?UTC", ll).group(0),
+                            "%H:%M:%S %d %b %Y UTC",
+                        )
+                    except Exception:
+                        log_error(f"Could not process timestamp {ll}", "exc")
+                        continue
+                    try:
+                        values = re.search(
+                            r"\((?P<msg>.*?)\):\((?P<gliderid>.*?):\((?P<counter>.*?)\)",
+                            ll,
+                        )
+                        if values and len(values.groupdict()) == 3:
+                            iridium_splits = None
+                            counter_line = values["counter"]
+                            if "GPS" not in counter_line:
+                                try:
+                                    splits = counter_line.split()
+                                    log_debug("splits = %s" % splits)
+                                    if len(splits) >= 2:
+                                        counter_line = "%s GPS,%s" % (
+                                            splits[0],
+                                            splits[1],
+                                        )
+                                        log_debug(
+                                            "New counter line (%s)" % counter_line
+                                        )
+                                        iridium_splits = splits[2].split(",")
+                                except Exception:
+                                    log_warning(
+                                        "counter line %s not an understood format"
+                                        % (counter_line,),
+                                        "exc",
+                                    )
+                            session = CommLog.ConnectSession(connect_ts, "")
+                            try:
+                                CommLog.crack_counter_line(
+                                    base_opts,
+                                    session,
+                                    counter_line.split(),
+                                    "Inbox SMS message",
+                                    1,
+                                    counter_line,
+                                )
+                            except Exception:
+                                log_error(
+                                    f"Could not crack counter line {counter_line}",
+                                    "exc",
+                                )
+                                continue
+                            if (
+                                session.gps_fix.hdop == 99.0
+                                and iridium_splits
+                                and len(iridium_splits) >= 4
+                            ):
+                                try:
+                                    ts = time.strptime(
+                                        f"{iridium_splits[0]} {iridium_splits[1]}",
+                                        "%d%m%y %H%M",
+                                    )
+                                    surface_positions.append(
+                                        surface_pos(
+                                            Utils.ddmm2dd(float(iridium_splits[3])),
+                                            Utils.ddmm2dd(float(iridium_splits[2])),
+                                            time.mktime(ts),
+                                            session.dive_num,
+                                            session.call_cycle,
+                                            "FixType:Iridium",
+                                        )
+                                    )
+                                except Exception:
+                                    log_error("Could not process iridium fix", "exc")
+                            else:
+                                # if session.gps_div
+                                surface_positions.append(
+                                    surface_pos(
+                                        Utils.ddmm2dd(session.gps_fix.lon),
+                                        Utils.ddmm2dd(session.gps_fix.lat),
+                                        time.mktime(session.gps_fix.datetime),
+                                        session.dive_num,
+                                        session.call_cycle,
+                                        "FixType:GPS",
+                                    )
+                                )
+                    except Exception:
+                        log_error(
+                            f"Error processing {sms_log_filename} line {ll}", "exc"
+                        )
+        except Exception:
+            log_error(f"Error processing {sms_log_filename}", "exc")
 
     # Sort by time
     surface_positions = sorted(
@@ -1227,6 +1329,8 @@ def main(
                 )
                 ballon_pairs.append(("Lat", f"{position.gps_fix_lat:.4f}"))
                 ballon_pairs.append(("Lon", f"{position.gps_fix_lon:.4f}"))
+                if position.sms:
+                    ballon_pairs.append(("ViaSMS", position.sms))
                 printDivePlacemark(
                     "SG%03d %d:%d"
                     % (base_opts.instrument_id, position.dive_num, position.call_cycle),
@@ -1255,6 +1359,7 @@ def main(
                     dive_gps_positions[1].gps_time_start,
                     0,
                     0,
+                    None,
                 )
             )
 
@@ -1353,6 +1458,8 @@ def main(
                     )
                     ballon_pairs.append(("Lat", f"{position.gps_fix_lat:.4f}"))
                     ballon_pairs.append(("Lon", f"{position.gps_fix_lon:.4f}"))
+                    if position.sms:
+                        ballon_pairs.append(("ViaSMS", position.sms))
                     printDivePlacemark(
                         "SG%03d %d:%d"
                         % (
@@ -1386,6 +1493,7 @@ def main(
                     dive_gps_positions[dive_num].gps_time_end,
                     dive_num,
                     0,
+                    None,
                 )
 
             # Drift track
@@ -1396,6 +1504,7 @@ def main(
                     dive_gps_positions[dive_num].gps_time_end,
                     0,
                     0,
+                    None,
                 )
             )
 
@@ -1426,6 +1535,7 @@ def main(
                         dive_gps_positions[dive_num + 1].gps_time_start,
                         0,
                         0,
+                        None,
                     )
                 )
 
@@ -1503,6 +1613,8 @@ def main(
                         )
                         ballon_pairs.append(("Lat", f"{position.gps_fix_lat:.4f}"))
                         ballon_pairs.append(("Lon", f"{position.gps_fix_lon:.4f}"))
+                        if position.sms:
+                            ballon_pairs.append(("ViaSMS", position.sms))
                         printDivePlacemark(
                             "SG%03d %d:%d"
                             % (
@@ -1564,6 +1676,9 @@ def main(
                 )
                 ballon_pairs.append(("Lat", f"{last_surface_position.gps_fix_lat:.4f}"))
                 ballon_pairs.append(("Lon", f"{last_surface_position.gps_fix_lon:.4f}"))
+                if position.sms:
+                    ballon_pairs.append(("ViaSMS", position.sms))
+
                 # printDivePlacemark("Last reported position SG%03d %d:%d"
                 #                   % (base_opts.instrument_id, last_surface_position.dive_num, last_surface_position.call_cycle),
                 printDivePlacemark(
@@ -1713,7 +1828,7 @@ def main(
         for f in base_opts.add_kml:
             log_info(f"processing extension {f}")
             try:
-                [modname, funcname] = f.split('.')
+                [modname, funcname] = f.split(".")
                 mod = Utils.loadmodule(modname + ".py")
                 if not mod:
                     continue
@@ -1723,7 +1838,7 @@ def main(
             except Exception as e:
                 log_error(f"Failed to handle extension {f}, {e}")
                 continue
- 
+
     printFooter(fo)
 
     fo.close()
