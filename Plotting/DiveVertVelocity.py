@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -773,6 +773,19 @@ def plot_vert_vel(
             "hovertemplate": "Buoy/Pitch<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
         }
     )
+    if bias_vert_speed_hdm is not None:
+        fig.add_trace(
+            {
+                "x": bias_vert_speed_hdm,
+                "y": depth,
+                "name": "Vert Speed Buoy/Pitch (HDM)<br>biased by %.1f cc (%d iterations)"
+                % (min_bias, iterations),
+                "mode": "lines",
+                "line": {"dash": "solid", "color": "Green"},
+                "hovertemplate": "HDM biased<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            }
+        )
+
     fig.add_trace(
         {
             "x": naive_model_w,
@@ -787,10 +800,10 @@ def plot_vert_vel(
         {
             "x": biased_model_w,
             "y": depth,
-            "name": f"{min_bias_gsm:.1f}cc biased Vert Speed GSM",
+            "name": f"Vert Speed GSM biased {min_bias_gsm:.1f}cc",
             "mode": "lines",
             "line": {"dash": "solid", "color": "LightGreen"},
-            "hovertemplate": "biased GSM<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            "hovertemplate": "GSM biased<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
         }
     )
     fig.add_trace(
@@ -814,17 +827,17 @@ def plot_vert_vel(
             "visible": "legendonly",
         }
     )
-    fig.add_trace(
-        {
-            "x": smoothed_w * 100.0,
-            "y": depth,
-            "name": f"Vert Speed smoothed dz/dt ({smooth_window} sec window)",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "Violet"},
-            "hovertemplate": "Smoothed dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-            "visible": "legendonly",
-        }
-    )
+    # fig.add_trace(
+    #     {
+    #         "x": smoothed_w * 100.0,
+    #         "y": depth,
+    #         "name": f"Vert Speed smoothed dz/dt ({smooth_window} sec window)",
+    #         "mode": "lines",
+    #         "line": {"dash": "solid", "color": "Violet"},
+    #         "hovertemplate": "Smoothed dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+    #         "visible": "legendonly",
+    #     }
+    # )
     fig.add_trace(
         {
             "x": upwelling_descent,
@@ -833,6 +846,7 @@ def plot_vert_vel(
             "mode": "lines",
             "line": {"dash": "solid", "color": "Red"},
             "hovertemplate": "Upwelling Descent<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            "visible": "legendonly",
         }
     )
     fig.add_trace(
@@ -843,20 +857,10 @@ def plot_vert_vel(
             "mode": "lines",
             "line": {"dash": "solid", "color": "Orange"},
             "hovertemplate": "Upwelling Ascent<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            "visible": "legendonly",
         }
     )
-    if bias_vert_speed_hdm is not None:
-        fig.add_trace(
-            {
-                "x": bias_vert_speed_hdm,
-                "y": depth,
-                "name": "Vert Speed Buoy/Pitch (HDM)<br>Biased by %.1f cc (%d iterations)"
-                % (min_bias, iterations),
-                "mode": "lines",
-                "line": {"dash": "solid", "color": "Green"},
-                "hovertemplate": "Buoy/Pitch Biased<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-            }
-        )
+
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth"
     fit_line = (
