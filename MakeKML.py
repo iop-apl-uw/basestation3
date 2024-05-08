@@ -599,6 +599,7 @@ def printDive(
     dive_num,
     last_dive,
     fo,
+    call_time=None,
 ):
     """Processes a dive
     Returns:
@@ -866,6 +867,12 @@ def printDive(
     ballon_pairs.append(("Start Lon", f"{gps_lon_start:.4f}"))
     ballon_pairs.append(("End Lat", f"{gps_lat_end:.4f}"))
     ballon_pairs.append(("End Lon", f"{gps_lon_end:.4f}"))
+    ballon_pairs.append(
+        ("Surface Time", f"{(gps_time_start - gps_time_one)/60.0:.1f} minutes")
+    )
+    if call_time:
+        ballon_pairs.append(("Call Time", f"{call_time / 60.0:.1f} minutes"))
+
     ballon_pairs.append((None, None))
     ballon_pairs.append(
         ("Dive length", "%d minutes" % ((time_vals[-1] - time_vals[0]) / 60.0))
@@ -1126,6 +1133,7 @@ def main(
     # Attempt to collect surfacing positions from comm.log
     # Do this here to get any dive0 entries
     surface_positions = []
+    call_time = collections.defaultdict(int)
     if comm_log is not None:
         for session in comm_log.sessions:
             if session.gps_fix is not None and session.gps_fix.isvalid:
@@ -1139,6 +1147,14 @@ def main(
                         None,
                     )
                 )
+            if (
+                session.connect_ts
+                and session.disconnect_ts
+                and session.dive_num is not None
+            ):
+                call_time[session.dive_num] += time.mktime(
+                    session.disconnect_ts
+                ) - time.mktime(session.connect_ts)
 
     # If there is a sms_message.log, process that
     sms_log_filename = os.path.join(base_opts.mission_dir, "sms_messages.log")
@@ -1424,6 +1440,7 @@ def main(
                 dive_num,
                 False,
                 fo,
+                call_time=call_time.get(dive_num, None),
             )
 
             # Add any non-plotted surface positions and drift tracks here
