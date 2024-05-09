@@ -493,15 +493,15 @@ def plot_vert_vel(
                     biases.append(0.5 * (biases[i] + biases[high]))
                     low = i
 
-        min_bias_gsm = biases[-1]
+        min_bias_buoy_only = biases[-1]
 
-        implied_volmax_gsm = (
+        implied_volmax_buoy_only = (
             vol0
-            - ((c_vbd + min_bias_gsm * vbd_cnts_per_cc) - vbd_min) / vbd_cnts_per_cc
+            - ((c_vbd + min_bias_buoy_only * vbd_cnts_per_cc) - vbd_min) / vbd_cnts_per_cc
         )
-        implied_cvbd_gsm = c_vbd + min_bias_gsm * vbd_cnts_per_cc
+        implied_cvbd_buoy_only = c_vbd + min_bias_buoy_only * vbd_cnts_per_cc
 
-        # Prior to the addition of the GSM calculation (flightModelW above), the code below was used to
+        # Prior to the addition of the flightModelW above, the code below was used to
         # improve the use of the HDM output in edge cases.  A typical example is a test
         # dive in Shilshole where dive time and climb time were dramatically different.  The resulting
         # profile often had the dive or climb being marked completly as stalled, and the
@@ -676,15 +676,15 @@ def plot_vert_vel(
     BaseDB.addValToDB(
         base_opts,
         dive_nc_file.dive_number,
-        "implied_C_VBD_GSM",
-        implied_cvbd_gsm,
+        "implied_C_VBD_bias_only",
+        implied_cvbd_buoy_only,
         con=conn,
     )
     BaseDB.addValToDB(
         base_opts,
         dive_nc_file.dive_number,
-        "implied_volmax_GSM",
-        implied_volmax_gsm,
+        "implied_volmax_bias_only",
+        implied_volmax_buoy_only,
         con=conn,
     )
     BaseDB.addValToDB(
@@ -751,6 +751,7 @@ def plot_vert_vel(
             "mode": "lines",
             "line": {"dash": "dash", "color": "Blue"},
             "hovertemplate": "Vert Speed Desired (dive)",
+            "showlegend": False,
         }
     )
     fig.add_trace(
@@ -761,49 +762,7 @@ def plot_vert_vel(
             "mode": "lines",
             "line": {"dash": "dash", "color": "Blue"},
             "hovertemplate": "Vert Speed Desired (climb)",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": vert_speed_hdm,
-            "y": depth,
-            "name": "Vert Speed Buoy/Pitch (HDM)",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "Cyan"},
-            "hovertemplate": "Buoy/Pitch<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-        }
-    )
-    if bias_vert_speed_hdm is not None:
-        fig.add_trace(
-            {
-                "x": bias_vert_speed_hdm,
-                "y": depth,
-                "name": "Vert Speed Buoy/Pitch (HDM)<br>biased by %.1f cc (%d iterations)"
-                % (min_bias, iterations),
-                "mode": "lines",
-                "line": {"dash": "solid", "color": "Green"},
-                "hovertemplate": "HDM biased<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-            }
-        )
-
-    fig.add_trace(
-        {
-            "x": naive_model_w,
-            "y": depth,
-            "name": "Vert Speed GSM",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "LightBlue"},
-            "hovertemplate": "GSM<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": biased_model_w,
-            "y": depth,
-            "name": f"Vert Speed GSM biased {min_bias_gsm:.1f}cc",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "LightGreen"},
-            "hovertemplate": "GSM biased<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            "showlegend": False,
         }
     )
     fig.add_trace(
@@ -816,6 +775,49 @@ def plot_vert_vel(
             "hovertemplate": "dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
         }
     )
+    fig.add_trace(
+        {
+            "x": naive_model_w,
+            "y": depth,
+            "name": "Uncorrected model w/glider parms",
+            "mode": "lines",
+            "line": {"dash": "solid", "color": "LightBlue"},
+            "hovertemplate": "uncorrected model<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+        }
+    )
+    fig.add_trace(
+        {
+            "x": biased_model_w,
+            "y": depth,
+            "name": f"model with buoyancy biased {min_bias_buoy_only:.1f}cc",
+            "mode": "lines",
+            "line": {"dash": "solid", "color": "LightGreen"},
+            "hovertemplate": "buoyancy biased<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+        }
+    )
+    fig.add_trace(
+        {
+            "x": vert_speed_hdm,
+            "y": depth,
+            "name": "Vert Speed Buoy/Pitch (current FMS-HDM)",
+            "mode": "lines",
+            "line": {"dash": "solid", "color": "Cyan"},
+            "hovertemplate": "Buoy/Pitch<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+        }
+    )
+    if bias_vert_speed_hdm is not None:
+        fig.add_trace(
+            {
+                "x": bias_vert_speed_hdm,
+                "y": depth,
+                "name": "Vert Speed Buoy/Pitch (biased FMS-HDM)<br>biased by %.1f cc (%d iterations)"
+                % (min_bias, iterations),
+                "mode": "lines",
+                "line": {"dash": "solid", "color": "Green"},
+                "hovertemplate": "FMS-HDM biased<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            }
+        )
+
     fig.add_trace(
         {
             "x": obs_w * 100.0,
@@ -864,7 +866,7 @@ def plot_vert_vel(
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth"
     fit_line = (
-        f"Best GSM VBD bias={min_bias_gsm:.0f}cc Implies: C_VBD={implied_cvbd_gsm:.0f}ad, volmax={implied_volmax_gsm:.0f}cc<br>"
+        f"Best buoyancy bias={min_bias_buoy_only:.0f}cc Implies: C_VBD={implied_cvbd_buoy_only:.0f}ad, volmax={implied_volmax_buoy_only:.0f}cc<br>"
         f"Best Fit VBD bias={min_bias:.0f}cc Implies: C_VBD={implied_cvbd:.0f}ad, volmax={implied_volmax:.0f}cc, max MAX_BUOY={implied_max_maxbuoy:.0f}cc<br>"
         f"Current Settings C_VBD={c_vbd:.0f}ad MAX_BUOY={max_buoy} SM_CC={sm_cc}<br>"
         f"Max SM_CC={implied_max_smcc:.0f}cc, min SM_CC {implied_min_smcc_surf:.1f} (based on density {density_1m:.5f} at {depth_1m:.2f}m and antenna 150cc)"

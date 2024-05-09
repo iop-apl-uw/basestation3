@@ -1188,7 +1188,7 @@ def attachHandlers(app: sanic.Sanic):
 
         mass = float(request.args['mass'][0]) if 'mass' in request.args else None
         
-        bias, hd, rms, log, plt = RegressVBD.regress(path, glider, dives, [depth1, depth2], initBias, mass, 'html', True)
+        bias, hd, vel, rms, log, plt, figs = RegressVBD.regress(path, glider, dives, [depth1, depth2], initBias, mass, 'html', True)
         if ballast:
             
             log['thrust'] = request.args['thrust'][0] if 'thrust' in request.args else -250
@@ -1201,7 +1201,7 @@ def attachHandlers(app: sanic.Sanic):
                           """
                           <script>
                           $('mass').value = {MASS};
-                          $('volmax').value = {volmax:.1f};
+                          $('volmax').value = {implied_volmax:.1f};
                           $('min_counts').value = {VBD_MIN};
                           $('max_counts').value = {VBD_MAX};
                           $('thrust').value = {thrust};

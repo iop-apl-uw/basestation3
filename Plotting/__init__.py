@@ -132,6 +132,7 @@ from . import DiveLegatoPressure
 from . import DiveLegatoData
 from . import DiveCTDCorrections
 from . import DiveVertVelocity
+from . import DiveVertVelocityNew
 from . import DivePitchRoll
 from . import DiveMagCal
 from . import DiveSBE43
