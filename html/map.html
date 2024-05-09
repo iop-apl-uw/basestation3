@@ -1542,6 +1542,7 @@
 
             if (glider !== null) {
                 document.title = glider + '-map';
+                window.name = glider + '-map';
                 lastBounds = loadBounds('' + glider);
                 loadGliderPosition(map, layerControl, glider, mission);
                 loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true, true);
@@ -1549,9 +1550,9 @@
 
                 L.easyButton('<img src="../script/images/diveplot_icon.png">', function(){
                     if (mission != '')
-                        window.location.href = '../' + glider + '?mission=' + mission;
+                        window.open('../' + glider + '?mission=' + mission, 'SG' + glider);
                     else
-                        window.location.href = '../' + glider;
+                        window.open('../' + glider, 'SG' + glider);
                 }).addTo(map);
 
             }

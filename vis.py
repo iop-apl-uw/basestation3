@@ -1097,7 +1097,7 @@ def attachHandlers(app: sanic.Sanic):
         (engplots, sgplots, engplotly, sgplotly) = await buildMissionPlotList(gliderPath(glider, request))
 
         message = {}
-        message['glider'] = f'SG{glider:03d}'
+        message['glider'] = f'{glider:03d}'
         message['dive'] = maxdv
         message['engplots'] = engplots
         message['sgplots'] = sgplots

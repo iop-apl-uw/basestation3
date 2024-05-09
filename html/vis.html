@@ -906,8 +906,8 @@
                 console.log(text);
                 return;
             }
-            document.title = data['glider'];
-            currTitle = data['glider'];
+            document.title = 'SG' + data['glider'];
+            currTitle = 'SG' + data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
                 currDive = maxDive = parseInt(data['dive']);
                 
@@ -1096,15 +1096,15 @@
 
         if (notify == 'critical')  { 
             $('btnNotifications').style.backgroundImage = "url('script/images/notification-icon.png')";
-            $('btnNotifications').innerHTML = "<img src='script/images/notification-active-flash-red.png' class='blinkfade'>";
+            $('btnNotifications').innerHTML = "<img src='script/images/notification-active-flash-red.png' class='blinkfade'/>";
         }
         else if (notify == 'error')  { 
             $('btnNotifications').style.backgroundImage = "url('script/images/notification-icon.png')";
-            $('btnNotifications').innerHTML = "<img src='script/images/notification-active-flash-yellow.png' class='blinkfade'>";
+            $('btnNotifications').innerHTML = "<img src='script/images/notification-active-flash-yellow.png' class='blinkfade'/>";
         }
         else if (notify == 'warning')  { 
             $('btnNotifications').style.backgroundImage = "url('script/images/notification-icon.png')";
-            $('btnNotifications').innerHTML = "<img src='script/images/notification-active-flash.png' class='blinkfade'>";
+            $('btnNotifications').innerHTML = "<img src='script/images/notification-active-flash.png' class='blinkfade'/>";
         }
         else if (notify == 'notify') {
             $('btnNotifications').style.backgroundImage = "url('script/images/notification-active-icon.png')";
@@ -2051,7 +2051,7 @@
 
         currGlider = glider;
         console.log(glider);
-        window.name = glider;
+        window.name = 'SG' + glider;
         loadStatus(glider, dive, !gotCurr);
         // setupStream(glider, true, true);
 {% if runMode == 'pilot' %}
