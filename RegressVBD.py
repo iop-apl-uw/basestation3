@@ -106,14 +106,14 @@ def w_misfit_abc(x0, W, Vol, Dens, Pit, m, rho, vol0):
     bias = x0[0]
     hd_a = x0[1]
     hd_b = x0[2]
-    hd_c = x0[3]
+    hd_c = 5.7e-6 # x0[3]
     return w_misfit(bias, hd_a, hd_b, hd_c, W, Vol, Dens, Pit, m, rho, vol0)
 
 def w_misfit_bias(x0, abc, W, Vol, Dens, Pit, m, rho, vol0):
     bias = x0[0]
     hd_a = abc[0]
     hd_b = abc[1]
-    hd_c = abc[2]
+    hd_c = 5.7e-6 # abc[2]
     return w_misfit(bias, hd_a, hd_b, hd_c, W, Vol, Dens, Pit, m, rho, vol0)
 
 def getVars(fname, basis_C_VBD, basis_VBD_CNV):
@@ -244,10 +244,10 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
 
     if bias_only:
         x0 = [init_bias]
-        abc = [basis_HD_A, basis_HD_B, basis_HD_C]
+        abc = [basis_HD_A, basis_HD_B, 5.7e-6] # basis_HD_C]
         x, rms_final, iter, calls, warns = scipy.optimize.fmin(func=w_misfit_bias, x0=x0, args=(abc, W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), full_output=True, maxiter=2000, ftol=1e-3)
     else:
-        x0 = [init_bias, basis_HD_A, basis_HD_B, basis_HD_C]
+        x0 = [init_bias, basis_HD_A, basis_HD_B] # , basis_HD_C]
         x, rms_final, iter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, x0=x0, args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), full_output=True, maxiter=2000, ftol=1e-3)
 
 
@@ -259,7 +259,7 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
     else:
         hd_a = x[1]
         hd_b = x[2]
-        hd_c = x[3]
+        hd_c = 5.7e-6 # x[3]
 
     volmax = vol0*1e6 + (basis_VBD_MIN - basis_C_VBD)*basis_VBD_CNV - bias
     c_vbd = basis_C_VBD + bias/basis_VBD_CNV
