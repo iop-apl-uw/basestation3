@@ -916,7 +916,7 @@ def get_FM_defaults(consts_d, glider_type=None):
             consts_d["hd_b"] = 0.015848931924611  # a little more drag than even DGs
             consts_d[
                 "hd_s"
-            ] = 0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+            ] = sg_hd_s # 0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
 
     elif glider_type == DEEPGLIDER:
         # TODO change these defaults since we now use hd_s = 0

@@ -705,7 +705,7 @@ global_options_dict = {
     # DOC regression scripts.
     "fm_isopycnal": options_t(
         False,
-        ("Base", "Reprocess", "FlightModel"),
+        ("Base", "Reprocess", "FlightModel", "MakeDiveProfiles"),
         ("--fm_isopycnal",),
         bool,
         {

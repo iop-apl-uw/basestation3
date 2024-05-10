@@ -5669,13 +5669,17 @@ def make_dive_profile(
         # However, abs compression and thermal expansion only apply to the hull volume not the compressee fluid
         # so remove vol_comp to compute that effect and then add vol_comp to get total volume
         # We use vol_comp_ref since we want the assumed volume of the uncompressed hull on the reference surface
-        volume_hull_v = displaced_volume_v - vol_comp_ref
         # The abs_compress and therm_expan numbers are very small.  Even with DG at 6Km, the exp term is small (~1e-3)
         # so the exp term is approximately linear, i.e., 1+<term>.
-        volume_v = volume_hull_v * np.exp(
-            -abs_compress * ctd_sg_press_v + therm_expan * (temp_cor_v - temp_ref)
-        )
-        volume_v = volume_v + vol_comp_v
+        if base_opts.fm_isopycnal:
+            volume_v = displaced_volume_v
+        else:
+            volume_hull_v = displaced_volume_v - vol_comp_ref
+            volume_v = volume_hull_v * np.exp(
+                -abs_compress * ctd_sg_press_v + therm_expan * (temp_cor_v - temp_ref)
+            )
+            volume_v = volume_v + vol_comp_v
+ 
         TraceArray.trace_array("vol", volume_v)
         # if False:
         #     log_info(
@@ -5917,7 +5921,10 @@ def make_dive_profile(
             mass_kg = calib_consts["mass"]  # critical to have this in kg
             gravity = 9.82  # m/s2
             rhoxl2_2m = (rho0 * glider_length * glider_length) / (2 * mass_kg)
-            dens_raw_v = seawater.dens(salin_raw_v, temp_raw_v, ctd_press_v)
+            if fm_isopycnal:
+                dens_raw_v = seawater.pden(salin_raw_v, temp_raw_v, ctd_press_v)
+            else:
+                dens_raw_v = seawater.dens(salin_raw_v, temp_raw_v, ctd_press_v)
             buoy_v = kg2g * (dens_raw_v * volume_v * 1e-6 - mass_kg)  # [g]
 
             # The sampling grid is often not aligned with motor moves
