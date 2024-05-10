@@ -1189,6 +1189,9 @@ def attachHandlers(app: sanic.Sanic):
         mass = float(request.args['mass'][0]) if 'mass' in request.args else None
         
         bias, hd, vel, rms, log, plt, figs = RegressVBD.regress(path, glider, dives, [depth1, depth2], initBias, mass, 'html', True)
+        if rms[1] == 0:
+            return sanic.response.html("did not converge")
+
         if ballast:
             
             log['thrust'] = request.args['thrust'][0] if 'thrust' in request.args else -250

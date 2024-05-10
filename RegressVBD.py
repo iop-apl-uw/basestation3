@@ -38,6 +38,16 @@ import os
 import scipy.interpolate
 import scipy.optimize
 import plotly.graph_objects
+import seawater
+
+from BaseLog import (
+    BaseLogger,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
+    log_critical,
+)
 
 import BaseOpts
 import scipy
@@ -133,7 +143,14 @@ def getVars(fname, basis_C_VBD, basis_VBD_CNV):
 
     # CTD time base
     ctd_time = nc.variables["ctd_time"][:]
+    ctd_time = nc.variables["ctd_time"][:]
+    ctd_depth = nc.variables["ctd_depth"][:]
     density_ctd = nc.variables["density"][:]
+    temp_ctd = nc.variables["temperature_raw"][:]
+    salin_ctd = nc.variables["salinity_raw"][:]
+
+    density_ctd = seawater.pden(salin_ctd, temp_ctd, ctd_depth)
+
     inds = np.nonzero(
         np.logical_and.reduce(
             (
@@ -245,11 +262,14 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
     if bias_only:
         x0 = [init_bias]
         abc = [basis_HD_A, basis_HD_B, 5.7e-6] # basis_HD_C]
-        x, rms_final, iter, calls, warns = scipy.optimize.fmin(func=w_misfit_bias, x0=x0, args=(abc, W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), full_output=True, maxiter=2000, ftol=1e-3)
+        x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_bias, x0=x0, args=(abc, W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
     else:
         x0 = [init_bias, basis_HD_A, basis_HD_B] # , basis_HD_C]
-        x, rms_final, iter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, x0=x0, args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), full_output=True, maxiter=2000, ftol=1e-3)
+        x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, x0=x0, args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
 
+    if warns > 0:
+        log_warning(f"regression did not converge (warnflag={warns})")
+        return  0, (basis_HD_A, basis_HD_B, basis_HD_C), None, (rms_init, 0), log, None, None
 
     bias = x[0]
     if bias_only:

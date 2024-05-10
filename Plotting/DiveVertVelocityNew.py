@@ -146,6 +146,10 @@ def plot_vert_vel_new(
 
     w_desired = np.fabs(float(mhead[3]))
 
+    min_bias = 0
+    best_hd = None
+    fit_fig = None
+
     bias_bo, hd_bo, vels_bo, rms_bo, log, plt, figs, = RegressVBD.regress(
                             base_opts.mission_dir,
                             base_opts.instrument_id,
@@ -157,7 +161,7 @@ def plot_vert_vel_new(
                             True,   # need to ask for dive plots to get the w velocity outputs  
                             bias_only=True,
                         )                                                                                   
-
+    
     bias, hd, vels, rms, log, plt, figs = RegressVBD.regress(
                             base_opts.mission_dir,
                             base_opts.instrument_id,
@@ -170,9 +174,12 @@ def plot_vert_vel_new(
                             bias_only=False
                         )                                                                                   
 
-    min_bias = bias
-    best_hd = hd
-    fit_fig = figs[0]
+    if rms[1] > 0:
+        min_bias = bias
+        best_hd = hd
+        fit_fig = figs[0]
+    
+    rms_mul = (0,0)
 
     if regress_dives > 1:
         dive1 = dive_num - regress_dives + 1
@@ -191,9 +198,11 @@ def plot_vert_vel_new(
                                 bias_only=False,
                                 decimate=regress_dives
                             )                                                                                   
-        min_bias = bias_mul
-        best_hd = hd_mul
-        fit_fig = figs_mul[0]
+
+        if rms_mul[1] > 0:
+            min_bias = bias_mul
+            best_hd = hd_mul
+            fit_fig = figs_mul[0]
 
 
     implied_volmax      = log['VOL0'] - ((log['C_VBD'] + min_bias / log['VBD_CNV']) - log['VBD_MIN'])*log['VBD_CNV']
@@ -215,29 +224,30 @@ def plot_vert_vel_new(
     else:
         conn = dbcon
 
-    BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_C_VBD", implied_cvbd, con=conn
-    )
-    BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_volmax", implied_volmax, con=conn
-    )
-    BaseDB.addValToDB(
-        base_opts,
-        dive_nc_file.dive_number,
-        "min_SM_CC",
-        implied_min_smcc_surf,
-        con=conn,
-    )
-    try:
-        BaseDB.addSlopeValToDB(
-            base_opts,
-            dive_nc_file.dive_number,
-            ["implied_volmax", "implied_C_VBD"],
-            con=conn,
-        )
-    except:
-        log_error("Failed to add values to database", "exc")
-
+#   NOT YET - don't overwrite DB values from trad version
+#    BaseDB.addValToDB(
+#        base_opts, dive_nc_file.dive_number, "implied_C_VBD", implied_cvbd, con=conn
+#    )
+#    BaseDB.addValToDB(
+#        base_opts, dive_nc_file.dive_number, "implied_volmax", implied_volmax, con=conn
+#    )
+#    BaseDB.addValToDB(
+#        base_opts,
+#        dive_nc_file.dive_number,
+#        "min_SM_CC",
+#        implied_min_smcc_surf,
+#        con=conn,
+#    )
+#    try:
+#        BaseDB.addSlopeValToDB(
+#            base_opts,
+#            dive_nc_file.dive_number,
+#            ["implied_volmax", "implied_C_VBD"],
+#            con=conn,
+#        )
+#    except:
+#        log_error("Failed to add values to database", "exc")
+#
     if dbcon == None:
         try:
             conn.commit()
@@ -252,71 +262,74 @@ def plot_vert_vel_new(
         return ([], [])
 
     fig = plotly.graph_objects.Figure()
-    fig.add_trace(
-        {
-            "x": [-w_desired, -w_desired],
-            "y": [np.nanmin(vels_bo[0]), np.nanmax(vels_bo[0])],
-            "name": "Vert Speed Desired (dive)",
-            "mode": "lines",
-            "line": {"dash": "dash", "color": "Grey"},
-            "hovertemplate": "Vert Speed Desired (dive)",
-            "showlegend": False,
-        }
-    )
-    fig.add_trace(
-        {
-            "x": [w_desired, w_desired],
-            "y": [np.nanmin(vels_bo[0]), np.nanmax(vels_bo[0])],
-            "name": "Vert Speed Desired (climb)",
-            "mode": "lines",
-            "line": {"dash": "dash", "color": "Grey"},
-            "hovertemplate": "Vert Speed Desired (climb)",
-            "showlegend": False,
-        }
-    )
+    if vels_bo:
+        fig.add_trace(
+            {
+                "x": [-w_desired, -w_desired],
+                "y": [np.nanmin(vels_bo[0]), np.nanmax(vels_bo[0])],
+                "name": "Vert Speed Desired (dive)",
+                "mode": "lines",
+                "line": {"dash": "dash", "color": "Grey"},
+                "hovertemplate": "Vert Speed Desired (dive)",
+                "showlegend": False,
+            }
+        )
+        fig.add_trace(
+            {
+                "x": [w_desired, w_desired],
+                "y": [np.nanmin(vels_bo[0]), np.nanmax(vels_bo[0])],
+                "name": "Vert Speed Desired (climb)",
+                "mode": "lines",
+                "line": {"dash": "dash", "color": "Grey"},
+                "hovertemplate": "Vert Speed Desired (climb)",
+                "showlegend": False,
+            }
+        )
 
-    fig.add_trace(
-        {
-            "x": vels_bo[1],
-            "y": vels_bo[0],
-            "name": "Vert Speed observed",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "Black"},
-            "hovertemplate": "dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-        }
-    )
+        fig.add_trace(
+            {
+                "x": vels_bo[1],
+                "y": vels_bo[0],
+                "name": "Vert Speed observed",
+                "mode": "lines",
+                "line": {"dash": "solid", "color": "Black"},
+                "hovertemplate": "dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            }
+        )
 
-    fig.add_trace(
-        {
-            "x": vels_bo[2],
-            "y": vels_bo[0],
-            "name": f"Uncorrected model (C_VBD={log['C_VBD']:.0f})",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "Blue"},
-            "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": vels_bo[3],
-            "y": vels_bo[0],
-            "name": f"Buoyancy only corrected model (bias={bias_bo:.1f})",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "salmon"},
-            "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-        }
-    )
-    fig.add_trace(
-        {
-            "x": vels[3],
-            "y": vels[0],
-            "name": f"HDM corrected model (bias={bias:.1f})",
-            "mode": "lines",
-            "line": {"dash": "solid", "color": "crimson"},
-            "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
-        }
-    )
-    if regress_dives > 1:
+        fig.add_trace(
+            {
+                "x": vels_bo[2],
+                "y": vels_bo[0],
+                "name": f"Uncorrected model (C_VBD={log['C_VBD']:.0f})",
+                "mode": "lines",
+                "line": {"dash": "solid", "color": "Blue"},
+                "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            }
+        )
+    if rms_bo[1] > 0:
+        fig.add_trace(
+            {
+                "x": vels_bo[3],
+                "y": vels_bo[0],
+                "name": f"Buoyancy only corrected model (bias={bias_bo:.1f})",
+                "mode": "lines",
+                "line": {"dash": "solid", "color": "salmon"},
+                "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            }
+        )
+    if rms[1] > 0:
+        fig.add_trace(
+            {
+                "x": vels[3],
+                "y": vels[0],
+                "name": f"HDM corrected model (bias={bias:.1f})",
+                "mode": "lines",
+                "line": {"dash": "solid", "color": "crimson"},
+                "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
+            }
+        )
+    if regress_dives > 1 and rms_mul[1] > 0:
         fig.add_trace(
             {
                 "x": vels_mul[3],
@@ -362,7 +375,7 @@ def plot_vert_vel_new(
     )
 
     return (
-        [fit_fig, fig],
+        [fig, fit_fig],
         [ PlotUtilsPlotly.write_output_files(
               base_opts,
               "dv%04d_vert_vel_new" % (dive_nc_file.dive_number,),
@@ -372,5 +385,5 @@ def plot_vert_vel_new(
               base_opts,
               "dv%04d_vert_vel_regression" % (dive_nc_file.dive_number,),
               fit_fig,
-          )]
+          ) if fit_fig else None]
     )
