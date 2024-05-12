@@ -149,35 +149,47 @@ def plot_vert_vel_new(
     min_bias = 0
     best_hd = None
     fit_fig = None
+    vels_baseline = None
 
-    bias_bo, hd_bo, vels_bo, rms_bo, log, plt, figs, = RegressVBD.regress(
+    rms_init = 0
+
+    bias_bo, hd_bo, vels_bo, rms_bo, log, _, _, = RegressVBD.regress(
                             base_opts.mission_dir,
                             base_opts.instrument_id,
                             [dive_num],
                             [d0, d1],
                             regress_init_bias,
                             None,   # use log mass
-                            'png',  # need to ask for plotting to get dive plots
-                            True,   # need to ask for dive plots to get the w velocity outputs  
+                            None,  
+                            False,  
                             bias_only=True,
                         )                                                                                   
+    if vels_bo:
+        vels_baseline = vels_bo
+        rms_init = rms_bo[0]
+        implied_cvbd_bo = log['C_VBD'] + bias_bo / log['VBD_CNV']
     
-    bias, hd, vels, rms, log, plt, figs = RegressVBD.regress(
+    bias, hd, vels, rms, _, _, figs = RegressVBD.regress(
                             base_opts.mission_dir,
                             base_opts.instrument_id,
                             [dive_num],
                             [d0, d1],
                             regress_init_bias,
                             None,   # use log mass
-                            'png',  # need to ask for plotting to get dive plots
-                            True,   # need to ask for dive plots to get the w velocity outputs  
+                            'html',   # get a fit quality plot in case we don't get one from multi dive
+                            False,
                             bias_only=False
                         )                                                                                   
+
+    if vels and vels_baseline is not None:
+        vels_baseline = vels
+        rms_init = rms[0]
 
     if rms[1] > 0:
         min_bias = bias
         best_hd = hd
         fit_fig = figs[0]
+        implied_cvbd_dive = log['C_VBD'] + bias / log['VBD_CNV']
     
     rms_mul = (0,0)
 
@@ -186,7 +198,7 @@ def plot_vert_vel_new(
         if dive1 < 1:
             dive1 = 1
         
-        bias_mul, hd_mul, vels_mul, rms_mul, log_mul, plt_mul, figs_mul = RegressVBD.regress(
+        bias_mul, hd_mul, vels_mul, rms_mul, _, _, figs_mul = RegressVBD.regress(
                                 base_opts.mission_dir,
                                 base_opts.instrument_id,
                                 [*range(dive1, dive_num + 1)],
@@ -203,6 +215,9 @@ def plot_vert_vel_new(
             min_bias = bias_mul
             best_hd = hd_mul
             fit_fig = figs_mul[0]
+            if vels_baseline is not None:
+                vels_baseline = vels_mul
+                rms_init = rms_mul[0]
 
 
     implied_volmax      = log['VOL0'] - ((log['C_VBD'] + min_bias / log['VBD_CNV']) - log['VBD_MIN'])*log['VBD_CNV']
@@ -210,6 +225,8 @@ def plot_vert_vel_new(
     implied_max_maxbuoy = -(implied_cvbd - log['VBD_MAX'])*log['VBD_CNV'] * log['RHO']
     implied_max_smcc    = -(implied_cvbd - log['VBD_MIN'])*log['VBD_CNV']
     implied_min_smcc_surf = log['MASS'] * (1 / density_1m - 1 / log['RHO']) + 150
+
+    implieds = f"C_VBD={implied_cvbd:.0f},A={best_hd[0]:.5f},B={best_hd[1]:.5f}<br>volmax={implied_volmax:.0f}, max MAX_BUOY={implied_max_maxbuoy:.1f}<br>max SM_CC={implied_max_smcc:.1f}, min SM_CC={implied_min_smcc_surf:.1f}<br>(based on density {density_1m:.4f} at {depth_1m:.2f}m and antenna 150cc)"
 
     log_info(
         f"implied_cvbd {implied_cvbd:.0f}, implied_volmax {implied_volmax:.1f}, implied_max_smcc {implied_max_smcc:.1f}, implied_max_maxbuoy {implied_max_maxbuoy:.1f}"
@@ -262,11 +279,11 @@ def plot_vert_vel_new(
         return ([], [])
 
     fig = plotly.graph_objects.Figure()
-    if vels_bo:
+    if vels_baseline is not None and vels_baseline[1] is not None:
         fig.add_trace(
             {
                 "x": [-w_desired, -w_desired],
-                "y": [np.nanmin(vels_bo[0]), np.nanmax(vels_bo[0])],
+                "y": [np.nanmin(vels_baseline[0]), np.nanmax(vels_baseline[0])],
                 "name": "Vert Speed Desired (dive)",
                 "mode": "lines",
                 "line": {"dash": "dash", "color": "Grey"},
@@ -277,7 +294,7 @@ def plot_vert_vel_new(
         fig.add_trace(
             {
                 "x": [w_desired, w_desired],
-                "y": [np.nanmin(vels_bo[0]), np.nanmax(vels_bo[0])],
+                "y": [np.nanmin(vels_baseline[0]), np.nanmax(vels_baseline[0])],
                 "name": "Vert Speed Desired (climb)",
                 "mode": "lines",
                 "line": {"dash": "dash", "color": "Grey"},
@@ -288,53 +305,62 @@ def plot_vert_vel_new(
 
         fig.add_trace(
             {
-                "x": vels_bo[1],
-                "y": vels_bo[0],
-                "name": "Vert Speed observed",
+                "x": vels_baseline[1],
+                "y": vels_baseline[0],
+                "name": "<b>Vert Speed observed</b>",
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "Black"},
                 "hovertemplate": "dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
             }
         )
 
+    if vels_baseline is not None and vels_baseline[2] is not None:
         fig.add_trace(
             {
-                "x": vels_bo[2],
-                "y": vels_bo[0],
-                "name": f"Uncorrected model (C_VBD={log['C_VBD']:.0f})",
+                "x": vels_baseline[2],
+                "y": vels_baseline[0],
+                "name": f"<b>Uncorrected model</b><br>RMS={rms_init:.3f}<br>C_VBD={log['C_VBD']:.0f},A={log['HD_A']:.5f},B={log['HD_B']:.5f}",
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "Blue"},
                 "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
             }
         )
+
     if rms_bo[1] > 0:
         fig.add_trace(
             {
                 "x": vels_bo[3],
                 "y": vels_bo[0],
-                "name": f"Buoyancy only corrected model (bias={bias_bo:.1f})",
+                "name": f"<b>Buoyancy only corrected model</b><br>RMS={rms_bo[1]:.3f}cm/s, bias={bias_bo:.1f}<br>C_VBD={implied_cvbd_bo:.0f}",
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "salmon"},
                 "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
             }
         )
+
     if rms[1] > 0:
+        if regress_dives > 1 and rms_mul[1] > 0:
+            tagline = f"<b>HDM corrected model</b><br>RMS={rms[1]:.3f}cm/s, bias={bias:.1f}<br>C_VBD={implied_cvbd_dive:.0f},A={hd[0]:.5f},B={hd[1]:.5f}"
+        else:
+            tagline = f"<b>HDM corrected model</b><br>RMS={rms[1]:.3f}cm/s, bias={bias:.1f}<br>{implieds}"
+
         fig.add_trace(
             {
                 "x": vels[3],
                 "y": vels[0],
-                "name": f"HDM corrected model (bias={bias:.1f})",
+                "name": tagline,
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "crimson"},
                 "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
             }
         )
     if regress_dives > 1 and rms_mul[1] > 0:
+        tagline = f"<b>HDM corrected model, multi-dives</b><br>RMS={rms_mul[1]:.3f}cm/s, bias={bias_mul:.1f}<br>{implieds}"
         fig.add_trace(
             {
                 "x": vels_mul[3],
                 "y": vels_mul[0],
-                "name": f"HDM corrected model, multi-dive (bias={bias_mul:.1f})",
+                "name": tagline,
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "Magenta"},
                 "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
@@ -343,15 +369,11 @@ def plot_vert_vel_new(
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth"
-    fit_line = (
-        f"Best Fit VBD bias={min_bias:.0f}cc Implies: C_VBD={implied_cvbd:.0f}ad, volmax={implied_volmax:.0f}cc, max MAX_BUOY={implied_max_maxbuoy:.0f}cc<br>"
-        f"Max SM_CC={implied_max_smcc:.0f}cc, min SM_CC {implied_min_smcc_surf:.1f} (based on density {density_1m:.5f} at {depth_1m:.2f}m and antenna 150cc)"
-    )
 
     fig.update_layout(
         {
             "xaxis": {
-                "title": f"Vertical Velocity (cm/sec)<br>{fit_line}",
+                "title": f"Vertical Velocity (cm/sec)", # <br>{fit_line}",
                 "showgrid": True,
                 # "side": "top"
             },

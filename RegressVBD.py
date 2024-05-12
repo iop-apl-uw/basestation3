@@ -100,31 +100,28 @@ def flightModelW(bu, ph, xl, a, b, c, rho, s):
     except ValueError:
         umag = 0
 
-    return umag * math.sin(th)
-
-def w_misfit(bias, hd_a, hd_b, hd_c, W, Vol, Dens, Pit, m, rho, vol0):
-    rms = 0
-    for k, vbd in enumerate(Vol): 
-        v = vol0*1e6 + vbd - bias
-        bu = 1000.0 * (-m + Dens[k] * v * 1.0e-6)
-        w = 100*flightModelW(bu, Pit[k], 1.8, hd_a, hd_b, hd_c, rho, -0.25)
-        rms = rms + pow(w - W[k], 2.0)
-
-    return math.sqrt(rms/len(Vol))
+    if np.isfinite(umag) and np.isfinite(th):
+        return umag * math.sin(th)
+    else:
+        return None
 
 def w_misfit_abc(x0, W, Vol, Dens, Pit, m, rho, vol0):
     bias = x0[0]
     hd_a = x0[1]
     hd_b = x0[2]
     hd_c = 5.7e-6 # x0[3]
-    return w_misfit(bias, hd_a, hd_b, hd_c, W, Vol, Dens, Pit, m, rho, vol0)
 
-def w_misfit_bias(x0, abc, W, Vol, Dens, Pit, m, rho, vol0):
-    bias = x0[0]
-    hd_a = abc[0]
-    hd_b = abc[1]
-    hd_c = 5.7e-6 # abc[2]
-    return w_misfit(bias, hd_a, hd_b, hd_c, W, Vol, Dens, Pit, m, rho, vol0)
+    bu = 1000.0 * (-m + Dens * (vol0*1e6 + (Vol - bias)) * 1.0e-6)
+    W_model = getModelW(bu, Pit, hd_a, hd_b, hd_c, rho)
+
+    return np.sqrt(np.nanmean((W_model - W)**2))
+
+def w_misfit_bias(bias, abc, W, Vol, Dens, Pit, m, rho, vol0):
+
+    bu = 1000.0 * (-m + Dens * (vol0*1e6 + (Vol - bias)) * 1.0e-6)
+    W_biased = getModelW(bu, Pit, abc[0], abc[1], abc[2] ,rho)
+
+    return np.nanmean(W_biased - W)
 
 def getVars(fname, basis_C_VBD, basis_VBD_CNV):
     try:
@@ -145,7 +142,8 @@ def getVars(fname, basis_C_VBD, basis_VBD_CNV):
     ctd_time = nc.variables["ctd_time"][:]
     ctd_time = nc.variables["ctd_time"][:]
     ctd_depth = nc.variables["ctd_depth"][:]
-    density_ctd = nc.variables["density"][:]
+    # density_ctd = nc.variables["density"][:]
+    # use raw 
     temp_ctd = nc.variables["temperature_raw"][:]
     salin_ctd = nc.variables["salinity_raw"][:]
 
@@ -172,15 +170,29 @@ def getVars(fname, basis_C_VBD, basis_VBD_CNV):
 
     w = Utils.ctr_1st_diff(-depth * 100, time)
 
+    inds = np.nonzero(
+        np.logical_and.reduce(
+            (
+                np.isfinite(density),
+                np.isfinite(w),
+                np.isfinite(pitch),
+            )
+        )
+    )[0]
+
     nc.close()
 
-    return w, depth, vbd, density, pitch
+    return w[inds], depth[inds], vbd[inds], density[inds], pitch[inds]
 
 def getModelW(bu, Pit, HD_A, HD_B, HD_C, rho0):
     W = bu.copy()
     for k, b in enumerate(bu):
-        W[k] = 100*flightModelW(b, Pit[k], 1.8, 
-                                HD_A, HD_B, HD_C, rho0, -0.25)
+        w = flightModelW(b, Pit[k], 1.8, HD_A, HD_B, HD_C, rho0, -0.25)
+        if w:
+            W[k] = 100*w
+        else:
+            W[k] = 0
+ 
     return W
 
 def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives, bias_only=False, decimate=1):
@@ -219,6 +231,9 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
 
     nc.close()
 
+    # collect the entire dataset over possibly multiple dives, but only 
+    # in the interesting depth band
+
     W        = np.empty(shape=(0))
     Dens     = np.empty(shape=(0))
     Vol      = np.empty(shape=(0))
@@ -241,7 +256,6 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
                 (
                     depth > dlims[0],
                     depth < dlims[1],
-                    np.isfinite(density)
                 )
             )
         )[0]
@@ -253,33 +267,60 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
         Dens = np.concatenate((Dens, density[inds]))
         Pit  = np.concatenate((Pit, pitch[inds]))
 
+        # get single latest dive whole dive (not depth ranged) variables
+        # for return purposes
+        if i == dives[-1]:
+            Wwhole       = w
+            depthwhole   = depth
+            densitywhole = density
+            pitchwhole   = pitch
+            vbdwhole     = vbd
+ 
+            bu = 1000.0 * (-basis_MASS + density * (vol0*1e6 + vbd) * 1.0e-6)
+            Wwhole_unbiased = getModelW(bu, pitch,
+                                        basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0)
+
     bu = 1000.0 * (-basis_MASS + Dens * (vol0*1e6 + Vol) * 1.0e-6)
-    W_unbiased = getModelW(bu, Pit,
-                           basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0)
+    W_unbiased = getModelW(bu, Pit, basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0)
+    rms_init = np.sqrt(np.nanmean((W_unbiased - W)**2))
 
-    rms_init = math.sqrt(np.sum((W_unbiased - W)*(W_unbiased - W))/len(W))
-
+    # use bisection for the bias only search for the rare cases where its better
+    # convergence properties make a difference
     if bias_only:
-        x0 = [init_bias]
         abc = [basis_HD_A, basis_HD_B, 5.7e-6] # basis_HD_C]
-        x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_bias, x0=x0, args=(abc, W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
-    else:
-        x0 = [init_bias, basis_HD_A, basis_HD_B] # , basis_HD_C]
-        x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, x0=x0, args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
-
-    if warns > 0:
-        log_warning(f"regression did not converge (warnflag={warns})")
-        return  0, (basis_HD_A, basis_HD_B, basis_HD_C), None, (rms_init, 0), log, None, None
-
-    bias = x[0]
-    if bias_only:
+        try:
+            x, res = scipy.optimize.brentq(w_misfit_bias, -600, 600, 
+                                           args=(abc, W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), 
+                                           maxiter=50, xtol=1e-3, full_output=True, disp=True)
+        except:
+            warns = 1
+        else:
+            warns = 0
+    
+        bias = x
         hd_a = abc[0]
         hd_b = abc[1]
         hd_c = abc[2]
     else:
+        x0 = [init_bias, basis_HD_A, basis_HD_B] # , basis_HD_C]
+        x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, 
+                                                                x0=x0, 
+                                                                args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), 
+                                                                maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
+
+        bias = x[0]
         hd_a = x[1]
         hd_b = x[2]
         hd_c = 5.7e-6 # x[3]
+
+    if warns > 0:
+        log_warning(f"regression did not converge (warnflag={warns})")
+        inds = np.nonzero( np.isfinite(Wwhole_unbiased) )
+        return  0, (basis_HD_A, basis_HD_B, basis_HD_C), (depthwhole[inds], Wwhole[inds], Wwhole_unbiased[inds], None), (rms_init, 0), log, None, None
+
+    bu = 1000.0 * (-basis_MASS + Dens * (vol0*1e6 + Vol - bias) * 1.0e-6)
+    W_biased = getModelW(bu, Pit, hd_a, hd_b, hd_c, basis_RHO0)
+    rms_final = np.sqrt(np.nanmean((W_biased - W)**2))
 
     volmax = vol0*1e6 + (basis_VBD_MIN - basis_C_VBD)*basis_VBD_CNV - bias
     c_vbd = basis_C_VBD + bias/basis_VBD_CNV
@@ -287,11 +328,20 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
     log['implied_volmax'] = volmax;
     log['implied_C_VBD'] = c_vbd;
 
-    if not doplot:
-        return bias, (hd_a, hd_b, hd_c), None, (rms_init, rms_final), log, None, None
+    bu = 1000.0 * (-basis_MASS + densitywhole * (vol0*1e6 + vbdwhole - bias) * 1.0e-6)
+    Wwhole_biased = getModelW(bu, pitchwhole, hd_a, hd_b, hd_c, basis_RHO0)
 
-    bu = 1000.0 * (-basis_MASS + Dens * (vol0*1e6 + Vol - bias) * 1.0e-6)
-    W_biased = getModelW(bu, Pit, hd_a, hd_b, hd_c, basis_RHO0)
+    inds = np.nonzero(
+        np.logical_and.reduce(
+            (
+                np.isfinite(Wwhole_unbiased),
+                np.isfinite(Wwhole_biased),
+            )
+        )
+    )
+
+    if not doplot:
+        return bias, (hd_a, hd_b, hd_c), (depthwhole[inds], Wwhole[inds], Wwhole_unbiased[inds], Wwhole_biased[inds]), (rms_init, rms_final), log, None, None
 
     minx = min([min(W_biased), min(W_unbiased)])
     maxx = max([max(W_biased), max(W_unbiased)])
@@ -394,127 +444,113 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
                             include_mathjax="cdn",
                            ) ]
 
-    if plot_dives:
-        for i in dives:
-            fname = os.path.join(path, f'p{glider:03d}{i:04d}.nc')
+    if not plot_dives:
+        return bias, (hd_a, hd_b, hd_c), (depthwhole[inds], Wwhole[inds], Wwhole_unbiased[inds], Wwhole_biased[inds]), (rms_init, rms_final), log, imgs, figs
+    
+    for i in dives:
+        fname = os.path.join(path, f'p{glider:03d}{i:04d}.nc')
 
-            w, depth, vbd, density, pitch = getVars(fname, basis_C_VBD, basis_VBD_CNV)
+        w, depth, vbd, density, pitch = getVars(fname, basis_C_VBD, basis_VBD_CNV)
 
-            inds = np.nonzero(
-                np.logical_and.reduce(
-                    (
-                        np.isfinite(pitch),
-                        np.isfinite(w),
-                        np.isfinite(density)
-                    )
+        bu = 1000.0 * (-basis_MASS + density * (vol0*1e6 + vbd) * 1.0e-6)
+        w_unbiased = getModelW(bu, pitch,
+                               basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0)
+
+        bu = 1000.0 * (-basis_MASS + density * (vol0*1e6 + vbd - bias) * 1.0e-6)
+        w_biased = getModelW(bu, pitch, hd_a, hd_b, hd_c, basis_RHO0)
+
+        inds = np.nonzero(
+            np.logical_and.reduce(
+                (
+                    np.isfinite(w_unbiased),
+                    np.isfinite(w_biased),
                 )
             )
-           
-            w       = w[inds]
-            depth   = depth[inds]
-            vbd     = vbd[inds]
-            density = density[inds]
-            pitch   = pitch[inds]
+        )
 
-            bu = 1000.0 * (-basis_MASS + density * (vol0*1e6 + vbd) * 1.0e-6)
-            w_unbiased = getModelW(bu, pitch,
-                                   basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0)
+        w       = w[inds]
+        depth   = depth[inds]
+        w_biased = w_biased[inds]
+        w_unbiased = w_unbiased[inds]
 
-            bu = 1000.0 * (-basis_MASS + density * (vol0*1e6 + vbd - bias) * 1.0e-6)
-            w_biased = getModelW(bu, pitch, hd_a, hd_b, hd_c, basis_RHO0)
+        fig = plotly.graph_objects.Figure()
+        fig.add_trace(
+            {
+                "x": w, 
+                "y": depth,
+                "name": "observed",
+                "mode": "lines",
+                "line": { "color": "black", },
+                "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+            }
+        )
+        fig.add_trace(
+            {
+                "x": w_unbiased,
+                "y": depth,
+                "name": "uncorrected model",
+                "mode": "lines",
+                 "line": { "color": "Blue", },
+                "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+            }
+        )
+        fig.add_trace(
+            {
+                "x": w_biased,
+                "y": depth,
+                "name": "corrected",
+                "mode": "lines",
+                "line": {"color": "Red"},
+                "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
+            }
+        )
 
-            inds = np.nonzero(
-                np.logical_and.reduce(
-                    (
-                        np.isfinite(w_unbiased),
-                        np.isfinite(w_biased),
-                    )
-                )
-            )
+        title = f"SG{glider:03d} {mission} dive {i}<br>(correct model (red) closer to observed (black) is better)"
 
-            w       = w[inds]
-            depth   = depth[inds]
-            w_biased = w_biased[inds]
-            w_unbiased = w_unbiased[inds]
+        fig.update_layout(
+            {
+                "xaxis": {
+                    "title": "vert vel (cm/s)",
+                    "showgrid": True,
+                },
+                "yaxis": {
+                    "title": "depth (m)",
+                    "showgrid": True,
+                    "autorange": "reversed",
+                },
+                "title": {
+                    "text": title, 
+                    "xanchor": "center",
+                    "yanchor": "top",
+                    "x": 0.5,
+                    "y": 0.95,
+                },
+                "margin": {
+                    "t": 100,
+                    "b": 125,
+                },
+            }
+        )
 
-            fig = plotly.graph_objects.Figure()
-            fig.add_trace(
-                {
-                    "x": w, 
-                    "y": depth,
-                    "name": "observed",
-                    "mode": "lines",
-                    "line": { "color": "black", },
-                    "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
-                }
-            )
-            fig.add_trace(
-                {
-                    "x": w_unbiased,
-                    "y": depth,
-                    "name": "uncorrected model",
-                    "mode": "lines",
-                     "line": { "color": "Blue", },
-                    "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
-                }
-            )
-            fig.add_trace(
-                {
-                    "x": w_biased,
-                    "y": depth,
-                    "name": "corrected",
-                    "mode": "lines",
-                    "line": {"color": "Red"},
-                    "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
-                }
-            )
+        figs.append(fig)
 
-            title = f"SG{glider:03d} {mission} dive {i}<br>(correct model (red) closer to observed (black) is better)"
-
-            fig.update_layout(
-                {
-                    "xaxis": {
-                        "title": "vert vel (cm/s)",
-                        "showgrid": True,
-                    },
-                    "yaxis": {
-                        "title": "depth (m)",
-                        "showgrid": True,
-                        "autorange": "reversed",
-                    },
-                    "title": {
-                        "text": title, 
-                        "xanchor": "center",
-                        "yanchor": "top",
-                        "x": 0.5,
-                        "y": 0.95,
-                    },
-                    "margin": {
-                        "t": 100,
-                        "b": 125,
-                    },
-                }
-            )
-
-            figs.append(fig)
-
-            if doplot == 'png':
-                imgs.append(fig.to_image(format="png"))
-            elif doplot == 'html':
-                imgs.append(fig.to_html(
-                                    include_plotlyjs="cdn",
-                                    full_html=False,
-                                    validate=True,
-                                    config={
-                                        "modeBarButtonsToRemove": ["lasso2d", "select2d"],
-                                        "scrollZoom": False,
-                                    },
-                                    include_mathjax="cdn",
-                                )
-                           )
+        if doplot == 'png':
+            imgs.append(fig.to_image(format="png"))
+        elif doplot == 'html':
+            imgs.append(fig.to_html(
+                                include_plotlyjs="cdn",
+                                full_html=False,
+                                validate=True,
+                                config={
+                                    "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                                    "scrollZoom": False,
+                                },
+                                include_mathjax="cdn",
+                            )
+                       )
 
     return bias, (hd_a, hd_b, hd_c), (depth, w, w_unbiased, w_biased), (rms_init, rms_final), log, imgs, figs
-
+    
 from itertools import chain
 
 def parseSingleRange(rng):
