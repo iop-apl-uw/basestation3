@@ -1171,7 +1171,7 @@
         var cookie;
         var priority;
         var first = false;
-        const stockPriority = ["diveplot", "reduced_ctd", "ctd", "ts", "vert_vel", "pitch", "roll", "roll_rate", "cog", "ctw", 
+        const stockPriority = ["diveplot", "reduced_ctd", "ctd", "ts", "vert_vel_new", "vert_vel_regression", "pitch", "roll", "roll_rate", "magcal", "ctw", "mission_map", "mission_energy", 
                                "wlbb2fl_Chlorophyll_fluorescence", "wlbb2fl_backscatter", "aa4831"];
        
         const subs = { "wlbb2fl_Chlorophyll_fluorescence": "Chlorophyll",
@@ -1209,6 +1209,7 @@
             var plots = resp['dvplots'];
             var plotly = resp['plotlyplots'];
             // var engplots = resp['engplots'];
+            var eplots = [...engplots];
 
             var ab = plots.indexOf('ab');
             if (ab > -1 && !priority.includes('ab')) {
@@ -1221,6 +1222,18 @@
                     x += 200;
                     idx = plots.indexOf(p);
                     plots.splice(idx, 1); 
+                    links.push(p in subs ? subs[p] : p);
+
+                    if (!first && setCurr) {
+                        first = true;
+                        currElt = p;
+                    } 
+                }
+                else if (eplots.includes(p)) {
+                    addPlot('eng', p, x, engplotlyplots.includes(p));
+                    x += 200;
+                    idx = eplots.indexOf(p);
+                    eplots.splice(idx, 1); 
                     links.push(p in subs ? subs[p] : p);
 
                     if (!first && setCurr) {
@@ -1250,8 +1263,8 @@
 
             links.push('eng');
 
-            engplots.sort();
-            for (p of engplots) {
+            eplots.sort();
+            for (p of eplots) {
                 addPlot('eng', p, x, engplotlyplots.includes(p));
                 links.push(p in subs ? subs[p] : p);
                 x += 200;

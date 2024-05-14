@@ -220,60 +220,59 @@ def plot_vert_vel_new(
                 rms_init = rms_mul[0]
 
 
-    implied_volmax      = log['VOL0'] - ((log['C_VBD'] + min_bias / log['VBD_CNV']) - log['VBD_MIN'])*log['VBD_CNV']
-    implied_cvbd        = log['C_VBD'] + min_bias / log['VBD_CNV']
-    implied_max_maxbuoy = -(implied_cvbd - log['VBD_MAX'])*log['VBD_CNV'] * log['RHO']
-    implied_max_smcc    = -(implied_cvbd - log['VBD_MIN'])*log['VBD_CNV']
-    implied_min_smcc_surf = log['MASS'] * (1 / density_1m - 1 / log['RHO']) + 150
+    if best_hd:
+        implied_volmax      = log['VOL0']*1e6 - ((log['C_VBD'] + min_bias / log['VBD_CNV']) - log['VBD_MIN'])*log['VBD_CNV']
+        implied_cvbd        = log['C_VBD'] + min_bias / log['VBD_CNV']
+        implied_max_maxbuoy = -(implied_cvbd - log['VBD_MAX'])*log['VBD_CNV'] * log['RHO']
+        implied_max_smcc    = -(implied_cvbd - log['VBD_MIN'])*log['VBD_CNV']
+        implied_min_smcc_surf = log['MASS'] * (1 / density_1m - 1 / log['RHO']) + 150
 
-    implieds = f"C_VBD={implied_cvbd:.0f},A={best_hd[0]:.5f},B={best_hd[1]:.5f}<br>volmax={implied_volmax:.0f}, max MAX_BUOY={implied_max_maxbuoy:.1f}<br>max SM_CC={implied_max_smcc:.1f}, min SM_CC={implied_min_smcc_surf:.1f}<br>(based on density {density_1m:.4f} at {depth_1m:.2f}m and antenna 150cc)"
+        implieds = f"max SM_CC={implied_max_smcc:.0f}, max MAX_BUOY={implied_max_maxbuoy:.0f}<br>min SM_CC={implied_min_smcc_surf:.0f} (rho {density_1m:.4f} at {depth_1m:.2f}m)"
 
-    log_info(
-        f"implied_cvbd {implied_cvbd:.0f}, implied_volmax {implied_volmax:.1f}, implied_max_smcc {implied_max_smcc:.1f}, implied_max_maxbuoy {implied_max_maxbuoy:.1f}"
-    )
-    log_info(
-        f"min SM_CC {implied_min_smcc_surf:.1f} based on density {density_1m:.5f} at {depth_1m:.2f}m and 150cc to raise the antenna"
-    )
+        log_info(
+            f"implied_cvbd {implied_cvbd:.0f}, implied_volmax {implied_volmax:.1f}, implied_max_smcc {implied_max_smcc:.1f}, implied_max_maxbuoy {implied_max_maxbuoy:.1f}"
+        )
+        log_info(
+            f"min SM_CC {implied_min_smcc_surf:.1f} based on density {density_1m:.5f} at {depth_1m:.2f}m and 150cc to raise the antenna"
+        )
 
-    if dbcon == None:
-        conn = Utils.open_mission_database(base_opts)
-        log_info("plot_vert_vel db opened")
-    else:
-        conn = dbcon
+        if dbcon == None:
+            conn = Utils.open_mission_database(base_opts)
+            log_info("plot_vert_vel db opened")
+        else:
+            conn = dbcon
 
-#   NOT YET - don't overwrite DB values from trad version
-#    BaseDB.addValToDB(
-#        base_opts, dive_nc_file.dive_number, "implied_C_VBD", implied_cvbd, con=conn
-#    )
-#    BaseDB.addValToDB(
-#        base_opts, dive_nc_file.dive_number, "implied_volmax", implied_volmax, con=conn
-#    )
-#    BaseDB.addValToDB(
-#        base_opts,
-#        dive_nc_file.dive_number,
-#        "min_SM_CC",
-#        implied_min_smcc_surf,
-#        con=conn,
-#    )
-#    try:
-#        BaseDB.addSlopeValToDB(
-#            base_opts,
-#            dive_nc_file.dive_number,
-#            ["implied_volmax", "implied_C_VBD"],
-#            con=conn,
-#        )
-#    except:
-#        log_error("Failed to add values to database", "exc")
-#
-    if dbcon == None:
+        BaseDB.addValToDB(
+            base_opts, dive_nc_file.dive_number, "regressed_C_VBD", implied_cvbd, con=conn
+        )
+        BaseDB.addValToDB(
+            base_opts, dive_nc_file.dive_number, "regressed_volmax", implied_volmax, con=conn
+        )
+        BaseDB.addValToDB(
+            base_opts, dive_nc_file.dive_number, "regressed_HD_A", best_hd[0], con=conn
+        )
+        BaseDB.addValToDB(
+            base_opts, dive_nc_file.dive_number, "regressed_HD_B", best_hd[1], con=conn
+        )
         try:
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
+            BaseDB.addSlopeValToDB(
+                base_opts,
+                dive_nc_file.dive_number,
+                ["regressed_volmax", "regressed_C_VBD"],
+                con=conn,
+            )
+        except:
+            log_error("Failed to add values to database", "exc")
 
-        log_info("plot_vert_vel db closed")
-        conn.close()
+        if dbcon == None:
+            try:
+                conn.commit()
+            except Exception as e:
+                conn.rollback()
+                log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
+
+            log_info("plot_vert_vel db closed")
+            conn.close()
 
     if not generate_plots:
         return ([], [])
@@ -307,7 +306,7 @@ def plot_vert_vel_new(
             {
                 "x": vels_baseline[1],
                 "y": vels_baseline[0],
-                "name": "<b>Vert Speed observed</b>",
+                "name": "<b>Vert Speed observed from pressure</b>",
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "Black"},
                 "hovertemplate": "dz/dt<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
@@ -319,7 +318,7 @@ def plot_vert_vel_new(
             {
                 "x": vels_baseline[2],
                 "y": vels_baseline[0],
-                "name": f"<b>Uncorrected model</b><br>RMS={rms_init:.3f}<br>C_VBD={log['C_VBD']:.0f},A={log['HD_A']:.5f},B={log['HD_B']:.5f}",
+                "name": f"<b>Model as flying on glider</b><br>C_VBD={log['C_VBD']:.0f},A={log['HD_A']:.5f},B={log['HD_B']:.5f}<br>RMS={rms_init:.3f}cm/s",
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "Blue"},
                 "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
@@ -331,7 +330,7 @@ def plot_vert_vel_new(
             {
                 "x": vels_bo[3],
                 "y": vels_bo[0],
-                "name": f"<b>Buoyancy only corrected model</b><br>RMS={rms_bo[1]:.3f}cm/s, bias={bias_bo:.1f}<br>C_VBD={implied_cvbd_bo:.0f}",
+                "name": f"<b>Buoyancy only corrected model</b><br>&#8594;C_VBD={implied_cvbd_bo:.0f}<br>RMS={rms_bo[1]:.3f}cm/s, bias={bias_bo:.1f}cc",
                 "mode": "lines",
                 "line": {"dash": "solid", "color": "salmon"},
                 "hovertemplate": "<br>%{x:.2f} cm/sec<br>%{y:.2f} meters<br><extra></extra>",
@@ -339,10 +338,9 @@ def plot_vert_vel_new(
         )
 
     if rms[1] > 0:
-        if regress_dives > 1 and rms_mul[1] > 0:
-            tagline = f"<b>HDM corrected model</b><br>RMS={rms[1]:.3f}cm/s, bias={bias:.1f}<br>C_VBD={implied_cvbd_dive:.0f},A={hd[0]:.5f},B={hd[1]:.5f}"
-        else:
-            tagline = f"<b>HDM corrected model</b><br>RMS={rms[1]:.3f}cm/s, bias={bias:.1f}<br>{implieds}"
+        tagline = f"<b>Buoyancy+HD corrected model</b><br>&#8594;C_VBD={implied_cvbd_dive:.0f},A={hd[0]:.5f},B={hd[1]:.5f}<br>RMS={rms[1]:.3f}cm/s, bias={bias:.1f}cc"
+        if regress_dives == 1 or rms_mul[1] == 0:
+            tagline = tagline + f"<br>{implieds}"
 
         fig.add_trace(
             {
@@ -355,7 +353,8 @@ def plot_vert_vel_new(
             }
         )
     if regress_dives > 1 and rms_mul[1] > 0:
-        tagline = f"<b>HDM corrected model, multi-dives</b><br>RMS={rms_mul[1]:.3f}cm/s, bias={bias_mul:.1f}<br>{implieds}"
+        tagline = f"<b>Buoyancy+HD corrected model, multi-dives</b><br>&#8594;C_VBD={implied_cvbd:.0f},A={best_hd[0]:.5f},B={best_hd[1]:.5f}<br>RMS={rms_mul[1]:.3f}cm/s, bias={bias_mul:.1f}cc<br>{implieds}"
+        
         fig.add_trace(
             {
                 "x": vels_mul[3],
@@ -368,7 +367,7 @@ def plot_vert_vel_new(
         )
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth"
+    title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth<br>Model results closer to observed values (solid black line) are better. RMS values are (model w - observed w). Lower is better."
 
     fig.update_layout(
         {
