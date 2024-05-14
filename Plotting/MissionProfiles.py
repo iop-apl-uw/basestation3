@@ -183,6 +183,7 @@ def mission_profiles(
             units = getValue(x, 'units', sk, vk, None)
             fill  = getValue(x, 'fill', sk, vk, False)
             decimals = getValue(x, 'decimals', sk, vk, None)
+            title = getValue(x, 'title', sk, vk, vk)
 
             if stop == -1 or stop >= latest:
                 stop = latest
@@ -295,7 +296,7 @@ def mission_profiles(
                 }
             )
 
-            title_text = f"{mission_str}<br>{vk}<br>section {sk}: {start}-{stop}"
+            title_text = f"{mission_str}<br>{title}<br>section {sk}: {start}-{stop}"
 
             if flip:
                 timevals.reverse()
