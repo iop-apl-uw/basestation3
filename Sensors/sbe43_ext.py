@@ -272,10 +272,15 @@ def asc2eng(base_opts, module_name, datafile=None):
     if sbe43_o2_freq is None:
         sbe43_o2_freq = datafile.remove_col("sbe43.O2Freq")
 
+
     if sbe43_o2_freq is not None:
         for i in range(len(sbe43_o2_freq)):
             if np.isfinite(sbe43_o2_freq[i]):
-                sbe43_o2_freq[i] = 4000000.0 / (sbe43_o2_freq[i] / 255.0)
+                # Rev E (67.00 and later) - just divide by 1000.
+                if datafile.version >= 67.0:
+                    sbe43_o2_freq[i] = sbe43_o2_freq[i] / 1000 # 4000000.0 / (sbe43_o2_freq[i] / 255.0)
+                else:
+                    sbe43_o2_freq[i] = 4000000.0 / (sbe43_o2_freq[i] / 255.0)
 
         datafile.eng_cols.append("sbe43.O2Freq")
 
