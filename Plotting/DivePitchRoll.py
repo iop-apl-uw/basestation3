@@ -462,16 +462,24 @@ def plot_pitch_roll(
     # roll calculations
     #
 
-    fitd = scipy.stats.linregress(
-        rollAD[iwn].ravel(), vehicle_roll_degrees_v[iwn].ravel()
-    )
-    c_roll_dive_imp = -fitd.intercept / fitd.slope
+    try:
+        fitd = scipy.stats.linregress(
+            rollAD[iwn].ravel(), vehicle_roll_degrees_v[iwn].ravel()
+        )
+        c_roll_dive_imp = -fitd.intercept / fitd.slope
+    except:
+        c_roll_dive_imp = 0
+        fitd = None
 
-    fitc = scipy.stats.linregress(
-        rollAD[iwp].ravel(), vehicle_roll_degrees_v[iwp].ravel()
-    )
-    c_roll_climb_imp = -fitc.intercept / fitc.slope
-
+    try:
+        fitc = scipy.stats.linregress(
+            rollAD[iwp].ravel(), vehicle_roll_degrees_v[iwp].ravel()
+        )
+        c_roll_climb_imp = -fitc.intercept / fitc.slope
+    except:
+        c_roll_climb_imp = 0
+        fitc = None
+ 
     log_info(f"c_roll_dive {c_roll_dive_imp}, c_roll_climb {c_roll_climb_imp}")
 
     BaseDB.addValToDB(
@@ -499,10 +507,13 @@ def plot_pitch_roll(
         conn.close()
         log_info("plot_pitch_roll db closed")
 
-    rollAD_Fit_dive = np.array([min(rollAD), max(rollAD)])
-    roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit_dive
-    rollAD_Fit_climb = np.array([min(rollAD[iwp].ravel()), max(rollAD[iwp].ravel())])
-    roll_Fit_climb = fitc.intercept + fitc.slope * rollAD_Fit_climb
+    if fitd:
+        rollAD_Fit_dive = np.array([min(rollAD), max(rollAD)])
+        roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit_dive
+
+    if fitc:
+        rollAD_Fit_climb = np.array([min(rollAD[iwp].ravel()), max(rollAD[iwp].ravel())])
+        roll_Fit_climb = fitc.intercept + fitc.slope * rollAD_Fit_climb
 
     #
     # roll plot
@@ -538,26 +549,28 @@ def plot_pitch_roll(
                 "hovertemplate": "RollAD<br>%{x:.0f}<br>%{y:.2f} deg<br><extra></extra>",
             }
         )
-        fig.add_trace(
-            {
-                "x": rollAD_Fit_dive,
-                "y": roll_Fit_dive,
-                "name": "linfit C_ROLL_DIVE",
-                "mode": "lines",
-                "line": {"dash": "solid", "color": "DarkBlue"},
-                "hovertemplate": f"Fit C_ROLL_DIVE={c_roll_dive_imp:.0f}<extra></extra>",
-            }
-        )
-        fig.add_trace(
-            {
-                "x": rollAD_Fit_climb,
-                "y": roll_Fit_climb,
-                "name": "linfit C_ROLL_CLIMB",
-                "mode": "lines",
-                "line": {"dash": "solid", "color": "Red"},
-                "hovertemplate": f"Fit C_ROLL_CLIMB={c_roll_climb_imp:.0f}<extra></extra>",
-            }
-        )
+        if fitd:
+            fig.add_trace(
+                {
+                    "x": rollAD_Fit_dive,
+                    "y": roll_Fit_dive,
+                    "name": "linfit C_ROLL_DIVE",
+                    "mode": "lines",
+                    "line": {"dash": "solid", "color": "DarkBlue"},
+                    "hovertemplate": f"Fit C_ROLL_DIVE={c_roll_dive_imp:.0f}<extra></extra>",
+                }
+            )
+        if fitc:
+            fig.add_trace(
+                {
+                    "x": rollAD_Fit_climb,
+                    "y": roll_Fit_climb,
+                    "name": "linfit C_ROLL_CLIMB",
+                    "mode": "lines",
+                    "line": {"dash": "solid", "color": "Red"},
+                    "hovertemplate": f"Fit C_ROLL_CLIMB={c_roll_climb_imp:.0f}<extra></extra>",
+                }
+            )
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Roll control vs Roll"
@@ -665,16 +678,24 @@ def plot_pitch_roll(
 
         ADs = []
         if len(centeredAD_d) > 1:
-            fitd = scipy.stats.linregress(centeredAD_d, centeredRate_d)
-            c_roll_dive_imp = -fitd.intercept / fitd.slope
-            ADs = ADs + centeredAD_d + [c_roll_dive_imp]
+            try:
+                fitd = scipy.stats.linregress(centeredAD_d, centeredRate_d)
+                c_roll_dive_imp = -fitd.intercept / fitd.slope
+                ADs = ADs + centeredAD_d + [c_roll_dive_imp]
+                c_roll_dive_imp = 0
+            except:
+                fitd = False
         else:
             fitd = False
 
         if len(centeredAD_c) > 1:
-            fitc = scipy.stats.linregress(centeredAD_c, centeredRate_c)
-            c_roll_climb_imp = -fitc.intercept / fitc.slope
-            ADs = ADs + centeredAD_c + [c_roll_climb_imp]
+            try:
+                fitc = scipy.stats.linregress(centeredAD_c, centeredRate_c)
+                c_roll_climb_imp = -fitc.intercept / fitc.slope
+                ADs = ADs + centeredAD_c + [c_roll_climb_imp]
+            except:
+                fitc = False
+                c_roll_climb_imp = 0
         else:
             fitc = False
 
@@ -703,15 +724,23 @@ def plot_pitch_roll(
         ircd = np.where(pitch_control < 0)
         ircc = np.where(pitch_control > 0)
 
-        fitd = scipy.stats.linregress(rollAD[ircd].ravel(), turnRate[ircd].ravel())
-        c_roll_dive_imp_all = -fitd.intercept / fitd.slope
+        try:
+            fitd = scipy.stats.linregress(rollAD[ircd].ravel(), turnRate[ircd].ravel())
+            c_roll_dive_imp_all = -fitd.intercept / fitd.slope
+            roll_Fit_dive_all = fitd.intercept + fitd.slope * rollAD_Fit_all
+            c_roll_dive_imp_all = 0
+        except:
+            fitd = None
 
-        fitc = scipy.stats.linregress(rollAD[ircc].ravel(), turnRate[ircc].ravel())
-        c_roll_climb_imp_all = -fitc.intercept / fitc.slope
+        try:
+            fitc = scipy.stats.linregress(rollAD[ircc].ravel(), turnRate[ircc].ravel())
+            c_roll_climb_imp_all = -fitc.intercept / fitc.slope
+            roll_Fit_climb_all = fitc.intercept + fitc.slope * rollAD_Fit_all
+        except:
+            fitc = None
+            c_roll_climb_imp_all = 0
 
         rollAD_Fit_all = np.array([max([0, min(rollAD)]), min([max(rollAD), 4096])])
-        roll_Fit_climb_all = fitc.intercept + fitc.slope * rollAD_Fit_all
-        roll_Fit_dive_all = fitd.intercept + fitd.slope * rollAD_Fit_all
 
         #
         # roll rate plot
@@ -748,26 +777,28 @@ def plot_pitch_roll(
             }
         )
 
-        fig.add_trace(
-            {
-                "x": rollAD_Fit_all,
-                "y": roll_Fit_dive_all,
-                "name": "linfit C_ROLL_DIVE all",
-                "mode": "lines",
-                "line": {"dash": "longdash", "color": "DarkBlue"},
-                "hovertemplate": f"Fit all C_ROLL_DIVE={c_roll_dive_imp_all:.0f}<extra></extra>",
-            }
-        )
-        fig.add_trace(
-            {
-                "x": rollAD_Fit_all,
-                "y": roll_Fit_climb_all,
-                "name": "linfit C_ROLL_CLIMB all",
-                "mode": "lines",
-                "line": {"dash": "longdash", "color": "Red"},
-                "hovertemplate": f"Fit all C_ROLL_CLIMB={c_roll_climb_imp_all:.0f}<extra></extra>",
-            }
-        )
+        if fitd:
+            fig.add_trace(
+                {
+                    "x": rollAD_Fit_all,
+                    "y": roll_Fit_dive_all,
+                    "name": "linfit C_ROLL_DIVE all",
+                    "mode": "lines",
+                    "line": {"dash": "longdash", "color": "DarkBlue"},
+                    "hovertemplate": f"Fit all C_ROLL_DIVE={c_roll_dive_imp_all:.0f}<extra></extra>",
+                }
+            )
+        if fitc:
+            fig.add_trace(
+                {
+                    "x": rollAD_Fit_all,
+                    "y": roll_Fit_climb_all,
+                    "name": "linfit C_ROLL_CLIMB all",
+                    "mode": "lines",
+                    "line": {"dash": "longdash", "color": "Red"},
+                    "hovertemplate": f"Fit all C_ROLL_CLIMB={c_roll_climb_imp_all:.0f}<extra></extra>",
+                }
+            )
         fig.add_trace(
             {
                 "x": centeredAD_d,
