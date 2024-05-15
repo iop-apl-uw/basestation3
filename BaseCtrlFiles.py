@@ -33,6 +33,7 @@ home directory (or other locations)
 
 """
 
+# fmt: off
 import copy
 import functools
 import json
@@ -821,6 +822,10 @@ def main():
         comm_log = CommLog.process_comm_log(
             os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
         )[0]
+
+    if comm_log is None:
+        log_error("Could not process comm.log")
+        return
 
     if base_opts.basectrlfiles_action in pagers_msgs:
         process_pagers_yml(

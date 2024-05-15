@@ -1621,6 +1621,10 @@ def main():
             os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
         )[0]
 
+    if comm_log is None:
+        log_error("Could not process comm.log")
+        return
+
     if base_opts.basedotfiles_action in ("gps", "drift"):
         process_pagers(
             base_opts,

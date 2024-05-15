@@ -2092,6 +2092,10 @@ def main():
 
     (comm_log, _, session, _, _) = process_comm_log(comm_log_path, base_opts)
 
+    if comm_log is None:
+        log_error("Could not process comm.log")
+        return 1
+
     if not base_opts.instrument_id:
         base_opts.instrument_id = comm_log.get_instrument_id()
 
