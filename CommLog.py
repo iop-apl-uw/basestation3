@@ -1266,7 +1266,8 @@ def process_comm_log(
 
             # XMODEM to glider
             if raw_strs[0] == "Sent":
-                session.transfer_direction[raw_strs[1]] = "sent"
+                if session:
+                    session.transfer_direction[raw_strs[1]] = "sent"
                 continue
 
             if raw_strs[0] == "Connected":
