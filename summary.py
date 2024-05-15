@@ -37,6 +37,7 @@ import CommLog
 import sys
 import asyncio
 import aiofiles.os
+import sys
 
 async def getCmdfileDirective(cmdfile):
     cmdfileDirective = 'unknown'
@@ -73,6 +74,13 @@ async def collectSummary(glider, path):
             start = 0
         else:
             start = statinfo.st_size - 10000
+            async with aiofiles.open(commlogfile, 'rb') as f:
+                await f.seek(-10000, 2)
+                cont = await f.read()
+                idx = cont.decode('utf-8', errors='ignore').find('Connected')
+                if idx > -1:
+                    start = start + idx
+
     except Exception as e:
         print(e)
         return {}
@@ -80,7 +88,7 @@ async def collectSummary(glider, path):
     processor = aiofiles.os.wrap(CommLog.process_comm_log)
     (commlog, commlog_pos, ongoing_session, _, _) = await processor(commlogfile, None, start_pos=start)
 
-    if not hasattr(commlog, 'sessions'):
+    if not commlog or not hasattr(commlog, 'sessions'):
         return {}
 
     if hasattr(commlog, 'sessions') and len(commlog.sessions) == 0:
@@ -262,5 +270,5 @@ async def collectSummary(glider, path):
     return out
 
 if __name__ == "__main__":
-    msg = asyncio.run(collectSummary(141, '/home/seaglider/home/sg141'))
+    msg = asyncio.run(collectSummary(int(sys.argv[1]), sys.argv[2]))
     print(msg)
