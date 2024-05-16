@@ -44,6 +44,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtils
 import PlotUtilsPlotly
+import Utils
 from BaseLog import log_error, log_debug
 from Plotting import plotdivesingle
 
@@ -68,10 +69,17 @@ def plot_CTW(
     try:
         start_time = dive_nc_file.start_time
         ctd_time = (dive_nc_file.variables["ctd_time"][:] - start_time) / 60.0
+        ctd_depth = dive_nc_file.variables["ctd_depth"][:]
         north_disp = dive_nc_file.variables["north_displacement"][:]
         east_disp = dive_nc_file.variables["east_displacement"][:]
         north_disp_gsm = dive_nc_file.variables["north_displacement_gsm"][:]
         east_disp_gsm = dive_nc_file.variables["east_displacement_gsm"][:]
+
+        lats = dive_nc_file.variables["latitude"][:]
+        lons = dive_nc_file.variables["longitude"][:]
+        lat_gps = dive_nc_file.variables["log_gps_lat"][:]
+        lon_gps = dive_nc_file.variables["log_gps_lon"][:]
+ 
         mhead = [
             float(s)
             for s in dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
@@ -91,6 +99,13 @@ def plot_CTW(
         log_error("Problems in plot_CTW", "exc")
         return ([], [])
 
+    x = lats.copy()
+    y = lons.copy()
+    x[0] = 0
+    y[0] = 0
+    for i in range(len(x)):
+        (_, _, x[i], y[i]) = Utils.rangeBearing(lats[0], lons[0], lats[i], lons[i])
+ 
     desired_head = mhead[0]
     north_disp_cum = np.cumsum(north_disp)
     east_disp_cum = np.cumsum(east_disp)
@@ -144,6 +159,70 @@ def plot_CTW(
         }
     )
 
+    customdata = np.squeeze(
+        np.dstack(
+            (
+                np.transpose(ctd_time),
+                np.transpose(ctd_depth),
+                np.transpose(lats),
+                np.transpose(lons),
+            )
+        )
+    )
+
+    hovertemplate = "lat %{customdata[2]:.4f}, lon %{customdata[3]:.4f}<br>time %{customdata[0]:.2f} min, depth %{customdata[1]:.2f} m<extra></extra>"
+
+    fig.add_trace(
+        {
+            "y": y,
+            "x": x,
+            "meta": ctd_time,
+            "name": "Course Over Ground",
+            "type": "scatter",
+            "mode": "markers",
+            "customdata": customdata,
+            "marker": {
+                "symbol": "circle",
+                "color": "Cyan",
+                "size": 2,
+                #'line':{'width':1, 'color':'LightSlateGrey'}
+            },
+            "hovertemplate": hovertemplate,
+        }
+    )
+
+    fig.add_trace(
+        {
+            "y": (0,),
+            "x": (0,),
+            "name": "GPS2",
+            "type": "scatter",
+            "mode": "markers",
+            "marker": {
+                "symbol": "star",
+                "color": "Red",
+                #'line':{'width':1, 'color':'LightSlateGrey'}
+            },
+            "hovertemplate": f"GPS2: {Utils.dd2ddmm(lat_gps[1]):.2f}, {Utils.dd2ddmm(lon_gps[1]):.2f}",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "y": (y[-1],),
+            "x": (x[-1],),
+            "name": "GPSEND",
+            "type": "scatter",
+            "mode": "markers",
+            "marker": {
+                "symbol": "triangle-up",
+                "color": "Red",
+                #'line':{'width':1, 'color':'LightSlateGrey'}
+            },
+            "hovertemplate": f"GPSE: {Utils.dd2ddmm(lat_gps[2]):.2f}, {Utils.dd2ddmm(lon_gps[2]):.2f}",
+        }
+    )
+
     def roll_heading(deg):
         if deg >= 360.0:
             deg -= 360.0
@@ -194,7 +273,7 @@ def plot_CTW(
     # fig.update_shapes(dict(xref="x", yref="y"))
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = f"{mission_dive_str}<br>Course through Water"
+    title_text = f"{mission_dive_str}<br>Course through water and over ground"
 
     if np.nanmax(np.absolute(north_disp_gsm_cum)) > np.nanmax(
         np.absolute(east_disp_gsm_cum)
@@ -212,13 +291,13 @@ def plot_CTW(
     fig.update_layout(
         {
             "xaxis": {
-                "title": "Eastward Displacment Through Water (m)",
+                "title": "Eastward Displacment (m)",
                 "showgrid": True,
                 #'range' : [min_salinity, max_salinity],
                 xconstrain_key: xconstrain_value,
             },
             "yaxis": {
-                "title": "Northward Displacment Through Water (m)",
+                "title": "Northward Displacment (m)",
                 #'range' : [max(depth_dive.max() if len(depth_dive) > 0 else 0, depth_climb.max() if len(depth_climb) > 0 else 0), 0]
                 yconstrain_key: yconstrain_value,
             },
