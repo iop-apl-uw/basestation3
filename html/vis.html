@@ -515,6 +515,7 @@
             });
         }
         currElt = elt;
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
         console.log(currElt);
     }
 
@@ -819,6 +820,7 @@
     function showTable() {
         setVisibility('mainTable'); 
         currElt = 'table';
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
     }
 
     function showPlotly() {
@@ -828,18 +830,21 @@
     function showLog() {
         setVisibility('logDiv');
         currElt = 'logfile';
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
         $('diveIndicator').style.display = 'block';
     }
 
     function showLogFile() {
         setVisibility('logfileDiv');
         currElt = 'logfileRaw';
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
         $('diveIndicator').style.display = 'block';
     }
 
     function showEng() {
         setVisibility('engfileDiv');
         currElt = 'engfile';
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
         $('diveIndicator').style.display = 'block';
     }
 
@@ -848,6 +853,7 @@
         setVisibility('capfileDiv');
         $('diveIndicator').style.display = 'block';
         currElt = 'capfile';
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
         if (critLine !== null)
             $(critLine).scrollIntoView();
     }
@@ -856,6 +862,7 @@
         setVisibility('notificationsDiv');
         $('diveIndicator').style.display = 'block';
         currElt = 'notifications';
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
         if ($('btnNotifications').innerHTML != "") {
             $('btnNotifications').style.backgroundImage = "url('script/images/notification-active-icon.png')";
             $('btnNotifications').innerHTML = '';
@@ -866,6 +873,7 @@
     function showChangelog() {
         setVisibility('changelogDiv');
         currElt = 'changelog';
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
     }
 
     function loadAbout(mission, org) {
@@ -912,7 +920,7 @@
                 currDive = maxDive = parseInt(data['dive']);
                 
                 loadPlots(currDive, setCurr);
-                $('diveIndicator').innerHTML = 'dive ' + currDive;
+                $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
 
                 // loadLog(currDive);
                 updateMaxDive();
@@ -922,7 +930,7 @@
                 currDive = dive;
 
                 loadPlots(currDive, setCurr);
-                $('diveIndicator').innerHTML = 'dive ' + currDive;
+                $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
 
                 // loadLog(currDive);
                 updateMaxDive();
@@ -1199,7 +1207,7 @@
         loadFile(dive, 'eng', 'engfileDiv');
         loadFile(dive, 'cap', 'capfileDiv');
         loadNotifications(dive);
-        $('diveIndicator').innerHTML = 'dive ' + currDive;
+        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
 
         fetch(`plots/${currGlider}/${dive}${mission()}`)
         .then(res => res.json())
