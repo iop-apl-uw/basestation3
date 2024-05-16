@@ -1,4 +1,4 @@
-#/! /usr/bin/env python
+# /! /usr/bin/env python
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023, 2024  University of Washington.
@@ -1477,14 +1477,14 @@ class BaseOptions:
         else:
             options_dict = global_options_dict
 
+        if add_arguments is not None:
+            for add_arg in add_arguments:
+                options_dict[add_arg].group.add(calling_module)
+
         if "--generate_sample_conf" in sys.argv:
             # Generate a sample conf file and exit
             generate_sample_conf_file(options_dict, calling_module)
             sys.exit(0)
-
-        if add_arguments is not None:
-            for add_arg in add_arguments:
-                options_dict[add_arg].group.add(calling_module)
 
         basestation_directory, _ = os.path.split(
             os.path.abspath(os.path.expanduser(sys.argv[0]))
