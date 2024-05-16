@@ -27,7 +27,28 @@
         left: 0px;
         top: 0px;
     }
-        
+   
+    #plotLinksPopup {
+        overflow-y: scroll;
+        overflow-x: auto;
+        width: 20vw;
+        height: 50vh;    
+        top: 45vh;
+        left: 3vw; 
+    }
+ 
+    .hamburger {
+        content: "     ";
+        position: relative;
+        left: 0;
+        display: block;
+        width: 16px;
+        top: -8px;
+        height: 0;
+        -webkit-box-shadow: 1px 10px 1px 1px #0000ff,1px 16px 1px 1px     #0000ff,1px 22px 1px 1px #0000ff;
+        box-shadow: 0 10px 0 1px #0000ff,0 16px 0 1px #0000ff,0 22px 0 1px #0000ff;
+    }
+    
     input { text-transform:none; }
 
     .jumpLink {

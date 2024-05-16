@@ -471,6 +471,30 @@
         $('diveIndicator').style.display = 'none';
     }
 
+    function showPlotLinks() {
+        var list;
+
+        if ($('plotLinksPopup').style.display == 'block') {
+            $('plotLinksPopup').style.display = 'none';
+            return;
+        }
+
+        while($('plotLinksPopup').firstChild) {
+            $('plotLinksPopup').removeChild($('plotLinksPopup').firstChild);
+        }
+
+        list = document.createElement('ul');
+        $('plotLinksPopup').appendChild(list);
+
+        plotList.forEach(function(ln) { 
+            it = document.createElement('li');
+            it.innerHTML = ln.name;
+            it.onclick = function() { showPlot(ln.which, ln.name, ln.plotly); console.log(ln.which + ' ' + ln.name); $('plotLinksPopup').style.display = 'none'; }
+            list.appendChild(it);
+        });
+
+        $('plotLinksPopup').style.display = 'block';
+    }
 
     function showPlot(which, elt, plotly) {
         console.log('showing ' + elt);
@@ -972,6 +996,7 @@
     }
 
     var plotList = []
+    
     function addPlot(which, p, x, plotly) {
         var div = document.createElement('div');
         div.classList.add('thumbDiv');
@@ -983,11 +1008,11 @@
         img.id = 'thumb' + p;
         div.appendChild(img);
         $('plotRibbon').appendChild(div);
-        plotList.push(p);
+        plotList.push( { "name": p, "which": which, "plotly": plotly } );
     }
 
     function jumpScrollByName(x) {
-        i = plotList.indexOf(x);
+        i = plotList.map(plotName => plotName.name).indexOf(x);
         if (i > -1) {
             jumpScroll(i);
         }
@@ -1127,7 +1152,7 @@
     function jumpScroll(n) {
         if (n <= plotList.length) {
             $('plotRibbon').scrollTo(200*n, 0, 'smooth');
-            $('thumb' + plotList[n]).click();
+            $('thumb' + plotList[n].name).click();
         }
         return false;
     }
@@ -1347,7 +1372,8 @@
             var sec = links.indexOf('sg');
 
             var j;
-            $('plotRibbonLinks').innerHTML = '';
+            $('plotRibbonLinks').innerHTML = '<span class="hamburger" onclick="showPlotLinks()">&nbsp;&nbsp;&nbsp;</span>';
+
             for (var i = 0 ; i < mn ; i += 5) {
                 if (i + 4 < mn)
                     j = i+4;
@@ -2160,17 +2186,17 @@
             var idx;
             const key = event.key;
             if (key == 'a' || key == 'h') {
-                idx = plotList.indexOf(currElt);
+                idx = plotList.map(p => p.name).indexOf(currElt);
                 if (idx > 0) {
                     idx --;
-                    $('thumb' + plotList[idx]).click();
+                    $('thumb' + plotList[idx].name).click();
                 }
             }
             else if (key == 'd' || key == 'l') {
-                idx = plotList.indexOf(currElt);
+                idx = plotList.map(p => p.name).indexOf(currElt);
                 if (idx < (plotList.length - 1)) {
                     idx ++;
-                    $('thumb' + plotList[idx]).click();
+                    $('thumb' + plotList[idx].name).click();
                 }
             }
             else if (key == 'w' || key == 'k')
@@ -2535,6 +2561,10 @@
 {% endif %}
 
 </div>  <!-- bodyView -->
+
+<div class="form-popup" id="plotLinksPopup">
+
+</div>
 
 {% include "dialogs.html" %}
 {% if runMode == 'pilot' %}
