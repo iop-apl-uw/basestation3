@@ -325,6 +325,26 @@ def flatten(inlist, ltype=(list, tuple), maxint=sys.maxsize):
         pass
     return inlist
 
+def mod360(degrees):
+    if degrees > 360:
+        degrees = math.fmod(degrees, 360)
+    if degrees < 0:
+        degrees = math.fmod(degrees, 360) + 360
+
+    return degrees
+
+def rangeBearing(latDeg0, longDeg0, latDeg1, longDeg1):
+    METERS_PER_DEG = 111120.0
+
+    diff = METERS_PER_DEG*math.cos(latDeg1*math.pi/180)
+    x    = -(longDeg0 - longDeg1)*diff
+    y    = (latDeg1 - latDeg0)*METERS_PER_DEG
+    
+    rng = math.sqrt(x*x + y*y)
+    brg = mod360(math.atan2(x,y)*180/math.pi)
+    
+    return (rng, brg, x, y)
+
 
 def haversine(lat0, lon0, lat1, lon1):
     """Distance between to positions, using the haversine method"""

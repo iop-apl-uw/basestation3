@@ -118,7 +118,7 @@ def plotmissionsingle(func):
 
 # Per-dive plotting routines
 from . import DivePlot
-from . import DiveCOG
+# from . import DiveCOG # deprecated in favor of the COG trace on the CTW plot
 from . import DiveCTW
 from . import DiveOptode
 from . import DiveWetlabs
