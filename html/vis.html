@@ -114,6 +114,10 @@
             $('lastConnect').innerHTML = '' + (Date.now()/1000 - connect_t).toFixed(0) + 's';
         }
         fixTimer = setTimeout('updateTimer()', 1000);
+
+        var d = new Date().toISOString();
+        $('currentDate').innerHTML = d.slice(0,10);
+        $('currentTime').innerHTML = d.slice(11,19);
     }
 {% endif %}
 
@@ -234,12 +238,16 @@
                         $('COG').innerHTML = cog.toFixed(1) + '&deg;';
                         $('DOG').innerHTML = dog.toFixed(0) + 'm';
                         $('dt').innerHTML = dt.toFixed(0) + 's';
+
+                        var next_t = (connect_t + dt)*1000; 
+                        $('nextCall').innerHTML = new Date(next_t).toISOString().slice(11,19); 
                     }
                     else {
                         $('SOG').innerHTML = '0';
                         $('COG').innerHTML = '0';
                         $('DOG').innerHTML = '0';
                         $('dt').innerHTML = '0';
+                        $('nextCall').innerHTML = '-';
                     }
 
                     $('position').innerHTML = formatPos(dd2ddmm(json['lat'])) + ',' + formatPos(dd2ddmm(json['lon']));
@@ -2506,14 +2514,17 @@
             <tr>
                 <td>pitch</td><td id="pitch"></td>
                 <td>volts</td><td id="volts"></td>
+                <td>next call</td><td id="nextCall"></td>
             </tr>
             <tr>
                 <td>depth</td><td id="depth"></td>
                 <td>dive</td><td id="dive"></td>
+                <td>time now</td><td id="currentTime"></td>
             </tr>
             <tr>
                 <td>RH</td><td id="RH"></td>
                 <td>cycle</td><td id="cycle"></td>
+                <td>date now</td><td id="currentDate"></td>
             </tr>
             <tr>
                 <td>int P</td><td id="intP"></td>
