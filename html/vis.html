@@ -887,7 +887,7 @@
         currElt = 'capfile';
         $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
         if (critLine !== null)
-            $(critLine).scrollIntoView();
+            $(critLine).scrollIntoView({ block: "center" });
     }
 
     function showNotifications() {
@@ -1049,13 +1049,15 @@
             }
             else {
                 if (ext == 'cap') {
+                    const re = new RegExp("[\d]*\.[\d]*,[HS][A-Z]*,C,.*")
+
                     critLine = null;
 
-                    if (data.includes(',C,')) {
+                    if (data.search(re) > -1) {
                         var i = 0;
                         var txt = '';
                         for (var x of data.split('\n')) {      
-                            if (x.includes(',C,'))  {
+                            if (x.search(re) > -1) {
                                 if (critLine == null) 
                                     critLine = 'crit' + i;
                                 txt += `<span id="crit${i}"><b>${x}</b></span>\n`;
