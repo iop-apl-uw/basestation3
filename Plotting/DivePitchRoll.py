@@ -682,8 +682,8 @@ def plot_pitch_roll(
                 fitd = scipy.stats.linregress(centeredAD_d, centeredRate_d)
                 c_roll_dive_imp = -fitd.intercept / fitd.slope
                 ADs = ADs + centeredAD_d + [c_roll_dive_imp]
-                c_roll_dive_imp = 0
             except:
+                c_roll_dive_imp = 0
                 fitd = False
         else:
             fitd = False
@@ -724,12 +724,14 @@ def plot_pitch_roll(
         ircd = np.where(pitch_control < 0)
         ircc = np.where(pitch_control > 0)
 
+        rollAD_Fit_all = np.array([max([0, min(rollAD)]), min([max(rollAD), 4096])])
+
         try:
             fitd = scipy.stats.linregress(rollAD[ircd].ravel(), turnRate[ircd].ravel())
             c_roll_dive_imp_all = -fitd.intercept / fitd.slope
             roll_Fit_dive_all = fitd.intercept + fitd.slope * rollAD_Fit_all
-            c_roll_dive_imp_all = 0
         except:
+            c_roll_dive_imp_all = 0
             fitd = None
 
         try:
@@ -740,7 +742,6 @@ def plot_pitch_roll(
             fitc = None
             c_roll_climb_imp_all = 0
 
-        rollAD_Fit_all = np.array([max([0, min(rollAD)]), min([max(rollAD), 4096])])
 
         #
         # roll rate plot
