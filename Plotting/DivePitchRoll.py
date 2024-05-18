@@ -454,7 +454,7 @@ def plot_pitch_roll(
             fig.add_trace(
                 {
                     "x": pitchAD[inds],
-                    "y": pitch_0,
+                    "y": pitch_1,
                     "customdata": customdata,
                     "name": f"<b>Nonlinear fit</b><br>&#8594;C_PITCH={ctr1:.0f},GAIN={gain1:.2f},SHIFT={shift1:.4f}<br>RMS={rms_1:.2f}&#176;",
                     "type": "scatter",
