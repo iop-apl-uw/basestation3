@@ -84,13 +84,6 @@ DEBUG_PDB = False
 # Configuration
 mail_server = "localhost"
 
-# Former extensions, now directly supported by the basestation - skip if found in .extensions file
-extensions_to_skip = {
-    "MakeKML.py": "KML generation is no longer an extension - see --skip_kml option to control generation",
-    "MakePlotMission.py": "MakePlotMission is now part of the plotting package",
-    "MakeMissionEngPlots.py": "MakePlotMission is now part of the plotting package",
-}
-
 
 def post_slack(base_opts, instrument_id, slack_hook_url, subject_line, message_body):
     """Posts to slack channel
@@ -1472,6 +1465,7 @@ def process_extensions(
 
     def process_one_extension_file(extensions_file_name):
         log_info(f"Starting processing on {extension_file_name} section(s):{sections}")
+        ret_val = 0
         cp = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes="#")
         cp.optionxform = str
         try:
@@ -1498,9 +1492,9 @@ def process_extensions(
                         )
                         extension_elts = extension_line.split(" ")
                         # First element - extension name, with .py file extension
-                        if extension_elts[0] in extensions_to_skip:
+                        if extension_elts[0] in Globals.extensions_to_skip:
                             log_warning(
-                                f"Skipping processing of {extension_elts[0]} - {extensions_to_skip[extension_elts[0]]}"
+                                f"Skipping processing of {extension_elts[0]} - {Globals.extensions_to_skip[extension_elts[0]]}"
                             )
                             continue
 
@@ -1538,9 +1532,9 @@ def process_extensions(
                                     "Error running %s - return %d"
                                     % (extension_module_name, extension_ret_val)
                                 )
-                                return 1
+                                ret_val |= extension_ret_val
         log_info(f"Finished processing on {extension_file_name}")
-        return 0
+        return ret_val
 
     ret_val = 0
     for extensions_file_name in (

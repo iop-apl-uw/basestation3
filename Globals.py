@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -121,3 +121,10 @@ flight_variables = [
 ignore_tag = "FM_ignore"  # if we have already ignored the line, don't do it again (in case of copy)
 ignore_tags = ["vbdbias_drift", "override."]  # other problem children
 ignore_tags.extend(flight_variables)
+
+# Former extensions, now directly supported by the basestation - skip if found in .extensions file
+extensions_to_skip = {
+    "MakeKML.py": "KML generation is no longer an extension - see --skip_kml option to control generation",
+    "MakePlotMission.py": "MakePlotMission is now part of the plotting package",
+    "MakeMissionEngPlots.py": "MakePlotMission is now part of the plotting package",
+}

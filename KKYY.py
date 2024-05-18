@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines for creating Navy data products
-"""
+"""Routines for creating Navy data products"""
+
 import math
 import os
 import pdb
@@ -39,14 +39,12 @@ import traceback
 
 import numpy as np
 
-import Utils
-
 import BaseOpts
 import MakeDiveProfiles
 import MakeMissionProfile
 import QC
-
-from BaseLog import BaseLogger, log_debug, log_warning, log_error, log_info
+import Utils
+from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
 from Globals import WhichHalf
 
 # DEBUG_PDB = "darwin" in sys.platform
@@ -161,6 +159,20 @@ def WMO_3333(lat, lon):
             return 5
 
 
+def load_additional_arguments():
+    """Defines and extends arguments related to this extension.
+    Called by BaseOpts when the extension is set to be loaded
+    """
+    return (
+        # Add this module to these options defined in BaseOpts
+        ["mission_dir", "netcdf_filename"],
+        # Option groups
+        {},
+        # Additional arguments
+        {},
+    )
+
+
 def main(
     instrument_id=None,
     base_opts=None,
@@ -184,8 +196,15 @@ def main(
     """
     # pylint: disable=unused-argument
     if base_opts is None:
+        add_to_arguments, add_option_groups, additional_arguments = (
+            load_additional_arguments()
+        )
+
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for creating simplified netCDF files",
+            additional_arguments=additional_arguments,
+            add_option_groups=add_option_groups,
+            add_to_arguments=add_to_arguments,
         )
 
     BaseLogger(base_opts)  # initializes BaseLog
@@ -194,7 +213,7 @@ def main(
         f"Started processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(time.time()))}"
     )
 
-    if base_opts.netcdf_filename:
+    if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
         dive_nc_file_names = [base_opts.netcdf_filename]
     elif base_opts.mission_dir:
         if nc_files_created is not None:
@@ -245,7 +264,7 @@ def main(
 
         try:
             kkyy_up_file = open(kkyy_up_file_name, "w")
-        except IOError:
+        except OSError:
             log_error(
                 f"Could not open {kkyy_up_file_name} for writing - skipping output",
                 "exc",
@@ -293,7 +312,7 @@ def main(
 
         try:
             kkyy_down_file = open(kkyy_down_file_name, "w")
-        except IOError:
+        except OSError:
             log_error(
                 f"Could not open {kkyy_down_file_name} for writing - skipping output",
                 "exc",
@@ -349,7 +368,7 @@ if __name__ == "__main__":
         retval = main()
     except SystemExit:
         pass
-    except:
+    except Exception:
         if DEBUG_PDB:
             extype, value, tb = sys.exc_info()
             traceback.print_exc()

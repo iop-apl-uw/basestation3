@@ -228,6 +228,50 @@ def cp_attrs(in_var, out_var):
             out_var.setncattr(a, in_var.getncattr(a))
 
 
+def load_additional_arguments():
+    """Defines and extends arguments related to this extension.
+    Called by BaseOpts when the extension is set to be loaded
+    """
+    return (
+        # Add this module to these options defined in BaseOpts
+        ["mission_dir", "netcdf_filename"],
+        # Description for any option_group tags used below
+        {"simplenetcdf": "Simple NetCDF file generation"},
+        # Add these options that are local to this extension
+        {
+            "simplencf_bin_width": BaseOpts.options_t(
+                0.0,
+                (
+                    "Base",
+                    "SimpleNetCDF",
+                ),
+                ("--simplencf_bin_width",),
+                float,
+                {
+                    "help": "Bin SimpleNetCDF output to this size.  0 generates timeseries files.  Negative generates timeseries and binned files",
+                    "section": "simplenetcdf",
+                    "option_group": "simplenetcdf",
+                },
+            ),
+            "simplencf_compress_output": BaseOpts.options_t(
+                False,
+                (
+                    "Base",
+                    "SimpleNetCDF",
+                ),
+                ("--simplencf_compress_output",),
+                bool,
+                {
+                    "help": "Compress the SimpleNetCDF file with bzip2",
+                    "action": "store_true",
+                    "section": "simplenetcdf",
+                    "option_group": "simplenetcdf",
+                },
+            ),
+        },
+    )
+
+
 def main(
     instrument_id=None,
     base_opts=None,
@@ -251,8 +295,14 @@ def main(
     """
     # pylint: disable=unused-argument
     if base_opts is None:
+        add_to_arguments, add_option_groups, additional_arguments = (
+            load_additional_arguments()
+        )
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for creating simplified netCDF files",
+            additional_arguments=additional_arguments,
+            add_option_groups=add_option_groups,
+            add_to_arguments=add_to_arguments,
         )
 
     BaseLogger(base_opts)  # initializes BaseLog
@@ -275,7 +325,7 @@ def main(
             f"bin_width:{simplencf_bin_width}, compress_output:{base_opts.simplencf_compress_output}"
         )
 
-        if base_opts.netcdf_filename:
+        if hasattr(base_opts, "netcdf_filename") and base_opts.netcdf_filename:
             dive_nc_file_names = [base_opts.netcdf_filename]
         elif base_opts.mission_dir:
             if nc_files_created is not None:

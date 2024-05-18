@@ -28,31 +28,30 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines for analysis based plots for reduced TS profiles
-"""
+"""Routines for analysis based plots for reduced TS profiles"""
 
 import os
 import pdb
 import stat
 import sys
-import traceback
 import time
+import traceback
 
-import plotly.graph_objects
 import numpy as np
+import plotly.graph_objects
 import seawater
 import xarray as xr
 
+import BaseOpts
+import PlotUtilsPlotly
+import Utils
 from BaseLog import (
     BaseLogger,
+    log_critical,
+    log_debug,
     log_error,
     log_info,
-    log_debug,
-    log_critical,
 )
-import BaseOpts
-import Utils
-import PlotUtilsPlotly
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
@@ -369,6 +368,30 @@ def plot_ts_profile_core(bin_width, depth, temperature, salinity, dive_num, base
     return ret_val
 
 
+def load_additional_arguments():
+    """Defines and extends arguments related to this extension.
+    Called by BaseOpts when the extension is set to be loaded
+    """
+    return (
+        # Add this module to these options defined in BaseOpts
+        [
+            "save_svg",
+            "save_png",
+            "save_jpg",
+            "save_webp",
+            "compress_div",
+            "full_html",
+            "plot_directory",
+            "mission_dir",
+            "netcdf_filename",
+        ],
+        # Option groups
+        {},
+        # Additional arguments
+        {},
+    )
+
+
 # pylint: disable=unused-argument
 def main(
     instrument_id=None,
@@ -393,8 +416,11 @@ def main(
     """
 
     if base_opts is None:
+        add_to_arguments, _, _ = load_additional_arguments()
+
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for plotting X3 compressed or network cdf TS profiles",
+            add_to_arguments=add_to_arguments,
             additional_arguments={
                 "profile_filenames": BaseOpts.options_t(
                     None,
@@ -425,7 +451,7 @@ def main(
 
     if hasattr(base_opts, "profile_filenames") and base_opts.profile_filenames:
         processed_other_files = base_opts.profile_filenames
-    
+
     if processed_other_files is not None:
         for ff in processed_other_files:
             if ff.endswith(".npro"):
@@ -452,7 +478,7 @@ def main(
         if not os.path.exists(base_opts.plot_directory):
             try:
                 os.mkdir(base_opts.plot_directory)
-            except:
+            except Exception:
                 log_error(f"Could not create {base_opts.plot_directory}", "exc")
                 log_info("Bailing out")
                 return 1
@@ -472,7 +498,7 @@ def main(
                     | stat.S_IROTH
                     | stat.S_IXOTH,
                 )
-            except:
+            except Exception:
                 log_error(f"Could not create {base_opts.plot_directory}", "exc")
                 log_info("Bailing out")
                 return 1
@@ -489,7 +515,7 @@ def main(
             except KeyboardInterrupt:
                 log_error("Interupted by operator")
                 break
-            except:
+            except Exception:
                 log_error(
                     "Error in plotting vertical velocity for %s - skipping"
                     % profile_file_name,
@@ -508,7 +534,7 @@ def main(
             except KeyboardInterrupt:
                 log_error("Interupted by operator")
                 break
-            except:
+            except Exception:
                 log_error(
                     "Error in plotting vertical velocity for %s - skipping"
                     % ncdf_file_name,

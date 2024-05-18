@@ -40,11 +40,12 @@
 # TODO Figure out how to show defaults in option help (https://stackoverflow.com/questions/12151306/argparse-way-to-include-default-values-in-help)
 
 import argparse
-import collections
 import configparser
 import copy
 import dataclasses
+import importlib
 import inspect
+import itertools
 import os
 import pdb
 import sys
@@ -53,7 +54,7 @@ import traceback
 import typing
 
 import Plotting
-from Globals import WhichHalf  # basestation_version
+from Globals import WhichHalf, extensions_to_skip  # basestation_version
 
 # Populate default plots with every plot registered in Plotting
 dive_plot_list = list(Plotting.dive_plot_funcs.keys())
@@ -131,7 +132,8 @@ def generate_sample_conf_file(options_dict, calling_module):
     sort_options_dict = dict(
         sorted(
             options_dict.items(),
-            key=lambda x: x[1].kwargs["section"] if "section" in x[1].kwargs else "",
+            #key=lambda x: x[1].kwargs["section"] if "section" in x[1].kwargs else "",
+            key=lambda x: x[1].kwargs.get("section", ""),
         )
     )
 
@@ -145,7 +147,8 @@ def generate_sample_conf_file(options_dict, calling_module):
         if opt_n in ("config_file_name", "generate_sample_conf"):
             continue
         if opt_v.group is None or calling_module in opt_v.group:
-            section_name = opt_v.kwargs["section"] if "section" in opt_v.kwargs else ""
+            #section_name = opt_v.kwargs["section"] if "section" in opt_v.kwargs else ""
+            section_name = opt_v.kwargs.get("section", "")
             if section_name not in seen_sections and section_name:
                 print(f"#\n[{section_name}]")
                 seen_sections.add(section_name)
@@ -167,6 +170,129 @@ def generate_sample_conf_file(options_dict, calling_module):
                 print("")
             else:
                 print(f"{opt_v.default_val}")
+
+
+def loadmodule(pathname):
+    """Loads a module and returns a module handle
+
+    pathname - fully qualified path to the module to be loaded
+
+    Return:
+       None - error
+       Module object - success
+
+    """
+    # Fast path: see if the module has already been imported.
+    _, name = os.path.split(pathname)
+    name, _ = os.path.splitext(name)
+
+    try:
+        return sys.modules[name]
+    except Exception:
+        pass
+
+    if not os.path.exists(pathname):
+        #log_error(f"Module {pathname} does not exists - skipping")
+        return None
+
+    # If any of the following calls raises an exception,
+    # there's a problem we can't handle -- let the caller handle it.
+    try:
+        spec = importlib.util.spec_from_file_location(name, pathname)
+        mod = importlib.util.module_from_spec(spec)
+        sys.modules["module.name"] = mod
+        spec.loader.exec_module(mod)
+        return mod
+    except Exception:
+        #log_error(f"Error loading {pathname}", "exc")
+        sys.stderr.write(f"Error loading {pathname} {traceback.format_exc()}")
+        #log_info("No module loaded")
+    return None
+
+def find_additional_options(basestation_directory):
+    """ Processes the .extensions and .sensors files to add any additional options.
+    This code partially duplicates functions in Sensor.py and BaseDotFiles.py, but
+    is re-written here to be free of any calls to the logginer infrastructure, which
+    have not yet been initialized when this routine is called.
+    """
+    new_arguments = {}
+    new_option_groups = {}
+    add_arguments = {}
+    tmp_ap =  argparse.ArgumentParser(
+            description="find_additional_options"
+        )
+    tmp_ap.add_argument("--mission_dir", action=FullPathTrailingSlashAction)
+    tmp_ap.add_argument("--group_etc", action=FullPathTrailingSlashAction)
+    tmp_argv = []
+    for arg in sys.argv[1:]:
+        if "-h" in arg:
+            continue
+        tmp_argv.append(arg)
+    args = tmp_ap.parse_known_args(tmp_argv)[0]
+
+    basestation_etc = os.path.join(basestation_directory, "etc")
+
+    for extension_directory in (basestation_etc, args.group_etc, args.mission_dir):
+        if extension_directory and os.path.exists(extension_directory):
+            extensions_file_name = os.path.join(extension_directory, ".extensions")
+            if os.path.exists(extensions_file_name):
+                #log_info(f"Starting processing on {extension_file_name} section(s):{sections}")
+                cp = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes="#")
+                cp.optionxform = str
+                try:
+                    # Anything not inside a section tag is in [global] section
+                    with open(extensions_file_name) as fi:
+                        cp.read_file(
+                            itertools.chain(["[global]"], fi), source=extensions_file_name
+                        )
+                except (OSError, PermissionError):
+                    sys.stderror.write(
+                        f"Could not open extensions_file_name {traceback.format_exc()}"
+                    )
+                    continue
+                else:
+                    for section in cp.sections():
+                        for extension_line in cp[section]:
+                            extension_line.lstrip().rstrip()
+                            if len(extension_line) < 1:
+                                continue
+                            # log_info(
+                            #     f"Processing:{extension_file_name} section:{section} line:{extension_line}"
+                            # )
+                            extension_elts = extension_line.split(" ")
+                            # First element - extension name, with .py file extension
+                            if extension_elts[0] in extensions_to_skip:
+                                continue
+
+                            extension_module_name = os.path.join(
+                                basestation_directory, extension_elts[0]
+                            )
+                            extension_module = loadmodule(extension_module_name)
+                            if extension_module is None or not hasattr(extension_module, "load_additional_arguments"):
+                                continue
+                            else:
+                                try:
+                                    extension_ret_val = extension_module.load_additional_arguments()
+                                except Exception:
+                                    sys.stderr.write(
+                                        f"Extension {extension_module_name} raised an exception {traceback.format_exc()}"
+                                    )
+                                    continue
+
+                                # ToDo - this is actually a tuple -
+                                # one is list of arguments to add the calling module to and the secons is new arguments to
+                                # add to the list
+                                if isinstance(extension_ret_val, tuple) and len(extension_ret_val) == 3:
+                                    if isinstance(extension_ret_val[0], list):
+                                        _, name = os.path.split(extension_module_name)
+                                        name, _ = os.path.splitext(name)
+                                        add_arguments[name] = extension_ret_val[0]
+                                    if isinstance(extension_ret_val[1], dict):
+                                        new_option_groups |= extension_ret_val[1]
+                                    if isinstance(extension_ret_val[2], dict):
+                                        # TODO - typecheck the dict members to be sure they are options_t
+                                        new_arguments |= extension_ret_val[2]
+    return (add_arguments, new_option_groups, new_arguments)
 
 
 # The kwargs in this type is overloaded.  Everything that is legit for argparse is allowed.
@@ -317,10 +443,8 @@ global_options_dict = {
             "CommLog",
             "FTPPush",
             "FlightModel",
-            "GliderDAC",
             "GliderEarlyGPS",
             "GliderTrack",
-            "KKYY",
             "MakeDiveProfiles",
             "MakeKML",
             "MakeMissionEngPlots",
@@ -330,10 +454,8 @@ global_options_dict = {
             "MakePlotMission",
             "MoveData",
             "Reprocess",
-            "SimpleNetCDF",
             "ValidateDirectives",
             "Ver65",
-            "WindRain",
             "RegressVBD",
             "Magcal",
         ),
@@ -742,6 +864,7 @@ global_options_dict = {
         {
             "help": "Skip generation of the KML output",
             "action": "store_true",
+            "option_group": "kml generation",
         },
     ),
     #
@@ -767,20 +890,10 @@ global_options_dict = {
             "required": ("MoveData",),
         },
     ),
-    # This is an option, but is now handled in code in each extension
-    # Note - converting to this requires careful review to see how this would interfere
-    # with other groups used to help command line help output
-    # group = parser.add_mutually_exclusive_group(required=True)
-    # group.add_argument('--mission_dir', )
+    # Used by a number of extensions when being run via the CLI
     "netcdf_filename": options_t(
         "",
         (
-            "Base",
-            "GliderDAC",
-            "KKYY",
-            "SimpleNetCDF",
-            "StripNetCDF",
-            "WindRain",
         ),
         ("netcdf_filename",),
         FullPath,
@@ -810,7 +923,6 @@ global_options_dict = {
             "BasePlot",
             "Reprocess",
             "MakeMissionEngPlot",
-            "MakePlotTSProfile",
         ),
         ("--save_svg",),
         bool,
@@ -826,7 +938,6 @@ global_options_dict = {
         (
             "Base",
             "BasePlot",
-            "MakePlotTSProfile",
             "Reprocess",
         ),
         ("--save_png",),
@@ -840,7 +951,7 @@ global_options_dict = {
     ),
     "save_jpg": options_t(
         False,
-        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
+        ("Base", "BasePlot", "Reprocess"),
         ("--save_jpg",),
         bool,
         {
@@ -852,7 +963,7 @@ global_options_dict = {
     ),
     "save_webp": options_t(
         True,
-        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
+        ("Base", "BasePlot", "Reprocess"),
         ("--save_webp",),
         bool,
         {
@@ -864,7 +975,7 @@ global_options_dict = {
     ),
     "compress_div": options_t(
         True,
-        ("Base", "BasePlot", "MakePlotTSProfile", "Reprocess"),
+        ("Base", "BasePlot", "Reprocess"),
         ("--compress_div",),
         bool,
         {
@@ -880,7 +991,6 @@ global_options_dict = {
         (
             "Base",
             "BasePlot",
-            "MakePlotTSProfile",
             "Reprocess",
         ),
         ("--full_html",),
@@ -923,7 +1033,6 @@ global_options_dict = {
             "BaseDB",
             "BasePlot",
             "MakeMissionEngPlots",
-            "MakePlotTSProfile",
             "Reprocess",
         ),
         ("--plot_directory",),
@@ -1050,13 +1159,6 @@ global_options_dict = {
         },
     ),
     # End plotting related
-    "strip_list": options_t(
-        ["tmicl_", "pmar_"],
-        ("StripNetCDF",),
-        ("--strip_list",),
-        str,
-        {"help": "Prefixes of dimensions and variables to strip", "nargs": "+"},
-    ),
     # MakeKML related
     "skip_points": options_t(
         10,
@@ -1281,130 +1383,7 @@ global_options_dict = {
         },
     ),
     # End MakeKML
-    "gliderdac_base_config": options_t(
-        "",
-        (
-            "Base",
-            "GliderDAC",
-        ),
-        ("--gliderdac_base_config",),
-        FullPath,
-        {
-            "help": "GliderDAC base configuration JSON file - common for all Seagliders",
-            "section": "gliderdac",
-            "action": FullPathAction,
-        },
-    ),
-    "gliderdac_project_config": options_t(
-        "",
-        (
-            "Base",
-            "GliderDAC",
-        ),
-        ("--gliderdac_project_config",),
-        FullPath,
-        {
-            "help": "GliderDAC project configuration JSON file - common for single study area",
-            "section": "gliderdac",
-            "action": FullPathAction,
-        },
-    ),
-    "gliderdac_deployment_config": options_t(
-        "",
-        (
-            "Base",
-            "GliderDAC",
-        ),
-        ("--gliderdac_deployment_config",),
-        FullPath,
-        {
-            "help": "GliderDAC deployoment configuration JSON file - specific to the current glider deoployment",
-            "section": "gliderdac",
-            "action": FullPathAction,
-        },
-    ),
-    "gliderdac_directory": options_t(
-        "",
-        (
-            "Base",
-            "GliderDAC",
-        ),
-        ("--gliderdac_directory",),
-        FullPath,
-        {
-            "help": "Directory to place output files in",
-            "section": "gliderdac",
-            "action": FullPathAction,
-        },
-    ),
-    "delayed_submission": options_t(
-        False,
-        (
-            "Base",
-            "GliderDAC",
-        ),
-        ("--delayed_submission",),
-        FullPath,
-        {
-            "help": "Generated files for delayed submission",
-            "section": "gliderdac",
-            "action": argparse.BooleanOptionalAction,
-        },
-    ),
-    "gliderdac_bin_width": options_t(
-        0.0,
-        (
-            "Base",
-            "GliderDAC",
-        ),
-        ("--gliderdac_bin_width",),
-        float,
-        {
-            "help": "Width of bins for GliderDAC file (0.0 indicates timeseries)",
-            "section": "gliderdac",
-        },
-    ),
-    "gliderdac_reduce_output": options_t(
-        True,
-        (
-            "Base",
-            "GliderDAC",
-        ),
-        ("--gliderdac_reduce",),
-        bool,
-        {
-            "help": "Reduce the output to only non-nan observations (not useful with non-CT data)",
-            "section": "gliderdac",
-            "action": argparse.BooleanOptionalAction,
-        },
-    ),
-    "simplencf_bin_width": options_t(
-        0.0,
-        (
-            "Base",
-            "SimpleNetCDF",
-        ),
-        ("--simplencf_bin_width",),
-        float,
-        {
-            "help": "Bin SimpleNetCDF output to this size",
-            "section": "simplenetcdf",
-        },
-    ),
-    "simplencf_compress_output": options_t(
-        False,
-        (
-            "Base",
-            "SimpleNetCDF",
-        ),
-        ("--simplencf_compress_output",),
-        bool,
-        {
-            "help": "Compress the simple netcdf file",
-            "action": "store_true",
-        },
-    ),
-    "network_log_decompressor": options_t(
+    "Network_log_decompressor": options_t(
         "",
         (
             "Base",
@@ -1448,7 +1427,8 @@ class BaseOptions:
         description,
         additional_arguments=None,
         alt_cmdline=None,
-        add_arguments=None,
+        add_to_arguments=None,
+        add_option_groups=None,
         calling_module=None,
     ):
         """
@@ -1457,9 +1437,11 @@ class BaseOptions:
                                    to a single module
             alt_cmdline - alternate command line - this is a string of options
                           equivilent to sys.argv[1:]
-            add_arguments - adds the calling_module to the list of .group set of that option
+            add_to_arguments - adds the calling_module to the list of .group set of that option
+            add_option_groups - dict of new option_groups and descriptions
         """
-
+        global option_group_description
+        
         self._opts = None  # Retained for debugging
         self._ap = None  # Retailed for debugging
 
@@ -1477,14 +1459,12 @@ class BaseOptions:
         else:
             options_dict = global_options_dict
 
-        if add_arguments is not None:
-            for add_arg in add_arguments:
+        if add_to_arguments is not None:
+            for add_arg in add_to_arguments:
                 options_dict[add_arg].group.add(calling_module)
 
-        if "--generate_sample_conf" in sys.argv:
-            # Generate a sample conf file and exit
-            generate_sample_conf_file(options_dict, calling_module)
-            sys.exit(0)
+        if add_option_groups is not None:
+            option_group_description |= add_option_groups 
 
         basestation_directory, _ = os.path.split(
             os.path.abspath(os.path.expanduser(sys.argv[0]))
@@ -1502,6 +1482,21 @@ class BaseOptions:
                 ),
             },
         )
+
+        ext_add_to_arguments, ext_add_option_groups, ext_add_options = find_additional_options(self.basestation_directory)
+        options_dict |= ext_add_options
+        option_group_description |= ext_add_option_groups
+        for module, add_arg_list in ext_add_to_arguments.items():
+            #TODO - check we have a valid option here
+            for add_arg in add_arg_list:
+                options_dict[add_arg].group.add(module)
+
+        if "--generate_sample_conf" in sys.argv:
+            # Generate a sample conf file and exit
+            generate_sample_conf_file(options_dict, calling_module)
+            sys.exit(0)
+
+
         # options_dict["group_etc"] = dataclasses.replace(
         #     options_dict["group_etc"],
         #     **{
@@ -1510,6 +1505,7 @@ class BaseOptions:
         #         ),
         #     },
         # )
+
         cp_default = {}
         for k, v in options_dict.items():
             if v.group is None or calling_module in v.group:
@@ -1525,12 +1521,12 @@ class BaseOptions:
 
         # Build up group dictionary
         option_group_set = set()
-        for k, v in options_dict.items():
+        for _, v in options_dict.items():
             if v.group is None or calling_module in v.group:
-                if "option_group" in v.kwargs.keys():
+                if "option_group" in v.kwargs:
                     option_group_set.add(v.kwargs["option_group"])
                 if (
-                    "required" in v.kwargs.keys()
+                    "required" in v.kwargs
                     and isinstance(v.kwargs["required"], tuple)
                     and calling_module in v.kwargs["required"]
                 ):
@@ -1548,7 +1544,7 @@ class BaseOptions:
             if v.group is None or calling_module in v.group:
                 kwargs_tmp = copy.deepcopy(v.kwargs)
 
-                if "subparsers" in kwargs_tmp.keys():
+                if "subparsers" in kwargs_tmp:
                     parsers = []
                     if not self._subparser:
                         self._subparser = ap.add_subparsers(
@@ -1566,7 +1562,7 @@ class BaseOptions:
 
                 for parser in parsers:
                     kwargs = copy.deepcopy(kwargs_tmp)
-                    if not (v.var_type == bool and "action" in v.kwargs.keys()):
+                    if not (v.var_type == bool and "action" in v.kwargs):
                         kwargs["type"] = v.var_type
                     if v.args and v.args[0].startswith("-"):
                         kwargs["dest"] = k
@@ -1575,14 +1571,14 @@ class BaseOptions:
                     #
                     # kwargs["default"] = None
                     kwargs["default"] = v.default_val
-                    if "section" in kwargs.keys():
+                    if "section" in kwargs:
                         del kwargs["section"]
-                    if "required" in kwargs.keys() and isinstance(
+                    if "required" in kwargs and isinstance(
                         kwargs["required"], tuple
                     ):
                         kwargs["required"] = calling_module in kwargs["required"]
                     if (
-                        "range" in kwargs.keys()
+                        "range" in kwargs
                         and isinstance(kwargs["range"], list)
                         and len(kwargs["range"]) == 2
                     ):
@@ -1593,7 +1589,7 @@ class BaseOptions:
                         kwargs["metavar"] = f"{{{min_val}..{max_val}}}"
 
                     arg_list = v.args
-                    if "option_group" in kwargs.keys():
+                    if "option_group" in kwargs:
                         og = kwargs["option_group"]
                         del kwargs["option_group"]
                         option_group_dict[og].add_argument(*arg_list, **kwargs)
@@ -1632,13 +1628,14 @@ class BaseOptions:
 
         # Initialize the object with the results of the command line parse
         for opt in dir(self._opts):
-            if opt in options_dict.keys():
+            if opt in options_dict:
                 setattr(self, opt, getattr(self._opts, opt))
 
         # Process the config file, updating the object
         if self._opts.config_file_name is not None:
             if not os.path.exists(self._opts.config_file_name):
-                setattr(self, "config_file_not_found", True)
+                #setattr(self, "config_file_not_found", True)
+                self.config_file_not_found = True
                 # raise FileNotFoundError(
                 #    f"Config file {self._opts.config_file_name} does not exist"
                 # )
@@ -1654,10 +1651,11 @@ class BaseOptions:
                         continue
                     if v.group is None or calling_module in v.group:
                         try:
-                            if "section" in v.kwargs:
-                                section_name = v.kwargs["section"]
-                            else:
-                                section_name = "base"
+                            section_name = v.kwargs.get("section", "base")
+                            #if "section" in v.kwargs:
+                            #    section_name = v.kwargs["section"]
+                            #else:
+                            #    section_name = "base"
                             if v.var_type == bool:
                                 try:
                                     value = cp.getboolean(section_name, k)
@@ -1705,7 +1703,7 @@ class BaseOptions:
                                     ) from exc
                                 else:
                                     if (
-                                        "range" in v.kwargs.keys()
+                                        "range" in v.kwargs
                                         and isinstance(v.kwargs["range"], list)
                                         and len(v.kwargs["range"]) == 2
                                     ):

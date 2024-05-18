@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,8 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Create a file for submission to the GliderDAC from an existing netCDF file
-"""
+"""Create a file for submission to the GliderDAC from an existing netCDF file"""
 #
 # Notes:
 #
@@ -52,6 +51,7 @@
 #    All other timeseries variables are marked good_data (QC_GOOD) for non-nan and
 #    missing_value (QC_MISSING) for nan data.
 
+import argparse
 import collections
 import os
 import pdb
@@ -59,21 +59,18 @@ import stat
 import sys
 import time
 import traceback
-
 from functools import reduce
 
 import gsw
-import yaml
-
 import numpy as np
 import xarray as xr
+import yaml
 
 import BaseOpts
 import MakeDiveProfiles
 import NetCDFUtils
 import QC
-
-from BaseLog import BaseLogger, log_info, log_warning, log_error, log_debug
+from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
 
 # Local config
 DEBUG_PDB = True
@@ -187,7 +184,7 @@ def load_var(dci, var_name, dims_map, sort_i):
         var_q = dci[qc_name].data
         try:
             qc_vals = QC.decode_qc(var_q)
-        except:
+        except Exception:
             log_warning(f"Could not decode QC for {var_name} - not applying", "exc")
         else:
             var[qc_vals != QC.QC_GOOD] = np.nan
@@ -232,14 +229,14 @@ def load_templates(base_opts):
         try:
             with open(file_name, "r") as fi:
                 templates.append(yaml.safe_load(fi.read()))
-        except:
+        except Exception:
             log_error(f"Could not procss {file_name}", "exc")
             return None
 
     # Merge templates together
     try:
         reduce(NetCDFUtils.merge_dict, templates)
-    except:
+    except Exception:
         log_error("Error merging config templates", "exc")
         return None
 
@@ -256,6 +253,125 @@ def find_deepest_bin_i(depth, bin_centers, bin_width):
     # Return the first shallower max_i
     # max_i -= 1
     return max_i
+
+
+def load_additional_arguments():
+    """Defines and extends arguments related to this extension.
+    Called by BaseOpts when the extension is set to be loaded
+    """
+    return (
+        # Add this module to these options defined in BaseOpts
+        ["mission_dir", "netcdf_filename"],
+        # Description for any option_group tags used below
+        {"gliderdac": "NetCDF file generation for submission to the Glider DAC"},
+        # Add these options that are local to this extension
+        {
+            "gliderdac_base_config": BaseOpts.options_t(
+                "",
+                (
+                    "Base",
+                    "GliderDAC",
+                ),
+                ("--gliderdac_base_config",),
+                BaseOpts.FullPath,
+                {
+                    "help": "GliderDAC base configuration YAML file - common for all Seagliders",
+                    "section": "gliderdac",
+                    "option_group": "gliderdac",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "gliderdac_project_config": BaseOpts.options_t(
+                "",
+                (
+                    "Base",
+                    "GliderDAC",
+                ),
+                ("--gliderdac_project_config",),
+                BaseOpts.FullPath,
+                {
+                    "help": "GliderDAC project configuration YAML file - common for single study area",
+                    "section": "gliderdac",
+                    "option_group": "gliderdac",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "gliderdac_deployment_config": BaseOpts.options_t(
+                "",
+                (
+                    "Base",
+                    "GliderDAC",
+                ),
+                ("--gliderdac_deployment_config",),
+                BaseOpts.FullPath,
+                {
+                    "help": "GliderDAC deployoment configuration YAML file - specific to the current glider deoployment",
+                    "section": "gliderdac",
+                    "option_group": "gliderdac",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "gliderdac_directory": BaseOpts.options_t(
+                "",
+                (
+                    "Base",
+                    "GliderDAC",
+                ),
+                ("--gliderdac_directory",),
+                BaseOpts.FullPath,
+                {
+                    "help": "Directory to place output files in",
+                    "section": "gliderdac",
+                    "option_group": "gliderdac",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "delayed_submission": BaseOpts.options_t(
+                False,
+                (
+                    "Base",
+                    "GliderDAC",
+                ),
+                ("--delayed_submission",),
+                BaseOpts.FullPath,
+                {
+                    "help": "Generated files for delayed submission",
+                    "section": "gliderdac",
+                    "option_group": "gliderdac",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "gliderdac_bin_width": BaseOpts.options_t(
+                0.0,
+                (
+                    "Base",
+                    "GliderDAC",
+                ),
+                ("--gliderdac_bin_width",),
+                float,
+                {
+                    "help": "Width of bins for GliderDAC file (0.0 indicates timeseries)",
+                    "section": "gliderdac",
+                    "option_group": "gliderdac",
+                },
+            ),
+            "gliderdac_reduce_output": BaseOpts.options_t(
+                True,
+                (
+                    "Base",
+                    "GliderDAC",
+                ),
+                ("--gliderdac_reduce",),
+                bool,
+                {
+                    "help": "Reduce the output to only non-nan observations (not useful with non-CT data)",
+                    "section": "gliderdac",
+                    "option_group": "gliderdac",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+        },
+    )
 
 
 def main(
@@ -280,9 +396,16 @@ def main(
         Any exceptions raised are considered critical errors and not expected
     """
     # pylint: disable=unused-argument
+
     if base_opts is None:
+        add_to_arguments, add_option_groups, additional_arguments = (
+            load_additional_arguments()
+        )
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for creating GliderDAC netCDF files",
+            additional_arguments=additional_arguments,
+            add_option_groups=add_option_groups,
+            add_to_arguments=add_to_arguments,
         )
 
     BaseLogger(base_opts)
@@ -298,7 +421,11 @@ def main(
         + time.strftime("%H:%M:%S %d %b %Y %Z", processing_start_time)
     )
 
-    if not base_opts.mission_dir and base_opts.netcdf_filename:
+    if (
+        not base_opts.mission_dir
+        and hasattr(base_opts, "netcdf_filename")
+        and base_opts.netcdf_filename
+    ):
         dive_nc_file_names = [base_opts.netcdf_filename]
         if not base_opts.gliderdac_directory:
             base_opts.gliderdac_directory = os.path.join(
@@ -333,7 +460,7 @@ def main(
                 | stat.S_IROTH
                 | stat.S_IXOTH,
             )
-        except:
+        except Exception:
             log_error(f"Could not create {base_opts.gliderdac_directory}", "exc")
             log_info("Bailing out")
             return 1
@@ -354,15 +481,14 @@ def main(
     }
 
     # Update anything overridden by config
-    if "config" in template:
-        if "timeseries_vars" in template["config"]:
-            timeseries_vars = template["config"]["timeseries_vars"]
+    if "config" in template and "timeseries_vars" in template["config"]:
+        timeseries_vars = template["config"]["timeseries_vars"]
 
     for dive_nc_file_name in dive_nc_file_names:
         log_info("Processing %s" % dive_nc_file_name)
         try:
             dsi = xr.open_dataset(dive_nc_file_name)
-        except:
+        except Exception:
             log_error(f"Error opening {dive_nc_file_name}", "exc")
             continue
 
@@ -635,9 +761,9 @@ def main(
         )
 
         # attributes
-        dso.attrs[
-            "history"
-        ] = f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', processing_start_time)}: GliderDac.py"
+        dso.attrs["history"] = (
+            f"{time.strftime('%Y-%m-%dT%H:%M:%SZ', processing_start_time)}: GliderDac.py"
+        )
         now_ts = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(time.time()))
         dso.attrs["date_created"] = now_ts
         dso.attrs["date_issued"] = now_ts
@@ -708,7 +834,7 @@ if __name__ == "__main__":
         retval = main()
     except SystemExit:
         pass
-    except:
+    except Exception:
         if DEBUG_PDB:
             extype, value, tb = sys.exc_info()
             traceback.print_exc()
