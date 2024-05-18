@@ -390,6 +390,7 @@ def load_ctrl_yml(
             log_info(f"No ctrl file {yml_file_name} found - skipping")
             continue
         try:
+            log_info(f"ctrl file {yml_file_name} found")
             with open(yml_file_name, "r") as fi:
                 # CONSIDER - run check_canonicalize_pagers_dict(pagers_dict) over each
                 #           dict as loaded - help with error processing some errors.
