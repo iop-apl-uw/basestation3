@@ -50,17 +50,20 @@ from BaseLog import (
 from Plotting import plotdivesingle
 
 
-class pitchFitClass:
-    def __init__(self):
-        pass
+def pitchfun_shift_solved(x, pitch, ad, vbd, cnv):
+    c = x[0]
+    g = x[1]
+    s = x[2]
 
-    def fitfun_shift_fixed(self, x, ctr, gain):
-        y = gain * (x[:, 0] * self.cnv - ctr * self.cnv - x[:, 1] * self.shift)
-        return y
+    p = g*(cnv*(ad - c) - vbd*s)
+    return np.sqrt(np.nanmean((p - pitch)**2))
 
-    def fitfun_shift_solved(self, x, ctr, gain, shift):
-        return gain * (x[:, 0] * self.cnv - ctr * self.cnv - x[:, 1] * shift)
+def pitchfun_shift_fixed(x, pitch, ad, vbd, cnv, s):
+    c = x[0]
+    g = x[1]
 
+    p = g*(cnv*(ad - c) - vbd*s)
+    return np.sqrt(np.nanmean((p - pitch)**2))
 
 def headingDiff(hdg1, hdg2):
     """Computes difference in two headings with wraparound"""
@@ -249,6 +252,7 @@ def plot_pitch_roll(
     # pitch calculations
     #
 
+
     xmax = 3.5
     xmin = -3.5
     in_fit = np.logical_and.reduce(
@@ -265,11 +269,19 @@ def plot_pitch_roll(
     inds = np.nonzero(in_fit)[0]
     outside_inds = np.nonzero(np.logical_not(in_fit))[0]
 
+    # current "model" result
+    pitch_curr =  pitch_gain * (pitch_cnv*(pitchAD[inds] - c_pitch) - vbd_control[inds] * vbd_shift)
+    rms_curr = np.sqrt(np.nanmean((pitch_curr - vehicle_pitch_degrees_v[inds])**2))
+
+    # linear model
     fit = scipy.stats.linregress(pitchAD[inds], vehicle_pitch_degrees_v[inds])
     implied_C = -fit.intercept / fit.slope
     implied_gain = fit.slope / pitch_cnv
+    
+    pitch_linear =  implied_gain * (pitch_cnv*(pitchAD[inds] - implied_C) - vbd_control[inds] * vbd_shift)
+    rms_linear = np.sqrt(np.nanmean((pitch_linear - vehicle_pitch_degrees_v[inds])**2))
 
-    log_info(f"implied_cpitch {implied_C}, implied_pitchgain {implied_gain}")
+    log_info(f"implied_cpitch {implied_C}, implied_pitchgain {implied_gain}, RMS={rms_linear}")
 
     if dbcon == None:
         conn = Utils.open_mission_database(base_opts)
@@ -294,39 +306,36 @@ def plot_pitch_roll(
     except:
         log_error("Failed to add slope value to database", "exc")
 
-    inst = pitchFitClass()
-    inst.cnv = pitch_cnv
-    inst.shift = vbd_shift
-
-    c0 = [[0, 0]]
-    c1 = [[0, 0, 0]]
+    c0 = [0, 0]
+    c1 = [0, 0, 0]
     if vbd_control is not None:
         try:
-            c0 = scipy.optimize.curve_fit(
-                inst.fitfun_shift_fixed,
-                np.column_stack((pitchAD[inds], vbd_control[inds])),
-                vehicle_pitch_degrees_v[inds],
-                p0=[c_pitch, pitch_gain],
-            )
-        except:
+            c0, rms_0, niter, calls, warns = scipy.optimize.fmin(func=pitchfun_shift_fixed,
+                                                                x0=[c_pitch, pitch_gain],
+                                                                args=(vehicle_pitch_degrees_v[inds], pitchAD[inds], vbd_control[inds], pitch_cnv, vbd_shift),
+                                                                maxiter=500, maxfun=1000, ftol=1e-3, full_output=True, disp=True)
+        except Exception as e:
+            log_error(e)
             pass
 
-        # c1 = scipy.optimize.curve_fit(inst.fitfun_shift_solved, np.column_stack((pitchAD[inds], vbd_control[inds])), vehicle_pitch_degrees_v[inds], p0=[ c_pitch, pitch_gain, vbd_shift ], bounds=([100, 5, 0.0005], [4000, 75, 0.005]))
         try:
-            c1 = scipy.optimize.curve_fit(
-                inst.fitfun_shift_solved,
-                np.column_stack((pitchAD[inds], vbd_control[inds])),
-                vehicle_pitch_degrees_v[inds],
-                p0=[c_pitch, pitch_gain, vbd_shift],
-            )
-        except:
+            c1, rms_1, niter, calls, warns = scipy.optimize.fmin(func=pitchfun_shift_solved,
+                                                                x0=[c_pitch, pitch_gain, vbd_shift],
+                                                                args=(vehicle_pitch_degrees_v[inds], pitchAD[inds], vbd_control[inds], pitch_cnv),
+                                                                maxiter=500, maxfun=1000, ftol=1e-3, full_output=True, disp=True)
+        except Exception as e:
+            log_error(e)
             pass
 
-    ctr0 = c0[0][0]
-    gain0 = c0[0][1]
-    ctr1 = c1[0][0]
-    gain1 = c1[0][1]
-    shift1 = c1[0][2]
+    ctr0 = c0[0]
+    gain0 = c0[1]
+
+    ctr1 = c1[0]
+    gain1 = c1[1]
+    shift1 = c1[2]
+
+    pitch_0 =  gain0 * (pitch_cnv*(pitchAD[inds] - ctr0) - vbd_control[inds] * vbd_shift)
+    pitch_1 =  gain1 * (pitch_cnv*(pitchAD[inds] - ctr1) - vbd_control[inds] * shift1)
 
     figs_list = []
     file_list = []
@@ -354,12 +363,40 @@ def plot_pitch_roll(
                         )
                     )
                 ),
-                "name": "Pitch control/Pitch (not used in fit)",
+                "name": "Observed pitch (not used in fit)",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
                     "symbol": "triangle-up",
                     "color": "LightBlue",
+                },
+                # "mode": "lines",
+                # "line": {"dash": "solid", "color": "Blue"},
+                "hovertemplate": pitch_template,
+                "visible": "legendonly",
+            }
+        )
+
+        customdata = np.squeeze(
+                        np.dstack(
+                            (
+                                np.transpose(pitch_control[inds]),
+                                np.transpose(roll_control[inds]),
+                            )
+                        )
+                     )
+
+        fig.add_trace(
+            {
+                "x": pitchAD[inds],
+                "y": vehicle_pitch_degrees_v[inds],
+                "customdata": customdata,
+                "name": "Observed pitch (used in fits)",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-down",
+                    "color": "black",
                 },
                 # "mode": "lines",
                 # "line": {"dash": "solid", "color": "Blue"},
@@ -370,51 +407,75 @@ def plot_pitch_roll(
         fig.add_trace(
             {
                 "x": pitchAD[inds],
-                "y": vehicle_pitch_degrees_v[inds],
-                "customdata": np.squeeze(
-                    np.dstack(
-                        (
-                            np.transpose(pitch_control[inds]),
-                            np.transpose(roll_control[inds]),
-                        )
-                    )
-                ),
-                "name": "Pitch control/Pitch (used in fit)",
+                "y": pitch_curr,
+                "customdata": customdata,
+                "name": f"<b>Model as flying on glider</b><br>C_PITCH={c_pitch:.0f},GAIN={pitch_gain:.2f},SHIFT={vbd_shift:.4f}<br>RMS={rms_curr:.2f}&#176;",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
-                    "symbol": "triangle-down",
-                    "color": "DarkBlue",
+                    "symbol": "circle",
+                    "color": "blue",
                 },
-                # "mode": "lines",
-                # "line": {"dash": "solid", "color": "Blue"},
                 "hovertemplate": pitch_template,
             }
         )
-        if min(pitch_Fit) > -120 and max(pitch_Fit) < 120:
+        fig.add_trace(
+            {
+                "x": pitchAD[inds],
+                "y": pitch_linear,
+                "customdata": customdata,
+                "name": f"<b>Linear fit</b><br>&#8594;C_PITCH={implied_C:.0f},GAIN={implied_gain:.2f}<br>RMS={rms_linear:.2f}&#176;",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "circle",
+                    "color": "salmon",
+                },
+                "hovertemplate": pitch_template,
+            }
+        )
+        if ctr0 > 0:
             fig.add_trace(
                 {
-                    "x": pitchAD_Fit,
-                    "y": pitch_Fit,
-                    "name": "linfit C_PITCH, PITCH_GAIN",
-                    "mode": "lines",
-                    "line": {"dash": "solid", "color": "Red"},
-                    "hovertemplate": f"Fit w/o VBD shift C_PITCH={implied_C:.0f} PITCH_GAIN={implied_gain:.2f}<br><extra></extra>",
+                    "x": pitchAD[inds],
+                    "y": pitch_0,
+                    "customdata": customdata,
+                    "name": f"<b>Nonlinear fit fixed shift</b><br>&#8594;C_PITCH={ctr0:.0f},GAIN={gain0:.2f}<br>RMS={rms_0:.2f}&#176;",
+                    "type": "scatter",
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "circle",
+                        "color": "crimson",
+                    },
+                    "hovertemplate": pitch_template,
+                }
+            )
+        if ctr1 > 0:
+            fig.add_trace(
+                {
+                    "x": pitchAD[inds],
+                    "y": pitch_0,
+                    "customdata": customdata,
+                    "name": f"<b>Nonlinear fit</b><br>&#8594;C_PITCH={ctr1:.0f},GAIN={gain1:.2f},SHIFT={shift1:.4f}<br>RMS={rms_1:.2f}&#176;",
+                    "type": "scatter",
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "circle",
+                        "color": "magenta",
+                    },
+                    "hovertemplate": pitch_template,
                 }
             )
 
+
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-        title_text = f"{mission_dive_str}<br>Pitch control vs Pitch"
-        fit_line = f"<br>     Linear (w/o VBD shift): C_PITCH={implied_C:.0f}ad PITCH_GAIN={implied_gain:.2f}deg/cm                              <br>"
-        fit_line += f"Nonlinear w/VBD shift fixed: C_PITCH={ctr0:.0f}ad PITCH_GAIN={gain0:.2f}deg/cm                              <br>"
-        fit_line += f"      Nonlinear w/VBD shift: C_PITCH={ctr1:.0f}ad PITCH_GAIN={gain1:.2f}deg/cm PITCH_VBD_SHIFT={shift1:.5f}cm/cc<br>"
-        fit_line += f"                  Current: C_PITCH={c_pitch:.0f}ad PITCH_GAIN={pitch_gain:.0f}deg/cm PITCH_VBD_SHIFT={vbd_shift:.5f}cm/cc."
+        title_text = f"{mission_dive_str}<br>Pitch control vs Pitch<br>Models closer to observed (black triangles) are better. Lower RMS values (model pitch - observed pitch) are better."
 
         fig.update_layout(
             {
                 "xaxis": {
                     "title": {
-                        "text": f"pitch control (counts)<br>{fit_line}",
+                        "text": f"pitch control (counts)",
                         "font": {"family": "Courier New, Arial"},
                     },
                     "showgrid": True,
