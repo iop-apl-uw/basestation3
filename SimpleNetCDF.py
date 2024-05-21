@@ -84,11 +84,14 @@ nc_meta = {
     ),
 }
 
-nc_meta["wlbb2fl_time"] = var_metadata(None, "wlbb2fl_time", None, "wlbb2fl_data_point")
-for sig in (470, 700, 695):
-    nc_meta[f"wlbb2fl_sig{sig}nm_adjusted"] = var_metadata(
-        None, "wlbb2fl_time", None, "wlbb2fl_data_point"
+for wl_type in ("wlbb2fl", "wlbbfl2", "wlbb3", "wlfl3"):
+    nc_meta[f"{wl_type}_time"] = var_metadata(
+        None, f"{wl_type}_time", None, f"{wl_type}_data_point"
     )
+    for sig in (460, 470, 695, 700):
+        nc_meta[f"{wl_type}_sig{sig}nm_adjusted"] = var_metadata(
+            None, f"{wl_type}_time", None, f"{wl_type}_data_point"
+        )
 
 nc_meta["ocr504i_time"] = var_metadata(None, "ocr504i_time", None, "ocr504i_data_point")
 for ii in range(1, 5):
