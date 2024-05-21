@@ -1068,18 +1068,6 @@ global_options_dict = {
             "option_group": "plotting",
         },
     ),
-    "flip_ad2cp": options_t(
-        True,
-        ("Base", "BasePlot", "Reprocess"),
-        ("--flip_ad2cp",),
-        bool,
-        {
-            "help": "Rotate the pitch/roll/heading for the adc2p compass output plot",
-            "section": "plotting",
-            "option_group": "plotting",
-            "action": argparse.BooleanOptionalAction,
-        },
-    ),
     # Core plotting routines
     "dive_plots": options_t(
         dive_plot_list,
@@ -1490,6 +1478,9 @@ class BaseOptions:
             #TODO - check we have a valid option here
             for add_arg in add_arg_list:
                 options_dict[add_arg].group.add(module)
+
+        # Anything added from the plot functions
+        options_dict |= Plotting.plotting_additional_arguments
 
         if "--generate_sample_conf" in sys.argv:
             # Generate a sample conf file and exit

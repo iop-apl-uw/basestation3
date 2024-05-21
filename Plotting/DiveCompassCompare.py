@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import argparse
 import collections
 import typing
 
@@ -45,11 +46,12 @@ import seawater
 if typing.TYPE_CHECKING:
     import BaseOpts
 
+import BaseOptionsType
 import PlotUtils
 import PlotUtilsPlotly
 import Utils
 from BaseLog import log_warning, log_info, log_debug, log_error
-from Plotting import plotdivesingle
+from Plotting import plotdivesingle, add_arguments
 
 
 def plot_compass_compare(
@@ -494,6 +496,22 @@ def plot_compass_compare(
     )
 
 
+@add_arguments(
+    additional_arguments={
+        "flip_ad2cp": BaseOptionsType.options_t(
+            True,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--flip_ad2cp",),
+            bool,
+            {
+                "help": "Rotate the pitch/roll/heading for the adc2p compass output plot",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": argparse.BooleanOptionalAction,
+            },
+        ),
+    }
+)
 @plotdivesingle
 def plot_compare_aux(
     base_opts: BaseOpts.BaseOptions,

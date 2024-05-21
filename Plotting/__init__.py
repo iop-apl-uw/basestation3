@@ -29,8 +29,8 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-""" Package setup for plotting routines
-"""
+"""Package setup for plotting routines"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 import inspect
@@ -46,6 +46,7 @@ from BaseLog import log_error, log_info
 
 dive_plot_funcs = {}
 mission_plot_funcs = {}
+plotting_additional_arguments = {}
 
 
 # pylint: disable=unused-argument
@@ -90,6 +91,21 @@ def compare_sigs(sig_a, sig_b):
         if t1[1].annotation != t2[1].annotation:
             return False
     return sig_a.return_annotation == sig_b.return_annotation
+
+
+def add_arguments(_func=None, *, additional_arguments=None):
+    """Specifies any additional arguments to be added to BaseOpts"""
+
+    def add_arguments_dec(func, additional_arguments=additional_arguments):
+        # TODO - check all dicts are options_t
+        if additional_arguments and isinstance(additional_arguments, dict):
+            global plotting_additional_arguments
+            plotting_additional_arguments |= additional_arguments
+
+    if _func is None:
+        return add_arguments_dec
+    else:
+        return add_arguments_dec(_func, additional_arguments=None)
 
 
 def plotdivesingle(func):
@@ -148,3 +164,9 @@ from . import MissionDisk
 from . import MissionCommLog
 from . import MissionProfiles
 from . import MissionCallStats
+
+# The local subdirectory is for any user added plotting functions.
+try:
+    from . import local
+except ImportError:
+    pass
