@@ -367,7 +367,7 @@ def plot_vert_vel_new(
         )
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
-    title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth<br>Model results closer to observed values (solid black line) are better. RMS values are (model w - observed w). Lower is better."
+    title_text = f"{mission_dive_str}<br>Vertical Velocity vs Depth<br>Models closer to observed (solid black line) are better. Lower RMS values (model w - observed w) are better."
 
     fig.update_layout(
         {
