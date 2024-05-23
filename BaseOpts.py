@@ -60,6 +60,9 @@ from Globals import WhichHalf, extensions_to_skip  # basestation_version
 dive_plot_list = list(Plotting.dive_plot_funcs.keys())
 mission_plot_list = list(Plotting.mission_plot_funcs.keys())
 
+# Deprecated options to warn and issue alerts on
+deprecated_options = {}
+
 
 def generate_range_action(arg, min_val, max_val):
     """Creates an range checking action for argparse"""
@@ -126,6 +129,21 @@ class FullPathTrailingSlashAction(argparse.Action):
         else:
             setattr(namespace, self.dest, values)
 
+class DeprecateAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        deprecated_options[self.option_strings[0]] = self.help
+        delattr(namespace, self.dest)
+
+def mark_deprecated_help_strings(parser, prefix="DEPRECATED"):
+    """
+    """
+    for action in parser._actions:
+        if isinstance(action, DeprecateAction):
+            h = action.help
+            if h is None:
+                action.help = prefix
+            else:
+                action.help = prefix + ": " + h            
 
 def generate_sample_conf_file(options_dict, calling_module):
     """Generates a sample .conf file (to stdout)"""
@@ -722,6 +740,17 @@ global_options_dict = {
             "help": "Optional domain name to use for email messages",
         },
     ),
+    "web_file_location": options_t(
+        "",
+        ("Base", "Reprocess", "MakeKML"),
+        ("--web_file_location",),
+        str,
+        {
+            "help": "Use --vis_base_url",
+            "action":DeprecateAction,
+        },
+    ),
+
     "vis_base_url": options_t(
         "",
         ("Base", "Reprocess", "MakeKML", "BaseCtrlFiles", "CommLog", "GliderEarlyGPS"),
@@ -1600,6 +1629,8 @@ class BaseOptions:
 
         self._ap = ap
 
+        mark_deprecated_help_strings(ap)
+
         if alt_cmdline is not None:
             self._opts = ap.parse_args(alt_cmdline.split())
         else:
@@ -1704,7 +1735,16 @@ class BaseOptions:
                                             raise f"{val} outside of range {min_val} {max_val}"
 
                                     setattr(self, k, val)
-
+                                    
+        # Check for deprecated options set in config
+        for k, v in options_dict.items():
+            if hasattr(self, k) and "action" in v.kwargs and v.kwargs["action"] is DeprecateAction:
+                if getattr(self, k) != v.default_val:
+                    if "help" in v.kwargs:
+                        deprecated_options[v.args[0]] = v.kwargs["help"]
+                    else:
+                        deprecated_options[v.args[0]] = "deprecated option"
+        self.deprecated_options = deprecated_options                                    
         # Update any options that affect other options
         if (
             hasattr(self, "ignore_flight_model")

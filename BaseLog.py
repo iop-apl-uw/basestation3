@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Basestation wide logging infrastructure """
+"""Basestation wide logging infrastructure"""
 
 import argparse
 import collections
@@ -126,6 +126,12 @@ class BaseLogger:
             except AttributeError:
                 pass
 
+            for k, v in opts.deprecated_options.items():
+                log_error(
+                    f"Option {k} is deprecated and is ignored {v}",
+                    alert="DEPRECATED_OPTION",
+                )
+
     def setHandler(
         self,
         handle: logging.Handler,
@@ -137,11 +143,13 @@ class BaseLogger:
         """
         if include_time:
             formatter = logging.Formatter(
-                fmt="{asctime}: {levelname}: {message}", style='{', datefmt="%H:%M:%S %d %b %Y %Z"
+                fmt="{asctime}: {levelname}: {message}",
+                style="{",
+                datefmt="%H:%M:%S %d %b %Y %Z",
             )
         else:
             # Remove timestamps for easier log comparison and reading
-            formatter = logging.Formatter(fmt="{levelname}: {message}", style='{')
+            formatter = logging.Formatter(fmt="{levelname}: {message}", style="{")
 
         if opts is not None:
             if opts.debug:

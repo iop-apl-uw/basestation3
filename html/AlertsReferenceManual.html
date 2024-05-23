@@ -122,9 +122,13 @@ viewed as acceptable - more then that is a potential sign of a failing instrumen
 any timeouts are potential sign of instrument failure.
 </p>
 
-<p><a name="BAD_GPCTD_CLOCK">TIMEOUT<br>
+<p><a name="BAD_GPCTD_CLOCK">BAD_GPCTD_CLOCK<br>
 A GPCTD reports the start of the profile time in the head of its .eng files. If the internal clock on the GPCTD is not
 being set correctly (usually done by the Seaglider before each profile), this time will be incorrect - the result it the
 basestation will throw out the GPCTD data as it lies well outside the start and end of the current profile.
+</p>
+
+<p><a name="DEPRECATED_OPTION">DEPRECATED_OPTION<br>
+The specified option has been deprecated and will be ignored  The options help string provides additional data.
 </p>
 </body>
