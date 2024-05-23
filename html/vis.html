@@ -371,6 +371,11 @@
                 return;
             }
 
+            if ('error' in data) {
+                console.log(data['error']);
+                return;
+            }
+
             if ('file' in data && data['file'] == file) {
                 $(file).value = data['contents'];
             }
@@ -450,9 +455,19 @@
         .then(text => {
             try {
                 data = JSON.parse(text);
+            } catch (error) {
+                console.log('openBallastSheet ' + error);
+            }
+
+            if ('error' in data) {
+                console.log(data['error']);
+                return;
+            }
+
+            try {
                 let volmax = data['log_MASS']/data['log_RHO'] + (data['log_VBD_MIN'] - data['log_C_VBD'])*data['log_VBD_CNV'];
                 window.open(`ballast?mass=${data['log_MASS']}&volmax=${volmax}&density=${data['log_RHO']}&thrust=${-data['log_MAX_BUOY']}&min=${data['log_VBD_MIN']}&max=${data['log_VBD_MAX']}`, currGlider + '-ballast');
-            } catch (error) {
+            } catch(error) {
                 console.log('openBallastSheet ' + error);
             }
         });
@@ -728,6 +743,11 @@
                     console.log(text);
                     return;
                 }
+        
+                if ('error' in data) {
+                    console.log('buildChangelog ' + data['error']);
+                    return;
+                }
 
                 c = 0;
                 if (sort == 'dive') {
@@ -783,6 +803,11 @@
                     return;
                 }
 
+                if ('error' in data) {
+                    console.log('buildChangelog ' + data['error']);
+                    return;
+                }
+
                 c = 0;
                 
                 html = '';
@@ -816,6 +841,11 @@
             } catch (error) {
                 console.log('buildTable ' + error);
                 console.log(text);
+                return;
+            }
+
+            if ('error' in data) {
+                console.log('buildTable ' + data['error']);
                 return;
             }
         
@@ -946,6 +976,12 @@
                 console.log(text);
                 return;
             }
+
+            if ('error' in data) {
+                console.log('loadStatus ' + data['error']);
+                return;
+            }
+
             document.title = 'SG' + data['glider'];
             currTitle = 'SG' + data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
@@ -1102,6 +1138,11 @@
             console.log('loadNotifications ' + error);
             console.log(resp[1]);
             deltas = { 'parm': [], 'file': [] };
+        }
+
+        if ('error' in deltas) {
+            console.log('loadNotifications ' + deltas['error']);
+            return;
         }
 
         // html = `Dive ${dive}<p><h3>alerts</h3><p>`;
@@ -1937,6 +1978,11 @@
                  data = JSON.parse(text);
             } catch (error) {
                 console.log(text);
+                return;
+            }
+
+            if ('error' in data) {
+                console.log(data['error']);
                 return;
             }
 

@@ -717,6 +717,7 @@ class ConnectSession:
     def to_message_dict(self):
         """Creates a dict from a subset of the session object for use in db operations"""
         return {
+            "glider": self.sg_id,
             "connected": time.mktime(self.connect_ts),
             "dive": self.dive_num,
             "cycle": self.call_cycle,

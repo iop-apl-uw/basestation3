@@ -415,8 +415,39 @@
 
                 console.log('setting up stream');
 
+                wsocket.onerror = function(error) {
+                    console.log('stream error detected');
+                };
+
+                wsocket.onclose = function(e) {
+                    if (e.wasClean) {
+                        console.log('stream closed cleanly');
+                    }
+                    else {
+                        console.log('connection died');
+                    }
+                };
+
                 wsocket.onmessage = function(e) {
-                    var msg = JSON.parse(e.data);
+                    var msg;
+                    var line = e.data;
+
+                    console.log(line);
+
+                    if (line.startsWith('START')) {
+                        console.log('got START ping');
+                        return;
+                    }
+
+                    try {
+                        msg = JSON.parse(line);
+                    } catch {
+                        console.log('could not parse ws message');
+                        return;
+                    }
+
+                    console.log(msg);
+
                     if ('ship' in msg && !usingLocation) {
                         var la = ddmm2dd(msg['lat']);
                         var lo = ddmm2dd(msg['lon']);
@@ -442,14 +473,24 @@
                     else if ('connected' in msg) {
                         // we don't actually have kml ready yet ...
                         // loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ], -1, null, false, true);
-                        var key = msg['glider'] + '_' + msg['mission'];
-                        gliderMarkers[key].setLatLng([ msg['lat'], msg['lon'] ]);
-                                                                                                   // tail
+                        var key = msg['glider'] + '_' + (msg['mission'] ? msg['mission'] : '');
+                        if (key in gliderMarkers) {
+                            gliderMarkers[key].setLatLng([ msg['lat'], msg['lon'] ]);
+                        }
+                        else {
+                            console.log('unknown ' + key);
+                        }
                     }
                     else if ('content' in msg && msg['content'] == 'files=all' &&
                              (msg['when'] == 'socket' || msg['when'] == 'sync') ) {
 
-                        loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ], -1, null, false, true);
+                        var key = msg['glider'] + '_' + (msg['mission'] ? msg['mission'] : '');
+                        if (key in gliderKMLlayers) { 
+                            loadGliderKML(map, layerControl, [ msg['glider'] ], [ msg['mission'] ? msg['mission'] : '' ], -1, null, false, true);
+                        }
+                        else {
+                            console.log('unknown ' + key);
+                        }
                     }
 
                 }
@@ -913,12 +954,19 @@
                                 layerControl.removeLayer(track._layers[k]._layers[1]);
                             }
                             layerControl.removeLayer(track._layers[k]);
-                            console.log('removing ' + track._layers[k]);
                         }
                     }
 
                     map.removeLayer(track);
-                    gliderKMLlayers[key].track = null; 
+                    gliderKMLlayers[key] = null; // .track = null; 
+                }
+                else {
+                    if (key in gliderKMLlayers) 
+                        console.log('previous layer was null');
+                    else {
+                        console.log(key + ' not in layers');
+                        console.log(gliderKMLlayers);
+                    } 
                 }
             }
                     
@@ -973,7 +1021,10 @@
                     else
                         urls.push('../kml/' + gliders[i] + '?mission=' + missions[i]);
 
-                    gliderKMLlayers[gliders[i] + '_' + missions[i]] = null;
+                    if (!((gliders[i] + '_' + missions[i]) in gliderKMLlayers)) {
+                        console.log('initializing layer ' + gliders[i] + '_' + missions[i]);
+                        gliderKMLlayers[ gliders[i] + '_' + missions[i] ] = null;
+                    }
                 }
                 console.log('loading glider KML layers');
                 console.log(urls);

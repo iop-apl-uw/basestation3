@@ -334,7 +334,7 @@ def missionFromRequest(request):
     return None
 
 def activeMission(gld, request):
-    x = next(filter(lambda d: d['glider'] == int(gld) and d['status'] == 'active',  request.app.ctx.missionTable), None)
+    x = next(filter(lambda d: d['glider'] == gld and d['status'] == 'active',  request.app.ctx.missionTable), None)
     return x
  
 def matchMission(gld, request, mission=None):
@@ -598,13 +598,14 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def mapdataHandler(request, glider:int):
         mission = matchMission(glider, request) 
+        print(mission)
         if mission:
             message = {}
             for k in ['sa', 'kml', 'also']:
                 if k in mission:
                     message[k] = mission[k]
 
-            if 'also' in message:
+            if 'also' in message and message['also'] is not None:
                 for a in message['also']:
                     if not 'mission' in a:
                         a.update( { 'mission': mission['mission'] } )
@@ -635,7 +636,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.json(message)
 
         else:
-            return sanic.response.text('not found')
+            return sanic.response.json({'error': 'not found'})
 
     # this requires that a reverse proxy provides an x-request-uri header
     # Apache: RequestHeader add "X-REQUEST-URI" expr=%{REQUEST_SCHEME}://%{HTTP_HOST}%{REQUEST_URI}?%{QUERY_STRING}
@@ -1017,7 +1018,7 @@ def attachHandlers(app: sanic.Sanic):
                     await cur.execute(f"SELECT * FROM changes WHERE dive={dive} ORDER BY parm ASC;")
                 except aiosqlite.OperationalError as e:
                     Utils.logDB(f'deltas close (exception) {glider}')
-                    return sanic.response.text(f'db error {e}')
+                    return sanic.response.json({'error', f'db error {e}'})
 
                 message['parm'] = await cur.fetchall()
 
@@ -1025,7 +1026,7 @@ def attachHandlers(app: sanic.Sanic):
                     await cur.execute(f"SELECT * FROM files WHERE dive={dive} ORDER BY file ASC;")
                 except aiosqlite.OperationalError as e:
                     Utils.logDB(f'deltas close (exception 2) {glider}')
-                    return sanic.response.text(f'db error {e}')
+                    return sanic.response.json({'error', f'db error {e}'})
 
                 message['file'] = await cur.fetchall()
                 Utils.logDB(f'deltas close {glider}')
@@ -1084,7 +1085,7 @@ def attachHandlers(app: sanic.Sanic):
                     await cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
                 except aiosqlite.OperationalError as e:
                     Utils.logDB(f'status close (exception) {glider}')
-                    return sanic.response.text(f'no table {e}')
+                    return sanic.response.json({'error', f'no table {e}'})
 
                 try:
                     maxdv = (await cur.fetchone())[0]
@@ -1095,7 +1096,7 @@ def attachHandlers(app: sanic.Sanic):
             await checkClose(conn)
             
         else:
-            return sanic.response.text('file not found')
+            return sanic.response.json({'error', 'file not found'})
 
         (engplots, sgplots, engplotly, sgplotly) = await buildMissionPlotList(gliderPath(glider, request))
 
@@ -1121,7 +1122,7 @@ def attachHandlers(app: sanic.Sanic):
         ok = ["cmdfile", "targets", "science", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
 
         if which not in ok:
-            return sanic.response.text("oops")
+            return sanic.response.json({'error', "oops"})
 
         message = {}
 
@@ -1141,7 +1142,7 @@ def attachHandlers(app: sanic.Sanic):
 
 
         if message['file'] == "none":
-            return sanic.response.text("none")
+            return sanic.response.json({'error', "none"})
 
         async with aiofiles.open(filename, 'r') as file:
             message['contents']= await file.read() 
@@ -1246,7 +1247,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute(q)
             except aiosqlite.OperationalError as e:
                 Utils.logDB(f'db close (exception) {glider}')
-                return sanic.response.text(f'no table {e}')
+                return sanic.response.json({'error', f'no table {e}'})
 
             data = await cur.fetchall()
             # r = [dict((cur.description[i][0], value) \
@@ -1265,14 +1266,14 @@ def attachHandlers(app: sanic.Sanic):
     # returns: JSON dict of changes [{(dive,parm,oldval,newval}] or [{dive,file,fullname,contents}]
     async def changesHandler(request, glider:int, dive:int, which:str, sort:str):
         if (which not in ['parms', 'files']) or (sort not in ['dive', 'file', 'parm']):
-            return sanic.response.text('no db')
+            return sanic.response.json({'error', 'no db'})
            
         db   = { 'parms': 'changes', 'files': 'files' } 
         col2 = which[0:-1]
 
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
-            return sanic.response.text('no db')
+            return sanic.response.json({'error', 'no db'})
 
         q = f"SELECT * FROM {db[which]}"
 
@@ -1291,7 +1292,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute(q)
             except aiosqlite.OperationalError as e:
                 Utils.logDB(f'changes close (exception) {glider}')
-                return sanic.response.text(f'no table {e}')
+                return sanic.response.json({'error', f'no table {e}'})
 
             data = await cur.fetchall()
             Utils.logDB(f'changes close {glider}')
@@ -1308,7 +1309,7 @@ def attachHandlers(app: sanic.Sanic):
     async def dbvarsHandler(request, glider:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
-            return sanic.response.text('no db')
+            return sanic.response.json({'error', 'no db'})
 
         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             Utils.logDB(f'dbvars open {glider}')
@@ -1317,7 +1318,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute('select * from dives')
             except aiosqlite.OperationalError as e:
                 Utils.logDB(f'dbvars close (exception) {glider}')
-                return sanic.response.text(f'no table {e}')
+                return sanic.response.json({'error', f'no table {e}'})
             names = list(map(lambda x: x[0], cur.description))
             data = {}
             data['names'] = names
@@ -1351,7 +1352,7 @@ def attachHandlers(app: sanic.Sanic):
     async def timeSeriesVarsHandler(request, glider:int):
         ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
         if not await aiofiles.os.path.exists(ncfilename):
-            return sanic.response.text('no db')
+            return sanic.response.json({'error', 'no db'})
 
         names = ExtractTimeseries.getVarNames(ncfilename)
         names = sorted([ f['var'] for f in names ])
@@ -1366,7 +1367,7 @@ def attachHandlers(app: sanic.Sanic):
     async def timeSeriesHandler(request, glider:int, dive:int, which:str):
         ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
         if not await aiofiles.os.path.exists(ncfilename):
-            return sanic.response.text('no db')
+            return sanic.response.json({'error', 'no db'})
 
         whichVars = which.split(',')
         dbVars = whichVars
@@ -1385,7 +1386,7 @@ def attachHandlers(app: sanic.Sanic):
     async def queryHandler(request, glider, queryVars):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
-            return sanic.response.text('no db')
+            return sanic.response.json({'error', 'no db'})
 
         if 'format' in request.args:
             format = request.args['format'][0]
@@ -1414,7 +1415,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute(q)
             except:
                 Utils.logDB(f'query close (except) {glider}')
-                return sanic.response.text('error')
+                return sanic.response.json({'error', 'db error'})
 
             d = await cur.fetchall()
             if format == 'json':
@@ -1428,7 +1429,7 @@ def attachHandlers(app: sanic.Sanic):
             else:
                 str = ''
                 Utils.logDB(f'query close (else) {glider}')
-                return sanic.response.text('error')
+                return sanic.response.json({'error', 'db error'})
                 
 
     @app.route('/selftest/<glider:int>')
@@ -1720,11 +1721,11 @@ def attachHandlers(app: sanic.Sanic):
     @authorized(modes=['private', 'pilot'])
     async def chatHistoryHandler(request, glider:int):
         if request.app.config.NO_CHAT:
-            return sanic.response.text('not allowed')
+            return sanic.response.json({'error', 'not allowed'})
 
         (tU, _) = getTokenUser(request)
         if tU == False:
-            return sanic.response.text('authorization failed')
+            return sanic.response.json({'error', 'authorization failed'})
 
         (rows, _) = await getChatMessages(request, glider, 0)
         return sanic.response.json(rows)
@@ -2077,10 +2078,13 @@ def attachHandlers(app: sanic.Sanic):
     
     @app.websocket('/map/stream')
     async def mapStreamHandler(request: sanic.Request, ws: sanic.Websocket):
+        await ws.send(f"START") # send something to ack the connection opened
+
         zsock = zmq.asyncio.Context().socket(zmq.SUB)
         zsock.setsockopt(zmq.LINGER, 0)
         zsock.connect(request.app.config.WATCH_IPC)
         zsock.setsockopt(zmq.SUBSCRIBE, b'')
+
         while True:
             try:
                 msg = await zsock.recv_multipart()
@@ -2090,8 +2094,12 @@ def attachHandlers(app: sanic.Sanic):
                     await ws.send(body)
                 elif '-urls-gpsstr' in topic or '-files' in topic:  
                     out = loads(body)
-                    if not 'mission' in msg:
-                        out.update( { 'mission': activeMission(msg['glider'], request) } )
+                    if (not 'glider' in out) :
+                        out.update( { 'glider': int(topic[0:3]) } )
+
+                    if (not 'mission' in out):
+                        mission = activeMission(out['glider'], request)
+                        out.update( { 'mission': mission['mission'] if mission else '' } )
 
                     await ws.send(f"{dumps(out).decode('utf-8')}")
 
