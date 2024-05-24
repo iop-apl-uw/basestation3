@@ -1018,7 +1018,7 @@ def attachHandlers(app: sanic.Sanic):
                     await cur.execute(f"SELECT * FROM changes WHERE dive={dive} ORDER BY parm ASC;")
                 except aiosqlite.OperationalError as e:
                     Utils.logDB(f'deltas close (exception) {glider}')
-                    return sanic.response.json({'error', f'db error {e}'})
+                    return sanic.response.json({'error': f'db error {e}'})
 
                 message['parm'] = await cur.fetchall()
 
@@ -1026,7 +1026,7 @@ def attachHandlers(app: sanic.Sanic):
                     await cur.execute(f"SELECT * FROM files WHERE dive={dive} ORDER BY file ASC;")
                 except aiosqlite.OperationalError as e:
                     Utils.logDB(f'deltas close (exception 2) {glider}')
-                    return sanic.response.json({'error', f'db error {e}'})
+                    return sanic.response.json({'error': f'db error {e}'})
 
                 message['file'] = await cur.fetchall()
                 Utils.logDB(f'deltas close {glider}')
@@ -1085,7 +1085,7 @@ def attachHandlers(app: sanic.Sanic):
                     await cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
                 except aiosqlite.OperationalError as e:
                     Utils.logDB(f'status close (exception) {glider}')
-                    return sanic.response.json({'error', f'no table {e}'})
+                    return sanic.response.json({'error': f'no table {e}'})
 
                 try:
                     maxdv = (await cur.fetchone())[0]
@@ -1096,7 +1096,7 @@ def attachHandlers(app: sanic.Sanic):
             await checkClose(conn)
             
         else:
-            return sanic.response.json({'error', 'file not found'})
+            return sanic.response.json({'error': 'file not found'})
 
         (engplots, sgplots, engplotly, sgplotly) = await buildMissionPlotList(gliderPath(glider, request))
 
@@ -1122,7 +1122,7 @@ def attachHandlers(app: sanic.Sanic):
         ok = ["cmdfile", "targets", "science", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
 
         if which not in ok:
-            return sanic.response.json({'error', "oops"})
+            return sanic.response.json({'error': "oops"})
 
         message = {}
 
@@ -1142,7 +1142,7 @@ def attachHandlers(app: sanic.Sanic):
 
 
         if message['file'] == "none":
-            return sanic.response.json({'error', "none"})
+            return sanic.response.json({'error': "none"})
 
         async with aiofiles.open(filename, 'r') as file:
             message['contents']= await file.read() 
@@ -1247,7 +1247,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute(q)
             except aiosqlite.OperationalError as e:
                 Utils.logDB(f'db close (exception) {glider}')
-                return sanic.response.json({'error', f'no table {e}'})
+                return sanic.response.json({'error': f'no table {e}'})
 
             data = await cur.fetchall()
             # r = [dict((cur.description[i][0], value) \
@@ -1266,14 +1266,14 @@ def attachHandlers(app: sanic.Sanic):
     # returns: JSON dict of changes [{(dive,parm,oldval,newval}] or [{dive,file,fullname,contents}]
     async def changesHandler(request, glider:int, dive:int, which:str, sort:str):
         if (which not in ['parms', 'files']) or (sort not in ['dive', 'file', 'parm']):
-            return sanic.response.json({'error', 'no db'})
+            return sanic.response.json({'error': 'no db'})
            
         db   = { 'parms': 'changes', 'files': 'files' } 
         col2 = which[0:-1]
 
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
-            return sanic.response.json({'error', 'no db'})
+            return sanic.response.json({'error': 'no db'})
 
         q = f"SELECT * FROM {db[which]}"
 
@@ -1292,7 +1292,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute(q)
             except aiosqlite.OperationalError as e:
                 Utils.logDB(f'changes close (exception) {glider}')
-                return sanic.response.json({'error', f'no table {e}'})
+                return sanic.response.json({'error': f'no table {e}'})
 
             data = await cur.fetchall()
             Utils.logDB(f'changes close {glider}')
@@ -1309,7 +1309,7 @@ def attachHandlers(app: sanic.Sanic):
     async def dbvarsHandler(request, glider:int):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
-            return sanic.response.json({'error', 'no db'})
+            return sanic.response.json({'error': 'no db'})
 
         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             Utils.logDB(f'dbvars open {glider}')
@@ -1318,7 +1318,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute('select * from dives')
             except aiosqlite.OperationalError as e:
                 Utils.logDB(f'dbvars close (exception) {glider}')
-                return sanic.response.json({'error', f'no table {e}'})
+                return sanic.response.json({'error': f'no table {e}'})
             names = list(map(lambda x: x[0], cur.description))
             data = {}
             data['names'] = names
@@ -1352,7 +1352,7 @@ def attachHandlers(app: sanic.Sanic):
     async def timeSeriesVarsHandler(request, glider:int):
         ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
         if not await aiofiles.os.path.exists(ncfilename):
-            return sanic.response.json({'error', 'no db'})
+            return sanic.response.json({'error': 'no db'})
 
         names = ExtractTimeseries.getVarNames(ncfilename)
         names = sorted([ f['var'] for f in names ])
@@ -1367,7 +1367,7 @@ def attachHandlers(app: sanic.Sanic):
     async def timeSeriesHandler(request, glider:int, dive:int, which:str):
         ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
         if not await aiofiles.os.path.exists(ncfilename):
-            return sanic.response.json({'error', 'no db'})
+            return sanic.response.json({'error': 'no db'})
 
         whichVars = which.split(',')
         dbVars = whichVars
@@ -1386,7 +1386,7 @@ def attachHandlers(app: sanic.Sanic):
     async def queryHandler(request, glider, queryVars):
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         if not await aiofiles.os.path.exists(dbfile):
-            return sanic.response.json({'error', 'no db'})
+            return sanic.response.json({'error': 'no db'})
 
         if 'format' in request.args:
             format = request.args['format'][0]
@@ -1415,7 +1415,7 @@ def attachHandlers(app: sanic.Sanic):
                 await cur.execute(q)
             except:
                 Utils.logDB(f'query close (except) {glider}')
-                return sanic.response.json({'error', 'db error'})
+                return sanic.response.json({'error': 'db error'})
 
             d = await cur.fetchall()
             if format == 'json':
@@ -1429,7 +1429,7 @@ def attachHandlers(app: sanic.Sanic):
             else:
                 str = ''
                 Utils.logDB(f'query close (else) {glider}')
-                return sanic.response.json({'error', 'db error'})
+                return sanic.response.json({'error': 'db error'})
                 
 
     @app.route('/selftest/<glider:int>')
@@ -1721,11 +1721,11 @@ def attachHandlers(app: sanic.Sanic):
     @authorized(modes=['private', 'pilot'])
     async def chatHistoryHandler(request, glider:int):
         if request.app.config.NO_CHAT:
-            return sanic.response.json({'error', 'not allowed'})
+            return sanic.response.json({'error': 'not allowed'})
 
         (tU, _) = getTokenUser(request)
         if tU == False:
-            return sanic.response.json({'error', 'authorization failed'})
+            return sanic.response.json({'error': 'authorization failed'})
 
         (rows, _) = await getChatMessages(request, glider, 0)
         return sanic.response.json(rows)
@@ -1805,12 +1805,12 @@ def attachHandlers(app: sanic.Sanic):
             try:
                 gliders = map(int, glider.split(','))
             except:
-                return sanic.response.text('invalid')
+                return sanic.response.json({'error': 'invalid'})
         else:
             try:
                 gliders = [ int(glider) ]
             except:
-                return sanic.response.text('invalid')
+                return sanic.response.json({'error': 'invalid'})
 
         opTable = await buildAuthTable(request, None)
 
@@ -1861,13 +1861,13 @@ def attachHandlers(app: sanic.Sanic):
                 except Exception as e:
                     sanic.log.logger.info(e)
                     Utils.logDB(f'posPoll close oops {glider}')
-                    return sanic.response.text('oops')
+                    return sanic.response.json({'error': 'oops'})
 
         if format == 'csv':
             return sanic.response.text(outs)
         else:
             if len(out) == 0: 
-                 return sanic.response.text('none')
+                 return sanic.response.json({'error': 'none'})
             elif len(out) == 1:    
                 return sanic.response.json(out[0])
             else:

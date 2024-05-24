@@ -553,7 +553,10 @@
                 if (mk.options.hasOwnProperty('id') && mk.options.id == "seagliderPositionHighlightState") {
                     console.log('getting glider from kml icon ' + mk['key']);
                     console.log(mk);
-                    mk = gliderMarkers[mk['key']];
+                    if ('key' in mk && mk['key'] in gliderMarkers)
+                        mk = gliderMarkers[mk['key']];
+                    else
+                        mk = null;
                     console.log('now');
                     console.log(mk);
                 }
@@ -838,6 +841,7 @@
                     loadGliderKML(map, layerControl, gliders, missions, tail, null, false, false);
             }
 
+                 
             function loadExtras(map, layerControl, glider, mission, tail) {
                 var url;
 
@@ -949,9 +953,11 @@
                     for (k of Object.keys(track._layers)) {
                         if (track._layers[k].options.hasOwnProperty('name') 
                             && (track._layers[k].options.name.includes('Dives') || track._layers[k].options.name.includes('Targets') || track._layers[k].options.name.includes('SSH'))) {
-                            if (track._layers[k].options.name.includes('SSH')) {
-                                layerControl.removeLayer(track._layers[k]._layers[0]);
-                                layerControl.removeLayer(track._layers[k]._layers[1]);
+                            if (track._layers[k].options.name.includes('SSH') && track._layers[k].hasOwnProperty('_layers')) {
+                                for (var i = 0 ; i < track._layers[k]._layers.length ; i++) {
+                                    layerControl.removeLayer(track._layers[k]._layers[i]);
+                                }
+                               //  layerControl.removeLayer(track._layers[k]._layers[1]);
                             }
                             layerControl.removeLayer(track._layers[k]);
                         }
@@ -983,6 +989,11 @@
                 fetch(url)
                 .then(resp => resp.json()) 
                 .then(d => {
+                    if ('error' in d) {
+                        console.log('glider ' + glider + ' ' + d['error']);
+                        return;
+                    }
+
                     if (key in gliderMarkers) {
                         gliderMarkers[key].setLatLng([ d['lat'], d['lon'] ]);
                     }
@@ -1086,8 +1097,8 @@
                                     map.removeLayer(track._layers[k]._layers[kk]);
                                 }
                             }
-                            console.log(track._layers[k].options.name);
-                            console.log(missions[i]);
+                            // console.log(track._layers[k].options.name);
+                            // console.log(missions[i]);
                         }
 
                         if (tail > -1 && track._layers[k].options.hasOwnProperty('name')
@@ -1595,17 +1606,32 @@
                 document.title = glider + '-map';
                 window.name = glider + '-map';
                 lastBounds = loadBounds('' + glider);
-                loadGliderPosition(map, layerControl, glider, mission);
-                loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true, true);
-                loadGliderDAC(map, layerControl, path[first], mission); 
 
-                L.easyButton('<img src="../script/images/diveplot_icon.png">', function(){
-                    if (mission != '')
-                        window.open('../' + glider + '?mission=' + mission, 'SG' + glider);
-                    else
-                        window.open('../' + glider, 'SG' + glider);
-                }).addTo(map);
+                var url;
 
+                if (mission && mission != '')
+                   url = `../summary/${glider}?mission=${mission}`;
+                else
+                   url = `../summary/${glider}`;
+               
+                fetch(url)
+                .then(resp => resp.json()) 
+                .then(d => {
+
+                    if (mission == null || mission == '')
+                        mission = d['mission']['mission'];
+
+                    loadGliderPosition(map, layerControl, glider, mission);
+                    loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true, true);
+                    loadGliderDAC(map, layerControl, path[first], mission); 
+
+                    L.easyButton('<img src="../script/images/diveplot_icon.png">', function(){
+                        if (mission != '')
+                            window.open('../' + glider + '?mission=' + mission, 'SG' + glider);
+                        else
+                            window.open('../' + glider, 'SG' + glider);
+                    }).addTo(map);
+                });
             }
             else {
                 document.title = 'map';
