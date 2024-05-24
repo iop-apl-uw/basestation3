@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Main plot for glider engineering data """
+"""Main plot for glider engineering data"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -436,13 +436,13 @@ def plot_diveplot(
     }
     if gc_pitch_pos_ad is not None:
         temp_dict["customdata"] = gc_pitch_pos_ad
-        temp_dict[
-            "hovertemplate"
-        ] = "Pitch pos<br>%{y:.2f} mm<br>%{customdata:d} AD<br>%{x:.2f} mins<br><extra></extra>"
+        temp_dict["hovertemplate"] = (
+            "Pitch pos<br>%{y:.2f} mm<br>%{customdata:.1f} AD<br>%{x:.2f} mins<br><extra></extra>"
+        )
     else:
-        temp_dict[
-            "hovertemplate"
-        ] = "Pitch pos<br>%{y:.2f} mm<br>%{x:.2f} mins<br><extra></extra>"
+        temp_dict["hovertemplate"] = (
+            "Pitch pos<br>%{y:.2f} mm<br>%{x:.2f} mins<br><extra></extra>"
+        )
 
     fig.add_trace(temp_dict)
     del temp_dict
@@ -476,13 +476,13 @@ def plot_diveplot(
     }
     if gc_roll_pos_ad is not None:
         temp_dict["customdata"] = gc_roll_pos_ad
-        temp_dict[
-            "hovertemplate"
-        ] = "Roll pos<br>%{y:.2f} deg<br>%{customdata:d} AD<br>%{x:.2f} mins<br><extra></extra>"
+        temp_dict["hovertemplate"] = (
+            "Roll pos<br>%{y:.2f} deg<br>%{customdata:.1f} AD<br>%{x:.2f} mins<br><extra></extra>"
+        )
     else:
-        temp_dict[
-            "hovertemplate"
-        ] = "Roll pos<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>"
+        temp_dict["hovertemplate"] = (
+            "Roll pos<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>"
+        )
 
     fig.add_trace(temp_dict)
     del temp_dict
@@ -647,13 +647,13 @@ def plot_diveplot(
     }
     if gc_vbd_pos_ad is not None:
         temp_dict["customdata"] = gc_vbd_pos_ad
-        temp_dict[
-            "hovertemplate"
-        ] = "VBD pos<br>%{meta:.2f} cc<br>%{customdata:d} AD<br>%{x:.2f} mins<br><extra></extra>"
+        temp_dict["hovertemplate"] = (
+            "VBD pos<br>%{meta:.2f} cc<br>%{customdata:.1f} AD<br>%{x:.2f} mins<br><extra></extra>"
+        )
     else:
-        temp_dict[
-            "hovertemplate"
-        ] = "VBD pos<br>%{meta:.2f} cc<br>%{x:.2f} mins<br><extra></extra>"
+        temp_dict["hovertemplate"] = (
+            "VBD pos<br>%{meta:.2f} cc<br>%{x:.2f} mins<br><extra></extra>"
+        )
 
     fig.add_trace(temp_dict)
     del temp_dict
