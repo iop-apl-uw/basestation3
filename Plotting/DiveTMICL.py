@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots TMICL data """
+"""Plots TMICL data"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -104,7 +104,6 @@ def plot_TMICL(
 
         try:
             sigmean_dive = dive_nc_file.variables[f"tmicl_sigmean_{ch}_a"][:]
-            sigvar_dive = dive_nc_file.variables[f"tmicl_sigvar_{ch}_a"][:]
             tmicl_time_dive = dive_nc_file.variables[f"tmicl_time_{ch}_a"][:]
         except KeyError as e:
             log_debug(f"Could not find variable {e.args[0]} - skipping dive plot")
@@ -112,11 +111,24 @@ def plot_TMICL(
             log_error("Error fetching dive variables - skipping dive plot", "exc")
 
         try:
+            sigvar_dive = dive_nc_file.variables[f"tmicl_sigvar_{ch}_a"][:]
+        except KeyError as e:
+            log_debug(f"Could not find variable {e.args[0]} - skipping dive plot")
+        except:
+            log_error("Error fetching dive variables - skipping dive plot", "exc")
+
+        try:
             sigmean_climb = dive_nc_file.variables[f"tmicl_sigmean_{ch}_b"][:]
-            sigvar_climb = dive_nc_file.variables[f"tmicl_sigvar_{ch}_b"][:]
             tmicl_time_climb = dive_nc_file.variables[f"tmicl_time_{ch}_b"][:]
         except KeyError as e:
-            log_info(f"Could not find variable {e.args[0]} - skipping climb plot")
+            log_debug(f"Could not find variable {e.args[0]} - skipping climb plot")
+        except:
+            log_error("Error fetching variables - skipping climb plot", "exc")
+
+        try:
+            sigvar_climb = dive_nc_file.variables[f"tmicl_sigvar_{ch}_b"][:]
+        except KeyError as e:
+            log_debug(f"Could not find variable {e.args[0]} - skipping climb plot")
         except:
             log_error("Error fetching variables - skipping climb plot", "exc")
 
