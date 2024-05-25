@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -50,11 +50,13 @@ from BaseLog import (
 )
 
 import BaseOpts
+import BaseOptsType
 import scipy
 
 import math
 import Utils
 import sys
+
 
 def flightModelW(bu, ph, xl, a, b, c, rho, s):
     gravity = 9.81
@@ -105,57 +107,53 @@ def flightModelW(bu, ph, xl, a, b, c, rho, s):
     else:
         return None
 
+
 def w_misfit_abc(x0, W, Vol, Dens, Pit, m, rho, vol0):
     bias = x0[0]
     hd_a = x0[1]
     hd_b = x0[2]
-    hd_c = 5.7e-6 # x0[3]
+    hd_c = 5.7e-6  # x0[3]
 
-    bu = 1000.0 * (-m + Dens * (vol0*1e6 + (Vol - bias)) * 1.0e-6)
+    bu = 1000.0 * (-m + Dens * (vol0 * 1e6 + (Vol - bias)) * 1.0e-6)
     W_model = getModelW(bu, Pit, hd_a, hd_b, hd_c, rho)
 
-    return np.sqrt(np.nanmean((W_model - W)**2))
+    return np.sqrt(np.nanmean((W_model - W) ** 2))
+
 
 def w_misfit_bias(bias, abc, W, Vol, Dens, Pit, m, rho, vol0):
-
-    bu = 1000.0 * (-m + Dens * (vol0*1e6 + (Vol - bias)) * 1.0e-6)
-    W_biased = getModelW(bu, Pit, abc[0], abc[1], abc[2] ,rho)
+    bu = 1000.0 * (-m + Dens * (vol0 * 1e6 + (Vol - bias)) * 1.0e-6)
+    W_biased = getModelW(bu, Pit, abc[0], abc[1], abc[2], rho)
 
     return np.nanmean(W_biased - W)
+
 
 def getVars(fname, basis_C_VBD, basis_VBD_CNV):
     try:
         nc = Utils.open_netcdf_file(fname)
     except:
         print(f"could not open {fname}")
-        return 
+        return
 
     c_vbd = nc.variables["log_C_VBD"].getValue()
 
     # SG eng time base
-    time  = nc.variables["time"][:]
+    time = nc.variables["time"][:]
     depth = nc.variables["depth"][:]
     pitch = nc.variables["eng_pitchAng"][:]
-    vbd   = nc.variables["eng_vbdCC"][:] + (c_vbd - basis_C_VBD)*basis_VBD_CNV
+    vbd = nc.variables["eng_vbdCC"][:] + (c_vbd - basis_C_VBD) * basis_VBD_CNV
 
     # CTD time base
     ctd_time = nc.variables["ctd_time"][:]
     ctd_time = nc.variables["ctd_time"][:]
     ctd_depth = nc.variables["ctd_depth"][:]
     # density_ctd = nc.variables["density"][:]
-    # use raw 
+    # use raw
     temp_ctd = nc.variables["temperature_raw"][:]
     salin_ctd = nc.variables["salinity_raw"][:]
 
     density_ctd = seawater.pden(salin_ctd, temp_ctd, ctd_depth)
 
-    inds = np.nonzero(
-        np.logical_and.reduce(
-            (
-                np.isfinite(density_ctd),
-            )
-        )
-    )[0]
+    inds = np.nonzero(np.logical_and.reduce((np.isfinite(density_ctd),)))[0]
     ctd_time = ctd_time[inds]
     density_ctd = density_ctd[inds]
 
@@ -184,72 +182,82 @@ def getVars(fname, basis_C_VBD, basis_VBD_CNV):
 
     return w[inds], depth[inds], vbd[inds], density[inds], pitch[inds]
 
+
 def getModelW(bu, Pit, HD_A, HD_B, HD_C, rho0):
     W = bu.copy()
     for k, b in enumerate(bu):
         w = flightModelW(b, Pit[k], 1.8, HD_A, HD_B, HD_C, rho0, -0.25)
         if w:
-            W[k] = 100*w
+            W[k] = 100 * w
         else:
             W[k] = 0
- 
+
     return W
 
-def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives, bias_only=False, decimate=1):
 
-    fname = os.path.join(path, f'p{glider:03d}{dives[-1]:04d}.nc')
+def regress(
+    path,
+    glider,
+    dives,
+    depthlims,
+    init_bias,
+    mass,
+    doplot,
+    plot_dives,
+    bias_only=False,
+    decimate=1,
+):
+    fname = os.path.join(path, f"p{glider:03d}{dives[-1]:04d}.nc")
 
     nc = Utils.open_netcdf_file(fname)
     basis_C_VBD = nc.variables["log_C_VBD"].getValue()
     basis_HD_A = nc.variables["log_HD_A"].getValue()
     basis_HD_B = nc.variables["log_HD_B"].getValue()
     basis_HD_C = nc.variables["log_HD_C"].getValue()
-    basis_RHO0 = nc.variables["log_RHO"].getValue()*1000
-    basis_MASS = (mass if mass else nc.variables["log_MASS"].getValue())/1000
+    basis_RHO0 = nc.variables["log_RHO"].getValue() * 1000
+    basis_MASS = (mass if mass else nc.variables["log_MASS"].getValue()) / 1000
     basis_VBD_CNV = nc.variables["log_VBD_CNV"].getValue()
     basis_VBD_MIN = nc.variables["log_VBD_MIN"].getValue()
 
-    vol0 = basis_MASS/basis_RHO0;
-
-    log = { 
-            "C_VBD": basis_C_VBD,
-            "HD_A": basis_HD_A,
-            "HD_B": basis_HD_B,
-            "HD_C": basis_HD_C,
-            "VOL0": vol0,
-            "MAX_BUOY": float(nc.variables["log_MAX_BUOY"].getValue()),
-            "SM_CC": float(nc.variables["log_SM_CC"].getValue()),
-            "VBD_MIN": float(nc.variables["log_VBD_MIN"].getValue()),
-            "VBD_MAX": float(nc.variables["log_VBD_MAX"].getValue()),
-            "VBD_CNV": float(nc.variables["log_VBD_CNV"].getValue()),
-            "RHO":     float(nc.variables["log_RHO"].getValue()),
-            "MASS":    mass if mass else float(nc.variables["log_MASS"].getValue()),
-          }
-
+    vol0 = basis_MASS / basis_RHO0
+    log = {
+        "C_VBD": basis_C_VBD,
+        "HD_A": basis_HD_A,
+        "HD_B": basis_HD_B,
+        "HD_C": basis_HD_C,
+        "VOL0": vol0,
+        "MAX_BUOY": float(nc.variables["log_MAX_BUOY"].getValue()),
+        "SM_CC": float(nc.variables["log_SM_CC"].getValue()),
+        "VBD_MIN": float(nc.variables["log_VBD_MIN"].getValue()),
+        "VBD_MAX": float(nc.variables["log_VBD_MAX"].getValue()),
+        "VBD_CNV": float(nc.variables["log_VBD_CNV"].getValue()),
+        "RHO": float(nc.variables["log_RHO"].getValue()),
+        "MASS": mass if mass else float(nc.variables["log_MASS"].getValue()),
+    }
 
     mission = nc.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")
 
     nc.close()
 
-    # collect the entire dataset over possibly multiple dives, but only 
+    # collect the entire dataset over possibly multiple dives, but only
     # in the interesting depth band
 
-    W        = np.empty(shape=(0))
-    Dens     = np.empty(shape=(0))
-    Vol      = np.empty(shape=(0))
-    Pit      = np.empty(shape=(0))
+    W = np.empty(shape=(0))
+    Dens = np.empty(shape=(0))
+    Vol = np.empty(shape=(0))
+    Pit = np.empty(shape=(0))
 
     for i in dives:
-        fname = os.path.join(path, f'p{glider:03d}{i:04d}.nc')
+        fname = os.path.join(path, f"p{glider:03d}{i:04d}.nc")
 
         w, depth, vbd, density, pitch = getVars(fname, basis_C_VBD, basis_VBD_CNV)
-       
+
         dmax = max(depth)
         dlims = depthlims
         if dlims[0] < 1:
-            dlims[0] = dlims[0]*dmax
+            dlims[0] = dlims[0] * dmax
         if dlims[1] < 1:
-            dlims[1] = dlims[1]*dmax
+            dlims[1] = dlims[1] * dmax
 
         inds = np.nonzero(
             np.logical_and.reduce(
@@ -259,76 +267,97 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
                 )
             )
         )[0]
-   
+
         inds = inds[::decimate]
- 
-        W    = np.concatenate((W, w[inds]))
-        Vol  = np.concatenate((Vol, vbd[inds]))
+
+        W = np.concatenate((W, w[inds]))
+        Vol = np.concatenate((Vol, vbd[inds]))
         Dens = np.concatenate((Dens, density[inds]))
-        Pit  = np.concatenate((Pit, pitch[inds]))
+        Pit = np.concatenate((Pit, pitch[inds]))
 
         # get single latest dive whole dive (not depth ranged) variables
         # for return purposes
         if i == dives[-1]:
-            Wwhole       = w
-            depthwhole   = depth
+            Wwhole = w
+            depthwhole = depth
             densitywhole = density
-            pitchwhole   = pitch
-            vbdwhole     = vbd
- 
-            bu = 1000.0 * (-basis_MASS + density * (vol0*1e6 + vbd) * 1.0e-6)
-            Wwhole_unbiased = getModelW(bu, pitch,
-                                        basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0)
+            pitchwhole = pitch
+            vbdwhole = vbd
 
-    bu = 1000.0 * (-basis_MASS + Dens * (vol0*1e6 + Vol) * 1.0e-6)
+            bu = 1000.0 * (-basis_MASS + density * (vol0 * 1e6 + vbd) * 1.0e-6)
+            Wwhole_unbiased = getModelW(
+                bu, pitch, basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0
+            )
+
+    bu = 1000.0 * (-basis_MASS + Dens * (vol0 * 1e6 + Vol) * 1.0e-6)
     W_unbiased = getModelW(bu, Pit, basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0)
-    rms_init = np.sqrt(np.nanmean((W_unbiased - W)**2))
+    rms_init = np.sqrt(np.nanmean((W_unbiased - W) ** 2))
 
     # use bisection for the bias only search for the rare cases where its better
     # convergence properties make a difference
     if bias_only:
-        abc = [basis_HD_A, basis_HD_B, 5.7e-6] # basis_HD_C]
+        abc = [basis_HD_A, basis_HD_B, 5.7e-6]  # basis_HD_C]
         try:
-            x, res = scipy.optimize.brentq(w_misfit_bias, -600, 600, 
-                                           args=(abc, W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), 
-                                           maxiter=50, xtol=1e-3, full_output=True, disp=True)
+            x, res = scipy.optimize.brentq(
+                w_misfit_bias,
+                -600,
+                600,
+                args=(abc, W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0),
+                maxiter=50,
+                xtol=1e-3,
+                full_output=True,
+                disp=True,
+            )
         except:
             warns = 1
         else:
             warns = 0
-    
+
         bias = x
         hd_a = abc[0]
         hd_b = abc[1]
         hd_c = abc[2]
     else:
-        x0 = [init_bias, basis_HD_A, basis_HD_B] # , basis_HD_C]
-        x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, 
-                                                                x0=x0, 
-                                                                args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), 
-                                                                maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
+        x0 = [init_bias, basis_HD_A, basis_HD_B]  # , basis_HD_C]
+        x, rms_final, niter, calls, warns = scipy.optimize.fmin(
+            func=w_misfit_abc,
+            x0=x0,
+            args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0),
+            maxiter=800,
+            maxfun=1600,
+            ftol=1e-3,
+            full_output=True,
+            disp=True,
+        )
 
         bias = x[0]
         hd_a = x[1]
         hd_b = x[2]
-        hd_c = 5.7e-6 # x[3]
+        hd_c = 5.7e-6  # x[3]
 
     if warns > 0:
         log_warning(f"regression did not converge (warnflag={warns})")
-        inds = np.nonzero( np.isfinite(Wwhole_unbiased) )
-        return  0, (basis_HD_A, basis_HD_B, basis_HD_C), (depthwhole[inds], Wwhole[inds], Wwhole_unbiased[inds], None), (rms_init, 0), log, None, None
+        inds = np.nonzero(np.isfinite(Wwhole_unbiased))
+        return (
+            0,
+            (basis_HD_A, basis_HD_B, basis_HD_C),
+            (depthwhole[inds], Wwhole[inds], Wwhole_unbiased[inds], None),
+            (rms_init, 0),
+            log,
+            None,
+            None,
+        )
 
-    bu = 1000.0 * (-basis_MASS + Dens * (vol0*1e6 + Vol - bias) * 1.0e-6)
+    bu = 1000.0 * (-basis_MASS + Dens * (vol0 * 1e6 + Vol - bias) * 1.0e-6)
     W_biased = getModelW(bu, Pit, hd_a, hd_b, hd_c, basis_RHO0)
-    rms_final = np.sqrt(np.nanmean((W_biased - W)**2))
+    rms_final = np.sqrt(np.nanmean((W_biased - W) ** 2))
 
-    volmax = vol0*1e6 + (basis_VBD_MIN - basis_C_VBD)*basis_VBD_CNV - bias
-    c_vbd = basis_C_VBD + bias/basis_VBD_CNV
+    volmax = vol0 * 1e6 + (basis_VBD_MIN - basis_C_VBD) * basis_VBD_CNV - bias
+    c_vbd = basis_C_VBD + bias / basis_VBD_CNV
 
-    log['implied_volmax'] = volmax;
-    log['implied_C_VBD'] = c_vbd;
-
-    bu = 1000.0 * (-basis_MASS + densitywhole * (vol0*1e6 + vbdwhole - bias) * 1.0e-6)
+    log["implied_volmax"] = volmax
+    log["implied_C_VBD"] = c_vbd
+    bu = 1000.0 * (-basis_MASS + densitywhole * (vol0 * 1e6 + vbdwhole - bias) * 1.0e-6)
     Wwhole_biased = getModelW(bu, pitchwhole, hd_a, hd_b, hd_c, basis_RHO0)
 
     inds = np.nonzero(
@@ -341,7 +370,20 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
     )
 
     if not doplot:
-        return bias, (hd_a, hd_b, hd_c), (depthwhole[inds], Wwhole[inds], Wwhole_unbiased[inds], Wwhole_biased[inds]), (rms_init, rms_final), log, None, None
+        return (
+            bias,
+            (hd_a, hd_b, hd_c),
+            (
+                depthwhole[inds],
+                Wwhole[inds],
+                Wwhole_unbiased[inds],
+                Wwhole_biased[inds],
+            ),
+            (rms_init, rms_final),
+            log,
+            None,
+            None,
+        )
 
     minx = min([min(W_biased), min(W_unbiased)])
     maxx = max([max(W_biased), max(W_unbiased)])
@@ -350,7 +392,7 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
 
     minlim = min([minx, miny])
     maxlim = max([maxx, maxy])
-    lim = max([abs(minlim), abs(maxlim)])*1.05
+    lim = max([abs(minlim), abs(maxlim)]) * 1.05
 
     figs = []
 
@@ -389,7 +431,7 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
             "y": [-lim, lim],
             "mode": "lines",
             "line": {"color": "Black"},
-            "showlegend": False
+            "showlegend": False,
         }
     )
 
@@ -400,15 +442,15 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
             "xaxis": {
                 "title": "model vert vel (cm/s)",
                 "showgrid": True,
-                "range": [-lim, lim]
+                "range": [-lim, lim],
             },
             "yaxis": {
                 "title": "observed vert vel (cm/s)",
                 "showgrid": True,
-                "range": [-lim, lim]
+                "range": [-lim, lim],
             },
             "title": {
-                "text": title, 
+                "text": title,
                 "xanchor": "center",
                 "yanchor": "top",
                 "x": 0.5,
@@ -430,33 +472,49 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
 
     imgs = None
 
-    if doplot == 'png':
+    if doplot == "png":
         imgs = [fig.to_image(format="png")]
-    elif doplot == 'html':
-        imgs = [fig.to_html(
-                            include_plotlyjs="cdn",
-                            full_html=False,
-                            validate=True,
-                            config={
-                                "modeBarButtonsToRemove": ["lasso2d", "select2d"],
-                                "scrollZoom": False,
-                            },
-                            include_mathjax="cdn",
-                           ) ]
+    elif doplot == "html":
+        imgs = [
+            fig.to_html(
+                include_plotlyjs="cdn",
+                full_html=False,
+                validate=True,
+                config={
+                    "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                    "scrollZoom": False,
+                },
+                include_mathjax="cdn",
+            )
+        ]
 
     if not plot_dives:
-        return bias, (hd_a, hd_b, hd_c), (depthwhole[inds], Wwhole[inds], Wwhole_unbiased[inds], Wwhole_biased[inds]), (rms_init, rms_final), log, imgs, figs
-    
+        return (
+            bias,
+            (hd_a, hd_b, hd_c),
+            (
+                depthwhole[inds],
+                Wwhole[inds],
+                Wwhole_unbiased[inds],
+                Wwhole_biased[inds],
+            ),
+            (rms_init, rms_final),
+            log,
+            imgs,
+            figs,
+        )
+
     for i in dives:
-        fname = os.path.join(path, f'p{glider:03d}{i:04d}.nc')
+        fname = os.path.join(path, f"p{glider:03d}{i:04d}.nc")
 
         w, depth, vbd, density, pitch = getVars(fname, basis_C_VBD, basis_VBD_CNV)
 
-        bu = 1000.0 * (-basis_MASS + density * (vol0*1e6 + vbd) * 1.0e-6)
-        w_unbiased = getModelW(bu, pitch,
-                               basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0)
+        bu = 1000.0 * (-basis_MASS + density * (vol0 * 1e6 + vbd) * 1.0e-6)
+        w_unbiased = getModelW(
+            bu, pitch, basis_HD_A, basis_HD_B, basis_HD_C, basis_RHO0
+        )
 
-        bu = 1000.0 * (-basis_MASS + density * (vol0*1e6 + vbd - bias) * 1.0e-6)
+        bu = 1000.0 * (-basis_MASS + density * (vol0 * 1e6 + vbd - bias) * 1.0e-6)
         w_biased = getModelW(bu, pitch, hd_a, hd_b, hd_c, basis_RHO0)
 
         inds = np.nonzero(
@@ -468,19 +526,21 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
             )
         )
 
-        w       = w[inds]
-        depth   = depth[inds]
+        w = w[inds]
+        depth = depth[inds]
         w_biased = w_biased[inds]
         w_unbiased = w_unbiased[inds]
 
         fig = plotly.graph_objects.Figure()
         fig.add_trace(
             {
-                "x": w, 
+                "x": w,
                 "y": depth,
                 "name": "observed",
                 "mode": "lines",
-                "line": { "color": "black", },
+                "line": {
+                    "color": "black",
+                },
                 "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
             }
         )
@@ -490,7 +550,9 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
                 "y": depth,
                 "name": "uncorrected model",
                 "mode": "lines",
-                 "line": { "color": "Blue", },
+                "line": {
+                    "color": "Blue",
+                },
                 "hovertemplate": "%{x:.0f},%{y:.0f}<br><extra></extra>",
             }
         )
@@ -519,7 +581,7 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
                     "autorange": "reversed",
                 },
                 "title": {
-                    "text": title, 
+                    "text": title,
                     "xanchor": "center",
                     "yanchor": "top",
                     "x": 0.5,
@@ -534,27 +596,38 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
 
         figs.append(fig)
 
-        if doplot == 'png':
+        if doplot == "png":
             imgs.append(fig.to_image(format="png"))
-        elif doplot == 'html':
-            imgs.append(fig.to_html(
-                                include_plotlyjs="cdn",
-                                full_html=False,
-                                validate=True,
-                                config={
-                                    "modeBarButtonsToRemove": ["lasso2d", "select2d"],
-                                    "scrollZoom": False,
-                                },
-                                include_mathjax="cdn",
-                            )
-                       )
+        elif doplot == "html":
+            imgs.append(
+                fig.to_html(
+                    include_plotlyjs="cdn",
+                    full_html=False,
+                    validate=True,
+                    config={
+                        "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                        "scrollZoom": False,
+                    },
+                    include_mathjax="cdn",
+                )
+            )
 
-    return bias, (hd_a, hd_b, hd_c), (depth, w, w_unbiased, w_biased), (rms_init, rms_final), log, imgs, figs
-    
+    return (
+        bias,
+        (hd_a, hd_b, hd_c),
+        (depth, w, w_unbiased, w_biased),
+        (rms_init, rms_final),
+        log,
+        imgs,
+        figs,
+    )
+
+
 from itertools import chain
 
+
 def parseSingleRange(rng):
-    parts = rng.split('-')
+    parts = rng.split("-")
     if 1 > len(parts) > 2:
         return []
 
@@ -566,60 +639,57 @@ def parseSingleRange(rng):
 
     return range(start, end + 1)
 
+
 def parseRangeList(rngs):
-    return sorted(set(chain(*[parseSingleRange(rng) for rng in rngs.split(',')])))
+    return sorted(set(chain(*[parseSingleRange(rng) for rng in rngs.split(",")])))
+
 
 def main():
-    base_opts = BaseOpts.BaseOptions("Command line app for VBD regression\nTypical usage (from glider mission directory): python RegressVBD.py -m ./ -i 235 --dives 3-5 --depths 40,140 --initial_bias -50 --out results.html",
+    base_opts = BaseOpts.BaseOptions(
+        "Command line app for VBD regression\nTypical usage (from glider mission directory): python RegressVBD.py -m ./ -i 235 --dives 3-5 --depths 40,140 --initial_bias -50 --out results.html",
         additional_arguments={
-            "dives": BaseOpts.options_t(
+            "dives": BaseOptsType.options_t(
                 "",
                 ("RegressVBD",),
-                ( "--dives", ), 
+                ("--dives",),
                 str,
-                {
-                    "help": "dives to process (e.g.: 3-4,7)",
-                    "required": ("RegressVBD",) 
-                }
+                {"help": "dives to process (e.g.: 3-4,7)", "required": ("RegressVBD",)},
             ),
-            "depths": BaseOpts.options_t(
+            "depths": BaseOptsType.options_t(
                 "",
                 ("RegressVBD",),
-                ( "--depths", ), 
+                ("--depths",),
                 str,
-                {
-                    "help": "depth limits (e.g.: 40,140)",
-                    "required": ("RegressVBD",) 
-                }
+                {"help": "depth limits (e.g.: 40,140)", "required": ("RegressVBD",)},
             ),
-            "out": BaseOpts.options_t(
+            "out": BaseOptsType.options_t(
                 "",
                 ("RegressVBD",),
-                ( "--out", ), 
+                ("--out",),
                 str,
                 {
                     "help": "output file name",
-                }
+                },
             ),
-            "mass": BaseOpts.options_t(
+            "mass": BaseOptsType.options_t(
                 None,
                 ("RegressVBD",),
-                ( "--mass", ),
+                ("--mass",),
                 float,
                 {
                     "help": "corrected scale mass (g)",
-                }
+                },
             ),
-            "initial_bias": BaseOpts.options_t(
+            "initial_bias": BaseOptsType.options_t(
                 -50,
                 ("RegressVBD",),
-                ( "--initial_bias", ),
+                ("--initial_bias",),
                 float,
                 {
                     "help": "initial bias estimate (cc)",
-                }
+                },
             ),
-        }
+        },
     )
 
     if not base_opts.instrument_id:
@@ -641,14 +711,14 @@ def main():
             print("Can't figure out the instrument id - bailing out")
             return
 
-    depthlims = base_opts.depths.split(',')
+    depthlims = base_opts.depths.split(",")
     if len(depthlims) != 2:
         print("invalid depth limits")
         return
 
     try:
         d0 = float(depthlims[0])
-        d1 = float(depthlims[1])    
+        d1 = float(depthlims[1])
     except:
         print("invalid depth lims")
         return
@@ -656,33 +726,36 @@ def main():
     dives = parseRangeList(base_opts.dives)
     if not dives or len(dives) < 1:
         print("invalid dives list")
-        return 
+        return
 
-    if base_opts.out and 'html' in base_opts.out:
-        fmt = 'html'
-    elif base_opts.out and 'png' in base_opts.out:
-        fmt = 'png'
+    if base_opts.out and "html" in base_opts.out:
+        fmt = "html"
+    elif base_opts.out and "png" in base_opts.out:
+        fmt = "png"
     else:
         fmt = False
 
-    bias, hd, w, rms, log, plt = regress(base_opts.mission_dir,
-                      base_opts.instrument_id,
-                      parseRangeList(base_opts.dives),
-                      [d0, d1],
-                      base_opts.initial_bias, 
-                      base_opts.mass,
-                      fmt, True)
+    bias, hd, w, rms, log, plt = regress(
+        base_opts.mission_dir,
+        base_opts.instrument_id,
+        parseRangeList(base_opts.dives),
+        [d0, d1],
+        base_opts.initial_bias,
+        base_opts.mass,
+        fmt,
+        True,
+    )
 
-    if fmt == 'html':
-        fid = open(base_opts.out, 'w')
+    if fmt == "html":
+        fid = open(base_opts.out, "w")
         fid.write("<br>".join(plt))
         fid.close()
-    elif fmt == 'png':
-        for k,p in enumerate(plt):
-            fid = open(f"{base_opts.out}{k}", 'wb')
+    elif fmt == "png":
+        for k, p in enumerate(plt):
+            fid = open(f"{base_opts.out}{k}", "wb")
             fid.write(p)
             fid.close()
-  
+
     print(f"Initial RMS = {rms[0]:.3f}")
     print(f"final RMS   = {rms[1]:.3f}")
     print(f"VBD bias    = {bias:.2f} cc")
@@ -690,10 +763,10 @@ def main():
     print(f"Implied volmax = {log['implied_volmax']:.1f} cc")
     print(f"Implied C_VBD  = {log['implied_C_VBD']:.1f}")
 
+
 if __name__ == "__main__":
     retval = 1
 
     retval = main()
 
     sys.exit(retval)
-

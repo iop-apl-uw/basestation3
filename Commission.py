@@ -45,6 +45,7 @@ import sys
 import shutil
 
 import BaseOpts
+import BaseOptsType
 import BaseDB
 from BaseLog import BaseLogger, log_critical, log_error, log_info
 
@@ -95,7 +96,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Creates the user accounts and populates home directories for new gliders (Run as root)",
         additional_arguments={
-            "home_dir": BaseOpts.options_t(
+            "home_dir": BaseOptsType.options_t(
                 "/home",
                 ("Commission",),
                 ("--home_dir",),
@@ -104,7 +105,7 @@ def main():
                     "help": "home directory base, used by Commission.py",
                 },
             ),
-            "glider_password": BaseOpts.options_t(
+            "glider_password": BaseOptsType.options_t(
                 None,
                 ("Commission",),
                 ("--glider_password",),
@@ -113,7 +114,7 @@ def main():
                     "help": "glider password, used by Commission.py",
                 },
             ),
-            "glider_group": BaseOpts.options_t(
+            "glider_group": BaseOptsType.options_t(
                 "gliders",
                 ("Commission",),
                 ("--glider_group",),
@@ -122,7 +123,7 @@ def main():
                     "help": "glider group, used by Commission.py",
                 },
             ),
-            "home_dir_group": BaseOpts.options_t(
+            "home_dir_group": BaseOptsType.options_t(
                 "gliders",
                 ("Commission",),
                 ("--home_dir_group",),
@@ -131,7 +132,7 @@ def main():
                     "help": "home dir group, used by Commission.py",
                 },
             ),
-            "glider_id": BaseOpts.options_t(
+            "glider_id": BaseOptsType.options_t(
                 None,
                 ("Commission",),
                 ("glider_id",),
@@ -140,7 +141,7 @@ def main():
                     "help": "serial number of glider to commission (no leading sg)",
                 },
             ),
-            "glider_jail": BaseOpts.options_t(
+            "glider_jail": BaseOptsType.options_t(
                 None,
                 ("Commission",),
                 ("--jail",),
@@ -150,7 +151,7 @@ def main():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-            "uid": BaseOpts.options_t(
+            "uid": BaseOptsType.options_t(
                 None,
                 ("Commission",),
                 ("--uid",),

@@ -47,6 +47,7 @@ from inotify_simple import INotify, flags
 import sdnotify
 
 import BaseOpts
+import BaseOptsType
 from BaseLog import (
     BaseLogger,
     log_error,
@@ -85,7 +86,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Glider Account Processing",
         additional_arguments={
-            "python_version": BaseOpts.options_t(
+            "python_version": BaseOptsType.options_t(
                 "/opt/basestation/bin/python",
                 ("BaseRunner",),
                 ("--python_version",),
@@ -94,7 +95,7 @@ def main():
                     "help": "path to python executable",
                 },
             ),
-            "watch_dir": BaseOpts.options_t(
+            "watch_dir": BaseOptsType.options_t(
                 None,
                 ("BaseRunner",),
                 ("watch_dir",),
@@ -104,7 +105,7 @@ def main():
                     "action": BaseOpts.FullPathTrailingSlashAction,
                 },
             ),
-            "jail_root": BaseOpts.options_t(
+            "jail_root": BaseOptsType.options_t(
                 "",
                 ("BaseRunner",),
                 ("--jail_root",),
@@ -114,7 +115,7 @@ def main():
                     "action": BaseOpts.FullPathTrailingSlashAction,
                 },
             ),
-            "archive": BaseOpts.options_t(
+            "archive": BaseOptsType.options_t(
                 False,
                 ("BaseRunner",),
                 ("--archive",),
@@ -124,7 +125,7 @@ def main():
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
-            "docker_image": BaseOpts.options_t(
+            "docker_image": BaseOptsType.options_t(
                 "",
                 ("BaseRunner",),
                 ("--docker_image",),
@@ -133,7 +134,7 @@ def main():
                     "help": "Docker image to use",
                 },
             ),
-            "docker_uid": BaseOpts.options_t(
+            "docker_uid": BaseOptsType.options_t(
                 0,
                 ("BaseRunner",),
                 ("--docker_uid",),
@@ -142,7 +143,7 @@ def main():
                     "help": "User id to run docker image as",
                 },
             ),
-            "docker_gid": BaseOpts.options_t(
+            "docker_gid": BaseOptsType.options_t(
                 0,
                 ("BaseRunner",),
                 ("--docker_gid",),
@@ -151,7 +152,7 @@ def main():
                     "help": "Group id to run docker image as",
                 },
             ),
-            "use_docker_basestation": BaseOpts.options_t(
+            "use_docker_basestation": BaseOptsType.options_t(
                 False,
                 ("BaseRunner",),
                 ("--use_docker_basestation",),
@@ -161,7 +162,7 @@ def main():
                     "action": BaseOpts.FullPathTrailingSlashAction,
                 },
             ),
-            "docker_mount": BaseOpts.options_t(
+            "docker_mount": BaseOptsType.options_t(
                 [],
                 ("BaseRunner",),
                 ("--docker_mount",),
@@ -314,7 +315,7 @@ def main():
                         )
             except KeyboardInterrupt:
                 exit_event.set()
-            except:
+            except Exception:
                 log_error(f"Error processing {run_file}", "exc")
             finally:
                 log_info("Cleanup")
@@ -325,13 +326,13 @@ def main():
                         if not os.path.exists(archive_dir):
                             try:
                                 os.mkdir(archive_dir)
-                            except:
+                            except Exception:
                                 log_error(f"Failed to create {archive_dir}", "exc")
                                 f_archive_failed = True
                         if not f_archive_failed:
                             try:
                                 shutil.move(run_file, archive_dir)
-                            except:
+                            except Exception:
                                 log_error(
                                     f"Failed to move {run_file} to {archive_dir}", "exc"
                                 )
@@ -341,7 +342,7 @@ def main():
                     if not base_opts.archive or f_archive_failed:
                         try:
                             os.unlink(run_file)
-                        except:
+                        except Exception:
                             log_critical(f"Failed to remove {run_file}", "exc")
 
     log_info("Shutdown signal received")

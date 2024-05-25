@@ -52,6 +52,7 @@ from BaseLog import (
 from CalibConst import getSGCalibrationConstants
 import BaseNetCDF
 import BaseOpts
+import BaseOptsType
 import BasePlot
 import FileMgr
 import FlightModel
@@ -79,7 +80,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Command line driver for reprocessing per-dive and other nc files",
         additional_arguments={
-            "dive_specs": BaseOpts.options_t(
+            "dive_specs": BaseOptsType.options_t(
                 "",
                 ("Reprocess",),
                 ("dive_specs",),
@@ -89,7 +90,7 @@ def main():
                     "nargs": "*",
                 },
             ),
-            "called_from_fm": BaseOpts.options_t(
+            "called_from_fm": BaseOptsType.options_t(
                 False,
                 ("Reprocess",),
                 ("--called_from_fm",),

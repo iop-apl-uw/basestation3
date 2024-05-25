@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2024  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -35,6 +35,7 @@ Strip1A.py: Strips '1A's from files, called by basestation code
 import sys
 
 import BaseOpts
+import BaseOptsType
 from BaseLog import BaseLogger, log_error, log_warning, log_debug
 
 
@@ -121,11 +122,10 @@ def strip1A(in_filename, out_filename, size=0):
 
 
 if __name__ == "__main__":
-
     base_opts = BaseOpts.BaseOptions(
         "Test entry point for Strip1a processing",
         additional_arguments={
-            "infile": BaseOpts.options_t(
+            "infile": BaseOptsType.options_t(
                 None,
                 ("Strip1A",),
                 ("infile",),
@@ -135,7 +135,7 @@ if __name__ == "__main__":
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-            "outfile": BaseOpts.options_t(
+            "outfile": BaseOptsType.options_t(
                 None,
                 ("Strip1A",),
                 ("outfile",),
@@ -145,7 +145,7 @@ if __name__ == "__main__":
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-            "strip_size": BaseOpts.options_t(
+            "strip_size": BaseOptsType.options_t(
                 None,
                 ("Strip1A",),
                 ("strip_size",),

@@ -52,6 +52,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtils
 import BaseOpts
+import BaseOptsType
 import Utils
 import CommLog
 import RegressVBD
@@ -745,7 +746,7 @@ def magcal_worker(
 def main():
     base_opts = BaseOpts.BaseOptions("Command line app for compass calibration\nTypical usage (from glider mission directory): python Magcal.py -m ./ -i 235 --dives 3-5 --out results.html",
         additional_arguments={
-            "dives": BaseOpts.options_t(
+            "dives": BaseOptsType.options_t(
                 "",
                 ("Magcal",),
                 ( "--dives", ), 
@@ -755,7 +756,7 @@ def main():
                     "required": ("Magcal",) 
                 }
             ),
-            "out": BaseOpts.options_t(
+            "out": BaseOptsType.options_t(
                 "",
                 ("Magcal",),
                 ( "--out", ), 
@@ -764,7 +765,7 @@ def main():
                     "help": "output file name",
                 }
             ),
-            "soft": BaseOpts.options_t(
+            "soft": BaseOptsType.options_t(
                 True,
                 ("Magcal",),
                 ("--soft",),
@@ -831,5 +832,3 @@ if __name__ == "__main__":
     retval = main()
 
     sys.exit(retval)
-
-

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -38,6 +38,7 @@ import time
 
 import BaseDotFiles
 import BaseOpts
+import BaseOptsType
 import Globals
 from BaseLog import BaseLogger, log_info, log_error
 
@@ -91,7 +92,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Basestation helper for pushing files",
         additional_arguments={
-            "ftp_type": BaseOpts.options_t(
+            "ftp_type": BaseOptsType.options_t(
                 "ftp",
                 ("FTPPush",),
                 ("--ftp_type",),
@@ -101,7 +102,7 @@ def main():
                     "choices": ("ftp", "sftp"),
                 },
             ),
-            "file_spec": BaseOpts.options_t(
+            "file_spec": BaseOptsType.options_t(
                 "",
                 ("FTPPush",),
                 ("file_spec",),

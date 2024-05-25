@@ -50,6 +50,7 @@ import pandas as pd
 
 import CmdHistory
 import BaseOpts
+import BaseOptsType
 import BasePlot
 import CalibConst
 import CommLog
@@ -1444,7 +1445,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "cmdline entry for basestation network file processing",
         additional_arguments={
-            "netcdf_files": BaseOpts.options_t(
+            "netcdf_files": BaseOptsType.options_t(
                 [],
                 ("BaseDB",),
                 ("netcdf_files",),
@@ -1456,7 +1457,7 @@ def main():
                     "subparsers": ("addncfs",),
                 },
             ),
-            "dive_num": BaseOpts.options_t(
+            "dive_num": BaseOptsType.options_t(
                 0,
                 ("BaseDB",),
                 ("dive_num",),
@@ -1466,7 +1467,7 @@ def main():
                     "subparsers": ("addval",),
                 },
             ),
-            "value_name": BaseOpts.options_t(
+            "value_name": BaseOptsType.options_t(
                 "",
                 ("BaseDB",),
                 ("value_name",),
@@ -1476,7 +1477,7 @@ def main():
                     "subparsers": ("addval",),
                 },
             ),
-            "value": BaseOpts.options_t(
+            "value": BaseOptsType.options_t(
                 0,
                 ("BaseDB",),
                 ("value",),
@@ -1486,7 +1487,7 @@ def main():
                     "subparsers": ("addval",),
                 },
             ),
-            "network": BaseOpts.options_t(
+            "network": BaseOptsType.options_t(
                 False,
                 ("BaseDB",),
                 ("--network",),
@@ -1496,7 +1497,7 @@ def main():
                     "action": "store_true",
                 },
             ),
-            "schema": BaseOpts.options_t(
+            "schema": BaseOptsType.options_t(
                 False,
                 ("BaseDB",),
                 ("--schema",),
@@ -1506,7 +1507,7 @@ def main():
                     "action": "store_true",
                 },
             ),
-            "init_db": BaseOpts.options_t(
+            "init_db": BaseOptsType.options_t(
                 False,
                 ("BaseDB",),
                 ("--init_db",),

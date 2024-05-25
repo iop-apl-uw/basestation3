@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -41,6 +41,7 @@ import numpy as np
 import FileMgr
 import LogFile
 import BaseOpts
+import BaseOptsType
 from BaseLog import (
     BaseLogger,
     log_error,
@@ -583,7 +584,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Processes seaglider data files from dat to asc",
         additional_arguments={
-            "data_file": BaseOpts.options_t(
+            "data_file": BaseOptsType.options_t(
                 None,
                 ("DataFiles",),
                 ("data_file",),
@@ -593,7 +594,7 @@ def main():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-            "log_file": BaseOpts.options_t(
+            "log_file": BaseOptsType.options_t(
                 None,
                 ("DataFiles",),
                 ("log_file",),

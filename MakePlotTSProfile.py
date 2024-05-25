@@ -43,6 +43,7 @@ import seawater
 import xarray as xr
 
 import BaseOpts
+import BaseOptsType
 import PlotUtilsPlotly
 import Utils
 from BaseLog import (
@@ -422,7 +423,7 @@ def main(
             "Basestation extension for plotting X3 compressed or network cdf TS profiles",
             add_to_arguments=add_to_arguments,
             additional_arguments={
-                "profile_filenames": BaseOpts.options_t(
+                "profile_filenames": BaseOptsType.options_t(
                     None,
                     ("MakePlotTSProfile",),
                     ("profile_filenames",),

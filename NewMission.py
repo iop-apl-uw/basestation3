@@ -36,9 +36,10 @@ import sys
 import time
 
 import BaseOpts
+import BaseOptsType
 import BaseDB
 import Sensors
-from BaseLog import BaseLogger, log_critical, log_error, log_info
+from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
 from Globals import known_files
 
 
@@ -57,7 +58,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Prepares a home directory for a new deployment by setting up symlinks, copying files and stubbing out files.  Note: group ownership of the new mission directory and created files is same as the home directory",
         additional_arguments={
-            "initdb": BaseOpts.options_t(
+            "initdb": BaseOptsType.options_t(
                 True,
                 ("NewMission",),
                 ("--initdb",),
@@ -67,7 +68,7 @@ def main():
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
-            "glider_home": BaseOpts.options_t(
+            "glider_home": BaseOptsType.options_t(
                 None,
                 ("NewMission",),
                 ("glider_home",),
@@ -77,7 +78,7 @@ def main():
                     "action": BaseOpts.FullPathTrailingSlashAction,
                 },
             ),
-            "new_mission_dir": BaseOpts.options_t(
+            "new_mission_dir": BaseOptsType.options_t(
                 None,
                 ("NewMission",),
                 ("new_mission_dir",),

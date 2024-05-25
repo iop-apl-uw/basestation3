@@ -44,6 +44,7 @@ import BaseCtrlFiles
 import BaseDB
 import BaseDotFiles
 import BaseOpts
+import BaseOptsType
 import CommLog
 import Daemon
 import Utils
@@ -405,7 +406,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "comm.log processor launched as soon as the glider connects",
         additional_arguments={
-            "comm_log": BaseOpts.options_t(
+            "comm_log": BaseOptsType.options_t(
                 "",
                 ("GliderEarlyGPS",),
                 ("comm_log",),

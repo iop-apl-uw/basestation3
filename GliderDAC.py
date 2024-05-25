@@ -67,6 +67,7 @@ import xarray as xr
 import yaml
 
 import BaseOpts
+import BaseOptsType
 import MakeDiveProfiles
 import NetCDFUtils
 import QC
@@ -266,7 +267,7 @@ def load_additional_arguments():
         {"gliderdac": "NetCDF file generation for submission to the Glider DAC"},
         # Add these options that are local to this extension
         {
-            "gliderdac_base_config": BaseOpts.options_t(
+            "gliderdac_base_config": BaseOptsType.options_t(
                 "",
                 (
                     "Base",
@@ -281,7 +282,7 @@ def load_additional_arguments():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-            "gliderdac_project_config": BaseOpts.options_t(
+            "gliderdac_project_config": BaseOptsType.options_t(
                 "",
                 (
                     "Base",
@@ -296,7 +297,7 @@ def load_additional_arguments():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-            "gliderdac_deployment_config": BaseOpts.options_t(
+            "gliderdac_deployment_config": BaseOptsType.options_t(
                 "",
                 (
                     "Base",
@@ -311,7 +312,7 @@ def load_additional_arguments():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-            "gliderdac_directory": BaseOpts.options_t(
+            "gliderdac_directory": BaseOptsType.options_t(
                 "",
                 (
                     "Base",
@@ -326,7 +327,7 @@ def load_additional_arguments():
                     "action": BaseOpts.FullPathAction,
                 },
             ),
-            "delayed_submission": BaseOpts.options_t(
+            "delayed_submission": BaseOptsType.options_t(
                 False,
                 (
                     "Base",
@@ -341,7 +342,7 @@ def load_additional_arguments():
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
-            "gliderdac_bin_width": BaseOpts.options_t(
+            "gliderdac_bin_width": BaseOptsType.options_t(
                 0.0,
                 (
                     "Base",
@@ -355,7 +356,7 @@ def load_additional_arguments():
                     "option_group": "gliderdac",
                 },
             ),
-            "gliderdac_reduce_output": BaseOpts.options_t(
+            "gliderdac_reduce_output": BaseOptsType.options_t(
                 True,
                 (
                     "Base",

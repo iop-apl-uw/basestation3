@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -43,6 +43,7 @@ import traceback
 
 import BaseNetCDF
 import BaseOpts
+import BaseOptsType
 import FileMgr
 import GPS
 import Utils
@@ -627,7 +628,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Test entry point for logfile processing",
         additional_arguments={
-            "log_file": BaseOpts.options_t(
+            "log_file": BaseOptsType.options_t(
                 None,
                 ("LogFile",),
                 ("log_file",),

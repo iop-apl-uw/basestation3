@@ -51,6 +51,7 @@ import traceback
 import copy
 
 import BaseOpts
+import BaseOptsType
 import BaseTime
 import FileMgr
 import GPS
@@ -2042,7 +2043,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Test entry for comm.log processing",
         additional_arguments={
-            "dump_last": BaseOpts.options_t(
+            "dump_last": BaseOptsType.options_t(
                 False,
                 ("CommLog",),
                 ("--dump_last",),
@@ -2052,7 +2053,7 @@ def main():
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
-            "dump_all": BaseOpts.options_t(
+            "dump_all": BaseOptsType.options_t(
                 False,
                 ("CommLog",),
                 ("--dump_all",),
@@ -2062,7 +2063,7 @@ def main():
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
-            "init_db": BaseOpts.options_t(
+            "init_db": BaseOptsType.options_t(
                 False,
                 ("CommLog",),
                 ("--init_db",),
@@ -2072,7 +2073,7 @@ def main():
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
-            "rebuild_db": BaseOpts.options_t(
+            "rebuild_db": BaseOptsType.options_t(
                 False,
                 ("CommLog",),
                 ("--rebuild_db",),

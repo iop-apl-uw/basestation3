@@ -40,6 +40,7 @@ import time
 import zlib
 
 import BaseOpts
+import BaseOptsType
 from BaseLog import BaseLogger, log_error, log_debug, log_critical, log_info
 import Utils
 
@@ -284,7 +285,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Decompresses files from the glider to stdout",
         additional_arguments={
-            "compressed_file": BaseOpts.options_t(
+            "compressed_file": BaseOptsType.options_t(
                 "",
                 ("BaseGZip",),
                 ("compressed_file",),

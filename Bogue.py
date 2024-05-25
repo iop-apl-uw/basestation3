@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -41,7 +41,7 @@ import sys
 import time
 
 import BaseOpts
-
+import BaseOptsType
 from BaseLog import BaseLogger, log_debug, log_error, log_info, log_critical
 
 
@@ -223,7 +223,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Processes gliders files for Bogue syndrome",
         additional_arguments={
-            "input_file": BaseOpts.options_t(
+            "input_file": BaseOptsType.options_t(
                 None,
                 ("Bogue",),
                 ("input_file",),

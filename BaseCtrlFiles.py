@@ -48,6 +48,7 @@ import yaml
 
 import BaseDotFiles
 import BaseOpts
+import BaseOptsType
 import CommLog
 from BaseLog import (
     BaseLogger,
@@ -802,7 +803,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "cmdline entry for basestation ctrl file processing",
         additional_arguments={
-            "basectrlfiles_action": BaseOpts.options_t(
+            "basectrlfiles_action": BaseOptsType.options_t(
                 (),
                 ("BaseCtrlFiles",),
                 ("basectrlfiles_action",),

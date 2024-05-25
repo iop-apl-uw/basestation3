@@ -46,6 +46,7 @@ import plotly
 import numpy as np
 
 import BaseOpts
+import BaseOptsType
 import CommLog
 import MakeDiveProfiles
 import Plotting
@@ -231,7 +232,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Basestation CLI for creating Seaglider plots",
         additional_arguments={
-            "netcdf_files": BaseOpts.options_t(
+            "netcdf_files": BaseOptsType.options_t(
                 None,
                 ("BasePlot",),
                 ("netcdf_files",),

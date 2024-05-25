@@ -88,7 +88,7 @@ def getSGCalibrationConstants(
     # open filename
     try:
         calib_file = open(calib_filename, "r")
-    except:
+    except Exception:
         log_error("Unable to open file: " + calib_filename)
         return None
 
@@ -119,7 +119,7 @@ def getSGCalibrationConstants(
                     if ignore_tag not in comment_str:
                         log_warning(
                             f"{key} value ignored. v3 Flight Model does not use this value. Add '% FM_ignore' to sg_calib_constants.m to suppress this warning.",
-                            alert=f"FM_IGNORE",
+                            alert="FM_IGNORE",
                             max_count=-1,
                         )
                     continue
@@ -153,7 +153,7 @@ def getSGCalibrationConstants(
                         # We take all numerics, declared or not...
                         # pylint: disable=eval-used
                         value = float(eval(value, None, eval_locals))
-                    except:
+                    except Exception:
                         # Non-numeric value of an unknown variable
                         log_debug("Assuming %s is a string" % key)
                     # Sometimes simple variables are defined that are used in later expressions in the M file...handle them
@@ -198,11 +198,12 @@ def dump(in_filename, fo):
 
 if __name__ == "__main__":
     import BaseOpts
+    import BaseOptsType
 
     base_opts = BaseOpts.BaseOptions(
         "Test entry for sg_calib_constants.m processing",
         additional_arguments={
-            "calib_const_file": BaseOpts.options_t(
+            "calib_const_file": BaseOptsType.options_t(
                 None,
                 ("CalibConst",),
                 ("calib_const_file",),

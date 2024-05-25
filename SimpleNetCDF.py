@@ -42,6 +42,7 @@ import warnings
 import numpy as np
 
 import BaseOpts
+import BaseOptsType
 import MakeDiveProfiles
 import NetCDFUtils
 import QC
@@ -242,7 +243,7 @@ def load_additional_arguments():
         {"simplenetcdf": "Simple NetCDF file generation"},
         # Add these options that are local to this extension
         {
-            "simplencf_bin_width": BaseOpts.options_t(
+            "simplencf_bin_width": BaseOptsType.options_t(
                 0.0,
                 (
                     "Base",
@@ -256,7 +257,7 @@ def load_additional_arguments():
                     "option_group": "simplenetcdf",
                 },
             ),
-            "simplencf_compress_output": BaseOpts.options_t(
+            "simplencf_compress_output": BaseOptsType.options_t(
                 False,
                 (
                     "Base",
@@ -298,9 +299,11 @@ def main(
     """
     # pylint: disable=unused-argument
     if base_opts is None:
-        add_to_arguments, add_option_groups, additional_arguments = (
-            load_additional_arguments()
-        )
+        (
+            add_to_arguments,
+            add_option_groups,
+            additional_arguments,
+        ) = load_additional_arguments()
         base_opts = BaseOpts.BaseOptions(
             "Basestation extension for creating simplified netCDF files",
             additional_arguments=additional_arguments,

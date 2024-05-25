@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -52,6 +52,7 @@ from BaseLog import (
     log_debug,
 )
 import BaseOpts
+import BaseOptsType
 import LogFile
 import NetCDFUtils
 import Utils
@@ -1284,7 +1285,7 @@ def main(
         base_opts = BaseOpts.BaseOptions(
             "cmdline entry for basestation network file processing",
             additional_arguments={
-                "log_in_file": BaseOpts.options_t(
+                "log_in_file": BaseOptsType.options_t(
                     "",
                     ("BaseNetwork",),
                     ("log_in_file",),
@@ -1295,7 +1296,7 @@ def main(
                         "subparsers": ("log",),
                     },
                 ),
-                "log_out_file": BaseOpts.options_t(
+                "log_out_file": BaseOptsType.options_t(
                     "",
                     ("BaseNetwork",),
                     ("log_out_file",),
@@ -1307,7 +1308,7 @@ def main(
                         "nargs": "?",
                     },
                 ),
-                "pro_in_file": BaseOpts.options_t(
+                "pro_in_file": BaseOptsType.options_t(
                     "",
                     ("BaseNetwork",),
                     ("pro_in_file",),
@@ -1318,7 +1319,7 @@ def main(
                         "subparsers": ("pro",),
                     },
                 ),
-                "pro_out_file": BaseOpts.options_t(
+                "pro_out_file": BaseOptsType.options_t(
                     "",
                     ("BaseNetwork",),
                     ("pro_out_file",),
@@ -1330,7 +1331,7 @@ def main(
                         "nargs": "?",
                     },
                 ),
-                "network_files": BaseOpts.options_t(
+                "network_files": BaseOptsType.options_t(
                     "",
                     ("BaseNetwork",),
                     ("network_files",),
@@ -1342,7 +1343,7 @@ def main(
                         "subparsers": ("cdf",),
                     },
                 ),
-                "netcdf_files": BaseOpts.options_t(
+                "netcdf_files": BaseOptsType.options_t(
                     "",
                     ("BaseNetwork",),
                     ("netcdf_files",),

@@ -66,6 +66,7 @@ with warnings.catch_warnings():
 
 import BaseGZip
 import BaseOpts
+import BaseOptsType
 import CommLog
 import Globals
 import Utils
@@ -1570,7 +1571,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "cmdline entry for basestation dot file processing",
         additional_arguments={
-            "basedotfiles_action": BaseOpts.options_t(
+            "basedotfiles_action": BaseOptsType.options_t(
                 (),
                 ("BaseDotFiles",),
                 ("basedotfiles_action",),
@@ -1580,7 +1581,7 @@ def main():
                     "choices": ("gps", "drift", "ftp", "sftp", "urls"),
                 },
             ),
-            "ftp_files": BaseOpts.options_t(
+            "ftp_files": BaseOptsType.options_t(
                 [],
                 ("BaseDotFiles",),
                 ("ftp_files",),
@@ -1590,7 +1591,7 @@ def main():
                     "nargs": "*",
                 },
             ),
-            "pass_num": BaseOpts.options_t(
+            "pass_num": BaseOptsType.options_t(
                 1,
                 ("BaseDotFiles",),
                 ("pass_num",),

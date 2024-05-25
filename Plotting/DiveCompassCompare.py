@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -46,7 +46,7 @@ import seawater
 if typing.TYPE_CHECKING:
     import BaseOpts
 
-import BaseOptionsType
+import BaseOptsType
 import PlotUtils
 import PlotUtilsPlotly
 import Utils
@@ -498,7 +498,7 @@ def plot_compass_compare(
 
 @add_arguments(
     additional_arguments={
-        "flip_ad2cp": BaseOptionsType.options_t(
+        "flip_ad2cp": BaseOptsType.options_t(
             True,
             ("Base", "BasePlot", "Reprocess"),
             ("--flip_ad2cp",),

@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2024  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -39,6 +39,7 @@ import time
 import requests
 
 import BaseOpts
+import BaseOptsType
 from BaseLog import log_error, log_info, BaseLogger
 
 
@@ -92,7 +93,7 @@ if __name__ == "__main__":
     base_options = BaseOpts.BaseOptions(
         "Test entry for slack/mattermost message posting",
         additional_arguments={
-            "slack_hook_url": BaseOpts.options_t(
+            "slack_hook_url": BaseOptsType.options_t(
                 None,
                 ("SlackPost",),
                 ("slack_hook_url",),
@@ -101,7 +102,7 @@ if __name__ == "__main__":
                     "help": "URL of the Slack/Mattermost hook",
                 },
             ),
-            "subject_line": BaseOpts.options_t(
+            "subject_line": BaseOptsType.options_t(
                 None,
                 ("SlackPost",),
                 ("subject_line",),
@@ -110,7 +111,7 @@ if __name__ == "__main__":
                     "help": "Subject line for post",
                 },
             ),
-            "message_body": BaseOpts.options_t(
+            "message_body": BaseOptsType.options_t(
                 None,
                 ("SlackPost",),
                 ("message_body",),

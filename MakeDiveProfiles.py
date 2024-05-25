@@ -76,6 +76,7 @@ from BaseLog import (
 )
 import BaseMagCal
 import BaseOpts
+import BaseOptsType
 import BaseNetCDF
 import CalibConst
 import DataFiles
@@ -5679,7 +5680,7 @@ def make_dive_profile(
                 -abs_compress * ctd_sg_press_v + therm_expan * (temp_cor_v - temp_ref)
             )
             volume_v = volume_v + vol_comp_v
- 
+
         TraceArray.trace_array("vol", volume_v)
         # if False:
         #     log_info(
@@ -7457,7 +7458,7 @@ def main():
     base_opts = BaseOpts.BaseOptions(
         "Command line driver for creating per-dive netCDF files",
         additional_arguments={
-            "basename": BaseOpts.options_t(
+            "basename": BaseOptsType.options_t(
                 None,
                 ("MakeDiveProfiles",),
                 ("basename",),
