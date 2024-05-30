@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots motor GC data over whole mission
-"""
+"""Plots motor GC data over whole mission"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
@@ -50,17 +50,33 @@ import pandas as pd
 if typing.TYPE_CHECKING:
     import BaseOpts
 
+import BaseOptsType
 import PlotUtilsPlotly
 import Utils
 
 from BaseLog import log_info, log_error
-from Plotting import plotmissionsingle
+from Plotting import plotmissionsingle, add_arguments
 
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
 
+@add_arguments(
+    additional_arguments={
+        "max_vbd_effic": BaseOptsType.options_t(
+            0.55,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--max_vbd_effic",),
+            float,
+            {
+                "help": "Set the maximum VBD efficiency to plot",
+                "section": "plotting",
+                "option_group": "plotting",
+            },
+        ),
+    }
+)
 @plotmissionsingle
 def mission_motors(
     base_opts: BaseOpts.BaseOptions,
@@ -327,16 +343,26 @@ def mission_motors(
         }
     )
 
+    yaxis_dict = {
+        "title": "Efficiency",
+        "showgrid": True,
+    }
+    if (
+        np.nanmax(pumpdf["vbd_eff"]) > base_opts.max_vbd_effic
+        or np.nanmax(pumpdf["vbd_eff"]) < 0.0
+    ):
+        yaxis_dict["autorangeoptions"] = {
+            "maxallowed": base_opts.max_vbd_effic,
+            "minallowed": -0.05,
+        }
+
     fig.update_layout(
         {
             "xaxis": {
                 "title": "Dive",
                 "showgrid": True,
             },
-            "yaxis": {
-                "title": "Efficiency",
-                "showgrid": True,
-            },
+            "yaxis": yaxis_dict,
             "title": {
                 "text": "VBD Efficiency",
                 "xanchor": "center",
