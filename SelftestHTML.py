@@ -61,10 +61,15 @@ try:
 except:
     sys.exit(1)
 
-if len(sys.argv) == 3:
+if len(sys.argv) >= 3:
     base = sys.argv[2]
 else:
     base = f'/home/seaglider/sg{sgnum:03d}' # make a guess
+
+if len(sys.argv) == 4:
+    num = sys.argv[3]
+else:
+    num = '0'
 
 selftestFiles = sorted(glob.glob(base + '/pt*.cap'), reverse=True)
 
@@ -72,10 +77,7 @@ if len(selftestFiles) == 0:
     print("no selftest files found")
     sys.exit(1)
 
-if len(sys.argv) == 3:
-    proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], sys.argv[1], sys.argv[2]], stdout=subprocess.PIPE)
-else:
-    proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], sys.argv[1]], stdout=subprocess.PIPE)
+proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], sys.argv[1], base, num], stdout=subprocess.PIPE)
 
 pcolors = {"[crit]": "red", "[warn]": "yellow", "[sers]": "orange"}
 rcolors = ["#cccccc", "#eeeeee"]

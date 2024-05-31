@@ -1439,8 +1439,10 @@ def attachHandlers(app: sanic.Sanic):
     # returns: HTML format summary of latest selftest results
     async def selftestHandler(request, glider:int):
         cmd = f"{sys.path[0]}/SelftestHTML.py"
+        num = int(request.args['num'][0]) if 'num' in request.args else 0
+
         proc = await asyncio.create_subprocess_exec(
-            cmd, f"{glider:03d}", gliderPath(glider, request), 
+            cmd, f"{glider:03d}", gliderPath(glider, request), f"{num:d}",
             stdout=asyncio.subprocess.PIPE, 
             stderr=asyncio.subprocess.PIPE
         )
@@ -2729,6 +2731,7 @@ if __name__ == '__main__':
     certPath = os.getenv("SANIC_CERTPATH") 
     noSave = False
     noChat = False
+    test = False
 
     overrides = {}
 

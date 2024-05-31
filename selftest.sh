@@ -28,34 +28,47 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-if ( $#argv == 2) then
+if ( $#argv >= 2) then
     set base = $2
 else
     set base = /home/seaglider/sg"$1"
     # set base = "/server/work1/seaglider/www/selftests" 
 endif
 
+if ( $#argv == 3 ) then
+    set num = `printf %04d $3`
+else
+    set num = "0000"
+endif
+
+echo $base
+echo $num
 
 if (! -d $base ) then
     echo "no such glider, usage: selfcheck NNN"
     exit
 endif
 
-set count = `ls "$base"/pt*.cap |& grep -v ls: | wc -l`
-if ( $count == 0 ) then
-    if ( -f "$base"/comm.log ) then
-       echo "no selftest capture present - here is what we know from comm.log"
-       grep st "$base"/comm.log
-    else
-       echo "no selftests or comm.log present"
+if ( $num == "0000" ) then
+    set count = `ls "$base"/pt*.cap |& grep -v ls: | wc -l`
+    if ( $count == 0 ) then
+        if ( -f "$base"/comm.log ) then
+           echo "no selftest capture present - here is what we know from comm.log"
+           grep st "$base"/comm.log
+        else
+           echo "no selftests or comm.log present"
+        endif
+        exit
     endif
-    exit
+
+    set fname = `ls -1 "$base"/pt*.cap | tail -n 1`
+else
+    set sg = `printf %03d $1`
+    set fname = "$base"/pt"$sg""$num".cap
 endif
 
-set fname = `ls -t "$base"/pt*.cap | head -n 1`
-set capname_by_date = $fname
+set capname_by_date = `ls -t "$base"/pt*.cap | head -n 1`
 
-set fname = `ls -1 "$base"/pt*.cap | tail -n 1`
 set capname = $fname
 
 if ($fname == "" || ! -f $fname ) then
