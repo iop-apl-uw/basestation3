@@ -44,6 +44,7 @@ import aiohttp
 import sanic
 import sanic_gzip
 import sanic_ext
+import pprint
 from functools import wraps,partial
 import jwt
 from passlib.hash import sha256_crypt
@@ -2655,7 +2656,7 @@ async def mainProcessStop(app):
     os.remove(app.config.WATCH_IPC[6:])
     os.remove(app.config.NOTIFY_IPC[6:])
 
-def createApp(overrides: dict) -> sanic.Sanic:
+def createApp(overrides: dict, test=False) -> sanic.Sanic:
 
     d = { "missionTable": [],   # list of missions (each a dict)
           "userTable": {},      # dict (keyed by username) of dict
@@ -2686,10 +2687,12 @@ def createApp(overrides: dict) -> sanic.Sanic:
     if 'WEATHERMAP_APPID' not in app.config:
         app.config.WEATHERMAP_APPID = ''
     if 'SHIP_UDP' not in app.config:
-        print('default UDP None')
         app.config.SHIP_UDP = None;
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
+
+    if test:
+        return app
 
     attachHandlers(app)
 
@@ -2730,7 +2733,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:sih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
+        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:tsih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -2761,6 +2764,8 @@ if __name__ == '__main__':
             certPath = a
         elif o in ['-s', '--ssl']:
             ssl = True
+        elif o in ['-t', '--test']:
+            test = True
         elif o in ['-i', '--inspector']:
             overrides['INSPECTOR'] = True
         elif o in ['-m', '--mission']:
@@ -2795,6 +2800,14 @@ if __name__ == '__main__':
     if "SANIC_SECRET" not in os.environ:
         overrides["SECRET"] = secrets.token_hex()
 
+    if test:
+        app = createApp(overrides)
+        tbl = asyncio.run(buildMissionTable(app))
+        pprint.pp(tbl)
+        users = asyncio.run(buildUserTable(app))
+        pprint.pp(users)
+        sys.exit(0) 
+ 
     WorkerManager.THRESHOLD = 600 # 60 seconds up from default 30
 
     loader = sanic.worker.loader.AppLoader(factory=partial(createApp, overrides))
