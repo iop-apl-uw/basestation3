@@ -169,7 +169,7 @@ async def process(sgnum, base, num):
 
     if len(selftestFiles) == 0:
         print("no selftest files found")
-        sys.exit(1)
+        return 
 
     proc = await asyncio.create_subprocess_exec('%s/selftest.sh' % sys.path[0], f"{sgnum}", base, f"{num}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 #    proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], f"{sgnum}", base, num], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -209,16 +209,21 @@ async def process(sgnum, base, num):
         except:
             continue
 
-        if insideMoveDump and line.find('SUSR') > -1:
-            print('</div><div id=plot%d style="display: none;">' % idnum)
-            plot = plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
-            print(plot)
-            print("</div>")
+        if insideMoveDump and line.find(',') > -1 and line.find('SMOTOR,N,') == -1:
+            print('</div>')
+            if len(moveRecord) > 0:
+                print('<div id=plot%d style="display: none;">' % idnum)
+                plot = plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
+                print(plot)
+                print("</div>")
+                firstPlot = False
             insideMoveDump = False
-            firstPlot = False
             idnum = idnum + 1
         elif insideMoveDump and line.find(',N,') == -1:
-            moveRecord.append(list(map(lambda x: float(x), line.split())))
+            try:
+                moveRecord.append(list(map(lambda x: float(x), line.split())))
+            except:
+                pass
 
         if insideDir and line.find(',') > -1 and line.find('is empty') == -1:
             print("</pre>")
