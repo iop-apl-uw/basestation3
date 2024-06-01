@@ -2798,7 +2798,7 @@ if __name__ == '__main__':
         overrides["SECRET"] = secrets.token_hex()
 
     if test:
-        app = createApp(overrides)
+        app = createApp(overrides, test=True)
         tbl = asyncio.run(buildMissionTable(app))
         pprint.pp(tbl)
         users = asyncio.run(buildUserTable(app))
