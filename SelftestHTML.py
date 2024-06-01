@@ -30,6 +30,7 @@ import sys
 import glob
 import subprocess
 import re
+import plotly.graph_objects
 
 def format(line):
     reds = ["errors", "error", "Failed", "failed", "[crit]", "timed out"]
@@ -44,6 +45,114 @@ def format(line):
             break
 
     print(line + "<br>")
+
+def plotMoveRecord(x, which, includes):
+    fig = plotly.graph_objects.Figure()
+    n = len(x)
+    curr = [y[4] for y in x]
+
+    if which == "VBD":
+        ad1 = [y[0] for y in x]
+        ad2 = [y[1] for y in x]
+        t = [idx/1.0 for idx in range(n)]
+        fig.add_trace(
+            {
+                "x": t, 
+                "y": ad1,
+                "name": "linpot A",
+                "type": "scatter",
+                "mode": "lines",
+                "line": {"color": "Black"},
+                "hovertemplate": "%{x:.1f},%{y:.1f}<br><extra></extra>",
+            }
+        )
+        fig.add_trace(
+            {
+                "x": t, 
+                "y": ad2,
+                "name": "linpot B",
+                "type": "scatter",
+                "mode": "lines",
+                "line": {"color": "Red"},
+                "hovertemplate": "%{x:.1f},%{y:.1f}<br><extra></extra>",
+            }
+        )
+    else:
+        if which == "Pitch":
+            ad = [y[2] for y in x]
+        elif which == "Roll":
+            ad = [y[3] for y in x]
+
+        t = [idx/10.0 for idx in range(n)]
+        fig.add_trace(
+            {
+                "x": t, 
+                "y": ad,
+                "name": which,
+                "type": "scatter",
+                "mode": "lines",
+                "line": {"color": "Black"},
+                "hovertemplate": "%{x:.3f},%{y:.1f}<br><extra></extra>",
+            }
+        )
+
+    fig.add_trace(
+        {
+            "x": t, 
+            "y": curr,
+            "yaxis": "y2",
+            "xaxis": "x1",
+            "name": "current",
+            "type": "scatter",
+            "mode": "lines",
+            "line": {"color": "Blue"},
+            "hovertemplate": "%{x:.1f},%{y:.0f}mA<br><extra></extra>",
+        }
+    )
+
+    fig.update_layout(
+        {
+            "xaxis": {
+                "title": "time (s)",
+                "showgrid": True,
+            },
+            "yaxis": {
+                "title": "AD counts",
+                "showgrid": True,
+            },
+            "yaxis2": {
+                "title": "current (mA)",  
+                "overlaying": "y1",
+                "side": "right",
+            },
+
+            "title": {
+                "text": f"{which} move record",
+                "xanchor": "center",
+                "yanchor": "top",
+                "x": 0.5,
+                "y": 0.95,
+            },
+            "height": 800,
+            "width": 800,
+#            "margin": {
+#                "t": 20,
+#                "b": 20,
+#            },
+        }
+    )
+
+    return fig.to_html(
+                        include_plotlyjs=includes,
+                        include_mathjax=includes,
+                        full_html=False,
+                        validate=True,
+                        config={
+                            "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                            "scrollZoom": False,
+                        },
+                      )
+     
 
 def motorCheck(valueToPrint, valueToCheck, minVal, maxVal):
     if float(valueToCheck) < minVal:
@@ -91,7 +200,7 @@ trow = 0
 
 print("<html><head><title>%03d-selftest</title>" % sgnum)
 print('<style>table.motors th,td { text-align: center; padding-left: 10px; padding-right: 10px; }</style></head><body>')
-print('<div id="top">top*<a href="#capture">capture</a>*<a href="#parameters">parameters</a><div><br>')
+print('<div id="top">top*<a href="#capture">capture</a>*<a href="#parameters">parameters</a>*<a href="#pitch">pitch</a>*<a href="#roll">roll</a>*<a href="#VBD">VBD</a><div><br>')
 
 showingRaw = False
 insideMoveDump = False
@@ -104,6 +213,7 @@ minRates = { 'Pitch': 100, 'Roll': 300, 'Pump': 5, 'Bleed': 15 }
 maxRates = { 'Pitch': 300, 'Roll': 500, 'Pump': 10, 'Bleed': 30 }
 minCurr = { 'Pitch': 40, 'Roll': 15, 'Pump': 400, 'Bleed': 0 }
 maxCurr = { 'Pitch': 400, 'Roll': 150, 'Pump': 1000 , 'Bleed': 2000 }
+firstPlot = True
 
 for raw_line in proc.stdout:
     try:
@@ -112,8 +222,13 @@ for raw_line in proc.stdout:
         continue
 
     if insideMoveDump and line.find('SUSR') > -1:
+        plot = plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
+        print(plot)
         print("</div>")
         insideMoveDump = False
+        firstPlot = False
+    elif insideMoveDump and line.find(',N,') == -1:
+        moveRecord.append(list(map(lambda x: float(x), line.split())))
 
     if insideDir and line.find(',') > -1 and line.find('is empty') == -1:
         print("</pre>")
@@ -139,7 +254,9 @@ for raw_line in proc.stdout:
         insideDir = True
 
     elif line.find(' completed from ') > -1 and showingRaw:
-        insideMoveDump = True
+        a = re.search(",(\w+) completed from ", line)
+        insideMoveDump = a.group(1)
+        moveRecord = []
         format(line)
         print('<a href="#" onclick="document.getElementById(\'div%d\').style.display == \'none\' ? document.getElementById(\'div%d\').style.display = \'block\' : document.getElementById(\'div%d\').style.display = \'none\'; return false;">move record</a><br>' % (idnum, idnum, idnum));
         print('<div id=div%d style="display: none;">' % idnum)
@@ -187,8 +304,14 @@ for raw_line in proc.stdout:
             format(line)
             
     elif line.find(',SUSR,N,---- ') > -1:
-        parts = line.split(',')
-        print("<h2>%s</h2>" % parts[3])
+        a = re.search(',SUSR,N,(.+)', line)
+        m = re.search('Checking (\w+)', line)
+        if m:
+            id = m.group(1).split()[0]
+            print(f'<h2 id="{id}">{a.group(1)}</h2>')
+        else:
+            print(f'<h2>{a.group(1)}</h2>')
+            
 
     elif not insidePre and (line.find('>prop') > -1 or line.find('>attach') > -1 or line.find('>scheme') > -1):
         format(line)
