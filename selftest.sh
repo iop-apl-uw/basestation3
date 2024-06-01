@@ -41,9 +41,6 @@ else
     set num = "0000"
 endif
 
-echo $base
-echo $num
-
 if (! -d $base ) then
     echo "no such glider, usage: selfcheck NNN"
     exit

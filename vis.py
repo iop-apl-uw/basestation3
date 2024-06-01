@@ -53,6 +53,7 @@ import hashlib
 import hmac
 import yaml
 import LogHTML
+import SelftestHTML
 import summary
 import multiprocessing
 import getopt
@@ -1435,19 +1436,12 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/selftest/<glider:int>')
     # description: selftest review
-    # parameters: mission
+    # parameters: mission, num
     # returns: HTML format summary of latest selftest results
     async def selftestHandler(request, glider:int):
-        cmd = f"{sys.path[0]}/SelftestHTML.py"
         num = int(request.args['num'][0]) if 'num' in request.args else 0
-
-        proc = await asyncio.create_subprocess_exec(
-            cmd, f"{glider:03d}", gliderPath(glider, request), f"{num:d}",
-            stdout=asyncio.subprocess.PIPE, 
-            stderr=asyncio.subprocess.PIPE
-        )
-        results, err = await proc.communicate()
-        return sanic.response.html(purgeSensitive(results.decode('utf-8', errors='ignore')))
+        html = await SelftestHTML.html(glider, gliderPath(glider, request), num)
+        return sanic.response.html(purgeSensitive(html))
 
     #
     # POST handler - to save files back to basestation
