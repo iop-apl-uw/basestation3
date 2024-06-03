@@ -65,7 +65,7 @@ DEBUG_PDB = False
 @add_arguments(
     additional_arguments={
         "max_vbd_effic": BaseOptsType.options_t(
-            0.55,
+            1.0,
             ("Base", "BasePlot", "Reprocess"),
             ("--max_vbd_effic",),
             float,
@@ -323,10 +323,13 @@ def mission_motors(
 
     fig = plotly.graph_objects.Figure()
 
+    pumpdf_vbd_eff = pumpdf["vbd_eff"].to_numpy()
+    pumpdf_vbd_eff[pumpdf_vbd_eff > base_opts.max_vbd_effic] = np.nan
+
     fig.add_trace(
         {
             "x": pumpdf["dive"],
-            "y": pumpdf["vbd_eff"],
+            "y": pumpdf_vbd_eff,
             "meta": np.stack((pumpdf["depth"], pumpdf["vbd_secs"]), axis=-1),
             "name": "VBD Efficiency",
             "type": "scatter",
@@ -343,26 +346,16 @@ def mission_motors(
         }
     )
 
-    yaxis_dict = {
-        "title": "Efficiency",
-        "showgrid": True,
-    }
-    if (
-        np.nanmax(pumpdf["vbd_eff"]) > base_opts.max_vbd_effic
-        or np.nanmax(pumpdf["vbd_eff"]) < 0.0
-    ):
-        yaxis_dict["autorangeoptions"] = {
-            "maxallowed": base_opts.max_vbd_effic,
-            "minallowed": -0.05,
-        }
-
     fig.update_layout(
         {
             "xaxis": {
                 "title": "Dive",
                 "showgrid": True,
             },
-            "yaxis": yaxis_dict,
+            "yaxis": {
+                "title": "Efficiency",
+                "showgrid": True,
+            },
             "title": {
                 "text": "VBD Efficiency",
                 "xanchor": "center",
