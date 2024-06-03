@@ -33,8 +33,9 @@ import plotly.graph_objects
 import io
 from contextlib import redirect_stdout
 import asyncio
+import math
 
-shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "software", "hardware"]
+shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "bathymetry", "software", "hardware"]
 
 def format(line):
     reds = ["errors", "error", "Failed", "failed", "[crit]", "timed out"]
@@ -72,6 +73,63 @@ def format(line):
             print(f"<span>{a.group(2) if a.group(2) else ''}</span><br>")    
     else:
         print(line + "<br>")
+
+def plotBathymaps(bathymaps, includes):
+    fig = plotly.graph_objects.Figure()
+
+    lat = 0
+    lon = 0
+    latmn = 180
+    latmx = -180
+    lonmn = 360
+    lonmx = -360
+
+    n = 0
+    for m in bathymaps: 
+        fig.add_trace(plotly.graph_objects.Scattermapbox(
+                name = f"{m['n']:03d}",
+                mode = "lines",
+                lon = [ m['ll'][1], m['ll'][1], m['ur'][1], m['ur'][1], m['ll'][1] ],
+                lat = [ m['ll'][0], m['ur'][0], m['ur'][0], m['ll'][0], m['ll'][0] ] ))
+
+        lat = lat + (m['ll'][0] + m['ur'][0])/2
+        lon = lon + (m['ll'][1] + m['ur'][1])/2
+        n = n + 1
+
+        if m['ll'][1] < lonmn:
+            lonmn = m['ll'][1]
+        if m['ll'][0] < latmn:
+            latmn = m['ll'][0]
+        if m['ur'][1] > lonmx:
+            lonmx = m['ur'][1]
+        if m['ur'][0] > latmx:
+            latmx = m['ur'][0]
+
+    lat = lat / n
+    lon = lon / n
+
+    max_bound = max(abs(lonmn - lonmx), abs(latmn - latmx)) * 111
+    zoom = 11.5 - math.log(max_bound)
+
+    fig.update_layout(
+        margin = {'l':0,'t':0,'b':0,'r':0},
+        width = 800,
+        height = 800,
+        mapbox = {
+            'center': {'lon': lon, 'lat': lat},
+            'style': "open-street-map",
+            'zoom': zoom})
+
+    return fig.to_html(
+                        include_plotlyjs=includes,
+                        include_mathjax=includes,
+                        full_html=False,
+                        validate=True,
+                        config={
+                            "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+                            "scrollZoom": True,
+                        },
+                      )
 
 def plotMoveRecord(x, which, includes):
     fig = plotly.graph_objects.Figure()
@@ -286,6 +344,8 @@ async def process(sgnum, base, num, mission=None, missions=None):
     insidePre = False
     highlightSensorResult = False
 
+    bathymaps = []
+
     idnum = 0
     minRates = { 'Pitch': 100, 'Roll': 300, 'Pump': 5, 'Bleed': 15 }
     maxRates = { 'Pitch': 300, 'Roll': 500, 'Pump': 10, 'Bleed': 30 }
@@ -315,6 +375,23 @@ async def process(sgnum, base, num, mission=None, missions=None):
                 moveRecord.append(list(map(lambda x: float(x), line.split())))
             except:
                 pass
+
+        if line.find('Loaded bathymap.') > -1:
+            a = re.search('Loaded bathymap.(\d+) ', line)
+            b = re.search('\(LL\)\s*([\-0-9\.]+),([\-0-9\.]+)\s*\(UR\)\s*([\-0-9\.]+),([\-0-9\.]+)', line)
+            ll = [float(b.group(1)), float(b.group(2))]
+            ur = [float(b.group(3)), float(b.group(4))]
+            num = int(a.group(1))
+            bathymaps.append( { "n": num, "ll": ll, "ur": ur } )
+
+        if len(bathymaps) > 0 and line.find('Loaded bathymap.') == -1:
+            print('<a href="#" onclick="document.getElementById(\'bathyplot\').style.display == \'none\' ? document.getElementById(\'bathyplot\').style.display = \'block\' : document.getElementById(\'bathyplot\').style.display = \'none\'; return false;">map view</a><br>')
+            print('<div id=bathyplot style="display: block;">')
+            plot = plotBathymaps(bathymaps, "cdn" if firstPlot else False)
+            print(plot)
+            print("</div>")
+            bathymaps = []
+            firstPlot = False
 
         if insideDir and line.find(',') > -1 and line.find('is empty') == -1:
             print("</pre>")
@@ -505,7 +582,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
     if insideParam:
         print("</table>")
 
-    print("</html>")
+    print("</body></html>")
 
 async def html(sgnum, base, num, mission=None, missions=None):
     f = io.StringIO()
