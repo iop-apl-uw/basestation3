@@ -53,7 +53,8 @@ if os.path.exists(local_canon):
 else:
     canonname = os.path.join(sys.path[0], "canonicals/canon_" + sys.argv[1] + ".log")
 
-print(canonname)
+print(f'canonical parameters: {os.path.basename(canonname)}')
+
 try:
     log = open(logname, "rb")
 except IOError:
