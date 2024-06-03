@@ -192,6 +192,8 @@ def processGC(dive, cur, nci):
 
                 if rate > 0 and nci.variables['gc_vbd_secs'][i] > 10:
                     vbd_eff = 0.01*rate*nci.variables['gc_depth'][i]/nci.variables['gc_vbd_i'][i]/nci.variables['gc_vbd_volts'][i]
+                    if vbd_eff > 1.0:
+                        vbd_eff = 1.0 # this is a flag that something is wrong, but won't cause downstream plots to be way off
 
         if "gc_flags" in nci.variables:
             flag_val = f"{nci.variables['gc_flags'][i]},"
