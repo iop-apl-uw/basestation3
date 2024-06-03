@@ -1439,8 +1439,9 @@ def attachHandlers(app: sanic.Sanic):
     # parameters: mission, num
     # returns: HTML format summary of latest selftest results
     async def selftestHandler(request, glider:int):
+        table = await buildAuthTable(request, None, glider=glider, mission=None)
         num = int(request.args['num'][0]) if 'num' in request.args else 0
-        html = await SelftestHTML.html(glider, gliderPath(glider, request), num)
+        html = await SelftestHTML.html(glider, gliderPath(glider, request), num, mission=missionFromRequest(request), missions=table)
         return sanic.response.html(purgeSensitive(html))
 
     #
@@ -2429,7 +2430,7 @@ async def buildMissionTable(app, config=None):
 
     return missions
  
-async def buildAuthTable(request, defaultPath):
+async def buildAuthTable(request, defaultPath, glider=None, mission=None):
     opTable = []
     for m in request.app.ctx.missionTable:
         status = checkGliderMission(request, m['glider'], m['mission'])
@@ -2438,7 +2439,8 @@ async def buildAuthTable(request, defaultPath):
 
         path    = m['path'] if m['path'] else defaultPath
         mission = m['mission'] if m['mission'] else defaultPath
-        opTable.append({ "mission": mission, "glider": m['glider'], "path": path, "default": m['default'], "status": m['status'] })
+        if (glider is None or glider == m['glider']) and (mission is None or mission == m['mission']):
+            opTable.append({ "mission": mission, "glider": m['glider'], "path": path, "default": m['default'], "status": m['status'] })
 
     return opTable
 

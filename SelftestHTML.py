@@ -34,6 +34,8 @@ import io
 from contextlib import redirect_stdout
 import asyncio
 
+shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "software", "hardware"]
+
 def format(line):
     reds = ["errors", "error", "Failed", "failed", "[crit]", "timed out"]
     yellows = ["WARNING"]
@@ -46,7 +48,30 @@ def format(line):
             line = line.replace(y, "<span style='background-color:orange;'>%s</span>" % y)
             break
 
-    print(line + "<br>")
+    a = re.search('(\d+\.\d+,[SH][A-Z0-9]+,[NCD],)(.+)?', line)
+    if a:
+        print(f"<span style='color:gray;'>{a.group(1)}</span>", end="")
+        b = None
+        c = None
+        d = None
+        if a.group(2) is not None:
+            try:
+                b = re.search('(\$[A-Z_0-9]+),(-?[0-9]+(?:\.[0-9e\-]+)?$)', a.group(2))
+                c = re.search('\s*[A-Za-z0-9_]+:\s*[0-9]+\.[0-9]+\s*amp-sec\s*/\s*[0-9]+\.[0-9]+\s*sec', a.group(2))
+                d = re.search('Updating parameter \$([A-Z0-9_]+) to (.+)', a.group(2))
+            except:
+                pass
+
+        if b:
+            print(f'<a href="../parms#{b.group(1)[1:]}">{b.group(1)}</a>,{b.group(2)}<br>')
+        elif c:
+            print(f'<pre class="inline">{a.group(2)}</pre><br>')
+        elif d:
+            print(f'Updating parameter <a href="../parms#{d.group(1)}">${d.group(1)}</a> to {d.group(2)}<br>')
+        else:
+            print(f"<span>{a.group(2) if a.group(2) else ''}</span><br>")    
+    else:
+        print(line + "<br>")
 
 def plotMoveRecord(x, which, includes):
     fig = plotly.graph_objects.Figure()
@@ -164,12 +189,75 @@ def motorCheck(valueToPrint, valueToCheck, minVal, maxVal):
     else:
         return valueToPrint
 
-async def process(sgnum, base, num):
+def printNav(div):
+    print('<span>')
+    for idx, v in enumerate(shortcuts):
+        if idx > 0:
+            print(' &bull; ', end="")
+
+        if div == v:
+            print(f'{v}', end="")
+        else:
+            print(f'<a href="#{v}">{v}</a>', end="")
+
+    print('</span><p>')
+
+    
+async def process(sgnum, base, num, mission=None, missions=None):
     selftestFiles = sorted(glob.glob(base + '/pt*.cap'), reverse=True)
 
+    print("<html><head><title>%03d-selftest</title>" % sgnum)
+    print("<style>table.motors th,td { text-align: center; padding-left: 10px; padding-right: 10px; } a {font-family: verdana, arial, tahoma, 'sans serif'; } a:link {color:#0000ff; text-decoration:none} a:visited {color:#0000aa; text-decoration:none} a:hover {color:#0000aa; text-decoration:underline} a:active {color:#0000aa; text-decoration:underline} pre.inline {display: inline;} h2 {margin-bottom:0px;} </style></head><body>")
+
+    firstLink = False
+
+    if len(selftestFiles) > 1:
+        stnums = []
+        for stf in selftestFiles:
+            a = re.search(f".+pt{sgnum:03d}(\d+).cap", stf)
+            stnums.append(int(a.group(1)))
+
+        if num == 0:
+            stnums = stnums[1:]
+        else:
+            stnums.remove(num)
+
+        for stn in stnums:
+            if firstLink == True:
+                print(" &bull; ")
+            else:
+                print("Selftest history: ")
+                
+            if mission:
+                print(f"<a href=\"../selftest/{sgnum}?mission={mission}&num={stn}\">{mission} #{stn:04d}</a> ")
+            else:     
+                print(f"<a href=\"../selftest/{sgnum}?num={stn}\">#{stn:04d}</a> ")
+
+            firstLink = True
+
+    if missions:
+        for m in missions:
+            if m['path'] == base:
+                continue
+
+            m_selftestFiles = sorted(glob.glob(m['path'] + '/pt*.cap'), reverse=True) 
+            for stf in m_selftestFiles:
+                a = re.search(f".+pt{sgnum:03d}(\d+).cap", stf)
+                stnum = a.group(1)
+                if firstLink == True:
+                    print(" &bull; ")
+                else:
+                    print("Selftest history: ")
+
+                print(f"<a href=\"../selftest/{sgnum}?mission={m['mission']}&num={stnum}\">{m['mission']} #{stnum}</a> ")
+                firstLink = True
+
     if len(selftestFiles) == 0:
-        print("no selftest files found")
+        print("<p>no matching selftest files found</html>")
         return 
+
+    if firstLink:
+        print("<hr>")
 
     proc = await asyncio.create_subprocess_exec('%s/selftest.sh' % sys.path[0], f"{sgnum}", base, f"{num}", stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE)
 #    proc = subprocess.Popen(['%s/selftest.sh' % sys.path[0], f"{sgnum}", base, num], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -186,9 +274,9 @@ async def process(sgnum, base, num):
     #     print("could not open %s" % selftestFiles[0])
     #     sys.exit(1)
 
-    print("<html><head><title>%03d-selftest</title>" % sgnum)
-    print('<style>table.motors th,td { text-align: center; padding-left: 10px; padding-right: 10px; }</style></head><body>')
-    print('<div id="top">top*<a href="#capture">capture</a>*<a href="#parameters">parameters</a>*<a href="#pitch">pitch</a>*<a href="#roll">roll</a>*<a href="#VBD">VBD</a><div><br>')
+
+    print('<a id="top"></a>')
+    printNav('top')
 
     showingRaw = False
     insideMoveDump = False
@@ -196,6 +284,8 @@ async def process(sgnum, base, num):
     insideParam = False
     insideMotorSummary = False
     insidePre = False
+    highlightSensorResult = False
+
     idnum = 0
     minRates = { 'Pitch': 100, 'Roll': 300, 'Pump': 5, 'Bleed': 15 }
     maxRates = { 'Pitch': 300, 'Roll': 500, 'Pump': 10, 'Bleed': 30 }
@@ -203,6 +293,7 @@ async def process(sgnum, base, num):
     maxCurr = { 'Pitch': 400, 'Roll': 150, 'Pump': 1000 , 'Bleed': 2000 }
     firstPlot = True
 
+    stdo.replace(b'\r', b'')
     for raw_line in stdo.splitlines(): # proc.stdout:
         try:
             line = raw_line.decode('utf-8').rstrip()
@@ -212,7 +303,7 @@ async def process(sgnum, base, num):
         if insideMoveDump and line.find(',') > -1 and line.find('SMOTOR,N,') == -1:
             print('</div>')
             if len(moveRecord) > 0:
-                print('<div id=plot%d style="display: none;">' % idnum)
+                print('<div id=plot%d style="display: block;">' % idnum)
                 plot = plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
                 print(plot)
                 print("</div>")
@@ -229,9 +320,15 @@ async def process(sgnum, base, num):
             print("</pre>")
             insideDir = False
 
-        if insidePre and line.find('>') == 0:
+        if insidePre and (line.find('>') == 0 or line.find(',---- ') > -1):
             print("</pre>")
             insidePre = False
+
+        if highlightSensorResult:
+            c = re.search('[A-Za-z0-9_]+:', line)
+            if not c:
+                print("</b>")
+                highlightSensorResult = False
 
         if insideParam and line.find('not between') == -1 and line.find('skipping') == -1 and line.find('canon') == -1 and line.find('[inf]') == -1 and line.find('[unknown]') == -1: 
             if len(line) > 2:
@@ -254,7 +351,7 @@ async def process(sgnum, base, num):
             moveRecord = []
             format(line)
             print('<a href="#" onclick="document.getElementById(\'div%d\').style.display == \'none\' ? document.getElementById(\'div%d\').style.display = \'block\' : document.getElementById(\'div%d\').style.display = \'none\'; return false;">details</a>' % (idnum, idnum, idnum));
-            print(' * <a href="#" onclick="document.getElementById(\'plot%d\').style.display == \'none\' ? document.getElementById(\'plot%d\').style.display = \'block\' : document.getElementById(\'plot%d\').style.display = \'none\'; return false;">plot</a><br>' % (idnum, idnum, idnum));
+            print(' &bull; <a href="#" onclick="document.getElementById(\'plot%d\').style.display == \'none\' ? document.getElementById(\'plot%d\').style.display = \'block\' : document.getElementById(\'plot%d\').style.display = \'none\'; return false;">plot</a><br>' % (idnum, idnum, idnum));
             print('<div id=div%d style="display: none;">' % idnum)
 
         elif line.startswith('Meta:'):
@@ -273,7 +370,8 @@ async def process(sgnum, base, num):
         elif line.startswith('Raw capture'):
             showingRaw = True
             print('<h2 id="capture" style="margin-bottom:0px;">%s</h2>' % line)
-            print('<a href="#top">top</a>*capture*<a href="#parameters">parameters</a><br>')
+            # print('<a href="#top">top</a> &bull; capture &bull; <a href="#parameters">parameters</a><br>')
+            printNav('capture')
 
         elif line.startswith('Summary of motor moves'): 
             print('<h2>%s</h2>' % line)
@@ -286,7 +384,8 @@ async def process(sgnum, base, num):
 
         elif line.startswith('Parameter comparison'):
             print('<h2 id="parameters" style="margin-bottom:0px;">%s</h2>' % line)
-            print('<a href="#top">top</a>*<a href="#capture">capture</a>*parameters<br>')
+            # print('<a href="#top">top</a> &bull; <a href="#capture">capture</a> &bull; parameters<br>')
+            printNav('parameters')
             insideParam = True
             print("<table>")
             print("<tr><th></th><th>parameter</th><th>current</th><th>min</th><th>max</th></tr>")
@@ -301,14 +400,20 @@ async def process(sgnum, base, num):
         elif line.find(',SUSR,N,---- ') > -1:
             a = re.search(',SUSR,N,(.+)', line)
             m = re.search('Checking (\w+)', line)
+            n = re.search('Reporting (\w+)', line)
             if m:
                 id = m.group(1).split()[0]
                 print(f'<h2 id="{id}">{a.group(1)}</h2>')
+            elif n:
+                id = n.group(1).split()[0]
+                print(f'<h2 id="{id}">{a.group(1)}</h2>')
             else:
                 print(f'<h2>{a.group(1)}</h2>')
-                
+               
+            if (m or n) and id in shortcuts:
+                printNav(id)
 
-        elif not insidePre and (line.find('>prop') > -1 or line.find('>attach') > -1 or line.find('>scheme') > -1):
+        elif not insidePre and (line.find('>prop') > -1 or line.find('>attach') > -1 or line.find('>scheme') > -1 or line.find('>sysclk') > -1 or line.find('>log meta') > -1):
             format(line)
             print("<pre>")
             insidePre = True
@@ -316,6 +421,11 @@ async def process(sgnum, base, num):
         elif line.find('>log test') > -1:
             print("<h2>logger sensor test results</h2>")
             format(line)
+
+        elif line.startswith('--checking '):
+            format(line)
+            print("<b>")
+            highlightSensorResult = True
 
         elif insideMotorSummary:
             if not (line.startswith('Pitch') or line.startswith('Roll') or line.startswith('VBD') or line.startswith('Pump')) and line != '':
@@ -374,7 +484,7 @@ async def process(sgnum, base, num):
             elif line.find('[unknown]') > -1:
                 pass 
             elif line.find('[inf]') > -1:
-                format(line)
+                # format(line)
                 print('<tr style="background-color:%s;">' % rcolors[trow % 2])
                 parts = line.split(' ')
                 
@@ -395,10 +505,12 @@ async def process(sgnum, base, num):
     if insideParam:
         print("</table>")
 
-async def html(sgnum, base, num):
+    print("</html>")
+
+async def html(sgnum, base, num, mission=None, missions=None):
     f = io.StringIO()
     with redirect_stdout(f):
-        await process(sgnum, base, num)
+        await process(sgnum, base, num, mission=mission, missions=missions)
 
     return f.getvalue()
 

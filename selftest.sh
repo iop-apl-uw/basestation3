@@ -248,7 +248,7 @@ end
 echo "--------------------------------------------"
 echo "Raw capture"
 echo 
-cat "$base"/"$fname".cap
+tr -d '\r' < "$base"/"$fname".cap
 
 echo ""
 echo ------------------------------
