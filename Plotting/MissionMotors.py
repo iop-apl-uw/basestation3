@@ -75,6 +75,17 @@ DEBUG_PDB = False
                 "option_group": "plotting",
             },
         ),
+        "max_vbd_pump_rate": BaseOptsType.options_t(
+            -20.0,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--max_vbd_pump_rate",),
+            float,
+            {
+                "help": "Set the maximum VBD pump rate in AD/sec (negative is pump)",
+                "section": "plotting",
+                "option_group": "plotting",
+            },
+        ),
     }
 )
 @plotmissionsingle
@@ -235,6 +246,9 @@ def mission_motors(
     pumpdf = vdf[vdf["vbd_rate"] < 0]
     bleeddf = vdf[vdf["vbd_rate"] > 0]
 
+    pumpdf_vbd_rate = pumpdf["vbd_rate"].to_numpy()
+    pumpdf_vbd_rate[pumpdf_vbd_rate < base_opts.max_vbd_pump_rate] = np.nan
+
     fig.add_trace(
         {
             "x": pumpdf["dive"],
@@ -254,7 +268,7 @@ def mission_motors(
     fig.add_trace(
         {
             "x": pumpdf["dive"],
-            "y": pumpdf["vbd_rate"],
+            "y": pumpdf_vbd_rate,
             "meta": pumpdf["depth"],
             "name": "Pump Rate",
             "type": "scatter",
