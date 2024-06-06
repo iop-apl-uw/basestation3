@@ -41,3 +41,4 @@ anyio
 pyzmq --no-binary=pyzmq
 ppigrf
 scanf
+pyproj
