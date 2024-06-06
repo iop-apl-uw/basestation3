@@ -310,6 +310,8 @@ async def process(sgnum, base, num, mission=None, missions=None):
                 print(f"<a href=\"../selftest/{sgnum}?mission={m['mission']}&num={stnum}\">{m['mission']} #{stnum}</a> ")
                 firstLink = True
 
+    print('<a id="top"></a>')
+
     if len(selftestFiles) == 0:
         print("<p>no matching selftest files found</html>")
         return 
