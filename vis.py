@@ -2437,10 +2437,10 @@ async def buildAuthTable(request, defaultPath, glider=None, mission=None):
         if status == PERM_REJECT:
             continue
 
-        path    = m['path'] if m['path'] else defaultPath
-        mission = m['mission'] if m['mission'] else defaultPath
+        path        = m['path'] if m['path'] else defaultPath
+        missionName = m['mission'] if m['mission'] else ""
         if (glider is None or glider == m['glider']) and (mission is None or mission == m['mission']):
-            opTable.append({ "mission": mission, "glider": m['glider'], "path": path, "default": m['default'], "status": m['status'] })
+            opTable.append({ "mission": missionName, "glider": m['glider'], "path": path, "default": m['default'], "status": m['status'] })
 
     return opTable
 
