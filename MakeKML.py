@@ -618,9 +618,9 @@ def printDive(
         )
 
     log_debug(f"Processing {dive_nc_file_name}")
-    gps_lat_start = gps_lon_start = gps_time_start = gps_lat_end = gps_lon_end = (
-        gps_time_end
-    ) = None
+    gps_lat_start = (
+        gps_lon_start
+    ) = gps_time_start = gps_lat_end = gps_lon_end = gps_time_end = None
 
     try:
         gps_lat_one = nc.variables["log_gps_lat"][0]
@@ -869,10 +869,12 @@ def printDive(
     ballon_pairs.append(("End Lon", f"{gps_lon_end:.4f}"))
 
     surface_time = gps_time_start - gps_time_one
-    log_debug(
-        f"dive:{dive_num},surface_time:{surface_time},call_time:{call_time},diff:{surface_time-call_time:.1f}"
-    )
-    ballon_pairs.append(("Surface Time", f"{(surface_time)/60.0:.1f} minutes"))
+    if call_time and surface_time:
+        log_debug(
+            f"dive:{dive_num},surface_time:{surface_time},call_time:{call_time},diff:{surface_time-call_time:.1f}"
+        )
+    if surface_time:
+        ballon_pairs.append(("Surface Time", f"{(surface_time)/60.0:.1f} minutes"))
     if call_time:
         ballon_pairs.append(("Call Time", f"{call_time / 60.0:.1f} minutes"))
 
@@ -1002,9 +1004,9 @@ def extractGPSPositions(dive_nc_file_name, dive_num):
         log_error("Skipping...")
         return None
 
-    gps_lat_start = gps_lon_start = gps_time_start = gps_lat_end = gps_lon_end = (
-        gps_time_end
-    ) = None
+    gps_lat_start = (
+        gps_lon_start
+    ) = gps_time_start = gps_lat_end = gps_lon_end = gps_time_end = None
     try:
         gps_lat_one = nc.variables["log_gps_lat"][0]
         gps_lon_one = nc.variables["log_gps_lon"][0]
