@@ -1401,7 +1401,7 @@ global_options_dict = {
         },
     ),
     # End MakeKML
-    "Network_log_decompressor": options_t(
+    "network_log_decompressor": options_t(
         "",
         (
             "Base",

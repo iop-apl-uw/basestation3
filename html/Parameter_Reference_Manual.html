@@ -754,28 +754,30 @@ is a logical or of the bits described below:
 for setting $N_NOCOMM to a larger value while still getting the typical
 behavior of pumping to max after a single dive with failed communications.</p>
 	  </ul>
-    <li><p>Bit 1 recovery: Setting this bit causes the glider to enter recovery
+    <li><p>Bit 1 (2) recovery: Setting this bit causes the glider to enter recovery
 after $N_NOCOMM dives with no communications. This bit takes precedence over any
 values in bits 2-4.</p>
-	<li><p>Bit 2 EPIRB mode: If set, the glider will loiter on the
+	<li><p>Bit 2 (4) EPIRB mode: If set, the glider will loiter on the
 surface in low power sleep for <span class="bold"><a href="#T_EPIRB">$T_EPIRB</a></span> seconds. The loiter
 period is immediately before GPS2 is acquired. The intent of this mode is
 to aid visual, acoustic, or ARGOS based backup recovery systems while
 still keeping the glider diving and navigating. This bit can be set 
 independently or in conjunction with bits 3 and 4. </p>
-	<li><p>Bit 3 escape: Setting this bit causes the glider to begin navigating
+	<li><p>Bit 3 (8) escape: Setting this bit causes the glider to begin navigating
 to the escape target defined for the current target. If no escape target
 is defined then the glider navigates by heading according to the
 <span class="bold"><a href="#ESCAPE_HEADING">$ESCAPE_HEADING</a></span>
 parameter.</p>
-	<li><p>Bit 4 moor at position: This causes the glider to latch the current
+	<li><p>Bit 4 (16) moor at position: This causes the glider to latch the current
 GPS position as a target and set that target as the current waypoint. 
 The glider will try to virtually moor at that position. </p>
-	<li><p>Bit 5 clear flow control bits on <span class="bold"><a href="#PHONE_DEVICE">$PHONE_DEVICE</a></span>. Latest glider firmware always disables flow control for the cmdfile so this bit is not strictly necessary for glider safety in the event of a flow control failure on the modem. </p>
-	<li><p>Bit 6 lengthen <span class="bold"><a href="#T_RSLEEP">$T_RSLEEP</a></span> by a factor of 30 when 2x $N_NOCOMM dives miss communications .</p>
-	<li><p>Bit 7 send a SMS messages to the sms_email address configured in NVRAM. 
+	<li><p>Bit 5 (32) clear flow control bits on <span class="bold"><a href="#PHONE_DEVICE">$PHONE_DEVICE</a></span>. Latest glider firmware always disables flow control for the cmdfile so this bit is not strictly necessary for glider safety in the event of a flow control failure on the modem. </p>
+	<li><p>Bit 6 (64) lengthen <span class="bold"><a href="#T_RSLEEP">$T_RSLEEP</a></span> by a factor of 30 when 2x $N_NOCOMM dives miss communications .</p>
+	<li><p>Bit 7 (128) send a SMS messages to the sms_email address configured in NVRAM. 
 The messages is identical to the GPS status line that is emitted to the comm.log on the basestation. </p>
-	<li><p>Bit 8 turn the network modem on (if available) to act as a transponder.</p>
+	<li><p>Bit 8 (256) check the SMS inbox for signed messages. Appropriately signed messages are
+interpreted as cmdfiles.</p>
+	<li><p>Bit 9 (512) turn the network modem on (if available) to act as a transponder.</p>
 </ul>
 
 <p>As an example, parameter values for <span class="bold">$N_NOCOMM</span> of 10 and <span class="bold">$NOCOMM_ACTION</span> of 21 
@@ -789,6 +791,9 @@ surface between station keeping dives. [1]</p>
 <ul>
     <li><p>Bit 0 (1): At apogee during all dives, pump to a neutral VBD position based on measured in situ density</p>
     <li><p>Bit 1 (2): At apogee during loiter dives, pump to a neutral VBD position based on measured in situ density<p>
+    <li><p>Bit 3 (8): Always send an SMS message (regardless of N_NOCOMM status).<p>
+    <li><p>Bit 4 (16): Always check for incoming SMS message (regardless of N_NOCOMM status).<p>
+    <li><p>Bit 5 (32): Honor PITCH_ADJUST_W on dives.<p>
 </ul>
 
 
