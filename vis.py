@@ -1053,20 +1053,23 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def summaryHandler(request, glider:int):
         msg = await summary.collectSummary(glider, gliderPath(glider,request))
-        if not 'humidity' in msg:
-            call = await getLatestCall(request, glider)
-            if call is not None and len(call) >= 1:
-                try:
-                    msg['lat']    = call[0]['lat']
-                    msg['lon']    = call[0]['lon']
-                    msg['dive']   = call[0]['dive']
-                    msg['calls']  = call[0]['call']
-                    msg['end']    = call[0]['connected']
-                    msg['volts']  = [ call[0]['volts10'], call[0]['volts24'] ]
-                    msg['humidity'] = call[0]['RH']
-                    msg['internalPressure'] = call[0]['intP']
-                except Exception as e:
-                    sanic.log.logger.info(f"summaryHandler: {e} {call[0]}")
+        # if not 'humidity' in msg:
+        # use comm.log values to overwrite log file values where available
+        call = await getLatestCall(request, glider)
+        if call is not None and len(call) >= 1:
+            try:
+                msg['lat']    = call[0]['lat']
+                msg['lon']    = call[0]['lon']
+                msg['dive']   = call[0]['dive']
+                msg['calls']  = call[0]['call']
+                msg['end']    = call[0]['connected']
+                msg['volts']  = [ call[0]['volts10'], call[0]['volts24'] ]
+                msg['humidity'] = call[0]['RH']
+                msg['internalPressure'] = call[0]['intP']
+                msg['sm_pitch']   = call[0]['pitch']
+                msg['sm_depth']   = call[0]['depth']
+            except Exception as e:
+                sanic.log.logger.info(f"summaryHandler: {e} {call[0]}")
                     
         msg['mission'] = filterMission(glider, request)
         return sanic.response.json(msg)

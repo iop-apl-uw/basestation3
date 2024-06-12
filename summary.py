@@ -197,7 +197,7 @@ async def collectSummary(glider, path):
         cur = await conn.cursor()
     
         await cur.execute(
-            "select dive,log_glider,batt_volts_10v,batt_volts_24v,batt_capacity_10v,batt_capacity_24v,log_start,total_flight_time_s,log_gps_time,error_count,max_depth,log_d_grid,meters_to_target,log_d_tgt,log_t_dive,log_tgt_lat,log_tgt_lon,energy_dives_remain_modeled,energy_days_remain_modeled,energy_end_time_modeled,log_internal_pressure,log_internal_pressure_slope,log_humid,log_humid_slope,implied_volmax,implied_volmax_slope,capture,criticals,alerts,distance_made_good,distance_to_goal,dog_efficiency,distance_over_ground from dives order by dive desc limit 1"
+            "select dive,log_glider,batt_volts_10v,batt_volts_24v,batt_capacity_10v,batt_capacity_24v,log_start,total_flight_time_s,log_gps_time,error_count,max_depth,log_d_grid,meters_to_target,log_d_tgt,log_t_dive,log_tgt_lat,log_tgt_lon,energy_dives_remain_modeled,energy_days_remain_modeled,energy_end_time_modeled,log_internal_pressure,log_internal_pressure_slope,log_humid,log_humid_slope,log__SM_ANGLEo,log__SM_DEPTHo,implied_volmax,implied_volmax_slope,capture,criticals,alerts,distance_made_good,distance_to_goal,dog_efficiency,distance_over_ground from dives order by dive desc limit 1"
         )
         data = await cur.fetchone()
         # data = {k:v for k,v in data.items() if v is not None}
@@ -250,6 +250,9 @@ async def collectSummary(glider, path):
     out['humiditySlope'] = data['log_HUMID_slope']
     out['internalPressure'] = data['log_INTERNAL_PRESSURE']
     out['internalPressureSlope'] = data['log_INTERNAL_PRESSURE_slope']
+
+    out['sm_pitch'] = data['log__SM_ANGLEo'];
+    out['sm_depth'] = data['log__SM_DEPTHo'];
 
     out['impliedVolmax'] = data['implied_volmax']
     out['impliedVolmaxSlope'] = data['implied_volmax_slope']

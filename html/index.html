@@ -807,7 +807,23 @@
                 h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
                 indicators.push(h);
             }
-            
+
+            if (data.hasOwnProperty('sm_pitch')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
+                h.classList.add(thresh(-data.sm_pitch, 25, 40));
+                h.innerHTML = `pitch<br>${data.sm_pitch.toFixed(1)}`;
+                indicators.push(h);
+            }
+           
+            if (data.hasOwnProperty('sm_depth')) {
+                h = document.createElement('div');
+                h.classList.add('indicator');
+                h.classList.add(thresh(data.sm_depth, 2.5, 1.5));
+                h.innerHTML = `depth<br>${data.sm_depth.toFixed(2)}`;
+                indicators.push(h);
+            }
+             
 
             // volmax
             if (data.hasOwnProperty('impliedVolmaxSlope')) {
