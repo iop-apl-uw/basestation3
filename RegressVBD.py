@@ -195,7 +195,7 @@ def getModelW(bu, Pit, HD_A, HD_B, HD_C, rho0):
  
     return W
 
-def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives, bias_only=False, decimate=1):
+def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives, bias_only=False, decimate=1, rho=None):
 
     fname = os.path.join(path, f'p{glider:03d}{dives[-1]:04d}.nc')
 
@@ -207,7 +207,7 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
     basis_HD_A = nc.variables["log_HD_A"].getValue()
     basis_HD_B = nc.variables["log_HD_B"].getValue()
     basis_HD_C = nc.variables["log_HD_C"].getValue()
-    basis_RHO0 = nc.variables["log_RHO"].getValue()*1000
+    basis_RHO0 = (rho if rho else nc.variables["log_RHO"].getValue())*1000
     basis_MASS = (mass if mass else nc.variables["log_MASS"].getValue())/1000
     basis_VBD_CNV = nc.variables["log_VBD_CNV"].getValue()
     basis_VBD_MIN = nc.variables["log_VBD_MIN"].getValue()
@@ -617,6 +617,15 @@ def main():
                     "help": "corrected scale mass (g)",
                 }
             ),
+            "rho": BaseOpts.options_t(
+                None,
+                ("RegressVBD",),
+                ( "--rho", ),
+                float,
+                {
+                    "help": "corrected apogee density (g/cc)",
+                }
+            ),
             "initial_bias": BaseOpts.options_t(
                 -50,
                 ("RegressVBD",),
@@ -672,13 +681,13 @@ def main():
     else:
         fmt = False
 
-    bias, hd, w, rms, log, plt = regress(base_opts.mission_dir,
+    bias, hd, w, rms, log, plt, _ = regress(base_opts.mission_dir,
                       base_opts.instrument_id,
                       parseRangeList(base_opts.dives),
                       [d0, d1],
                       base_opts.initial_bias, 
                       base_opts.mass,
-                      fmt, True)
+                      fmt, True, rho=base_opts.rho)
 
     if fmt == 'html':
         fid = open(base_opts.out, 'w')
