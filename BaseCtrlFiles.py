@@ -397,7 +397,10 @@ def load_ctrl_yml(
                 #           dict as loaded - help with error processing some errors.
                 #           Downside - would need to push off checking on defined uses
                 #           as later yml files might define them
-                yml_dicts.append(yaml.safe_load(fi.read()))
+                tmp_dict = yaml.safe_load(fi.read())
+                if tmp_dict is None:
+                    tmp_dict = {}
+                yml_dicts.append(tmp_dict)
         except Exception:
             log_error(f"Could not procss {yml_file_name} - skipping", "exc")
 
