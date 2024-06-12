@@ -32,8 +32,7 @@
 ## - .cnf based sensors need to include descriptions, units and flag for inclusion in whole mission data fields for all columns
 ##
 
-"""Routines for creating dive profiles from a Seaglider's eng and log files
-"""
+"""Routines for creating dive profiles from a Seaglider's eng and log files"""
 
 # pylint: disable=fixme
 # TODO - remove all uses of globals(), locals() and exec()
@@ -45,7 +44,6 @@
 # pylint: disable=too-many-branches
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-statements
-
 
 import cProfile
 import pstats
@@ -1249,10 +1247,10 @@ def compute_lat_lon(
         dac_east_speed_m_s * delta_time_s_v
     )
     # Use incremental trapezoidal integration of displacements to compute lat/lon dive positions from base location
-    north_corr_displacement_m_v = scipy.integrate.cumtrapz(
+    north_corr_displacement_m_v = scipy.integrate.cumulative_trapezoid(
         north_corr_displacement_m_v, initial=0.0
     )
-    east_corr_displacement_m_v = scipy.integrate.cumtrapz(
+    east_corr_displacement_m_v = scipy.integrate.cumulative_trapezoid(
         east_corr_displacement_m_v, initial=0.0
     )
 
@@ -2849,15 +2847,15 @@ def make_dive_profile(
 
     directives.reviewed = 0  # not reviewed until they specifically say so... (could be a default rule '* no_reviewed' since first-come first-served)
     directives.reviewed = reviewed = eval_directive("reviewed", report=False)
-    directives.correct_thermal_inertia_effects = (
-        perform_thermal_inertia_correction
-    ) = eval_directive("correct_thermal_inertia_effects")
+    directives.correct_thermal_inertia_effects = perform_thermal_inertia_correction = (
+        eval_directive("correct_thermal_inertia_effects")
+    )
     # For the legato, this correction is never the correct choice
     if sg_ct_type == 4:
         perform_thermal_inertia_correction = False
-    directives.detect_conductivity_anomalies = (
-        perform_cond_anomaly_check
-    ) = eval_directive("detect_conductivity_anomalies")
+    directives.detect_conductivity_anomalies = perform_cond_anomaly_check = (
+        eval_directive("detect_conductivity_anomalies")
+    )
     directives.interp_gc_temperatures = interpolate_gc_temperatures = eval_directive(
         "interp_gc_temperatures"
     )
@@ -3325,9 +3323,9 @@ def make_dive_profile(
         # If both auxPressure and auxCompass are present, they are always on the same time grid
         # There may be cases where we choose to fall back on the gliders compass (sparton of otherwise) even if the auxCompass is present
         #
-        vehicle_heading_mag_degrees_v = (
-            vehicle_pitch_degrees_v
-        ) = vehicle_roll_degrees_v = None
+        vehicle_heading_mag_degrees_v = vehicle_pitch_degrees_v = (
+            vehicle_roll_degrees_v
+        ) = None
         if use_auxcompass:
             vehicle_heading_mag_degrees_v = results_d["auxCompass_hdg"]
             vehicle_pitch_degrees_v = results_d["auxCompass_pit"]
@@ -3471,9 +3469,9 @@ def make_dive_profile(
                 if new_head is not None:
                     vehicle_heading_mag_degrees_v = new_head
                     head_index = eng_f.columns.index("head")
-                    eng_f.data[
-                        :, head_index
-                    ] = new_head  # Update heading with the improved version of heading
+                    eng_f.data[:, head_index] = (
+                        new_head  # Update heading with the improved version of heading
+                    )
 
         vbdCC_v = eng_f.get_col("vbdCC")
         if vbdCC_v is None:
@@ -4640,17 +4638,17 @@ def make_dive_profile(
         # see discussion in BaseNetCDF about resolution vs accuracy
         # TODO some instruments have much better resolution than 1 secs and
         # even the glider doesn't have resolution finer than 2.5 secs nominally...so what is this saying?
-        globals_d[
-            "time_coverage_resolution"
-        ] = "PT1S"  # ISO 8601 duration: Period Time 1 second
+        globals_d["time_coverage_resolution"] = (
+            "PT1S"  # ISO 8601 duration: Period Time 1 second
+        )
 
         globals_d["geospatial_vertical_min"] = min(sg_depth_m_v)
         globals_d["geospatial_vertical_max"] = max(sg_depth_m_v)
         globals_d["geospatial_vertical_units"] = "meter"
         # see discussion in BaseNetCDF about resolution vs accuracy
-        globals_d[
-            "geospatial_vertical_resolution"
-        ] = "centimeter"  # TODO for MMP this should be 'N meter binned'
+        globals_d["geospatial_vertical_resolution"] = (
+            "centimeter"  # TODO for MMP this should be 'N meter binned'
+        )
         globals_d["geospatial_vertical_positive"] = "no"
 
         # compute time increments for DAC use below
@@ -5214,9 +5212,9 @@ def make_dive_profile(
                     "On the bottom at %.1fm for %.1f minutes."
                     % (max_ctd_depth_m, stuck_time / 60.0)
                 )
-            ctd_delta_time_s_v[
-                stuck_i_v
-            ] = 0  # not flying here so no flight elapsed time (see DAC below)
+            ctd_delta_time_s_v[stuck_i_v] = (
+                0  # not flying here so no flight elapsed time (see DAC below)
+            )
             if sbect_unpumped and sg_ct_type != 4:
                 # TODO really? like apogee, salin might tbe ok if we aren't in a thermocline
                 # CONSIDER drop this
@@ -6493,15 +6491,15 @@ def make_dive_profile(
             avg_speed_dive = np.mean(
                 z_hdm_horizontal_speed_cm_s_v[Utils.setdiff(dive_i_v, bad_speed_i_v)]
             )
-            z_hdm_horizontal_speed_cm_s_v[
-                Utils.intersect(bad_speed_i_v, dive_i_v)
-            ] = avg_speed_dive
+            z_hdm_horizontal_speed_cm_s_v[Utils.intersect(bad_speed_i_v, dive_i_v)] = (
+                avg_speed_dive
+            )
             avg_speed_climb = np.mean(
                 z_hdm_horizontal_speed_cm_s_v[Utils.setdiff(climb_i_v, bad_speed_i_v)]
             )
-            z_hdm_horizontal_speed_cm_s_v[
-                Utils.intersect(bad_speed_i_v, climb_i_v)
-            ] = avg_speed_climb
+            z_hdm_horizontal_speed_cm_s_v[Utils.intersect(bad_speed_i_v, climb_i_v)] = (
+                avg_speed_climb
+            )
             z_hdm_horizontal_speed_cm_s_v[slow_apogee_climb_pump_i_v] = 0
             avg_displacement_m = (
                 sum(z_hdm_horizontal_speed_cm_s_v * ctd_delta_time_s_v) / m2cm
@@ -6589,12 +6587,12 @@ def make_dive_profile(
             if sfc_drift_interval_i is not None:
                 # Before going below the sfc we are in the thrall of any sfc current
                 # replace the speeds and direction where for DAC and displacement calculations
-                ctd_gsm_horizontal_speed_cm_s_v[
-                    sfc_drift_interval_i
-                ] = surface_current_drift_cm_s
-                hdm_horizontal_speed_cm_s_v[
-                    sfc_drift_interval_i
-                ] = surface_current_drift_cm_s
+                ctd_gsm_horizontal_speed_cm_s_v[sfc_drift_interval_i] = (
+                    surface_current_drift_cm_s
+                )
+                hdm_horizontal_speed_cm_s_v[sfc_drift_interval_i] = (
+                    surface_current_drift_cm_s
+                )
                 head_polar_rad_v[sfc_drift_interval_i] = surface_current_set_rad
                 sfc_east_displacement_drift_m_v = (
                     cm2m * surface_curr_east * ctd_delta_time_s_v[sfc_drift_interval_i]
@@ -6822,18 +6820,18 @@ def make_dive_profile(
         if sfc_drift_interval_i is not None:
             # Update the initial displacement only!!
             # This updates the vectors directly so the adjusted values are written as displacements from GPS2 not 0,0
-            gsm_east_displacement_m_v[
-                sfc_drift_interval_i
-            ] = sfc_east_displacement_drift_m_v
-            gsm_north_displacement_m_v[
-                sfc_drift_interval_i
-            ] = sfc_north_displacemnt_drift_m_v
-            hdm_east_displacement_m_v[
-                sfc_drift_interval_i
-            ] = sfc_east_displacement_drift_m_v
-            hdm_north_displacement_m_v[
-                sfc_drift_interval_i
-            ] = sfc_north_displacemnt_drift_m_v
+            gsm_east_displacement_m_v[sfc_drift_interval_i] = (
+                sfc_east_displacement_drift_m_v
+            )
+            gsm_north_displacement_m_v[sfc_drift_interval_i] = (
+                sfc_north_displacemnt_drift_m_v
+            )
+            hdm_east_displacement_m_v[sfc_drift_interval_i] = (
+                sfc_east_displacement_drift_m_v
+            )
+            hdm_north_displacement_m_v[sfc_drift_interval_i] = (
+                sfc_north_displacemnt_drift_m_v
+            )
 
         gsm_lat_dd_v, gsm_lon_dd_v = compute_lat_lon(
             gsm_dac_east_speed_m_s,

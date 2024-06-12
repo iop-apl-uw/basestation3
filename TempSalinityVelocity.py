@@ -28,15 +28,14 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines for computing corrected temperature, salinity, glider speed and angle
-"""
+"""Routines for computing corrected temperature, salinity, glider speed and angle"""
 
 import math
 import os
 import time
 
 import numpy as np
-from scipy.integrate import cumtrapz
+from scipy.integrate import cumulative_trapezoid
 import scipy.signal  # for convolve
 import scipy.io  # for loadmat
 from scipy.interpolate import RectBivariateSpline
@@ -774,7 +773,7 @@ def TSV_iterative(
 
             # compute cell mouth to entrance of narrow (sample) section of cell lag [s]
             q_f_v = sbect_area_narrow * u_f_v  # cell flushing volume flux [m^3/s]
-            vol_ec_v = cumtrapz(
+            vol_ec_v = cumulative_trapezoid(
                 q_f_v, r_elapsed_time_s_v
             )  # volume history of flow entering cell [m^3] NOTE arg order reversed from matlab and this yeilds r_sg_np-1 entries
             vol_ec_v = np.insert(vol_ec_v, 0, 0.0)  # ensure equal length with r_sg_np
@@ -1029,9 +1028,9 @@ def TSV_iterative(
                 Ai_v = pchip(mode_time_s_v, Ai_v, m_time_fine_s_v)
 
                 # Iteratively solve for thermal inertia wall heat anomaly
-                temp_mode_v[
-                    :
-                ] = 0  # reset contrinution array and set temp_mode_v[0] = 0 as boundary condition
+                temp_mode_v[:] = (
+                    0  # reset contrinution array and set temp_mode_v[0] = 0 as boundary condition
+                )
                 # initialize the iterative computation
                 prior_tau_v_i = tau_v[0]
                 prior_tau_v_2 = 2 * prior_tau_v_i
@@ -1133,9 +1132,9 @@ def TSV_iterative(
                 )  # valid_i(r_suspects_i)
                 # DEAD full_suspects_i_v = filter(lambda i: valid_i_v[0] <= i and valid_i_v[-1] >= i,full_suspects_i_v)
                 if len(full_suspects_i_v):
-                    salin_cor_v[
-                        valid_i_v
-                    ] = r_salin_cor_v  # make intermediate results available
+                    salin_cor_v[valid_i_v] = (
+                        r_salin_cor_v  # make intermediate results available
+                    )
                     # make interp_ts_i_v available so we can suggest below if need be
                     interp_ts_i_v = ts_interpolate(
                         temp_cor_v,
@@ -1166,9 +1165,9 @@ def TSV_iterative(
             r_extrapolated_i_v = []
 
         TraceArray.trace_array("salin_pre_interp_%d" % loop, r_salin_cor_v)
-        salin_cor_v[
-            valid_i_v
-        ] = r_salin_cor_v  # ensure intermediate results are available and interpolate in full space
+        salin_cor_v[valid_i_v] = (
+            r_salin_cor_v  # ensure intermediate results are available and interpolate in full space
+        )
         # interpolate salinity here in full space
         interp_salin_i_v = QC.manual_qc(
             directives,
@@ -1297,7 +1296,7 @@ def TSV_iterative(
             q_en_v = (
                 math.pi * glider_r_en * glider_r_en * u_en_v
             )  # nose entry volume flux [m^3/s]
-            vol_en_v = cumtrapz(
+            vol_en_v = cumulative_trapezoid(
                 q_en_v, r_elapsed_time_s_v
             )  # volume history of flow entering nose [m^3]
             vol_en_v = np.insert(vol_en_v, 0, 0.0)  # ensure equal length with r_sg_np
@@ -1322,7 +1321,7 @@ def TSV_iterative(
             drhodt_v = Utils.ctr_1st_diff(
                 sigma_t_v, r_elapsed_time_s_v
             )  # ambient density variation rate
-            interstitial_buoyancy_v = -kg2g * cumtrapz(
+            interstitial_buoyancy_v = -kg2g * cumulative_trapezoid(
                 dmdt_v - drhodt_v * glider_interstitial_volume, r_elapsed_time_s_v
             )  # [g] TODO negative because?
             interstitial_buoyancy_v = np.insert(
@@ -1410,9 +1409,9 @@ def TSV_iterative(
         # Per CCE we do not recompute stalls based on unsteady speed, only FV results
         # ensure these are set to zero as well
         hdm_speed_unsteady_cm_s_v[fv_stalled_i_v] = 0.0  # stalled
-        hdm_glide_angle_unsteady_deg_v[
-            fv_stalled_i_v
-        ] = 0.0  # going nowhere... (not NaN, which leads to bad component velocities)
+        hdm_glide_angle_unsteady_deg_v[fv_stalled_i_v] = (
+            0.0  # going nowhere... (not NaN, which leads to bad component velocities)
+        )
 
         # Compute the residual speed before we update r_speed_cm_s_v
         residual_speed_diff = abs(hdm_speed_unsteady_cm_s_v - r_speed_cm_s_v)
