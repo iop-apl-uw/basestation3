@@ -155,13 +155,13 @@ async def displayTables(fname):
     print("<tr>") # row 2
 
     print("<td>") # row 2, col 1
-    if 'AH0_24V' in L and '24V_AH' in L:
+    if 'AH0_24V' in L and '24V_AH' in L and L['AH0_24V'] > 0:
         pct24 = 100*(1.0 - L['24V_AH'][1]/L['AH0_24V'])
         print("&#8226 %5.2f of %5.2f AH used of 24V (%s%% remains)" % (L['24V_AH'][1], L['AH0_24V'], ctext("%5.2f" % pct24, "red" if pct24 < 10 else "green")))
     print("</td>")
   
     print("<td>") # row 2, col 2 
-    if 'AH0_10V' in L and L['AH0_10V'] > 0:
+    if 'AH0_10V' in L and '10V_AH' in L and L['AH0_10V'] > 0:
         pct10 = 100*(1.0 - L['10V_AH'][1]/L['AH0_10V'])
         print("&#8226 %5.2f of %5.2f AH used of 10V (%s%% remains)" % (L['10V_AH'][1], L['AH0_10V'], ctext("%5.2f" % pct10, "red" if pct10 < 10 else "green")))
 
