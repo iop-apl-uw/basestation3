@@ -295,7 +295,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
 
     if missions:
         for m in missions:
-            if m['path'] == base:
+            if 'path' not in m or m['path'] == base or m['path'] is None:
                 continue
 
             m_selftestFiles = sorted(glob.glob(m['path'] + '/pt*.cap'), reverse=True) 
