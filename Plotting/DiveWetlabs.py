@@ -72,10 +72,11 @@ def plot_wetlabs(
         return ([], [])
 
     wetlabs_types = []
+    varlist = "".join(filter(lambda x: 'sg_cal' not in x, dive_nc_file.variables))
     for typ in ("wlbb2fl", "wlbbfl2", "wlbb3", "wlfl3"):
         if "%s_time" % typ in dive_nc_file.variables:
             wetlabs_types.append((typ, True))
-        elif typ in "".join(dive_nc_file.variables):
+        elif typ in varlist:
             wetlabs_types.append((typ, False))
 
     if not wetlabs_types:
