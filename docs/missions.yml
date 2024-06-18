@@ -58,6 +58,11 @@ endpoints:
  selftest: { modes:[pilot,private], groups:[pilots] }
  save: { modes: [private] } # no save API endpoint in pilot mode this way
 
+# defaults applied to all missions if not elsewhere spec'd
+defaults: { link: http://iop.apl.washington.edu }
+# defaults applied to all missions when running in pilot mode
+pilotdefaults: { pilotgroups: [analysts] }
+
 # 4 sets of defaults can be specified: defaults (fallback)
 # privatedefaltis, pilotdefaults, and publicdefaults corresponding to
 # the different run modes. If a value is specified for a mission it
@@ -68,30 +73,34 @@ endpoints:
 # A mission can also have its own endpoint specific restrictions.
 # Format is the same as for the endpoints section above:
 #
-# sg249: { endpoints: { data: { users: [collaborator] } } }
+# - { glider: 249, endpoints: { data: { users: [collaborator] } } }
 #
 # using whatever YAML {}/block or separate line style you prefer
 #
 missions:
-# defaults applied to all missions if not elsewhere spec'd
- defaults: { link: http://iop.apl.washington.edu }
-# defaults applied to all missions when running in pilot mode
- pilotdefaults: { pilotgroups: [analysts] }
 # we don't specify private defaults - if we add pilots or pilotusers
 # to privatedefaults then we must auth as pilot for every mission,
 # which would mean we were running as in pilot mode
 #
 # now the actual missions
- sg249: { planned: 2023-07-30 }
- sg236: {}
- sg241: {}
- sg180/SMODE_Aug22: { users:[fred], groups: [guest], pilotgroups: [  iop,    analysts], 
-                      link: http://seaglider.pub,
-                      comment: "this is a comment", 
-                      started: 2022-08-27, ended: 2022-10-30, 
-                      reason: "mission complete" }
- sg219/SMODE_Aug22: {}
- sg220/SMODE_Aug22: {}
- sg237/SMODE_Aug22: {}
- sg247/SMODE_Aug22: {}
- sg248/SMODE_Oct22: {}
+ - { glider: 249, path: sg249, planned: 2023-07-30 }
+ - { glider: 236, path: sg236 }
+ - { glider: 241, path: sg241 }
+ - 
+    glider:180
+    path: sg180/SMODE_Aug22
+    mission: SMODE_Aug22
+    users:[fred]
+    groups: [guest]
+    pilotgroups: [  iop,    analysts] 
+    link: http://seaglider.pub
+    comment: "this is a comment" 
+    started: 2022-08-27
+    ended: 2022-10-30
+    reason: "mission complete" 
+    status: complete
+ - { glider: 219, path: sg129/SMODE_Aug22, mission: SMODE_Aug22, status: complete }
+ - { glider: 220, path: sg129/SMODE_Aug22, mission: SMODE_Aug22, status: complete }
+ - { glider: 237, path: sg129/SMODE_Aug22, mission: SMODE_Aug22, status: complete }
+ - { glider: 247, path: sg129/SMODE_Aug22, mission: SMODE_Aug22, status: complete }
+ - { glider: 248, path: sg129/SMODE_Oct22, mission: SMODE_Oct22, status: active }
