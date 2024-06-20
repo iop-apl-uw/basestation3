@@ -381,7 +381,11 @@ def main():
     moveFiles("gps-sync*", base_opts.mission_dir, base_opts.target_dir)
 
     # get ready for the next mission
-    BaseDB.createDB(base_opts)
+    # BaseDB.createDB(base_opts)
+    # MoveData can be run as user who might not have the right permissions or umask
+    # to get the sgNNN.db permissions correct. Rely on NewMission (which makes
+    # an attempt at chmod) or open_mission_database to do the creation
+    # on demand by glider or runner process.
 
     return 0
 

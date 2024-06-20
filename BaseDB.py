@@ -1340,7 +1340,7 @@ def rebuildControlHistory(base_opts):
 
     cur.close()
 
-    for i in range(1, maxdv + 1):
+    for i in range(0, maxdv + 1):
         for which in ['targets', 'science', 'scicon.sch', 'pdoscmds.bat', 'tcm2mat.cal']:
             fullname = f'{which}.{i}'
             cmdname = os.path.join(path, fullname)
@@ -1409,6 +1409,9 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
         log_info("logParameterChanges db closed")
 
 def addSession(base_opts, session, con=None, sms=0):
+    if session is None:
+        return
+
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
         if mycon is None:

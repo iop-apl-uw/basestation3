@@ -2120,7 +2120,7 @@ def main():
             for session in comm_log.sessions:
                 BaseDB.addSession(base_opts, session)
                 if session.dive_num is not None and int(session.dive_num) > 0:
-                    if session.call_cycle == None or int(session.call_cycle) == 0:
+                    if session.call_cycle == None:
                         cmdname = f"cmdfile.{int(session.dive_num)}"
                     else:
                         cmdname = (
