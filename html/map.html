@@ -658,7 +658,7 @@
                 newLayer.addTo(map);
             }
  
-            function loadAssets(map, layerControl, assets) {
+            function loadAssets(map, layerControl, assets, glider, mission) {
                 var assetMarkers = [];
                 var mk;
                 console.log(assets);
@@ -712,6 +712,73 @@
                         assetMarkers.push(mk);
                         layerControl.addOverlay(mk, a.asset, "assets");
                         mk.addTo(map);
+                    }
+                    else if (glider > 0 && a.type == 'csv' && 'file' in a) {
+                        var url, i, j;
+                        if (mission == null || mission == undefined || mission == '') 
+                            url = '../csv/' + glider + '?file=' + a.file;
+                        else
+                            url = '../csv/' + glider + '?mission=' + mission + '&file=' + a.file;
+
+                        var mks = [];
+
+                        fetch(url)
+                        .then(resp => resp.json()) 
+                        .then(d => {
+                            if ('data' in d) {
+                                p = d['data'][d['data'].length - 1];
+                                    
+                                html = [ a.asset, formatPos(p[2]) + "," + formatPos(p[1]), "@" + new Date(p[0]*1000).toISOString()].join('<br/>');
+                                try {
+                                    mk = L.shapeMarker([p[2], p[1]],
+                                                       {
+                                                          shape: a.marker,
+                                                          radius: 5,
+                                                          color: a.color,
+                                                       }
+                                                      ).bindTooltip(a.asset, { permanent: true, className: 'assetLabel' })
+                                                       .bindPopup(html);
+                                    assetMarkers.push(mk); 
+                                    mk.on('click', function(e) {
+                                        activateAsset(this); 
+                                    });
+                                    
+                                    mks.push(mk); 
+                                    //layerControl.addOverlay(mk, a.asset, "assets");
+                                    //mk.addTo(map);
+                                }
+                                catch(e) {
+                                    console.log('assets ' + e);
+                                    console.log(d);
+                                }
+
+                                if (a.tail && parseInt(a.tail) > 0) {
+                                    var i, j, ntail = parseInt(a.tail);
+                                    if (ntail > d['data'].length - 1) {
+                                        ntail = d['data'].length - 1;
+                                    }
+                                    for (i = 0, j = d['data'].length - 2 ; i < ntail ; i++, j--) {
+                                        mk = L.shapeMarker([d['data'][j][2], d['data'][j][1]],
+                                                           {
+                                                              shape: a.marker,
+                                                              radius: 2,
+                                                              color: a.color,
+                                                           });
+                                        //layerControl.addOverlay(mk, a.asset, "IGBH");
+                                        //mk.addTo(map);
+                                        mks.push(mk);
+                                    }
+                                    
+                                }
+
+                                var newL = L.layerGroup(mks);
+                                layerControl.addOverlay(newL, a.asset, "assets");
+                                newL.addTo(map);
+                            }
+                            else {
+                                console.log('missing data');
+                            }
+                        })
                     }
                     else if (a.type == 'json' && 'url' in a) {
                         var obj;
@@ -815,7 +882,7 @@
                 
             }
 
-            function loadAlso(map, layerControl, also, tail) {
+            function loadAlso(map, layerControl, also, tail, glider, mission) {
                 var pcs;
                 var gliders = [];
                 var missions = [];
@@ -836,7 +903,7 @@
                 console.log(assets);
 
                 if (assets.length)
-                    loadAssets(map, layerControl, assets);    
+                    loadAssets(map, layerControl, assets, glider, mission);    
                 if (gliders.length)
                     loadGliderKML(map, layerControl, gliders, missions, tail, null, false, false);
             }
@@ -877,12 +944,12 @@
                     // if glider is specified then also has a list of assets
                     // and additional gliders
                     if ('also' in d && d.also) {
-                        loadAlso(map, layerControl, d.also, tail);
+                        loadAlso(map, layerControl, d.also, tail, glider, mission);
                     }
                     // if glider is not specified then the response has a list of all assets 
                     // in the yml file
                     else if ('assets' in d && d.assets) {
-                        loadAssets(map, layerControl, d.assets);    
+                        loadAssets(map, layerControl, d.assets, glider, mission);    
                     }
                     if ('routes' in d) {
                         loadRoutes(map, layerControl, d.routes);
@@ -1662,7 +1729,7 @@
                     else
                         d_also.push({'glider': parseInt(pieces[0]), 'mission': ''});
                 }
-                loadAlso(map, layerControl, d_also, tail);
+                loadAlso(map, layerControl, d_also, tail, 0, '');
             }
 
             if (params.has('sa')) {

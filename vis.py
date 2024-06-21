@@ -654,7 +654,36 @@ def attachHandlers(app: sanic.Sanic):
         # f.host = fwdHost
         # f.port = None
         # return f.tostr()
+       
+    @app.route('/csv/<glider:int>')
+    # description: get glider KML
+    # parameters: mission, file
+    # returns: json array of data
+    @authorized()
+    async def csvHandler(request, glider:int):
+        if not 'file' in request.args:
+            return sanic.response.json({'error': 'no file'})
         
+        filename = request.args['file'][0]
+        if re.match(r'[^0-9A-Za-z_]', filename):
+            return sanic.response.json({'error': 'invalid file'})
+
+        fullname = f'{gliderPath(glider,request)}/{filename}.csv'
+            
+        x = []
+        try:
+            async with aiofiles.open(fullname, 'r') as file:
+                async for line in file:
+                    try:
+                        x.append([float(y) for y in line.split(',')])
+                    except:
+                        continue
+        except:
+            return sanic.response.json({'error': 'invalid file'})
+ 
+        return sanic.response.json({'data': x})
+            
+         
     @app.route('/kml/<glider:int>')
     # description: get glider KML
     # parameters: mission
