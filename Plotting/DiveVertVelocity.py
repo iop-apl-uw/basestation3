@@ -403,6 +403,19 @@ def plot_vert_vel(
 
         # Extract the calib constants, then fill in any missing ones with defaults
         calib_consts = Utils.extract_calib_consts(dive_nc_file)
+        if 'mass' not in calib_consts:
+            calib_consts['mass'] = log_MASS
+        if 'rho0' not in calib_consts:
+            calib_consts['rho0'] = log_RHO
+        if 'hd_a' not in calib_consts:
+            calib_consts['hd_a'] = log_HD_A
+        if 'hd_b' not in calib_consts:
+            calib_consts['hd_b'] = log_HD_B
+        if 'hd_c' not in calib_consts:
+            calib_consts['hd_c'] = log_HD_C
+        if 'volmax' not in calib_consts:
+            calib_consts['volmax'] = 1.0e6*log_MASS/log_RHO + (vbd_min - c_vbd)*vbd_cnv
+
         MakeDiveProfiles.sg_config_constants(base_opts, calib_consts)
 
         log_info(

@@ -147,7 +147,7 @@ from . import DiveCompassCompare
 from . import DiveLegatoPressure
 from . import DiveLegatoData
 from . import DiveCTDCorrections
-from . import DiveVertVelocity
+# from . import DiveVertVelocity
 from . import DiveVertVelocityNew
 from . import DivePitchRoll
 from . import DiveMagCal
