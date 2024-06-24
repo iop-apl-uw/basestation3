@@ -248,7 +248,8 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
             nonlocal check
             nonlocal requirePilot
 
-            url = request.server_path[1:].split('/')[0]
+            # url = request.server_path[1:].split('/')[0]
+            url = request.path[1:].split('/')[0]
             if check & AUTH_ENDPOINT:
                 if url in request.app.ctx.endpoints:
                     e = request.app.ctx.endpoints[url]
@@ -275,7 +276,8 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                 glider = kwargs['glider'] if 'glider' in kwargs else None
                 mission = request.args['mission'][0] if 'mission' in request.args else None
 
-                m = next(filter(lambda d: d['glider'] == glider and d['mission'] == mission, request.app.ctx.missionTable), None)
+                # m = next(filter(lambda d: d['glider'] == glider and d['mission'] == mission, request.app.ctx.missionTable), None)
+                m = matchMission(glider, request, mission)
                 if m is not None and 'endpoints' in m and m['endpoints'] is not None and url in m['endpoints']:
                     e = m['endpoints'][url]
                     status = checkEndpoint(request, e)
@@ -600,7 +602,6 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def mapdataHandler(request, glider:int):
         mission = matchMission(glider, request) 
-        print(mission)
         if mission:
             message = {}
             for k in ['sa', 'kml', 'also']:
