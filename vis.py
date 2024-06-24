@@ -1253,7 +1253,10 @@ def attachHandlers(app: sanic.Sanic):
 
             plt.insert(0, ballastHTML)
 
-        return sanic.response.html("<br>".join(plt))
+        html = "<style>@media print { .pagebreak { page-break-before: always; } }</style>\n<html>\n"
+        html = html + "\n<div class=\"pagebreak\"></div>\n".join(plt)
+        html = html + "\n</html>"
+        return sanic.response.html(html)
     
     @app.route('/db/<glider:int>/<dive:int>')
     # description: query database for common engineering variables
