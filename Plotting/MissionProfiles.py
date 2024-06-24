@@ -193,7 +193,7 @@ def mission_profiles(
 
             fname = f"sg_{vk}_section_{sk}"
             fullname = os.path.join(base_opts.mission_dir, f"plots/{fname}.webp")
-            if os.path.exists(fullname) and not force:
+            if os.path.exists(fullname) and os.stat(section_file_name).st_mtime < os.stat(fullname).st_mtime and not force:
                 continue
 
             fig = plotly.graph_objects.Figure()
