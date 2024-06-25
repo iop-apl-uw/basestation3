@@ -257,7 +257,11 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                     if status == PERM_INVALID:
                         return sanic.response.text("Page not found: {}".format(request.path), status=404)
                     elif status == PERM_REJECT:
-                        return sanic.response.text("authorization failed")
+                        # return sanic.response.text("authorization failed")
+                        return await sanic_ext.render(
+                            "login.html", context={"body": "authorization failed", "url": request.url}, status=400
+                        )
+
                     else:
                         if 'modes' in e and e['modes'] is not None:
                             modes = e['modes']
@@ -284,7 +288,10 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                     if status == PERM_INVALID:
                         return sanic.response.text("Page not found: {}".format(request.path), status=404)
                     elif status == PERM_REJECT:
-                        return sanic.response.text("authorization failed")
+                        # return sanic.response.text("authorization failed")
+                        return await sanic_ext.render(
+                            "login.html", context={"body": "authorization failed", "url": request.url}, status=400
+                        )
                     else:
                         if 'modes' in e and e['modes'] is not None:
                             modes = e['modes']
@@ -458,10 +465,12 @@ def attachHandlers(app: sanic.Sanic):
             if user.lower() == username and sha256_crypt.verify(password, prop['password']):
                 token = jwt.encode({ "user": user, "groups": prop['groups']}, request.app.config.SECRET)
                 response = sanic.response.text("authorization ok")
-                response.cookies["token"] = token
-                response.cookies["token"]["max-age"] = 86400
-                response.cookies["token"]["samesite"] = "Strict"
-                response.cookies["token"]["httponly"] = True
+                response.add_cookie(
+                    "token", token, 
+                    max_age=86400,
+                    samesite="Strict",
+                    httponly=True
+                )
                 return response
 
         return sanic.response.text('authorization failed') 
@@ -545,7 +554,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/dash')
     # description: dashboard (engineering diagnostic) view of index (all missions) page
-    # parameters: plot (which plot to include in tiles, default=diveplot)
+    # parameters: plot (which plot to include in tiles, default=diveplot), mission (comma separated list), glider (comma separated list), status, auth
     # returns: HTML page
     @authorized(check=AUTH_ENDPOINT)
     @app.ext.template("index.html")
@@ -554,7 +563,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/')
     # description: "public" index (all missions) page
-    # parameters: plot (which plot to include in tiles, default=map)
+    # parameters: plot (which plot to include in tiles, default=map), mission (comma separated list), glider (comma separated list), status, auth
     # returns: HTML page
     @app.ext.template("index.html")
     async def indexHandler(request):
@@ -562,7 +571,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/map/<glider:int>')
     # description: map tool
-    # parameters: mission, tail (number of dives back to show in glider track), also (additional gliders to plot), sa (URL for SA to load)
+    # parameters: mission, tail (number of dives back to show in glider track), also (additional gliders to plot), sa (URL for SA to load), ais, ship, 
     # returns: HTML page
     @authorized()
     @app.ext.template("map.html")
@@ -657,7 +666,7 @@ def attachHandlers(app: sanic.Sanic):
         # return f.tostr()
        
     @app.route('/csv/<glider:int>')
-    # description: get glider KML
+    # description: get CSV file from glider directory (supports assets type: csv on maps)
     # parameters: mission, file
     # returns: json array of data
     @authorized()
@@ -687,7 +696,7 @@ def attachHandlers(app: sanic.Sanic):
          
     @app.route('/kml/<glider:int>')
     # description: get glider KML
-    # parameters: mission
+    # parameters: mission, network, kmz
     # returns: KML
     @authorized()
     async def kmlHandler(request, glider:int):
@@ -1458,16 +1467,18 @@ def attachHandlers(app: sanic.Sanic):
             d = await cur.fetchall()
             if format == 'json':
                 data = {}
-                print(cur.description)
                 for i in range(len(cur.description)):
                     data[cur.description[i][0]] = [ f[i] for f in d ]
 
                 Utils.logDB(f'query close (return) {glider}')
                 return sanic.response.json(data)
             else:
-                str = ''
+                txt = ''
+                for f in d:
+                    txt = txt + str(f).strip('()') + "\n"
+
                 Utils.logDB(f'query close (else) {glider}')
-                return sanic.response.json({'error': 'db error'})
+                return sanic.response.text(txt)
                 
 
     @app.route('/selftest/<glider:int>')
@@ -1832,7 +1843,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/pos/poll/<glider:str>')
     # description: get latest glider position
-    # parameters: mission
+    # parameters: mission, format
     # returns: JSON dict of glider position
     async def posPollHandler(request: sanic.Request, glider:str):
         if ',' in glider:
@@ -2146,7 +2157,11 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/tile/<path:str>/<z:int>/<x:int>/<y:int>')
     # description: download map tile
     async def tileHandler(request, path:str, z:int, x:int, y:int):
+        if re.match(r'[^0-9A-Za-z_]', path):
+            return sanic.response.text('invalid')
+
         path = f'{sys.path[0]}/tiles/{path}/{z}/{x}/{y}.png'
+
         if await aiofiles.os.path.exists(path):
             return await sanic.response.file(path, mime_type='image/png')
         else:
@@ -2154,6 +2169,9 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/tile/asset/<path:str>/<z:int>/<x:int>/<y:int>')
     async def tileSetHandler(request, path:str, z:int, x:int, y:int):
+        if re.match(r'[^0-9A-Za-z_]', path):
+            return sanic.response.text('invalid')
+
         path = f'{sys.path[0]}/tiles/assets/{path}/{z}/{x}/{y}.png'
         if await aiofiles.os.path.exists(path):
             return await sanic.response.file(path, mime_type='image/png')
@@ -2475,8 +2493,9 @@ async def buildAuthTable(request, defaultPath, glider=None, mission=None):
 
         path        = m['path'] if m['path'] else defaultPath
         missionName = m['mission'] if m['mission'] else ""
+        project     = m['project'] if m['project'] else ""
         if (glider is None or glider == m['glider']) and (mission is None or mission == m['mission']):
-            opTable.append({ "mission": missionName, "glider": m['glider'], "path": path, "default": m['default'], "status": m['status'] })
+            opTable.append({ "mission": missionName, "glider": m['glider'], "path": path, "default": m['default'], "status": m['status'], "project": project })
 
     return opTable
 

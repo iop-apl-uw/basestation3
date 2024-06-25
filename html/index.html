@@ -1103,8 +1103,15 @@
             for (g of data['missions']) {
                 allMissions.push(g.mission.split('_')[0])
                 allGliders.push(g.glider);
+                if (g.project) {
+                    allMissions.push(g.project);
+                    project = g.project;
+                }
+                else {
+                    project = null;
+                }
 
-                glider = { glider: g.glider, mission: g.mission, status: g.status };
+                glider = { glider: g.glider, mission: g.mission, status: g.status, project: project  };
 {% if runMode == 'pilot' %}
                 if (gliders.length > 0 && (!gliders.includes("" + glider.glider) || shown.includes(glider.glider))) {
 {% else %}
@@ -1114,11 +1121,11 @@
                     continue;
                 }
 
-                if (showMission !== false && showMission.findIndex((m) => { return g.mission.startsWith(m) }) == -1) {
+                if (showMission !== false && showMission.findIndex((m) => {  return (g.mission.startsWith(m) || project == m) }) == -1) {
                     console.log('skipping unrequested ' + glider.mission);
                     continue;
                 }
-   
+  
                 if (showStatus !== false && !showStatus.includes(g.status))  
                     continue;
  

@@ -96,7 +96,7 @@ API / URL usage
 
 GET /
     description: "public" index (all missions) page
-    parameters : plot (which plot to include in tiles, default=map)
+    parameters : plot (which plot to include in tiles, default=map), mission (comma separated list), glider (comma separated list), status, auth
     returns    : HTML page
 
 GET /<glider:int>
@@ -107,18 +107,23 @@ GET /<glider:int>
 GET /alerts/<glider:int>/<dive:int>
     description: basestation alerts file
     parameters : mission
-    returns    : raw alerts file from basestation (HTML format)
+    returns    : alerts file (with re-written links) from basestation (HTML format)
 
 POST /auth
     description: user authorization
     payload    : (JSON) username, password
     returns    : none on success (sets cookie with authorization token)
 
-GET /changes/<glider:int>/<dive:int>/<sort:str>
-    description: query database for parameter changes
-    args       : dive=-1 returns entire history
+GET /baselog/<glider:int>/<timestamp:str>
+    description: basestation baselog file
     parameters : mission
-    returns    : JSON dict of changes [{(dive,parm,oldval,newval}]
+    returns    : raw baselog file from basestation (txt)
+
+GET /changes/<glider:int>/<dive:int>/<which:str>/<sort:str>
+    description: query database for parameter or control file changes
+    args       : dive=-1 returns entire history, which=parms|files, sort=dive|parm|file
+    parameters : mission
+    returns    : JSON dict of changes [{(dive,parm,oldval,newval}] or [{dive,file,fullname,contents}]
 
 POST /chat/send/<glider:int>
     description: POST a message to chat
@@ -132,9 +137,14 @@ GET /control/<glider:int>/<which:str>
     parameters : mission
     returns    : latest version of glider control file
 
+GET /csv/<glider:int>
+    description: get CSV file from glider directory (supports assets type
+    parameters : mission, file
+    returns    : json array of data
+
 GET /dash
     description: dashboard (engineering diagnostic) view of index (all missions) page
-    parameters : plot (which plot to include in tiles, default=diveplot)
+    parameters : plot (which plot to include in tiles, default=diveplot), mission (comma separated list), glider (comma separated list), status, auth
     returns    : HTML page
 
 GET /data/<which:str>/<glider:int>/<dive:int>
@@ -164,9 +174,9 @@ GET /file/<ext:str>/<glider:int>/<dive:int>
     parameters : mission
     returns    : raw eng, log, or cap file
 
-GET /gliderkml/<glider:int>
+GET /kml/<glider:int>
     description: get glider KML
-    parameters : mission
+    parameters : mission, network, kmz
     returns    : KML
 
 GET /log/<glider:int>/<dive:int>
@@ -174,10 +184,12 @@ GET /log/<glider:int>/<dive:int>
     parameters : mission
     returns    : summary version of log file in HTML format
 
-GET /map/<glider:int>
-    description: map tool
-    parameters : mission, tail (number of dives back to show in glider track), also (additional gliders to plot), sa (URL for SA to load)
-    returns    : HTML page
+GET /magcal/<glider:int>/<dives:str>
+    description: run magcal over multiple dives
+    parameters : mission, ballast
+    returns    : html of plotly results plot
+
+WEBSOCKET /map/stream
 
 GET /mapdata/<glider:int>
     description: get map configation (also, sa, kml from missions.yml)
@@ -204,6 +216,10 @@ WEBSOCKET /pos/stream/<glider:int>
     description: stream real-time position updates
     parameters : mission
 
+POST /post
+    description: post version of proxy request handler for map tool
+    returns    : contents from requested URL
+
 GET /pro/<glider:int>/<whichVar:str>/<whichProfiles:int>/<first:int>/<last:int>/<stride:int>/<top:int>/<bot:int>/<binSize:int>
     description: extract bin averaged profiles
     args       : whichProfiles=1(dives)|2(climbs)|3(both)|4(combine)
@@ -221,8 +237,15 @@ GET /proxykmz/<url:path>
 GET /query/<glider:int>/<queryVars:str>
     description: query per dive database for arbitrary variables
     args       : queryVars=comma separated list
-    parameters : mission
+    parameters : mission, format, limit
     returns    : JSON dict of query results
+
+GET /rafos/<glider:int>
+
+GET /regress/<glider:int>/<dives:str>/<depth1:float>/<depth2:float>/<initBias:float>
+    description: run VBD regression over multiple dives
+    parameters : mission, ballast
+    returns    : html of plotly results plot
 
 POST /save/<glider:int>/<which:str>
     description: save glider control file
@@ -233,7 +256,7 @@ POST /save/<glider:int>/<which:str>
 
 GET /selftest/<glider:int>
     description: selftest review
-    parameters : mission
+    parameters : mission, num
     returns    : HTML format summary of latest selftest results
 
 GET /status/<glider:int>
@@ -250,6 +273,8 @@ GET /summary/<glider:int>
     parameters : mission
     returns    : JSON formatted dict of glider engineering status variables
 
+GET /tile/asset/<path:str>/<z:int>/<x:int>/<y:int>
+
 GET /time/<glider:int>/<dive:int>/<which:str>
     description: extract timeseries data from netCDF
     parameters : mission
@@ -260,7 +285,12 @@ GET /timevars/<glider:int>
     parameters : mission
     returns    : JSON list of variable names
 
-GET /url
+POST /upload/<glider:int>
+    description: upload files to glider home directory
+    parameters : mission
+    returns    : 
+
+POST /url
     description: .urls notification handler (used when vis server is different from basestation server)
     parameters : instrument_name, dive, files (), status (), gpsstr ()
     returns    : 'ok' or 'error'
@@ -269,7 +299,7 @@ GET /user
     description: checks whether current session user is valid
     returns    : YES is user is valid
 
-WEBSOCKET /watch/<mask:str>
+WEBSOCKET /watch
     description: stream real-time glider summary state (call status, cmdfile directive)
-    parameters : mission
+    parameters : mission, gliders
 

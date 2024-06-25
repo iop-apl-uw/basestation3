@@ -1,0 +1,74 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="/script/dialogs.css" />
+<link rel="stylesheet" href="/script/base.css" />
+
+<style>
+    a:link,.spanClick           {color:#0000ff; text-decoration:none}
+    a:visited {color:#0000aa; text-decoration:none}
+    a:hover,.spanClick:hover    {color:#0000aa; text-decoration:underline; cursor:pointer; }
+    a:active,.spanClick:active  {color:#0000aa; text-decoration:underline}
+
+    #navLinks {
+        font-size: 1rem;
+        position: sticky;  
+        top: 0;
+        width: 100%;
+        z-index: 100;
+        list-style: none; 
+        opacity: 1.0;
+        background: #999;
+        background-color: #999;
+        padding-bottom: 1.0vh;
+    }
+
+
+    #page {
+        overflow: none;
+    }
+    
+    body {
+        background-color: #999999;
+        color: #000000;
+        font-family: verdana, arial, tahoma, 'sans serif'; 
+        box-sizing: border-box;
+        /* overflow: none; */
+        font-size: 1rem;
+    }
+
+    #loginForm {
+        top: 10vh;
+    }
+
+</style>
+
+<script src="/script/util.js"></script>
+<script src="/script/dialogs.js"></script>
+<script>
+    function open() {
+        document.getElementById("main").innerHTML = "authorization ok";
+        window.location.href = '{{ url }}';
+    }
+    function init() {
+        openLoginForm(open);
+    }
+
+</script>
+
+<html>
+<body onload="init();">
+
+<div id="page">
+    <div id="navLinks">
+        <a href="/" target="index">Index</a> <b>&#124;</b> <a href="/dash">Dashboard</a> 
+    </div>
+
+    <div id="main">
+        {{ body }}
+    </div> 
+
+</div>
+{% include "dialogs.html" %}
+
+</body>
+</html>
