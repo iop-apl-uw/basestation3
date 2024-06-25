@@ -131,7 +131,7 @@ def magcal_worker(
     if npts > 2000:
         decimate = math.ceil(npts / 2000)
         idx = range(0, npts, decimate)
-        npts = len(idx) + 1
+        npts = len(idx) + len(dive_nc_file)
     else:
         decimate = 1
 
@@ -147,7 +147,11 @@ def magcal_worker(
     for f in dive_nc_file:
         mpts = f.dimensions["sg_data_point"].size
         idx = range(0, mpts, decimate)
+        print(idx)
         mpts = len(idx)
+        print(npts, k, mpts)
+        print(len(f.variables["eng_pitchAng"][idx]))
+        print(len(pitch[k:k+mpts]))
         pitch[k:k+mpts]     = f.variables["eng_pitchAng"][idx] * math.pi / 180.0
         roll[k:k+mpts]      = f.variables["eng_rollAng"][idx] * math.pi / 180.0
         fxm[k:k+mpts]       = f.variables["eng_mag_x"][idx]
@@ -763,6 +767,7 @@ def main():
                 str,
                 {
                     "help": "output file name",
+                    "required": ("Magcal",) 
                 }
             ),
             "soft": BaseOptsType.options_t(
