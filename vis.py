@@ -542,7 +542,7 @@ def attachHandlers(app: sanic.Sanic):
     # if not authorized
     @app.route('/<glider:int>')
     # description: main page for glider
-    # parameters: mission, plot (starting plot), dive (starting dive), order (plot ribbon order), plot tool values: x,y,z,first,last,step,top,bottom,bin,wholemission|divetimeseries,dives|climbs|both|combine, op (contour,profiles,plot,table,csv)
+    # parameters: mission, plot (starting plot), dive (starting dive), order (plot ribbon order), x,y,z,first,last,step,top,bottom,bin,wholemission|divetimeseries,dives|climbs|both|combine (plot tool values), op (contour,profiles,plot,table,csv), sectionNumber (sort order for section numbers ( normal, reverse)), sectionSort (major sort key for sections (number, name))
     # returns: HTML page
     @app.ext.template("vis.html")
     async def mainHandler(request, glider:int):

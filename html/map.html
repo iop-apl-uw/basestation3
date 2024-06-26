@@ -672,7 +672,7 @@
                         console.log('adding fixed ' + a.asset);
                         html = [ a.asset, formatPos(a.lat) + "," + formatPos(a.lon)].join('<br/>');
                         try {
-                            mk = L.shapeMarker([a.lat, a.lon],
+                            mk = new L.shapeMarker([a.lat, a.lon],
                                                {
                                                   shape: a.marker,
                                                   radius: 5,
@@ -714,6 +714,7 @@
                         mk.addTo(map);
                     }
                     else if (glider > 0 && a.type == 'csv' && 'file' in a) {
+                        console.log('adding csv ' + a.asset);
                         var url, i, j;
                         if (mission == null || mission == undefined || mission == '') 
                             url = '../csv/' + glider + '?file=' + a.file;
@@ -721,131 +722,144 @@
                             url = '../csv/' + glider + '?mission=' + mission + '&file=' + a.file;
 
                         var mks = [];
+                
+                        (() => { // need to get a into local scope (aa) for async fetch
 
-                        fetch(url)
-                        .then(resp => resp.json()) 
-                        .then(d => {
-                            if ('data' in d) {
-                                p = d['data'][d['data'].length - 1];
-                                    
-                                html = [ a.asset, formatPos(p[2]) + "," + formatPos(p[1]), "@" + new Date(p[0]*1000).toISOString()].join('<br/>');
-                                try {
-                                    mk = L.shapeMarker([p[2], p[1]],
-                                                       {
-                                                          shape: a.marker,
-                                                          radius: 5,
-                                                          color: a.color,
-                                                       }
-                                                      ).bindTooltip(a.asset, { permanent: true, className: 'assetLabel' })
-                                                       .bindPopup(html);
-                                    assetMarkers.push(mk); 
-                                    mk.on('click', function(e) {
-                                        activateAsset(this); 
-                                    });
-                                    
-                                    mks.push(mk); 
-                                    //layerControl.addOverlay(mk, a.asset, "assets");
-                                    //mk.addTo(map);
-                                }
-                                catch(e) {
-                                    console.log('assets ' + e);
-                                    console.log(d);
-                                }
+                            let aa = a;
 
-                                if (a.tail && parseInt(a.tail) > 0) {
-                                    var i, j, ntail = parseInt(a.tail);
-                                    if (ntail > d['data'].length - 1) {
-                                        ntail = d['data'].length - 1;
-                                    }
-                                    for (i = 0, j = d['data'].length - 2 ; i < ntail ; i++, j--) {
-                                        mk = L.shapeMarker([d['data'][j][2], d['data'][j][1]],
+                            fetch(url)
+                            .then(resp => resp.json())
+                            .then(d => {
+                                if ('data' in d) {
+                                    p = d['data'][d['data'].length - 1];
+                                        
+                                    html = [ aa.asset, formatPos(p[2]) + "," + formatPos(p[1]), "@" + new Date(p[0]*1000).toISOString()].join('<br/>');
+                                    try {
+                                        mk = new L.shapeMarker([p[2], p[1]],
                                                            {
-                                                              shape: a.marker,
-                                                              radius: 2,
-                                                              color: a.color,
-                                                           });
-                                        //layerControl.addOverlay(mk, a.asset, "IGBH");
+                                                              shape: aa.marker,
+                                                              radius: 5,
+                                                              color: aa.color,
+                                                           }
+                                                          ).bindTooltip(aa.asset, { permanent: true, className: 'assetLabel' })
+                                                           .bindPopup(html);
+                                        assetMarkers.push(mk); 
+                                        mk.on('click', function(e) {
+                                            activateAsset(this); 
+                                        });
+                                        
+                                        mks.push(mk); 
+                                        //layerControl.addOverlay(mk, aa.asset, "assets");
                                         //mk.addTo(map);
-                                        mks.push(mk);
                                     }
-                                    
-                                }
+                                    catch(e) {
+                                        console.log('assets ' + e);
+                                        console.log(d);
+                                    }
 
-                                var newL = L.layerGroup(mks);
-                                layerControl.addOverlay(newL, a.asset, "assets");
-                                newL.addTo(map);
-                            }
-                            else {
-                                console.log('missing data');
-                            }
-                        })
+                                    if (aa.tail && parseInt(aa.tail) > 0) {
+                                        var i, j, ntail = parseInt(aa.tail);
+                                        if (ntail > d['data'].length - 1) {
+                                            ntail = d['data'].length - 1;
+                                        }
+                                        for (i = 0, j = d['data'].length - 2 ; i < ntail ; i++, j--) {
+                                            mk = new L.shapeMarker([d['data'][j][2], d['data'][j][1]],
+                                                               {
+                                                                  shape: aa.marker,
+                                                                  radius: 2,
+                                                                  color: aa.color,
+                                                               });
+                                            //layerControl.addOverlay(mk, aa.asset, "IGBH");
+                                            //mk.addTo(map);
+                                            mks.push(mk);
+                                        }
+                                        
+                                    }
+
+                                    var newL = L.layerGroup(mks);
+                                    layerControl.addOverlay(newL, aa.asset, "assets");
+                                    newL.addTo(map);
+                                }
+                                else {
+                                    console.log('missing data');
+                                }
+                            });
+
+                        })();
                     }
                     else if (a.type == 'json' && 'url' in a) {
+                        console.log('adding json ' + a.asset);
+
                         var obj;
                         if ('method' in a)
                             method = a['method'];
                         else
                             method = 'GET';
 
-                        if (method == 'POST' && 'payload' in a)
-                            obj = a['payload']
+                        if (method == 'POST' && 'payload' in a) {
+                            obj = a['payload'];
+                        }
 
-                        fetch(a.url, 
-                                {
-                                    method: method,
-                                    body: JSON.stringify(obj),
+                        (() => { // need to get a into local scope so it's correct when we async get to the fetch result
+
+                            let aa = a;
+
+                            fetch(aa.url,  {
+                                              method: method,
+                                              body: JSON.stringify(obj),
+                                          })
+                            .then(resp => resp.json())
+                            .then(d => {
+                                console.log(aa);
+                                if ('lat' in d && 'lon' in d) {
+                                    html = [ aa.asset, formatPos(d.lat) + "," + formatPos(d.lon)].join('<br/>');
+                                    if ('sog' in d && 'cog' in d) {
+                                        html = html + '<br/>' + d.sog + " @ " + d.cog;
+                                    }
+                                    mk = new L.shapeMarker([d.lat, d.lon],
+                                                       {
+                                                          shape: aa.marker,
+                                                          radius: 5,
+                                                          color: aa.color,
+                                                       }
+                                                      ).bindTooltip(aa.asset, { permanent: true, className: 'assetLabel' })
+                                                       .bindPopup(html);
+                                    assetMarkers.push(mk); 
+                                    layerControl.addOverlay(mk, aa.asset, "assets");
+                                    mk.addTo(map);
+
+                                    setupShip(map, layerControl, aa.asset, mk);
+
+                                    if ('interval' in a && aa.interval > 0) {
+
+                                        setInterval(function() {
+                                                        fetch(aa.url)
+                                                        .then(resp => resp.json())
+                                                        .then(d => {
+                                                            html = [ aa.asset, formatPos(d.lat) + "," + formatPos(d.lon)].join('<br/>');
+                                                            if ('sog' in d && 'cog' in d) { 
+                                                                html = html + '<br/>' + d.sog + " @ " + d.cog;
+                                                            }
+                                                            mk.setPopupContent(html);
+                                                            mk.setLatLng([d.lat, d.lon]);
+                                                            if (activeRoute != null || activeAsset != null || activeGlider != null) {
+                                                                updateRouteInfo(d.lat, d.lon, d.sog);
+                                                            }
+
+                                                            html = [
+                                                              'Pos: ' + formatPos(d.lat) + ',' + formatPos(d.lon), 
+                                                              'COG: ' + d.cog.toFixed(1) + '&deg;' + '&nbsp;&nbsp;HDT: ' + d.heading.toFixed(1) + '&deg;',
+                                                              'SOG: ' + d.sog.toFixed(2) + ' kts',
+                                                            ].join('<br />');
+                                                            document.getElementById('basicInfo').innerHTML = html;
+
+                                                        })
+                                                    }, aa.interval*1000);
+
+                                    }
                                 }
-                        )
-                        .then(resp => resp.json()) 
-                        .then(d => {
-                            if ('lat' in d && 'lon' in d) {
-                                html = [ a.asset, formatPos(d.lat) + "," + formatPos(d.lon)].join('<br/>');
-                                if ('sog' in d && 'cog' in d) {
-                                    html = html + '<br/>' + d.sog + " @ " + d.cog;
-                                }
-                                mk = L.shapeMarker([d.lat, d.lon],
-                                                   {
-                                                      shape: a.marker,
-                                                      radius: 5,
-                                                      color: a.color,
-                                                   }
-                                                  ).bindTooltip(a.asset, { permanent: true, className: 'assetLabel' })
-                                                   .bindPopup(html);
-                                assetMarkers.push(mk); 
-                                layerControl.addOverlay(mk, a.asset, "assets");
-                                mk.addTo(map);
-
-                                setupShip(map, layerControl, a.asset, mk);
-
-                                if ('interval' in a && a.interval > 0) {
-
-                                    setInterval(function() {
-                                                    fetch(a.url)
-                                                    .then(resp => resp.json())
-                                                    .then(d => {
-                                                        html = [ a.asset, formatPos(d.lat) + "," + formatPos(d.lon)].join('<br/>');
-                                                        if ('sog' in d && 'cog' in d) { 
-                                                            html = html + '<br/>' + d.sog + " @ " + d.cog;
-                                                        }
-                                                        mk.setPopupContent(html);
-                                                        mk.setLatLng([d.lat, d.lon]);
-                                                        if (activeRoute != null || activeAsset != null || activeGlider != null) {
-                                                            updateRouteInfo(d.lat, d.lon, d.sog);
-                                                        }
-
-                                                        html = [
-                                                          'Pos: ' + formatPos(d.lat) + ',' + formatPos(d.lon), 
-                                                          'COG: ' + d.cog.toFixed(1) + '&deg;' + '&nbsp;&nbsp;HDT: ' + d.heading.toFixed(1) + '&deg;',
-                                                          'SOG: ' + d.sog.toFixed(2) + ' kts',
-                                                        ].join('<br />');
-                                                        document.getElementById('basicInfo').innerHTML = html;
-
-                                                    })
-                                                }, a.interval*1000);
-
-                                }
-                            }
-                        });
+                            });
+                        })();
                     }
                 }
 /*
@@ -902,8 +916,9 @@
 
                 console.log(assets);
 
-                if (assets.length)
-                    loadAssets(map, layerControl, assets, glider, mission);    
+                if (assets.length) {
+                    loadAssets(map, layerControl, assets, glider, mission);
+                }
                 if (gliders.length)
                     loadGliderKML(map, layerControl, gliders, missions, tail, null, false, false);
             }
@@ -949,7 +964,7 @@
                     // if glider is not specified then the response has a list of all assets 
                     // in the yml file
                     else if ('assets' in d && d.assets) {
-                        loadAssets(map, layerControl, d.assets, glider, mission);    
+                        loadAssets(map, layerControl, d.assets, glider, mission);
                     }
                     if ('routes' in d) {
                         loadRoutes(map, layerControl, d.routes);
