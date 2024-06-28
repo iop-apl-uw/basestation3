@@ -713,6 +713,79 @@
                         layerControl.addOverlay(mk, a.asset, "assets");
                         mk.addTo(map);
                     }
+                    else if (a.type == 'iabp' && 'bid' in a) {
+                        console.log('adding iabp ' + a.asset);
+                        var url, i, j;
+                        if ('tail' in a)
+                            url = '../iabp/' + a.bid + '?tail=' + a.tail;
+                        else
+                            url = '../iabp/' + a.bid;
+
+                        var mks = [];
+                
+                        (() => { // need to get a into local scope (aa) for async fetch
+
+                            let aa = a;
+
+                            fetch(url)
+                            .then(resp => resp.json())
+                            .then(d => {
+                                p = d[d.length - 1];
+                                    
+                                html = [ aa.asset, formatPos(p['lat']) + "," + formatPos(p['lon']), "@" + new Date(p['t']*1000).toISOString()]
+                                if ('BP' in p)
+                                    html.push('BP=' + p['BP']);
+                                if ('Ta' in p)
+                                    html.push('Ta=' + p['Ta']);
+
+                                html = html.join('<br/>');
+                                try {
+                                    mk = new L.shapeMarker([p['lat'], p['lon']],
+                                                       {
+                                                          shape: aa.marker,
+                                                          radius: 5,
+                                                          color: aa.color,
+                                                       }
+                                                      ).bindTooltip(aa.asset, { permanent: true, className: 'assetLabel' })
+                                                       .bindPopup(html);
+                                    assetMarkers.push(mk); 
+                                    mk.on('click', function(e) {
+                                        activateAsset(this); 
+                                    });
+                                    
+                                    mks.push(mk); 
+                                    //layerControl.addOverlay(mk, aa.asset, "assets");
+                                    //mk.addTo(map);
+                                }
+                                catch(e) {
+                                    console.log('assets ' + e);
+                                    console.log(d);
+                                }
+
+                                if (aa.tail && parseInt(aa.tail) > 0) {
+                                    var i, j, ntail = parseInt(aa.tail);
+                                    if (ntail > d.length - 1) {
+                                        ntail = d.length - 1;
+                                    }
+                                    for (i = 0, j = d.length - 2 ; i < ntail ; i++, j--) {
+                                        mk = new L.shapeMarker([ d[j]['lat'], d[j]['lon'] ],
+                                                           {
+                                                              shape: aa.marker,
+                                                              radius: 2,
+                                                              color: aa.color,
+                                                           });
+                                        mks.push(mk);
+                                    }
+                                    
+                                }
+
+                                var newL = L.layerGroup(mks);
+                                layerControl.addOverlay(newL, aa.asset, "assets");
+                                newL.addTo(map);
+                            });
+
+                        })();
+                    }
                     else if (glider > 0 && a.type == 'csv' && 'file' in a) {
                         console.log('adding csv ' + a.asset);
                         var url, i, j;
@@ -769,8 +842,6 @@
                                                                   radius: 2,
                                                                   color: aa.color,
                                                                });
-                                            //layerControl.addOverlay(mk, aa.asset, "IGBH");
-                                            //mk.addTo(map);
                                             mks.push(mk);
                                         }
                                         

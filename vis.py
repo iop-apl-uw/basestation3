@@ -29,6 +29,7 @@
 
 from orjson import dumps,loads
 import time
+import calendar
 import os
 import os.path
 from parse import parse
@@ -764,6 +765,51 @@ def attachHandlers(app: sanic.Sanic):
             sanic.log.logger.info(f'{fullname} not found')
             return sanic.response.text('not found', status=404)
 
+    @app.route('/iabp/<bid:int>')
+    # description: fetch latest IABP buoy data
+    # parameters: tail (days)
+    # returns: JSON
+    async def iabpHandler(request, bid:int):
+        if 'tail' in request.args:
+            tail = int(request.args['tail'][0])
+        else:
+            tail = 4
+
+        url = 'https://iabp.apl.washington.edu/download?bid=' + str(bid) + '&ndays=' + str(tail + 1)
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url, ssl=False) as response:
+                if response.status == 200:
+                    body = await response.read()
+                    try:
+                        lines = body.splitlines()
+                        cols = lines[0].split(b',')
+                        BPcol = cols.index(b'BP') if b'BP' in cols else -1
+                        Tacol = cols.index(b'Ta') if b'Ta' in cols else -1
+                        Tscol = cols.index(b'Ts') if b'Ts' in cols else -1
+                        latest = lines[-1].split(b',')
+                        d = []
+                        for line in lines[1:]:
+                            x = line.split(b',')
+                            if float(x[5]) > float(latest[5]) - tail - 1.0/48.0 and x[2] == latest[2]:
+                                t = calendar.timegm((int(x[1]),1,1,0,0,0,0,0,0)) + (float(x[5]) - 1)*86400.0
+                                m = {'t': t, 'lat': float(x[6]), 'lon': float(x[7])}
+                                if BPcol > -1: 
+                                    m.update({'BP': float(x[BPcol])})
+                                if Tacol > -1: 
+                                    m.update({'Ta': float(x[Tacol])})
+                                if Tscol > -1: 
+                                    m.update({'Ts': float(x[Tscol])})
+                                
+                                d.append(m)
+
+                        return sanic.response.json(d)
+                    except Exception as e:
+                        return sanic.response.json({'error': f'error {e}'})
+
+            
+     
+    # returns: 
     @app.post('/post')
     # description: post version of proxy request handler for map tool
     # returns: contents from requested URL
