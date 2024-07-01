@@ -77,8 +77,9 @@ set glider = `basename $fname | cut -b3-5`
 set testnum = `basename $fname | cut -b6-9`
 set date = `grep "RTC time" $fname | cut -f3-8 -d' '`
 set filedate = `ls -l $fname | awk '{print $6,$7,$8}'`
+set b = `echo $fname | grep -o -G sg.\*`
 
-echo Meta: $fname \("$filedate"\) SG"$glider" \#"$testnum" Dated: $date
+echo Meta: $b \("$filedate"\) SG"$glider" \#"$testnum" Dated: $date
 
 if ( "$fname" != "$capname_by_date" ) then
     echo "WARNING: there is a capture file with a newer timestamp"
