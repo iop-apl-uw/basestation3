@@ -51,9 +51,8 @@ import pdb
 import sys
 import time
 import traceback
-import typing
 
-from BaseOptsType import options_t
+from BaseOptsType import options_t, DeprecateAction, deprecated_options
 import Plotting
 from Globals import WhichHalf, extensions_to_skip  # basestation_version
 
@@ -62,7 +61,7 @@ dive_plot_list = list(Plotting.dive_plot_funcs.keys())
 mission_plot_list = list(Plotting.mission_plot_funcs.keys())
 
 # Deprecated options to warn and issue alerts on
-deprecated_options = {}
+#deprecated_options = {}
 
 
 def generate_range_action(arg, min_val, max_val):
@@ -130,10 +129,10 @@ class FullPathTrailingSlashAction(argparse.Action):
         else:
             setattr(namespace, self.dest, values)
 
-class DeprecateAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        deprecated_options[self.option_strings[0]] = self.help
-        delattr(namespace, self.dest)
+#class DeprecateAction(argparse.Action):
+#    def __call__(self, parser, namespace, values, option_string=None):
+#        deprecated_options[self.option_strings[0]] = self.help
+#        delattr(namespace, self.dest)
 
 def mark_deprecated_help_strings(parser, prefix="DEPRECATED"):
     """

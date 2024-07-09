@@ -33,8 +33,10 @@
      Defined here to prevent issues with circular refrences when loading
 """
 
+import argparse
 import dataclasses
 import typing
+
 
 @dataclasses.dataclass
 class options_t:
@@ -54,3 +56,11 @@ class options_t:
             self.group = set(self.group)
         if not isinstance(self.kwargs, dict):
             raise ValueError("kwargs is not a dict")
+
+# Deprecated options to warn and issue alerts on
+deprecated_options = {}
+        
+class DeprecateAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        deprecated_options[self.option_strings[0]] = self.help
+        delattr(namespace, self.dest)

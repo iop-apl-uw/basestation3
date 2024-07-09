@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots comparision of compass output """
+"""Plots comparision of compass output"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -123,7 +123,7 @@ def plot_compass_compare(
             except KeyError:
                 log_warning("No depth variable found")
         depth_time = dive_nc_file.variables["time"][:]
-    except:
+    except Exception:
         log_error("Could not process compass_compare", "exc")
         return ([], [])
 
@@ -139,7 +139,7 @@ def plot_compass_compare(
                 second_compass_depth = -1.0 * gsw.z_from_p(
                     second_compass_pressure, np.mean((gps_lat[1], gps_lat[2])), 0.0, 0.0
                 )
-        except:
+        except Exception:
             log_error("Failed to correct second compass pressure for lat", "exc")
             second_compass_depth = None
 
@@ -432,7 +432,7 @@ def plot_compass_compare(
     try:
         glider_id = int(glider_id)
         glider_id = "SG%03d" % glider_id
-    except:
+    except Exception:
         pass
 
     title_text = (
@@ -496,22 +496,6 @@ def plot_compass_compare(
     )
 
 
-@add_arguments(
-    additional_arguments={
-        "flip_ad2cp": BaseOptsType.options_t(
-            True,
-            ("Base", "BasePlot", "Reprocess"),
-            ("--flip_ad2cp",),
-            bool,
-            {
-                "help": "Rotate the pitch/roll/heading for the adc2p compass output plot",
-                "section": "plotting",
-                "option_group": "plotting",
-                "action": argparse.BooleanOptionalAction,
-            },
-        ),
-    }
-)
 @plotdivesingle
 def plot_compare_aux(
     base_opts: BaseOpts.BaseOptions,
@@ -579,6 +563,58 @@ def plot_compare_cp(
     )
 
 
+@add_arguments(
+    additional_arguments={
+        "flip_ad2cp": BaseOptsType.options_t(
+            True,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--flip_ad2cp",),
+            bool,
+            {
+                "help": "Rotate the pitch/roll/heading for the adc2p compass output plot",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": BaseOptsType.DeprecateAction,
+            },
+        ),
+        "flip_ad2cp_pitch": BaseOptsType.options_t(
+            True,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--flip_ad2cp_pitch",),
+            bool,
+            {
+                "help": "Rotate the pitch for the adc2p compass output plot",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": argparse.BooleanOptionalAction,
+            },
+        ),
+        "flip_ad2cp_roll": BaseOptsType.options_t(
+            True,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--flip_ad2cp_roll",),
+            bool,
+            {
+                "help": "Rotate the roll for the adc2p compass output plot",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": argparse.BooleanOptionalAction,
+            },
+        ),
+        "flip_ad2cp_heading": BaseOptsType.options_t(
+            True,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--flip_ad2cp_heading",),
+            bool,
+            {
+                "help": "Rotate the heading for the adc2p compass output plot",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": argparse.BooleanOptionalAction,
+            },
+        ),
+    }
+)
 @plotdivesingle
 def plot_compare_ad2cp(
     base_opts: BaseOpts.BaseOptions,
@@ -599,7 +635,7 @@ def plot_compare_ad2cp(
         "ad2cp_roll",
         "ad2cp_pressure",
         base_opts,
-        flip_pitch=base_opts.flip_ad2cp,
-        flip_roll=base_opts.flip_ad2cp,
-        flip_heading=base_opts.flip_ad2cp,
+        flip_pitch=base_opts.flip_ad2cp_pitch,
+        flip_roll=base_opts.flip_ad2cp_roll,
+        flip_heading=base_opts.flip_ad2cp_heading,
     )
