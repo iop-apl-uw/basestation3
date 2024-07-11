@@ -28,8 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Utility functions for plotting routines
-"""
+"""Utility functions for plotting routines"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -219,37 +218,66 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
     gc_pitch_time = np.copy(gc_time)
     gc_vbd_time = np.copy(gc_time)
 
-    for ii in range(len(gc_st_secs)):
-        g_autonomous_turning = gc_phase[ii] & 1024
-        if g_autonomous_turning:
-            motors = [
-                ("roll", gc_roll_secs[ii]),
-                ("pitch", gc_pitch_secs[ii]),
-                ("vbd", gc_vbd_secs[ii]),
-            ]
-        else:
-            motors = [
-                ("pitch", gc_pitch_secs[ii]),
-                ("vbd", gc_vbd_secs[ii]),
-                ("roll", gc_roll_secs[ii]),
-            ]
-        st = gc_st_secs[ii] - ncf.start_time
-        for m in motors:
-            if m[1] > 0.0:
-                if m[0] == "vbd":
-                    gc_moves.append(gc_move(st, st + m[1], 1))
-                    gc_vbd_time[ii * 2] = st
-                    gc_vbd_time[(ii * 2) + 1] = st + m[1]
-                elif m[0] == "pitch":
-                    gc_moves.append(gc_move(st, st + m[1], 2))
-                    gc_pitch_time[ii * 2] = st
-                    gc_pitch_time[(ii * 2) + 1] = st + m[1]
-                elif m[0] == "roll":
-                    gc_moves.append(gc_move(st, st + m[1], 4))
-                    gc_roll_time[ii * 2] = st
-                    gc_roll_time[(ii * 2) + 1] = st + m[1]
+    if "gc_vbd_start_time" in ncf.variables:
+        motor_times = {}
+        motors = {
+            "roll": gc_roll_time,
+            "pitch": gc_pitch_time,
+            "vbd": gc_vbd_time,
+        }
+        for motor, motor_code in (("vbd", 1), ("pitch", 2), ("roll", 4)):
+            for start_stop in ("start", "end"):
+                col_name = f"gc_{motor}_{start_stop}_time"
+                motor_times[col_name] = ncf.variables[col_name][:]
+                good_pts = np.logical_not(np.isnan(motor_times[col_name]))
+                motor_times[col_name][good_pts] -= ncf.start_time
+            for ii in np.nonzero(good_pts)[0]:
+                gc_moves.append(
+                    gc_move(
+                        motor_times[f"gc_{motor}_start_time"][ii],
+                        motor_times[f"gc_{motor}_end_time"][ii],
+                        motor_code,
+                    )
+                )
+            for ii in range(len(gc_st_secs)):
+                if motor_times[f"gc_{motor}_start_time"][ii] > 0.0:
+                    motors[motor][ii * 2] = motor_times[f"gc_{motor}_start_time"][ii]
+                    motors[motor][(ii * 2) + 1] = motor_times[f"gc_{motor}_end_time"][
+                        ii
+                    ]
 
-                st += m[1]
+    else:
+        for ii in range(len(gc_st_secs)):
+            g_autonomous_turning = gc_phase[ii] & 1024
+            if g_autonomous_turning:
+                motors = [
+                    ("roll", gc_roll_secs[ii]),
+                    ("pitch", gc_pitch_secs[ii]),
+                    ("vbd", gc_vbd_secs[ii]),
+                ]
+            else:
+                motors = [
+                    ("pitch", gc_pitch_secs[ii]),
+                    ("vbd", gc_vbd_secs[ii]),
+                    ("roll", gc_roll_secs[ii]),
+                ]
+            st = gc_st_secs[ii] - ncf.start_time
+            for m in motors:
+                if m[1] > 0.0:
+                    if m[0] == "vbd":
+                        gc_moves.append(gc_move(st, st + m[1], 1))
+                        gc_vbd_time[ii * 2] = st
+                        gc_vbd_time[(ii * 2) + 1] = st + m[1]
+                    elif m[0] == "pitch":
+                        gc_moves.append(gc_move(st, st + m[1], 2))
+                        gc_pitch_time[ii * 2] = st
+                        gc_pitch_time[(ii * 2) + 1] = st + m[1]
+                    elif m[0] == "roll":
+                        gc_moves.append(gc_move(st, st + m[1], 4))
+                        gc_roll_time[ii * 2] = st
+                        gc_roll_time[(ii * 2) + 1] = st + m[1]
+
+                    st += m[1]
 
     # Convert Roll to engineering units
     gc_state_state = ncf.variables["gc_state_state"][:]
