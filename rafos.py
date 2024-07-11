@@ -1,6 +1,7 @@
 import sys
 import datetime
 import Utils
+import Utils2
 import ExtractTimeseries
 import scipy
 import asyncio
@@ -66,7 +67,7 @@ async def hitsTable(path):
     hits = [ (lambda d: d.update(epoch=k) or d)(v) for (k,v) in hits.items() ]
     hits = sorted(hits, key=lambda x: x['epoch'])
 
-    ncfilename = Utils.get_mission_timeseries_name(None, path)
+    ncfilename = Utils2.get_mission_timeseries_name(None, path)
 
     print(minDive, maxDive)
     whichVars = ['latitude', 'longitude', 'depth']

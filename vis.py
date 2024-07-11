@@ -65,6 +65,7 @@ import zmq.asyncio
 # import urllib.parse 
 import BaseOpts
 import Utils
+import Utils2
 import secrets
 import ExtractTimeseries
 import socket
@@ -1428,7 +1429,7 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     @compress.compress()
     async def proHandler(request, glider:int, whichVar:str, whichProfiles:int, first:int, last:int, stride:int, top:int, bot:int, binSize:int):
-        ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
+        ncfilename = Utils2.get_mission_timeseries_name(None, gliderPath(glider,request))
         if not await aiofiles.os.path.exists(ncfilename):
             return sanic.response.text('no db')
 
@@ -1443,7 +1444,7 @@ def attachHandlers(app: sanic.Sanic):
     # returns: JSON list of variable names
     @authorized()
     async def timeSeriesVarsHandler(request, glider:int):
-        ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
+        ncfilename = Utils2.get_mission_timeseries_name(None, gliderPath(glider,request))
         if not await aiofiles.os.path.exists(ncfilename):
             return sanic.response.json({'error': 'no db'})
 
@@ -1458,7 +1459,7 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     @compress.compress()
     async def timeSeriesHandler(request, glider:int, dive:int, which:str):
-        ncfilename = Utils.get_mission_timeseries_name(None, gliderPath(glider,request))
+        ncfilename = Utils2.get_mission_timeseries_name(None, gliderPath(glider,request))
         if not await aiofiles.os.path.exists(ncfilename):
             return sanic.response.json({'error': 'no db'})
 

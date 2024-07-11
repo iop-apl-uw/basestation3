@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots dive vertical velocty and estimates C_VBD
-"""
+"""Plots dive vertical velocty and estimates C_VBD"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 import typing
@@ -50,6 +50,7 @@ import MakeDiveProfiles
 import PlotUtils
 import PlotUtilsPlotly
 import Utils
+import Utils2
 
 from BaseLog import log_warning, log_error, log_info, log_debug
 from Plotting import plotdivesingle
@@ -402,19 +403,21 @@ def plot_vert_vel(
             )
 
         # Extract the calib constants, then fill in any missing ones with defaults
-        calib_consts = Utils.extract_calib_consts(dive_nc_file)
-        if 'mass' not in calib_consts:
-            calib_consts['mass'] = log_MASS
-        if 'rho0' not in calib_consts:
-            calib_consts['rho0'] = log_RHO
-        if 'hd_a' not in calib_consts:
-            calib_consts['hd_a'] = log_HD_A
-        if 'hd_b' not in calib_consts:
-            calib_consts['hd_b'] = log_HD_B
-        if 'hd_c' not in calib_consts:
-            calib_consts['hd_c'] = log_HD_C
-        if 'volmax' not in calib_consts:
-            calib_consts['volmax'] = 1.0e6*log_MASS/log_RHO + (vbd_min - c_vbd)*vbd_cnv
+        calib_consts = Utils2.extract_calib_consts(dive_nc_file)
+        if "mass" not in calib_consts:
+            calib_consts["mass"] = log_MASS
+        if "rho0" not in calib_consts:
+            calib_consts["rho0"] = log_RHO
+        if "hd_a" not in calib_consts:
+            calib_consts["hd_a"] = log_HD_A
+        if "hd_b" not in calib_consts:
+            calib_consts["hd_b"] = log_HD_B
+        if "hd_c" not in calib_consts:
+            calib_consts["hd_c"] = log_HD_C
+        if "volmax" not in calib_consts:
+            calib_consts["volmax"] = (
+                1.0e6 * log_MASS / log_RHO + (vbd_min - c_vbd) * vbd_cnv
+            )
 
         MakeDiveProfiles.sg_config_constants(base_opts, calib_consts)
 
@@ -510,7 +513,8 @@ def plot_vert_vel(
 
         implied_volmax_buoy_only = (
             vol0
-            - ((c_vbd + min_bias_buoy_only * vbd_cnts_per_cc) - vbd_min) / vbd_cnts_per_cc
+            - ((c_vbd + min_bias_buoy_only * vbd_cnts_per_cc) - vbd_min)
+            / vbd_cnts_per_cc
         )
         implied_cvbd_buoy_only = c_vbd + min_bias_buoy_only * vbd_cnts_per_cc
 

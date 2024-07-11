@@ -52,6 +52,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtilsPlotly
 import Utils
+import Utils2
 
 from BaseLog import log_error, log_warning, log_info
 from Plotting import plotmissionsingle
@@ -153,7 +154,7 @@ def mission_profiles(
     figs = []
     outs = []
 
-    ncname = Utils.get_mission_timeseries_name(base_opts)
+    ncname = Utils2.get_mission_timeseries_name(base_opts)
 
     try:
         nci = Utils.open_netcdf_file(ncname, "r")

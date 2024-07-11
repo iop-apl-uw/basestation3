@@ -34,7 +34,7 @@
 # pylint: disable=missing-function-docstring
 
 
-""" An attempt to turn 'experimental' regress_vbd.m into a Maytag washer, an automatic reliable appliance"""
+"""An attempt to turn 'experimental' regress_vbd.m into a Maytag washer, an automatic reliable appliance"""
 
 import cProfile
 import pstats
@@ -56,6 +56,7 @@ import scipy.optimize  # fminbound
 import BaseOpts
 import MakeDiveProfiles  # for collect_nc_perdive_files() compressee_density(), compute_displacements(), compute_dac() etc
 import Utils
+import Utils2
 import Globals  # versions, esp basestation_version
 import QC
 from CalibConst import getSGCalibrationConstants
@@ -906,17 +907,17 @@ def get_FM_defaults(consts_d, glider_type=None):
         # thermal expansion of the hull
         consts_d["therm_expan"] = 7.05e-5  # m^3/degree
         # % compressibility of the hull per dbar
-        consts_d[
-            "abs_compress"
-        ] = 4.1e-6  # m^3/dbar (slightly less than the compressibility of SW)
+        consts_d["abs_compress"] = (
+            4.1e-6  # m^3/dbar (slightly less than the compressibility of SW)
+        )
         if consts_d["mass"] > SGX_MASS:
             # An SGX, which are massive vehicles
             log_info("FM:Assuming this is an SGX vehicle", max_count=1)
             consts_d["hd_a"] = 0.003548133892336
             consts_d["hd_b"] = 0.015848931924611  # a little more drag than even DGs
-            consts_d[
-                "hd_s"
-            ] = sg_hd_s # 0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+            consts_d["hd_s"] = (
+                sg_hd_s  # 0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+            )
 
     elif glider_type == DEEPGLIDER:
         # TODO change these defaults since we now use hd_s = 0
@@ -926,9 +927,9 @@ def get_FM_defaults(consts_d, glider_type=None):
         consts_d["hd_c"] = 2.5e-6  # DG037 53 and 55 stall with higher value
         # consts_d['hd_c']    =   5.7e-6 # increased c to deal with high pitch dives DG046 BATS May19 after dive 70?
         # Lucas experiment consts_d['hd_c']    =   2.5e-5 # DG037 53 and 55 stall with higher value
-        consts_d[
-            "hd_s"
-        ] = 0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+        consts_d["hd_s"] = (
+            0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+        )
         # 9/6/2019: On all DG vehicles we found that FMS underestimated the speeds on both dive and climb for steep dives (> 25 degreees)
         # attempts to deal with c failed but s made a big difference. -0.25 (SG) was ok, -0.30 was better, -0.35 overestimated dive speeds
         # consts_d['hd_s']    =   -0.20 # how the drag scales by shape
@@ -940,9 +941,9 @@ def get_FM_defaults(consts_d, glider_type=None):
     elif glider_type == OCULUS:
         consts_d["hd_a"] = 0.007079457843841  # much higher lift
         consts_d["hd_b"] = 0.014125375446228  # like DG
-        consts_d[
-            "hd_s"
-        ] = 0.0  # how the drag scales by shape (0 for the more standard shape of Oculus per Eriksen)
+        consts_d["hd_s"] = (
+            0.0  # how the drag scales by shape (0 for the more standard shape of Oculus per Eriksen)
+        )
         # thermal expansion of the hull
         consts_d["therm_expan"] = 7.05e-5  # m^3/degree
         # % compressibility of the hull per dbar
@@ -1370,9 +1371,9 @@ def load_dive_data(base_opts, dive_data):
                 valid_i
             ]  # for compressee and hull thermal expansion
             density_insitu = density_insitu[valid_i]
-            data_d[
-                "density_insitu"
-            ] = density_insitu  # for buoyancy calculations (kg/m^3)
+            data_d["density_insitu"] = (
+                density_insitu  # for buoyancy calculations (kg/m^3)
+            )
             dive_data.bottom_temp = min(data_d["temperature"])
 
             density = density[valid_i]
@@ -1763,12 +1764,12 @@ def solve_ab_grid(base_opts, dive_set, reprocess_count, dive_num=None):
                     dd.vbdbias
                 )  # apply per-dive vbdbias to copy so any cache is not poisoned
             combined_data_d[vector_name].extend(data_vector)
-    combined_data_d[
-        "n_velo"
-    ] = n_velo  # A boolean about whether velo data is available for all valid points for all dives
-    combined_data_d[
-        "correct_aoa_velo"
-    ] = correct_aoa_velo  # A boolean about whether velo data needs aoa correction for all dives
+    combined_data_d["n_velo"] = (
+        n_velo  # A boolean about whether velo data is available for all valid points for all dives
+    )
+    combined_data_d["correct_aoa_velo"] = (
+        correct_aoa_velo  # A boolean about whether velo data needs aoa correction for all dives
+    )
 
     # convert to numpy arrays
     for vector_name in dive_data_vector_names:
@@ -1939,9 +1940,9 @@ def load_dive_data_DAC(base_opts, dive_data):
         data_d["pitch"] = eng_pitch_ang
         data_d["w"] = w  # what we optimize against
         data_d["pressure"] = press  # for compression and compressee
-        data_d[
-            "temperature"
-        ] = temperature_raw  # for compressee and hull thermal expansion
+        data_d["temperature"] = (
+            temperature_raw  # for compressee and hull thermal expansion
+        )
         data_d["density_insitu"] = density_insitu  # for buoyancy calculations (kg/m^3)
         data_d["density"] = density  # for buoyancy calculations (kg/m^3)
 
@@ -3795,7 +3796,7 @@ def main(
     # In case there is non-zero mass_comp
     if compress_cnf is None:
         if not old_basestation:
-            compress_cnf, _ = Utils.read_cnf_file(
+            compress_cnf, _ = Utils2.read_cnf_file(
                 "compress.cnf",
                 mission_dir=mission_directory,
                 encode_list=False,
@@ -4060,9 +4061,9 @@ def main(
         # limit the bounds for abs_compress search
         flight_dive_data_d["ac_min"] = ac_min_start
         flight_dive_data_d["ac_max"] = ac_max_start
-        flight_dive_data_d[
-            "ac_min_press"
-        ] = 500  # [dbar] this is where we can start seeing the impact, otherwise use the default
+        flight_dive_data_d["ac_min_press"] = (
+            500  # [dbar] this is where we can start seeing the impact, otherwise use the default
+        )
         # DEBUG pfdd(True) #  display initial defaults in the log file
         save_flight_database(base_opts)
 

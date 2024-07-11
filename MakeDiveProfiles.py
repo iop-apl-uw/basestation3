@@ -92,6 +92,7 @@ from HydroModel import glide_slope, hydro_model
 
 # from TraceArray import *  # REMOVE use this only only if we are tracing/comparing computations w/ matlab
 import Utils
+import Utils2
 import LegatoCorrections
 
 DEBUG_PDB = False
@@ -4084,7 +4085,7 @@ def make_dive_profile(
                 "press_counts"
             )  # returns None if not present
             # Try reading a possibly updated kistler.cnf file; returns None if not present
-            kistler_cnf, _ = Utils.read_cnf_file(
+            kistler_cnf, _ = Utils2.read_cnf_file(
                 "kistler.cnf",
                 mission_dir=base_opts.mission_dir,
                 encode_list=False,
@@ -5643,7 +5644,7 @@ def make_dive_profile(
         vol_comp_ref = 0
         if mass_comp:
             # TODO modifiy this to be called once per set of dives and cached in a local
-            compress_cnf, _ = Utils.read_cnf_file(
+            compress_cnf, _ = Utils2.read_cnf_file(
                 "compress.cnf",
                 mission_dir=base_opts.mission_dir,
                 encode_list=False,

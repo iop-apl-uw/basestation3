@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2024, 2024  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,8 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Support for loading and running Sensor extensions
-"""
+"""Support for loading and running Sensor extensions"""
 
 import collections
 import os
@@ -39,6 +38,7 @@ import shutil
 import BaseNetCDF
 import LogFile
 import Utils
+import Utils2
 
 from BaseLog import log_error, log_debug, log_info, log_warning
 
@@ -143,9 +143,9 @@ class SensorExtensions:
                         else:
                             for processing_func in extension_elts[1:]:
                                 try:
-                                    temp_dict[
-                                        processing_func
-                                    ] = extension_module.__dict__[processing_func]
+                                    temp_dict[processing_func] = (
+                                        extension_module.__dict__[processing_func]
+                                    )
                                 except KeyError:
                                     log_warning(
                                         "Sensor extension %s does not contain function %s, but is configured to have it - skipping"
@@ -164,9 +164,9 @@ class SensorExtensions:
                             elif processing_func == "init_logger":
                                 temp_dict[processing_func] = conf_file_init_logger
                             elif processing_func == "process_data_files":
-                                temp_dict[
-                                    processing_func
-                                ] = conf_file_process_data_files
+                                temp_dict[processing_func] = (
+                                    conf_file_process_data_files
+                                )
                             elif processing_func == "add_netcdf_meta":
                                 temp_dict[processing_func] = conf_file_add_netcdf_meta
                             else:
@@ -404,7 +404,7 @@ def conf_file_asc2eng(base_opts, conf_file_name, datafile):
      0 - success (data found, processed, and added to datafile)
      1 - no data found to process
     """
-    cnf_dict, _ = Utils.read_cnf_file(conf_file_name)
+    cnf_dict, _ = Utils2.read_cnf_file(conf_file_name)
     if cnf_dict is None:
         return -1
 
@@ -483,7 +483,7 @@ def conf_file_init_logger(conf_file_name, init_dict=None):
     except KeyError:
         init_dict[conf_file_name] = {}
 
-    cnf_dict, cnf_nc_meta_dict = Utils.read_cnf_file(conf_file_name)
+    cnf_dict, cnf_nc_meta_dict = Utils2.read_cnf_file(conf_file_name)
     if cnf_dict is None:
         return -1
 
@@ -627,7 +627,7 @@ def conf_file_init_sensor(conf_file_name, init_dict=None):
     except KeyError:
         init_dict[conf_file_name] = {}
 
-    cnf_dict, cnf_nc_meta_dict = Utils.read_cnf_file(conf_file_name)
+    cnf_dict, cnf_nc_meta_dict = Utils2.read_cnf_file(conf_file_name)
     if cnf_dict is None:
         return -1
 
@@ -787,7 +787,7 @@ def conf_file_add_netcdf_meta(conf_file_name, init_dict=None):
     except KeyError:
         init_dict[conf_file_name] = {}
 
-    _, cnf_nc_meta_dict = Utils.read_cnf_file(conf_file_name)
+    _, cnf_nc_meta_dict = Utils2.read_cnf_file(conf_file_name)
     if cnf_nc_meta_dict is None:
         return -1
 
