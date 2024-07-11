@@ -2583,19 +2583,23 @@ def make_dive_profile(
     )  # copy the explicit constants, which we write below
 
     if base_opts.ignore_flight_model:
-        if 'mass' not in calib_consts:
-            calib_consts['mass'] = log_f.data.get("$MASS", 0)/1000
-        if 'rho0' not in calib_consts:
-            calib_consts['rho0'] = log_f.data.get("$RHO", 1.0275)*1000
-        if 'hd_a' not in calib_consts:
-            calib_consts['hd_a'] = log_f.data.get("$HD_A", 0)
-        if 'hd_b' not in calib_consts:
-            calib_consts['hd_b'] = log_f.data.get("$HD_B", 0)
-        if 'hd_c' not in calib_consts:
-            calib_consts['hd_c'] = log_f.data.get("$HD_C", 0)
-        if 'volmax' not in calib_consts:
-            calib_consts['volmax'] = log_f.data.get("$MASS", 0)/log_f.data.get("$RHO", 1.0275) + (log_f.data.get("$VBD_MIN", 500) - log_f.data.get("$C_VBD", 3000))*log_f.data.get("$VBD_CNV", -0.245) 
-           
+        if "mass" not in calib_consts:
+            calib_consts["mass"] = log_f.data.get("$MASS", 0) / 1000
+        if "rho0" not in calib_consts:
+            calib_consts["rho0"] = log_f.data.get("$RHO", 1.0275) * 1000
+        if "hd_a" not in calib_consts:
+            calib_consts["hd_a"] = log_f.data.get("$HD_A", 0)
+        if "hd_b" not in calib_consts:
+            calib_consts["hd_b"] = log_f.data.get("$HD_B", 0)
+        if "hd_c" not in calib_consts:
+            calib_consts["hd_c"] = log_f.data.get("$HD_C", 0)
+        if "volmax" not in calib_consts:
+            calib_consts["volmax"] = log_f.data.get("$MASS", 0) / log_f.data.get(
+                "$RHO", 1.0275
+            ) + (
+                log_f.data.get("$VBD_MIN", 500) - log_f.data.get("$C_VBD", 3000)
+            ) * log_f.data.get("$VBD_CNV", -0.245)
+
     sg_config_constants(
         base_opts,
         calib_consts,
@@ -4773,13 +4777,21 @@ def make_dive_profile(
 
         # Compute vehicle measured vertical velocity w_cm_s_v, which is used to estimate initial speed and glide angle.
         # Compute w = dz/dt using depth from pressure and latitude
-        w_cm_s_v = Utils.ctr_1st_diff(-sg_depth_m_v * m2cm, elapsed_time_s_v)
+
+        # Handle missing pressure observations
+        good_depth_pts = np.logical_not(np.isnan(sg_depth_m_v))
+        w_cm_s_v = Utils.ctr_1st_diff(
+            -sg_depth_m_v[good_depth_pts] * m2cm, elapsed_time_s_v[good_depth_pts]
+        )
         # Map to ctd times and compute gsm results at that dimension
         # BUG? This is what the matlab code does so we can use gsm values as initial start values for tsv
         # The alternative is to save them in sg_data_point space and just interpolate
         # before tsv but not record that...If we do this, remove them from the ctd coordinates
         ctd_w_cm_s_v = Utils.interp1d(
-            sg_epoch_time_s_v, w_cm_s_v, ctd_epoch_time_s_v, kind="linear"
+            sg_epoch_time_s_v[good_depth_pts],
+            w_cm_s_v,
+            ctd_epoch_time_s_v,
+            kind="linear",
         )
         # Compute an intiial guess for glide angles and glider speed:
         # Use a version of the hydrodynamic model that assumes constant bouyancy throughout the dive
