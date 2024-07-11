@@ -2094,6 +2094,93 @@ nc_var_metadata = {
         },
         (nc_gc_event_info,),
     ],
+    "gc_vbd_st": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "Time since st_secs for start of VBD move",
+        },
+        (nc_gc_event_info,),
+    ],
+    "gc_pitch_st": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "Time since st_secs for start of pitch move",
+        },
+        (nc_gc_event_info,),
+    ],
+    "gc_roll_st": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "Time since st_secs for start of roll move",
+        },
+        (nc_gc_event_info,),
+    ],
+    "gc_vbd_start_time": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "Start of VBD motor move time in GMT epoch format",
+            "_FillValue": nc_nan,
+        },
+        (nc_gc_event_info,),
+    ],
+    "gc_pitch_start_time": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "Start of pitch motor move time in GMT epoch format",
+            "_FillValue": nc_nan,
+        },
+        (nc_gc_event_info,),
+    ],
+    "gc_roll_start_time": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "Start of roll motor move time in GMT epoch format",
+            "_FillValue": nc_nan,
+        },
+        (nc_gc_event_info,),
+    ],
+    "gc_vbd_end_time": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "End of VBD motor move time in GMT epoch format",
+            "_FillValue": nc_nan,
+        },
+        (nc_gc_event_info,),
+    ],
+    "gc_pitch_end_time": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "End of pitch motor move time in GMT epoch format",
+            "_FillValue": nc_nan,
+        },
+        (nc_gc_event_info,),
+    ],
+    "gc_roll_end_time": [
+        False,
+        "d",
+        {
+            "units": "seconds",
+            "description": "End of roll motor move time in GMT epoch format",
+            "_FillValue": nc_nan,
+        },
+        (nc_gc_event_info,),
+    ],
     "gc_vbd_i": [False, "d", {"units": "A"}, (nc_gc_event_info,)],
     "gc_gcphase": [
         False,
@@ -2174,6 +2261,16 @@ nc_var_metadata = {
         {
             "flag_values": [1, 2, 3, 4, 5, 6],
             "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
+        },
+        (nc_sg_data_info,),
+    ],
+    "eng_GC_state": [
+        False,
+        "i",
+        {
+            # "flag_values": [1, 2, 3, 4, 5, 6],
+            # "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
+            "description": "Motor status byte",
         },
         (nc_sg_data_info,),
     ],

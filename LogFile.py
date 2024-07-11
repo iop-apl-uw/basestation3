@@ -40,6 +40,8 @@ import sys
 import time
 import traceback
 
+import numpy as np
+
 import BaseNetCDF
 import BaseOpts
 import BaseOptsType
@@ -205,7 +207,7 @@ def parse_log_file(in_filename, issue_warn=False):
 
     try:
         raw_log_file = open(in_filename, "rb")
-    except IOError:
+    except OSError:
         log_error("Could not open " + in_filename + " for reading")
         return None
 
@@ -363,7 +365,7 @@ def parse_log_file(in_filename, issue_warn=False):
                 nc_var_name = BaseNetCDF.nc_sg_log_prefix + parm_name.lstrip("$")
                 try:
                     md = BaseNetCDF.nc_var_metadata[nc_var_name]
-                except:
+                except Exception:
                     log_error("Missing metadata for log entry %s" % parm_name)
                     md = BaseNetCDF.form_nc_metadata(
                         nc_var_name, nc_data_type="c"
@@ -474,7 +476,7 @@ def parse_log_file(in_filename, issue_warn=False):
     )  # make st_secs and end_secs 'i'
     try:
         gc_header_parts = log_file.data["$GCHEAD"].split(",")
-    except:
+    except Exception:
         # pre-version 65 columns or no gc section (i.e. dive 0)
         log_warning("Missing $GCHEAD in %s - assuming old version" % in_filename)
         #
@@ -485,13 +487,23 @@ def parse_log_file(in_filename, issue_warn=False):
             ","
         )
 
+    # RevE - svn version 7102
+    # Motor start times relative to st_secs
+    if "vbd_st" in gc_header_parts:
+        gc_ext_header = gc_header_parts
+        for motor in ("vbd", "pitch", "roll"):
+            for start_end in ("start", "end"):
+                gc_data[f"{motor}_{start_end}_time"] = []
+
     # We could have a bolluxed logfile with truncated lines because of transmission issues (labrador/apr05/sg016 dive 416)
     # or we could have an older file where we guessed about the header but the number of entries is actually different
     # In the former case we want to drop the bad line(s); in the later case we want to preserve the data we think we trust
     # as long as the number of entries are consistent
     indices = list(range(len(gc_header_parts)))  # assume the best
     indices_tmp = None
+    line_count = 0
     for gc_line in log_file.gc:  # these are the string data lines, in an array
+        line_count += 1
         gc_line_parts = gc_line.split(",")
         if indices_tmp is None:
             if len(gc_line_parts) < len(gc_header_parts):
@@ -525,7 +537,7 @@ def parse_log_file(in_filename, issue_warn=False):
 
             try:
                 md = BaseNetCDF.nc_var_metadata[BaseNetCDF.nc_gc_prefix + column_name]
-            except:
+            except Exception:
                 log_error("Missing metadata for GC column (%s)" % column_name)
                 value = None
             else:
@@ -566,6 +578,29 @@ def parse_log_file(in_filename, issue_warn=False):
                 )
             values.append(value)
 
+        # If there are start times for the motor moves, then add the epoch times to the list
+        if "vbd_st" in gc_header_parts:
+            for motor in ("vbd", "pitch", "roll"):
+                if not np.isclose(gc_data[f"{motor}_st"][-1], 0):
+                    if np.isclose(gc_data[f"{motor}_secs"][-1], 0):
+                        log_warning(
+                            f"GC table line:{line_count} {motor}_st:{gc_data[f'{motor}_st'][-1]} but {motor}_secs:{gc_data[f'{motor}_secs'][-1]}"
+                        )
+                    gc_data[f"{motor}_start_time"].append(
+                        gc_data["st_secs"][-1] + gc_data[f"{motor}_st"][-1]
+                    )
+                    gc_data[f"{motor}_end_time"].append(
+                        gc_data[f"{motor}_start_time"][-1]
+                        + gc_data[f"{motor}_secs"][-1]
+                    )
+                else:
+                    if not np.isclose(gc_data[f"{motor}_secs"][-1], 0):
+                        log_warning(
+                            f"GC table line:{line_count} {motor}_st:{gc_data[f'{motor}_st'][-1]} but {motor}_secs:{gc_data[f'{motor}_secs'][-1]}"
+                        )
+                    gc_data[f"{motor}_start_time"].append(np.nan)
+                    gc_data[f"{motor}_end_time"].append(np.nan)
+
     log_file.gc_data = gc_data
 
     state_data = {"secs": [], "state": [], "eop_code": []}
@@ -581,7 +616,7 @@ def parse_log_file(in_filename, issue_warn=False):
 
             else:
                 e = ""
-        except:
+        except Exception:
             pass
 
         s_code = map_state_code(s)
@@ -667,7 +702,7 @@ if __name__ == "__main__":
         retval = main()
     except SystemExit:
         pass
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, tb = sys.exc_info()
             traceback.print_exc()

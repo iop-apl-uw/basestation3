@@ -2,21 +2,21 @@
 # -*- python-fmt -*-
 
 ## Copyright (c) 2023, 2024  University of Washington.
-## 
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,8 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Contains all routines for extracting data from a glider's data file
-"""
+"""Contains all routines for extracting data from a glider's data file"""
 
 import os
 import sys
@@ -155,7 +154,7 @@ class DataFile:
         rec = self.remove_col("rec")
         GC_phase = self.remove_col("GC_phase")
         optional_cols = {}
-        for c in ("volt1", "volt2", "curr1", "curr2"):
+        for c in ("volt1", "volt2", "curr1", "curr2", "GC_state"):
             optional_cols[c] = self.remove_col(c)
 
         num_rows = len(elaps_t)
@@ -246,7 +245,7 @@ class DataFile:
         self.eng_dict["pitchAng"] = pitchAng
         self.eng_dict["rollAng"] = rollAng
         self.eng_dict["rec"] = rec
-        for c in ("volt1", "volt2", "curr1", "curr2"):
+        for c in ("volt1", "volt2", "curr1", "curr2", "GC_state"):
             if (c in optional_cols) and (optional_cols[c] is not None):
                 self.eng_dict[c] = optional_cols[c]
                 self.eng_cols.append(c)
@@ -520,7 +519,7 @@ def process_data_file(in_filename, file_type, calib_consts):
     while True:
         raw_line = raw_data_file.readline().rstrip()
         line_count = line_count + 1
-        if raw_line == "" or raw_line[-1] == "\x1A":
+        if raw_line == "" or raw_line[-1] == "\x1a":
             break
         raw_strs = raw_line.split()
         row = []
