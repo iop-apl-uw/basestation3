@@ -490,7 +490,6 @@ def parse_log_file(in_filename, issue_warn=False):
     # RevE - svn version 7102
     # Motor start times relative to st_secs
     if "vbd_st" in gc_header_parts:
-        gc_ext_header = gc_header_parts
         for motor in ("vbd", "pitch", "roll"):
             for start_end in ("start", "end"):
                 gc_data[f"{motor}_{start_end}_time"] = []
@@ -501,9 +500,7 @@ def parse_log_file(in_filename, issue_warn=False):
     # as long as the number of entries are consistent
     indices = list(range(len(gc_header_parts)))  # assume the best
     indices_tmp = None
-    line_count = 0
     for gc_line in log_file.gc:  # these are the string data lines, in an array
-        line_count += 1
         gc_line_parts = gc_line.split(",")
         if indices_tmp is None:
             if len(gc_line_parts) < len(gc_header_parts):
@@ -581,11 +578,7 @@ def parse_log_file(in_filename, issue_warn=False):
         # If there are start times for the motor moves, then add the epoch times to the list
         if "vbd_st" in gc_header_parts:
             for motor in ("vbd", "pitch", "roll"):
-                if not np.isclose(gc_data[f"{motor}_st"][-1], 0):
-                    if np.isclose(gc_data[f"{motor}_secs"][-1], 0):
-                        log_warning(
-                            f"GC table line:{line_count} {motor}_st:{gc_data[f'{motor}_st'][-1]} but {motor}_secs:{gc_data[f'{motor}_secs'][-1]}"
-                        )
+                if not np.isclose(gc_data[f"{motor}_secs"][-1], 0):
                     gc_data[f"{motor}_start_time"].append(
                         gc_data["st_secs"][-1] + gc_data[f"{motor}_st"][-1]
                     )
@@ -594,10 +587,6 @@ def parse_log_file(in_filename, issue_warn=False):
                         + gc_data[f"{motor}_secs"][-1]
                     )
                 else:
-                    if not np.isclose(gc_data[f"{motor}_secs"][-1], 0):
-                        log_warning(
-                            f"GC table line:{line_count} {motor}_st:{gc_data[f'{motor}_st'][-1]} but {motor}_secs:{gc_data[f'{motor}_secs'][-1]}"
-                        )
                     gc_data[f"{motor}_start_time"].append(np.nan)
                     gc_data[f"{motor}_end_time"].append(np.nan)
 
