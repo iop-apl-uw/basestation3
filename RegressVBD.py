@@ -170,21 +170,32 @@ def getVars(fname, basis_C_VBD, basis_VBD_CNV):
     )
     density = f(time)
 
-    w = Utils.ctr_1st_diff(-depth * 100, time)
-
     inds = np.nonzero(
         np.logical_and.reduce(
             (
+                np.isfinite(depth),
                 np.isfinite(density),
-                np.isfinite(w),
                 np.isfinite(pitch),
             )
         )
     )[0]
 
+    w = Utils.ctr_1st_diff(-depth[inds] * 100, time[inds])
+
+#    inds = np.nonzero(
+#        np.logical_and.reduce(
+#            (
+#                np.isfinite(density),
+#                np.isfinite(w),
+#                np.isfinite(pitch),
+#            )
+#        )
+#    )[0]
+
     nc.close()
 
-    return w[inds], depth[inds], vbd[inds], density[inds], pitch[inds]
+    return w, depth[inds], vbd[inds], density[inds], pitch[inds]
+#    return w[inds], depth[inds], vbd[inds], density[inds], pitch[inds]
 
 def getModelW(bu, Pit, HD_A, HD_B, HD_C, rho0):
     W = bu.copy()
@@ -266,7 +277,7 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
                 )
             )
         )[0]
-   
+  
         inds = inds[::decimate]
  
         W    = np.concatenate((W, w[inds]))
