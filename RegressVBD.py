@@ -28,9 +28,11 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" regress for VBD bias and flight coefficiencts over multiple dives
-    using just nc files (does not use log, eng, or sg_calib_constants)
+"""regress for VBD bias and flight coefficiencts over multiple dives
+using just nc files (does not use log, eng, or sg_calib_constants)
 """
+
+# fmt: off
 
 import numpy as np
 import CommLog
@@ -299,10 +301,11 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
                                            maxiter=50, xtol=1e-3, full_output=True, disp=True)
         except:
             warns = 1
+            bias = 0
         else:
             warns = 0
-    
-        bias = x
+            bias = x
+            
         hd_a = abc[0]
         hd_b = abc[1]
         hd_c = abc[2]
@@ -712,4 +715,3 @@ if __name__ == "__main__":
     retval = main()
 
     sys.exit(retval)
-
