@@ -681,7 +681,7 @@ def attachHandlers(app: sanic.Sanic):
         x = next(filter(lambda d: d['project'] == mission, request.app.ctx.missionTable), None)
         if x:
             glider = x['glider']
-            url = '../' + url.replace('GGG', f'{glider:03d}')    
+            url = getRequestURL(request).replace('GGG', f'{glider:03d}').replace(f'/project/{mission}', '')
             return sanic.response.redirect(url)
 
         return sanic.response.text('none')
