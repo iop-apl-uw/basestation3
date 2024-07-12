@@ -227,13 +227,13 @@ def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
 
 def checkEndpoint(request, e):
 
-    if e['users'] is not None or e['groups'] is not None:
+    if 'users' in e or 'groups' in e:
         (tU, tG) = getTokenUser(request)
         allowAccess = False
 
-        if tU and e['users'] and tU in e['users']:
+        if tU and 'users' in e and e['users'] and tU in e['users']:
             allowAccess = True
-        elif tG and e['groups'] and len(set(tG) & set(e['groups'])) > 0:
+        elif tG and 'groups' in e and e['groups'] and len(set(tG) & set(e['groups'])) > 0:
             allowAccess = True
 
         if not allowAccess:
@@ -265,11 +265,14 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                         )
 
                     else:
+                        if 'allow' in e and e['allow'] == True:
+                            response = await f(request, *args, **kwargs)
+                            return response
                         if 'modes' in e and e['modes'] is not None:
                             modes = e['modes']
                         if 'requirepilot' in e and e['requirepilot'] is not None:
                             requirePilot = e['requirepilot']
-
+                        
             runningMode = modeNames[request.app.config.RUNMODE]
 
             if check & AUTH_MISSION:
@@ -282,8 +285,12 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                 glider = kwargs['glider'] if 'glider' in kwargs else None
                 mission = request.args['mission'][0] if 'mission' in request.args else None
 
-                # m = next(filter(lambda d: d['glider'] == glider and d['mission'] == mission, request.app.ctx.missionTable), None)
                 m = matchMission(glider, request, mission)
+                if m is not None and 'allow' in m and m['allow'] == True:
+                    # allow in a mission overrides everything else
+                    response = await f(request, *args, **kwargs)
+                    return response
+
                 if m is not None and 'endpoints' in m and m['endpoints'] is not None and url in m['endpoints']:
                     e = m['endpoints'][url]
                     status = checkEndpoint(request, e)
@@ -295,6 +302,9 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                             "login.html", context={"body": "authorization failed", "url": request.url}, status=400
                         )
                     else:
+                        if 'allow' in e and e['allow'] == True:
+                            response = await f(request, *args, **kwargs)
+                            return response
                         if 'modes' in e and e['modes'] is not None:
                             modes = e['modes']
                         if 'requirepilot' in e and e['requirepilot'] is not None:
@@ -378,7 +388,6 @@ def gliderPath(glider, request, mission=None):
         return m['path']
     else:
         return f'sg{glider:03d}'
-
 
 def baseOpts(instrument_id, mission_dir, module_name):
     cnf_file = os.path.join(mission_dir, f'sg{instrument_id:03d}.conf')
@@ -666,7 +675,17 @@ def attachHandlers(app: sanic.Sanic):
         # f.host = fwdHost
         # f.port = None
         # return f.tostr()
-       
+
+    @app.route('/project/<mission:str>/<url:path>')
+    async def projectHandler(request, mission:str, url):
+        x = next(filter(lambda d: d['project'] == mission, request.app.ctx.missionTable), None)
+        if x:
+            glider = x['glider']
+            url = '../' + url.replace('GGG', f'{glider:03d}')    
+            return sanic.response.redirect(url)
+
+        return sanic.response.text('none')
+         
     @app.route('/csv/<glider:int>')
     # description: get CSV file from glider directory (supports assets type: csv on maps)
     # parameters: mission, file
