@@ -85,7 +85,10 @@ async def displayTables(fname):
 
     GCrows = len(GC)
 
-    GC_out_names = ["st_secs", "depth", "ob_vertv", "data_pts", "end_secs", "gcphase", "pitch_ctl", "pitch_secs", "pitch_i", "pitch_ad", "pitch_rate", "roll_secs", "roll_i", "roll_ad", "roll_rate", "vbd_ctl", "vbd_secs", "vbd_i", "vbd_ad", "vbd_rate", "vbd_eff", "pitch_errors", "roll_errors", "vbd_errors", "pitch_volts", "roll_volts", "vbd_volts"]
+    if 'vbd_st' in L['GCHEAD']:
+        GC_out_names = ["st_secs", "depth", "ob_vertv", "data_pts", "end_secs", "gcphase", "pitch_ctl", "pitch_st", "pitch_secs", "pitch_i", "pitch_ad", "pitch_rate", "roll_st", "roll_secs", "roll_i", "roll_ad", "roll_rate", "vbd_ctl", "vbd_st", "vbd_secs", "vbd_i", "vbd_ad", "vbd_rate", "vbd_eff", "pitch_errors", "roll_errors", "vbd_errors", "pitch_volts", "roll_volts", "vbd_volts"]
+    else:
+        GC_out_names = ["st_secs", "depth", "ob_vertv", "data_pts", "end_secs", "gcphase", "pitch_ctl", "pitch_secs", "pitch_i", "pitch_ad", "pitch_rate", "roll_secs", "roll_i", "roll_ad", "roll_rate", "vbd_ctl", "vbd_secs", "vbd_i", "vbd_ad", "vbd_rate", "vbd_eff", "pitch_errors", "roll_errors", "vbd_errors", "pitch_volts", "roll_volts", "vbd_volts"]
 
     phase = {0:"no move", 1:"pitch", 2:"VBD", 4:"roll", 8:"turning", 256:"roll -", 512:"roll +"}
 
@@ -355,7 +358,53 @@ async def displayTables(fname):
     print("</tr>")
     print("</tbody></table>")
 
-    print("""
+    if 'vbd_st' in L['GCHEAD']:
+        print("""
+<table rules=groups style="text-align:center; font-family:verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
+<colgroup span=6><colgroup span=6><colgroup span=5><colgroup span=7><colgroup span=3><colgroup span=3>
+<thead>
+<tr bgcolor="#aaaaaa">
+<td rowspan=2>t(s)</td>
+<td rowspan=2>depth(m)</td>
+<td rowspan=2>w(cm/s)</td>
+<td rowspan=2>num pts</td>
+<td rowspan=2>t(s)</td>
+<td rowspan=2>GC phase</td>
+<td colspan=6>pitch</td>
+<td colspan=5>roll</td>
+<td colspan=7>VBD</td>
+<td colspan=3>errors</td>
+<td colspan=3>volts</td>
+</tr>
+<tr bgcolor="#aaaaaa">
+<td>ctl(cm)</td>
+<td>t(s)</td>
+<td>dt(s)</td>
+<td>A</td>
+<td>pos(AD)</td>
+<td>rate</td>
+<td>t(s)</td>
+<td>dt(s)</td>
+<td>A</td>
+<td>pos(AD)</td>
+<td>rate</td>
+<td>ctl(cc)</td>
+<td>t(s)</td>
+<td>dt(s)</td>
+<td>A</td>
+<td>pos(AD)</td>
+<td>rate</td>
+<td>eff</td>
+<td>pit</td>
+<td>rol</td>
+<td>VBD</td>
+<td>pit</td><td>roll</td><td>VBD</td>
+</tr>
+</thead>
+<tbody>
+""")
+    else:
+        print("""
 <table rules=groups style="text-align:center; font-family:verdana, arial, tahoma, 'sans serif'; font-size: 12px;">
 <colgroup span=6><colgroup span=5><colgroup span=4><colgroup span=6><colgroup span=3><colgroup span=3>
 <thead>
@@ -480,8 +529,12 @@ async def displayTables(fname):
             else:
                 print("<td align=left colspan=5></td>")
 
-            print("<td colspan=5><td colspan=4><td colspan=6><td colspan=3>")
-            print("<td colspan=3>")
+            if 'vbd_st' in L['GCHEAD']:
+                print("<td colspan=6><td colspan=5><td colspan=7>")
+            else:
+                print("<td colspan=5><td colspan=4><td colspan=6>")
+
+            print("<td colspan=3><td colspan=3>")
 
         else:
 
@@ -529,7 +582,7 @@ async def displayTables(fname):
                         k_col = L['GCHEAD'].index(GC_out_names[j])
                         if (k_col < len(g)):
                             y = g[k_col]
-                            if (y == 0):
+                            if (y == 0) and not GC_out_names[j].find("_st") > -1:
                                 y = "-"
                             elif GC_out_names[j].find("_volts") > -1 and y > 28:
                                 y = "-"
@@ -543,84 +596,39 @@ async def displayTables(fname):
 
         print("</tr>")
 
+
+    if version >= 67:
+        SM_GC_names = ["depth", "vbd_secs", "pitch_secs", "roll_secs", "vbd_i", "pitch_i", "roll_i", "vbd_ad", "vbd_pot1_ad", "vbd_pot2_ad", "pitch_ad", "roll_ad", "vbd_errors", "pitch_errors", "roll_errors", "vbd_volts", "pitch_volts", "roll_volts"]
+    else:
+        SM_GC_names = ["depth", "pitch_secs", "roll_secs", "vbd_secs", "pitch_i", "roll_i", "vbd_i", "pitch_ad", "roll_ad", "vbd_ad", "pitch_retries", "pitch_errors", "roll_retries", "roll_errors", "vbd_retries", "vbd_errors", "pitch_volts", "roll_volts", "vbd_volts"]
+         
     if 'SM_GC' in L:
         print("<tr><td>SM</td>")
-        print("<td>%s</td>" % L['SM_GC'][0])
-        print("<td>-</td>") # w
-        print("<td>-</td>") # num pts
-        print("<td>-</td>") # t
-        print("<td>-</td>") # phase
-
-        if version >= 67: 
-            k_vbd = 1
-            k_pit = 2
-            k_rol = 3
-            vbd_ad_inc = 2 
-            retries_inc = 0
-            vbd_V = L['SM_GC'][15]
-        else:
-            k_pit = 1
-            k_rol = 2 
-            k_vbd = 3
-            vbd_ad_inc = 0
-            retries_inc = 1
-            vbd_V = L['SM_GC'][21]
-
-        print("<td>-</td>") # pitch ctl
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_pit] == 0 else L['SM_GC'][k_pit])) # pitch t
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_pit + 3] == 0 else L['SM_GC'][k_pit +3])) # pitch A
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_pit + 6 + vbd_ad_inc] == 0 else L['SM_GC'][k_pit+ 6 +vbd_ad_inc])) # pitch pos
-        # pitch rate
-        if (L['SM_GC'][k_pit] > 0):
-            x = (L['SM_GC'][k_pit + 6 + vbd_ad_inc] - GC[last_real_GC - 1][23])/L['SM_GC'][k_pit]
-            print("<td>%.1f</td>" % x)
-        else:
-            print("<td>-</td>")
-
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_rol] == 0 else L['SM_GC'][k_rol])) # roll t
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_rol + 3] == 0 else L['SM_GC'][k_rol + 3])) # roll A
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_rol + 6 + vbd_ad_inc] == 0 else L['SM_GC'][k_rol + 6 + vbd_ad_inc])) # roll AD
-
-        # roll rate
-        if (L['SM_GC'][k_rol] > 0):
-            x = (L['SM_GC'][k_rol + 6 + vbd_ad_inc] - GC[last_real_GC - 1][24])/L['SM_GC'][k_rol]
-            print("<td>%.1f</td>" % x)
-        else:
-            print("<td>-</td>")
-
-        print("<td>-</td>") # VBD ctl
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_vbd] == 0 else L['SM_GC'][k_vbd])) # VBD t
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_vbd + 3] == 0 else L['SM_GC'][k_vbd + 3])) # VBD A
-        print("<td>%s</td>" % ("-" if L['SM_GC'][k_vbd + 6 + vbd_ad_inc] == 0 else L['SM_GC'][k_vbd + 6 + vbd_ad_inc])) # VBD pos
-
-        # VBD rate and effic
-        if (L['SM_GC'][k_vbd] > 0):
-            rate = (L['SM_GC'][k_vbd + 6 + vbd_ad_inc] - GC[last_real_GC - 1][20])/L['SM_GC'][k_vbd]
-            print("<td>%.1f</td>" % rate)
-            rate = -rate/4.0767
-            x = 0.01*L['SM_GC'][0]*rate/L['SM_GC'][k_vbd + 3]/vbd_V
-            print("<td>%.3f</td>" % x)
-        else:
-            print("<td>-</td>")
-            print("<td>-</td>")
-
-        if version >= 67:
-            print("<td>%s</td>" % ("-" if L['SM_GC'][13] == 0 else L['SM_GC'][13])) # pitch errors
-            print("<td>%s</td>" % ("-" if L['SM_GC'][14] == 0 else L['SM_GC'][14])) # roll errors
-            print("<td>%s</td>" % ("-" if L['SM_GC'][12] == 0 else L['SM_GC'][12])) # VBD errors
-
-            print("<td>%s</td>" % ("-" if L['SM_GC'][16] == 0 else L['SM_GC'][16])) # pitch V
-            print("<td>%s</td>" % ("-" if L['SM_GC'][17] == 0 else L['SM_GC'][17])) # roll V
-            print("<td>%s</td>" % ("-" if L['SM_GC'][15] == 0 else L['SM_GC'][15])) # VBD V
-        else:
-            print("<td>%s</td>" % ("-" if L['SM_GC'][14] == 0 else L['SM_GC'][14])) # pitch errors
-            print("<td>%s</td>" % ("-" if L['SM_GC'][16] == 0 else L['SM_GC'][16])) # roll errors
-            print("<td>%s</td>" % ("-" if L['SM_GC'][18] == 0 else L['SM_GC'][18])) # VBD errors
-
-            print("<td>%s</td>" % ("-" if L['SM_GC'][19] == 0 else L['SM_GC'][16])) # pitch V
-            print("<td>%s</td>" % ("-" if L['SM_GC'][20] == 0 else L['SM_GC'][20])) # roll V
-            print("<td>%s</td>" % ("-" if L['SM_GC'][21] == 0 else L['SM_GC'][21])) # VBD V
-
+        vbd_rate = 0
+        for j in range(1, len(GC_out_names)):
+            if GC_out_names[j] in SM_GC_names:
+                k = SM_GC_names.index(GC_out_names[j])
+                if L['SM_GC'][k] == 0.0:
+                    print("<td>-</td>")
+                else:
+                    print("<td>%s</td>" % L['SM_GC'][k])
+            elif '_rate' in GC_out_names[j]:
+                which = GC_out_names[j].split('_')[0]
+                k_gc = L['GCHEAD'].index(which + '_ad')
+                k_sm = SM_GC_names.index(which + '_ad')
+                k_t = SM_GC_names.index(which + '_secs')
+                x = (L['SM_GC'][k_sm] - GC[last_real_GC - 1][k_gc])/L['SM_GC'][k_t]
+                print("<td>%.1f</td>" % x)
+                if which == 'vbd':
+                    vbd_rate = -x/4.0767
+            elif 'vbd_eff' in GC_out_names[j]:
+                k_i = SM_GC_names.index(which + '_i')
+                k_v = SM_GC_names.index(which + '_volts')
+                x = 0.01*L['SM_GC'][0]*vbd_rate/L['SM_GC'][k_i]/L['SM_GC'][k_v]    
+                print("<td>%.2f</td>" % x)
+            else:
+                print("<td>-</td>")
+         
         print("</tr>")
 
     print("</tbody></table>")
