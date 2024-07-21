@@ -1,4 +1,4 @@
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -617,14 +617,20 @@ async def displayTables(fname):
                 k_gc = L['GCHEAD'].index(which + '_ad')
                 k_sm = SM_GC_names.index(which + '_ad')
                 k_t = SM_GC_names.index(which + '_secs')
-                x = (L['SM_GC'][k_sm] - GC[last_real_GC - 1][k_gc])/L['SM_GC'][k_t]
+                try:
+                    x = (L['SM_GC'][k_sm] - GC[last_real_GC - 1][k_gc])/L['SM_GC'][k_t]
+                except ZeroDivisionError:
+                    x = 0.0
                 print("<td>%.1f</td>" % x)
                 if which == 'vbd':
                     vbd_rate = -x/4.0767
             elif 'vbd_eff' in GC_out_names[j]:
                 k_i = SM_GC_names.index(which + '_i')
                 k_v = SM_GC_names.index(which + '_volts')
-                x = 0.01*L['SM_GC'][0]*vbd_rate/L['SM_GC'][k_i]/L['SM_GC'][k_v]    
+                try:
+                    x = 0.01*L['SM_GC'][0]*vbd_rate/L['SM_GC'][k_i]/L['SM_GC'][k_v]
+                except ZeroDivisionError:
+                    x = 0.0
                 print("<td>%.2f</td>" % x)
             else:
                 print("<td>-</td>")
