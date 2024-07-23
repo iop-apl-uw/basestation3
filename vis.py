@@ -250,6 +250,8 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
             nonlocal check
             nonlocal requirePilot
 
+            ws = kwargs['ws'] if 'ws' in kwargs else None
+
             # url = request.server_path[1:].split('/')[0]
             url = request.path[1:].split('/')[0]
             if check & AUTH_ENDPOINT:
@@ -325,10 +327,16 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                 status = checkGliderMission(request, glider, mission, perm=defaultPerm)
                 if status <= PERM_REJECT or (requirePilot and status < PERM_PILOT):
                     sanic.log.logger.info(f"{url} authorization failed {status}, {requirePilot}")
+                    if ws is not None:
+                        sanic.log.logger.info("closing invalid stream")
+                        await ws.send("invalid")
+                        await ws.close()
+
                     if status == PERM_INVALID:
                         return sanic.response.text("not found")
                     else: 
                         return sanic.response.text("authorization failed")
+
 
             elif modes is not None and runningMode not in modes:
                 # do the public / pilot mode check for AUTH_ENDPOINT only mode

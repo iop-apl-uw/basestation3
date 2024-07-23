@@ -152,6 +152,8 @@
         console.log(new_uri);
         wsocket = new ReconnectingWebSocket(new_uri);
         wsocket.timeoutInterval = 10000;
+        wsocket.reconnectInterval = 10000;
+        wsocket.maxReconnectAttempts = 12;
         wsocket.debug = true;
 
         wsocket.onopen = function() {
@@ -160,6 +162,7 @@
 
         wsocket.onerror = function(error) {
             console.log('stream error detected');
+            console.log(error)
         };
 
         wsocket.onclose = function(e) {
@@ -187,6 +190,11 @@
 
             var line = e.data;
             console.log(line);
+            if (line == 'invalid') {
+                console.log('invalid');
+                wsocket.close();
+            }
+
             if (line.startsWith('START')) {
                 console.log('got START ping');
             }
