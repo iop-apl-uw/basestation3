@@ -20,7 +20,10 @@ function formatQuery(params) {
     if (params.length) {
         q = '?' 
         for (i = 0 ; i < params.length ; i++) {
-            q = q + params[i];
+            if (params[i].charAt(0) == '?' || params[i].charAt(0) == '&')
+                q = q + params[i].slice(1);
+            else
+                q = q + params[i];
             if (i < params.length - 1)
                 q = q + '&';
         }

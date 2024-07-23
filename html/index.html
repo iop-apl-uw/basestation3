@@ -581,9 +581,9 @@
             t.appendChild(header);
 
             txt = document.createElement('div');
-            if (data.hasOwnProperty('end')) {
+            if (data.hasOwnProperty('end') && data.end) {
                 let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
-                if (data.hasOwnProperty('depth'))
+                if (data.hasOwnProperty('depth') && data.depth)
                     txt.innerHTML = `dive ${data.dive} ended ${end_t} to ${data.depth.toFixed(0)}m`;
                 else
                     txt.innerHTML = `dive ${data.dive}, last call ${end_t}`;
@@ -916,7 +916,7 @@
             box.classList.add('imgbox');
             img = document.createElement('img');
             img.alt = 'plots not available';
-            if (data.dive) {
+            if (data.dive > 0) {
                 var q;
                 var ma = missionArg(glider);
                 if (ma == '') 
@@ -986,8 +986,15 @@
             
             txt = document.createElement('div');
             txt.classList.add('position');
-            let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
-            txt.innerHTML = `dive ${data.dive} ended ${end_t}<br>to ${data.depth.toFixed(0)}m in ${(data.length/60).toFixed(0)} minutes`;
+
+            if (data.hasOwnProperty('end') && data.end 
+                && data.hasOwnProperty('depth') && data.depth 
+                && data.hasOwnProperty('length') && data.length) {
+
+                let end_t = new Date(data.end*1000).toISOString().replace('T', ' ').slice(0,-5);
+                txt.innerHTML = `dive ${data.dive} ended ${end_t}<br>to ${data.depth.toFixed(0)}m in ${(data.length/60).toFixed(0)} minutes`;
+            }
+
             t.appendChild(txt);
 
             box = document.createElement('div');
@@ -1015,9 +1022,9 @@
             else
                 q = ma + '&fallback=1';
 
-            if (plotWhich == 'map')
+            if (plotWhich == 'map' && data.dive)
                 img.src = 'plot/webp/eng/' + glider.glider + '/' + data.dive + '/mission_map' + q;
-            else
+            else if (data.dive)
                 img.src = 'plot/webp/dv/' + glider.glider + '/' + data.dive + '/' + plotWhich + q;
             
             img.classList.add('indexImg');
@@ -1028,8 +1035,16 @@
                 tag.innerHTML = glider.status;
                 box.appendChild(tag);
             }
+            else if (!data.dive || data.dive == 0) {
+                tag = document.createElement('div');
+                tag.classList.add('imgtag');
+                tag.innerHTML = 'pending';
+                box.appendChild(tag);
+            }
 
-            box.appendChild(img);
+            if (data.dive)
+                box.appendChild(img);
+
             t.appendChild(box);
         })
         .catch(error => {
@@ -1228,9 +1243,13 @@
             new_uri += "?gliders=" + gliders.join(',');
 
         wsocket = new WebSocket(new_uri);
+        wsocket.timeoutInterval = 10000;
+        wsocket.reconnectInterval = 10000;
+        wsocket.maxReconnectAttempts = 12;
 
         wsocket.onerror = function(error) {
             console.log('stream error detected');
+            console.log(error);
             wsocket.close();
         };
 
@@ -1247,6 +1266,9 @@
         wsocket.onmessage = function(e) {
             var line = e.data;
             console.log(line);
+            if (line == 'START') 
+                return;
+
             try {
                 json = JSON.parse(line);
             } catch (error) {

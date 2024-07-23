@@ -369,7 +369,7 @@
         fetch(`control/${currGlider}/${file}${mission()}`)
         .then(res => res.text())
         .then(text => {
-            if (text == 'none')
+            if (text == 'none' || text == 'authorization failed')
                 return;
 
             try {
@@ -1867,6 +1867,9 @@
         fetch(`timevars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
+            if (text == 'authorization failed') 
+                return;
+
             try {
                 var allnames = JSON.parse(text);  
                 var names = [] 

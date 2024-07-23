@@ -238,9 +238,12 @@
         new_uri += "/pos/stream/" + glider + (mission ? "?" + mission : "");
         console.log(new_uri);
         wsocket = new WebSocket(new_uri);
+        wsocket.timeoutInterval = 30000;
+        wsocket.reconnectInterval = 30000;
 
         wsocket.onerror = function(error) {
             console.log('stream error detected');
+            console.log(error);
             wsocket.close();
         };
 

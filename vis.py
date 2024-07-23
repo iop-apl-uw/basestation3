@@ -326,7 +326,7 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                 # this will always fail and return not authorized if glider is None
                 status = checkGliderMission(request, glider, mission, perm=defaultPerm)
                 if status <= PERM_REJECT or (requirePilot and status < PERM_PILOT):
-                    sanic.log.logger.info(f"{url} authorization failed {status}, {requirePilot}")
+                    sanic.log.logger.debug(f"{url} authorization failed {status}, {requirePilot}")
                     if ws is not None:
                         sanic.log.logger.info("closing invalid stream")
                         await ws.send("invalid")
