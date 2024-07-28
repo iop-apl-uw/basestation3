@@ -1540,7 +1540,7 @@ def loadmodule(pathname):
     try:
         spec = importlib.util.spec_from_file_location(name, pathname)
         mod = importlib.util.module_from_spec(spec)
-        sys.modules["module.name"] = mod
+        sys.modules[name] = mod
         spec.loader.exec_module(mod)
         return mod
     except:
