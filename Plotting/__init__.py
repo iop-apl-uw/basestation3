@@ -33,8 +33,11 @@
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
+
+import importlib
 import inspect
-import logging
+import pathlib
+import sys
 import typing
 
 # Avoid circular input for type checking
@@ -134,6 +137,7 @@ def plotmissionsingle(func):
 
 # Per-dive plotting routines
 from . import DivePlot
+
 # from . import DiveCOG # deprecated in favor of the COG trace on the CTW plot
 from . import DiveCTW
 from . import DiveOptode
@@ -147,6 +151,7 @@ from . import DiveCompassCompare
 from . import DiveLegatoPressure
 from . import DiveLegatoData
 from . import DiveCTDCorrections
+
 # from . import DiveVertVelocity
 from . import DiveVertVelocityNew
 from . import DivePitchRoll
@@ -165,8 +170,14 @@ from . import MissionCommLog
 from . import MissionProfiles
 from . import MissionCallStats
 
-# The local subdirectory is for any user added plotting functions.
-try:
-    from . import local
-except ImportError:
-    pass
+# Load any other plotting routines located in the local directory
+# Note: symlinks to other modules will be followed
+l_dir = pathlib.Path(__file__).parent.joinpath("local")
+if l_dir.exists() and l_dir.is_dir():
+    for l_file in l_dir.iterdir():
+        if l_file.suffix == ".py":
+            if l_file.stem not in sys.modules:
+                spec = importlib.util.spec_from_file_location(l_file.stem, l_file)
+                mod = importlib.util.module_from_spec(spec)
+                sys.modules[l_file.stem] = mod
+                spec.loader.exec_module(mod)
