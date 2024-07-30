@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -89,6 +89,16 @@ def mission_volume(
         except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
             log_warning("Could not load implied volmax", "exc")
 
+    regressed_volmax_df = None
+    if "regressed_volmax" in columns:
+        try:
+            regressed_volmax_df = pd.read_sql_query(
+                "SELECT dive,regressed_volmax from dives",
+                conn,
+            ).sort_values("dive")
+        except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
+            log_warning("Could not load implied volmax", "exc")
+
     volmax_GSM_df = None
     if "implied_volmax_GSM" in columns:
         try:
@@ -135,10 +145,26 @@ def mission_volume(
                 "mode": "lines",
                 "line": {
                     "dash": "solid",
-                    "color": "DarkMagenta",
+                    "color": "DarkCyan",
                     "width": 1,
                 },
                 "hovertemplate": "Basestation Volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
+            }
+        )
+    if regressed_volmax_df is not None:
+        fig.add_trace(
+            {
+                "name": "Basestation Regressed Volmax",
+                "x": regressed_volmax_df["dive"],
+                "y": regressed_volmax_df["regressed_volmax"],
+                "yaxis": "y1",
+                "mode": "lines",
+                "line": {
+                    "dash": "solid",
+                    "color": "DarkMagenta",
+                    "width": 1,
+                },
+                "hovertemplate": "Basestation Regressed Volmax estimate<br>Dive %{x:.0f}<br>volmax %{y:.0f} cc<extra></extra>",
             }
         )
     if volmax_GSM_df is not None:
