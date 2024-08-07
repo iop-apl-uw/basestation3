@@ -720,7 +720,7 @@ The minimum allowable observed voltage on the 24 volt battery pack before the gl
  
 <div class="med"></div>
  <p><span class="bold"><a name="N_DIVES">$N_DIVES</a></span><br>
-The number of dives to complete before entering recovery. A value of zero
+The absolute number of dives (the maximum value of <span class="bold"><a href="#DIVE">$DIVE</a></span>) to complete before entering recovery. A value of zero
 (default) means dive until stopped by pilot command ($QUIT) or some
 other recovery condition occurs (battery exhaustion, error limit exceeded, etc.). [0] </p>
  
@@ -784,7 +784,7 @@ interpreted as cmdfiles.</p>
 will cause the glider to reset $SM_CC to max any time one dive passes with 
 no communications. If 10 dives pass with no communications, the glider 
 will try to stay at its current position, with extra loitering on the
-surface between station keeping dives. [1]</p>
+surface between station keeping dives. [131]</p>
  
 <div class="med"></div>
  <p><span class="bold"><a name="OPTIONS">$OPTIONS</a></span><br>A bitmask value to control various (likely developmental) behaviors.</p>
@@ -889,7 +889,7 @@ Interesting values might be in the range 2--10.[0]
   <p><span class="bold"><a name="PROTOCOL">$PROTOCOL</a></span><br>The file
   transfer protocol to use. (bits 0-2 data protocol, bits 3-5 control protocol:
   0 - ymodem, 1 - raw
-  upload) [0]</p>
+  upload) [9]</p>
   
   
   
@@ -1055,7 +1055,7 @@ appropriate depth bins otherwise in the science file.
  <p><span class="bold"><a name="T_TURN">$T_TURN</a></span><br>The maximum amount of time (seconds) allowed to complete a turn during the active G&C mode. If this timeout is reached before the desired heading is reached, the Seaglider rolls back to neutral and continues. [225]</p>
   
 <div class="med"></div>
- <p><span class="bold"><a name="T_TURN_SAMPINT">$T_TURN_SAMPINT</a></span><br>The sample interval during active and passive G&C. This should be short enough so that the glider cannot pass entirely through the desired heading deadband without sampling. This was implemented to correct a bug in the guidance routine that allowed for complete circles to occur when trying simple course corrections. A negative value indicates that the "extra" samples taken during a turn should be recorded.[5]</p>
+ <p><span class="bold"><a name="T_TURN_SAMPINT">$T_TURN_SAMPINT</a></span><br>The sample interval while turning. This should be short enough so that the glider cannot pass entirely through the desired heading deadband without sampling. A negative value indicates that the "extra" samples (if sampling faster than the current science specification) taken during a turn should be recorded.[-5]</p>
   
 <div class="med"></div>
  <p><span class="bold"><a name="T_WATCHDOG">$T_WATCHDOG</a></span><br>The value to which the watchdog timer is set (minutes). This is an information-only parameter; the watchdog timer itself is set with DIP-switches on its chip on the main board. [10]</p>
