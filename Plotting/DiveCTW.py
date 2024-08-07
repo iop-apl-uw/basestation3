@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2024  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -39,13 +39,14 @@ import numpy as np
 import plotly.graph_objects
 
 if typing.TYPE_CHECKING:
-    import BaseOpts
     import scipy
+
+    import BaseOpts
 
 import PlotUtils
 import PlotUtilsPlotly
 import Utils
-from BaseLog import log_error, log_debug
+from BaseLog import log_debug, log_error, log_warning
 from Plotting import plotdivesingle
 
 
@@ -79,7 +80,7 @@ def plot_CTW(
         lons = dive_nc_file.variables["longitude"][:]
         lat_gps = dive_nc_file.variables["log_gps_lat"][:]
         lon_gps = dive_nc_file.variables["log_gps_lon"][:]
- 
+
         mhead = [
             float(s)
             for s in dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
@@ -95,7 +96,7 @@ def plot_CTW(
             magvar = dive_nc_file.variables["magnetic_variation"].getValue()
         else:
             log_error("Could not find the magvar for plot_CTW", "exc")
-    except:
+    except Exception:
         log_error("Problems in plot_CTW", "exc")
         return ([], [])
 
@@ -105,7 +106,7 @@ def plot_CTW(
     y[0] = 0
     for i in range(len(x)):
         (_, _, x[i], y[i]) = Utils.rangeBearing(lats[0], lons[0], lats[i], lons[i])
- 
+
     desired_head = mhead[0]
     north_disp_cum = np.cumsum(north_disp)
     east_disp_cum = np.cumsum(east_disp)
@@ -119,6 +120,29 @@ def plot_CTW(
         f"Total displacement {disp} (m) desired heading {desired_head:f} (deg), magvar {magvar:f} (deg)"
     )
 
+    # Check for AD2CP output
+    north_disp_cum_ttw = None
+    east_disp_cum_ttw = None
+    north_disp_cum_ttw_ocn = None
+    east_disp_cum_ttw_ocn = None
+    if (
+        "ad2cp_inv_glider_uttw" in dive_nc_file.variables
+        and "ad2cp_inv_glider_vttw" in dive_nc_file.variables
+    ):
+        try:
+            uttw = dive_nc_file.variables["ad2cp_inv_glider_uttw"][:]
+            vttw = dive_nc_file.variables["ad2cp_inv_glider_vttw"][:]
+            uocn = dive_nc_file.variables["ad2cp_inv_glider_uocn"][:]
+            vocn = dive_nc_file.variables["ad2cp_inv_glider_vocn"][:]
+            ttw_time = np.diff(dive_nc_file.variables["ad2cp_inv_glider_time"][:])
+            north_disp_cum_ttw = np.cumsum(vttw[1:] * ttw_time)
+            east_disp_cum_ttw = np.cumsum(uttw[1:] * ttw_time)
+            north_disp_cum_ttw_ocn = np.cumsum((vttw[1:] + vocn[1:]) * ttw_time)
+            east_disp_cum_ttw_ocn = np.cumsum((uttw[1:] + uocn[1:]) * ttw_time)
+            ttw_time = dive_nc_file.variables["ad2cp_inv_glider_time"][:]
+            ttw_time = (ttw_time[1:] - ttw_time[1]) / 60.0
+        except Exception:
+            log_warning("Problems in plot_CTW ADCP intput", "exc")
     # _, gc_roll_time, gc_roll_pos, gc_pitch_time, gc_pitch_pos, gc_vbd_time, gc_vbd_pos = extract_gc_moves(dive_nc_file)
 
     fig = plotly.graph_objects.Figure()
@@ -159,6 +183,27 @@ def plot_CTW(
         }
     )
 
+    if north_disp_cum_ttw is not None and east_disp_cum_ttw is not None:
+        fig.add_trace(
+            {
+                "y": north_disp_cum_ttw,
+                "x": east_disp_cum_ttw,
+                "meta": ttw_time,
+                "name": "Course Through Water AD2CP Inverse",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "circle",
+                    # "color": "DarkGrey",
+                    "color": "Magenta",
+                    "size": 2,
+                    #'line':{'width':1, 'color':'LightSlateGrey'}
+                },
+                "hovertemplate": "CTW AD2CP<br>Northward %{y:.1f} m<br>Eastward %{x:.1f} m<br>%{meta:.2f} mins<extra></extra>",
+                # "visible": "legendonly",  # For now
+            }
+        )
+
     customdata = np.squeeze(
         np.dstack(
             (
@@ -190,6 +235,28 @@ def plot_CTW(
             "hovertemplate": hovertemplate,
         }
     )
+
+    if north_disp_cum_ttw_ocn is not None:
+        fig.add_trace(
+            {
+                "y": north_disp_cum_ttw_ocn,
+                "x": east_disp_cum_ttw_ocn,
+                "meta": ttw_time,
+                "name": "Course Over Ground AD2CP",
+                "type": "scatter",
+                "mode": "markers",
+                "customdata": customdata,
+                "marker": {
+                    "symbol": "circle",
+                    # "color": "Grey",
+                    "color": "Orange",
+                    "size": 2,
+                    #'line':{'width':1, 'color':'LightSlateGrey'}
+                },
+                "hovertemplate": "COG AD2CP<br>Northward %{y:.1f} m<br>Eastward %{x:.1f} m<br>%{meta:.2f} mins<extra></extra>",
+                # "visible": "legendonly",  # For now
+            }
+        )
 
     fig.add_trace(
         {
