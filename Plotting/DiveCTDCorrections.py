@@ -460,7 +460,7 @@ def plot_ctd_corrections(
                 "domain": [0.1, 0.9],
             },
             "yaxis": {
-                "title": "Conductivity (PSU)",
+                "title": "Salinity (PSU)",
                 "showgrid": True,
                 "autorange": "reversed",
             },
