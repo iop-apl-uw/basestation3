@@ -99,17 +99,19 @@
 #    latlon: ddmm 
 #    # send_funcs
 #    email: [ { status: off, filters: [critical], address: mymobilephone@mobile.att.net, format:html }, 
-#             { filters["gps, alerts"], address: someone@mydomain.edu@email.edu, format: html } ]
-#    ntfy: [ { filter[ gps ], topic: myntfytopic123 } ]
-#
+#             { filters: [gps, alerts], address: someone@mydomain.edu@email.edu, format: html } ]
+#    ntfy: [ { filters: [gps], topic: myntfytopic123 } ]
+
 # global:
-#    # send_funcs
-#    slack: [ { filter["gps"], hook: https://xyx.edu/hooks/gps_webhook },
-#             { filter["alerts"], hook: https://xyx.edu/hooks/alert_webhook } ]
-#    mattermost: [ { filter["gps"], hook: https://xyx.edu/hooks/gps_webhook },
-#                  { filter["alerts"], hook: https://xyx.edu/hooks/alert_webhook }
-#                  { filter["critical"], hook: https://xyx.edu/hooks/alert_webhook, mention:"@username" } ]
-#
+#   # send_funcs
+#   slack: [ { filters: [gps], hook: https://xyx.edu/hooks/gps_webhook },
+#            { filters: [alerts], hook: https://xyx.edu/hooks/alert_webhook } ]
+            
+#   mattermost: [ { filters: [gps], hook: https://xyx.edu/hooks/gps_webhook },
+#                 { filters: [alerts], hook: https://xyx.edu/hooks/alert_webhook },
+#                 { filters: [critical], hook: https://xyx.edu/hooks/alert_webhook, mention:"@username" } ]
+
 # gps: username
 # alerts: [username, global]
 # critical: [username, global]
+# ntfy: [ {  topic: pmel_ocg402, filters: ["warnings","gps"] } ]
