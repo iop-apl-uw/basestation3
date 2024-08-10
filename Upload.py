@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -106,6 +106,7 @@ def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pd
         fo.close()
         # Write out pdos contribution
         pdoscmds_file_xr.write("xr %s\n" % chunk_file_name)
+        pdoscmds_file_xr.write("stroke\n")
         pdoscmds_file_md5.write("strip1a %s %d\n" % (chunk_file_name, chunk_file_size))
         pdoscmds_file_md5.write("md5 %s %s\n" % (chunk_md5.hexdigest(), chunk_file_name))
         counter = counter + 1
@@ -140,12 +141,14 @@ def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pd
     
 if __name__ == "__main__":
     c_size = 4096
-    gliderzip_binary = None
+    gliderzip_binary = "gzip"
     pdoscmds_file_name = None # assume the default file names below
-    usage_string = "usage: %s [--chunksize NNNN] [--gliderzip path-to-gliderzip] [--pdoscmds combined-pdoscmds-file-name] <filename>"
+    usage_string = "usage: %s [--chunksize NNNN] [--pdoscmds combined-pdoscmds-file-name] <filename>"
+
+    print("This program only supports uploads to a RevE motherboard")
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "c:", ["chunksize=", "gliderzip=", "pdoscmds="])
+        opts, args = getopt.getopt(sys.argv[1:], "c:", ["chunksize=", "pdoscmds="])
     except getopt.GetoptError:
         print((usage_string % sys.argv[0]))
         sys.exit(1)
@@ -153,22 +156,22 @@ if __name__ == "__main__":
     for o, a in opts:
         if o in ("--chunksize"):
             c_size = int(a)
-        if o in ("--gliderzip"):
-            gliderzip_binary = a
+        #if o in ("--gliderzip"):
+        #    gliderzip_binary = a
         if o in ("--pdoscmds"):
             pdoscmds_file_name = a
 
-    if(not gliderzip_binary):
-        head, tail = os.path.split(sys.argv[0])
-        gliderzip_binary = os.path.join(sys.path[0], "gliderzip")
+    #if(not gliderzip_binary):
+    #    head, tail = os.path.split(sys.argv[0])
+    #    gliderzip_binary = os.path.join(sys.path[0], "gliderzip")
 
     if (len(args) != 1):
         print((usage_string % sys.argv[0]))
         sys.exit(1)
 
-    if(not os.path.exists(gliderzip_binary) and gliderzip_binary != "gzip"):
-        print(("Error - glider version of gzip [%s] does not exist - use --gliderzip to specify" % gliderzip_binary))
-        sys.exit(1)
+    #if(not os.path.exists(gliderzip_binary) and gliderzip_binary != "gzip"):
+    #    print(("Error - glider version of gzip [%s] does not exist - use --gliderzip to specify" % gliderzip_binary))
+    #    sys.exit(1)
 
     if pdoscmds_file_name is None:
         # Onboard the glider if you try to xr a file that already exists, it will skip the xr.
