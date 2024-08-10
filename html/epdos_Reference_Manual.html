@@ -1,0 +1,366 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 TRANSITIONAL//EN"></div>
+<html>
+
+	<head>
+		<title></title>
+		<meta http-equiv="content-type" content="text/html; charset=iso-8859-1"><style type="text/css">
+		body {	font-family: "Arial, Helvetica", sans-serif;	font-size: 14px;	font-style: normal;	font-weight: normal;	color: #000000;	background-color: #ffffff;	margin: 0px;
+}
+table {	clear: both;}table.pageContainer {	width: 85%;	height: 100%;	border-collapse: collapse;}table.pageContainer td.content {	border-left: solid 1px #000000;	border-right: solid 1px #000000;	background-color: #FFFFFF;	text-align: left;	padding: 12px;	vertical-align: top;}
+td { vertical-align: top; padding-bottom: 10px; }
+
+/* BEGIN P ELEMENTS */p {	font-family: "Arial, Helvetica", sans-serif;	font-size: 12px;	font-style: normal;	font-weight: normal;	color: #000000;	padding: 0px;	margin: 0px;	clear: both;}p.docTitle {	font-size: 24px;	font-weight: bold;	text-align: center;}p.docSubTitle {	font-size: 16px;	text-align: center;}p.chapterTitle {	font-size: 20px;	font-weight: bold;}p.chapterSubTitle {	font-size: 20px;	font-weight: bold;}p.chapterSection {	font-size: 18px;	font-weight: bold;}
+
+
+p.subSection {
+	font-size: 16px;
+	font-weight: bold;
+
+}
+p.boldCenterEm {	font-weight: bold;	text-align: center;}	p.fileQuote {	font-family: Courier New, Courier;	font-size: 14px;	font-weight: bold;}p.fileName {	font-weight: bold;}p.intlist {	font-size: 10px;	margin: 10px 48px;}p.indent {	font-size: 12px;	margin: 10px 24px;
+	padding: 4px;}
+
+div.cmd {
+	font-size: 14px;
+	font-weight: bold;
+	font-style: italic;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+div.cmdText {
+	font-size: 14px;
+    padding-left: 20px;
+}
+
+p.cmdSmall {
+	font-size: 12px;
+	font-weight: bold;
+	font-style: italic;
+}
+p.cmdtype {
+	font-size: 16px;
+	padding: 0px 0px 6px 0px;
+}
+/* END P ELEMENTS *//* BEGIN EMPHASIS ELEMENTS */span.bold {	font-weight: bold;}span.italic {	font-style: italic;}em.bold {	font-style: normal;	font-weight: bold;}em.italic {	font-style: italic;	font-weight: normal;}span.quote {	font-family: Courier New, Courier;	font-size: 14px;	font-weight: bold;}span.annotate {	font-family: Arial, Helvetica, sans-serif;	font-size: 12px;	font-weigth: normal;}
+
+span.cmd {
+	font-weight: bold;
+	font-style: italic;
+	font-size: 14px;
+}
+
+span.cmdSmall {
+	font-weight: bold;
+	font-style: italic;
+	font-size: 12px;
+}
+
+span.ul {
+	text-decoration:underline;
+}
+
+span.fileName {
+	font-weight: bold;
+}/* END EMPHASIS ELEMENTS *//* BEGIN LAYOUT HELPERS */
+
+div.tiny {
+	padding: 2px;
+	margin: 0ps;
+}
+
+div.small {	padding: 6px;	margin: 0px;}div.med {	padding: 12px;	margin: 0px;}div.large {	padding: 16px;	margin: 0px;}
+
+div.tab {
+	padding: 0px 8px;
+}
+/* END LAYOUT HELPERS */
+
+/* BEGIN TABLES*/
+
+table.pdos {
+	border: solid 1px;
+	border-collapse: collapse;
+	width: 80%;
+	margin: 20px;
+}
+
+table.pdos td {
+	font-family: "Arial, Helvetica", sans-serif;	font-size: 12px;	font-style: normal;	font-weight: normal;	border: none;	padding: 4px 4px 4px 8px;
+	border: solid 1px;
+	border-collapse: collapse;}
+
+table.pdos td.left {
+	font-weight: bold;
+	white-space: nowrap;
+	vertical-align: top;
+}
+
+table.pdos td.coltitle {
+	font-style: italic;
+	white-space: nowrap;
+}
+
+A {
+	text-decoration:none
+}</style>
+
+</head>
+<body link="#000000">
+
+<p class="docTitle">epdos Reference Manual</p>
+
+ <div class="small"></div>
+
+    <p>epdos commands are operating system like commands generally used to access functions not avaiable in the menu system or to access menu system functions remotely. When connected via serial console, epdos commands are available from the main menu using the ! prefix or from the pdos> prompt accessed via the menu system (type pdos at any menu prompt). When operating autonomously, epdos commands can be executed by uploading the <span class="fileName">pdoscmds.bat</span> file or using the $PDOSCMD cmdfile directive. </p>
+
+ <div class="small"></div>
+
+ <p>Filenames specified in commands are case-insensitive.  Certain commands below admit the use of '?' and '*' as wildcard characters in <span class="cmdsmall">glob</span> patterns to match filenames.  The '?' wildcard character matches any single character. Thus the pattern <span class="fileName">bathymap.0??</span> would match <span class="fileName">bathymap.004</span>.  The '*' wildcard character matches strings of characters in the file name. Thus the pattern <span class="fileName">SG0001*.A</span> would match <span class="fileName">SG0001LZ.A</span>, <span class="fileName">SG0001DZ.A</span>, etc.  </p>
+
+<div class="med"></div>
+<h3>System commands</h3>
+<p>
+
+<div class="cmdGroup">
+
+    <div class="cmd">menu menuPath args ...</div>
+    <div class="cmdText">
+        Execute a command from the menu system. menuPath is a / separated list of menu, sub-menu and menu options as described by the [name] strings displayed in the menu system. 
+        <br><br>
+        menu hw/vbd/ad pos=2000
+        <br><br>
+        for example will move the VBD to 2000 counts. This is equivalent to navigating to the hardware menu (hw), VBD sub-menu (vbd) and choosing the AD option to manually move the VBD control.
+    </div>
+
+    <div class="cmd">quit</div>
+    <div class="cmdText"> Exit the epdos system and return to the menu system.  </div> 
+
+    <div class="cmd"> pdos [/f]</div>
+    <div class="cmdText">
+        Exit the glider program. Reboots the glider firmware. The /f flag forces the exit (skips the confirmation question). 
+    </div>
+
+    <div class="cmd"> reboot</div>
+    <div class="cmdText">
+         Sets $RELAUNCH to indicate an epdos commanded reboot and restarts the glider program. 
+    </div>
+
+    <div class="cmd">clock [mm/dd/yyyy HH:MM:SS]</div>
+    <div class="cmdText">
+         Read or optionally set the main real-time clock. This does not set the supervisor RTC (use hw/super/setrtc from the menu) or any peripheral clocks.</div>
+    <div class="cmd">flash backup a-f</div>
+    <div class="cmdText">
+        Save currently flashed firmware to a file, backup_x.bin on microSD card, where x is one of a-f.
+    </div>
+
+    <div class="cmd">sysclk [speed] [hse]</div>
+    <div class="cmdText">
+         Display system clock information. If speed is specified, set CPU operating clock to speed. Specify hse to use the high-speed external oscillator as the system clock (this is almost always what you want). Use with care. An incorrect speed specification could leave the glider in an inoperative state.
+    </div> 
+    <div class="cmd">scuttle confirmation</div>
+    <div class="cmdText">
+        Scuttle the glider. This pitches the glider full forward and opens the valve.
+    </div>
+    <div class="cmd">wipe confirmation</div>
+    <div class="cmdText">
+        Wipe the microSD card by filling the entire card with a random sequence of bytes. 
+    </div>
+</div>
+
+<h3>Scripting commands</h3>
+
+<div class="cmdGroup">
+    <div class="cmd">stroke</div>
+    <div class="cmdText">Stroke the watchdog.	</div>
+
+    <div class="cmd">time command args ...</div>
+    <div class="cmdText">Run command with args. Report the execution time.</div>
+
+    <div class="cmd">repeat count command args …</div>
+    <div class="cmdText">Run command with args count times. command can be a batch file.</div>
+
+    <div class="cmd">abort_if 0|1</div>
+    <div class="cmdText">(only useful inside a batch file) Stop batch file execution if the previous command returned False (0) or True (1). Not all commands return useful values. </div>
+
+    <div class="cmd">delay milliseconds</div>
+    <div class="cmdText">Pause execution for milliseconds. Does not enter low power sleep.</div>
+
+    <div class="cmd">sleep seconds</div>
+    <div class="cmdText">Enter low power sleep for seconds. </div>
+
+    <div class="cmd">print arg1 [arg2...] [> | >> dest]</div>
+    <div class="cmdText">Print (echo) strings to screen (and capture file) or file dest. Arguments are expanded using a similar syntax as logdev and serdev serial strings. See argument expansion below.</div>
+</div>
+
+<h3>File transfer commands</h3>
+
+<div class="cmdGroup">
+    <div class="cmd">yr</div>
+    <div class="cmdText">Receive files via YMODEM.</div>
+
+    <div class="cmd">ys file</div>
+    <div class="cmdText">Send file via YMODEM. In online mode (during Iridium call, via pdoscmds.bat for example), file must be a single file. From the console to a computer connected via serial port, file can be glob (e.g., sg*dz.a) to send multiple files.</div>
+
+    <div class="cmd">raw_r file</div>
+    <div class="cmdText">Receive file via raw protocol.</div>
+
+    <div class="cmd">raw_s file</div>
+    <div class="cmdText">Send file via raw protocol. </div>
+</div>
+
+<h3>File utility and shell-like commands</h3>
+
+<div class="cmdGroup">
+    <div class="cmd">gzip originalFile compressedFile</div>
+    <div class="cmdText">Compress a file.</div>
+
+    <div class="cmd">gunzip compressedFile uncompressedFile</div>
+    <div class="cmdText">Uncompress a file.</div>
+
+    <div class="cmd">tar x|t[v][z] tarFile</div>
+    <div class="cmdText">Extract (x) or display contents (t) of tarFile. </div>
+
+    <div class="cmd">tar c[v][z] tarFile glob [pathglob]</div>
+    <div class="cmdText">Create a tar file. Specify z to create a gzip compressed tar file. v to operate verbosely. path is optional. If specified it will be pre-prended to the the file pattern glob. path can itself be a glob. For example, "tar cvz eng.tgz sg0*dz.a dv00*", will search all directories matching dv00* for files matching sg0*dz.a and tar them into a single file. </div>
+
+<div class="cmd">md5 file</div>
+<div class="cmdText">Compute and display MD5 hash of file. </div>
+
+    <div class="cmd">mkdir directory</div>
+    <div class="cmdText">Create directory on the microSD card.</div>
+
+    <div class="cmd">ren oldName newName</div>
+    <div class="cmdText">Rename a file.</div>
+
+    <div class="cmd">mv glob1 [glob2 ...] directory</div>
+    <div class="cmdText">mv is a directory aware version of rename, similar to the Unix mv command. Multiple glob glob patterns/filenames can be specified. The destination directory must exist. If there are just two arguments and the second argument is not an existing directory than mv behaves exactly like rename. </div>
+
+    <div class="cmd">cp file1 file2</div>
+    <div class="cmdText">Copy a file. </div>
+
+    <div class="cmd">del [/v] glob1 [glob2 ...]</div>
+    <div class="cmdText">Delete files from microSD card.</div>
+
+    <div class="cmd">rm glob [path]</div>
+    <div class="cmdText">Recursively delete files matching glob. Path is optional. If specified, it is the starting point (highest level) in the directory tree for the search for matching files. </div>
+
+<div class="cmd">dir [glob1] [glob2...]</div>
+<div class="cmdText">Show directory entries for files matching a list of glob patterns. If no patterns are given, shows the entire root directory.</div>
+
+<div class="cmd">ls [glob] [path]</div>
+<div class="cmdText">Recursively show directory entries for files matching glob, with optional starting path. If no arguments are given, lists the entire directory tree. </div>
+
+<div class="cmd">dirfile file [glob] [path]</div>
+<div class="cmdText">Same as ls but results are saved to file rather than output to screen.</div>
+
+<div class="cmd">usage [glob1] [glob2...]</div>
+<div class="cmdText">Count files and sum sizes for files matching a list of glob patterns. If not patterns are given, shows the entire root directory.</div>
+
+<div class="cmd">cat glob1 [glob2 ...] [> | >> dest]</div>
+<div class="cmdText">Cat (output) files to console or optionally redirected to a file. Use > to overwrite dest. Use >> to append to dest. </div>
+
+<div class="cmd">trunc file length</div>
+<div class="cmdText">Truncate file to length bytes.	</div>
+
+    <div class="cmd">grep /s string1 [/s string2 ...] [/b linesBefore] [/a linesAfter] [/v] [/c] [/or] glob1 [glob2...]</div>
+    <div class="cmdText">Search files matching a list of glob patterns line-by-line for matching string patterns. Files can be gzipped or plain text. Use /b and /a to control how many lines of context are printed before and after matched lines. /c specifies that only a count of matches will be returned. /v inverts the search - only non-matching lines are reported (or counted). By default multiple search conditions are and-ed together (i.e., a line in a file matches only if all strings are found on that line). Use /or to change this to logical or. </div>
+
+    <div class="cmd">xargs pathspec filespec [commands] [args]</div>
+    <div class="cmdText">Similar to a unix pipeline consisting of find piped to xargs, builds a list of files by separately globbing paths and filenames. Searches for directories matching pathspec, and then within each matched directory searches for files matching filespec. With no additional arguments a list of matched files is printed. If command is specified (possibly with its own arguments) the list of files is appended as additional arguments. Valid commands are any that take a list of files or glob patterns as the final arguments (dir, usage, del, grep, cat (without redirection)). "xargs dv001? sg*kz.a grep /s ,C," for example searches dives 10-19 capture files for the string ,C,.</div>
+</div>
+
+<h3>Capture system commands</h3>
+
+<div class="cmdGroup">
+    <div class="cmd">capvec [subsystem level dest]</div>
+    <div class="cmdText">With no arguments, prints the current capture vector information. With arguments, sets debugging verbosity/level (DEBUG, NORMAL, CRITICAL) and destination (BOTH, FILE, SCREEN, NONE) for subsystem. subsystem is the system name prefixed with H (hardware) or S (software) to control the output for, .e.g, HCOMPASS or SUSR. Use capvec with no arguments to see all available subsystem names.</div>
+
+<div class="cmd">capflush</div>
+<div class="cmdText">Flush memory buffered capture contents to disk.</div>
+
+    <div class="cmd">capclose file [capFile]</div>
+    <div class="cmdText">Close the current working capture contents (or capFile if specified) to file and start a new empty capture file. In online mode (during an Iridium call via pdoscmds.bat), the capture file has already been moved to a temporary name to store the output of the commands in pdoscmds.bat. To close and reset the "regular" capture file (in which all of the offline results have been stored), specify thisdive.kap as capFile. </div>
+</div>
+
+
+<h3>Glider control and data file commands</h3>
+
+<div class="cmdGroup">
+    <div class="cmd">target [targetName]</div>
+    <div class="cmdText">Re-read targets file. With no arguments, displays current targets. With an argument, sets targetName as the active target.</div>
+
+<div class="cmd">science</div>
+<div class="cmdText">Re-read and report science file contents.</div>
+
+    <div class="cmd">resend_dive [/l | /d | /c] diveNumber [fragment1] [fragment2...]</div>
+    <div class="cmdText">Queue log (/l), eng (/d), capture (/c), or all (no specifier) files from diveNumber for re-transmission. A list of specific fragments to resend is optional. If not provided, all fragments will be sent. </div>
+<div class="cmd">split file</div>
+
+<div class="cmdText">Split file into fragments according to $N_FILEKB.</div>
+
+<div class="cmd">resend_dive /f file [fragment1] [fragment2 ...]</div>
+<div class="cmdText">Queue logger file file for re-transmission. A list of specific fragments to resend is optional. If not provided, all fragments will be sent. </div>
+</div>
+
+<h3>Low-level filesystem and microSD commands</h3>
+
+<div class="cmdGroup">
+    <div class="cmd">sdinfo</div>
+    <div class="cmdText">Report microSD card information (serial number, manufacturer info, capacity, etc.)</div>
+
+    <div class="cmd">sdfree [/v]</div>
+    <div class="cmdText">Report microSD card free space. With the /v option, report verbose information about the filesystem (open files, etc.)</div>
+
+<div class="cmd">mem</div>
+<div class="cmdText">Display memory (RAM) status.</div>
+
+    <div class="cmd">format confirmation</div>
+    <div class="cmdText">Format the microSD card filesystem.</div>
+
+<div class="cmd">walkdsk [/v]</div>
+<div class="cmdText">Recursively walk the entire filesystem to look for potential errors. /v turns on verbose reporting.</div>
+
+    <div class="cmd">checkdsk [/v]</div>
+    <div class="cmdText">Recursively walk the entire filesystem and attempt to open and close every file. </div>
+
+    <div class="cmd">fsck [/v]</div>
+    <div class="cmdText">Recursively walk the entire filesystem, opening and close every file. Tries to delete any file that cannot be opened. </div>
+</div>
+
+<h3>Low-level nonvolatile memory commands</h3>
+
+<div class="cmdGroup">
+    <div class="cmd">initnv page</div>
+    <div class="cmdText">Query the status of of nonvolatile storage page page. Page 0 is parameter memory. Page 1 is utility memory. </div>
+
+    <div class="cmd">dumpnv page</div>
+    <div class="cmdText">Display low-level information about storage page page. 	</div>
+
+    <div class="cmd">formatnv page confirmation</div>
+    <div class="cmdText">Format (erases all existing data) page. confirmation must be YES. </div>
+
+    <div class="cmd">readnv var</div>
+    <div class="cmdText">Read value of utility variable var.</div>
+
+    <div class="cmd">writenv var value</div>
+    <div class="cmdText">Write value to utility variable var.</div>
+</div>
+
+<h3>Exec system commands</h3>
+
+<div class="cmdGroup">
+    <div class="cmd">eval [conditionName]</div>
+    <div class="cmdText">If no conditionName is specified, evaluate all currently set conditions. If the condition evaluates true, execute the corresponding set number or pdos command.</div>
+
+    <div class="cmd">clear conditionName</div>
+    <div class="cmdText">Delete conditionName from the list of active conditions.</div>
+
+    <div class="cmd">condition name=conditionName [set=setNumber | pdos=command] expresssion="conditionalExpression" init="expression" [init="expression" ...]</div>
+        <div class="cmdText">Define a new condition and add it to the list of active conditions. </div>
+
+    <div class="cmd">exec [setNumber]</div>
+    <div class="cmdText">If no setNumber is given, show all active conditions. If setNumber is given, execute it. </div>
+</div>
+
+</body>
+</html>
