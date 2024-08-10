@@ -921,12 +921,6 @@ def check_versions():
         msg = "Numpy %s or greater required" % Globals.required_numpy_version
         log_critical(msg)
         raise RuntimeError(msg)
-    if normalize_version(np.__version__) < normalize_version(
-        Globals.recommended_numpy_version
-    ):
-        log_warning(
-            "Numpy %s or greater recomemnded" % Globals.recommended_numpy_version
-        )
 
     # Check scipy version
     log_info("Scipy version %s" % scipy.__version__)
@@ -936,12 +930,6 @@ def check_versions():
         msg = "Scipy %s or greater required" % Globals.required_scipy_version
         log_critical(msg)
         raise RuntimeError(msg)
-    if normalize_version(scipy.__version__) < normalize_version(
-        Globals.recommended_scipy_version
-    ):
-        log_warning(
-            "SciPy %s or greater recomemnded" % Globals.recommended_scipy_version
-        )
 
     # Check seawater version
     if hasattr(seawater, "__version__"):

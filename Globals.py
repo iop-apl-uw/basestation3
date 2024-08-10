@@ -50,13 +50,8 @@ required_nc_fileversion = "2.7"  #  (August, 2011)
 # Version stamps for various packages
 required_python_version = (3, 10, 9)
 recommended_python_version = (3, 10, 10)
-required_numpy_version = "1.19.1"
-recommended_numpy_version = "1.19.1"
-
-required_scipy_version = "1.9.0"
-recommended_scipy_version = "1.9.0"
-# need at least 0.11.0 for proper sparse matrix support (scipy.sparse.diags)
-required_scipy_sparse_version = "1.4.1"
+required_numpy_version = "1.26.0"
+required_scipy_version = "1.14.0"
 
 
 # pylint: disable=E0239
