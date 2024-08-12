@@ -129,7 +129,7 @@ def getVars(fname, basis_C_VBD, basis_VBD_CNV):
     try:
         nc = Utils.open_netcdf_file(fname)
     except:
-        print(f"could not open {fname}")
+        log_debug(f"could not open {fname}")
         return None, None, None, None, None
 
     c_vbd = nc.variables["log_C_VBD"].getValue()
@@ -663,29 +663,29 @@ def main():
     if not base_opts.instrument_id:
         _, tail = os.path.split(base_opts.mission_dir[:-1])
         if tail[-5:-3] != "sg":
-            print("Can't figure out the instrument id - bailing out")
+            log_error("Can't figure out the instrument id - bailing out")
             return
         try:
             base_opts.instrument_id = int(tail[-3:])
         except:
-            print("Can't figure out the instrument id - bailing out")
+            log_error("Can't figure out the instrument id - bailing out")
             return
 
     depthlims = base_opts.depths.split(',')
     if len(depthlims) != 2:
-        print("invalid depth limits")
+        log_error("invalid depth limits")
         return
 
     try:
         d0 = float(depthlims[0])
         d1 = float(depthlims[1])    
     except:
-        print("invalid depth lims")
+        log_error("invalid depth lims")
         return
 
     dives = parseRangeList(base_opts.dives)
     if not dives or len(dives) < 1:
-        print("invalid dives list")
+        log_error("invalid dives list")
         return 
 
     if base_opts.out and 'html' in base_opts.out:
@@ -713,12 +713,12 @@ def main():
             fid.write(p)
             fid.close()
   
-    print(f"Initial RMS = {rms[0]:.3f}")
-    print(f"final RMS   = {rms[1]:.3f}")
-    print(f"VBD bias    = {bias:.2f} cc")
-    print(f"HD a,b,c    = [{hd[0]:.5f},{hd[1]:.5f},{hd[2]:.3e}]")
-    print(f"Implied volmax = {log['implied_volmax']:.1f} cc")
-    print(f"Implied C_VBD  = {log['implied_C_VBD']:.1f}")
+    log_info(f"Initial RMS = {rms[0]:.3f}")
+    log_info(f"final RMS   = {rms[1]:.3f}")
+    log_info(f"VBD bias    = {bias:.2f} cc")
+    log_info(f"HD a,b,c    = [{hd[0]:.5f},{hd[1]:.5f},{hd[2]:.3e}]")
+    log_info(f"Implied volmax = {log['implied_volmax']:.1f} cc")
+    log_info(f"Implied C_VBD  = {log['implied_C_VBD']:.1f}")
 
 if __name__ == "__main__":
     retval = 1
