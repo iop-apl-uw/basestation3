@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots gliders course through the water """
+"""Plots gliders course through the water"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -68,7 +68,9 @@ def plot_CTW(
 
     # Preliminaries
     try:
-        start_time = dive_nc_file.start_time
+        # start_time = dive_nc_file.start_time
+        time_gps = dive_nc_file.variables["log_gps_time"][:]
+        start_time = time_gps[1]
         ctd_time = (dive_nc_file.variables["ctd_time"][:] - start_time) / 60.0
         ctd_depth = dive_nc_file.variables["ctd_depth"][:]
         north_disp = dive_nc_file.variables["north_displacement"][:]
@@ -129,18 +131,33 @@ def plot_CTW(
         "ad2cp_inv_glider_uttw" in dive_nc_file.variables
         and "ad2cp_inv_glider_vttw" in dive_nc_file.variables
     ):
+        # import pdb
+
+        # pdb.set_trace()
         try:
+            ttw_time = dive_nc_file.variables["ad2cp_inv_glider_time"][:]
+            dive_i = np.logical_and(ttw_time >= time_gps[1], ttw_time <= time_gps[2])
+
+            ttw_dive_time_diff = np.hstack(
+                (ttw_time[dive_i][0] - time_gps[1], np.diff(ttw_time[dive_i]))
+            )
+            ttw_dive_time = (ttw_time[dive_i] - time_gps[1]) / 60.0
             uttw = dive_nc_file.variables["ad2cp_inv_glider_uttw"][:]
             vttw = dive_nc_file.variables["ad2cp_inv_glider_vttw"][:]
             uocn = dive_nc_file.variables["ad2cp_inv_glider_uocn"][:]
             vocn = dive_nc_file.variables["ad2cp_inv_glider_vocn"][:]
-            ttw_time = np.diff(dive_nc_file.variables["ad2cp_inv_glider_time"][:])
-            north_disp_cum_ttw = np.cumsum(vttw[1:] * ttw_time)
-            east_disp_cum_ttw = np.cumsum(uttw[1:] * ttw_time)
-            north_disp_cum_ttw_ocn = np.cumsum((vttw[1:] + vocn[1:]) * ttw_time)
-            east_disp_cum_ttw_ocn = np.cumsum((uttw[1:] + uocn[1:]) * ttw_time)
-            ttw_time = dive_nc_file.variables["ad2cp_inv_glider_time"][:]
-            ttw_time = (ttw_time[1:] - ttw_time[1]) / 60.0
+
+            north_disp_cum_ttw = np.cumsum(vttw[dive_i] * ttw_dive_time_diff)
+            east_disp_cum_ttw = np.cumsum(uttw[dive_i] * ttw_dive_time_diff)
+            north_disp_cum_ttw_ocn = np.cumsum(
+                (vttw[dive_i] + vocn[dive_i]) * ttw_dive_time_diff
+            )
+            east_disp_cum_ttw_ocn = np.cumsum(
+                (uttw[dive_i] + uocn[dive_i]) * ttw_dive_time_diff
+            )
+
+            # ttw_time = dive_nc_file.variables["ad2cp_inv_glider_time"][:]
+            # ttw_time = (ttw_time[1:] - ttw_time[1]) / 60.0
         except Exception:
             log_warning("Problems in plot_CTW ADCP intput", "exc")
     # _, gc_roll_time, gc_roll_pos, gc_pitch_time, gc_pitch_pos, gc_vbd_time, gc_vbd_pos = extract_gc_moves(dive_nc_file)
@@ -188,8 +205,8 @@ def plot_CTW(
             {
                 "y": north_disp_cum_ttw,
                 "x": east_disp_cum_ttw,
-                "meta": ttw_time,
-                "name": "Course Through Water AD2CP Inverse",
+                "meta": ttw_dive_time,
+                "name": "Course Through Water AD2CP",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
@@ -215,7 +232,7 @@ def plot_CTW(
         )
     )
 
-    hovertemplate = "lat %{customdata[2]:.4f}, lon %{customdata[3]:.4f}<br>time %{customdata[0]:.2f} min, depth %{customdata[1]:.2f} m<extra></extra>"
+    hovertemplate = "COG<br>lat %{customdata[2]:.4f}, lon %{customdata[3]:.4f}<br>time %{customdata[0]:.2f} min, depth %{customdata[1]:.2f} m<extra></extra>"
 
     fig.add_trace(
         {
@@ -241,7 +258,7 @@ def plot_CTW(
             {
                 "y": north_disp_cum_ttw_ocn,
                 "x": east_disp_cum_ttw_ocn,
-                "meta": ttw_time,
+                "meta": ttw_dive_time,
                 "name": "Course Over Ground AD2CP",
                 "type": "scatter",
                 "mode": "markers",
@@ -270,7 +287,7 @@ def plot_CTW(
                 "color": "Red",
                 #'line':{'width':1, 'color':'LightSlateGrey'}
             },
-            "hovertemplate": f"GPS2: {Utils.dd2ddmm(lat_gps[1]):.2f}, {Utils.dd2ddmm(lon_gps[1]):.2f}",
+            "hovertemplate": f"GPS2: {lat_gps[1]:.4f}, {lon_gps[1]:.4f}<extra></extra>",
         }
     )
 
@@ -286,7 +303,8 @@ def plot_CTW(
                 "color": "Red",
                 #'line':{'width':1, 'color':'LightSlateGrey'}
             },
-            "hovertemplate": f"GPSE: {Utils.dd2ddmm(lat_gps[2]):.2f}, {Utils.dd2ddmm(lon_gps[2]):.2f}",
+            # "hovertemplate": f"GPSE: {Utils.dd2ddmm(lat_gps[2]):.2f}, {Utils.dd2ddmm(lon_gps[2]):.2f}",
+            "hovertemplate": f"GPSE: {lat_gps[2]:.4f}, {lon_gps[2]:.4f}<br>{(time_gps[2] - start_time)/60.0:.4f} mins<extra></extra>",
         }
     )
 
