@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -135,7 +135,7 @@ def main():
                 },
             ),
             "docker_uid": BaseOptsType.options_t(
-                0,
+                -1,
                 ("BaseRunner",),
                 ("--docker_uid",),
                 int,
@@ -144,7 +144,7 @@ def main():
                 },
             ),
             "docker_gid": BaseOptsType.options_t(
-                0,
+                -1,
                 ("BaseRunner",),
                 ("--docker_gid",),
                 int,
@@ -159,7 +159,7 @@ def main():
                 bool,
                 {
                     "help": "Use the basestation installed in the docker container",
-                    "action": BaseOpts.FullPathTrailingSlashAction,
+                    "action": argparse.BooleanOptionalAction,
                 },
             ),
             "docker_mount": BaseOptsType.options_t(
@@ -296,7 +296,11 @@ def main():
                             )
                         for m in base_opts.docker_mount:
                             basestation_mount += f" --volume {m[0]}"
-                        cmd_line = f'docker run {docker_detach} --user {base_opts.docker_uid}:{base_opts.docker_gid} --volume {glider_home}:{glider_home} {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
+                        if base_opts.docker_uid >= 0 and base_opts.docker_gid >= 0:
+                            user_str = f" --user {base_opts.docker_uid}:{base_opts.docker_gid} "
+                        else:
+                            user_str = ""
+                        cmd_line = f'docker run {docker_detach} {user_str} --volume {glider_home}:{glider_home} --volume /tmp:/tmp {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
                     # May not be critical, but for now, this script when launched out of systemd is
                     # running with unbuffered stdin/stdout - no need to launch other scripts this way
                     my_env = os.environ.copy()
