@@ -30,9 +30,14 @@
 # BaseRunner.py.  Not well tested and highly experimental.
 #
 # Known Issues:
-# - .pagers, .ftp, .mailer and .urls are not all currently working from inside the container.
+#  .pagers/pagers.yml
+#       URL/web based notifiers (nfty for example) work
+#       smtp based untested
+#  .ftp - untested
+#  .mailer - untested
+#  .urls - untested but should work
+#  
 # - vis notifications not working from inside the container.
-# - file permissions for converted files not correct
 #
 # To Build:
 # docker build -t basestation:3.10.10 --build-arg USER_ID=$(id BASERUNNER -u) --build-arg GROUP_ID=$(id BASERUNNER -g) .

@@ -236,13 +236,19 @@ def main():
             try:
                 runfile_line = open(run_file, "r").readline()
                 log_debug(runfile_line)
-                seaglider_root_dir, log_file, cmd_line = runfile_line.split(" ", 2)
-                seaglider_root_dir = seaglider_root_dir.rstrip()
+                (
+                    seaglider_home_dir,
+                    seaglider_mission_dir,
+                    log_file,
+                    cmd_line,
+                ) = runfile_line.split(" ", 3)
+                seaglider_home_dir = seaglider_home_dir.rstrip()
+                seaglider_mission_dir = seaglider_mission_dir.rstrip()
                 log_file = log_file.rstrip()
-                if base_opts.jail_root and log_file.startswith(seaglider_root_dir):
+                if base_opts.jail_root and log_file.startswith(seaglider_mission_dir):
                     log_file = os.path.join(base_opts.jail_root, log_file[1:])
                 log_info(
-                    f"seaglider_root_dir:{seaglider_root_dir} log_file:{log_file}, cmd_line:{cmd_line}"
+                    f"seaglider_home_dir:{seaglider_home_dir} seaglider_mission_dir:{seaglider_mission_dir} log_file:{log_file}, cmd_line:{cmd_line}"
                 )
                 script_name = cmd_line.split(" ", 1)[0].rstrip()
                 if script_name not in known_scripts:
@@ -266,7 +272,7 @@ def main():
                         # Convert to the path outside the jail
                         cmd_line_parts = cmd_line.split()
                         for ii in range(len(cmd_line_parts)):
-                            if cmd_line_parts[ii].startswith(seaglider_root_dir):
+                            if cmd_line_parts[ii].startswith(seaglider_mission_dir):
                                 cmd_line_parts[ii] = os.path.join(
                                     base_opts.jail_root, cmd_line_parts[ii][1:]
                                 )
@@ -284,11 +290,15 @@ def main():
                             cmd_line_parts.pop(cmd_line_parts.index("--daemon"))
                         cmd_line = " ".join(cmd_line_parts)
                         if base_opts.jail_root:
-                            glider_home = os.path.join(
-                                base_opts.jail_root, seaglider_root_dir
+                            home_dir = os.path.join(
+                                base_opts.jail_root, seaglider_home_dir
+                            )
+                            mission_dir = os.path.join(
+                                base_opts.jail_root, seaglider_mission_dir
                             )
                         else:
-                            glider_home = seaglider_root_dir
+                            home_dir = seaglider_home_dir
+                            mission_dir = seaglider_mission_dir
                         basestation_mount = ""
                         if not base_opts.use_docker_basestation:
                             basestation_mount = (
@@ -300,7 +310,11 @@ def main():
                             user_str = f" --user {base_opts.docker_uid}:{base_opts.docker_gid} "
                         else:
                             user_str = ""
-                        cmd_line = f'docker run {docker_detach} {user_str} --volume {glider_home}:{glider_home} --volume /tmp:/tmp {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
+                        if home_dir != mission_dir:
+                            home_dir_str = f"--volume {home_dir}:{home_dir}"
+                        else:
+                            home_dir_str = ""
+                        cmd_line = f'docker run {docker_detach} {user_str} {home_dir_str} --ipc="host" --volume {mission_dir}:{mission_dir} --volume /tmp:/tmp {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
                     # May not be critical, but for now, this script when launched out of systemd is
                     # running with unbuffered stdin/stdout - no need to launch other scripts this way
                     my_env = os.environ.copy()
