@@ -1511,7 +1511,7 @@ def loadmodule(pathname):
 
     """
     # Fast path: see if the module has already been imported.
-    _, name = os.path.split(pathname)
+    directory, name = os.path.split(pathname)
     name, _ = os.path.splitext(name)
 
     try:
@@ -1522,6 +1522,9 @@ def loadmodule(pathname):
     if not os.path.exists(pathname):
         log_error(f"Module {pathname} does not exists - skipping")
         return None
+
+    if directory not in sys.path:
+        sys.path.append(directory)
 
     # If any of the following calls raises an exception,
     # there's a problem we can't handle -- let the caller handle it.
