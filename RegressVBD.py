@@ -210,9 +210,21 @@ def getModelW(bu, Pit, HD_A, HD_B, HD_C, rho0):
 
 def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives, bias_only=False, decimate=1, rho=None):
 
-    fname = os.path.join(path, f'p{glider:03d}{dives[-1]:04d}.nc')
 
-    nc = Utils.open_netcdf_file(fname)
+    nc = None
+    latest = -1
+
+    for d in reversed(dives): 
+        fname = os.path.join(path, f'p{glider:03d}{d:04d}.nc')
+        try:
+            nc = Utils.open_netcdf_file(fname)
+        except:
+            pass
+
+        if nc:
+            latest = d
+            break
+
     if nc is None:
         return  0, _, _, (0, 0), None, None, None
 
@@ -287,7 +299,7 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
 
         # get single latest dive whole dive (not depth ranged) variables
         # for return purposes
-        if i == dives[-1]:
+        if i == latest:
             Wwhole       = w
             depthwhole   = depth
             densitywhole = density
