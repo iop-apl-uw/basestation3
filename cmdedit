@@ -140,25 +140,24 @@ elif progname == "targedit":
 
 ctrlfile = wd + "/" + filename
 if os.path.isfile(ctrlfile) and not os.access(ctrlfile, os.W_OK):
-    print(f"{filename} access denied")
+    print(f"{filename} access denied - you do not have have write permission")
     sys.exit(2)
 
 # scan the comm.log to figure out what the latest dive is
 
-try:
-    comm = open(wd + "/comm.log", "r", errors="ignore")
-except IOError:
-    print("could not open comm.log in working directory")
-    sys.exit(2)
-
 latest = 0
 
-p = re.compile("^[0-9].*:.*:.* GPS")
-for s in comm:
-    if p.match(s):
-        latest = int(s.split(":")[0])
+try:
+    comm = open(wd + "/comm.log", "r", errors="ignore")
+    p = re.compile("^[0-9].*:.*:.* GPS")
+    for s in comm:
+        if p.match(s):
+            latest = int(s.split(":")[0])
 
-comm.close()
+    comm.close()
+except IOError:
+    print("could not open comm.log - cannot determine dive number")
+
 
 # determine the name of the most recent (in a dive number sense) logfile
 
@@ -258,17 +257,19 @@ while done_editing == 0:
     if interactive:
         if p.returncode > 0:
             answer = input("Errors detected, keep changes anyway (yes/no/edit)? ")
-            if answer == "edit":
-                done_editing = 0
         else:
-            answer = input("New file check ok, accept it (yes/no)? ")
+            answer = input("New file check ok, accept it (yes/no/edit)? ")
+
+        if answer in ["edit", "E", "e"]:
+            done_editing = 0
+                
     else:
         if p.returncode > 0 and not ignore_errors:
             answer = "no"
         else:
             answer = "yes"
 
-if answer == "yes":
+if answer in ["yes", "Y", "y"]:
     shutil.copyfile(newfile, ctrlfile)
     print(f"Changes accepted, {filename} has been modified")
 else:
@@ -299,11 +300,14 @@ ctrlfile_text = open(ctrlfile, "rb").read()
 checksum = zlib.crc32(ctrlfile_text)
 size = os.path.getsize(ctrlfile)
 
-log = open(wd + "/" + progname + ".log", "a")
-log.write(f"### {pilot} ({username}) {date}\n")
-log.write(f"+++ {filename} ({size:d} bytes, {checksum:d} checksum)\n")
-log.write(ctrlfile_text.decode('utf-8'))
-log.write(f"--- validation against {logfile} (latest dive is {latest:d})\n")
-log.write(validate_output)
+try:
+    log = open(wd + "/" + progname + ".log", "a")
+    log.write(f"### {pilot} ({username}) {date}\n")
+    log.write(f"+++ {filename} ({size:d} bytes, {checksum:d} checksum)\n")
+    log.write(ctrlfile_text.decode('utf-8'))
+    log.write(f"--- validation against {logfile} (latest dive is {latest:d})\n")
+    log.write(validate_output)
+except:
+    print("changes not logged")
 
 sys.exit(0)
