@@ -12,7 +12,7 @@ mkdocs
 mkdocstrings[python]
 mkdocs-material
 ## Linting
-ruff
+ruff>=0.6.0
 ## Misc
 ipython
 flynt

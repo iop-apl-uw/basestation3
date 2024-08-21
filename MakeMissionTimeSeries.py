@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines for creating mission profile from a Seaglider's dive profiles
-"""
+"""Routines for creating mission profile from a Seaglider's dive profiles"""
+
 import cProfile
 import functools
 import os
@@ -167,14 +167,10 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         "start_longitude",
         "end_longitude",
     ]
-    mission_nc_dive_d = (
-        {}
-    )  # Data of nc_dim_dive dimension - scalars assembled from different pieces of nc files
+    mission_nc_dive_d = {}  # Data of nc_dim_dive dimension - scalars assembled from different pieces of nc files
 
     # We use declarations on BaseNetCDF.nc_var_metadata to decide which vectors to include
-    mission_nc_var_d = (
-        {}
-    )  # Data of different vector dimensions - vectors appended directly from contributing nc files
+    mission_nc_var_d = {}  # Data of different vector dimensions - vectors appended directly from contributing nc files
 
     for var in dive_vars:
         mission_nc_dive_d[var] = []
@@ -183,6 +179,15 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
     total_dive_vars = set()
     for dive_nc_profile_name in dive_nc_profile_names:
         log_debug("Processing %s" % dive_nc_profile_name)
+        try:
+            if base_opts.stop_processing_event.is_set():
+                log_warning(
+                    "Caught SIGUSR1 perviously - stopping furhter MakeMissionTimeSeries processing"
+                )
+                return (1, None)
+        except KeyError:
+            pass
+
         try:  # RuntimeError
             dive_num = 0  # impossible dive number
             (

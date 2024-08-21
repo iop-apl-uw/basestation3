@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines for driving the individual plotting routines
-"""
+"""Routines for driving the individual plotting routines"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
@@ -53,7 +53,14 @@ import Plotting
 import PlotUtils
 import Utils
 
-from BaseLog import BaseLogger, log_error, log_info, log_critical, log_debug
+from BaseLog import (
+    BaseLogger,
+    log_error,
+    log_info,
+    log_critical,
+    log_debug,
+    log_warning,
+)
 from CalibConst import getSGCalibrationConstants
 
 # DEBUG_PDB = "darwin" in sys.platform
@@ -102,6 +109,12 @@ def plot_dives(
         log_info(f"Plotting {dive_nc_file_name}")
         dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
         for plot_name, plot_func in dive_plot_dict.items():
+            try:
+                if base_opts.stop_processing_event.is_set():
+                    log_warning("Caught SIGUSR1 - bailing out")
+                    return (fig, output_files)
+            except AttributeError:
+                pass
             log_debug(f"Trying Dive Plot :{plot_name}")
             try:
                 fig_list, file_list = plot_func(
@@ -164,6 +177,12 @@ def plot_mission(
     figs = []
     output_files = []
     for plot_name, plot_func in mission_plot_dict.items():
+        try:
+            if base_opts.stop_processing_event.is_set():
+                log_warning("Caught SIGUSR1 - bailing out")
+                return (figs, output_files)
+        except AttributeError:
+            pass
         log_debug(f"Trying Mission Plot: {plot_name}")
         try:
             fig_list, file_list = plot_func(

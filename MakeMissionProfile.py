@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2024  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,8 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines for creating mission profile from a Seaglider's dive profiles
-"""
+"""Routines for creating mission profile from a Seaglider's dive profiles"""
 
 import cProfile
 import functools
@@ -422,9 +421,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
 
     # Walk through each netcdf file, open it up and extract the columns needed,
     # adding to lists as we go
-    mission_nc_dive_d = (
-        {}
-    )  # Data of 'divenum' dimension - assembled from other pieces of nc files and calculated from bin
+    mission_nc_dive_d = {}  # Data of 'divenum' dimension - assembled from other pieces of nc files and calculated from bin
     included_binned_vars = (
         set()
     )  # all the binned vector variables we'll include the final nc file
@@ -433,6 +430,15 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     first_profile_name = None
     for dive_nc_profile_name in dive_nc_profile_names:
         log_debug("Processing %s" % dive_nc_profile_name)
+        try:
+            if base_opts.stop_processing_event.is_set():
+                log_warning(
+                    "Caught SIGUSR1 perviously - stopping furhter MakeMissionTimeSeries processing"
+                )
+                return (1, None)
+        except KeyError:
+            pass
+
         if first_profile_name is None:
             first_profile_name = dive_nc_profile_name
         try:  # RuntimeError
@@ -576,9 +582,9 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             dive_profile_mean_time = (
                 (profile_mean_time - results_d["log_gps_time"][GPS.GPS_I.GPS2]) / 2.0
             ) + results_d["log_gps_time"][GPS.GPS_I.GPS2]
-            mission_nc_dive_d[dive_num][
-                "dive_profile_mean_time"
-            ] = dive_profile_mean_time
+            mission_nc_dive_d[dive_num]["dive_profile_mean_time"] = (
+                dive_profile_mean_time
+            )
 
             # Compute climb average position
             climb_profile_mean_lat, climb_profile_mean_lon = Utils.average_position(
@@ -587,18 +593,18 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 results_d["log_gps_lat"][GPS.GPS_I.GPSE],
                 results_d["log_gps_lon"][GPS.GPS_I.GPSE],
             )
-            mission_nc_dive_d[dive_num][
-                "climb_profile_mean_lat"
-            ] = climb_profile_mean_lat
-            mission_nc_dive_d[dive_num][
-                "climb_profile_mean_lon"
-            ] = climb_profile_mean_lon
+            mission_nc_dive_d[dive_num]["climb_profile_mean_lat"] = (
+                climb_profile_mean_lat
+            )
+            mission_nc_dive_d[dive_num]["climb_profile_mean_lon"] = (
+                climb_profile_mean_lon
+            )
             climb_profile_mean_time = (
                 (results_d["log_gps_time"][GPS.GPS_I.GPSE] - profile_mean_time) / 2.0
             ) + profile_mean_time
-            mission_nc_dive_d[dive_num][
-                "climb_profile_mean_time"
-            ] = climb_profile_mean_time
+            mission_nc_dive_d[dive_num]["climb_profile_mean_time"] = (
+                climb_profile_mean_time
+            )
 
             log_debug(
                 "dive = %d, dive_mean_time = %d, profile_mean_time = %d, climb_mean_time = %d"
@@ -655,9 +661,9 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                                 if nc_data_type == "Q"
                                 else BaseNetCDF.nc_nan
                             )
-                        mission_nc_dive_d[dive_num][
-                            dive_nc_varname
-                        ] = value  # record scalar value
+                        mission_nc_dive_d[dive_num][dive_nc_varname] = (
+                            value  # record scalar value
+                        )
                         included_scalar_vars.add(dive_nc_varname)
                     else:
                         if nc_data_type == "Q":
@@ -734,9 +740,9 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                         # record these locations and clear below
                         dupd_var_indicies_d[time_var] = duplicates_i_v
                     sg_values = temp_dive_vars[t][indices_i_v]
-                    sg_values[
-                        duplicates_i_v
-                    ] = BaseNetCDF.nc_nan  # assume we are missing data here
+                    sg_values[duplicates_i_v] = (
+                        BaseNetCDF.nc_nan
+                    )  # assume we are missing data here
                 data_columns.append(sg_values)
 
             # 'profiles' contain either a 'down' (0) and an 'up' (1) profile dictionary or a single 'both' dictionary
@@ -779,12 +785,12 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                         data_cols_bin[d] = data_cols_bin[d][::-1]
 
                 mission_nc_dive_d[dive_num]["profiles"][i]["data_cols"] = {}
-                mission_nc_dive_d[dive_num]["profiles"][i]["data_cols"][
-                    "obs_bin"
-                ] = np.array(temp_obs_bin, np.float64)
-                mission_nc_dive_d[dive_num]["profiles"][i]["data_cols"][
-                    "depth"
-                ] = np.array(temp_depth_bin, np.float64)
+                mission_nc_dive_d[dive_num]["profiles"][i]["data_cols"]["obs_bin"] = (
+                    np.array(temp_obs_bin, np.float64)
+                )
+                mission_nc_dive_d[dive_num]["profiles"][i]["data_cols"]["depth"] = (
+                    np.array(temp_depth_bin, np.float64)
+                )
 
                 for j in range(len(temp_dive_var_names)):
                     if len(temp_depth_bin) > 0:
