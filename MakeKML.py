@@ -618,9 +618,9 @@ def printDive(
         )
 
     log_debug(f"Processing {dive_nc_file_name}")
-    gps_lat_start = (
-        gps_lon_start
-    ) = gps_time_start = gps_lat_end = gps_lon_end = gps_time_end = None
+    gps_lat_start = gps_lon_start = gps_time_start = gps_lat_end = gps_lon_end = (
+        gps_time_end
+    ) = None
 
     try:
         gps_lat_one = nc.variables["log_gps_lat"][0]
@@ -1004,9 +1004,9 @@ def extractGPSPositions(dive_nc_file_name, dive_num):
         log_error("Skipping...")
         return None
 
-    gps_lat_start = (
-        gps_lon_start
-    ) = gps_time_start = gps_lat_end = gps_lon_end = gps_time_end = None
+    gps_lat_start = gps_lon_start = gps_time_start = gps_lat_end = gps_lon_end = (
+        gps_time_end
+    ) = None
     try:
         gps_lat_one = nc.variables["log_gps_lat"][0]
         gps_lon_one = nc.variables["log_gps_lon"][0]
@@ -1309,6 +1309,16 @@ def main(
 
         # GPS positions
         for dive_index in range(len(dive_nc_file_names)):
+            # Stop processing if signaled
+            try:
+                if base_opts.stop_processing_event.is_set():
+                    log_warning(
+                        "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
+                    )
+                    return 1
+            except KeyError:
+                pass
+
             dive_nc_file_name = dive_nc_file_names[dive_index]
             head, tail = os.path.split(
                 os.path.abspath(os.path.expanduser(dive_nc_file_name))
@@ -1414,6 +1424,16 @@ def main(
 
         # Regular dives
         for dive_index in range(len(dive_nc_file_names)):
+            # Stop processing if signaled
+            try:
+                if base_opts.stop_processing_event.is_set():
+                    log_warning(
+                        "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
+                    )
+                    return 1
+            except KeyError:
+                pass
+
             dive_nc_file_name = dive_nc_file_names[dive_index]
             head, tail = os.path.split(
                 os.path.abspath(os.path.expanduser(dive_nc_file_name))
@@ -1790,6 +1810,16 @@ def main(
                     tgt_radius=tgt_radius,
                 )
 
+    # Stop processing if signaled
+    try:
+        if base_opts.stop_processing_event.is_set():
+            log_warning(
+                "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
+            )
+            return 1
+    except KeyError:
+        pass
+
     # Add in the SSH file in, if it exists
     add_files = {}
     if base_opts.merge_ssh:
@@ -1864,6 +1894,16 @@ def main(
     printFooter(fo)
 
     fo.close()
+
+    # Stop processing if signaled
+    try:
+        if base_opts.stop_processing_event.is_set():
+            log_warning(
+                "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
+            )
+            return 1
+    except KeyError:
+        pass
 
     # Zip the output file
     if zip_kml:

@@ -1382,13 +1382,6 @@ def signal_handler_abort_processing(signum, frame):
         stop_processing_event.set()
 
 
-class AbortProcessingException(Exception):
-    """Internal nofication to stop mission processing"""
-
-    # def __init__(self):
-    #    pass
-
-
 def main():
     """Command line driver for the all basestation processing.
 
@@ -2276,111 +2269,110 @@ def main():
         log_warning("Caught SIGUSR1 - bailing out")
         return 1
 
-    try:
-        # Begin whole mission processing here
+    # Begin whole mission processing here
 
-        #
-        # Create the mission profile file
-        #
-        if base_opts.make_mission_profile and len(nc_files_created) > 0:
-            if len(nc_dive_file_names) < 1:
-                log_warning(
-                    "No dive netCDF file created - mission netCDF file will not be updated"
+    #
+    # Create the mission profile file
+    #
+    if base_opts.make_mission_profile and len(nc_files_created) > 0:
+        if len(nc_dive_file_names) < 1:
+            log_warning(
+                "No dive netCDF file created - mission netCDF file will not be updated"
+            )
+        else:
+            try:
+                (
+                    mp_ret_val,
+                    mission_profile_name,
+                ) = MakeMissionProfile.make_mission_profile(
+                    dive_nc_file_names, base_opts
                 )
-            else:
-                try:
-                    (
-                        mp_ret_val,
-                        mission_profile_name,
-                    ) = MakeMissionProfile.make_mission_profile(
-                        dive_nc_file_names, base_opts
-                    )
-                    if stop_processing_event.is_set():
-                        log_warning("Caught SIGUSR1 - bailing out")
-                        return 1
-                    if mp_ret_val:
-                        failed_mission_profile = True
-                    else:
-                        data_product_file_names.append(mission_profile_name)
-                except Exception:
-                    log_error("Failed to create mission profile", "exc")
+                if stop_processing_event.is_set():
+                    log_warning("Caught SIGUSR1 - bailing out")
+                    return 1
+                if mp_ret_val:
                     failed_mission_profile = True
-        #
-        # Create the mission timeseries file
-        #
-        if base_opts.make_mission_timeseries and len(nc_files_created) > 0:
-            if len(nc_dive_file_names) < 1:
-                log_warning(
-                    "No dive netCDF file created - mission timeseries file will not be updated"
+                else:
+                    data_product_file_names.append(mission_profile_name)
+            except Exception:
+                log_error("Failed to create mission profile", "exc")
+                failed_mission_profile = True
+    #
+    # Create the mission timeseries file
+    #
+    if base_opts.make_mission_timeseries and len(nc_files_created) > 0:
+        if len(nc_dive_file_names) < 1:
+            log_warning(
+                "No dive netCDF file created - mission timeseries file will not be updated"
+            )
+        else:
+            try:
+                (
+                    mt_retval,
+                    mission_timeseries_name,
+                ) = MakeMissionTimeSeries.make_mission_timeseries(
+                    dive_nc_file_names, base_opts
                 )
-            else:
-                try:
-                    (
-                        mt_retval,
-                        mission_timeseries_name,
-                    ) = MakeMissionTimeSeries.make_mission_timeseries(
-                        dive_nc_file_names, base_opts
-                    )
-                    if stop_processing_event.is_set():
-                        log_warning("Caught SIGUSR1 - bailing out")
-                        return 1
-                    if mt_retval:
-                        failed_mission_timeseries = True
-                    else:
-                        data_product_file_names.append(mission_timeseries_name)
-                except Exception:
-                    log_error("Failed to create mission timeseries", "exc")
+                if stop_processing_event.is_set():
+                    log_warning("Caught SIGUSR1 - bailing out")
+                    return 1
+                if mt_retval:
                     failed_mission_timeseries = True
+                else:
+                    data_product_file_names.append(mission_timeseries_name)
+            except Exception:
+                log_error("Failed to create mission timeseries", "exc")
+                failed_mission_timeseries = True
 
-        processed_file_names = []
-        processed_file_names.append(processed_eng_and_log_files)
-        processed_file_names.append(processed_selftest_eng_and_log_files)
-        # processed_file_names.append(processed_other_files)
-        processed_file_names.append(data_product_file_names)
-        processed_file_names.append(processed_logger_eng_files)
-        processed_file_names.append(processed_logger_other_files)
-        processed_file_names = Utils.flatten(processed_file_names)
+    processed_file_names = []
+    processed_file_names.append(processed_eng_and_log_files)
+    processed_file_names.append(processed_selftest_eng_and_log_files)
+    # processed_file_names.append(processed_other_files)
+    processed_file_names.append(data_product_file_names)
+    processed_file_names.append(processed_logger_eng_files)
+    processed_file_names.append(processed_logger_other_files)
+    processed_file_names = Utils.flatten(processed_file_names)
 
-        # Whole mission plotting
-        if "mission" in base_opts.plot_types:
-            mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
-            plot_dict = BasePlot.get_mission_plots(base_opts)
-            _, output_files = BasePlot.plot_mission(base_opts, plot_dict, mission_str)
-            if stop_processing_event.is_set():
-                log_warning("Caught SIGUSR1 - bailing out")
-                return 1
-            for output_file in output_files:
-                processed_other_files.append(output_file)
+    # Whole mission plotting
+    if "mission" in base_opts.plot_types:
+        mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
+        plot_dict = BasePlot.get_mission_plots(base_opts)
+        _, output_files = BasePlot.plot_mission(base_opts, plot_dict, mission_str)
+        if stop_processing_event.is_set():
+            log_warning("Caught SIGUSR1 - bailing out")
+            return 1
+        for output_file in output_files:
+            processed_other_files.append(output_file)
 
-        # Generate KML
-        try:
-            if not base_opts.skip_kml:
-                MakeKML.main(
-                    base_opts,
-                    calib_consts,
-                    processed_other_files,
-                )
-        except Exception:
-            log_error("Failed to generate KML", "exc")
+    # Generate KML
+    try:
+        if not base_opts.skip_kml:
+            MakeKML.main(
+                base_opts,
+                calib_consts,
+                processed_other_files,
+            )
+    except Exception:
+        log_error("Failed to generate KML", "exc")
 
-        # Invoke extensions, if any
-        BaseDotFiles.process_extensions(
-            ".extensions",
-            ("global", "mission"),
-            base_opts,
-            sg_calib_file_name,
-            dive_nc_file_names,
-            nc_files_created,
-            processed_other_files,  # Output list for extension created files
-            known_mailer_tags,
-            known_ftp_tags,
-            processed_file_names,
-        )
-        del processed_file_names
+    if stop_processing_event.is_set():
+        log_warning("Caught SIGUSR1 - bailing out")
+        return 1
 
-    except AbortProcessingException:
-        # Issued the message in the handler
-        pass
+    # Invoke extensions, if any
+    BaseDotFiles.process_extensions(
+        ".extensions",
+        ("global", "mission"),
+        base_opts,
+        sg_calib_file_name,
+        dive_nc_file_names,
+        nc_files_created,
+        processed_other_files,  # Output list for extension created files
+        known_mailer_tags,
+        known_ftp_tags,
+        processed_file_names,
+    )
+    del processed_file_names
 
     # Alert message and file processing
     alerts_d = log_alerts()
