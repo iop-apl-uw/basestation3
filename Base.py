@@ -128,7 +128,7 @@ processed_logger_other_files = []  # List of all non-eng files from all loggers 
 #    conform to basestation directory and filename convetions
 
 # Configuration
-previous_conversion_time_out = 30  # Time to wait for previous conversion to complete
+previous_conversion_time_out = 60  # Time to wait for previous conversion to complete
 
 # Utility functions
 
