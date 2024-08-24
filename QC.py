@@ -28,8 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Routines for creating and managing the QC vectors
-"""
+"""Routines for creating and managing the QC vectors"""
 
 import collections
 import os
@@ -1304,6 +1303,7 @@ cond_qc_list = [
     r"uncorrectable [-+]?(?:\d*\.*\d+)m raw conductivity bubble on climb",
     "raw legato salinity below bound",
     "bad raw legato salinity indicates raw legato conductivity issues",
+    "conductivity anomaly",
 ]
 skip_qc_list = [
     "changed corrected salin implies changed speed",
@@ -1313,6 +1313,9 @@ skip_qc_list = [
     "changed salinity implies changed aa4831 oxygen",
     "despiked pressure",
     "bad aa4831 oyxgen",
+    "unsampled temperature",
+    "unsampled conductivity",
+    "unsampled optode oyxgen",
 ]
 
 
