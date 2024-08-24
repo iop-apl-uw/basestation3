@@ -2834,9 +2834,37 @@ async def watchMonitorPublish(config):
         udpSock = None
 
     while True:
+<<<<<<< HEAD
         aws = [ asyncio.create_task(messagingSocketWatch(inbound), name='inbound'),
                 # asyncio.create_task(messagingSocketWatch(configWatchSocket, name='config'),
                 asyncio.create_task(fileWatch(watcher, files), name='files') ]
+=======
+        stat = await inbound.poll(1000)
+        if stat:
+            r = await inbound.recv_multipart()
+            d = loads(r[1])
+            if 'when' not in d:
+                d.update({"when": "socket"})
+
+            r[1] = dumps(d)
+            sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
+            await zsock.send_multipart(r)
+
+        stat = await configWatchSocket.poll(1000)
+        if stat:
+            msg = await configWatchSocket.recv_multipart()
+            topic = msg[0].decode('utf-8')
+            if config['MISSIONS_FILE'] in topic:
+                files = await buildFilesWatchList(config)
+
+        mods = await checkFilesystemChanges(files)
+        sanic.log.logger.info(mods)
+        for f in mods:
+            msg = [(f"{f['glider']:03d}-file-{f['file']}").encode('utf-8'), dumps(f)]
+            sanic.log.logger.info(f"{f['glider']:03d}-file-{f['file']}")
+            await zsock.send_multipart(msg)
+
+>>>>>>> f8fa7da (protect against nonetype return from yaml read of empty file (vs empty dict))
         if udpSock:
             aws.append(asyncio.create_task(udpSock.recvfrom(), name='udp'))
 
