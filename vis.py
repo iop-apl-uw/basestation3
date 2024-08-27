@@ -42,6 +42,8 @@ import aiosqlite
 import aiofiles
 import asyncio
 import aiohttp
+import asyncudp
+import asyncinotify
 import sanic
 import sanic_gzip
 import sanic_ext
@@ -255,8 +257,8 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
             # url = request.server_path[1:].split('/')[0]
             url = request.path[1:].split('/')[0]
             if check & AUTH_ENDPOINT:
-                if url in request.app.ctx.endpoints:
-                    e = request.app.ctx.endpoints[url]
+                if url in request.ctx.ctx.endpoints:
+                    e = request.ctx.ctx.endpoints[url]
                     status = checkEndpoint(request, e)
                     if status == PERM_INVALID:
                         return sanic.response.text("Page not found: {}".format(request.path), status=404)
@@ -365,7 +367,7 @@ def missionFromRequest(request):
     return None
 
 def activeMission(gld, request):
-    x = next(filter(lambda d: d['glider'] == gld and d['status'] == 'active',  request.app.ctx.missionTable), None)
+    x = next(filter(lambda d: d['glider'] == gld and d['status'] == 'active',  request.ctx.ctx.missionTable), None)
     return x
  
 def matchMission(gld, request, mission=None):
@@ -376,14 +378,14 @@ def matchMission(gld, request, mission=None):
 
         mission = request.args['mission'][0]
 
-    x = next(filter(lambda d: d['glider'] == int(gld) and d['mission'] == mission,  request.app.ctx.missionTable), None)
+    x = next(filter(lambda d: d['glider'] == int(gld) and d['mission'] == mission,  request.ctx.ctx.missionTable), None)
     if x:
         return x
 
     if mission:
         return None
 
-    x = next(filter(lambda d: d['glider'] == int(gld) and d['default'] == True, request.app.ctx.missionTable), None)
+    x = next(filter(lambda d: d['glider'] == int(gld) and d['default'] == True, request.ctx.ctx.missionTable), None)
     return x 
 
 def filterMission(gld, request, mission=None):
@@ -468,6 +470,26 @@ def attachHandlers(app: sanic.Sanic):
     app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
     app.static('/manifest.json', f'{sys.path[0]}/scripts/manifest.json', name='manifest')
 
+    if os.path.exists(app.config.STATIC_FILE):
+        with open(app.config.STATIC_FILE) as f:
+            d = f.read()
+            try:
+                x = yaml.safe_load(d)
+            except Exception as e:
+                sanic.log.logger.info(f"static parse error {e}")
+                x = {}
+    else:
+        x = {}
+
+    for route in list(x.keys()):
+        print(x[route])
+        if 'route' in x[route] and 'path' in x[route]:
+            if 'index' in x[route]:
+                app.static(x[route]['route'], x[route]['path'], name=route, index=x[route]['index'])
+            else:
+                app.static(x[route]['route'], x[route]['path'], name=route)
+
+    
     @app.exception(sanic.exceptions.NotFound)
     def pageNotFound(request, exception):
         return sanic.response.text("Page not found: {}".format(request.path), status=404)
@@ -480,7 +502,7 @@ def attachHandlers(app: sanic.Sanic):
         username = request.json.get("username", None).lower()
         password = request.json.get("password", None)
 
-        for user,prop in request.app.ctx.userTable.items():
+        for user,prop in request.ctx.ctx.userTable.items():
             if user.lower() == username and sha256_crypt.verify(password, prop['password']):
                 token = jwt.encode({ "user": user, "groups": prop['groups']}, request.app.config.SECRET)
                 response = sanic.response.text("authorization ok")
@@ -608,12 +630,12 @@ def attachHandlers(app: sanic.Sanic):
     async def mapdataBareHandler(request):
         message = {}
 
-        if len(request.app.ctx.routes):
-            message['routes'] = request.app.ctx.routes;
+        if len(request.ctx.ctx.routes):
+            message['routes'] = request.ctx.ctx.routes;
 
         a_dicts = []
-        for a in request.app.ctx.assets.keys():
-            d = request.app.ctx.assets[a]
+        for a in request.ctx.ctx.assets.keys():
+            d = request.ctx.ctx.assets[a]
             d.update( { 'asset': a } )
             a_dicts.append(d)
 
@@ -641,23 +663,23 @@ def attachHandlers(app: sanic.Sanic):
                     if not 'mission' in a:
                         a.update( { 'mission': mission['mission'] } )
                     if 'asset' in a:
-                        if a['asset'] in request.app.ctx.assets.keys():
+                        if a['asset'] in request.ctx.ctx.assets.keys():
                             # don't copy the whole dict because maybe we have local
                             # overrides in this per mission version
-                            for k in request.app.ctx.assets[a['asset']].keys():
+                            for k in request.ctx.ctx.assets[a['asset']].keys():
                                 if not k in a.keys():
-                                    a.update({ k: request.app.ctx.assets[a['asset']][k] })
+                                    a.update({ k: request.ctx.ctx.assets[a['asset']][k] })
                         else:
                             a.pop('asset')     
 
-            if len(request.app.ctx.routes):
-                message['routes'] = request.app.ctx.routes;
+            if len(request.ctx.ctx.routes):
+                message['routes'] = request.ctx.ctx.routes;
 
             #if 'assets' in mission:
             #    a_dicts = []
             #    for a in mission['assets']:
-            #        if a in request.app.ctx.assets.keys():       
-            #            d = request.app.ctx.assets[a]
+            #        if a in request.ctx.ctx.assets.keys():       
+            #            d = request.ctx.ctx.assets[a]
             #            d.update( { 'name': a } )
             #            a_dicts.append(d)
             #
@@ -686,7 +708,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/project/<mission:str>/<url:path>')
     async def projectHandler(request, mission:str, url):
-        x = next(filter(lambda d: d['project'] == mission, request.app.ctx.missionTable), None)
+        x = next(filter(lambda d: d['project'] == mission, request.ctx.ctx.missionTable), None)
         if x:
             glider = x['glider']
             url = getRequestURL(request).replace('GGG', f'{glider:03d}').replace(f'/project/{mission}', '')
@@ -1156,7 +1178,7 @@ def attachHandlers(app: sanic.Sanic):
     # returns: JSON formatted dict of missions and mission config
     async def missionsHandler(request, mask:int):
         table = await buildAuthTable(request, "")
-        msg = { "missions": table, "organization": request.app.ctx.organization }
+        msg = { "missions": table, "organization": request.ctx.ctx.organization }
         return sanic.response.json(msg)
      
     @app.route('/summary/<glider:int>')
@@ -1225,7 +1247,7 @@ def attachHandlers(app: sanic.Sanic):
         message['sgplots'] = sgplots
         message['engplotly'] = engplotly
         message['sgplotly'] = sgplotly
-        message['organization'] = request.app.ctx.organization
+        message['organization'] = request.ctx.ctx.organization
         
         message['mission'] = filterMission(glider, request) 
         return sanic.response.json(message)
@@ -1698,7 +1720,7 @@ def attachHandlers(app: sanic.Sanic):
         if 'file' not in message or message['file'] != which:
             return sanic.response.text('oops')
 
-        if applyControls(request.app.ctx.controls, message['contents'], which) == True:
+        if applyControls(request.ctx.ctx.controls, message['contents'], which) == True:
             return sanic.response.text('not allowed')
          
         path = gliderPath(glider, request)
@@ -2355,6 +2377,24 @@ def attachHandlers(app: sanic.Sanic):
         if 'secret' in request.forwarded:
             del request.forwarded['secret']
 
+        if hasattr(request.app.ctx, 'domains'):
+            domain = request.headers.host.split('.')[0]
+            if  domain in request.app.ctx.domains:
+                request.ctx.ctx = request.app.ctx.domains[domain]
+                return None
+
+            domain = request.path[1:].split('/')[0]
+            if domain in request.app.ctx.domains:
+                newURL = getRequestURL(request).rstrip('/').replace(f'/{domain}', '').replace('//', '//' + domain + '.')
+                return sanic.response.redirect(newURL)
+    
+            if not request.app.ctx.rootdomain or request.headers.host.split(':')[0] != request.app.ctx.rootdomain:
+                print(request.app.ctx.rootdomain)
+                print(request.headers.host)
+                return sanic.response.text('Not Found', status=502)
+                 
+        request.ctx.ctx = request.app.ctx
+ 
         return None
 
 
@@ -2362,10 +2402,12 @@ def attachHandlers(app: sanic.Sanic):
 #  setup / config file readers
 #
 
-async def buildUserTable(app):
+async def buildUserTable(app, config=None):
+    if config == None:
+        config = app.config
 
-    if await aiofiles.os.path.exists(app.config.USERS_FILE):
-        async with aiofiles.open(app.config.USERS_FILE, "r") as f:
+    if await aiofiles.os.path.exists(config.USERS_FILE):
+        async with aiofiles.open(config.USERS_FILE, "r") as f:
             d = await f.read()
             try:
                 x = yaml.safe_load(d)
@@ -2388,7 +2430,9 @@ async def buildUserTable(app):
             if uk not in x[user].keys():
                 x[user].update( { uk: dflts[uk] if dflts and uk in dflts else None } )
 
-    app.ctx.userTable = x
+    if app:
+        app.ctx.userTable = x
+
     return x
 
 async def buildMissionTable(app, config=None):
@@ -2405,34 +2449,13 @@ async def buildMissionTable(app, config=None):
             async with aiofiles.open(config['MISSIONS_FILE'], "r") as f:
                 d = await f.read()
                 try:
-                    x = yaml.safe_load(d)
+                    if not (x := yaml.safe_load(d)):
+                        x = {}
                 except Exception as e:
                     sanic.log.logger.info(f"mission file parse error {e}")
                     x = {}
         else:
             x = {}
-
-    if 'includes' in x:
-        missionTable = []
-        if 'organization' in x and app:
-            app.ctx.organization = x['organization']
-
-        for group in list(x['includes'].keys()):     
-            c = { 'MISSIONS_FILE': x['includes'][group]['missions'] }
-            tbl = await buildMissionTable(None, config=c)
-            for k in tbl:
-                if 'path' in k and k['path']:
-                    k['path'] = x['includes'][group]['root'] + '/' + k['path']
-                else:
-                    k['path'] = x['includes'][group]['root'] + f"/sg{k['glider']:03d}"
-
-            missionTable = missionTable + tbl
-
-        if app:
-            app.ctx.missionTable = missionTable
-
-        print(missionTable)
-        return missionTable
 
     if 'organization' not in x:
         x['organization'] = {}
@@ -2455,6 +2478,73 @@ async def buildMissionTable(app, config=None):
     if 'routes' not in x:
         x['routes'] = []
 
+    if 'domains' in x:
+        ikey = 'domains'
+    elif 'includes' in x:
+        ikey = 'includes'
+    else:
+        ikey = None
+
+    domains = {}
+    if ikey:
+        missionTable = []
+        if ikey == 'domains':
+            rootdomain = None
+
+        for domain in list(x[ikey].keys()):
+            if domain == 'root':
+                rootdomain = x[ikey][domain]
+                continue
+
+            mfile = x[ikey][domain]['missions']
+            try:
+                (tbl, xx, _) = await buildMissionTable(None, config={'MISSIONS_FILE': mfile})
+            except:
+                continue
+
+            for k in tbl:
+                if 'path' in k and k['path']:
+                    k['path'] = x[ikey][domain]['root'] + '/' + k['path']
+                else:
+                    k['path'] = x[ikey][domain]['root'] + f"/sg{k['glider']:03d}"
+
+            if ikey == 'domains':
+                if 'users' in x[ikey][domain]:
+                    ufile = x[ikey][domain]['users']
+                    try:
+                        userTbl = await buildUserTable(None, config={ 'USERS_FILE': ufile })
+                    except:
+                        userTbl = {}
+                else:
+                    ufile = None
+                    userTbl = {}
+
+                domains[domain] = SimpleNamespace( missionTable=tbl,
+                                                   userTable=userTbl,
+                                                   organization=xx['organization'],
+                                                   endpoints=xx['endpoints'],
+                                                   controls=xx['controls'],
+                                                   assets=xx['assets'],
+                                                   routes=xx['routes'],
+                                                   missionsFile=mfile,
+                                                   usersFile=ufile )
+
+            missionTable = missionTable + tbl
+
+        if app:
+            if ikey == 'domains':
+                app.ctx.domains = domains
+                app.ctx.rootdomain = rootdomain
+
+            app.ctx.missionTable = missionTable
+            app.ctx.organization = x['organization']
+            app.ctx.endpoints    = x['endpoints']
+            app.ctx.controls     = x['controls']
+            app.ctx.assets       = x['assets']
+            app.ctx.routes       = x['routes']
+
+        return (missionTable, None, domains)
+     
     orgDictKeys = ["orgname", "orglink", "text", "contact", "email"]
     for ok in orgDictKeys:
         if ok not in x['organization'].keys():
@@ -2469,7 +2559,11 @@ async def buildMissionTable(app, config=None):
                       ]
     
     dflts         = x['defaults']
-    mode_dflts    = x[modeNames[config.RUNMODE] + 'defaults']
+    if 'RUNMODE' in config:
+        mode_dflts    = x[modeNames[config.RUNMODE] + 'defaults']
+    else:
+        mode_dflts = {}
+
     missions = []
     gliders  = []
     ids      = []
@@ -2556,11 +2650,11 @@ async def buildMissionTable(app, config=None):
         app.ctx.assets = x['assets']
         app.ctx.routes = x['routes']
 
-    return missions
+    return (missions, x, domains)
  
 async def buildAuthTable(request, defaultPath, glider=None, mission=None):
     opTable = []
-    for m in request.app.ctx.missionTable:
+    for m in request.ctx.ctx.missionTable:
         status = checkGliderMission(request, m['glider'], m['mission'])
         if status == PERM_REJECT:
             continue
@@ -2620,26 +2714,13 @@ async def buildMissionPlotList(path):
     return (plots['eng']['.webp'], plots['sg']['.webp'], plots['eng']['.div'], plots['sg']['.div'])
 
 #
-# background main task 
+# background tasks
 #
 
-async def checkFilesystemChanges(files):
-    mods = []
-    for f in files:
-        if await aiofiles.os.path.exists(f['full']):
-            n = await aiofiles.os.path.getctime(f['full'])
-            if n > f['ctime']:
-                f['ctime'] = n
-                sz = await aiofiles.os.path.getsize(f['full'])
-                if sz > f['size']:
-                    f['delta'] = sz - f['size']
-                else:
-                    f['delta'] = sz
-
-                f['size'] = sz
-                mods.append(f)
-
-    return mods
+# this is per app config file watcher - each app must listen on its
+# own so that it can update its own tables. This watches for published
+# modification notices on the watch socket. The main process
+# watchMonitorPublish does the actual inotify file watching
 
 async def configWatcher(app):
     zsock = zmq.asyncio.Context().socket(zmq.SUB)
@@ -2664,26 +2745,70 @@ async def configWatcher(app):
         # app.m.name.restart() 
 
 async def buildFilesWatchList(config):
-    missions = await buildMissionTable(None, config=config)
-    files = [ ]
+    (missions, _, domains) = await buildMissionTable(None, config=config)
+    files = { }
+    watcher = asyncinotify.Inotify()
+
     if not config.SINGLE_MISSION:
         for f in [ config['MISSIONS_FILE'], config['USERS_FILE'] ]:
-            files.append( { 'glider': 0, 'full': f, 'file': f, 'ctime': 0, 'size': 0, 'delta': 0, 'mission': '' } )
+            if f and await aiofiles.os.path.exists(f):
+                sz = await aiofiles.os.path.getsize(f)
+                files[f] = { 'glider': 0, 'file': f, 'size': sz, 'delta': 0, 'mission': '', 'config': True }
+                watcher.add_watch(f, mask=asyncinotify.Mask.CLOSE_WRITE)
 
+        for d in list(domains.keys()):
+            for f in [ domains[d].missionsFile, domains[d].usersFile ]:
+                if f and await aiofiles.os.path.exists(f):
+                    sz = await aiofiles.os.path.getsize(f)
+                    files[f] = { 'glider': 0, 
+                                 'file': config['MISSIONS_FILE'] if f == domains[d].missionsFile else config['USERS_FILE'], 
+                                 'size': sz, 
+                                 'delta': 0, 
+                                 'mission': '', 
+                                 'config': True }
+                    watcher.add_watch(f, mask=asyncinotify.Mask.CLOSE_WRITE)
+                
     for m in missions:
         if m['status'] == 'active':
+            if m['path']:
+                fname = f"{m['path']}"
+            else:
+                fname = f"sg{m['glider']:03d}" 
+
+            watcher.add_watch(fname, asyncinotify.Mask.CLOSE_WRITE)
+
             for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat", f"sg{m['glider']:03d}.kmz"]:
                 if m['path']:
                     fname = f"{m['path']}/{f}"
                 else:
                     fname = f"sg{m['glider']:03d}/{f}" 
-                files.append( { "glider": m['glider'], "full": fname, "file": f, "ctime": 0, "size": 0, "delta": 0, "mission": m['mission'] if m['mission'] else "" } )
 
-    await checkFilesystemChanges(files) # load initial mod times
+                if await aiofiles.os.path.exists(fname):
+                    sz = await aiofiles.os.path.getsize(fname)
+                else:
+                    sz = 0
 
-    return files
+                files[fname] = { "glider": m['glider'], "file": fname, "size": sz, "delta": 0, 'config': False, "mission": m['mission'] if m['mission'] else "" } 
 
-async def notifier(config):
+
+
+    return (watcher, files)
+
+async def fileWatch(watcher, files):
+    while True:
+        e = await watcher.get()
+        if e.name:
+            f = str(e.watch.path.joinpath(e.name))
+        else:
+            f = str(e.watch.path)
+        if f in files:
+            return (f, files[f]['config'])
+
+# quick wrapper so we get a coroutine vs a Future (which we can't name when we create_task below)
+async def messagingSocketWatch(sock):
+    return await sock.recv_multipart()
+
+async def watchMonitorPublish(config):
     msk = os.umask(0o000)
     ctx = zmq.asyncio.Context()
     zsock = ctx.socket(zmq.PUB)
@@ -2691,88 +2816,118 @@ async def notifier(config):
     zsock.setsockopt(zmq.SNDTIMEO, 1000)
     zsock.setsockopt(zmq.LINGER, 0)
 
-    configWatchSocket = ctx.socket(zmq.SUB)
-    configWatchSocket.setsockopt(zmq.LINGER, 0)
-    configWatchSocket.connect(config.WATCH_IPC)
-    configWatchSocket.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
+    #configWatchSocket = ctx.socket(zmq.SUB)
+    #configWatchSocket.setsockopt(zmq.LINGER, 0)
+    #configWatchSocket.connect(config.WATCH_IPC)
+    #configWatchSocket.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
 
     inbound = ctx.socket(zmq.PULL)
     inbound.bind(config.NOTIFY_IPC)
     os.umask(msk)
 
-    files = await buildFilesWatchList(config)
+    (watcher, files) = await buildFilesWatchList(config)
 
     if config.SHIP_UDP is not None:
-        udpSock = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        udpSock.setblocking(0)
-        udpSock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
-        udpSock.bind(('', int(config.SHIP_UDP)))
+        udpSock = await asyncudp.create_socket(local_addr=('', int(config.SHIP_UDP)), packets_queue_max_size=1024, reuse_port=True)
+
     else:
         udpSock = None
 
     while True:
-        stat = await inbound.poll(200)
-        if stat:
-            r = await inbound.recv_multipart()
-            d = loads(r[1])
-            if 'when' not in d:
-                d.update({"when": "socket"})
-
-            r[1] = dumps(d)
-            sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
-            await zsock.send_multipart(r)
-
-        stat = await configWatchSocket.poll(200)
-        if stat:
-            msg = await configWatchSocket.recv_multipart()
-            topic = msg[0].decode('utf-8')
-            if config['MISSIONS_FILE'] in topic:
-                files = await buildFilesWatchList(config)
-
-        mods = await checkFilesystemChanges(files)
-        sanic.log.logger.info(mods)
-        for f in mods:
-            msg = [(f"{f['glider']:03d}-file-{f['file']}").encode('utf-8'), dumps(f)]
-            sanic.log.logger.info(f"{f['glider']:03d}-file-{f['file']}")
-            await zsock.send_multipart(msg)
-
+        aws = [ asyncio.create_task(messagingSocketWatch(inbound), name='inbound'),
+                # asyncio.create_task(messagingSocketWatch(configWatchSocket, name='config'),
+                asyncio.create_task(fileWatch(watcher, files), name='files') ]
         if udpSock:
-            try:
-                data = udpSock.recvfrom(1024)
-                sanic.log.logger.info(data)
-                if data:
-                    sentences = data[0].decode()
-                    msg = { 'ship': 'shipname', 'time': time.time() }
-                    for line in sentences.splitlines():
-                        if 'GGA' in line:
-                            pieces = line.split(',')
-                            msg['hhmmss'] = float(pieces[1])
-                            msg['lat'] = float(pieces[2])
-                            msg['lon'] = float(pieces[4])
-                            if (pieces[3] == 'S'):
-                                msg['lat'] = -msg['lat']
-                            if (pieces[5] == 'W'):
-                                msg['lon'] = -msg['lon']
+            aws.append(asyncio.create_task(udpSock.recvfrom(), name='udp'))
 
-                        elif 'HDT' in line:
-                            pieces = line.split(',')
-                            msg['hdt'] = float(pieces[1])
-                        elif 'VTG' in line:
-                            pieces = line.split(',')
-                            msg['cog'] = float(pieces[1])
-                            msg['sog'] = float(pieces[5])
-                        elif 'ZDA' in line:
-                            pieces = line.split(',')
-                            msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
+        done, pend = await asyncio.wait(aws, return_when=asyncio.FIRST_COMPLETED)
 
-                    await zsock.send_multipart(["000-ship-shipname".encode('utf-8'), dumps(msg)])
-            except:
-                pass
+        for task in done:
+            name = task.get_name()
+            r = task.result()
+            if name == 'inbound': # r is multipart message
+                d = loads(r[1])
+                if 'when' not in d:
+                    d.update({"when": "socket"})
+
+                r[1] = dumps(d)
+                sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
+                await zsock.send_multipart(r)
+#
+#            elif name == 'config':
+#                
+#                topic = r[0].decode('utf-8')
+#                if config['MISSIONS_FILE'] in topic:
+#                    watcher.close()
+#                    (watcher, files) = await buildFilesWatchList(config)
+#
+            elif name == 'files':
+                fname = r[0]
+                if r[1]:                # r is tuple (name, config boolean)
+                    watcher.close()
+                    print('rebuilding list')
+                    (watcher, files) = await buildFilesWatchList(config)
+                    # rebuild the watch list, but re-reading the tables is a per app thing
+                    # so relies on this notification going out and then configWatcher
+                    # picking it up
+                if 'comm.log' in fname:
+                    sz = await aiofiles.os.path.getsize(fname)
+                    if sz > files[fname]['size']:
+                        files[fname]['delta'] = sz - files[fname]['size']
+                    else:
+                        files[fname]['delta'] = sz
+
+                    files[fname]['size']  = sz
+                else:
+                    sz = 0
+
+                msg = [(f"{files[fname]['glider']:03d}-file-{files[fname]['file']}").encode('utf-8'), dumps(files[fname])]
+                sanic.log.logger.info(f"{files[fname]['glider']:03d}-file-{files[fname]['file']}, {sz}")
+                await zsock.send_multipart(msg)
+
+            elif name == 'udp':
+                try:
+                    data = r
+                    sanic.log.logger.info(data)
+                    if data:
+                        sentences = data[0].decode()
+                        msg = { 'ship': 'shipname', 'time': time.time() }
+                        for line in sentences.splitlines():
+                            if 'GGA' in line:
+                                pieces = line.split(',')
+                                msg['hhmmss'] = float(pieces[1])
+                                msg['lat'] = float(pieces[2])
+                                msg['lon'] = float(pieces[4])
+                                if (pieces[3] == 'S'):
+                                    msg['lat'] = -msg['lat']
+                                if (pieces[5] == 'W'):
+                                    msg['lon'] = -msg['lon']
+
+                            elif 'HDT' in line:
+                                pieces = line.split(',')
+                                msg['hdt'] = float(pieces[1])
+                            elif 'VTG' in line:
+                                pieces = line.split(',')
+                                msg['cog'] = float(pieces[1])
+                                msg['sog'] = float(pieces[5])
+                            elif 'ZDA' in line:
+                                pieces = line.split(',')
+                                msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
+
+                        await zsock.send_multipart(["000-ship-shipname".encode('utf-8'), dumps(msg)])
+                except:
+                    pass
+
+        for task in pend:
+            task.cancel()
+
+        await asyncio.wait(pend)
+
 
                 
 def backgroundWatcher(config):
     loop = asyncio.get_event_loop()
-    loop.create_task(notifier(config))
+    loop.create_task(watchMonitorPublish(config))
     loop.run_forever()
 
 async def mainProcessReady(app):
@@ -2805,6 +2960,8 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
         app.config.MISSIONS_FILE = "missions.yml"
     if 'USERS_FILE' not in app.config:
         app.config.USERS_FILE = "users.yml"
+    if 'STATIC_FILE' not in app.config:
+        app.config.STATIC_FILE = "static.yml"
     if 'FQDN' not in app.config:
         app.config.FQDN = None;
     if 'USER' not in app.config:
@@ -2836,6 +2993,7 @@ def usage():
     print("  --domain=|-d       fully-qualified-domain-name (optional)")
     print("  --missionsfile=|-f missions.yml file (default ROOT/missions.yml)")
     print("  --usersfile=|-u    users.yml file (default ROOT/users.yml)")
+    print("  --staticfile=|-w   static.yml file (default ROOT/static.yml)")
     print("  --certs=|-c        certificate file for SSL")
     print("  --ssl|-s           boolean enable SSL")
     print("  --inspector|-i     boolean enable SANIC inspector")
@@ -2861,7 +3019,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:tsih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
+        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:w:tsih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -2879,6 +3037,8 @@ if __name__ == '__main__':
             overrides['MISSIONS_FILE'] = a
         elif o in ['-u', '--usersfile']:
             overrides['USERS_FILE'] = a
+        elif o in ['-w', '--staticfile']:
+            overrides['STATIC_FILE'] = a
         elif o in ['--shipudp']:
             overrides['SHIP_UDP'] = a
             print(f'UDP {a}')
@@ -2930,7 +3090,7 @@ if __name__ == '__main__':
 
     if test:
         app = createApp(overrides, test=True)
-        tbl = asyncio.run(buildMissionTable(app))
+        (tbl, _, _) = asyncio.run(buildMissionTable(app))
         pprint.pp(tbl)
         users = asyncio.run(buildUserTable(app))
         pprint.pp(users)
