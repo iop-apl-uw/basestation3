@@ -362,7 +362,7 @@ def update_globals_from_nodc(base_opts, globals_d):
                 nodc_dicts.append(yaml.safe_load(fi.read()))
                 fi.close()
             except:
-                log_error(f"Could not process {yaml_filename} - skipping")
+                log_error(f"Could not process {yaml_filename} - skipping", "exc")
 
         else:
             log_info(f"{yaml_filename} does not exist - skipping")
