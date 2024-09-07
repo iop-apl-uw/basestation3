@@ -28,8 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Runs a monitor of the comm log traffic for the duration of the call - quits on disconnect or reconnect
-"""
+"""Runs a monitor of the comm log traffic for the duration of the call - quits on disconnect or reconnect"""
 
 import inspect
 import os
@@ -330,19 +329,6 @@ class GliderEarlyGPSClient:
             else:
                 BaseDB.addSession(self.__base_opts, session)
 
-    def callback_ver(self, session):
-        """Calback for comm.log ver= line"""
-        if not self._first_time:
-            if session is None:
-                log_warning("ver callback called with empty session")
-            else:
-                BaseDotFiles.process_pagers(
-                    self.__base_opts, session.sg_id, ("gps",), session=session
-                )
-                BaseCtrlFiles.process_pagers_yml(
-                    self.__base_opts, session.sg_id, ("gps",), session=session
-                )
-
     def process_counter_line(self, session, testing=False):
         """
         Returns True for success, False for failure
@@ -357,6 +343,14 @@ class GliderEarlyGPSClient:
             # Ignore second counter line
             pass
         else:
+            if not self._first_time:
+                BaseDotFiles.process_pagers(
+                    self.__base_opts, session.sg_id, ("gps",), session=session
+                )
+                BaseCtrlFiles.process_pagers_yml(
+                    self.__base_opts, session.sg_id, ("gps",), session=session
+                )
+
             try:
                 gliderLat = Utils.ddmm2dd(session.gps_fix.lat)
                 gliderLon = Utils.ddmm2dd(session.gps_fix.lon)
