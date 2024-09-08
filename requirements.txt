@@ -5,7 +5,8 @@ matplotlib>=3.6.0
 cmocean
 numpy>=1.26.0,<2
 #gsw==3.3.1
-gsw==3.6.16
+#gsw==3.6.16
+gsw==3.6.19
 seawater==3.3.4
 plotly==5.19.0
 scipy>=1.14.0
