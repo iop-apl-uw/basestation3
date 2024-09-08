@@ -747,7 +747,13 @@ def process_file_group(
                         f"Extracting {tarmember.name} from {defrag_file_name} to directory {base_opts.mission_dir}"
                     )
                     try:
-                        tar.extract(tarmember.name, base_opts.mission_dir)
+                        if sys.version_info < (3, 10, 11):
+                            tar.extract(tarmember.name, base_opts.mission_dir)
+                        else:
+                            tar.extract(
+                                tarmember.name, base_opts.mission_dir, filter="data"
+                            )
+
                     except OverflowError as exception:
                         log_warning(
                             f"Potential problems extracting {tarmember.name} ({exception.args})"
