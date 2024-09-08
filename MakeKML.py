@@ -1316,7 +1316,7 @@ def main(
                         "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
                     )
                     return 1
-            except KeyError:
+            except AttributeError:
                 pass
 
             dive_nc_file_name = dive_nc_file_names[dive_index]
@@ -1431,7 +1431,7 @@ def main(
                         "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
                     )
                     return 1
-            except KeyError:
+            except AttributeError:
                 pass
 
             dive_nc_file_name = dive_nc_file_names[dive_index]
@@ -1817,7 +1817,7 @@ def main(
                 "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
             )
             return 1
-    except KeyError:
+    except AttributeError:
         pass
 
     # Add in the SSH file in, if it exists
@@ -1902,7 +1902,7 @@ def main(
                 "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
             )
             return 1
-    except KeyError:
+    except AttributeError:
         pass
 
     # Zip the output file

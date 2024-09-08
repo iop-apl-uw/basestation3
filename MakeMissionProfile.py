@@ -436,7 +436,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                     "Caught SIGUSR1 perviously - stopping furhter MakeMissionTimeSeries processing"
                 )
                 return (1, None)
-        except KeyError:
+        except AttributeError:
             pass
 
         if first_profile_name is None:
