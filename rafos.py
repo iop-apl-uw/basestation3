@@ -25,7 +25,7 @@ async def hitsTable(path):
                     dive = int(pcs[1])
                     if dive > maxDive:
                         maxDive = dive
-                    if dive < minDive:
+                    if dive > 0 and dive < minDive:
                         minDive = dive
                 elif line.startswith('$ID'):
                     pcs = line.split(',')
@@ -74,10 +74,12 @@ async def hitsTable(path):
     data = ExtractTimeseries.extractVars(ncfilename, whichVars, minDive, maxDive)
     del(data['time'])
 
-    fla = scipy.interpolate.interp1d(data['epoch'], data['latitude'], bounds_error=False, fill_value=0.0)
-    flo = scipy.interpolate.interp1d(data['epoch'], data['longitude'], bounds_error=False, fill_value=0.0)
-    fde = scipy.interpolate.interp1d(data['epoch'], data['depth'], bounds_error=False, fill_value=0.0)
+    fla = scipy.interpolate.interp1d(data['epoch'], data['latitude'], bounds_error=False, fill_value='extrapolate')
+    flo = scipy.interpolate.interp1d(data['epoch'], data['longitude'], bounds_error=False, fill_value='extrapolate')
+    fde = scipy.interpolate.interp1d(data['epoch'], data['depth'], bounds_error=False, fill_value='extrapolate')
     for h in hits:
+        if 'srcLat' not in h:
+            continue
         gliderLat = fla(h['epoch'])[()]
         gliderLon = flo(h['epoch'])[()]
         gliderDep = fde(h['epoch'])[()]
