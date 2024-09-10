@@ -901,10 +901,13 @@
 
                                     setupShip(map, layerControl, aa.asset, mk);
 
-                                    if ('interval' in a && aa.interval > 0) {
+                                    if ('interval' in aa && aa.interval > 0) {
 
                                         setInterval(function() {
-                                                        fetch(aa.url)
+                                                        fetch(aa.url, {
+                                                            method: method,
+                                                            body: JSON.stringify(obj),
+                                                        })
                                                         .then(resp => resp.json())
                                                         .then(d => {
                                                             html = [ aa.asset, formatPos(d.lat) + "," + formatPos(d.lon)].join('<br/>');
