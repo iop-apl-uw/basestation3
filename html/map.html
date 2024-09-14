@@ -1070,7 +1070,8 @@
                     }
                     let newLayer = L.layerGroup(v);
                     layerControl.addOverlay(newLayer, 'DAC', `${glider} ${mission}`); 
-                    // newLayer.addTo(map); // not by default
+		            if (checkLayerState("DAC", "on"))
+                        newLayer.addTo(map); // not by default
                 })
                 .catch(e => {
                     console.log('DAC ' + e);
@@ -1238,7 +1239,16 @@
                             }
                             else if (track._layers[k].options.name.includes('Targets')) {
                                 layerControl.addOverlay(track._layers[k], 'targets', gliders[i] + ' ' + missions[i]);
-                                map.removeLayer(track._layers[k]);
+                                if (!Object.keys(localStorage).includes('layerStatus_targets') || localStorage.getItem('layerStatus_targets') == 'off') {
+
+                                    map.removeLayer(track._layers[k]);
+                                    console.log("targets " + localStorage['layerStatus_targets']);
+                
+                                //   console.log("removing targets");
+				                }
+                                //else {
+                                //    console.log("targets " + localStorage['layerStatus_targets']);
+                               // }
                             }
                             else if (track._layers[k].options.name.includes('layer_')) {
                                 var [dm, ...nm] = track._layers[k].options.name.split('_')
