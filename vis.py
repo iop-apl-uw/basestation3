@@ -2460,11 +2460,13 @@ async def buildMissionTable(app, config=None):
                 d = await f.read()
                 try:
                     if not (x := yaml.safe_load(d)):
+                        print('could not read yaml')
                         x = {}
                 except Exception as e:
                     sanic.log.logger.info(f"mission file parse error {e}")
                     x = {}
         else:
+            print('config file does not exist')
             x = {}
 
     if 'organization' not in x:
@@ -2788,20 +2790,21 @@ async def buildFilesWatchList(config):
             else:
                 fname = f"sg{m['glider']:03d}" 
 
-            watcher.add_watch(fname, asyncinotify.Mask.CLOSE_WRITE)
+            if await aiofiles.os.path.exists(fname):
+                watcher.add_watch(fname, asyncinotify.Mask.CLOSE_WRITE)
 
-            for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat", f"sg{m['glider']:03d}.kmz"]:
-                if m['path']:
-                    fname = f"{m['path']}/{f}"
-                else:
-                    fname = f"sg{m['glider']:03d}/{f}" 
+                for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat", f"sg{m['glider']:03d}.kmz"]:
+                    if m['path']:
+                        fname = f"{m['path']}/{f}"
+                    else:
+                        fname = f"sg{m['glider']:03d}/{f}" 
 
-                if await aiofiles.os.path.exists(fname):
-                    sz = await aiofiles.os.path.getsize(fname)
-                else:
-                    sz = 0
+                    if await aiofiles.os.path.exists(fname):
+                        sz = await aiofiles.os.path.getsize(fname)
+                    else:
+                        sz = 0
 
-                files[fname] = { "glider": m['glider'], "file": fname, "size": sz, "delta": 0, 'config': False, "mission": m['mission'] if m['mission'] else "" } 
+                    files[fname] = { "glider": m['glider'], "file": fname, "size": sz, "delta": 0, 'config': False, "mission": m['mission'] if m['mission'] else "" } 
 
 
 
