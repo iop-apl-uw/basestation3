@@ -73,6 +73,18 @@
         var obj = Object.fromEntries(formData);
         var opts = []
 
+        if (obj['dives'] == '' ||
+            obj['depth1'] == '' ||
+            obj['depth2'] == '' ||
+            obj['initBias'] == '') {
+            alert('missing required input (dives, min depth, max depth, init bias)');
+            return;
+        }
+
+        if (parseFloat(obj['initBias']) == 0) {
+            alert('zero value for init bias not recommended');
+        } 
+
         if (mission() != '')
             opts.push(mission());
         if ('ballast' in obj)
