@@ -1295,7 +1295,16 @@ def attachHandlers(app: sanic.Sanic):
         path = gliderPath(glider, request)
         hits  = await rafos.hitsTable(path)
         out = ExtractTimeseries.dumps(hits) # need custom serializer for the numpy array
-        return sanic.response.raw(out, headers={ 'Content-type': 'application/json' })
+
+        if 'format' in request.args:
+            format = request.args['format'][0]
+        else:
+            format = 'json'
+
+        if format == 'json':
+            return sanic.response.raw(out, headers={ 'Content-type': 'application/json' })
+        else:
+            return sanic.response.html(rafos.toHTML(hits))
 
     @app.route('/magcal/<glider:int>/<dives:str>')
     # description: run magcal over multiple dives
