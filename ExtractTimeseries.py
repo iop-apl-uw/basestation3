@@ -214,6 +214,10 @@ def extractVars(nc_filename, varNames, dive1, diveN, extnci=None):
     else:
         nci = extnci
 
+    dmax = max(nci.variables['dive_number'][:])
+    if dmax < diveN:
+        diveN = dmax
+
     d1 = numpy.where(nci.variables['dive_number'][:] == dive1)[0]
     dN = numpy.where(nci.variables['dive_number'][:] == diveN)[0]
     t0 = nci.variables['start_time'][d1]
