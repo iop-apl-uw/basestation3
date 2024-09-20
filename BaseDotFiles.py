@@ -1446,7 +1446,6 @@ def process_mailer(
 
 
 def process_extensions(
-    extension_file_name,
     sections,
     base_opts,
     sg_calib_file_name=None,
@@ -1463,6 +1462,7 @@ def process_extensions(
         0 - success
         1 - failure
     """
+    extension_file_name = ".extensions"
 
     def process_one_extension_file(extensions_file_name):
         log_info(f"Starting processing on {extensions_file_name} section(s):{sections}")

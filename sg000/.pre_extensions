@@ -1,3 +1,1 @@
-# Basetation extensions that are run on glider loging are listed here.
-# Hash symbol marks a comment line
-# Any extensions run here will be blocking the glider's login, so they should be brief
+# This file is no longer used.  Plase see the [prelogin] section in .extensions

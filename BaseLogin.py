@@ -70,8 +70,7 @@ def main():
 
     # Invoke extensions, if any
     process_extensions(
-        ".pre_extensions",
-        ("global",),
+        ("prelogin",),
         base_opts,
     )
 

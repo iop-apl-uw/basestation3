@@ -205,7 +205,6 @@ def main():
         ".mailer",
         ".ftp",
         ".extensions",
-        ".pre_extensions",
         ".pre_login",
         ".post_dive",
         ".post_mission",

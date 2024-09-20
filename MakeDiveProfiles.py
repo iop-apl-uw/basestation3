@@ -7426,7 +7426,6 @@ def make_dive_profile(
         nc_dive_file.close()  # close file
 
         BaseDotFiles.process_extensions(
-            ".extensions",
             ("postnetcdf",),
             base_opts,
             sg_calib_file_name=sg_calib_file_name,

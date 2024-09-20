@@ -2241,7 +2241,6 @@ def main():
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
-        ".extensions",
         ("dive",),
         base_opts,
         sg_calib_file_name=sg_calib_file_name,
@@ -2367,7 +2366,6 @@ def main():
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
-        ".extensions",
         ("global", "mission"),
         base_opts,
         sg_calib_file_name=sg_calib_file_name,
