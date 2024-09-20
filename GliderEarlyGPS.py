@@ -344,6 +344,12 @@ class GliderEarlyGPSClient:
             pass
         else:
             if not self._first_time:
+                BaseDotFiles.process_extensions(
+                    ("commloggps",),
+                    self.__base_opts,
+                    session=session,
+                )
+
                 BaseDotFiles.process_pagers(
                     self.__base_opts, session.sg_id, ("gps",), session=session
                 )

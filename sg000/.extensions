@@ -40,6 +40,9 @@
 # Extensions listed in this section are run immediately after a per-dive netcdf file has been created,
 # to allow for additional science processing.  The extension is invoked once for each file.
 [prelogin]
-# Extensions listed in this section are run after before the glider has finished logging in.
+# Extensions listed in this section are run before the glider has finished logging in.
 # NOTE: Any extensions run here will be blocking the glider's login, so they should be brief
 # This secion replaces the .pre_extensions file
+[commloggps]
+# Extensions listed in this section are run after the counter/gps line has arrived in the comm.log
+# for the current glider callin

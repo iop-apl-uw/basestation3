@@ -1455,6 +1455,7 @@ def process_extensions(
     known_mailer_tags=None,
     known_ftp_tags=None,
     processed_file_names=None,
+    **kwargs,
 ):
     """Processes the extensions file, running each extension
 
@@ -1520,6 +1521,7 @@ def process_extensions(
                                     known_mailer_tags=known_mailer_tags,
                                     known_ftp_tags=known_ftp_tags,
                                     processed_file_names=processed_file_names,
+                                    **kwargs,
                                 )
                             except Exception:
                                 log_error(
