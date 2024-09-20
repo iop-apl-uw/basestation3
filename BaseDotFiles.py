@@ -226,9 +226,9 @@ def send_email_text(
             smtp.ehlo()
             smtp.login(smtp_account, smtp_password)
             if not base_opts.reply_addr:
-                email_msg[
-                    "Reply-To"
-                ] = from_email_addr  # smtp servers often rewrite from_line to use 'Original Name <account_name@gmail.com>'
+                email_msg["Reply-To"] = (
+                    from_email_addr  # smtp servers often rewrite from_line to use 'Original Name <account_name@gmail.com>'
+                )
         else:  # linux of some sort
             smtp = smtplib.SMTP("localhost")
         smtp.sendmail(email_send_from, email_send_to, email_msg.as_string())
@@ -1449,13 +1449,13 @@ def process_extensions(
     extension_file_name,
     sections,
     base_opts,
-    sg_calib_file_name,
-    dive_nc_file_names,
-    nc_files_created,
-    processed_other_files,
-    known_mailer_tags,
-    known_ftp_tags,
-    processed_file_names,
+    sg_calib_file_name=None,
+    dive_nc_file_names=None,
+    nc_files_created=None,
+    processed_other_files=None,
+    known_mailer_tags=None,
+    known_ftp_tags=None,
+    processed_file_names=None,
 ):
     """Processes the extensions file, running each extension
 

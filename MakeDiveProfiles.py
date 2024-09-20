@@ -7429,13 +7429,8 @@ def make_dive_profile(
             ".extensions",
             ("postnetcdf",),
             base_opts,
-            sg_calib_file_name,
-            None,
-            [nc_dive_file_name],
-            None,
-            None,
-            None,
-            None,
+            sg_calib_file_name=sg_calib_file_name,
+            nc_files_created=[nc_dive_file_name],
         )
 
         nc_dive_file_name_gz = "%s.gz" % nc_dive_file_name
