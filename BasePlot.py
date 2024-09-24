@@ -110,7 +110,10 @@ def plot_dives(
         dive_ncf = Utils.open_netcdf_file(dive_nc_file_name)
         for plot_name, plot_func in dive_plot_dict.items():
             try:
-                if base_opts.stop_processing_event.is_set():
+                if (
+                    hasattr(base_opts, "stop_processing_event")
+                    and base_opts.stop_processing_event.is_set()
+                ):
                     log_warning("Caught SIGUSR1 - bailing out")
                     return (fig, output_files)
             except AttributeError:
@@ -178,7 +181,10 @@ def plot_mission(
     output_files = []
     for plot_name, plot_func in mission_plot_dict.items():
         try:
-            if base_opts.stop_processing_event.is_set():
+            if (
+                hasattr(base_opts, "stop_processing_event")
+                and base_opts.stop_processing_event.is_set()
+            ):
                 log_warning("Caught SIGUSR1 - bailing out")
                 return (figs, output_files)
         except AttributeError:

@@ -431,7 +431,10 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
     for dive_nc_profile_name in dive_nc_profile_names:
         log_debug("Processing %s" % dive_nc_profile_name)
         try:
-            if base_opts.stop_processing_event.is_set():
+            if (
+                hasattr(base_opts, "stop_processing_event")
+                and base_opts.stop_processing_event.is_set()
+            ):
                 log_warning(
                     "Caught SIGUSR1 perviously - stopping furhter MakeMissionTimeSeries processing"
                 )

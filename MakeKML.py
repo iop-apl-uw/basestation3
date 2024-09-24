@@ -1311,7 +1311,10 @@ def main(
         for dive_index in range(len(dive_nc_file_names)):
             # Stop processing if signaled
             try:
-                if base_opts.stop_processing_event.is_set():
+                if (
+                    hasattr(base_opts, "stop_processing_event")
+                    and base_opts.stop_processing_event.is_set()
+                ):
                     log_warning(
                         "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
                     )
@@ -1426,7 +1429,10 @@ def main(
         for dive_index in range(len(dive_nc_file_names)):
             # Stop processing if signaled
             try:
-                if base_opts.stop_processing_event.is_set():
+                if (
+                    hasattr(base_opts, "stop_processing_event")
+                    and base_opts.stop_processing_event.is_set()
+                ):
                     log_warning(
                         "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
                     )
@@ -1812,7 +1818,10 @@ def main(
 
     # Stop processing if signaled
     try:
-        if base_opts.stop_processing_event.is_set():
+        if (
+            hasattr(base_opts, "stop_processing_event")
+            and base_opts.stop_processing_event.is_set()
+        ):
             log_warning(
                 "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
             )
@@ -1897,7 +1906,10 @@ def main(
 
     # Stop processing if signaled
     try:
-        if base_opts.stop_processing_event.is_set():
+        if (
+            hasattr(base_opts, "stop_processing_event")
+            and base_opts.stop_processing_event.is_set()
+        ):
             log_warning(
                 "Caught SIGUSR1 perviously - stopping furhter MakeKML processing"
             )
