@@ -31,25 +31,18 @@
 """
 Rebuilds per-dive nc files from log and eng files (no comm.log or dat/asc processing)
 """
+
 import cProfile
-import pstats
 import glob
 import os
 import pdb
+import pstats
 import shutil
 import sys
 import time
 import traceback
 
-from BaseLog import (
-    BaseLogger,
-    log_debug,
-    log_info,
-    log_error,
-    log_warning,
-    log_critical,
-)
-from CalibConst import getSGCalibrationConstants
+import BaseDB
 import BaseNetCDF
 import BaseOpts
 import BaseOptsType
@@ -57,14 +50,23 @@ import BasePlot
 import FileMgr
 import FlightModel
 import MakeDiveProfiles
+import MakeKML
 import MakeMissionProfile
 import MakeMissionTimeSeries
-import MakeKML
 import PlotUtils
 import QC
 import Sensors
 import TraceArray
 import Utils
+from BaseLog import (
+    BaseLogger,
+    log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
+)
+from CalibConst import getSGCalibrationConstants
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
@@ -300,6 +302,9 @@ def main():
             # - don't add to list
             if nc_file_created:
                 dive_nc_file_names.append(nc_file_created)
+                if not base_opts.called_from_fm:
+                    BaseDB.loadDB(base_opts, nc_file_created, run_dive_plots=False)
+
         del temp_ret_val
 
     log_info(f"Dives processed = {dives_processed}")
@@ -330,6 +335,9 @@ def main():
                 else:
                     nc_files_created = list(set(nc_files_created))
                     log_info(f"FM files updated {nc_files_created}")
+                    if not base_opts.called_from_fm:
+                        for ncf in nc_files_created:
+                            BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
                     all_dive_nc_file_names.extend(nc_files_created)
                     all_dive_nc_file_names = sorted(
                         Utils.unique(all_dive_nc_file_names)

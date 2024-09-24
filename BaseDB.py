@@ -1112,7 +1112,7 @@ def rebuildDivesGC(base_opts, ext):
 def loadDB(base_opts, filename, run_dive_plots=True):
     """Load a single netcdf file into the database"""
     con = Utils.open_mission_database(base_opts)
-    log_info("loadDB db opened")
+    log_info(f"loadDB db opened - adding:{filename}")
 
     # createDivesTable(cur)
     checkSchema(base_opts, con)
