@@ -35,6 +35,7 @@ Processes network files
 import collections
 import io
 import os
+import pathlib
 import pdb
 import sys
 import time
@@ -43,6 +44,7 @@ import traceback
 import numpy as np
 import xarray as xr
 
+import BaseDB
 from BaseLog import (
     BaseLogger,
     log_error,
@@ -59,6 +61,15 @@ import Utils
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
 
 var_template = {
     "variables": {
@@ -420,6 +431,42 @@ var_template = {
             ],
             "coord_row": "log_FREEZE_data_points",
         },
+        "log_EXED": {
+            "type": "c",
+            "attributes": {
+                "comment": "Exed commands",
+            },
+            "coord_cols": [
+                "name",
+                "seqnum",
+                "why",
+            ],
+            "coord_row": "log_EXED_data_points",
+        },
+        "log_WARN": {
+            "type": "c",
+            "attributes": {
+                "comment": "WARN messages",
+            },
+            "coord_cols": [
+                "warning",
+            ],
+            "coord_row": "log_WARN_data_points",
+        },
+        "log_NET_PING": {
+            "type": "f8",
+            "attributes": {
+                "_FillValue": -999,
+                "comment": "Network messages",
+            },
+            "coord_cols": [
+                "time",
+                "connectedtop",
+                "range",
+                "SNR",
+            ],
+            "coord_row": "log_NET_PING_data_points",
+        },
         "start_time": {
             "type": "f8",
             "num_digits": 2,
@@ -462,6 +509,9 @@ def create_ds_var(dso, template, var_name, data, row_coord=None):
     """
     if isinstance(data, str):
         inp_data = np.array(data, dtype=np.dtype(("S", len(data))))
+    elif template["variables"][var_name]["type"] == "c":
+        # This includes singleton strings
+        inp_data = data
     elif np.ndim(data) == 0:
         # Scalar data
         inp_data = np.dtype(template["variables"][var_name]["type"]).type(data)
@@ -476,9 +526,10 @@ def create_ds_var(dso, template, var_name, data, row_coord=None):
         if inp_data == np.nan:
             inp_data = template["variables"][var_name]["attributes"]["_FillValue"]
     else:
-        inp_data[inp_data == np.nan] = template["variables"][var_name]["attributes"][
-            "_FillValue"
-        ]
+        if "_FillValue" in template["variables"][var_name]["attributes"]:
+            inp_data[inp_data == np.nan] = template["variables"][var_name][
+                "attributes"
+            ]["_FillValue"]
 
     # Set the dimensions and coodinates
     coords = None
@@ -596,14 +647,12 @@ def convert_network_logfile(base_opts, in_file_name, out_file_name):
             return None
 
     try:
-        fo = open(out_file_name, "wb")
+        with open(out_file_name, "wb") as fo:
+            for ll in run_output:
+                fo.write(ll)
     except Exception:
-        log_error(f"Failed to open {out_file_name}")
+        log_error(f"Failed to process {out_file_name}")
         return None
-
-    for ll in run_output:
-        fo.write(ll)
-    fo.close()
 
     return out_file_name
 
@@ -700,6 +749,9 @@ class log_parser:
         self.state_table = []
         self.modem_table = []
         self.freeze_table = []
+        self.exed_table = []
+        self.warn_table = []
+        self.net_ping_table = []
 
     # Parsers
     def float32_cnv(self, x):
@@ -710,6 +762,9 @@ class log_parser:
 
     def str_cnv(self, x):
         return str(x[0])
+
+    def strs_cnv(self, x):
+        return x
 
     def state_cnv(self, x):
         return [
@@ -724,6 +779,9 @@ class log_parser:
         lon = Utils.ddmm2dd(np.float64(x[3]))
         hdop = np.float64(x[4])
         return np.array([ttime, lat, lon, hdop])
+
+    def net_ping_cnv(self, x):
+        return np.array([np.float64(y) for y in x])
 
     # Adders
     def add_to_global_table(self, param_name, val):
@@ -753,6 +811,24 @@ class log_parser:
             raise TypeError("Incorrect number of values for STATE line", val)
         self.state_table.append(val)
 
+    def add_to_exed_table(self, param_name, val):
+        # pylint: disable=unused-argument
+        if len(val) != 3:
+            raise TypeError("Incorrect number of values for EXED line", val)
+        self.exed_table.append(val)
+
+    def add_to_warn_table(self, param_name, val):
+        # pylint: disable=unused-argument
+        if not isinstance(val, str) and len(val) != 1:
+            raise TypeError("Incorrect number of values for WARN line", val)
+        self.warn_table.append(val)
+
+    def add_to_net_ping_table(self, param_name, val):
+        # pylint: disable=unused-argument
+        if len(val) != 4:
+            raise TypeError("Incorrect number of values for NET_PING line", val)
+        self.net_ping_table.append(val)
+
     parser_type = collections.namedtuple("parser_type", ("parser", "add_action"))
     log_parse = {
         "$_SM_DEPTHo": parser_type(float32_cnv, add_to_global_table),
@@ -780,6 +856,9 @@ class log_parser:
         "$MODEM": parser_type(float32_cnv, add_to_modem_table),
         "$STATE": parser_type(state_cnv, add_to_state_table),
         "$FREEZE": parser_type(float32_cnv, add_to_freeze_table),
+        "$EXED": parser_type(strs_cnv, add_to_exed_table),
+        "$WARN": parser_type(str_cnv, add_to_warn_table),
+        "$NET_PING": parser_type(net_ping_cnv, add_to_net_ping_table),
     }
 
     def parse_log_line(self, rs):
@@ -830,78 +909,97 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
             data = np.genfromtxt(
                 network_profile, comments="%", names=("temperature", "salinity")
             )
-            depth = np.linspace(
-                first_bin_depth,
-                first_bin_depth + (bin_width * len(data["temperature"])),
-                num=len(data["temperature"]),
-                endpoint=False,
-            )
-            create_ds_var(dso, var_template, "depth", depth)
-            for var_name in ("temperature", "salinity"):
-                tmp_v = np.array((data[var_name], np.full(len(data[var_name]), np.nan)))
-                create_ds_var(dso, var_template, var_name, tmp_v)
-            time_v = np.array(
-                (
-                    np.full(len(data[var_name]), np.nan),
-                    np.full(len(data[var_name]), np.nan),
+            if not data.size:
+                log_error(f"Read from {network_profile} returned no data")
+            else:
+                if np.ndim(data["temperature"]) == 0:
+                    create_ds_var(
+                        dso,
+                        var_template,
+                        "depth",
+                        np.atleast_1d(np.array(bin_width / 2.0)),
+                    )
+                else:
+                    depth = np.linspace(
+                        first_bin_depth,
+                        first_bin_depth + (bin_width * len(data["temperature"])),
+                        num=len(data["temperature"]),
+                        endpoint=False,
+                    )
+                    create_ds_var(dso, var_template, "depth", depth)
+                for var_name in ("temperature", "salinity"):
+                    tmp_v = np.array(
+                        (
+                            np.atleast_1d(data[var_name]),
+                            np.full(len(np.atleast_1d(data[var_name])), np.nan),
+                        )
+                    )
+                    create_ds_var(dso, var_template, var_name, tmp_v)
+                time_v = np.array(
+                    (
+                        np.full(len(np.atleast_1d(data[var_name])), np.nan),
+                        np.full(len(np.atleast_1d(data[var_name])), np.nan),
+                    )
                 )
-            )
         except Exception:
+            DEBUG_PDB_F()
             log_error(f"Failed processing {network_profile}", "exc")
 
     if not os.path.isfile(network_logfile):
         log_warning(f"{network_logfile} not found - skipping")
     else:
         try:
-            raw_network_logfile = open(network_logfile, "rb")
-        except Exception:
-            log_error(f"Failed opening {network_logfile}", "exc")
-        else:
-            lp = log_parser()
-            line_count = 0
-            start_time = 0
-            while True:
-                line_count += 1
-                try:
-                    raw_line = raw_network_logfile.readline().decode()
-                except UnicodeDecodeError:
-                    log_error(
-                        f"Could not process line {line_count} of {network_logfile}"
-                    )
-                    continue
-                raw_line = raw_line.rstrip()
-                if raw_line == "":
-                    break
+            with open(network_logfile, "rb") as raw_network_logfile:
+                lp = log_parser()
+                line_count = 0
+                start_time = 0
+                while True:
+                    line_count += 1
+                    try:
+                        raw_line = raw_network_logfile.readline().decode()
+                    except UnicodeDecodeError:
+                        log_error(
+                            f"Could not process line {line_count} of {network_logfile}"
+                        )
+                        continue
 
-                try:
-                    if raw_line.startswith("$"):
-                        lp.parse_log_line(raw_line)
-                    elif raw_line.startswith("start:"):
-                        try:
-                            if "," in raw_line:
-                                time_string = raw_line.split(",", maxsplit=1)[1]
-                            else:
-                                time_string = raw_line.split(":", maxsplit=1)[1]
-                            start_time = Utils.parse_time(time_string)
-                        except Exception:
-                            log_error(
-                                f"Could not process start line {line_count} of {network_logfile} - skipping",
-                                "exc",
-                            )
-                    else:
-                        pass
-                        # This is the first line in the .nlog
-                        # ts = parse_timestamp(raw_line)
-                except LookupError as e:
-                    log_error(
-                        f"{e.args[0]} {e.args[1]} line {line_count} of {network_logfile} - skipping",
-                    )
-                except Exception:
-                    log_error(
-                        f"Could not process {line_count} of {network_logfile} - skipping",
-                        "exc",
-                    )
-        raw_network_logfile.close()
+                    if not raw_line:
+                        break
+
+                    raw_line = raw_line.rstrip()
+                    if not (raw_line):
+                        continue
+
+                    try:
+                        if raw_line.startswith("$"):
+                            lp.parse_log_line(raw_line)
+                        elif raw_line.startswith("start:"):
+                            try:
+                                if "," in raw_line:
+                                    time_string = raw_line.split(",", maxsplit=1)[1]
+                                else:
+                                    time_string = raw_line.split(":", maxsplit=1)[1]
+                                start_time = Utils.parse_time(time_string)
+                            except Exception:
+                                log_error(
+                                    f"Could not process start line {line_count} of {network_logfile} - skipping",
+                                    "exc",
+                                )
+                        else:
+                            pass
+                            # This is the first line in the .nlog
+                            # ts = parse_timestamp(raw_line)
+                    except LookupError as e:
+                        log_error(
+                            f"{e.args[0]} {e.args[1]} line {line_count} of {network_logfile} - skipping",
+                        )
+                    except Exception:
+                        log_error(
+                            f"Could not process {line_count} of {network_logfile} - skipping",
+                            "exc",
+                        )
+        except Exception:
+            log_error(f"Failed processing {network_logfile}", "exc")
 
         create_ds_var(dso, var_template, "start_time", start_time)
 
@@ -950,6 +1048,9 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
         for tab, var_name in (
             ("modem_table", "log_MODEM"),
             ("freeze_table", "log_FREEZE"),
+            ("exed_table", "log_EXED"),
+            ("warn_table", "log_WARN"),
+            ("net_ping_table", "log_NET_PING"),
         ):
             t_table = None
             for ll in getattr(lp, tab):
@@ -959,11 +1060,15 @@ def make_netcdf_network_file(network_logfile, network_profile, ts_outputfile=Fal
                     t_table = np.vstack([t_table, ll])
 
             if t_table is not None:
-                if len(np.shape(t_table)) == 1:
-                    # Convert to a 1xN table - makes the netcdf creation go.
-                    t_table = np.reshape(t_table, (1, np.shape(t_table)[0]))
-                rc = np.arange(np.shape(t_table)[0])
-                create_ds_var(dso, var_template, var_name, t_table, row_coord=rc)
+                if np.ndim(t_table) == 0:
+                    # This is a string
+                    create_ds_var(dso, var_template, var_name, t_table)
+                else:
+                    if len(np.shape(t_table)) == 1:
+                        # Convert to a 1xN table - makes the netcdf creation go.
+                        t_table = np.reshape(t_table, (1, np.shape(t_table)[0]))
+                    rc = np.arange(np.shape(t_table)[0])
+                    create_ds_var(dso, var_template, var_name, t_table, row_coord=rc)
 
     if time_v is not None:
         create_ds_var(dso, var_template, "time", time_v)
@@ -1037,6 +1142,7 @@ def make_netcdf_network_files(network_files, processed_files_list):
         try:
             ncf_filename = make_netcdf_network_file(*dive_net_files)
         except Exception:
+            DEBUG_PDB_F()
             log_error(f"Failed to create cdf file from {dive_net_files}", "exc")
             ret_val = 1
         else:
@@ -1246,10 +1352,7 @@ def make_netcdf_network_file_from_perdive_files(
         try:
             ncf_output_filename = make_netcdf_network_file_from_perdive(ncf_filename)
         except Exception:
-            if DEBUG_PDB:
-                _, _, tracebk = sys.exc_info()
-                traceback.print_exc()
-                pdb.post_mortem(tracebk)
+            DEBUG_PDB_F()
             log_error(
                 f"Unhandled exception in processing {ncf_filename}-- skipping", "exc"
             )
@@ -1397,6 +1500,19 @@ def main(
             base_opts.network_files, processed_files_list
         )
         log_info(f"Created {processed_files_list}")
+        for ncf in processed_files_list:
+            if ".ncdf" in ncf:
+                if not hasattr(base_opts, "mission_dir") or not base_opts.mission_dir:
+                    base_opts.mission_dir = pathlib.Path(ncf).parent
+                if (
+                    not hasattr(base_opts, "instrument_id")
+                    or not base_opts.instrument_id
+                ):
+                    try:
+                        base_opts.instrument_id = int(pathlib.Path(ncf).stem[1:4])
+                    except Exception:
+                        base_opts.instrument_id = -1
+                BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
 
     log_info(
         "Finished processing "
@@ -1416,9 +1532,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception:
-        if DEBUG_PDB:
-            _, _, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
+        DEBUG_PDB_F()
 
         log_critical("Unhandled exception in main -- exiting", "exc")
