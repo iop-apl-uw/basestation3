@@ -43,7 +43,8 @@ import aiofiles
 import asyncio
 import aiohttp
 import asyncudp
-import asyncinotify
+if "darwin" not in sys.platform:
+    import asyncinotify
 import sanic
 import sanic_gzip
 import sanic_ext
@@ -2756,6 +2757,9 @@ async def configWatcher(app):
 async def buildFilesWatchList(config):
     (missions, _, domains) = await buildMissionTable(None, config=config)
     files = { }
+    if "darwin" in sys.platform:
+        return (None, None)
+
     watcher = asyncinotify.Inotify()
 
     if not config.SINGLE_MISSION:
@@ -2843,9 +2847,11 @@ async def watchMonitorPublish(config):
         udpSock = None
 
     while True:
-        aws = [ asyncio.create_task(messagingSocketWatch(inbound), name='inbound'),
+        aws = [ asyncio.create_task(messagingSocketWatch(inbound), name='inbound') ]
                 # asyncio.create_task(messagingSocketWatch(configWatchSocket, name='config'),
-                asyncio.create_task(fileWatch(watcher, files), name='files') ]
+        if watcher:
+            aws.append(asyncio.create_task(fileWatch(watcher, files), name='files'))
+
         if udpSock:
             aws.append(asyncio.create_task(udpSock.recvfrom(), name='udp'))
 
@@ -2872,7 +2878,7 @@ async def watchMonitorPublish(config):
 #
             elif name == 'files':
                 fname = r[0]
-                if r[1]:                # r is tuple (name, config boolean)
+                if r[1] and watcher:             # r is tuple (name, config boolean)
                     watcher.close()
                     print('rebuilding list')
                     (watcher, files) = await buildFilesWatchList(config)
@@ -2927,10 +2933,11 @@ async def watchMonitorPublish(config):
                 except:
                     pass
 
-        for task in pend:
-            task.cancel()
+        if len(pend) > 0:
+            for task in pend:
+                task.cancel()
 
-        await asyncio.wait(pend)
+            await asyncio.wait(pend)
 
 
                 
