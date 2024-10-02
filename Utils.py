@@ -1576,7 +1576,7 @@ def open_mission_database(
                     | stat.S_IROTH,
                 )
             except:
-                log_error(f"Unable to change mode of {dbfile}", "exc")
+                log_error(f"Unable to change mode of {db}", "exc")
 
             # BaseDB.prepCallsChangesFiles(base_opts, dbfile=db)
             # BaseDB.prepDivesGC(base_opts, dbfile=db)
