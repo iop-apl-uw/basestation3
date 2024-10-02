@@ -1026,6 +1026,14 @@ nc_var_metadata = {
         {"units": "meters", "description": "Depth bias of pressure sensor"},
         nc_scalar,
     ],
+    "sg_cal_depth_slope_correction": [
+        False,
+        "d",
+        {
+            "description": "Correction factor to apply to truck depth to compensate for data with incorrect pressure slope"
+        },
+        nc_scalar,
+    ],
     "sg_cal_pitchbias": [
         False,
         "d",

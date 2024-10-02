@@ -1,7 +1,7 @@
 % Establishes glider calibration constants.
 
 % This file is an example as well as documentation.
-% Lines prefixed with %PARAM are parameters - remove "%PARAM " to enable
+% Lines prefixed with %PARAM are parameters, the default value as the right hand side - remove "%PARAM " to enable
 % Note - this file MUST be changed apprpriately for your vehicle and mission
 
 % REQUIRED
@@ -15,6 +15,10 @@ mass = 52.173; % (kg) scale weight
 
 % Optional
 %PARAM mass_comp = 0;
+
+% Correction factor to apply to truck depth to compensate for data with incorrect pressure slope
+% Only change this if you are sure your dataset has this issue
+%PARAM depth_slope_correction = 1.0;
 
 % NOTE:
 % FlightModel will supply

@@ -327,6 +327,7 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
         "pitchbias": 0,  # [deg] pitch sensor bias
         "rollbias": 0,  # [deg] pitch sensor bias
         "depth_bias": 0,  #  [m] depth bias (in meters) because of a flakey or mis-tared pressure sensor
+        "depth_slope_correction": 1.0,  # correction factor to apply to truck depth to compensate for data with incorrect pressure slope
         # setting to non-zero often helps catch the vehicle slowing down into a stall and accelerating to flight
         # it also helps with sitting on the bottom bouncing around...
         "min_stall_speed": 1.0,  # [cm/s] stalled if speed below this
@@ -2733,7 +2734,12 @@ def make_dive_profile(
                     "elaps_t"
                 )
                 sg_press_v = (
-                    (eng_f.get_col("depth") * cm2m - calib_consts["depth_bias"])
+                    (
+                        eng_f.get_col("depth")
+                        * cm2m
+                        * calib_consts["depth_slope_correction"]
+                        - calib_consts["depth_bias"]
+                    )
                     * psi_per_meter
                     * dbar_per_psi
                 )
@@ -3830,7 +3836,8 @@ def make_dive_profile(
 
             # CONSIDER: should we support kistler cnf files in case?
             sg_press_v = (
-                eng_f.get_col("depth") * cm2m - calib_consts["depth_bias"]
+                eng_f.get_col("depth") * cm2m * calib_consts["depth_slope_correction"]
+                - calib_consts["depth_bias"]
             ) * psi_per_meter
             sg_press_v *= dbar_per_psi  # convert to dbar
             if not base_opts.use_gsw:
@@ -4103,7 +4110,10 @@ def make_dive_profile(
                 # Recover sg measured pressure [dbar] from the depth record using any depth bias
                 # First convert from psuedo-meters to psi
                 sg_press_v = (
-                    eng_f.get_col("depth") * cm2m - calib_consts["depth_bias"]
+                    eng_f.get_col("depth")
+                    * cm2m
+                    * calib_consts["depth_slope_correction"]
+                    - calib_consts["depth_bias"]
                 ) * psi_per_meter
                 if kistler_cnf:
                     # Old mission without a kistler.cnf but calibration constructed afterwards
@@ -4381,8 +4391,10 @@ def make_dive_profile(
                 raise RuntimeError(True, "No pumped CT data found") from e
 
             # CONSIDER: should we support kistler cnf files in this branch?
+            # UPDATE_PRESS
             sg_press_v = (
-                eng_f.get_col("depth") * cm2m - calib_consts["depth_bias"]
+                eng_f.get_col("depth") * cm2m * calib_consts["depth_slope_correction"]
+                - calib_consts["depth_bias"]
             ) * psi_per_meter
             sg_press_v *= dbar_per_psi  # convert to dbar
             if not base_opts.use_gsw:
