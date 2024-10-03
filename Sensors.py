@@ -31,6 +31,7 @@
 """Support for loading and running Sensor extensions"""
 
 import collections
+import contextlib
 import os
 import re
 import shutil
@@ -39,8 +40,7 @@ import BaseNetCDF
 import LogFile
 import Utils
 import Utils2
-
-from BaseLog import log_error, log_debug, log_info, log_warning
+from BaseLog import log_debug, log_error, log_info, log_warning
 
 known_logger_dict_keys = (
     "logger_prefix",
@@ -89,6 +89,23 @@ class SensorExtensions:
 
         self.__extension_file_name = extension_file_name
         self.__extension_directory = sensor_extension_directory
+        if base_opts.group_etc:
+            self.__group_extension_file_name = os.path.join(
+                base_opts.group_etc, sensor_extension_base_name
+            )
+            self.__group_extension_directory = base_opts.group_etc
+        else:
+            self.__group_extension_file_name = None
+            self.__group_extension_directory = None
+
+        if base_opts.mission_dir:
+            self.__mission_extension_file_name = os.path.join(
+                base_opts.mission_dir, sensor_extension_base_name
+            )
+            self.__mission_extension_directory = base_opts.mission_dir
+        else:
+            self.__mission_extension_file_name = None
+            self.__mission_extension_directory = None
 
     def init_sensor_extensions(self):
         """Initializes the internal call structures
@@ -100,147 +117,223 @@ class SensorExtensions:
             0 - success
             1 - failure
         """
-        ret_val = 0
+
+        def process_one_extension_file(
+            extension_file_name,
+            extension_directory,
+            additional_search_directory,
+            error_on_missing=False,
+        ):
+            log_debug(f"Starting processing on {extension_file_name}")
+            if not os.path.exists(extension_file_name):
+                if error_on_missing:
+                    log_error(
+                        f"{extension_file_name} does not exist - skipping sensor init"
+                    )
+                    return 1
+                else:
+                    log_debug(f"{extension_file_name} does not exist - skipping")
+                    return 0
+            try:
+                with open(extension_file_name, "r") as extension_file:
+                    return_val = 0
+                    for extension_line in extension_file:
+                        extension_line = extension_line.rstrip()
+                        log_debug(f"extension file line = ({extension_line})")
+                        if extension_line == "":
+                            continue
+                        if extension_line[0] != "#":
+                            log_debug(
+                                "Processing %s line (%s)"
+                                % (extension_file_name, extension_line)
+                            )
+                            extension_line.rstrip()
+                            extension_elts = extension_line.split(",")
+                            for search_directory in (
+                                extension_directory,
+                                additional_search_directory,
+                            ):
+                                if search_directory is None:
+                                    continue
+                                extension_module_name = os.path.join(
+                                    search_directory, extension_elts[0]
+                                )
+                                if extension_module_name in self.__se_dict:
+                                    log_warning(
+                                        f"{extension_module_name} already loaded - skipping"
+                                    )
+                                    continue
+                                if not os.path.exists(extension_module_name):
+                                    if error_on_missing:
+                                        log_error(
+                                            f"Extension {extension_module_name} does not exist - skipping"
+                                        )
+                                    else:
+                                        log_debug(
+                                            f"Extension {extension_module_name} does not exist - skipping"
+                                        )
+                                    continue
+
+                                _, tail = os.path.splitext(extension_module_name)
+                                temp_dict = {}
+                                if tail == ".py":
+                                    extension_module = Utils.loadmodule(
+                                        extension_module_name
+                                    )
+                                    if extension_module is None:
+                                        log_error(
+                                            f"Error loading {extension_module_name} - skipping"
+                                        )
+                                        return_val = 1
+                                    else:
+                                        for processing_func in extension_elts[1:]:
+                                            try:
+                                                temp_dict[processing_func] = (
+                                                    extension_module.__dict__[
+                                                        processing_func
+                                                    ]
+                                                )
+                                            except KeyError:
+                                                log_warning(
+                                                    "Sensor extension %s does not contain function %s, but is configured to have it - skipping"
+                                                    % (
+                                                        extension_module_name,
+                                                        processing_func,
+                                                    )
+                                                )
+
+                                elif tail == ".cnf":
+                                    # For .cnf file sensors, install the appropriate built in handler
+                                    # and for logdev sensors, pull out the prefix
+                                    for processing_func in extension_elts[1:]:
+                                        # Truth to tell, asc2eng and init_sensor are REQUIRED
+                                        if processing_func == "asc2eng":
+                                            temp_dict[processing_func] = (
+                                                conf_file_asc2eng
+                                            )
+                                        elif processing_func == "init_sensor":
+                                            temp_dict[processing_func] = (
+                                                conf_file_init_sensor
+                                            )
+                                        elif processing_func == "init_logger":
+                                            temp_dict[processing_func] = (
+                                                conf_file_init_logger
+                                            )
+                                        elif processing_func == "process_data_files":
+                                            temp_dict[processing_func] = (
+                                                conf_file_process_data_files
+                                            )
+                                        elif processing_func == "add_netcdf_meta":
+                                            temp_dict[processing_func] = (
+                                                conf_file_add_netcdf_meta
+                                            )
+                                        else:
+                                            log_error(
+                                                "Unknown processing function %s for cnf file %s"
+                                                % (
+                                                    processing_func,
+                                                    extension_module_name,
+                                                )
+                                            )
+                                            return_val = 1
+
+                                else:
+                                    log_error(
+                                        "Unknown extension %s - skipping %s"
+                                        % (tail, extension_module_name)
+                                    )
+                                    return_val = 1
+                                    continue
+                                # If we get here temp_dict is initialized as a logger or a sensor
+                                # An extension can be for a logger or sensor - not both
+                                if "init_logger" in temp_dict:
+                                    ttemp_dict = {}
+                                    extension_ret_val = temp_dict["init_logger"](
+                                        extension_module_name, ttemp_dict
+                                    )
+                                    if extension_ret_val < 0:
+                                        log_debug(
+                                            "Error running init_logger (%s) - return %d"
+                                            % (extension_module_name, extension_ret_val)
+                                        )
+                                        return_val = 1
+                                    else:
+                                        for i in known_logger_dict_keys:
+                                            with contextlib.suppress(Exception):
+                                                temp_dict[i] = ttemp_dict[
+                                                    extension_module_name
+                                                ][i]
+
+                                if "init_sensor" in temp_dict:
+                                    ttemp_dict = {}
+                                    extension_ret_val = temp_dict["init_sensor"](
+                                        extension_module_name, ttemp_dict
+                                    )
+                                    if extension_ret_val < 0:
+                                        log_error(
+                                            "Error running init_sensor (%s) - return %d"
+                                            % (extension_module_name, extension_ret_val)
+                                        )
+                                        return_val = 1
+                                    else:
+                                        for i in known_sensor_dict_keys:
+                                            with contextlib.suppress(Exception):
+                                                temp_dict[i] = ttemp_dict[
+                                                    extension_module_name
+                                                ][i]
+                                if "add_netcdf_meta" in temp_dict:
+                                    ttemp_dict = {}
+                                    extension_ret_val = temp_dict["add_netcdf_meta"](
+                                        extension_module_name, ttemp_dict
+                                    )
+                                    if extension_ret_val < 0:
+                                        log_error(
+                                            "Error running init_sensor (%s) - return %d"
+                                            % (extension_module_name, extension_ret_val)
+                                        )
+                                        return_val = 1
+                                    else:
+                                        for i in known_sensor_dict_keys:
+                                            with contextlib.suppress(Exception):
+                                                temp_dict[i] = ttemp_dict[
+                                                    extension_module_name
+                                                ][i]
+                                # set sensor extension dictionary
+                                self.__se_dict[extension_module_name] = temp_dict
+            except Exception:
+                log_error(
+                    f"Problems processing {extension_file_name} - skipping", "exc"
+                )
+                return 1
+
+            log_debug(f"Finished processing on {extension_file_name}")
+            return return_val
+
         if self.__extension_file_name is None:
             log_info("Sensor extension not enabled - skipping processing")
             return (None, 0)
 
-        log_debug(f"Starting processing on {self.__extension_file_name}")
-        try:
-            extension_file = open(self.__extension_file_name, "r")
-        except IOError as exception:
-            log_error(
-                "Could not open %s (%s) - skipping processing"
-                % (self.__extension_file_name, exception.args)
-            )
+        ret_val = process_one_extension_file(
+            self.__extension_file_name,
+            self.__extension_directory,
+            None,
+            error_on_missing=True,
+        )
+        if ret_val:
             return (None, 1)
-        else:
-            ret_val = 0
-            for extension_line in extension_file:
-                extension_line = extension_line.rstrip()
-                log_debug(f"extension file line = ({extension_line})")
-                if extension_line == "":
-                    continue
-                if extension_line[0] != "#":
-                    log_debug(
-                        "Processing %s line (%s)"
-                        % (self.__extension_file_name, extension_line)
-                    )
-                    extension_line.rstrip()
-                    extension_elts = extension_line.split(",")
-                    extension_module_name = os.path.join(
-                        self.__extension_directory, extension_elts[0]
-                    )
-                    _, tail = os.path.splitext(extension_module_name)
-                    temp_dict = {}
-                    if tail == ".py":
-                        extension_module = Utils.loadmodule(extension_module_name)
-                        if extension_module is None:
-                            log_error(
-                                f"Error loading {extension_module_name} - skipping"
-                            )
-                            ret_val = 1
-                        else:
-                            for processing_func in extension_elts[1:]:
-                                try:
-                                    temp_dict[processing_func] = (
-                                        extension_module.__dict__[processing_func]
-                                    )
-                                except KeyError:
-                                    log_warning(
-                                        "Sensor extension %s does not contain function %s, but is configured to have it - skipping"
-                                        % (extension_module_name, processing_func)
-                                    )
 
-                    elif tail == ".cnf":
-                        # For .cnf file sensors, install the appropriate built in handler
-                        # and for logdev sensors, pull out the prefix
-                        for processing_func in extension_elts[1:]:
-                            # Truth to tell, asc2eng and init_sensor are REQUIRED
-                            if processing_func == "asc2eng":
-                                temp_dict[processing_func] = conf_file_asc2eng
-                            elif processing_func == "init_sensor":
-                                temp_dict[processing_func] = conf_file_init_sensor
-                            elif processing_func == "init_logger":
-                                temp_dict[processing_func] = conf_file_init_logger
-                            elif processing_func == "process_data_files":
-                                temp_dict[processing_func] = (
-                                    conf_file_process_data_files
-                                )
-                            elif processing_func == "add_netcdf_meta":
-                                temp_dict[processing_func] = conf_file_add_netcdf_meta
-                            else:
-                                log_error(
-                                    "Unknown processing function %s for cnf file %s"
-                                    % (processing_func, extension_module_name)
-                                )
-                                ret_val = 1
+        if self.__group_extension_file_name:
+            ret_val |= process_one_extension_file(
+                self.__group_extension_file_name,
+                self.__extension_directory,
+                self.__group_extension_directory,
+            )
 
-                    else:
-                        log_error(
-                            "Unknown extension %s - skipping %s"
-                            % (tail, extension_module_name)
-                        )
-                        ret_val = 1
-                        continue
-                    # If we get here temp_dict is initialized as a logger or a sensor
-                    # An extension can be for a logger or sensor - not both
-                    if "init_logger" in temp_dict:
-                        ttemp_dict = {}
-                        extension_ret_val = temp_dict["init_logger"](
-                            extension_module_name, ttemp_dict
-                        )
-                        if extension_ret_val < 0:
-                            log_debug(
-                                "Error running init_logger (%s) - return %d"
-                                % (extension_module_name, extension_ret_val)
-                            )
-                            ret_val = 1
-                        else:
-                            for i in known_logger_dict_keys:
-                                try:
-                                    temp_dict[i] = ttemp_dict[extension_module_name][i]
-                                except:
-                                    pass
-
-                    if "init_sensor" in temp_dict:
-                        ttemp_dict = {}
-                        extension_ret_val = temp_dict["init_sensor"](
-                            extension_module_name, ttemp_dict
-                        )
-                        if extension_ret_val < 0:
-                            log_error(
-                                "Error running init_sensor (%s) - return %d"
-                                % (extension_module_name, extension_ret_val)
-                            )
-                            ret_val = 1
-                        else:
-                            for i in known_sensor_dict_keys:
-                                try:
-                                    temp_dict[i] = ttemp_dict[extension_module_name][i]
-                                except:
-                                    pass
-                    if "add_netcdf_meta" in temp_dict:
-                        ttemp_dict = {}
-                        extension_ret_val = temp_dict["add_netcdf_meta"](
-                            extension_module_name, ttemp_dict
-                        )
-                        if extension_ret_val < 0:
-                            log_error(
-                                "Error running init_sensor (%s) - return %d"
-                                % (extension_module_name, extension_ret_val)
-                            )
-                            ret_val = 1
-                        else:
-                            for i in known_sensor_dict_keys:
-                                try:
-                                    temp_dict[i] = ttemp_dict[extension_module_name][i]
-                                except:
-                                    pass
-                    # set sensor extension dictionary
-                    self.__se_dict[extension_module_name] = temp_dict
-
-        log_debug(f"Finished processing on {self.__extension_file_name}")
+        ret_val |= process_one_extension_file(
+            self.__mission_extension_file_name,
+            self.__extension_directory,
+            self.__mission_extension_directory,
+        )
 
         return (self.__se_dict, ret_val)
 
@@ -424,7 +517,7 @@ def conf_file_asc2eng(base_opts, conf_file_name, datafile):
                     try:
                         scale = float(m.group(2))
                         offset = float(m.group(3))
-                    except:
+                    except Exception:
                         log_error(
                             "Processing line %s in %s - scale and offset must be floats"
                             % (col, conf_file_name)
@@ -554,7 +647,7 @@ def conf_file_init_logger(conf_file_name, init_dict=None):
     for v in ["x", "y", "z"]:
         try:
             file = cnf_dict["script-" + v]
-        except:
+        except Exception:
             file = None
 
         if file:
@@ -563,7 +656,7 @@ def conf_file_init_logger(conf_file_name, init_dict=None):
 
         try:
             param = cnf_dict["param-" + v]
-        except:
+        except Exception:
             param = None
 
         if param and cmdprefix:
@@ -577,7 +670,7 @@ def conf_file_init_logger(conf_file_name, init_dict=None):
     for v in ["0", "1", "2"]:
         try:
             param = cnf_dict["log-" + v]
-        except:
+        except Exception:
             param = None
 
         if param and cmdprefix:
@@ -592,7 +685,7 @@ def conf_file_init_logger(conf_file_name, init_dict=None):
         if k.startswith("register_sensor_dim_info"):
             try:
                 BaseNetCDF.register_sensor_dim_info(*cnf_nc_meta_dict[k])
-            except:
+            except Exception:
                 log_error(
                     f"Failed to register dimension {k} {cnf_nc_meta_dict[k]}",
                     "exc",
@@ -654,7 +747,7 @@ def conf_file_init_sensor(conf_file_name, init_dict=None):
                     try:
                         scale = float(m.group(2))
                         offset = float(m.group(3))
-                    except:
+                    except Exception:
                         log_error(
                             "Processing line %s in %s - scale and offset must be floats"
                             % (col, conf_file_name)
@@ -800,7 +893,7 @@ def conf_file_add_netcdf_meta(conf_file_name, init_dict=None):
         if k.startswith("register_sensor_dim_info"):
             try:
                 BaseNetCDF.register_sensor_dim_info(*cnf_nc_meta_dict[k])
-            except:
+            except Exception:
                 log_error(
                     f"Failed to register dimension {k} {cnf_nc_meta_dict[k]}",
                     "exc",
