@@ -932,12 +932,12 @@ def process_sftp_line(
 
     # sftp specification of the form host, user,password,path_to_key,port,path,[files]
     sftp_tags = sftp_line.split(",")
-    if len(sftp_tags) < 6:
+    if len(sftp_tags) < 7:
         log_error(f"Incomplete sftp specification {sftp_line} - skipping")
         return 1
 
     # Address
-    host, user, pwd, path_to_key, port, remote_path = sftp_tags[:6]
+    host, user, pwd, path_to_key, path_to_known_hosts, port, remote_path = sftp_tags[:7]
 
     if not port:
         port = 22
@@ -954,8 +954,17 @@ def process_sftp_line(
         log_error(f"Key file {path_to_key} not found")
         return 1
 
+    if not path_to_known_hosts:
+        path_to_known_hosts = os.path.expanduser("~/.ssh/known_hosts")
+    else:
+        path_to_known_hosts = os.path.expanduser(path_to_known_hosts)
+
+    if path_to_known_hosts and not os.path.exists(path_to_known_hosts):
+        log_error(f"Key file {path_to_known_hosts} not found")
+        return 1
+
     log_info(
-        f"user:{user},host:{host},keyfile:{path_to_key},port:{port},remote_path:{remote_path}"
+        f"user:{user},host:{host},keyfile:{path_to_key},path_to_known_hosts:{path_to_known_hosts},port:{port},remote_path:{remote_path}"
     )
 
     sftp_file_names_to_send = process_ftp_tags(
@@ -980,8 +989,10 @@ def process_sftp_line(
 
     try:
         client = paramiko.SSHClient()
-        client.load_host_keys(os.path.expanduser("~/.ssh/known_hosts"))
-        client.connect(host, username=user, password=pwd, key_filename=path_to_key)
+        client.load_host_keys(path_to_known_hosts)
+        client.connect(
+            host, port=port, username=user, password=pwd, key_filename=path_to_key
+        )
         sftp = client.open_sftp()
     except Exception:
         log_error(f"Could not connect {sftp_line}", "exc")
@@ -1633,9 +1644,9 @@ def main():
             os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
         )[0]
 
-    if comm_log is None:
-        log_error("Could not process comm.log")
-        return
+        if comm_log is None:
+            log_error("Could not process comm.log")
+            return
 
     if base_opts.basedotfiles_action in ("gps", "drift"):
         process_pagers(

@@ -1,0 +1,36 @@
+## .sftp file
+#
+# This file controls the sending of data products created during basestation
+# processing via sftp (secure file transfer protocol to an openssh server).
+#
+# A global copy of this file may be place in
+#
+# /usr/local/basestation3/etc/.sftp
+#
+# If --group_etc is specified on the Base.py command line, then a that directory will
+# also be searched for a version of this file
+#
+# Each line of this file is of the format
+# # Lines are of the form
+# host,user,pwd,path_to_key,port,remote_path[,[eng| log| pro| bpo| csv| asc| cap| comm| dn_kkyy| up_kkyy| nc| mission_ts| mission_pro]+] | ,all
+# where:
+# hose - host name or address for sftp server
+# user - user name on the sftp server
+# password - password on the sftp server - leave empty for none
+# path_to_key - path to the keyfile. Note: this file is very permission sensitive
+# path_to_known_hosts - path to the known_hosts_file (if needed). Note: this file is very permission sensitive
+# port - optional override to port on the host - leave empty for default of 22
+# remote_path - path to the place the products in (must be / at a minimum)
+#
+# The known_hosts file must have been pre-populated with the servers fingerprints.  This can be done by
+# connecting to server via sftp as the user or by running ssh-keyscan -H myserver >> ~/.ssh/known_hosts (under the appropriate user account).
+#
+# eng, log, pro, bpo, csv, asc, cap , dn_kkyy, up_kkyy, nc - send any newly created files of the specified extension
+# comm - send the comm.log file
+# mission_ts, mission_pro - send the mission timeseries or mission profile, if they have been updated on the processing
+# all - send all the newly created or updated files
+#
+## Examples
+#
+## Push out the typical per-dive files to the incoming directory on a remote server
+#myserver.org,sg000,,/home/sg000/.ssh/my_private_key,,,incoming,log,eng,cap,nc,comm
