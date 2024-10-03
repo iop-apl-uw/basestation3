@@ -1520,7 +1520,7 @@ def loadmodule(pathname):
         pass
 
     if not os.path.exists(pathname):
-        log_error(f"Module {pathname} does not exists - skipping")
+        log_error(f"Module {pathname} does not exist - skipping")
         return None
 
     if directory not in sys.path:
