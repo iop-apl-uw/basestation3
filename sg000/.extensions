@@ -1,25 +1,44 @@
-# Basetation extensions that are to be run during glider logout processing are listed here.
-# Extensions are executed in the order listed
+# Basetation extensions that are to be run during glider processing are listed here.
 #
-# A global copy of this file may be place in
+# .extension files are searched for in the following locations and processed in order.
+# 
+#    /usr/local/basestation3/etc/.extensions
+#    {group_etc}/.extensions (if --group_etc is specified on the Base.py command line)
+#    {seaglider_hom_ directory}/.extensions
 #
-# /usr/local/basestation3/etc/.extensions
+# Extensions themselves searched for in the following locations
 #
-# If --group_etc is specified on the Base.py command line, then a that directory will
-# also be searched for a version of this file
+#    For /usr/local/basestation3/etc/.extensions:
+#    - /usr/local/basestation3
 #
-# Those extensions will be run first, before those listed in the seaglider home directory
+#    For {group_etc}/.extensions (if --group_etc is specified on the Base.py command line)
+#    - /usr/local/basestation3
+#    - {group_etc}
+#
+#    For {seaglider_hom_ directory}/.extensions
+#    - /usr/local/basestation3
+#    - {seaglider_hom_ directory}
+#
+# Extension are processed at specific points during basestation processing - each point
+# corresponds to a section (furhter documented below) - extension listed in that section will
+# be processed. Extensions outside a section are consider to be in section [mission].
 #
 # Hash symbol marks a comment line
+# 
+# Note: a extension may include a leading path that is relative the search location.  For
+# example, if /usr/local/basestation3/etc/.extension contained the following line:
 #
-# Extensions outside a section are consider to be in section [mission]
+# local/MyExtension.py
+#
+# The extension would be looked for in /usr/local/basestation3/local/MyExtension.py
+#
 #
 [dive]
 # Extensions listed in this section are run after all dive files have been processed
 # (include netcdf creation) and before whole mission processing has occured.
 #
 # Uncomment to enable KKYY file creation
-#KKYY.py
+# KKYY.py
 #
 # Uncomment for simplified netcdf files
 # SimpleNetCDF.py
@@ -33,6 +52,9 @@
 #
 # Support for plotting compress TS profiles
 # MakePlotTSProfile.py
+#
+# A simple/sample extension - starting point for writing a new extension
+# SimpleExtension.py
 #
 [mission]
 # Extensions listed in this section are run after whole mission processing has occured.

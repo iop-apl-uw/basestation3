@@ -1463,9 +1463,8 @@ def process_extensions(
         0 - success
         1 - failure
     """
-    extension_file_name = ".extensions"
 
-    def process_one_extension_file(extensions_file_name):
+    def process_one_extension_file(extensions_file_name, additional_search_path):
         log_info(f"Starting processing on {extensions_file_name} section(s):{sections}")
         ret_val = 0
         cp = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes="#")
@@ -1479,7 +1478,7 @@ def process_extensions(
         except (OSError, PermissionError) as exception:
             log_error(
                 "Could not open %s (%s) - skipping %s processing"
-                % (extensions_file_name, extension_file_name, exception.args)
+                % (extensions_file_name, extensions_file_name, exception.args)
             )
             return 1
         else:
@@ -1490,7 +1489,7 @@ def process_extensions(
                         if len(extension_line) < 1:
                             continue
                         log_info(
-                            f"Processing:{extension_file_name} section:{section} line:{extension_line}"
+                            f"Processing:{extensions_file_name} section:{section} line:{extension_line}"
                         )
                         extension_elts = extension_line.split(" ")
                         # First element - extension name, with .py file extension
@@ -1500,16 +1499,27 @@ def process_extensions(
                             )
                             continue
 
-                        extension_module_name = os.path.join(
-                            base_opts.basestation_directory, extension_elts[0]
-                        )
-                        extension_module = Utils.loadmodule(extension_module_name)
-                        if extension_module is None:
-                            log_error(
-                                f"Error loading {extension_module_name} - skipping"
+                        for search_path in (
+                            base_opts.basestation_directory,
+                            additional_search_path,
+                        ):
+                            if search_path is None:
+                                continue
+                            extension_module_name = os.path.join(
+                                search_path, extension_elts[0]
                             )
-                            continue
-                        else:
+                            if not os.path.exists(extension_module_name):
+                                log_debug(
+                                    f"Extension {extension_module_name} does not exist - skipping"
+                                )
+                                continue
+                            extension_module = Utils.loadmodule(extension_module_name)
+                            if extension_module is None:
+                                log_error(
+                                    f"Error loading {extension_module_name} - skipping"
+                                )
+                                continue
+                            log_info(f"Running {extension_module_name}")
                             try:
                                 # Invoke the extension
                                 extension_ret_val = extension_module.main(
@@ -1540,19 +1550,24 @@ def process_extensions(
         return ret_val
 
     ret_val = 0
-    for extensions_file_name in (
-        os.path.join(base_opts.basestation_etc, ".extensions"),
-        os.path.join(base_opts.group_etc, ".extensions")
-        if base_opts.group_etc
-        else None,
-        os.path.join(base_opts.mission_dir, ".extensions"),
+    for extensions_file_name, additional_search_path in (
+        (os.path.join(base_opts.basestation_etc, ".extensions"), None),
+        (
+            os.path.join(base_opts.group_etc, ".extensions")
+            if base_opts.group_etc
+            else None,
+            base_opts.group_etc,
+        ),
+        (os.path.join(base_opts.mission_dir, ".extensions"), base_opts.mission_dir),
     ):
         if extensions_file_name is None:
             continue
         if not os.path.exists(extensions_file_name):
-            log_info(f"No .extensions file {extensions_file_name} found")
+            log_debug(f"No .extensions file {extensions_file_name} found")
             continue
-        ret_val |= process_one_extension_file(extensions_file_name)
+        ret_val |= process_one_extension_file(
+            extensions_file_name, additional_search_path
+        )
 
     return ret_val
 
