@@ -4796,9 +4796,14 @@ def make_dive_profile(
 
         # Handle missing pressure observations
         good_depth_pts = np.logical_not(np.isnan(sg_depth_m_v))
-        w_cm_s_v = Utils.ctr_1st_diff(
-            -sg_depth_m_v[good_depth_pts] * m2cm, elapsed_time_s_v[good_depth_pts]
-        )
+        try:
+            w_cm_s_v = Utils.ctr_1st_diff(
+                -sg_depth_m_v[good_depth_pts] * m2cm, elapsed_time_s_v[good_depth_pts]
+            )
+        except Exception:
+            log_error("Failed calculating dz/dt", "exc")
+            return (1, None)
+
         # Map to ctd times and compute gsm results at that dimension
         # BUG? This is what the matlab code does so we can use gsm values as initial start values for tsv
         # The alternative is to save them in sg_data_point space and just interpolate
