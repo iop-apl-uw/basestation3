@@ -3395,21 +3395,24 @@ def make_dive_profile(
                     "Compass invalid out for %d of %d points - interpolating bad points"
                     % (len(bad_i_v), sg_np)
                 )
-                nans, x = Utils.nan_helper(vehicle_heading_mag_degrees_v)
-                vehicle_heading_mag_degrees_v[nans] = np.interp(
-                    x(nans), x(~nans), vehicle_heading_mag_degrees_v[~nans]
-                )
+                try:
+                    nans, x = Utils.nan_helper(vehicle_heading_mag_degrees_v)
+                    vehicle_heading_mag_degrees_v[nans] = np.interp(
+                        x(nans), x(~nans), vehicle_heading_mag_degrees_v[~nans]
+                    )
 
-                nans, x = Utils.nan_helper(vehicle_pitch_degrees_v)
-                vehicle_pitch_degrees_v[nans] = np.interp(
-                    x(nans), x(~nans), vehicle_pitch_degrees_v[~nans]
-                )
+                    nans, x = Utils.nan_helper(vehicle_pitch_degrees_v)
+                    vehicle_pitch_degrees_v[nans] = np.interp(
+                        x(nans), x(~nans), vehicle_pitch_degrees_v[~nans]
+                    )
 
-                nans, x = Utils.nan_helper(vehicle_roll_degrees_v)
-                vehicle_roll_degrees_v[nans] = np.interp(
-                    x(nans), x(~nans), vehicle_roll_degrees_v[~nans]
-                )
-
+                    nans, x = Utils.nan_helper(vehicle_roll_degrees_v)
+                    vehicle_roll_degrees_v[nans] = np.interp(
+                        x(nans), x(~nans), vehicle_roll_degrees_v[~nans]
+                    )
+                except Exception:
+                    log_error("Failed interpolating bad compass points", "exc")
+                    return (1, None)
             try:
                 # The pitch roll calibration applied to the Sparton compass from 2005 to mid-2012
                 # distorted the true pitch, which has implications for the speed of the vehicle,
