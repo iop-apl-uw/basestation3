@@ -1527,7 +1527,7 @@ def attachHandlers(app: sanic.Sanic):
         if 'time' in dbVars:
             dbVars.remove('time')
 
-        data = ExtractTimeseries.extractVars(ncfilename, dbVars, dive, dive)
+        data = ExtractTimeseries.extractVars(ncfilename, dbVars, dive if dive > 0 else 1, dive if dive > 0 else 100000)
         return sanic.response.json(data)
 
     @app.route('/query/<glider:int>/<queryVars:str>')
