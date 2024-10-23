@@ -443,6 +443,7 @@ async def getLatestFile(glider, request, which, dive=None):
                     j = parse('%s.{:d}' % which, fpath.name)
                     if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] > latest:
                         latest = j.fixed[0]
+                        call = -1
         except Exception as e:
             sanic.log.logger.info(f"getLatestFile: {e}")
             continue
@@ -936,10 +937,13 @@ def attachHandlers(app: sanic.Sanic):
             url = url + '?' + request.query_string
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    body = await response.read()
-                    return sanic.response.raw(body)
+            try:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        body = await response.read()
+                        return sanic.response.raw(body)
+            except:
+                return sanic.response.html('empty')
         
     @app.route('/proxykmz/<url:path>')
     # description: proxy and unzip network KMZ sources
@@ -1285,8 +1289,9 @@ def attachHandlers(app: sanic.Sanic):
         if message['file'] == "none":
             return sanic.response.json({'error': "none"})
 
-        async with aiofiles.open(filename, 'r') as file:
-            message['contents']= await file.read() 
+        if await aiofiles.os.path.exists(filename):
+            async with aiofiles.open(filename, 'r') as file:
+                message['contents']= await file.read() 
 
         return sanic.response.json(message)
 
@@ -1972,8 +1977,12 @@ def attachHandlers(app: sanic.Sanic):
             format = 'json'
 
         if 't' in request.args and len(request.args['t'][0]) > 0:
-            t = int(request.args['t'][0])
-            q = f"SELECT * FROM calls WHERE epoch > {t} ORDER BY epoch DESC LIMIT 1;"
+            try:
+                t = int(request.args['t'][0])
+            except ValueError:
+                q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+            else:
+                q = f"SELECT * FROM calls WHERE epoch > {t} ORDER BY epoch DESC LIMIT 1;"
         else:
             q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
                 
