@@ -622,11 +622,11 @@
         // date = new Date(1000*(d['log_start'] + d['total_flight_time_s']));
         date = new Date(1000*(d['log_gps_time']));
         cell = row.insertCell(1); 
-        text = document.createTextNode((date.getFullYear() - 2000) + '/' +
-                                       (date.getMonth() + 1).zeroPad() + '/' + 
-                                       date.getDate().zeroPad() + ' ' + 
-                                       date.getHours().zeroPad() + ':' + 
-                                       date.getMinutes().zeroPad());
+        text = document.createTextNode((date.getUTCFullYear() - 2000) + '/' +
+                                       (date.getUTCMonth() + 1).zeroPad() + '/' + 
+                                       date.getUTCDate().zeroPad() + ' ' + 
+                                       date.getUTCHours().zeroPad() + ':' + 
+                                       date.getUTCMinutes().zeroPad());
         cell.appendChild(text);
 
         cell = row.insertCell(2); 
