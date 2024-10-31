@@ -4801,8 +4801,8 @@ def make_dive_profile(
                 -sg_depth_m_v[good_depth_pts] * m2cm, elapsed_time_s_v[good_depth_pts]
             )
         except Exception:
-            log_error("Failed calculating dz/dt", "exc")
-            return (1, None)
+            log_error("Failed calculating dz/dt - skipping profile", "exc")
+            return (2, None)
 
         # Map to ctd times and compute gsm results at that dimension
         # BUG? This is what the matlab code does so we can use gsm values as initial start values for tsv
