@@ -31,16 +31,28 @@
 
 import argparse
 import os
+import pdb
 import shutil
 import sys
 import time
+import traceback
 
+import BaseDB
 import BaseOpts
 import BaseOptsType
-import BaseDB
 import Sensors
 from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
 from Globals import known_files
+
+DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
 
 
 def main():
@@ -92,18 +104,13 @@ def main():
 
     BaseLogger(base_opts)  # initializes BaseLog
 
-    # Sensor extensions
-    (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
-    if init_ret_val > 0:
-        log_warning("Sensor initialization failed")
-
     if not base_opts.instrument_id:
         try:
             glider_id = int(
                 os.path.split(os.path.split(base_opts.glider_home)[0])[1][2:]
             )
             base_opts.instrument_id = glider_id
-        except:
+        except Exception:
             log_error("Failed to figure out instrument_id", "exc")
             return 1
 
@@ -136,8 +143,15 @@ def main():
 
     if current_mission_dir:
         stat_st = os.stat(current_mission_dir)
+        base_opts.mission_dir = current_mission_dir
     else:
         stat_st = os.stat(base_opts.glider_home)
+        base_opts.mission_dir = base_opts.glider_home
+
+    # Sensor extensions
+    (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
+    if init_ret_val > 0:
+        log_warning("Sensor initialization failed")
 
     uid = stat_st.st_uid
     gid = stat_st.st_gid
@@ -146,7 +160,7 @@ def main():
 
     try:
         os.mkdir(new_mission_dir, mode=0o775)
-    except:
+    except Exception:
         log_error(f"Failed to crete {new_mission_dir}", "exc")
         return 1
 
@@ -182,7 +196,7 @@ def main():
             new_copy_file_fullpath = os.path.join(new_mission_dir, copy_file_name)
             try:
                 shutil.copy(copy_file_fullpath, new_copy_file_fullpath)
-            except:
+            except Exception:
                 log_error(
                     "Failed to propagate {copy_file_fullpath} to {new_copy_file_fullpath}",
                     "exc",
@@ -215,7 +229,7 @@ def main():
         link_dotfile = os.path.join(new_mission_dir, dotfile)
         try:
             os.symlink(master_dotfile, link_dotfile)
-        except:
+        except Exception:
             log_error("Failed to create symlink {link_dotfile}", "exc")
         # Cannot set permissions on symlink files
         # else:
@@ -225,7 +239,7 @@ def main():
         os.unlink(current_symlink)
     except FileNotFoundError:
         pass
-    except:
+    except Exception:
         log_error("Failed to unlink symlink {current_symlink} - bailing out", "exc")
         return 1
 
@@ -236,7 +250,7 @@ def main():
         )
         log_info(f"rel_new_mission_dir {rel_new_mission_dir}")
         os.symlink(rel_new_mission_dir, current_symlink, target_is_directory=True)
-    except:
+    except Exception:
         log_error("Failed to create symlink {rel_new_mission_dir} - bailing out", "exc")
         return 1
     # items.append(rel_current_symlink)
@@ -255,7 +269,7 @@ def main():
         except PermissionError:
             # If run as regular user, setting the UID is not permitted
             pass
-        except:
+        except Exception:
             log_error(
                 f"Failed to set UID on {item} to {uid}",
                 "exc",
@@ -264,13 +278,13 @@ def main():
 
         try:
             os.chown(item, -1, gid)
-        except:
+        except Exception:
             log_error(f"Failed to set GID on {item} to {gid} - bailing out", "exc")
             return 1
 
         try:
             os.chmod(item, stat_st.st_mode)
-        except:
+        except Exception:
             log_info(
                 f"Failed to set permissions on {item}",
                 "exc",
@@ -292,6 +306,7 @@ if __name__ == "__main__":
     try:
         retval = main()
     except Exception:
+        DEBUG_PDB_F()
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)
