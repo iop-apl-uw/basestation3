@@ -1442,14 +1442,15 @@
             // const noaa = new L.TileLayer('../tile/NOAA+Stamen/{z}/{x}/{y}');
 
 
-            gebco = L.tileLayer.wms("https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?",
+            // gebco = L.tileLayer.wms("https://www.gebco.net/data_and_products/gebco_web_services/web_map_service/mapserv?",
+            gebco = L.tileLayer.wms("https://wms.gebco.net/2024/mapserv?",
                                     {
-                                        layers:"GEBCO_LATEST_2",
+                                        layers:"GEBCO_2024",
                                         format:"image/png",
                                         opacity: 0.4,
                                     });
                            
-            if (checkLayerState("GEBCO", "on"))
+            if (checkLayerState("GEBCO shading", "on"))
                 map.addLayer(gebco); 
 
             console.log(Object.keys(localStorage));
@@ -1631,16 +1632,23 @@
                 map.addLayer(chlA);
 
             // contours
-            
-            contours = L.tileLayer.wms("http://www.opendem.info:80/geoserver/opendem/ows?",
+           
+            contours = L.tileLayer("https://tiles.arcgis.com/tiles/C8EMgrsFcRFL6LrL/arcgis/rest/services/GEBCO_contours/MapServer/tile/{z}/{y}/{x}",
                                     {
+                                        layer: 'GEBCO contours',
                                         format: "image/png",
-                                        layers: "opendem:gebco_2021_contours",
-                                        opacity: 0.2,
-                                        // tileSize: 1024,
+                                        opacity: 0.2
                                     });
 
-            if (checkLayerState("contours", "on"))
+           // contours = L.tileLayer.wms("http://www.opendem.info:80/geoserver/opendem/ows?",
+           //                         {
+           //                             format: "image/png",
+           //                             layers: "opendem:gebco_2021_contours",
+           //                             opacity: 0.2,
+           //                             // tileSize: 1024,
+           //                         });
+
+            if (checkLayerState("GEBCO contours", "on"))
                 map.addLayer(contours); // not on by default
             
             // coordinate display
@@ -1695,8 +1703,8 @@
 
             var overlayLayers = {
                 "bathymetry": {
-                    "GEBCO": gebco,
-                    "contours": contours,
+                    "GEBCO shading": gebco,
+                    "GEBCO contours": contours,
                 },
                 "satellite": {
                     "SSH": ssh,
