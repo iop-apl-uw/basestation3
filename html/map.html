@@ -1453,6 +1453,18 @@
             if (checkLayerState("GEBCO shading", "on"))
                 map.addLayer(gebco); 
 
+
+            eez = L.tileLayer.wms("https://geo.vliz.be/geoserver/gwc/service/wms?",
+                                    {
+                                        layers: 'MarineRegions:eez_boundaries',
+                                        format: "image/png",
+                                        transparent: "true",
+                                        // opacity: 0.2
+                                    });
+
+            if (checkLayerState("EEZ", "on"))
+                map.addLayer(eez); 
+
             console.log(Object.keys(localStorage));
             console.log(Object.keys(localStorage).includes("baseLayer"));
             console.log(localStorage.getItem('baseLayer'));
@@ -1714,6 +1726,7 @@
                 },
                 "chart": {
                     "AIS": ais,
+                    "EEZ": eez,
                     "chart marks": chart,
                 },
 {% if weathermapAppID != '' %}
