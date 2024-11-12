@@ -155,15 +155,19 @@
                 let wind = resp[1];
                 let depth = resp[2];
                 let marine = resp[3];
-                
+               
                 marine = removeTags(marine, 'head');
+                marine = removeTags(marine, 'header');
+                marine = removeTags(marine, 'nav');
                 marine = marine.replaceAll('MapClick.php', 'https://marine.weather.gov/MapClick.php');
                 marine = marine.replaceAll('width="800"', '');
-               
+                   
                 var n = waves['hourly']['time'].length;
                 var m = wind['hourly']['time'].length;
                 var i;
-                var txt = "Forecast for " + formatPos(latlng.lat) + "," + formatPos(latlng.lng) + ',z=' + depth['results'][0]['elevation'] + 'm <table style="text-align:right";>';
+                var txt = `<a href="https://www.marinetraffic.com/en/ais/home/centerx:${latlng.lng.toFixed(4)}/centery:${latlng.lat.toFixed(4)}/zoom:9" target="_blank">AIS</a> * <a href="https://windy.com?${latlng.lat.toFixed(4)},${latlng.lng.toFixed(4)},8" target="_blank">windy</a><br>`
+                console.log(txt);
+                txt = txt + "Forecast for " + formatPos(latlng.lat) + "," + formatPos(latlng.lng) + ',z=' + depth['results'][0]['elevation'] + 'm <table style="text-align:right";>';
                 
                 txt += '<tr style="text-align:center;"><th>UTC</th><th>wind (m/s)</th><th>SWH (m)</th><th>SLP (mbar)</th><th>precip (mm)</th><th>vis (km)</th></tr>';
                 for (i = 0 ; i < n && i < m && i < 72 ; i += 12) {
@@ -177,8 +181,10 @@
                 txt += "</table>";
                 txt += "via Open-Meteo and German Weather Service DWD";
 
-                if (marine.includes("NWS Forecast for:")) {
-                    txt += "<br>" + marine;
+                if (mar = marine.includes("NWS Forecast for:")) {
+                    var fcast = marine.substring(marine.indexOf("<b>NWS Forecast for:"));
+                    var last = fcast.indexOf("<hr><br></td></tr><tr><td colspan");
+                    txt += "<br><hr>" + fcast.substring(0,last+18);
                 }
 
                 popup.setLatLng(latlng)
@@ -1477,19 +1483,26 @@
             // AIS
             
 
-            ais = L.tileLayer("https://tiles.marinetraffic.com/ais_helpers/shiptilesingle.aspx?output=png&sat=1&grouping=shiptype&tile_size=512&legends=1&zoom={z}&X={x}&Y={y}",
+            ais = L.tileLayer.wms("https://gmtds.maplarge.com/ogc/ais:density/wms?",
                                     {
-                                        tileSize: 512,
+                                        layers: 'ais:density',
+                                        format: 'image/png',
+                                        opacity: 0.4,
                                     });
+
+            //ais = L.tileLayer("https://tiles.marinetraffic.com/ais_helpers/shiptilesingle.aspx?output=png&sat=1&grouping=shiptype&tile_size=512&legends=1&zoom={z}&X={x}&Y={y}",
+            //                        {
+            //                            tileSize: 512,
+            //                        });
 
             //if (!checkLayerState("AIS", "off")) {
             //    map.addLayer(ais);
             //    AISoff = false;
             //}
             //else
-                AISoff = true;
+            //    AISoff = true;
 
-     
+    /* 
             var aisReload = params.has('ais') ? parseInt(params.get('ais')) : 10;
             if (aisReload > 0) {
                 if (aisReload < 10)
@@ -1503,7 +1516,7 @@
                             },
                             aisReload*60000);
             }
-
+*/
             // chart marks
 
             chart = L.tileLayer("https://t1.openseamap.org/seamark/{z}/{x}/{y}.png", 
@@ -1725,7 +1738,7 @@
                     "Chlorophyll-A (Aqua MODIS L2)": chlA,
                 },
                 "chart": {
-                    "AIS": ais,
+                    "traffic density": ais,
                     "EEZ": eez,
                     "chart marks": chart,
                 },
