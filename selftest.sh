@@ -133,6 +133,9 @@ set press_offset = `grep \$PRESSURE_YINT "$base"/pt"$1""$testnum".log | tail -n 
 if ($press_offset == "") then
     set press_offset = `grep "Current pressure y-intercept is" $fname | cut -f5 -d' '`
 endif
+if ($press_offset == "") then
+    set press_offset = `grep \$PRESSURE_YINT $fname | tail -n 1 | cut -f5 -d, | cat`
+endif
 
 if ($press_counts == "" || $press_offset == "") then
     echo "WARNING: insufficient data to check pressure parameters"
@@ -146,6 +149,10 @@ else
 endif
 
 set press_slope = `grep \$PRESSURE_SLOPE "$base"/pt"$1""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
+if ($press_slope == "") then
+    set press_slope = `grep \$PRESSURE_SLOPE $fname | tail -n 1 | cut -f5 -d, | cat`
+endif
+
 set gain = ""
 if ($press_slope == "") then
     echo 'WARNING: could not check $PRESSURE_SLOPE'
@@ -233,6 +240,9 @@ foreach cal (t_g t_h t_i t_j c_g c_h c_i c_j)
     set upper = `echo $cal | tr '[:lower:]' '[:upper:]'`
     set parm = `printf 'SEABIRD_%s' $upper`
     set sg_val = `grep $parm "$base"/"$fname".log | cut -f2 -d, | tail -n 1`
+    if ($sg_val == "") then
+        set sg_val = `grep $parm "$base"/"$fname".cap | cut -f5 -d, | tail -n 1`
+    endif
     set cal_val = `grep $cal "$base"/sg_calib_constants.m | cut -f2 -d= | cut -f1 -d\;` 
     set sgc = `printf "%.8f" $sg_val`
     set cac = `printf "%.8f" $cal_val`
@@ -242,7 +252,7 @@ foreach cal (t_g t_h t_i t_j c_g c_h c_i c_j)
         set ratio = `echo "1000*$sgc/$cac" | bc`
     endif
     if ( !($ratio > 990 && $ratio < 1010) ) then
-       echo "value for $cal does not match in sg_calib_constants.m $cac and on glider $sgc"
+       echo "value for $cal does not match: sg_calib_constants.m=$cac, glider=$sgc"
     endif
 end
 
