@@ -1313,6 +1313,7 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
             raise RuntimeError(
                 "Unable to compute counts per mV for Kistler conversion"
             ) from e
+        
 
     x = counts_v / counts_per_mVpV  # mV
     x2 = x * x
@@ -1352,7 +1353,7 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
             raise RuntimeError(
                 "Unable to find conversion parameters for Kistler conversion"
             ) from e
-
+        
     # deliberately NOT adding PRESSURE_YINT
     return press_v  # [psi]
 
@@ -1621,7 +1622,9 @@ def load_dive_profile_data(
             if len(missing_files):
                 # we could have been called with just an nc file to load
                 # and all/some other files None, which is not an error per se
-                raise RuntimeError("Missing data files: %s" % missing_files)
+                log_error("Missing data files: %s - bailing out" % missing_files)
+                raise RuntimeError(True)
+            
             log_info("Loading data from original files")
 
         # If we get here we think we can load data from variaus sources
@@ -2122,7 +2125,8 @@ def load_dive_profile_data(
                 ignore_fm_tags=not base_opts.ignore_flight_model,
             )
             if not local_calib_consts:
-                raise RuntimeError("Could not process %s" % sg_calib_file_name)
+                log_error("Could not process %s - bailing out " % sg_calib_file_name)
+                raise RuntimeError(True)
             # Update non-None values from local into calib_consts from any nc file
             # None values occur as default values for required_keys but if we read values
             # for an nc file this permits using those values in the presence of a nearly-empty
@@ -2140,7 +2144,8 @@ def load_dive_profile_data(
                 log_debug("Updating data from %s" % log_file_name)
             log_f = LogFile.parse_log_file(log_file_name)
             if not log_f:
-                raise RuntimeError("Could not parse %s" % log_file_name)
+                log_error("Could not parse %s - bailing out" % log_file_name)
+                raise RuntimeError(True)
             BaseNetCDF.assign_dim_info_size(
                 nc_info_d, BaseNetCDF.nc_gc_event_info, len(log_f.gc_data["st_secs"])
             )
@@ -2169,10 +2174,9 @@ def load_dive_profile_data(
             # In the case of a corrupted nc file and no original files we won't have a log_f structure
             # at this point.  Unable to continue
             status = 0  # let caller know the bad news...
-            raise RuntimeError(
-                "Could not determine log info for %s" % nc_dive_file_name
-            )
-
+            log_error("Could not determine log info for %s - bailing out" % nc_dive_file_name)
+            raise RuntimeError(True)
+        
         # At this point calib_consts[] contains just the explicitly set/stored variables from (past) sg_calib_constants.m files
         # Do this patch for old files and then see if we want to add the default values.
         try:
@@ -2199,7 +2203,8 @@ def load_dive_profile_data(
                 log_debug("Updating data from %s" % eng_file_name)
             eng_f = DataFiles.process_data_file(eng_file_name, "eng", calib_consts)
             if not eng_f:
-                raise RuntimeError("Could not parse %s" % eng_file_name)
+                log_error("Could not parse %s - bailing out" % eng_file_name)
+                raise RuntimeError(True)
             status = 2  # raw data changed; results need updating
         else:
             # If the eng_f object was created before the calib_consts was reconstructed, apply it here
@@ -2355,8 +2360,8 @@ def load_dive_profile_data(
             instruments_d,
         )
 
-    except RuntimeError as exception:
-        log_error(exception.args[0], "exc")
+    except RuntimeError:
+        #log_error(exception.args[0], "exc")
         return (0, None, None, None, None, None, None, None, None)
     except Exception:
         # Typically because a reader died
@@ -2398,10 +2403,8 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
 
     if sgc_vars_used is None:
         if log_vars_used is None:
-            raise RuntimeError(
-                True,
-                f"SBECT data found but {sbect_type} calibration constant(s) missing",
-            )
+            log_error(f"SBECT data found but {sbect_type} calibration constant(s) missing - bailing out")
+            raise RuntimeError(True)
         log_error(
             f"Missing {missing_sgc_vars} from sg_calib_constants.m - using CT {sbect_type} calibration constants from log file",
             alert="MISSING_SEABIRD_CAL",
@@ -3177,7 +3180,8 @@ def make_dive_profile(
         if directives.eval_function("skip_profile"):
             skipped_profile = 1
             results_d.update({"skipped_profile": skipped_profile})
-            raise RuntimeError(False, "Skipping profile as directed")
+            log_info("Skipping profile as directed")
+            raise RuntimeError(False)
 
         # Fetch dflare and dsurf for bubble calculations below
         try:
@@ -3278,7 +3282,8 @@ def make_dive_profile(
             directives.suggest(
                 "skip_profile%% Missing $GC records; truncated log file?"
             )
-            raise RuntimeError(True, "No $GC records; truncated dive?")
+            log_error("No $GC records; truncated dive? - bailing out")
+            raise RuntimeError(True)
 
         if auxcompass_present:
             # Correct the heading?
@@ -3574,10 +3579,9 @@ def make_dive_profile(
                     gc_start_vbd_ad_v = np.array(log_f.gc_data["vbd_pot1_ad_start"])
                     gc_vbd_ad = np.array(log_f.gc_data["vbd_pot1_ad"])
                 else:
-                    raise RuntimeError(
-                        "Unknown value for $VBD_LP_IGNORE: %d"
-                        % log_f.data["$VBD_LP_IGNORE"]
-                    )
+                    log_error("Unknown value for $VBD_LP_IGNORE: %d - bailing out"
+                              % log_f.data["$VBD_LP_IGNORE"])
+                    raise RuntimeError(True)                     
             else:
                 gc_start_vbd_ad_available = False
                 gc_start_vbd_ad_v = None
@@ -3798,9 +3802,8 @@ def make_dive_profile(
                     ctd_condtemp_v = results_d["legato_conducTemp"]
                     ctd_epoch_time_s_v = results_d["legato_time"]
                 except KeyError as e:
-                    raise RuntimeError(
-                        True, "Legato CT scicon data found, but had problems loading"
-                    ) from e
+                    log_error(f"Legato CT scicon data found, but had problems loading {e} - bailing out")
+                    raise RuntimeError(True)
             else:
                 ctd_temp_v = eng_f.get_col("rbr_temp")
                 ctd_cond_v = eng_f.get_col("rbr_conduc")
@@ -3814,10 +3817,9 @@ def make_dive_profile(
                     or ctd_condtemp_v is None
                     or ctd_epoch_time_s_v is None
                 ):
-                    raise RuntimeError(
-                        True,
-                        "Legato CT data specified, but no data found for scicon or truck",
-                    )
+                    log_error("Legato CT data specified, but no data found for scicon or truck - bailing out")
+                    raise RuntimeError(True)
+
                 tmp_press_v = eng_f.get_col("rbr_pressure")
 
             ctd_np = len(ctd_epoch_time_s_v)
@@ -3943,7 +3945,7 @@ def make_dive_profile(
                 ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
                     BaseNetCDF.nc_sbect_data_info
                 ]
-            except KeyError as e:
+            except KeyError:
                 # Next, try for the glider eng file
                 (_, tempFreq_v) = eng_f.find_col(
                     ["tempFreq", "sbect_tempFreq", "sailct_tempFreq"]
@@ -3952,7 +3954,8 @@ def make_dive_profile(
                     ["condFreq", "sbect_condFreq", "sailct_condFreq"]
                 )
                 if tempFreq_v is None and condFreq_v is None:
-                    raise RuntimeError(True, "No CT data found") from e
+                    log_error("No CT data found - bailing out")
+                    raise RuntimeError(True)
                 ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
                     BaseNetCDF.nc_sg_data_info
                 ]
@@ -4391,7 +4394,8 @@ def make_dive_profile(
                 ctd_temp_v = results_d["gpctd_temperature"]
                 ctd_cond_v = results_d["gpctd_conductivity"]
             except KeyError as e:
-                raise RuntimeError(True, "No pumped CT data found") from e
+                log_error(f"No pumped CT data found {e} - bailing out")
+                raise RuntimeError(True)
 
             # CONSIDER: should we support kistler cnf files in this branch?
             # UPDATE_PRESS
@@ -4522,7 +4526,8 @@ def make_dive_profile(
 
             valid_gpctd_i_v = Utils.setdiff(list(range(ctd_np)), bad_gpctd_i_v)
             if not valid_gpctd_i_v:
-                raise RuntimeError(True, "No valid GPCTD data found")
+                log_error("No valid GPCTD data found - bailing out")
+                raise RuntimeError(True)
 
             # Reduce the data
             ctd_epoch_time_s_v = ctd_epoch_time_s_v[valid_gpctd_i_v]
@@ -4858,7 +4863,8 @@ def make_dive_profile(
         else:
             # ak/oct03/p0090005 applied/rimpac/p0190001 (probably initial ballasting and centering issues)
             # If USE_ICE could be stuck under ice (and raised above water level)
-            raise RuntimeError(True, "Glider never dove?")
+            log_error("Glider never dove? - bailing out")
+            raise RuntimeError(True)
 
         max_ctd_depth_i = ctd_depth_m_v.argmax()
         max_ctd_depth_m = ctd_depth_m_v[max_ctd_depth_i]
@@ -5347,7 +5353,8 @@ def make_dive_profile(
         if len(flying_i_v):
             flying_i = flying_i_v[0]
         else:
-            raise RuntimeError(True, "Glider never started flying?")
+            log_error("Glider never started flying? - bailing out")
+            raise RuntimeError(True)
 
         flare_i = 0  # where flare depth achieved
         # CONSIDER - probably not correct for Legato
@@ -5374,7 +5381,8 @@ def make_dive_profile(
             else:
                 # If USE_ICE could be stuck under ice and held there unable to break free
                 # APL/sgs141_DavisStrait_Feb11_ICE dives 87ff
-                raise RuntimeError(True, "Glider never flared?")
+                log_error("Glider never flared? - bailing out")
+                raise RuntimeError(True)
 
             dive_start_i = max([flare_i, flying_i, dive_start_i])
 
@@ -5632,11 +5640,9 @@ def make_dive_profile(
         num_bad_samples = len(bad_samples)
         num_good_samples = ctd_np - num_bad_samples
         if num_good_samples < 2:
-            not_enough = (
-                "Insufficient samples (%d of %d) to continue with CT corrections"
-                % (num_good_samples, ctd_np)
-            )
-            raise RuntimeError(True, not_enough)
+            log_error("Insufficient samples (%d of %d) to continue with CT corrections - bailing out"
+                % (num_good_samples, ctd_np))
+            raise RuntimeError(True)
 
         # Setup to solve, perhaps iteratively, salinity and hydrodynamic speeds and angles
         # based on buoyancy forcing.  This could involve thermal-mass corrections.
@@ -5750,7 +5756,8 @@ def make_dive_profile(
         modes = int(calib_consts["sbect_modes"])  # ensure integer
         explicit_calib_consts["sbect_modes"] = modes
         if modes not in [0, 1, 3, 5]:
-            raise RuntimeError("Unknown number of thermal inertia modes: %d" % modes)
+            log_error("Unknown number of thermal inertia modes: %d - bailing out" % modes)
+            raise RuntimeError(True)
 
         if perform_thermal_inertia_correction:
             log_info("Using %d-mode thermal-inertia correction." % modes)
@@ -6959,9 +6966,10 @@ def make_dive_profile(
             processing_error = 1  # Had an error of some sort
             results_d.update({"processing_error": "processing_error"})
             results_d["processing_error"] = processing_error
-            log_error(exception.args[1], "exc")
+            #log_error(exception.args[1], "exc")
         else:
-            log_info(exception.args[1], "exc")
+            #log_info(exception.args[1], "exc")
+            pass
 
     # Fall through and write the nc file with whatever data is available
     results_d.update(
