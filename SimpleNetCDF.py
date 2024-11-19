@@ -362,14 +362,16 @@ def main(
                 return 1
 
             nci = Utils.open_netcdf_file(netcdf_in_filename, "r")
-            nco = Utils.open_netcdf_file(netcdf_out_filename, "w")
             if (
                 master_time_name not in nci.variables
                 or master_depth_name not in nci.variables
             ):
-                log_error("Could not load variables - skipping", "exc")
+                log_error(
+                    f"Could not load variables {master_time_name} or {master_depth_name} from {netcdf_in_filename} - skipping"
+                )
                 continue
 
+            nco = Utils.open_netcdf_file(netcdf_out_filename, "w")
             for var_name, var_meta in nc_meta.items():
                 if var_name not in nci.variables:
                     continue
@@ -549,9 +551,10 @@ def main(
             if base_opts.simplencf_compress_output:
                 netcdf_out_filename_bzip = netcdf_out_filename + ".bz2"
                 try:
-                    with open(netcdf_out_filename, "rb") as fi, bz2.open(
-                        netcdf_out_filename_bzip, "wb"
-                    ) as fo:
+                    with (
+                        open(netcdf_out_filename, "rb") as fi,
+                        bz2.open(netcdf_out_filename_bzip, "wb") as fo,
+                    ):
                         fo.write(fi.read())
                 except Exception:
                     log_error("Could not write out bz output", "exc")
