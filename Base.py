@@ -1388,7 +1388,7 @@ def signal_handler_abort_processing(signum, frame):
         stop_processing_event.set()
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Command line driver for the all basestation processing.
 
     Base.py is normally invoked as part of the glider logout sequence, but it
@@ -1420,7 +1420,8 @@ def main():
 
     # Get options
     base_opts = BaseOpts.BaseOptions(
-        "Command line driver for the all basestation processing."
+        "Command line driver for the all basestation processing.",
+        cmdline_args=cmdline_args,
     )
     # Initialize log
     BaseLogger(base_opts, include_time=True)

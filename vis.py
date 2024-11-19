@@ -402,10 +402,10 @@ def gliderPath(glider, request, mission=None):
 
 def baseOpts(instrument_id, mission_dir, module_name):
     cnf_file = os.path.join(mission_dir, f'sg{instrument_id:03d}.conf')
- 
+
     base_opts = BaseOpts.BaseOptions(
         "",
-        alt_cmdline = f"-c {cnf_file} -m {mission_dir}",
+        cmdline_args = f"-c {cnf_file} -m {mission_dir}".split(),
         calling_module=module_name,
     )
 
@@ -3071,7 +3071,7 @@ if __name__ == '__main__':
             overrides['SHIP_UDP'] = a
             print(f'UDP {a}')
         elif o in ['--shipjson']:
-            override['SHIP_JSON'] = a
+            overrides['SHIP_JSON'] = a
         elif o in ['--nosave']:
             noSave = True
         elif o in ['--nochat']:

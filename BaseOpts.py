@@ -230,7 +230,7 @@ def loadmodule(pathname):
         #log_info("No module loaded")
     return None
 
-def find_additional_options(basestation_directory):
+def find_additional_options(basestation_directory, cmdline_args):
     """ Processes the .extensions and .sensors files to add any additional options.
     This code partially duplicates functions in Sensor.py and BaseDotFiles.py, but
     is re-written here to be free of any calls to the logginer infrastructure, which
@@ -245,7 +245,7 @@ def find_additional_options(basestation_directory):
     tmp_ap.add_argument("--mission_dir", action=FullPathTrailingSlashAction)
     tmp_ap.add_argument("--group_etc", action=FullPathTrailingSlashAction)
     tmp_argv = []
-    for arg in sys.argv[1:]:
+    for arg in cmdline_args:
         if "-h" in arg:
             continue
         tmp_argv.append(arg)
@@ -1446,7 +1446,7 @@ class BaseOptions:
         self,
         description,
         additional_arguments=None,
-        alt_cmdline=None,
+        cmdline_args=None,
         add_to_arguments=None,
         add_option_groups=None,
         calling_module=None,
@@ -1455,12 +1455,15 @@ class BaseOptions:
         Input:
             additional_arguments - dictionay of additional arguments - sepcific
                                    to a single module
-            alt_cmdline - alternate command line - this is a string of options
+            cmdline_args - alternate command line - list of strings -
                           equivilent to sys.argv[1:]
             add_to_arguments - adds the calling_module to the list of .group set of that option
             add_option_groups - dict of new option_groups and descriptions
         """
         global option_group_description
+
+        if cmdline_args is None:
+            cmdline_args = sys.argv[1:]
         
         self._opts = None  # Retained for debugging
         self._ap = None  # Retailed for debugging
@@ -1487,8 +1490,10 @@ class BaseOptions:
             option_group_description |= add_option_groups 
 
         basestation_directory, _ = os.path.split(
-            os.path.abspath(os.path.expanduser(sys.argv[0]))
+            #os.path.abspath(os.path.expanduser(sys.argv[0]))
+            __file__
         )
+        
         self.basestation_directory = basestation_directory  # make avaiable
         # add path to load common basestation modules from subdirectories
         sys.path.append(basestation_directory)
@@ -1503,7 +1508,7 @@ class BaseOptions:
             },
         )
 
-        ext_add_to_arguments, ext_add_option_groups, ext_add_options = find_additional_options(self.basestation_directory)
+        ext_add_to_arguments, ext_add_option_groups, ext_add_options = find_additional_options(self.basestation_directory, cmdline_args)
         options_dict |= ext_add_options
         option_group_description |= ext_add_option_groups
         for module, add_arg_list in ext_add_to_arguments.items():
@@ -1514,7 +1519,7 @@ class BaseOptions:
         # Anything added from the plot functions
         options_dict |= Plotting.plotting_additional_arguments
 
-        if "--generate_sample_conf" in sys.argv:
+        if "--generate_sample_conf" in cmdline_args:
             # Generate a sample conf file and exit
             generate_sample_conf_file(options_dict, calling_module)
             sys.exit(0)
@@ -1634,10 +1639,7 @@ class BaseOptions:
 
         mark_deprecated_help_strings(ap)
 
-        if alt_cmdline is not None:
-            self._opts = ap.parse_args(alt_cmdline.split())
-        else:
-            self._opts = ap.parse_args()
+        self._opts = ap.parse_args(cmdline_args)
 
         if "subparser_name" in self._opts:
             self.subparser_name = self._opts.subparser_name
