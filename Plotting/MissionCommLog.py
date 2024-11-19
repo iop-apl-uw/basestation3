@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots comm.log counter values
-"""
+"""Plots comm.log counter values"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
@@ -89,7 +89,7 @@ def mission_commlog(
             conn,
         )
     except Exception:
-        log_error("Could not fetch needed columns", "exc")
+        log_error("Could not fetch needed columns - skipping eng_mission_commlog", "exc")
         if dbcon is None:
             conn.close()
             log_info("mission_commlog db closed")
@@ -99,6 +99,9 @@ def mission_commlog(
     callNum = np.arange(0, len(df["pitch"]))
 
     dive_nums = df["dive"]
+    if len(dive_nums) == 0:
+        log_error("No call data found in database - skipping eng_mission_commlog")
+        return ([], [])
 
     # Interpolate over missing dive numbers - may not be needed
     dive_nums_i = list(
@@ -254,9 +257,7 @@ def mission_commlog(
         )
 
     colors = ["red", "blue", "green"]
-    for i, (a, tag) in enumerate(
-        [("pitchAD", "Pitch AD"), ("rollAD", "Roll AD"), ("vbdAD", "VBD AD")]
-    ):
+    for i, (a, tag) in enumerate([("pitchAD", "Pitch AD"), ("rollAD", "Roll AD"), ("vbdAD", "VBD AD")]):
         if a in df.columns:
             fig.add_trace(
                 {
