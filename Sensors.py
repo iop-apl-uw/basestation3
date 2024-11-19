@@ -310,7 +310,7 @@ class SensorExtensions:
             return return_val
 
         if self.__extension_file_name is None:
-            log_info("Sensor extension not enabled - skipping processing")
+            log_warning("Sensor extension not enabled - skipping processing")
             return (None, 0)
 
         ret_val = process_one_extension_file(
