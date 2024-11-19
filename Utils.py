@@ -53,6 +53,7 @@ import re
 import signal
 import subprocess
 import sqlite3
+import stat
 import sys
 import time
 import typing
