@@ -3,22 +3,24 @@ kaleido>=0.2.1; platform_machine != 'armv7l'
 brotlipy
 matplotlib>=3.6.0
 cmocean
-numpy>=1.26.0,<2
-#gsw==3.3.1
-#gsw==3.6.16
+numpy==1.26.4
 gsw==3.6.19
 seawater==3.3.4
-plotly==5.19.0
-scipy>=1.14.0
+plotly==5.24.1
+scipy==1.14.1
 # latest cartopy crashes when shapely is not built from source
-shapely --no-binary shapely
-cartopy
-PyYAML>=6.0
+#shapely --no-binary shapely
+#cartopy
+# No crashes seen with these versions - leaving the above in place
+# until further testing says we don't need to install from source
+shapely==2.0.6
+cartopy==0.24.1
+PyYAML==6.0.2
 # For SlackPost and InReachSend
 requests>=2.31.0
 # For GliderDAC and BaseNetwork support
-xarray>=0.21.1
-netCDF4>=1.5.8
+xarray==2024.10.0
+netCDF4==1.7.2
 # For sftp support in BaseDotFiles
 paramiko>=2.10.4
 # For BaseRunner
@@ -42,7 +44,7 @@ anyio
 pyzmq --no-binary=pyzmq
 ppigrf
 scanf
-pyproj
-pydantic
+pyproj==3.7.0
+pydantic==2.9.2
 asyncudp
 asyncinotify
