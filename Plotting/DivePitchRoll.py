@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023, 2024 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -162,12 +162,15 @@ def plot_pitch_roll(
         elif vbd_lp_ignore == 2:
             GC_vbd_AD_start = pot1_start
             GC_vbd_AD_end = pot1
-    except Exception as e:
+    except KeyError as e:
         log_error(
-            f"Could not fetch needed variables {e} - skipping pitch and roll plots",
-            "exc",
+            f"Could not fetch needed variables {e} - skipping pitch and roll plots - skipping",
         )
         return ([], [])
+    except Exception:
+        log_error("Problems in pitch and roll plots - skipping", "exc")
+        return ([], [])
+
 
     try:
         bad_i_v = [i for i in range(sg_np) if np.isnan(vehicle_pitch_degrees_v[i])]

@@ -84,11 +84,7 @@ def plot_CTW(
         lon_gps = dive_nc_file.variables["log_gps_lon"][:]
 
         mhead = [
-            float(s)
-            for s in dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
-            .tobytes()
-            .decode("utf-8")
-            .split(",")
+            float(s) for s in dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:].tobytes().decode("utf-8").split(",")
         ]
         errband = float(dive_nc_file.variables["log_HEAD_ERRBAND"].getValue())
         if "log_gps_magvar" in dive_nc_file.variables:
@@ -97,7 +93,11 @@ def plot_CTW(
             # Vendor Basestation
             magvar = dive_nc_file.variables["magnetic_variation"].getValue()
         else:
-            log_error("Could not find the magvar for plot_CTW", "exc")
+            log_error("Could not find the magvar for plot_CTW")
+            magvar = -1.0
+    except KeyError as e:
+        log_error(f"Unable to load {e} - skipping plot_CTW")
+        return ([], [])
     except Exception:
         log_error("Problems in plot_CTW", "exc")
         return ([], [])
@@ -118,19 +118,14 @@ def plot_CTW(
 
     disp = np.sqrt(north_disp_cum[-1] ** 2 + east_disp_cum[-1] ** 2)
 
-    log_debug(
-        f"Total displacement {disp} (m) desired heading {desired_head:f} (deg), magvar {magvar:f} (deg)"
-    )
+    log_debug(f"Total displacement {disp} (m) desired heading {desired_head:f} (deg), magvar {magvar:f} (deg)")
 
     # Check for AD2CP output
     north_disp_cum_ttw = None
     east_disp_cum_ttw = None
     north_disp_cum_ttw_ocn = None
     east_disp_cum_ttw_ocn = None
-    if (
-        "ad2cp_inv_glider_uttw" in dive_nc_file.variables
-        and "ad2cp_inv_glider_vttw" in dive_nc_file.variables
-    ):
+    if "ad2cp_inv_glider_uttw" in dive_nc_file.variables and "ad2cp_inv_glider_vttw" in dive_nc_file.variables:
         # import pdb
 
         # pdb.set_trace()
@@ -138,9 +133,7 @@ def plot_CTW(
             ttw_time = dive_nc_file.variables["ad2cp_inv_glider_time"][:]
             dive_i = np.logical_and(ttw_time >= time_gps[1], ttw_time <= time_gps[2])
 
-            ttw_dive_time_diff = np.hstack(
-                (ttw_time[dive_i][0] - time_gps[1], np.diff(ttw_time[dive_i]))
-            )
+            ttw_dive_time_diff = np.hstack((ttw_time[dive_i][0] - time_gps[1], np.diff(ttw_time[dive_i])))
             ttw_dive_time = (ttw_time[dive_i] - time_gps[1]) / 60.0
             uttw = dive_nc_file.variables["ad2cp_inv_glider_uttw"][:]
             vttw = dive_nc_file.variables["ad2cp_inv_glider_vttw"][:]
@@ -149,12 +142,8 @@ def plot_CTW(
 
             north_disp_cum_ttw = np.cumsum(vttw[dive_i] * ttw_dive_time_diff)
             east_disp_cum_ttw = np.cumsum(uttw[dive_i] * ttw_dive_time_diff)
-            north_disp_cum_ttw_ocn = np.cumsum(
-                (vttw[dive_i] + vocn[dive_i]) * ttw_dive_time_diff
-            )
-            east_disp_cum_ttw_ocn = np.cumsum(
-                (uttw[dive_i] + uocn[dive_i]) * ttw_dive_time_diff
-            )
+            north_disp_cum_ttw_ocn = np.cumsum((vttw[dive_i] + vocn[dive_i]) * ttw_dive_time_diff)
+            east_disp_cum_ttw_ocn = np.cumsum((uttw[dive_i] + uocn[dive_i]) * ttw_dive_time_diff)
 
             # ttw_time = dive_nc_file.variables["ad2cp_inv_glider_time"][:]
             # ttw_time = (ttw_time[1:] - ttw_time[1]) / 60.0
@@ -360,9 +349,7 @@ def plot_CTW(
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>Course through water and over ground"
 
-    if np.nanmax(np.absolute(north_disp_gsm_cum)) > np.nanmax(
-        np.absolute(east_disp_gsm_cum)
-    ):
+    if np.nanmax(np.absolute(north_disp_gsm_cum)) > np.nanmax(np.absolute(east_disp_gsm_cum)):
         xconstrain_key = "scaleanchor"
         xconstrain_value = "y"
         yconstrain_key = "constrain"
@@ -405,7 +392,5 @@ def plot_CTW(
 
     return (
         [fig],
-        PlotUtilsPlotly.write_output_files(
-            base_opts, "dv%04d_ctw" % (dive_nc_file.dive_number,), fig
-        ),
+        PlotUtilsPlotly.write_output_files(base_opts, "dv%04d_ctw" % (dive_nc_file.dive_number,), fig),
     )

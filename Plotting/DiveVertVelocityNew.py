@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots dive vertical velocty and estimates C_VBD
-"""
+"""Plots dive vertical velocty and estimates C_VBD"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 import typing
@@ -70,20 +70,17 @@ def plot_vert_vel_new(
 ) -> tuple[list, list]:
     """Plots various measures of vetical velocity and estimates volmax and C_VBD"""
 
-    calfile = os.path.join(
-        base_opts.mission_dir, "sg_calib_constants.m"
-    )
+    calfile = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
     if os.path.exists(calfile):
         calConst = CalibConst.getSGCalibrationConstants(calfile, suppress_required_error=True)
     else:
         calConst = {}
-     
-    regress_dives  = calConst.get('regress_dives', 3);
-    regress_top    = calConst.get('regress_top_depth', 0.2);
-    regress_bottom = calConst.get('regress_bottom_depth', 0.9);
-    regress_init_bias = calConst.get('regress_init_bias', -50);
 
+    regress_dives = calConst.get("regress_dives", 3)
+    regress_top = calConst.get("regress_top_depth", 0.2)
+    regress_bottom = calConst.get("regress_bottom_depth", 0.9)
+    regress_init_bias = calConst.get("regress_init_bias", -50)
     log_info("Starting dive_vert_vel")
 
     # Preliminaries
@@ -92,22 +89,11 @@ def plot_vert_vel_new(
 
         dive_num = getattr(dive_nc_file, "dive_number")
 
-        mhead = (
-            dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
-            .tobytes()
-            .decode("utf-8")
-            .split(",")
-        )
+        mhead = dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:].tobytes().decode("utf-8").split(",")
 
         ctd_depth = dive_nc_file.variables["ctd_depth"][:]
         density_ctd = dive_nc_file.variables["density"][:]
-        inds = np.nonzero(
-            np.logical_and.reduce(
-                (
-                    np.isfinite(density_ctd),
-                )
-            )
-        )[0]
+        inds = np.nonzero(np.logical_and.reduce((np.isfinite(density_ctd),)))[0]
         ctd_depth = ctd_depth[inds]
         density_ctd = density_ctd[inds]
         isurf = np.nonzero(
@@ -127,20 +113,23 @@ def plot_vert_vel_new(
             depth_1m = ctd_depth[isurf]
 
         # print(density_1m, depth_1m)
-    except:
+    except KeyError as e:
         log_error(
-            "Could not fetch needed variables - skipping vertical velocity plot", "exc"
+            f"Could not load {e} - skipping vert_vel_new/vert_vel__regression",
         )
+        return ([], [])
+    except Exception:
+        log_error("Could not fetch needed variables - skipping vertical velocity plot", "exc")
         return ([], [])
 
     depth_max = np.nanmax(ctd_depth)
     if regress_top < 1:
-        d0 = regress_top*depth_max
+        d0 = regress_top * depth_max
     else:
         d0 = regress_top
 
     if regress_bottom < 1:
-        d1 = regress_bottom*depth_max
+        d1 = regress_bottom * depth_max
     else:
         d1 = regress_bottom
 
@@ -153,33 +142,41 @@ def plot_vert_vel_new(
 
     rms_init = 0
 
-    bias_bo, hd_bo, vels_bo, rms_bo, log, _, _, = RegressVBD.regress(
-                            base_opts.mission_dir,
-                            base_opts.instrument_id,
-                            [dive_num],
-                            [d0, d1],
-                            regress_init_bias,
-                            None,   # use log mass
-                            None,  
-                            False,  
-                            bias_only=True,
-                        )                                                                                   
+    (
+        bias_bo,
+        hd_bo,
+        vels_bo,
+        rms_bo,
+        log,
+        _,
+        _,
+    ) = RegressVBD.regress(
+        base_opts.mission_dir,
+        base_opts.instrument_id,
+        [dive_num],
+        [d0, d1],
+        regress_init_bias,
+        None,  # use log mass
+        None,
+        False,
+        bias_only=True,
+    )
     if vels_bo:
         vels_baseline = vels_bo
         rms_init = rms_bo[0]
-        implied_cvbd_bo = log['C_VBD'] + bias_bo / log['VBD_CNV']
-    
+        implied_cvbd_bo = log["C_VBD"] + bias_bo / log["VBD_CNV"]
+
     bias, hd, vels, rms, _, _, figs = RegressVBD.regress(
-                            base_opts.mission_dir,
-                            base_opts.instrument_id,
-                            [dive_num],
-                            [d0, d1],
-                            regress_init_bias,
-                            None,   # use log mass
-                            'html',   # get a fit quality plot in case we don't get one from multi dive
-                            False,
-                            bias_only=False
-                        )                                                                                   
+        base_opts.mission_dir,
+        base_opts.instrument_id,
+        [dive_num],
+        [d0, d1],
+        regress_init_bias,
+        None,  # use log mass
+        "html",  # get a fit quality plot in case we don't get one from multi dive
+        False,
+        bias_only=False,
+    )
 
     if vels and vels_baseline is not None:
         vels_baseline = vels
@@ -189,27 +186,27 @@ def plot_vert_vel_new(
         min_bias = bias
         best_hd = hd
         fit_fig = figs[0]
-        implied_cvbd_dive = log['C_VBD'] + bias / log['VBD_CNV']
-    
-    rms_mul = (0,0)
+        implied_cvbd_dive = log["C_VBD"] + bias / log["VBD_CNV"]
+
+    rms_mul = (0, 0)
 
     if regress_dives > 1:
         dive1 = dive_num - regress_dives + 1
         if dive1 < 1:
             dive1 = 1
-        
+
         bias_mul, hd_mul, vels_mul, rms_mul, _, _, figs_mul = RegressVBD.regress(
-                                base_opts.mission_dir,
-                                base_opts.instrument_id,
-                                [*range(dive1, dive_num + 1)],
-                                [d0, d1],
-                                regress_init_bias,
-                                None,
-                                'html', # generate the quality of fit/model improvement plot in html form
-                                True,   # need to ask for dive plots to get the w velocity outputs (for last dive)
-                                bias_only=False,
-                                decimate=regress_dives
-                            )                                                                                   
+            base_opts.mission_dir,
+            base_opts.instrument_id,
+            [*range(dive1, dive_num + 1)],
+            [d0, d1],
+            regress_init_bias,
+            None,
+            "html",  # generate the quality of fit/model improvement plot in html form
+            True,  # need to ask for dive plots to get the w velocity outputs (for last dive)
+            bias_only=False,
+            decimate=regress_dives,
+        )
 
         if rms_mul[1] > 0:
             min_bias = bias_mul
@@ -219,13 +216,14 @@ def plot_vert_vel_new(
                 vels_baseline = vels_mul
                 rms_init = rms_mul[0]
 
-
     if best_hd:
-        implied_volmax      = log['VOL0']*1e6 - ((log['C_VBD'] + min_bias / log['VBD_CNV']) - log['VBD_MIN'])*log['VBD_CNV']
-        implied_cvbd        = log['C_VBD'] + min_bias / log['VBD_CNV']
-        implied_max_maxbuoy = -(implied_cvbd - log['VBD_MAX'])*log['VBD_CNV'] * log['RHO']
-        implied_max_smcc    = -(implied_cvbd - log['VBD_MIN'])*log['VBD_CNV']
-        implied_min_smcc_surf = log['MASS'] * (1 / density_1m - 1 / log['RHO']) + 150
+        implied_volmax = (
+            log["VOL0"] * 1e6 - ((log["C_VBD"] + min_bias / log["VBD_CNV"]) - log["VBD_MIN"]) * log["VBD_CNV"]
+        )
+        implied_cvbd = log["C_VBD"] + min_bias / log["VBD_CNV"]
+        implied_max_maxbuoy = -(implied_cvbd - log["VBD_MAX"]) * log["VBD_CNV"] * log["RHO"]
+        implied_max_smcc = -(implied_cvbd - log["VBD_MIN"]) * log["VBD_CNV"]
+        implied_min_smcc_surf = log["MASS"] * (1 / density_1m - 1 / log["RHO"]) + 150
 
         implieds = f"max SM_CC={implied_max_smcc:.0f}, max MAX_BUOY={implied_max_maxbuoy:.0f}<br>min SM_CC={implied_min_smcc_surf:.0f} (rho {density_1m:.4f} at {depth_1m:.2f}m)"
 
@@ -243,17 +241,21 @@ def plot_vert_vel_new(
             conn = dbcon
 
         BaseDB.addValToDB(
-            base_opts, dive_nc_file.dive_number, "regressed_C_VBD", implied_cvbd, con=conn
+            base_opts,
+            dive_nc_file.dive_number,
+            "regressed_C_VBD",
+            implied_cvbd,
+            con=conn,
         )
         BaseDB.addValToDB(
-            base_opts, dive_nc_file.dive_number, "regressed_volmax", implied_volmax, con=conn
+            base_opts,
+            dive_nc_file.dive_number,
+            "regressed_volmax",
+            implied_volmax,
+            con=conn,
         )
-        BaseDB.addValToDB(
-            base_opts, dive_nc_file.dive_number, "regressed_HD_A", best_hd[0], con=conn
-        )
-        BaseDB.addValToDB(
-            base_opts, dive_nc_file.dive_number, "regressed_HD_B", best_hd[1], con=conn
-        )
+        BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "regressed_HD_A", best_hd[0], con=conn)
+        BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "regressed_HD_B", best_hd[1], con=conn)
         try:
             BaseDB.addSlopeValToDB(
                 base_opts,
@@ -354,7 +356,7 @@ def plot_vert_vel_new(
         )
     if regress_dives > 1 and rms_mul[1] > 0:
         tagline = f"<b>Buoyancy+HD corrected model, multi-dives</b><br>&#8594;C_VBD={implied_cvbd:.0f},A={best_hd[0]:.5f},B={best_hd[1]:.5f}<br>RMS={rms_mul[1]:.3f}cm/s, bias={bias_mul:.1f}cc<br>{implieds}"
-        
+
         fig.add_trace(
             {
                 "x": vels_mul[3],
@@ -372,7 +374,7 @@ def plot_vert_vel_new(
     fig.update_layout(
         {
             "xaxis": {
-                "title": f"Vertical Velocity (cm/sec)", # <br>{fit_line}",
+                "title": f"Vertical Velocity (cm/sec)",  # <br>{fit_line}",
                 "showgrid": True,
                 # "side": "top"
             },
@@ -397,14 +399,18 @@ def plot_vert_vel_new(
 
     return (
         [fig, fit_fig],
-        [ PlotUtilsPlotly.write_output_files(
-              base_opts,
-              "dv%04d_vert_vel_new" % (dive_nc_file.dive_number,),
-              fig,
-          ),
-          PlotUtilsPlotly.write_output_files(
-              base_opts,
-              "dv%04d_vert_vel_regression" % (dive_nc_file.dive_number,),
-              fit_fig,
-          ) if fit_fig else None]
+        [
+            PlotUtilsPlotly.write_output_files(
+                base_opts,
+                "dv%04d_vert_vel_new" % (dive_nc_file.dive_number,),
+                fig,
+            ),
+            PlotUtilsPlotly.write_output_files(
+                base_opts,
+                "dv%04d_vert_vel_regression" % (dive_nc_file.dive_number,),
+                fit_fig,
+            )
+            if fit_fig
+            else None,
+        ],
     )
