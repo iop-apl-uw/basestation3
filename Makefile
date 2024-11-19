@@ -13,7 +13,16 @@ rufffmt:
 mypy:
 	-mypy
 
-# Change to --cov-report html to generate html coverage reports
-#test:
-#	-pytest --cov --cov-report term-missing tests/
+test:
+	-pytest --cov --cov-report term-missing tests/
+
+testhtml:
+	-pytest --cov --cov-report html tests/
+
+# Requires act tool to be installed
+# For MacOS
+# brew install act
+# Runs github workflow locally
+act:
+	-act -j check --container-daemon-socket -  --container-architecture linux/aarch64 push
 

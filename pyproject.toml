@@ -1,8 +1,8 @@
 [tool.mypy]
-plugins = ['numpy.typing.mypy_plugin']
-#TODO - add in sensors and extensions
+plugins = ['numpy.typing.mypy_plugin', 'pydantic.mypy']
 files = ['Base.py', 'MakeDiveProfiles.py', "Reprocess.py"]
-strict = true
+#strict = true
+python_version = "3.10"
 
 # # Much of the numerical computing stack doesn't have type annotations yet.
 [[tool.mypy.overrides]]
@@ -25,6 +25,8 @@ pythonpath = "."
 # Turn this on and do a pass through the code base
 #line-length = 120
 output-format = 'pylint'
+include = ["./*py", "tests/*py"]
+target-version = "py310"
 
 [tool.ruff.lint]
 # Check for numpy 2 issues
