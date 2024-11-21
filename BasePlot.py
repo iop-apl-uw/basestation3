@@ -39,11 +39,10 @@ import pdb
 import pstats
 import sys
 import time
-import typing
 import traceback
 
-import plotly
 import numpy as np
+import plotly
 
 import BaseOpts
 import BaseOptsType
@@ -52,13 +51,12 @@ import MakeDiveProfiles
 import Plotting
 import PlotUtils
 import Utils
-
 from BaseLog import (
     BaseLogger,
-    log_error,
-    log_info,
     log_critical,
     log_debug,
+    log_error,
+    log_info,
     log_warning,
 )
 from CalibConst import getSGCalibrationConstants
@@ -115,7 +113,7 @@ def plot_dives(
                     and base_opts.stop_processing_event.is_set()
                 ):
                     log_warning("Caught SIGUSR1 - bailing out")
-                    return (fig, output_files)
+                    return (figs, output_files)
             except AttributeError:
                 pass
             log_debug(f"Trying Dive Plot :{plot_name}")
