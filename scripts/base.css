@@ -93,15 +93,17 @@
     .dropdown {
       position: relative;
       display: inline-block;
+      overflow-x: visible;
+      z-index: 10; 
     }
 
     .dropdown-content {
       display: none;
       position: absolute;
       background-color: #f1f1f1;
-      min-width: 160px;
+      min-width: 300px;
       box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-      z-index: 1000;
+      overflow-x: visible;
     }
 
     .dropdown-content span {
@@ -145,6 +147,28 @@
         border-right: none;
         border-collapse: collapse;
     }
+   
+    #pilotWheelDiv {
+        display: flex;
+        overflow-y: none;
+        overflow-x: visible;
+        grid-template-columns: 0.5fr 0.5fr;
+        grid-template-rows: 100%;
+        grid-template-areas:
+            "pilotParmList pilotDirectiveList";
+        height: 100%;
+    }
+    #pilotParmsList {
+        overflow-y: scroll;
+        grid-area: pilotParmList;
+        overflow-x: visible;
+        width: 50%;
+    }
+    #pilotDirectiveList {
+        overflow-y: scroll;
+        grid-area: pilotDirectiveList;
+        width: 50%;
+    } 
     #changelogDiv {
         display: grid;
         overflow-y: none;
@@ -246,6 +270,9 @@
         color: "black";
     }
 
+    #btnPilotWheel {
+        background: url("images/joystick-icon.png");
+    }
     #btnDiveUp {
         background: url("images/up-icon.png");
     }

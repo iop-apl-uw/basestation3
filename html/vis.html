@@ -24,6 +24,33 @@
     .hide {
         display: none !important;
     }
+    .bold {
+        font-weight: bold;
+    }
+    .paramSearched {
+       background-color: #FFFF00;
+    }
+    .paramInputLabel {
+        padding-left: 5px;
+        width: 50%;
+    }
+    .paramInputHolder {
+        width: 50%;
+        border-style: none;
+        border-width: 0px;
+        display: flex;
+        overflow-x: visible;
+    }
+    .paramInputInput {
+        width: 50%;
+        border-style: none;
+        border-width: 0px;
+    }
+    .paramInputDiv {
+        padding: 4px;
+        display: flex;    
+        overflow-x: visible;
+    }
 </style>
 
 <script>
@@ -53,6 +80,8 @@
     var permalink = null;
 
     var divesInTable = [];
+
+    var parms = []
 
     var sectionSortMajor = 'number';
     var sectionNumberSort = 'reverse';
@@ -492,7 +521,12 @@
     }
 
     function setVisibility(elt) {
+{% if runMode == 'pilot' and noSave == false %}
+        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv', 'pilotWheelDiv'];
+{% else %}
         const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv'];
+{% endif %}
+
         for (var d of divs) {
             if (d != elt) $(d).classList.add('hide');
         }
@@ -887,6 +921,15 @@
         });
     }
 
+{% if runMode == 'pilot' %}
+{% if noSave == false %}
+    function showPilotWheel() {
+        setVisibility('pilotWheelDiv'); 
+        currElt = 'pilotWheel';
+    }
+{% endif %}
+{% endif %}
+
     function showTable() {
         setVisibility('mainTable'); 
         currElt = 'table';
@@ -968,6 +1011,222 @@
         } 
     }
 
+{% if runMode == 'pilot' %}
+{% if noSave == false %}
+    var parmGroups = ["BASIC", "NAV", "DIVE", "SURFACE", "FLIGHT", "PITCH", "ROLL", "VBD", "ALTIMETER", "HARDWARE"];
+    function changeParmGroup(group) {
+        for (g of parmGroups) {
+            console.log(g);
+            if (g != group) {
+                $('pilot' + g).classList.add('hide');
+                $('tab' + g).classList.remove('bold');
+            }
+        }
+        $('pilot' + group).classList.remove('hide');
+        $('tab' + group).classList.add('bold');
+    }
+    function highlightParam(p) {
+        var el = document.querySelectorAll('.paramInputLabel');
+        var txt = '';
+        for (e of el) {
+            if (e.innerHTML == p) {
+                e.style.fontWeight = 'bold';
+                changeParmGroup(parms[p]['category']);
+                e.classList.add('paramSearched');
+            }
+            else if (e.style.fontWeight == 'bold') {
+                e.style.fontWeight = 'normal'; 
+                e.classList.remove('paramSearched');
+            } 
+        }
+        
+    }
+    function doParamSearch() {
+        var s = $('txtParamSearch').value;
+        var s_upper = s.toUpperCase();
+        
+        var results = ''
+        for (p of Object.keys(parms)) {
+            if (p.includes(s_upper) || parms[p]['help'].includes(s)) {
+                results = results + '<span class="spanClick" onclick="highlightParam(\'' + p + '\'); return false;">$' + p + '</span>: ' + parms[p]['help'] + '<br>';
+            } 
+        }
+
+        if (results == '')
+            results = 'not found';
+
+        $('divParamSearchResults').innerHTML = results; 
+    }
+    function parmsToCmdfile() {
+        $('selectFile').value = 'cmdfile';
+        changeFile();
+        var el = document.querySelectorAll('.paramInputInput');
+        var txt = '';
+        for (e of el) {
+            if (e.style.fontWeight == 'bold') {
+                var p = '$' + e.id.split('_').slice(1).join('_');
+                txt = txt + p + ',' + e.value + '\n';
+            }
+        }
+        const directive = document.querySelector('input[name="radPilotDirective"]:checked').value;
+        txt = txt + '$' + directive + '\n';
+        $('cmdfile').value = txt;
+    }
+    function markChanged(w) {
+        $('paramInput_' + w).style.fontWeight = "bold";
+    }
+    function paramInputChange(w) {
+        var prev = parms[w]['current'];
+        parms[w]['current'] = $('paramInput_' + w).value;
+        markChanged(w);
+
+        if ($('selLinkChanges').checked == false || (w != 'T_DIVE' && w != 'D_TGT'))
+            return;
+
+        console.log('linking');
+        var prev_t = w == 'T_DIVE' ? prev : parseFloat(parms['T_DIVE']['current']);
+        var prev_d = w == 'D_TGT' ? prev : parseFloat(parms['D_TGT']['current']);
+        var ratio = prev_d / prev_t;
+        console.log(ratio);
+        if (w == 'T_DIVE') {
+            
+            // $('paramInput_D_TGT').onchange = null;
+            $('paramInput_D_TGT').value = (ratio*parseFloat($('paramInput_T_DIVE').value)).toFixed(0);
+            markChanged('D_TGT');
+            console.log($('paramInput_D_TGT').value);
+            // $('paramInput_D_TGT').onchange = function() { paramInputChange('D_TGT'); };
+        }
+        else {
+            // $('paramInput_T_DIVE').onchange = null;
+            $('paramInput_T_DIVE').value = (parseFloat($('paramInput_D_TGT').value)/ratio).toFixed(0);
+            markChanged('T_DIVE');
+            // $('paramInput_T_DIVE').onchange = function() { paramInputChange('T_DIVE'); };
+        }
+
+        prev_t = parseFloat($('paramInput_T_DIVE').value);
+        prev_d = parseFloat($('paramInput_D_TGT').value);
+
+        $('paramInput_T_MISSION').value = (prev_t + (0.25*prev_t > 15 ? 0.25*prev_t : 15)).toFixed(0);
+        markChanged('T_MISSION');
+        parms['T_DIVE']['current'] = prev_t; 
+        parms['D_TGT']['current'] = prev_d; 
+        parms['T_MISSION']['current'] = $('paramInput_T_MISSION').value;
+    }
+    function addParamInput(g, p, v, h, b, m) {
+        const colors = ["#cccccc", "#eeeeee"];
+        var div = document.createElement('div');
+        div.classList.add('paramInputDiv');
+        var span = document.createElement('span');
+        span.classList.add('paramInputLabel');
+        span.innerHTML = p;
+        span.title = h;
+        var inp = document.createElement('input');
+        inp.id = 'paramInput_' + p;
+        inp.classList.add('paramInputInput');
+        inp.value = v;
+        div.appendChild(span);
+        var holder = document.createElement('div');
+        holder.classList.add('paramInputHolder');
+        div.appendChild(holder);
+        holder.appendChild(inp); 
+
+        inp.onchange = function() { paramInputChange(p); };
+        if (b || m) {
+            var d2 = document.createElement('div');
+            d2.classList.add("dropdown")
+            var s2 = document.createElement('span');
+            s2.innerHTML = '...';
+            s2.classList.add('spanClick');
+            s2.classList.add('droplink');
+            d2.appendChild(s2);
+            var d3 = document.createElement('div')     
+            d3.classList.add('dropdown-content');
+            d2.appendChild(d3);
+                
+            var sel = document.createElement('select');
+            sel.classList.add('select-checkbox');
+            sel.multiple = true;
+            d3.appendChild(sel);
+ 
+            var s;
+            var n = 0;
+            var opts = b ? b : m;
+            for (opt of opts) {
+                
+                s = document.createElement('option');
+                s.innerHTML = `${opt['value']}: ${opt['function']}`;
+                s.value = opt['value'];
+                if (v & opt['value'])
+                    s.selected = true;
+
+                sel.appendChild(s);
+                n ++;
+            }
+            sel.onchange = function() { 
+                var x = 0;
+                for (var i = 0 ; i < sel.options.length ; i++) {
+                    if (sel.options[i].selected)
+                        x += parseInt(sel.options[i].value);
+                }
+                if (b) inp.value = '' + x;
+                else inp.value = x;
+                markChanged(p);
+            };
+            sel.size = n;
+            if (b) multiSelectWithoutCtrl(sel);
+            holder.appendChild(d2);
+        }
+
+        $(g).appendChild(div);
+        div.style.backgroundColor = colors[$(g).childElementCount % 2];
+    }
+    function loadParms(glider) {
+        fetch(`parmdata/${glider}/${maxDive}${mission()}`)
+        .then(res => res.text())
+        .then(text => {
+            try {
+                parms = JSON.parse(text);
+            } catch (error) {
+                console.log('loadParms error');
+                return;
+            }
+
+            // console.log(parms);
+            const order = { "DIVE": [ "T_DIVE", "D_TGT", "T_MISSION", "D_ABORT", "N_DIVES"],
+                            "NAV": [ "COMPASS_USE", "NAV_MODE", "HEADING", "T_GPS", "N_GPS" ],
+                            "SURFACE": [ "SM_CC", "N_NOCOMM", "NOCOMM_ACTION", "T_RSLEEP", "CAPUPLOAD", "COMM_SEQ", "CALL_NIVES", "N_FILEKB", "PROTOCOL", "CALL_TRIES", "CALL_WAIT" ],
+                            "VBD":  ["C_VBD", "C_VBD_AUTO_DELTA", "C_VBD_AUTO_MAX", "W_ADJ_DBAND", "VBD_TIMEOUT"],
+                            "ROLL": ["C_ROLL_DIVE", "C_ROLL_CLIMB", "ROLL_ADJ_GAIN", "ROLL_ADJ_DBAND", "ROLL_TIMEOUT" ],
+                            "PITCH": ["C_PITCH", "PITCH_GAIN", "PITCH_ADJ_GAIN", "PITCH_ADJ_DBAND", "PITCH_W_GAIN", "PITCH_W_DBAND", "C_PITCH_AUTO_DELTA", "C_PITCH_AUTO_MAX", "PITCH_GAIN_AUTO_DELTA", "PITCH_GAIN_AUTO_MAX", "PITCH_TIMEOUT"],
+                            "FLIGHT": ["MAX_BUOY", "HEAD_ERRBAND", "RHO", "MASS", ],
+                            "ALTIMETER": ["XPDR_INT", "XPDR_REP", "XPDR_VALID", "XPDR_INHIBIT"]};
+            const ignore = ["DIVE", "MISSION", "ID", "DEEPGLIDER", "DEEPGLIDERMB", "MOTHERBOARD"]
+
+            for (p of Object.keys(parms)) {
+                parms[p]['original'] =  parms[p]['current'];
+            }
+
+            for (g of Object.keys(order)) {
+                for (p of order[g]) {
+                    if (Object.keys(parms).includes(p)) 
+                        addParamInput('pilot' + g, p, 'current' in parms[p] ? parms[p]['current'] : '', parms[p]['help'], 'bitfield' in parms[p] ? parms[p]['bitfield'] : null, 'menufield' in parms[p] ? parms[p]['menufield'] : null);
+                }
+            }
+            for (p of Object.keys(parms)) {
+                if (ignore.includes(p))
+                    continue;
+
+                if (parmGroups.includes(parms[p]['category'])) {
+                    if (!(Object.keys(order).includes(parms[p]['category'])) ||
+                        !(order[parms[p]['category']].includes(p)))
+                            addParamInput('pilot' + parms[p]['category'], p, 'current' in parms[p] ? parms[p]['current'] : '', parms[p]['help'], 'bitfield' in parms[p] ? parms[p]['bitfield'] : null, 'menufield' in parms[p] ? parms[p]['menufield'] : null);
+                }
+            }
+
+        }); 
+    }
+{% endif %}
+{% endif %}
     function loadStatus(glider, dive, setCurr) {
         fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
@@ -1022,6 +1281,12 @@
                 setupStream(glider, true, true);
                 currStatus = 'active';
             }
+{% if runMode == 'pilot' %}
+{% if noSave == false %}
+            console.log('loading parms');
+            loadParms(glider); // have to wait for maxDive above to be set
+{% endif %}
+{% endif %}
         })
         .catch(error => {
             console.log(error);
@@ -2378,6 +2643,11 @@
 
 <div id="toolbar">
     <div class="toolTop">
+{% if runMode == 'pilot' %}
+{% if noSave == false %}
+        <button class="tool" id="btnPilotWheel"    onclick="showPilotWheel();" title="pilot controls"></button>
+{% endif %}
+{% endif %}
         <button class="tool" id="btnDiveUp"        onclick="changeDive(1);" title="next dive [w,k] "></button>
         <button class="tool" id="btnDiveTable"     onclick="showTable();" title="dives table"></button>
         <button class="tool" id="btnDiveDown"      onclick="changeDive(-1);" title="prev dive [s,j]"></button>
@@ -2438,6 +2708,57 @@
         </tbody>
     </table>
 
+{% if runMode == 'pilot' %}
+{% if noSave == false %}
+    <div id="pilotWheelDiv" class="hide" style="text-align: left;">
+        <div id="pilotParmsList">
+            <div id="pilotNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
+                <span id="tabBASIC" class="spanClick" onclick="changeParmGroup('BASIC'); return false;">Basic</span> <b>&#124;</b>
+                <span id="tabNAV" class="spanClick" onclick="changeParmGroup('NAV'); return false;">Navigation</span> <b>&#124;</b>
+                <span id="tabDIVE" class="spanClick bold" onclick="changeParmGroup('DIVE'); return false;">Dive</span> <b>&#124;</b>
+                <span id="tabSURFACE" class="spanClick" onclick="changeParmGroup('SURFACE'); return false;">Surface</span> <b>&#124;</b>
+                <span id="tabFLIGHT" class="spanClick" onclick="changeParmGroup('FLIGHT'); return false;">Flight</span> <b>&#124;</b>
+                <span id="tabPITCH" class="spanClick" onclick="changeParmGroup('PITCH'); return false;">Pitch</span> <b>&#124;</b>
+                <span id="tabROLL" class="spanClick" onclick="changeParmGroup('ROLL'); return false;">Roll</span> <b>&#124;</b>
+                <span id="tabVBD" class="spanClick" onclick="changeParmGroup('VBD'); return false;">VBD</span> <b>&#124;</b>
+                <span id="tabALTIMETER" class="spanClick" onclick="changeParmGroup('ALTIMETER'); return false;">Altimeter</span> <b>&#124;</b>
+                <span id="tabHARDWARE" class="spanClick" onclick="changeParmGroup('HARDWARE'); return false;">Hardware</span> 
+            </div>
+            
+            <div id="pilotBASIC" class="hide"></div>
+            <div id="pilotNAV" class="hide"></div>
+            <div id="pilotDIVE"> 
+                <input type="checkbox" checked id="selLinkChanges"><label for="selLinkChanges">auto calculate</label>
+            </div>
+            <div id="pilotSURFACE" class="hide"></div>
+            <div id="pilotFLIGHT" class="hide"></div>
+            <div id="pilotPITCH" class="hide"></div>
+            <div id="pilotROLL" class="hide"></div>
+            <div id="pilotVBD" class="hide"></div>
+            <div id="pilotVBD" class="hide"></div>
+            <div id="pilotALTIMETER" class="hide"></div>
+            <div id="pilotHARDWARE" class="hide"></div>
+        </div>
+        <div id="pilotDirectiveList">
+            <span id="parmsToCmdfile" class="spanClick" onclick="parmsToCmdfile(); return false;">Write cmdfile</span> 
+            <p>
+            <input type="radio" id="radPilotDirectiveGO" name="radPilotDirective" value="GO" checked>
+            <label for="radPilotDirectiveGO">GO</label>
+            <input type="radio" id="radPilotDirectiveQUIT" name="radPilotDirective" value="QUIT">
+            <label for="radPilotDirectiveQUIT">QUIT</label>
+            <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" value="RESUME">
+            <label for="radPilotDirectiveRESUME">RESUME</label>
+            <p>
+            <button id="btnParamSearch" onclick="doParamSearch();">search</button>
+            <input id="txtParamSearch" class="parmInputInput">
+            <p>
+            <div id="divParamSearchResults">
+            </div>
+        </div>
+
+    </div>
+{% endif %}
+{% endif %}
     <div id="logDiv" class="hide"></div>
     <div id="notificationsDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('notificationsDiv');" class="hide"></div>
     <div id="changelogDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('changelogDiv');" class="hide">

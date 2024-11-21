@@ -77,6 +77,7 @@ from sanic.worker.manager import WorkerManager
 import RegressVBD
 import Magcal
 import BaseCtrlFiles
+import parms
 
 #from contextlib import asynccontextmanager
 #
@@ -1214,6 +1215,17 @@ def attachHandlers(app: sanic.Sanic):
         msg['mission'] = filterMission(glider, request)
         return sanic.response.json(msg)
 
+    @app.route('/parmdata/<glider:int>/<dive:int>')
+    @authorized()
+    async def parmdataHandler(request, glider:int, dive:int):
+        logfile = f'p{glider:03d}{dive:04d}.log'
+        try:
+            o = await parms.read(gliderPath(glider, request), logfile, 'cmdfile')
+        except Exception as e:
+            return sanic.response.json({'error': f'no parms {e}'})
+        else:
+            return sanic.response.json(o)
+
     # this does setup and is generally only called once at page load
     @app.route('/status/<glider:int>')
     # description: glider latest dive number and visualization config (mission.dat variables, mission plots)
@@ -1726,7 +1738,7 @@ def attachHandlers(app: sanic.Sanic):
     async def saveHandler(request, glider:int, which:str):
         # the no save command line flag allows one more layer
         # of protection
-        if request.app.config.NO_SAVE:
+        if True or request.app.config.NO_SAVE:
             return sanic.response.text('not allowed')
 
         validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
