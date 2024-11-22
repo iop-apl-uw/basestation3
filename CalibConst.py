@@ -36,8 +36,8 @@ import re
 import sys
 
 
+import BaseNetCDF
 from BaseLog import BaseLogger, log_error, log_debug, log_warning
-from BaseNetCDF import nc_sg_cal_prefix, nc_var_metadata
 from Globals import ignore_tags, ignore_tag
 
 
@@ -134,9 +134,9 @@ def getSGCalibrationConstants(
                     # log_debug("skipping [] expression: " + expr)
                     continue
 
-                nc_var_name = nc_sg_cal_prefix + key
+                nc_var_name = BaseNetCDF.nc_sg_cal_prefix + key
                 try:
-                    md = nc_var_metadata[nc_var_name]
+                    md = BaseNetCDF.nc_var_metadata[nc_var_name]
                     (
                         _,
                         nc_data_type,
