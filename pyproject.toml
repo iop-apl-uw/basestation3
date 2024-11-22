@@ -62,4 +62,11 @@ ignore = [
   # Does not generally improve readability
   "SIM108",
 ]
-
+[tool.coverage.html]
+directory = "coverage_html_report"
+omit = [
+    "adcp/*",
+    "local/*",
+    "microstructure/*",
+    "Plotting/local/*",
+    ]
