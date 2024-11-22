@@ -270,7 +270,7 @@ def magcal_worker(
             # WARNING: /opt/basestation/lib/python3.10/site-packages/ppigrf/ppigrf.py:139: FutureWarning:
             # The 'unit' keyword in TimedeltaIndex construction is deprecated and will be removed in a future version. Use pd.to_timedelta instead.
             # on some package combos - filter out for now
-            warnings.simplefilter('ignore', FutureWarning)
+            warnings.simplefilter('ignore', FutureWarning)            
             igrf = ppigrf.igrf(dive_nc_file[0]['log_gps_lon'][0],
                                dive_nc_file[0]['log_gps_lat'][0],
                                0, datetime.datetime.fromtimestamp(dive_nc_file[0]['log_gps_time'][0]))
@@ -278,9 +278,10 @@ def magcal_worker(
         Wf = 0.1
         Wfh = 1.0
         F = 1.0
-        ix = igrf[0][0][0]
-        iy = igrf[1][0][0]
-        iz = igrf[2][0][0]
+        # GBS 2024/11/21 - Inslates the code from versions of ppigrf that return (1,1) or (1,) arrays
+        ix = np.squeeze(igrf)[0]
+        iy = np.squeeze(igrf)[1]
+        iz = np.squeeze(igrf)[2]
         Fh = math.sqrt(ix*ix + iy*iy)/math.sqrt(ix*ix + iy*iy + iz*iz)
 
         norm = math.sqrt(Ph.item(0)*Ph.item(0) + Ph.item(1)*Ph.item(1) + Ph.item(2)*Ph.item(2))
