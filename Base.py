@@ -113,24 +113,37 @@ stop_processing_event = threading.Event()
 base_lockfile_name = ".conversion_lock"
 base_completed_name = ".completed"
 
-logger_eng_readers = {}  # Mapping from logger prefix to eng_file readers
-
-## Global lists and dicts
-# incomplete_files = []
-processed_logger_payload_files = {}  # Dictionay of lists of files from a logger payload file, keyed by logger prefix
-# Files in these lists do not conform to normal logger basestation naming conventions
-processed_eng_and_log_files = []
-processed_selftest_eng_and_log_files = []
-processed_other_files = []
-processed_logger_eng_files = []  # List of eng files from all loggers - files on this list must conform to the basestation file and
-# dive directory naming convention
-processed_logger_other_files = []  # List of all non-eng files from all loggers - files on this list do not need to
-#    conform to basestation directory and filename convetions
-
 # Configuration
 previous_conversion_time_out = 60  # Time to wait for previous conversion to complete
 
+
 # Utility functions
+def set_globals() -> None:
+    global \
+        logger_eng_readers, \
+        processed_logger_payload_files, \
+        processed_eng_and_log_files, \
+        processed_selftest_eng_and_log_files, \
+        processed_other_files, \
+        processed_logger_eng_files, \
+        processed_logger_other_files
+
+    logger_eng_readers = {}  # Mapping from logger prefix to eng_file readers
+
+    ## Global lists and dicts
+    # incomplete_files = []
+    processed_logger_payload_files = {}  # Dictionay of lists of files from a logger payload file, keyed by logger prefix
+    # Files in these lists do not conform to normal logger basestation naming conventions
+    processed_eng_and_log_files = []
+    processed_selftest_eng_and_log_files = []
+    processed_other_files = []
+    processed_logger_eng_files = []  # List of eng files from all loggers - files on this list must conform to the basestation file and
+    # dive directory naming convention
+    processed_logger_other_files = []  # List of all non-eng files from all loggers - files on this list do not need to
+    #    conform to basestation directory and filename convetions
+
+
+set_globals()
 
 
 # urllib override to prevent username/passwd prompting on stdin
@@ -1468,6 +1481,14 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     )
     if not calib_consts:
         log_warning(f"Could not process {sg_calib_file_name}")
+
+    # These functions reset large blocks of global variables being used in other modules that
+    # assume an initial value on first load, then are updated throughout the run.  The call
+    # here sets back to the initial state to handle multiple runs under pytest
+    set_globals()
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    FlightModel.set_globals()
 
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)

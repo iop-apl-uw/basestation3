@@ -361,7 +361,7 @@ def update_globals_from_nodc(base_opts, globals_d):
                 fi = open(yaml_filename, "r")
                 nodc_dicts.append(yaml.safe_load(fi.read()))
                 fi.close()
-            except:
+            except Exception:
                 log_error(f"Could not process {yaml_filename} - skipping", "exc")
 
         else:
@@ -371,7 +371,7 @@ def update_globals_from_nodc(base_opts, globals_d):
         reduce(
             lambda x, y: NetCDFUtils.merge_dict(x, y, allow_override=True), nodc_dicts
         )
-    except:
+    except Exception:
         log_error("Error merging config templates", "exc")
     else:
         for k, v in nodc_dicts[0].items():
@@ -634,13 +634,2700 @@ nc_ctd_time_var = "ctd_time"
 # make similar dimensions for sbe43, optode, wetlabs, etc.
 
 # called from init_sensors, which registers the truck info as well
-nc_mdp_data_info = {}  # info -> dim_name or None
-nc_mdp_time_vars = {}  # registered dim_name -> time_var
-nc_mdp_instrument_vars = {}  # dim_info to instrument variable
-nc_mdp_mmt_vars = {}  # registered dim_name -> constructed var to hold dive numbers in MMT
-nc_data_infos = []  # registered infos with time_vars
-# TODO add keywords for data types as well so we can compose keywords globals
-nc_instrument_to_data_kind = {}  # e.g., sbe41 => 'physical', etc.
+
+
+def set_globals() -> None:
+    """Allows global varaibles to be reset externally"""
+    global \
+        nc_mdp_data_info, \
+        nc_mdp_time_vars, \
+        nc_mdp_instrument_vars, \
+        nc_mdp_mmt_vars, \
+        nc_data_infos, \
+        nc_instrument_to_data_kind, \
+        nc_dim_profile, \
+        nc_dim_depth, \
+        nc_dim_dives, \
+        nc_char_dims, \
+        nc_string_dim_format, \
+        nc_var_metadata, \
+        ensure_long_names, \
+        after_static_check
+    ##########
+    nc_mdp_data_info = {}  # info -> dim_name or None
+    nc_mdp_time_vars = {}  # registered dim_name -> time_var
+    nc_mdp_instrument_vars = {}  # dim_info to instrument variable
+    nc_mdp_mmt_vars = {}  # registered dim_name -> constructed var to hold dive numbers in MMT
+    nc_data_infos = []  # registered infos with time_vars
+    # TODO add keywords for data types as well so we can compose keywords globals
+    nc_instrument_to_data_kind = {}  # e.g., sbe41 => 'physical', etc.
+
+    # make_mission_profiles() writes all matricies with dimensions (profile,depth) based on included binned vectors
+    nc_dim_profile = "profile"  # for make_mission_profiles()  matricies
+    nc_dim_depth = "depth"  # for make_mission_profiles()  matricies
+
+    # dimension for the accumulated scalars, one per included dive
+    nc_dim_dives = "dive"  # for make_mission_timeseries() matricies
+
+    # a dictionaary mapping from string length to a string dimension for reuse by the current file being written
+    # callers reset this global for each new NC file you write
+    nc_char_dims = {}
+    nc_string_dim_format = "string_%d"  # was "STRING%d" per ARGO
+
+    # Metadata for netCDF data
+    # Fields are:
+    #  0 - include in mission file
+    #  1 - nc data type
+    #  2 - dictionary of attribute names and values
+    # The dictionary of attributes is arbitrary, but the commonly expected ones are:
+
+    #   description - one line description of the variables
+
+    #   units - units the variable is expressed in
+    #      CF1.4 -- there are rules for composing units that must be followed
+    #      CF1.4: units need to be SI and must follow the conventions found in:
+    #      Prefixes:       http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-prefixes.xml
+    #      Base units:     http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-base.xml
+    #      Derived units:  http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-derived.xml
+    #      Acceptable:     http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-accepted.xml
+    #      Non-SI:         http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-common.xml
+
+    #   standard_name - the generally accepted oceangraphic name for this variable (that is, the netCDF name
+    #                   may include instrument of origin details or other qualifiers)
+    #   standard_name values are constrained by CF1.4; see the table. otherwise use 'long_name' if you must
+    #   ONLY use standard_value for the main variables you want oceanographers to use
+    #   e.g., see salinity_raw (long_name) and salinity (standard_name: sea_water_salinity)
+    #   http://cf-pcmdi.llnl.gov/documents/cf-standard-names/standard-name-table/14/cf-standard-name-table.html
+
+    # NOTE: if you change the format of the table, don't forget to update the metadata in ./Sensors modules
+
+    # Constraints:
+    # - Always add a default type, even though we try to infer from values if given
+    # - All qc variables should declare their type as nc_qc_type (see comment in QC.py) and should declare units,
+    #        if necessary, as 'qc_flag' for compliance conversion
+    # - Do NOT use 'missing_value', which is deprecated in CF1.4 (but NOT CF1.5, sigh); use '_FillValue' for missing or undefined values
+    #   add _FillValue only if some data points are truely missing, e.g., unsampled or based on unsampled data
+    #   NOTE: _FillValue are handled differently for different vectors and then for only a few of them
+    #   all variables used in timeseries (include in mission file == True or with [D] and [P] in description string) should have an appropriate _FillValue
+    # - timeseries code assumes all variables declared for inclusion will *always* be present in processed dives, even if just filled with _FillValue
+
+    nc_var_metadata = {
+        # The platform variable; NODC requires the name 'glider'
+        "glider": [False, "c", {"nodc_name": "glider"}, nc_scalar],
+        "sg_cal_id_str": [
+            False,
+            "c",
+            {"description": "Three digit vehicle identification string"},
+            nc_scalar,
+        ],
+        "sg_cal_mission_title": [
+            False,
+            "c",
+            {"description": "Description of mission"},
+            nc_scalar,
+        ],
+        # Normally a number but we require it as a string
+        # Typically has the form: a8xxnnnn where a is some region indicator (where launched)
+        # Can be preceded with Q (hence the string requirement) if the data might go to TESAC
+        "sg_cal_wmo_id": [
+            False,
+            "c",
+            {"description": "The WMO id assigned to this deployment"},
+            nc_scalar,
+        ],
+        # motor limits and rates (UNUSED--look at $PITCH_MAX, etc...)
+        # These are never used but we have them here to record them without complaint from legacy sg_calib_constants.m files
+        "sg_cal_pitch_max_cnts": [False, "i", {}, nc_scalar],
+        "sg_cal_pitch_min_cnts": [False, "i", {}, nc_scalar],
+        "sg_cal_roll_max_cnts": [False, "i", {}, nc_scalar],
+        "sg_cal_roll_min_cnts": [False, "i", {}, nc_scalar],
+        "sg_cal_vbd_cnts_per_cc": [False, "d", {}, nc_scalar],
+        "sg_cal_vbd_max_cnts": [False, "i", {}, nc_scalar],
+        "sg_cal_vbd_min_cnts": [False, "i", {}, nc_scalar],
+        "sg_cal_pump_rate_intercept": [False, "d", {}, nc_scalar],
+        "sg_cal_pump_rate_slope": [False, "d", {}, nc_scalar],
+        "sg_cal_pump_power_intercept": [False, "d", {}, nc_scalar],
+        "sg_cal_pump_power_slope": [False, "d", {}, nc_scalar],
+        # buoyancy parameters
+        "sg_cal_volmax": [
+            False,
+            "d",
+            {"description": "Maximum displaced volume of the glider", "units": "m^3"},
+            nc_scalar,
+        ],
+        # DEAD 'sg_cal_vbd_change_rate' : [False, 'd', {'description':'Buoyancy loss rate of vehicle during deployment', 'units':'cc/day'}, nc_scalar],
+        "sg_cal_mass": [
+            False,
+            "d",
+            {"description": "Mass of the glider", "units": "kg"},
+            nc_scalar,
+        ],
+        "sg_cal_mass_comp": [
+            False,
+            "d",
+            {"description": "Mass of the compressee", "units": "kg"},
+            nc_scalar,
+        ],
+        "sg_cal_abs_compress": [
+            False,
+            "d",
+            {"description": "SG vehicle compressibility", "units": "cc/dbar"},
+            nc_scalar,
+        ],
+        "sg_cal_therm_expan": [
+            False,
+            "d",
+            {
+                "description": "SG thermal expansion coeff",
+                "units": "cc/degrees_Celsius",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_temp_ref": [
+            False,
+            "d",
+            {
+                "description": "Reference temperature for SG thermal expansion calculation",
+                "units": "degrees_Celsius",
+            },
+            nc_scalar,
+        ],
+        # hydrodynamic parameters
+        "sg_cal_rho0": [
+            False,
+            "d",
+            {
+                "description": "Typical expected density of seawater for this deployment",
+                "units": "kg/m^3",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_hd_a": [
+            False,
+            "d",
+            {
+                "description": "Hydrodynamic lift factor for given hull shape (1/degrees of attack angle)"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_hd_b": [
+            False,
+            "d",
+            {
+                "description": "Hydrodynamic drag factor for given hull shape (Pa^(-1/4))"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_hd_c": [
+            False,
+            "d",
+            {
+                "description": "Hydrodynamic induced drag factor for given hull shape (1/radians^2 of attack angle)"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_hd_s": [
+            False,
+            "d",
+            {
+                "units": "fraction",
+                "description": "How the drag scales by shape (-1/4 for SG per Eriksen, et al.)",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_solve_flare_apogee_speed": [
+            False,
+            "i",
+            {
+                "description": "Whether to solve for accelerated speeds during flare and apogee"
+            },
+            nc_scalar,
+        ],
+        # Sparton compass pitch and roll coeffients, used to invert correction if desired
+        "sg_cal_sparton_pitch0": [False, "d", {}, nc_scalar],
+        "sg_cal_sparton_pitch1": [False, "d", {}, nc_scalar],
+        "sg_cal_sparton_pitch2": [False, "d", {}, nc_scalar],
+        "sg_cal_sparton_pitch3": [False, "d", {}, nc_scalar],
+        # Currently we do not adjust roll but record the parameters if they want...
+        "sg_cal_sparton_roll0": [False, "d", {}, nc_scalar],
+        "sg_cal_sparton_roll1": [False, "d", {}, nc_scalar],
+        "sg_cal_sparton_roll2": [False, "d", {}, nc_scalar],
+        "sg_cal_sparton_roll3": [False, "d", {}, nc_scalar],
+        # SBECT 41 coefficients
+        "sg_cal_calibcomm": [False, "c", {}, nc_scalar],
+        "sg_cal_c_g": [False, "d", {}, nc_scalar],
+        "sg_cal_c_h": [False, "d", {}, nc_scalar],
+        "sg_cal_c_i": [False, "d", {}, nc_scalar],
+        "sg_cal_c_j": [False, "d", {}, nc_scalar],
+        "sg_cal_cpcor": [
+            False,
+            "d",
+            {
+                "description": "Nominal compression factor of conductivity tube with pressure"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_ctcor": [
+            False,
+            "d",
+            {
+                "description": "Nominal thermal expansion factor of a cube of boro-silicate glass"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbe_cond_freq_max": [
+            False,
+            "d",
+            {
+                "description": "SBE41 maximum permitted conductivity frequency",
+                "units": "Hz",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbe_cond_freq_min": [
+            False,
+            "d",
+            {
+                "description": "SBE41 minimum permitted conductivity frequency",
+                "units": "Hz",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_t_g": [False, "d", {}, nc_scalar],
+        "sg_cal_t_h": [False, "d", {}, nc_scalar],
+        "sg_cal_t_i": [False, "d", {}, nc_scalar],
+        "sg_cal_t_j": [False, "d", {}, nc_scalar],
+        "sg_cal_sbe_temp_freq_max": [
+            False,
+            "d",
+            {
+                "description": "SBE41 maximum permitted temperature frequency",
+                "units": "Hz",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbe_temp_freq_min": [
+            False,
+            "d",
+            {
+                "description": "SBE41 minimum permitted temperature frequency",
+                "units": "Hz",
+            },
+            nc_scalar,
+        ],
+        # User-specified adjustments to raw data, if any
+        "sg_cal_cond_bias": [
+            False,
+            "d",
+            {"units": "mS/cm", "description": " Conductivity bias"},
+            nc_scalar,
+        ],
+        "sg_cal_depth_bias": [
+            False,
+            "d",
+            {"units": "meters", "description": "Depth bias of pressure sensor"},
+            nc_scalar,
+        ],
+        "sg_cal_depth_slope_correction": [
+            False,
+            "d",
+            {
+                "description": "Correction factor to apply to truck depth to compensate for data with incorrect pressure slope"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_pitchbias": [
+            False,
+            "d",
+            {"units": "degrees", "description": "Pitch sensor bias"},
+            nc_scalar,
+        ],
+        "sg_cal_rollbias": [
+            False,
+            "d",
+            {"units": "degrees", "description": "Roll sensor bias"},
+            nc_scalar,
+        ],
+        "sg_cal_temp_bias": [
+            False,
+            "d",
+            {"units": "degrees_Celsius", "description": "Temperature bias"},
+            nc_scalar,
+        ],
+        "sg_cal_vbdbias": [
+            False,
+            "d",
+            {"units": "cc", "description": "VBD bias"},
+            nc_scalar,
+        ],
+        "sg_cal_min_stall_speed": [
+            False,
+            "d",
+            {
+                "units": "cm/s",
+                "description": "Minimum likely speed for vehicle, else stalled",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_max_stall_speed": [
+            False,
+            "d",
+            {
+                "units": "cm/s",
+                "description": "Maximum likely speed for vehicle, else stalled",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_min_stall_angle": [
+            False,
+            "d",
+            {"units": "degrees", "description": "Minimum flight angle, else stalled"},
+            nc_scalar,
+        ],
+        "sg_cal_sg_configuration": [
+            False,
+            "i",
+            {"description": "The general configuration of the glider"},
+            nc_scalar,
+        ],
+        # Cell interior geometry
+        "sg_cal_sg_ct_geometry": [
+            False,
+            "i",
+            {"description": "The geometry of the CT sensor itself"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_x_T": [
+            False,
+            "d",
+            {"description": "Cell mouth to thermistor x offset", "units": "meters"},
+            nc_scalar,
+        ],  # relative to center of cell mount
+        "sg_cal_sbect_z_T": [
+            False,
+            "d",
+            {"description": "Cell mouth to thermistor z offset", "units": "meters"},
+            nc_scalar,
+        ],  # relative to center of cell mount
+        "sg_cal_sbect_x_m": [
+            False,
+            "d",
+            {"description": "Length of mouth portion of cell", "units": "meters"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_r_m": [
+            False,
+            "d",
+            {"description": "Radius of mouth portion of cell", "units": "meters"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_cell_length": [
+            False,
+            "d",
+            {
+                "units": "meters",
+                "description": "Combined length of the 2 narrow (sample) portions of cell",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbect_r_n": [
+            False,
+            "d",
+            {"units": "meters", "description": "Radius of narrow portion of cell"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_r_w": [
+            False,
+            "d",
+            {"units": "meters", "description": "Radius of wide portion of cell"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_x_w": [
+            False,
+            "d",
+            {"units": "meters", "description": "Length of wide portion of cell"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_C_d0": [
+            False,
+            "d",
+            {"description": "Measured cell drag coefficient"},
+            nc_scalar,
+        ],  # (1.2 for the original SG cell mount before SG105, 2.4 for new style)
+        # Cell type and response factors
+        "sg_cal_sg_ct_type": [
+            False,
+            "i",
+            {
+                "units": "flag",
+                "description": "The type of CT sensor (original, gun, pumped)",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbect_unpumped": [
+            False,
+            "i",
+            {"units": "flag", "description": "Whether the CTD is pumped or not"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_tau_T": [
+            False,
+            "d",
+            {"units": "seconds", "description": "Thermistor response (from Seabird)"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_gpctd_tau_1": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Time delay between thermistor and mouth of conductivity tube in pumped CTD",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbect_gpctd_u_f": [
+            False,
+            "d",
+            {
+                "units": "cm/s",
+                "description": "Tube flow speed for continuous pumped CTD",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbe_cond_freq_offset": [
+            False,
+            "d",
+            {"units": "Hz", "description": "Conductivity frequency offset"},
+            nc_scalar,
+        ],
+        "sg_cal_sbe_temp_freq_offset": [
+            False,
+            "d",
+            {"units": "Hz", "description": "Temperature frequency offset"},
+            nc_scalar,
+        ],
+        # Non-modal correction (DEAD)
+        # TODO: maintain this definition but declare it dead so we can read it from old files but drop it in new files
+        # Add 'DEAD' tag to metadata with first version no longer supporting it. If dead, return none from create_nc_var() immediately.
+        # TODO: add PCor to sbe43_ext.py and declare DEAD, remove code in MDP::load_dive_profile_data()
+        "sg_cal_sbect_tau_w_min": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Minimum thermal response time of the glass/epoxy tube",
+            },
+            nc_scalar,
+        ],  # DEAD UNUSED
+        "sg_cal_sbect_u_r": [
+            False,
+            "d",
+            {"units": "m/s", "description": "Thermal inertia response rolloff speed "},
+            nc_scalar,
+        ],  # DEAD UNUSED
+        # Modal correction
+        "sg_cal_sbect_modes": [
+            False,
+            "i",
+            {"description": "Number of modes to use for thermal-inertia correction"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_inlet_bl_factor": [
+            False,
+            "d",
+            {"description": "Scale factor for inlet boundary layer formation"},
+            nc_scalar,
+        ],
+        "sg_cal_sbect_Nu_0i": [
+            False,
+            "d",
+            {
+                "description": "Scale factor for unmodeled flow disruption to interior flow Biot number"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbect_Nu_0e": [
+            False,
+            "d",
+            {
+                "description": "Scale factor for unmodeled flow disruption to exterior flow Biot number"
+            },
+            nc_scalar,
+        ],
+        # Cell installation geometry wrt pressure sensor
+        "sg_cal_sg_sensor_geometry": [
+            False,
+            "i",
+            {
+                "description": "How the CT is mounted with respect to the SG pressure sensor"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_glider_xT": [
+            False,
+            "d",
+            {"description": "Glider x coord of thermistor tip", "units": "meters"},
+            nc_scalar,
+        ],
+        "sg_cal_glider_zT": [
+            False,
+            "d",
+            {"description": "Glider z coord of thermistor tip", "units": "meters"},
+            nc_scalar,
+        ],
+        "sg_cal_glider_xP": [
+            False,
+            "d",
+            {"description": "Glider x coord of pressure gauge", "units": "meters"},
+            nc_scalar,
+        ],  # to center of pressure gauge
+        "sg_cal_glider_zP": [
+            False,
+            "d",
+            {"description": "Glider z coord of pressure gauge", "units": "meters"},
+            nc_scalar,
+        ],  # to center of pressure gauge
+        "sg_cal_sg_vehicle_geometry": [
+            False,
+            "i",
+            {"description": "Various size measurements of the vehicle itself"},
+            nc_scalar,
+        ],
+        "sg_cal_glider_length": [
+            False,
+            "d",
+            {
+                "description": "Length of standard glider body (not including antenna mast)",
+                "units": "meters",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_glider_interstitial_volume": [
+            False,
+            "d",
+            {
+                "description": "SG interstitial volume between fairing and hull",
+                "units": "m^3",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_glider_interstitial_length": [
+            False,
+            "d",
+            {
+                "description": "SG equivalent interstitial pipe length",
+                "units": "meters",
+            },
+            nc_scalar,
+        ],  #
+        "sg_cal_glider_r_en": [
+            False,
+            "d",
+            {"description": "Nose entry hole radius", "units": "meters"},
+            nc_scalar,
+        ],  # hole size
+        "sg_cal_glider_wake_entry_thickness": [
+            False,
+            "d",
+            {"description": "Wake entry region thickness", "units": "meters"},
+            nc_scalar,
+        ],
+        "sg_cal_glider_vol_wake": [
+            False,
+            "d",
+            {"description": "Attached wake volume", "units": "m^3"},
+            nc_scalar,
+        ],
+        "sg_cal_glider_r_fair": [
+            False,
+            "d",
+            {"description": "Maximum radius of fairing", "units": "meters"},
+            nc_scalar,
+        ],
+        # Parameters that control standard QC tests
+        "sg_cal_QC_temp_max": [
+            False,
+            "d",
+            {
+                "units": "degrees_Celsius",
+                "description": "Maximum allowable temperature",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_temp_min": [
+            False,
+            "d",
+            {
+                "units": "degrees_Celsius",
+                "description": "Minimum allowable temperature",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_temp_spike_depth": [
+            False,
+            "d",
+            {"units": "meters", "description": "Depth for deep temperature spike test"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_temp_spike_deep": [
+            False,
+            "d",
+            {
+                "units": "degrees_Celsius/meter",
+                "description": "Allowable temperature spike in deep water",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_temp_spike_shallow": [
+            False,
+            "d",
+            {
+                "units": "degrees_Celsius/meter",
+                "description": "Allowable temperature spike in shallow deep water",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_temp_gradient_depth": [
+            False,
+            "d",
+            {
+                "units": "meters",
+                "description": "Depth for deep temperature gradient test",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_temp_gradient_deep": [
+            False,
+            "d",
+            {
+                "units": "degrees_Celsius/meter",
+                "description": "Allowable temperature gradient in deep water",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_temp_gradient_shallow": [
+            False,
+            "d",
+            {
+                "units": "degrees_Celsius/meter",
+                "description": "Allowable temperature gradient in shallow water",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_cond_max": [
+            False,
+            "d",
+            {"units": "mS/cm", "description": "Maximum conductivity value"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_cond_min": [
+            False,
+            "d",
+            {"units": "mS/cm", "description": "Minimum conductivity value"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_cond_spike_depth": [
+            False,
+            "d",
+            {
+                "units": "meters",
+                "description": "Depth for deep conductivity spike test",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_cond_spike_deep": [
+            False,
+            "d",
+            {
+                "units": "mS/cm/m",
+                "description": "Allowable conductivity spike in deep water",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_cond_spike_shallow": [
+            False,
+            "d",
+            {
+                "units": "mS/cm/m",
+                "description": "Allowable conductivity spike in shallow deep water",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_salin_max": [
+            False,
+            "d",
+            {"units": "PSU", "description": "Maximum salinity value (PSU)"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_salin_min": [
+            False,
+            "d",
+            {"units": "PSU", "description": "Minimum salinity value (PSU)"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_salin_spike_depth": [
+            False,
+            "d",
+            {"units": "meters", "description": "Depth for deep salinity spike test"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_salin_spike_deep": [
+            False,
+            "d",
+            {
+                "units": "PSU/meter",
+                "description": "Allowable salinity spike in deep water",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_salin_spike_shallow": [
+            False,
+            "d",
+            {
+                "units": "PSU/meter",
+                "description": "Allowable salinity spike in shallow deep water (PSU/meter)",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_salin_gradient_depth": [
+            False,
+            "d",
+            {"units": "meters", "description": "Depth for deep salinity gradient test"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_salin_gradient_deep": [
+            False,
+            "d",
+            {
+                "units": "PSU/meter",
+                "description": "Allowable salinity gradient in deep water (PSU/meter)",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_salin_gradient_shallow": [
+            False,
+            "d",
+            {
+                "units": "PSU/meter",
+                "description": "Allowable salinity gradient in shallow water (PSU/meter)",
+            },
+            nc_scalar,
+        ],
+        "sg_cal_QC_overall_ctd_percentage": [
+            False,
+            "d",
+            {"description": "Maximum fraction of CTD data that can be QC_BAD"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_overall_speed_percentage": [
+            False,
+            "d",
+            {"description": "Maximum fraction of CTD data that can be QC_BAD"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_bound_action": [
+            False,
+            "i",
+            {"description": "What QC to assert when a bound is exceeded"},
+            nc_scalar,
+        ],
+        "sg_cal_QC_spike_action": [
+            False,
+            "i",
+            {"description": "What QC to assert when a spike is detected"},
+            nc_scalar,
+        ],
+        "sg_cal_GPS_position_error": [
+            False,
+            "d",
+            {"units": "meters", "description": "Assumed error of GPS fixes"},
+            nc_scalar,
+        ],
+        "sg_cal_use_auxpressure": [
+            False,
+            "i",
+            {"description": "Whether to use aux pressure sensor data"},
+            nc_scalar,
+        ],
+        "sg_cal_use_auxcompass": [
+            False,
+            "i",
+            {"description": "Whether to use aux compass sensor data"},
+            nc_scalar,
+        ],
+        "sg_cal_use_adcppressure": [
+            False,
+            "i",
+            {
+                "description": "Whether to use the adcp pressure sensor over the truck pressure"
+            },
+            nc_scalar,
+        ],
+        "sg_cal_sbe_cond_freq_C0": [
+            False,
+            "d",
+            {"description": "Conductivity zero frequency"},
+            nc_scalar,
+        ],
+        # Legato corrections
+        "sg_cal_legato_time_lag": [
+            False,
+            "d",
+            {"description": ""},
+            nc_scalar,
+        ],
+        "sg_cal_legato_alpha": [
+            False,
+            "d",
+            {"description": ""},
+            nc_scalar,
+        ],
+        "sg_cal_legato_tau": [
+            False,
+            "d",
+            {"description": "Thermister response"},
+            nc_scalar,
+        ],
+        "sg_cal_legato_ctcoeff": [
+            False,
+            "d",
+            {"description": ""},
+            nc_scalar,
+        ],
+        "sg_cal_legato_use_truck_pressure": [
+            False,
+            "d",
+            {
+                "description": "Use the seaglider's pressure trace for ctd corrections (non-zero). Use the legato's pressure trace for ctd corrections (zero)."
+            },
+            nc_scalar,
+        ],
+        "sg_cal_legato_cond_press_correction": [
+            False,
+            "d",
+            {
+                "description": "Early legato units required a conductivity correction based on pressure (non-zero).  Later units do this onboard (zero)."
+            },
+            nc_scalar,
+        ],
+        # log file header values
+        "log_version": [
+            False,
+            "d",
+            {"description": "Version of glider software"},
+            nc_scalar,
+        ],
+        "log_glider": [False, "i", {"description": "Glider three digit id"}, nc_scalar],
+        "log_mission": [False, "i", {"description": "Mission number"}, nc_scalar],
+        "log_dive": [False, "i", {"description": "Dive number"}, nc_scalar],
+        "log_start": [False, "d", {"description": "Dive start time"}, nc_scalar],
+        # log file parameters (alphabetically)
+        # as a rule control and AD parameters are 'i' type, strings are 'c' and the rest should be 'd'
+        # even times and depths
+        "log_10V_AH": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_24V_AH": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_MAXI_10V": [False, "d", {}, nc_scalar],
+        "log_MAXI_24V": [False, "d", {}, nc_scalar],
+        "log_AD7714Ch0Gain": [False, "i", {}, nc_scalar],
+        "log_AH0_10V": [False, "d", {}, nc_scalar],
+        "log_AH0_24V": [False, "d", {}, nc_scalar],
+        "log_ALTIM_BOTTOM_PING": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_ALTIM_BOTTOM_PING_RANGE": [False, "d", {}, nc_scalar],
+        "log_ALTIM_BOTTOM_TURN_MARGIN": [False, "d", {}, nc_scalar],
+        "log_ALTIM_FREQUENCY": [False, "d", {}, nc_scalar],
+        "log_ALTIM_PING_DELTA": [False, "d", {}, nc_scalar],
+        "log_ALTIM_PING_DEPTH": [False, "d", {}, nc_scalar],
+        "log_ALTIM_PING_N": [False, "d", {}, nc_scalar],
+        "log_ALTIM_PING_FIT": [False, "d", {}, nc_scalar],
+        "log_ALTIM_PULSE": [False, "d", {}, nc_scalar],
+        "log_ALTIM_SENSITIVITY": [False, "d", {}, nc_scalar],
+        "log_ALTIM_TOP_MIN_OBSTACLE": [False, "d", {}, nc_scalar],
+        "log_ALTIM_TOP_PING": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_ALTIM_TOP_PING_RANGE": [False, "d", {}, nc_scalar],
+        "log_ALTIM_TOP_TURN_MARGIN": [False, "d", {}, nc_scalar],
+        "log_APOGEE_PITCH": [False, "d", {}, nc_scalar],
+        "log_CALL_NDIVES": [False, "i", {}, nc_scalar],
+        "log_CALL_TRIES": [False, "i", {}, nc_scalar],
+        "log_CALL_WAIT": [False, "i", {}, nc_scalar],
+        "log_CAPMAXSIZE": [False, "i", {}, nc_scalar],
+        "log_CAPUPLOAD": [False, "i", {}, nc_scalar],
+        "log_CAP_FILE_SIZE": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_CF8_MAXERRORS": [False, "i", {}, nc_scalar],
+        "log_CFSIZE": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_COMM_SEQ": [False, "i", {}, nc_scalar],
+        "log_COMPASS2_DEVICE": [False, "d", {}, nc_scalar],
+        "log_COMPASS_DEVICE": [False, "d", {}, nc_scalar],
+        "log_COMPASS_USE": [False, "i", {}, nc_scalar],
+        "log_COURSE_BIAS": [False, "d", {}, nc_scalar],
+        "log_CURRENT": [False, "c", {}, nc_scalar],
+        "log_CT_PROFILE": [False, None, {}, nc_scalar],
+        "log_CT_RECORDABOVE": [False, None, {}, nc_scalar],
+        "log_CT_XMITABOVE": [False, None, {}, nc_scalar],
+        "log_C_PITCH": [False, "i", {}, nc_scalar],
+        "log_C_PITCH_AUTO_DELTA": [False, "d", {}, nc_scalar],
+        "log_C_PITCH_AUTO_MAX": [False, "d", {}, nc_scalar],
+        "log_C_ROLL_CLIMB": [False, "d", {}, nc_scalar],
+        "log_C_ROLL_DIVE": [False, "d", {}, nc_scalar],
+        "log_C_VBD": [False, "i", {}, nc_scalar],
+        "log_C_VBD_AUTO_DELTA": [False, "i", {}, nc_scalar],
+        "log_C_VBD_AUTO_MAX": [False, "i", {}, nc_scalar],
+        "log_DATA_FILE_SIZE": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_DBDW": [False, "d", {}, nc_scalar],
+        "log_DEEPGLIDER": [False, "i", {}, nc_scalar],
+        "log_DEEPGLIDERMB": [False, "i", {}, nc_scalar],
+        "log_DEVICE1": [False, "d", {}, nc_scalar],
+        "log_DEVICE2": [False, "d", {}, nc_scalar],
+        "log_DEVICE3": [False, "d", {}, nc_scalar],
+        "log_DEVICE4": [False, "d", {}, nc_scalar],
+        "log_DEVICE5": [False, "d", {}, nc_scalar],
+        "log_DEVICE6": [False, "d", {}, nc_scalar],
+        "log_DEVICES": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_DEVICE_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_DEVICE_MAX_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_DEVICE_SECS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_DIVE": [False, "i", {}, nc_scalar],
+        "log_D_ABORT": [False, "d", {}, nc_scalar],
+        "log_D_BOOST": [False, "d", {}, nc_scalar],
+        "log_D_CALL": [False, "d", {}, nc_scalar],
+        "log_D_FINISH": [False, "d", {}, nc_scalar],
+        "log_D_FLARE": [False, "d", {}, nc_scalar],
+        "log_D_GRID": [False, "d", {}, nc_scalar],
+        "log_D_NO_BLEED": [False, "d", {}, nc_scalar],
+        "log_D_OFFGRID": [False, "d", {}, nc_scalar],
+        "log_D_PITCH": [False, "d", {}, nc_scalar],
+        "log_D_SAFE": [False, "d", {}, nc_scalar],
+        "log_D_SURF": [False, "d", {}, nc_scalar],
+        "log_D_TGT": [False, "d", {}, nc_scalar],
+        "log_EOP_CODE": [False, "c", {}, nc_scalar],
+        "log_ERRORS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_ESCAPE_HEADING": [False, "d", {}, nc_scalar],
+        "log_ESCAPE_HEADING_DELTA": [False, "d", {}, nc_scalar],
+        "log_ESCAPE_REASON": [False, "c", {}, nc_scalar],
+        "log_ESCAPE_STARTED_DIVE": [False, "d", {}, nc_scalar],
+        "log_FERRY_MAX": [False, "d", {}, nc_scalar],
+        "log_FG_AHR_10V": [False, "d", {}, nc_scalar],
+        "log_FG_AHR_10Vo": [False, "d", {}, nc_scalar],
+        "log_FG_AHR_24V": [False, "d", {}, nc_scalar],
+        "log_FG_AHR_24Vo": [False, "d", {}, nc_scalar],
+        "log_FILEMGR": [False, "i", {}, nc_scalar],
+        "log_FINISH": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_FINISH1": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_FINISH2": [False, "d", {}, nc_scalar],
+        "log_FIX_MISSING_TIMEOUT": [False, "d", {}, nc_scalar],
+        "log_FREEZE": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_GCHEAD": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_GLIDE_SLOPE": [False, "d", {}, nc_scalar],
+        "log_GPS": [
+            False,
+            "c",
+            {
+                "description": "String reported in logfile for GPS fix (first surface position after dive)"
+            },
+            nc_scalar,
+        ],
+        "log_GPS1": [
+            False,
+            "c",
+            {
+                "description": "String reported in logfile for GPS1 fix (first surface position before dive)"
+            },
+            nc_scalar,
+        ],
+        "log_GPS2": [
+            False,
+            "c",
+            {
+                "description": "String reported in logfile for GPS2 fix (last surface position before dive)"
+            },
+            nc_scalar,
+        ],
+        "log_GPS_DEVICE": [False, "d", {}, nc_scalar],
+        "log_HD_A": [
+            False,
+            "d",
+            {
+                "description": "Hydrodynamic lift factor for given hull shape (1/degrees of attack angle)"
+            },
+            nc_scalar,
+        ],
+        "log_HD_B": [
+            False,
+            "d",
+            {
+                "description": "Hydrodynamic drag factor for given hull shape (Pa^(-1/4))"
+            },
+            nc_scalar,
+        ],
+        "log_HD_C": [
+            False,
+            "d",
+            {
+                "description": "Hydrodynamic induced drag factor for given hull shape (1/degrees^2 of attack angle)"
+            },
+            nc_scalar,
+        ],
+        "log_HEADING": [False, "d", {}, nc_scalar],
+        "log_HEAD_ERRBAND": [False, "d", {}, nc_scalar],
+        "log_HEAPDBG": [False, "i", {}, nc_scalar],
+        "log_HUMID": [False, "d", {}, nc_scalar],
+        "log_ICE_FREEZE_MARGIN": [False, "d", {}, nc_scalar],
+        "log_ID": [False, "i", {}, nc_scalar],
+        "log_IMPLIED_C_PITCH": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_IMPLIED_C_VBD": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_INTERNAL_PRESSURE": [False, "d", {}, nc_scalar],
+        "log_INT_PRESSURE_SLOPE": [False, "d", {}, nc_scalar],
+        "log_INT_PRESSURE_YINT": [False, "d", {}, nc_scalar],
+        "log_IRIDIUM_FIX": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_IRON": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_KALMAN_ARGS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_KALMAN_CONTROL": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_KALMAN_USE": [False, "i", {}, nc_scalar],
+        "log_KALMAN_X": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_KALMAN_Y": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_KERMIT": [False, "i", {}, nc_scalar],
+        "log_LOGGERDEVICE1": [False, "d", {}, nc_scalar],
+        "log_LOGGERDEVICE2": [False, "d", {}, nc_scalar],
+        "log_LOGGERDEVICE3": [False, "d", {}, nc_scalar],
+        "log_LOGGERDEVICE4": [False, "d", {}, nc_scalar],
+        "log_LOGGERS": [False, "d", {}, nc_scalar],
+        "log_LOITER_D_NO_PUMP": [False, "d", {}, nc_scalar],
+        "log_LOITER_DBDW": [False, "d", {}, nc_scalar],
+        "log_LOITER_W_DBAND": [False, "d", {}, nc_scalar],
+        "log_LOITER_D_TOP": [False, "d", {}, nc_scalar],
+        "log_LOITER_D_BOTTOM": [False, "d", {}, nc_scalar],
+        "log_LOITER_N_DIVE": [False, "d", {}, nc_scalar],
+        "log_MAGCAL": [False, "c", {}, nc_scalar],
+        "log_MAGERROR": [False, "d", {}, nc_scalar],
+        "log_MASS": [False, "d", {}, nc_scalar],
+        "log_MASS_COMP": [False, "d", {}, nc_scalar],
+        "log_MAX_BUOY": [False, "d", {}, nc_scalar],
+        #'log_MEM' : [False, 'd', {}, nc_scalar],
+        "log_MEM": [
+            False,
+            "c",
+            {},
+            nc_scalar,
+        ],  # Multi-valued string for version 67.00 and later
+        "log_MEM0": [
+            False,
+            "c",
+            {},
+            nc_scalar,
+        ],  # Multi-valued string for version 67.00 and later
+        "log_MEM1": [
+            False,
+            "c",
+            {},
+            nc_scalar,
+        ],  # Multi-valued string for version 67.00 and later
+        "log_MEM2": [
+            False,
+            "c",
+            {},
+            nc_scalar,
+        ],  # Multi-valued string for version 67.00 and later
+        "log_MHEAD_RNG_PITCHd_Wd": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_MINV_10V": [False, "d", {}, nc_scalar],
+        "log_MINV_24V": [False, "d", {}, nc_scalar],
+        "log_MISSION": [False, "i", {}, nc_scalar],
+        "log_MOTHERBOARD": [False, "i", {}, nc_scalar],
+        "log_NAV_DEVICE": [False, "i", {}, nc_scalar],
+        "log_NAV2_DEVICE": [False, "i", {}, nc_scalar],
+        "log_NAV3_DEVICE": [False, "i", {}, nc_scalar],
+        "log_NAV4_DEVICE": [False, "i", {}, nc_scalar],
+        "log_NAV_MODE": [False, "i", {}, nc_scalar],
+        "log_N_FILEKB": [False, "i", {}, nc_scalar],
+        "log_N_GPS": [False, "i", {}, nc_scalar],
+        "log_N_NOCOMM": [False, "i", {}, nc_scalar],
+        "log_N_NOSURFACE": [False, "i", {}, nc_scalar],
+        "log_N_DIVES": [False, "i", {}, nc_scalar],
+        "log_NET": [False, "c", {}, nc_scalar],
+        "log_NETWORK_DEVICE": [False, "c", {}, nc_scalar],
+        "log_NOCOMM_ACTION": [False, "i", {}, nc_scalar],
+        "log_PHONE_DEVICE": [False, "d", {}, nc_scalar],
+        "log_PHONE_SUPPLY": [False, "i", {}, nc_scalar],
+        "log_OPTIONS": [False, "i", {}, nc_scalar],
+        "log_PITCH_ADJ_DBAND": [False, "d", {}, nc_scalar],
+        "log_PITCH_ADJ_GAIN": [False, "d", {}, nc_scalar],
+        "log_PITCH_AD_RATE": [False, "d", {}, nc_scalar],
+        "log_PITCH_CNV": [False, "d", {}, nc_scalar],
+        "log_PITCH_DBAND": [False, "d", {}, nc_scalar],
+        "log_PITCH_GAIN": [False, "d", {}, nc_scalar],
+        "log_PITCH_GAIN_AUTO_DELTA": [False, "d", {}, nc_scalar],
+        "log_PITCH_GAIN_AUTO_MAX": [False, "d", {}, nc_scalar],
+        "log_PITCH_MAX": [False, "d", {}, nc_scalar],
+        "log_PITCH_MAXERRORS": [False, "i", {}, nc_scalar],
+        "log_PITCH_MIN": [False, "i", {}, nc_scalar],
+        "log_PITCH_TIMEOUT": [False, "d", {}, nc_scalar],
+        "log_PITCH_VBD_SHIFT": [False, "d", {}, nc_scalar],
+        "log_PITCH_W_DBAND": [False, "d", {}, nc_scalar],
+        "log_PITCH_W_GAIN": [False, "d", {}, nc_scalar],
+        "log_PRESSURE_DEVICE": [False, "c", {}, nc_scalar],
+        "log_PRESSURE_SLOPE": [False, "d", {}, nc_scalar],
+        "log_PRESSURE_YINT": [False, "d", {}, nc_scalar],
+        "log_PROTOCOL": [False, "i", {}, nc_scalar],
+        "log_P_OVSHOOT": [False, "d", {}, nc_scalar],
+        "log_P_OVSHOOT_WITHG": [False, "d", {}, nc_scalar],
+        "log_RAFOS_CLK": [False, "d", {}, nc_scalar],
+        "log_RAFOS_CORR_THRESH": [False, "d", {}, nc_scalar],
+        "log_RAFOS_DEVICE": [False, "d", {}, nc_scalar],
+        "log_RAFOS_FIX": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_RAFOS_HIT_WINDOW": [False, "d", {}, nc_scalar],
+        "log_RAFOS_PEAK_OFFSET": [False, "d", {}, nc_scalar],
+        "log_RAFOS_MMODEM": [False, "d", {}, nc_scalar],
+        "log_NETBOX": [False, "i", {}, nc_scalar],
+        "log_RELAUNCH": [False, "i", {}, nc_scalar],
+        "log_RECOV_CODE": [False, "c", {}, nc_scalar],
+        "log_RESTART_TIME": [False, "c", {}, nc_scalar],
+        "log_RHO": [
+            False,
+            "d",
+            {
+                "description": "Expected density at deepest point over the deployment",
+                "units": "gram/cc",
+            },
+            nc_scalar,
+        ],  # not kg/m^3!
+        "log_ROLL_ADJ_DBAND": [False, "d", {}, nc_scalar],
+        "log_ROLL_ADJ_GAIN": [False, "d", {}, nc_scalar],
+        "log_ROLL_AD_RATE": [False, "d", {}, nc_scalar],
+        "log_ROLL_CNV": [False, "d", {}, nc_scalar],
+        "log_ROLL_DEG": [False, "d", {}, nc_scalar],
+        "log_ROLL_MAX": [False, "i", {}, nc_scalar],
+        "log_ROLL_MAXERRORS": [False, "i", {}, nc_scalar],
+        "log_ROLL_MIN": [False, "i", {}, nc_scalar],
+        "log_ROLL_TIMEOUT": [False, "d", {}, nc_scalar],
+        "log_R_PORT_OVSHOOT": [False, "d", {}, nc_scalar],
+        "log_R_STBD_OVSHOOT": [False, "d", {}, nc_scalar],
+        "log_SDSIZE": [
+            False,
+            "c",
+            {},
+            nc_scalar,
+        ],  # Multi-valued string for version 67.00 and later
+        "log_SDFILEDIR": [
+            False,
+            "c",
+            {},
+            nc_scalar,
+        ],  #  RevE - Number of files and directories on the sd card
+        "log_SEABIRD_C_Z": [
+            False,
+            "d",
+            {"description": "Conductivity zero frequency"},
+            nc_scalar,
+        ],
+        "log_SEABIRD_C_G": [False, "d", {}, nc_scalar],
+        "log_SEABIRD_C_H": [False, "d", {}, nc_scalar],
+        "log_SEABIRD_C_I": [False, "d", {}, nc_scalar],
+        "log_SEABIRD_C_J": [False, "d", {}, nc_scalar],
+        "log_SEABIRD_T_G": [False, "d", {}, nc_scalar],
+        "log_SEABIRD_T_H": [False, "d", {}, nc_scalar],
+        "log_SEABIRD_T_I": [False, "d", {}, nc_scalar],
+        "log_SEABIRD_T_J": [False, "d", {}, nc_scalar],
+        "log_SENSORS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_SENSOR_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_SENSOR_SECS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_SHORTING_PLUG": [False, "d", {}, nc_scalar],  # From Kongsberg firmware
+        "log_SIM_PITCH": [False, "d", {}, nc_scalar],
+        "log_SIM_W": [False, "d", {}, nc_scalar],
+        "log_SMARTDEVICE1": [False, "d", {}, nc_scalar],
+        "log_SMARTDEVICE2": [False, "d", {}, nc_scalar],
+        "log_SMARTS": [False, "d", {}, nc_scalar],
+        "log_SM_CC": [False, "d", {}, nc_scalar],
+        "log_SM_CCo": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_SM_GC": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_SM_PING": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_SOUNDSPEED": [False, "d", {}, nc_scalar],
+        "log_SPEED_FACTOR": [False, "d", {}, nc_scalar],
+        "log_SPEED_LIMITS": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_STARTED": [False, None, {}, nc_scalar],  # ??
+        "log_STROBE": [False, "i", {}, nc_scalar],
+        "log_SURF": [False, "c", {}, nc_scalar],
+        "log_SURFACE_URGENCY": [False, "i", {}, nc_scalar],
+        "log_SURFACE_URGENCY_FORCE": [False, "i", {}, nc_scalar],
+        "log_SURFACE_URGENCY_TRY": [False, "i", {}, nc_scalar],
+        "log_SUPER": [False, "c", {}, nc_scalar],
+        "log_TCM_PITCH_OFFSET": [False, "d", {}, nc_scalar],
+        "log_TCM_ROLL_OFFSET": [False, "d", {}, nc_scalar],
+        "log_TCM_TEMP": [False, "d", {}, nc_scalar],
+        "log_TEMP": [
+            False,
+            "d",
+            {"description": "Temperature inside pressure hull", "units": "C"},
+            nc_scalar,
+        ],
+        "log_TGT_AUTO_DEFAULT": [False, "i", {}, nc_scalar],
+        "log_TGT_DEFAULT_LAT": [False, "d", {}, nc_scalar],
+        "log_TGT_DEFAULT_LON": [False, "d", {}, nc_scalar],
+        "log_TGT_LATLONG": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_TGT_NAME": [False, "c", {}, nc_scalar],
+        "log_TGT_RADIUS": [False, "d", {}, nc_scalar],
+        "log_TT8_MAMPS": [
+            False,
+            "c",
+            {},
+            nc_scalar,
+        ],  # Multi-valued string (2 values in later versions)
+        "log_T_ABORT": [False, "d", {}, nc_scalar],
+        "log_T_BOOST": [False, "d", {}, nc_scalar],
+        "log_T_DIVE": [False, "d", {}, nc_scalar],
+        "log_T_EPIRB": [False, "d", {}, nc_scalar],
+        "log_T_GPS": [False, "d", {}, nc_scalar],
+        "log_T_GPS_ALMANAC": [False, "d", {}, nc_scalar],
+        "log_T_GPS_CHARGE": [False, "d", {}, nc_scalar],
+        "log_T_LOITER": [False, "d", {}, nc_scalar],
+        "log_T_SLOITER": [False, "d", {}, nc_scalar],
+        "log_T_MISSION": [False, "d", {}, nc_scalar],
+        "log_T_NO_W": [False, "d", {}, nc_scalar],
+        "log_T_RSLEEP": [False, "d", {}, nc_scalar],
+        "log_T_TURN": [False, "d", {}, nc_scalar],
+        "log_T_TURN_SAMPINT": [False, "d", {}, nc_scalar],
+        "log_T_WATCHDOG": [False, "d", {}, nc_scalar],
+        "log_UNCOM_BLEED": [False, "i", {}, nc_scalar],
+        "log_UPLOAD_DIVES_MAX": [False, "i", {}, nc_scalar],
+        "log_USE_BATHY": [False, "i", {}, nc_scalar],
+        "log_USE_ICE": [False, "i", {}, nc_scalar],
+        "log_VBD_BLEED_AD_RATE": [False, "d", {}, nc_scalar],
+        "log_VBD_CNV": [False, "d", {}, nc_scalar],
+        "log_VBD_DBAND": [False, "d", {}, nc_scalar],
+        "log_VBD_MAX": [False, "i", {}, nc_scalar],
+        "log_VBD_MAXERRORS": [False, "i", {}, nc_scalar],
+        "log_VBD_MIN": [False, "i", {}, nc_scalar],
+        "log_VBD_PUMP_AD_RATE_APOGEE": [False, "d", {}, nc_scalar],
+        "log_VBD_PUMP_AD_RATE_SURFACE": [False, "d", {}, nc_scalar],
+        "log_VBD_TIMEOUT": [False, "d", {}, nc_scalar],
+        "log_VBD_LP_IGNORE": [False, "d", {}, nc_scalar],
+        "log_STOP_T": [False, "d", {}, nc_scalar],
+        "log_W_ADJ_DBAND": [False, "d", {}, nc_scalar],
+        "log_XPDR_DEVICE": [False, "d", {}, nc_scalar],
+        "log_XPDR_INHIBIT": [False, "d", {}, nc_scalar],
+        "log_XPDR_INT": [False, "d", {}, nc_scalar],
+        "log_XPDR_PINGS": [False, "c", {}, nc_scalar],
+        "log_XPDR_REP": [False, "d", {}, nc_scalar],
+        "log_XPDR_VALID": [False, "d", {}, nc_scalar],
+        "log_OSC": [False, "i", {}, nc_scalar],
+        "log__CALLS": [False, "d", {}, nc_scalar],
+        "log__SM_ANGLEo": [False, "d", {}, nc_scalar],
+        "log__SM_DEPTHo": [False, "d", {}, nc_scalar],
+        "log__XMS_NAKs": [False, "d", {}, nc_scalar],
+        "log__XMS_TOUTs": [False, "d", {}, nc_scalar],
+        # These are found on iRobot versions of the software
+        "log_T_BOOST_BLACKOUT": [False, "d", {}, nc_scalar],
+        "log_LENGTH": [False, "d", {}, nc_scalar],
+        "log_DIRECT_CONTROL": [False, "d", {}, nc_scalar],
+        "log_ROLL_GAIN_P": [False, "d", {}, nc_scalar],
+        "log_EBE_ENABLE": [False, "d", {}, nc_scalar],
+        "log_GC_WINDOW": [False, "d", {}, nc_scalar],
+        "log_GC_LAST_COLLECTION": [False, "d", {}, nc_scalar],
+        "log_EXEC_P": [False, "d", {}, nc_scalar],
+        "log_EXEC_DT": [False, "d", {}, nc_scalar],
+        "log_EXEC_T": [False, "d", {}, nc_scalar],
+        "log_EXEC_N": [False, "d", {}, nc_scalar],
+        "log_PING": [False, "c", {}, nc_scalar],
+        # $STATE line entries (gc_state)
+        "gc_state_secs": [
+            True,
+            "d",
+            {
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Start of STATE time in GMT epoch format",
+            },
+            (nc_gc_state_info,),
+        ],
+        "gc_state_state": [
+            True,
+            "i",
+            {"description": "Name of the GC state"},
+            (nc_gc_state_info,),
+        ],
+        "gc_state_eop_code": [
+            True,
+            "i",
+            {"description": "GC states end of phase (EOP) code"},
+            (nc_gc_state_info,),
+        ],
+        # GC table messages
+        "gc_msg_NEWHEAD_secs": [
+            True,
+            "d",
+            {
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Start of NEWHEAD time in GMT epoch format",
+            },
+            (f"{nc_gc_msg_prefix}NEWHEAD_info",),
+        ],
+        "gc_msg_NEWHEAD_depth": [
+            "f",
+            "d",
+            {
+                "standard_name": "depth",
+                "positive": "down",
+                "units": "meters",
+                "description": "Measured vertical distance below the surface",
+            },
+            (f"{nc_gc_msg_prefix}NEWHEAD_info",),
+        ],
+        "gc_msg_NEWHEAD_heading": [
+            "f",
+            "d",
+            {
+                "description": "New vehicle heading (true)",
+                "units": "decimal degrees",
+            },
+            (f"{nc_gc_msg_prefix}NEWHEAD_info",),
+        ],
+        # $GC line entries (gc_event)
+        "gc_st_secs": [
+            True,
+            "d",
+            {
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Start of GC time in GMT epoch format",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_pitch_ctl": [False, "d", {"units": "cm"}, (nc_gc_event_info,)],
+        "gc_vbd_ctl": [False, "d", {"units": "cm"}, (nc_gc_event_info,)],
+        "gc_roll_ctl": [False, "d", {"units": "cm"}, (nc_gc_event_info,)],
+        "gc_depth": [False, "d", {"units": "meters"}, (nc_gc_event_info,)],
+        "gc_ob_vertv": [False, "d", {"units": "cm/s"}, (nc_gc_event_info,)],
+        "gc_data_pts": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_end_secs": [
+            False,
+            "d",
+            {
+                "units": "seconds  since 1970-1-1 00:00:00",
+                "description": "End of GC time in GMT epoch format",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_pitch_secs": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Elapsed seconds since start of this pitch change",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_roll_secs": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Elapsed seconds since start of this roll change",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_vbd_secs": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Elapsed seconds since start of this VBD change",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_vbd_st": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Time since st_secs for start of VBD move",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_pitch_st": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Time since st_secs for start of pitch move",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_roll_st": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Time since st_secs for start of roll move",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_vbd_start_time": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Start of VBD motor move time in GMT epoch format",
+                "_FillValue": nc_nan,
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_pitch_start_time": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Start of pitch motor move time in GMT epoch format",
+                "_FillValue": nc_nan,
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_roll_start_time": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Start of roll motor move time in GMT epoch format",
+                "_FillValue": nc_nan,
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_vbd_end_time": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "End of VBD motor move time in GMT epoch format",
+                "_FillValue": nc_nan,
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_pitch_end_time": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "End of pitch motor move time in GMT epoch format",
+                "_FillValue": nc_nan,
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_roll_end_time": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "End of roll motor move time in GMT epoch format",
+                "_FillValue": nc_nan,
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_vbd_i": [False, "d", {"units": "A"}, (nc_gc_event_info,)],
+        "gc_gcphase": [
+            False,
+            "i",
+            {
+                "flag_values": [1, 2, 3, 4, 5, 6],
+                "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_flags": [
+            False,
+            "i",
+            {
+                "flag_values": [1, 2, 3, 4, 5, 6],
+                "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
+            },
+            (nc_gc_event_info,),
+        ],
+        "gc_pitch_i": [False, "d", {"units": "A"}, (nc_gc_event_info,)],
+        "gc_roll_i": [False, "d", {"units": "A"}, (nc_gc_event_info,)],
+        "gc_pitch_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_roll_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_pitch_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_roll_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_vbd_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_vbd_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_vbd_pot1_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_vbd_pot2_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_vbd_pot1_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_vbd_pot2_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_pitch_retries": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_pitch_errors": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_roll_retries": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_roll_errors": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_vbd_retries": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_vbd_errors": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
+        "gc_pitch_volts": [False, "d", {"units": "V"}, (nc_gc_event_info,)],
+        "gc_roll_volts": [False, "d", {"units": "V"}, (nc_gc_event_info,)],
+        "gc_vbd_volts": [False, "d", {"units": "V"}, (nc_gc_event_info,)],
+        "gc_int_press": [
+            False,
+            "d",
+            {"description": "Internal pressure", "units": "psia"},
+            (nc_gc_event_info,),
+        ],
+        "gc_humidity": [
+            False,
+            "d",
+            {"description": "Internal relative humidity", "units": "percent"},
+            (nc_gc_event_info,),
+        ],
+        # Columns in the engineering file
+        "eng_elaps_t_0000": [
+            False,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds",
+                "description": "Elapsed seconds since start of mission",
+            },
+            (nc_sg_data_info,),
+        ],
+        "eng_elaps_t": [
+            False,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds",
+                "description": "Elapsed seconds since start of dive",
+            },
+            (nc_sg_data_info,),
+        ],
+        "eng_rec": [False, "d", {}, (nc_sg_data_info,)],
+        "eng_GC_phase": [
+            False,
+            "d",
+            {
+                "flag_values": [1, 2, 3, 4, 5, 6],
+                "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
+            },
+            (nc_sg_data_info,),
+        ],
+        "eng_GC_state": [
+            False,
+            "i",
+            {
+                # "flag_values": [1, 2, 3, 4, 5, 6],
+                # "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
+                "description": "Motor status byte",
+            },
+            (nc_sg_data_info,),
+        ],
+        "eng_GC_flags": [
+            False,
+            "d",
+            {
+                "flag_values": [1, 2, 3, 4, 5, 6],
+                "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
+            },
+            (nc_sg_data_info,),
+        ],
+        "eng_pressure": [
+            False,
+            "d",
+            {"description": "Reported pressure", "units": "psia"},
+            (nc_sg_data_info,),
+        ],
+        "eng_press_counts": [
+            False,
+            "d",
+            {"description": "Pressure sensor AD counts"},
+            (nc_sg_data_info,),
+        ],
+        "eng_depth": [
+            False,
+            "d",
+            {
+                "standard_name": "depth",
+                "positive": "down",
+                "units": "cm",
+                "description": "Measured vertical distance below the surface",
+            },
+            (nc_sg_data_info,),
+        ],
+        "eng_head": [
+            "f",
+            "d",
+            {"description": "Vehicle heading (magnetic)", "units": "degrees"},
+            (nc_sg_data_info,),
+        ],
+        "eng_pitchAng": [
+            "f",
+            "d",
+            {"description": "Vehicle pitch", "units": "degrees"},
+            (nc_sg_data_info,),
+        ],
+        "eng_rollAng": [
+            False,
+            "d",
+            {"description": "Vehicle roll", "units": "degrees"},
+            (nc_sg_data_info,),
+        ],
+        "eng_pitchCtl": [False, "d", {}, (nc_sg_data_info,)],
+        "eng_rollCtl": [False, "d", {}, (nc_sg_data_info,)],
+        "eng_vbdCC": [False, "d", {}, (nc_sg_data_info,)],
+        "eng_volt1": [False, "d", {}, (nc_sg_data_info,)],
+        "eng_volt2": [False, "d", {}, (nc_sg_data_info,)],
+        "eng_curr1": [False, "d", {}, (nc_sg_data_info,)],
+        "eng_curr2": [False, "d", {}, (nc_sg_data_info,)],
+        # Declaration of eng-based CT freq (normal unpumped sbect and SailCT)
+        # are in Sensors/sbect_ext.py, as are scicon unpumped CT freq vars.
+        # gpctd (pumped sbect) variables are declared in Sensors/payload_ext.py
+        # Other eng_ variables are declared in various sensor and logger extensions
+        # and created for any cnf sensor definition
+        # Per-profile derived results
+        # QC status variables and vectors
+        "reviewed": [
+            False,
+            "i",
+            {
+                "description": "Whether a scientist has reviewed and approved this profile"
+            },
+            nc_scalar,
+        ],
+        "directives": [
+            False,
+            "c",
+            {
+                "description": "The control directives supplied by the scientist for this profile"
+            },
+            nc_scalar,
+        ],
+        # These are written only if they are true
+        "skipped_profile": [
+            False,
+            "i",
+            {
+                "description": "Whether a scientist decided to skip processing this profile"
+            },
+            nc_scalar,
+        ],
+        "processing_error": [
+            False,
+            "i",
+            {
+                "description": "Whether an error was encountered while processing this profile"
+            },
+            nc_scalar,
+        ],
+        "test_tank_dive": [
+            False,
+            "i",
+            {"description": "Whether this is a test tank dive"},
+            nc_scalar,
+        ],
+        "deck_dive": [
+            False,
+            "i",
+            {"description": "Whether this is a deck dive"},
+            nc_scalar,
+        ],
+        # In spite of their prefix, access as results_d['log_gps_lat']
+        "log_gps_lat": [
+            False,
+            "d",
+            {
+                "standard_name": "latitude",
+                "units": "degrees_north",
+                "description": "GPS latitudes",
+            },
+            (nc_gps_info_info,),
+        ],
+        "log_gps_lon": [
+            False,
+            "d",
+            {
+                "standard_name": "longitude",
+                "units": "degrees_east",
+                "description": "GPS longitudes",
+            },
+            (nc_gps_info_info,),
+        ],
+        "log_gps_time": [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "GPS times in GMT epoch format",
+            },
+            (nc_gps_info_info,),
+        ],
+        "log_gps_first_fix_time": [
+            False,
+            "d",
+            {"units": "seconds", "description": "Time to first fix"},
+            (nc_gps_info_info,),
+        ],
+        "log_gps_final_fix_time": [
+            False,
+            "d",
+            {"units": "seconds", "description": "Time to fix"},
+            (nc_gps_info_info,),
+        ],
+        "log_gps_hdop": [
+            False,
+            "d",
+            {"description": "Horizontal Dilution Of Precision"},
+            (nc_gps_info_info,),
+        ],
+        "log_gps_magvar": [
+            False,
+            "d",
+            {
+                "units": "degrees",
+                "description": "Magnetic variance (degrees, positive E)",
+            },
+            (nc_gps_info_info,),
+        ],
+        "log_gps_driftspeed": [
+            False,
+            "d",
+            {"units": "knots", "description": "Estimated surface drift speed"},
+            (nc_gps_info_info,),
+        ],
+        "log_gps_driftheading": [
+            False,
+            "d",
+            {"units": "degrees true", "description": "Estimated drift direction"},
+            (nc_gps_info_info,),
+        ],
+        "log_gps_n_satellites": [
+            False,
+            "d",
+            {"description": "Number of satellites contributing to the final fix"},
+            (nc_gps_info_info,),
+        ],
+        "log_gps_hpe": [
+            False,
+            "d",
+            {"units": "meters", "description": "Horizontal position error"},
+            (nc_gps_info_info,),
+        ],
+        "log_gps_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the GPS1 information",
+            },
+            (nc_gps_info_info,),
+        ],
+        "magnetic_variation": [
+            False,
+            "d",
+            {"description": "The magnetic variance from true north (degrees)"},
+            nc_scalar,
+        ],
+        "avg_latitude": [
+            False,
+            "d",
+            {
+                "units": "degrees_north",
+                "description": "The average latitude of the dive",
+            },
+            nc_scalar,
+        ],
+        "avg_longitude": [
+            False,
+            "d",
+            {
+                "units": "degrees_east",
+                "description": "The average longitude of the dive",
+            },
+            nc_scalar,
+        ],
+        nc_sg_time_var: [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "axis": "T",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Time of the [P] in GMT epoch format",
+            },
+            (nc_sg_data_info,),
+        ],
+        "pressure": [
+            "f",
+            "d",
+            {
+                "units": "dbar",
+                "description": "Uncorrected sea-water pressure at pressure sensor",
+            },
+            (nc_sg_data_info,),
+        ],
+        "depth": [
+            "f",
+            "d",
+            {
+                "standard_name": "depth",
+                "axis": "Z",
+                "units": "meters",
+                "positive": "down",
+                "description": "Depth below the surface, corrected for average latitude",
+            },
+            (nc_sg_data_info,),
+        ],
+        "GPS1_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the GPS1 information",
+            },
+            nc_scalar,
+        ],
+        "GPS2_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the GPS2 information",
+            },
+            nc_scalar,
+        ],
+        "GPSE_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the final GPS information",
+            },
+            nc_scalar,
+        ],
+        "start_of_climb_time": [
+            False,
+            "d",
+            {
+                "units": "seconds",
+                "description": "Elapsed seconds after dive start when second (positive) apogee pump starts",
+            },
+            nc_scalar,
+        ],
+        # CT values (missing values are marked in parallel _qc variable as QC_MISSING)
+        nc_ctd_time_var: [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "axis": "T",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Time of CTD [P] in GMT epoch format",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "ctd_depth": [
+            "f",
+            "d",
+            {
+                "standard_name": "depth",
+                "axis": "Z",
+                "units": "meters",
+                "positive": "down",
+                "description": "CTD thermistor depth corrected for average latitude",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "ctd_pressure": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_pressure",
+                "units": "dbar",
+                "description": "Pressure at CTD thermistor",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "ctd_pressure_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust pressure - legato only",
+            },
+            (nc_ctd_results_info,),
+        ],
+        # TODO: parse the field and test in MMP and MMT if all are included...
+        "temperature_raw": [
+            "f",
+            "d",
+            {
+                "units": "degrees_Celsius",
+                "description": "Uncorrected temperature (in situ)",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "conductivity_raw": [
+            "f",
+            "d",
+            {"units": "S/m", "description": "Uncorrected conductivity"},
+            (nc_ctd_results_info,),
+        ],
+        "salinity_raw": [
+            "f",
+            "d",
+            {
+                "units": "PSU",
+                "description": "Uncorrected salinity derived from temperature_raw and conductivity_raw (PSU)",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "temperature_raw_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each raw temperature value",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "conductivity_raw_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each raw conductivity value",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "salinity_raw_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each raw salinity value",
+            },
+            (nc_ctd_results_info,),
+        ],
+        # CT adjusted values (missing values are marked in parallel _qc variable as QC_MISSING)
+        "temperature": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_temperature",
+                "units": "degrees_Celsius",
+                "description": "Termperature (in situ) corrected for thermistor first-order lag",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "conductivity": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_electrical_conductivity",
+                "units": "S/m",
+                "description": "Conductivity corrected for anomalies",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "salinity": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_salinity",
+                "units": "PSU",
+                "description": "Salinity corrected for thermal-inertia effects (PSU)",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "conservative_temperature": [
+            "f",
+            "d",
+            {
+                "units": "degrees_Celsius",
+                "description": "Conservative termperature per TEOS-10",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "absolute_salinity": [
+            "f",
+            "d",
+            {"units": "g/kg", "description": "Absolute salinity per TEOS-10"},
+            (nc_ctd_results_info,),
+        ],
+        "gsw_sigma0": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_sigma_theta",
+                "ref_pressure": "0",
+                "units": "kg/m^3",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "gsw_sigma3": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_sigma_theta",
+                "ref_pressure": "3000",
+                "units": "kg/m^3",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "gsw_sigma4": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_sigma_theta",
+                "ref_pressure": "4000",
+                "units": "kg/m^3",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "temperature_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each corrected temperature value",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "conductivity_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each corrected conductivity value",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "salinity_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each corrected salinity value",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "CTD_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the corrected CTD values",
+            },
+            nc_scalar,
+        ],
+        # Derived seawater properties from salinity
+        "density": [
+            False,
+            "d",
+            {
+                "standard_name": "sea_water_density",
+                "ref_pressure": "0",
+                "units": "g/m^3",
+                "description": "Sea water potential density",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "density_insitu": [
+            False,
+            "d",
+            {
+                "units": "g/m^3",
+                "description": "Sea water in-situ density based on pressure",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "sigma_t": [
+            False,
+            "d",
+            {
+                "standard_name": "sea_water_sigma_t",
+                "ref_pressure": "0",
+                "description": "Sigma based on density",
+                "units": "g/m^3",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "theta": [
+            False,
+            "d",
+            {
+                "standard_name": "sea_water_potential_temperature",
+                "units": "degrees_Celsius",
+                "description": "Potential temperature based on corrected salinity",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "sigma_theta": [
+            False,
+            "d",
+            {
+                "standard_name": "sea_water_sigma_theta",
+                "ref_pressure": "0",
+                "units": "kg/m^3",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "sigma3": [
+            False,
+            "d",
+            {
+                "standard_name": "sea_water_sigma_theta",
+                "ref_pressure": "3000",
+                "units": "kg/m^3",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "sigma4": [
+            False,
+            "d",
+            {
+                "standard_name": "sea_water_sigma_theta",
+                "ref_pressure": "4000",
+                "units": "kg/m^3",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "sound_velocity": [
+            "f",
+            "d",
+            {
+                "standard_name": "speed_of_sound_in_sea_water",
+                "description": "Sound velocity",
+                "units": "m/s",
+            },
+            (nc_ctd_results_info,),
+        ],
+        # Vehicle speed and glide angle data
+        "hdm_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether corrected temperatures, salinities, and velocities from the hydrodynamic model converged on a consistent solution",
+            },
+            nc_scalar,
+        ],
+        "buoyancy": [
+            False,
+            "d",
+            {
+                "units": "g",
+                "description": "Buoyancy of vehicle, corrected for compression effects",
+            },
+            (nc_ctd_results_info,),
+        ],
+        # Based on eng data (pitch, depth) only
+        "speed_gsm": [
+            "f",
+            "d",
+            {"description": "Vehicle speed based on gsm", "units": "cm/s"},
+            (nc_ctd_results_info,),
+        ],
+        "glide_angle_gsm": [
+            False,
+            "d",
+            {"description": "Glide angle based on gsm", "units": "degrees"},
+            (nc_ctd_results_info,),
+        ],
+        "horz_speed_gsm": [
+            "f",
+            "d",
+            {"description": "Vehicle horizontal speed based on gsm", "units": "cm/s"},
+            (nc_ctd_results_info,),
+        ],
+        "vert_speed_gsm": [
+            "f",
+            "d",
+            {"description": "Vehicle vertical speed based on gsm", "units": "cm/s"},
+            (nc_ctd_results_info,),
+        ],
+        "flight_avg_speed_east_gsm": [
+            False,
+            "d",
+            {
+                "units": "m/s",
+                "description": "Eastward component of flight average speed based on gsm",
+            },
+            nc_scalar,
+        ],
+        "flight_avg_speed_north_gsm": [
+            False,
+            "d",
+            {
+                "units": "m/s",
+                "description": "Northward component of flight average speed based on gsm",
+            },
+            nc_scalar,
+        ],
+        "north_displacement_gsm": [
+            False,
+            "d",
+            {"description": "Northward displacement from gsm", "units": "meters"},
+            (nc_ctd_results_info,),
+        ],
+        "east_displacement_gsm": [
+            False,
+            "d",
+            {"description": "Eastward displacement from gsm", "units": "meters"},
+            (nc_ctd_results_info,),
+        ],
+        "speed": [
+            "f",
+            "d",
+            {"description": "Vehicle speed based on hdm", "units": "cm/s"},
+            (nc_ctd_results_info,),
+        ],
+        "glide_angle": [
+            False,
+            "d",
+            {"description": "Glide angle based on hdm", "units": "degrees"},
+            (nc_ctd_results_info,),
+        ],
+        "horz_speed": [
+            "f",
+            "d",
+            {"description": "Vehicle horizontal speed based on hdm", "units": "cm/s"},
+            (nc_ctd_results_info,),
+        ],
+        "vert_speed": [
+            "f",
+            "d",
+            {"description": "Vehicle vertical speed based on hdm", "units": "cm/s"},
+            (nc_ctd_results_info,),
+        ],
+        "speed_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each hdm speed value",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "flight_avg_speed_east": [
+            False,
+            "d",
+            {
+                "units": "m/s",
+                "description": "Eastward component of flight average speed based on hdm",
+            },
+            nc_scalar,
+        ],
+        "flight_avg_speed_north": [
+            False,
+            "d",
+            {
+                "units": "m/s",
+                "description": "Northward component of flight average speed based on hdm",
+            },
+            nc_scalar,
+        ],
+        "north_displacement": [
+            False,
+            "d",
+            {"description": "Northward displacement from hdm", "units": "meters"},
+            (nc_ctd_results_info,),
+        ],
+        "east_displacement": [
+            False,
+            "d",
+            {"description": "Eastward displacement from hdm", "units": "meters"},
+            (nc_ctd_results_info,),
+        ],
+        # depth-average current
+        # NOTE: these are scalar in a profile but a vector in mission_timeseries, etc.
+        "depth_avg_curr_east_gsm": [
+            False,
+            "d",
+            {
+                "units": "m/s",
+                "description": "Eastward component of depth-average current based on gsm",
+            },
+            nc_scalar,
+        ],
+        "depth_avg_curr_north_gsm": [
+            False,
+            "d",
+            {
+                "units": "m/s",
+                "description": "Northward component of depth-average current based on gsm",
+            },
+            nc_scalar,
+        ],
+        "depth_avg_curr_east": [
+            "f",
+            "d",
+            {
+                "standard_name": "eastward_sea_water_velocity",
+                "units": "m/s",
+                "description": "Eastward component of the [D] depth-average current based on hdm",
+            },
+            nc_scalar,
+        ],
+        "depth_avg_curr_north": [
+            "f",
+            "d",
+            {
+                "standard_name": "northward_sea_water_velocity",
+                "units": "m/s",
+                "description": "Northward component of the [D] depth-average current based on hdm",
+            },
+            nc_scalar,
+        ],
+        "depth_avg_curr_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the [D] depth-average current values and displacements",
+            },
+            nc_scalar,
+        ],
+        "depth_avg_curr_error": [
+            False,
+            "d",
+            {
+                "units": "m/s",
+                "description": "Expected error of depth-average current from GPS",
+            },
+            nc_scalar,
+        ],
+        "delta_time_s": [
+            False,
+            "d",
+            {"units": "s", "description": "Difference between sample times"},
+            (nc_ctd_results_info,),
+        ],
+        "polar_heading": [
+            False,
+            "d",
+            {"units": "radians", "description": "Vehicle heading from the east"},
+            (nc_ctd_results_info,),
+        ],
+        "GPS_east_displacement_m": [
+            False,
+            "d",
+            {
+                "units": "m",
+                "description": "Total vehicle eastward displacement based on GPS2 and GPSE locations",
+            },
+            nc_scalar,
+        ],
+        "GPS_north_displacement_m": [
+            False,
+            "d",
+            {
+                "units": "m",
+                "description": "Total vehicle northward displacement based on GPS2 and GPSE locations",
+            },
+            nc_scalar,
+        ],
+        "total_flight_time_s": [
+            False,
+            "d",
+            {
+                "units": "s",
+                "description": "Total flight time seconds including surface maneuver drift time",
+            },
+            nc_scalar,
+        ],
+        "latitude_gsm": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "units": "degrees_north",
+                "description": "Latitude of the [P] based on gsm DAC",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "longitude_gsm": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "units": "degrees_east",
+                "description": "Longitude of the [P] based on gsm DAC",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "latitude": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "latitude",
+                "axis": "Y",
+                "units": "degrees_north",
+                "description": "Latitude of the [P] based on hdm DAC",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "longitude": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "longitude",
+                "axis": "X",
+                "units": "degrees_east",
+                "description": "Longitude of the [P] based on hdm DAC",
+            },
+            (nc_ctd_results_info,),
+        ],
+        "latlong_qc": [
+            True,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the [D] estimated latitude and longitude estimates",
+            },
+            nc_scalar,
+        ],
+        # surface drift current
+        "surface_curr_east": [
+            False,
+            "d",
+            {
+                "standard_name": "surface_eastward_sea_water_velocity",
+                "units": "cm/s",
+                "description": "Eastward component of surface current",
+            },
+            nc_scalar,
+        ],
+        "surface_curr_north": [
+            False,
+            "d",
+            {
+                "standard_name": "surface_northward_sea_water_velocity",
+                "units": "cm/s",
+                "description": "Northward component of surface current",
+            },
+            nc_scalar,
+        ],
+        "surface_curr_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the surface current values",
+            },
+            nc_scalar,
+        ],
+        "surface_curr_error": [
+            False,
+            "d",
+            {
+                "units": "m/s",
+                "description": "Expected error of surface drift current from GPS",
+            },
+            nc_scalar,
+        ],
+        "dissolved_oxygen_sat": [
+            "f",
+            "d",
+            {
+                "units": "micromoles/kg",
+                "description": "Calculated saturation value for oxygen given measured presure and corrected temperature, and salinity",
+            },
+            (nc_ctd_results_info,),
+        ],
+        # This variable is an alias to dive_number below; required for CF compliance.
+        "trajectory": [
+            False,
+            "i",
+            {
+                "description": "Dive number for observations",
+                "long_name": "Unique identifier for each feature instance",
+                "cf_role": "trajectory_id",
+            },
+            (nc_trajectory_info,),
+        ],
+        # Variables used in make_mission_timeseries() make_mission_profiles()
+        # These deliberately have nc_scalar for mdp_dim_info.  This is calculated and set by MMT and MMP
+        "dive_number": [
+            True,
+            "i",
+            {"description": "Dive number for given observation"},
+            nc_scalar,
+        ],
+        # make_mission_profile()
+        # over all the dives collected (nc_dim_dives)
+        "GPS2_lat": ["f", "d", {}, nc_scalar],
+        "GPS2_lon": ["f", "d", {}, nc_scalar],
+        "GPS2_time": ["f", "d", {}, nc_scalar],
+        "GPSEND_lat": ["f", "d", {}, nc_scalar],
+        "GPSEND_lon": ["f", "d", {}, nc_scalar],
+        "GPSEND_time": ["f", "d", {}, nc_scalar],
+        "mean_latitude": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "longitude",
+                "units": "degrees_north",
+                "description": "Mean latitude of the [D]",
+            },
+            nc_scalar,
+        ],
+        "mean_longitude": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "latitude",
+                "units": "degrees_east",
+                "description": "Mean longitude of the [D]",
+            },
+            nc_scalar,
+        ],
+        "mean_time": [
+            True,
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Mean time of the [D] in GMT epoch format",
+            },
+            nc_scalar,
+        ],
+        "deepest_sample_time": [
+            True,
+            "d",
+            {"description": "Time for the deepest sample in the given dive"},
+            nc_scalar,
+        ],
+        "obs_bin": [
+            "f",
+            "d",
+            {"description": "Number of CT observations for this bin"},
+            nc_scalar,
+        ],
+        # Mission profile variables
+        "year": [
+            True,
+            "i",
+            {"_FillValue": -1, "description": "Year of the [D]"},
+            nc_scalar,
+        ],
+        "month": [
+            True,
+            "i",
+            {
+                "_FillValue": -1,
+                "description": "Month of the year of the [D] - one based",
+            },
+            nc_scalar,
+        ],
+        "date": [
+            True,
+            "i",
+            {
+                "_FillValue": -1,
+                "description": "Month date of the month of the [D] - one based",
+            },
+            nc_scalar,
+        ],
+        "hour": [
+            True,
+            "i",
+            {
+                "_FillValue": -1,
+                "description": "Decimal hour of the day of the [D] - zero based",
+            },
+            nc_scalar,
+        ],  # BUG? why not mv:-1?
+        "dd": [
+            True,
+            "i",
+            {
+                "_FillValue": -1,
+                "description": "Decimal day of the year of the [D] - zero based",
+            },
+            nc_scalar,
+        ],  # BUG? why not mv:-1?
+        # must have same mdp_info as nc_sg_time_var, see MMP
+        "bin_time": [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "mean time for the bin in GMT epoch format",
+            },
+            (nc_sg_data_info,),
+        ],
+        "start_time": [
+            False,
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Starting time of the [D] in GMT epoch format",
+            },
+            nc_scalar,
+        ],
+        "end_time": [
+            False,
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Ending time of the [D] in GMT epoch format",
+            },
+            nc_scalar,
+        ],
+        "start_latitude": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "latitude",
+                "units": "degrees_north",
+                "description": "Starting latitude of the [D]",
+            },
+            nc_scalar,
+        ],
+        "end_latitude": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "longitude",
+                "units": "degrees_north",
+                "description": "Ending latitude of the [D]",
+            },
+            nc_scalar,
+        ],
+        "start_longitude": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "latitude",
+                "units": "degrees_east",
+                "description": "Starting longitude of the [D]",
+            },
+            nc_scalar,
+        ],
+        "end_longitude": [
+            "f",
+            "d",
+            {
+                "_FillValue": nc_nan,
+                "standard_name": "longitude",
+                "units": "degrees_east",
+                "description": "Ending longitude of the [D]",
+            },
+            nc_scalar,
+        ],
+    }
+
+    # Neither long_name nor standard_name are required (consumers just use the variable name instead) but it silences the compliance checker
+    ensure_long_names = (
+        False  # CF1.4 just a WARNING ensure compliance at the expense of space
+    )
+    after_static_check = False
+
+
+# Set globals on initial import
+set_globals()
 
 
 def register_sensor_dim_info(
@@ -769,2600 +3456,6 @@ def assign_dim_info_size(nc_info_d, dim_info, size):
     except KeyError:
         pass
     nc_info_d[dim_name] = size  # update
-
-
-# make_mission_profiles() writes all matricies with dimensions (profile,depth) based on included binned vectors
-nc_dim_profile = "profile"  # for make_mission_profiles()  matricies
-nc_dim_depth = "depth"  # for make_mission_profiles()  matricies
-
-# dimension for the accumulated scalars, one per included dive
-nc_dim_dives = "dive"  # for make_mission_timeseries() matricies
-
-# a dictionaary mapping from string length to a string dimension for reuse by the current file being written
-# callers reset this global for each new NC file you write
-nc_char_dims = {}
-nc_string_dim_format = "string_%d"  # was "STRING%d" per ARGO
-
-# Metadata for netCDF data
-# Fields are:
-#  0 - include in mission file
-#  1 - nc data type
-#  2 - dictionary of attribute names and values
-# The dictionary of attributes is arbitrary, but the commonly expected ones are:
-
-#   description - one line description of the variables
-
-#   units - units the variable is expressed in
-#      CF1.4 -- there are rules for composing units that must be followed
-#      CF1.4: units need to be SI and must follow the conventions found in:
-#      Prefixes:       http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-prefixes.xml
-#      Base units:     http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-base.xml
-#      Derived units:  http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-derived.xml
-#      Acceptable:     http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-accepted.xml
-#      Non-SI:         http://www.unidata.ucar.edu/software/udunits/udunits-2/udunits2-common.xml
-
-#   standard_name - the generally accepted oceangraphic name for this variable (that is, the netCDF name
-#                   may include instrument of origin details or other qualifiers)
-#   standard_name values are constrained by CF1.4; see the table. otherwise use 'long_name' if you must
-#   ONLY use standard_value for the main variables you want oceanographers to use
-#   e.g., see salinity_raw (long_name) and salinity (standard_name: sea_water_salinity)
-#   http://cf-pcmdi.llnl.gov/documents/cf-standard-names/standard-name-table/14/cf-standard-name-table.html
-
-# NOTE: if you change the format of the table, don't forget to update the metadata in ./Sensors modules
-
-# Constraints:
-# - Always add a default type, even though we try to infer from values if given
-# - All qc variables should declare their type as nc_qc_type (see comment in QC.py) and should declare units,
-#        if necessary, as 'qc_flag' for compliance conversion
-# - Do NOT use 'missing_value', which is deprecated in CF1.4 (but NOT CF1.5, sigh); use '_FillValue' for missing or undefined values
-#   add _FillValue only if some data points are truely missing, e.g., unsampled or based on unsampled data
-#   NOTE: _FillValue are handled differently for different vectors and then for only a few of them
-#   all variables used in timeseries (include in mission file == True or with [D] and [P] in description string) should have an appropriate _FillValue
-# - timeseries code assumes all variables declared for inclusion will *always* be present in processed dives, even if just filled with _FillValue
-
-nc_var_metadata = {
-    # The platform variable; NODC requires the name 'glider'
-    "glider": [False, "c", {"nodc_name": "glider"}, nc_scalar],
-    "sg_cal_id_str": [
-        False,
-        "c",
-        {"description": "Three digit vehicle identification string"},
-        nc_scalar,
-    ],
-    "sg_cal_mission_title": [
-        False,
-        "c",
-        {"description": "Description of mission"},
-        nc_scalar,
-    ],
-    # Normally a number but we require it as a string
-    # Typically has the form: a8xxnnnn where a is some region indicator (where launched)
-    # Can be preceded with Q (hence the string requirement) if the data might go to TESAC
-    "sg_cal_wmo_id": [
-        False,
-        "c",
-        {"description": "The WMO id assigned to this deployment"},
-        nc_scalar,
-    ],
-    # motor limits and rates (UNUSED--look at $PITCH_MAX, etc...)
-    # These are never used but we have them here to record them without complaint from legacy sg_calib_constants.m files
-    "sg_cal_pitch_max_cnts": [False, "i", {}, nc_scalar],
-    "sg_cal_pitch_min_cnts": [False, "i", {}, nc_scalar],
-    "sg_cal_roll_max_cnts": [False, "i", {}, nc_scalar],
-    "sg_cal_roll_min_cnts": [False, "i", {}, nc_scalar],
-    "sg_cal_vbd_cnts_per_cc": [False, "d", {}, nc_scalar],
-    "sg_cal_vbd_max_cnts": [False, "i", {}, nc_scalar],
-    "sg_cal_vbd_min_cnts": [False, "i", {}, nc_scalar],
-    "sg_cal_pump_rate_intercept": [False, "d", {}, nc_scalar],
-    "sg_cal_pump_rate_slope": [False, "d", {}, nc_scalar],
-    "sg_cal_pump_power_intercept": [False, "d", {}, nc_scalar],
-    "sg_cal_pump_power_slope": [False, "d", {}, nc_scalar],
-    # buoyancy parameters
-    "sg_cal_volmax": [
-        False,
-        "d",
-        {"description": "Maximum displaced volume of the glider", "units": "m^3"},
-        nc_scalar,
-    ],
-    # DEAD 'sg_cal_vbd_change_rate' : [False, 'd', {'description':'Buoyancy loss rate of vehicle during deployment', 'units':'cc/day'}, nc_scalar],
-    "sg_cal_mass": [
-        False,
-        "d",
-        {"description": "Mass of the glider", "units": "kg"},
-        nc_scalar,
-    ],
-    "sg_cal_mass_comp": [
-        False,
-        "d",
-        {"description": "Mass of the compressee", "units": "kg"},
-        nc_scalar,
-    ],
-    "sg_cal_abs_compress": [
-        False,
-        "d",
-        {"description": "SG vehicle compressibility", "units": "cc/dbar"},
-        nc_scalar,
-    ],
-    "sg_cal_therm_expan": [
-        False,
-        "d",
-        {"description": "SG thermal expansion coeff", "units": "cc/degrees_Celsius"},
-        nc_scalar,
-    ],
-    "sg_cal_temp_ref": [
-        False,
-        "d",
-        {
-            "description": "Reference temperature for SG thermal expansion calculation",
-            "units": "degrees_Celsius",
-        },
-        nc_scalar,
-    ],
-    # hydrodynamic parameters
-    "sg_cal_rho0": [
-        False,
-        "d",
-        {
-            "description": "Typical expected density of seawater for this deployment",
-            "units": "kg/m^3",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_hd_a": [
-        False,
-        "d",
-        {
-            "description": "Hydrodynamic lift factor for given hull shape (1/degrees of attack angle)"
-        },
-        nc_scalar,
-    ],
-    "sg_cal_hd_b": [
-        False,
-        "d",
-        {"description": "Hydrodynamic drag factor for given hull shape (Pa^(-1/4))"},
-        nc_scalar,
-    ],
-    "sg_cal_hd_c": [
-        False,
-        "d",
-        {
-            "description": "Hydrodynamic induced drag factor for given hull shape (1/radians^2 of attack angle)"
-        },
-        nc_scalar,
-    ],
-    "sg_cal_hd_s": [
-        False,
-        "d",
-        {
-            "units": "fraction",
-            "description": "How the drag scales by shape (-1/4 for SG per Eriksen, et al.)",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_solve_flare_apogee_speed": [
-        False,
-        "i",
-        {
-            "description": "Whether to solve for accelerated speeds during flare and apogee"
-        },
-        nc_scalar,
-    ],
-    # Sparton compass pitch and roll coeffients, used to invert correction if desired
-    "sg_cal_sparton_pitch0": [False, "d", {}, nc_scalar],
-    "sg_cal_sparton_pitch1": [False, "d", {}, nc_scalar],
-    "sg_cal_sparton_pitch2": [False, "d", {}, nc_scalar],
-    "sg_cal_sparton_pitch3": [False, "d", {}, nc_scalar],
-    # Currently we do not adjust roll but record the parameters if they want...
-    "sg_cal_sparton_roll0": [False, "d", {}, nc_scalar],
-    "sg_cal_sparton_roll1": [False, "d", {}, nc_scalar],
-    "sg_cal_sparton_roll2": [False, "d", {}, nc_scalar],
-    "sg_cal_sparton_roll3": [False, "d", {}, nc_scalar],
-    # SBECT 41 coefficients
-    "sg_cal_calibcomm": [False, "c", {}, nc_scalar],
-    "sg_cal_c_g": [False, "d", {}, nc_scalar],
-    "sg_cal_c_h": [False, "d", {}, nc_scalar],
-    "sg_cal_c_i": [False, "d", {}, nc_scalar],
-    "sg_cal_c_j": [False, "d", {}, nc_scalar],
-    "sg_cal_cpcor": [
-        False,
-        "d",
-        {
-            "description": "Nominal compression factor of conductivity tube with pressure"
-        },
-        nc_scalar,
-    ],
-    "sg_cal_ctcor": [
-        False,
-        "d",
-        {
-            "description": "Nominal thermal expansion factor of a cube of boro-silicate glass"
-        },
-        nc_scalar,
-    ],
-    "sg_cal_sbe_cond_freq_max": [
-        False,
-        "d",
-        {
-            "description": "SBE41 maximum permitted conductivity frequency",
-            "units": "Hz",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_sbe_cond_freq_min": [
-        False,
-        "d",
-        {
-            "description": "SBE41 minimum permitted conductivity frequency",
-            "units": "Hz",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_t_g": [False, "d", {}, nc_scalar],
-    "sg_cal_t_h": [False, "d", {}, nc_scalar],
-    "sg_cal_t_i": [False, "d", {}, nc_scalar],
-    "sg_cal_t_j": [False, "d", {}, nc_scalar],
-    "sg_cal_sbe_temp_freq_max": [
-        False,
-        "d",
-        {"description": "SBE41 maximum permitted temperature frequency", "units": "Hz"},
-        nc_scalar,
-    ],
-    "sg_cal_sbe_temp_freq_min": [
-        False,
-        "d",
-        {"description": "SBE41 minimum permitted temperature frequency", "units": "Hz"},
-        nc_scalar,
-    ],
-    # User-specified adjustments to raw data, if any
-    "sg_cal_cond_bias": [
-        False,
-        "d",
-        {"units": "mS/cm", "description": " Conductivity bias"},
-        nc_scalar,
-    ],
-    "sg_cal_depth_bias": [
-        False,
-        "d",
-        {"units": "meters", "description": "Depth bias of pressure sensor"},
-        nc_scalar,
-    ],
-    "sg_cal_depth_slope_correction": [
-        False,
-        "d",
-        {
-            "description": "Correction factor to apply to truck depth to compensate for data with incorrect pressure slope"
-        },
-        nc_scalar,
-    ],
-    "sg_cal_pitchbias": [
-        False,
-        "d",
-        {"units": "degrees", "description": "Pitch sensor bias"},
-        nc_scalar,
-    ],
-    "sg_cal_rollbias": [
-        False,
-        "d",
-        {"units": "degrees", "description": "Roll sensor bias"},
-        nc_scalar,
-    ],
-    "sg_cal_temp_bias": [
-        False,
-        "d",
-        {"units": "degrees_Celsius", "description": "Temperature bias"},
-        nc_scalar,
-    ],
-    "sg_cal_vbdbias": [
-        False,
-        "d",
-        {"units": "cc", "description": "VBD bias"},
-        nc_scalar,
-    ],
-    "sg_cal_min_stall_speed": [
-        False,
-        "d",
-        {
-            "units": "cm/s",
-            "description": "Minimum likely speed for vehicle, else stalled",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_max_stall_speed": [
-        False,
-        "d",
-        {
-            "units": "cm/s",
-            "description": "Maximum likely speed for vehicle, else stalled",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_min_stall_angle": [
-        False,
-        "d",
-        {"units": "degrees", "description": "Minimum flight angle, else stalled"},
-        nc_scalar,
-    ],
-    "sg_cal_sg_configuration": [
-        False,
-        "i",
-        {"description": "The general configuration of the glider"},
-        nc_scalar,
-    ],
-    # Cell interior geometry
-    "sg_cal_sg_ct_geometry": [
-        False,
-        "i",
-        {"description": "The geometry of the CT sensor itself"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_x_T": [
-        False,
-        "d",
-        {"description": "Cell mouth to thermistor x offset", "units": "meters"},
-        nc_scalar,
-    ],  # relative to center of cell mount
-    "sg_cal_sbect_z_T": [
-        False,
-        "d",
-        {"description": "Cell mouth to thermistor z offset", "units": "meters"},
-        nc_scalar,
-    ],  # relative to center of cell mount
-    "sg_cal_sbect_x_m": [
-        False,
-        "d",
-        {"description": "Length of mouth portion of cell", "units": "meters"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_r_m": [
-        False,
-        "d",
-        {"description": "Radius of mouth portion of cell", "units": "meters"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_cell_length": [
-        False,
-        "d",
-        {
-            "units": "meters",
-            "description": "Combined length of the 2 narrow (sample) portions of cell",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_sbect_r_n": [
-        False,
-        "d",
-        {"units": "meters", "description": "Radius of narrow portion of cell"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_r_w": [
-        False,
-        "d",
-        {"units": "meters", "description": "Radius of wide portion of cell"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_x_w": [
-        False,
-        "d",
-        {"units": "meters", "description": "Length of wide portion of cell"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_C_d0": [
-        False,
-        "d",
-        {"description": "Measured cell drag coefficient"},
-        nc_scalar,
-    ],  # (1.2 for the original SG cell mount before SG105, 2.4 for new style)
-    # Cell type and response factors
-    "sg_cal_sg_ct_type": [
-        False,
-        "i",
-        {
-            "units": "flag",
-            "description": "The type of CT sensor (original, gun, pumped)",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_sbect_unpumped": [
-        False,
-        "i",
-        {"units": "flag", "description": "Whether the CTD is pumped or not"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_tau_T": [
-        False,
-        "d",
-        {"units": "seconds", "description": "Thermistor response (from Seabird)"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_gpctd_tau_1": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Time delay between thermistor and mouth of conductivity tube in pumped CTD",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_sbect_gpctd_u_f": [
-        False,
-        "d",
-        {"units": "cm/s", "description": "Tube flow speed for continuous pumped CTD"},
-        nc_scalar,
-    ],
-    "sg_cal_sbe_cond_freq_offset": [
-        False,
-        "d",
-        {"units": "Hz", "description": "Conductivity frequency offset"},
-        nc_scalar,
-    ],
-    "sg_cal_sbe_temp_freq_offset": [
-        False,
-        "d",
-        {"units": "Hz", "description": "Temperature frequency offset"},
-        nc_scalar,
-    ],
-    # Non-modal correction (DEAD)
-    # TODO: maintain this definition but declare it dead so we can read it from old files but drop it in new files
-    # Add 'DEAD' tag to metadata with first version no longer supporting it. If dead, return none from create_nc_var() immediately.
-    # TODO: add PCor to sbe43_ext.py and declare DEAD, remove code in MDP::load_dive_profile_data()
-    "sg_cal_sbect_tau_w_min": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Minimum thermal response time of the glass/epoxy tube",
-        },
-        nc_scalar,
-    ],  # DEAD UNUSED
-    "sg_cal_sbect_u_r": [
-        False,
-        "d",
-        {"units": "m/s", "description": "Thermal inertia response rolloff speed "},
-        nc_scalar,
-    ],  # DEAD UNUSED
-    # Modal correction
-    "sg_cal_sbect_modes": [
-        False,
-        "i",
-        {"description": "Number of modes to use for thermal-inertia correction"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_inlet_bl_factor": [
-        False,
-        "d",
-        {"description": "Scale factor for inlet boundary layer formation"},
-        nc_scalar,
-    ],
-    "sg_cal_sbect_Nu_0i": [
-        False,
-        "d",
-        {
-            "description": "Scale factor for unmodeled flow disruption to interior flow Biot number"
-        },
-        nc_scalar,
-    ],
-    "sg_cal_sbect_Nu_0e": [
-        False,
-        "d",
-        {
-            "description": "Scale factor for unmodeled flow disruption to exterior flow Biot number"
-        },
-        nc_scalar,
-    ],
-    # Cell installation geometry wrt pressure sensor
-    "sg_cal_sg_sensor_geometry": [
-        False,
-        "i",
-        {"description": "How the CT is mounted with respect to the SG pressure sensor"},
-        nc_scalar,
-    ],
-    "sg_cal_glider_xT": [
-        False,
-        "d",
-        {"description": "Glider x coord of thermistor tip", "units": "meters"},
-        nc_scalar,
-    ],
-    "sg_cal_glider_zT": [
-        False,
-        "d",
-        {"description": "Glider z coord of thermistor tip", "units": "meters"},
-        nc_scalar,
-    ],
-    "sg_cal_glider_xP": [
-        False,
-        "d",
-        {"description": "Glider x coord of pressure gauge", "units": "meters"},
-        nc_scalar,
-    ],  # to center of pressure gauge
-    "sg_cal_glider_zP": [
-        False,
-        "d",
-        {"description": "Glider z coord of pressure gauge", "units": "meters"},
-        nc_scalar,
-    ],  # to center of pressure gauge
-    "sg_cal_sg_vehicle_geometry": [
-        False,
-        "i",
-        {"description": "Various size measurements of the vehicle itself"},
-        nc_scalar,
-    ],
-    "sg_cal_glider_length": [
-        False,
-        "d",
-        {
-            "description": "Length of standard glider body (not including antenna mast)",
-            "units": "meters",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_glider_interstitial_volume": [
-        False,
-        "d",
-        {
-            "description": "SG interstitial volume between fairing and hull",
-            "units": "m^3",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_glider_interstitial_length": [
-        False,
-        "d",
-        {"description": "SG equivalent interstitial pipe length", "units": "meters"},
-        nc_scalar,
-    ],  #
-    "sg_cal_glider_r_en": [
-        False,
-        "d",
-        {"description": "Nose entry hole radius", "units": "meters"},
-        nc_scalar,
-    ],  # hole size
-    "sg_cal_glider_wake_entry_thickness": [
-        False,
-        "d",
-        {"description": "Wake entry region thickness", "units": "meters"},
-        nc_scalar,
-    ],
-    "sg_cal_glider_vol_wake": [
-        False,
-        "d",
-        {"description": "Attached wake volume", "units": "m^3"},
-        nc_scalar,
-    ],
-    "sg_cal_glider_r_fair": [
-        False,
-        "d",
-        {"description": "Maximum radius of fairing", "units": "meters"},
-        nc_scalar,
-    ],
-    # Parameters that control standard QC tests
-    "sg_cal_QC_temp_max": [
-        False,
-        "d",
-        {"units": "degrees_Celsius", "description": "Maximum allowable temperature"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_temp_min": [
-        False,
-        "d",
-        {"units": "degrees_Celsius", "description": "Minimum allowable temperature"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_temp_spike_depth": [
-        False,
-        "d",
-        {"units": "meters", "description": "Depth for deep temperature spike test"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_temp_spike_deep": [
-        False,
-        "d",
-        {
-            "units": "degrees_Celsius/meter",
-            "description": "Allowable temperature spike in deep water",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_temp_spike_shallow": [
-        False,
-        "d",
-        {
-            "units": "degrees_Celsius/meter",
-            "description": "Allowable temperature spike in shallow deep water",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_temp_gradient_depth": [
-        False,
-        "d",
-        {"units": "meters", "description": "Depth for deep temperature gradient test"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_temp_gradient_deep": [
-        False,
-        "d",
-        {
-            "units": "degrees_Celsius/meter",
-            "description": "Allowable temperature gradient in deep water",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_temp_gradient_shallow": [
-        False,
-        "d",
-        {
-            "units": "degrees_Celsius/meter",
-            "description": "Allowable temperature gradient in shallow water",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_cond_max": [
-        False,
-        "d",
-        {"units": "mS/cm", "description": "Maximum conductivity value"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_cond_min": [
-        False,
-        "d",
-        {"units": "mS/cm", "description": "Minimum conductivity value"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_cond_spike_depth": [
-        False,
-        "d",
-        {"units": "meters", "description": "Depth for deep conductivity spike test"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_cond_spike_deep": [
-        False,
-        "d",
-        {
-            "units": "mS/cm/m",
-            "description": "Allowable conductivity spike in deep water",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_cond_spike_shallow": [
-        False,
-        "d",
-        {
-            "units": "mS/cm/m",
-            "description": "Allowable conductivity spike in shallow deep water",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_salin_max": [
-        False,
-        "d",
-        {"units": "PSU", "description": "Maximum salinity value (PSU)"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_salin_min": [
-        False,
-        "d",
-        {"units": "PSU", "description": "Minimum salinity value (PSU)"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_salin_spike_depth": [
-        False,
-        "d",
-        {"units": "meters", "description": "Depth for deep salinity spike test"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_salin_spike_deep": [
-        False,
-        "d",
-        {"units": "PSU/meter", "description": "Allowable salinity spike in deep water"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_salin_spike_shallow": [
-        False,
-        "d",
-        {
-            "units": "PSU/meter",
-            "description": "Allowable salinity spike in shallow deep water (PSU/meter)",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_salin_gradient_depth": [
-        False,
-        "d",
-        {"units": "meters", "description": "Depth for deep salinity gradient test"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_salin_gradient_deep": [
-        False,
-        "d",
-        {
-            "units": "PSU/meter",
-            "description": "Allowable salinity gradient in deep water (PSU/meter)",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_salin_gradient_shallow": [
-        False,
-        "d",
-        {
-            "units": "PSU/meter",
-            "description": "Allowable salinity gradient in shallow water (PSU/meter)",
-        },
-        nc_scalar,
-    ],
-    "sg_cal_QC_overall_ctd_percentage": [
-        False,
-        "d",
-        {"description": "Maximum fraction of CTD data that can be QC_BAD"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_overall_speed_percentage": [
-        False,
-        "d",
-        {"description": "Maximum fraction of CTD data that can be QC_BAD"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_bound_action": [
-        False,
-        "i",
-        {"description": "What QC to assert when a bound is exceeded"},
-        nc_scalar,
-    ],
-    "sg_cal_QC_spike_action": [
-        False,
-        "i",
-        {"description": "What QC to assert when a spike is detected"},
-        nc_scalar,
-    ],
-    "sg_cal_GPS_position_error": [
-        False,
-        "d",
-        {"units": "meters", "description": "Assumed error of GPS fixes"},
-        nc_scalar,
-    ],
-    "sg_cal_use_auxpressure": [
-        False,
-        "i",
-        {"description": "Whether to use aux pressure sensor data"},
-        nc_scalar,
-    ],
-    "sg_cal_use_auxcompass": [
-        False,
-        "i",
-        {"description": "Whether to use aux compass sensor data"},
-        nc_scalar,
-    ],
-    "sg_cal_use_adcppressure": [
-        False,
-        "i",
-        {
-            "description": "Whether to use the adcp pressure sensor over the truck pressure"
-        },
-        nc_scalar,
-    ],
-    "sg_cal_sbe_cond_freq_C0": [
-        False,
-        "d",
-        {"description": "Conductivity zero frequency"},
-        nc_scalar,
-    ],
-    # Legato corrections
-    "sg_cal_legato_time_lag": [
-        False,
-        "d",
-        {"description": ""},
-        nc_scalar,
-    ],
-    "sg_cal_legato_alpha": [
-        False,
-        "d",
-        {"description": ""},
-        nc_scalar,
-    ],
-    "sg_cal_legato_tau": [
-        False,
-        "d",
-        {"description": "Thermister response"},
-        nc_scalar,
-    ],
-    "sg_cal_legato_ctcoeff": [
-        False,
-        "d",
-        {"description": ""},
-        nc_scalar,
-    ],
-    "sg_cal_legato_use_truck_pressure": [
-        False,
-        "d",
-        {
-            "description": "Use the seaglider's pressure trace for ctd corrections (non-zero). Use the legato's pressure trace for ctd corrections (zero)."
-        },
-        nc_scalar,
-    ],
-    "sg_cal_legato_cond_press_correction": [
-        False,
-        "d",
-        {
-            "description": "Early legato units required a conductivity correction based on pressure (non-zero).  Later units do this onboard (zero)."
-        },
-        nc_scalar,
-    ],
-    # log file header values
-    "log_version": [
-        False,
-        "d",
-        {"description": "Version of glider software"},
-        nc_scalar,
-    ],
-    "log_glider": [False, "i", {"description": "Glider three digit id"}, nc_scalar],
-    "log_mission": [False, "i", {"description": "Mission number"}, nc_scalar],
-    "log_dive": [False, "i", {"description": "Dive number"}, nc_scalar],
-    "log_start": [False, "d", {"description": "Dive start time"}, nc_scalar],
-    # log file parameters (alphabetically)
-    # as a rule control and AD parameters are 'i' type, strings are 'c' and the rest should be 'd'
-    # even times and depths
-    "log_10V_AH": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_24V_AH": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_MAXI_10V": [False, "d", {}, nc_scalar],
-    "log_MAXI_24V": [False, "d", {}, nc_scalar],
-    "log_AD7714Ch0Gain": [False, "i", {}, nc_scalar],
-    "log_AH0_10V": [False, "d", {}, nc_scalar],
-    "log_AH0_24V": [False, "d", {}, nc_scalar],
-    "log_ALTIM_BOTTOM_PING": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_ALTIM_BOTTOM_PING_RANGE": [False, "d", {}, nc_scalar],
-    "log_ALTIM_BOTTOM_TURN_MARGIN": [False, "d", {}, nc_scalar],
-    "log_ALTIM_FREQUENCY": [False, "d", {}, nc_scalar],
-    "log_ALTIM_PING_DELTA": [False, "d", {}, nc_scalar],
-    "log_ALTIM_PING_DEPTH": [False, "d", {}, nc_scalar],
-    "log_ALTIM_PING_N": [False, "d", {}, nc_scalar],
-    "log_ALTIM_PING_FIT": [False, "d", {}, nc_scalar],
-    "log_ALTIM_PULSE": [False, "d", {}, nc_scalar],
-    "log_ALTIM_SENSITIVITY": [False, "d", {}, nc_scalar],
-    "log_ALTIM_TOP_MIN_OBSTACLE": [False, "d", {}, nc_scalar],
-    "log_ALTIM_TOP_PING": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_ALTIM_TOP_PING_RANGE": [False, "d", {}, nc_scalar],
-    "log_ALTIM_TOP_TURN_MARGIN": [False, "d", {}, nc_scalar],
-    "log_APOGEE_PITCH": [False, "d", {}, nc_scalar],
-    "log_CALL_NDIVES": [False, "i", {}, nc_scalar],
-    "log_CALL_TRIES": [False, "i", {}, nc_scalar],
-    "log_CALL_WAIT": [False, "i", {}, nc_scalar],
-    "log_CAPMAXSIZE": [False, "i", {}, nc_scalar],
-    "log_CAPUPLOAD": [False, "i", {}, nc_scalar],
-    "log_CAP_FILE_SIZE": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_CF8_MAXERRORS": [False, "i", {}, nc_scalar],
-    "log_CFSIZE": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_COMM_SEQ": [False, "i", {}, nc_scalar],
-    "log_COMPASS2_DEVICE": [False, "d", {}, nc_scalar],
-    "log_COMPASS_DEVICE": [False, "d", {}, nc_scalar],
-    "log_COMPASS_USE": [False, "i", {}, nc_scalar],
-    "log_COURSE_BIAS": [False, "d", {}, nc_scalar],
-    "log_CURRENT": [False, "c", {}, nc_scalar],
-    "log_CT_PROFILE": [False, None, {}, nc_scalar],
-    "log_CT_RECORDABOVE": [False, None, {}, nc_scalar],
-    "log_CT_XMITABOVE": [False, None, {}, nc_scalar],
-    "log_C_PITCH": [False, "i", {}, nc_scalar],
-    "log_C_PITCH_AUTO_DELTA": [False, "d", {}, nc_scalar],
-    "log_C_PITCH_AUTO_MAX": [False, "d", {}, nc_scalar],
-    "log_C_ROLL_CLIMB": [False, "d", {}, nc_scalar],
-    "log_C_ROLL_DIVE": [False, "d", {}, nc_scalar],
-    "log_C_VBD": [False, "i", {}, nc_scalar],
-    "log_C_VBD_AUTO_DELTA": [False, "i", {}, nc_scalar],
-    "log_C_VBD_AUTO_MAX": [False, "i", {}, nc_scalar],
-    "log_DATA_FILE_SIZE": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_DBDW": [False, "d", {}, nc_scalar],
-    "log_DEEPGLIDER": [False, "i", {}, nc_scalar],
-    "log_DEEPGLIDERMB": [False, "i", {}, nc_scalar],
-    "log_DEVICE1": [False, "d", {}, nc_scalar],
-    "log_DEVICE2": [False, "d", {}, nc_scalar],
-    "log_DEVICE3": [False, "d", {}, nc_scalar],
-    "log_DEVICE4": [False, "d", {}, nc_scalar],
-    "log_DEVICE5": [False, "d", {}, nc_scalar],
-    "log_DEVICE6": [False, "d", {}, nc_scalar],
-    "log_DEVICES": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_DEVICE_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_DEVICE_MAX_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_DEVICE_SECS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_DIVE": [False, "i", {}, nc_scalar],
-    "log_D_ABORT": [False, "d", {}, nc_scalar],
-    "log_D_BOOST": [False, "d", {}, nc_scalar],
-    "log_D_CALL": [False, "d", {}, nc_scalar],
-    "log_D_FINISH": [False, "d", {}, nc_scalar],
-    "log_D_FLARE": [False, "d", {}, nc_scalar],
-    "log_D_GRID": [False, "d", {}, nc_scalar],
-    "log_D_NO_BLEED": [False, "d", {}, nc_scalar],
-    "log_D_OFFGRID": [False, "d", {}, nc_scalar],
-    "log_D_PITCH": [False, "d", {}, nc_scalar],
-    "log_D_SAFE": [False, "d", {}, nc_scalar],
-    "log_D_SURF": [False, "d", {}, nc_scalar],
-    "log_D_TGT": [False, "d", {}, nc_scalar],
-    "log_EOP_CODE": [False, "c", {}, nc_scalar],
-    "log_ERRORS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_ESCAPE_HEADING": [False, "d", {}, nc_scalar],
-    "log_ESCAPE_HEADING_DELTA": [False, "d", {}, nc_scalar],
-    "log_ESCAPE_REASON": [False, "c", {}, nc_scalar],
-    "log_ESCAPE_STARTED_DIVE": [False, "d", {}, nc_scalar],
-    "log_FERRY_MAX": [False, "d", {}, nc_scalar],
-    "log_FG_AHR_10V": [False, "d", {}, nc_scalar],
-    "log_FG_AHR_10Vo": [False, "d", {}, nc_scalar],
-    "log_FG_AHR_24V": [False, "d", {}, nc_scalar],
-    "log_FG_AHR_24Vo": [False, "d", {}, nc_scalar],
-    "log_FILEMGR": [False, "i", {}, nc_scalar],
-    "log_FINISH": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_FINISH1": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_FINISH2": [False, "d", {}, nc_scalar],
-    "log_FIX_MISSING_TIMEOUT": [False, "d", {}, nc_scalar],
-    "log_FREEZE": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_GCHEAD": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_GLIDE_SLOPE": [False, "d", {}, nc_scalar],
-    "log_GPS": [
-        False,
-        "c",
-        {
-            "description": "String reported in logfile for GPS fix (first surface position after dive)"
-        },
-        nc_scalar,
-    ],
-    "log_GPS1": [
-        False,
-        "c",
-        {
-            "description": "String reported in logfile for GPS1 fix (first surface position before dive)"
-        },
-        nc_scalar,
-    ],
-    "log_GPS2": [
-        False,
-        "c",
-        {
-            "description": "String reported in logfile for GPS2 fix (last surface position before dive)"
-        },
-        nc_scalar,
-    ],
-    "log_GPS_DEVICE": [False, "d", {}, nc_scalar],
-    "log_HD_A": [
-        False,
-        "d",
-        {
-            "description": "Hydrodynamic lift factor for given hull shape (1/degrees of attack angle)"
-        },
-        nc_scalar,
-    ],
-    "log_HD_B": [
-        False,
-        "d",
-        {"description": "Hydrodynamic drag factor for given hull shape (Pa^(-1/4))"},
-        nc_scalar,
-    ],
-    "log_HD_C": [
-        False,
-        "d",
-        {
-            "description": "Hydrodynamic induced drag factor for given hull shape (1/degrees^2 of attack angle)"
-        },
-        nc_scalar,
-    ],
-    "log_HEADING": [False, "d", {}, nc_scalar],
-    "log_HEAD_ERRBAND": [False, "d", {}, nc_scalar],
-    "log_HEAPDBG": [False, "i", {}, nc_scalar],
-    "log_HUMID": [False, "d", {}, nc_scalar],
-    "log_ICE_FREEZE_MARGIN": [False, "d", {}, nc_scalar],
-    "log_ID": [False, "i", {}, nc_scalar],
-    "log_IMPLIED_C_PITCH": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_IMPLIED_C_VBD": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_INTERNAL_PRESSURE": [False, "d", {}, nc_scalar],
-    "log_INT_PRESSURE_SLOPE": [False, "d", {}, nc_scalar],
-    "log_INT_PRESSURE_YINT": [False, "d", {}, nc_scalar],
-    "log_IRIDIUM_FIX": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_IRON": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_KALMAN_ARGS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_KALMAN_CONTROL": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_KALMAN_USE": [False, "i", {}, nc_scalar],
-    "log_KALMAN_X": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_KALMAN_Y": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_KERMIT": [False, "i", {}, nc_scalar],
-    "log_LOGGERDEVICE1": [False, "d", {}, nc_scalar],
-    "log_LOGGERDEVICE2": [False, "d", {}, nc_scalar],
-    "log_LOGGERDEVICE3": [False, "d", {}, nc_scalar],
-    "log_LOGGERDEVICE4": [False, "d", {}, nc_scalar],
-    "log_LOGGERS": [False, "d", {}, nc_scalar],
-    "log_LOITER_D_NO_PUMP": [False, "d", {}, nc_scalar],
-    "log_LOITER_DBDW": [False, "d", {}, nc_scalar],
-    "log_LOITER_W_DBAND": [False, "d", {}, nc_scalar],
-    "log_LOITER_D_TOP": [False, "d", {}, nc_scalar],
-    "log_LOITER_D_BOTTOM": [False, "d", {}, nc_scalar],
-    "log_LOITER_N_DIVE": [False, "d", {}, nc_scalar],
-    "log_MAGCAL": [False, "c", {}, nc_scalar],
-    "log_MAGERROR": [False, "d", {}, nc_scalar],
-    "log_MASS": [False, "d", {}, nc_scalar],
-    "log_MASS_COMP": [False, "d", {}, nc_scalar],
-    "log_MAX_BUOY": [False, "d", {}, nc_scalar],
-    #'log_MEM' : [False, 'd', {}, nc_scalar],
-    "log_MEM": [
-        False,
-        "c",
-        {},
-        nc_scalar,
-    ],  # Multi-valued string for version 67.00 and later
-    "log_MEM0": [
-        False,
-        "c",
-        {},
-        nc_scalar,
-    ],  # Multi-valued string for version 67.00 and later
-    "log_MEM1": [
-        False,
-        "c",
-        {},
-        nc_scalar,
-    ],  # Multi-valued string for version 67.00 and later
-    "log_MEM2": [
-        False,
-        "c",
-        {},
-        nc_scalar,
-    ],  # Multi-valued string for version 67.00 and later
-    "log_MHEAD_RNG_PITCHd_Wd": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_MINV_10V": [False, "d", {}, nc_scalar],
-    "log_MINV_24V": [False, "d", {}, nc_scalar],
-    "log_MISSION": [False, "i", {}, nc_scalar],
-    "log_MOTHERBOARD": [False, "i", {}, nc_scalar],
-    "log_NAV_DEVICE": [False, "i", {}, nc_scalar],
-    "log_NAV2_DEVICE": [False, "i", {}, nc_scalar],
-    "log_NAV3_DEVICE": [False, "i", {}, nc_scalar],
-    "log_NAV4_DEVICE": [False, "i", {}, nc_scalar],
-    "log_NAV_MODE": [False, "i", {}, nc_scalar],
-    "log_N_FILEKB": [False, "i", {}, nc_scalar],
-    "log_N_GPS": [False, "i", {}, nc_scalar],
-    "log_N_NOCOMM": [False, "i", {}, nc_scalar],
-    "log_N_NOSURFACE": [False, "i", {}, nc_scalar],
-    "log_N_DIVES": [False, "i", {}, nc_scalar],
-    "log_NET": [False, "c", {}, nc_scalar],
-    "log_NETWORK_DEVICE": [False, "c", {}, nc_scalar],
-    "log_NOCOMM_ACTION": [False, "i", {}, nc_scalar],
-    "log_PHONE_DEVICE": [False, "d", {}, nc_scalar],
-    "log_PHONE_SUPPLY": [False, "i", {}, nc_scalar],
-    "log_OPTIONS": [False, "i", {}, nc_scalar],
-    "log_PITCH_ADJ_DBAND": [False, "d", {}, nc_scalar],
-    "log_PITCH_ADJ_GAIN": [False, "d", {}, nc_scalar],
-    "log_PITCH_AD_RATE": [False, "d", {}, nc_scalar],
-    "log_PITCH_CNV": [False, "d", {}, nc_scalar],
-    "log_PITCH_DBAND": [False, "d", {}, nc_scalar],
-    "log_PITCH_GAIN": [False, "d", {}, nc_scalar],
-    "log_PITCH_GAIN_AUTO_DELTA": [False, "d", {}, nc_scalar],
-    "log_PITCH_GAIN_AUTO_MAX": [False, "d", {}, nc_scalar],
-    "log_PITCH_MAX": [False, "d", {}, nc_scalar],
-    "log_PITCH_MAXERRORS": [False, "i", {}, nc_scalar],
-    "log_PITCH_MIN": [False, "i", {}, nc_scalar],
-    "log_PITCH_TIMEOUT": [False, "d", {}, nc_scalar],
-    "log_PITCH_VBD_SHIFT": [False, "d", {}, nc_scalar],
-    "log_PITCH_W_DBAND": [False, "d", {}, nc_scalar],
-    "log_PITCH_W_GAIN": [False, "d", {}, nc_scalar],
-    "log_PRESSURE_DEVICE": [False, "c", {}, nc_scalar],
-    "log_PRESSURE_SLOPE": [False, "d", {}, nc_scalar],
-    "log_PRESSURE_YINT": [False, "d", {}, nc_scalar],
-    "log_PROTOCOL": [False, "i", {}, nc_scalar],
-    "log_P_OVSHOOT": [False, "d", {}, nc_scalar],
-    "log_P_OVSHOOT_WITHG": [False, "d", {}, nc_scalar],
-    "log_RAFOS_CLK": [False, "d", {}, nc_scalar],
-    "log_RAFOS_CORR_THRESH": [False, "d", {}, nc_scalar],
-    "log_RAFOS_DEVICE": [False, "d", {}, nc_scalar],
-    "log_RAFOS_FIX": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_RAFOS_HIT_WINDOW": [False, "d", {}, nc_scalar],
-    "log_RAFOS_PEAK_OFFSET": [False, "d", {}, nc_scalar],
-    "log_RAFOS_MMODEM": [False, "d", {}, nc_scalar],
-    "log_NETBOX": [False, "i", {}, nc_scalar],
-    "log_RELAUNCH": [False, "i", {}, nc_scalar],
-    "log_RECOV_CODE": [False, "c", {}, nc_scalar],
-    "log_RESTART_TIME": [False, "c", {}, nc_scalar],
-    "log_RHO": [
-        False,
-        "d",
-        {
-            "description": "Expected density at deepest point over the deployment",
-            "units": "gram/cc",
-        },
-        nc_scalar,
-    ],  # not kg/m^3!
-    "log_ROLL_ADJ_DBAND": [False, "d", {}, nc_scalar],
-    "log_ROLL_ADJ_GAIN": [False, "d", {}, nc_scalar],
-    "log_ROLL_AD_RATE": [False, "d", {}, nc_scalar],
-    "log_ROLL_CNV": [False, "d", {}, nc_scalar],
-    "log_ROLL_DEG": [False, "d", {}, nc_scalar],
-    "log_ROLL_MAX": [False, "i", {}, nc_scalar],
-    "log_ROLL_MAXERRORS": [False, "i", {}, nc_scalar],
-    "log_ROLL_MIN": [False, "i", {}, nc_scalar],
-    "log_ROLL_TIMEOUT": [False, "d", {}, nc_scalar],
-    "log_R_PORT_OVSHOOT": [False, "d", {}, nc_scalar],
-    "log_R_STBD_OVSHOOT": [False, "d", {}, nc_scalar],
-    "log_SDSIZE": [
-        False,
-        "c",
-        {},
-        nc_scalar,
-    ],  # Multi-valued string for version 67.00 and later
-    "log_SDFILEDIR": [
-        False,
-        "c",
-        {},
-        nc_scalar,
-    ],  #  RevE - Number of files and directories on the sd card
-    "log_SEABIRD_C_Z": [
-        False,
-        "d",
-        {"description": "Conductivity zero frequency"},
-        nc_scalar,
-    ],
-    "log_SEABIRD_C_G": [False, "d", {}, nc_scalar],
-    "log_SEABIRD_C_H": [False, "d", {}, nc_scalar],
-    "log_SEABIRD_C_I": [False, "d", {}, nc_scalar],
-    "log_SEABIRD_C_J": [False, "d", {}, nc_scalar],
-    "log_SEABIRD_T_G": [False, "d", {}, nc_scalar],
-    "log_SEABIRD_T_H": [False, "d", {}, nc_scalar],
-    "log_SEABIRD_T_I": [False, "d", {}, nc_scalar],
-    "log_SEABIRD_T_J": [False, "d", {}, nc_scalar],
-    "log_SENSORS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_SENSOR_MAMPS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_SENSOR_SECS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_SHORTING_PLUG": [False, "d", {}, nc_scalar],  # From Kongsberg firmware
-    "log_SIM_PITCH": [False, "d", {}, nc_scalar],
-    "log_SIM_W": [False, "d", {}, nc_scalar],
-    "log_SMARTDEVICE1": [False, "d", {}, nc_scalar],
-    "log_SMARTDEVICE2": [False, "d", {}, nc_scalar],
-    "log_SMARTS": [False, "d", {}, nc_scalar],
-    "log_SM_CC": [False, "d", {}, nc_scalar],
-    "log_SM_CCo": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_SM_GC": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_SM_PING": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_SOUNDSPEED": [False, "d", {}, nc_scalar],
-    "log_SPEED_FACTOR": [False, "d", {}, nc_scalar],
-    "log_SPEED_LIMITS": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_STARTED": [False, None, {}, nc_scalar],  # ??
-    "log_STROBE": [False, "i", {}, nc_scalar],
-    "log_SURF": [False, "c", {}, nc_scalar],
-    "log_SURFACE_URGENCY": [False, "i", {}, nc_scalar],
-    "log_SURFACE_URGENCY_FORCE": [False, "i", {}, nc_scalar],
-    "log_SURFACE_URGENCY_TRY": [False, "i", {}, nc_scalar],
-    "log_SUPER": [False, "c", {}, nc_scalar],
-    "log_TCM_PITCH_OFFSET": [False, "d", {}, nc_scalar],
-    "log_TCM_ROLL_OFFSET": [False, "d", {}, nc_scalar],
-    "log_TCM_TEMP": [False, "d", {}, nc_scalar],
-    "log_TEMP": [
-        False,
-        "d",
-        {"description": "Temperature inside pressure hull", "units": "C"},
-        nc_scalar,
-    ],
-    "log_TGT_AUTO_DEFAULT": [False, "i", {}, nc_scalar],
-    "log_TGT_DEFAULT_LAT": [False, "d", {}, nc_scalar],
-    "log_TGT_DEFAULT_LON": [False, "d", {}, nc_scalar],
-    "log_TGT_LATLONG": [False, "c", {}, nc_scalar],  # Multi-valued string
-    "log_TGT_NAME": [False, "c", {}, nc_scalar],
-    "log_TGT_RADIUS": [False, "d", {}, nc_scalar],
-    "log_TT8_MAMPS": [
-        False,
-        "c",
-        {},
-        nc_scalar,
-    ],  # Multi-valued string (2 values in later versions)
-    "log_T_ABORT": [False, "d", {}, nc_scalar],
-    "log_T_BOOST": [False, "d", {}, nc_scalar],
-    "log_T_DIVE": [False, "d", {}, nc_scalar],
-    "log_T_EPIRB": [False, "d", {}, nc_scalar],
-    "log_T_GPS": [False, "d", {}, nc_scalar],
-    "log_T_GPS_ALMANAC": [False, "d", {}, nc_scalar],
-    "log_T_GPS_CHARGE": [False, "d", {}, nc_scalar],
-    "log_T_LOITER": [False, "d", {}, nc_scalar],
-    "log_T_SLOITER": [False, "d", {}, nc_scalar],
-    "log_T_MISSION": [False, "d", {}, nc_scalar],
-    "log_T_NO_W": [False, "d", {}, nc_scalar],
-    "log_T_RSLEEP": [False, "d", {}, nc_scalar],
-    "log_T_TURN": [False, "d", {}, nc_scalar],
-    "log_T_TURN_SAMPINT": [False, "d", {}, nc_scalar],
-    "log_T_WATCHDOG": [False, "d", {}, nc_scalar],
-    "log_UNCOM_BLEED": [False, "i", {}, nc_scalar],
-    "log_UPLOAD_DIVES_MAX": [False, "i", {}, nc_scalar],
-    "log_USE_BATHY": [False, "i", {}, nc_scalar],
-    "log_USE_ICE": [False, "i", {}, nc_scalar],
-    "log_VBD_BLEED_AD_RATE": [False, "d", {}, nc_scalar],
-    "log_VBD_CNV": [False, "d", {}, nc_scalar],
-    "log_VBD_DBAND": [False, "d", {}, nc_scalar],
-    "log_VBD_MAX": [False, "i", {}, nc_scalar],
-    "log_VBD_MAXERRORS": [False, "i", {}, nc_scalar],
-    "log_VBD_MIN": [False, "i", {}, nc_scalar],
-    "log_VBD_PUMP_AD_RATE_APOGEE": [False, "d", {}, nc_scalar],
-    "log_VBD_PUMP_AD_RATE_SURFACE": [False, "d", {}, nc_scalar],
-    "log_VBD_TIMEOUT": [False, "d", {}, nc_scalar],
-    "log_VBD_LP_IGNORE": [False, "d", {}, nc_scalar],
-    "log_STOP_T": [False, "d", {}, nc_scalar],
-    "log_W_ADJ_DBAND": [False, "d", {}, nc_scalar],
-    "log_XPDR_DEVICE": [False, "d", {}, nc_scalar],
-    "log_XPDR_INHIBIT": [False, "d", {}, nc_scalar],
-    "log_XPDR_INT": [False, "d", {}, nc_scalar],
-    "log_XPDR_PINGS": [False, "c", {}, nc_scalar],
-    "log_XPDR_REP": [False, "d", {}, nc_scalar],
-    "log_XPDR_VALID": [False, "d", {}, nc_scalar],
-    "log_OSC": [False, "i", {}, nc_scalar],
-    "log__CALLS": [False, "d", {}, nc_scalar],
-    "log__SM_ANGLEo": [False, "d", {}, nc_scalar],
-    "log__SM_DEPTHo": [False, "d", {}, nc_scalar],
-    "log__XMS_NAKs": [False, "d", {}, nc_scalar],
-    "log__XMS_TOUTs": [False, "d", {}, nc_scalar],
-    # These are found on iRobot versions of the software
-    "log_T_BOOST_BLACKOUT": [False, "d", {}, nc_scalar],
-    "log_LENGTH": [False, "d", {}, nc_scalar],
-    "log_DIRECT_CONTROL": [False, "d", {}, nc_scalar],
-    "log_ROLL_GAIN_P": [False, "d", {}, nc_scalar],
-    "log_EBE_ENABLE": [False, "d", {}, nc_scalar],
-    "log_GC_WINDOW": [False, "d", {}, nc_scalar],
-    "log_GC_LAST_COLLECTION": [False, "d", {}, nc_scalar],
-    "log_EXEC_P": [False, "d", {}, nc_scalar],
-    "log_EXEC_DT": [False, "d", {}, nc_scalar],
-    "log_EXEC_T": [False, "d", {}, nc_scalar],
-    "log_EXEC_N": [False, "d", {}, nc_scalar],
-    "log_PING": [False, "c", {}, nc_scalar],
-    # $STATE line entries (gc_state)
-    "gc_state_secs": [
-        True,
-        "d",
-        {
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Start of STATE time in GMT epoch format",
-        },
-        (nc_gc_state_info,),
-    ],
-    "gc_state_state": [
-        True,
-        "i",
-        {"description": "Name of the GC state"},
-        (nc_gc_state_info,),
-    ],
-    "gc_state_eop_code": [
-        True,
-        "i",
-        {"description": "GC states end of phase (EOP) code"},
-        (nc_gc_state_info,),
-    ],
-    # GC table messages
-    "gc_msg_NEWHEAD_secs": [
-        True,
-        "d",
-        {
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Start of NEWHEAD time in GMT epoch format",
-        },
-        (f"{nc_gc_msg_prefix}NEWHEAD_info",),
-    ],
-    "gc_msg_NEWHEAD_depth": [
-        "f",
-        "d",
-        {
-            "standard_name": "depth",
-            "positive": "down",
-            "units": "meters",
-            "description": "Measured vertical distance below the surface",
-        },
-        (f"{nc_gc_msg_prefix}NEWHEAD_info",),
-    ],
-    "gc_msg_NEWHEAD_heading": [
-        "f",
-        "d",
-        {
-            "description": "New vehicle heading (true)",
-            "units": "decimal degrees",
-        },
-        (f"{nc_gc_msg_prefix}NEWHEAD_info",),
-    ],
-    # $GC line entries (gc_event)
-    "gc_st_secs": [
-        True,
-        "d",
-        {
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Start of GC time in GMT epoch format",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_pitch_ctl": [False, "d", {"units": "cm"}, (nc_gc_event_info,)],
-    "gc_vbd_ctl": [False, "d", {"units": "cm"}, (nc_gc_event_info,)],
-    "gc_roll_ctl": [False, "d", {"units": "cm"}, (nc_gc_event_info,)],
-    "gc_depth": [False, "d", {"units": "meters"}, (nc_gc_event_info,)],
-    "gc_ob_vertv": [False, "d", {"units": "cm/s"}, (nc_gc_event_info,)],
-    "gc_data_pts": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_end_secs": [
-        False,
-        "d",
-        {
-            "units": "seconds  since 1970-1-1 00:00:00",
-            "description": "End of GC time in GMT epoch format",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_pitch_secs": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Elapsed seconds since start of this pitch change",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_roll_secs": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Elapsed seconds since start of this roll change",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_vbd_secs": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Elapsed seconds since start of this VBD change",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_vbd_st": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Time since st_secs for start of VBD move",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_pitch_st": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Time since st_secs for start of pitch move",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_roll_st": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Time since st_secs for start of roll move",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_vbd_start_time": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Start of VBD motor move time in GMT epoch format",
-            "_FillValue": nc_nan,
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_pitch_start_time": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Start of pitch motor move time in GMT epoch format",
-            "_FillValue": nc_nan,
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_roll_start_time": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Start of roll motor move time in GMT epoch format",
-            "_FillValue": nc_nan,
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_vbd_end_time": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "End of VBD motor move time in GMT epoch format",
-            "_FillValue": nc_nan,
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_pitch_end_time": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "End of pitch motor move time in GMT epoch format",
-            "_FillValue": nc_nan,
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_roll_end_time": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "End of roll motor move time in GMT epoch format",
-            "_FillValue": nc_nan,
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_vbd_i": [False, "d", {"units": "A"}, (nc_gc_event_info,)],
-    "gc_gcphase": [
-        False,
-        "i",
-        {
-            "flag_values": [1, 2, 3, 4, 5, 6],
-            "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_flags": [
-        False,
-        "i",
-        {
-            "flag_values": [1, 2, 3, 4, 5, 6],
-            "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
-        },
-        (nc_gc_event_info,),
-    ],
-    "gc_pitch_i": [False, "d", {"units": "A"}, (nc_gc_event_info,)],
-    "gc_roll_i": [False, "d", {"units": "A"}, (nc_gc_event_info,)],
-    "gc_pitch_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_roll_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_pitch_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_roll_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_vbd_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_vbd_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_vbd_pot1_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_vbd_pot2_ad": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_vbd_pot1_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_vbd_pot2_ad_start": [False, "d", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_pitch_retries": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_pitch_errors": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_roll_retries": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_roll_errors": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_vbd_retries": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_vbd_errors": [False, "i", {"units": "1"}, (nc_gc_event_info,)],
-    "gc_pitch_volts": [False, "d", {"units": "V"}, (nc_gc_event_info,)],
-    "gc_roll_volts": [False, "d", {"units": "V"}, (nc_gc_event_info,)],
-    "gc_vbd_volts": [False, "d", {"units": "V"}, (nc_gc_event_info,)],
-    "gc_int_press": [
-        False,
-        "d",
-        {"description": "Internal pressure", "units": "psia"},
-        (nc_gc_event_info,),
-    ],
-    "gc_humidity": [
-        False,
-        "d",
-        {"description": "Internal relative humidity", "units": "percent"},
-        (nc_gc_event_info,),
-    ],
-    # Columns in the engineering file
-    "eng_elaps_t_0000": [
-        False,
-        "d",
-        {
-            "standard_name": "time",
-            "units": "seconds",
-            "description": "Elapsed seconds since start of mission",
-        },
-        (nc_sg_data_info,),
-    ],
-    "eng_elaps_t": [
-        False,
-        "d",
-        {
-            "standard_name": "time",
-            "units": "seconds",
-            "description": "Elapsed seconds since start of dive",
-        },
-        (nc_sg_data_info,),
-    ],
-    "eng_rec": [False, "d", {}, (nc_sg_data_info,)],
-    "eng_GC_phase": [
-        False,
-        "d",
-        {
-            "flag_values": [1, 2, 3, 4, 5, 6],
-            "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
-        },
-        (nc_sg_data_info,),
-    ],
-    "eng_GC_state": [
-        False,
-        "i",
-        {
-            # "flag_values": [1, 2, 3, 4, 5, 6],
-            # "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
-            "description": "Motor status byte",
-        },
-        (nc_sg_data_info,),
-    ],
-    "eng_GC_flags": [
-        False,
-        "d",
-        {
-            "flag_values": [1, 2, 3, 4, 5, 6],
-            "flag_meanings": "pitch vbd active_roll passive_roll roll_back passive",
-        },
-        (nc_sg_data_info,),
-    ],
-    "eng_pressure": [
-        False,
-        "d",
-        {"description": "Reported pressure", "units": "psia"},
-        (nc_sg_data_info,),
-    ],
-    "eng_press_counts": [
-        False,
-        "d",
-        {"description": "Pressure sensor AD counts"},
-        (nc_sg_data_info,),
-    ],
-    "eng_depth": [
-        False,
-        "d",
-        {
-            "standard_name": "depth",
-            "positive": "down",
-            "units": "cm",
-            "description": "Measured vertical distance below the surface",
-        },
-        (nc_sg_data_info,),
-    ],
-    "eng_head": [
-        "f",
-        "d",
-        {"description": "Vehicle heading (magnetic)", "units": "degrees"},
-        (nc_sg_data_info,),
-    ],
-    "eng_pitchAng": [
-        "f",
-        "d",
-        {"description": "Vehicle pitch", "units": "degrees"},
-        (nc_sg_data_info,),
-    ],
-    "eng_rollAng": [
-        False,
-        "d",
-        {"description": "Vehicle roll", "units": "degrees"},
-        (nc_sg_data_info,),
-    ],
-    "eng_pitchCtl": [False, "d", {}, (nc_sg_data_info,)],
-    "eng_rollCtl": [False, "d", {}, (nc_sg_data_info,)],
-    "eng_vbdCC": [False, "d", {}, (nc_sg_data_info,)],
-    "eng_volt1": [False, "d", {}, (nc_sg_data_info,)],
-    "eng_volt2": [False, "d", {}, (nc_sg_data_info,)],
-    "eng_curr1": [False, "d", {}, (nc_sg_data_info,)],
-    "eng_curr2": [False, "d", {}, (nc_sg_data_info,)],
-    # Declaration of eng-based CT freq (normal unpumped sbect and SailCT)
-    # are in Sensors/sbect_ext.py, as are scicon unpumped CT freq vars.
-    # gpctd (pumped sbect) variables are declared in Sensors/payload_ext.py
-    # Other eng_ variables are declared in various sensor and logger extensions
-    # and created for any cnf sensor definition
-    # Per-profile derived results
-    # QC status variables and vectors
-    "reviewed": [
-        False,
-        "i",
-        {"description": "Whether a scientist has reviewed and approved this profile"},
-        nc_scalar,
-    ],
-    "directives": [
-        False,
-        "c",
-        {
-            "description": "The control directives supplied by the scientist for this profile"
-        },
-        nc_scalar,
-    ],
-    # These are written only if they are true
-    "skipped_profile": [
-        False,
-        "i",
-        {"description": "Whether a scientist decided to skip processing this profile"},
-        nc_scalar,
-    ],
-    "processing_error": [
-        False,
-        "i",
-        {
-            "description": "Whether an error was encountered while processing this profile"
-        },
-        nc_scalar,
-    ],
-    "test_tank_dive": [
-        False,
-        "i",
-        {"description": "Whether this is a test tank dive"},
-        nc_scalar,
-    ],
-    "deck_dive": [
-        False,
-        "i",
-        {"description": "Whether this is a deck dive"},
-        nc_scalar,
-    ],
-    # In spite of their prefix, access as results_d['log_gps_lat']
-    "log_gps_lat": [
-        False,
-        "d",
-        {
-            "standard_name": "latitude",
-            "units": "degrees_north",
-            "description": "GPS latitudes",
-        },
-        (nc_gps_info_info,),
-    ],
-    "log_gps_lon": [
-        False,
-        "d",
-        {
-            "standard_name": "longitude",
-            "units": "degrees_east",
-            "description": "GPS longitudes",
-        },
-        (nc_gps_info_info,),
-    ],
-    "log_gps_time": [
-        True,
-        "d",
-        {
-            "standard_name": "time",
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "GPS times in GMT epoch format",
-        },
-        (nc_gps_info_info,),
-    ],
-    "log_gps_first_fix_time": [
-        False,
-        "d",
-        {"units": "seconds", "description": "Time to first fix"},
-        (nc_gps_info_info,),
-    ],
-    "log_gps_final_fix_time": [
-        False,
-        "d",
-        {"units": "seconds", "description": "Time to fix"},
-        (nc_gps_info_info,),
-    ],
-    "log_gps_hdop": [
-        False,
-        "d",
-        {"description": "Horizontal Dilution Of Precision"},
-        (nc_gps_info_info,),
-    ],
-    "log_gps_magvar": [
-        False,
-        "d",
-        {"units": "degrees", "description": "Magnetic variance (degrees, positive E)"},
-        (nc_gps_info_info,),
-    ],
-    "log_gps_driftspeed": [
-        False,
-        "d",
-        {"units": "knots", "description": "Estimated surface drift speed"},
-        (nc_gps_info_info,),
-    ],
-    "log_gps_driftheading": [
-        False,
-        "d",
-        {"units": "degrees true", "description": "Estimated drift direction"},
-        (nc_gps_info_info,),
-    ],
-    "log_gps_n_satellites": [
-        False,
-        "d",
-        {"description": "Number of satellites contributing to the final fix"},
-        (nc_gps_info_info,),
-    ],
-    "log_gps_hpe": [
-        False,
-        "d",
-        {"units": "meters", "description": "Horizontal position error"},
-        (nc_gps_info_info,),
-    ],
-    "log_gps_qc": [
-        False,
-        QC.nc_qc_type,
-        {"units": "qc_flag", "description": "Whether to trust the GPS1 information"},
-        (nc_gps_info_info,),
-    ],
-    "magnetic_variation": [
-        False,
-        "d",
-        {"description": "The magnetic variance from true north (degrees)"},
-        nc_scalar,
-    ],
-    "avg_latitude": [
-        False,
-        "d",
-        {"units": "degrees_north", "description": "The average latitude of the dive"},
-        nc_scalar,
-    ],
-    "avg_longitude": [
-        False,
-        "d",
-        {"units": "degrees_east", "description": "The average longitude of the dive"},
-        nc_scalar,
-    ],
-    nc_sg_time_var: [
-        True,
-        "d",
-        {
-            "standard_name": "time",
-            "axis": "T",
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Time of the [P] in GMT epoch format",
-        },
-        (nc_sg_data_info,),
-    ],
-    "pressure": [
-        "f",
-        "d",
-        {
-            "units": "dbar",
-            "description": "Uncorrected sea-water pressure at pressure sensor",
-        },
-        (nc_sg_data_info,),
-    ],
-    "depth": [
-        "f",
-        "d",
-        {
-            "standard_name": "depth",
-            "axis": "Z",
-            "units": "meters",
-            "positive": "down",
-            "description": "Depth below the surface, corrected for average latitude",
-        },
-        (nc_sg_data_info,),
-    ],
-    "GPS1_qc": [
-        False,
-        QC.nc_qc_type,
-        {"units": "qc_flag", "description": "Whether to trust the GPS1 information"},
-        nc_scalar,
-    ],
-    "GPS2_qc": [
-        False,
-        QC.nc_qc_type,
-        {"units": "qc_flag", "description": "Whether to trust the GPS2 information"},
-        nc_scalar,
-    ],
-    "GPSE_qc": [
-        False,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust the final GPS information",
-        },
-        nc_scalar,
-    ],
-    "start_of_climb_time": [
-        False,
-        "d",
-        {
-            "units": "seconds",
-            "description": "Elapsed seconds after dive start when second (positive) apogee pump starts",
-        },
-        nc_scalar,
-    ],
-    # CT values (missing values are marked in parallel _qc variable as QC_MISSING)
-    nc_ctd_time_var: [
-        True,
-        "d",
-        {
-            "standard_name": "time",
-            "axis": "T",
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Time of CTD [P] in GMT epoch format",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "ctd_depth": [
-        "f",
-        "d",
-        {
-            "standard_name": "depth",
-            "axis": "Z",
-            "units": "meters",
-            "positive": "down",
-            "description": "CTD thermistor depth corrected for average latitude",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "ctd_pressure": [
-        "f",
-        "d",
-        {
-            "standard_name": "sea_water_pressure",
-            "units": "dbar",
-            "description": "Pressure at CTD thermistor",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "ctd_pressure_qc": [
-        True,
-        QC.nc_qc_type,
-        {"units": "qc_flag", "description": "Whether to trust pressure - legato only"},
-        (nc_ctd_results_info,),
-    ],
-    # TODO: parse the field and test in MMP and MMT if all are included...
-    "temperature_raw": [
-        "f",
-        "d",
-        {
-            "units": "degrees_Celsius",
-            "description": "Uncorrected temperature (in situ)",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "conductivity_raw": [
-        "f",
-        "d",
-        {"units": "S/m", "description": "Uncorrected conductivity"},
-        (nc_ctd_results_info,),
-    ],
-    "salinity_raw": [
-        "f",
-        "d",
-        {
-            "units": "PSU",
-            "description": "Uncorrected salinity derived from temperature_raw and conductivity_raw (PSU)",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "temperature_raw_qc": [
-        True,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust each raw temperature value",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "conductivity_raw_qc": [
-        True,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust each raw conductivity value",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "salinity_raw_qc": [
-        True,
-        QC.nc_qc_type,
-        {"units": "qc_flag", "description": "Whether to trust each raw salinity value"},
-        (nc_ctd_results_info,),
-    ],
-    # CT adjusted values (missing values are marked in parallel _qc variable as QC_MISSING)
-    "temperature": [
-        "f",
-        "d",
-        {
-            "standard_name": "sea_water_temperature",
-            "units": "degrees_Celsius",
-            "description": "Termperature (in situ) corrected for thermistor first-order lag",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "conductivity": [
-        "f",
-        "d",
-        {
-            "standard_name": "sea_water_electrical_conductivity",
-            "units": "S/m",
-            "description": "Conductivity corrected for anomalies",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "salinity": [
-        "f",
-        "d",
-        {
-            "standard_name": "sea_water_salinity",
-            "units": "PSU",
-            "description": "Salinity corrected for thermal-inertia effects (PSU)",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "conservative_temperature": [
-        "f",
-        "d",
-        {
-            "units": "degrees_Celsius",
-            "description": "Conservative termperature per TEOS-10",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "absolute_salinity": [
-        "f",
-        "d",
-        {"units": "g/kg", "description": "Absolute salinity per TEOS-10"},
-        (nc_ctd_results_info,),
-    ],
-    "gsw_sigma0": [
-        "f",
-        "d",
-        {
-            "standard_name": "sea_water_sigma_theta",
-            "ref_pressure": "0",
-            "units": "kg/m^3",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "gsw_sigma3": [
-        "f",
-        "d",
-        {
-            "standard_name": "sea_water_sigma_theta",
-            "ref_pressure": "3000",
-            "units": "kg/m^3",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "gsw_sigma4": [
-        "f",
-        "d",
-        {
-            "standard_name": "sea_water_sigma_theta",
-            "ref_pressure": "4000",
-            "units": "kg/m^3",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "temperature_qc": [
-        True,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust each corrected temperature value",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "conductivity_qc": [
-        True,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust each corrected conductivity value",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "salinity_qc": [
-        True,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust each corrected salinity value",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "CTD_qc": [
-        False,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust the corrected CTD values",
-        },
-        nc_scalar,
-    ],
-    # Derived seawater properties from salinity
-    "density": [
-        False,
-        "d",
-        {
-            "standard_name": "sea_water_density",
-            "ref_pressure": "0",
-            "units": "g/m^3",
-            "description": "Sea water potential density",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "density_insitu": [
-        False,
-        "d",
-        {
-            "units": "g/m^3",
-            "description": "Sea water in-situ density based on pressure",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "sigma_t": [
-        False,
-        "d",
-        {
-            "standard_name": "sea_water_sigma_t",
-            "ref_pressure": "0",
-            "description": "Sigma based on density",
-            "units": "g/m^3",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "theta": [
-        False,
-        "d",
-        {
-            "standard_name": "sea_water_potential_temperature",
-            "units": "degrees_Celsius",
-            "description": "Potential temperature based on corrected salinity",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "sigma_theta": [
-        False,
-        "d",
-        {
-            "standard_name": "sea_water_sigma_theta",
-            "ref_pressure": "0",
-            "units": "kg/m^3",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "sigma3": [
-        False,
-        "d",
-        {
-            "standard_name": "sea_water_sigma_theta",
-            "ref_pressure": "3000",
-            "units": "kg/m^3",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "sigma4": [
-        False,
-        "d",
-        {
-            "standard_name": "sea_water_sigma_theta",
-            "ref_pressure": "4000",
-            "units": "kg/m^3",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "sound_velocity": [
-        "f",
-        "d",
-        {
-            "standard_name": "speed_of_sound_in_sea_water",
-            "description": "Sound velocity",
-            "units": "m/s",
-        },
-        (nc_ctd_results_info,),
-    ],
-    # Vehicle speed and glide angle data
-    "hdm_qc": [
-        False,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether corrected temperatures, salinities, and velocities from the hydrodynamic model converged on a consistent solution",
-        },
-        nc_scalar,
-    ],
-    "buoyancy": [
-        False,
-        "d",
-        {
-            "units": "g",
-            "description": "Buoyancy of vehicle, corrected for compression effects",
-        },
-        (nc_ctd_results_info,),
-    ],
-    # Based on eng data (pitch, depth) only
-    "speed_gsm": [
-        "f",
-        "d",
-        {"description": "Vehicle speed based on gsm", "units": "cm/s"},
-        (nc_ctd_results_info,),
-    ],
-    "glide_angle_gsm": [
-        False,
-        "d",
-        {"description": "Glide angle based on gsm", "units": "degrees"},
-        (nc_ctd_results_info,),
-    ],
-    "horz_speed_gsm": [
-        "f",
-        "d",
-        {"description": "Vehicle horizontal speed based on gsm", "units": "cm/s"},
-        (nc_ctd_results_info,),
-    ],
-    "vert_speed_gsm": [
-        "f",
-        "d",
-        {"description": "Vehicle vertical speed based on gsm", "units": "cm/s"},
-        (nc_ctd_results_info,),
-    ],
-    "flight_avg_speed_east_gsm": [
-        False,
-        "d",
-        {
-            "units": "m/s",
-            "description": "Eastward component of flight average speed based on gsm",
-        },
-        nc_scalar,
-    ],
-    "flight_avg_speed_north_gsm": [
-        False,
-        "d",
-        {
-            "units": "m/s",
-            "description": "Northward component of flight average speed based on gsm",
-        },
-        nc_scalar,
-    ],
-    "north_displacement_gsm": [
-        False,
-        "d",
-        {"description": "Northward displacement from gsm", "units": "meters"},
-        (nc_ctd_results_info,),
-    ],
-    "east_displacement_gsm": [
-        False,
-        "d",
-        {"description": "Eastward displacement from gsm", "units": "meters"},
-        (nc_ctd_results_info,),
-    ],
-    "speed": [
-        "f",
-        "d",
-        {"description": "Vehicle speed based on hdm", "units": "cm/s"},
-        (nc_ctd_results_info,),
-    ],
-    "glide_angle": [
-        False,
-        "d",
-        {"description": "Glide angle based on hdm", "units": "degrees"},
-        (nc_ctd_results_info,),
-    ],
-    "horz_speed": [
-        "f",
-        "d",
-        {"description": "Vehicle horizontal speed based on hdm", "units": "cm/s"},
-        (nc_ctd_results_info,),
-    ],
-    "vert_speed": [
-        "f",
-        "d",
-        {"description": "Vehicle vertical speed based on hdm", "units": "cm/s"},
-        (nc_ctd_results_info,),
-    ],
-    "speed_qc": [
-        False,
-        QC.nc_qc_type,
-        {"units": "qc_flag", "description": "Whether to trust each hdm speed value"},
-        (nc_ctd_results_info,),
-    ],
-    "flight_avg_speed_east": [
-        False,
-        "d",
-        {
-            "units": "m/s",
-            "description": "Eastward component of flight average speed based on hdm",
-        },
-        nc_scalar,
-    ],
-    "flight_avg_speed_north": [
-        False,
-        "d",
-        {
-            "units": "m/s",
-            "description": "Northward component of flight average speed based on hdm",
-        },
-        nc_scalar,
-    ],
-    "north_displacement": [
-        False,
-        "d",
-        {"description": "Northward displacement from hdm", "units": "meters"},
-        (nc_ctd_results_info,),
-    ],
-    "east_displacement": [
-        False,
-        "d",
-        {"description": "Eastward displacement from hdm", "units": "meters"},
-        (nc_ctd_results_info,),
-    ],
-    # depth-average current
-    # NOTE: these are scalar in a profile but a vector in mission_timeseries, etc.
-    "depth_avg_curr_east_gsm": [
-        False,
-        "d",
-        {
-            "units": "m/s",
-            "description": "Eastward component of depth-average current based on gsm",
-        },
-        nc_scalar,
-    ],
-    "depth_avg_curr_north_gsm": [
-        False,
-        "d",
-        {
-            "units": "m/s",
-            "description": "Northward component of depth-average current based on gsm",
-        },
-        nc_scalar,
-    ],
-    "depth_avg_curr_east": [
-        "f",
-        "d",
-        {
-            "standard_name": "eastward_sea_water_velocity",
-            "units": "m/s",
-            "description": "Eastward component of the [D] depth-average current based on hdm",
-        },
-        nc_scalar,
-    ],
-    "depth_avg_curr_north": [
-        "f",
-        "d",
-        {
-            "standard_name": "northward_sea_water_velocity",
-            "units": "m/s",
-            "description": "Northward component of the [D] depth-average current based on hdm",
-        },
-        nc_scalar,
-    ],
-    "depth_avg_curr_qc": [
-        True,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust the [D] depth-average current values and displacements",
-        },
-        nc_scalar,
-    ],
-    "depth_avg_curr_error": [
-        False,
-        "d",
-        {
-            "units": "m/s",
-            "description": "Expected error of depth-average current from GPS",
-        },
-        nc_scalar,
-    ],
-    "delta_time_s": [
-        False,
-        "d",
-        {"units": "s", "description": "Difference between sample times"},
-        (nc_ctd_results_info,),
-    ],
-    "polar_heading": [
-        False,
-        "d",
-        {"units": "radians", "description": "Vehicle heading from the east"},
-        (nc_ctd_results_info,),
-    ],
-    "GPS_east_displacement_m": [
-        False,
-        "d",
-        {
-            "units": "m",
-            "description": "Total vehicle eastward displacement based on GPS2 and GPSE locations",
-        },
-        nc_scalar,
-    ],
-    "GPS_north_displacement_m": [
-        False,
-        "d",
-        {
-            "units": "m",
-            "description": "Total vehicle northward displacement based on GPS2 and GPSE locations",
-        },
-        nc_scalar,
-    ],
-    "total_flight_time_s": [
-        False,
-        "d",
-        {
-            "units": "s",
-            "description": "Total flight time seconds including surface maneuver drift time",
-        },
-        nc_scalar,
-    ],
-    "latitude_gsm": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "units": "degrees_north",
-            "description": "Latitude of the [P] based on gsm DAC",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "longitude_gsm": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "units": "degrees_east",
-            "description": "Longitude of the [P] based on gsm DAC",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "latitude": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "latitude",
-            "axis": "Y",
-            "units": "degrees_north",
-            "description": "Latitude of the [P] based on hdm DAC",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "longitude": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "longitude",
-            "axis": "X",
-            "units": "degrees_east",
-            "description": "Longitude of the [P] based on hdm DAC",
-        },
-        (nc_ctd_results_info,),
-    ],
-    "latlong_qc": [
-        True,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust the [D] estimated latitude and longitude estimates",
-        },
-        nc_scalar,
-    ],
-    # surface drift current
-    "surface_curr_east": [
-        False,
-        "d",
-        {
-            "standard_name": "surface_eastward_sea_water_velocity",
-            "units": "cm/s",
-            "description": "Eastward component of surface current",
-        },
-        nc_scalar,
-    ],
-    "surface_curr_north": [
-        False,
-        "d",
-        {
-            "standard_name": "surface_northward_sea_water_velocity",
-            "units": "cm/s",
-            "description": "Northward component of surface current",
-        },
-        nc_scalar,
-    ],
-    "surface_curr_qc": [
-        False,
-        QC.nc_qc_type,
-        {
-            "units": "qc_flag",
-            "description": "Whether to trust the surface current values",
-        },
-        nc_scalar,
-    ],
-    "surface_curr_error": [
-        False,
-        "d",
-        {
-            "units": "m/s",
-            "description": "Expected error of surface drift current from GPS",
-        },
-        nc_scalar,
-    ],
-    "dissolved_oxygen_sat": [
-        "f",
-        "d",
-        {
-            "units": "micromoles/kg",
-            "description": "Calculated saturation value for oxygen given measured presure and corrected temperature, and salinity",
-        },
-        (nc_ctd_results_info,),
-    ],
-    # This variable is an alias to dive_number below; required for CF compliance.
-    "trajectory": [
-        False,
-        "i",
-        {
-            "description": "Dive number for observations",
-            "long_name": "Unique identifier for each feature instance",
-            "cf_role": "trajectory_id",
-        },
-        (nc_trajectory_info,),
-    ],
-    # Variables used in make_mission_timeseries() make_mission_profiles()
-    # These deliberately have nc_scalar for mdp_dim_info.  This is calculated and set by MMT and MMP
-    "dive_number": [
-        True,
-        "i",
-        {"description": "Dive number for given observation"},
-        nc_scalar,
-    ],
-    # make_mission_profile()
-    # over all the dives collected (nc_dim_dives)
-    "GPS2_lat": ["f", "d", {}, nc_scalar],
-    "GPS2_lon": ["f", "d", {}, nc_scalar],
-    "GPS2_time": ["f", "d", {}, nc_scalar],
-    "GPSEND_lat": ["f", "d", {}, nc_scalar],
-    "GPSEND_lon": ["f", "d", {}, nc_scalar],
-    "GPSEND_time": ["f", "d", {}, nc_scalar],
-    "mean_latitude": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "longitude",
-            "units": "degrees_north",
-            "description": "Mean latitude of the [D]",
-        },
-        nc_scalar,
-    ],
-    "mean_longitude": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "latitude",
-            "units": "degrees_east",
-            "description": "Mean longitude of the [D]",
-        },
-        nc_scalar,
-    ],
-    "mean_time": [
-        True,
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "time",
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Mean time of the [D] in GMT epoch format",
-        },
-        nc_scalar,
-    ],
-    "deepest_sample_time": [
-        True,
-        "d",
-        {"description": "Time for the deepest sample in the given dive"},
-        nc_scalar,
-    ],
-    "obs_bin": [
-        "f",
-        "d",
-        {"description": "Number of CT observations for this bin"},
-        nc_scalar,
-    ],
-    # Mission profile variables
-    "year": [
-        True,
-        "i",
-        {"_FillValue": -1, "description": "Year of the [D]"},
-        nc_scalar,
-    ],
-    "month": [
-        True,
-        "i",
-        {"_FillValue": -1, "description": "Month of the year of the [D] - one based"},
-        nc_scalar,
-    ],
-    "date": [
-        True,
-        "i",
-        {
-            "_FillValue": -1,
-            "description": "Month date of the month of the [D] - one based",
-        },
-        nc_scalar,
-    ],
-    "hour": [
-        True,
-        "i",
-        {
-            "_FillValue": -1,
-            "description": "Decimal hour of the day of the [D] - zero based",
-        },
-        nc_scalar,
-    ],  # BUG? why not mv:-1?
-    "dd": [
-        True,
-        "i",
-        {
-            "_FillValue": -1,
-            "description": "Decimal day of the year of the [D] - zero based",
-        },
-        nc_scalar,
-    ],  # BUG? why not mv:-1?
-    # must have same mdp_info as nc_sg_time_var, see MMP
-    "bin_time": [
-        True,
-        "d",
-        {
-            "standard_name": "time",
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "mean time for the bin in GMT epoch format",
-        },
-        (nc_sg_data_info,),
-    ],
-    "start_time": [
-        False,
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "time",
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Starting time of the [D] in GMT epoch format",
-        },
-        nc_scalar,
-    ],
-    "end_time": [
-        False,
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "time",
-            "units": "seconds since 1970-1-1 00:00:00",
-            "description": "Ending time of the [D] in GMT epoch format",
-        },
-        nc_scalar,
-    ],
-    "start_latitude": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "latitude",
-            "units": "degrees_north",
-            "description": "Starting latitude of the [D]",
-        },
-        nc_scalar,
-    ],
-    "end_latitude": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "longitude",
-            "units": "degrees_north",
-            "description": "Ending latitude of the [D]",
-        },
-        nc_scalar,
-    ],
-    "start_longitude": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "latitude",
-            "units": "degrees_east",
-            "description": "Starting longitude of the [D]",
-        },
-        nc_scalar,
-    ],
-    "end_longitude": [
-        "f",
-        "d",
-        {
-            "_FillValue": nc_nan,
-            "standard_name": "longitude",
-            "units": "degrees_east",
-            "description": "Ending longitude of the [D]",
-        },
-        nc_scalar,
-    ],
-}
-
-# Neither long_name nor standard_name are required (consumers just use the variable name instead) but it silences the compliance checker
-ensure_long_names = (
-    False  # CF1.4 just a WARNING ensure compliance at the expense of space
-)
-after_static_check = False
 
 
 def form_nc_metadata(
@@ -3764,7 +3857,7 @@ def create_nc_var(
                 f"Unable to assign value to nc var {var_name} {var_dims} ({exception.args})"
             )
             return None
-        except:
+        except Exception:
             log_error(f"Unable to assign value to nc var {var_name} {var_dims}")
             return None
 
@@ -3784,14 +3877,14 @@ def create_nc_var(
     for attr_name, vvalue in list(md.items()):
         try:
             vvalue.index("[P]")
-        except:
+        except Exception:
             pass
         else:
             vvalue = vvalue.replace("[P]", "profile" if profile else "sample")
 
         try:
             vvalue.index("[D]")
-        except:
+        except Exception:
             pass
         else:
             vvalue = vvalue.replace("[D]", "profile" if profile else "dive")

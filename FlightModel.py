@@ -90,7 +90,7 @@ SGX_MASS = 60  # kg that distinguishes an SGX from a smaller, original SG
 
 # These variables are assumed constant for glider type and deployment
 # If any of them change, we need to recompute vbdbias and a/b
-header_variables = [
+header_variables = (
     "fm_version",
     "glider",
     "glider_type",
@@ -102,188 +102,16 @@ header_variables = [
     "mission_title",
     "history",
     "hd_s_scale",
-]
+)
 # All computations are based on the stated mass and mass_comp and stall assumptions
-assumption_variables = [
+assumption_variables = (
     "mass",
     "mass_comp",  # from ballasting and expected apogee etc.
     "max_stall_speed",
     "min_stall_speed",
     "min_stall_angle",  # for hydro_model
-]
+)
 # variables needed for w_rms_func()
-
-
-# see load_dive_data() these are the vectors we collect for each dive to compute various flight model parameters
-# deliberately NOT vol_comp, vol_comp_ref, and therm_expan_term, which are computed and cached
-# if compare_velo is non-zero we add 'velo_speed' to this list below
-dive_data_vector_names = [
-    "w",
-    "pressure",
-    "temperature",
-    "density_insitu",
-    "density",
-    "displaced_volume",
-    "pitch",
-]
-
-# CONTROL PARAMETERS
-
-# Moved to option enable_reprocessing_dives = (
-#    True  # CONTROL Normally True but if False we don't spend time updating the dives
-# )
-old_basestation = False  # assume the best
-force_alerts = False  # CONTROL test alert code for each 'new' dive
-# What should be tested, if velo is available, IN ADDITION to w vs. w_stdy (hdm_speed*sin(glide_angle))
-compare_velo = 3  # CONTROL 0 - ignore, even if present (default); 1 - use it and test velo vs. hdm_speed; 2 - use it and test w vs. velo*sin(glide_angle) 3 - method 1 and 2 combined
-acceptable_w_rms = 5  # PARAMETER w_rms (cm/s) must be less than this to accept solution
-grid_dive_sets = []  # special sets of dives to solve a/b grids (for debugging and other analysis; see rva_solve_ab.m)
-# Analysis of velocometer data suggests that the w-only solutions under-estimate hd_b by 20%
-# This parameter can be used to scale the solved predicted_hd_b just before it is delivered to MDP
-# We do it this way for several reasons:
-# 1. We want a self-consistent set of solutions of the flight parameters under the data we measured (FM ignores whatever is in the nc file)
-# 2. It is not clear how scale *during* the operation and shift the w_rms contours in ab grids etc.
-# 3. The grid itself might not fall on the scaling factor so we would have to do 2D interpolation of some sort
-# TODO: eventually we will make this glider type dependent and compare_velo dependent (should always be 1.0)
-predicted_hd_a_scale = 1.0  # No change
-predicted_hd_b_scale = 1.0  # No change (1.2 increases hd_b by 20%)
-
-generate_figures = True  # CONTROL requires matplot etc.
-# add 2nd axis on vbdbias plot for current implied C_VBD wrt to show_implied_c_vbd
-show_implied_c_vbd = 0  # PARAMETER what the pilot declared is a good C_VBD at the start of the deployment
-fig_markersize = 7  # PARAMETER size of the markers in the eng plots
-show_previous_ab_solution = (
-    True  # CONTROL show previous 0.2 cm/s and minimum ab solution contour if available
-)
-copy_figures_to_plots = (
-    True  # CONTROL add our figures to the plots subdir so IOP can see them
-)
-generate_dac_figures = (
-    False  # CONTROL show impact of different a/b values on DAC for a dive (expensive)
-)
-
-checkpoint_flight_dive_data = False  # CONTROL incrementally checkpoint the flight db (and mat file) per processed dive
-dump_checkpoint_data_matfiles = (
-    False  # CONTROL dump matlab readable checkpoint files for debugging
-)
-dump_fm_files = True  # CONTROL dump individual .m files?
-
-flush_ab_grid_cache_entries = []  # DEBUG which dives to flush and force recomputation?
-# flush_ab_grid_cache_entries = [47]
-
-# PARAMTERS that control the operation of FlightModel calculations:
-
-# A note on volmax/vbdbias and our initial estimates MakeDiveProfiles() uses
-# volmax with an associated vbdbias to compute buoyancy forcing We take over
-# this system by ignoring the user's volmax guess (and rho0) and compute our own
-# based on the given mass and a *fixed* plausible oceananic density
-# (1027.5kg/m^3).  All the parameters will scale to this so the choice of density
-# is largely irrelevant.  Based on that initial guess we compute a per-dive
-# vbdbias required to redice the w_rms signal.  Over the first
-# early_volmax_adjust dives we adjust our volmax estimate such that the mean
-# vbdbias for those dives is near zero.
-
-# NOTE: This is for convenience only; the buoyancy forcing does not change.
-# Once set we can then look at large relative changes in recent vbdbias values
-# to report biofouling however we expect some variation because of
-# temperature-related volume changes not covered by the hull and thermal
-# expansion terms, notably the temperature oil volume change.  In any case,
-# before we update volmax to its final value the computed buoyancies and a/b are
-# accurate at all times.
-
-# The more dives we specify the more dives need reprocessing in a batch after we do the final adjustment
-# reduce them but if C_VBD hasn't been adjusted we might not be close
-# At the minimum we could wait 0 dives since vbdbias is adjusted wrt to whatever value we set
-# however we should skip the first actual dive since bubbles and like need to be eliminated
-# Thus the minimum adjustment is 1 (so we if we start at 1 we'll adjust using dive 2)
-
-# NOTE: if you expect to set/override these parameters in a cnf file they must be all lower-case!!
-early_volmax_adjust = 10  # PARAMETER number of dives: adjust volmax and re-tare vbdbias values over the 'first' N dives (was 10)
-FM_default_rho0 = 1027.5  # assume constant for all missions; the scales velocity in hydro_model().  Matches MDP
-
-sg_hd_s = (
-    -0.25
-)  # CONSTANT how drag scales by shape for the Seaglider shape (Hubbard, 1990)
-hd_s_assumed_q = 40  # PARAMETER typical mean speed of a glider along track (cm/s) (between 10 and 150cmn/s)
-vbdbias_search_range = 1000  # PARAMETER +/- cc range around (initial) volmax estimate to search for vbdbias
-max_w_rms_vbdbias = 10  # if min w_rms for the vbdbias search is greater than this, the dive is ratty (pressure sensor noise) and we shouldn't trust it
-vbdbias_tolerance = 20  # PARAMETER cc of vbdbias change between nc and new value that triggers reprocessing
-vbdbias_filter = 15  # PARAMETER how many dives to filter median vbdbias
-
-# abs_compress is complicated
-# we want to be able to search for it (like vbdbias) on a per-dive basis (see solve_vbdbias_abs_compress)
-# however, given the current structure of w_rms_func, when we are doing the grid search we can only apply one abs_compress
-# (because we can't apply and cache the final vol?) and we pre-apply vbdbias to displaced_volume
-abs_compress_tolerance = 0.05  # PARAMETER fraction difference of abs_compress between nc and new value that triggers reprocessing (5%)
-ac_min_start = 1e-6  # most squishy
-ac_max_start = 8e-6  # most stiff
-
-# PARAMETERS used to filter which dives are used in grid regressions
-# Maintain a ring buffer of different sizes depending on how many dives have been processed so far
-# Thus we compute early and often during the early part of the mission but lengthen as the mission progresses
-# Constraints: The grid_spacing values must always increase with later dives
-grid_spacing_d = {1: 4, 16: 8, 40: 16}  # mapping of dive -> grid_spacing size
-# more frequent earlier or for short deployments: grid_spacing_d = {1: 4, 32: 8, 40: 16} # mapping of dive -> grid_spacing size
-# DEBUG grid_spacing_d = {1: 15} # disable expanding grid_spacing and use fixed stride
-grid_spacing_keys = None
-
-# we decide to commit to a new a/b over a previous a/b if the *prior* RMS at the *new* a/b point exceeds this tolerance
-# otherwise the new a/b value was acceptable according to the prior calculation so don't change a/b
-force_ab_report = (
-    False  # CONTROL control chattiness to help determine ab_tolerance threshold
-)
-ab_tolerance = 0.2  # PARAMETER RMS change (cm/s) that indicates hd_a/hd_b should change
-biofouling_scale = (
-    1.5  # what factor of the default hd_b is required to warn of biofouling?
-)
-
-# PARAMETERS for validation
-w_rms_func_bad = np.nan  # 'normal'
-w_rms_func_bad = 1000  # tried inf but that failed
-# PARAMETERS used to filter which data are used in regressions
-# for shallow 200m dives this is about 20 pts during the dive and climb
-data_density_max_depth = 9  # PARAMETER final 'good' points should not be separated by more that N meters (higher is more permissive)
-decimation = 0
-# DEAD debugging code for data_density_max_depth
-# raw temp and salinity will have NaN for timeout and unsampled points
-# if we want to eliminate flare, apo, spike and anomoly points, etc, then we need to use corrected salinity qc (but NOT the salinity values)
-ignore_salinity_qc = (
-    False  # DEAD? PARAMETER whether to ignore salinity qc results in nc file
-)
-
-required_fraction_good = 0.5  # PARAMETER how many of the dive's good points remain after eliminating extreme pumps, rolls and pitches?
-non_stalled_percent = 0.8  # PARAMETER after fitting with given parameters, what fraction of the good points predict good (non-stalled) velocities
-
-# if 0, use all original valid points else limit the points to just the 'still water' with acceleration <dw/dt>)n_dives_grid_spacing less than value cm/s2
-limit_to_still_water = 0.01  # PARAMETER cm/s2 nominally 0.01 but higher if there is pressure sensor noise (TERIFIC) test mean(mdwdt) > limit_to_still_water
-max_speed = 200  # cm/s (deal with pressure sensor spikes?)
-# Avoid acceleration because of pumping and bleeding and big rolls
-vbddiffmax = 0.5  # PARAMETRER cc/s
-# We seem to be able to fit steep,low power dives experienced at target turns.  See PAPA Jun09
-# Values for deciding if we are excessively rolled or pitched, which might violate steady flight assumptions
-# include rolls between rollmin and rollmax
-rollmin = 0  # PARAMETER degrees
-# if greater than this, we are rolled (port or stbd) too much
-rollmax = 90  # PARAMETER degrees
-# include pitches between pitchmin and pitchmax
-pitchmin = 0  # PARAMETER degrees
-# if greater than this, we are pitched (up or down) too much (typically flare)
-pitchmax = 60  # PARAMETER degrees
-# include points that are between and including the min an max values below
-# Avoid shallow points (for flare, surface) or below thermocline if you are trying to eliminate thermal compression effects
-pressmin = 10  # PARAMETER minimum pressure for which records are considered (avoid flare and surface maneuvers)
-pressmax = 6000  # PARAMETER maximum pressure for which records are considered
-
-max_pitch_d = 50  # PARAMETER (was 25) avoid using extremely steep dives to estimate a/b as we are not 'flying' in the typical flight regime
-min_pitch_diff = 7  # combined dives need at least 7 degrees of pitches
-
-
-def trusted_drag(pitch_diff):
-    global compare_velo, min_pitch_diff
-    return compare_velo or pitch_diff > min_pitch_diff
-
-
-angles = None  # Eventually a set of bins for each angle
 
 # Various constants
 cm_per_m = 100.0
@@ -291,29 +119,276 @@ m_per_cm = 1 / cm_per_m
 g_per_kg = 1000.0
 kg_per_g = 1 / g_per_kg
 
-# various globals
-flight_directory = None
-plots_directory = None
-flight_dive_data_filename = None
-# eventually a dict: dive -> <flight_data>, 'mass', etc. assumptions
-flight_dive_data_d = None
 
-mission_directory = None
-# set once in main()
-nc_path_format = None
-compress_cnf = None
-# an updated copy of prevailing flight constants from flight_dive_data_d, etc. required by hydro_model()
-flight_consts_d = {}
+def set_globals() -> None:
+    """ Allows globals to be reset externally"""
+    global \
+        dive_data_vector_names, \
+        old_basestation, \
+        force_alerts, \
+        compare_velo, \
+        acceptable_w_rms, \
+        grid_dive_sets, \
+        predicted_hd_a_scale, \
+        predicted_hd_b_scale, \
+        generate_figures, \
+        show_implied_c_vbd, \
+        fig_markersize, \
+        show_previous_ab_solution, \
+        copy_figures_to_plots, \
+        generate_dac_figures, \
+        checkpoint_flight_dive_data, \
+        dump_checkpoint_data_matfiles, \
+        dump_fm_files, \
+        flush_ab_grid_cache_entries, \
+        early_volmax_adjust, \
+        FM_default_rho0, \
+        sg_hd_s, \
+        hd_s_assumed_q, \
+        vbdbias_search_range, \
+        max_w_rms_vbdbias, \
+        vbdbias_tolerance, \
+        vbdbias_filter, \
+        abs_compress_tolerance, \
+        ac_min_start, \
+        ac_max_start, \
+        grid_spacing_d, \
+        grid_spacing_keys, \
+        force_ab_report, \
+        ab_tolerance, \
+        biofouling_scale, \
+        w_rms_func_bad, \
+        w_rms_func_bad, \
+        data_density_max_depth, \
+        decimation, \
+        ignore_salinity_qc, \
+        required_fraction_good, \
+        non_stalled_percent, \
+        limit_to_still_water, \
+        max_speed, \
+        vbddiffmax, \
+        rollmin, \
+        rollmax, \
+        pitchmin, \
+        pitchmax, \
+        pressmin, \
+        pressmax, \
+        max_pitch_d, \
+        min_pitch_diff, \
+        angles, \
+        flight_directory, \
+        plots_directory, \
+        flight_dive_data_filename, \
+        flight_dive_data_d, \
+        mission_directory, \
+        nc_path_format, \
+        compress_cnf, \
+        flight_consts_d, \
+        HIST, \
+        glider_type, \
+        flight_dive_nums, \
+        hd_a_grid, \
+        hd_b_grid, \
+        ab_grid_cache_d, \
+        restart_cache_d
+    # see load_dive_data() these are the vectors we collect for each dive to compute various flight model parameters
+    # deliberately NOT vol_comp, vol_comp_ref, and therm_expan_term, which are computed and cached
+    # if compare_velo is non-zero we add 'velo_speed' to this list below
+    dive_data_vector_names = [
+        "w",
+        "pressure",
+        "temperature",
+        "density_insitu",
+        "density",
+        "displaced_volume",
+        "pitch",
+    ]
 
-HIST = []  # w_rms_func() calculation history for debugging
+    # CONTROL PARAMETERS
 
-# global pointers to entries in flight_dive_data_d structures we use
-glider_type = None
-flight_dive_nums = None
-hd_a_grid = None
-hd_b_grid = None
-ab_grid_cache_d = None
-restart_cache_d = None
+    # Moved to option enable_reprocessing_dives = (
+    #    True  # CONTROL Normally True but if False we don't spend time updating the dives
+    # )
+    old_basestation = False  # assume the best
+    force_alerts = False  # CONTROL test alert code for each 'new' dive
+    # What should be tested, if velo is available, IN ADDITION to w vs. w_stdy (hdm_speed*sin(glide_angle))
+    compare_velo = 3  # CONTROL 0 - ignore, even if present (default); 1 - use it and test velo vs. hdm_speed; 2 - use it and test w vs. velo*sin(glide_angle) 3 - method 1 and 2 combined
+    acceptable_w_rms = (
+        5  # PARAMETER w_rms (cm/s) must be less than this to accept solution
+    )
+    grid_dive_sets = []  # special sets of dives to solve a/b grids (for debugging and other analysis; see rva_solve_ab.m)
+    # Analysis of velocometer data suggests that the w-only solutions under-estimate hd_b by 20%
+    # This parameter can be used to scale the solved predicted_hd_b just before it is delivered to MDP
+    # We do it this way for several reasons:
+    # 1. We want a self-consistent set of solutions of the flight parameters under the data we measured (FM ignores whatever is in the nc file)
+    # 2. It is not clear how scale *during* the operation and shift the w_rms contours in ab grids etc.
+    # 3. The grid itself might not fall on the scaling factor so we would have to do 2D interpolation of some sort
+    # TODO: eventually we will make this glider type dependent and compare_velo dependent (should always be 1.0)
+    predicted_hd_a_scale = 1.0  # No change
+    predicted_hd_b_scale = 1.0  # No change (1.2 increases hd_b by 20%)
+
+    generate_figures = True  # CONTROL requires matplot etc.
+    # add 2nd axis on vbdbias plot for current implied C_VBD wrt to show_implied_c_vbd
+    show_implied_c_vbd = 0  # PARAMETER what the pilot declared is a good C_VBD at the start of the deployment
+    fig_markersize = 7  # PARAMETER size of the markers in the eng plots
+    show_previous_ab_solution = True  # CONTROL show previous 0.2 cm/s and minimum ab solution contour if available
+    copy_figures_to_plots = (
+        True  # CONTROL add our figures to the plots subdir so IOP can see them
+    )
+    generate_dac_figures = False  # CONTROL show impact of different a/b values on DAC for a dive (expensive)
+
+    checkpoint_flight_dive_data = False  # CONTROL incrementally checkpoint the flight db (and mat file) per processed dive
+    dump_checkpoint_data_matfiles = (
+        False  # CONTROL dump matlab readable checkpoint files for debugging
+    )
+    dump_fm_files = True  # CONTROL dump individual .m files?
+
+    flush_ab_grid_cache_entries = []  # DEBUG which dives to flush and force recomputation?
+    # flush_ab_grid_cache_entries = [47]
+
+    # PARAMTERS that control the operation of FlightModel calculations:
+
+    # A note on volmax/vbdbias and our initial estimates MakeDiveProfiles() uses
+    # volmax with an associated vbdbias to compute buoyancy forcing We take over
+    # this system by ignoring the user's volmax guess (and rho0) and compute our own
+    # based on the given mass and a *fixed* plausible oceananic density
+    # (1027.5kg/m^3).  All the parameters will scale to this so the choice of density
+    # is largely irrelevant.  Based on that initial guess we compute a per-dive
+    # vbdbias required to redice the w_rms signal.  Over the first
+    # early_volmax_adjust dives we adjust our volmax estimate such that the mean
+    # vbdbias for those dives is near zero.
+
+    # NOTE: This is for convenience only; the buoyancy forcing does not change.
+    # Once set we can then look at large relative changes in recent vbdbias values
+    # to report biofouling however we expect some variation because of
+    # temperature-related volume changes not covered by the hull and thermal
+    # expansion terms, notably the temperature oil volume change.  In any case,
+    # before we update volmax to its final value the computed buoyancies and a/b are
+    # accurate at all times.
+
+    # The more dives we specify the more dives need reprocessing in a batch after we do the final adjustment
+    # reduce them but if C_VBD hasn't been adjusted we might not be close
+    # At the minimum we could wait 0 dives since vbdbias is adjusted wrt to whatever value we set
+    # however we should skip the first actual dive since bubbles and like need to be eliminated
+    # Thus the minimum adjustment is 1 (so we if we start at 1 we'll adjust using dive 2)
+
+    # NOTE: if you expect to set/override these parameters in a cnf file they must be all lower-case!!
+    early_volmax_adjust = 10  # PARAMETER number of dives: adjust volmax and re-tare vbdbias values over the 'first' N dives (was 10)
+    FM_default_rho0 = 1027.5  # assume constant for all missions; the scales velocity in hydro_model().  Matches MDP
+
+    sg_hd_s = (
+        -0.25
+    )  # CONSTANT how drag scales by shape for the Seaglider shape (Hubbard, 1990)
+    hd_s_assumed_q = 40  # PARAMETER typical mean speed of a glider along track (cm/s) (between 10 and 150cmn/s)
+    vbdbias_search_range = 1000  # PARAMETER +/- cc range around (initial) volmax estimate to search for vbdbias
+    max_w_rms_vbdbias = 10  # if min w_rms for the vbdbias search is greater than this, the dive is ratty (pressure sensor noise) and we shouldn't trust it
+    vbdbias_tolerance = 20  # PARAMETER cc of vbdbias change between nc and new value that triggers reprocessing
+    vbdbias_filter = 15  # PARAMETER how many dives to filter median vbdbias
+
+    # abs_compress is complicated
+    # we want to be able to search for it (like vbdbias) on a per-dive basis (see solve_vbdbias_abs_compress)
+    # however, given the current structure of w_rms_func, when we are doing the grid search we can only apply one abs_compress
+    # (because we can't apply and cache the final vol?) and we pre-apply vbdbias to displaced_volume
+    abs_compress_tolerance = 0.05  # PARAMETER fraction difference of abs_compress between nc and new value that triggers reprocessing (5%)
+    ac_min_start = 1e-6  # most squishy
+    ac_max_start = 8e-6  # most stiff
+
+    # PARAMETERS used to filter which dives are used in grid regressions
+    # Maintain a ring buffer of different sizes depending on how many dives have been processed so far
+    # Thus we compute early and often during the early part of the mission but lengthen as the mission progresses
+    # Constraints: The grid_spacing values must always increase with later dives
+    grid_spacing_d = {1: 4, 16: 8, 40: 16}  # mapping of dive -> grid_spacing size
+    # more frequent earlier or for short deployments: grid_spacing_d = {1: 4, 32: 8, 40: 16} # mapping of dive -> grid_spacing size
+    # DEBUG grid_spacing_d = {1: 15} # disable expanding grid_spacing and use fixed stride
+    grid_spacing_keys = None
+
+    # we decide to commit to a new a/b over a previous a/b if the *prior* RMS at the *new* a/b point exceeds this tolerance
+    # otherwise the new a/b value was acceptable according to the prior calculation so don't change a/b
+    force_ab_report = (
+        False  # CONTROL control chattiness to help determine ab_tolerance threshold
+    )
+    ab_tolerance = (
+        0.2  # PARAMETER RMS change (cm/s) that indicates hd_a/hd_b should change
+    )
+    biofouling_scale = (
+        1.5  # what factor of the default hd_b is required to warn of biofouling?
+    )
+
+    # PARAMETERS for validation
+    w_rms_func_bad = np.nan  # 'normal'
+    w_rms_func_bad = 1000  # tried inf but that failed
+    # PARAMETERS used to filter which data are used in regressions
+    # for shallow 200m dives this is about 20 pts during the dive and climb
+    data_density_max_depth = 9  # PARAMETER final 'good' points should not be separated by more that N meters (higher is more permissive)
+    decimation = 0
+    # DEAD debugging code for data_density_max_depth
+    # raw temp and salinity will have NaN for timeout and unsampled points
+    # if we want to eliminate flare, apo, spike and anomoly points, etc, then we need to use corrected salinity qc (but NOT the salinity values)
+    ignore_salinity_qc = (
+        False  # DEAD? PARAMETER whether to ignore salinity qc results in nc file
+    )
+
+    required_fraction_good = 0.5  # PARAMETER how many of the dive's good points remain after eliminating extreme pumps, rolls and pitches?
+    non_stalled_percent = 0.8  # PARAMETER after fitting with given parameters, what fraction of the good points predict good (non-stalled) velocities
+
+    # if 0, use all original valid points else limit the points to just the 'still water' with acceleration <dw/dt>)n_dives_grid_spacing less than value cm/s2
+    limit_to_still_water = 0.01  # PARAMETER cm/s2 nominally 0.01 but higher if there is pressure sensor noise (TERIFIC) test mean(mdwdt) > limit_to_still_water
+    max_speed = 200  # cm/s (deal with pressure sensor spikes?)
+    # Avoid acceleration because of pumping and bleeding and big rolls
+    vbddiffmax = 0.5  # PARAMETRER cc/s
+    # We seem to be able to fit steep,low power dives experienced at target turns.  See PAPA Jun09
+    # Values for deciding if we are excessively rolled or pitched, which might violate steady flight assumptions
+    # include rolls between rollmin and rollmax
+    rollmin = 0  # PARAMETER degrees
+    # if greater than this, we are rolled (port or stbd) too much
+    rollmax = 90  # PARAMETER degrees
+    # include pitches between pitchmin and pitchmax
+    pitchmin = 0  # PARAMETER degrees
+    # if greater than this, we are pitched (up or down) too much (typically flare)
+    pitchmax = 60  # PARAMETER degrees
+    # include points that are between and including the min an max values below
+    # Avoid shallow points (for flare, surface) or below thermocline if you are trying to eliminate thermal compression effects
+    pressmin = 10  # PARAMETER minimum pressure for which records are considered (avoid flare and surface maneuvers)
+    pressmax = 6000  # PARAMETER maximum pressure for which records are considered
+
+    max_pitch_d = 50  # PARAMETER (was 25) avoid using extremely steep dives to estimate a/b as we are not 'flying' in the typical flight regime
+    min_pitch_diff = 7  # combined dives need at least 7 degrees of pitches
+
+    angles = None  # Eventually a set of bins for each angle
+
+    # various globals
+    flight_directory = None
+    plots_directory = None
+    flight_dive_data_filename = None
+    # eventually a dict: dive -> <flight_data>, 'mass', etc. assumptions
+    flight_dive_data_d = None
+
+    mission_directory = None
+    # set once in main()
+    nc_path_format = None
+    compress_cnf = None
+    # an updated copy of prevailing flight constants from flight_dive_data_d, etc. required by hydro_model()
+    flight_consts_d = {}
+
+    HIST = []  # w_rms_func() calculation history for debugging
+
+    # global pointers to entries in flight_dive_data_d structures we use
+    glider_type = None
+    flight_dive_nums = None
+    hd_a_grid = None
+    hd_b_grid = None
+    ab_grid_cache_d = None
+    restart_cache_d = None
+
+
+# Set globals on import
+set_globals()
+
+
+def trusted_drag(pitch_diff):
+    global compare_velo, min_pitch_diff
+    return compare_velo or pitch_diff > min_pitch_diff
+
 
 if generate_figures:
     import matplotlib
@@ -620,6 +695,7 @@ def load_flight_database(
     )
     if verify:
         # initialize assumptions by copy from sgc
+        log_info("------In Verify------")
         for fv in assumption_variables:
             flight_dive_data_d[fv] = sg_calib_constants_d[fv]
     return True
@@ -907,17 +983,17 @@ def get_FM_defaults(consts_d, glider_type=None):
         # thermal expansion of the hull
         consts_d["therm_expan"] = 7.05e-5  # m^3/degree
         # % compressibility of the hull per dbar
-        consts_d[
-            "abs_compress"
-        ] = 4.1e-6  # m^3/dbar (slightly less than the compressibility of SW)
+        consts_d["abs_compress"] = (
+            4.1e-6  # m^3/dbar (slightly less than the compressibility of SW)
+        )
         if consts_d["mass"] > SGX_MASS:
             # An SGX, which are massive vehicles
             log_info("FM:Assuming this is an SGX vehicle", max_count=1)
             consts_d["hd_a"] = 0.003548133892336
             consts_d["hd_b"] = 0.015848931924611  # a little more drag than even DGs
-            consts_d[
-                "hd_s"
-            ] = sg_hd_s  # 0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+            consts_d["hd_s"] = (
+                sg_hd_s  # 0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+            )
 
     elif glider_type == DEEPGLIDER:
         # TODO change these defaults since we now use hd_s = 0
@@ -927,9 +1003,9 @@ def get_FM_defaults(consts_d, glider_type=None):
         consts_d["hd_c"] = 2.5e-6  # DG037 53 and 55 stall with higher value
         # consts_d['hd_c']    =   5.7e-6 # increased c to deal with high pitch dives DG046 BATS May19 after dive 70?
         # Lucas experiment consts_d['hd_c']    =   2.5e-5 # DG037 53 and 55 stall with higher value
-        consts_d[
-            "hd_s"
-        ] = 0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+        consts_d["hd_s"] = (
+            0.0  # how the drag scales by shape (0 for the more standard shape of DG per Eriksen)
+        )
         # 9/6/2019: On all DG vehicles we found that FMS underestimated the speeds on both dive and climb for steep dives (> 25 degreees)
         # attempts to deal with c failed but s made a big difference. -0.25 (SG) was ok, -0.30 was better, -0.35 overestimated dive speeds
         # consts_d['hd_s']    =   -0.20 # how the drag scales by shape
@@ -941,9 +1017,9 @@ def get_FM_defaults(consts_d, glider_type=None):
     elif glider_type == OCULUS:
         consts_d["hd_a"] = 0.007079457843841  # much higher lift
         consts_d["hd_b"] = 0.014125375446228  # like DG
-        consts_d[
-            "hd_s"
-        ] = 0.0  # how the drag scales by shape (0 for the more standard shape of Oculus per Eriksen)
+        consts_d["hd_s"] = (
+            0.0  # how the drag scales by shape (0 for the more standard shape of Oculus per Eriksen)
+        )
         # thermal expansion of the hull
         consts_d["therm_expan"] = 7.05e-5  # m^3/degree
         # % compressibility of the hull per dbar
@@ -1371,9 +1447,9 @@ def load_dive_data(base_opts, dive_data):
                 valid_i
             ]  # for compressee and hull thermal expansion
             density_insitu = density_insitu[valid_i]
-            data_d[
-                "density_insitu"
-            ] = density_insitu  # for buoyancy calculations (kg/m^3)
+            data_d["density_insitu"] = (
+                density_insitu  # for buoyancy calculations (kg/m^3)
+            )
             dive_data.bottom_temp = min(data_d["temperature"])
 
             density = density[valid_i]
@@ -1764,12 +1840,12 @@ def solve_ab_grid(base_opts, dive_set, reprocess_count, dive_num=None):
                     dd.vbdbias
                 )  # apply per-dive vbdbias to copy so any cache is not poisoned
             combined_data_d[vector_name].extend(data_vector)
-    combined_data_d[
-        "n_velo"
-    ] = n_velo  # A boolean about whether velo data is available for all valid points for all dives
-    combined_data_d[
-        "correct_aoa_velo"
-    ] = correct_aoa_velo  # A boolean about whether velo data needs aoa correction for all dives
+    combined_data_d["n_velo"] = (
+        n_velo  # A boolean about whether velo data is available for all valid points for all dives
+    )
+    combined_data_d["correct_aoa_velo"] = (
+        correct_aoa_velo  # A boolean about whether velo data needs aoa correction for all dives
+    )
 
     # convert to numpy arrays
     for vector_name in dive_data_vector_names:
@@ -1940,9 +2016,9 @@ def load_dive_data_DAC(base_opts, dive_data):
         data_d["pitch"] = eng_pitch_ang
         data_d["w"] = w  # what we optimize against
         data_d["pressure"] = press  # for compression and compressee
-        data_d[
-            "temperature"
-        ] = temperature_raw  # for compressee and hull thermal expansion
+        data_d["temperature"] = (
+            temperature_raw  # for compressee and hull thermal expansion
+        )
         data_d["density_insitu"] = density_insitu  # for buoyancy calculations (kg/m^3)
         data_d["density"] = density  # for buoyancy calculations (kg/m^3)
 
@@ -4061,9 +4137,9 @@ def main(
         # limit the bounds for abs_compress search
         flight_dive_data_d["ac_min"] = ac_min_start
         flight_dive_data_d["ac_max"] = ac_max_start
-        flight_dive_data_d[
-            "ac_min_press"
-        ] = 500  # [dbar] this is where we can start seeing the impact, otherwise use the default
+        flight_dive_data_d["ac_min_press"] = (
+            500  # [dbar] this is where we can start seeing the impact, otherwise use the default
+        )
         # DEBUG pfdd(True) #  display initial defaults in the log file
         save_flight_database(base_opts)
 
