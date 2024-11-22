@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022, 2023, 2024 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -25,14 +25,10 @@
 """
 rbr legato basestation sensor extension
 """
+
 import Utils
 from BaseLog import log_error
-from BaseNetCDF import (
-    nc_scalar,
-    register_sensor_dim_info,
-    nc_legato_data_info,
-    nc_sg_data_info,
-)
+import BaseNetCDF
 
 
 def init_sensor(module_name, init_dict=None):
@@ -48,8 +44,12 @@ def init_sensor(module_name, init_dict=None):
         log_error("No datafile supplied for init_sensors - version mismatch?")
         return -1
 
-    register_sensor_dim_info(
-        nc_legato_data_info, "legato_data_point", "legato_time", True, "legato"
+    BaseNetCDF.register_sensor_dim_info(
+        BaseNetCDF.nc_legato_data_info,
+        "legato_data_point",
+        "legato_time",
+        True,
+        "legato",
     )
 
     # results are computed in MDP
@@ -63,7 +63,7 @@ def init_sensor(module_name, init_dict=None):
                     "nodc_name": "thermosalinograph",
                     "make_model": "unpumped RBR Legato",
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],  # always scalar
             # legato via truck
             "eng_rbr_conduc": [
@@ -74,7 +74,7 @@ def init_sensor(module_name, init_dict=None):
                     "units": "mS/cm",
                     "description": "Conductivity as reported by the instrument",
                 },
-                (nc_sg_data_info,),
+                (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_rbr_temp": [
                 "f",
@@ -84,7 +84,7 @@ def init_sensor(module_name, init_dict=None):
                     "units": "degrees_Celsius",
                     "description": "Termperature (in situ) as reported by the instrument",
                 },
-                (nc_sg_data_info,),
+                (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_rbr_conducTemp": [
                 False,
@@ -93,7 +93,7 @@ def init_sensor(module_name, init_dict=None):
                     "units": "degrees_Celsius",
                     "description": "As reported by the instrument",
                 },
-                (nc_sg_data_info,),
+                (BaseNetCDF.nc_sg_data_info,),
             ],
             "eng_rbr_pressure": [
                 "f",
@@ -103,7 +103,7 @@ def init_sensor(module_name, init_dict=None):
                     "units": "dbar",
                     "description": "CTD reported pressure",
                 },
-                (nc_sg_data_info,),
+                (BaseNetCDF.nc_sg_data_info,),
             ],
             # legato via scicon
             "legato_time": [
@@ -114,7 +114,7 @@ def init_sensor(module_name, init_dict=None):
                     "units": "seconds since 1970-1-1 00:00:00",
                     "description": "sbe41 time in GMT epoch format",
                 },
-                (nc_legato_data_info,),
+                (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_conduc": [
                 "f",
@@ -124,7 +124,7 @@ def init_sensor(module_name, init_dict=None):
                     "units": "mS/cm",
                     "description": "Conductivity as reported by the instrument",
                 },
-                (nc_legato_data_info,),
+                (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_temp": [
                 "f",
@@ -134,7 +134,7 @@ def init_sensor(module_name, init_dict=None):
                     "units": "degrees_Celsius",
                     "description": "Termperature (in situ) as reported by the instrument",
                 },
-                (nc_legato_data_info,),
+                (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_conducTemp": [
                 False,
@@ -143,7 +143,7 @@ def init_sensor(module_name, init_dict=None):
                     "units": "degrees_Celsius",
                     "description": "As reported by the instrument",
                 },
-                (nc_legato_data_info,),
+                (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_pressure": [
                 "f",
@@ -153,25 +153,25 @@ def init_sensor(module_name, init_dict=None):
                     "units": "dbar",
                     "description": "CTD reported pressure",
                 },
-                (nc_legato_data_info,),
+                (BaseNetCDF.nc_legato_data_info,),
             ],
             "legato_ontime_a": [
                 False,
                 "d",
                 {"description": "legato total time turned on dive", "units": "secs"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "legato_samples_a": [
                 False,
                 "i",
                 {"description": "legato total number of samples taken dive"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "legato_timeouts_a": [
                 False,
                 "i",
                 {"description": "legato total number of samples timed out on dive"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "legato_errors_a": [
                 False,
@@ -179,25 +179,25 @@ def init_sensor(module_name, init_dict=None):
                 {
                     "description": "legato total number of errors reported during sampling on dive"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "legato_ontime_b": [
                 False,
                 "d",
                 {"description": "legato total time turned on climb", "units": "secs"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "legato_samples_b": [
                 False,
                 "i",
                 {"description": "legato total number of samples taken climb"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "legato_timeouts_b": [
                 False,
                 "i",
                 {"description": "legato total number of samples timed out on climb"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "legato_errors_b": [
                 False,
@@ -205,7 +205,7 @@ def init_sensor(module_name, init_dict=None):
                 {
                     "description": "legato total number of errors reported during sampling on climb"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
         }
     }

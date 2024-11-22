@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022, 2024 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -38,14 +38,7 @@ import re
 import numpy as np
 
 from BaseLog import log_error, log_debug, log_warning, log_info
-from BaseNetCDF import (
-    nc_scalar,
-    register_sensor_dim_info,
-    form_nc_metadata,
-    nc_mdp_data_info,
-    nc_var_metadata,
-    assign_dim_info_size,
-)
+import BaseNetCDF
 import FileMgr
 import Utils
 
@@ -105,7 +98,7 @@ def init_logger(module_name, init_dict=None):
                     "description": "Depth above above which data is recorded",
                     "units": "meters",
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "log_TM_PROFILE": [
                 False,
@@ -113,7 +106,7 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "log_TM_XMITPROFILE": [
                 False,
@@ -121,7 +114,7 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Which profile to transmit back to the basestation - 0 none, 1 dive, 2 climb, 3 both"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "log_TM_LOGSAMPLE": [
                 False,
@@ -129,7 +122,7 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Interrogate tmicl each glider sample for the most recent reading."
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "log_TM_XMITRAW": [
                 False,
@@ -137,40 +130,45 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Which part of the dive data to transmit - 0 none, 1 dive, 2 climb, 3 both."
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "log_TM_FREEKB": [
                 False,
                 "d",
                 {"description": "Free diskspace on TMICL, in kBytes"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "log_TM_NDIVE": [
                 False,
                 "d",
                 {"description": "Dive multiplier for TMICL"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             # From here down are per channel
             # ch 0
-            "tmicl_nfft_ch0": [False, "i", {"description": "Size of FFT"}, nc_scalar],
+            "tmicl_nfft_ch0": [
+                False,
+                "i",
+                {"description": "Size of FFT"},
+                BaseNetCDF.nc_scalar,
+            ],
             "tmicl_navg_ch0": [
                 False,
                 "i",
                 {"description": "Number of overlapping FFTs averaged"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_osc_ch0": [
                 False,
                 "i",
                 {"description": "Oscillator setting"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_nlog_ch0": [
                 False,
                 "i",
                 {"description": "Number of log averaged spectra bins"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_logmap_ch0": [
                 False,
@@ -178,19 +176,19 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Array describing the mapping from frequency to log averaged"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_container_ch0": [
                 False,
                 "c",
                 {"description": "Name of the containing directory"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_comment_ch0": [
                 False,
                 "c",
                 {"description": "Comment field"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_despikethreshold_ch0": [
                 False,
@@ -198,32 +196,32 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Threshold (in stddev) for the despiker to work on the raw signal"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_noiseintersect_ch0": [
                 False,
                 "d",
                 {"description": "Y-intersect of the noise cutoff"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_noiseslope_ch0": [
                 False,
                 "d",
                 {"description": "Slope of the noise cutoff"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_fmin_ch0": [
                 False,
                 "d",
                 {"description": "Frequency cut off for integration"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
-            "tmicl_GD_ch0": [False, "d", {"description": "Gain"}, nc_scalar],
+            "tmicl_GD_ch0": [False, "d", {"description": "Gain"}, BaseNetCDF.nc_scalar],
             "tmicl_S_ch0": [
                 False,
                 "d",
                 {"description": "Shear sensitivity"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_channels_ch0": [
                 False,
@@ -231,43 +229,43 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Channel map - 1 channel 1, 2 channel 2, 3 channel 0 and 1"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_serialnum_ch0": [
                 False,
                 "c",
                 {"description": "serial number of tmicl board"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_samplerate_ch0": [
                 False,
                 "i",
                 {"description": "Per channel sample requested rate in Hz"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_effectivesamplerate_ch0": [
                 False,
                 "d",
                 {"description": "Per channel sample effective rate in Hz"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_motordroppedblocks_ch0": [
                 False,
                 "i",
                 {"description": "Number of blocks dropped due to motor moves"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_goodblocks_ch0": [
                 False,
                 "i",
                 {"description": "Number of good blocks"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_totaldespike_ch0": [
                 False,
                 "i",
                 {"description": "Total number of samples despiked"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_samplesprocessed_ch0": [
                 False,
@@ -275,27 +273,32 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Total number of samples processed (always a multiple of nfft/2)"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             # ch1
-            "tmicl_nfft_ch1": [False, "i", {"description": "Size of FFT"}, nc_scalar],
+            "tmicl_nfft_ch1": [
+                False,
+                "i",
+                {"description": "Size of FFT"},
+                BaseNetCDF.nc_scalar,
+            ],
             "tmicl_navg_ch1": [
                 False,
                 "i",
                 {"description": "Number of overlapping FFTs averaged"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_osc_ch1": [
                 False,
                 "i",
                 {"description": "Oscillator setting"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_nlog_ch1": [
                 False,
                 "i",
                 {"description": "Number of log averaged spectra bins"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_logmap_ch1": [
                 False,
@@ -303,19 +306,19 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Array describing the mapping from frequency to log averaged"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_container_ch1": [
                 False,
                 "c",
                 {"description": "Name of the containing directory"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_comment_ch1": [
                 False,
                 "c",
                 {"description": "Comment field"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_despikethreshold_ch1": [
                 False,
@@ -323,32 +326,32 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Threshold (in stddev) for the despiker to work on the raw signal"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_noiseintersect_ch1": [
                 False,
                 "d",
                 {"description": "Y-intersect of the noise cutoff"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_noiseslope_ch1": [
                 False,
                 "d",
                 {"description": "Slope of the noise cutoff"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_fmin_ch1": [
                 False,
                 "d",
                 {"description": "Frequency cut off for integration"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
-            "tmicl_GD_ch1": [False, "d", {"description": "Gain"}, nc_scalar],
+            "tmicl_GD_ch1": [False, "d", {"description": "Gain"}, BaseNetCDF.nc_scalar],
             "tmicl_S_ch1": [
                 False,
                 "d",
                 {"description": "Shear sensitivity"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_channels_ch1": [
                 False,
@@ -356,43 +359,43 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Channel map - 1 channel 1, 2 channel 2, 3 channel 0 and 1"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_serialnum_ch1": [
                 False,
                 "c",
                 {"description": "serial number of tmicl board"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_samplerate_ch1": [
                 False,
                 "i",
                 {"description": "Per channel sample requested rate in Hz"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_effectivesamplerate_ch1": [
                 False,
                 "d",
                 {"description": "Per channel sample effective rate in Hz"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_motordroppedblocks_ch1": [
                 False,
                 "i",
                 {"description": "Number of blocks dropped due to motor moves"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_goodblocks_ch1": [
                 False,
                 "i",
                 {"description": "Number of good blocks"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_totaldespike_ch1": [
                 False,
                 "i",
                 {"description": "Total number of samples despiked"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
             "tmicl_samplesprocessed_ch1": [
                 False,
@@ -400,7 +403,7 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Total number of samples processed (always a multiple of nfft/2)"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ],
         },
     }
@@ -410,25 +413,25 @@ def init_logger(module_name, init_dict=None):
             False,
             "i",
             {"description": "Size of FFT"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_navg_%s" % name] = [
             False,
             "i",
             {"description": "Number of overlapping FFTs averaged"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_osc_%s" % name] = [
             False,
             "i",
             {"description": "Oscillator setting"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_nlog_%s" % name] = [
             False,
             "i",
             {"description": "Number of log averaged spectra bins"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_logmap_%s" % name] = [
             False,
@@ -436,38 +439,38 @@ def init_logger(module_name, init_dict=None):
             {
                 "description": "Array describing the mapping from frequency to log averaged"
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_container_%s" % name] = [
             False,
             "c",
             {"description": "Name of the containing directory"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         # Don't change this format with adjusting the code below
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_comment0_%s" % name] = [
             False,
             "c",
             {"description": "Comment field"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_comment1_%s" % name] = [
             False,
             "c",
             {"description": "Comment field"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_comment2_%s" % name] = [
             False,
             "c",
             {"description": "Comment field"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_comment3_%s" % name] = [
             False,
             "c",
             {"description": "Comment field"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"][
             "tmicl_despikethreshold_%s" % name
@@ -477,34 +480,39 @@ def init_logger(module_name, init_dict=None):
             {
                 "description": "Threshold (in stddev) for the despiker to work on the raw signal"
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"][
             "tmicl_noiseintersect_%s" % name
-        ] = [False, "d", {"description": "Y-intersect of the noise cutoff"}, nc_scalar]
+        ] = [
+            False,
+            "d",
+            {"description": "Y-intersect of the noise cutoff"},
+            BaseNetCDF.nc_scalar,
+        ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_noiseslope_%s" % name] = [
             False,
             "d",
             {"description": "Slope of the noise cutoff"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_fmin_%s" % name] = [
             False,
             "d",
             {"description": "Frequency cut off for integration"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_GD_%s" % name] = [
             False,
             "d",
             {"description": "Gain"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_S_%s" % name] = [
             False,
             "d",
             {"description": "Shear sensitivity"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_channels_%s" % name] = [
             False,
@@ -512,19 +520,19 @@ def init_logger(module_name, init_dict=None):
             {
                 "description": "Channel map - 1 channel 1, 2 channel 2, 3 channel 0 and 1"
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_serialnum_%s" % name] = [
             False,
             "c",
             {"description": "serial number of tmicl board"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"]["tmicl_samplerate_%s" % name] = [
             False,
             "i",
             {"description": "Per channel sample requested rate in Hz"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         init_dict[module_name]["netcdf_metadata_adds"][
             "tmicl_effectivesamplerate_%s" % name
@@ -532,7 +540,7 @@ def init_logger(module_name, init_dict=None):
             False,
             "d",
             {"description": "Per channel sample effective rate in Hz"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
 
     # Predeclare the possible dimensions for non-base files
@@ -545,23 +553,23 @@ def init_logger(module_name, init_dict=None):
                 col_info = "%s_info" % col_dim
                 var_dim = "tmicl_%s_%s_%s" % (ec, ch, cast)
                 description = "Tmicl %s %s %s" % (ec, ch, f"{descr} profile")
-                register_sensor_dim_info(
+                BaseNetCDF.register_sensor_dim_info(
                     row_info, row_dim, None, True, None
                 )  # CONSIDER True -> 'microstructure'
-                register_sensor_dim_info(
+                BaseNetCDF.register_sensor_dim_info(
                     col_info, col_dim, None, True, None
                 )  # CONSIDER True -> 'microstructure'
-                init_dict[module_name]["netcdf_metadata_adds"][
-                    var_dim
-                ] = form_nc_metadata(
-                    None,
-                    False,
-                    "d",
-                    {"description": description},
-                    (
-                        row_info,
-                        col_info,
-                    ),
+                init_dict[module_name]["netcdf_metadata_adds"][var_dim] = (
+                    BaseNetCDF.form_nc_metadata(
+                        None,
+                        False,
+                        "d",
+                        {"description": description},
+                        (
+                            row_info,
+                            col_info,
+                        ),
+                    )
                 )
     return 0
 
@@ -1129,8 +1137,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
             )
             log_debug("Creating dimension %s" % nc_eng_file_mdp_dim)
             nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
-            if nc_eng_file_mdp_info not in nc_mdp_data_info:
-                register_sensor_dim_info(
+            if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
+                BaseNetCDF.register_sensor_dim_info(
                     nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None
                 )
 
@@ -1154,13 +1162,13 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 # load_dive_profile_data() will reload such data also with complaint
                 # If you write files with constructed dim info and later declare it
                 # then when the nc file is rebuilt it will use the new, declared dim name
-                if nc_var_name not in nc_var_metadata.keys():
+                if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
                     log_debug(
                         "Metadata for tmicl data %s was not pre-declared" % nc_var_name
                     )
                     # Since it is raw data and load_dive_profile_data() will create this info
                     # as well, we let MMT and MMP handle it
-                    netcdf_dict[nc_var_name] = form_nc_metadata(
+                    netcdf_dict[nc_var_name] = BaseNetCDF.form_nc_metadata(
                         None, False, "d", {}, (nc_eng_file_mdp_info,)
                     )
 
@@ -1227,8 +1235,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 )
                 log_debug("Creating dimension %s" % nc_eng_file_mdp_dim)
                 nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
-                if nc_eng_file_mdp_info not in nc_mdp_data_info:
-                    register_sensor_dim_info(
+                if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
+                    BaseNetCDF.register_sensor_dim_info(
                         nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None
                     )
 
@@ -1239,11 +1247,11 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 )
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, sig_var))
-                if nc_var_name not in nc_var_metadata.keys():
+                if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
                     log_debug(
                         "Metadata for tmicl data %s was not pre-declared" % nc_var_name
                     )
-                    netcdf_dict[nc_var_name] = form_nc_metadata(
+                    netcdf_dict[nc_var_name] = BaseNetCDF.form_nc_metadata(
                         None, False, "d", {}, (nc_eng_file_mdp_info,)
                     )
 
@@ -1255,14 +1263,14 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 "time",
             )
             ret_list.append((nc_var_name, time_col))
-            if nc_var_name not in nc_var_metadata.keys():
+            if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
                 nc_eng_file_mdp_dim = "%s_data_point" % nc_var_name
                 nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
-                if nc_eng_file_mdp_info not in nc_mdp_data_info:
-                    register_sensor_dim_info(
+                if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
+                    BaseNetCDF.register_sensor_dim_info(
                         nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None
                     )  # CONSIDER True -> 'microstructure'
-                netcdf_dict[nc_var_name] = form_nc_metadata(
+                netcdf_dict[nc_var_name] = BaseNetCDF.form_nc_metadata(
                     None, False, "d", {}, (nc_eng_file_mdp_info,)
                 )
 
@@ -1287,18 +1295,18 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                         "center_freqs",
                     )
                     ret_list.append((nc_var_name, center_freqs))
-                    if nc_var_name not in nc_var_metadata.keys():
+                    if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
                         nc_eng_file_mdp_dim = "%s_data_point" % nc_var_name
                         nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
-                        if nc_eng_file_mdp_info not in nc_mdp_data_info:
-                            register_sensor_dim_info(
+                        if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
+                            BaseNetCDF.register_sensor_dim_info(
                                 nc_eng_file_mdp_info,
                                 nc_eng_file_mdp_dim,
                                 None,
                                 True,
                                 None,
                             )  # CONSIDER True -> 'microstructure'
-                        netcdf_dict[nc_var_name] = form_nc_metadata(
+                        netcdf_dict[nc_var_name] = BaseNetCDF.form_nc_metadata(
                             None, False, "d", {}, (nc_eng_file_mdp_info,)
                         )
 
@@ -1313,10 +1321,10 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
             # The nc metadata for nc_var_name was created in init_logger() above
             # including the multi-dimensional row and coluumn info and dimensions
             # Here we are able to assert the dimension sizes
-            assign_dim_info_size(
+            BaseNetCDF.assign_dim_info_size(
                 nc_info_d, "%s_row_info" % nc_var_name, spectra.shape[0]
             )  # rows
-            assign_dim_info_size(
+            BaseNetCDF.assign_dim_info_size(
                 nc_info_d, "%s_col_info" % nc_var_name, spectra.shape[1]
             )  # columns
 

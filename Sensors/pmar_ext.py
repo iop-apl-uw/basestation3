@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2024 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -34,14 +34,7 @@ import traceback
 import numpy as np
 
 from BaseLog import log_error, log_info, log_debug, log_warning
-from BaseNetCDF import (
-    nc_scalar,
-    register_sensor_dim_info,
-    form_nc_metadata,
-    nc_mdp_data_info,
-    nc_var_metadata,
-    assign_dim_info_size,
-)
+import BaseNetCDF
 import FileMgr
 import QC
 import Utils
@@ -71,7 +64,7 @@ def init_logger(module_name, init_dict=None):
                 "description": "Depth above above which data is recorded",
                 "units": "meters",
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "log_PM_PROFILE": [
             False,
@@ -79,7 +72,7 @@ def init_logger(module_name, init_dict=None):
             {
                 "description": "Which part of the dive to record data for - 0 none, 1 dive, 2 climb, 3 both"
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "log_PM_XMITPROFILE": [
             False,
@@ -87,7 +80,7 @@ def init_logger(module_name, init_dict=None):
             {
                 "description": "Which profile to transmit back to the basestation - 0 none, 1 dive, 2 climb, 3 both"
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "log_PM_XMITRAW": [
             False,
@@ -95,37 +88,37 @@ def init_logger(module_name, init_dict=None):
             {
                 "description": "Which part of the dive data to transmit - 0 none, 1 dive, 2 climb, 3 both."
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "log_PM_FREEKB": [
             False,
             "d",
             {"description": "Free diskspace on PMAR, in kBytes"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "log_PM_ACTIVECARD": [
             False,
             "d",
             {"description": "Currently active card"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "log_PM_MOTORS": [
             False,
             "d",
             {"description": "Send motor notifacations to PMAR"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "log_PM_SENDDEPTH": [
             False,
             "d",
             {"description": "Send depth notifacations to PMAR"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "log_PM_NDIVE": [
             False,
             "d",
             {"description": "Dive multiplier for PMAR"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
     }
     for dd in range(8):
@@ -133,7 +126,7 @@ def init_logger(module_name, init_dict=None):
             False,
             "d",
             {"description": f"Free diskspace on PMAR disk {dd:02d}, in kBytes"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
 
     for cast, _ in FileMgr.cast_descr:
@@ -142,31 +135,31 @@ def init_logger(module_name, init_dict=None):
                 False,
                 "i",
                 {"description": "Number of blocks dropped due to motor moves"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_clipdroppedblocks_{cast}{ch}"] = [
                 False,
                 "i",
                 {"description": "Number of blocks dropped due to clipping"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_goodblocks_{cast}{ch}"] = [
                 False,
                 "i",
                 {"description": "Number of good blocks"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_totalclip_{cast}{ch}"] = [
                 False,
                 "i",
                 {"description": "Total number of samples clipped"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_totaldespike_{cast}{ch}"] = [
                 False,
                 "i",
                 {"description": "Total number of samples despiked"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_samplesprocessed_{cast}{ch}"] = [
                 False,
@@ -174,13 +167,13 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Total number of samples processed (always a multiple of nfft/2)"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_writeerrors_{cast}{ch}"] = [
                 False,
                 "i",
                 {"description": "Total number of file write errors"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_bufferfull_{cast}{ch}"] = [
                 False,
@@ -188,19 +181,19 @@ def init_logger(module_name, init_dict=None):
                 {
                     "description": "Total number of samples dropped due to buffer overflow"
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_datafiles_{cast}{ch}"] = [
                 False,
                 "i",
                 {"description": "Total number of data files created"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             netcdf_metadata_adds[f"pmar_datafailedfiles_{cast}{ch}"] = [
                 False,
                 "i",
                 {"description": "Total number of data files that failed"},
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
 
     for ch in ("", "_ch00", "_ch01"):
@@ -208,79 +201,79 @@ def init_logger(module_name, init_dict=None):
             False,
             "i",
             {"description": "Size of FFT"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_navg{ch}"] = [
             False,
             "i",
             {"description": "Number of blocks per ensemble"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_samplerate{ch}"] = [
             False,
             "d",
             {"description": "Actual sample rate"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_container{ch}"] = [
             False,
             "c",
             {"description": "Name of the containing directory"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_comment{ch}"] = [
             False,
             "c",
             {"description": "Comment field"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_serialnum{ch}"] = [
             False,
             "c",
             {"description": "PMAR boards serial number"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_osc{ch}"] = [
             False,
             "i",
             {"description": "Oscillator setting"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_datawindow{ch}"] = [
             False,
             "d",
             {"description": "Size in seconds of the signal stats window"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_clipmin{ch}"] = [
             False,
             "i",
             {"description": "Signal value below which a negative clip is counted"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_clipmax{ch}"] = [
             False,
             "i",
             {"description": "Signal value above which a postivie clip is counted"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_maxclipcount{ch}"] = [
             False,
             "i",
             {"description": "Max number of clips allowed in a block"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_minblocksensemble{ch}"] = [
             False,
             "i",
             {"description": "Minimum number of blocks contained in an ensemble"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_num_blocks{ch}"] = [
             False,
             "i",
             {"description": "Number of blocks included in the ensemble"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_logmap{ch}"] = [
             False,
@@ -288,66 +281,66 @@ def init_logger(module_name, init_dict=None):
             {
                 "description": "Array describing the mapping from frequency to log averaged"
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_gain{ch}"] = [
             False,
             "d",
             {"description": "Gain setting for recording (0 - 4)"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_gain0{ch}"] = [
             False,
             "d",
             {"description": "Setting gain stage 0 in dB"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_gain1{ch}"] = [
             False,
             "d",
             {"description": "Setting gain stage 1 in dB"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_cutoff{ch}"] = [
             False,
             "d",
             {"description": "Low pass frequency in Hz"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_despikethreshold{ch}"] = [
             False,
             "d",
             {"description": "Threshold for despiking in standard deviations"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         netcdf_metadata_adds[f"pmar_despikepasses{ch}"] = [
             False,
             "d",
             {"description": "Number of times data depiker has been run"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
 
-    #       'pmar_nfft_ch01': [False, 'i', {'description':'Size of FFT'}, nc_scalar],
-    #       'pmar_navg_ch01': [False, 'i', {'description':'Number of blocks per ensemble'}, nc_scalar],
-    #       'pmar_samplerate_ch01': [False, 'd', {'description':'Actual sample rate'}, nc_scalar],
-    #       'pmar_container_ch01': [False, 'c', {'description':'Name of the containing directory'}, nc_scalar],
-    #       'pmar_comment_ch01': [False, 'c', {'description':'Comment field'}, nc_scalar],
-    #       'pmar_serialnum_ch01': [False, 'c', {'description':'PMAR boards serial number'}, nc_scalar],
-    #       'pmar_osc_ch01': [False, 'i', {'description':'Oscillator setting'}, nc_scalar],
-    #       'pmar_datawindow_ch01': [False, 'd', {'description':'Size in seconds of the signal stats window'}, nc_scalar],
-    #       'pmar_clipmin_ch01': [False, 'i', {'description':'Signal value below which a negative clip is counted'}, nc_scalar],
-    #       'pmar_clipmax_ch01': [False, 'i', {'description':'Signal value above which a postivie clip is counted'}, nc_scalar],
-    #       'pmar_maxclipcount_ch01': [False, 'i', {'description':'Max number of clips allowed in a block'}, nc_scalar],
-    #       'pmar_minblocksensemble_ch01': [False, 'i', {'description':'Minimum number of blocks contained in an ensemble'}, nc_scalar],
-    #       'pmar_num_blocks_ch01': [False, 'i', {'description':'Number of blocks included in the ensemble'}, nc_scalar],
-    #       'pmar_logmap_ch01': [False, 'c', {'description':'Array describing the mapping from frequency to log averaged'}, nc_scalar],
-    #       'pmar_gain_ch01': [False, 'd', {'description':'Gain setting for recording (0 - 4)'}, nc_scalar],
-    #       'pmar_gain0_ch01': [False, 'd', {'description':'Setting gain stage 0 in dB'}, nc_scalar],
-    #       'pmar_gain1_ch01': [False, 'd', {'description':'Setting gain stage 1 in dB'}, nc_scalar],
-    #       'pmar_cutoff_ch01': [False, 'd', {'description':'Low pass frequency in Hz'}, nc_scalar],
+    #       'pmar_nfft_ch01': [False, 'i', {'description':'Size of FFT'}, BaseNetCDF.nc_scalar],
+    #       'pmar_navg_ch01': [False, 'i', {'description':'Number of blocks per ensemble'}, BaseNetCDF.nc_scalar],
+    #       'pmar_samplerate_ch01': [False, 'd', {'description':'Actual sample rate'}, BaseNetCDF.nc_scalar],
+    #       'pmar_container_ch01': [False, 'c', {'description':'Name of the containing directory'}, BaseNetCDF.nc_scalar],
+    #       'pmar_comment_ch01': [False, 'c', {'description':'Comment field'}, BaseNetCDF.nc_scalar],
+    #       'pmar_serialnum_ch01': [False, 'c', {'description':'PMAR boards serial number'}, BaseNetCDF.nc_scalar],
+    #       'pmar_osc_ch01': [False, 'i', {'description':'Oscillator setting'}, BaseNetCDF.nc_scalar],
+    #       'pmar_datawindow_ch01': [False, 'd', {'description':'Size in seconds of the signal stats window'}, BaseNetCDF.nc_scalar],
+    #       'pmar_clipmin_ch01': [False, 'i', {'description':'Signal value below which a negative clip is counted'}, BaseNetCDF.nc_scalar],
+    #       'pmar_clipmax_ch01': [False, 'i', {'description':'Signal value above which a postivie clip is counted'}, BaseNetCDF.nc_scalar],
+    #       'pmar_maxclipcount_ch01': [False, 'i', {'description':'Max number of clips allowed in a block'}, BaseNetCDF.nc_scalar],
+    #       'pmar_minblocksensemble_ch01': [False, 'i', {'description':'Minimum number of blocks contained in an ensemble'}, BaseNetCDF.nc_scalar],
+    #       'pmar_num_blocks_ch01': [False, 'i', {'description':'Number of blocks included in the ensemble'}, BaseNetCDF.nc_scalar],
+    #       'pmar_logmap_ch01': [False, 'c', {'description':'Array describing the mapping from frequency to log averaged'}, BaseNetCDF.nc_scalar],
+    #       'pmar_gain_ch01': [False, 'd', {'description':'Gain setting for recording (0 - 4)'}, BaseNetCDF.nc_scalar],
+    #       'pmar_gain0_ch01': [False, 'd', {'description':'Setting gain stage 0 in dB'}, BaseNetCDF.nc_scalar],
+    #       'pmar_gain1_ch01': [False, 'd', {'description':'Setting gain stage 1 in dB'}, BaseNetCDF.nc_scalar],
+    #       'pmar_cutoff_ch01': [False, 'd', {'description':'Low pass frequency in Hz'}, BaseNetCDF.nc_scalar],
 
-    #       'pmar_despikethreshold_ch01': [False, 'd', {'description':'Threshold for despiking in standard deviations'}, nc_scalar],
-    #       'pmar_despikepasses_ch01': [False, 'd', {'description':'Number of times data depiker has been run'}, nc_scalar],
+    #       'pmar_despikethreshold_ch01': [False, 'd', {'description':'Threshold for despiking in standard deviations'}, BaseNetCDF.nc_scalar],
+    #       'pmar_despikepasses_ch01': [False, 'd', {'description':'Number of times data depiker has been run'}, BaseNetCDF.nc_scalar],
 
     # }
 
@@ -374,26 +367,28 @@ def init_logger(module_name, init_dict=None):
                 else "up profile"
             )
             description_qc = "Whether to trust the PMAR logavg spectra"
-            register_sensor_dim_info(row_info, row_dim, None, True, None)
-            register_sensor_dim_info(col_info, col_dim, None, True, None)
-            init_dict[module_name]["netcdf_metadata_adds"][var_name] = form_nc_metadata(
-                None,
-                False,
-                "d",
-                {"description": description, "units": "units of variance/Hertz"},
-                (
-                    row_info,
-                    col_info,
-                ),
+            BaseNetCDF.register_sensor_dim_info(row_info, row_dim, None, True, None)
+            BaseNetCDF.register_sensor_dim_info(col_info, col_dim, None, True, None)
+            init_dict[module_name]["netcdf_metadata_adds"][var_name] = (
+                BaseNetCDF.form_nc_metadata(
+                    None,
+                    False,
+                    "d",
+                    {"description": description, "units": "units of variance/Hertz"},
+                    (
+                        row_info,
+                        col_info,
+                    ),
+                )
             )
-            init_dict[module_name]["netcdf_metadata_adds"][
-                var_name_qc
-            ] = form_nc_metadata(
-                None,
-                False,
-                QC.nc_qc_type,
-                {"units": "qc_flag", "description": description_qc},
-                (row_info,),
+            init_dict[module_name]["netcdf_metadata_adds"][var_name_qc] = (
+                BaseNetCDF.form_nc_metadata(
+                    None,
+                    False,
+                    QC.nc_qc_type,
+                    {"units": "qc_flag", "description": description_qc},
+                    (row_info,),
+                )
             )
     return 0
 
@@ -419,7 +414,6 @@ def process_tar_members(
     base_name = None
 
     for pmar_file in pmar_file_list:
-
         if base_name is None:
             head, _ = os.path.split(pmar_file)
             base_name = "%s/p%s%03d%04d%s" % (
@@ -861,8 +855,8 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
             )
             log_debug("Creating dimension %s" % nc_eng_file_mdp_dim)
             nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
-            if nc_eng_file_mdp_info not in nc_mdp_data_info:
-                register_sensor_dim_info(
+            if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
+                BaseNetCDF.register_sensor_dim_info(
                     nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None
                 )
 
@@ -886,13 +880,13 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 )
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, data[i]))
-                if nc_var_name not in nc_var_metadata.keys():
+                if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
                     log_debug(
                         "Metadata for pmar data %s was not pre-declared" % nc_var_name
                     )
                     # Since it is raw data and load_dive_profile_data() will create this info
                     # as well, we let MMT and MMP handle it
-                    netcdf_dict[nc_var_name] = form_nc_metadata(
+                    netcdf_dict[nc_var_name] = BaseNetCDF.form_nc_metadata(
                         None, False, "d", {}, (nc_eng_file_mdp_info,)
                     )
 
@@ -911,14 +905,14 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                     "center_freqs",
                 )
                 ret_list.append((nc_var_name, center_freqs))
-                if nc_var_name not in nc_var_metadata.keys():
+                if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
                     nc_eng_file_mdp_dim = "%s_data_point" % nc_var_name
                     nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
-                    if nc_eng_file_mdp_info not in nc_mdp_data_info:
-                        register_sensor_dim_info(
+                    if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
+                        BaseNetCDF.register_sensor_dim_info(
                             nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None
                         )
-                    netcdf_dict[nc_var_name] = form_nc_metadata(
+                    netcdf_dict[nc_var_name] = BaseNetCDF.form_nc_metadata(
                         None, False, "d", {}, (nc_eng_file_mdp_info,)
                     )
 
@@ -937,10 +931,10 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 # The nc metadata for nc_var_name was created in init_logger() above
                 # including the multi-dimensional row and coluumn info and dimensions
                 # Here we are able to assert the dimension sizes
-                assign_dim_info_size(
+                BaseNetCDF.assign_dim_info_size(
                     nc_info_d, "%s_row_info" % nc_var_name, spectra.shape[0]
                 )  # rows
-                assign_dim_info_size(
+                BaseNetCDF.assign_dim_info_size(
                     nc_info_d, "%s_col_info" % nc_var_name, spectra.shape[1]
                 )  # columns
 

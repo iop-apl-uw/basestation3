@@ -29,17 +29,7 @@ WETlabs puck basestation sensor extension
 import copy
 
 from BaseLog import log_error, log_debug
-from BaseNetCDF import (
-    assign_dim_info_dim_name,
-    assign_dim_info_size,
-    nc_mdp_data_info,
-    nc_nan,
-    nc_scalar,
-    nc_sg_cal_prefix,
-    nc_sg_data_info,
-    nc_sg_eng_prefix,
-    register_sensor_dim_info,
-)
+import BaseNetCDF
 import Utils
 
 
@@ -252,14 +242,14 @@ def init_sensor(module_name, init_dict=None):
             False,
             "c",
             {"description": "Dictionary for remapping eng files"},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
     }
     for canonical_instrument, instrument_synonyms in instruments_d.items():
         # create data info
         data_time_var = "%s_time" % canonical_instrument  # from scicon
         data_info = "%s_data_info" % canonical_instrument
-        register_sensor_dim_info(
+        BaseNetCDF.register_sensor_dim_info(
             data_info,
             "%s_data_point" % canonical_instrument,
             data_time_var,
@@ -273,7 +263,7 @@ def init_sensor(module_name, init_dict=None):
         # create results info
         results_time_var = "%s_results_time" % canonical_instrument
         results_info = "%s_results_info" % canonical_instrument
-        register_sensor_dim_info(
+        BaseNetCDF.register_sensor_dim_info(
             results_info,
             "%s_result_point" % canonical_instrument,
             results_time_var,
@@ -290,7 +280,7 @@ def init_sensor(module_name, init_dict=None):
                 "long_name": "underway backscatter fluorescence puck",
                 "make_model": "Wetlabs backscatter fluorescence puck",
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         meta_data_adds[canonical_instrument] = md
         # for scicon data time var
@@ -329,7 +319,7 @@ def init_sensor(module_name, init_dict=None):
                     % (canonical_instrument, tag),
                     "units": "secs",
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             meta_data_adds["%s_samples_%s" % (canonical_instrument, cast)] = [
                 False,
@@ -338,7 +328,7 @@ def init_sensor(module_name, init_dict=None):
                     "description": "%s total number of samples taken %s"
                     % (canonical_instrument, tag)
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             meta_data_adds["%s_timeouts_%s" % (canonical_instrument, cast)] = [
                 False,
@@ -347,7 +337,7 @@ def init_sensor(module_name, init_dict=None):
                     "description": "%s total number of samples timed out on %s"
                     % (canonical_instrument, tag)
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
 
         for canonical_column, defn_d in columns_d.items():
@@ -357,16 +347,16 @@ def init_sensor(module_name, init_dict=None):
             # The canonical data variable and instrument_column name mapped to...
             # CRITICAL this must match what the remapper produces
             data_var = "%s_%s" % (canonical_instrument, canonical_column)
-            eng_data_var = "%s%s" % (nc_sg_eng_prefix, data_var)
+            eng_data_var = "%s%s" % (BaseNetCDF.nc_sg_eng_prefix, data_var)
             md = [
                 "f",
                 "d",
                 {
-                    "_FillValue": nc_nan,
+                    "_FillValue": BaseNetCDF.nc_nan,
                     "description": "%s as reported by instrument" % name,
                     "instrument": canonical_instrument,
                 },
-                (nc_sg_data_info,),
+                (BaseNetCDF.nc_sg_data_info,),
             ]
             meta_data_adds[eng_data_var] = md
 
@@ -375,7 +365,7 @@ def init_sensor(module_name, init_dict=None):
                 "f",
                 "d",
                 {
-                    "_FillValue": nc_nan,
+                    "_FillValue": BaseNetCDF.nc_nan,
                     "description": "%s as reported by instrument" % name,
                     "instrument": canonical_instrument,
                 },
@@ -401,7 +391,7 @@ def init_sensor(module_name, init_dict=None):
                     "f",
                     "d",
                     {
-                        "_FillValue": nc_nan,
+                        "_FillValue": BaseNetCDF.nc_nan,
                         "units": units,
                         "description": descr,
                     },
@@ -410,28 +400,36 @@ def init_sensor(module_name, init_dict=None):
                 meta_data_adds[results_var] = md
                 # to support the adjusted variable above and record for posterity what the cal sheet said
                 # Not all of these are used for processing
-                md = [False, "d", {}, nc_scalar]
+                md = [False, "d", {}, BaseNetCDF.nc_scalar]
                 dark_counts_var = "%s_%s_dark_counts" % (
                     canonical_instrument,
                     canonical_column,
                 )
-                meta_data_adds["%s%s" % (nc_sg_cal_prefix, dark_counts_var)] = md
+                meta_data_adds[
+                    "%s%s" % (BaseNetCDF.nc_sg_cal_prefix, dark_counts_var)
+                ] = md
                 scale_factor_var = "%s_%s_scale_factor" % (
                     canonical_instrument,
                     canonical_column,
                 )
-                meta_data_adds["%s%s" % (nc_sg_cal_prefix, scale_factor_var)] = md
+                meta_data_adds[
+                    "%s%s" % (BaseNetCDF.nc_sg_cal_prefix, scale_factor_var)
+                ] = md
                 # These let people know about full range but aren't used to convert
                 res_counts_var = "%s_%s_resolution_counts" % (
                     canonical_instrument,
                     canonical_column,
                 )
-                meta_data_adds["%s%s" % (nc_sg_cal_prefix, res_counts_var)] = md
+                meta_data_adds[
+                    "%s%s" % (BaseNetCDF.nc_sg_cal_prefix, res_counts_var)
+                ] = md
                 max_counts_var = "%s_%s_max_counts" % (
                     canonical_instrument,
                     canonical_column,
                 )
-                meta_data_adds["%s%s" % (nc_sg_cal_prefix, max_counts_var)] = md
+                meta_data_adds[
+                    "%s%s" % (BaseNetCDF.nc_sg_cal_prefix, max_counts_var)
+                ] = md
                 if display_sg_calib_vars:
                     print("%s = 0.0; %% For %s channel" % (dark_counts_var, name))
                     print("%s = 0.0; %% For %s channel" % (scale_factor_var, name))
@@ -452,11 +450,11 @@ def init_sensor(module_name, init_dict=None):
                 ]
 
     calib_var = "calibcomm_wetlabs"
-    meta_data_adds["%s%s" % (nc_sg_cal_prefix, calib_var)] = [
+    meta_data_adds["%s%s" % (BaseNetCDF.nc_sg_cal_prefix, calib_var)] = [
         False,
         "c",
         {},
-        nc_scalar,
+        BaseNetCDF.nc_scalar,
     ]  # for all installed wetlabs
     if display_sg_calib_vars:
         print("%% Declare sensor calibration information as shown")
@@ -486,12 +484,12 @@ def init_sensor(module_name, init_dict=None):
                     canonical_column,
                 )
                 for column_synonym in defn_d["synonyms"]:
-                    asc_remap_d[
-                        "%s.%s" % (instrument_synonym, column_synonym)
-                    ] = canonical_instrument_column_asc
-                    eng_remap_d[
-                        "%s_%s" % (instrument_synonym, column_synonym)
-                    ] = canonical_instrument_column_eng
+                    asc_remap_d["%s.%s" % (instrument_synonym, column_synonym)] = (
+                        canonical_instrument_column_asc
+                    )
+                    eng_remap_d["%s_%s" % (instrument_synonym, column_synonym)] = (
+                        canonical_instrument_column_eng
+                    )
 
     # very old files go to wlbb2fl by fiat
     for canonical_column, defn_d in columns_d.items():
@@ -622,12 +620,12 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         (data_present, data) = eng_f.find_col([data_var])
         if data_present:
             time_s_v = l["sg_epoch_time_s_v"]
-            results_dim = nc_mdp_data_info[nc_sg_data_info]
+            results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_sg_data_info]
         else:
             try:
                 data = results_d[data_var]
                 time_s_v = results_d[data_time_var]
-                results_dim = nc_mdp_data_info[data_info]
+                results_dim = BaseNetCDF.nc_mdp_data_info[data_info]
                 data_present = True
             except KeyError:
                 data_present = False
@@ -663,8 +661,10 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                     np = len(time_s_v)
                     # NOTE this could happen up to 3 times per instrument if all calib data is present
                     # but size shouldn't change per instrument so no foul
-                    assign_dim_info_dim_name(nc_info_d, results_info, results_dim)
-                    assign_dim_info_size(nc_info_d, results_info, np)
+                    BaseNetCDF.assign_dim_info_dim_name(
+                        nc_info_d, results_info, results_dim
+                    )
+                    BaseNetCDF.assign_dim_info_size(nc_info_d, results_info, np)
                     results_d.update(
                         {results_time_var: time_s_v, results_var: scaled_data}
                     )

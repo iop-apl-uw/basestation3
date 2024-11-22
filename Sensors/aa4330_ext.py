@@ -28,18 +28,7 @@ Optode aa4XXX basestation sensor extension
 import numpy as np
 
 from BaseLog import log_error, log_warning, log_debug
-from BaseNetCDF import (
-    assign_dim_info_dim_name,
-    assign_dim_info_size,
-    fetch_instrument_metadata,
-    nc_ctd_results_info,
-    nc_mdp_data_info,
-    nc_nan,
-    nc_scalar,
-    nc_sg_data_info,
-    nc_sg_eng_prefix,
-    register_sensor_dim_info,
-)
+import BaseNetCDF
 from QC import (
     QC_BAD,
     QC_GOOD,
@@ -74,59 +63,59 @@ def init_sensor(module_name, init_dict=None):
     # exactly one optode's data will be processed and the choice is random
     meta_data_adds = {
         # unused at the moment
-        "sg_cal_optode_TempCoef0": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_TempCoef1": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_TempCoef2": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_TempCoef3": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_TempCoef4": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_TempCoef5": [False, "d", {}, nc_scalar],
+        "sg_cal_optode_TempCoef0": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_TempCoef1": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_TempCoef2": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_TempCoef3": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_TempCoef4": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_TempCoef5": [False, "d", {}, BaseNetCDF.nc_scalar],
         # Used to convert tcphase to calphase
-        "sg_cal_optode_PhaseCoef0": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_PhaseCoef1": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_PhaseCoef2": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_PhaseCoef3": [False, "d", {}, nc_scalar],
+        "sg_cal_optode_PhaseCoef0": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_PhaseCoef1": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_PhaseCoef2": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_PhaseCoef3": [False, "d", {}, BaseNetCDF.nc_scalar],
         # For the aa4330 w/ FW 4.5.7 and above, the PhaseCoef's above should be [0,1,0,0]
         # and these coeffients may be supplied (else assumed to be [0,1])
-        "sg_cal_optode_ConcCoef0": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_ConcCoef1": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA0": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA1": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA2": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA3": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA4": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA5": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA6": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA7": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA8": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA9": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA10": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA11": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA12": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefA13": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB0": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB1": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB2": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB3": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB4": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB5": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB6": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB7": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB8": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB9": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB10": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB11": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB12": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_FoilCoefB13": [False, "d", {}, nc_scalar],
+        "sg_cal_optode_ConcCoef0": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_ConcCoef1": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA0": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA1": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA2": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA3": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA4": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA5": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA6": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA7": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA8": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA9": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA10": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA11": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA12": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefA13": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB0": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB1": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB2": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB3": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB4": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB5": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB6": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB7": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB8": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB9": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB10": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB11": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB12": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_FoilCoefB13": [False, "d", {}, BaseNetCDF.nc_scalar],
         # Aanderaa supports an onboard Stern-Volmer correction for instrument O2
         # record those coefficients in case we want to replicate that correction instead
-        "sg_cal_optode_SVUCoef0": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_SVUCoef1": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_SVUCoef2": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_SVUCoef3": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_SVUCoef4": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_SVUCoef5": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_SVUCoef6": [False, "d", {}, nc_scalar],
-        "sg_cal_optode_SVU_enabled": [False, "d", {}, nc_scalar],
+        "sg_cal_optode_SVUCoef0": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_SVUCoef1": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_SVUCoef2": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_SVUCoef3": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_SVUCoef4": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_SVUCoef5": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_SVUCoef6": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_SVU_enabled": [False, "d", {}, BaseNetCDF.nc_scalar],
         # Support Johnson et al. air oxygen correction for sensor drift (for both aa4330 and aa3830)
         "sg_cal_optode_st_calphase": [
             False,
@@ -134,7 +123,7 @@ def init_sensor(module_name, init_dict=None):
             {
                 "description": "Mean calibrated phase value from instrument in air during selftest"
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "sg_cal_optode_st_temp": [
             False,
@@ -143,7 +132,7 @@ def init_sensor(module_name, init_dict=None):
                 "description": "Mean optode temperature from instrument in air during selftest",
                 "units": "degrees_Celsius",
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],
         "sg_cal_optode_st_slp": [
             False,
@@ -152,14 +141,14 @@ def init_sensor(module_name, init_dict=None):
                 "description": "Sealevel pressure in air during selftest",
                 "units": "mbar",
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ],  # 1013.25 mbar nominal
     }
     for instrument in instruments:
         # create data info
         data_info = "%s_data_info" % instrument
         data_time_var = "%s_time" % instrument
-        register_sensor_dim_info(
+        BaseNetCDF.register_sensor_dim_info(
             data_info,
             "%s_data_point" % instrument,
             data_time_var,
@@ -169,7 +158,7 @@ def init_sensor(module_name, init_dict=None):
         # create results info
         results_time_var = "aander%s_results_time" % instrument
         results_info = "%s_results_info" % instrument
-        register_sensor_dim_info(
+        BaseNetCDF.register_sensor_dim_info(
             results_info,
             "%s_result_point" % instrument,
             results_time_var,
@@ -185,7 +174,7 @@ def init_sensor(module_name, init_dict=None):
                 "nodc_name": "optode",
                 "make_model": "Aanderaa %s" % instrument,
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]  # always scalar
         meta_data_adds[instrument] = md
 
@@ -194,63 +183,63 @@ def init_sensor(module_name, init_dict=None):
         # The new correction will change this to umoles/m^3 so that will change the name
         # to mole_concentration_of_dissolved_molecular_oxygen_in_sea_water
         # Add instrument explicitly for eng file data since they all share the same dim info
-        eng_tuple = (nc_sg_eng_prefix, instrument)
+        eng_tuple = (BaseNetCDF.nc_sg_eng_prefix, instrument)
         eng_o2_var = "%s_O2" % instrument
-        md_var = "%s%s" % (nc_sg_eng_prefix, eng_o2_var)
+        md_var = "%s%s" % (BaseNetCDF.nc_sg_eng_prefix, eng_o2_var)
         meta_data_adds[md_var] = [
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "units": "micromoles/L",
                 "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data,"
                 + "assuming optode temperature but without depth or salinity correction",
                 "instrument": instrument,
             },
-            (nc_sg_data_info,),
+            (BaseNetCDF.nc_sg_data_info,),
         ]
         meta_data_adds["%s%s_AirSat" % eng_tuple] = [
             False,
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "description": "As reported by the instrument",
                 "instrument": instrument,
             },
-            (nc_sg_data_info,),
+            (BaseNetCDF.nc_sg_data_info,),
         ]
         meta_data_adds["%s%s_Temp" % eng_tuple] = [
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "units": "degrees_Celsius",
                 "description": "As reported by the instrument",
                 "instrument": instrument,
             },
-            (nc_sg_data_info,),
+            (BaseNetCDF.nc_sg_data_info,),
         ]
         meta_data_adds["%s%s_CalPhase" % eng_tuple] = [
             False,
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "description": "As reported by the instrument",
                 "instrument": instrument,
             },
-            (nc_sg_data_info,),
+            (BaseNetCDF.nc_sg_data_info,),
         ]
         eng_tcphase_var = "%s_TCPhase" % instrument
-        md_var = "%s%s" % (nc_sg_eng_prefix, eng_tcphase_var)
+        md_var = "%s%s" % (BaseNetCDF.nc_sg_eng_prefix, eng_tcphase_var)
         meta_data_adds[md_var] = [
             False,
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "description": "As reported by the instrument",
                 "instrument": instrument,
             },
-            (nc_sg_data_info,),
+            (BaseNetCDF.nc_sg_data_info,),
         ]
 
         # from scicon eng file
@@ -271,7 +260,7 @@ def init_sensor(module_name, init_dict=None):
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "units": "micromoles/L",
                 "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data,"
                 + " assuming optode temperature but without depth or salinity correction",
@@ -283,7 +272,7 @@ def init_sensor(module_name, init_dict=None):
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "description": "As reported by the instrument",
                 "instrument": instrument,
             },
@@ -294,7 +283,7 @@ def init_sensor(module_name, init_dict=None):
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "units": "degrees_Celsius",
                 "description": "As reported by the instrument",
                 "instrument": instrument,
@@ -305,7 +294,7 @@ def init_sensor(module_name, init_dict=None):
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "description": "As reported by the instrument",
                 "instrument": instrument,
             },
@@ -316,7 +305,7 @@ def init_sensor(module_name, init_dict=None):
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "description": "As reported by the instrument",
                 "instrument": instrument,
             },
@@ -340,7 +329,7 @@ def init_sensor(module_name, init_dict=None):
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "standard_name": "mole_concentration_of_dissolved_molecular_oxygen_in_sea_water",
                 "units": "micromoles/kg",
                 "description": "Dissolved oxygen concentration, calculated from optode tcphase corrected for salininty and depth",
@@ -362,7 +351,7 @@ def init_sensor(module_name, init_dict=None):
             "f",
             "d",
             {
-                "_FillValue": nc_nan,
+                "_FillValue": BaseNetCDF.nc_nan,
                 "units": "micromoles/kg",
                 "description": "Dissolved oxygen concentration reported from optode corrected for salinity",
             },
@@ -376,14 +365,14 @@ def init_sensor(module_name, init_dict=None):
                 "units": "qc_flag",
                 "description": "Whether to trust the Aanderaa %s results" % instrument,
             },
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
         results_drift_gain_var = "aander%s_drift_gain" % instrument
         meta_data_adds[results_drift_gain_var] = [
             False,
             "d",
             {"description": "Drift gain correction for the Aanderaa %s" % instrument},
-            nc_scalar,
+            BaseNetCDF.nc_scalar,
         ]
 
         for cast, tag in (("a", "dive"), ("b", "climb")):
@@ -394,7 +383,7 @@ def init_sensor(module_name, init_dict=None):
                     "description": "%s total time turned on %s" % (instrument, tag),
                     "units": "secs",
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             meta_data_adds["%s_samples_%s" % (instrument, cast)] = [
                 False,
@@ -403,7 +392,7 @@ def init_sensor(module_name, init_dict=None):
                     "description": "%s total number of samples taken %s"
                     % (instrument, tag)
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
             meta_data_adds["%s_timeouts_%s" % (instrument, cast)] = [
                 False,
@@ -412,7 +401,7 @@ def init_sensor(module_name, init_dict=None):
                     "description": "%s total number of samples timed out on %s"
                     % (instrument, tag)
                 },
-                nc_scalar,
+                BaseNetCDF.nc_scalar,
             ]
 
         canonical_data_to_results_d[instrument] = [
@@ -582,7 +571,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
             results_drift_gain_var,
         ) = cd
 
-        instrument_metadata_d = fetch_instrument_metadata(data_info)
+        instrument_metadata_d = BaseNetCDF.fetch_instrument_metadata(data_info)
         if "ancillary_variables" in instrument_metadata_d:
             del instrument_metadata_d["ancillary_variables"]  # eliminate
 
@@ -598,7 +587,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
             tcphase_var = eng_tcphase_var
             _, optode_tcphase_v = eng_f.find_col([tcphase_var])
             optode_time_s_v = sg_epoch_time_s_v
-            optode_results_dim = nc_mdp_data_info[nc_sg_data_info]
+            optode_results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_sg_data_info]
         else:
             try:
                 # See if we have data from scicon
@@ -606,7 +595,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                 tcphase_var = scicon_tcphase_var
                 optode_tcphase_v = results_d[tcphase_var]
                 optode_time_s_v = results_d[scicon_time_var]
-                optode_results_dim = nc_mdp_data_info[data_info]
+                optode_results_dim = BaseNetCDF.nc_mdp_data_info[data_info]
             except KeyError:
                 continue  # no data from this type of optode
 
@@ -673,7 +662,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         Conc_coef.reverse()
 
         # First expand some other data we need for conversions to O2 concentration:
-        if optode_results_dim != nc_info_d[nc_ctd_results_info]:
+        if optode_results_dim != BaseNetCDF.nc_info_d[BaseNetCDF.nc_ctd_results_info]:
             # interpolate the CTD data we need
             temp_cor_v = Utils.interp1d(
                 ctd_epoch_time_s_v, temp_cor_v, optode_time_s_v, kind="linear"
@@ -695,8 +684,8 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
             )
 
         optode_np = len(optode_time_s_v)
-        assign_dim_info_dim_name(nc_info_d, results_info, optode_results_dim)
-        assign_dim_info_size(nc_info_d, results_info, optode_np)
+        BaseNetCDF.assign_dim_info_dim_name(nc_info_d, results_info, optode_results_dim)
+        BaseNetCDF.assign_dim_info_size(nc_info_d, results_info, optode_np)
 
         # Shouldn't we compute the difference of temp over optode temp (and salinity over fresh (0), which is salinity)
         (
@@ -978,8 +967,8 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         # See SG189 dive 37 in SPURS_Sep12, recorded on scicon.  Typically the first and/or last point in the dive or climb file
         bad_i = [i for i in range(optode_np) if optode_tcphase_v[i] < 0]
         assert_qc(QC_BAD, optode_oxygen_qc_v, bad_i, "bad %s oyxgen" % instrument)
-        optode_tcphase_v[bad_i] = nc_nan
-        optode_o2_v[bad_i] = nc_nan
+        optode_tcphase_v[bad_i] = BaseNetCDF.nc_nan
+        optode_o2_v[bad_i] = BaseNetCDF.nc_nan
 
         ## NOTE: we use CTD temperature, not optode_tempc_v, and we use insitu density, not potential density
         inherit_qc(
