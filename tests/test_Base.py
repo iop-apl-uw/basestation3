@@ -29,30 +29,66 @@
 
 import pathlib
 import shutil
+import sys
 
 import pytest
 
 import Base
 
-import pdb
+test_cases = (
+    (
+        "testdata/sg179_Guam_Oct19_noct",
+        "sg179",
+        "",
+        (
+            "Found Disconnect with no previous Connected",
+            "No CT data found",
+            "Failed to create profiles for",
+            "is marked as having a processing error",
+            "Profiles for dive [100] had problems during processing.",
+            "Could not load variables ctd_time or ctd_depth",
+            "mpath failed - skipping mission map",
+            "No call data found in database - skipping eng_mission_commlog",
+            "Unable to load 'ctd_time' - skipping plot_CTW",
+            "Could not load 'ctd_depth'",
+            "Could not fetch needed variables 'depth'",
+            "skipping bathy in plots",
+        ),
+    ),
+    (
+        "testdata/sg179_Guam_Oct19",
+        "sg179",
+        "--plot_types none",
+        (
+            "Found Disconnect with no previous Connected:",
+            "timeout(s) seen in",
+            "CTD out of the water after",
+            "Large mis-match between predicted and observed w",
+            "Compass invalid out for",
+            "is marked as having a processing error",
+        ),
+    ),
+    (
+        "testdata/sg178_Guam_Oct19",
+        "sg178",
+        "--plot_types none",
+        (
+            "timeout(s) seen in",
+            "CTD out of the water after",
+            "Large mis-match between predicted and observed w",
+            "ALERT:TIMEOUT",
+        ),
+    ),
+)
 
 test_inputs = []
 
-test_dirs = [("testdata/sg179_Guam_Oct19", "sg179")]
-
-for test_data_dir, glider in test_dirs:
+for test_data_dir, glider, additional_args, allowed_msgs in test_cases:
     test_inputs.append(
         (
             test_data_dir,
-            f"--verbose --local --plot_types none --mission_dir {test_data_dir}/mission_dir --config {test_data_dir}/mission_dir/{glider}.conf".split(),
-            [
-                "Found Disconnect with no previous Connected:",
-                "timeout(s) seen in",
-                "CTD out of the water after",
-                "Large mis-match between predicted and observed w",
-                "Compass invalid out for",
-                "is marked as having a processing error",
-            ],
+            f"--verbose --local {additional_args} --mission_dir {test_data_dir}/mission_dir --config {test_data_dir}/mission_dir/{glider}.conf".split(),
+            allowed_msgs,
         )
     )
 
@@ -61,9 +97,10 @@ for test_data_dir, glider in test_dirs:
 
 
 @pytest.mark.parametrize("test_data_dir,cmd_line,allowed_msgs", test_inputs)
-def test_downward(caplog, test_data_dir, cmd_line, allowed_msgs):
+def test_conversion(caplog, test_data_dir, cmd_line, allowed_msgs):
     data_dir = pathlib.Path(test_data_dir)
     mission_dir = data_dir.joinpath("mission_dir")
+
     # Clean up previous run - if any
     if mission_dir.exists():
         shutil.rmtree(mission_dir)
@@ -75,10 +112,14 @@ def test_downward(caplog, test_data_dir, cmd_line, allowed_msgs):
         shutil.copy(p, mission_dir)
     result = Base.main(cmd_line)
     assert result == 0
+    bad_errors = ""
     for record in caplog.records:
         # Check for known WARNING, ERROR or CRITICAL msgs
         for msg in allowed_msgs:
             if msg in record.msg:
                 break
         else:
-            assert record.levelname not in ["CRITICAL", "ERROR", "WARNING"]
+            if record.levelname in ["CRITICAL", "ERROR", "WARNING"]:
+                bad_errors += f"{record.levelname}:{record.msg}"
+    if bad_errors:
+        pytest.fail(bad_errors)
