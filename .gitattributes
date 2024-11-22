@@ -1,0 +1,5 @@
+# exclude .gitignore and similar from the generated tarball
+.git*           export-ignore
+# exclude tests
+tests/  export-ignore
+testdata/   export-ignore
