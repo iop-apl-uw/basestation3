@@ -1079,7 +1079,13 @@
                         v.push(line);
                     }
                     let newLayer = L.layerGroup(v);
-                    layerControl.addOverlay(newLayer, 'DAC', `${glider} ${mission}`); 
+                    if (mission && mission != '') {
+                        layerControl.addOverlay(newLayer, 'DAC', `${glider} ${mission}`); 
+                    }
+                    else {
+                        layerControl.addOverlay(newLayer, 'DAC', `${glider} `); 
+                    }
+
 		            if (checkLayerState("DAC", "on"))
                         newLayer.addTo(map); // not by default
                 })
