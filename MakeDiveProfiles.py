@@ -119,19 +119,19 @@ thermocline_temp_diff = 0.034  # PARAMETER definition of thermocline temp differ
 
 ARGO_sample_interval_m = 25  # [m] 1000m/40 samples, or 2000m/70 samples  (28.57m)
 
-flight_variables = [
-    "volmax",
-    "vbdbias",
-    "hd_a",
-    "hd_b",
-    "hd_c",
-    "hd_s",
-    "abs_compress",
-    "therm_expan",
-    "temp_ref",
-    "glider_length",
-    "rho0",
-]
+# flight_variables = [
+#     "volmax",
+#     "vbdbias",
+#     "hd_a",
+#     "hd_b",
+#     "hd_c",
+#     "hd_s",
+#     "abs_compress",
+#     "therm_expan",
+#     "temp_ref",
+#     "glider_length",
+#     "rho0",
+# ]
 
 sb_ct_type_map = {
     0: "original Seabird unpumped CTD",
@@ -166,7 +166,7 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
         for var, default_value in list(config.items()):
             try:
                 previous_value = calib_consts[var]  # override?
-                if var not in flight_variables and var not in [
+                if var not in Globals.flight_variables and var not in [
                     "mass_comp"
                 ]:  # We report these separately below
                     if previous_value != default_value:
@@ -2612,7 +2612,7 @@ def make_dive_profile(
         ("gpctd_time" in results_d),
     )  # update copy with defaults
 
-    for fv in flight_variables:
+    for fv in Globals.flight_variables:
         src_tag = "SGC" if base_opts.ignore_flight_model else "FM"
         log_info("%s: %s=%g" % (src_tag, fv, calib_consts[fv]))
 
