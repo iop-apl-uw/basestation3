@@ -662,7 +662,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         Conc_coef.reverse()
 
         # First expand some other data we need for conversions to O2 concentration:
-        if optode_results_dim != BaseNetCDF.nc_info_d[BaseNetCDF.nc_ctd_results_info]:
+        if optode_results_dim != nc_info_d[BaseNetCDF.nc_ctd_results_info]:
             # interpolate the CTD data we need
             temp_cor_v = Utils.interp1d(
                 ctd_epoch_time_s_v, temp_cor_v, optode_time_s_v, kind="linear"
