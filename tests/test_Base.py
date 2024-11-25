@@ -27,9 +27,11 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import os
 import pathlib
 import shutil
 import sys
+import time
 
 import pytest
 
@@ -79,6 +81,20 @@ test_cases = (
             "ALERT:TIMEOUT",
         ),
     ),
+    (
+        "testdata/sg677_GoMex_2022_M1_Legato",
+        "sg677",
+        "",
+        (
+            "Found Disconnect with no previous Connected:",
+            "Found Connected with no previous Disconnect:",
+            "No handler found for columns",
+            "Restarting anomaly after",
+            "Large unexplained positive conductivity",
+            "No call data found in database",
+            "skipping bathy in plots",
+        ),
+    ),
 )
 
 test_inputs = []
@@ -98,6 +114,9 @@ for test_data_dir, glider, additional_args, allowed_msgs in test_cases:
 
 @pytest.mark.parametrize("test_data_dir,cmd_line,allowed_msgs", test_inputs)
 def test_conversion(caplog, test_data_dir, cmd_line, allowed_msgs):
+    os.environ["TZ"] = "UTC"
+    time.tzset()
+
     data_dir = pathlib.Path(test_data_dir)
     mission_dir = data_dir.joinpath("mission_dir")
 
@@ -120,6 +139,6 @@ def test_conversion(caplog, test_data_dir, cmd_line, allowed_msgs):
                 break
         else:
             if record.levelname in ["CRITICAL", "ERROR", "WARNING"]:
-                bad_errors += f"{record.levelname}:{record.msg}"
+                bad_errors += f"{record.levelname}:{record.getMessage()}\n"
     if bad_errors:
         pytest.fail(bad_errors)
