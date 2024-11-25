@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2024  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots motor GC data over whole mission
-"""
+"""Plots glider track over entire mission"""
+
 # fmt: off
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -48,7 +48,6 @@ import matplotlib.path as mpath
 import matplotlib.patches as patches
 import os
 from CalibConst import getSGCalibrationConstants
-import matplotlib.cm as cm
 import matplotlib.colors as mcolors
 import xarray as xr
 
@@ -283,7 +282,7 @@ def mission_map(
     ax.add_feature(cartopy.feature.LAND, zorder=1, edgecolor='black', facecolor='gray')
     ax.title.set_text("")
 
-    deep = truncate_colormap(cm.get_cmap('Blues'), minval=0.3, maxval=1)
+    deep = truncate_colormap(plt.get_cmap('Blues'), minval=0.3, maxval=1)
     if bathy is not None:
         ax.pcolormesh(bathy_lons, bathy_lats, bathy_depth, transform=ccrs.PlateCarree(), 
                       cmap=deep, zorder=0, alpha=1, edgecolors=None, shading='gouraud')
