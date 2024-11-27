@@ -20,6 +20,9 @@ async def read(path, logfile=None, cmdfile=None):
 
     r = re.compile('\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
 
+    loggers = None
+    sensors = None
+
     if logfile and await Path(os.path.join(path, logfile)).exists():
         try:
             async with aiofiles.open(os.path.join(path, logfile), 'r') as f:
@@ -32,6 +35,9 @@ async def read(path, logfile=None, cmdfile=None):
                                 d[p]['current'] = int(v)
                             else:
                                 d[p]['current'] = float(v)
+                    elif line.startswith('$SENSORS'):
+                        sensors = line.strip().split(',')[1:7]
+                        loggers = line.strip().split(',')[7:]
         except:
             pass
 
@@ -52,6 +58,9 @@ async def read(path, logfile=None, cmdfile=None):
                                 d[p]['waiting'] = n
         except:
             pass
+
+    if loggers and 'LOGGERS' in d:
+        d['LOGGERS']['help'] = f'Logger devices enable/disable control (1: {loggers[0]}, 2: {loggers[1]}, 4: {loggers[2]}, 8: {loggers[3]})'
 
     return d
 

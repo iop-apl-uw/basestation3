@@ -1199,7 +1199,9 @@
                             "ROLL": ["C_ROLL_DIVE", "C_ROLL_CLIMB", "ROLL_ADJ_GAIN", "ROLL_ADJ_DBAND", "ROLL_TIMEOUT" ],
                             "PITCH": ["C_PITCH", "PITCH_GAIN", "PITCH_ADJ_GAIN", "PITCH_ADJ_DBAND", "PITCH_W_GAIN", "PITCH_W_DBAND", "C_PITCH_AUTO_DELTA", "C_PITCH_AUTO_MAX", "PITCH_GAIN_AUTO_DELTA", "PITCH_GAIN_AUTO_MAX", "PITCH_TIMEOUT"],
                             "FLIGHT": ["MAX_BUOY", "HEAD_ERRBAND", "RHO", "MASS", ],
-                            "ALTIMETER": ["XPDR_INT", "XPDR_REP", "XPDR_VALID", "XPDR_INHIBIT"]};
+                            "ALTIMETER": ["XPDR_INT", "XPDR_REP", "XPDR_VALID", "XPDR_INHIBIT"],
+                            "HARDWARE": ["LOGGERS"],
+                        };
             const ignore = ["DIVE", "MISSION", "ID", "DEEPGLIDER", "DEEPGLIDERMB", "MOTHERBOARD"]
 
             for (p of Object.keys(parms)) {
