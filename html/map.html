@@ -1662,7 +1662,10 @@
                                     {
                                         layer: 'GEBCO contours',
                                         format: "image/png",
-                                        opacity: 0.2
+                                        maxNativeZoom: 10,
+                                        maxZoom: 16,
+                                        detectRetina: false,
+                                        opacity: 0.6
                                     });
 
            // contours = L.tileLayer.wms("http://www.opendem.info:80/geoserver/opendem/ows?",
