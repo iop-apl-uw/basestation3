@@ -1302,9 +1302,8 @@
 
                     // Adjust map to show the kml for the first glider
                     if (i == 0 && doCtr) {
-                        if (lastBounds) {
+                        if (lastBounds && lastBounds[0] > -180 && lastBounds[1] > -90 && lastBounds[2] < 180 && lastBounds[3] < 90) {
                             map.fitBounds(lastBounds);
-                            console.log('fitting to last bounds');
                         }
                         else {
                             const bounds = track.getBounds();
