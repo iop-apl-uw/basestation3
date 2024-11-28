@@ -88,13 +88,48 @@
     }
 
     .droplink {
+      z-index: 10;
+    }
+
+    .clickdown {
+      /* position: relative; */
+      /* display: inline-block; */
+    }
+
+    .clickdown label {
+        display: inline-block;
+    }
+
+    .clickdown input {
+        margin-right: 100px;
+        display: none;
+    }
+
+    .clickdown-content {
+      display: none;
+      position: absolute;
+      background-color: #f1f1f1;
+      min-width: 300px;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+      overflow-x: visible;
+    }
+  
+    .clickdown-content span {
+      color: black;
+      padding: 3px 3px;
+      text-decoration: none;
+      display: block;
+   }
+ 
+    .clickdown input:checked ~ .clickdown-content {
+        display: block;
     }
 
     .dropdown {
       position: relative;
       display: inline-block;
       overflow-x: visible;
-      z-index: 10; 
+      z-index: 100;
     }
 
     .dropdown-content {
@@ -118,10 +153,10 @@
     .dropdown:hover .dropdown-content {display: block;}
 
     .dropdown:hover .droplink {background-color: #3e8e41;}
-
+ 
     .select-checkbox option::before {
         content: "\2610";
-        width: 1.3em;
+        width: 1.8em;
         text-align: center;
         display: inline-block;
     }

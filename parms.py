@@ -61,6 +61,10 @@ async def read(path, logfile=None, cmdfile=None):
 
     if loggers and 'LOGGERS' in d:
         d['LOGGERS']['help'] = f'Logger devices enable/disable control (1: {loggers[0]}, 2: {loggers[1]}, 4: {loggers[2]}, 8: {loggers[3]})'
+        d['LOGGERS']['bitfield'] = [{'value': 1, 'function': loggers[0]}, 
+                                    {'value': 2, 'function': loggers[1]}, 
+                                    {'value': 4, 'function': loggers[1]}, 
+                                    {'value': 8, 'function': loggers[1]}];
 
     return d
 

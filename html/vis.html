@@ -238,12 +238,16 @@
             else if (line.startsWith('NEW=')) {
                 json = JSON.parse(line.slice(4));
                 glider = json['glider'];
-                if ('content' in json && json['content'] == 'files=all' && 
+                console.log('NEW detected ' + line);
+                if ('content' in json && (json['content'] == 'files=all' || json['content'] == 'files=perdive') && 
                      (json['when'] == 'socket' || json['when'] == 'sync') ) {
                     newDive = json['dive'];
-                    if (newDive > maxDive) {
+                    console.log('newDive = ' + newDive + ' maxDive = ' + maxDive);
+                    
+                    if (newDive >= maxDive) {
                         maxDive = newDive;
                         updateMaxDive();
+                        console.log("NEW maxDive=" + maxDive);
                         loadPlots(newDive, true);
                         buildTable(currGlider, newDive);
                         buildChangelog(3);
@@ -301,7 +305,7 @@
                 }
                 else {
                     // loadStatus(currGlider, -1);
-                    console.log('untreated NEW=' + line);
+                    console.log('untreated ' + line); // perdive for example
                 }
                 // loadLog(newDive);
                 first = false;
@@ -921,13 +925,11 @@
         });
     }
 
-{% if runMode == 'pilot' %}
-{% if noSave == false %}
+{% if runMode == 'pilot' and noSave == false %}
     function showPilotWheel() {
         setVisibility('pilotWheelDiv'); 
         currElt = 'pilotWheel';
     }
-{% endif %}
 {% endif %}
 
     function showTable() {
@@ -1011,8 +1013,7 @@
         } 
     }
 
-{% if runMode == 'pilot' %}
-{% if noSave == false %}
+{% if runMode == 'pilot' and noSave == false %}
     var parmGroups = ["BASIC", "NAV", "DIVE", "SURFACE", "FLIGHT", "PITCH", "ROLL", "VBD", "ALTIMETER", "HARDWARE"];
     function changeParmGroup(group) {
         for (g of parmGroups) {
@@ -1133,14 +1134,17 @@
         inp.onchange = function() { paramInputChange(p); };
         if (b || m) {
             var d2 = document.createElement('div');
-            d2.classList.add("dropdown")
-            var s2 = document.createElement('span');
-            s2.innerHTML = '...';
-            s2.classList.add('spanClick');
-            s2.classList.add('droplink');
+            d2.classList.add("clickdown")
+            var s2 = document.createElement('label');
+            s2.innerHTML = '&#9998;';
+            s2.setAttribute('for', 'chk' + p);
+            var chk2 = document.createElement('input');
+            chk2.type = 'checkbox';
+            chk2.id = 'chk' + p;
             d2.appendChild(s2);
+            d2.appendChild(chk2);
             var d3 = document.createElement('div')     
-            d3.classList.add('dropdown-content');
+            d3.classList.add('clickdown-content');
             d2.appendChild(d3);
                 
             var sel = document.createElement('select');
@@ -1228,7 +1232,6 @@
         }); 
     }
 {% endif %}
-{% endif %}
     function loadStatus(glider, dive, setCurr) {
         fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
@@ -1255,6 +1258,7 @@
             currTitle = 'SG' + data['glider'];
             if (dive == -1 && parseInt(data['dive']) != currDive) {
                 currDive = maxDive = parseInt(data['dive']);
+                console.log('dive -1 load status maxDive = ' + maxDive);
                 
                 loadPlots(currDive, setCurr);
                 $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
@@ -1265,6 +1269,7 @@
             else if (dive > 0 && dive <= parseInt(data['dive'])) {
                 maxDive = parseInt(data['dive']);
                 currDive = dive;
+                console.log('dive 0 load status maxDive = ' + maxDive);
 
                 loadPlots(currDive, setCurr);
                 $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
@@ -1283,11 +1288,9 @@
                 setupStream(glider, true, true);
                 currStatus = 'active';
             }
-{% if runMode == 'pilot' %}
-{% if noSave == false %}
+{% if runMode == 'pilot' and noSave == false %}
             console.log('loading parms');
             loadParms(glider); // have to wait for maxDive above to be set
-{% endif %}
 {% endif %}
         })
         .catch(error => {
@@ -2627,10 +2630,10 @@
     <div class="dropdown">
         <span class="spanClick droplink">Tools </span><b>&#124;</b>
         <div class="dropdown-content">
-            <span class="spanClick" onclick="popupPosition(); return false;">Position</span> 
-            <span class="spanClick" onclick="openRegressionForm(); return false;">VBD regression</span> 
-            <span class="spanClick" onclick="openBallastSheet(); return false;">Ballast worksheet</span> 
-            <span class="spanClick" onclick="openMagcalForm(); return false;">Compass calibration</span> 
+            <span class="spanClick" onclick="popupPosition(); return false;">Position</span>
+            <span class="spanClick" onclick="openRegressionForm(); return false;">VBD regression</span>
+            <span class="spanClick" onclick="openBallastSheet(); return false;">Ballast worksheet</span>
+            <span class="spanClick" onclick="openMagcalForm(); return false;">Compass calibration</span>
         </div>
     </div>
     <span id="missionIndex" hidden="hidden"><span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b></span>
@@ -2645,11 +2648,6 @@
 
 <div id="toolbar">
     <div class="toolTop">
-{% if runMode == 'pilot' %}
-{% if noSave == false %}
-        <button class="tool" id="btnPilotWheel"    onclick="showPilotWheel();" title="pilot controls"></button>
-{% endif %}
-{% endif %}
         <button class="tool" id="btnDiveUp"        onclick="changeDive(1);" title="next dive [w,k] "></button>
         <button class="tool" id="btnDiveTable"     onclick="showTable();" title="dives table"></button>
         <button class="tool" id="btnDiveDown"      onclick="changeDive(-1);" title="prev dive [s,j]"></button>
@@ -2659,6 +2657,9 @@
         <button class="tool" id="btnPlotTool"      onclick="showPlotly();" title="plot and table tool"></button>
         <button class="tool" id="btnLogFile"       onclick="showLogFile();" title="log file"></button>
         <button class="tool" id="btnEngFile"       onclick="showEng();" title="engineering file"></button>
+{% if runMode == 'pilot' and noSave == false %}
+        <button class="tool" id="btnPilotWheel"    onclick="showPilotWheel();" title="pilot controls"></button>
+{% endif %}
     </div>
 
     <div class="toolBottom">
@@ -2710,8 +2711,7 @@
         </tbody>
     </table>
 
-{% if runMode == 'pilot' %}
-{% if noSave == false %}
+{% if runMode == 'pilot' and noSave == false %}
     <div id="pilotWheelDiv" class="hide" style="text-align: left;">
         <div id="pilotParmsList">
             <div id="pilotNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
@@ -2759,7 +2759,6 @@
         </div>
 
     </div>
-{% endif %}
 {% endif %}
     <div id="logDiv" class="hide"></div>
     <div id="notificationsDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('notificationsDiv');" class="hide"></div>

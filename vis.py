@@ -2224,9 +2224,8 @@ def attachHandlers(app: sanic.Sanic):
                 elif 'urls' in topic:
                     # m = loads(body)
                     await ws.send(f"NEW={body}")
-                elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC:
+                elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC and not 'km' in topic:
                     m = loads(body) 
-                    
                     async with aiofiles.open(m['full'], 'rb') as file:
                         Utils.logDB(f'stream 3 open {glider}')
                         body = (await file.read()).decode('utf-8', errors='ignore')
@@ -2825,7 +2824,7 @@ async def buildFilesWatchList(config):
                     else:
                         sz = 0
 
-                    files[fname] = { "glider": m['glider'], "file": fname, "size": sz, "delta": 0, 'config': False, "mission": m['mission'] if m['mission'] else "" } 
+                    files[fname] = { "glider": m['glider'], "file": f, "full": fname, "size": sz, "delta": 0, 'config': False, "mission": m['mission'] if m['mission'] else "" } 
 
 
 
