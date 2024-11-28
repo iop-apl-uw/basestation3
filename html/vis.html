@@ -1074,12 +1074,13 @@
         $('cmdfile').value = txt;
     }
     function markChanged(w) {
+        $('paramInput_' + w).title = 'was ' + $('paramInput_' + w).value;
         $('paramInput_' + w).style.fontWeight = "bold";
     }
     function paramInputChange(w) {
         var prev = parms[w]['current'];
-        parms[w]['current'] = $('paramInput_' + w).value;
         markChanged(w);
+        parms[w]['current'] = $('paramInput_' + w).value;
 
         if ($('selLinkChanges').checked == false || (w != 'T_DIVE' && w != 'D_TGT'))
             return;
@@ -1092,23 +1093,23 @@
         if (w == 'T_DIVE') {
             
             // $('paramInput_D_TGT').onchange = null;
-            $('paramInput_D_TGT').value = (ratio*parseFloat($('paramInput_T_DIVE').value)).toFixed(0);
             markChanged('D_TGT');
+            $('paramInput_D_TGT').value = (ratio*parseFloat($('paramInput_T_DIVE').value)).toFixed(0);
             console.log($('paramInput_D_TGT').value);
             // $('paramInput_D_TGT').onchange = function() { paramInputChange('D_TGT'); };
         }
         else {
             // $('paramInput_T_DIVE').onchange = null;
-            $('paramInput_T_DIVE').value = (parseFloat($('paramInput_D_TGT').value)/ratio).toFixed(0);
             markChanged('T_DIVE');
+            $('paramInput_T_DIVE').value = (parseFloat($('paramInput_D_TGT').value)/ratio).toFixed(0);
             // $('paramInput_T_DIVE').onchange = function() { paramInputChange('T_DIVE'); };
         }
 
         prev_t = parseFloat($('paramInput_T_DIVE').value);
         prev_d = parseFloat($('paramInput_D_TGT').value);
 
-        $('paramInput_T_MISSION').value = (prev_t + (0.25*prev_t > 15 ? 0.25*prev_t : 15)).toFixed(0);
         markChanged('T_MISSION');
+        $('paramInput_T_MISSION').value = (prev_t + (0.25*prev_t > 15 ? 0.25*prev_t : 15)).toFixed(0);
         parms['T_DIVE']['current'] = prev_t; 
         parms['D_TGT']['current'] = prev_d; 
         parms['T_MISSION']['current'] = $('paramInput_T_MISSION').value;
@@ -1168,13 +1169,13 @@
             }
             sel.onchange = function() { 
                 var x = 0;
+                markChanged(p);
                 for (var i = 0 ; i < sel.options.length ; i++) {
                     if (sel.options[i].selected)
                         x += parseInt(sel.options[i].value);
                 }
                 if (b) inp.value = '' + x;
                 else inp.value = x;
-                markChanged(p);
             };
             sel.size = n;
             if (b) multiSelectWithoutCtrl(sel);
@@ -1214,7 +1215,7 @@
 
             for (g of Object.keys(order)) {
                 for (p of order[g]) {
-                    if (Object.keys(parms).includes(p)) 
+                    if (Object.keys(parms).includes(p))  
                         addParamInput('pilot' + g, p, 'current' in parms[p] ? parms[p]['current'] : '', parms[p]['help'], 'bitfield' in parms[p] ? parms[p]['bitfield'] : null, 'menufield' in parms[p] ? parms[p]['menufield'] : null);
                 }
             }
@@ -1226,6 +1227,13 @@
                     if (!(Object.keys(order).includes(parms[p]['category'])) ||
                         !(order[parms[p]['category']].includes(p)))
                             addParamInput('pilot' + parms[p]['category'], p, 'current' in parms[p] ? parms[p]['current'] : '', parms[p]['help'], 'bitfield' in parms[p] ? parms[p]['bitfield'] : null, 'menufield' in parms[p] ? parms[p]['menufield'] : null);
+                }
+            }
+            for (p of Object.keys(parms)) {
+                if ('waiting' in parms[p]) {
+                    parms[p]['current'] = parms[p]['waiting']; 
+                    markChanged(p);
+                    $('paramInput_' + p).value = parms[p]['waiting'];
                 }
             }
 
