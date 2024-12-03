@@ -18,6 +18,7 @@
         <script src="../script/L.KML.js"></script>
         <script src="../script/Control.Coordinates.js"></script>
         <script src="../script/leaflet.groupedlayercontrol.js"></script>
+        <script src="../script/leaflet.textpath.js"></script>
 <!--
         <script src="../script/leaflet-reticle.js"></script>
 -->
@@ -84,6 +85,9 @@
         </div>
 
         <script type="text/javascript">
+            var targetsChannel = null;
+            var currentMission = '';
+/*
             function reckon(pt, range, az) 
             {
                 const MPD = 111120.0; 
@@ -93,7 +97,7 @@
                 pt2[1] = pt[1] + range*Math.sin(az*Math.PI/180.0)/(MPD*Math.cos(pt[0]*Math.PI/180));
                 return pt2;
             }
-
+*/
             function xy2magdir(x, y)
             {
                 let mag = Math.sqrt(x*x + y*y);
@@ -1321,6 +1325,36 @@
                 }
             }
 
+            function findGoto(goto, list) {
+                for (var i = 0 ; i < list.length ; i++) {
+                    if (list[i]['name'] == goto) {
+                        return list[i];
+                    }
+                }
+                return null;
+            }
+            function getTargetsFromVis(data) {
+                var k, j, ln, mk, mks = [];
+                for (var i = 0 ; i < data.length ; i++) {
+                    k = data[i];
+
+                    mk = L.circle([ddmm2dd(k.lat), ddmm2dd(k.lon)], { radius: k.radius, color: 'red' });
+                    mk.bindTooltip(k.name, { permanent: false, className: 'assetLabel' } );
+
+                    mks.push(mk);
+
+                    if ('goto' in k && (j = findGoto(k['goto'], data))) {
+                        ln = L.polyline( [ [ddmm2dd(k.lat), ddmm2dd(k.lon)],
+                                           [ddmm2dd(j.lat), ddmm2dd(j.lon)] ] );
+                        ln.setText('> ', { repeat: false, offset: 6, center: true, attributes: { 'font-weight': 'bold', 'font-size': '18' }});
+                        mks.push(ln);
+                    }
+                }
+                var newLayer = L.layerGroup(mks);
+                layerControl.addOverlay(newLayer, 'vis-targets', glider + ' ' + currMission);
+                newLayer.addTo(map);
+            }
+
             function exportTargets(points, fmt) {
                 var buffText = "";
                 if (fmt == 116 || fmt == 84) { // 't' = targets
@@ -1349,7 +1383,11 @@
                             buffText += ' ]\n';
                     }
                 }
-                return buffText;
+    
+                if (targetsChannel) {
+                    targetsChannel.postMessage(points);
+                }
+
                 return buffText;
             }
 
@@ -1804,6 +1842,8 @@
             var mission = params.has('mission') ? params.get('mission') : '';
             var tail = params.has('tail') ? parseInt(params.get('tail')) : -1;
 
+            currMission = mission;
+
             if (glider !== null) {
                 document.title = glider + '-map';
                 window.name = glider + '-map';
@@ -1815,14 +1855,20 @@
                    url = `../summary/${glider}?mission=${mission}`;
                 else
                    url = `../summary/${glider}`;
+
+                targetsChannel = new BroadcastChannel(glider + '-targets');
+                targetsChannel.onmessage = (event) => {
+                    getTargetsFromVis(event.data);
+                };
                
                 fetch(url)
                 .then(resp => resp.json()) 
                 .then(d => {
 
-                    if (mission == null || mission == '')
+                    if (mission == null || mission == '') {
                         mission = d['mission']['mission'];
-
+                        currMission = mission;
+                    }
                     loadGliderPosition(map, layerControl, glider, mission);
                     loadGliderKML(map, layerControl, [ glider ], [ mission ], tail, lastBounds, true, true);
                     loadGliderDAC(map, layerControl, path[first], mission); 
@@ -1834,6 +1880,7 @@
                             window.open('../' + glider, 'SG' + glider);
                     }).addTo(map);
                 });
+
             }
             else {
                 document.title = 'map';

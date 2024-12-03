@@ -10,12 +10,14 @@
 
 <link rel="stylesheet" href="script/base.css" />
 <link rel="stylesheet" href="script/plottool.css" />
+<link rel="stylesheet" href="script/spincontrol.css" />
 
 <script src="script/plotly-latest.min.js"></script>
 <script src="script/util.js"></script>
 <script src="script/dialogs.js"></script>
 <script src="script/websocket.js"></script>
 <script src="script/tabstats.js"></script>
+<script src="script/spincontrol.js"></script>
 
 {% if runMode == 'pilot' %}
 <script src="script/chat.js"></script>
@@ -51,6 +53,18 @@
         display: flex;    
         overflow-x: visible;
     }
+    .vertRow th {
+        writing-mode: sideways-lr;
+        vertical-align: bottom;
+        horitzontal-align: center;
+    }
+    #thDepthLims {
+        writing-mode: horizontal-tb !important;
+    }
+    .selected-target {
+        background-color: #FFFF00;
+    }
+
 </style>
 
 <script>
@@ -65,6 +79,7 @@
     var currGlider = '';
     var currMission = '';
     var currStatus = '';
+    var targetsChannel = null;
 
     var engplots = [];
     var engplotlyplots = [];
@@ -81,8 +96,9 @@
 
     var divesInTable = [];
 
-    var parms = []
-
+    var parms = [];
+    var parms_SENSORS = null;
+ 
     var sectionSortMajor = 'number';
     var sectionNumberSort = 'reverse';
 
@@ -314,6 +330,13 @@
             else if (line.startsWith('FILE=')) {
                 json = JSON.parse(line.slice(5));
                 $(json['file']).value = json['body'];
+                if (json['file'] == 'science') {
+                }
+                else if (json['file'] == 'targets' && 'data' in json) {
+                    loadTargetsList(json['data']);
+                }
+                else if (json['file'] == 'cmdfile') {
+                } 
             }
             else { // new comm.log content comes unprefixed
                 var elt = $('commlog');
@@ -419,10 +442,18 @@
 
             if ('file' in data && data['file'] == file) {
                 $(file).value = data['contents'];
+                if (file == 'science') {
+                    initScienceFileTable('data' in data ? data['data'] : null);
+                }
+                else if (file == 'targets' && 'data' in data && data['data']) {
+                    console.log(data['data']);
+                    loadTargetsList(data['data']);
+                }
             }
             if ('dive' in data && data['dive'] > -1) {
                 controlFileDive[file] = data['dive'];
             }
+
         })
         .catch(error => {
             console.log(`${file}-${error}`);
@@ -1014,6 +1045,582 @@
     }
 
 {% if runMode == 'pilot' and noSave == false %}
+
+    function changeWheelPane(file) {
+        const panes = ["Cmdfile", "Science", "Targets"];
+        for (p of panes) {
+            if (file != p) {
+                $('pilotWheel' + p).classList.add('hide');
+                $('tab' + p).classList.remove('bold');
+            }
+        }
+        $('pilotWheel' + file).classList.remove('hide');
+        $('tab' + file).classList.add('bold');
+    }
+
+    /* TARGETS EDITOR */
+
+    const targetKeys = ["lat", "lon", "radius", "goto", "depth", "finish", "head", "dives", "timeout", "timeout-goto", "exec", "timeout-exec", "timeout-goto", "fence-lat", "fence-lon", "fence-radius", "fence-exec", "fence-goto"];
+
+    function initTargetsEntryTable()
+    {
+        var tr, td, inp;
+        
+        for (k of targetKeys) {
+            tr = document.createElement('tr');
+            td = document.createElement('td');
+            td.innerHTML = k;
+            tr.appendChild(td);
+
+            td = document.createElement('td');
+            inp = document.createElement('input');
+            inp.id = 'targets' + k;
+            td.appendChild(inp);
+            tr.appendChild(td);
+            $('targetsEntryTable').appendChild(tr);             
+        }
+    }
+
+    function targetToString(t) 
+    {
+        var str = t.name;
+
+        for (k of targetKeys) {    
+            if (k in t) {
+                str = str + ' ' + k + '=' + t[k];
+            }
+        }
+
+        return str;
+    }
+
+    function rowToTarget(r)
+    {
+        var cols = r.cells;
+        var flds = cols[2].innerHTML.split(' ');
+        var t    = {};
+
+        t['name'] = cols[1].innerHTML;
+        for (var i = 0 ; i < flds.length ; i++) {
+            s = flds[i].split('=');
+            t[s[0]] = s[1]; 
+        }
+
+        return t;
+    }
+
+    function findTargetByName(name)
+    {
+        for (var i = 0 ; i < $('targetsList').rows.length ; i++) {
+            if (name == $('targetsList').rows[i].cells[1].innerHTML)
+                return i;
+        }
+    
+        return -1; 
+    }
+
+    function addUpdateTarget()
+    {
+        var i = findTargetByName($('targetsname').value);
+        var t = {};
+
+        t['name'] = $('targetsname').value;
+        for (k of targetKeys) {
+            if ($('targets' + k).value != '') {
+                t[k] = $('targets' + k).value;
+            }
+        } 
+
+        if (i == -1)  {
+            addTargetToList(t, -1);
+            highlightTargetRowByIndex($('targetsList').rows.length - 1);
+        }
+        else {
+            var str = targetToString(t);
+            $('targetsList').rows[i].cells[2].innerHTML = str.split(' ').slice(1).join(' '); 
+        }
+    }
+
+    function getSelectedTargetRowIndex()
+    {
+        for (var i = 0 ; i < $('targetsList').rows.length ; i++) {
+            if ($('targetsList').rows[i].classList.contains('selected-target')) 
+                return i;
+        }
+
+        return -1;
+    }
+
+    function copySelectedTarget() 
+    {
+        var t, i;
+        i = getSelectedTargetRowIndex();
+        if (i >= 0) {
+            var t = rowToTarget($('targetsList').rows[i]);
+            t['name'] = t['name'] + '_copy';
+            addTargetToList(t, -1);
+        }
+    }
+
+    function sendTargetsToMap()
+    {
+        var tgts = [];
+        for (var i = 0 ; i < $('targetsList').rows.length ; i++) {
+            tgts.push(rowToTarget($('targetsList').rows[i]));
+        }
+
+        targetsChannel.postMessage(tgts);
+    }
+
+    function insertTargets()
+    {
+        var ninsert = 2;
+        var t1, t2;
+        var isel = getSelectedTargetRowIndex();
+        var pts = [], pt;
+        var rng, brg;
+        var radius;
+        if (isel < 1)
+            return;
+   
+        t2 = rowToTarget($('targetsList').rows[isel]); 
+        t1 = rowToTarget($('targetsList').rows[isel - 1]); 
+
+        if ($('intermediateRadius').value != '')
+            radius = $('intermediateRadius').value;
+        else
+            radius = t2['radius'];
+
+        try {
+            ninsert = parseInt($('intermediateCount').value);
+        }
+        catch {
+            ninsert = 2;
+        }
+
+        rng = haversine({ lat: ddmm2dd(parseFloat(t1.lat)), lon: ddmm2dd(parseFloat(t1.lon)) },
+                        { lat: ddmm2dd(parseFloat(t2.lat)), lon: ddmm2dd(parseFloat(t2.lon)) });
+        console.log(rng);
+        rng = rng / (ninsert + 1);
+        brg = bearing({ lat: ddmm2dd(parseFloat(t1.lat)), lon: ddmm2dd(parseFloat(t1.lon)) },
+                      { lat: ddmm2dd(parseFloat(t2.lat)), lon: ddmm2dd(parseFloat(t2.lon)) });
+        console.log(brg);
+ 
+        for (var i = 0 ; i < ninsert ; i++) {
+            var t = { name: t1['name'] + '_' + t2['name'] + '_' + (i+1) };
+            pt = reckon([ddmm2dd(parseFloat(t1.lat)), ddmm2dd(parseFloat(t1.lon))], rng*(i + 1), brg);
+            console.log(pt);
+            t['lat'] = dd2ddmm(pt[0]).toFixed(3);
+            t['lon'] = dd2ddmm(pt[1]).toFixed(3);
+            if (i < ninsert - 1)
+                t['goto'] = t1['name'] + '_' + t2['name'] + '_' + (i+2);
+            else
+                t['goto'] = t2['name'];
+            t['radius'] = radius;
+            console.log('adding at ' + (isel + i));
+            addTargetToList(t, isel + i);
+        }
+
+        t1['goto'] = t1['name'] + '_' + t2['name'] + '_1';
+        $('targetsList').rows[isel-1].cells[2].innerHTML = targetToString(t1).split(' ').slice(1).join(' '); 
+    }
+
+    function writeTargetsFile()
+    {
+        var str = '';
+        var t;
+        for (var i = 0 ; i < $('targetsList').rows.length ; i++) {
+            t = rowToTarget($('targetsList').rows[i]);
+            str = str + targetToString(t) + '\n';
+        }
+        $('selectFile').value = 'targets';
+        changeFile();
+        $('targets').value = str;  
+    }
+
+    function getTargetsFromMap(pts) 
+    {
+        if (pts == null || pts.length == 0) {
+            return;
+        }
+
+        clearTargetsList();
+        for (var i = 0 ; i < pts.length ; i++) {
+            var t = {};
+            t['name'] = 'T' + (i+1);
+            if (i < pts.length - 1)
+                t['goto'] = 'T' + (i+2);
+            else 
+                t['goto'] = t['name'];
+            t['lat'] = dd2ddmm(pts[i].lat).toFixed(3);
+            t['lon'] = dd2ddmm(pts[i].lng).toFixed(3);
+            t['radius'] = 2000;
+            addTargetToList(t, -1);
+        }
+        highlightTargetRowByIndex(0);
+    }
+
+    function loadTargetToForm(t)
+    {
+        $('targetsname').value = t['name'];
+        for (k of targetKeys) {
+            $('targets' + k).value = k in t ? t[k] : '';
+        }
+    }
+
+    function toggleSelectedTargetRow(r) 
+    {
+        var rows = $('targetsList').rows;
+        var nr = rows.length;
+
+        for (var i = 0 ; i < nr ; i++) {
+            if (rows[i] == r) {
+                rows[i].classList.add('selected-target');
+                loadTargetToForm(rowToTarget(rows[i]));
+            }
+            else {
+                rows[i].classList.remove('selected-target');
+            }
+        }
+    }
+
+    function highlightTargetRowByIndex(i)
+    {
+        if (i >= $('targetsList').rows.length)
+            i = 0;
+            
+        if ($('targetsList').rows.length > 0)
+            toggleSelectedTargetRow($('targetsList').rows[i]); 
+    }
+
+    function addTargetToList(t, idx)
+    {
+        var tr, del, nm, bdy, str;
+        str = targetToString(t);
+        
+        
+        tr  = $('targetsList').insertRow(idx); // document.createElement('tr');
+        bdy = document.createElement('td');
+        nm  = document.createElement('td');
+        del = document.createElement('td');
+        del.innerHTML = 'x';
+        del.addEventListener("click", function() { deleteTargetRow(this); });
+        tr.appendChild(del);
+        tr.addEventListener("click", function() { toggleSelectedTargetRow(this); });
+        nm.innerHTML = str.split(' ')[0];
+        bdy.innerHTML = str.split(' ').slice(1).join(' ');
+        tr.appendChild(nm);
+        tr.appendChild(bdy); 
+    }
+
+    function deleteTargetRow(d)
+    {
+        var idx = d.parentNode.rowIndex;
+        $('targetsList').deleteRow(idx);
+        highlightTargetRowByIndex(idx - 1);
+    }
+
+    function clearTargetsList()
+    {
+        var nr = $('targetsList').rows.length;
+        for (var i = nr-1 ; i >= 0 ; i--)
+            deleteTargetRow($('targetsList').rows[i]);
+
+        $('targetsname').value = '';
+        for (k of targetKeys) {
+            $('targets' + k).value = '';
+        }
+    }
+
+    function loadTargetsList(tgts) 
+    {
+        clearTargetsList();
+        for (t of tgts) {
+            addTargetToList(t, -1);
+        }
+        highlightTargetRowByIndex(0);
+    }
+
+    /* SCIENCE EDITOR */
+
+    function createInput(value, classname)
+    {
+        var inp = document.createElement('input');
+        inp.setAttribute("type", "text");
+        inp.setAttribute("size", "4");
+        inp.value = value;
+        inp.className = classname;
+
+        return inp;
+    }
+
+    function initScienceFileTable(d)
+    {
+        var i, nameToUse;
+        if (d) {
+            for (i = 0 ; i < d.length ; i++) {
+                addScienceFileRow(structuredClone(d[i]));
+            }
+            updateScienceFileTable();
+        }
+        else {
+            addScienceFileRow({ name: '50', seconds: '5', gc: '300', sensors: new Array('1', '1', '1', '0', '0', '0')});
+        }
+        
+        if (parms_SENSORS) {
+            
+            for (i = 1 ; i <= 6 && i <= parms_SENSORS.length ; i++) {
+                nameToUse = parms_SENSORS[i-1] != 'nil' ? parms_SENSORS[i-1] : 'sensor' + i; 
+                $('scienceSensor' + i).innerHTML   = nameToUse;
+                $('scienceProfiles' + i).innerHTML = nameToUse;
+                $('scienceDives' + i).innerHTML    = nameToUse;
+            } 
+        } 
+    }
+
+    function updateScienceFileTable()
+    {
+        var i, nr, td, td_prev;
+        var rows = $('scienceTable').getElementsByTagName("TR"); 
+        nr = rows.length;
+        for (i = 1 ; i < nr ; i++) {
+            td_prev = rows[i-1].getElementsByClassName("depth")[0];
+            td = rows[i].childNodes[1].childNodes[0];
+            td.nodeValue =  td_prev.value + " - ";
+        }
+    }
+
+    function changeScienceFileIncrement(row)
+    {
+        var i;
+        var spin;
+        var wake = parseFloat(row.getElementsByClassName("wake")[0].value);
+        var incr, mult;
+        for (i = 0 ; i < 8 ; i++) {
+            spin = row.getElementsByClassName("spinContainer")[i].spin;
+            incr = spin.GetIncrement();
+            mult = spin.GetCurrentValue() / incr;
+            spin.SetIncrement(wake);
+            spin.SetCurrentValue(wake*mult);
+        } 
+    }
+
+    function deleteScienceFileRow(row) {
+        if (row.rowIndex <= 2)
+            return;
+
+        $('scienceTable').parentNode.deleteRow(row.rowIndex);
+        updateScienceFileTable();
+
+    }
+
+    function parseScienceFileRow(row) {
+       var ons, wake, depth, gc, spin, compass, pressure;
+       var profiles = null, dives = null, timeout = null, batch = null;
+       var mult;
+       var j;
+
+       ons = new Array();
+       dives = new Array();
+       profiles = new Array();
+       wake = row.getElementsByClassName("wake")[0].value;
+       gc = row.getElementsByClassName("gc")[0].value;
+       depth = row.getElementsByClassName("depth")[0].value;
+       for (j = 0 ; j < 6 ; j++) {
+           spin = row.getElementsByClassName("sensorSpin" + j)[0].spin; 
+           mult = spin.GetCurrentValue() / spin.GetIncrement();
+           ons.push(mult);
+
+           spin = row.getElementsByClassName("divesSpin" + j)[0].spin; 
+           mult = spin.GetCurrentValue() / spin.GetIncrement();
+           dives.push(mult);
+
+           mult = row.getElementsByClassName("selProfiles" + j)[0].value;
+           profiles.push(mult);
+       }
+
+       spin = row.getElementsByClassName("sensorSpin" + 6)[0].spin; 
+       compass = '' + spin.GetCurrentValue() / spin.GetIncrement();
+
+       spin = row.getElementsByClassName("sensorSpin" + 7)[0].spin; 
+       pressure = '' + spin.GetCurrentValue() / spin.GetIncrement();
+
+       timeout = row.getElementsByClassName("timeout")[0].value;
+
+       return {seconds: wake, gc: gc, name: depth, sensors : ons, compass : compass, pressure : pressure, profiles: profiles, dives: dives, timeout: timeout };
+
+    }
+
+
+    function addScienceFileRow(d) {
+        var wake = 'seconds' in d ? d['seconds'] : '5';
+        var ons  = 'sensors' in d ? d['sensors'] : [ '1', '1', '1', '0', '0', '0' ];
+        var tbody = $('scienceTable');
+        var row = document.createElement("TR")
+        var td_depth, td_wake, td_gc, td_top, txt, inp, td_img, img, td, sel, opt;
+        var tds = new Array();
+        var spin;
+        var i, j, vopt;
+        const profileNames = ["D+C", "D", "C"];
+        const profileValues = [3, 1, 2];
+
+        if (ons.length < 6) {
+            for (i = ons.length ; i < 6 ; i++)
+                ons[i] = '0';
+        }
+
+        ons[6] = 'compass' in d ? d['compass'] : '1';
+        ons[7] = 'pressure' in d ? d['pressure'] : '1';
+
+        td_img = document.createElement("TD");
+        img = document.createElement('span');
+        img.innerHTML = '&#10006;';
+        img.classList.add('spanClick');
+        img.onclick = function() { deleteScienceFileRow(row); }
+        td_img.appendChild(img);
+        row.appendChild(td_img);
+
+        td_top = document.createElement("TD");
+        td_top.appendChild(document.createTextNode("0 - "));
+        row.appendChild(td_top);
+
+        td_depth = document.createElement("TD");
+        inp = createInput('name' in d ? d['name'] : 100, "depth");
+        inp.onchange = updateScienceFileTable;
+        td_depth.appendChild(inp);
+        row.appendChild(td_depth);
+
+        td_wake = document.createElement("TD");
+        inp = createInput(wake, "wake");
+        inp.onchange = function() { changeScienceFileIncrement(row); }
+        td_wake.appendChild(inp);
+        row.appendChild(td_wake);
+
+        for (i = 0 ; i < 8 ; i++) { // 7 and 8 are compass and pressure
+            tds[i] = document.createElement("TD");
+            spin = new SpinControl();
+            tds[i].appendChild(spin.GetContainer());
+            spin.GetContainer().classList.add('sensorSpin' + i);
+            spin.SetIncrement(parseFloat(wake));
+            spin.SetCurrentValue(parseFloat(wake) * parseFloat(ons[i]));
+            spin.StartListening();
+            row.appendChild(tds[i]);
+        }
+
+        td_gc = document.createElement("TD");
+        td_gc.appendChild(createInput(d['gc'], "gc"));
+        row.appendChild(td_gc);
+
+        td = document.createElement("TD");
+        td.appendChild(createInput('timeout' in d ? d['timeout'] : '', "timeout"));
+        row.appendChild(td);
+
+        for (i = 0 ; i < 6 ; i++) { 
+            td = document.createElement("TD");
+            sel = document.createElement('select');
+            sel.classList.add('select-checkbox');
+            sel.classList.add('select-no-arrow');
+            sel.classList.add('selProfiles' + i);
+            sel.multiple = false;
+ 
+            
+            if ('profiles' in d && i < d['profiles'].length)
+                vopt = profileValues.indexOf(parseInt(d['profiles'][i]));
+            else
+                vopt = 0;
+            for (j = 0 ; j < 3; j++) {
+                opt = document.createElement('option');
+                opt.innerHTML = profileNames[j];
+                opt.value = profileValues[j];
+                
+                if (j == vopt) 
+                    opt.selected = true;
+
+                sel.appendChild(opt);
+            }
+
+            td.appendChild(sel);
+            row.appendChild(td);
+        }
+        for (i = 0 ; i < 6 ; i++) { 
+            td = document.createElement("TD");
+            spin = new SpinControl();
+            td.appendChild(spin.GetContainer());
+            spin.GetContainer().classList.add('divesSpin' + i);
+            spin.SetMinValue(0);
+            spin.SetMaxValue(100);
+            spin.SetIncrement(1);
+            if ('dives' in d && i <  d['dives'].length)
+                spin.SetCurrentValue(parseInt(d['dives'][i]));
+            else
+                spin.SetCurrentValue(1);
+            spin.StartListening();
+            row.appendChild(td);
+        }
+
+        tbody.appendChild(row);
+
+    }
+
+    function addNewScienceFileRow() {
+       var rows = $('scienceTable').getElementsByTagName("TR");
+       var nr = rows.length;
+       var line;   
+    
+       line = parseScienceFileRow(rows[nr - 1]);
+       line.name = '' + (parseFloat(line.name) + 100)
+       addScienceFileRow(line);
+       updateScienceFileTable();
+
+    }
+
+    function writeScienceFileToEditor()
+    {
+        var today = new Date();
+        var spin, incr, mult;
+        var str;
+        var i, j, nr;
+        var rows = $('scienceTable').getElementsByTagName("TR");
+        var line;
+
+        str = "/ science file created by online sciedit\n";
+        str = str + '/ ' + today.toLocaleString() + '\n';
+        str = str + '/ ';
+
+        if (parms_SENSORS) {
+            for (i = 0 ; i < parms_SENSORS.length ; i++) {
+                str = str + parms_SENSORS[i];
+                if (i < parms_SENSORS.length - 1)
+                    str = str + ', ';
+                else
+                    str = str + '\n';
+            }
+        } 
+        nr = rows.length;
+        for (i = 0 ; i < nr ; i++) {
+            line = parseScienceFileRow(rows[i]);
+            str = str + `${line.name} seconds=${line.seconds} sensors=${line.sensors.join('')} gc=${line.gc} pressure=${line.pressure} compass=${line.compass}`; 
+            if ('profiles' in line && line.profiles) {
+                str = str + ` profiles=${line.profiles.join('')}`
+            }
+            if ('dives' in line && line.dives) {
+                str = str + ` dives=${line.dives.join('')}`
+            }
+            if ('timeout' in line && line.timeout) {
+                str = str + ` timeout=${line.timeout}`
+            }
+            if ('batch' in line && line.batch) {
+                str = str + ` batch=${line.batch}`
+            }
+            str = str + '\n';
+        } 
+        $('selectFile').value = 'science';
+        changeFile();
+        $('science').value = str;  
+   }
+
+    /* CMDFILE EDITOR */
+
     var parmGroups = ["BASIC", "NAV", "DIVE", "SURFACE", "FLIGHT", "PITCH", "ROLL", "VBD", "ALTIMETER", "HARDWARE"];
     function changeParmGroup(group) {
         for (g of parmGroups) {
@@ -1113,6 +1720,10 @@
         parms['T_DIVE']['current'] = prev_t; 
         parms['D_TGT']['current'] = prev_d; 
         parms['T_MISSION']['current'] = $('paramInput_T_MISSION').value;
+        if (parseFloat($('paramInput_D_ABORT').value) < prev_d) {
+            parms['D_ABORT']['current'] = $('paramInput_D_ABORT').value = prev_d + 25;
+            markChanged('D_ABORT');
+        }
     }
     function addParamInput(g, p, v, h, b, m) {
         const colors = ["#cccccc", "#eeeeee"];
@@ -1207,7 +1818,12 @@
                             "ALTIMETER": ["XPDR_INT", "XPDR_REP", "XPDR_VALID", "XPDR_INHIBIT"],
                             "HARDWARE": ["LOGGERS"],
                         };
-            const ignore = ["DIVE", "MISSION", "ID", "DEEPGLIDER", "DEEPGLIDERMB", "MOTHERBOARD"]
+            const ignore = ["DIVE", "MISSION", "ID", "DEEPGLIDER", "DEEPGLIDERMB", "MOTHERBOARD"];
+
+            if ('SENSORS' in parms) {
+                parms_SENSORS = [...parms['SENSORS']];
+                delete parms['SENSORS'];
+            }
 
             for (p of Object.keys(parms)) {
                 parms[p]['original'] =  parms[p]['current'];
@@ -1237,6 +1853,10 @@
                 }
             }
 
+            loadControlFile('science');
+            loadControlFile('targets');
+
+            // initScienceFileTable();
         }); 
     }
 {% endif %}
@@ -1296,7 +1916,11 @@
                 setupStream(glider, true, true);
                 currStatus = 'active';
             }
-{% if runMode == 'pilot' and noSave == false %}
+{% if runMode == 'pilot' %}
+            targetsChannel = new BroadcastChannel(glider + '-targets');
+            targetsChannel.onmessage = (event) => {
+                getTargetsFromMap(event.data);
+            };
             console.log('loading parms');
             loadParms(glider); // have to wait for maxDive above to be set
 {% endif %}
@@ -2448,13 +3072,15 @@
         // setupStream(glider, true, true);
 {% if runMode == 'pilot' %}
         loadControlFile('cmdfile');
-        loadControlFile('science');
-        loadControlFile('targets');
+        // loadControlFile('science'); call these from fetch of loadStatus
+        // loadControlFile('targets');
         loadControlFile('scicon.sch');
         loadControlFile('tcm2mat.cal');
         loadControlFile('pdoscmds.bat');
         loadControlFile('sg_calib_constants.m');
         $('selectFile').value = 'cmdfile';
+        changeFile();
+        initTargetsEntryTable();
 {% endif %}
         loadPlotlyControlsXY(glider);
         loadPlotlyControlsContour(glider);
@@ -2721,8 +3347,14 @@
 
 {% if runMode == 'pilot' and noSave == false %}
     <div id="pilotWheelDiv" class="hide" style="text-align: left;">
-        <div id="pilotParmsList">
-            <div id="pilotNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
+        <div id="pilotWheelNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
+            <span id="tabCmdfile" class="spanClick" onclick="changeWheelPane('Cmdfile'); return false;">cmdfile</span> <b>&#124;</b>
+            <span id="tabScience" class="spanClick" onclick="changeWheelPane('Science'); return false;">science</span> <b>&#124;</b>
+            <span id="tabTargets" class="spanClick" onclick="changeWheelPane('Targets'); return false;">targets</span> 
+        </div>
+        
+        <div id="pilotWheelCmdfile">
+            <div id="pilotCmdfileNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
                 <span id="tabBASIC" class="spanClick" onclick="changeParmGroup('BASIC'); return false;">Basic</span> <b>&#124;</b>
                 <span id="tabNAV" class="spanClick" onclick="changeParmGroup('NAV'); return false;">Navigation</span> <b>&#124;</b>
                 <span id="tabDIVE" class="spanClick bold" onclick="changeParmGroup('DIVE'); return false;">Dive</span> <b>&#124;</b>
@@ -2734,38 +3366,107 @@
                 <span id="tabALTIMETER" class="spanClick" onclick="changeParmGroup('ALTIMETER'); return false;">Altimeter</span> <b>&#124;</b>
                 <span id="tabHARDWARE" class="spanClick" onclick="changeParmGroup('HARDWARE'); return false;">Hardware</span> 
             </div>
-            
-            <div id="pilotBASIC" class="hide"></div>
-            <div id="pilotNAV" class="hide"></div>
-            <div id="pilotDIVE"> 
-                <input type="checkbox" checked id="selLinkChanges"><label for="selLinkChanges">auto calculate</label>
+            <div id="pilotParmsList">
+                
+                <div id="pilotBASIC" class="hide"></div>
+                <div id="pilotNAV" class="hide"></div>
+                <div id="pilotDIVE"> 
+                    <input type="checkbox" checked id="selLinkChanges"><label for="selLinkChanges">link target depth/time changes</label>
+                </div>
+                <div id="pilotSURFACE" class="hide"></div>
+                <div id="pilotFLIGHT" class="hide"></div>
+                <div id="pilotPITCH" class="hide"></div>
+                <div id="pilotROLL" class="hide"></div>
+                <div id="pilotVBD" class="hide"></div>
+                <div id="pilotVBD" class="hide"></div>
+                <div id="pilotALTIMETER" class="hide"></div>
+                <div id="pilotHARDWARE" class="hide"></div>
             </div>
-            <div id="pilotSURFACE" class="hide"></div>
-            <div id="pilotFLIGHT" class="hide"></div>
-            <div id="pilotPITCH" class="hide"></div>
-            <div id="pilotROLL" class="hide"></div>
-            <div id="pilotVBD" class="hide"></div>
-            <div id="pilotVBD" class="hide"></div>
-            <div id="pilotALTIMETER" class="hide"></div>
-            <div id="pilotHARDWARE" class="hide"></div>
-        </div>
-        <div id="pilotDirectiveList">
-            <span id="parmsToCmdfile" class="spanClick" onclick="parmsToCmdfile(); return false;">Write cmdfile</span> 
-            <p>
-            <input type="radio" id="radPilotDirectiveGO" name="radPilotDirective" value="GO" checked>
-            <label for="radPilotDirectiveGO">GO</label>
-            <input type="radio" id="radPilotDirectiveQUIT" name="radPilotDirective" value="QUIT">
-            <label for="radPilotDirectiveQUIT">QUIT</label>
-            <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" value="RESUME">
-            <label for="radPilotDirectiveRESUME">RESUME</label>
-            <p>
-            <button id="btnParamSearch" onclick="doParamSearch();">search</button>
-            <input id="txtParamSearch" class="parmInputInput">
-            <p>
-            <div id="divParamSearchResults">
+            <div id="pilotDirectiveList">
+                <input type="button" value="Make cmdfile" onclick="parmsToCmdfile();">
+                <p>
+                <input type="radio" id="radPilotDirectiveGO" name="radPilotDirective" value="GO" checked>
+                <label for="radPilotDirectiveGO">GO</label>
+                <input type="radio" id="radPilotDirectiveQUIT" name="radPilotDirective" value="QUIT">
+                <label for="radPilotDirectiveQUIT">QUIT</label>
+                <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" value="RESUME">
+                <label for="radPilotDirectiveRESUME">RESUME</label>
+                <p>
+                <input type="button" id="btnParamSearch" onclick="doParamSearch();" value="search">
+                <input id="txtParamSearch" class="parmInputInput">
+                <p>
+                <div id="divParamSearchResults">
+                </div>
             </div>
         </div>
+        <div id="pilotWheelScience" class="hide">
+            <span id="spnScienceEditorInfo">Sensor configuration from dive x, initial table from science.x</span><br>
+            <input type="button" value="Make science file" onclick="writeScienceFileToEditor(); return false;">
+            <input type="button" value="Add row" onclick="addNewScienceFileRow();">
+            <table>
+                <thead>
+                    <tr><th colspan="13"/><th colspan="13" align="center" style="background: #aaaaaa;">options</th>
+                    <tr><th/><th/><th/><th/><th id="scienceSampleIntervals" colspan="8" align="center" style="background: #aaaaaa;">sample intervals (s)</th><th/><th/><th colspan="6" align="center" style="background: #aaaaaa;"><u>D</u>ive and/or <u>C</u>limb</th><th colspan="6" align="center" style="background: #aaaaaa;">which dives</th>
+                    <tr class="vertRow">
+                        <th></th>
+                        <th id="thDepthLims" colspan=2 style="background: #cccccc;" align="center" style="writing-mode: horizontal-tb !important;">depths</th>
+                        <th>wake (s)</th>
+                        <th id="scienceSensor1">sensor 1</th>
+                        <th id="scienceSensor2">sensor 2</th>
+                        <th id="scienceSensor3">sensor 3</th>
+                        <th id="scienceSensor4">sensor 4</th>
+                        <th id="scienceSensor5">sensor 5</th>
+                        <th id="scienceSensor6">sensor 6</th>
+                        <th id="scienceCompass">compass</th>
+                        <th id="sciencePressure">pressure</th>
 
+                        <th>GC (s)</th>
+                        
+                        <th id="scienceTimeout">timeout</th>
+                        <th id="scienceProfiles1">sensor 1</th>
+                        <th id="scienceProfiles2">sensor 2</th>
+                        <th id="scienceProfiles3">sensor 3</th>
+                        <th id="scienceProfiles4">sensor 4</th>
+                        <th id="scienceProfiles5">sensor 5</th>
+                        <th id="scienceProfiles6">sensor 6</th>
+                        <th id="scienceDives1">sensor 1</th>
+                        <th id="scienceDives2">sensor 2</th>
+                        <th id="scienceDives3">sensor 3</th>
+                        <th id="scienceDives4">sensor 4</th>
+                        <th id="scienceDives5">sensor 5</th>
+                        <th id="scienceDives6">sensor 6</th>
+
+                    </tr>
+                </thead>
+                <tbody id="scienceTable">
+                </tbody>
+            </table>
+        </div>
+        <div id="pilotWheelTargets" class="hide">
+            <div id="pilotWheelTargetsEntry">
+                <table>
+                    <tbody id="targetsEntryTable">
+                        <tr><td>name</td><td><input id="targetsname"></td></tr>
+                    </tbody>
+                </table>
+                <input type="button" id="btnTargetSubmit" value="update" onclick="addUpdateTarget();">
+            </div>
+            <div id="pilotWheelTargetsList">
+                <table>
+                    <tbody id="targetsList" style="font-family:monospace;"></tbody>
+                </table>
+                <input type="button" value="Copy selected" onclick="copySelectedTarget();">
+                <input type="button" value="Make targets file" onclick="writeTargetsFile();">
+                <input type="button" value="Send to map" onclick="sendTargetsToMap();">
+                <p> 
+                <b>intermediate target generation</b> 
+                <br>(inserts from target above selected target to selected target): 
+                <br>
+                number <input value="3" id="intermediateCount" size="4">
+                radius <input value="1000" id="intermediateRadius" size="5">
+                <input type="button" value="insert" onclick="insertTargets();">
+            </div>
+        </div>
     </div>
 {% endif %}
     <div id="logDiv" class="hide"></div>

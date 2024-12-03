@@ -60,6 +60,7 @@ import typing
 import pathlib
 import anyio
 import warnings
+import aiofiles
 
 import gsw
 import seawater
@@ -1682,3 +1683,50 @@ def logDB(msg):
     # f = open("/home/seaglider/home/db.log", "a")
     # f.write(f"{time.time()} {msg}\n")
     # f.close()
+
+async def readResponseStackFile(name, keys):
+    if not await aiofiles.os.path.exists(name):
+        return None
+
+    async with aiofiles.open(name, 'r') as file:
+        a = []
+        async for line in file:
+            if line[0] == "/":
+                continue
+
+            split = line.split()
+            if len(split) < 2:
+                continue
+
+            d = { "name": split[0] }
+            for pair in split[1:]:
+                try:
+                    name, value = pair.split("=")
+                except ValueError:
+                    continue
+
+                if name in keys:
+                    d.update( { name: value } )
+
+            a.append(d)
+
+        return a
+
+
+async def readTargetsFile(name):
+    return await readResponseStackFile(name, ["lat", "lon", "radius", "goto", "escape", "depth", "finish", "timeout", "exec", "dives", "timeout-exec", "timeout-goto", "fence-lat", "fence-lon", "fence-radius", "fence-exec", "fence-goto", "head"])
+
+async def readScienceFile(name):
+    d = await readResponseStackFile(name, ["sensors", "gc", "seconds", "profiles", "dives", "batch", "pressure", "compass", "timeout"])
+    if d is None:
+        return d
+
+    for b in d:
+        for k in ['sensors', 'profiles', 'dives']:
+            if k in b:
+                if ',' in b[k]:
+                    b[k] = b[k].split(',')
+                else:
+                    b[k] = list(b[k])
+    
+    return d

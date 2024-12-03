@@ -7,22 +7,31 @@ import asyncio
 import os
 from anyio import Path
 
-async def read(path, logfile=None, cmdfile=None):
-
-    async with aiofiles.open(sys.path[0] + "/parms.json", 'r') as f:
-        o = await f.read()
-    
-    d = json.loads(o)
-
-    groups = set([ d[k]['category'] for k in d])
-
-    # roll = { k:v for k, v in d.items() if v['category'] == 'ROLL' }
-
+async def cmdfile(path, cmdfile):
     r = re.compile('\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
+    d = {}
+    try:
+        async with aiofiles.open(os.path.join(path, cmdfile), 'r') as f:
+            async for line in f:
+                if m := r.match(line):
+                    p = m.groupdict()['param']
+                    v = m.groupdict()['value']
+                    d[p] = {}
+                    if p in d:
+                        if d[p]['type'] == 'INT':
+                            n = int(v)
+                        else:
+                            n = float(v)
+                        
+                        if d[p]['current'] != n:
+                            d[p]['waiting'] = n
+    except:
+        pass
 
-    loggers = None
-    sensors = None
+    return d
 
+async def update(d, path, logfile=None, cmdfile=None):
+    r = re.compile('\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
     if logfile and await Path(os.path.join(path, logfile)).exists():
         try:
             async with aiofiles.open(os.path.join(path, logfile), 'r') as f:
@@ -36,8 +45,8 @@ async def read(path, logfile=None, cmdfile=None):
                             else:
                                 d[p]['current'] = float(v)
                     elif line.startswith('$SENSORS'):
-                        sensors = line.strip().split(',')[1:7]
-                        loggers = line.strip().split(',')[7:]
+                        sensors = line.strip().split(',')[1:]
+                        d['SENSORS'] = sensors;
         except:
             pass
 
@@ -59,14 +68,29 @@ async def read(path, logfile=None, cmdfile=None):
         except:
             pass
 
-    if loggers and 'LOGGERS' in d:
+    if 'SENSORS' in d and d['SENSORS'] and 'LOGGERS' in d:
+        loggers = d['SENSORS'][6:]
         d['LOGGERS']['help'] = f'Logger devices enable/disable control (1: {loggers[0]}, 2: {loggers[1]}, 4: {loggers[2]}, 8: {loggers[3]})'
         d['LOGGERS']['bitfield'] = [{'value': 1, 'function': loggers[0]}, 
                                     {'value': 2, 'function': loggers[1]}, 
                                     {'value': 4, 'function': loggers[1]}, 
                                     {'value': 8, 'function': loggers[1]}];
-
+    
     return d
+    
+async def read(path, logfile=None, cmdfile=None):
+
+    async with aiofiles.open(sys.path[0] + "/parms.json", 'r') as f:
+        o = await f.read()
+    
+    d = json.loads(o)
+
+    groups = set([ d[k]['category'] for k in d])
+
+    # roll = { k:v for k, v in d.items() if v['category'] == 'ROLL' }
+
+
+    return await update(d, path, logfile=logfile, cmdfile=cmdfile)
 
 if __name__ == "__main__":
     d = asyncio.run(read('./', logfile=sys.argv[1], cmdfile=sys.argv[2]))

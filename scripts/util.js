@@ -86,6 +86,32 @@ function haversine(pt0, pt1) {
     return 2.0*R*Math.asin(Math.sqrt(a));
 }
 
+function reckon(pt, range, az) 
+{
+    const DTR = 1.745329251994330e-02;
+    const phi1 = pt[0]*DTR;
+    const lam1 = pt[1]*DTR;
+    const del  = range / 6378137;
+    az = az*DTR;
+    console.log(phi1, lam1, del); 
+    const phi2 = Math.asin( Math.sin(phi1)*Math.cos(del) +
+                          Math.cos(phi1)*Math.sin(del)*Math.cos(az) );
+    console.log(phi2);
+    const lam2 = lam1 + Math.atan2(Math.sin(az)*Math.sin(del)*Math.cos(phi1),
+                               Math.cos(del)-Math.sin(phi1)*Math.sin(phi2));
+
+   
+    return [phi2/DTR, lam2/DTR];
+/*
+                const MPD = 111120.0;
+                var pt2 = [0,0];
+
+                pt2[0] = pt[0] + range*Math.cos(az*Math.PI/180.0)/MPD;
+                pt2[1] = pt[1] + range*Math.sin(az*Math.PI/180.0)/(MPD*Math.cos(pt[0]*Math.PI/180));
+                return pt2;
+*/
+}
+
 function formatDate(d) {
     let yr  = d.getUTCFullYear() - 2000;
     let mon = d.getUTCMonth() + 1;

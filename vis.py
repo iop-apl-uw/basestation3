@@ -1305,6 +1305,11 @@ def attachHandlers(app: sanic.Sanic):
             async with aiofiles.open(filename, 'r') as file:
                 message['contents']= await file.read() 
 
+            if which == 'targets':
+                message['data'] = await Utils.readTargetsFile(filename)
+            elif which == 'science':
+                message['data'] = await Utils.readScienceFile(filename)
+        
         return sanic.response.json(message)
 
     @app.route('/rafos/<glider:int>')
@@ -2230,6 +2235,13 @@ def attachHandlers(app: sanic.Sanic):
                         Utils.logDB(f'stream 3 open {glider}')
                         body = (await file.read()).decode('utf-8', errors='ignore')
                         m.update( { "body": body } )
+                        if m['file'] == 'science':
+                            m.update( { "data": await Utils.readScienceFile(m['full']) } )
+                        elif m['file'] == 'targets':
+                            m.update( { "data": await Utils.readTargetsFile(m['full']) } )
+                        elif m['file'] == 'cmdfile':
+                            m.update( { "data": await parms.cmdfile(gliderPath(glider, request), 'cmdfile') } )
+            
                         await ws.send(f"FILE={dumps(m).decode('utf-8')}")
 
                     Utils.logDB(f'stream 3 close {glider}')
@@ -3153,6 +3165,7 @@ if __name__ == '__main__':
         sanic.Sanic.serve(primary=app, app_loader=loader)
         #app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
     else:
-        app.prepare(host="0.0.0.0", port=port, access_log=True, debug=False, fast=True)
+        # app.prepare(host="0.0.0.0", port=port, access_log=True, debug=False, fast=True)
+        app.prepare(host="0.0.0.0", port=port, access_log=True, debug=True, reload_dir="/home/jgobat/work/git/basestation3/html", fast=True)
         sanic.Sanic.serve(primary=app, app_loader=loader)
         # app.run(host='0.0.0.0', port=port, access_log=True, debug=True, fast=True)
