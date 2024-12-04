@@ -408,6 +408,7 @@
             alert(error);
         });
     }
+{% endif %}
 
     function changeDirective(cmd) {
         var newCmd = '$' + cmd;
@@ -419,7 +420,6 @@
 
         return false;
     }
-{% endif %}
 
     function loadControlFile(file) {
         fetch(`control/${currGlider}/${file}${mission()}`)
@@ -556,7 +556,7 @@
     }
 
     function setVisibility(elt) {
-{% if runMode == 'pilot' and noSave == false %}
+{% if runMode == 'pilot' %}
         const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv', 'pilotWheelDiv'];
 {% else %}
         const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv'];
@@ -956,7 +956,7 @@
         });
     }
 
-{% if runMode == 'pilot' and noSave == false %}
+{% if runMode == 'pilot' %}
     function showPilotWheel() {
         setVisibility('pilotWheelDiv'); 
         currElt = 'pilotWheel';
@@ -1044,7 +1044,7 @@
         } 
     }
 
-{% if runMode == 'pilot' and noSave == false %}
+{% if runMode == 'pilot' %}
 
     function changeWheelPane(file) {
         const panes = ["Cmdfile", "Science", "Targets"];
@@ -3291,7 +3291,7 @@
         <button class="tool" id="btnPlotTool"      onclick="showPlotly();" title="plot and table tool"></button>
         <button class="tool" id="btnLogFile"       onclick="showLogFile();" title="log file"></button>
         <button class="tool" id="btnEngFile"       onclick="showEng();" title="engineering file"></button>
-{% if runMode == 'pilot' and noSave == false %}
+{% if runMode == 'pilot' %}
         <button class="tool" id="btnPilotWheel"    onclick="showPilotWheel();" title="pilot controls"></button>
 {% endif %}
     </div>
@@ -3345,7 +3345,7 @@
         </tbody>
     </table>
 
-{% if runMode == 'pilot' and noSave == false %}
+{% if runMode == 'pilot' %}
     <div id="pilotWheelDiv" class="hide" style="text-align: left;">
         <div id="pilotWheelNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
             <span id="tabCmdfile" class="spanClick" onclick="changeWheelPane('Cmdfile'); return false;">cmdfile</span> <b>&#124;</b>
@@ -3641,10 +3641,10 @@
 {% if noSave == false %}
             <button id="btnSave" type="button" onclick="saveControl(0);" style="margin-left:2px;">Save</button>
             <button id="btnForce" type="button" onclick="saveControl(1);">Force</button>
+{% endif %}
             <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
             <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
             <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>
-{% endif %}
             <select id="selectFile" onchange="changeFile()">
                 <option value="cmdfile" selected>cmdfile</option>
                 <option value="targets">targets</option>
