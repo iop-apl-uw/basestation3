@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+# !/usr/bin/python3
 ## Copyright (c) 2023  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
@@ -34,6 +34,9 @@ import io
 from contextlib import redirect_stdout
 import asyncio
 import math
+from scipy import stats
+import numpy as np
+import parms
 
 shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "bathymetry", "software", "hardware"]
 
@@ -131,11 +134,95 @@ def plotBathymaps(bathymaps, includes):
                         },
                       )
 
+def warnMoveAnalysis(str):
+    print("<span style='background-color: orange;'>WARNING: %s</span><br>" % str)
+    print("<script>failures += '<span style=\"background-color: orange;\">WARNING</span>: " + str + "<br>';</script>")
+
+def analyzeMoveRecord(x, which, param):
+    p = [y[2] for y in x]
+    r = [y[3] for y in x]
+    v1 = [y[0] for y in x]
+    v2 = [y[1] for y in x]
+
+    n = len(p)
+    idx = range(n)
+
+    pitch = stats.describe(p)
+    roll  = stats.describe(r)
+    vbd1  = stats.describe(v1)
+    vbd2  = stats.describe(v2)
+
+    z_pitch = abs(pitch.minmax[1] - pitch.minmax[0])
+    z_roll = abs(roll.minmax[1] - roll.minmax[0])
+    z_vbd1 = abs(vbd1.minmax[1] - vbd1.minmax[0])
+    z_vbd2 = abs(vbd2.minmax[1] - vbd2.minmax[0])
+   
+    if param and 'current' in param['PITCH_MIN'] and (pitch.minmax[0] < param['PITCH_MIN']['current']-10 or pitch.minmax[1] > param['PITCH_MAX']['current']+10):
+        p_flag = True
+    else:
+        p_flag = False
+    if param and 'current' in param['ROLL_MIN'] and (roll.minmax[0] < param['ROLL_MIN']['current']-10 or roll.minmax[1] > param['ROLL_MAX']['current']+10):
+        r_flag = True
+    else:
+        r_flag = False
+    if param and 'current' in param['VBD_MIN'] and ((vbd1.minmax[0] + vbd2.minmax[0])/2 < param['VBD_MIN']['current']-10 or (vbd1.minmax[1] + vbd2.minmax[1])/2 > param['VBD_MAX']['current'] + 10):
+        v_flag = True
+    else:
+        v_flag = False
+
+
+    l_pitch = stats.linregress(idx, p) 
+    l_roll = stats.linregress(idx, r) 
+    l_vbd1 = stats.linregress(idx, v1) 
+    l_vbd2 = stats.linregress(idx, v2) 
+
+    if which == "VBD":
+        if abs(l_vbd1.rvalue) < 0.999:
+            warnMoveAnalysis(f"VBD pot A count linearity is low (r={l_vbd1.rvalue})")
+        if abs(l_vbd2.rvalue) < 0.999:
+            warnMoveAnalysis(f"VBD pot B count linearity is low (r={l_vbd2.rvalue})")
+
+        if z_pitch > 10:
+            warnMoveAnalysis(f"possible outliers in pitch AD during VBD move (min-max={z_pitch})") 
+        elif p_flag:
+            warnMoveAnalysis(f"possible outliers in pitch AD during VBD move (AD values outside _MIN/_MAX)") 
+        if z_roll > 10:
+            warnMoveAnalysis(f"possible outliers in roll AD during VBD move (min-max={z_roll})") 
+        elif r_flag:
+            warnMoveAnalysis(f"possible outliers in roll AD during VBD move (AD values outside _MIN/_MAX)") 
+    elif which == "Roll":
+        if abs(l_roll.rvalue) < 0.999:
+            warnMoveAnalysis(f"roll AD count linearity is low (r={l_roll.rvalue})")
+        if z_pitch > 10:
+            warnMoveAnalysis(f"possible outliers in pitch AD during roll move (min-max={z_pitch})") 
+        elif p_flag:
+            warnMoveAnalysis(f"possible outliers in pitch AD during roll move (AD values outside _MIN/_MAX)") 
+        if z_vbd1 > 10:
+            warnMoveAnalysis(f"possible outliers in VBD A AD during roll move (min-max={z_vbd1})") 
+        if z_vbd2 > 10:
+            warnMoveAnalysis(f"possible outliers in VBD B AD during roll move (min-max={z_vbd2})")
+        if v_flag:
+            warnMoveAnalysis(f"possible outliers in VBD AD during roll move (AD values outside _MIN/_MAX)") 
+    elif which == "Pitch":
+        if abs(l_pitch.rvalue) < 0.999:
+            warnMoveAnalysis(f"pitch AD count linearity is low (r={l_pitch.rvalue})")
+        if z_roll > 10:
+            warnMoveAnalysis(f"possible outliers in roll AD during pitch move (min-max={z_roll}") 
+        elif r_flag:
+            warnMoveAnalysis(f"possible outliers in roll AD during pitch move (AD values outside _MIN/_MAX)") 
+        if z_vbd1 > 10:
+            warnMoveAnalysis(f"possible outliers in VBD A AD during pitch move (min-max={z_vbd1})") 
+        if z_vbd2 > 10:
+            warnMoveAnalysis(f"possible outliers in VBD B AD during pitch move (min-max={z_vbd2})") 
+        if v_flag:
+            warnMoveAnalysis(f"possible outliers in VBD AD during pitch move (AD values outside _MIN/_MAX)") 
+
+        
 def plotMoveRecord(x, which, includes):
     fig = plotly.graph_objects.Figure()
     n = len(x)
     curr = [y[4] for y in x]
-
+       
     if which == "VBD":
         ad1 = [y[0] for y in x]
         ad2 = [y[1] for y in x]
@@ -265,7 +352,8 @@ async def process(sgnum, base, num, mission=None, missions=None):
     selftestFiles = sorted(glob.glob(base + '/pt*.cap'), reverse=True)
 
     print("<html><head><title>%03d-selftest</title>" % sgnum)
-    print("<style>table.motors th,td { text-align: center; padding-left: 10px; padding-right: 10px; } a {font-family: verdana, arial, tahoma, 'sans serif'; } a:link {color:#0000ff; text-decoration:none} a:visited {color:#0000aa; text-decoration:none} a:hover {color:#0000aa; text-decoration:underline} a:active {color:#0000aa; text-decoration:underline} pre.inline {display: inline;} h2 {margin-bottom:0px;} </style></head><body>")
+    print('<script>var failures=""; function addFailures() { document.getElementById("failureSummary").innerHTML = failures; }</script>')
+    print("<style>table.motors th,td { text-align: center; padding-left: 10px; padding-right: 10px; } a {font-family: verdana, arial, tahoma, 'sans serif'; } a:link {color:#0000ff; text-decoration:none} a:visited {color:#0000aa; text-decoration:none} a:hover {color:#0000aa; text-decoration:underline} a:active {color:#0000aa; text-decoration:underline} pre.inline {display: inline;} h2 {margin-bottom:0px;} </style></head><body onload='addFailures();'>")
 
     firstLink = False
 
@@ -356,28 +444,52 @@ async def process(sgnum, base, num, mission=None, missions=None):
     firstPlot = True
 
     stdo.replace(b'\r', b'')
+
+    gotHeader = False
+    paramValues = None
+
     for raw_line in stdo.splitlines(): # proc.stdout:
         try:
             line = raw_line.decode('utf-8').rstrip()
         except:
             continue
 
+        if not gotHeader:
+            pcs = line.split()
+            glider   = pcs[0]
+            testnum = pcs[1]
+            capname   = pcs[2]
+            logname   = capname.replace('cap', 'log')
+            print(glider, testnum, capname, logname)
+            paramValues = await parms.read('./', capfile=capname)
+            if not paramValues or not 'VBD_MIN' in paramValues or not 'current' in paramValues:
+                paramValues = await parms.read('./', logfile=logname)
+            gotHeader = True
+
         if insideMoveDump and line.find(',') > -1 and line.find('SMOTOR,N,') == -1:
+            print('</table>')
             print('</div>')
             if len(moveRecord) > 0:
                 print('<div id=plot%d style="display: block;">' % idnum)
                 plot = plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
                 print(plot)
                 print("</div>")
+                analyzeMoveRecord(moveRecord, insideMoveDump, paramValues)
                 firstPlot = False
             insideMoveDump = False
             idnum = idnum + 1
         elif insideMoveDump and line.find(',N,') == -1:
             try:
-                moveRecord.append(list(map(lambda x: float(x), line.split())))
+                d = list(map(lambda x: float(x), line.split()))
+                moveRecord.append(d)
+                print("<tr>")
+                for i in d:
+                    print(f"<td>{i}")
+                continue
             except:
                 pass
 
+            
         if line.find('Loaded bathymap.') > -1:
             a = re.search('Loaded bathymap.(\d+) ', line)
             b = re.search('\(LL\)\s*([\-0-9\.]+),([\-0-9\.]+)\s*\(UR\)\s*([\-0-9\.]+),([\-0-9\.]+)', line)
@@ -431,8 +543,18 @@ async def process(sgnum, base, num, mission=None, missions=None):
             format(line)
             print('<a href="#" onclick="document.getElementById(\'div%d\').style.display == \'none\' ? document.getElementById(\'div%d\').style.display = \'block\' : document.getElementById(\'div%d\').style.display = \'none\'; return false;">details</a>' % (idnum, idnum, idnum));
             print(' &bull; <a href="#" onclick="document.getElementById(\'plot%d\').style.display == \'none\' ? document.getElementById(\'plot%d\').style.display = \'block\' : document.getElementById(\'plot%d\').style.display = \'none\'; return false;">plot</a><br>' % (idnum, idnum, idnum));
-            print('<div id=div%d style="display: none;">' % idnum)
-
+            print('<div id=div%d style="display: block;">' % idnum)
+            print('<table><tr>')
+            print('<th>VBD1 AD')
+            print('<th>VBD2 AD')
+            print('<th>pitch AD')
+            print('<th>roll AD')
+            print('<th>curr mA')
+            print('<th>volts')
+            print('<th>pressure')
+            print('<th>heading')
+            print('<th>pitch')
+            print('<th>roll</tr>')
         elif line.startswith('Meta:'):
             i = line.find('Dated:')
             print("<h2>")
@@ -460,6 +582,8 @@ async def process(sgnum, base, num, mission=None, missions=None):
 
         elif line.startswith('Summary of'): 
             print('<h2>%s</h2>' % line)
+            if line.startswith('Summary of failures'):
+                print('<div id="failureSummary"></div>')
 
         elif line.startswith('Parameter comparison'):
             print('<h2 id="parameters" style="margin-bottom:0px;">%s</h2>' % line)

@@ -30,11 +30,16 @@ async def cmdfile(path, cmdfile):
 
     return d
 
-async def update(d, path, logfile=None, cmdfile=None):
-    r = re.compile('\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
-    if logfile and await Path(os.path.join(path, logfile)).exists():
+async def update(d, path, logfile=None, cmdfile=None, capfile=None):
+    if capfile and logfile == None:
+        currfile = capfile
+        r = re.compile('[0-9]+.[0-9]+,SUSR,N,\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
+    else:
+        currfile = logfile
+        r = re.compile('\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
+    if currfile and await Path(os.path.join(path, currfile)).exists():
         try:
-            async with aiofiles.open(os.path.join(path, logfile), 'r') as f:
+            async with aiofiles.open(os.path.join(path, currfile), 'r') as f:
                 async for line in f:
                     if m := r.match(line):
                         p = m.groupdict()['param']
@@ -78,7 +83,7 @@ async def update(d, path, logfile=None, cmdfile=None):
     
     return d
     
-async def read(path, logfile=None, cmdfile=None):
+async def read(path, logfile=None, cmdfile=None, capfile=None):
 
     async with aiofiles.open(sys.path[0] + "/parms.json", 'r') as f:
         o = await f.read()
@@ -90,9 +95,17 @@ async def read(path, logfile=None, cmdfile=None):
     # roll = { k:v for k, v in d.items() if v['category'] == 'ROLL' }
 
 
-    return await update(d, path, logfile=logfile, cmdfile=cmdfile)
+    return await update(d, path, logfile=logfile, cmdfile=cmdfile, capfile=capfile)
 
+def readSync(path, logfile=None, cmdfile=None, capfile=None):
+    loop = asyncio.get_event_loop()
+    d = loop.run_until_complete(read(path, logfile=logfile, cmdfile=cmdfile, capfile=capfile))
+    return d
+ 
 if __name__ == "__main__":
-    d = asyncio.run(read('./', logfile=sys.argv[1], cmdfile=sys.argv[2]))
+    if '.cap' in sys.argv[1]:
+        d = asyncio.run(read('./', capfile=sys.argv[1], cmdfile=(sys.argv[2] if len(sys.argv) == 3 else None)))
+    else:
+        d = asyncio.run(read('./', logfile=sys.argv[1], cmdfile=(sys.argv[2] if len(sys.argv) == 3 else None)))
 
     print(d)
