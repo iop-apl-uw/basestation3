@@ -45,7 +45,7 @@ helpDict = { "Failed to send sms message": "Iridium SMS sending is a good backup
             "WARNING: mean counts": "Pressure AD counts at sealevel is outside typical range expected. This could be a sign that there is a mismatch between gain settings and sensor configuration. Check your pressure sensor to verify that it is configured correctly.",
             "max-min=": "Observed spread between min and max AD counts on axis that should not have moved was more than 10 counts.",
             "AD values outside": "Observed min and/or max AD counts on axis that should not have moved exceeded the set software limits by more than 10 counts.",
-            "Setting Loggers": "Your current $LOGGERS value does not match the configured devices.",
+            "Setting LOGGERS": "Your current $LOGGERS value does not match the configured devices.",
             "Cal value=0.000": "<b>set sbe_cond_freq_C0 in sg_calib_constants.m</b>",
             "CREG failed": "This could be a sign of antenna or signal problems or could just have been a temporary inability of the phone to see the satellite.",
             "stat on CREG?": "This could be a sign of antenna or signal problems or could just have been a temporary inability of the phone to register with the satellite.",
