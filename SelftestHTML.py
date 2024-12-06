@@ -40,17 +40,17 @@ import parms
 
 shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "bathymetry", "software", "hardware"]
 
-helpDict = { "Failed to send sms message": "Iridium SMS sending is a good backup communications method and is already configured for SIM cards. Set an email from epdos with 'writenv SMSemail foo@foo.com'. Ask iopsg for more details",
-             "No SMS email address": "Iridium SMS sending is a good backup communications method and is already configured for SIM cards. Set an email from epdos with 'writenv SMSemail foo@foo.com'. Ask iopsg for more details",
+helpDict = { "Failed to send sms message": "Iridium SMS sending is a good backup communications method. An SMS failure could be lack of a satellite connection or your SMS email may not be configured.",
+             "No SMS email address": "Iridium SMS sending is a good backup communications method and is already configured for SIM cards. Set an email from epdos with 'writenv SMSemail foo@foo.com'. Consult your technical support for more info.",
             "WARNING: mean counts": "Pressure AD counts at sealevel is outside typical range expected. This could be a sign that there is a mismatch between gain settings and sensor configuration. Check your pressure sensor to verify that it is configured correctly.",
-            "min-max=": "Observed min and max AD counts on axis that should not have moved changed by more than 10 counts.",
+            "max-min=": "Observed spread between min and max AD counts on axis that should not have moved was more than 10 counts.",
             "AD values outside": "Observed min and/or max AD counts on axis that should not have moved exceeded the set software limits by more than 10 counts.",
             "Setting Loggers": "Your current $LOGGERS value does not match the configured devices.",
             "Cal value=0.000": "<b>set sbe_cond_freq_C0 in sg_calib_constants.m</b>",
             "CREG failed": "This could be a sign of antenna or signal problems or could just have been a temporary inability of the phone to see the satellite.",
             "stat on CREG?": "This could be a sign of antenna or signal problems or could just have been a temporary inability of the phone to register with the satellite.",
             "COMPASS_USE,0": "Best practice: set COMPASS_USE to at least 4 to save magnetometer data in eng file for in situ and post-mission compass calibration",
-            "linearity is low": "AD counts should change in a steady, linear way with no spikes/dips/blips. The linear fit for the AD progress during this move has a low r^2 value indicating a possible problem with move rate or potentiometer.",
+            "linearity is low": "AD counts should change in a steady, linear way with no spikes/dips/blips. The linear fit for the AD progress during this move has a high RMS error between a linear fit and the observed values (RMSE > 20 counts), indicating a possible problem with move rate or potentiometer.",
             "> latched value": "The current internal pressure is > 0.1 PSI higher than the most recent value stored after pulling vacuum. This could be a sign of a potential leak.",
             "processing running on HSI": "The main processor oscillator is not function correctly. This is a sign of a serious problem with the mainboard electronics",
             "RTC running on LSI": "The main clock oscillator is not working correctly. This is a sign of a potentially serious problem with the mainboard electronics",
@@ -175,6 +175,17 @@ def warnMoveAnalysis(str):
         h = f' <span style="color: red;">[{h}]</span>'
     print("<script>failures += '<span style=\"background-color: orange;\">WARNING</span>: " + str + h + "<br>'</script>")
 
+def rmse(f, x, y):
+    s = 0
+    n = len(x)
+    if n < 2:
+        return 0
+    for i in range(n):
+        e = y[i] - (f.intercept + f.slope*x[i])
+        s = s + e*e
+     
+    return math.sqrt(s/n)
+
 def analyzeMoveRecord(x, which, param):
     p = [y[2] for y in x]
     r = [y[3] for y in x]
@@ -209,48 +220,52 @@ def analyzeMoveRecord(x, which, param):
 
 
     l_pitch = stats.linregress(idx, p) 
+    pitche = rmse(l_pitch, idx, p)
     l_roll = stats.linregress(idx, r) 
+    rolle = rmse(l_roll, idx, r)
     l_vbd1 = stats.linregress(idx, v1) 
+    vbd1e = rmse(l_vbd1, idx, v1)
     l_vbd2 = stats.linregress(idx, v2) 
+    vbd2e = rmse(l_vbd2, idx, v2)
 
     if which == "VBD":
-        if abs(l_vbd1.rvalue) < 0.999:
-            warnMoveAnalysis(f"VBD pot A count linearity is low (r={l_vbd1.rvalue})")
-        if abs(l_vbd2.rvalue) < 0.999:
-            warnMoveAnalysis(f"VBD pot B count linearity is low (r={l_vbd2.rvalue})")
+        if vbd1e > 20:
+            warnMoveAnalysis(f"VBD pot A count linearity is low (RMSE={vbd1e} counts)")
+        if vbd2e > 20:
+            warnMoveAnalysis(f"VBD pot B count linearity is low (RMSE={vbd2e} counts)")
 
         if z_pitch > 10:
-            warnMoveAnalysis(f"possible outliers in pitch AD during VBD move (min-max={z_pitch})") 
+            warnMoveAnalysis(f"possible outliers in pitch AD during VBD move (max-min={z_pitch})") 
         elif p_flag:
             warnMoveAnalysis(f"possible outliers in pitch AD during VBD move (AD values outside _MIN/_MAX)") 
         if z_roll > 10:
-            warnMoveAnalysis(f"possible outliers in roll AD during VBD move (min-max={z_roll})") 
+            warnMoveAnalysis(f"possible outliers in roll AD during VBD move (max-min={z_roll})") 
         elif r_flag:
             warnMoveAnalysis(f"possible outliers in roll AD during VBD move (AD values outside _MIN/_MAX)") 
     elif which == "Roll":
-        if abs(l_roll.rvalue) < 0.999:
-            warnMoveAnalysis(f"roll AD count linearity is low (r={l_roll.rvalue})")
+        if rolle > 20:
+            warnMoveAnalysis(f"roll AD count linearity is low (RMSE={rolle} counts)")
         if z_pitch > 10:
-            warnMoveAnalysis(f"possible outliers in pitch AD during roll move (min-max={z_pitch})") 
+            warnMoveAnalysis(f"possible outliers in pitch AD during roll move (max-min={z_pitch})") 
         elif p_flag:
             warnMoveAnalysis(f"possible outliers in pitch AD during roll move (AD values outside _MIN/_MAX)") 
         if z_vbd1 > 10:
-            warnMoveAnalysis(f"possible outliers in VBD A AD during roll move (min-max={z_vbd1})") 
+            warnMoveAnalysis(f"possible outliers in VBD A AD during roll move (max-min={z_vbd1})") 
         if z_vbd2 > 10:
-            warnMoveAnalysis(f"possible outliers in VBD B AD during roll move (min-max={z_vbd2})")
+            warnMoveAnalysis(f"possible outliers in VBD B AD during roll move (max-min={z_vbd2})")
         if v_flag:
             warnMoveAnalysis(f"possible outliers in VBD AD during roll move (AD values outside _MIN/_MAX)") 
     elif which == "Pitch":
-        if abs(l_pitch.rvalue) < 0.999:
-            warnMoveAnalysis(f"pitch AD count linearity is low (r={l_pitch.rvalue})")
+        if pitche > 20:
+            warnMoveAnalysis(f"pitch AD count linearity is low (RMSE={pitche} counts)")
         if z_roll > 10:
-            warnMoveAnalysis(f"possible outliers in roll AD during pitch move (min-max={z_roll}") 
+            warnMoveAnalysis(f"possible outliers in roll AD during pitch move (max-min={z_roll}") 
         elif r_flag:
             warnMoveAnalysis(f"possible outliers in roll AD during pitch move (AD values outside _MIN/_MAX)") 
         if z_vbd1 > 10:
-            warnMoveAnalysis(f"possible outliers in VBD A AD during pitch move (min-max={z_vbd1})") 
+            warnMoveAnalysis(f"possible outliers in VBD A AD during pitch move (max-min={z_vbd1})") 
         if z_vbd2 > 10:
-            warnMoveAnalysis(f"possible outliers in VBD B AD during pitch move (min-max={z_vbd2})") 
+            warnMoveAnalysis(f"possible outliers in VBD B AD during pitch move (max-min={z_vbd2})") 
         if v_flag:
             warnMoveAnalysis(f"possible outliers in VBD AD during pitch move (AD values outside _MIN/_MAX)") 
 
