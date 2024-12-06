@@ -390,6 +390,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
 
     print("<html><head><title>%03d-selftest</title>" % sgnum)
     print('<script>var failures=""; function addFailures() { document.getElementById("failureSummary").innerHTML = failures; }</script>')
+    print('<script>function jumpToAnchor(a) {   var loc = document.location.toString().split(\'#\')[0]; document.location = loc + a; return false; }</script>')
     print("<style>table.motors th,td { text-align: center; padding-left: 10px; padding-right: 10px; } a {font-family: verdana, arial, tahoma, 'sans serif'; } a:link {color:#0000ff; text-decoration:none} a:visited {color:#0000aa; text-decoration:none} a:hover {color:#0000aa; text-decoration:underline} a:active {color:#0000aa; text-decoration:underline} pre.inline {display: inline;} h2 {margin-bottom:0px;} </style></head><body onload='addFailures();'>")
 
     firstLink = False
@@ -475,7 +476,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
 
     idnum = 0
     minRates = { 'Pitch': 100, 'Roll': 300, 'Pump': 5, 'Bleed': 15 }
-    maxRates = { 'Pitch': 300, 'Roll': 500, 'Pump': 10, 'Bleed': 30 }
+    maxRates = { 'Pitch': 300, 'Roll': 650, 'Pump': 10, 'Bleed': 35 }
     minCurr = { 'Pitch': 40, 'Roll': 15, 'Pump': 400, 'Bleed': 0 }
     maxCurr = { 'Pitch': 400, 'Roll': 150, 'Pump': 1000 , 'Bleed': 2000 }
     firstPlot = True
@@ -484,6 +485,8 @@ async def process(sgnum, base, num, mission=None, missions=None):
 
     gotHeader = False
     paramValues = None
+    moveCountTable = 0
+    moveCountLink = 0
 
     for raw_line in stdo.splitlines(): # proc.stdout:
         try:
@@ -577,6 +580,8 @@ async def process(sgnum, base, num, mission=None, missions=None):
             a = re.search(",(\w+) completed from ", line)
             insideMoveDump = a.group(1)
             moveRecord = []
+            print(f"<a id='move{moveCountLink}'>")
+            moveCountLink = moveCountLink + 1
             format(line)
             print('<a href="#" onclick="document.getElementById(\'div%d\').style.display == \'none\' ? document.getElementById(\'div%d\').style.display = \'block\' : document.getElementById(\'div%d\').style.display = \'none\'; return false;">details</a>' % (idnum, idnum, idnum));
             print(' &bull; <a href="#" onclick="document.getElementById(\'plot%d\').style.display == \'none\' ? document.getElementById(\'plot%d\').style.display = \'block\' : document.getElementById(\'plot%d\').style.display = \'none\'; return false;">plot</a><br>' % (idnum, idnum, idnum));
@@ -613,7 +618,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
 
         elif line.startswith('Summary of motor moves'): 
             print('<h2>%s</h2>' % line)
-            print('color thresholds are for guidance only - examine each move record and plot for details<br>')
+            print('color thresholds are for guidance only - examine each move record and plot for details (click on a row to jump to that move)<p>')
             print('<table class="motors" rules="rows">')
             print('<tr><th>motor</th><th>start EU</th><th>end EU</th><th>start AD</th><th>end AD</th><th>dest AD</th><th>sec</th><th>AD/sec</th><th>avg mA</th><th>max mA</th><th>avg V</th><th>min V</th></tr>')
             insideMotorSummary = True
@@ -696,7 +701,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
                     if not which:
                         which = result['which']
 
-                    print(f"<tr><td>{which}</td> \
+                    print(f"<tr onclick='jumpToAnchor(\"#move{moveCountTable}\");'><td>{which}</td> \
                             <td>{result['startEU']}</td> \
                             <td>{result['endEU']}</td> \
                             <td>{result['startAD']}</td> \
@@ -708,7 +713,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
                             <td>{result['maxCurr']}</td> \
                             <td>{result['avgVolts']}</td> \
                             <td>{result['minVolts'] if haveDest else result['avgVolts']}</td></tr>") 
-        
+                    moveCountTable = moveCountTable + 1          
      
         elif insideParam:
             if line.find('not between') > -1:

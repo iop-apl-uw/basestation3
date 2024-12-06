@@ -201,17 +201,25 @@ set Cfreq = `grep "^ct:" $fname | tail -n 1 | cut -f2 -d' '`
 set C0 = `grep sbe_cond_freq_C0 "$base"/sg_calib_constants.m | cut -f2 -d= | cut -f1 -d';'`
 
 if ($Cfreq == "") then
-    set col = `grep columns "$base"/pt"$1""$testnum".eng | cut -f2 -d' ' | awk 'BEGIN{FS=","; OFS="\n"} {$1=$1} 1' | grep -n condFreq | cut -f1 -d:`
+    set col = `grep columns "$base"/pt"$1""$testnum".eng | cut -f2 -d' ' | awk 'BEGIN{FS=","; OFS="\n"} {$1=$1} 1' | grep -i -n condFreq | cut -f1 -d:`
     set Cfreq = `grep -A 3 %data: "$base"/pt"$1""$testnum".eng | tail -1 | cut -f"$col" -d' '`
 else if (`printf %.0f $Cfreq` > 10000) then
     set Cfreq = `echo $Cfreq/1000 | bc -l`
 endif
-printf "Conductivity frequency=%.3f, Cal value=%.3f\n" $Cfreq $C0
+
+set cttype = `grep -i CondFreq $fname`
+if ("$cttype" == "") then
+    set cttype = `grep -i sbect $fname`
+endif
+
+if ("$cttype" != "") then
+    printf "Conductivity frequency=%.3f, Cal value=%.3f\n" $Cfreq $C0
+endif
 
 set legatoPressure = `grep HLEGATO,N,pressure: $fname | cut -f2 -d: | cut -f1 -d' '`
 if ($legatoPressure != "") then
     set sgcalLegatoPressure = `grep legato_sealevel "$base"/sg_calib_constants.m`
-    echo $sgcalLegatoPressure
+    echo "currently in sg_calib_constants:" $sgcalLegatoPressure
     if ( "$sgcalLegatoPressure" != "" ) then
         echo "UPDATE: legato_sealevel = $legatoPressure; in sg_calib_constants.m"
     else
@@ -238,25 +246,27 @@ if ( $ndat_files > 10 || $nsc_files > 10 ) then
 endif
 
 set fname = `basename $fname .cap`
-foreach cal (t_g t_h t_i t_j c_g c_h c_i c_j) 
-    set upper = `echo $cal | tr '[:lower:]' '[:upper:]'`
-    set parm = `printf 'SEABIRD_%s' $upper`
-    set sg_val = `grep $parm "$base"/"$fname".log | cut -f2 -d, | tail -n 1`
-    if ($sg_val == "") then
-        set sg_val = `grep $parm "$base"/"$fname".cap | cut -f5 -d, | tail -n 1`
-    endif
-    set cal_val = `grep $cal "$base"/sg_calib_constants.m | cut -f2 -d= | cut -f1 -d\;` 
-    set sgc = `printf "%.8f" $sg_val`
-    set cac = `printf "%.8f" $cal_val`
-    if ( $cac == "0.00000000" ) then
-        set ratio = 0
-    else
-        set ratio = `echo "1000*$sgc/$cac" | bc`
-    endif
-    if ( !($ratio > 990 && $ratio < 1010) ) then
-       echo "value for $cal does not match: sg_calib_constants.m=$cac, glider=$sgc"
-    endif
-end
+if ("$cttype" != "") then
+    foreach cal (t_g t_h t_i t_j c_g c_h c_i c_j) 
+        set upper = `echo $cal | tr '[:lower:]' '[:upper:]'`
+        set parm = `printf 'SEABIRD_%s' $upper`
+        set sg_val = `grep $parm "$base"/"$fname".log | cut -f2 -d, | tail -n 1`
+        if ($sg_val == "") then
+            set sg_val = `grep $parm "$base"/"$fname".cap | cut -f5 -d, | tail -n 1`
+        endif
+        set cal_val = `grep $cal "$base"/sg_calib_constants.m | cut -f2 -d= | cut -f1 -d\;` 
+        set sgc = `printf "%.8f" $sg_val`
+        set cac = `printf "%.8f" $cal_val`
+        if ( $cac == "0.00000000" ) then
+            set ratio = 0
+        else
+            set ratio = `echo "1000*$sgc/$cac" | bc`
+        endif
+        if ( !($ratio > 990 && $ratio < 1010) ) then
+           echo "value for $cal does not match: sg_calib_constants.m=$cac, glider=$sgc"
+        endif
+    end
+endif
 
 echo "--------------------------------------------"
 echo "Raw capture"
