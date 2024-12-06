@@ -500,11 +500,11 @@ async def process(sgnum, base, num, mission=None, missions=None):
             testnum = pcs[1]
             capname   = pcs[2]
             logname   = capname.replace('cap', 'log')
-            print(glider, testnum, capname, logname)
             paramValues = await parms.read('./', capfile=capname)
             if not paramValues or not 'VBD_MIN' in paramValues or not 'current' in paramValues:
                 paramValues = await parms.read('./', logfile=logname)
             gotHeader = True
+            continue
 
         if insideMoveDump and line.find(',') > -1 and line.find('SMOTOR,N,') == -1:
             print('</table>')
