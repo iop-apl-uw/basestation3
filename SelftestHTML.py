@@ -40,7 +40,34 @@ import parms
 
 shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "bathymetry", "software", "hardware"]
 
+helpDict = { "Failed to send sms message": "Iridium SMS sending is a good backup communications method and is already configured for SIM cards. Set an email from epdos with 'writenv SMSemail foo@foo.com'. Ask iopsg for more details",
+             "No SMS email address": "Iridium SMS sending is a good backup communications method and is already configured for SIM cards. Set an email from epdos with 'writenv SMSemail foo@foo.com'. Ask iopsg for more details",
+            "WARNING: mean counts": "Pressure AD counts at sealevel is outside typical range expected. This could be a sign that there is a mismatch between gain settings and sensor configuration. Check your pressure sensor to verify that it is configured correctly.",
+            "min-max=": "Observed min and max AD counts on axis that should not have moved changed by more than 10 counts.",
+            "AD values outside": "Observed min and/or max AD counts on axis that should not have moved exceeded the set software limits by more than 10 counts.",
+            "Setting Loggers": "Your current $LOGGERS value does not match the configured devices.",
+            "Cal value=0.000": "<b>set sbe_cond_freq_C0 in sg_calib_constants.m</b>",
+            "CREG failed": "This could be a sign of antenna or signal problems or could just have been a temporary inability of the phone to see the satellite.",
+            "stat on CREG?": "This could be a sign of antenna or signal problems or could just have been a temporary inability of the phone to register with the satellite.",
+            "COMPASS_USE,0": "Best practice: set COMPASS_USE to at least 4 to save magnetometer data in eng file for in situ and post-mission compass calibration",
+            "linearity is low": "AD counts should change in a steady, linear way with no spikes/dips/blips. The linear fit for the AD progress during this move has a low r^2 value indicating a possible problem with move rate or potentiometer.",
+            "> latched value": "The current internal pressure is > 0.1 PSI higher than the most recent value stored after pulling vacuum. This could be a sign of a potential leak.",
+            "processing running on HSI": "The main processor oscillator is not function correctly. This is a sign of a serious problem with the mainboard electronics",
+            "RTC running on LSI": "The main clock oscillator is not working correctly. This is a sign of a potentially serious problem with the mainboard electronics",
+            "suspicious zero values in calibration": "This could be a sign of a problem with the compass or the tcm2mat.cal file, but could also be that the glider is very flat and stready. Re-run bench tests to investigate.",
+            "time not syncd, PPS timeout": "The glider was unable to sync its clock to the GPS pulse-per-second. This could be a sign that the GPS did not run long enough for an accurate clock sync (perhaps due to a cold start after a long time off) or a sign of a problem with the PPS line."
+           }
+
+def checkHelp(line):
+    for k in helpDict.keys():
+        if k in line:
+            return helpDict[k]
+
+    return None
+
 def format(line):
+    h = checkHelp(line)
+
     reds = ["errors", "error", "Failed", "failed", "[crit]", "timed out"]
     yellows = ["WARNING"]
     for r in reds:
@@ -67,16 +94,21 @@ def format(line):
                 pass
 
         if b:
-            print(f'<a href="../parms#{b.group(1)[1:]}">{b.group(1)}</a>,{b.group(2)}<br>')
+            print(f'<a href="../parms#{b.group(1)[1:]}">{b.group(1)}</a>,{b.group(2)}')
         elif c:
-            print(f'<pre class="inline">{a.group(2)}</pre><br>')
+            print(f'<pre class="inline">{a.group(2)}</pre>')
         elif d:
-            print(f'Updating parameter <a href="../parms#{d.group(1)}">${d.group(1)}</a> to {d.group(2)}<br>')
+            print(f'Updating parameter <a href="../parms#{d.group(1)}">${d.group(1)}</a> to {d.group(2)}')
         else:
-            print(f"<span>{a.group(2) if a.group(2) else ''}</span><br>")    
+            print(f"<span>{a.group(2) if a.group(2) else ''}</span>")    
     else:
-        print(line + "<br>")
+        print(line)
 
+    if h:
+        print(f"<span style='color: red;'> [{h}]</span>")    
+
+    print("<br>")
+    
 def plotBathymaps(bathymaps, includes):
     fig = plotly.graph_objects.Figure()
 
@@ -135,8 +167,13 @@ def plotBathymaps(bathymaps, includes):
                       )
 
 def warnMoveAnalysis(str):
-    print("<span style='background-color: orange;'>WARNING: %s</span><br>" % str)
-    print("<script>failures += '<span style=\"background-color: orange;\">WARNING</span>: " + str + "<br>';</script>")
+    format(f'WARNING: {str}')
+    h = checkHelp(str)
+    if h is None:
+        h = ''
+    else:
+        h = f' <span style="color: red;">[{h}]</span>'
+    print("<script>failures += '<span style=\"background-color: orange;\">WARNING</span>: " + str + h + "<br>'</script>")
 
 def analyzeMoveRecord(x, which, param):
     p = [y[2] for y in x]
@@ -576,6 +613,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
 
         elif line.startswith('Summary of motor moves'): 
             print('<h2>%s</h2>' % line)
+            print('color thresholds are for guidance only - examine each move record and plot for details<br>')
             print('<table class="motors" rules="rows">')
             print('<tr><th>motor</th><th>start EU</th><th>end EU</th><th>start AD</th><th>end AD</th><th>dest AD</th><th>sec</th><th>AD/sec</th><th>avg mA</th><th>max mA</th><th>avg V</th><th>min V</th></tr>')
             insideMotorSummary = True
