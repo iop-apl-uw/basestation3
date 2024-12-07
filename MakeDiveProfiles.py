@@ -5648,7 +5648,8 @@ def make_dive_profile(
         ]
         num_bad_samples = len(bad_samples)
         num_good_samples = ctd_np - num_bad_samples
-        if num_good_samples < 2:
+
+        if not base_opts.allow_insufficient_dives and num_good_samples < 2:
             log_error(
                 "Insufficient samples (%d of %d) to continue with CT corrections - bailing out"
                 % (num_good_samples, ctd_np)

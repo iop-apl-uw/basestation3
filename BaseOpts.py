@@ -550,6 +550,17 @@ global_options_dict = {
             "action": FullPathAction,
         },
     ),
+    "allow_insufficient_dives": options_t(
+        False,
+        ("Base", "MakeDiveProfiles", "Reprocess"),
+        ("--allow_insufficient_dives",),
+        bool,
+        {
+            "help": "Allows dives with an insufficient number of good CTD data points to attempt CTD corrections",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
+
     #
     "instrument_id": options_t(
         0,
