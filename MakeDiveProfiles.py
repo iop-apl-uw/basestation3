@@ -45,55 +45,55 @@
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-statements
 
-import cProfile
-import pstats
-import os
-import math
 import copy
+import cProfile
+import glob
+import math
+import os
+import pdb
+import pstats
+import re
 import sys
 import time
-import re
 import traceback
-import pdb
-import glob
 
+import gsw
 import numpy as np
 import scipy.integrate
-import gsw
 import seawater
 
 import BaseDotFiles
 import BaseGZip
-from BaseLog import (
-    BaseLogger,
-    log_debug,
-    log_error,
-    log_info,
-    log_warning,
-    log_critical,
-)
 import BaseMagCal
+import BaseNetCDF
 import BaseOpts
 import BaseOptsType
-import BaseNetCDF
 import CalibConst
 import DataFiles
 import FileMgr
 import FlightModel
-import LogFile
 import Globals
 import GPS
+import LegatoCorrections
+import LogFile
 import NetCDFUtils
 import QC
 import Sensors
 import TraceArray
-from TempSalinityVelocity import TSV_iterative, load_thermal_inertia_modes
-from HydroModel import glide_slope, hydro_model
 
 # from TraceArray import *  # REMOVE use this only only if we are tracing/comparing computations w/ matlab
 import Utils
 import Utils2
-import LegatoCorrections
+from BaseLog import (
+    BaseLogger,
+    log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
+)
+from HydroModel import glide_slope, hydro_model
+from TempSalinityVelocity import TSV_iterative, load_thermal_inertia_modes
 
 DEBUG_PDB = False
 
@@ -1313,7 +1313,6 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
             raise RuntimeError(
                 "Unable to compute counts per mV for Kistler conversion"
             ) from e
-        
 
     x = counts_v / counts_per_mVpV  # mV
     x2 = x * x
@@ -1353,7 +1352,7 @@ def compute_kistler_pressure(kistler_cnf, log_f, counts_v, temp_v):
             raise RuntimeError(
                 "Unable to find conversion parameters for Kistler conversion"
             ) from e
-        
+
     # deliberately NOT adding PRESSURE_YINT
     return press_v  # [psi]
 
@@ -1624,7 +1623,7 @@ def load_dive_profile_data(
                 # and all/some other files None, which is not an error per se
                 log_error("Missing data files: %s - bailing out" % missing_files)
                 raise RuntimeError(True)
-            
+
             log_info("Loading data from original files")
 
         # If we get here we think we can load data from variaus sources
@@ -2174,9 +2173,11 @@ def load_dive_profile_data(
             # In the case of a corrupted nc file and no original files we won't have a log_f structure
             # at this point.  Unable to continue
             status = 0  # let caller know the bad news...
-            log_error("Could not determine log info for %s - bailing out" % nc_dive_file_name)
+            log_error(
+                "Could not determine log info for %s - bailing out" % nc_dive_file_name
+            )
             raise RuntimeError(True)
-        
+
         # At this point calib_consts[] contains just the explicitly set/stored variables from (past) sg_calib_constants.m files
         # Do this patch for old files and then see if we want to add the default values.
         try:
@@ -2361,7 +2362,7 @@ def load_dive_profile_data(
         )
 
     except RuntimeError:
-        #log_error(exception.args[0], "exc")
+        # log_error(exception.args[0], "exc")
         return (0, None, None, None, None, None, None, None, None)
     except Exception:
         # Typically because a reader died
@@ -2403,7 +2404,9 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
 
     if sgc_vars_used is None:
         if log_vars_used is None:
-            log_error(f"SBECT data found but {sbect_type} calibration constant(s) missing - bailing out")
+            log_error(
+                f"SBECT data found but {sbect_type} calibration constant(s) missing - bailing out"
+            )
             raise RuntimeError(True)
         log_error(
             f"Missing {missing_sgc_vars} from sg_calib_constants.m - using CT {sbect_type} calibration constants from log file",
@@ -3579,9 +3582,11 @@ def make_dive_profile(
                     gc_start_vbd_ad_v = np.array(log_f.gc_data["vbd_pot1_ad_start"])
                     gc_vbd_ad = np.array(log_f.gc_data["vbd_pot1_ad"])
                 else:
-                    log_error("Unknown value for $VBD_LP_IGNORE: %d - bailing out"
-                              % log_f.data["$VBD_LP_IGNORE"])
-                    raise RuntimeError(True)                     
+                    log_error(
+                        "Unknown value for $VBD_LP_IGNORE: %d - bailing out"
+                        % log_f.data["$VBD_LP_IGNORE"]
+                    )
+                    raise RuntimeError(True)
             else:
                 gc_start_vbd_ad_available = False
                 gc_start_vbd_ad_v = None
@@ -3802,7 +3807,9 @@ def make_dive_profile(
                     ctd_condtemp_v = results_d["legato_conducTemp"]
                     ctd_epoch_time_s_v = results_d["legato_time"]
                 except KeyError as e:
-                    log_error(f"Legato CT scicon data found, but had problems loading {e} - bailing out")
+                    log_error(
+                        f"Legato CT scicon data found, but had problems loading {e} - bailing out"
+                    )
                     raise RuntimeError(True)
             else:
                 ctd_temp_v = eng_f.get_col("rbr_temp")
@@ -3817,7 +3824,9 @@ def make_dive_profile(
                     or ctd_condtemp_v is None
                     or ctd_epoch_time_s_v is None
                 ):
-                    log_error("Legato CT data specified, but no data found for scicon or truck - bailing out")
+                    log_error(
+                        "Legato CT data specified, but no data found for scicon or truck - bailing out"
+                    )
                     raise RuntimeError(True)
 
                 tmp_press_v = eng_f.get_col("rbr_pressure")
@@ -5640,8 +5649,10 @@ def make_dive_profile(
         num_bad_samples = len(bad_samples)
         num_good_samples = ctd_np - num_bad_samples
         if num_good_samples < 2:
-            log_error("Insufficient samples (%d of %d) to continue with CT corrections - bailing out"
-                % (num_good_samples, ctd_np))
+            log_error(
+                "Insufficient samples (%d of %d) to continue with CT corrections - bailing out"
+                % (num_good_samples, ctd_np)
+            )
             raise RuntimeError(True)
 
         # Setup to solve, perhaps iteratively, salinity and hydrodynamic speeds and angles
@@ -5756,7 +5767,9 @@ def make_dive_profile(
         modes = int(calib_consts["sbect_modes"])  # ensure integer
         explicit_calib_consts["sbect_modes"] = modes
         if modes not in [0, 1, 3, 5]:
-            log_error("Unknown number of thermal inertia modes: %d - bailing out" % modes)
+            log_error(
+                "Unknown number of thermal inertia modes: %d - bailing out" % modes
+            )
             raise RuntimeError(True)
 
         if perform_thermal_inertia_correction:
@@ -6966,9 +6979,9 @@ def make_dive_profile(
             processing_error = 1  # Had an error of some sort
             results_d.update({"processing_error": "processing_error"})
             results_d["processing_error"] = processing_error
-            #log_error(exception.args[1], "exc")
+            # log_error(exception.args[1], "exc")
         else:
-            #log_info(exception.args[1], "exc")
+            # log_info(exception.args[1], "exc")
             pass
 
     # Fall through and write the nc file with whatever data is available
