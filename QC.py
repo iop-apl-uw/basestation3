@@ -801,15 +801,15 @@ class ProfileDirectives:
 
     comment = re.compile(r"%.*")  # % and anything after it, to a newline
     no_prefix = "no_"
-    drv_functions = [
+    drv_functions = (
         "bad_temperature",
         "interp_temperature",
         "bad_conductivity",
         "interp_conductivity",
         "bad_salinity",
         "interp_salinity",
-    ]
-    drv_predicates = [
+    )
+    drv_predicates = (
         "skip_profile",
         # TODO consider echoing these comments in the global comment field of the nc file (after any NODC.cnf contributions)
         "comment",  # ignored but good for commenting on a dive w/o other directives present
@@ -823,7 +823,27 @@ class ProfileDirectives:
         "bad_gps3",
         "detect_vbd_bleed",
         "detect_slow_apogee_flow",
-    ]
+    )
+    drv_ranges = (
+        "between",
+        "in_between",
+        "below",
+        "less_than",
+        "before",
+        "above",
+        "greater_than",
+        "after",
+        "at",
+    )
+
+    drv_indicies = (
+        "depth",
+        "dive_depth",
+        "climb_depth",
+        "time",
+        "data_points",
+        "glider_data_points",
+    )
 
     def __init__(self, mission_dir, dive_num, filename=None):
         self.dive_num = dive_num  # functions apply to this dive only
@@ -839,7 +859,7 @@ class ProfileDirectives:
     def __str__(self):
         return "<%d edit functions for dive %d>" % (len(self.functions), self.dive_num)
 
-    def parse(self, line):
+    def parse(self, line, filename=None, linenum=None):
         """Tokenize line for use in eval function
         Retain only if it applies to this dive
         Retain comments as well
@@ -871,7 +891,12 @@ class ProfileDirectives:
                     self.comments = []  # reset
                     return None  # This line does not apply
         except ValueError:
-            qc_warn_str = f"Unknown dive specifier '{dive_spec}' in '{line}'"
+            if filename and linenum is not None:
+                qc_warn_str = (
+                    f"Unknown dive specifier '{dive_spec}' in {filename}:{linenum}"
+                )
+            else:
+                qc_warn_str = f"Unknown dive specifier '{dive_spec}' in '{line}'"
             log_warning(qc_warn_str, alert="BAD_DIVE_SPEC", max_count=1)
 
         # this function applies to all or this dive_number
@@ -882,7 +907,12 @@ class ProfileDirectives:
             if f[0:l_no] == self.no_prefix:
                 f = f[l_no:]
         if not (f in self.drv_functions or f in self.drv_predicates):
-            log_warning(f"Unknown directive '{function_tag}' in '{line}'")
+            if filename and linenum is not None:
+                log_warning(
+                    f"Unknown directive '{function_tag}' in {filename}:{linenum}"
+                )
+            else:
+                log_warning(f"Unknown directive '{function_tag}' in '{line}'")
 
         function = [dive_spec, function_tag]
         for arg in values[2:]:
@@ -891,6 +921,27 @@ class ProfileDirectives:
                 # skip empties
             # validate non-integers?
             function.append(arg)
+        if f in self.drv_functions:
+            if len(function) < 3:
+                if filename and linenum is not None:
+                    log_warning(
+                        f"function '{f}' in {filename} line {linenum} requires at least one argument"
+                    )
+                else:
+                    log_warning(
+                        f"function '{f}' in line '{line}' requires at least one argument"
+                    )
+                return None
+            if function[2] in self.drv_indicies and len(function) < 4:
+                if filename and linenum is not None:
+                    log_warning(
+                        f"function '{f}', index '{function[2]}' in {filename} line {linenum} requires at least one argument"
+                    )
+                else:
+                    log_warning(
+                        f"function '{f}', index '{function[2]}' in line '{line}' requires at least one argument"
+                    )
+                return None
         self.functions.append(function)
         self.lines.extend(self.comments)
         self.comments = []  # reset
@@ -924,8 +975,10 @@ class ProfileDirectives:
             log_error(f"Unable to open {filename}")
             return None
         self.comments = []  # reset
-        for line in file.readlines():
-            self.parse(line)  # update functions by side-effect
+        for line_num, line in enumerate(file.readlines()):
+            self.parse(
+                line, filename=filename, linenum=line_num
+            )  # update functions by side-effect
         file.close()  # needed?
         return None
 
