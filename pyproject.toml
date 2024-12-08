@@ -47,6 +47,7 @@ select = [
     # Numpy 2.0 compat
     "NPY201"
 ]
+# Note: when migrating to numpy2.0, grep for NPY201 for locations that need updating
 ignore = [
   # line too long - revisit after format pass to 120 columns
   "E501",

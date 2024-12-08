@@ -48,28 +48,27 @@ import glob
 import importlib
 import math
 import os
+import pathlib
 import pickle
 import re
 import signal
-import subprocess
 import sqlite3
 import stat
+import subprocess
 import sys
 import time
 import typing
-import pathlib
-import anyio
 import warnings
-import aiofiles
 
+import aiofiles
+import anyio
 import gsw
+import netCDF4
+import numpy as np
+import scipy
 import seawater
 import zmq
 import zmq.asyncio
-
-import numpy as np
-import scipy
-import netCDF4
 
 import Globals
 
@@ -78,7 +77,7 @@ if typing.TYPE_CHECKING:
     import BaseOpts
 
 
-from BaseLog import log_debug, log_error, log_warning, log_info, log_critical
+from BaseLog import log_critical, log_debug, log_error, log_info, log_warning
 
 
 def open_netcdf_file(
@@ -99,7 +98,7 @@ def open_netcdf_file(
             os.remove(filename)
         except FileNotFoundError:
             pass
-        except:
+        except Exception:
             log_warning("Failed to remove file before write", "exc")
     ds = netCDF4.Dataset(filename, mode)
     ds.set_auto_mask(False)
@@ -316,10 +315,9 @@ def create_lock_file(base_opts, base_lockfile_name):
         os.path.join(base_opts.mission_dir, base_lockfile_name)
     )
     try:
-        fo = open(lock_file_name, "w")
-        fo.write("%d" % os.getpid())
-        fo.close()
-    except:
+        with open(lock_file_name, "w") as fo:
+            fo.write("%d" % os.getpid())
+    except Exception:
         log_error("Could not create %s" % lock_file_name, "exc")
         return -1
     else:
@@ -344,7 +342,7 @@ def cleanup_lock_file(base_opts, base_lockfile_name):
         return 0
     try:
         os.remove(lock_file_name)
-    except:
+    except Exception:
         log_error("Could not remove %s" % lock_file_name, "exc")
         return -1
     else:
@@ -399,8 +397,8 @@ def check_lock_file(base_opts, base_lockfile_name):
         )
         if os.path.exists(lock_file_name):
             try:
-                fi = open(lock_file_name, "r")
-            except:
+                fi = open(lock_file_name, "r")  # noqa: SIM115
+            except Exception:
                 log_error(
                     "Could not open the log file to check PID - ignoring PID check"
                 )
@@ -409,7 +407,7 @@ def check_lock_file(base_opts, base_lockfile_name):
             else:
                 try:
                     previous_pid = int(fi.read())
-                except:
+                except Exception:
                     log_error("Error fetching pid from lockfile", "exc")
                     cleanup_lock_file(base_opts, base_lockfile_name)
                     return -1
@@ -430,33 +428,33 @@ def bzip_decompress(input_file_name, output_file_name):
     Return 0 for success, 1 for failure
     """
     try:
-        input_file = open(input_file_name, "rb")
-    except IOError as exception:
+        input_file = open(input_file_name, "rb")  # noqa: SIM115
+    except OSError as exception:
         log_error("Could not open %s (%s)" % (input_file_name, exception.args))
         return 1
 
     try:
-        output_file = open(output_file_name, "wb")
-    except IOError as exception:
+        output_file = open(output_file_name, "wb")  # noqa: SIM115
+    except OSError as exception:
         log_error("Could not open %s (%s)" % (output_file_name, exception.args))
         return 1
 
     try:
         data = input_file.read()
-    except IOError as exception:
+    except OSError as exception:
         log_error("Could not read %s (%s)" % (input_file_name, exception.args))
         return 1
 
     try:
         data_out = bz2.decompress(data)
-    except:
-        log_error("Could not decompress %s (%s)" % (input_file_name, exception.args))
+    except Exception:
+        log_error(f"Could not decompress {input_file_name}", "exc")
         return 1
 
     try:
         output_file.write(data_out)
-    except:
-        log_error("Could not write to %s (%s)" % (output_file_name, exception.args))
+    except Exception:
+        log_error(f"Could not write to {output_file_name}", "exc")
         return 1
 
     input_file.close()
@@ -528,7 +526,7 @@ def run_cmd_shell(cmd, timeout=None, shell=True):
         try:
             signal.alarm(timeout)
             _, sts = os.waitpid(p.pid, 0)
-        except:
+        except Exception:
             log_error("Timeout running (%s)" % cmd, "exc")
             sts = None
         finally:
@@ -551,8 +549,8 @@ def read_eng_file(eng_file_name):
     columns_header_pattern = re.compile(r"^%columns:\s*(?P<value>.*)")
 
     try:
-        eng_file = open(eng_file_name, "r")
-    except IOError:
+        eng_file = open(eng_file_name, "r")  # noqa: SIM115
+    except OSError:
         log_error("Could not open %s for reading" % (eng_file_name))
         return None
 
@@ -600,7 +598,7 @@ def read_eng_file(eng_file_name):
             else:
                 try:
                     row.append(np.float64(raw_strs[i]))
-                except:
+                except Exception:
                     log_error(
                         "Problems converting [%s] to float from line [%s] (%s, line %d)"
                         % (raw_strs[i], eng_line, eng_file_name, line_count)
@@ -697,7 +695,7 @@ def medfilt1(x=None, L=None):
                 "Input filter window length too long: L = %d, len(x) = %d" % (L, N)
             )
             return None
-    except:
+    except Exception:
         log_error("Input data must be a sequence", "exc")
         return None
 
@@ -984,7 +982,7 @@ def is_float(s):
     try:
         float(s)
         return True
-    except:
+    except Exception:
         return False
 
 
@@ -1025,7 +1023,7 @@ def remap_dict_from_sg_calib(calib_consts, remap_str):
                 k, v = s.split(":")
                 remap_dict[k.strip()] = v.strip()
             return remap_dict
-        except:
+        except Exception:
             log_error(
                 "Could not process remap_eng_cols from sg_calib_contants.m (%s)", "exc"
             )
@@ -1286,8 +1284,8 @@ qc_log_type = collections.namedtuple("qc_log_type", ["qc_str", "qc_type", "qc_po
 def load_qc_pickl(qc_file):
     """Loads QC pickle file"""
     try:
-        fi = open(qc_file, "r")
-    except:
+        fi = open(qc_file, "r")  # noqa: SIM115
+    except Exception:
         return None
 
     ret_list = []
@@ -1518,7 +1516,7 @@ def loadmodule(pathname):
 
     try:
         return sys.modules[name]
-    except:
+    except Exception:
         pass
 
     if not os.path.exists(pathname):
@@ -1536,7 +1534,7 @@ def loadmodule(pathname):
         sys.modules[name] = mod
         spec.loader.exec_module(mod)
         return mod
-    except:
+    except Exception:
         log_error(f"Error loading {pathname}", "exc")
         log_info("No module loaded")
     return None
@@ -1560,7 +1558,7 @@ def open_mission_database(
     import BaseDB
 
     db = mission_database_filename(base_opts)
-    if db == None:
+    if db is None:
         return None
 
     if not os.path.exists(db):
@@ -1577,7 +1575,7 @@ def open_mission_database(
                     | stat.S_IWGRP
                     | stat.S_IROTH,
                 )
-            except:
+            except Exception:
                 log_error(f"Unable to change mode of {db}", "exc")
 
             # BaseDB.prepCallsChangesFiles(base_opts, dbfile=db)
@@ -1611,7 +1609,7 @@ def dive_var_trend(base_opts, dive_col, y_col):
     with warnings.catch_warnings():
         # For very small number of dives, we get
         # RankWarning: Polyfit may be poorly conditioned
-        warnings.simplefilter("ignore", np.RankWarning)
+        warnings.simplefilter("ignore", np.RankWarning)  # noqa: NPY201
         m, b = np.polyfit(dive_col[-p_dives_back:], y_col[-p_dives_back:], 1)
     return (m, b)
 
@@ -1628,7 +1626,7 @@ def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
     with warnings.catch_warnings():
         # For very small number of dives, we get
         # RankWarning: Polyfit may be poorly conditioned
-        warnings.simplefilter("ignore", np.RankWarning)
+        warnings.simplefilter("ignore", np.RankWarning)  # noqa: NPY201
         m, b = np.polyfit(dive_col[-p_dives_back:], gauge_col[-p_dives_back:], 1)
     log_info(f"m:{m} b:{b}")
     lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)
@@ -1684,11 +1682,12 @@ def logDB(msg):
     # f.write(f"{time.time()} {msg}\n")
     # f.close()
 
+
 async def readResponseStackFile(name, keys):
     if not await aiofiles.os.path.exists(name):
         return None
 
-    async with aiofiles.open(name, 'r') as file:
+    async with aiofiles.open(name, "r") as file:
         a = []
         async for line in file:
             if line[0] == "/":
@@ -1698,7 +1697,7 @@ async def readResponseStackFile(name, keys):
             if len(split) < 2:
                 continue
 
-            d = { "name": split[0] }
+            d = {"name": split[0]}
             for pair in split[1:]:
                 try:
                     name, value = pair.split("=")
@@ -1706,7 +1705,7 @@ async def readResponseStackFile(name, keys):
                     continue
 
                 if name in keys:
-                    d.update( { name: value } )
+                    d.update({name: value})
 
             a.append(d)
 
@@ -1714,19 +1713,55 @@ async def readResponseStackFile(name, keys):
 
 
 async def readTargetsFile(name):
-    return await readResponseStackFile(name, ["lat", "lon", "radius", "goto", "escape", "depth", "finish", "timeout", "exec", "dives", "timeout-exec", "timeout-goto", "fence-lat", "fence-lon", "fence-radius", "fence-exec", "fence-goto", "head"])
+    return await readResponseStackFile(
+        name,
+        [
+            "lat",
+            "lon",
+            "radius",
+            "goto",
+            "escape",
+            "depth",
+            "finish",
+            "timeout",
+            "exec",
+            "dives",
+            "timeout-exec",
+            "timeout-goto",
+            "fence-lat",
+            "fence-lon",
+            "fence-radius",
+            "fence-exec",
+            "fence-goto",
+            "head",
+        ],
+    )
+
 
 async def readScienceFile(name):
-    d = await readResponseStackFile(name, ["sensors", "gc", "seconds", "profiles", "dives", "batch", "pressure", "compass", "timeout"])
+    d = await readResponseStackFile(
+        name,
+        [
+            "sensors",
+            "gc",
+            "seconds",
+            "profiles",
+            "dives",
+            "batch",
+            "pressure",
+            "compass",
+            "timeout",
+        ],
+    )
     if d is None:
         return d
 
     for b in d:
-        for k in ['sensors', 'profiles', 'dives']:
+        for k in ["sensors", "profiles", "dives"]:
             if k in b:
-                if ',' in b[k]:
-                    b[k] = b[k].split(',')
+                if "," in b[k]:
+                    b[k] = b[k].split(",")
                 else:
                     b[k] = list(b[k])
-    
+
     return d
