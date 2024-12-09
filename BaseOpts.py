@@ -47,13 +47,14 @@ import importlib
 import inspect
 import itertools
 import os
+import pathlib
 import pdb
 import sys
 import time
 import traceback
 
-from BaseOptsType import options_t, DeprecateAction, deprecated_options
 import Plotting
+from BaseOptsType import DeprecateAction, deprecated_options, options_t
 from Globals import WhichHalf, extensions_to_skip  # basestation_version
 
 # Populate default plots with every plot registered in Plotting
@@ -99,7 +100,6 @@ def FullPath(x):
     else:
         return os.path.abspath(os.path.expanduser(x))
 
-
 def FullPathTrailingSlash(x):
     """Expand user- and relative-paths and include the trailing slash"""
     if x == "":
@@ -118,6 +118,7 @@ class FullPathAction(argparse.Action):
             setattr(namespace, self.dest, values)
 
 
+
 class FullPathTrailingSlashAction(argparse.Action):
     """Expand user- and relative-paths and include the trailing slash"""
 
@@ -128,6 +129,32 @@ class FullPathTrailingSlashAction(argparse.Action):
             )
         else:
             setattr(namespace, self.dest, values)
+
+# Pathlib based
+def FullPathlib(x):
+    """Expand user- and relative-paths"""
+    # This catches the case for a nargs=? argument that is FullPath type and the argument
+    # is not specified on the command line.  In this case, the default value is returned,
+    # but since our default is None, it gets run through this helper and converted
+    # - so, don't do that.
+    if x == "":
+        return None
+
+    if isinstance(x, list):
+        return list(map(lambda y: pathlib.Path(y).expanduser().absolute(), x))
+    else:
+        return pathlib.Path(x).expanduser().absolute()
+
+class FullPathlibAction(argparse.Action):
+    """Expand user- and relative-paths"""
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        if values is not None:
+            setattr(namespace, self.dest, FullPath(values))
+        else:
+            setattr(namespace, self.dest, values)
+    
+            
 
 #class DeprecateAction(argparse.Action):
 #    def __call__(self, parser, namespace, values, option_string=None):
@@ -829,6 +856,27 @@ global_options_dict = {
             "action": "store_true",
         },
     ),
+    "whole_mission_config": options_t(
+        None,
+        ("Base", "Reprocess", "MakeMissionTimeSeries", "MakeMissionProfile"),
+        ("--whole_mission_config",),
+        FullPathlib,
+        {
+            "help": "Configuration file for whole mission netCDF products",
+            "action": FullPathlibAction,
+        },
+    ),
+    "dump_whole_mission_config": options_t(
+        False,
+        ("MakeMissionTimeSeries", "MakeMissionProfile"),
+        ("--dump_whole_mission_config",),
+        bool,
+        {
+            "help": "Dumps a sample configuration file for whole mission netCDF products and exits",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
+
     # DOC Skips running the flight model system.  FMS is still consulted for flight
     # DOC values such as volmax hd_a, hd_b, hd_c etc. - if there is a previous previous estimates
     # DOC in flight, those are used - otherwise the system defaults are used.  Normally, this option
@@ -1601,7 +1649,7 @@ class BaseOptions:
 
                 for parser in parsers:
                     kwargs = copy.deepcopy(kwargs_tmp)
-                    if not (v.var_type == bool and "action" in v.kwargs):
+                    if not (v.var_type == bool and "action" in v.kwargs): # noqa: E721 This is a class, not instance compare
                         kwargs["type"] = v.var_type
                     if v.args and v.args[0].startswith("-"):
                         kwargs["dest"] = k
@@ -1694,7 +1742,7 @@ class BaseOptions:
                             #    section_name = v.kwargs["section"]
                             #else:
                             #    section_name = "base"
-                            if v.var_type == bool:
+                            if v.var_type == bool: # noqa: E721 This is a class, not instance compare
                                 try:
                                     value = cp.getboolean(section_name, k)
                                 except ValueError as exc:
@@ -1754,12 +1802,11 @@ class BaseOptions:
                                     
         # Check for deprecated options set in config
         for k, v in options_dict.items():
-            if hasattr(self, k) and "action" in v.kwargs and v.kwargs["action"] is DeprecateAction:
-                if getattr(self, k) != v.default_val:
-                    if "help" in v.kwargs:
-                        deprecated_options[v.args[0]] = v.kwargs["help"]
-                    else:
-                        deprecated_options[v.args[0]] = "deprecated option"
+            if hasattr(self, k) and "action" in v.kwargs and v.kwargs["action"] is DeprecateAction and getattr(self, k) != v.default_val:
+                if "help" in v.kwargs:
+                    deprecated_options[v.args[0]] = v.kwargs["help"]
+                else:
+                    deprecated_options[v.args[0]] = "deprecated option"
         self.deprecated_options = deprecated_options                                    
         # Update any options that affect other options
         if (
