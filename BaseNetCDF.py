@@ -31,20 +31,22 @@
 """Routines and variables for creating NetCDF files for Seagliders"""
 
 # import configparser
+import contextlib
 import os
+import pdb
 import sys
 import time
 import uuid
 from functools import reduce
 
-import yaml
 import numpy as np
+import yaml
 
-from BaseLog import log_warning, log_error, log_debug, log_critical, log_info
 import Globals
 import NetCDFUtils
 import QC
 import Utils
+from BaseLog import log_critical, log_debug, log_error, log_info, log_warning
 
 nc_inf = np.array([np.inf], dtype=np.float64)[0]  # CF1.4 ensure double
 nc_nan = np.array([np.nan], dtype=np.float64)[0]  # CF1.4 ensure double
@@ -312,10 +314,8 @@ def merge_nc_globals(master_globals_d, slave_globals_d):
         if master_value:
             master_globals_d[key] = master_value
         else:
-            try:
+            with contextlib.suppress(KeyError):
                 del master_globals_d[key]  # remove it if it exists
-            except KeyError:
-                pass  # was already gone
 
 
 def merge_instruments(master_instruments_d, slave_instruments_d):
@@ -332,10 +332,8 @@ def merge_instruments(master_instruments_d, slave_instruments_d):
         if master_value:
             master_instruments_d[key] = master_value
         else:
-            try:
+            with contextlib.suppress(KeyError):
                 del master_instruments_d[key]  # remove it if it exists
-            except KeyError:
-                pass  # was already gone
 
 
 def update_globals_from_nodc(base_opts, globals_d):
@@ -358,9 +356,8 @@ def update_globals_from_nodc(base_opts, globals_d):
     ):
         if os.path.exists(yaml_filename):
             try:
-                fi = open(yaml_filename, "r")
-                nodc_dicts.append(yaml.safe_load(fi.read()))
-                fi.close()
+                with open(yaml_filename, "r") as fi:
+                    nodc_dicts.append(yaml.safe_load(fi.read()))
             except Exception:
                 log_error(f"Could not process {yaml_filename} - skipping", "exc")
 
@@ -3605,7 +3602,7 @@ def ensure_CF_compliance():
     # fix up meta_data_d for coordinates
     # can only do this after nc_coordinate_vars_local is computed above
     # mmt_time_vars = list(nc_mdp_time_vars.values())
-    for var_name, md in list(nc_var_metadata.items()):
+    for _, md in list(nc_var_metadata.items()):
         include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
         if len(mdp_dim_info) == 1:  # vector?
             mdi = mdp_dim_info[0]
@@ -3641,7 +3638,7 @@ def init_tables(init_dict):
     """
     for d in init_dict.values():
         if "netcdf_metadata_adds" in d:
-            for key in d["netcdf_metadata_adds"].keys():
+            for key in d["netcdf_metadata_adds"]:
                 if key not in nc_var_metadata:
                     # add only if there isn't a definition already
                     # this permits explicit declaration of metadata for, say, cnf columns
@@ -3690,7 +3687,7 @@ def create_nc_var(
     value=None,
     additional_meta_data_d=None,
     remove_meta_data=None,
-    f_timeseries=False,
+    timeseries_val=False,
 ):
     """Given a netCDF variable name, construct a netCDF variable, with the
     specified dimension of the type and missing value specified in the var metadata
@@ -3735,8 +3732,11 @@ def create_nc_var(
         )  # default scalar metadata with nc_data_type explicitly None -- see below
 
     include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
-    if f_timeseries and isinstance(include_in_mission_profile, str):
-        nc_data_type = include_in_mission_profile
+    if timeseries_val:
+        if isinstance(timeseries_val, str):
+            nc_data_type = timeseries_val
+        elif isinstance(include_in_mission_profile, str):
+            nc_data_type = include_in_mission_profile
     if nc_data_type is None:
         if value is None:
             log_error(
@@ -3813,9 +3813,7 @@ def create_nc_var(
                 (var_dims,),
                 compression="zlib",
                 complevel=9,
-                fill_value=meta_data_d["_FillValue"]
-                if "_FillValue" in meta_data_d
-                else False,
+                fill_value=meta_data_d.get("_FillValue", False),
             )
         else:  # another type we know
             nc_var = nc_file.createVariable(
@@ -3824,15 +3822,13 @@ def create_nc_var(
                 (),
                 compression="zlib",
                 complevel=9,
-                fill_value=meta_data_d["_FillValue"]
-                if "_FillValue" in meta_data_d
-                else False,
+                fill_value=meta_data_d.get("_FillValue", False),
             )
         if value is None:
-            try:  # try replacing the initial value with the fill value, if any
+            # try replacing the initial value with the fill value, if any
+            with contextlib.suppress(KeyError):
                 value = meta_data_d["_FillValue"]
-            except KeyError:
-                pass  # ah well, use None as is and hope for the best
+            # if not, ah well, use None as is and hope for the best
     else:  # an explicit tuple of dimensions
         # DEBUG print "create_dim: %s ('%s')" % (var_name, string.join(var_dims,','))
         log_debug(f"{var_name} {nc_data_type} {var_dims}")
@@ -3842,9 +3838,7 @@ def create_nc_var(
             var_dims,
             compression="zlib",
             complevel=9,
-            fill_value=meta_data_d["_FillValue"]
-            if "_FillValue" in meta_data_d
-            else False,
+            fill_value=meta_data_d.get("_FillValue", False),
         )
     if value is not None:
         try:

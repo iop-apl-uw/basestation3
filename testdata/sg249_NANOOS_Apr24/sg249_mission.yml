@@ -1,0 +1,13 @@
+timeseries:
+  # Change default type
+  wlbb2fl_sig695nm: d
+  # Turn off something on by default
+  wlbb2fl_sig470nm: False
+  # Include dive scalar not on by default, use default type
+  depth_avg_curr_east_gsm: True
+  # Include dive scalar not on by default, override default type
+  depth_avg_curr_north_gsm: f
+  # Add in dive vector not on be default - use default type
+  east_displacement_gsm: True
+  # Add in dive vector not on be default - override default type
+  north_displacement_gsm: f

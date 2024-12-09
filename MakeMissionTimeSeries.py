@@ -33,9 +33,11 @@
 import cProfile
 import functools
 import os
+import pdb
+import pstats
 import sys
 import time
-import pstats
+import traceback
 
 import numpy as np
 
@@ -49,15 +51,24 @@ import MakeDiveProfiles
 import QC
 import Sensors
 import Utils
-
 from BaseLog import (
     BaseLogger,
+    log_critical,
+    log_debug,
+    log_error,
     log_info,
     log_warning,
-    log_critical,
-    log_error,
-    log_debug,
 )
+
+DEBUG_PDB = True
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
 
 
 # NOTE this is the closest to a ARGO trajectory data set, a set of dives (cycles)
@@ -82,10 +93,22 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         mission_timeseries_name - the name possibly changed from the input parameter
     """
 
+    if base_opts.dump_whole_mission_config:
+        Utils.dump_mission_cfg(sys.stdout, BaseNetCDF.nc_var_metadata)
+        return (0, None)
+
+    _, timeseries_cfg_d = Utils.whole_mission_cfg(
+        base_opts.whole_mission_config, BaseNetCDF.nc_var_metadata
+    )
+
     mission_timeseries_name = None  # not known yet
     BaseNetCDF.reset_nc_char_dims()
 
-    ctd_vars = (
+    # These vectors are related to the CTD's time basis (and dimension).  The CTD
+    # (seabird or legato) may be moved from a scicon to truck during a mission
+    # (for a Seaglider wired appropriately).  The code below supports a single migration of the CTD
+    # and its related vectors
+    migratable_ctd_vars = (
         "salinity_qc",
         "ctd_time",
         "dissolved_oxygen_sat",
@@ -223,7 +246,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 # calib_consts is set; figure out filename, etc.
                 try:
                     instrument_id = int(calib_consts["id_str"])
-                except:
+                except Exception:
                     instrument_id = int(base_opts.instrument_id)
                 if instrument_id == 0:
                     log_warning("Unable to determine instrument id; assuming 0")
@@ -377,45 +400,41 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                     continue
 
                 include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
-                if include_in_mission_profile:
-                    # Variable is tagged for adding to the mission profile
-                    if mdp_dim_info:
-                        temp_dive_vars[dive_nc_varname] = results_d[dive_nc_varname]
-                        # We know from ensure_cf_compliance() that this var is a vector
-                        mdp_dim_info = mdp_dim_info[0]  # get first (and only) info
-                        dim_name = nc_info_d[mdp_dim_info]
-                        # initialize or extend
-                        if dim_name not in extended_dim_names:
-                            # We are going to initialize or extend below
-                            mmt_varname = BaseNetCDF.nc_mdp_mmt_vars[mdp_dim_info]
-                            mmt_dive = np.empty(
-                                len(temp_dive_vars[dive_nc_varname][:]), np.int32
-                            )  # an array for this dive's data point
-                            mmt_dive[:] = dive_num
-                        try:
-                            old_dim_name = master_nc_info_d[mdp_dim_info]
-                            if old_dim_name != dim_name:
-                                # An instrumment has changed dimensions - normally this represents a situation where there are
-                                # netcdf files from two different missions (or something equally bad).  Howerver,
-                                # for gliders where the CTD has been moved from scicon to the truck (or back) via the new tailboards,
-                                # a new set of vectors must be constructed, with a new dimension that is different
-                                # then the others
 
-                                # Note: this logic does not deal with the case where the CTD is from scicon->truck->scicon or the inverse.
+                if dive_nc_varname in timeseries_cfg_d:
+                    if not timeseries_cfg_d[dive_nc_varname]:
+                        continue
+                elif not include_in_mission_profile:
+                    continue
 
-                                if dive_nc_varname not in ctd_vars:
-                                    raise RuntimeError(
-                                        "Differing dim_info %s vs %s for %s in ncfile:%s"
-                                        % (
-                                            old_dim_name,
-                                            dim_name,
-                                            dive_nc_varname,
-                                            dive_nc_profile_name,
-                                        )
-                                    )
-                                rename_ctd_dim = True
-                                log_debug(
-                                    "Differing dim_info %s vs %s, varname:%s ncfile:%s"
+                # Variable is tagged for adding to the mission profile
+                if mdp_dim_info:
+                    temp_dive_vars[dive_nc_varname] = results_d[dive_nc_varname]
+                    # We know from ensure_cf_compliance() that this var is a vector
+                    mdp_dim_info = mdp_dim_info[0]  # get first (and only) info
+                    dim_name = nc_info_d[mdp_dim_info]
+                    # initialize or extend
+                    if dim_name not in extended_dim_names:
+                        # We are going to initialize or extend below
+                        mmt_varname = BaseNetCDF.nc_mdp_mmt_vars[mdp_dim_info]
+                        mmt_dive = np.empty(
+                            len(temp_dive_vars[dive_nc_varname][:]), np.int32
+                        )  # an array for this dive's data point
+                        mmt_dive[:] = dive_num
+                    try:
+                        old_dim_name = master_nc_info_d[mdp_dim_info]
+                        if old_dim_name != dim_name:
+                            # An instrumment has changed dimensions - normally this represents a situation where there are
+                            # netcdf files from two different missions (or something equally bad).  Howerver,
+                            # for gliders where the CTD has been moved from scicon to the truck (or back) via the new tailboards,
+                            # a new set of vectors must be constructed, with a new dimension that is different
+                            # then the others
+
+                            # Note: this logic does not deal with the case where the CTD is from scicon->truck->scicon or the inverse.
+
+                            if dive_nc_varname not in migratable_ctd_vars:
+                                raise RuntimeError(
+                                    "Differing dim_info %s vs %s for %s in ncfile:%s"
                                     % (
                                         old_dim_name,
                                         dim_name,
@@ -423,45 +442,54 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                                         dive_nc_profile_name,
                                     )
                                 )
+                            rename_ctd_dim = True
+                            log_debug(
+                                "Differing dim_info %s vs %s, varname:%s ncfile:%s"
+                                % (
+                                    old_dim_name,
+                                    dim_name,
+                                    dive_nc_varname,
+                                    dive_nc_profile_name,
+                                )
+                            )
 
-                            if dim_name not in extended_dim_names:
-                                extended_dim_names.append(
-                                    dim_name
-                                )  # first time for this file
-                                master_nc_info_d[dim_name] = (
-                                    master_nc_info_d[dim_name] + nc_info_d[dim_name]
-                                )  # extend size
-                                mission_nc_var_d[mmt_varname] = np.concatenate(
-                                    (mission_nc_var_d[mmt_varname], mmt_dive)
-                                )  # extend dive numbers
-                        except KeyError:
-                            # our first time seeing this mdp_dim_info
-                            master_nc_info_d[mdp_dim_info] = dim_name
-                            # our first time for this file as well
-                            extended_dim_names.append(dim_name)
-                            master_nc_info_d[dim_name] = nc_info_d[dim_name]  # size
-                            mission_nc_var_d[mmt_varname] = mmt_dive
-                    else:
-                        # accumulate per-dive scalars we want to copy
-                        try:
-                            values = mission_nc_dive_d[dive_nc_varname]
-                        except KeyError:
-                            values = []
-                            mission_nc_dive_d[dive_nc_varname] = values
-                            dive_vars.append(dive_nc_varname)
-                        try:
-                            value = results_d[dive_nc_varname]
-                        except KeyError:
-                            log_error(
-                                "Unable to extract %s from %s"
-                                % (dive_nc_varname, dive_nc_profile_name)
-                            )
-                            value = (
-                                QC.QC_MISSING
-                                if nc_data_type == "Q"
-                                else BaseNetCDF.nc_nan
-                            )
-                        values.append(value)
+                        if dim_name not in extended_dim_names:
+                            extended_dim_names.append(
+                                dim_name
+                            )  # first time for this file
+                            master_nc_info_d[dim_name] = (
+                                master_nc_info_d[dim_name] + nc_info_d[dim_name]
+                            )  # extend size
+                            mission_nc_var_d[mmt_varname] = np.concatenate(
+                                (mission_nc_var_d[mmt_varname], mmt_dive)
+                            )  # extend dive numbers
+                    except KeyError:
+                        # our first time seeing this mdp_dim_info
+                        master_nc_info_d[mdp_dim_info] = dim_name
+                        # our first time for this file as well
+                        extended_dim_names.append(dim_name)
+                        master_nc_info_d[dim_name] = nc_info_d[dim_name]  # size
+                        mission_nc_var_d[mmt_varname] = mmt_dive
+                else:
+                    # accumulate per-dive scalars we want to copy
+                    try:
+                        values = mission_nc_dive_d[dive_nc_varname]
+                    except KeyError:
+                        values = []
+                        mission_nc_dive_d[dive_nc_varname] = values
+                        dive_vars.append(dive_nc_varname)
+                    try:
+                        # Squeeze to convert (1,) arrays into scalars
+                        value = np.squeeze(results_d[dive_nc_varname])
+                    except KeyError:
+                        log_error(
+                            "Unable to extract %s from %s"
+                            % (dive_nc_varname, dive_nc_profile_name)
+                        )
+                        value = (
+                            QC.QC_MISSING if nc_data_type == "Q" else BaseNetCDF.nc_nan
+                        )
+                    values.append(value)
 
             # now initialize or extend the vector values for these variables
             # BUG: this assumes that if you declare True for include_in_mission_profile in BaseNetCDF.nc_var_metadata
@@ -551,7 +579,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 or var == "depth"
             ):
                 dropped_vars.append(var)
-            if var in ctd_vars:
+            if var in migratable_ctd_vars:
                 if (var not in dropped_vars) and (
                     new_ctd_data_point not in master_nc_info_d
                 ):
@@ -590,7 +618,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
     # Now write the results
     try:
         mission_timeseries_file = Utils.open_netcdf_file(mission_timeseries_name, "w")
-    except:
+    except Exception:
         log_error("Unable to open %s for writing" % mission_timeseries_name)
         return (1, mission_timeseries_name)
 
@@ -604,20 +632,20 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
     # total number of concatentated data points over all dives
     created_dims = []
     for _, nc_dim_name in list(BaseNetCDF.nc_mdp_data_info.items()):
+        # any registered?  normally only data infos are but see ctd_results_info
         if (
             nc_dim_name
-        ):  # any registered?  normally only data infos are but see ctd_results_info
-            if (
-                nc_dim_name in master_nc_info_d and not nc_dim_name in created_dims
-            ):  # do we have a size? which implies we have that data (and possibly results)
-                log_debug(
-                    "Creating dimension %s (%s)"
-                    % (nc_dim_name, master_nc_info_d[nc_dim_name])
-                )
-                mission_timeseries_file.createDimension(
-                    nc_dim_name, master_nc_info_d[nc_dim_name]
-                )
-                created_dims.append(nc_dim_name)  # Do this once
+            and nc_dim_name in master_nc_info_d
+            and nc_dim_name not in created_dims
+        ):  # do we have a size? which implies we have that data (and possibly results)
+            log_debug(
+                "Creating dimension %s (%s)"
+                % (nc_dim_name, master_nc_info_d[nc_dim_name])
+            )
+            mission_timeseries_file.createDimension(
+                nc_dim_name, master_nc_info_d[nc_dim_name]
+            )
+            created_dims.append(nc_dim_name)  # Do this once
 
     nc_var_d = {}
     del_attrs = None
@@ -625,7 +653,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
     for var in list(mission_nc_var_d.keys()):
         try:
             md = BaseNetCDF.nc_var_metadata[var]
-            include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
+            _, _, meta_data_d, mdp_dim_info = md
             dim_names = BaseNetCDF.nc_scalar  # assume scalar (should this ever be?)
             mmt_var_aux = None
             if mdp_dim_info:
@@ -651,12 +679,18 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                             mmt_var_aux.update(
                                 {"instrument": instrument_var, "platform": platform_var}
                             )
-                        except:
+                        except Exception:
                             pass
             else:  # scalar
                 pass
 
             # Pass value, which is assigned by create_nc_var if present and after possible coercion
+
+            # A note on the code:
+            #     timeseries_val=timeseries_cfg_d.get(var, True),
+            # below - At this point in the processing, variables that have been marked to not include
+            # by timeseries_cfg_d are not in mission_nc_var_d so the lookup is either True, a type code
+            # or fails so True it returned.
             value = mission_nc_var_d[var][:]
             nc_var_d[var] = BaseNetCDF.create_nc_var(
                 mission_timeseries_file,
@@ -666,7 +700,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 value,
                 mmt_var_aux,
                 del_attrs,
-                f_timeseries=True,
+                timeseries_val=timeseries_cfg_d.get(var, True),
             )
 
         except KeyError:
@@ -684,10 +718,11 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         (BaseNetCDF.nc_dim_trajectory_info,),
         True,
         mission_nc_dive_d["dive_number"],
-        f_timeseries=True,
+        timeseries_val=True,
     )  # alias
 
     for var in dive_vars:
+        # See note on timeseries_val=timeseries_cfg_d.get(var, True) above
         BaseNetCDF.create_nc_var(
             mission_timeseries_file,
             var,
@@ -696,7 +731,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             mission_nc_dive_d[var],
             None,
             del_attrs,
-            f_timeseries=True,
+            timeseries_val=timeseries_cfg_d.get(var, True),
         )
 
     BaseNetCDF.create_nc_var(
@@ -706,8 +741,9 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         False,
         "%s %s" % (platform_var, platform_id),
         {"call_sign": platform_id},
-        f_timeseries=True,
+        timeseries_val=True,
     )
+
     for instrument_var in Utils.unique(instrument_vars):
         BaseNetCDF.create_nc_var(
             mission_timeseries_file,
@@ -715,7 +751,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             BaseNetCDF.nc_scalar,
             False,
             instrument_var,
-            f_timeseries=True,
+            timeseries_val=True,
         )
 
     mission_timeseries_file.sync()
@@ -733,13 +769,13 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
         if os.path.exists(mission_timeseries_name_gz):
             try:
                 os.remove(mission_timeseries_name_gz)
-            except:
+            except Exception:
                 log_error("Couldn't remove %s" % mission_timeseries_name_gz)
 
     return (ret_val, mission_timeseries_name)
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Command line driver for creating mission timeseries from single dive netCDF files
 
     Returns:
@@ -751,7 +787,8 @@ def main():
 
     """
     base_opts = BaseOpts.BaseOptions(
-        "Command line driver for creating mission timeseries from single dive netCDF files"
+        "Command line driver for creating mission timeseries from single dive netCDF files",
+        cmdline_args=cmdline_args,
     )
 
     BaseLogger(base_opts)  # initializes BaseLog
@@ -760,7 +797,7 @@ def main():
     if base_opts.nice:
         try:
             os.nice(base_opts.nice)
-        except:
+        except Exception:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     log_info(
@@ -816,6 +853,7 @@ if __name__ == "__main__":
         else:
             retval = main()
     except Exception:
+        DEBUG_PDB_F()
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)

@@ -46,6 +46,7 @@ import errno
 import functools
 import glob
 import importlib
+import io
 import math
 import os
 import pathlib
@@ -67,6 +68,7 @@ import netCDF4
 import numpy as np
 import scipy
 import seawater
+import yaml
 import zmq
 import zmq.asyncio
 
@@ -75,9 +77,43 @@ import Globals
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
     import BaseOpts
-
+from typing import Any
 
 from BaseLog import log_critical, log_debug, log_error, log_info, log_warning
+
+netcdf4_datatypes_nonchar = (
+    # (NC_BYTE)
+    "i1",
+    "b",
+    "B",
+    # (NC_UBYTE)
+    "u1",
+    # (NC_SHORT)
+    "i2",
+    "h",
+    "s",
+    # (NC_USHORT)
+    "u2",
+    # (NC_INT)
+    "i4",
+    "i",
+    "l",
+    # (NC_UINT)
+    "u4",
+    # (NC_INT64)
+    "i8",
+    # (NC_UINT64)
+    "u8",
+    # (NC_FLOAT)
+    "f4",
+    "f",
+    # (NC_DOUBLE)
+    "f8",
+    "d",
+)
+
+# NC_CHAR
+netcdf4_datatypes = ("S1", "c") + netcdf4_datatypes_nonchar
 
 
 def open_netcdf_file(
@@ -1765,3 +1801,89 @@ async def readScienceFile(name):
                     b[k] = list(b[k])
 
     return d
+
+
+whole_mission_cfg_sections = ("profile", "timeseries")
+
+
+def whole_mission_cfg(
+    cfg_file: pathlib.Path, meta_data_d: dict[str, Any]
+) -> dict[str, bool] | dict[str, bool]:
+    """Loads a yaml config file for modifying the contents of a whole mission netcdf file.
+
+    Args:
+        cfg_file: Fully qualified path to a config file
+        meta_data_d: current meta data dictionry
+
+    Returns:
+        profile and timeseries config dictionaries.
+    """
+
+    if cfg_file is None:
+        return ({}, {})
+
+    try:
+        with open(cfg_file, "r") as fi:
+            cfg_dict = yaml.safe_load(fi.read())
+    except Exception:
+        log_error(f"Could not procss {cfg_file} - ignoring contents", "exc")
+        return ({}, {})
+
+    ret_dicts = {}
+    for section in whole_mission_cfg_sections:
+        ret_dicts[section] = {}
+
+        if section in cfg_dict:
+            if not isinstance(cfg_dict[section], dict):
+                log_warning(
+                    f"Section {section} of {cfg_file} is not a dictionary - skipping"
+                )
+                continue
+            for k, v in cfg_dict[section].items():
+                try:
+                    if not isinstance(k, str):
+                        log_warning(
+                            f"Variable {k} in section {section} of {cfg_file} is not a str ({type(k)}) - skipping"
+                        )
+                        continue
+                    if k not in meta_data_d:
+                        log_warning(
+                            f"Variable {k} in section {section} of {cfg_file} not known - skipping"
+                        )
+                        continue
+                    if not (
+                        isinstance(v, bool)
+                        or (
+                            section == "timeseries"
+                            and (isinstance(v, str))
+                            and v in netcdf4_datatypes_nonchar
+                        )
+                    ):
+                        log_warning(
+                            f"Value {v} of variable {k} in section {section} of {cfg_file} is of unsupported type ({type(v)}) - skipping"
+                        )
+                        continue
+                    ret_dicts[section][k] = v
+                except Exception:
+                    log_error(
+                        f"Problems processing {k} in section {section} of {cfg_file}"
+                    )
+
+    return tuple(v for k, v in ret_dicts.items())
+
+
+def dump_mission_cfg(stream: io.TextIO, meta_data_d: dict[str, Any]) -> None:
+    """Dumps a sample config file the output stream (typically stdout)
+
+    Args:
+        stream : io stream to write output to
+        meta_data_d: current meta data dictionry
+
+    Returns:
+        profile and timeseries config dictionaries.
+    """
+
+    for section in whole_mission_cfg_sections:
+        stream.write(f"{section}:\n")
+        for k, v in meta_data_d.items():
+            stream.write(f"#  {k}:{v[0]}  #default_type:{v[1]}\n")
