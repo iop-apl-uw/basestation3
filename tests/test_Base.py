@@ -27,13 +27,10 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import os
 import pathlib
-import shutil
-import sys
-import time
 
 import pytest
+import testutils
 
 import Base
 
@@ -108,37 +105,12 @@ for test_data_dir, glider, additional_args, allowed_msgs in test_cases:
         )
     )
 
-# Each test in a "mission_dir" under the testdata/XXXX directory - testdata/sg179_Guam_Oct19/mission_dir for example
-# Previous runs are removed and the contents of testdata/XXXX (no sub-directories) are copied to testdata/XXXX/mission_dir
-
 
 @pytest.mark.parametrize("test_data_dir,cmd_line,allowed_msgs", test_inputs)
 def test_conversion(caplog, test_data_dir, cmd_line, allowed_msgs):
-    os.environ["TZ"] = "UTC"
-    time.tzset()
-
     data_dir = pathlib.Path(test_data_dir)
     mission_dir = data_dir.joinpath("mission_dir")
 
-    # Clean up previous run - if any
-    if mission_dir.exists():
-        shutil.rmtree(mission_dir)
-    # Populate the new mission_dir
-    mission_dir.mkdir()
-    for p in data_dir.iterdir():
-        if p.is_dir():
-            continue
-        shutil.copy(p, mission_dir)
-    result = Base.main(cmd_line)
-    assert result == 0
-    bad_errors = ""
-    for record in caplog.records:
-        # Check for known WARNING, ERROR or CRITICAL msgs
-        for msg in allowed_msgs:
-            if msg in record.msg:
-                break
-        else:
-            if record.levelname in ["CRITICAL", "ERROR", "WARNING"]:
-                bad_errors += f"{record.levelname}:{record.getMessage()}\n"
-    if bad_errors:
-        pytest.fail(bad_errors)
+    testutils.run_mission(
+        data_dir, mission_dir, Base.main, cmd_line, caplog, allowed_msgs
+    )
