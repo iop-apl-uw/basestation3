@@ -60,7 +60,7 @@ from BaseLog import (
     log_warning,
 )
 
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:
