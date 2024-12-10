@@ -868,7 +868,7 @@ global_options_dict = {
     ),
     "dump_whole_mission_config": options_t(
         False,
-        ("MakeMissionTimeSeries", "MakeMissionProfile"),
+        ("Base", "Reprocess", "MakeMissionTimeSeries", "MakeMissionProfile"),
         ("--dump_whole_mission_config",),
         bool,
         {

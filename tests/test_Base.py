@@ -57,7 +57,7 @@ test_cases = (
     (
         "testdata/sg179_Guam_Oct19",
         "sg179",
-        "--plot_types none",
+        "--plot_types none --make_mission_timeseries --make_mission_profile",
         (
             "Found Disconnect with no previous Connected:",
             "timeout(s) seen in",
