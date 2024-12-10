@@ -49,20 +49,27 @@ import FileMgr
 import Globals
 import GPS
 import MakeDiveProfiles
-import Sensors
 import QC
+import Sensors
 import Utils
-
 from BaseLog import (
     BaseLogger,
-    log_info,
-    log_error,
-    log_warning,
     log_critical,
     log_debug,
+    log_error,
+    log_info,
+    log_warning,
 )
 
 DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
 
 
 def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_columns):
@@ -99,11 +106,8 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
                 data_columns.append(inp_data_columns[d][depth_filter_i])
         else:
             data_columns = inp_data_columns
-    except:
-        if DEBUG_PDB:
-            _, _, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
+    except Exception:
+        DEBUG_PDB_F()
         log_error("Unexpected error in bin_data", "exc")
         return [None, None, None]
 
@@ -125,11 +129,8 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
             # bin_index[i] = 1 + int((depth_m_v[i] + bin_width/2.0)/bin_width)
             # Zero base indexing
             bin_index[i] = int(round((depth_m_v[i] + bin_width / 2.0) / bin_width)) - 1
-    except:
-        if DEBUG_PDB:
-            _, _, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
+    except Exception:
+        DEBUG_PDB_F()
         log_error("Unexpected error in bin_data", "exc")
         return [None, None, None]
 
@@ -230,10 +231,14 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
                         # data_cols_down_bin[d][j] = np.average(data_columns[d][obs_bin_tuple])
                         # Average the actual readings - anything that is a BaseNetCDF.nc_nan or nc_inf is excluded
                         temp_data_col = data_columns[d][obs_bin_tuple]
+                        temp_temp_data_col = temp_data_col[
+                            np.where(np.isfinite(temp_data_col))
+                        ]
+                        if temp_temp_data_col.size == 0:
+                            data_cols_down_bin[d][j] = BaseNetCDF.nc_nan
+                            continue
                         try:
-                            data_cols_down_bin[d][j] = np.average(
-                                temp_data_col[np.where(np.isfinite(temp_data_col))]
-                            )
+                            data_cols_down_bin[d][j] = np.average(temp_temp_data_col)
                         except (ZeroDivisionError, FloatingPointError):
                             data_cols_down_bin[d][j] = BaseNetCDF.nc_nan
 
@@ -277,10 +282,14 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
                         # data_cols_up_bin[d][j] = np.average(data_columns[d][obs_bin_tuple])
                         # Average the actual readings - anything that is a BaseNetCDF.nc_nan or nc_inf is excluded
                         temp_data_col = data_columns[d][obs_bin_tuple]
+                        temp_temp_data_col = temp_data_col[
+                            np.where(np.isfinite(temp_data_col))
+                        ]
+                        if temp_temp_data_col.size == 0:
+                            data_cols_up_bin[d][j] = BaseNetCDF.nc_nan
+                            continue
                         try:
-                            data_cols_up_bin[d][j] = np.average(
-                                temp_data_col[np.where(np.isfinite(temp_data_col))]
-                            )
+                            data_cols_up_bin[d][j] = np.average(temp_temp_data_col)
                         except (ZeroDivisionError, FloatingPointError):
                             data_cols_up_bin[d][j] = BaseNetCDF.nc_nan
 
@@ -316,7 +325,7 @@ def bin_data(bin_width, which_half, include_empty_bins, depth_m_v, inp_data_colu
         depth_bin = np.zeros(total_bins, np.float64)
         depth_bin[:] = BaseNetCDF.nc_nan
         data_cols_bin = []
-        for d in range(num_data_cols):
+        for _ in range(num_data_cols):
             temp = np.zeros(total_bins, np.float64)
             temp[:] = BaseNetCDF.nc_nan
             data_cols_bin.append(temp)
@@ -377,6 +386,14 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
 
     Raises:
     """
+
+    if base_opts.dump_whole_mission_config:
+        Utils.dump_mission_cfg(sys.stdout, BaseNetCDF.nc_var_metadata)
+        return (0, None)
+
+    profile_cfg_d, _ = Utils.whole_mission_cfg(
+        base_opts.whole_mission_config, BaseNetCDF.nc_var_metadata
+    )
 
     mission_profile_name = None  # not known yet
     BaseNetCDF.reset_nc_char_dims()
@@ -476,7 +493,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 # calib_consts is set; figure out filename, etc.
                 try:
                     instrument_id = int(calib_consts["id_str"])
-                except:
+                except Exception:
                     instrument_id = int(base_opts.instrument_id)
                 if instrument_id == 0:
                     log_warning("Unable to determine instrument id; assuming 0")
@@ -652,46 +669,48 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                     continue
 
                 include_in_mission_profile, nc_data_type, meta_data_d, mdp_dim_info = md
-                if include_in_mission_profile:
-                    # Variable is tagged for adding to the mission profile
-                    #
-                    if mdp_dim_info == BaseNetCDF.nc_scalar:
-                        try:
-                            value = results_d[dive_nc_varname]
-                        except KeyError:
-                            value = (
-                                QC.QC_MISSING
-                                if nc_data_type == "Q"
-                                else BaseNetCDF.nc_nan
-                            )
-                        mission_nc_dive_d[dive_num][dive_nc_varname] = (
-                            value  # record scalar value
+                if dive_nc_varname in profile_cfg_d:
+                    if not profile_cfg_d[dive_nc_varname]:
+                        continue
+                elif not include_in_mission_profile:
+                    continue
+
+                # Variable is tagged for adding to the mission profile
+                if mdp_dim_info == BaseNetCDF.nc_scalar:
+                    try:
+                        value = results_d[dive_nc_varname]
+                    except KeyError:
+                        value = (
+                            QC.QC_MISSING if nc_data_type == "Q" else BaseNetCDF.nc_nan
                         )
-                        included_scalar_vars.add(dive_nc_varname)
+                    mission_nc_dive_d[dive_num][dive_nc_varname] = (
+                        value  # record scalar value
+                    )
+                    included_scalar_vars.add(dive_nc_varname)
+                else:
+                    if nc_data_type == "Q":
+                        # we don't bin qc vectors but we might want to use them to filter the others
+                        # this is where we'd have to put them aside
+                        pass
                     else:
-                        if nc_data_type == "Q":
-                            # we don't bin qc vectors but we might want to use them to filter the others
-                            # this is where we'd have to put them aside
-                            pass
-                        else:
-                            # log_info("Including %s (%d)" % (dive_nc_varname, len(results_d[dive_nc_varname])))
-                            temp_dive_vars[dive_nc_varname] = results_d[dive_nc_varname]
+                        # log_info("Including %s (%d)" % (dive_nc_varname, len(results_d[dive_nc_varname])))
+                        temp_dive_vars[dive_nc_varname] = results_d[dive_nc_varname]
 
-                            # Look up the matching _QC vector and if applicable, apply the only_good
-                            dive_nc_varname_qc = dive_nc_varname + "_qc"
+                        # Look up the matching _QC vector and if applicable, apply the only_good
+                        dive_nc_varname_qc = dive_nc_varname + "_qc"
 
-                            if dive_nc_varname_qc in results_d:
-                                # find_qc(results_d[dive_nc_varname_qc], QC.only_good_qc_values, mask=True)
-                                # temperature_qc = QC.decode_qc(dive_nc_file.variables['temperature_qc'])
-                                temp_dive_vars[dive_nc_varname][
-                                    np.logical_not(
-                                        QC.find_qc(
-                                            results_d[dive_nc_varname_qc],
-                                            QC.only_good_qc_values,
-                                            mask=True,
-                                        )
+                        if dive_nc_varname_qc in results_d:
+                            # find_qc(results_d[dive_nc_varname_qc], QC.only_good_qc_values, mask=True)
+                            # temperature_qc = QC.decode_qc(dive_nc_file.variables['temperature_qc'])
+                            temp_dive_vars[dive_nc_varname][
+                                np.logical_not(
+                                    QC.find_qc(
+                                        results_d[dive_nc_varname_qc],
+                                        QC.only_good_qc_values,
+                                        mask=True,
                                     )
-                                ] = BaseNetCDF.nc_nan
+                                )
+                            ] = BaseNetCDF.nc_nan
 
             # Bin the data
             temp_dive_vars["bin_time"] = temp_dive_vars[BaseNetCDF.nc_sg_time_var]
@@ -864,7 +883,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
 
     try:
         mission_profile_file = Utils.open_netcdf_file(mission_profile_name, "w")
-    except:
+    except Exception:
         log_error("Unable to open %s for writing" % mission_profile_name)
         return (1, mission_profile_name)
 
@@ -918,7 +937,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["depth"][:] = mission_nc_dive_d[max_depth_dive_num]["profiles"][
         max_depth_index
@@ -945,7 +964,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         None,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["trajectory"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -954,7 +973,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         None,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["year"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -963,7 +982,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["month"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -972,7 +991,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["date"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -981,7 +1000,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d[BaseNetCDF.nc_sg_time_var] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -990,7 +1009,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["hour"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -999,7 +1018,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["dd"] = BaseNetCDF.create_nc_var(
         mission_profile_file, "dd", (BaseNetCDF.nc_dim_profile,), True, None, aux_attrs
@@ -1011,7 +1030,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["latitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1020,7 +1039,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["start_time"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1029,7 +1048,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["end_time"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1038,7 +1057,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["start_latitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1047,7 +1066,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["end_latitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1056,7 +1075,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["start_longitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1065,7 +1084,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
     mission_nc_var_d["end_longitude"] = BaseNetCDF.create_nc_var(
         mission_profile_file,
@@ -1074,10 +1093,16 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         True,
         None,
         aux_attrs,
-        f_timeseries=True,
+        timeseries_val=True,
     )
 
     # Create all the nc vars, possibly adding instrument info and coordinates?
+
+    # A note on the code:
+    #     timeseries_val=profile_cfg_d.get(var, True),
+    # below - At this point in the processing, variables that have been marked to not include
+    # by profile_cfg_d are not in included_binned_vars so the lookup is either True, a type code
+    # or fails so True it returned.
     instrument_vars = []
     for dive_varname in included_binned_vars:
         md = BaseNetCDF.nc_var_metadata[dive_varname]
@@ -1088,7 +1113,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             (BaseNetCDF.nc_dim_profile, BaseNetCDF.nc_dim_depth),
             True,
             None,
-            f_timeseries=True,
+            timeseries_val=profile_cfg_d.get(dive_varname, True),
         )
     # Always add the platform variable
     BaseNetCDF.create_nc_var(
@@ -1098,7 +1123,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         False,
         "%s %s" % (platform_var, platform_id),
         {"call_sign": platform_id},
-        f_timeseries=True,
+        timeseries_val=True,
     )
     # If we don't add to instrument_vars above this is DEAD
     for instrument_var in Utils.unique(instrument_vars):
@@ -1108,7 +1133,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             BaseNetCDF.nc_scalar,
             False,
             instrument_var,
-            f_timeseries=True,
+            timeseries_val=True,
         )
 
     # handle scalar variables in two steps: first create arrays to hold the concatenated values, then creatte the nc variable with possible coercion applied to values
@@ -1223,9 +1248,9 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
 
             # Concatenate the scalars, which apply to all halves
             for scalar_var in included_scalar_vars:
-                mission_nc_var_d[scalar_var][nc_profile] = mission_nc_dive_d[dive_num][
-                    scalar_var
-                ]
+                mission_nc_var_d[scalar_var][nc_profile] = np.squeeze(
+                    mission_nc_dive_d[dive_num][scalar_var]
+                )
 
             mission_nc_var_d[BaseNetCDF.nc_sg_time_var][nc_profile] = profile_time
             profile_t = time.gmtime(profile_time)
@@ -1303,6 +1328,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
             True,
             values,
             aux_attrs,
+            timeseries_val=profile_cfg_d.get(scalar_var, True),
         )
 
     mission_profile_file.sync()
@@ -1319,13 +1345,13 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
         if os.path.exists(mission_profile_name_gz):
             try:
                 os.remove(mission_profile_name_gz)
-            except:
+            except Exception:
                 log_error("Couldn't remove %s" % mission_profile_name_gz)
 
     return (0, mission_profile_name)
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Command line driver for creating mission profiles from single dive netCDF files
 
     Returns:
@@ -1336,7 +1362,8 @@ def main():
         None - all exceptions are caught and logged
     """
     base_opts = BaseOpts.BaseOptions(
-        "Command line driver for creating mission profiles from single dive netCDF files"
+        "Command line driver for creating mission profiles from single dive netCDF files",
+        cmdline_args=cmdline_args,
     )
     BaseLogger(base_opts)  # initializes BaseLog
 
@@ -1344,7 +1371,7 @@ def main():
     if base_opts.nice:
         try:
             os.nice(base_opts.nice)
-        except:
+        except Exception:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
     log_info(
@@ -1401,6 +1428,7 @@ if __name__ == "__main__":
         else:
             retval = main()
     except Exception:
+        DEBUG_PDB_F()
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)

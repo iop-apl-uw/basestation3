@@ -1853,11 +1853,7 @@ def whole_mission_cfg(
                         continue
                     if not (
                         isinstance(v, bool)
-                        or (
-                            section == "timeseries"
-                            and (isinstance(v, str))
-                            and v in netcdf4_datatypes_nonchar
-                        )
+                        or ((isinstance(v, str)) and v in netcdf4_datatypes_nonchar)
                     ):
                         log_warning(
                             f"Value {v} of variable {k} in section {section} of {cfg_file} is of unsupported type ({type(v)}) - skipping"
