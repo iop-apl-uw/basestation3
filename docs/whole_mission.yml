@@ -1,13 +1,16 @@
 # This configuration file is used by MakeMissionTimeSeries and MakeMissionProfile
 # (or Base.p/Reprocess.py when generating whole mission products) to add, delete or
-# change data types included in the whole mission files.
+# change data types included in the whole mission files.  Use the --whole_mission_config
+# option for any of the above files with a version of this file as the argument.
 #
 # The format is of two dictionaries (either is optional) for the whole mission timeseries and
-# profiles netcdf files.  Each dictionary is of name of a variable and the action/type:
+# whole mission profile netcdf files.  Each dictionary is a series of variable names and
+# the action/type pairs. The action/type value may be one of:
+#
 #    True - include the variable
 #    False - do not include the variable
 #    type - include the variable, using the specified type string as the type to write to the
-#           netcdf file.
+#           netcdf file (possibly changing the default type for the variable).
 #
 # Accepted types are:
 # S1 or c (NC_CHAR)
@@ -22,12 +25,15 @@
 # f4 or f (NC_FLOAT)
 # f8 or d (NC_DOUBLE)
 #
-# Note: Not all type conversions may not always work - some testing is advised.
+# Note: Not all type conversions may not always work - testing is advised.
 #
 # A full listing of the all known variables and default values can be obtained by:
 #   python MakeMissionTimeSeries.py --dump_whole_mission_config
 # or
 #   python MakeMissionProfile.py --dump_whole_mission_config
+#
+# Note: The names are as they appear in netCDF files, and may not correspond to variable names
+# as they appear in the source files.
 #
 # Below is some example settings.
 timeseries:
