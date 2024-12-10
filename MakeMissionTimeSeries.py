@@ -805,6 +805,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
 
+    # These functions reset large blocks of global variables being used in other modules that
+    # assume an initial value on first load, then are updated throughout the run.  The call
+    # here sets back to the initial state to handle multiple runs under pytest
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+
     # Sensor extensions
     (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
     if init_ret_val > 0:

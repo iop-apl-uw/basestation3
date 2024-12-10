@@ -1374,6 +1374,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         except Exception:
             log_error("Setting nice to %d failed" % base_opts.nice)
 
+    # These functions reset large blocks of global variables being used in other modules that
+    # assume an initial value on first load, then are updated throughout the run.  The call
+    # here sets back to the initial state to handle multiple runs under pytest
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+
     log_info(
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
