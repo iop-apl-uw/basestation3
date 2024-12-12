@@ -7621,6 +7621,9 @@ def main():
     # Initialize the FileMgr with data on the installed loggers
     FileMgr.logger_init(init_dict)
 
+    # Any initialization from the extensions
+    BaseDotFiles.process_extensions(("init_extension",), base_opts, init_dict=init_dict)
+
     # Initialze the netCDF tables
     BaseNetCDF.init_tables(init_dict)
 

@@ -42,6 +42,7 @@ import traceback
 
 import numpy as np
 
+import BaseDotFiles
 import BaseGZip
 import BaseNetCDF
 import BaseOpts
@@ -1392,6 +1393,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # Initialize the FileMgr with data on the installed loggers
     # logger_init(init_dict)
+
+    # Any initialization from the extensions
+    BaseDotFiles.process_extensions(("init_extension",), base_opts, init_dict=init_dict)
 
     # Initialze the netCDF tables
     BaseNetCDF.init_tables(init_dict)

@@ -1475,7 +1475,9 @@ def process_extensions(
         1 - failure
     """
 
-    def process_one_extension_file(extensions_file_name, additional_search_path):
+    def process_one_extension_file(
+        extensions_file_name, additional_search_path, sections
+    ):
         log_info(f"Starting processing on {extensions_file_name} section(s):{sections}")
         ret_val = 0
         cp = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes="#")
@@ -1493,15 +1495,22 @@ def process_extensions(
             )
             return 1
         else:
-            for section in sections:
+            f_init_extension = False
+            if sections[0] == "init_extension":
+                f_init_extension = True
+                section_list = cp.sections()
+            else:
+                section_list = sections
+            for section in section_list:
                 if cp.has_section(section):
                     for extension_line in cp[section]:
                         extension_line.lstrip().rstrip()
                         if len(extension_line) < 1:
                             continue
-                        log_info(
-                            f"Processing:{extensions_file_name} section:{section} line:{extension_line}"
-                        )
+                        if not f_init_extension:
+                            log_info(
+                                f"Processing:{extensions_file_name} section:{section} line:{extension_line}"
+                            )
                         extension_elts = extension_line.split(" ")
                         # First element - extension name, with .py file extension
                         if extension_elts[0] in Globals.extensions_to_skip:
@@ -1531,32 +1540,57 @@ def process_extensions(
                                 )
                                 continue
                             log_info(f"Running {extension_module_name}")
-                            try:
-                                # Invoke the extension
-                                extension_ret_val = extension_module.main(
-                                    base_opts=base_opts,
-                                    sg_calib_file_name=sg_calib_file_name,
-                                    dive_nc_file_names=dive_nc_file_names,
-                                    nc_files_created=nc_files_created,
-                                    processed_other_files=processed_other_files,
-                                    known_mailer_tags=known_mailer_tags,
-                                    known_ftp_tags=known_ftp_tags,
-                                    processed_file_names=processed_file_names,
-                                    **kwargs,
+                            if f_init_extension:
+                                if not hasattr(extension_module, "init_extension"):
+                                    continue
+                                log_info(
+                                    f"Calling init_extension on {extension_module_name}"
                                 )
-                            except Exception:
-                                log_error(
-                                    "Extension %s raised an exception"
-                                    % extension_module_name,
-                                    "exc",
-                                )
-                                extension_ret_val = 1
-                            if extension_ret_val:
-                                log_error(
-                                    "Error running %s - return %d"
-                                    % (extension_module_name, extension_ret_val)
-                                )
-                                ret_val |= extension_ret_val
+                                try:
+                                    extension_ret_val = extension_module.init_extension(
+                                        extension_module_name,
+                                        base_opts=base_opts,
+                                        **kwargs,
+                                    )
+                                except Exception:
+                                    log_error(
+                                        f"Extension {extension_module_name} raisedb an exception callinig init_extension",
+                                        "exc",
+                                    )
+                                    extension_ret_val = 1
+                                if extension_ret_val:
+                                    log_error(
+                                        "Error running %s - return %d"
+                                        % (extension_module_name, extension_ret_val)
+                                    )
+                                    ret_val |= extension_ret_val
+                            else:
+                                try:
+                                    # Invoke the extension
+                                    extension_ret_val = extension_module.main(
+                                        base_opts=base_opts,
+                                        sg_calib_file_name=sg_calib_file_name,
+                                        dive_nc_file_names=dive_nc_file_names,
+                                        nc_files_created=nc_files_created,
+                                        processed_other_files=processed_other_files,
+                                        known_mailer_tags=known_mailer_tags,
+                                        known_ftp_tags=known_ftp_tags,
+                                        processed_file_names=processed_file_names,
+                                        **kwargs,
+                                    )
+                                except Exception:
+                                    log_error(
+                                        "Extension %s raised an exception"
+                                        % extension_module_name,
+                                        "exc",
+                                    )
+                                    extension_ret_val = 1
+                                if extension_ret_val:
+                                    log_error(
+                                        "Error running %s - return %d"
+                                        % (extension_module_name, extension_ret_val)
+                                    )
+                                    ret_val |= extension_ret_val
         log_info(f"Finished processing on {extensions_file_name}")
         return ret_val
 
@@ -1577,7 +1611,7 @@ def process_extensions(
             log_debug(f"No .extensions file {extensions_file_name} found")
             continue
         ret_val |= process_one_extension_file(
-            extensions_file_name, additional_search_path
+            extensions_file_name, additional_search_path, sections
         )
 
     return ret_val

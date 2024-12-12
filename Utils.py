@@ -60,6 +60,7 @@ import sys
 import time
 import typing
 import warnings
+from typing import Literal
 
 import aiofiles
 import anyio
@@ -115,18 +116,11 @@ netcdf4_datatypes_nonchar = (
 # NC_CHAR
 netcdf4_datatypes = ("S1", "c") + netcdf4_datatypes_nonchar
 
-
 def open_netcdf_file(
-    filename: str, mode="r", version=1
-) -> scipy.io._netcdf.netcdf_file:
-    """A wrapper to handle the fact that mmap does not work on Mac OSX
-    Running under Darwin sometimes yields 'Error 24: Too many open files', which is nonsense
-    mmap=None says use mmap if you can
-    """
-    # return netcdf.netcdf_file(filename,mode,mmap=False if sys.platform == 'darwin' else mmap, version=version)
-    # pylint: disable=protected-access
-    # return scipy.io._netcdf.netcdf_file(filename, mode, mmap=False, version=version)
-
+    filename: str,
+    mode: Literal["r", "w", "r+", "a", "x", "rs", "ws", "r+s", "as"] = "r",
+    mask_results: bool = False,
+) -> netCDF4.Dataset:
     # netCDF4 tries to open with a write exclusive, which will fail if some other process has
     # the file open for read.
     if "w" in mode:
@@ -137,7 +131,7 @@ def open_netcdf_file(
         except Exception:
             log_warning("Failed to remove file before write", "exc")
     ds = netCDF4.Dataset(filename, mode)
-    ds.set_auto_mask(False)
+    ds.set_auto_mask(mask_results)
     return ds
 
 
@@ -1883,3 +1877,49 @@ def dump_mission_cfg(stream: io.TextIO, meta_data_d: dict[str, Any]) -> None:
         stream.write(f"{section}:\n")
         for k, v in meta_data_d.items():
             stream.write(f"#  {k}:{v[0]}  #default_type:{v[1]}\n")
+
+def strip_vars(dsi:netCDF4.Dataset, dso:netCDF4.Dataset, strip_names:list[str])->None:
+    """Copies dsi to dso, excliding any varables in the var_meta dict
+
+    Args:
+        dsi: dataset opened for reading
+        dso: dataset opened for writing
+        strip_vars: list of variable names to not copy over
+
+    """
+    strip_dims = []
+    for name, var in dsi.variables.items():
+        if name in strip_names:
+            for d in var.dimensions:
+                strip_dims.append(d)
+
+    # Check for any dims that a shared with non-strip items
+    for name, var in dsi.variables.items():
+        if name not in strip_names:
+            for d in var.dimensions:
+                if d in strip_dims:
+                    strip_dims.remove(d)
+
+    for name, dimension in dsi.dimensions.items():
+        if name not in strip_dims:
+            dso.createDimension(name, dimension.size)
+
+    for name, var in dsi.variables.items():
+        if name not in strip_names:
+            fv = var.getncattr("_FillValue") if "_FillValue" in var.ncattrs() else None
+            nc_var = dso.createVariable(
+                name,
+                var.datatype,
+                var.dimensions,
+                fill_value=fv,
+                compression="zlib",
+                complevel=9,
+            )
+            nc_var[:] = var[:]
+            for a in var.ncattrs():
+                if a != "_FillValue":
+                    nc_var.setncattr(a, var.getncattr(a))
+
+    for a in dsi.ncattrs():
+        dso.setncattr(a, dsi.getncattr(a))
+

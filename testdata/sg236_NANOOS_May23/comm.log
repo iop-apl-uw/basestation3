@@ -1,0 +1,3700 @@
+Connected at 2023-05-03T16:36:07Z (sg236)
+logged in
+0:0:1:0:1:35:0:691:2132:501:-10.00:-0.04:18.20:15.00:15.32:9.04:49.37 GPS,030523,162550,4654.651,-12417.851,22,1.9,31,15.5
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:162327
+Iridium bars: 5 geolocation: 4654.095703,-12418.988281,030523,163523
+2023-05-03T16:36:16Z [sg236] Sending 196 bytes of cmdfile
+2023-05-03T16:36:16Z [sg236] Sent 196 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-03T16:36:28Z [sg236] ready to receive 2 files
+2023-05-03T16:36:29Z [sg236] Receiving 384 bytes of st0004dz.x
+2023-05-03T16:36:30Z [sg236] Received 384 bytes of st0004dz.x (332.2 Bps)
+2023-05-03T16:36:30Z [sg236] OK
+2023-05-03T16:36:32Z [sg236] Receiving 1843 bytes of st0004lz.x
+2023-05-03T16:36:37Z [sg236] Received 1843 bytes of st0004lz.x (343.5 Bps)
+2023-05-03T16:36:37Z [sg236] OK
+2023-05-03T16:36:48Z [sg236] ready to receive st0004kz.x
+2023-05-03T16:36:49Z [sg236] Receiving 26055 bytes of st0004kz.x
+2023-05-03T16:38:08Z [sg236] Received 26055 bytes of st0004kz.x (330.7 Bps)
+2023-05-03T16:38:08Z [sg236] OK
+0:0:1:0:1:35:1 logout
+Disconnected at 2023-05-03T16:38:10Z (normal)
+
+
+Connected at 2023-05-03T16:54:30Z (sg236)
+logged in
+0:1:1:0:1:35:0:691:2132:501:-0.33:-0.04:17.57:15.00:15.42:9.03:49.47 GPS,030523,165340,4653.902,-12427.334,1,0.9,4,15.5
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:162327
+Iridium bars: 5 geolocation: 4654.507812,-12423.369141,030523,163602
+2023-05-03T16:54:39Z [sg236] Sending 228 bytes of cmdfile
+2023-05-03T16:54:39Z [sg236] Sent 228 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-03T16:54:49Z [sg236] ready to receive sg0000kl.x
+2023-05-03T16:54:50Z [sg236] Receiving 3799 bytes of sg0000kl.x
+2023-05-03T16:55:01Z [sg236] Received 3799 bytes of sg0000kl.x (344.3 Bps)
+2023-05-03T16:55:01Z [sg236] OK
+0:1:1:0:1:35:1 logout
+Disconnected at 2023-05-03T16:55:04Z (normal)
+
+
+Connected at 2023-05-03T16:56:35Z (sg236)
+logged in
+0:2:1:0:2:35:0:189:2118:501:6.28:-0.07:17.52:15.00:15.40:9.02:49.37 GPS,030523,165541,4653.829,-12428.014,1,0.9,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=NO_RECOVERY_REASON
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.024414,-12430.349609,030523,165425
+2023-05-03T16:56:43Z [sg236] Sending 240 bytes of cmdfile
+2023-05-03T16:56:43Z [sg236] Sent 240 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-03T16:56:53Z [sg236] ready to receive 1 files
+2023-05-03T16:56:54Z [sg236] Receiving 1545 bytes of sg0000lz.x
+2023-05-03T16:56:59Z [sg236] Received 1545 bytes of sg0000lz.x (343.2 Bps)
+2023-05-03T16:56:59Z [sg236] OK
+0:2:1:0:2:35:1 logout
+Disconnected at 2023-05-03T16:57:01Z (normal)
+
+
+Connected at 2023-05-03T17:00:00Z (sg236)
+logged in
+0:3:1:0:2:35:0:188:2117:501:2.27:-0.08:17.43:15.00:15.38:9.02:49.47 GPS,030523,165909,4653.705,-12429.190,1,0.9,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.616699,-12425.968750,030523,165629
+2023-05-03T17:00:09Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:00:09Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:3:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:00:14Z (normal)
+
+
+Connected at 2023-05-03T17:03:09Z (sg236)
+logged in
+0:4:1:0:2:35:0:187:2118:502:-11.90:-0.06:17.34:15.00:15.38:9.01:49.45 GPS,030523,170222,4653.619,-12430.267,1,0.8,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4651.398438,-12616.923828,030523,165954
+2023-05-03T17:03:18Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:03:18Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:4:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:03:23Z (normal)
+
+
+Connected at 2023-05-03T17:06:14Z (sg236)
+logged in
+0:5:1:0:2:35:0:188:2118:502:-8.84:-0.07:17.20:15.00:15.40:9.01:49.43 GPS,030523,170532,4653.536,-12431.335,1,0.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.024414,-12430.349609,030523,170303
+2023-05-03T17:06:32Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:06:32Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:5:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:06:47Z (normal)
+
+
+Connected at 2023-05-03T17:09:44Z (sg236)
+logged in
+0:6:1:0:2:35:0:188:2117:506:1.57:-0.09:17.03:15.00:15.39:9.01:49.50 GPS,030523,170855,4653.458,-12432.483,1,0.8,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.917480,-12427.751953,030523,170607
+2023-05-03T17:10:03Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:10:03Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:6:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:10:15Z (normal)
+
+
+Connected at 2023-05-03T17:13:08Z (sg236)
+logged in
+0:7:1:0:2:35:0:188:2117:506:-0.40:-0.09:16.90:15.00:15.40:9.00:49.48 GPS,030523,171223,4653.391,-12433.655,1,0.8,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.429199,-12434.731445,030523,170933
+2023-05-03T17:13:18Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:13:18Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:7:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:13:23Z (normal)
+
+
+Connected at 2023-05-03T17:16:11Z (sg236)
+logged in
+0:8:1:0:2:35:0:188:2118:507:0.73:-0.09:16.79:15.00:15.42:9.00:49.43 GPS,030523,171531,4653.326,-12434.714,1,0.8,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.533691,-12437.326172,030523,171301
+2023-05-03T17:16:20Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:16:20Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:8:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:16:25Z (normal)
+
+
+Connected at 2023-05-03T17:21:01Z (sg236)
+logged in
+0:9:2:0:2:35:-2:188:2117:506:-2.06:-0.09:16.70:15.00:15.39:8.99:49.50 GPS,030523,171834,4653.320,-12435.758,1,0.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.429199,-12434.731445,030523,171604
+2023-05-03T17:21:10Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:21:10Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:9:2:0:2:35:1 logout
+Disconnected at 2023-05-03T17:21:17Z (normal)
+
+
+Connected at 2023-05-03T17:24:07Z (sg236)
+logged in
+0:10:1:0:2:35:0:188:2118:507:-6.56:-0.10:16.57:15.00:15.41:8.99:49.50 GPS,030523,172325,4653.306,-12437.412,1,0.9,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.533691,-12437.326172,030523,172052
+2023-05-03T17:24:20Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:24:20Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:10:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:24:25Z (normal)
+
+
+Connected at 2023-05-03T17:27:15Z (sg236)
+logged in
+0:11:1:0:2:35:0:188:2118:507:-2.55:-0.11:16.49:15.00:15.40:8.99:49.48 GPS,030523,172634,4653.295,-12438.499,1,0.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4653.533691,-12437.326172,030523,172401
+2023-05-03T17:27:26Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:27:26Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:11:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:27:40Z (normal)
+
+
+Connected at 2023-05-03T17:30:28Z (sg236)
+logged in
+0:12:1:0:2:35:0:188:2117:507:-8.99:-0.12:16.42:15.00:15.42:8.99:49.10 GPS,030523,172949,4653.293,-12439.607,1,0.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.429199,-12434.731445,030523,172709
+2023-05-03T17:30:39Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:30:39Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:12:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:30:44Z (normal)
+
+
+Connected at 2023-05-03T17:33:37Z (sg236)
+logged in
+0:13:1:0:2:35:0:188:2117:507:-2.96:-0.12:16.35:15.00:15.41:8.98:49.48 GPS,030523,173253,4653.311,-12440.623,1,0.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.933594,-12441.709961,030523,173021
+2023-05-03T17:33:45Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:33:45Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:13:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:33:50Z (normal)
+
+
+Connected at 2023-05-03T17:37:22Z (sg236)
+logged in
+0:14:1:0:2:35:0:188:2117:507:2.17:-0.12:16.27:15.00:15.40:8.98:49.47 GPS,030523,173631,4653.298,-12441.844,1,1.4,31,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 0 geolocation: 4654.831543,-12439.117188,030523,173330
+2023-05-03T17:37:49Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:37:49Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:14:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:37:55Z (normal)
+
+
+Connected at 2023-05-03T17:40:48Z (sg236)
+logged in
+0:15:1:0:2:35:0:188:2117:507:-1.54:-0.12:16.20:15.00:15.41:8.98:49.45 GPS,030523,174005,4653.272,-12443.028,1,1.4,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.933594,-12441.709961,030523,173713
+2023-05-03T17:40:57Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:40:57Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:15:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:41:02Z (normal)
+
+
+Connected at 2023-05-03T17:43:50Z (sg236)
+logged in
+0:16:1:0:2:35:0:188:2117:508:-11.56:-0.12:16.15:15.00:15.39:8.97:49.42 GPS,030523,174310,4653.238,-12444.050,1,1.7,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4651.559082,-12444.298828,030523,174041
+2023-05-03T17:43:59Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:43:59Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:16:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:44:06Z (normal)
+
+
+Connected at 2023-05-03T17:47:04Z (sg236)
+logged in
+0:17:1:0:2:35:0:188:2118:508:-9.27:-0.11:16.07:15.00:15.39:8.97:49.09 GPS,030523,174614,4653.201,-12445.086,1,1.7,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.933594,-12441.709961,030523,174342
+2023-05-03T17:47:21Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:47:21Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:17:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:47:30Z (normal)
+
+
+Connected at 2023-05-03T17:50:19Z (sg236)
+logged in
+0:18:1:0:2:35:0:188:2118:508:-8.21:-0.12:16.02:15.00:15.39:8.96:49.44 GPS,030523,174938,4653.153,-12446.231,1,1.8,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4651.955078,-12448.682617,030523,174650
+2023-05-03T17:50:28Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:50:28Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:18:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:50:32Z (normal)
+
+
+Connected at 2023-05-03T17:53:22Z (sg236)
+logged in
+0:19:1:0:2:35:0:188:2118:509:-8.83:-0.13:15.96:15.00:15.41:8.96:49.07 GPS,030523,175240,4653.125,-12447.263,1,1.8,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4651.559082,-12444.298828,030523,175011
+2023-05-03T17:53:45Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:53:45Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:19:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:53:52Z (normal)
+
+
+Connected at 2023-05-03T17:56:48Z (sg236)
+logged in
+0:20:1:0:2:35:0:188:2117:508:-4.88:-0.13:15.91:15.00:15.40:8.97:49.34 GPS,030523,175601,4653.107,-12448.409,1,1.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 2 geolocation: 4653.036133,-12444.298828,030523,175312
+2023-05-03T17:57:01Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T17:57:01Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:20:1:0:2:35:1 logout
+Disconnected at 2023-05-03T17:57:10Z (normal)
+
+
+Connected at 2023-05-03T17:59:59Z (sg236)
+logged in
+0:21:1:0:2:35:0:188:2117:509:-2.71:-0.14:15.85:15.00:15.40:8.96:49.42 GPS,030523,175919,4653.081,-12449.537,1,1.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.431641,-12448.682617,030523,175642
+2023-05-03T18:00:08Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:00:08Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:21:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:00:13Z (normal)
+
+
+Connected at 2023-05-03T18:03:03Z (sg236)
+logged in
+0:22:1:0:2:35:0:188:2118:509:-4.96:-0.13:15.80:15.00:15.41:8.96:49.35 GPS,030523,180222,4653.069,-12450.578,1,1.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4651.955078,-12448.682617,030523,175952
+2023-05-03T18:03:14Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:03:14Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:22:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:03:19Z (normal)
+
+
+Connected at 2023-05-03T18:06:30Z (sg236)
+logged in
+0:23:1:0:2:35:0:188:2118:509:-2.40:-0.14:15.75:15.00:15.41:8.95:49.02 GPS,030523,180529,4653.061,-12451.656,1,1.8,5,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.824707,-12453.067383,030523,180258
+2023-05-03T18:06:42Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:06:42Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:23:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:06:47Z (normal)
+
+
+Connected at 2023-05-03T18:09:35Z (sg236)
+logged in
+0:24:1:0:2:35:0:188:2117:509:-12.09:-0.14:15.70:15.00:15.38:8.96:49.36 GPS,030523,180857,4653.062,-12452.859,1,1.8,5,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 3 geolocation: 4653.824707,-12453.067383,030523,180618
+2023-05-03T18:09:44Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:09:44Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:24:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:09:49Z (normal)
+
+
+Connected at 2023-05-03T18:12:35Z (sg236)
+logged in
+0:25:1:0:2:35:0:188:2117:509:-3.58:-0.16:15.67:15.00:15.39:8.95:49.35 GPS,030523,181159,4653.072,-12453.903,1,1.8,5,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.824707,-12453.067383,030523,180930
+2023-05-03T18:12:44Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:12:44Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:25:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:12:49Z (normal)
+
+
+Connected at 2023-05-03T18:17:26Z (sg236)
+logged in
+0:26:2:0:2:35:-2:188:2117:510:-0.05:-0.15:15.62:15.00:15.41:8.95:49.35 GPS,030523,181458,4653.121,-12454.916,1,1.8,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4652.922363,-12455.651367,030523,181230
+2023-05-03T18:17:40Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:17:40Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:26:2:0:2:35:1 logout
+Disconnected at 2023-05-03T18:17:47Z (normal)
+
+
+Connected at 2023-05-03T18:20:40Z (sg236)
+logged in
+0:27:1:0:2:35:0:188:2118:511:-4.36:-0.16:15.56:15.00:15.41:8.95:49.31 GPS,030523,181957,4653.327,-12456.599,1,1.9,4,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4655.118652,-12454.872070,030523,181717
+2023-05-03T18:20:49Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:20:49Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:27:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:20:54Z (normal)
+
+
+Connected at 2023-05-03T18:23:47Z (sg236)
+logged in
+0:28:1:0:2:35:0:188:2117:511:3.39:-0.15:15.51:15.00:15.40:8.95:48.62 GPS,030523,182302,4653.452,-12457.646,1,1.9,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.824707,-12453.067383,030523,182033
+2023-05-03T18:24:03Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:24:03Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:28:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:24:11Z (normal)
+
+
+Connected at 2023-05-03T18:27:02Z (sg236)
+logged in
+0:29:1:0:2:35:0:188:2117:512:-2.03:-0.12:15.47:15.00:15.41:8.95:49.27 GPS,030523,182619,4653.604,-12458.765,1,1.9,3,15.5
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.215332,-12457.456055,030523,182340
+2023-05-03T18:27:13Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:27:13Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:29:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:27:20Z (normal)
+
+
+Connected at 2023-05-03T18:30:27Z (sg236)
+logged in
+0:30:1:0:2:35:0:187:2118:512:-8.11:-0.13:15.43:15.00:15.39:8.94:49.30 GPS,030523,182929,4653.789,-12459.834,1,2.0,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.215332,-12457.456055,030523,182654
+2023-05-03T18:30:36Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:30:36Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:30:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:30:41Z (normal)
+
+
+Connected at 2023-05-03T18:33:48Z (sg236)
+logged in
+0:31:1:0:2:35:0:188:2117:512:-4.34:-0.15:15.39:15.00:15.40:8.94:49.31 GPS,030523,183250,4654.179,-12500.600,1,2.0,4,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.311523,-12500.038086,030523,183020
+2023-05-03T18:33:59Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:33:59Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:31:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:34:06Z (normal)
+
+
+Connected at 2023-05-03T18:37:13Z (sg236)
+logged in
+0:32:1:0:2:35:0:188:2118:512:-5.62:-0.16:15.36:15.00:15.40:8.94:48.90 GPS,030523,183631,4654.421,-12500.548,1,1.4,20,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,030523,183333
+2023-05-03T18:37:22Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:37:22Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:32:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:37:30Z (normal)
+
+
+Connected at 2023-05-03T18:40:25Z (sg236)
+logged in
+0:33:1:0:2:35:0:188:2117:515:-5.93:-0.16:15.32:15.00:15.39:8.94:49.29 GPS,030523,183940,4654.406,-12500.511,1,1.4,5,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.982910,-12459.262695,030523,183706
+2023-05-03T18:40:38Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:40:38Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:33:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:40:46Z (normal)
+
+
+Connected at 2023-05-03T18:45:19Z (sg236)
+logged in
+0:34:2:0:2:35:-2:188:2117:516:-6.79:-0.16:15.29:15.00:15.41:8.93:49.19 GPS,030523,184255,4654.427,-12500.493,1,1.4,4,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.726562,-12450.481445,030523,184018
+2023-05-03T18:45:40Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:45:40Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:34:2:0:2:35:1 logout
+Disconnected at 2023-05-03T18:45:48Z (normal)
+
+
+Connected at 2023-05-03T18:51:16Z (sg236)
+logged in
+0:35:2:0:2:35:-3:188:2118:519:-5.75:-0.14:15.27:15.00:15.40:8.93:49.18 GPS,030523,184756,4654.467,-12500.467,1,1.5,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,030523,184849
+2023-05-03T18:51:39Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:51:39Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:35:2:0:2:35:1 logout
+Disconnected at 2023-05-03T18:51:46Z (normal)
+
+
+Connected at 2023-05-03T18:54:54Z (sg236)
+logged in
+0:36:1:0:2:35:0:188:2118:520:-16.93:-0.16:15.23:15.00:15.36:8.93:49.17 GPS,030523,185359,4654.511,-12500.431,1,1.5,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4655.508301,-12459.262695,030523,185107
+2023-05-03T18:55:03Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:55:03Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:36:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:55:08Z (normal)
+
+
+Connected at 2023-05-03T18:58:10Z (sg236)
+logged in
+0:37:1:0:2:35:0:188:2121:523:-53.41:1.29:15.04:15.00:15.36:8.90:49.01 GPS,030523,185716,4654.535,-12500.416,1,1.6,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.215332,-12457.456055,030523,185447
+2023-05-03T18:58:19Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T18:58:19Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:37:1:0:2:35:1 logout
+Disconnected at 2023-05-03T18:58:24Z (normal)
+
+
+Connected at 2023-05-03T19:01:11Z (sg236)
+logged in
+0:38:1:0:2:35:0:188:2121:523:-67.57:1.27:14.63:15.00:15.38:8.88:48.70 GPS,030523,190032,4654.553,-12500.405,1,1.6,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4651.359863,-12534.091797,030523,185804
+2023-05-03T19:01:21Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T19:01:21Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:38:1:0:2:35:1 logout
+Disconnected at 2023-05-03T19:01:26Z (normal)
+
+
+Connected at 2023-05-03T19:04:13Z (sg236)
+logged in
+0:39:1:0:2:35:0:188:2121:523:-55.30:1.20:14.29:15.00:15.38:8.87:49.17 GPS,030523,190334,4654.568,-12500.395,1,1.7,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4652.998047,-12549.833984,030523,190103
+2023-05-03T19:04:27Z [sg236] Sending 251 bytes of cmdfile
+2023-05-03T19:04:27Z [sg236] Sent 251 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:39:1:0:2:35:1 logout
+Disconnected at 2023-05-03T19:04:34Z (normal)
+
+
+Connected at 2023-05-03T19:07:27Z (sg236)
+logged in
+0:40:1:0:2:35:0:188:2120:523:-54.62:1.23:14.01:15.00:15.37:8.87:49.24 GPS,030523,190642,4654.583,-12500.388,1,1.7,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.317383,-12544.721680,030523,190406
+2023-05-03T19:07:37Z [sg236] Sending 253 bytes of cmdfile
+2023-05-03T19:07:37Z [sg236] Sent 253 bytes of cmdfile
+Parsed RESUME from cmdfile
+0:40:1:0:2:35:1 logout
+Disconnected at 2023-05-03T19:07:42Z (normal)
+
+
+Connected at 2023-05-03T19:38:27Z (sg236)
+logged in
+1:0:1:0:2:35:0:182:2120:501:-65.04:1.24:12.47:15.00:15.23:8.81:49.35 GPS,030523,193731,4654.727,-12500.348,1,0.9,23,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,030523,190720
+2023-05-03T19:38:35Z [sg236] Sending 207 bytes of cmdfile
+2023-05-03T19:38:35Z [sg236] Sent 207 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-03T19:38:40Z [sg236] ready to receive 2 files
+2023-05-03T19:38:41Z [sg236] Receiving 1964 bytes of sg0001dz.x
+2023-05-03T19:38:50Z [sg236] Received 1964 bytes of sg0001dz.x (226.1 Bps)
+2023-05-03T19:38:50Z [sg236] OK
+2023-05-03T19:38:51Z [sg236] Receiving 3066 bytes of sg0001lz.x
+2023-05-03T19:39:00Z [sg236] Received 3066 bytes of sg0001lz.x (344.4 Bps)
+2023-05-03T19:39:00Z [sg236] OK
+2023-05-03T19:39:03Z [sg236] ready to receive 2 files
+2023-05-03T19:39:04Z [sg236] Receiving 3072 bytes of sc0001ag.x
+2023-05-03T19:39:16Z [sg236] Received 3072 bytes of sc0001ag.x (247.5 Bps)
+2023-05-03T19:39:16Z [sg236] OK
+2023-05-03T19:39:18Z [sg236] Receiving 2048 bytes of sc0001bg.x
+2023-05-03T19:39:24Z [sg236] Received 2048 bytes of sc0001bg.x (345.7 Bps)
+2023-05-03T19:39:24Z [sg236] OK
+1:0:1:0:2:35:1 logout
+Disconnected at 2023-05-03T19:39:26Z (normal)
+
+
+Connected at 2023-05-03T19:40:15Z (sg236)
+logged in
+1:1:1:0:2:35:0:181:2120:506:-57.19:1.23:12.36:15.00:15.20:8.81:49.36 GPS,030523,193934,4654.736,-12500.331,1,0.7,2,15.6
+EOP_CODE=NO_VERTICAL_VELOCITY
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4654.215332,-12457.456055,030523,193820
+2023-05-03T19:40:32Z [sg236] Sending 207 bytes of cmdfile
+2023-05-03T19:40:32Z [sg236] Sent 207 bytes of cmdfile
+Parsed QUIT from cmdfile
+1:1:1:0:2:35:1 logout
+Disconnected at 2023-05-03T19:40:44Z (normal)
+
+
+Connected at 2023-05-03T19:43:31Z (sg236)
+logged in
+1:2:1:0:2:35:0:182:2120:507:-68.87:1.29:12.21:15.00:15.25:8.81:49.41 GPS,030523,194250,4654.748,-12500.305,1,0.7,2,15.6
+EOP_CODE=NO_VERTICAL_VELOCITY
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.982910,-12459.262695,030523,194006
+2023-05-03T19:43:40Z [sg236] Sending 207 bytes of cmdfile
+2023-05-03T19:43:40Z [sg236] Sent 207 bytes of cmdfile
+Parsed QUIT from cmdfile
+1:2:1:0:2:35:1 logout
+Disconnected at 2023-05-03T19:43:45Z (normal)
+
+
+Connected at 2023-05-03T19:46:32Z (sg236)
+logged in
+1:3:1:0:2:35:0:182:2120:508:-58.99:1.25:12.12:15.00:15.28:8.81:49.46 GPS,030523,194551,4654.757,-12500.280,1,0.7,2,15.6
+EOP_CODE=NO_VERTICAL_VELOCITY
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,030523,194324
+2023-05-03T19:46:41Z [sg236] Sending 210 bytes of cmdfile
+2023-05-03T19:46:41Z [sg236] Sent 210 bytes of cmdfile
+Parsed RESUME from cmdfile
+1:3:1:0:2:35:1 logout
+Disconnected at 2023-05-03T19:46:48Z (normal)
+
+
+Connected at 2023-05-03T20:19:25Z (sg236)
+logged in
+2:0:1:0:2:35:0:184:2122:633:-66.54:1.39:11.62:15.00:15.02:8.79:48.94 GPS,030523,201825,4654.742,-12500.156,0,0.8,2,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.215332,-12457.456055,030523,194625
+2023-05-03T20:19:33Z [sg236] Sending 207 bytes of cmdfile
+2023-05-03T20:19:33Z [sg236] Sent 207 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-03T20:19:37Z [sg236] ready to receive 2 files
+2023-05-03T20:19:39Z [sg236] Receiving 3339 bytes of sg0002dz.x
+2023-05-03T20:19:48Z [sg236] Received 3339 bytes of sg0002dz.x (340.2 Bps)
+2023-05-03T20:19:48Z [sg236] OK
+2023-05-03T20:19:50Z [sg236] Receiving 3251 bytes of sg0002lz.x
+2023-05-03T20:19:59Z [sg236] Received 3251 bytes of sg0002lz.x (342.0 Bps)
+2023-05-03T20:19:59Z [sg236] OK
+2023-05-03T20:20:01Z [sg236] ready to receive 2 files
+2023-05-03T20:20:02Z [sg236] Receiving 3072 bytes of sc0002ag.x
+2023-05-03T20:20:11Z [sg236] Received 3072 bytes of sc0002ag.x (344.1 Bps)
+2023-05-03T20:20:11Z [sg236] OK
+2023-05-03T20:20:12Z [sg236] Receiving 4096 bytes of sc0002bg.x
+2023-05-03T20:20:24Z [sg236] Received 4096 bytes of sc0002bg.x (345.3 Bps)
+2023-05-03T20:20:24Z [sg236] OK
+2:0:1:0:2:35:1 logout
+Disconnected at 2023-05-03T20:20:27Z (normal)
+
+
+Connected at 2023-05-03T20:21:12Z (sg236)
+logged in
+2:1:1:0:2:35:0:184:2122:636:-61.05:1.28:11.57:15.00:15.06:8.80:49.24 GPS,030523,202035,4654.748,-12500.152,0,0.8,2,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4654.602539,-12501.845703,030523,201918
+2023-05-03T20:21:21Z [sg236] Sending 207 bytes of cmdfile
+2023-05-03T20:21:21Z [sg236] Sent 207 bytes of cmdfile
+Parsed QUIT from cmdfile
+2:1:1:0:2:35:1 logout
+Disconnected at 2023-05-03T20:21:25Z (normal)
+
+
+Connected at 2023-05-03T20:24:29Z (sg236)
+logged in
+2:2:1:0:2:35:0:184:2122:638:-59.53:1.27:11.49:15.00:15.17:8.79:49.21 GPS,030523,202333,4654.756,-12500.139,1,0.8,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.311523,-12500.038086,030523,202107
+2023-05-03T20:24:43Z [sg236] Sending 210 bytes of cmdfile
+2023-05-03T20:24:43Z [sg236] Sent 210 bytes of cmdfile
+Parsed RESUME from cmdfile
+2:2:1:0:2:35:1 logout
+Disconnected at 2023-05-03T20:24:58Z (normal)
+
+
+Connected at 2023-05-03T21:14:02Z (sg236)
+logged in
+3:0:2:0:2:35:-2:182:2070:633:-56.57:1.24:10.71:15.00:14.98:8.76:49.13 GPS,030523,211158,4654.925,-12459.881,2,1.5,5,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,030523,211254
+2023-05-03T21:14:11Z [sg236] Sending 208 bytes of cmdfile
+2023-05-03T21:14:11Z [sg236] Sent 208 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-03T21:14:15Z [sg236] Sending 133 bytes of targets
+2023-05-03T21:14:15Z [sg236] Sent 133 bytes of targets
+2023-05-03T21:14:19Z [sg236] ready to receive 2 files
+2023-05-03T21:14:20Z [sg236] Receiving 4925 bytes of sg0003dz.x
+2023-05-03T21:14:34Z [sg236] Received 4925 bytes of sg0003dz.x (344.6 Bps)
+2023-05-03T21:14:34Z [sg236] OK
+2023-05-03T21:14:35Z [sg236] Receiving 3804 bytes of sg0003lz.x
+2023-05-03T21:14:46Z [sg236] Received 3804 bytes of sg0003lz.x (344.2 Bps)
+2023-05-03T21:14:46Z [sg236] OK
+2023-05-03T21:14:49Z [sg236] ready to receive 2 files
+2023-05-03T21:14:50Z [sg236] Receiving 4224 bytes of sc0003ag.x
+2023-05-03T21:15:02Z [sg236] Received 4224 bytes of sc0003ag.x (345.0 Bps)
+2023-05-03T21:15:02Z [sg236] OK
+2023-05-03T21:15:04Z [sg236] Receiving 5248 bytes of sc0003bg.x
+2023-05-03T21:15:21Z [sg236] Received 5248 bytes of sc0003bg.x (303.5 Bps)
+2023-05-03T21:15:21Z [sg236] OK
+3:0:2:0:2:35:1 logout
+Disconnected at 2023-05-03T21:15:23Z (normal)
+
+
+Connected at 2023-05-03T21:16:19Z (sg236)
+logged in
+3:1:1:0:2:35:0:181:2069:642:-60.11:1.26:10.69:15.00:15.06:8.76:48.72 GPS,030523,211533,4654.923,-12459.867,2,0.9,4,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.982910,-12459.262695,030523,211357
+2023-05-03T21:16:34Z [sg236] Sending 208 bytes of cmdfile
+2023-05-03T21:16:34Z [sg236] Sent 208 bytes of cmdfile
+Parsed QUIT from cmdfile
+3:1:1:0:2:35:1 logout
+Disconnected at 2023-05-03T21:16:39Z (normal)
+
+
+Connected at 2023-05-03T21:19:31Z (sg236)
+logged in
+3:2:1:0:2:35:0:182:2069:642:-70.84:1.28:10.70:15.00:15.14:8.76:49.08 GPS,030523,211847,4654.918,-12459.854,1,0.9,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4655.508301,-12459.262695,030523,211610
+2023-05-03T21:19:41Z [sg236] Sending 211 bytes of cmdfile
+2023-05-03T21:19:41Z [sg236] Sent 211 bytes of cmdfile
+Parsed RESUME from cmdfile
+3:2:1:0:2:35:1 logout
+Disconnected at 2023-05-03T21:19:45Z (normal)
+
+
+Connected at 2023-05-03T22:35:34Z (sg236)
+logged in
+4:0:1:0:2:35:0:182:2079:633:-63.14:1.21:9.71:15.00:15.00:8.72:48.79 GPS,030523,223431,4654.981,-12500.754,30,0.8,31,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4655.508301,-12459.262695,030523,211924
+2023-05-03T22:35:43Z [sg236] Sending 209 bytes of cmdfile
+2023-05-03T22:35:43Z [sg236] Sent 209 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-03T22:35:47Z [sg236] ready to receive 2 files
+Disconnected at 2023-05-03T22:35:55Z (hangup)
+
+
+Connected at 2023-05-03T22:37:41Z (sg236)
+logged in
+4:0:2:0:2:35:0:182:2079:633:-63.14:1.21:9.71:15.00:15.00:8.72:48.79 GPS,030523,223431,4654.981,-12500.754,30,0.8,31,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,030523,223527
+2023-05-03T22:37:50Z [sg236] Sending 209 bytes of cmdfile
+2023-05-03T22:37:50Z [sg236] Sent 209 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-03T22:37:55Z [sg236] ready to receive 2 files
+2023-05-03T22:37:56Z [sg236] Receiving 6588 bytes of sg0004dz.x
+2023-05-03T22:38:15Z [sg236] Received 6588 bytes of sg0004dz.x (342.8 Bps)
+2023-05-03T22:38:15Z [sg236] OK
+2023-05-03T22:38:16Z [sg236] Receiving 4184 bytes of sg0004lz.x
+2023-05-03T22:38:29Z [sg236] Received 4184 bytes of sg0004lz.x (342.1 Bps)
+2023-05-03T22:38:29Z [sg236] OK
+2023-05-03T22:38:31Z [sg236] ready to receive 2 files
+2023-05-03T22:38:32Z [sg236] Receiving 7168 bytes of sc0004ag.x
+2023-05-03T22:38:53Z [sg236] Received 7168 bytes of sc0004ag.x (343.2 Bps)
+2023-05-03T22:38:53Z [sg236] OK
+2023-05-03T22:38:54Z [sg236] Receiving 8192 bytes of sc0004bg.x
+2023-05-03T22:39:20Z [sg236] Received 8192 bytes of sc0004bg.x (314.7 Bps)
+2023-05-03T22:39:20Z [sg236] OK
+4:0:2:0:2:35:1 logout
+Disconnected at 2023-05-03T22:39:23Z (normal)
+
+
+Connected at 2023-05-03T22:40:16Z (sg236)
+logged in
+4:1:1:0:2:35:0:182:2079:646:-59.13:1.13:9.78:15.00:15.05:8.73:48.76 GPS,030523,223931,4654.974,-12500.723,1,0.6,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,030523,223736
+2023-05-03T22:40:34Z [sg236] Sending 209 bytes of cmdfile
+2023-05-03T22:40:34Z [sg236] Sent 209 bytes of cmdfile
+Parsed QUIT from cmdfile
+4:1:1:0:2:35:1 logout
+Disconnected at 2023-05-03T22:40:41Z (normal)
+
+
+Connected at 2023-05-03T22:43:36Z (sg236)
+logged in
+4:2:1:0:2:35:0:182:2079:648:-66.99:1.26:9.86:15.00:15.15:8.74:48.67 GPS,030523,224248,4654.971,-12500.698,1,0.6,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.311523,-12500.038086,030523,224007
+2023-05-03T22:43:45Z [sg236] Sending 215 bytes of cmdfile
+2023-05-03T22:43:45Z [sg236] Sent 215 bytes of cmdfile
+Parsed RESUME from cmdfile
+4:2:1:0:2:35:1 logout
+Disconnected at 2023-05-03T22:43:50Z (normal)
+
+
+Connected at 2023-05-04T00:50:27Z (sg236)
+logged in
+5:0:1:0:2:35:0:183:2079:633:-70.65:1.28:8.93:14.99:14.95:8.68:48.18 GPS,040523,004924,4655.185,-12502.469,1,1.2,5,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,030523,224330
+2023-05-04T00:50:38Z [sg236] Sending 211 bytes of cmdfile
+2023-05-04T00:50:39Z [sg236] Sent 211 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-04T00:50:43Z [sg236] ready to receive 3 files
+2023-05-04T00:50:45Z [sg236] Receiving 8192 bytes of sg0005dz.x00
+2023-05-04T00:51:10Z [sg236] Received 8192 bytes of sg0005dz.x00 (322.1 Bps)
+2023-05-04T00:51:10Z [sg236] OK
+2023-05-04T00:51:11Z [sg236] Receiving 1638 bytes of sg0005dz.x01
+2023-05-04T00:51:16Z [sg236] Received 1638 bytes of sg0005dz.x01 (343.4 Bps)
+2023-05-04T00:51:16Z [sg236] OK
+2023-05-04T00:51:17Z [sg236] Receiving 5114 bytes of sg0005lz.x
+2023-05-04T00:51:32Z [sg236] Received 5114 bytes of sg0005lz.x (343.0 Bps)
+2023-05-04T00:51:32Z [sg236] OK
+2023-05-04T00:51:37Z [sg236] ready to receive 4 files
+2023-05-04T00:51:38Z [sg236] Receiving 8192 bytes of sc0005ag.x00
+2023-05-04T00:52:04Z [sg236] Received 8192 bytes of sc0005ag.x00 (317.3 Bps)
+2023-05-04T00:52:04Z [sg236] OK
+2023-05-04T00:52:06Z [sg236] Receiving 1024 bytes of sc0005ag.x01
+2023-05-04T00:52:08Z [sg236] Received 1024 bytes of sc0005ag.x01 (347.4 Bps)
+2023-05-04T00:52:08Z [sg236] OK
+2023-05-04T00:52:10Z [sg236] Receiving 8192 bytes of sc0005bg.x00
+2023-05-04T00:52:36Z [sg236] Received 8192 bytes of sc0005bg.x00 (314.8 Bps)
+2023-05-04T00:52:36Z [sg236] OK
+2023-05-04T00:52:37Z [sg236] Receiving 1024 bytes of sc0005bg.x01
+2023-05-04T00:52:42Z [sg236] Received 1024 bytes of sc0005bg.x01 (194.4 Bps)
+2023-05-04T00:52:42Z [sg236] OK
+5:0:1:0:2:35:1 logout
+Disconnected at 2023-05-04T00:52:45Z (normal)
+
+
+Connected at 2023-05-04T00:53:45Z (sg236)
+logged in
+5:1:1:0:2:35:0:183:2079:645:-65.17:1.24:9.02:15.00:14.98:8.69:47.75 GPS,040523,005255,4655.187,-12502.471,1,1.2,4,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.215332,-12457.456055,040523,005020
+2023-05-04T00:53:54Z [sg236] Sending 211 bytes of cmdfile
+2023-05-04T00:53:54Z [sg236] Sent 211 bytes of cmdfile
+Parsed QUIT from cmdfile
+5:1:1:0:2:35:1 logout
+Disconnected at 2023-05-04T00:53:58Z (normal)
+
+
+Connected at 2023-05-04T00:54:58Z (sg236)
+logged in
+5:2:1:0:2:35:0:183:2079:646:-64.43:1.20:9.07:15.00:15.01:8.69:48.13 GPS,040523,005419,4655.187,-12502.474,2,1.2,5,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.077637,-12501.845703,040523,005341
+2023-05-04T00:55:07Z [sg236] Sending 211 bytes of cmdfile
+2023-05-04T00:55:07Z [sg236] Sent 211 bytes of cmdfile
+Parsed QUIT from cmdfile
+5:2:1:0:2:35:1 logout
+Disconnected at 2023-05-04T00:55:11Z (normal)
+
+
+Connected at 2023-05-04T00:58:02Z (sg236)
+logged in
+5:3:1:0:2:35:0:183:2079:648:-61.96:1.18:9.16:15.00:15.10:8.70:48.13 GPS,040523,005721,4655.188,-12502.479,1,1.2,4,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.370117,-12503.656250,040523,005452
+2023-05-04T00:58:13Z [sg236] Sending 189 bytes of cmdfile
+2023-05-04T00:58:13Z [sg236] Sent 189 bytes of cmdfile
+Parsed RESUME from cmdfile
+5:3:1:0:2:35:1 logout
+Disconnected at 2023-05-04T00:58:18Z (normal)
+
+
+Connected at 2023-05-04T04:10:28Z (sg236)
+logged in
+6:0:2:0:2:35:-2:182:2075:633:-62.45:1.25:8.53:14.98:14.91:8.67:47.56 GPS,040523,040801,4655.725,-12505.246,23,1.2,24,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.602539,-12501.845703,040523,005753
+2023-05-04T04:10:37Z [sg236] Sending 186 bytes of cmdfile
+2023-05-04T04:10:37Z [sg236] Sent 186 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-04T04:10:42Z [sg236] ready to receive 3 files
+2023-05-04T04:10:43Z [sg236] Receiving 8192 bytes of sg0006dz.x00
+2023-05-04T04:11:07Z [sg236] Received 8192 bytes of sg0006dz.x00 (344.8 Bps)
+2023-05-04T04:11:07Z [sg236] OK
+2023-05-04T04:11:08Z [sg236] Receiving 5330 bytes of sg0006dz.x01
+2023-05-04T04:11:24Z [sg236] Received 5330 bytes of sg0006dz.x01 (344.1 Bps)
+2023-05-04T04:11:24Z [sg236] OK
+2023-05-04T04:11:25Z [sg236] Receiving 6324 bytes of sg0006lz.x
+2023-05-04T04:11:44Z [sg236] Received 6324 bytes of sg0006lz.x (343.4 Bps)
+2023-05-04T04:11:44Z [sg236] OK
+2023-05-04T04:11:46Z [sg236] ready to receive 4 files
+2023-05-04T04:11:47Z [sg236] Receiving 8192 bytes of sc0006ag.x00
+2023-05-04T04:12:11Z [sg236] Received 8192 bytes of sc0006ag.x00 (343.4 Bps)
+2023-05-04T04:12:11Z [sg236] OK
+2023-05-04T04:12:13Z [sg236] Receiving 3072 bytes of sc0006ag.x01
+2023-05-04T04:12:21Z [sg236] Received 3072 bytes of sc0006ag.x01 (345.2 Bps)
+2023-05-04T04:12:21Z [sg236] OK
+2023-05-04T04:12:23Z [sg236] Receiving 8192 bytes of sc0006bg.x00
+2023-05-04T04:12:47Z [sg236] Received 8192 bytes of sc0006bg.x00 (343.4 Bps)
+2023-05-04T04:12:47Z [sg236] OK
+2023-05-04T04:12:48Z [sg236] Receiving 3072 bytes of sc0006bg.x01
+2023-05-04T04:12:57Z [sg236] Received 3072 bytes of sc0006bg.x01 (345.3 Bps)
+2023-05-04T04:12:57Z [sg236] OK
+6:0:2:0:2:35:1 logout
+Disconnected at 2023-05-04T04:12:59Z (normal)
+
+
+Connected at 2023-05-04T07:56:43Z (sg236)
+logged in
+7:0:1:0:2:35:0:182:2124:632:-66.40:1.21:8.39:14.95:14.90:8.66:47.12 GPS,040523,075526,4655.763,-12508.429,31,0.8,33,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.370117,-12503.656250,040523,041022
+2023-05-04T07:56:53Z [sg236] Sending 175 bytes of cmdfile
+2023-05-04T07:56:53Z [sg236] Sent 175 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-04T07:56:58Z [sg236] ready to receive 3 files
+2023-05-04T07:57:00Z [sg236] Receiving 8192 bytes of sg0007dz.x00
+2023-05-04T07:57:23Z [sg236] Received 8192 bytes of sg0007dz.x00 (344.7 Bps)
+2023-05-04T07:57:23Z [sg236] OK
+2023-05-04T07:57:25Z [sg236] Receiving 7051 bytes of sg0007dz.x01
+2023-05-04T07:57:46Z [sg236] Received 7051 bytes of sg0007dz.x01 (341.5 Bps)
+2023-05-04T07:57:46Z [sg236] OK
+2023-05-04T07:57:47Z [sg236] Receiving 6926 bytes of sg0007lz.x
+2023-05-04T07:58:07Z [sg236] Received 6926 bytes of sg0007lz.x (342.1 Bps)
+2023-05-04T07:58:07Z [sg236] OK
+2023-05-04T07:58:10Z [sg236] ready to receive 4 files
+2023-05-04T07:58:11Z [sg236] Receiving 8192 bytes of sc0007ag.x00
+2023-05-04T07:58:35Z [sg236] Received 8192 bytes of sc0007ag.x00 (344.6 Bps)
+2023-05-04T07:58:35Z [sg236] OK
+2023-05-04T07:58:37Z [sg236] Receiving 3072 bytes of sc0007ag.x01
+2023-05-04T07:58:46Z [sg236] Received 3072 bytes of sc0007ag.x01 (337.7 Bps)
+2023-05-04T07:58:46Z [sg236] OK
+2023-05-04T07:58:47Z [sg236] Receiving 8192 bytes of sc0007bg.x00
+2023-05-04T07:59:11Z [sg236] Received 8192 bytes of sc0007bg.x00 (344.6 Bps)
+2023-05-04T07:59:11Z [sg236] OK
+2023-05-04T07:59:12Z [sg236] Receiving 3200 bytes of sc0007bg.x01
+2023-05-04T07:59:22Z [sg236] Received 3200 bytes of sc0007bg.x01 (344.3 Bps)
+2023-05-04T07:59:22Z [sg236] OK
+7:0:1:0:2:35:1 logout
+Disconnected at 2023-05-04T07:59:27Z (normal)
+
+
+Connected at 2023-05-04T11:50:47Z (sg236)
+logged in
+8:0:1:0:2:35:0:183:2074:633:-65.34:1.30:8.34:14.95:14.89:8.65:47.02 GPS,040523,114928,4656.080,-12511.286,30,1.1,31,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.987305,-12506.237305,040523,075635
+2023-05-04T11:50:56Z [sg236] Sending 175 bytes of cmdfile
+2023-05-04T11:50:56Z [sg236] Sent 175 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-04T11:51:00Z [sg236] ready to receive 3 files
+2023-05-04T11:51:02Z [sg236] Receiving 8192 bytes of sg0008dz.x00
+2023-05-04T11:51:25Z [sg236] Received 8192 bytes of sg0008dz.x00 (344.5 Bps)
+2023-05-04T11:51:25Z [sg236] OK
+2023-05-04T11:51:27Z [sg236] Receiving 7714 bytes of sg0008dz.x01
+2023-05-04T11:51:49Z [sg236] Received 7714 bytes of sg0008dz.x01 (341.1 Bps)
+2023-05-04T11:51:49Z [sg236] OK
+2023-05-04T11:51:51Z [sg236] Receiving 6988 bytes of sg0008lz.x
+2023-05-04T11:52:11Z [sg236] Received 6988 bytes of sg0008lz.x (344.1 Bps)
+2023-05-04T11:52:11Z [sg236] OK
+2023-05-04T11:52:13Z [sg236] ready to receive 4 files
+2023-05-04T11:52:14Z [sg236] Receiving 8192 bytes of sc0008ag.x00
+2023-05-04T11:52:38Z [sg236] Received 8192 bytes of sc0008ag.x00 (343.3 Bps)
+2023-05-04T11:52:38Z [sg236] OK
+2023-05-04T11:52:39Z [sg236] Receiving 3072 bytes of sc0008ag.x01
+2023-05-04T11:52:48Z [sg236] Received 3072 bytes of sc0008ag.x01 (345.3 Bps)
+2023-05-04T11:52:48Z [sg236] OK
+2023-05-04T11:52:50Z [sg236] Receiving 8192 bytes of sc0008bg.x00
+2023-05-04T11:53:13Z [sg236] Received 8192 bytes of sc0008bg.x00 (345.3 Bps)
+2023-05-04T11:53:13Z [sg236] OK
+2023-05-04T11:53:15Z [sg236] Receiving 4096 bytes of sc0008bg.x01
+2023-05-04T11:53:26Z [sg236] Received 4096 bytes of sc0008bg.x01 (344.6 Bps)
+2023-05-04T11:53:26Z [sg236] OK
+8:0:1:0:2:35:1 logout
+Disconnected at 2023-05-04T11:53:29Z (normal)
+
+
+Connected at 2023-05-04T16:41:14Z (sg236)
+logged in
+9:0:1:0:2:35:0:182:2126:633:-56.40:1.06:8.04:15.00:14.94:8.64:46.88 GPS,040523,164000,4656.210,-12515.583,25,1.1,25,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.844727,-12510.630859,040523,115038
+2023-05-04T16:41:27Z [sg236] Sending 225 bytes of cmdfile
+2023-05-04T16:41:27Z [sg236] Sent 225 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-04T16:41:35Z [sg236] Sending 94 bytes of scicon.sch
+2023-05-04T16:41:35Z [sg236] Sent 94 bytes of scicon.sch
+2023-05-04T16:41:37Z [sg236] ready to receive 4 files
+2023-05-04T16:41:39Z [sg236] Receiving 8192 bytes of sg0009dz.x00
+2023-05-04T16:42:05Z [sg236] Received 8192 bytes of sg0009dz.x00 (312.9 Bps)
+2023-05-04T16:42:05Z [sg236] OK
+2023-05-04T16:42:06Z [sg236] Receiving 8192 bytes of sg0009dz.x01
+2023-05-04T16:42:30Z [sg236] Received 8192 bytes of sg0009dz.x01 (340.7 Bps)
+2023-05-04T16:42:30Z [sg236] OK
+2023-05-04T16:42:31Z [sg236] Receiving 1856 bytes of sg0009dz.x02
+2023-05-04T16:42:38Z [sg236] Received 1856 bytes of sg0009dz.x02 (278.7 Bps)
+2023-05-04T16:42:38Z [sg236] OK
+2023-05-04T16:42:39Z [sg236] Receiving 7465 bytes of sg0009lz.x
+2023-05-04T16:43:02Z [sg236] Received 7465 bytes of sg0009lz.x (318.6 Bps)
+2023-05-04T16:43:02Z [sg236] OK
+2023-05-04T16:43:05Z [sg236] ready to receive 4 files
+2023-05-04T16:43:06Z [sg236] Receiving 8192 bytes of sc0009ag.x00
+2023-05-04T16:43:30Z [sg236] Received 8192 bytes of sc0009ag.x00 (343.2 Bps)
+2023-05-04T16:43:30Z [sg236] OK
+2023-05-04T16:43:31Z [sg236] Receiving 5120 bytes of sc0009ag.x01
+2023-05-04T16:43:46Z [sg236] Received 5120 bytes of sc0009ag.x01 (342.9 Bps)
+2023-05-04T16:43:46Z [sg236] OK
+2023-05-04T16:43:47Z [sg236] Receiving 8192 bytes of sc0009bg.x00
+2023-05-04T16:44:11Z [sg236] Received 8192 bytes of sc0009bg.x00 (344.4 Bps)
+2023-05-04T16:44:11Z [sg236] OK
+2023-05-04T16:44:12Z [sg236] Receiving 2176 bytes of sc0009bg.x01
+2023-05-04T16:44:18Z [sg236] Received 2176 bytes of sc0009bg.x01 (346.0 Bps)
+2023-05-04T16:44:18Z [sg236] OK
+9:0:1:0:2:35:1 logout
+Disconnected at 2023-05-04T16:44:20Z (normal)
+
+
+Connected at 2023-05-04T22:24:39Z (sg236)
+logged in
+10:0:1:0:2:35:0:180:2078:633:-67.24:1.16:8.21:14.93:14.89:8.65:46.70 GPS,040523,222304,4657.017,-12519.087,19,1.9,23,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4654.837891,-12517.600586,040523,164109
+2023-05-04T22:24:50Z [sg236] Sending 236 bytes of cmdfile
+2023-05-04T22:24:50Z [sg236] Sent 236 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-04T22:24:55Z [sg236] ready to receive 4 files
+2023-05-04T22:24:56Z [sg236] Receiving 8192 bytes of sg0010dz.x00
+2023-05-04T22:25:20Z [sg236] Received 8192 bytes of sg0010dz.x00 (344.5 Bps)
+2023-05-04T22:25:20Z [sg236] OK
+2023-05-04T22:25:24Z [sg236] Receiving 8192 bytes of sg0010dz.x01
+2023-05-04T22:25:48Z [sg236] Received 8192 bytes of sg0010dz.x01 (344.9 Bps)
+2023-05-04T22:25:48Z [sg236] OK
+2023-05-04T22:25:49Z [sg236] Receiving 4789 bytes of sg0010dz.x02
+2023-05-04T22:26:03Z [sg236] Received 4789 bytes of sg0010dz.x02 (343.3 Bps)
+2023-05-04T22:26:03Z [sg236] OK
+2023-05-04T22:26:04Z [sg236] Receiving 8144 bytes of sg0010lz.x
+2023-05-04T22:26:28Z [sg236] Received 8144 bytes of sg0010lz.x (344.1 Bps)
+2023-05-04T22:26:28Z [sg236] OK
+2023-05-04T22:26:30Z [sg236] ready to receive 6 files
+2023-05-04T22:26:31Z [sg236] Receiving 8192 bytes of sc0010ag.x00
+2023-05-04T22:26:55Z [sg236] Received 8192 bytes of sc0010ag.x00 (344.3 Bps)
+2023-05-04T22:26:55Z [sg236] OK
+2023-05-04T22:26:56Z [sg236] Receiving 8192 bytes of sc0010ag.x01
+2023-05-04T22:27:20Z [sg236] Received 8192 bytes of sc0010ag.x01 (344.4 Bps)
+2023-05-04T22:27:20Z [sg236] OK
+2023-05-04T22:27:21Z [sg236] Receiving 5120 bytes of sc0010ag.x02
+2023-05-04T22:27:36Z [sg236] Received 5120 bytes of sc0010ag.x02 (345.5 Bps)
+2023-05-04T22:27:36Z [sg236] OK
+2023-05-04T22:27:37Z [sg236] Receiving 8192 bytes of sc0010bg.x00
+2023-05-04T22:28:06Z [sg236] Received 8192 bytes of sc0010bg.x00 (285.2 Bps)
+2023-05-04T22:28:06Z [sg236] OK
+2023-05-04T22:28:10Z [sg236] Receiving 8192 bytes of sc0010bg.x01
+2023-05-04T22:28:35Z [sg236] Received 8192 bytes of sc0010bg.x01 (321.4 Bps)
+2023-05-04T22:28:35Z [sg236] OK
+2023-05-04T22:28:36Z [sg236] Receiving 1024 bytes of sc0010bg.x02
+2023-05-04T22:28:40Z [sg236] Received 1024 bytes of sc0010bg.x02 (270.3 Bps)
+2023-05-04T22:28:40Z [sg236] OK
+10:0:1:0:2:35:1 logout
+Disconnected at 2023-05-04T22:28:45Z (normal)
+
+
+Connected at 2023-05-05T04:48:15Z (sg236)
+logged in
+11:0:2:0:2:35:-2:182:2124:531:-62.70:1.11:8.27:15.00:15.47:8.64:46.46 GPS,050523,044531,4657.370,-12519.396,30,0.7,32,15.6
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.312500,-12517.600586,040523,222432
+2023-05-05T04:48:23Z [sg236] Sending 236 bytes of cmdfile
+2023-05-05T04:48:23Z [sg236] Sent 236 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-05T04:48:28Z [sg236] ready to receive 3 files
+2023-05-05T04:48:29Z [sg236] Receiving 8192 bytes of sg0011dz.x00
+2023-05-05T04:48:53Z [sg236] Received 8192 bytes of sg0011dz.x00 (344.5 Bps)
+2023-05-05T04:48:53Z [sg236] OK
+2023-05-05T04:48:54Z [sg236] Receiving 7973 bytes of sg0011dz.x01
+2023-05-05T04:49:17Z [sg236] Received 7973 bytes of sg0011dz.x01 (343.5 Bps)
+2023-05-05T04:49:17Z [sg236] OK
+2023-05-05T04:49:19Z [sg236] Receiving 5630 bytes of sg0011lz.x
+2023-05-05T04:49:35Z [sg236] Received 5630 bytes of sg0011lz.x (344.2 Bps)
+2023-05-05T04:49:35Z [sg236] OK
+2023-05-05T04:49:37Z [sg236] ready to receive 4 files
+2023-05-05T04:49:38Z [sg236] Receiving 8192 bytes of sc0011ag.x00
+2023-05-05T04:50:02Z [sg236] Received 8192 bytes of sc0011ag.x00 (344.5 Bps)
+2023-05-05T04:50:02Z [sg236] OK
+2023-05-05T04:50:03Z [sg236] Receiving 8192 bytes of sc0011ag.x01
+2023-05-05T04:50:27Z [sg236] Received 8192 bytes of sc0011ag.x01 (343.5 Bps)
+2023-05-05T04:50:27Z [sg236] OK
+2023-05-05T04:50:29Z [sg236] Receiving 5248 bytes of sc0011ag.x02
+2023-05-05T04:50:44Z [sg236] Received 5248 bytes of sc0011ag.x02 (344.6 Bps)
+2023-05-05T04:50:44Z [sg236] OK
+2023-05-05T04:50:45Z [sg236] Receiving 1024 bytes of sc0011bg.x
+2023-05-05T04:50:48Z [sg236] Received 1024 bytes of sc0011bg.x (344.1 Bps)
+2023-05-05T04:50:48Z [sg236] OK
+11:0:2:0:2:35:1 logout
+Disconnected at 2023-05-05T04:50:50Z (normal)
+
+
+Connected at 2023-05-05T04:53:36Z (sg236)
+logged in
+11:1:1:0:2:35:0:181:2125:537:-53.22:0.95:8.62:15.00:15.32:8.66:46.74 GPS,050523,045257,4657.396,-12519.370,1,0.7,2,15.6
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.601074,-12519.423828,050523,044808
+Disconnected at 2023-05-05T04:53:50Z (hangup)
+
+
+Connected at 2023-05-05T04:56:38Z (sg236)
+logged in
+11:2:1:0:2:35:0:181:2124:537:-60.17:1.12:8.75:15.00:15.34:8.66:46.72 GPS,050523,045601,4657.406,-12519.357,1,0.9,2,15.6
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.312500,-12517.600586,050523,045328
+2023-05-05T04:56:47Z [sg236] Sending 240 bytes of cmdfile
+2023-05-05T04:56:47Z [sg236] Sent 240 bytes of cmdfile
+Parsed RESUME from cmdfile
+11:2:1:0:2:35:1 logout
+Disconnected at 2023-05-05T04:56:52Z (normal)
+
+
+Connected at 2023-05-05T11:36:56Z (sg236)
+logged in
+12:0:1:0:2:35:0:182:2070:1365:-60.72:1.38:8.23:15.00:15.08:8.69:46.75 GPS,050523,113531,4658.038,-12521.329,31,0.8,32,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.601074,-12519.423828,050523,045633
+2023-05-05T11:37:04Z [sg236] Sending 236 bytes of cmdfile
+2023-05-05T11:37:04Z [sg236] Sent 236 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-05T11:37:09Z [sg236] ready to receive 6 files
+2023-05-05T11:37:10Z [sg236] Receiving 8192 bytes of sg0012dz.x00
+2023-05-05T11:37:35Z [sg236] Received 8192 bytes of sg0012dz.x00 (330.5 Bps)
+2023-05-05T11:37:35Z [sg236] OK
+2023-05-05T11:37:36Z [sg236] Receiving 8192 bytes of sg0012dz.x01
+2023-05-05T11:38:00Z [sg236] Received 8192 bytes of sg0012dz.x01 (343.3 Bps)
+2023-05-05T11:38:00Z [sg236] OK
+2023-05-05T11:38:01Z [sg236] Receiving 8192 bytes of sg0012dz.x02
+2023-05-05T11:38:25Z [sg236] Received 8192 bytes of sg0012dz.x02 (343.5 Bps)
+2023-05-05T11:38:25Z [sg236] OK
+2023-05-05T11:38:26Z [sg236] Receiving 4301 bytes of sg0012dz.x03
+2023-05-05T11:38:39Z [sg236] Received 4301 bytes of sg0012dz.x03 (331.2 Bps)
+2023-05-05T11:38:39Z [sg236] OK
+2023-05-05T11:38:40Z [sg236] Receiving 8192 bytes of sg0012lz.x00
+2023-05-05T11:39:04Z [sg236] Received 8192 bytes of sg0012lz.x00 (341.9 Bps)
+2023-05-05T11:39:04Z [sg236] OK
+2023-05-05T11:39:06Z [sg236] Receiving 246 bytes of sg0012lz.x01
+2023-05-05T11:39:06Z [sg236] Received 246 bytes of sg0012lz.x01 (358.1 Bps)
+2023-05-05T11:39:06Z [sg236] OK
+2023-05-05T11:39:09Z [sg236] ready to receive 6 files
+2023-05-05T11:39:10Z [sg236] Receiving 8192 bytes of sc0012ag.x00
+2023-05-05T11:39:34Z [sg236] Received 8192 bytes of sc0012ag.x00 (341.0 Bps)
+2023-05-05T11:39:34Z [sg236] OK
+2023-05-05T11:39:35Z [sg236] Receiving 8192 bytes of sc0012ag.x01
+2023-05-05T11:40:02Z [sg236] Received 8192 bytes of sc0012ag.x01 (305.7 Bps)
+2023-05-05T11:40:02Z [sg236] OK
+2023-05-05T11:40:03Z [sg236] Receiving 5120 bytes of sc0012ag.x02
+2023-05-05T11:40:18Z [sg236] Received 5120 bytes of sc0012ag.x02 (344.7 Bps)
+2023-05-05T11:40:18Z [sg236] OK
+2023-05-05T11:40:19Z [sg236] Receiving 8192 bytes of sc0012bg.x00
+2023-05-05T11:40:46Z [sg236] Received 8192 bytes of sc0012bg.x00 (305.4 Bps)
+2023-05-05T11:40:46Z [sg236] OK
+2023-05-05T11:40:47Z [sg236] Receiving 8192 bytes of sc0012bg.x01
+2023-05-05T11:41:14Z [sg236] Received 8192 bytes of sc0012bg.x01 (301.3 Bps)
+2023-05-05T11:41:14Z [sg236] OK
+2023-05-05T11:41:16Z [sg236] Receiving 5120 bytes of sc0012bg.x02
+2023-05-05T11:41:34Z [sg236] Received 5120 bytes of sc0012bg.x02 (276.2 Bps)
+2023-05-05T11:41:34Z [sg236] OK
+12:0:1:0:2:35:1 logout
+Disconnected at 2023-05-05T11:41:37Z (normal)
+
+
+Connected at 2023-05-05T18:55:48Z (sg236)
+logged in
+13:0:1:0:2:35:0:183:2072:1365:-71.70:1.61:8.06:15.00:15.07:8.69:46.70 GPS,050523,185417,4657.100,-12523.130,54,1.6,71,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.601074,-12519.423828,050523,113649
+2023-05-05T18:55:58Z [sg236] Sending 236 bytes of cmdfile
+2023-05-05T18:55:58Z [sg236] Sent 236 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-05T18:56:03Z [sg236] ready to receive 6 files
+2023-05-05T18:56:04Z [sg236] Receiving 8192 bytes of sg0013dz.x00
+2023-05-05T18:56:28Z [sg236] Received 8192 bytes of sg0013dz.x00 (345.2 Bps)
+2023-05-05T18:56:28Z [sg236] OK
+2023-05-05T18:56:30Z [sg236] Receiving 8192 bytes of sg0013dz.x01
+2023-05-05T18:56:53Z [sg236] Received 8192 bytes of sg0013dz.x01 (344.5 Bps)
+2023-05-05T18:56:53Z [sg236] OK
+2023-05-05T18:56:55Z [sg236] Receiving 8192 bytes of sg0013dz.x02
+2023-05-05T18:57:19Z [sg236] Received 8192 bytes of sg0013dz.x02 (335.9 Bps)
+2023-05-05T18:57:19Z [sg236] OK
+2023-05-05T18:57:21Z [sg236] Receiving 4990 bytes of sg0013dz.x03
+2023-05-05T18:57:35Z [sg236] Received 4990 bytes of sg0013dz.x03 (345.0 Bps)
+2023-05-05T18:57:35Z [sg236] OK
+2023-05-05T18:57:36Z [sg236] Receiving 8192 bytes of sg0013lz.x00
+2023-05-05T18:58:00Z [sg236] Received 8192 bytes of sg0013lz.x00 (344.6 Bps)
+2023-05-05T18:58:00Z [sg236] OK
+2023-05-05T18:58:02Z [sg236] Receiving 738 bytes of sg0013lz.x01
+2023-05-05T18:58:04Z [sg236] Received 738 bytes of sg0013lz.x01 (347.8 Bps)
+2023-05-05T18:58:04Z [sg236] OK
+2023-05-05T18:58:06Z [sg236] ready to receive 6 files
+2023-05-05T18:58:08Z [sg236] Receiving 8192 bytes of sc0013ag.x00
+2023-05-05T18:58:32Z [sg236] Received 8192 bytes of sc0013ag.x00 (337.2 Bps)
+2023-05-05T18:58:32Z [sg236] OK
+2023-05-05T18:58:34Z [sg236] Receiving 8192 bytes of sc0013ag.x01
+2023-05-05T18:58:57Z [sg236] Received 8192 bytes of sc0013ag.x01 (344.9 Bps)
+2023-05-05T18:58:57Z [sg236] OK
+2023-05-05T18:58:59Z [sg236] Receiving 7168 bytes of sc0013ag.x02
+2023-05-05T18:59:19Z [sg236] Received 7168 bytes of sc0013ag.x02 (344.8 Bps)
+2023-05-05T18:59:19Z [sg236] OK
+2023-05-05T18:59:21Z [sg236] Receiving 8192 bytes of sc0013bg.x00
+2023-05-05T18:59:45Z [sg236] Received 8192 bytes of sc0013bg.x00 (344.6 Bps)
+2023-05-05T18:59:45Z [sg236] OK
+2023-05-05T18:59:46Z [sg236] Receiving 8192 bytes of sc0013bg.x01
+2023-05-05T19:00:10Z [sg236] Received 8192 bytes of sc0013bg.x01 (345.3 Bps)
+2023-05-05T19:00:10Z [sg236] OK
+2023-05-05T19:00:14Z [sg236] Receiving 3072 bytes of sc0013bg.x02
+2023-05-05T19:00:23Z [sg236] Received 3072 bytes of sc0013bg.x02 (346.5 Bps)
+2023-05-05T19:00:23Z [sg236] OK
+13:0:1:0:2:35:1 logout
+Disconnected at 2023-05-05T19:00:28Z (normal)
+
+
+Connected at 2023-05-06T01:12:58Z (sg236)
+logged in
+14:0:1:0:2:35:0:182:2123:1367:-58.70:1.21:8.13:15.00:15.20:8.68:46.68 GPS,060523,011131,4657.151,-12525.776,77,0.8,99,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.687500,-12521.997070,050523,185541
+2023-05-06T01:13:07Z [sg236] Sending 238 bytes of cmdfile
+2023-05-06T01:13:07Z [sg236] Sent 238 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-06T01:13:12Z [sg236] ready to receive 5 files
+2023-05-06T01:13:13Z [sg236] Receiving 8192 bytes of sg0014dz.x00
+2023-05-06T01:13:37Z [sg236] Received 8192 bytes of sg0014dz.x00 (344.7 Bps)
+2023-05-06T01:13:37Z [sg236] OK
+2023-05-06T01:13:38Z [sg236] Receiving 8192 bytes of sg0014dz.x01
+2023-05-06T01:14:02Z [sg236] Received 8192 bytes of sg0014dz.x01 (345.0 Bps)
+2023-05-06T01:14:02Z [sg236] OK
+2023-05-06T01:14:03Z [sg236] Receiving 8192 bytes of sg0014dz.x02
+2023-05-06T01:14:27Z [sg236] Received 8192 bytes of sg0014dz.x02 (343.8 Bps)
+2023-05-06T01:14:27Z [sg236] OK
+2023-05-06T01:14:28Z [sg236] Receiving 1103 bytes of sg0014dz.x03
+2023-05-06T01:14:31Z [sg236] Received 1103 bytes of sg0014dz.x03 (342.9 Bps)
+2023-05-06T01:14:31Z [sg236] OK
+2023-05-06T01:14:33Z [sg236] Receiving 8154 bytes of sg0014lz.x
+2023-05-06T01:14:56Z [sg236] Received 8154 bytes of sg0014lz.x (344.9 Bps)
+2023-05-06T01:14:56Z [sg236] OK
+2023-05-06T01:14:59Z [sg236] ready to receive 6 files
+2023-05-06T01:15:00Z [sg236] Receiving 8192 bytes of sc0014ag.x00
+2023-05-06T01:15:24Z [sg236] Received 8192 bytes of sc0014ag.x00 (344.7 Bps)
+2023-05-06T01:15:24Z [sg236] OK
+2023-05-06T01:15:25Z [sg236] Receiving 8192 bytes of sc0014ag.x01
+2023-05-06T01:15:49Z [sg236] Received 8192 bytes of sc0014ag.x01 (344.6 Bps)
+2023-05-06T01:15:49Z [sg236] OK
+2023-05-06T01:15:50Z [sg236] Receiving 7168 bytes of sc0014ag.x02
+2023-05-06T01:16:11Z [sg236] Received 7168 bytes of sc0014ag.x02 (344.6 Bps)
+2023-05-06T01:16:11Z [sg236] OK
+2023-05-06T01:16:12Z [sg236] Receiving 8192 bytes of sc0014bg.x00
+2023-05-06T01:16:36Z [sg236] Received 8192 bytes of sc0014bg.x00 (344.2 Bps)
+2023-05-06T01:16:36Z [sg236] OK
+2023-05-06T01:16:37Z [sg236] Receiving 8192 bytes of sc0014bg.x01
+2023-05-06T01:17:01Z [sg236] Received 8192 bytes of sc0014bg.x01 (344.5 Bps)
+2023-05-06T01:17:01Z [sg236] OK
+2023-05-06T01:17:02Z [sg236] Receiving 7168 bytes of sc0014bg.x02
+2023-05-06T01:17:23Z [sg236] Received 7168 bytes of sc0014bg.x02 (343.3 Bps)
+2023-05-06T01:17:23Z [sg236] OK
+14:0:1:0:2:35:1 logout
+Disconnected at 2023-05-06T01:17:28Z (normal)
+
+
+Connected at 2023-05-06T01:18:15Z (sg236)
+logged in
+14:1:1:0:2:35:0:181:2123:1368:-65.62:1.27:8.36:15.00:15.05:8.70:46.67 GPS,060523,011736,4657.167,-12525.767,0,0.8,2,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.059570,-12526.394531,060523,011251
+2023-05-06T01:18:26Z [sg236] Sending 238 bytes of cmdfile
+2023-05-06T01:18:26Z [sg236] Sent 238 bytes of cmdfile
+Parsed QUIT from cmdfile
+14:1:1:0:2:35:1 logout
+Disconnected at 2023-05-06T01:18:30Z (normal)
+
+
+Connected at 2023-05-06T01:21:19Z (sg236)
+logged in
+14:2:1:0:2:35:0:182:2123:1369:-68.30:1.32:8.46:15.00:15.11:8.70:46.67 GPS,060523,012037,4657.175,-12525.765,1,0.8,2,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.059570,-12526.394531,060523,011810
+2023-05-06T01:21:28Z [sg236] Sending 238 bytes of cmdfile
+2023-05-06T01:21:28Z [sg236] Sent 238 bytes of cmdfile
+Parsed QUIT from cmdfile
+14:2:1:0:2:35:1 logout
+Disconnected at 2023-05-06T01:21:33Z (normal)
+
+
+Connected at 2023-05-06T01:24:36Z (sg236)
+logged in
+14:3:1:0:2:35:0:182:2123:1369:-63.43:1.32:8.52:15.00:15.15:8.71:46.70 GPS,060523,012341,4657.184,-12525.761,1,0.8,2,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.059570,-12526.394531,060523,012112
+2023-05-06T01:24:45Z [sg236] Sending 240 bytes of cmdfile
+2023-05-06T01:24:45Z [sg236] Sent 240 bytes of cmdfile
+Parsed RESUME from cmdfile
+14:3:1:0:2:35:1 logout
+Disconnected at 2023-05-06T01:24:50Z (normal)
+
+
+Connected at 2023-05-06T06:53:07Z (sg236)
+logged in
+15:0:2:0:2:35:-3:182:2075:1366:-69.04:1.58:8.09:15.00:15.12:8.68:46.69 GPS,060523,064939,4656.191,-12527.887,26,1.1,26,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4657.059570,-12526.394531,060523,065104
+2023-05-06T06:53:18Z [sg236] Sending 236 bytes of cmdfile
+2023-05-06T06:53:18Z [sg236] Sent 236 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-06T06:53:30Z [sg236] ready to receive 4 files
+2023-05-06T06:53:33Z [sg236] Receiving 8192 bytes of sg0015dz.x00
+2023-05-06T06:53:57Z [sg236] Received 8192 bytes of sg0015dz.x00 (345.2 Bps)
+2023-05-06T06:53:57Z [sg236] OK
+2023-05-06T06:53:58Z [sg236] Receiving 8192 bytes of sg0015dz.x01
+2023-05-06T06:54:22Z [sg236] Received 8192 bytes of sg0015dz.x01 (344.8 Bps)
+2023-05-06T06:54:22Z [sg236] OK
+2023-05-06T06:54:23Z [sg236] Receiving 4117 bytes of sg0015dz.x02
+2023-05-06T06:54:35Z [sg236] Received 4117 bytes of sg0015dz.x02 (344.6 Bps)
+2023-05-06T06:54:35Z [sg236] OK
+2023-05-06T06:54:36Z [sg236] Receiving 7855 bytes of sg0015lz.x
+2023-05-06T06:54:59Z [sg236] Received 7855 bytes of sg0015lz.x (343.8 Bps)
+2023-05-06T06:54:59Z [sg236] OK
+2023-05-06T06:55:01Z [sg236] ready to receive 5 files
+2023-05-06T06:55:02Z [sg236] Receiving 8192 bytes of sc0015ag.x00
+2023-05-06T06:55:26Z [sg236] Received 8192 bytes of sc0015ag.x00 (344.7 Bps)
+2023-05-06T06:55:26Z [sg236] OK
+2023-05-06T06:55:27Z [sg236] Receiving 8192 bytes of sc0015ag.x01
+2023-05-06T06:55:51Z [sg236] Received 8192 bytes of sc0015ag.x01 (343.2 Bps)
+2023-05-06T06:55:51Z [sg236] OK
+2023-05-06T06:55:52Z [sg236] Receiving 4096 bytes of sc0015ag.x02
+2023-05-06T06:56:04Z [sg236] Received 4096 bytes of sc0015ag.x02 (343.8 Bps)
+2023-05-06T06:56:04Z [sg236] OK
+2023-05-06T06:56:05Z [sg236] Receiving 8192 bytes of sc0015bg.x00
+2023-05-06T06:56:29Z [sg236] Received 8192 bytes of sc0015bg.x00 (344.9 Bps)
+2023-05-06T06:56:29Z [sg236] OK
+2023-05-06T06:56:30Z [sg236] Receiving 7296 bytes of sc0015bg.x01
+2023-05-06T06:56:52Z [sg236] Received 7296 bytes of sc0015bg.x01 (343.2 Bps)
+2023-05-06T06:56:52Z [sg236] OK
+15:0:2:0:2:35:1 logout
+Disconnected at 2023-05-06T06:56:54Z (normal)
+
+
+Connected at 2023-05-06T12:18:31Z (sg236)
+logged in
+16:0:1:0:2:35:0:182:2124:1365:-64.71:1.51:8.13:15.00:15.11:8.69:46.74 GPS,060523,121706,4656.664,-12531.027,50,1.2,53,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.144043,-12528.961914,060523,065301
+2023-05-06T12:18:39Z [sg236] Sending 236 bytes of cmdfile
+2023-05-06T12:18:39Z [sg236] Sent 236 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-06T12:18:44Z [sg236] ready to receive 4 files
+2023-05-06T12:18:45Z [sg236] Receiving 8192 bytes of sg0016dz.x00
+2023-05-06T12:19:09Z [sg236] Received 8192 bytes of sg0016dz.x00 (344.6 Bps)
+2023-05-06T12:19:09Z [sg236] OK
+2023-05-06T12:19:10Z [sg236] Receiving 8192 bytes of sg0016dz.x01
+2023-05-06T12:19:34Z [sg236] Received 8192 bytes of sg0016dz.x01 (344.6 Bps)
+2023-05-06T12:19:34Z [sg236] OK
+2023-05-06T12:19:35Z [sg236] Receiving 5294 bytes of sg0016dz.x02
+2023-05-06T12:19:50Z [sg236] Received 5294 bytes of sg0016dz.x02 (344.7 Bps)
+2023-05-06T12:19:50Z [sg236] OK
+2023-05-06T12:19:52Z [sg236] Receiving 7982 bytes of sg0016lz.x
+2023-05-06T12:20:15Z [sg236] Received 7982 bytes of sg0016lz.x (344.2 Bps)
+2023-05-06T12:20:15Z [sg236] OK
+2023-05-06T12:20:17Z [sg236] ready to receive 5 files
+2023-05-06T12:20:18Z [sg236] Receiving 8192 bytes of sc0016ag.x00
+2023-05-06T12:20:42Z [sg236] Received 8192 bytes of sc0016ag.x00 (339.4 Bps)
+2023-05-06T12:20:42Z [sg236] OK
+2023-05-06T12:20:44Z [sg236] Receiving 8192 bytes of sc0016ag.x01
+2023-05-06T12:21:07Z [sg236] Received 8192 bytes of sc0016ag.x01 (344.4 Bps)
+2023-05-06T12:21:07Z [sg236] OK
+2023-05-06T12:21:09Z [sg236] Receiving 5120 bytes of sc0016ag.x02
+2023-05-06T12:21:24Z [sg236] Received 5120 bytes of sc0016ag.x02 (344.1 Bps)
+2023-05-06T12:21:24Z [sg236] OK
+2023-05-06T12:21:25Z [sg236] Receiving 8192 bytes of sc0016bg.x00
+2023-05-06T12:21:49Z [sg236] Received 8192 bytes of sc0016bg.x00 (344.9 Bps)
+2023-05-06T12:21:49Z [sg236] OK
+2023-05-06T12:21:50Z [sg236] Receiving 7296 bytes of sc0016bg.x01
+2023-05-06T12:22:11Z [sg236] Received 7296 bytes of sc0016bg.x01 (344.3 Bps)
+2023-05-06T12:22:11Z [sg236] OK
+16:0:1:0:2:35:1 logout
+Disconnected at 2023-05-06T12:22:13Z (normal)
+
+
+Connected at 2023-05-06T17:31:12Z (sg236)
+logged in
+17:0:1:0:2:35:0:183:2120:1365:-63.59:1.22:8.05:15.00:15.17:8.68:46.63 GPS,060523,172941,4656.825,-12534.249,54,1.1,57,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.059570,-12526.394531,060523,121826
+2023-05-06T17:31:30Z [sg236] Sending 261 bytes of cmdfile
+2023-05-06T17:31:30Z [sg236] Sent 261 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-06T17:31:35Z [sg236] ready to receive 4 files
+2023-05-06T17:31:37Z [sg236] Receiving 8192 bytes of sg0017dz.x00
+2023-05-06T17:32:00Z [sg236] Received 8192 bytes of sg0017dz.x00 (344.3 Bps)
+2023-05-06T17:32:00Z [sg236] OK
+2023-05-06T17:32:02Z [sg236] Receiving 8192 bytes of sg0017dz.x01
+2023-05-06T17:32:25Z [sg236] Received 8192 bytes of sg0017dz.x01 (344.8 Bps)
+2023-05-06T17:32:25Z [sg236] OK
+2023-05-06T17:32:27Z [sg236] Receiving 4651 bytes of sg0017dz.x02
+2023-05-06T17:32:40Z [sg236] Received 4651 bytes of sg0017dz.x02 (344.4 Bps)
+2023-05-06T17:32:40Z [sg236] OK
+2023-05-06T17:32:41Z [sg236] Receiving 7842 bytes of sg0017lz.x
+2023-05-06T17:33:04Z [sg236] Received 7842 bytes of sg0017lz.x (342.9 Bps)
+2023-05-06T17:33:04Z [sg236] OK
+2023-05-06T17:33:07Z [sg236] ready to receive 5 files
+2023-05-06T17:33:08Z [sg236] Receiving 8192 bytes of sc0017ag.x00
+2023-05-06T17:33:32Z [sg236] Received 8192 bytes of sc0017ag.x00 (344.4 Bps)
+2023-05-06T17:33:32Z [sg236] OK
+2023-05-06T17:33:33Z [sg236] Receiving 8192 bytes of sc0017ag.x01
+2023-05-06T17:33:57Z [sg236] Received 8192 bytes of sc0017ag.x01 (343.1 Bps)
+2023-05-06T17:33:57Z [sg236] OK
+2023-05-06T17:33:58Z [sg236] Receiving 4224 bytes of sc0017ag.x02
+2023-05-06T17:34:11Z [sg236] Received 4224 bytes of sc0017ag.x02 (344.8 Bps)
+2023-05-06T17:34:11Z [sg236] OK
+2023-05-06T17:34:12Z [sg236] Receiving 8192 bytes of sc0017bg.x00
+2023-05-06T17:34:36Z [sg236] Received 8192 bytes of sc0017bg.x00 (343.3 Bps)
+2023-05-06T17:34:36Z [sg236] OK
+2023-05-06T17:34:37Z [sg236] Receiving 6144 bytes of sc0017bg.x01
+2023-05-06T17:34:55Z [sg236] Received 6144 bytes of sc0017bg.x01 (344.4 Bps)
+2023-05-06T17:34:55Z [sg236] OK
+17:0:1:0:2:35:1 logout
+Disconnected at 2023-05-06T17:34:57Z (normal)
+
+
+Connected at 2023-05-07T00:26:58Z (sg236)
+logged in
+18:0:1:0:2:35:0:182:2077:1543:-66.86:1.65:8.22:15.00:15.23:8.70:46.62 GPS,070523,002530,4657.638,-12538.664,72,0.8,72,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4659.269043,-12535.195312,060523,173104
+2023-05-07T00:27:06Z [sg236] Sending 261 bytes of cmdfile
+2023-05-07T00:27:06Z [sg236] Sent 261 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-07T00:27:11Z [sg236] ready to receive 5 files
+2023-05-07T00:27:12Z [sg236] Receiving 8192 bytes of sg0018dz.x00
+2023-05-07T00:27:36Z [sg236] Received 8192 bytes of sg0018dz.x00 (344.5 Bps)
+2023-05-07T00:27:36Z [sg236] OK
+2023-05-07T00:27:39Z [sg236] Receiving 8192 bytes of sg0018dz.x01
+2023-05-07T00:28:03Z [sg236] Received 8192 bytes of sg0018dz.x01 (344.9 Bps)
+2023-05-07T00:28:03Z [sg236] OK
+2023-05-07T00:28:04Z [sg236] Receiving 8009 bytes of sg0018dz.x02
+2023-05-07T00:28:28Z [sg236] Received 8009 bytes of sg0018dz.x02 (344.3 Bps)
+2023-05-07T00:28:28Z [sg236] OK
+2023-05-07T00:28:29Z [sg236] Receiving 8192 bytes of sg0018lz.x00
+2023-05-07T00:28:53Z [sg236] Received 8192 bytes of sg0018lz.x00 (341.1 Bps)
+2023-05-07T00:28:53Z [sg236] OK
+2023-05-07T00:28:54Z [sg236] Receiving 774 bytes of sg0018lz.x01
+2023-05-07T00:28:56Z [sg236] Received 774 bytes of sg0018lz.x01 (343.0 Bps)
+2023-05-07T00:28:56Z [sg236] OK
+2023-05-07T00:28:59Z [sg236] ready to receive 6 files
+2023-05-07T00:29:00Z [sg236] Receiving 8192 bytes of sc0018ag.x00
+2023-05-07T00:29:24Z [sg236] Received 8192 bytes of sc0018ag.x00 (344.6 Bps)
+2023-05-07T00:29:24Z [sg236] OK
+2023-05-07T00:29:25Z [sg236] Receiving 8192 bytes of sc0018ag.x01
+2023-05-07T00:29:49Z [sg236] Received 8192 bytes of sc0018ag.x01 (343.6 Bps)
+2023-05-07T00:29:49Z [sg236] OK
+2023-05-07T00:29:50Z [sg236] Receiving 5120 bytes of sc0018ag.x02
+2023-05-07T00:30:05Z [sg236] Received 5120 bytes of sc0018ag.x02 (345.0 Bps)
+2023-05-07T00:30:05Z [sg236] OK
+2023-05-07T00:30:06Z [sg236] Receiving 8192 bytes of sc0018bg.x00
+2023-05-07T00:30:30Z [sg236] Received 8192 bytes of sc0018bg.x00 (335.0 Bps)
+2023-05-07T00:30:30Z [sg236] OK
+2023-05-07T00:30:32Z [sg236] Receiving 8192 bytes of sc0018bg.x01
+2023-05-07T00:30:55Z [sg236] Received 8192 bytes of sc0018bg.x01 (344.6 Bps)
+2023-05-07T00:30:55Z [sg236] OK
+2023-05-07T00:30:57Z [sg236] Receiving 4096 bytes of sc0018bg.x02
+2023-05-07T00:31:09Z [sg236] Received 4096 bytes of sc0018bg.x02 (339.6 Bps)
+2023-05-07T00:31:09Z [sg236] OK
+18:0:1:0:2:35:1 logout
+Disconnected at 2023-05-07T00:31:11Z (normal)
+
+
+Connected at 2023-05-07T07:19:11Z (sg236)
+logged in
+19:0:1:0:2:35:0:182:2080:1409:-63.78:1.49:8.05:15.00:15.16:8.69:46.33 GPS,070523,071739,4657.335,-12542.766,30,0.8,39,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.876465,-12537.759766,070523,002648
+2023-05-07T07:19:26Z [sg236] Sending 260 bytes of cmdfile
+2023-05-07T07:19:26Z [sg236] Sent 260 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-07T07:19:31Z [sg236] ready to receive 5 files
+2023-05-07T07:19:32Z [sg236] Receiving 8192 bytes of sg0019dz.x00
+2023-05-07T07:19:57Z [sg236] Received 8192 bytes of sg0019dz.x00 (338.3 Bps)
+2023-05-07T07:19:57Z [sg236] OK
+2023-05-07T07:19:58Z [sg236] Receiving 8192 bytes of sg0019dz.x01
+2023-05-07T07:20:22Z [sg236] Received 8192 bytes of sg0019dz.x01 (343.8 Bps)
+2023-05-07T07:20:22Z [sg236] OK
+2023-05-07T07:20:23Z [sg236] Receiving 7303 bytes of sg0019dz.x02
+2023-05-07T07:20:45Z [sg236] Received 7303 bytes of sg0019dz.x02 (331.7 Bps)
+2023-05-07T07:20:45Z [sg236] OK
+2023-05-07T07:20:47Z [sg236] Receiving 8192 bytes of sg0019lz.x00
+2023-05-07T07:21:10Z [sg236] Received 8192 bytes of sg0019lz.x00 (344.8 Bps)
+2023-05-07T07:21:10Z [sg236] OK
+2023-05-07T07:21:12Z [sg236] Receiving 510 bytes of sg0019lz.x01
+2023-05-07T07:21:15Z [sg236] Received 510 bytes of sg0019lz.x01 (141.4 Bps)
+2023-05-07T07:21:15Z [sg236] OK
+2023-05-07T07:21:20Z [sg236] ready to receive 6 files
+2023-05-07T07:21:22Z [sg236] Receiving 8192 bytes of sc0019ag.x00
+2023-05-07T07:21:45Z [sg236] Received 8192 bytes of sc0019ag.x00 (343.8 Bps)
+2023-05-07T07:21:45Z [sg236] OK
+2023-05-07T07:21:47Z [sg236] Receiving 8192 bytes of sc0019ag.x01
+2023-05-07T07:22:11Z [sg236] Received 8192 bytes of sc0019ag.x01 (343.6 Bps)
+2023-05-07T07:22:11Z [sg236] OK
+2023-05-07T07:22:12Z [sg236] Receiving 5120 bytes of sc0019ag.x02
+2023-05-07T07:22:27Z [sg236] Received 5120 bytes of sc0019ag.x02 (344.4 Bps)
+2023-05-07T07:22:27Z [sg236] OK
+2023-05-07T07:22:29Z [sg236] Receiving 8192 bytes of sc0019bg.x00
+2023-05-07T07:22:52Z [sg236] Received 8192 bytes of sc0019bg.x00 (342.5 Bps)
+2023-05-07T07:22:52Z [sg236] OK
+2023-05-07T07:22:54Z [sg236] Receiving 8192 bytes of sc0019bg.x01
+2023-05-07T07:23:18Z [sg236] Received 8192 bytes of sc0019bg.x01 (343.4 Bps)
+2023-05-07T07:23:18Z [sg236] OK
+2023-05-07T07:23:19Z [sg236] Receiving 3072 bytes of sc0019bg.x02
+2023-05-07T07:23:28Z [sg236] Received 3072 bytes of sc0019bg.x02 (344.5 Bps)
+2023-05-07T07:23:28Z [sg236] OK
+19:0:1:0:2:35:1 logout
+Disconnected at 2023-05-07T07:23:31Z (normal)
+
+
+Connected at 2023-05-07T14:04:34Z (sg236)
+logged in
+20:0:1:0:2:35:0:180:2121:526:-57.80:1.07:7.74:15.00:15.49:8.62:46.69 GPS,070523,140339,4657.783,-12544.747,14,1.2,15,15.7
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4700.010254,-12642.723633,070523,071904
+2023-05-07T14:04:43Z [sg236] Sending 260 bytes of cmdfile
+2023-05-07T14:04:43Z [sg236] Sent 260 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-07T14:04:48Z [sg236] ready to receive 3 files
+2023-05-07T14:04:49Z [sg236] Receiving 8192 bytes of sg0020dz.x00
+2023-05-07T14:05:13Z [sg236] Received 8192 bytes of sg0020dz.x00 (341.7 Bps)
+2023-05-07T14:05:13Z [sg236] OK
+2023-05-07T14:05:14Z [sg236] Receiving 3037 bytes of sg0020dz.x01
+2023-05-07T14:05:23Z [sg236] Received 3037 bytes of sg0020dz.x01 (345.3 Bps)
+2023-05-07T14:05:23Z [sg236] OK
+2023-05-07T14:05:24Z [sg236] Receiving 5432 bytes of sg0020lz.x
+2023-05-07T14:05:41Z [sg236] Received 5432 bytes of sg0020lz.x (311.1 Bps)
+2023-05-07T14:05:41Z [sg236] OK
+20:0:1:0:2:35:1 logout
+Disconnected at 2023-05-07T14:05:44Z (normal)
+
+
+Connected at 2023-05-07T14:08:48Z (sg236)
+logged in
+20:1:1:0:2:35:0:180:2122:534:-58.74:1.06:7.86:15.00:15.42:8.63:46.65 GPS,070523,140801,4657.770,-12544.705,3,1.1,6,15.7
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.520508,-12544.003906,070523,140429
+2023-05-07T14:08:57Z [sg236] Sending 260 bytes of cmdfile
+2023-05-07T14:08:57Z [sg236] Sent 260 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-07T14:09:02Z [sg236] ready to receive 4 files
+2023-05-07T14:09:04Z [sg236] Receiving 8192 bytes of sc0020ag.x00
+2023-05-07T14:09:27Z [sg236] Received 8192 bytes of sc0020ag.x00 (344.7 Bps)
+2023-05-07T14:09:27Z [sg236] OK
+2023-05-07T14:09:29Z [sg236] Receiving 8192 bytes of sc0020ag.x01
+2023-05-07T14:09:53Z [sg236] Received 8192 bytes of sc0020ag.x01 (342.9 Bps)
+2023-05-07T14:09:53Z [sg236] OK
+2023-05-07T14:09:54Z [sg236] Receiving 2048 bytes of sc0020ag.x02
+2023-05-07T14:10:00Z [sg236] Received 2048 bytes of sc0020ag.x02 (344.7 Bps)
+2023-05-07T14:10:00Z [sg236] OK
+2023-05-07T14:10:01Z [sg236] Receiving 1024 bytes of sc0020bg.x
+2023-05-07T14:10:04Z [sg236] Received 1024 bytes of sc0020bg.x (342.3 Bps)
+2023-05-07T14:10:04Z [sg236] OK
+20:1:1:0:2:35:1 logout
+Disconnected at 2023-05-07T14:10:07Z (normal)
+
+
+Connected at 2023-05-07T14:13:01Z (sg236)
+logged in
+20:2:1:0:2:35:0:180:2122:537:-57.04:1.09:8.03:15.00:15.37:8.64:46.66 GPS,070523,141219,4657.757,-12544.658,3,1.1,8,15.7
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.238281,-12542.161133,070523,140843
+2023-05-07T14:13:10Z [sg236] Sending 260 bytes of cmdfile
+2023-05-07T14:13:10Z [sg236] Sent 260 bytes of cmdfile
+Parsed GO from cmdfile
+20:2:1:0:2:35:1 logout
+Disconnected at 2023-05-07T14:13:15Z (normal)
+
+
+Connected at 2023-05-07T14:16:07Z (sg236)
+logged in
+20:3:1:0:2:35:0:180:2122:538:-62.62:1.24:8.17:15.00:15.36:8.65:46.68 GPS,070523,141524,4657.742,-12544.625,2,1.1,4,15.7
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.597656,-12546.564453,070523,141254
+2023-05-07T14:16:19Z [sg236] Sending 260 bytes of cmdfile
+2023-05-07T14:16:19Z [sg236] Sent 260 bytes of cmdfile
+Parsed GO from cmdfile
+20:3:1:0:2:35:1 logout
+Disconnected at 2023-05-07T14:16:24Z (normal)
+
+
+Connected at 2023-05-07T14:21:23Z (sg236)
+logged in
+20:4:2:0:2:35:-3:180:2122:538:-64.42:1.15:8.32:15.00:15.37:8.66:46.57 GPS,070523,141833,4657.731,-12544.592,1,1.1,4,15.7
+EOP_CODE=ABORT_DEPTH_EXCEEDED
+RECOV_CODE=EXCEEDED_ABORT_DEPTH
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.597656,-12546.564453,070523,141910
+2023-05-07T14:21:32Z [sg236] Sending 264 bytes of cmdfile
+2023-05-07T14:21:32Z [sg236] Sent 264 bytes of cmdfile
+Parsed RESUME from cmdfile
+2023-05-07T14:21:37Z [sg236] Sending 63 bytes of scicon.sch
+2023-05-07T14:21:37Z [sg236] Sent 63 bytes of scicon.sch
+20:4:2:0:2:35:1 logout
+Disconnected at 2023-05-07T14:21:39Z (normal)
+
+
+Connected at 2023-05-07T20:10:53Z (sg236)
+logged in
+21:0:1:0:2:35:0:182:2074:1647:-70.31:1.42:7.96:15.00:15.25:8.70:46.34 GPS,070523,200926,4657.911,-12547.913,72,1.0,103,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.954102,-12550.969727,070523,142115
+2023-05-07T20:11:20Z [sg236] Sending 259 bytes of cmdfile
+2023-05-07T20:11:20Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-07T20:11:25Z [sg236] ready to receive 4 files
+2023-05-07T20:11:26Z [sg236] Receiving 8192 bytes of sg0021dz.x00
+2023-05-07T20:12:00Z [sg236] Received 8192 bytes of sg0021dz.x00 (239.3 Bps)
+2023-05-07T20:12:00Z [sg236] OK
+2023-05-07T20:12:02Z [sg236] Receiving 8192 bytes of sg0021dz.x01
+2023-05-07T20:12:27Z [sg236] Received 8192 bytes of sg0021dz.x01 (324.0 Bps)
+2023-05-07T20:12:27Z [sg236] OK
+2023-05-07T20:12:31Z [sg236] Receiving 5920 bytes of sg0021dz.x02
+2023-05-07T20:12:49Z [sg236] Received 5920 bytes of sg0021dz.x02 (323.1 Bps)
+2023-05-07T20:12:49Z [sg236] OK
+2023-05-07T20:12:50Z [sg236] Receiving 8122 bytes of sg0021lz.x
+2023-05-07T20:13:20Z [sg236] Received 8122 bytes of sg0021lz.x (268.1 Bps)
+2023-05-07T20:13:20Z [sg236] OK
+2023-05-07T20:13:23Z [sg236] ready to receive 4 files
+2023-05-07T20:13:24Z [sg236] Receiving 8192 bytes of sc0021ag.x00
+2023-05-07T20:13:47Z [sg236] Received 8192 bytes of sc0021ag.x00 (343.4 Bps)
+2023-05-07T20:13:47Z [sg236] OK
+2023-05-07T20:13:51Z [sg236] Receiving 3072 bytes of sc0021ag.x01
+2023-05-07T20:14:01Z [sg236] Received 3072 bytes of sc0021ag.x01 (302.3 Bps)
+2023-05-07T20:14:01Z [sg236] OK
+2023-05-07T20:14:02Z [sg236] Receiving 8192 bytes of sc0021bg.x00
+2023-05-07T20:14:36Z [sg236] Received 8192 bytes of sc0021bg.x00 (247.4 Bps)
+2023-05-07T20:14:36Z [sg236] OK
+2023-05-07T20:14:37Z [sg236] Receiving 2048 bytes of sc0021bg.x01
+2023-05-07T20:14:43Z [sg236] Received 2048 bytes of sc0021bg.x01 (345.9 Bps)
+2023-05-07T20:14:43Z [sg236] OK
+21:0:1:0:2:35:1 logout
+Disconnected at 2023-05-07T20:14:45Z (normal)
+
+
+Connected at 2023-05-08T02:07:57Z (sg236)
+logged in
+22:0:1:0:2:35:0:182:2127:1647:-72.66:1.52:7.99:15.00:15.24:8.70:46.19 GPS,080523,020633,4658.538,-12551.982,95,1.9,97,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.597656,-12546.564453,070523,201046
+2023-05-08T02:08:23Z [sg236] Sending 259 bytes of cmdfile
+2023-05-08T02:08:23Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-08T02:08:28Z [sg236] ready to receive 4 files
+2023-05-08T02:08:29Z [sg236] Receiving 8192 bytes of sg0022dz.x00
+2023-05-08T02:09:01Z [sg236] Received 8192 bytes of sg0022dz.x00 (255.4 Bps)
+2023-05-08T02:09:01Z [sg236] OK
+2023-05-08T02:09:02Z [sg236] Receiving 8192 bytes of sg0022dz.x01
+2023-05-08T02:09:27Z [sg236] Received 8192 bytes of sg0022dz.x01 (331.5 Bps)
+2023-05-08T02:09:27Z [sg236] OK
+2023-05-08T02:09:28Z [sg236] Receiving 4857 bytes of sg0022dz.x02
+2023-05-08T02:09:47Z [sg236] Received 4857 bytes of sg0022dz.x02 (260.2 Bps)
+2023-05-08T02:09:47Z [sg236] OK
+2023-05-08T02:09:48Z [sg236] Receiving 7693 bytes of sg0022lz.x
+2023-05-08T02:10:13Z [sg236] Received 7693 bytes of sg0022lz.x (311.1 Bps)
+2023-05-08T02:10:13Z [sg236] OK
+2023-05-08T02:10:17Z [sg236] ready to receive 4 files
+2023-05-08T02:10:21Z [sg236] Receiving 8192 bytes of sc0022ag.x00
+2023-05-08T02:10:45Z [sg236] Received 8192 bytes of sc0022ag.x00 (336.9 Bps)
+2023-05-08T02:10:45Z [sg236] OK
+2023-05-08T02:10:47Z [sg236] Receiving 2048 bytes of sc0022ag.x01
+2023-05-08T02:10:56Z [sg236] Received 2048 bytes of sc0022ag.x01 (221.7 Bps)
+2023-05-08T02:10:56Z [sg236] OK
+2023-05-08T02:11:00Z [sg236] Receiving 8192 bytes of sc0022bg.x00
+2023-05-08T02:11:22Z [sg236] Received 8192 bytes of sc0022bg.x00 (363.9 Bps)
+2023-05-08T02:11:22Z [sg236] OK
+2023-05-08T02:11:23Z [sg236] Receiving 2048 bytes of sc0022bg.x01
+2023-05-08T02:11:31Z [sg236] Received 2048 bytes of sc0022bg.x01 (279.7 Bps)
+2023-05-08T02:11:31Z [sg236] OK
+22:0:1:0:2:35:1 logout
+Disconnected at 2023-05-08T02:11:33Z (normal)
+
+
+Connected at 2023-05-08T07:58:03Z (sg236)
+logged in
+23:0:1:0:2:35:0:182:2128:1575:-65.74:1.66:7.94:15.00:15.22:8.68:46.50 GPS,080523,075639,4658.168,-12555.325,84,1.0,84,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4659.427734,-12550.969727,080523,020751
+2023-05-08T07:58:19Z [sg236] Sending 259 bytes of cmdfile
+2023-05-08T07:58:19Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-08T07:58:24Z [sg236] ready to receive 4 files
+2023-05-08T07:58:26Z [sg236] Receiving 8192 bytes of sg0023dz.x00
+2023-05-08T07:58:49Z [sg236] Received 8192 bytes of sg0023dz.x00 (344.6 Bps)
+2023-05-08T07:58:49Z [sg236] OK
+2023-05-08T07:58:51Z [sg236] Receiving 8192 bytes of sg0023dz.x01
+2023-05-08T07:59:15Z [sg236] Received 8192 bytes of sg0023dz.x01 (333.3 Bps)
+2023-05-08T07:59:15Z [sg236] OK
+2023-05-08T07:59:17Z [sg236] Receiving 4649 bytes of sg0023dz.x02
+2023-05-08T07:59:30Z [sg236] Received 4649 bytes of sg0023dz.x02 (339.5 Bps)
+2023-05-08T07:59:30Z [sg236] OK
+2023-05-08T07:59:32Z [sg236] Receiving 7862 bytes of sg0023lz.x
+2023-05-08T07:59:56Z [sg236] Received 7862 bytes of sg0023lz.x (327.5 Bps)
+2023-05-08T07:59:56Z [sg236] OK
+2023-05-08T07:59:58Z [sg236] ready to receive 4 files
+2023-05-08T08:00:00Z [sg236] Receiving 8192 bytes of sc0023ag.x00
+2023-05-08T08:00:27Z [sg236] Received 8192 bytes of sc0023ag.x00 (294.3 Bps)
+2023-05-08T08:00:27Z [sg236] OK
+2023-05-08T08:00:29Z [sg236] Receiving 2048 bytes of sc0023ag.x01
+2023-05-08T08:00:35Z [sg236] Received 2048 bytes of sc0023ag.x01 (345.4 Bps)
+2023-05-08T08:00:35Z [sg236] OK
+2023-05-08T08:00:36Z [sg236] Receiving 8192 bytes of sc0023bg.x00
+2023-05-08T08:01:01Z [sg236] Received 8192 bytes of sc0023bg.x00 (330.1 Bps)
+2023-05-08T08:01:01Z [sg236] OK
+2023-05-08T08:01:05Z [sg236] Receiving 2048 bytes of sc0023bg.x01
+2023-05-08T08:01:10Z [sg236] Received 2048 bytes of sc0023bg.x01 (346.8 Bps)
+2023-05-08T08:01:10Z [sg236] OK
+23:0:1:0:2:35:1 logout
+Disconnected at 2023-05-08T08:01:15Z (normal)
+
+
+Connected at 2023-05-08T13:53:53Z (sg236)
+logged in
+24:0:2:0:2:35:-3:183:2081:1543:-64.69:1.80:7.86:15.00:15.21:8.69:46.59 GPS,080523,135008,4658.026,-12559.466,42,1.7,42,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 3 geolocation: 4700.132812,-12559.786133,080523,135130
+2023-05-08T13:54:02Z [sg236] Sending 259 bytes of cmdfile
+2023-05-08T13:54:02Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-08T13:54:07Z [sg236] ready to receive 4 files
+2023-05-08T13:54:08Z [sg236] Receiving 8192 bytes of sg0024dz.x00
+2023-05-08T13:54:32Z [sg236] Received 8192 bytes of sg0024dz.x00 (343.0 Bps)
+2023-05-08T13:54:32Z [sg236] OK
+2023-05-08T13:54:33Z [sg236] Receiving 8192 bytes of sg0024dz.x01
+2023-05-08T13:54:57Z [sg236] Received 8192 bytes of sg0024dz.x01 (344.5 Bps)
+2023-05-08T13:54:57Z [sg236] OK
+2023-05-08T13:54:58Z [sg236] Receiving 4578 bytes of sg0024dz.x02
+2023-05-08T13:55:11Z [sg236] Received 4578 bytes of sg0024dz.x02 (344.1 Bps)
+2023-05-08T13:55:11Z [sg236] OK
+2023-05-08T13:55:12Z [sg236] Receiving 7732 bytes of sg0024lz.x
+2023-05-08T13:55:35Z [sg236] Received 7732 bytes of sg0024lz.x (344.2 Bps)
+2023-05-08T13:55:35Z [sg236] OK
+2023-05-08T13:55:37Z [sg236] ready to receive 4 files
+2023-05-08T13:55:38Z [sg236] Receiving 8192 bytes of sc0024ag.x00
+2023-05-08T13:56:02Z [sg236] Received 8192 bytes of sc0024ag.x00 (344.2 Bps)
+2023-05-08T13:56:02Z [sg236] OK
+2023-05-08T13:56:03Z [sg236] Receiving 2048 bytes of sc0024ag.x01
+2023-05-08T13:56:09Z [sg236] Received 2048 bytes of sc0024ag.x01 (347.4 Bps)
+2023-05-08T13:56:09Z [sg236] OK
+2023-05-08T13:56:10Z [sg236] Receiving 8192 bytes of sc0024bg.x00
+2023-05-08T13:56:34Z [sg236] Received 8192 bytes of sc0024bg.x00 (344.8 Bps)
+2023-05-08T13:56:34Z [sg236] OK
+2023-05-08T13:56:35Z [sg236] Receiving 2048 bytes of sc0024bg.x01
+2023-05-08T13:56:41Z [sg236] Received 2048 bytes of sc0024bg.x01 (344.6 Bps)
+2023-05-08T13:56:41Z [sg236] OK
+24:0:2:0:2:35:1 logout
+Disconnected at 2023-05-08T13:56:44Z (normal)
+
+
+Connected at 2023-05-08T19:25:37Z (sg236)
+logged in
+25:0:1:0:2:35:0:181:2121:1556:-66.57:1.59:7.89:15.00:15.22:8.69:46.64 GPS,080523,192420,4657.771,-12603.365,71,0.7,75,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.381348,-12557.931641,080523,135344
+2023-05-08T19:25:46Z [sg236] Sending 259 bytes of cmdfile
+2023-05-08T19:25:46Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-08T19:25:53Z [sg236] ready to receive 4 files
+2023-05-08T19:25:57Z [sg236] Receiving 8192 bytes of sg0025dz.x00
+2023-05-08T19:26:20Z [sg236] Received 8192 bytes of sg0025dz.x00 (353.7 Bps)
+2023-05-08T19:26:20Z [sg236] OK
+2023-05-08T19:26:21Z [sg236] Receiving 8192 bytes of sg0025dz.x01
+2023-05-08T19:26:47Z [sg236] Received 8192 bytes of sg0025dz.x01 (320.4 Bps)
+2023-05-08T19:26:47Z [sg236] OK
+2023-05-08T19:26:48Z [sg236] Receiving 2975 bytes of sg0025dz.x02
+2023-05-08T19:26:58Z [sg236] Received 2975 bytes of sg0025dz.x02 (300.0 Bps)
+2023-05-08T19:26:58Z [sg236] OK
+2023-05-08T19:26:59Z [sg236] Receiving 7502 bytes of sg0025lz.x
+2023-05-08T19:27:22Z [sg236] Received 7502 bytes of sg0025lz.x (334.8 Bps)
+2023-05-08T19:27:22Z [sg236] OK
+2023-05-08T19:27:25Z [sg236] ready to receive 4 files
+2023-05-08T19:27:26Z [sg236] Receiving 8192 bytes of sc0025ag.x00
+2023-05-08T19:27:51Z [sg236] Received 8192 bytes of sc0025ag.x00 (327.1 Bps)
+2023-05-08T19:27:51Z [sg236] OK
+2023-05-08T19:27:52Z [sg236] Receiving 2176 bytes of sc0025ag.x01
+2023-05-08T19:27:59Z [sg236] Received 2176 bytes of sc0025ag.x01 (340.4 Bps)
+2023-05-08T19:27:59Z [sg236] OK
+2023-05-08T19:28:00Z [sg236] Receiving 8192 bytes of sc0025bg.x00
+2023-05-08T19:28:24Z [sg236] Received 8192 bytes of sc0025bg.x00 (337.1 Bps)
+2023-05-08T19:28:24Z [sg236] OK
+2023-05-08T19:28:26Z [sg236] Receiving 1024 bytes of sc0025bg.x01
+2023-05-08T19:28:30Z [sg236] Received 1024 bytes of sc0025bg.x01 (223.4 Bps)
+2023-05-08T19:28:30Z [sg236] OK
+25:0:1:0:2:35:1 logout
+Disconnected at 2023-05-08T19:28:35Z (normal)
+
+
+Connected at 2023-05-09T01:03:48Z (sg236)
+logged in
+26:0:1:0:2:35:0:181:2078:1520:-71.16:1.78:7.86:15.00:15.22:8.68:46.62 GPS,090523,010225,4658.414,-12607.116,27,1.3,73,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.730469,-12602.338867,080523,192529
+2023-05-09T01:04:02Z [sg236] Sending 259 bytes of cmdfile
+2023-05-09T01:04:02Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-09T01:04:07Z [sg236] ready to receive 4 files
+2023-05-09T01:04:08Z [sg236] Receiving 8192 bytes of sg0026dz.x00
+2023-05-09T01:04:37Z [sg236] Received 8192 bytes of sg0026dz.x00 (283.2 Bps)
+2023-05-09T01:04:37Z [sg236] OK
+2023-05-09T01:04:41Z [sg236] Receiving 8192 bytes of sg0026dz.x01
+2023-05-09T01:05:05Z [sg236] Received 8192 bytes of sg0026dz.x01 (342.4 Bps)
+2023-05-09T01:05:05Z [sg236] OK
+2023-05-09T01:05:06Z [sg236] Receiving 4241 bytes of sg0026dz.x02
+2023-05-09T01:05:21Z [sg236] Received 4241 bytes of sg0026dz.x02 (295.1 Bps)
+2023-05-09T01:05:21Z [sg236] OK
+2023-05-09T01:05:24Z [sg236] Receiving 7787 bytes of sg0026lz.x
+2023-05-09T01:05:51Z [sg236] Received 7787 bytes of sg0026lz.x (292.8 Bps)
+2023-05-09T01:05:51Z [sg236] OK
+2023-05-09T01:05:53Z [sg236] ready to receive 4 files
+2023-05-09T01:05:55Z [sg236] Receiving 8192 bytes of sc0026ag.x00
+2023-05-09T01:06:20Z [sg236] Received 8192 bytes of sc0026ag.x00 (321.9 Bps)
+2023-05-09T01:06:20Z [sg236] OK
+2023-05-09T01:06:21Z [sg236] Receiving 2176 bytes of sc0026ag.x01
+2023-05-09T01:06:28Z [sg236] Received 2176 bytes of sc0026ag.x01 (308.5 Bps)
+2023-05-09T01:06:28Z [sg236] OK
+2023-05-09T01:06:30Z [sg236] Receiving 8192 bytes of sc0026bg.x00
+2023-05-09T01:06:54Z [sg236] Received 8192 bytes of sc0026bg.x00 (343.8 Bps)
+2023-05-09T01:06:54Z [sg236] OK
+2023-05-09T01:06:55Z [sg236] Receiving 1024 bytes of sc0026bg.x01
+2023-05-09T01:06:58Z [sg236] Received 1024 bytes of sc0026bg.x01 (344.4 Bps)
+2023-05-09T01:06:58Z [sg236] OK
+26:0:1:0:2:35:1 logout
+Disconnected at 2023-05-09T01:07:00Z (normal)
+
+
+Connected at 2023-05-09T06:57:30Z (sg236)
+logged in
+27:0:1:0:2:35:0:183:2122:1574:-73.70:1.69:100.95:5.89:5.88:3.35:-3.66 GPS,090523,065635,4657.733,-12610.749,1,0.8,1,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=VOLTAGE_CUTOFF_10V
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.801270,-12604.887695,090523,010339
+2023-05-09T06:57:53Z [sg236] Sending 259 bytes of cmdfile
+2023-05-09T06:57:53Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-09T06:58:02Z [sg236] ready to receive 4 files
+2023-05-09T06:58:04Z [sg236] Receiving 8192 bytes of sg0027dz.x00
+2023-05-09T06:58:30Z [sg236] Received 8192 bytes of sg0027dz.x00 (312.6 Bps)
+2023-05-09T06:58:30Z [sg236] OK
+2023-05-09T06:58:32Z [sg236] Receiving 8192 bytes of sg0027dz.x01
+2023-05-09T06:58:58Z [sg236] Received 8192 bytes of sg0027dz.x01 (315.2 Bps)
+2023-05-09T06:58:58Z [sg236] OK
+2023-05-09T06:58:59Z [sg236] Receiving 6262 bytes of sg0027dz.x02
+2023-05-09T06:59:22Z [sg236] Received 6262 bytes of sg0027dz.x02 (273.1 Bps)
+2023-05-09T06:59:22Z [sg236] OK
+2023-05-09T06:59:30Z [sg236] Receiving 8002 bytes of sg0027lz.x
+2023-05-09T07:00:08Z [sg236] Received 8002 bytes of sg0027lz.x (214.1 Bps)
+2023-05-09T07:00:08Z [sg236] OK
+2023-05-09T07:00:11Z [sg236] ready to receive 4 files
+2023-05-09T07:00:14Z [sg236] Receiving 8192 bytes of sc0027ag.x00
+2023-05-09T07:00:39Z [sg236] Received 8192 bytes of sc0027ag.x00 (337.0 Bps)
+2023-05-09T07:00:39Z [sg236] OK
+2023-05-09T07:00:40Z [sg236] Receiving 3072 bytes of sc0027ag.x01
+2023-05-09T07:00:49Z [sg236] Received 3072 bytes of sc0027ag.x01 (342.4 Bps)
+2023-05-09T07:00:49Z [sg236] OK
+2023-05-09T07:00:50Z [sg236] Receiving 8192 bytes of sc0027bg.x00
+2023-05-09T07:01:18Z [sg236] Received 8192 bytes of sc0027bg.x00 (302.6 Bps)
+2023-05-09T07:01:18Z [sg236] OK
+2023-05-09T07:01:19Z [sg236] Receiving 4096 bytes of sc0027bg.x01
+2023-05-09T07:01:31Z [sg236] Received 4096 bytes of sc0027bg.x01 (339.5 Bps)
+2023-05-09T07:01:31Z [sg236] OK
+27:0:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:01:34Z (normal)
+
+
+Connected at 2023-05-09T07:04:30Z (sg236)
+logged in
+27:1:1:0:2:35:0:183:2121:1575:-62.49:1.51:101.07:5.85:5.84:3.36:-3.79 GPS,090523,070346,4657.723,-12610.778,1,0.8,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=VOLTAGE_CUTOFF_10V
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.801270,-12604.887695,090523,065719
+2023-05-09T07:04:39Z [sg236] Sending 259 bytes of cmdfile
+2023-05-09T07:04:39Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+27:1:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:04:44Z (normal)
+
+
+Connected at 2023-05-09T07:07:53Z (sg236)
+logged in
+27:2:1:0:2:35:0:183:2121:1575:-68.56:1.57:101.11:5.87:5.85:3.36:-3.77 GPS,090523,070651,4657.718,-12610.790,1,0.8,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=VOLTAGE_CUTOFF_10V
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.487793,-12613.704102,090523,070422
+2023-05-09T07:08:08Z [sg236] Sending 259 bytes of cmdfile
+2023-05-09T07:08:08Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+27:2:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:08:13Z (normal)
+
+
+Connected at 2023-05-09T07:11:06Z (sg236)
+logged in
+27:3:1:0:2:35:0:183:2122:1576:-65.04:1.53:101.15:5.87:5.86:3.36:-3.78 GPS,090523,071020,4657.714,-12610.801,2,0.8,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=VOLTAGE_CUTOFF_10V
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.886719,-12633.891602,090523,070746
+2023-05-09T07:11:15Z [sg236] Sending 259 bytes of cmdfile
+2023-05-09T07:11:15Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+27:3:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:11:23Z (normal)
+
+
+Connected at 2023-05-09T07:14:10Z (sg236)
+logged in
+27:4:1:0:2:35:0:182:2121:1577:-70.68:1.55:101.18:5.88:5.87:3.36:-3.78 GPS,090523,071329,4657.708,-12610.811,1,0.8,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=VOLTAGE_CUTOFF_10V
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,071058
+2023-05-09T07:14:20Z [sg236] Sending 259 bytes of cmdfile
+2023-05-09T07:14:20Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+27:4:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:14:25Z (normal)
+
+
+Connected at 2023-05-09T07:17:15Z (sg236)
+logged in
+27:5:1:0:2:35:0:182:2121:1578:-62.17:1.43:101.22:5.89:5.87:3.36:-3.79 GPS,090523,071633,4657.704,-12610.820,1,0.8,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=VOLTAGE_CUTOFF_10V
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 3 geolocation: 4657.145996,-12609.294922,090523,071404
+2023-05-09T07:17:32Z [sg236] Sending 259 bytes of cmdfile
+2023-05-09T07:17:32Z [sg236] Sent 259 bytes of cmdfile
+Parsed GO from cmdfile
+27:5:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:17:37Z (normal)
+
+
+Connected at 2023-05-09T07:20:26Z (sg236)
+logged in
+27:6:1:0:2:35:0:182:2121:1578:-65.37:1.52:101.26:5.89:5.88:3.36:-3.80 GPS,090523,071944,4657.699,-12610.828,2,0.8,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=VOLTAGE_CUTOFF_10V
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.827148,-12618.114258,090523,071708
+2023-05-09T07:20:36Z [sg236] Sending 262 bytes of cmdfile
+2023-05-09T07:20:36Z [sg236] Sent 262 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:6:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:20:41Z (normal)
+
+
+Connected at 2023-05-09T07:23:34Z (sg236)
+logged in
+27:7:1:0:2:35:0:182:2121:1578:-62.16:1.47:101.29:5.90:5.88:3.37:-3.81 GPS,090523,072249,4657.693,-12610.838,1,0.8,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,072020
+2023-05-09T07:23:44Z [sg236] Sending 262 bytes of cmdfile
+2023-05-09T07:23:44Z [sg236] Sent 262 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:7:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:23:49Z (normal)
+
+
+Connected at 2023-05-09T07:26:44Z (sg236)
+logged in
+27:8:1:0:2:35:0:182:2122:1579:-66.43:1.54:101.32:5.90:5.88:3.37:-3.82 GPS,090523,072556,4657.687,-12610.848,1,0.8,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,072327
+2023-05-09T07:26:54Z [sg236] Sending 262 bytes of cmdfile
+2023-05-09T07:26:54Z [sg236] Sent 262 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:8:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:26:59Z (normal)
+
+
+Connected at 2023-05-09T07:30:09Z (sg236)
+logged in
+27:9:1:0:2:35:0:182:2121:1580:-70.06:1.43:101.36:5.90:5.89:3.37:-3.83 GPS,090523,072911,4657.680,-12610.855,1,0.9,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.077148,-12606.747070,090523,072638
+2023-05-09T07:30:18Z [sg236] Sending 262 bytes of cmdfile
+2023-05-09T07:30:18Z [sg236] Sent 262 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:9:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:30:24Z (normal)
+
+
+Connected at 2023-05-09T07:33:25Z (sg236)
+logged in
+27:10:1:0:2:35:0:181:2121:1580:-63.93:1.50:101.39:5.90:5.89:3.37:-3.84 GPS,090523,073236,4657.672,-12610.865,1,1.0,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 3 geolocation: 4657.145996,-12609.294922,090523,073003
+2023-05-09T07:33:34Z [sg236] Sending 262 bytes of cmdfile
+2023-05-09T07:33:34Z [sg236] Sent 262 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:10:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:33:39Z (normal)
+
+
+Connected at 2023-05-09T07:36:32Z (sg236)
+logged in
+27:11:1:0:2:35:0:182:2121:1581:-62.70:1.40:101.43:5.90:5.89:3.37:-3.85 GPS,090523,073547,4657.667,-12610.875,1,1.0,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,073319
+2023-05-09T07:36:41Z [sg236] Sending 262 bytes of cmdfile
+2023-05-09T07:36:41Z [sg236] Sent 262 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:11:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:36:47Z (normal)
+
+
+Connected at 2023-05-09T07:39:45Z (sg236)
+logged in
+27:12:1:0:2:35:0:182:2122:1581:-64.05:1.47:101.46:5.91:5.89:3.37:-3.86 GPS,090523,073859,4657.661,-12610.882,2,1.0,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.487793,-12613.704102,090523,073626
+2023-05-09T07:39:55Z [sg236] Sending 262 bytes of cmdfile
+2023-05-09T07:39:55Z [sg236] Sent 262 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:12:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:40:00Z (normal)
+
+
+Connected at 2023-05-09T07:43:11Z (sg236)
+logged in
+27:13:1:0:2:35:0:182:2121:1581:-71.19:1.50:101.49:5.91:5.89:3.37:-3.87 GPS,090523,074208,4657.657,-12610.896,2,1.0,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,073938
+2023-05-09T07:43:24Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T07:43:24Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:13:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:43:30Z (normal)
+
+
+Connected at 2023-05-09T07:54:25Z (sg236)
+logged in
+27:14:1:0:2:35:0:182:2122:1583:-66.56:1.57:101.58:5.93:5.91:3.38:-3.85 GPS,090523,075337,4657.640,-12610.944,1,0.9,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,074303
+2023-05-09T07:54:37Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T07:54:37Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:14:1:0:2:35:1 logout
+Disconnected at 2023-05-09T07:54:42Z (normal)
+
+
+Connected at 2023-05-09T08:15:42Z (sg236)
+logged in
+27:15:1:0:2:35:0:182:2122:1585:-65.38:1.56:101.72:5.95:5.94:3.38:-3.84 GPS,090523,081449,4657.596,-12611.024,1,1.6,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4701.168945,-12613.022461,090523,075418
+2023-05-09T08:15:52Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T08:15:52Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:15:1:0:2:35:1 logout
+Disconnected at 2023-05-09T08:15:58Z (normal)
+
+
+Connected at 2023-05-09T08:36:59Z (sg236)
+logged in
+27:16:1:0:2:35:0:182:2121:1587:-68.94:1.51:101.82:5.97:5.95:3.38:-3.81 GPS,090523,083610,4657.580,-12611.092,2,1.8,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,081530
+2023-05-09T08:37:10Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T08:37:10Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:16:1:0:2:35:1 logout
+Disconnected at 2023-05-09T08:37:18Z (normal)
+
+
+Connected at 2023-05-09T08:58:40Z (sg236)
+logged in
+27:17:1:0:2:35:0:182:2122:1588:-70.49:1.53:101.88:5.98:5.96:3.39:-3.75 GPS,090523,085739,4657.560,-12611.167,2,0.9,16,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,083649
+2023-05-09T08:58:49Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T08:58:49Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:17:1:0:2:35:1 logout
+Disconnected at 2023-05-09T08:58:54Z (normal)
+
+
+Connected at 2023-05-09T09:19:49Z (sg236)
+logged in
+27:18:1:0:2:35:0:182:2121:1589:-65.13:1.51:101.93:5.98:5.96:3.39:-3.69 GPS,090523,091903,4657.546,-12611.275,1,0.9,4,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4700.234863,-12615.569336,090523,085832
+2023-05-09T09:19:58Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T09:19:58Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:18:1:0:2:35:1 logout
+Disconnected at 2023-05-09T09:20:03Z (normal)
+
+
+Connected at 2023-05-09T09:42:42Z (sg236)
+logged in
+27:19:2:0:2:35:-2:182:2121:1590:-66.89:1.51:101.97:5.99:5.97:3.39:-3.62 GPS,090523,094016,4657.560,-12611.372,1,1.9,8,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,091941
+2023-05-09T09:42:51Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T09:42:51Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:19:2:0:2:35:1 logout
+Disconnected at 2023-05-09T09:42:56Z (normal)
+
+
+Connected at 2023-05-09T10:04:17Z (sg236)
+logged in
+27:20:1:0:2:35:0:182:2121:1591:-68.01:1.52:102.00:5.98:5.97:3.39:-3.54 GPS,090523,100330,4657.593,-12611.459,30,0.9,30,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,094235
+2023-05-09T10:04:25Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T10:04:25Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:20:1:0:2:35:1 logout
+Disconnected at 2023-05-09T10:04:30Z (normal)
+
+
+Connected at 2023-05-09T10:25:20Z (sg236)
+logged in
+27:21:1:0:2:35:0:182:2122:1591:-60.63:1.59:102.02:5.99:5.97:3.40:-3.48 GPS,090523,102437,4657.647,-12611.546,1,0.8,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4659.550293,-12606.747070,090523,100410
+2023-05-09T10:25:29Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T10:25:29Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:21:1:0:2:35:1 logout
+Disconnected at 2023-05-09T10:25:35Z (normal)
+
+
+Connected at 2023-05-09T10:46:42Z (sg236)
+logged in
+27:22:1:0:2:35:0:182:2121:1592:-67.15:1.51:102.04:5.99:5.98:3.40:-3.41 GPS,090523,104541,4657.712,-12611.575,1,0.9,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.487793,-12613.704102,090523,102513
+2023-05-09T10:46:55Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T10:46:55Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:22:1:0:2:35:1 logout
+Disconnected at 2023-05-09T10:47:00Z (normal)
+
+
+Connected at 2023-05-09T11:07:52Z (sg236)
+logged in
+27:23:1:0:2:35:0:182:2121:1592:-67.57:1.51:102.06:5.99:5.98:3.40:-3.35 GPS,090523,110707,4657.768,-12611.594,2,1.5,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4657.145996,-12609.294922,090523,104633
+2023-05-09T11:08:00Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T11:08:00Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:23:1:0:2:35:1 logout
+Disconnected at 2023-05-09T11:08:05Z (normal)
+
+
+Connected at 2023-05-09T11:28:57Z (sg236)
+logged in
+27:24:1:0:2:35:0:181:2121:1593:-68.89:1.54:102.07:5.99:5.98:3.40:-3.29 GPS,090523,112812,4657.804,-12611.600,2,1.4,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,110744
+2023-05-09T11:29:05Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T11:29:05Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:24:1:0:2:35:1 logout
+Disconnected at 2023-05-09T11:29:10Z (normal)
+
+
+Connected at 2023-05-09T11:51:42Z (sg236)
+logged in
+27:25:2:0:2:35:-2:181:2122:1593:-69.48:1.53:102.07:5.99:5.98:3.40:-3.24 GPS,090523,114917,4657.815,-12611.579,1,1.2,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4658.420410,-12611.157227,090523,112850
+2023-05-09T11:51:51Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T11:51:51Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:25:2:0:2:35:1 logout
+Disconnected at 2023-05-09T11:51:56Z (normal)
+
+
+Connected at 2023-05-09T12:12:47Z (sg236)
+logged in
+27:26:1:0:2:35:0:181:2121:1594:-70.38:1.51:102.08:5.99:5.98:3.40:-3.19 GPS,090523,121203,4657.812,-12611.547,2,1.2,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4701.168945,-12613.022461,090523,115133
+2023-05-09T12:12:55Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T12:12:55Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:26:1:0:2:35:1 logout
+Disconnected at 2023-05-09T12:13:03Z (normal)
+
+
+Connected at 2023-05-09T12:33:57Z (sg236)
+logged in
+27:27:1:0:2:35:0:180:2121:1594:-67.90:1.52:102.09:6.00:5.98:3.40:-3.15 GPS,090523,123310,4657.817,-12611.499,1,1.1,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.619141,-12632.012695,090523,121239
+2023-05-09T12:34:10Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T12:34:10Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:27:1:0:2:35:1 logout
+Disconnected at 2023-05-09T12:34:15Z (normal)
+
+
+Connected at 2023-05-09T12:55:08Z (sg236)
+logged in
+27:28:1:0:2:35:0:180:2121:1594:-53.95:1.50:102.10:6.00:5.98:3.40:-3.11 GPS,090523,125422,4657.779,-12611.449,2,1.2,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,123350
+2023-05-09T12:55:18Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T12:55:18Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:28:1:0:2:35:1 logout
+Disconnected at 2023-05-09T12:55:25Z (normal)
+
+
+Connected at 2023-05-09T13:16:18Z (sg236)
+logged in
+27:29:1:0:2:35:0:180:2122:1594:-69.71:1.59:102.10:6.00:5.98:3.40:-3.07 GPS,090523,131532,4657.706,-12611.408,2,1.2,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,125501
+2023-05-09T13:16:29Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T13:16:29Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:29:1:0:2:35:1 logout
+Disconnected at 2023-05-09T13:16:34Z (normal)
+
+
+Connected at 2023-05-09T13:37:42Z (sg236)
+logged in
+27:30:1:0:2:35:0:180:2122:1594:-73.42:1.59:102.10:6.00:5.98:3.40:-3.04 GPS,090523,133702,4657.619,-12611.386,2,0.8,23,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 3 geolocation: 4657.145996,-12609.294922,090523,131607
+2023-05-09T13:37:50Z [sg236] Sending 274 bytes of cmdfile
+2023-05-09T13:37:50Z [sg236] Sent 274 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T13:37:55Z [sg236] Sending 21 bytes of pdoscmds.bat
+2023-05-09T13:37:55Z [sg236] Sent 21 bytes of pdoscmds.bat
+2023-05-09T13:37:59Z [sg236] ready to receive sg0027pz.030
+2023-05-09T13:38:00Z [sg236] Receiving 493 bytes of sg0027pz.030
+2023-05-09T13:38:02Z [sg236] Received 493 bytes of sg0027pz.030 (337.2 Bps)
+2023-05-09T13:38:02Z [sg236] OK
+27:30:1:0:2:35:1 logout
+Disconnected at 2023-05-09T13:38:04Z (normal)
+
+
+Connected at 2023-05-09T13:44:13Z (sg236)
+logged in
+27:31:1:0:2:35:0:180:2122:1594:-66.42:1.51:102.11:5.99:5.97:3.40:-3.04 GPS,090523,134311,4657.596,-12611.385,2,0.9,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4657.145996,-12609.294922,090523,133735
+2023-05-09T13:44:44Z [sg236] Sending 274 bytes of cmdfile
+2023-05-09T13:44:44Z [sg236] Sent 274 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:31:1:0:2:35:1 logout
+Disconnected at 2023-05-09T13:44:49Z (normal)
+
+
+Connected at 2023-05-09T13:50:39Z (sg236)
+logged in
+27:32:1:0:2:35:0:180:2122:1595:-73.97:1.59:102.11:5.98:5.97:3.40:-3.04 GPS,090523,134956,4657.572,-12611.381,2,0.9,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.487793,-12613.704102,090523,134406
+2023-05-09T13:50:48Z [sg236] Sending 274 bytes of cmdfile
+2023-05-09T13:50:48Z [sg236] Sent 274 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:32:1:0:2:35:1 logout
+Disconnected at 2023-05-09T13:50:53Z (normal)
+
+
+Connected at 2023-05-09T13:56:41Z (sg236)
+logged in
+27:33:1:0:2:35:0:180:2122:1595:-62.35:1.53:102.12:5.98:5.96:3.40:-3.03 GPS,090523,135600,4657.547,-12611.378,1,0.9,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,135034
+2023-05-09T13:56:57Z [sg236] Sending 274 bytes of cmdfile
+2023-05-09T13:56:57Z [sg236] Sent 274 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T13:57:04Z [sg236] Sending 20 bytes of pdoscmds.bat
+2023-05-09T13:57:04Z [sg236] Sent 20 bytes of pdoscmds.bat
+2023-05-09T13:57:10Z [sg236] ready to receive sg0027pz.033
+2023-05-09T13:57:11Z [sg236] Receiving 485 bytes of sg0027pz.033
+2023-05-09T13:57:12Z [sg236] Received 485 bytes of sg0027pz.033 (347.7 Bps)
+2023-05-09T13:57:12Z [sg236] OK
+27:33:1:0:2:35:1 logout
+Disconnected at 2023-05-09T13:57:15Z (normal)
+
+
+Connected at 2023-05-09T14:03:05Z (sg236)
+logged in
+27:34:1:0:2:35:0:180:2122:1595:-71.79:1.44:102.12:5.98:5.96:3.40:-3.03 GPS,090523,140222,4657.523,-12611.378,1,0.9,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,135636
+2023-05-09T14:03:14Z [sg236] Sending 274 bytes of cmdfile
+2023-05-09T14:03:14Z [sg236] Sent 274 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:34:1:0:2:35:1 logout
+Disconnected at 2023-05-09T14:03:19Z (normal)
+
+
+Connected at 2023-05-09T14:09:23Z (sg236)
+logged in
+27:35:1:0:2:35:0:180:2122:1595:-65.81:1.52:102.12:5.98:5.96:3.40:-3.02 GPS,090523,140825,4657.499,-12611.382,1,0.9,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,140259
+2023-05-09T14:09:31Z [sg236] Sending 274 bytes of cmdfile
+2023-05-09T14:09:31Z [sg236] Sent 274 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:35:1:0:2:35:1 logout
+Disconnected at 2023-05-09T14:09:38Z (hangup)
+
+
+Connected at 2023-05-09T14:15:38Z (sg236)
+logged in
+27:36:1:0:2:35:0:180:2122:1595:-70.18:1.55:102.12:5.97:5.96:3.40:-3.01 GPS,090523,141444,4657.476,-12611.388,1,0.9,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.487793,-12613.704102,090523,140918
+2023-05-09T14:15:49Z [sg236] Sending 274 bytes of cmdfile
+2023-05-09T14:15:49Z [sg236] Sent 274 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:36:1:0:2:35:1 logout
+Disconnected at 2023-05-09T14:15:54Z (normal)
+
+
+Connected at 2023-05-09T14:21:57Z (sg236)
+logged in
+27:37:1:0:2:35:0:180:2122:1595:-66.75:1.48:102.12:5.97:5.96:3.40:-3.00 GPS,090523,142101,4657.459,-12611.389,2,1.1,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.029297,-12553.526367,090523,141532
+2023-05-09T14:22:08Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T14:22:08Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:37:1:0:2:35:1 logout
+Disconnected at 2023-05-09T14:22:14Z (normal)
+
+
+Connected at 2023-05-09T14:43:05Z (sg236)
+logged in
+27:38:1:0:2:35:0:180:2122:1595:-61.40:1.45:102.12:5.98:5.97:3.40:-2.96 GPS,090523,144221,4657.418,-12611.400,2,1.2,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.674805,-12549.123047,090523,142152
+2023-05-09T14:43:14Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T14:43:14Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:38:1:0:2:35:1 logout
+Disconnected at 2023-05-09T14:43:20Z (normal)
+
+
+Connected at 2023-05-09T15:04:25Z (sg236)
+logged in
+27:39:1:0:2:35:0:180:2121:1595:-66.68:1.53:102.12:5.99:5.97:3.40:-2.94 GPS,090523,150332,4657.380,-12611.418,2,1.6,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,144257
+2023-05-09T15:04:38Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T15:04:38Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:39:1:0:2:35:1 logout
+Disconnected at 2023-05-09T15:04:50Z (normal)
+
+
+Connected at 2023-05-09T15:25:44Z (sg236)
+logged in
+27:40:1:0:2:35:0:180:2121:1595:-65.86:1.47:102.13:5.99:5.98:3.40:-2.92 GPS,090523,152458,4657.343,-12611.457,2,1.7,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,150418
+2023-05-09T15:25:55Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T15:25:55Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:40:1:0:2:35:1 logout
+Disconnected at 2023-05-09T15:26:00Z (normal)
+
+
+Connected at 2023-05-09T15:47:04Z (sg236)
+logged in
+27:41:1:0:2:35:0:180:2121:1595:-61.41:1.49:102.13:5.99:5.98:3.40:-2.91 GPS,090523,154615,4657.321,-12611.463,1,1.5,4,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,152538
+2023-05-09T15:47:13Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T15:47:13Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:41:1:0:2:35:1 logout
+Disconnected at 2023-05-09T15:47:19Z (normal)
+
+
+Connected at 2023-05-09T16:08:21Z (sg236)
+logged in
+27:42:1:0:2:35:0:180:2122:1595:-62.46:1.40:102.14:5.99:5.98:3.40:-2.90 GPS,090523,160740,4657.300,-12611.471,14,1.4,16,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,154658
+2023-05-09T16:08:29Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T16:08:29Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:42:1:0:2:35:1 logout
+Disconnected at 2023-05-09T16:08:35Z (normal)
+
+
+Connected at 2023-05-09T16:29:44Z (sg236)
+logged in
+27:43:1:0:2:35:0:180:2122:1595:-63.89:1.45:102.15:6.00:5.98:3.40:-2.89 GPS,090523,162845,4657.291,-12611.469,2,1.5,5,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.827148,-12618.114258,090523,160814
+2023-05-09T16:29:53Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T16:29:53Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:43:1:0:2:35:1 logout
+Disconnected at 2023-05-09T16:29:57Z (normal)
+
+
+Connected at 2023-05-09T16:51:06Z (sg236)
+logged in
+27:44:1:0:2:35:0:180:2122:1596:-65.14:1.53:102.16:6.00:5.98:3.40:-2.89 GPS,090523,165010,4657.288,-12611.413,2,1.9,7,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.923340,-12750.839844,090523,162938
+2023-05-09T16:51:15Z [sg236] Sending 275 bytes of cmdfile
+2023-05-09T16:51:15Z [sg236] Sent 275 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:44:1:0:2:35:1 logout
+Disconnected at 2023-05-09T16:51:20Z (normal)
+
+
+Connected at 2023-05-09T17:16:26Z (sg236)
+logged in
+27:45:3:0:2:35:-3:180:2121:1595:-64.00:1.53:102.16:5.99:5.98:3.40:-2.88 GPS,090523,171156,4657.275,-12611.359,30,1.0,31,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.487793,-12613.704102,090523,171411
+2023-05-09T17:16:35Z [sg236] Sending 287 bytes of cmdfile
+2023-05-09T17:16:35Z [sg236] Sent 287 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T17:16:41Z [sg236] Sending 107 bytes of pdoscmds.bat
+2023-05-09T17:16:41Z [sg236] Sent 107 bytes of pdoscmds.bat
+2023-05-09T17:16:50Z [sg236] ready to receive sg0027pz.045
+2023-05-09T17:16:51Z [sg236] Receiving 395 bytes of sg0027pz.045
+2023-05-09T17:16:52Z [sg236] Received 395 bytes of sg0027pz.045 (357.2 Bps)
+2023-05-09T17:16:52Z [sg236] OK
+27:45:3:0:2:35:1 logout
+Disconnected at 2023-05-09T17:16:55Z (normal)
+
+
+Connected at 2023-05-09T17:19:44Z (sg236)
+logged in
+27:46:1:0:2:35:0:180:2121:1596:-61.58:1.48:102.18:5.98:5.96:3.40:-2.92 GPS,090523,171902,4657.269,-12611.335,1,1.0,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,171620
+2023-05-09T17:19:55Z [sg236] Sending 287 bytes of cmdfile
+2023-05-09T17:19:55Z [sg236] Sent 287 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:46:1:0:2:35:1 logout
+Disconnected at 2023-05-09T17:20:00Z (normal)
+
+
+Connected at 2023-05-09T17:25:05Z (sg236)
+logged in
+27:47:2:0:2:35:-3:180:2121:1595:-66.33:1.48:102.19:5.97:5.96:3.40:-2.92 GPS,090523,172207,4657.265,-12611.321,1,1.0,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4702.980957,-12617.438477,090523,172258
+2023-05-09T17:25:14Z [sg236] Sending 287 bytes of cmdfile
+2023-05-09T17:25:14Z [sg236] Sent 287 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T17:25:24Z [sg236] Sending 41 bytes of pdoscmds.bat
+2023-05-09T17:25:24Z [sg236] Sent 41 bytes of pdoscmds.bat
+2023-05-09T17:25:30Z [sg236] ready to receive sg0027pz.047
+2023-05-09T17:25:31Z [sg236] Receiving 585 bytes of sg0027pz.047
+2023-05-09T17:25:33Z [sg236] Received 585 bytes of sg0027pz.047 (350.5 Bps)
+2023-05-09T17:25:33Z [sg236] OK
+27:47:2:0:2:35:1 logout
+Disconnected at 2023-05-09T17:25:35Z (normal)
+
+
+Connected at 2023-05-09T17:28:25Z (sg236)
+logged in
+27:48:1:0:2:35:0:180:2121:1595:-65.50:1.49:102.19:5.96:5.94:3.40:-2.93 GPS,090523,172743,4657.257,-12611.294,1,1.0,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,172457
+2023-05-09T17:28:34Z [sg236] Sending 287 bytes of cmdfile
+2023-05-09T17:28:34Z [sg236] Sent 287 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T17:28:39Z [sg236] Sending 107 bytes of pdoscmds.bat
+2023-05-09T17:28:39Z [sg236] Sent 107 bytes of pdoscmds.bat
+2023-05-09T17:28:47Z [sg236] ready to receive sg0027pz.048
+2023-05-09T17:28:48Z [sg236] Receiving 383 bytes of sg0027pz.048
+2023-05-09T17:28:49Z [sg236] Received 383 bytes of sg0027pz.048 (345.2 Bps)
+2023-05-09T17:28:49Z [sg236] OK
+27:48:1:0:2:35:1 logout
+Disconnected at 2023-05-09T17:28:52Z (normal)
+
+
+Connected at 2023-05-09T17:31:55Z (sg236)
+logged in
+27:49:1:0:2:35:0:180:2121:1595:-65.38:1.48:102.20:5.96:5.94:3.40:-2.94 GPS,090523,173100,4657.254,-12611.279,1,1.0,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,172819
+2023-05-09T17:32:04Z [sg236] Sending 287 bytes of cmdfile
+2023-05-09T17:32:04Z [sg236] Sent 287 bytes of cmdfile
+Parsed QUIT from cmdfile
+27:49:1:0:2:35:1 logout
+Disconnected at 2023-05-09T17:32:08Z (normal)
+
+
+Connected at 2023-05-09T17:34:57Z (sg236)
+logged in
+27:50:1:0:2:35:0:180:2122:1596:-58.93:1.42:102.20:5.95:5.94:3.41:-2.93 GPS,090523,173417,4657.251,-12611.265,1,1.0,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,173148
+2023-05-09T17:35:06Z [sg236] Sending 310 bytes of cmdfile
+2023-05-09T17:35:06Z [sg236] Sent 310 bytes of cmdfile
+Parsed RESUME from cmdfile
+27:50:1:0:2:35:1 logout
+Disconnected at 2023-05-09T17:35:11Z (normal)
+
+
+Connected at 2023-05-09T18:17:14Z (sg236)
+logged in
+28:0:1:0:2:35:0:180:2128:1650:-67.47:1.54:101.82:5.87:5.85:3.39:-2.63 GPS,090523,181555,4657.257,-12611.397,10,1.1,13,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 0 geolocation: 4657.145996,-12609.294922,090523,173450
+2023-05-09T18:17:24Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:17:24Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T18:17:45Z [sg236] Sending 86 bytes of pdoscmds.bat
+2023-05-09T18:17:45Z [sg236] Sent 86 bytes of pdoscmds.bat
+2023-05-09T18:17:52Z [sg236] ready to receive sg0028pz.000
+2023-05-09T18:17:53Z [sg236] Receiving 368 bytes of sg0028pz.000
+2023-05-09T18:17:54Z [sg236] Received 368 bytes of sg0028pz.000 (351.4 Bps)
+2023-05-09T18:17:54Z [sg236] OK
+2023-05-09T18:17:56Z [sg236] ready to receive 3 files
+2023-05-09T18:17:58Z [sg236] Receiving 4876 bytes of sg0028dz.x
+2023-05-09T18:18:14Z [sg236] Received 4876 bytes of sg0028dz.x (298.9 Bps)
+2023-05-09T18:18:14Z [sg236] OK
+2023-05-09T18:18:15Z [sg236] Receiving 5298 bytes of sg0028kz.x
+2023-05-09T18:18:32Z [sg236] Received 5298 bytes of sg0028kz.x (318.2 Bps)
+2023-05-09T18:18:32Z [sg236] OK
+2023-05-09T18:18:33Z [sg236] Receiving 3504 bytes of sg0028lz.x
+2023-05-09T18:18:43Z [sg236] Received 3504 bytes of sg0028lz.x (344.7 Bps)
+2023-05-09T18:18:43Z [sg236] OK
+2023-05-09T18:18:45Z [sg236] ready to receive 2 files
+2023-05-09T18:18:46Z [sg236] Receiving 3072 bytes of sc0028ag.x
+2023-05-09T18:18:56Z [sg236] Received 3072 bytes of sc0028ag.x (311.6 Bps)
+2023-05-09T18:18:56Z [sg236] OK
+2023-05-09T18:18:57Z [sg236] Receiving 5120 bytes of sc0028bg.x
+2023-05-09T18:19:13Z [sg236] Received 5120 bytes of sc0028bg.x (340.3 Bps)
+2023-05-09T18:19:13Z [sg236] OK
+28:0:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:19:15Z (normal)
+
+
+Connected at 2023-05-09T18:21:51Z (sg236)
+logged in
+28:1:2:0:2:35:-2:180:2128:1646:-64.98:1.55:101.82:5.85:5.84:3.39:-2.62 GPS,090523,181923,4657.236,-12611.391,1,1.1,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.487793,-12613.704102,090523,181708
+2023-05-09T18:22:00Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:22:00Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+28:1:2:0:2:35:1 logout
+Disconnected at 2023-05-09T18:22:07Z (normal)
+
+
+Connected at 2023-05-09T18:25:02Z (sg236)
+logged in
+28:2:1:0:2:35:0:180:2128:1645:-56.54:1.53:101.83:5.88:5.87:3.39:-2.61 GPS,090523,182415,4657.207,-12611.383,1,1.1,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.214355,-12611.840820,090523,182144
+2023-05-09T18:25:11Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:25:11Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T18:25:16Z [sg236] Sending 87 bytes of pdoscmds.bat
+2023-05-09T18:25:16Z [sg236] Sent 87 bytes of pdoscmds.bat
+2023-05-09T18:25:24Z [sg236] ready to receive sg0028pz.002
+2023-05-09T18:25:25Z [sg236] Receiving 339 bytes of sg0028pz.002
+2023-05-09T18:25:26Z [sg236] Received 339 bytes of sg0028pz.002 (335.8 Bps)
+2023-05-09T18:25:26Z [sg236] OK
+28:2:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:25:28Z (normal)
+
+
+Connected at 2023-05-09T18:28:22Z (sg236)
+logged in
+28:3:1:0:2:35:0:180:2127:1645:-64.78:1.58:82.65:7.50:7.85:4.53:5.16 GPS,090523,182735,4657.187,-12611.379,2,1.3,2,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.487793,-12613.704102,090523,182454
+2023-05-09T18:28:34Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:28:34Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+28:3:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:28:39Z (normal)
+
+
+Connected at 2023-05-09T18:31:41Z (sg236)
+logged in
+28:4:1:0:2:35:0:180:2127:1645:-67.73:1.60:82.67:7.50:7.86:4.53:5.15 GPS,090523,183047,4657.169,-12611.378,2,1.3,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,182814
+2023-05-09T18:31:51Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:31:51Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T18:31:57Z [sg236] Sending 87 bytes of pdoscmds.bat
+2023-05-09T18:31:57Z [sg236] Sent 87 bytes of pdoscmds.bat
+2023-05-09T18:32:04Z [sg236] ready to receive sg0028pz.004
+2023-05-09T18:32:06Z [sg236] Receiving 360 bytes of sg0028pz.004
+2023-05-09T18:32:07Z [sg236] Received 360 bytes of sg0028pz.004 (355.2 Bps)
+2023-05-09T18:32:07Z [sg236] OK
+28:4:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:32:09Z (normal)
+
+
+Connected at 2023-05-09T18:35:06Z (sg236)
+logged in
+28:5:1:0:2:35:0:180:2128:1645:-63.04:1.57:82.69:7.50:7.86:4.53:5.13 GPS,090523,183418,4657.146,-12611.375,2,1.6,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.517578,-12710.475586,090523,183134
+2023-05-09T18:35:16Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:35:16Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+28:5:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:35:22Z (normal)
+
+
+Connected at 2023-05-09T18:38:27Z (sg236)
+logged in
+28:6:1:0:2:35:0:180:2128:1645:-66.35:1.55:82.72:7.50:7.87:4.53:5.11 GPS,090523,183730,4657.125,-12611.374,2,1.7,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.077148,-12606.747070,090523,183458
+2023-05-09T18:38:36Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:38:36Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T18:38:41Z [sg236] Sending 61 bytes of targets
+2023-05-09T18:38:41Z [sg236] Sent 61 bytes of targets
+28:6:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:38:44Z (normal)
+
+
+Connected at 2023-05-09T18:41:41Z (sg236)
+logged in
+28:7:1:0:2:35:0:180:2128:1645:-65.78:1.54:82.74:7.50:7.88:4.54:5.08 GPS,090523,184053,4657.104,-12611.375,1,1.7,4,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.945801,-12707.962891,090523,183821
+2023-05-09T18:41:51Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:41:51Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+28:7:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:41:56Z (normal)
+
+
+Connected at 2023-05-09T18:44:44Z (sg236)
+logged in
+28:8:1:0:2:35:0:180:2128:1645:-71.00:1.53:82.77:7.50:7.88:4.53:5.06 GPS,090523,184405,4657.083,-12611.375,1,1.8,4,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,184134
+2023-05-09T18:44:54Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:44:54Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T18:44:59Z [sg236] Sending 62 bytes of pdoscmds.bat
+2023-05-09T18:44:59Z [sg236] Sent 62 bytes of pdoscmds.bat
+2023-05-09T18:45:05Z [sg236] ready to receive sg0028pz.008
+2023-05-09T18:45:06Z [sg236] Receiving 476 bytes of sg0028pz.008
+2023-05-09T18:45:07Z [sg236] Received 476 bytes of sg0028pz.008 (339.5 Bps)
+2023-05-09T18:45:07Z [sg236] OK
+28:8:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:45:10Z (normal)
+
+
+Connected at 2023-05-09T18:48:05Z (sg236)
+logged in
+28:9:1:0:2:35:0:180:2128:1645:-67.40:1.63:82.80:7.50:7.88:4.54:5.03 GPS,090523,184719,4657.063,-12611.379,1,1.8,4,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,184437
+2023-05-09T18:48:15Z [sg236] Sending 309 bytes of cmdfile
+2023-05-09T18:48:15Z [sg236] Sent 309 bytes of cmdfile
+Parsed QUIT from cmdfile
+28:9:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:48:22Z (normal)
+
+
+Connected at 2023-05-09T18:51:28Z (sg236)
+logged in
+28:10:1:0:2:35:0:180:2128:1645:-62.88:1.59:82.82:7.50:7.89:4.54:5.01 GPS,090523,185031,4657.043,-12611.384,1,1.9,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Disconnected at 2023-05-09T18:51:40Z (hangup)
+
+
+Connected at 2023-05-09T18:54:38Z (sg236)
+logged in
+28:11:1:0:2:35:0:180:2127:1645:-65.51:1.62:82.85:7.50:7.89:4.54:4.97 GPS,090523,185353,4657.020,-12611.392,2,2.0,4,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,185121
+2023-05-09T18:54:47Z [sg236] Sending 313 bytes of cmdfile
+2023-05-09T18:54:47Z [sg236] Sent 313 bytes of cmdfile
+Parsed RESUME from cmdfile
+28:11:1:0:2:35:1 logout
+Disconnected at 2023-05-09T18:54:53Z (normal)
+
+
+Connected at 2023-05-09T20:59:06Z (sg236)
+logged in
+29:0:2:0:2:35:-2:181:2131:1648:-62.25:1.66:81.80:7.50:7.85:4.50:5.42 GPS,090523,205620,4656.914,-12610.221,48,1.5,54,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4658.420410,-12611.157227,090523,185431
+2023-05-09T20:59:22Z [sg236] Sending 311 bytes of cmdfile
+2023-05-09T20:59:22Z [sg236] Sent 311 bytes of cmdfile
+Parsed QUIT from cmdfile
+2023-05-09T20:59:33Z [sg236] Sending 87 bytes of pdoscmds.bat
+2023-05-09T20:59:33Z [sg236] Sent 87 bytes of pdoscmds.bat
+2023-05-09T20:59:40Z [sg236] ready to receive sg0029pz.000
+2023-05-09T20:59:42Z [sg236] Receiving 358 bytes of sg0029pz.000
+2023-05-09T20:59:43Z [sg236] Received 358 bytes of sg0029pz.000 (353.5 Bps)
+2023-05-09T20:59:43Z [sg236] OK
+2023-05-09T20:59:45Z [sg236] ready to receive 3 files
+2023-05-09T20:59:46Z [sg236] Receiving 8192 bytes of sg0029dz.x00
+2023-05-09T21:00:16Z [sg236] Received 8192 bytes of sg0029dz.x00 (272.2 Bps)
+2023-05-09T21:00:16Z [sg236] OK
+2023-05-09T21:00:17Z [sg236] Receiving 2348 bytes of sg0029dz.x01
+2023-05-09T21:00:24Z [sg236] Received 2348 bytes of sg0029dz.x01 (346.2 Bps)
+2023-05-09T21:00:24Z [sg236] OK
+2023-05-09T21:00:25Z [sg236] Receiving 5022 bytes of sg0029lz.x
+2023-05-09T21:00:44Z [sg236] Received 5022 bytes of sg0029lz.x (263.2 Bps)
+2023-05-09T21:00:44Z [sg236] OK
+2023-05-09T21:00:47Z [sg236] ready to receive 2 files
+2023-05-09T21:00:48Z [sg236] Receiving 6144 bytes of sc0029ag.x
+2023-05-09T21:01:07Z [sg236] Received 6144 bytes of sc0029ag.x (318.0 Bps)
+2023-05-09T21:01:07Z [sg236] OK
+2023-05-09T21:01:11Z [sg236] Receiving 7168 bytes of sc0029bg.x
+2023-05-09T21:01:33Z [sg236] Received 7168 bytes of sc0029bg.x (323.6 Bps)
+2023-05-09T21:01:33Z [sg236] OK
+29:0:2:0:2:35:1 logout
+Disconnected at 2023-05-09T21:01:35Z (normal)
+
+
+Connected at 2023-05-09T21:02:34Z (sg236)
+logged in
+29:1:1:0:2:35:0:181:2127:1647:-66.56:1.76:81.91:7.50:7.81:4.50:5.26 GPS,090523,210145,4656.885,-12610.268,1,1.4,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,205859
+2023-05-09T21:02:55Z [sg236] Sending 311 bytes of cmdfile
+2023-05-09T21:02:55Z [sg236] Sent 311 bytes of cmdfile
+Parsed QUIT from cmdfile
+29:1:1:0:2:35:1 logout
+Disconnected at 2023-05-09T21:03:05Z (hangup)
+
+
+Connected at 2023-05-09T21:06:26Z (sg236)
+logged in
+29:2:1:0:2:35:0:180:2127:1647:-67.18:1.66:81.97:7.50:7.83:4.50:5.17 GPS,090523,210528,4656.864,-12610.300,2,1.4,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,210225
+2023-05-09T21:06:37Z [sg236] Sending 311 bytes of cmdfile
+2023-05-09T21:06:37Z [sg236] Sent 311 bytes of cmdfile
+Parsed QUIT from cmdfile
+29:2:1:0:2:35:1 logout
+Disconnected at 2023-05-09T21:06:47Z (normal)
+
+
+Connected at 2023-05-09T21:09:35Z (sg236)
+logged in
+29:3:1:0:2:35:0:181:2127:1647:-67.85:1.63:82.03:7.50:7.84:4.51:5.15 GPS,090523,210855,4656.845,-12610.326,2,1.3,3,15.7
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,210620
+2023-05-09T21:09:44Z [sg236] Sending 313 bytes of cmdfile
+2023-05-09T21:09:44Z [sg236] Sent 313 bytes of cmdfile
+Parsed RESUME from cmdfile
+29:3:1:0:2:35:1 logout
+Disconnected at 2023-05-09T21:09:49Z (normal)
+
+
+Connected at 2023-05-10T00:43:48Z (sg236)
+logged in
+30:0:2:0:2:35:-2:183:2074:1613:-67.98:1.47:81.58:7.50:7.86:4.48:4.69 GPS,100523,004050,4656.970,-12607.640,80,0.7,121,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.145996,-12609.294922,090523,210928
+2023-05-10T00:43:58Z [sg236] Sending 309 bytes of cmdfile
+2023-05-10T00:43:58Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-10T00:44:03Z [sg236] ready to receive 3 files
+2023-05-10T00:44:04Z [sg236] Receiving 8192 bytes of sg0030dz.x00
+2023-05-10T00:44:30Z [sg236] Received 8192 bytes of sg0030dz.x00 (310.9 Bps)
+2023-05-10T00:44:30Z [sg236] OK
+2023-05-10T00:44:31Z [sg236] Receiving 7345 bytes of sg0030dz.x01
+2023-05-10T00:44:54Z [sg236] Received 7345 bytes of sg0030dz.x01 (322.8 Bps)
+2023-05-10T00:44:54Z [sg236] OK
+2023-05-10T00:44:55Z [sg236] Receiving 6148 bytes of sg0030lz.x
+2023-05-10T00:45:13Z [sg236] Received 6148 bytes of sg0030lz.x (343.4 Bps)
+2023-05-10T00:45:13Z [sg236] OK
+2023-05-10T00:45:16Z [sg236] ready to receive 2 files
+2023-05-10T00:45:17Z [sg236] Receiving 8192 bytes of sc0030ag.x
+2023-05-10T00:45:42Z [sg236] Received 8192 bytes of sc0030ag.x (323.0 Bps)
+2023-05-10T00:45:42Z [sg236] OK
+2023-05-10T00:45:43Z [sg236] Receiving 8192 bytes of sc0030bg.x
+2023-05-10T00:46:08Z [sg236] Received 8192 bytes of sc0030bg.x (336.4 Bps)
+2023-05-10T00:46:08Z [sg236] OK
+30:0:2:0:2:35:1 logout
+Disconnected at 2023-05-10T00:46:13Z (normal)
+
+
+Connected at 2023-05-10T04:28:13Z (sg236)
+logged in
+31:0:1:0:2:35:0:183:2126:1650:-66.88:1.52:81.55:7.50:7.85:4.48:4.37 GPS,100523,042701,4656.836,-12604.926,189,0.7,190,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4700.234863,-12615.569336,100523,004338
+2023-05-10T04:28:21Z [sg236] Sending 309 bytes of cmdfile
+2023-05-10T04:28:21Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-10T04:28:26Z [sg236] ready to receive 3 files
+2023-05-10T04:28:27Z [sg236] Receiving 8192 bytes of sg0031dz.x00
+2023-05-10T04:28:59Z [sg236] Received 8192 bytes of sg0031dz.x00 (254.6 Bps)
+2023-05-10T04:28:59Z [sg236] OK
+2023-05-10T04:29:01Z [sg236] Receiving 7611 bytes of sg0031dz.x01
+2023-05-10T04:29:28Z [sg236] Received 7611 bytes of sg0031dz.x01 (273.3 Bps)
+2023-05-10T04:29:28Z [sg236] OK
+2023-05-10T04:29:30Z [sg236] Receiving 6328 bytes of sg0031lz.x
+2023-05-10T04:29:53Z [sg236] Received 6328 bytes of sg0031lz.x (272.9 Bps)
+2023-05-10T04:29:53Z [sg236] OK
+2023-05-10T04:29:55Z [sg236] ready to receive 3 files
+2023-05-10T04:29:56Z [sg236] Receiving 8192 bytes of sc0031ag.x
+2023-05-10T04:30:26Z [sg236] Received 8192 bytes of sc0031ag.x (275.4 Bps)
+2023-05-10T04:30:26Z [sg236] OK
+2023-05-10T04:30:27Z [sg236] Receiving 8192 bytes of sc0031bg.x00
+2023-05-10T04:30:59Z [sg236] Received 8192 bytes of sc0031bg.x00 (255.2 Bps)
+2023-05-10T04:30:59Z [sg236] OK
+2023-05-10T04:31:00Z [sg236] Receiving 1024 bytes of sc0031bg.x01
+2023-05-10T04:31:03Z [sg236] Received 1024 bytes of sc0031bg.x01 (348.6 Bps)
+2023-05-10T04:31:03Z [sg236] OK
+31:0:1:0:2:35:1 logout
+Disconnected at 2023-05-10T04:31:06Z (normal)
+
+
+Connected at 2023-05-10T08:21:32Z (sg236)
+logged in
+32:0:2:0:2:35:-2:180:2124:1637:-61.61:1.41:81.54:7.50:7.85:4.48:4.22 GPS,100523,081826,4656.451,-12602.049,124,1.0,125,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.801270,-12604.887695,100523,042808
+2023-05-10T08:21:58Z [sg236] Sending 309 bytes of cmdfile
+2023-05-10T08:21:58Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-10T08:22:17Z [sg236] ready to receive 4 files
+2023-05-10T08:22:18Z [sg236] Receiving 8192 bytes of sg0032dz.x00
+2023-05-10T08:22:50Z [sg236] Received 8192 bytes of sg0032dz.x00 (257.2 Bps)
+2023-05-10T08:22:50Z [sg236] OK
+2023-05-10T08:22:51Z [sg236] Receiving 8192 bytes of sg0032dz.x01
+2023-05-10T08:23:17Z [sg236] Received 909 bytes of sg0032dz.x01 (36.3 Bps)
+2023-05-10T08:23:17Z [sg236] E0 8192 909
+Disconnected at 2023-05-10T08:23:22Z (hangup)
+
+
+Connected at 2023-05-10T08:25:17Z (sg236)
+logged in
+32:0:3:0:2:35:0:180:2124:1637:-61.61:1.41:81.54:7.50:7.85:4.48:4.22 GPS,100523,081826,4656.451,-12602.049,124,1.0,125,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.979004,-12600.483398,100523,082125
+2023-05-10T08:25:26Z [sg236] Sending 309 bytes of cmdfile
+2023-05-10T08:25:26Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-10T08:25:31Z [sg236] ready to receive 3 files
+2023-05-10T08:25:33Z [sg236] Receiving 8192 bytes of sg0032dz.x01
+2023-05-10T08:26:00Z [sg236] Received 8192 bytes of sg0032dz.x01 (295.1 Bps)
+2023-05-10T08:26:00Z [sg236] OK
+2023-05-10T08:26:04Z [sg236] Receiving 315 bytes of sg0032dz.x02
+2023-05-10T08:26:05Z [sg236] Received 315 bytes of sg0032dz.x02 (346.0 Bps)
+2023-05-10T08:26:05Z [sg236] OK
+2023-05-10T08:26:06Z [sg236] Receiving 6471 bytes of sg0032lz.x
+2023-05-10T08:26:32Z [sg236] Received 6471 bytes of sg0032lz.x (254.3 Bps)
+2023-05-10T08:26:32Z [sg236] OK
+2023-05-10T08:26:35Z [sg236] ready to receive 3 files
+2023-05-10T08:26:36Z [sg236] Receiving 8192 bytes of sc0032ag.x
+2023-05-10T08:27:01Z [sg236] Received 8192 bytes of sc0032ag.x (320.9 Bps)
+2023-05-10T08:27:01Z [sg236] OK
+2023-05-10T08:27:03Z [sg236] Receiving 8192 bytes of sc0032bg.x00
+2023-05-10T08:27:28Z [sg236] Received 8192 bytes of sc0032bg.x00 (329.4 Bps)
+2023-05-10T08:27:28Z [sg236] OK
+2023-05-10T08:27:29Z [sg236] Receiving 1024 bytes of sc0032bg.x01
+2023-05-10T08:27:32Z [sg236] Received 1024 bytes of sc0032bg.x01 (347.3 Bps)
+2023-05-10T08:27:32Z [sg236] OK
+32:0:3:0:2:35:1 logout
+Disconnected at 2023-05-10T08:27:35Z (normal)
+
+
+Connected at 2023-05-10T12:15:45Z (sg236)
+logged in
+33:0:1:0:2:35:0:180:2119:1649:-65.43:1.52:81.53:7.50:7.83:4.48:4.20 GPS,100523,121402,4656.386,-12559.686,90,0.9,127,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.453613,-12600.483398,100523,082509
+2023-05-10T12:15:53Z [sg236] Sending 309 bytes of cmdfile
+2023-05-10T12:15:53Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-10T12:15:58Z [sg236] ready to receive 4 files
+2023-05-10T12:15:59Z [sg236] Receiving 8192 bytes of sg0033dz.x00
+2023-05-10T12:16:29Z [sg236] Received 8192 bytes of sg0033dz.x00 (271.5 Bps)
+2023-05-10T12:16:29Z [sg236] OK
+2023-05-10T12:16:30Z [sg236] Receiving 8192 bytes of sg0033dz.x01
+2023-05-10T12:16:57Z [sg236] Received 8192 bytes of sg0033dz.x01 (308.3 Bps)
+2023-05-10T12:16:57Z [sg236] OK
+2023-05-10T12:17:01Z [sg236] Receiving 142 bytes of sg0033dz.x02
+2023-05-10T12:17:01Z [sg236] Received 142 bytes of sg0033dz.x02 (332.9 Bps)
+2023-05-10T12:17:01Z [sg236] OK
+2023-05-10T12:17:02Z [sg236] Receiving 6446 bytes of sg0033lz.x
+2023-05-10T12:17:21Z [sg236] Received 6446 bytes of sg0033lz.x (344.1 Bps)
+2023-05-10T12:17:21Z [sg236] OK
+2023-05-10T12:17:23Z [sg236] ready to receive 3 files
+2023-05-10T12:17:24Z [sg236] Receiving 8192 bytes of sc0033ag.x
+2023-05-10T12:17:48Z [sg236] Received 8192 bytes of sc0033ag.x (345.2 Bps)
+2023-05-10T12:17:48Z [sg236] OK
+2023-05-10T12:17:49Z [sg236] Receiving 8192 bytes of sc0033bg.x00
+2023-05-10T12:18:13Z [sg236] Received 8192 bytes of sc0033bg.x00 (344.6 Bps)
+2023-05-10T12:18:13Z [sg236] OK
+2023-05-10T12:18:14Z [sg236] Receiving 1024 bytes of sc0033bg.x01
+2023-05-10T12:18:17Z [sg236] Received 1024 bytes of sc0033bg.x01 (347.4 Bps)
+2023-05-10T12:18:17Z [sg236] OK
+33:0:1:0:2:35:1 logout
+Disconnected at 2023-05-10T12:18:19Z (normal)
+
+
+Connected at 2023-05-10T16:04:57Z (sg236)
+logged in
+34:0:1:0:2:35:0:182:2127:1572:-69.04:1.50:81.44:7.50:7.83:4.47:4.27 GPS,100523,160330,4656.062,-12557.106,74,0.8,74,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.381348,-12557.931641,100523,121538
+2023-05-10T16:05:12Z [sg236] Sending 309 bytes of cmdfile
+2023-05-10T16:05:12Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-10T16:05:16Z [sg236] ready to receive 3 files
+2023-05-10T16:05:17Z [sg236] Receiving 8192 bytes of sg0034dz.x00
+2023-05-10T16:05:41Z [sg236] Received 8192 bytes of sg0034dz.x00 (344.7 Bps)
+2023-05-10T16:05:41Z [sg236] OK
+2023-05-10T16:05:42Z [sg236] Receiving 8097 bytes of sg0034dz.x01
+2023-05-10T16:06:06Z [sg236] Received 8097 bytes of sg0034dz.x01 (341.8 Bps)
+2023-05-10T16:06:06Z [sg236] OK
+2023-05-10T16:06:07Z [sg236] Receiving 6125 bytes of sg0034lz.x
+2023-05-10T16:06:25Z [sg236] Received 6125 bytes of sg0034lz.x (344.5 Bps)
+2023-05-10T16:06:25Z [sg236] OK
+2023-05-10T16:06:27Z [sg236] ready to receive 3 files
+2023-05-10T16:06:28Z [sg236] Receiving 8192 bytes of sc0034ag.x
+2023-05-10T16:06:53Z [sg236] Received 8192 bytes of sc0034ag.x (338.5 Bps)
+2023-05-10T16:06:53Z [sg236] OK
+2023-05-10T16:06:54Z [sg236] Receiving 8192 bytes of sc0034bg.x00
+2023-05-10T16:07:18Z [sg236] Received 8192 bytes of sc0034bg.x00 (344.7 Bps)
+2023-05-10T16:07:18Z [sg236] OK
+2023-05-10T16:07:19Z [sg236] Receiving 128 bytes of sc0034bg.x01
+2023-05-10T16:07:19Z [sg236] Received 128 bytes of sc0034bg.x01 (347.9 Bps)
+2023-05-10T16:07:19Z [sg236] OK
+34:0:1:0:2:35:1 logout
+Disconnected at 2023-05-10T16:07:21Z (normal)
+
+
+Connected at 2023-05-10T21:14:53Z (sg236)
+logged in
+35:0:1:0:2:35:0:179:2073:1515:-67.96:1.33:81.39:7.50:7.80:4.47:4.06 GPS,100523,211329,4656.152,-12553.811,36,1.9,57,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4656.103516,-12556.081055,100523,160452
+2023-05-10T21:15:07Z [sg236] Sending 309 bytes of cmdfile
+2023-05-10T21:15:07Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-10T21:15:12Z [sg236] ready to receive 4 files
+2023-05-10T21:15:15Z [sg236] Receiving 8192 bytes of sg0035dz.x00
+2023-05-10T21:15:37Z [sg236] Received 8192 bytes of sg0035dz.x00 (372.0 Bps)
+2023-05-10T21:15:37Z [sg236] OK
+2023-05-10T21:15:39Z [sg236] Receiving 8192 bytes of sg0035dz.x01
+2023-05-10T21:16:04Z [sg236] Received 8192 bytes of sg0035dz.x01 (318.9 Bps)
+2023-05-10T21:16:04Z [sg236] OK
+2023-05-10T21:16:06Z [sg236] Receiving 7757 bytes of sg0035dz.x02
+2023-05-10T21:16:38Z [sg236] Received 7757 bytes of sg0035dz.x02 (240.1 Bps)
+2023-05-10T21:16:38Z [sg236] OK
+2023-05-10T21:16:39Z [sg236] Receiving 7268 bytes of sg0035lz.x
+2023-05-10T21:17:01Z [sg236] Received 7268 bytes of sg0035lz.x (329.8 Bps)
+2023-05-10T21:17:01Z [sg236] OK
+2023-05-10T21:17:04Z [sg236] ready to receive 4 files
+2023-05-10T21:17:05Z [sg236] Receiving 8192 bytes of sc0035ag.x00
+2023-05-10T21:17:29Z [sg236] Received 8192 bytes of sc0035ag.x00 (343.0 Bps)
+2023-05-10T21:17:29Z [sg236] OK
+2023-05-10T21:17:30Z [sg236] Receiving 2048 bytes of sc0035ag.x01
+2023-05-10T21:17:36Z [sg236] Received 2048 bytes of sc0035ag.x01 (345.3 Bps)
+2023-05-10T21:17:36Z [sg236] OK
+2023-05-10T21:17:40Z [sg236] Receiving 8192 bytes of sc0035bg.x00
+2023-05-10T21:18:03Z [sg236] Received 8192 bytes of sc0035bg.x00 (343.8 Bps)
+2023-05-10T21:18:03Z [sg236] OK
+2023-05-10T21:18:05Z [sg236] Receiving 2048 bytes of sc0035bg.x01
+2023-05-10T21:18:11Z [sg236] Received 2048 bytes of sc0035bg.x01 (345.6 Bps)
+2023-05-10T21:18:11Z [sg236] OK
+35:0:1:0:2:35:1 logout
+Disconnected at 2023-05-10T21:18:13Z (normal)
+
+
+Connected at 2023-05-11T02:17:57Z (sg236)
+logged in
+36:0:1:0:2:35:0:179:2067:1649:-63.69:1.42:81.45:7.50:7.85:4.48:3.97 GPS,110523,021626,4656.312,-12549.926,120,1.1,156,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4657.029297,-12553.526367,100523,211447
+2023-05-11T02:18:17Z [sg236] Sending 309 bytes of cmdfile
+2023-05-11T02:18:17Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-11T02:18:22Z [sg236] ready to receive 4 files
+2023-05-11T02:18:23Z [sg236] Receiving 8192 bytes of sg0036dz.x00
+2023-05-11T02:18:52Z [sg236] Received 8192 bytes of sg0036dz.x00 (279.1 Bps)
+2023-05-11T02:18:52Z [sg236] OK
+2023-05-11T02:18:54Z [sg236] Receiving 8192 bytes of sg0036dz.x01
+2023-05-11T02:19:19Z [sg236] Received 8192 bytes of sg0036dz.x01 (326.2 Bps)
+2023-05-11T02:19:19Z [sg236] OK
+2023-05-11T02:19:20Z [sg236] Receiving 4416 bytes of sg0036dz.x02
+2023-05-11T02:19:36Z [sg236] Received 4416 bytes of sg0036dz.x02 (273.2 Bps)
+2023-05-11T02:19:36Z [sg236] OK
+2023-05-11T02:19:37Z [sg236] Receiving 7263 bytes of sg0036lz.x
+2023-05-11T02:19:58Z [sg236] Received 7263 bytes of sg0036lz.x (343.6 Bps)
+2023-05-11T02:19:58Z [sg236] OK
+2023-05-11T02:20:01Z [sg236] ready to receive 4 files
+2023-05-11T02:20:02Z [sg236] Receiving 8192 bytes of sc0036ag.x00
+2023-05-11T02:20:29Z [sg236] Received 8192 bytes of sc0036ag.x00 (305.6 Bps)
+2023-05-11T02:20:29Z [sg236] OK
+2023-05-11T02:20:30Z [sg236] Receiving 2048 bytes of sc0036ag.x01
+2023-05-11T02:20:36Z [sg236] Received 2048 bytes of sc0036ag.x01 (344.5 Bps)
+2023-05-11T02:20:36Z [sg236] OK
+2023-05-11T02:20:37Z [sg236] Receiving 8192 bytes of sc0036bg.x00
+2023-05-11T02:21:02Z [sg236] Received 8192 bytes of sc0036bg.x00 (334.4 Bps)
+2023-05-11T02:21:02Z [sg236] OK
+2023-05-11T02:21:03Z [sg236] Receiving 1152 bytes of sc0036bg.x01
+2023-05-11T02:21:07Z [sg236] Received 1152 bytes of sc0036bg.x01 (246.0 Bps)
+2023-05-11T02:21:07Z [sg236] OK
+36:0:1:0:2:35:1 logout
+Disconnected at 2023-05-11T02:21:10Z (normal)
+
+
+Connected at 2023-05-11T07:28:16Z (sg236)
+logged in
+37:0:2:0:2:35:-3:179:2080:1650:-65.61:1.56:81.39:7.50:7.85:4.47:4.00 GPS,110523,072430,4656.001,-12546.103,159,0.8,159,15.7
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4657.597656,-12546.564453,110523,072555
+2023-05-11T07:28:26Z [sg236] Sending 309 bytes of cmdfile
+2023-05-11T07:28:26Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-11T07:28:31Z [sg236] ready to receive 4 files
+2023-05-11T07:28:32Z [sg236] Receiving 8192 bytes of sg0037dz.x00
+2023-05-11T07:28:57Z [sg236] Received 8192 bytes of sg0037dz.x00 (324.8 Bps)
+2023-05-11T07:28:57Z [sg236] OK
+2023-05-11T07:28:59Z [sg236] Receiving 8192 bytes of sg0037dz.x01
+2023-05-11T07:29:25Z [sg236] Received 8192 bytes of sg0037dz.x01 (307.4 Bps)
+2023-05-11T07:29:25Z [sg236] OK
+2023-05-11T07:29:27Z [sg236] Receiving 4533 bytes of sg0037dz.x02
+2023-05-11T07:29:40Z [sg236] Received 4533 bytes of sg0037dz.x02 (343.1 Bps)
+2023-05-11T07:29:40Z [sg236] OK
+2023-05-11T07:29:41Z [sg236] Receiving 7084 bytes of sg0037lz.x
+2023-05-11T07:30:09Z [sg236] Received 7084 bytes of sg0037lz.x (259.7 Bps)
+2023-05-11T07:30:09Z [sg236] OK
+2023-05-11T07:30:11Z [sg236] ready to receive 4 files
+2023-05-11T07:30:13Z [sg236] Receiving 8192 bytes of sc0037ag.x00
+2023-05-11T07:30:40Z [sg236] Received 8192 bytes of sc0037ag.x00 (298.2 Bps)
+2023-05-11T07:30:40Z [sg236] OK
+2023-05-11T07:30:41Z [sg236] Receiving 2048 bytes of sc0037ag.x01
+2023-05-11T07:30:47Z [sg236] Received 2048 bytes of sc0037ag.x01 (344.1 Bps)
+2023-05-11T07:30:47Z [sg236] OK
+2023-05-11T07:30:49Z [sg236] Receiving 8192 bytes of sc0037bg.x00
+2023-05-11T07:31:15Z [sg236] Received 8192 bytes of sc0037bg.x00 (317.2 Bps)
+2023-05-11T07:31:15Z [sg236] OK
+2023-05-11T07:31:16Z [sg236] Receiving 1024 bytes of sc0037bg.x01
+2023-05-11T07:31:19Z [sg236] Received 1024 bytes of sc0037bg.x01 (344.4 Bps)
+2023-05-11T07:31:19Z [sg236] OK
+37:0:2:0:2:35:1 logout
+Disconnected at 2023-05-11T07:31:26Z (normal)
+
+
+Connected at 2023-05-11T12:59:18Z (sg236)
+logged in
+38:0:1:0:2:35:0:179:2076:1486:-68.86:1.55:81.42:7.50:7.81:4.47:3.95 GPS,110523,125800,4655.912,-12542.858,100,0.9,100,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.841797,-12544.721680,110523,072809
+2023-05-11T12:59:29Z [sg236] Sending 309 bytes of cmdfile
+2023-05-11T12:59:29Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-11T12:59:39Z [sg236] ready to receive 4 files
+2023-05-11T12:59:43Z [sg236] Receiving 8192 bytes of sg0038dz.x00
+2023-05-11T13:00:07Z [sg236] Received 8192 bytes of sg0038dz.x00 (342.1 Bps)
+2023-05-11T13:00:07Z [sg236] OK
+2023-05-11T13:00:11Z [sg236] Receiving 8192 bytes of sg0038dz.x01
+2023-05-11T13:00:33Z [sg236] Received 8192 bytes of sg0038dz.x01 (369.4 Bps)
+2023-05-11T13:00:33Z [sg236] OK
+2023-05-11T13:00:34Z [sg236] Receiving 6036 bytes of sg0038dz.x02
+2023-05-11T13:00:54Z [sg236] Received 6036 bytes of sg0038dz.x02 (310.1 Bps)
+2023-05-11T13:00:54Z [sg236] OK
+2023-05-11T13:00:55Z [sg236] Receiving 7779 bytes of sg0038lz.x
+2023-05-11T13:01:18Z [sg236] Received 7779 bytes of sg0038lz.x (338.5 Bps)
+2023-05-11T13:01:18Z [sg236] OK
+2023-05-11T13:01:20Z [sg236] ready to receive 4 files
+2023-05-11T13:01:22Z [sg236] Receiving 8192 bytes of sc0038ag.x00
+2023-05-11T13:01:45Z [sg236] Received 8192 bytes of sc0038ag.x00 (344.7 Bps)
+2023-05-11T13:01:45Z [sg236] OK
+2023-05-11T13:01:47Z [sg236] Receiving 2048 bytes of sc0038ag.x01
+2023-05-11T13:01:52Z [sg236] Received 2048 bytes of sc0038ag.x01 (346.7 Bps)
+2023-05-11T13:01:52Z [sg236] OK
+2023-05-11T13:01:54Z [sg236] Receiving 8192 bytes of sc0038bg.x00
+2023-05-11T13:02:18Z [sg236] Received 8192 bytes of sc0038bg.x00 (343.2 Bps)
+2023-05-11T13:02:18Z [sg236] OK
+2023-05-11T13:02:19Z [sg236] Receiving 2048 bytes of sc0038bg.x01
+2023-05-11T13:02:25Z [sg236] Received 2048 bytes of sc0038bg.x01 (343.7 Bps)
+2023-05-11T13:02:25Z [sg236] OK
+38:0:1:0:2:35:1 logout
+Disconnected at 2023-05-11T13:02:28Z (normal)
+
+
+Connected at 2023-05-11T18:12:54Z (sg236)
+Disconnected at 2023-05-11T18:13:06Z (hangup)
+
+
+Connected at 2023-05-11T18:14:51Z (sg236)
+logged in
+39:0:2:0:2:35:-6:179:2126:1649:-64.61:1.34:81.48:7.50:7.85:4.48:3.92 GPS,110523,181120,4654.626,-12540.206,65,1.4,107,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.920410,-12547.279297,110523,181249
+2023-05-11T18:15:02Z [sg236] Sending 309 bytes of cmdfile
+2023-05-11T18:15:02Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-11T18:15:08Z [sg236] ready to receive 4 files
+2023-05-11T18:15:09Z [sg236] Receiving 8192 bytes of sg0039dz.x00
+2023-05-11T18:15:37Z [sg236] Received 8192 bytes of sg0039dz.x00 (289.9 Bps)
+2023-05-11T18:15:37Z [sg236] OK
+2023-05-11T18:15:39Z [sg236] Receiving 8192 bytes of sg0039dz.x01
+2023-05-11T18:16:02Z [sg236] Received 8192 bytes of sg0039dz.x01 (345.0 Bps)
+2023-05-11T18:16:02Z [sg236] OK
+2023-05-11T18:16:06Z [sg236] Receiving 7281 bytes of sg0039dz.x02
+2023-05-11T18:16:28Z [sg236] Received 7281 bytes of sg0039dz.x02 (338.5 Bps)
+2023-05-11T18:16:28Z [sg236] OK
+2023-05-11T18:16:29Z [sg236] Receiving 7429 bytes of sg0039lz.x
+2023-05-11T18:17:03Z [sg236] Received 7429 bytes of sg0039lz.x (221.2 Bps)
+2023-05-11T18:17:03Z [sg236] OK
+2023-05-11T18:17:05Z [sg236] ready to receive 4 files
+2023-05-11T18:17:06Z [sg236] Receiving 8192 bytes of sc0039ag.x00
+2023-05-11T18:17:36Z [sg236] Received 8192 bytes of sc0039ag.x00 (281.6 Bps)
+2023-05-11T18:17:36Z [sg236] OK
+2023-05-11T18:17:37Z [sg236] Receiving 2048 bytes of sc0039ag.x01
+2023-05-11T18:17:45Z [sg236] Received 2048 bytes of sc0039ag.x01 (254.2 Bps)
+2023-05-11T18:17:45Z [sg236] OK
+2023-05-11T18:17:46Z [sg236] Receiving 8192 bytes of sc0039bg.x00
+2023-05-11T18:18:11Z [sg236] Received 8192 bytes of sc0039bg.x00 (327.6 Bps)
+2023-05-11T18:18:11Z [sg236] OK
+2023-05-11T18:18:13Z [sg236] Receiving 2048 bytes of sc0039bg.x01
+2023-05-11T18:18:19Z [sg236] Received 2048 bytes of sc0039bg.x01 (344.4 Bps)
+2023-05-11T18:18:19Z [sg236] OK
+39:0:2:0:2:35:1 logout
+Disconnected at 2023-05-11T18:18:21Z (normal)
+
+
+Connected at 2023-05-11T23:24:50Z (sg236)
+logged in
+40:0:1:0:2:35:0:182:2074:1491:-69.62:1.73:81.47:7.50:7.84:4.47:3.94 GPS,110523,232331,4654.016,-12537.112,102,0.8,103,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4658.002930,-12445.301758,110523,181441
+2023-05-11T23:24:59Z [sg236] Sending 309 bytes of cmdfile
+2023-05-11T23:24:59Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-11T23:25:04Z [sg236] ready to receive 4 files
+2023-05-11T23:25:05Z [sg236] Receiving 8192 bytes of sg0040dz.x00
+2023-05-11T23:25:30Z [sg236] Received 8192 bytes of sg0040dz.x00 (330.8 Bps)
+2023-05-11T23:25:30Z [sg236] OK
+2023-05-11T23:25:31Z [sg236] Receiving 8192 bytes of sg0040dz.x01
+2023-05-11T23:25:55Z [sg236] Received 8192 bytes of sg0040dz.x01 (340.9 Bps)
+2023-05-11T23:25:55Z [sg236] OK
+2023-05-11T23:25:57Z [sg236] Receiving 7374 bytes of sg0040dz.x02
+2023-05-11T23:26:18Z [sg236] Received 7374 bytes of sg0040dz.x02 (338.2 Bps)
+2023-05-11T23:26:18Z [sg236] OK
+2023-05-11T23:26:20Z [sg236] Receiving 7448 bytes of sg0040lz.x
+2023-05-11T23:26:42Z [sg236] Received 7448 bytes of sg0040lz.x (340.4 Bps)
+2023-05-11T23:26:42Z [sg236] OK
+2023-05-11T23:26:44Z [sg236] ready to receive 4 files
+2023-05-11T23:26:45Z [sg236] Receiving 8192 bytes of sc0040ag.x00
+2023-05-11T23:27:11Z [sg236] Received 8192 bytes of sc0040ag.x00 (317.0 Bps)
+2023-05-11T23:27:11Z [sg236] OK
+2023-05-11T23:27:12Z [sg236] Receiving 2048 bytes of sc0040ag.x01
+2023-05-11T23:27:18Z [sg236] Received 2048 bytes of sc0040ag.x01 (343.9 Bps)
+2023-05-11T23:27:18Z [sg236] OK
+2023-05-11T23:27:20Z [sg236] Receiving 8192 bytes of sc0040bg.x00
+2023-05-11T23:27:44Z [sg236] Received 8192 bytes of sc0040bg.x00 (338.5 Bps)
+2023-05-11T23:27:44Z [sg236] OK
+2023-05-11T23:27:45Z [sg236] Receiving 1152 bytes of sc0040bg.x01
+2023-05-11T23:27:48Z [sg236] Received 1152 bytes of sc0040bg.x01 (346.8 Bps)
+2023-05-11T23:27:48Z [sg236] OK
+40:0:1:0:2:35:1 logout
+Disconnected at 2023-05-11T23:27:51Z (normal)
+
+
+Connected at 2023-05-12T04:23:51Z (sg236)
+logged in
+41:0:1:0:2:35:0:183:2078:1487:-66.67:1.64:81.40:7.50:7.83:4.47:4.00 GPS,120523,042231,4654.707,-12533.964,57,1.1,58,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.119141,-12535.924805,110523,232443
+2023-05-12T04:24:04Z [sg236] Sending 309 bytes of cmdfile
+2023-05-12T04:24:04Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-12T04:24:16Z [sg236] ready to receive 4 files
+2023-05-12T04:24:17Z [sg236] Receiving 8192 bytes of sg0041dz.x00
+2023-05-12T04:24:43Z [sg236] Received 8192 bytes of sg0041dz.x00 (319.1 Bps)
+2023-05-12T04:24:43Z [sg236] OK
+2023-05-12T04:24:44Z [sg236] Receiving 8192 bytes of sg0041dz.x01
+2023-05-12T04:25:12Z [sg236] Received 8192 bytes of sg0041dz.x01 (288.7 Bps)
+2023-05-12T04:25:12Z [sg236] OK
+2023-05-12T04:25:14Z [sg236] Receiving 5579 bytes of sg0041dz.x02
+2023-05-12T04:25:31Z [sg236] Received 5579 bytes of sg0041dz.x02 (310.8 Bps)
+2023-05-12T04:25:31Z [sg236] OK
+2023-05-12T04:25:33Z [sg236] Receiving 7688 bytes of sg0041lz.x
+2023-05-12T04:25:55Z [sg236] Received 7688 bytes of sg0041lz.x (344.7 Bps)
+2023-05-12T04:25:55Z [sg236] OK
+2023-05-12T04:25:57Z [sg236] ready to receive 4 files
+2023-05-12T04:25:58Z [sg236] Receiving 8192 bytes of sc0041ag.x00
+2023-05-12T04:26:22Z [sg236] Received 8192 bytes of sc0041ag.x00 (341.1 Bps)
+2023-05-12T04:26:22Z [sg236] OK
+2023-05-12T04:26:24Z [sg236] Receiving 2048 bytes of sc0041ag.x01
+2023-05-12T04:26:29Z [sg236] Received 2048 bytes of sc0041ag.x01 (346.5 Bps)
+2023-05-12T04:26:29Z [sg236] OK
+2023-05-12T04:26:31Z [sg236] Receiving 8192 bytes of sc0041bg.x00
+2023-05-12T04:26:55Z [sg236] Received 8192 bytes of sc0041bg.x00 (340.7 Bps)
+2023-05-12T04:26:55Z [sg236] OK
+2023-05-12T04:26:56Z [sg236] Receiving 1024 bytes of sc0041bg.x01
+2023-05-12T04:26:59Z [sg236] Received 1024 bytes of sc0041bg.x01 (342.9 Bps)
+2023-05-12T04:26:59Z [sg236] OK
+41:0:1:0:2:35:1 logout
+Disconnected at 2023-05-12T04:27:01Z (normal)
+
+
+Connected at 2023-05-12T09:30:27Z (sg236)
+logged in
+42:0:3:0:2:35:-2:178:2129:1649:-67.95:1.44:81.54:7.50:7.85:4.48:3.89 GPS,120523,092510,4654.458,-12530.771,122,1.9,123,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 0 geolocation: 4655.036621,-12533.360352,120523,042347
+2023-05-12T09:30:38Z [sg236] Sending 309 bytes of cmdfile
+2023-05-12T09:30:38Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-12T09:30:45Z [sg236] ready to receive 4 files
+2023-05-12T09:30:46Z [sg236] Receiving 8192 bytes of sg0042dz.x00
+Disconnected at 2023-05-12T09:31:01Z (hangup)
+
+
+Connected at 2023-05-12T09:32:43Z (sg236)
+logged in
+42:0:4:0:2:35:0:178:2129:1649:-67.95:1.44:81.54:7.50:7.85:4.48:3.89 GPS,120523,092510,4654.458,-12530.771,122,1.9,123,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4655.036621,-12533.360352,120523,093022
+2023-05-12T09:32:54Z [sg236] Sending 309 bytes of cmdfile
+2023-05-12T09:32:54Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-12T09:32:59Z [sg236] ready to receive 4 files
+2023-05-12T09:33:02Z [sg236] Receiving 8192 bytes of sg0042dz.x00
+2023-05-12T09:33:24Z [sg236] Received 8192 bytes of sg0042dz.x00 (381.6 Bps)
+2023-05-12T09:33:24Z [sg236] OK
+2023-05-12T09:33:25Z [sg236] Receiving 8192 bytes of sg0042dz.x01
+2023-05-12T09:33:50Z [sg236] Received 8192 bytes of sg0042dz.x01 (328.4 Bps)
+2023-05-12T09:33:50Z [sg236] OK
+2023-05-12T09:33:51Z [sg236] Receiving 5841 bytes of sg0042dz.x02
+2023-05-12T09:34:09Z [sg236] Received 5841 bytes of sg0042dz.x02 (323.6 Bps)
+2023-05-12T09:34:09Z [sg236] OK
+2023-05-12T09:34:10Z [sg236] Receiving 7484 bytes of sg0042lz.x
+2023-05-12T09:34:32Z [sg236] Received 7484 bytes of sg0042lz.x (341.5 Bps)
+2023-05-12T09:34:32Z [sg236] OK
+2023-05-12T09:34:34Z [sg236] ready to receive 4 files
+2023-05-12T09:34:35Z [sg236] Receiving 8192 bytes of sc0042ag.x00
+2023-05-12T09:35:02Z [sg236] Received 8192 bytes of sc0042ag.x00 (312.3 Bps)
+2023-05-12T09:35:02Z [sg236] OK
+2023-05-12T09:35:03Z [sg236] Receiving 2048 bytes of sc0042ag.x01
+2023-05-12T09:35:09Z [sg236] Received 2048 bytes of sc0042ag.x01 (343.9 Bps)
+2023-05-12T09:35:09Z [sg236] OK
+2023-05-12T09:35:12Z [sg236] Receiving 8192 bytes of sc0042bg.x00
+2023-05-12T09:35:39Z [sg236] Received 8192 bytes of sc0042bg.x00 (307.8 Bps)
+2023-05-12T09:35:39Z [sg236] OK
+2023-05-12T09:35:40Z [sg236] Receiving 1024 bytes of sc0042bg.x01
+2023-05-12T09:35:45Z [sg236] Received 1024 bytes of sc0042bg.x01 (204.1 Bps)
+2023-05-12T09:35:45Z [sg236] OK
+42:0:4:0:2:35:1 logout
+Disconnected at 2023-05-12T09:35:50Z (hangup)
+
+
+Connected at 2023-05-12T14:32:43Z (sg236)
+logged in
+43:0:2:0:2:35:-2:188:2126:1443:-68.77:1.76:81.54:7.50:7.83:4.48:3.93 GPS,120523,142939,4654.113,-12527.631,74,1.0,74,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.753418,-12531.528320,120523,093236
+2023-05-12T14:32:56Z [sg236] Sending 309 bytes of cmdfile
+2023-05-12T14:32:56Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-12T14:33:03Z [sg236] ready to receive 4 files
+2023-05-12T14:33:04Z [sg236] Receiving 8192 bytes of sg0043dz.x00
+2023-05-12T14:33:30Z [sg236] Received 8192 bytes of sg0043dz.x00 (314.1 Bps)
+2023-05-12T14:33:30Z [sg236] OK
+2023-05-12T14:33:32Z [sg236] Receiving 8192 bytes of sg0043dz.x01
+2023-05-12T14:33:55Z [sg236] Received 8192 bytes of sg0043dz.x01 (344.4 Bps)
+2023-05-12T14:33:55Z [sg236] OK
+2023-05-12T14:33:57Z [sg236] Receiving 4831 bytes of sg0043dz.x02
+2023-05-12T14:34:11Z [sg236] Received 4831 bytes of sg0043dz.x02 (341.5 Bps)
+2023-05-12T14:34:11Z [sg236] OK
+2023-05-12T14:34:12Z [sg236] Receiving 7332 bytes of sg0043lz.x
+2023-05-12T14:34:33Z [sg236] Received 7332 bytes of sg0043lz.x (342.0 Bps)
+2023-05-12T14:34:33Z [sg236] OK
+2023-05-12T14:34:36Z [sg236] ready to receive 4 files
+2023-05-12T14:34:37Z [sg236] Receiving 8192 bytes of sc0043ag.x00
+2023-05-12T14:35:01Z [sg236] Received 8192 bytes of sc0043ag.x00 (344.7 Bps)
+2023-05-12T14:35:01Z [sg236] OK
+2023-05-12T14:35:02Z [sg236] Receiving 1152 bytes of sc0043ag.x01
+2023-05-12T14:35:05Z [sg236] Received 1152 bytes of sc0043ag.x01 (347.9 Bps)
+2023-05-12T14:35:05Z [sg236] OK
+2023-05-12T14:35:09Z [sg236] Receiving 8192 bytes of sc0043bg.x00
+2023-05-12T14:35:33Z [sg236] Received 8192 bytes of sc0043bg.x00 (344.6 Bps)
+2023-05-12T14:35:33Z [sg236] OK
+2023-05-12T14:35:34Z [sg236] Receiving 1152 bytes of sc0043bg.x01
+2023-05-12T14:35:37Z [sg236] Received 1152 bytes of sc0043bg.x01 (343.6 Bps)
+2023-05-12T14:35:37Z [sg236] OK
+43:0:2:0:2:35:1 logout
+Disconnected at 2023-05-12T14:35:40Z (normal)
+
+
+Connected at 2023-05-12T19:35:27Z (sg236)
+logged in
+44:0:1:0:2:35:0:181:2077:1392:-68.40:1.78:81.59:7.50:7.79:4.48:3.88 GPS,120523,193412,4654.002,-12524.300,30,1.4,33,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.384766,-12527.134766,120523,143232
+2023-05-12T19:35:43Z [sg236] Sending 309 bytes of cmdfile
+2023-05-12T19:35:43Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-12T19:35:49Z [sg236] ready to receive 4 files
+2023-05-12T19:35:50Z [sg236] Receiving 8192 bytes of sg0044dz.x00
+2023-05-12T19:36:14Z [sg236] Received 8192 bytes of sg0044dz.x00 (345.1 Bps)
+2023-05-12T19:36:14Z [sg236] OK
+2023-05-12T19:36:15Z [sg236] Receiving 8192 bytes of sg0044dz.x01
+2023-05-12T19:37:00Z [sg236] Received 8192 bytes of sg0044dz.x01 (183.2 Bps)
+2023-05-12T19:37:00Z [sg236] OK
+2023-05-12T19:37:01Z [sg236] Receiving 5532 bytes of sg0044dz.x02
+2023-05-12T19:37:18Z [sg236] Received 5532 bytes of sg0044dz.x02 (328.0 Bps)
+2023-05-12T19:37:18Z [sg236] OK
+2023-05-12T19:37:19Z [sg236] Receiving 7605 bytes of sg0044lz.x
+2023-05-12T19:37:41Z [sg236] Received 7605 bytes of sg0044lz.x (344.7 Bps)
+2023-05-12T19:37:41Z [sg236] OK
+2023-05-12T19:37:44Z [sg236] ready to receive 4 files
+2023-05-12T19:37:45Z [sg236] Receiving 8192 bytes of sc0044ag.x00
+2023-05-12T19:38:09Z [sg236] Received 8192 bytes of sc0044ag.x00 (334.9 Bps)
+2023-05-12T19:38:09Z [sg236] OK
+2023-05-12T19:38:11Z [sg236] Receiving 2048 bytes of sc0044ag.x01
+2023-05-12T19:38:17Z [sg236] Received 2048 bytes of sc0044ag.x01 (344.4 Bps)
+2023-05-12T19:38:17Z [sg236] OK
+2023-05-12T19:38:18Z [sg236] Receiving 8192 bytes of sc0044bg.x00
+2023-05-12T19:38:46Z [sg236] Received 8192 bytes of sc0044bg.x00 (294.6 Bps)
+2023-05-12T19:38:46Z [sg236] OK
+2023-05-12T19:38:47Z [sg236] Receiving 1024 bytes of sc0044bg.x01
+2023-05-12T19:38:50Z [sg236] Received 1024 bytes of sc0044bg.x01 (342.6 Bps)
+2023-05-12T19:38:50Z [sg236] OK
+44:0:1:0:2:35:1 logout
+Disconnected at 2023-05-12T19:38:52Z (normal)
+
+
+Connected at 2023-05-13T00:33:21Z (sg236)
+logged in
+45:0:1:0:2:35:0:183:2127:1457:-65.98:1.76:81.52:7.50:7.81:4.47:3.92 GPS,130523,003200,4653.808,-12520.459,58,0.9,58,15.6
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.299316,-12524.566406,120523,193521
+2023-05-13T00:33:47Z [sg236] Sending 309 bytes of cmdfile
+2023-05-13T00:33:47Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-13T00:33:52Z [sg236] ready to receive 4 files
+2023-05-13T00:33:53Z [sg236] Receiving 8192 bytes of sg0045dz.x00
+2023-05-13T00:34:22Z [sg236] Received 8192 bytes of sg0045dz.x00 (287.7 Bps)
+2023-05-13T00:34:22Z [sg236] OK
+2023-05-13T00:34:23Z [sg236] Receiving 8192 bytes of sg0045dz.x01
+2023-05-13T00:34:48Z [sg236] Received 8192 bytes of sg0045dz.x01 (326.1 Bps)
+2023-05-13T00:34:48Z [sg236] OK
+2023-05-13T00:34:52Z [sg236] Receiving 3837 bytes of sg0045dz.x02
+2023-05-13T00:35:05Z [sg236] Received 3837 bytes of sg0045dz.x02 (282.5 Bps)
+2023-05-13T00:35:05Z [sg236] OK
+2023-05-13T00:35:07Z [sg236] Receiving 7060 bytes of sg0045lz.x
+2023-05-13T00:35:29Z [sg236] Received 7060 bytes of sg0045lz.x (319.4 Bps)
+2023-05-13T00:35:29Z [sg236] OK
+2023-05-13T00:35:31Z [sg236] ready to receive 3 files
+2023-05-13T00:35:32Z [sg236] Receiving 8192 bytes of sc0045ag.x00
+2023-05-13T00:35:59Z [sg236] Received 8192 bytes of sc0045ag.x00 (310.9 Bps)
+2023-05-13T00:35:59Z [sg236] OK
+2023-05-13T00:36:00Z [sg236] Receiving 128 bytes of sc0045ag.x01
+2023-05-13T00:36:00Z [sg236] Received 128 bytes of sc0045ag.x01 (338.7 Bps)
+2023-05-13T00:36:00Z [sg236] OK
+2023-05-13T00:36:02Z [sg236] Receiving 1024 bytes of sc0045bg.x
+2023-05-13T00:36:05Z [sg236] Received 1024 bytes of sc0045bg.x (344.2 Bps)
+2023-05-13T00:36:05Z [sg236] OK
+45:0:1:0:2:35:1 logout
+Disconnected at 2023-05-13T00:36:07Z (normal)
+
+
+Connected at 2023-05-13T06:03:50Z (sg236)
+logged in
+46:1:1:1:2:35:-2:183:2128:501:-66.12:1.40:82.05:7.50:7.68:4.47:3.57 GPS,130523,060301,4654.727,-12517.182,23,1.1,24,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_NOCOMM_REACHED
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4655.212891,-12521.997070,130523,003314
+2023-05-13T06:03:59Z [sg236] Sending 309 bytes of cmdfile
+2023-05-13T06:03:59Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-13T06:04:04Z [sg236] ready to receive 4 files
+2023-05-13T06:04:05Z [sg236] Receiving 8192 bytes of sg0046dz.x00
+2023-05-13T06:04:29Z [sg236] Received 8192 bytes of sg0046dz.x00 (342.2 Bps)
+2023-05-13T06:04:29Z [sg236] OK
+2023-05-13T06:04:30Z [sg236] Receiving 8192 bytes of sg0046dz.x01
+2023-05-13T06:04:54Z [sg236] Received 8192 bytes of sg0046dz.x01 (342.2 Bps)
+2023-05-13T06:04:54Z [sg236] OK
+2023-05-13T06:04:55Z [sg236] Receiving 5270 bytes of sg0046dz.x02
+2023-05-13T06:05:11Z [sg236] Received 5270 bytes of sg0046dz.x02 (342.8 Bps)
+2023-05-13T06:05:11Z [sg236] OK
+2023-05-13T06:05:12Z [sg236] Receiving 7233 bytes of sg0046lz.x
+2023-05-13T06:05:33Z [sg236] Received 7233 bytes of sg0046lz.x (344.8 Bps)
+2023-05-13T06:05:33Z [sg236] OK
+2023-05-13T06:05:35Z [sg236] ready to receive 2 files
+2023-05-13T06:05:36Z [sg236] Receiving 1024 bytes of sc0046ag.x
+2023-05-13T06:05:39Z [sg236] Received 1024 bytes of sc0046ag.x (343.2 Bps)
+2023-05-13T06:05:39Z [sg236] OK
+2023-05-13T06:05:41Z [sg236] Receiving 1024 bytes of sc0046bg.x
+2023-05-13T06:05:44Z [sg236] Received 1024 bytes of sc0046bg.x (343.1 Bps)
+2023-05-13T06:05:44Z [sg236] OK
+46:1:1:1:2:35:1 logout
+Disconnected at 2023-05-13T06:05:46Z (normal)
+
+
+Connected at 2023-05-13T06:08:27Z (sg236)
+logged in
+46:2:1:0:2:35:0:183:2128:501:-61.41:1.36:82.22:7.50:7.74:4.48:3.45 GPS,130523,060736,4654.748,-12517.266,2,1.1,4,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_NOCOMM_REACHED
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4653.550293,-12515.781250,130523,060343
+2023-05-13T06:08:40Z [sg236] Sending 309 bytes of cmdfile
+2023-05-13T06:08:40Z [sg236] Sent 309 bytes of cmdfile
+Disconnected at 2023-05-13T06:09:13Z (hangup)
+
+
+Connected at 2023-05-13T06:12:12Z (sg236)
+logged in
+46:3:1:0:2:35:0:183:2128:501:-63.61:1.38:82.35:7.50:7.77:4.49:3.40 GPS,130523,061121,4654.767,-12517.325,1,1.1,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_NOCOMM_REACHED
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 0 geolocation: 4651.313965,-12507.002930,130523,060818
+2023-05-13T06:12:21Z [sg236] Sending 309 bytes of cmdfile
+2023-05-13T06:12:21Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+46:3:1:0:2:35:1 logout
+Disconnected at 2023-05-13T06:12:25Z (normal)
+
+
+Connected at 2023-05-13T06:16:54Z (sg236)
+logged in
+46:4:2:0:2:35:-2:183:2128:501:-63.61:1.35:82.46:7.50:7.80:4.49:3.35 GPS,130523,061433,4654.785,-12517.367,1,0.8,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_NOCOMM_REACHED
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.837891,-12517.600586,130523,061206
+2023-05-13T06:17:02Z [sg236] Sending 309 bytes of cmdfile
+2023-05-13T06:17:02Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+46:4:2:0:2:35:1 logout
+Disconnected at 2023-05-13T06:17:07Z (normal)
+
+
+Connected at 2023-05-13T06:20:00Z (sg236)
+logged in
+46:5:1:0:2:35:0:182:2128:503:-68.44:1.57:82.63:7.50:7.82:4.50:3.28 GPS,130523,061914,4654.810,-12517.432,1,0.8,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_NOCOMM_REACHED
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.837891,-12517.600586,130523,061648
+2023-05-13T06:20:08Z [sg236] Sending 309 bytes of cmdfile
+2023-05-13T06:20:08Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+46:5:1:0:2:35:1 logout
+Disconnected at 2023-05-13T06:20:13Z (normal)
+
+
+Connected at 2023-05-13T06:23:04Z (sg236)
+logged in
+46:6:1:0:2:35:0:181:2127:503:-65.53:1.57:82.74:7.50:7.83:4.50:3.22 GPS,130523,062220,4654.826,-12517.470,1,0.8,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_NOCOMM_REACHED
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 5 geolocation: 4654.837891,-12517.600586,130523,061953
+2023-05-13T06:23:13Z [sg236] Sending 313 bytes of cmdfile
+2023-05-13T06:23:13Z [sg236] Sent 313 bytes of cmdfile
+Parsed RESUME from cmdfile
+46:6:1:0:2:35:1 logout
+Disconnected at 2023-05-13T06:23:18Z (normal)
+
+
+Connected at 2023-05-13T11:43:57Z (sg236)
+logged in
+47:1:1:1:2:35:-2:179:2121:500:-66.00:1.61:82.15:7.50:7.72:4.48:3.69 GPS,130523,114301,4655.042,-12514.527,45,0.9,46,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_NOCOMM_REACHED
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4654.837891,-12517.600586,130523,062259
+2023-05-13T11:44:08Z [sg236] Sending 309 bytes of cmdfile
+2023-05-13T11:44:08Z [sg236] Sent 309 bytes of cmdfile
+Parsed GO from cmdfile
+2023-05-13T11:44:13Z [sg236] ready to receive 4 files
+2023-05-13T11:44:15Z [sg236] Receiving 8192 bytes of sg0047dz.x00
+2023-05-13T11:44:40Z [sg236] Received 8192 bytes of sg0047dz.x00 (323.2 Bps)
+2023-05-13T11:44:40Z [sg236] OK
+2023-05-13T11:44:41Z [sg236] Receiving 8192 bytes of sg0047dz.x01
+2023-05-13T11:45:05Z [sg236] Received 8192 bytes of sg0047dz.x01 (344.5 Bps)
+2023-05-13T11:45:05Z [sg236] OK
+2023-05-13T11:45:06Z [sg236] Receiving 6134 bytes of sg0047dz.x02
+2023-05-13T11:45:25Z [sg236] Received 6134 bytes of sg0047dz.x02 (326.1 Bps)
+2023-05-13T11:45:25Z [sg236] OK
+2023-05-13T11:45:26Z [sg236] Receiving 7252 bytes of sg0047lz.x
+2023-05-13T11:45:48Z [sg236] Received 7252 bytes of sg0047lz.x (338.3 Bps)
+2023-05-13T11:45:48Z [sg236] OK
+2023-05-13T11:45:50Z [sg236] ready to receive 2 files
+2023-05-13T11:45:51Z [sg236] Receiving 1024 bytes of sc0047ag.x
+2023-05-13T11:45:56Z [sg236] Received 1024 bytes of sc0047ag.x (201.2 Bps)
+2023-05-13T11:45:56Z [sg236] OK
+2023-05-13T11:46:00Z [sg236] Receiving 1024 bytes of sc0047bg.x
+2023-05-13T11:46:04Z [sg236] Received 1024 bytes of sc0047bg.x (231.7 Bps)
+2023-05-13T11:46:04Z [sg236] OK
+47:1:1:1:2:35:1 logout
+Disconnected at 2023-05-13T11:46:07Z (normal)
+
+
+Connected at 2023-05-13T11:48:56Z (sg236)
+logged in
+47:2:1:0:2:35:0:179:2121:500:-70.64:1.47:82.37:7.50:7.76:4.49:3.55 GPS,130523,114815,4655.015,-12514.527,0,0.9,3,15.6
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_NOCOMM_REACHED
+ver=67.01,rev=6742:6751M,frag=8,launch=030523:165518
+Iridium bars: 4 geolocation: 4656.844727,-12510.630859,130523,114352
+2023-05-13T11:49:07Z [sg236] Sending 325 bytes of cmdfile
+2023-05-13T11:49:07Z [sg236] Sent 325 bytes of cmdfile
+Parsed RESUME from cmdfile
+47:2:1:0:2:35:1 logout
+Disconnected at 2023-05-13T11:49:12Z (normal)
+
+

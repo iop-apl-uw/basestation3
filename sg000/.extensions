@@ -61,6 +61,11 @@
 [postnetcdf]
 # Extensions listed in this section are run immediately after a per-dive netcdf file has been created,
 # to allow for additional science processing.  The extension is invoked once for each file.
+#
+# A extension to add additional columns with a manually adjusted temperature and/or salinity.
+# A good starting point for writing an expanded package of post-basestaiton processing.
+#CTDAdjustment.py
+#
 [prelogin]
 # Extensions listed in this section are run before the glider has finished logging in.
 # NOTE: Any extensions run here will be blocking the glider's login, so they should be brief
