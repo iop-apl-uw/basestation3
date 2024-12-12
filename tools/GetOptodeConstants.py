@@ -75,6 +75,7 @@ def main():
     optode_type = ""
     sn = None
     SVUon = False
+    foilID = "???"
 
     try:
         with open(base_opts.capture, "rb") as fi:
@@ -122,9 +123,9 @@ def main():
                     if values:
                         foil_strs[foil] = ""
                         for ii in range(2, 16):
-                            foil_strs[
-                                foil
-                            ] = f"{foil_strs[foil]}optode_FoilCoef{foil}{ii-2:d} = {values[ii]:g};\n"
+                            foil_strs[foil] = (
+                                f"{foil_strs[foil]}optode_FoilCoef{foil}{ii-2:d} = {values[ii]:g};\n"
+                            )
                         continue
 
                 values = scanf("PhaseCoef %s %d %f %f %f %f", s)
@@ -150,9 +151,9 @@ def main():
                     values = scanf(f"C{ccoef}Coef %s %d %f %f %f %f", s)
                     if values:
                         for ii in range(2, 6):
-                            ccoef_strs[
-                                ccoef
-                            ] = f"{ccoef_strs[ccoef]}optode_C{ccoef}{ii-2}Coef = {values[ii]:g};\n"
+                            ccoef_strs[ccoef] = (
+                                f"{ccoef_strs[ccoef]}optode_C{ccoef}{ii-2}Coef = {values[ii]:g};\n"
+                            )
                         continue
 
                 values = scanf("Enable SVUformula %s %d %s", s)
