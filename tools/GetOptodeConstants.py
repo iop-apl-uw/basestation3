@@ -70,7 +70,7 @@ def main():
     foil_strs = {"A": "", "B": ""}
     phase = ""
     temp = ""
-    ccoef_strs = {"0": "", "1": "", "2": "", "3": ""}
+    ccoef_strs = {"0": "", "1": "", "2": "", "3": "", "4": ""}
     SVUcoef = ""
     optode_type = ""
     sn = None
@@ -147,7 +147,7 @@ def main():
                         phase = f"{phase}optode_ConcCoef{ii-2} = {values[ii]:g};\n"
                     continue
 
-                for ccoef in ("0", "1", "2", "3"):
+                for ccoef in ("0", "1", "2", "3", "4"):
                     values = scanf(f"C{ccoef}Coef %s %d %f %f %f %f", s)
                     if values:
                         for ii in range(2, 6):
@@ -180,7 +180,7 @@ def main():
             print(f"optode_SVU_enabled = {SVUon};\n")
             print(SVUcoef)
         # 3380
-        for ccoef in ("0", "1", "2", "3"):
+        for ccoef in ("0", "1", "2", "3", "4"):
             print(ccoef_strs[ccoef])
 
     except Exception:
