@@ -39,10 +39,11 @@ import functools
 import json
 import os
 import pdb
+import re
 import sys
 import time
 import traceback
-import re
+
 import requests
 import yaml
 
@@ -50,6 +51,8 @@ import BaseDotFiles
 import BaseOpts
 import BaseOptsType
 import CommLog
+import GPS
+import Utils
 from BaseLog import (
     BaseLogger,
     log_critical,
@@ -81,6 +84,7 @@ def send_email(
     send_dict: dict,
     subject_line: str,
     message_body: str,
+    gps_fix:GPS.GPSFix | None  = None
 ) -> None:
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
@@ -116,6 +120,7 @@ def send_slack(
     send_dict: dict,
     subject_line: str,
     message_body: str,
+    gps_fix:GPS.GPSFix | None  = None        
 ) -> None:
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
@@ -150,6 +155,7 @@ def send_mattermost(
     send_dict: dict,
     subject_line: str,
     message_body: str,
+    gps_fix:GPS.GPSFix | None  = None        
 ) -> None:
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
@@ -200,6 +206,7 @@ def send_ntfy(
     send_dict: dict,
     subject_line: str,
     message_body: str,
+    gps_fix:GPS.GPSFix | None  = None        
 ) -> None:
     default_priorities = { "critical": 5 }
     tags = { 
@@ -218,10 +225,7 @@ def send_ntfy(
         log_error(f"Missing topic for user:{user}, endpoint:{endpoint}")
         return
 
-    if "priority" not in endpoint:
-        priorities = default_priorities
-    else:
-        priorities = endpoint["priority"]
+    priorities = endpoint.get("priority", default_priorities)
 
     if 'type' in send_dict and send_dict['type'] in priorities:
         priority = priorities[send_dict['type']]
@@ -288,6 +292,7 @@ def send_post(
     send_dict: dict,
     subject_line: str,
     message_body: str,
+    gps_fix:GPS.GPSFix | None  = None        
 ) -> None:
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
@@ -323,9 +328,55 @@ def send_inreach(
     send_dict: dict,
     subject_line: str,
     message_body: str,
+    gps_fix:GPS.GPSFix | None  = None        
 ) -> None:
-    log_info("send_inreach NYI")
-    pass
+    endpoint = send_dict["endpoint"]
+    user = send_dict["user"]
+
+    if gps_fix is None:
+        log_info(f"No valid gps fix for inreach message user:{user}, endpoint:{endpoint}")
+        return
+
+    for check_val in ("imei", "usr", "pwd"):
+        if check_val not in endpoint:
+            log_error(f"Missing imei number for user:{user}, endpoint:{endpoint}")
+            return
+
+    msg = "%s:%s" % (subject_line, message_body)
+
+    try:
+        epoch_ms = int(time.mktime(gps_fix.datetime))
+    except Exception:
+        log_error("Unable extract fix/time from message body", 'exc')
+        return
+
+    data = {
+        "Messages":[
+            {
+                "Message":msg,
+                "Recipients":[ endpoint["imei"] ],
+                "ReferencePoint": {
+                    "Altitude":0,
+                    "Coordinate": {
+                        "Latitude":Utils.ddmm2dd(gps_fix.lat),
+                        "Longitude":Utils.ddmm2dd(gps_fix.lon),
+                    },
+                    "Course":0,
+                    "Label":"SG%03d" % instrument_id,
+                    "LocationType":0,
+                    "Speed":0
+                },
+                "Sender":"sg%03d@iopbase3.apl.washington.edu" % instrument_id,
+                "Timestamp":"/Date(%d)/" % epoch_ms
+            }
+        ]
+    }
+
+    log_info(data)
+    return
+    ret_val = requests.post("https://us0-enterprise.inreach.garmin.com:443/IpcInbound/V1/Messaging.svc/Message", json=data, auth=(endpoint["usr"], endpoint["pwd"]))
+    log_info(ret_val.json())
+    
 
 
 pagers_sendfuncs = {
@@ -626,6 +677,7 @@ def process_pagers_yml(
 
                 case "gps" | "recov" | "critical" | "lategps":
                     dive_prefix = True
+                    gps_fix = None
                     if comm_log:
                         (
                             gps_message,
@@ -649,6 +701,11 @@ def process_pagers_yml(
                                 )
                             )
                         reboot_msg = comm_log.has_glider_rebooted()
+
+                        try:
+                            gps_fix = comm_log.last_surfacing().gps_fix
+                        except Exception:
+                            log_error("Failed to fetch gps_fix from last session in comm.log", "exc")
                     elif session:
                         (
                             gps_message,
@@ -677,6 +734,12 @@ def process_pagers_yml(
                             )
                         except Exception:
                             log_error("Problem formatting GPS message", "exc")
+                            
+                        try:
+                            gps_fix = session.gps_fix
+                        except Exception:
+                            log_error("Failed to fetch gps_fix from last session in comm.log")
+
                         reboot_msg = None
                     else:
                         log_warning(
@@ -717,6 +780,7 @@ def process_pagers_yml(
                             si,
                             subject_line,
                             gps_message,
+                            gps_fix=gps_fix,
                         )
 
                 case "alerts":
