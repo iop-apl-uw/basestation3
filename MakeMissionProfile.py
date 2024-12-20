@@ -829,7 +829,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                         meta_data_d,
                         mdp_dim_info,
                     ) = md
-                    if nc_data_type == "d":
+                    if nc_data_type in ("d", "f"):
                         mission_nc_dive_d[dive_num]["profiles"][i]["data_cols"][
                             temp_dive_var_names[j]
                         ] = np.array(data_cols_bin[j], np.float64)
@@ -1295,7 +1295,7 @@ def make_mission_profile(dive_nc_profile_names, base_opts):
                 # Now, assign the data column to the netCDF variable, by
                 # ensuring the data columns are all of the same length
                 # Fill the vectors with the missing values first
-                if nc_data_type == "d":
+                if nc_data_type in ("d", "f"):
                     temp_v = np.zeros(max_depth_len, np.float64)
                 elif nc_data_type == "i":
                     temp_v = np.zeros(max_depth_len, np.int32)

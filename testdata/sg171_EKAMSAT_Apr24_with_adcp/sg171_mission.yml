@@ -1,0 +1,10 @@
+#
+#  These are marked as included in MMT and MMP by BaseADCP in adcp dir
+#
+#  ad2cp_inv_glider_vocn: f
+#  ad2cp_inv_glider_uocn: f
+#  ad2cp_inv_glider_time: True
+timeseries:
+  ad2cp_inv_glider_wocn: f
+profile:
+  ad2cp_inv_glider_wocn: f
