@@ -345,7 +345,7 @@ def send_inreach(
     msg = "%s:%s" % (subject_line, message_body)
 
     try:
-        epoch_ms = int(time.mktime(gps_fix.datetime))
+        epoch_ms = int(time.mktime(gps_fix.datetime)) * 1000.0
     except Exception:
         log_error("Unable extract fix/time from message body", 'exc')
         return
@@ -372,10 +372,10 @@ def send_inreach(
         ]
     }
 
-    log_info(data)
-    return
+    #log_info(data)
+
     ret_val = requests.post("https://us0-enterprise.inreach.garmin.com:443/IpcInbound/V1/Messaging.svc/Message", json=data, auth=(endpoint["usr"], endpoint["pwd"]))
-    log_info(ret_val.json())
+    log_info(f"inReach Post Return {ret_val.json()}")
     
 
 
