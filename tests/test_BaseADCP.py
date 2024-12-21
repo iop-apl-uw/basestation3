@@ -38,6 +38,52 @@ import xarray as xr
 
 import MakeMissionTimeSeries
 import MakeMissionProfile
+import Reprocess
+
+
+def test_reprocess(caplog):
+    extension_filename = pathlib.Path.cwd().joinpath("etc/.extensions")
+    if not extension_filename.exists():
+        pytest.skip(reason=f"{extension_filename} does not exist")
+
+    with open(extension_filename) as fi:
+        if "BaseADCP.py" not in fi.read():
+            pytest.skip(reason=f"BaseADCP.py not installed in {extension_filename}")
+
+    data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24")
+    mission_dir = data_dir.joinpath("mission_dir")
+
+    allowed_msgs = [""]
+    cmd_line = [
+        "--verbose",
+        "--mission_dir",
+        str(mission_dir),
+        "--skip_flight_model",
+        "--force",
+        "100:109",
+    ]
+
+    testutils.run_mission(
+        data_dir,
+        mission_dir,
+        Reprocess.main,
+        cmd_line,
+        caplog,
+        allowed_msgs,
+    )
+
+    # Check for variables
+    dsi = xr.load_dataset(mission_dir.joinpath("p1710100.nc"))
+
+    var_dict = {
+        "ad2cp_inv_glider_vocn": np.dtype("float32"),
+        "ad2cp_inv_glider_uocn": np.dtype("float32"),
+        "ad2cp_inv_glider_wocn": np.dtype("float32"),
+    }
+
+    for v, t in var_dict.items():
+        assert v in dsi.variables
+        assert dsi.variables[v].dtype == t
 
 
 def test_whole_mission(caplog):

@@ -42,8 +42,8 @@ import sys
 import time
 import traceback
 
-import BaseDotFiles
 import BaseDB
+import BaseDotFiles
 import BaseNetCDF
 import BaseOpts
 import BaseOptsType
@@ -73,13 +73,20 @@ from CalibConst import getSGCalibrationConstants
 DEBUG_PDB = False
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]):
     """Command line driver for reprocessing per-dive and other nc files
 
     Returns:
         0 - success
         1 - failure
     """
+    # These functions reset large blocks of global variables being used in other modules that
+    # assume an initial value on first load, then are updated throughout the run.  The call
+    # here sets back to the initial state to handle multiple runs under pytest
+    Sensors.set_globals()
+    BaseNetCDF.set_globals()
+    FlightModel.set_globals()
+
     base_opts = BaseOpts.BaseOptions(
         "Command line driver for reprocessing per-dive and other nc files",
         additional_arguments={
@@ -104,6 +111,7 @@ def main():
                 },
             ),
         },
+        cmdline_args=cmdline_args,
     )
 
     BaseLogger(base_opts, include_time=True)  # initializes BaseLog
