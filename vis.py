@@ -78,20 +78,7 @@ import RegressVBD
 import Magcal
 import BaseCtrlFiles
 import parms
-
-#from contextlib import asynccontextmanager
-#
-#@asynccontextmanager
-#async def aclosing(thing):
-#    try:
-#        yield thing
-#    finally:
-#        try:
-#            await thing.close()
-#            Utils.logDB("CLOSED")
-#        except ValueError:
-#            pass
-#
+import visauth
 
 async def checkClose(conn):
     try:
@@ -165,25 +152,28 @@ def getTokenUser(request):
         return (request.app.config.USER, False)
 
     if not 'token' in request.cookies:
-        return (False, False)
+        return (False, False, False)
 
     try:
          token = jwt.decode(request.cookies.get("token"), request.app.config.SECRET, algorithms=["HS256"])
     except jwt.exceptions.InvalidTokenError:
-        return (False, False)
+        return (False, False, False)
 
-    if 'user' in token and 'groups' in token:
-        return (token['user'], token['groups'])
+    if 'user' in token and 'groups' in token and 'domain' in token:
+        return (token['user'], token['groups'], token['domain'])
 
-    return (False, False)
+    return (False, False, False)
 
 # checks whether the auth token authorizes a user or group in users, groups
 def checkToken(request, users, groups, pilots, pilotgroups):
     if not 'token' in request.cookies:
         return PERM_REJECT
 
-    (tokenUser, tokenGroups) = getTokenUser(request)
+    (tokenUser, tokenGroups, tokenDomain) = getTokenUser(request)
     if not tokenUser:
+        return PERM_REJECT
+
+    if tokenDomain != request.app.ctx.ctx.domain:
         return PERM_REJECT
 
     perm = PERM_REJECT
@@ -267,7 +257,7 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                     elif status == PERM_REJECT:
                         # return sanic.response.text("authorization failed")
                         return await sanic_ext.render(
-                            "login.html", context={"body": "authorization failed", "url": request.url}, status=400
+                            "login.html", context={"mode": "login", "body": "authorization failed", "url": request.url}, status=400
                         )
 
                     else:
@@ -305,7 +295,7 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                     elif status == PERM_REJECT:
                         # return sanic.response.text("authorization failed")
                         return await sanic_ext.render(
-                            "login.html", context={"body": "authorization failed", "url": request.url}, status=400
+                            "login.html", context={"mode": "login", "body": "authorization failed", "url": request.url}, status=400
                         )
                     else:
                         if 'allow' in e and e['allow'] == True:
@@ -499,33 +489,109 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.post('/auth')
     # description: user authorization 
-    # payload: (JSON) username, password
+    # payload: (JSON) username, password, optional MFA code
     # returns: none on success (sets cookie with authorization token)
     async def authHandler(request):
         username = request.json.get("username", None).lower()
         password = request.json.get("password", None)
+        code     = request.json.get("code", None)
 
+
+        authed = False
+        response = None
         for user,prop in request.ctx.ctx.userTable.items():
-            if user.lower() == username and sha256_crypt.verify(password, prop['password']):
-                token = jwt.encode({ "user": user, "groups": prop['groups']}, request.app.config.SECRET)
-                response = sanic.response.text("authorization ok")
-                response.add_cookie(
-                    "token", token, 
-                    max_age=86400,
-                    samesite="Strict",
-                    httponly=True
-                )
+            if user.lower() == username:
+                if 'password' in prop:
+                    if sha256_crypt.verify(password, prop['password']):
+                        response = sanic.response.json({'status': 'authorized', 'msg': 'authorizoration ok'})
+                        authed = True
+                    else:
+                        response = sanic.response.json({'status': 'error', 'msg': 'authorization failed'})
+                else:
+                    status = visauth.authorizeUser(request.app.config.AUTH_DB, username, request.app.ctx.ctx.domain, password, code)
+                    response = sanic.response.json(status)
+                         
+                    if status and 'status' in status and status['status'] == 'authorized':
+                        authed = True
+
+                if authed:
+                    token = jwt.encode({ "user": username, "groups": prop['groups'], "domain": request.app.ctx.ctx.domain}, request.app.config.SECRET)
+                    response = sanic.response.json(status)
+                    response.add_cookie(
+                        "token", token,
+                        max_age=86400,
+                        samesite="Strict",
+                        httponly=True
+                    )
+                
                 return response
 
-        return sanic.response.text('authorization failed') 
+        return sanic.response.json({'status': 'error', 'msg': 'error'})
 
     @app.route('/user')
     # description: checks whether current session user is valid
     # returns: YES is user is valid
-    @authorized(modes=['pilot','private'], check=AUTH_ENDPOINT)
+    @authorized(check=AUTH_ENDPOINT)
     async def userHandler(request):
         (tU, tG) = getTokenUser(request)
-        return sanic.response.text('YES' if tU else 'NO')
+        return sanic.response.text('logged in' if tU else 'not logged in')
+
+    @app.get("/setup")
+    @authorized(modes=['pilot'], check=0)
+    async def setupHandler(request):
+        if 'url' in request.args:
+            url = request.args['url'][0]
+        else:
+            url = "/"
+        return await sanic_ext.render("setup.html", context={"mode": "setup", "body": "Finish setting up your account", "url": url}, status=400)
+
+    @app.get("/change")
+    @authorized(modes=['pilot'], check=0)
+    async def changeHandler(request):
+        return await sanic_ext.render("setup.html", context={"mode": "password", "body": "Change your password now", "url": "/login"}, status=400)
+
+    @app.get("/logout")
+    async def logoutHandler(request):
+        response = sanic.response.text("logged out")
+        response.delete_cookie("token")
+        return response
+
+    @app.get("/login")
+    async def loginHandler(request):
+        if 'url' in request.args:
+            url = request.args['url'][0]
+        else:
+            url = "/"
+
+        return await sanic_ext.render("login.html", context={"mode": "login", "body": "Enter your login credentials", "url": url}, status=400)
+
+    @app.post("/password")
+    @authorized(modes=['pilot'], check=0)
+    async def passwordHandler(request):
+        username    = request.json.get("username", None).lower()
+        curPassword = request.json.get("curPassword", None)
+        newPassword = request.json.get("newPassword", None)
+        code        = request.json.get("code", None)
+
+        if username and curPassword and newPassword and code:
+            status = visauth.authorizeUser(request.app.config.AUTH_DB, username, request.app.ctx.ctx.domain, curPassword, code, new_password=newPassword)
+            return sanic.response.json(status)
+        else:
+            return sanic.response.json({'status': 'error', 'msg': 'error'})
+
+    @app.post("/register")
+    @authorized(modes=['pilot'], check=0)
+    async def registerHandler(request):
+        username    = request.json.get("username", None).lower()
+        curPassword = request.json.get("curPassword", None)
+        newPassword = request.json.get("newPassword", None)
+        code        = request.json.get("code", None)
+
+        if username and curPassword and newPassword and code:
+            status = visauth.setupUser(request.app.config.AUTH_DB, username, request.app.ctx.ctx.domain, curPassword, code, newPassword)
+            return sanic.response.json(status)
+        else:
+            return sanic.response.json({'status': 'error', 'msg': 'error'})
  
     @app.route('/plot/<fmt:str>/<which:str>/<glider:int>/<dive:int>/<image:str>')
     # description: get a plot image
@@ -1743,7 +1809,7 @@ def attachHandlers(app: sanic.Sanic):
     async def saveHandler(request, glider:int, which:str):
         # the no save command line flag allows one more layer
         # of protection
-        if True or request.app.config.NO_SAVE:
+        if request.app.config.NO_SAVE:
             return sanic.response.text('not allowed')
 
         validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
@@ -2459,7 +2525,7 @@ async def buildUserTable(app, config=None):
     else:
         x = {}
 
-    userDictKeys = [ "groups", "password" ]
+    userDictKeys = [ "groups" ] # password is optional - if not spec'd user is in auth.db
 
     dflts = None
     for user in list(x.keys()):
@@ -2521,6 +2587,8 @@ async def buildMissionTable(app, config=None):
         x['assets'] = {}
     if 'routes' not in x:
         x['routes'] = []
+    if 'domain' not in x:
+        x['domain'] = None
 
     if 'domains' in x:
         ikey = 'domains'
@@ -2564,6 +2632,7 @@ async def buildMissionTable(app, config=None):
                     userTbl = {}
 
                 domains[domain] = SimpleNamespace( missionTable=tbl,
+                                                   domain=domain,
                                                    userTable=userTbl,
                                                    organization=xx['organization'],
                                                    endpoints=xx['endpoints'],
@@ -3023,6 +3092,8 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
         app.config.WEATHERMAP_APPID = ''
     if 'SHIP_UDP' not in app.config:
         app.config.SHIP_UDP = None;
+    if 'AUTH_DB' not in app.config:
+        app.config.AUTH_DB = "auth.db"
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
@@ -3070,7 +3141,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'm:p:o:r:d:f:u:c:w:tsih', ["mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
+        opts, args = getopt.getopt(sys.argv[1:], 'a:m:p:o:r:d:f:u:c:w:tsih', ["auth", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -3107,6 +3178,8 @@ if __name__ == '__main__':
             test = True
         elif o in ['-i', '--inspector']:
             overrides['INSPECTOR'] = True
+        elif o in ['-a', '--auth']:
+            overrides['AUTH_DB'] = a
         elif o in ['-m', '--mission']:
             overrides['SINGLE_MISSION'] = a
             pieces = a.split(':')

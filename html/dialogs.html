@@ -1,4 +1,16 @@
 <!-- The login form -->
+<script>
+    function toggleCode() 
+    {
+        if (document.getElementById('chkHavePilotCode').checked) {
+            document.getElementById('txtCode').style = 'display: block;';
+        }
+        else {
+            document.getElementById('txtCode').style = 'display: none;';
+        }
+    }
+</script>
+
 <div class="form-popup" id="loginForm">
   <form class="form-login" id="formLoginForm">
     <label for="username"><b>Username</b></label>
@@ -6,6 +18,8 @@
 
     <label for="password"><b>Password</b></label>
     <input type="password" placeholder="Enter password" name="password" required>
+    <label><input type="checkbox" id="chkHavePilotCode" onchange="toggleCode();">I have a code</label>
+    <input type="text" name="code" id="txtCode" placeholder="Enter code" style="display: none;">
 
     <button type="submit" class="btn" onclick="submitLoginForm(); return false;">login</button>
     <button type="button" class="btn cancel" onclick="closeLoginForm(); return false;">cancel</button>

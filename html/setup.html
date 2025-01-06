@@ -1,0 +1,231 @@
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<link rel="stylesheet" href="/script/dialogs.css" />
+<link rel="stylesheet" href="/script/base.css" />
+<link rel="stylesheet" href="/script/login.css" />
+
+<script src="/script/util.js"></script>
+<script src="/script/dialogs.js"></script>
+
+
+<script>
+function $(x) {
+    return document.getElementById(x)
+}
+
+function allowCheck() {
+    if ($('spnPasswordScore').innerHTML == '4/4' && $('spnCheckPassword').innerHTML == 'match!') {
+        $('btnCheck').disabled = false;
+    }
+    else {
+        $('btnCheck').disabled = true;
+    }
+    $('btnSubmit').disabled = true;
+    $('spnValidPassword').innerHTML = "";
+}
+
+function allowSubmit() {
+    $('btnSubmit').disabled = true;
+    if ($('txtOneTimeCode').value.length == 6 && $('txtCurrentPassword').value != '' && $('spnValidPassword').innerHTML == 'password ok!' && $('txtUsername').value != '') {
+        $('btnSubmit').disabled = false;
+    }
+}
+
+async function hashIt(pw) {
+    const pwuint8 = new TextEncoder().encode(pw);
+    const hashb   = await crypto.subtle.digest('SHA-1', pwuint8);
+    const hasha   = Array.from(new Uint8Array(hashb));
+    const hashh   = hasha.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashh.toUpperCase();
+}
+
+async function submit() {
+    var obj = {};
+    obj['username']    = $('txtUsername').value;
+    obj['curPassword'] = $('txtCurrentPassword').value;
+    obj['newPassword'] = $('txtNewPassword').value;
+    obj['code']        = $('txtOneTimeCode').value;
+
+    if ($('txtUsername').value == '' || $('txtCurrentPassword').value == '' || $('txtOneTimeCode').value.length != 6) {
+        alert('invalid entries');
+        return;
+    }
+
+{% if mode == 'setup' %}
+    $('divWait').style.display = 'block';
+    fetch('/register', 
+{% else %}
+    fetch('/password', 
+{% endif %}
+    { 
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', },
+        body: JSON.stringify(obj),
+    })
+    .then(res => res.text())
+    .then(text => {
+        data = JSON.parse(text);
+{% if mode == 'setup' %}
+        if ('status' in data && data['status'] == 'pending' && 'qr' in data && 'key' in data) {
+            $('divQR').style.display      = 'block';
+            $('divRelogin').style.display = 'block';
+            $('spanKey').innerHTML        = data['key'];
+            $('svgQR').innerHTML          = data['qr'];
+            $('divWait').style.display = 'none';
+        }
+        else {
+            console.log(data);
+        }
+{% else %}
+        alert('msg' in data ? data['msg'] : 'error');
+        if ('status' in data && data['status'] == 'changed') {
+            window.replace('/login');            
+        }
+{% endif %}
+    });
+}
+
+async function checkPassword() {
+    const hashh = await hashIt($('txtNewPassword').value);
+    const piece = hashh.slice(0,5);
+    const tail  = hashh.slice(5);
+
+    var q = `https://api.pwnedpasswords.com/range/${piece}`
+    fetch(q, { mode: 'cors' })
+    .then(res => res.text())
+    .then(text => {
+        const lines = text.split("\n");
+        var state = true;
+        var h,c;
+        for (line of lines) {
+            h = line.split(':')[0]; 
+            c = line.split(':')[1]; 
+            if (h == tail) {
+                $('spnValidPassword').innerHTML = `password appears in breached passwords database (${c} occurences)`;
+                state = false;
+                break;
+            }
+        }
+
+        if (state) {
+            $('spnValidPassword').innerHTML = "password ok!";
+            allowSubmit();
+        }
+    });
+}
+
+
+</script>
+
+<style>
+    input[type=text], input[type=password] {
+      width: 100%;
+      border: none;
+      background: #bbb;
+      margin: 5px;
+      font-size: 1.2rem;
+    }
+
+    input[type=button] {
+      background-color: #04AA6D;
+      color: white;
+      border: none;
+      cursor: pointer;
+      width: calc(100% - 5px);
+      opacity: 0.8;
+      margin: 5px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      font-size: 1.3rem;
+    }
+
+    input[type=button]:disabled, input[type=button][disabled] {
+      background-color: #AA046D;
+      color: #88046D;
+    }
+
+</style>
+
+<html>
+<body onload="allowCheck(); allowSubmit();">
+<div id="page">
+    <div id="navLinks">
+        <a href="/" target="index">Index</a> <b>&#124;</b> <a href="/dash">Dashboard</a>
+    </div>
+
+    <div id="main">
+        {{ body }}
+    </div>
+
+    <table>
+    <tr><td> 1. Username
+        <td> <input type="text" id="txtUsername"> 
+    <tr><td> 2. Current password
+        <td> <input type="password" id="txtCurrentPassword">
+    <tr><td> 3. New password
+        <td> <input type="password" id="txtNewPassword"> 
+        <td> strength: <span id="spnPasswordScore">0/4</span> (must be 4/4)
+    <tr><td> 4. Re-enter new password
+        <td> <input type="password" id="txtCheckPassword"> 
+        <td> <span id="spnCheckPassword">does not match</span>
+    <tr><td> 5. Check password safety
+        <td> <input type="button" id="btnCheck" onclick="checkPassword(); return false;" value="check" disabled=true title="click to check new password against online database of breached passwords">
+        <td> <span id="spnValidPassword"></span>
+{% if mode == 'setup' %}
+    <tr><td> 6. One-time code
+        <td> <input type="text" id="txtOneTimeCode">
+        <td> from your email
+    <tr><td> 7. Finish setup
+{% else %}
+    <tr><td> 6. Login code
+        <td> <input type="text" id="txtOneTimeCode">
+        <td> from your authenticator app
+    <tr><td> 7. Submit change
+{% endif %}
+        <td> <input type="button" id="btnSubmit" onclick="submit(); return false;" value="submit" disabled=true title="new password must match, be 4/4 strong, and not be in the breached passwords database before you can submit">
+    </table>
+    <br>
+{% if mode == 'setup' %}
+    <div id="divWait" style="display:none;">Wait...</div>
+    <div id="divQR" style="display:none;">
+        Your password has been changed. You must now configure multi-factor authentication by setting 
+        <br> an authenticator app on your phone (Duo, Google Authenticator, Aegis, etc.).
+        <br> In the app, do one of:
+        <p>
+        8a. Enter this key into your authenticator app:
+        <p>
+        <span id="spanKey"></span>
+        <p><b>or</b><p>
+        8b. Scan the QR code with your authenticator app:
+        <p>
+        <svg id="svgQR"></svg>
+    </div>
+    <div style="display:none;" id="divRelogin">
+        When your authenticator is setup, go back to <b><a href="/login">login</a></b>
+    </div>
+{% endif %}
+    <script language="javascript" type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/zxcvbn/4.4.2/zxcvbn.js"></script>
+
+</body>
+
+<script>
+    $('txtNewPassword').onkeyup = function() {
+        var res = zxcvbn($('txtNewPassword').value);
+        $('spnPasswordScore').innerHTML = res.score + '/4';
+        $('spnCheckPassword').innerHTML = $('txtCheckPassword').value == $('txtNewPassword').value ? "match!" : "does not match";
+        allowCheck();
+    }
+    $('txtCheckPassword').onkeyup = function() {
+        $('spnCheckPassword').innerHTML = $('txtCheckPassword').value == $('txtNewPassword').value ? "match!" : "does not match";
+        allowCheck();
+    }
+    $('txtCurrentPassword').onkeyup = function() {
+        allowSubmit();
+    }
+    $('txtOneTimeCode').onkeyup = function() {
+        allowSubmit();
+    }
+
+</script>
+
+</html>

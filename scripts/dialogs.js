@@ -2,6 +2,9 @@
 
     function openLoginForm(callback) {
         $('loginForm').style.display = "block";
+        if ($('chkHavePilotCode').checked) {
+            $('txtCode').style.display = "block";
+        }
         loginCallback = callback;
     }
 
@@ -122,11 +125,12 @@
         .then(res => res.text())
         .then(text => {
             closeLoginForm();
+            var d = JSON.parse(text);
             console.log(text);
-            if (text.includes('failed'))  {
-                alert(text);
+            if (d['status'] == 'pending') {
+                window.location.replace('/setup');
             }
-            else {
+            else if (d['status'] == 'authorized') {
                 console.log(window.location.pathname);
                 console.log(window.location.search);
                 if (loginCallback) loginCallback();
