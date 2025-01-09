@@ -1180,6 +1180,7 @@
                                                            }
                                                           ).addTo(map);
 
+                        layerControl.addOverlay(gliderMarkers[key], 'position', '' + glider + ' ' + mission);
                         gliderMarkers[key].bringToFront();
                         gliderMarkers[key]['key'] = key;
                         gliderMarkers[key].on('click', function(e) {
@@ -1240,6 +1241,7 @@
                     for (k of Object.keys(track._layers)) {
                         if (track._layers[k].options.hasOwnProperty('id') && track._layers[k].options.id == "seagliderPositionHighlightState") {
                             ctr = track._layers[k]._latlng;
+                            layerControl.addOverlay(track._layers[k], 'KML position', '' + gliders[i] + ' ' + missions[i]);
                             track._layers[k]['key'] = gliders[i] + '_' + missions[i];
                             track._layers[k].on('click', function(e) {
                                 console.log('glider marker KML click');
