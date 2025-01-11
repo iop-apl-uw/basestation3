@@ -5,18 +5,19 @@ all: rufflint mypy
 rufflint:
 	-ruff check .
 
-rufffmt:
-	-ruff check --select I --fix .
-	-ruff format .
+# Not yet
+#rufffmt:
+#	-ruff check --select I --fix .
+#	-ruff format .
 
 mypy:
 	-mypy
 
 test:
-	-pytest --cov --cov-report term-missing tests/
+	-pytest -rsx --cov --cov-report term-missing tests/
 
 testhtml:
-	-pytest --cov --cov-report html tests/
+	-pytest -rsx --cov --cov-report html tests/
 
 # Runs github workflow locally
 # Requires act tool to be installed.  Act requires docker to be installed.
