@@ -1,7 +1,7 @@
 # /! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -967,6 +967,26 @@ global_options_dict = {
         {
             "help": "Force reprocessing of plots",
             "action": "store_true",
+        },
+    ),
+    "reprocess_dive_extensions": options_t(
+        True,
+        ("Reprocess",),
+        ("--reprocess_dive_extensions",),
+        bool,
+        {
+            "help": "Run [dive] extensions during reprocessing",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
+    "reprocess_mission_extensions": options_t(
+        True,
+        ("Reprocess",),
+        ("--reprocess_mission_extensions",),
+        bool,
+        {
+            "help": "Run [mission] (global) extensions during reprocessing",
+            "action": argparse.BooleanOptionalAction,
         },
     ),
     #

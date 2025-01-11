@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -257,6 +257,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
     # Now, create the profiles
     dives_processed = []  # MDP succeeded
     dives_not_processed = []  # MDP failed
+    nc_files_created = []
+
     for dive_path in dive_list:
         log_debug(f"Processing {dive_path}")
         head, _ = os.path.splitext(os.path.abspath(dive_path))
@@ -303,6 +305,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
 
         TraceArray.trace_results_stop()  # Just in case we bailed out...no harm if closed
         QC.qc_log_stop()
+        # Even if the processing failed, we may get a netcdf files out
+        if nc_file_created:
+            nc_files_created.append(nc_file_created)
         if temp_ret_val == 1:
             ret_val = 1
             dives_not_processed.append(dive_num)
@@ -335,9 +340,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                 log_info(
                     f"Started FLIGHT processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(flight_t0))}"
                 )
-                nc_files_created = []
+                fm_nc_files_created = []
                 try:
-                    FlightModel.main(base_opts, sg_calib_file_name, nc_files_created)
+                    FlightModel.main(base_opts, sg_calib_file_name, fm_nc_files_created)
                 except Exception:
                     log_error("Flight model failed", "exc")
                     if DEBUG_PDB:
@@ -345,8 +350,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                         traceback.print_exc()
                         pdb.post_mortem(tb)
                 else:
-                    nc_files_created = list(set(nc_files_created))
-                    log_info(f"FM files updated {nc_files_created}")
+                    fm_nc_files_created = list(set(fm_nc_files_created))
+                    log_info(f"FM files updated {fm_nc_files_created}")
+                    nc_files_created = list(set(nc_files_created + fm_nc_files_created))
+                    del fm_nc_files_created
                     if not base_opts.called_from_fm:
                         for ncf in nc_files_created:
                             BaseDB.loadDB(base_opts, ncf, run_dive_plots=False)
@@ -364,6 +371,19 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                 log_info(
                     "Skipping FLIGHT processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+
+            if base_opts.reprocess_dive_extensions:
+                BaseDotFiles.process_extensions(
+                    ("dive",),
+                    base_opts,
+                    sg_calib_file_name=sg_calib_file_name,
+                    dive_nc_file_names=all_dive_nc_file_names,
+                    nc_files_created=nc_files_created,
+                    # processed_other_files=processed_other_files,  # Output list for extension created files
+                    # known_mailer_tags=known_mailer_tags,
+                    # known_ftp_tags=known_ftp_tags,
+                    # processed_file_names=processed_file_names,
                 )
 
             if base_opts.make_mission_profile:
@@ -442,6 +462,19 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                 log_info(
                     "Skipping PLOT processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
+                )
+
+            if base_opts.reprocess_mission_extensions:
+                BaseDotFiles.process_extensions(
+                    ("global", "mission"),
+                    base_opts,
+                    sg_calib_file_name=sg_calib_file_name,
+                    dive_nc_file_names=all_dive_nc_file_names,
+                    nc_files_created=nc_files_created,
+                    # processed_other_files=processed_other_files,  # Output list for extension created files
+                    # known_mailer_tags=known_mailer_tags,
+                    # known_ftp_tags=known_ftp_tags,
+                    # processed_file_names=processed_file_names,
                 )
 
     log_info(
