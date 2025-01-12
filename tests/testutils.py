@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -48,6 +48,7 @@ def run_mission(
     cmd_line: list[str],
     caplog: Any,
     allowed_msgs: list[str],
+    pre_test_hook: Callable[[pathlib.Path], None] | None = None,
 ) -> None:
     """Copies a mission to a test directory, executes it and checks warning and error output against a known list
 
@@ -70,6 +71,8 @@ def run_mission(
         if p.is_dir():
             continue
         shutil.copy(p, mission_dir)
+    if pre_test_hook:
+        pre_test_hook(mission_dir)
     result = main_func(cmd_line)
     assert result == 0
     bad_errors = ""

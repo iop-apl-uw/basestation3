@@ -236,6 +236,7 @@ def load_additional_arguments():
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
+
     return (
         # Add this module to these options defined in BaseOpts
         ["mission_dir", "netcdf_filename"],
@@ -247,6 +248,7 @@ def load_additional_arguments():
                 0.0,
                 (
                     "Base",
+                    "Reprocess",
                     "SimpleNetCDF",
                 ),
                 ("--simplencf_bin_width",),
@@ -261,6 +263,7 @@ def load_additional_arguments():
                 False,
                 (
                     "Base",
+                    "Reprocess",
                     "SimpleNetCDF",
                 ),
                 ("--simplencf_compress_output",),
