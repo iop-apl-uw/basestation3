@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -271,6 +271,7 @@ def load_additional_arguments():
                 "",
                 (
                     "Base",
+                    "Reprocess",
                     "GliderDAC",
                 ),
                 ("--gliderdac_base_config",),
@@ -286,6 +287,7 @@ def load_additional_arguments():
                 "",
                 (
                     "Base",
+                    "Reprocess",
                     "GliderDAC",
                 ),
                 ("--gliderdac_project_config",),
@@ -301,6 +303,7 @@ def load_additional_arguments():
                 "",
                 (
                     "Base",
+                    "Reprocess",
                     "GliderDAC",
                 ),
                 ("--gliderdac_deployment_config",),
@@ -316,6 +319,7 @@ def load_additional_arguments():
                 "",
                 (
                     "Base",
+                    "Reprocess",
                     "GliderDAC",
                 ),
                 ("--gliderdac_directory",),
@@ -331,6 +335,7 @@ def load_additional_arguments():
                 False,
                 (
                     "Base",
+                    "Reprocess",
                     "GliderDAC",
                 ),
                 ("--delayed_submission",),
@@ -346,6 +351,7 @@ def load_additional_arguments():
                 0.0,
                 (
                     "Base",
+                    "Reprocess",
                     "GliderDAC",
                 ),
                 ("--gliderdac_bin_width",),
@@ -360,6 +366,7 @@ def load_additional_arguments():
                 True,
                 (
                     "Base",
+                    "Reprocess",
                     "GliderDAC",
                 ),
                 ("--gliderdac_reduce",),
