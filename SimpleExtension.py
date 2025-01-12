@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -41,13 +41,16 @@ from BaseLog import BaseLogger, log_info
 
 DEBUG_PDB = False
 
+
 def load_additional_arguments():
     """Defines and extends arguments related to this extension.
     Called by BaseOpts when the extension is set to be loaded
     """
     return (
         # Add this module to these options defined in BaseOpts
-        ["mission_dir", ],
+        [
+            "mission_dir",
+        ],
         # Option groups
         {},
         # Additional arguments
@@ -90,7 +93,7 @@ def main(
             add_to_arguments=add_to_arguments,
         )
 
-    BaseLogger(base_opts)  
+    BaseLogger(base_opts)
 
     log_info(
         f"Started processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(time.time()))}"
@@ -102,6 +105,11 @@ def main(
         session.dump_contents(tmp)
         tmp.seek(0)
         log_info(f"session_contents: {tmp.read()}")
+
+    # Example [mission] processing
+    if nc_files_created:
+        for nc_file_created in nc_files_created:
+            log_info(f"Created {nc_file_created}")
 
     log_info(
         "Finished processing "
