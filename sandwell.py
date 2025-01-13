@@ -112,7 +112,7 @@ def read_grid(lon_lat, file_path=None):
     bathy_grid = np.ndarray(lat_grid.shape, dtype='i2')
 
     if file_path is None:
-        file_path = '/usr/local/matlab/m_map/private/topo_17.1.img'
+        file_path = '/usr/local/basestation3/data/topo_17.1.img';
 
     with open(file_path, 'rb') as f:
         for i in range(Nlats):
