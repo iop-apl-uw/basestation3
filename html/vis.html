@@ -26,6 +26,12 @@
     .hide {
         display: none !important;
     }
+    .pre {
+        display: block;
+        unicode-bidi: embed;
+        font-family: monospace;
+        white-space: pre;
+    }
     .bold {
         font-weight: bold;
     }
@@ -65,6 +71,28 @@
         background-color: #FFFF00;
     }
 
+    .processing:after {
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: bottom;
+      -webkit-animation: ellipsis steps(4, end) 900ms infinite;
+      animation: ellipsis steps(4, end) 900ms infinite;
+      content: "\2026";
+      /* ascii code for the ellipsis character */
+      width: 0px;
+    }
+
+    @keyframes ellipsis {
+      to {
+        width: 20px;
+      }
+    }
+
+    @-webkit-keyframes ellipsis {
+      to {
+        width: 20px;
+      }
+    }
 </style>
 
 <script>
@@ -557,10 +585,11 @@
 
     function setVisibility(elt) {
 {% if runMode == 'pilot' %}
-        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv', 'pilotWheelDiv'];
+        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv', 'pilotWheelDiv', 'searchToolDiv'];
 {% else %}
         const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv'];
 {% endif %}
+        const noflowDivs = ['searchToolDiv', 'changelogDiv'];
 
         for (var d of divs) {
             if (d != elt) $(d).classList.add('hide');
@@ -569,6 +598,14 @@
         $('plotlyPopperOuter').style.display = 'none';
         $('plotlyPermalink').style.display = 'none';
         $('diveIndicator').style.display = 'none';
+
+        if (noflowDivs.includes(elt)) {
+            $('main').style.overflow = "hidden";
+        }
+        else {
+            $('main').style.overflow = "auto";
+        }
+
     }
 
     function showPlotLinks() {
@@ -956,12 +993,152 @@
         });
     }
 
+    function searchToolFilter() {
+        const lines = $('searchToolResults').innerHTML.split("\n");
+        var fields, nf, i, j, data;
+        var out;
+
+        try {
+            fields = $('searchToolFilterFields').value.split(",");
+        }
+        catch {
+            alert('specify comma separated list of fields');
+            return;
+        }
+
+        if (fields.length < 1) {
+            alert('specify comma separated list of fields');
+            return;
+        }
+
+        for (i = 0 ; i < fields.length ; i++) {
+            try {
+                fields[i] = parseInt(fields[i]) - 1;
+            }
+            catch {
+                alert('specify comma separated list of fields');
+                return;
+            }
+        }
+
+        console.log(fields);
+
+        out = '';
+        for (i = 0 ; i < lines.length ; i++) {
+            data = lines[i].split(/[,: ]/);        
+            console.log(data);
+            for (j = 0 ; j < fields.length ; j++)
+                if (fields[j] >= 0 && fields[j] < data.length)
+                    out = out + data[fields[j]] + ' ';
+
+            out = out + '\n';
+        }    
+
+        $('searchToolResults').innerHTML = out;
+    }
+    function searchToolPlot(xy) {
+        const lines = $('searchToolResults').innerHTML.split("\n");
+        var   data, st, nf, i;
+        var   xd, d;
+
+        data = []
+        for (i = 0 ; i < lines.length ; i++) {
+            data.push(lines[i].trim().split(/[,: ]/));        
+        }
+
+        data = transpose(data);
+        if (xy) {
+            xd = data[0];
+            st = 1;
+        }
+        else {
+            xd = [...Array(lines.length).keys()];
+            st = 0;
+        }    
+
+        nf = data.length;
+        console.log('nfields ' + nf);
+
+        d = []
+        for (i = st ; i < nf ; i++) {
+            d.push({
+                    x: xd,
+                    y: data[i],
+                    mode: "markers",
+                    type: "scatter",
+                   });
+        }
+        var layout = { 
+                        font:   { size: 12 },
+                        margin: { t:20, l:80, r:80, b:80 },
+                        xaxis:  { title: "" },
+                        yaxis:  { title: "", autorange: true },
+                        title:  { text: "" },
+                        plot_bgcolor: "#cccccc",
+                        paper_bgcolor: "#bbbbbb",
+                     };
+        var config = { responsive: true };
+        $('searchToolPlot').removeChild($('searchToolPlot').firstChild);
+        Plotly.newPlot($('searchToolPlot'), d, layout, config);
+    }
+    function searchTool() {
+        const whichFile = document.querySelector('input[name="searchToolWhichFiles"]:checked').value;
+        const whichDives = document.querySelector('input[name="searchToolWhichDives"]:checked').value;
+        const search = $('searchToolTerm').value;
+        const filename = $('searchToolIncludeFilename').checked;
+        const divenum = $('searchToolIncludeDiveNumber').checked;
+        var dive1 = 0, diveN = 0;
+        var opts = [];
+
+        if (search == "") {
+            return;
+        }
+
+        if (whichDives == "range") {
+            try {
+                dive1 = parseInt($('searchToolFirstDive').value);
+            }
+            catch (error) {
+                console.log(error);
+                dive1 = 0;
+            }
+            try {
+                diveN = parseInt($('searchToolLastDive').value);
+            }
+            catch (error) {
+                console.log(error);
+                diveN = 0;
+            }
+        }
+
+        if (mission() != "")
+            opts.push(mission());
+        if (filename)
+            opts.push('showfile=1');
+        if (divenum)
+            opts.push('showdive=1');
+
+        $('searchStatus').innerHTML = 'processing';
+        $('searchStatus').classList.add('processing');
+        fetch(`grep/${currGlider}/${whichFile}/${whichDives}/${dive1}/${diveN}/${search}${formatQuery(opts)}`)
+        .then(res => res.text())
+        .then(text => {
+            $('searchStatus').innerHTML = '';
+            $('searchStatus').classList.remove('processing');
+            $('searchToolResults').innerHTML = text;
+        });
+    }
+
 {% if runMode == 'pilot' %}
     function showPilotWheel() {
         setVisibility('pilotWheelDiv'); 
         currElt = 'pilotWheel';
     }
 {% endif %}
+    function showSearchTool() {
+        setVisibility('searchToolDiv'); 
+        currElt = 'searchTool';
+    }
 
     function showTable() {
         setVisibility('mainTable'); 
@@ -1772,7 +1949,7 @@
                 s = document.createElement('option');
                 s.innerHTML = `${opt['value']}: ${opt['function']}`;
                 s.value = opt['value'];
-                if (v & opt['value'])
+                if ((b && (v & opt['value'])) || (m && v == opt['value']))
                     s.selected = true;
 
                 sel.appendChild(s);
@@ -3294,6 +3471,7 @@
 {% if runMode == 'pilot' %}
         <button class="tool" id="btnPilotWheel"    onclick="showPilotWheel();" title="pilot controls"></button>
 {% endif %}
+        <button class="tool" id="btnSearchTool"    onclick="showSearchTool();" title="search tool"></button>
     </div>
 
     <div class="toolBottom">
@@ -3344,6 +3522,61 @@
             </tr>
         </tbody>
     </table>
+    <div id="searchToolDiv" class="hide" style="text-align: left; margin-left: 10px;">
+        <div id="searchToolControls">
+            <input type="radio" id="searchToolWhichCommLog" name="searchToolWhichFiles" value="comm" checked>
+            <label for="searchToolWhichCommLog">comm.log</label>
+            <input type="radio" id="searchToolWhichLogFiles" name="searchToolWhichFiles" value="log">
+            <label for="searchToolWhichLogFiles">log files</label>
+            <input type="radio" id="searchToolWhichEngFiles" name="searchToolWhichFiles" value="eng">
+            <label for="searchToolWhichLogFiles">eng files</label>
+            <input type="radio" id="searchToolWhichCapFiles" name="searchToolWhichFiles" value="cap">
+            <label for="searchToolWhichLogFiles">cap files</label>
+            <br>
+            <input type="radio" id="searchToolWhichCmdfiles" name="searchToolWhichFiles" value="cmdfile">
+            <label for="searchToolWhichCommLog">cmdfile(s)</label>
+            <input type="radio" id="searchToolWhichPdosBat" name="searchToolWhichFiles" value="pdosbat">
+            <label for="searchToolWhichPdosBat">pdoscmd.bat(s)</label>
+            <input type="radio" id="searchToolWhichPdosLog" name="searchToolWhichFiles" value="pdoslog">
+            <label for="searchToolWhichPdosLog">pdos logs</label>
+            <input type="radio" id="searchToolWhichBaselog" name="searchToolWhichFiles" value="baselog">
+            <label for="searchToolWhichBaselog">baselog.log</label>
+            <p>
+            <input type="radio" id="searchToolSelftest" name="searchToolWhichDives" value="selftest">
+            <label for="searchToolSelftest">selftest(s)</label>
+            <input type="radio" id="searchToolAllDives" name="searchToolWhichDives" value="all" checked>
+            <label for="searchToolAllDives">all dives</label>
+            <input type="radio" id="searchToolDiveRange" name="searchToolWhichDives" value="range">
+            <label for="searchToolDiveRange">dive range:</label>
+            <label for="searchToolFirstDive">first</label> 
+            <input id="searchToolFirstDive" size="5">
+            <label for="searchToolLastDive">last</label> 
+            <input id="searchToolLastDive" size="5">
+            <p>
+            <input id="searchToolIncludeFilename" type="checkbox">
+            <label for="searchToolIncludeFilename">include filename</label>
+            <input id="searchToolIncludeDiveNumber" type="checkbox" checked>
+            <label for="searchToolIncludeDiveNumber">include dive number</label>
+            <p>
+            <label for="searchToolTerm">search term</label>
+            <input id="searchToolTerm">
+            <p>
+            <input type="button" value="search" onclick="searchTool(); return false;">
+            <span id="searchStatus"></span>
+            <p>
+            <input type="button" value="filter" onclick="searchToolFilter(); return false;">
+            <label for="searchToolFilterFields">fields</label> 
+            <input id="searchToolFilterFields" size="5">
+            <input type="button" value="plot x,y..." onclick="searchToolPlot(1); return false;">
+            <input type="button" value="plot y,y..." onclick="searchToolPlot(0); return false;">
+           <hr>
+        </div>
+        <div id="searchToolResults" class="pre">
+
+        </div>
+        <div id="searchToolPlot">
+        </div>
+    </div>
 
 {% if runMode == 'pilot' %}
     <div id="pilotWheelDiv" class="hide" style="text-align: left;">
@@ -3555,7 +3788,7 @@
         </div>
     </div>
 
-    <div id="logfileDiv" class="hide" oncontextmenu="parameterHelp('logfileDiv'); return false;" title="right click/long press parameter for help" style="background-color:#eeeeee; text-align:left;" >
+    <div id="logfileDiv" class="hide" oncontextmenu="parameterHelp('logfileDiv'); return false;" title="right click/long press parameter for help" style="background-color:#eeeeee; text-align:left;">
     </div>
 
     <div id="engfileDiv" class="hide" style="background-color:#eeeeee; text-align:left;">

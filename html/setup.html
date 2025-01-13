@@ -75,6 +75,8 @@ async function submit() {
         }
         else {
             console.log(data);
+            alert('msg' in data ? data['msg'] : 'account setup failed');
+            window.replace('/login');
         }
 {% else %}
         alert('msg' in data ? data['msg'] : 'error');

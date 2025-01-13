@@ -186,6 +186,36 @@
         border-right: none;
         border-collapse: collapse;
     }
+
+    #searchToolDiv {
+        overflow: hidden;
+        display: grid;
+        grid-gap: 2px;
+        grid-template-columns: repeat(2, 1fr);
+        grid-template-rows: auto-fit 1fr;
+        grid-template-areas:
+            "searchToolControls searchToolControls"
+            "searchToolResults searchToolPlot";
+        height: 98%;
+        max-height: 98%;
+    }
+
+    #searchToolControls {
+        overflow: hidden;
+        grid-area: searchToolControls
+    }
+
+
+    #searchToolResults {
+        overflow: auto;
+        grid-area: searchToolResults;
+    }
+
+    #searchToolPlot {
+        grid-area: searchToolPlot;
+        overflow: hidden;
+        max-height: 80vh;
+    }
  
     #pilotWheelDiv {
         display: flex;
@@ -201,7 +231,7 @@
         display: flex;
         flex-wrap: wrap;
         flex-direction: row;
-        overflow-y: none;
+        /* overflow-y: none; */
         overflow-x: visible;
         height: 100%;
         width: 100%;
@@ -222,7 +252,7 @@
     } 
     #pilotWheelCmdfile {
         display: flex;
-        overflow-y: none;
+        /* overflow-y: none; */
         overflow-x: visible;
         grid-template-columns: 0.5fr 0.5fr;
         grid-template-rows: 100%;
@@ -253,7 +283,7 @@
     } 
     #changelogDiv {
         display: grid;
-        overflow-y: none;
+        /* overflow-y: none; */
         grid-template-columns: 0.5fr 0.5fr;
         grid-template-rows: 100%;
         grid-template-areas:
@@ -285,7 +315,10 @@
         text-align:right; 
         font-family:verdana, arial, tahoma, 'sans serif';
         /* width:1040px; */
-        overflow-y:auto;
+        overflow-y: scroll;
+        overflow-x: scroll;
+        height: 100vh;
+        width: 100vw;
     }
 
     #mainTable td,th {
@@ -311,10 +344,6 @@
 
     #ribbonExpander {
         display: none;
-    }
-
-    #main {
-        overflow-y: none;
     }
 
     #diveIndicator {
@@ -354,6 +383,9 @@
 
     #btnPilotWheel {
         background: url("images/joystick-icon.png");
+    }
+    #btnSearchTool {
+        background: url("images/search.png");
     }
     #btnDiveUp {
         background: url("images/up-icon.png");
@@ -422,7 +454,7 @@
             height:50px; 
             display: grid;
             overflow-x: auto;
-            overflow-y: none; 
+            /* overflow-y: none;  */
             grid-template-columns: max-content 1fr max-content;
             grid-template-rows: 1fr; /* 50px; */
             grid-template-areas:
@@ -441,7 +473,7 @@
         .mobile#main {
             z-index: 3;
             grid-area: main;
-            overflow:auto; 
+            overflow: auto; 
             background-color:#dddddd; 
             text-align:center;
             position: relative;
@@ -906,7 +938,7 @@
     }
 
     .desktop#main {
-	    overflow:auto; 
+	    overflow: auto;
 	    background-color:#dddddd; 
 	    text-align:center;
         grid-area: main;

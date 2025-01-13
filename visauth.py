@@ -117,8 +117,11 @@ def setupUser(db, username, domain, password_input, code, new_password):
     if r == False:
         return {'status': 'error'}
 
-    if not r['otc'] or r['otc'] == '' or r['otc_expiry'] < time.time():
+    if not r['otc'] or r['otc'] == '': 
         return {'msg': 'OTC error', 'status': 'error'}
+
+    if r['otc_expiry'] < time.time():
+        return {'msg': 'one-time-code expired', 'status': 'error'}
         
     if r['locked']:
         return {'msg': 'locked', 'status': 'error'}

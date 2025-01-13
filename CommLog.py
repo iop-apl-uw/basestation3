@@ -2121,10 +2121,10 @@ def main():
                 BaseDB.addSession(base_opts, session)
                 if session.dive_num is not None and int(session.dive_num) > 0:
                     if session.call_cycle == None:
-                        cmdname = f"cmdfile.{int(session.dive_num)}"
+                        cmdname = f"cmdfile.{int(session.dive_num):04d}"
                     else:
                         cmdname = (
-                            f"cmdfile.{int(session.dive_num)}.{int(session.call_cycle)}"
+                            f"cmdfile.{int(session.dive_num):04d}.{int(session.call_cycle):04d}"
                         )
 
                     BaseDB.logParameterChanges(

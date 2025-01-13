@@ -173,7 +173,7 @@ def checkToken(request, users, groups, pilots, pilotgroups):
     if not tokenUser:
         return PERM_REJECT
 
-    if tokenDomain != request.app.ctx.ctx.domain:
+    if tokenDomain != request.ctx.ctx.domain:
         return PERM_REJECT
 
     perm = PERM_REJECT
@@ -222,7 +222,7 @@ def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
 def checkEndpoint(request, e):
 
     if 'users' in e or 'groups' in e:
-        (tU, tG) = getTokenUser(request)
+        (tU, tG, tD) = getTokenUser(request)
         allowAccess = False
 
         if tU and 'users' in e and e['users'] and tU in e['users']:
@@ -460,6 +460,7 @@ def attachHandlers(app: sanic.Sanic):
     app.static('/ballast', f'{sys.path[0]}/html/ballast.html', name='ballast')
     app.static('/script', f'{sys.path[0]}/scripts', name='script')
     app.static('/help', f'{sys.path[0]}/html/help.html', name='help')
+    app.static('/robots.txt', f'{sys.path[0]}/html/robots.txt', name='robots')
     app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
     app.static('/manifest.json', f'{sys.path[0]}/scripts/manifest.json', name='manifest')
 
@@ -502,21 +503,26 @@ def attachHandlers(app: sanic.Sanic):
         for user,prop in request.ctx.ctx.userTable.items():
             if user.lower() == username:
                 if 'password' in prop:
+                    sanic.log.logger.info("checking basic auth")
                     if sha256_crypt.verify(password, prop['password']):
+                        sanic.log.logger.info(f'{username} basic authorized')
                         response = sanic.response.json({'status': 'authorized', 'msg': 'authorizoration ok'})
                         authed = True
                     else:
                         response = sanic.response.json({'status': 'error', 'msg': 'authorization failed'})
                 else:
-                    status = visauth.authorizeUser(request.app.config.AUTH_DB, username, request.app.ctx.ctx.domain, password, code)
+                    sanic.log.logger.info("checking advanced auth")
+                    status = visauth.authorizeUser(request.app.config.AUTH_DB, username, request.ctx.ctx.domain, password, code)
                     response = sanic.response.json(status)
-                         
+                    sanic.log.logger.info(status)     
                     if status and 'status' in status and status['status'] == 'authorized':
+                        sanic.log.logger.info(f'{username} basic authorized')
                         authed = True
+                    else:
+                        sanic.log.logger.info('auth failed')
 
                 if authed:
-                    token = jwt.encode({ "user": username, "groups": prop['groups'], "domain": request.app.ctx.ctx.domain}, request.app.config.SECRET)
-                    response = sanic.response.json(status)
+                    token = jwt.encode({ "user": username, "groups": prop['groups'], "domain": request.ctx.ctx.domain}, request.app.config.SECRET)
                     response.add_cookie(
                         "token", token,
                         max_age=86400,
@@ -533,7 +539,7 @@ def attachHandlers(app: sanic.Sanic):
     # returns: YES is user is valid
     @authorized(check=AUTH_ENDPOINT)
     async def userHandler(request):
-        (tU, tG) = getTokenUser(request)
+        (tU, tG, tD) = getTokenUser(request)
         return sanic.response.text('logged in' if tU else 'not logged in')
 
     @app.get("/setup")
@@ -574,7 +580,7 @@ def attachHandlers(app: sanic.Sanic):
         code        = request.json.get("code", None)
 
         if username and curPassword and newPassword and code:
-            status = visauth.authorizeUser(request.app.config.AUTH_DB, username, request.app.ctx.ctx.domain, curPassword, code, new_password=newPassword)
+            status = visauth.authorizeUser(request.app.config.AUTH_DB, username, request.ctx.ctx.domain, curPassword, code, new_password=newPassword)
             return sanic.response.json(status)
         else:
             return sanic.response.json({'status': 'error', 'msg': 'error'})
@@ -588,7 +594,7 @@ def attachHandlers(app: sanic.Sanic):
         code        = request.json.get("code", None)
 
         if username and curPassword and newPassword and code:
-            status = visauth.setupUser(request.app.config.AUTH_DB, username, request.app.ctx.ctx.domain, curPassword, code, newPassword)
+            status = visauth.setupUser(request.app.config.AUTH_DB, username, request.ctx.ctx.domain, curPassword, code, newPassword)
             return sanic.response.json(status)
         else:
             return sanic.response.json({'status': 'error', 'msg': 'error'})
@@ -1292,6 +1298,89 @@ def attachHandlers(app: sanic.Sanic):
         else:
             return sanic.response.json(o)
 
+    @app.route('/grep/<glider:int>/<file:str>/<dives:str>/<dive1:int>/<diveN:int>/<search:str>')
+    @authorized()
+    async def grepHandler(request, glider:int, file:str, dives:str, dive1:int, diveN:int, search:str):
+        if not file in ['comm', 'log', 'eng', 'cap', 'pdoslog', 'pdosbat', 'cmdfile', 'baselog']:
+            return sanic.response.text('invalid file')
+        if not dives in ['selftest', 'all', 'range']:
+            return sanic.response.text('invalid dives')
+
+        showfile = 'showfile' in request.args;
+        showdive = 'showdive' in request.args;
+
+        if file == 'comm':
+            files = [ f'{gliderPath(glider, request)}/comm.log' ]
+        elif file == 'baselog':
+            files = [ f'{gliderPath(glider, request)}/baselog.log' ]
+        else:
+            p = Path(gliderPath(glider, request))
+            files = []
+            if dives == 'selftest':
+                pref = "pt"
+            else:
+                pref = "p"
+
+            if file == 'pdoslog':
+                glob = f"{pref}{glider:03d}????.*.pdos"
+            elif file == 'cmdfile': 
+                glob = "cmdfile.*.*"
+            elif file == 'pdosbat':
+                glob = "pdoscmds.bat.*.*"
+            else:
+                glob = f"{pref}{glider:03d}????.{file}"
+
+            async for fpath in p.glob(glob):
+                files.append(fpath)
+              
+            # files = sorted(files)
+
+        if file in ['log', 'eng', 'cap']:
+            pattern = re.compile('p(?P<glider>[0-9]{3})(?P<dive>[0-9]{4})\.[a-z]{3}')
+        elif file == 'pdoslog':
+            pattern = re.compile('p(?P<glider>[0-9]{3})(?P<dive>[0-9]{4})\.(?P<cycle>[0-9]{3})\.pdos')
+        elif file == 'cmdfile':
+            pattern = re.compile('cmdfile\.(?P<dive>[0-9]+).(?P<cycle>[0-9]+)')
+        elif file == 'pdosbat':
+            pattern = re.compile('pdoscmds\.bat\.(?P<dive>[0-9]+).(?P<cycle>[0-9]+)')
+        else:
+            pattern = None
+ 
+        out = []
+        for f in files:
+            dv = None
+            cy = None
+            if pattern is not None:
+                m = pattern.search(os.path.basename(f))    
+                if m:
+                    dv = int(m.group("dive"))
+                    if dives == 'range':
+                        if dv < dive1 or dv > diveN:
+                            continue
+                    if 'cycle' in m.groupdict():
+                        cy = int(m.group("cycle"))
+
+            async with aiofiles.open(f, 'r') as file:
+
+                async for line in file:
+                    add = ''
+                    if search in line:
+                        if showdive and dv is not None:
+                            add = add + f"{dv:04d} "
+                            if cy is not None:
+                                add = add + f"{cy:04d} "
+                        if showfile:
+                            add = add + f"{os.path.basename(f)}: "
+
+                        add = add + line.strip()
+                        out.append(add)
+
+        if len(files) > 1:
+            out = sorted(out)
+   
+        return sanic.response.text("\n".join(out)) 
+                     
+            
     # this does setup and is generally only called once at page load
     @app.route('/status/<glider:int>')
     # description: glider latest dive number and visualization config (mission.dat variables, mission plots)
@@ -1829,7 +1918,7 @@ def attachHandlers(app: sanic.Sanic):
                     await file.close()
                     sanic.log.logger.debug("saved to %s" % file.name)
 
-                    (tU, _) = getTokenUser(request)
+                    (tU, _, _) = getTokenUser(request)
 
                     if 'force' in message and message['force'] == 1:
                         cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {file.name} -u {tU}"
@@ -1962,7 +2051,7 @@ def attachHandlers(app: sanic.Sanic):
         if request.app.config.NO_CHAT:
             return sanic.response.json({'error': 'not allowed'})
 
-        (tU, _) = getTokenUser(request)
+        (tU, _, _) = getTokenUser(request)
         if tU == False:
             return sanic.response.json({'error': 'authorization failed'})
 
@@ -1981,7 +2070,7 @@ def attachHandlers(app: sanic.Sanic):
 
         # we could have gotten here by virtue of no restrictions specified for this glider/mission,
         # but chat only worked if someone is logged in, so we check that we have a user
-        (tU, _) = getTokenUser(request)
+        (tU, _, _) = getTokenUser(request)
         if tU == False:
             return sanic.response.text('authorization failed')
 
@@ -2227,7 +2316,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             await ws.send('no comm.log\n')
 
-        (tU, _) = getTokenUser(request)
+        (tU, _, _) = getTokenUser(request)
         
         prev_db_t = time.time()
         conn = None
@@ -2597,6 +2686,9 @@ async def buildMissionTable(app, config=None):
     else:
         ikey = None
 
+    if 'authdomain' not in x:
+        x['authdomain'] = None
+
     domains = {}
     if ikey:
         missionTable = []
@@ -2762,6 +2854,7 @@ async def buildMissionTable(app, config=None):
         app.ctx.controls = x['controls']
         app.ctx.assets = x['assets']
         app.ctx.routes = x['routes']
+        app.ctx.domain = x['authdomain']
 
     return (missions, x, domains)
  

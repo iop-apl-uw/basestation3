@@ -2070,7 +2070,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         backup_filename = os.path.join(base_opts.mission_dir, known_file)
         if os.path.exists(backup_filename):
             if backup_dive_num is not None:
-                backup_target_filename = "%s.%d.%d" % (
+                backup_target_filename = "%s.%04d.%04d" % (
                     backup_filename,
                     int(backup_dive_num),
                     int(backup_call_cycle),
@@ -2091,7 +2091,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 )
 
     if backup_dive_num is not None and int(backup_dive_num) >= 1:
-        cmdfile_name = f"cmdfile.{int(backup_dive_num)}.{int(backup_call_cycle)}"
+        cmdfile_name = f"cmdfile.{int(backup_dive_num):04d}.{int(backup_call_cycle):04d}"
 
         fullname = os.path.join(base_opts.mission_dir, cmdfile_name)
         if os.path.exists(fullname):
@@ -2413,7 +2413,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     alert_message_base_name = "alert_message.html"
     (backup_dive_num, backup_call_cycle) = comm_log.get_last_dive_num_and_call_counter()
     if backup_dive_num is not None:
-        alert_message_file_name = "%s.%d.%d" % (
+        alert_message_file_name = "%s.%04d.%04d" % (
             alert_message_base_name,
             int(backup_dive_num),
             int(backup_call_cycle),
