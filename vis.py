@@ -252,13 +252,8 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                 if url in request.ctx.ctx.endpoints:
                     e = request.ctx.ctx.endpoints[url]
                     status = checkEndpoint(request, e)
-                    if status == PERM_INVALID:
-                        return sanic.response.text("Page not found: {}".format(request.path), status=404)
-                    elif status == PERM_REJECT:
-                        # return sanic.response.text("authorization failed")
-                        return await sanic_ext.render(
-                            "login.html", context={"mode": "login", "body": "authorization failed", "url": request.url}, status=400
-                        )
+                    if status == PERM_REJECT:
+                        return sanic.response.text("authorization failed")
 
                     else:
                         if 'allow' in e and e['allow'] == True:
@@ -290,13 +285,8 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                 if m is not None and 'endpoints' in m and m['endpoints'] is not None and url in m['endpoints']:
                     e = m['endpoints'][url]
                     status = checkEndpoint(request, e)
-                    if status == PERM_INVALID:
-                        return sanic.response.text("Page not found: {}".format(request.path), status=404)
-                    elif status == PERM_REJECT:
-                        # return sanic.response.text("authorization failed")
-                        return await sanic_ext.render(
-                            "login.html", context={"mode": "login", "body": "authorization failed", "url": request.url}, status=400
-                        )
+                    if status == PERM_REJECT:
+                        return sanic.response.text("authorization failed")
                     else:
                         if 'allow' in e and e['allow'] == True:
                             response = await f(request, *args, **kwargs)

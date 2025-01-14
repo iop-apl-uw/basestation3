@@ -453,7 +453,7 @@
         fetch(`control/${currGlider}/${file}${mission()}`)
         .then(res => res.text())
         .then(text => {
-            if (text == 'none' || text == 'authorization failed')
+            if (text == "none" || text.includes("authorization failed"))
                 return;
 
             try {
@@ -553,6 +553,9 @@
         fetch(q)
         .then(res => res.text())
         .then(text => {
+            if (text == "none" || text.includes("authorization failed"))
+                return;
+
             try {
                 data = JSON.parse(text);
             } catch (error) {
@@ -664,6 +667,9 @@
             fetch(`plot/div/${which}/${currGlider}/${currDive}/${elt}${mission()}`)
             .then(res => res.text())
             .then(data => {
+                if (data == "none" || data.includes("authorization failed"))
+                    return;
+
                 setInnerHTML($('mainDiv'), data);
                 $('plotlyPopperOuter').onclick = function() 
                     { 
@@ -850,6 +856,9 @@
             fetch(q)
             .then(res => res.text())
             .then(text => {
+                if (text == "none" || text.includes("authorization failed"))
+                    return;
+
                 try {
                     data = JSON.parse(text);
                 } catch (error) {
@@ -908,6 +917,9 @@
             fetch(q)
             .then(res => res.text())
             .then(text => {
+                if (text == "none" || text.includes("authorization failed"))
+                    return;
+
                 console.log(text);
                 try {
                     data = JSON.parse(text);
@@ -950,6 +962,9 @@
         fetch(q)
         .then(res => res.text())
         .then(text => {
+            if (text == "none" || text.includes("authorization failed"))
+                return;
+
             try {
                 data = JSON.parse(text);
             } catch (error) {
@@ -1123,6 +1138,9 @@
         fetch(`grep/${currGlider}/${whichFile}/${whichDives}/${dive1}/${diveN}/${search}${formatQuery(opts)}`)
         .then(res => res.text())
         .then(text => {
+            if (text == "none" || text.includes("authorization failed"))
+                return;
+
             $('searchStatus').innerHTML = '';
             $('searchStatus').classList.remove('processing');
             $('searchToolResults').innerHTML = text;
@@ -1977,6 +1995,9 @@
         fetch(`parmdata/${glider}/${maxDive}${mission()}`)
         .then(res => res.text())
         .then(text => {
+            if (text == "none" || text.includes("authorization failed"))
+                return;
+
             try {
                 parms = JSON.parse(text);
             } catch (error) {
@@ -2093,6 +2114,13 @@
                 setupStream(glider, true, true);
                 currStatus = 'active';
             }
+
+            if (currMission == "" && data.mission.mission != "") {
+                // should we set currMission as well ... will cause all query links to
+                // include it which should be fine ??
+                $('missionIndex').removeAttribute('hidden');
+                $('missionIndexText').innerHTML = data.mission.mission.replaceAll('_', ' ');
+            }
 {% if runMode == 'pilot' %}
             targetsChannel = new BroadcastChannel(glider + '-targets');
             targetsChannel.onmessage = (event) => {
@@ -2153,6 +2181,9 @@
         fetch(`log/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
+            if (data == "none" || data.includes("authorization failed"))
+                return;
+
             // $('logDiv').innerHTML = 'Dive ' + dive + '<br>';
             $('logDiv').innerHTML = '<br>';
             $('logDiv').innerHTML += data;
@@ -2162,10 +2193,55 @@
         });
     }
 
+    function loadEngFile(dive, ext, div) {
+        fetch(`file/${ext}/${currGlider}/${dive}${mission()}`)
+        .then(res => res.text())
+        .then(data => {
+            if (data == "none" || data.includes("authorization failed"))
+                return;
+
+            const lines = data.split("\n");
+            var i, j;
+            var columns = null;
+            var out = "";
+            
+            for (i = 0 ; i < lines.length ; i++) {
+                if (Array.from(lines[i])[0] == "%") {
+                    out = out + lines[i].trim() + "<br>";
+                    if (lines[i].includes('columns:')) {
+                        columns = lines[i].trim().split(" ")[1].split(",");
+                    }
+                    if (lines[i].includes('data:')) {
+                        out = out + "<table><tr>";
+                        for (j = 0 ; j < columns.length ; j++) {
+                            out = out + "<th>" + columns[j] + "</th>";
+                        }
+                        out = out + "</tr>";
+                    }
+                }
+                else {
+                    out = out + "<tr>"; 
+                    columns = lines[i].trim().split(" ");
+                    for (j = 0 ; j < columns.length ; j++) {
+                        out = out + '<td>' + columns[j] + '</td>';
+                    }
+                    out = out + "</tr>"; 
+                }
+            }
+            out = out + '</table>';
+            $(div).innerHTML = out;
+        })
+        .catch(error => {
+            console.log(`loadFile - ${ext} ${error}`);
+        });
+    }
     function loadFile(dive, ext, div) {
         fetch(`file/${ext}/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
+            if (data.includes("authorization failed"))
+                return;
+
             if (data == 'none' && ext == 'cap') {
                 $('btnCapFile').style.backgroundImage = "url('script/images/cap-none-icon.png')";
                 $(div).innerHTML = '<br>no capture file'; 
@@ -2219,6 +2295,10 @@
 
         let resp = await Promise.all(urls.map(url => fetch(url).then(res => res.text())));
         let alerts = resp[0];
+
+        if (resp[0].includes("authorization failed") || resp[1].includes("authorization failed"))
+            return;
+
         try {
             deltas = JSON.parse(resp[1]);
         } catch (error) {
@@ -2367,14 +2447,18 @@
         highlightCurrDive(dive);
         loadLog(dive);
         loadFile(dive, 'log', 'logfileDiv');
-        loadFile(dive, 'eng', 'engfileDiv');
+        loadEngFile(dive, 'eng', 'engfileDiv');
         loadFile(dive, 'cap', 'capfileDiv');
         loadNotifications(dive);
         $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
 
         fetch(`plots/${currGlider}/${dive}${mission()}`)
-        .then(res => res.json())
-        .then(resp => {
+        .then(res => res.text())
+        .then(data => {
+            if (data.includes("authorization failed"))
+                return;
+
+            resp = JSON.parse(data);
             var links = [];
             clearPlots();
             var plots = resp['dvplots'];
@@ -2668,6 +2752,9 @@
         fetch(`pro/${currGlider}/${x}/${whichProf}/${first}/${last}/${step}/${top}/${bot}/${binSize}${mission()}`)
         .then(res => res.text())
         .then(data => {
+            if (data.includes("authorization failed"))
+                return;
+
             data = data.replaceAll('NaN', 'null');
             data = JSON.parse(data);
             // console.log(data[x]);
@@ -2796,6 +2883,9 @@
         fetch(query)
         .then(res => res.text())
         .then(data => {
+            if (data.includes("authorization failed"))
+                return;
+
             currElt = 'plotly-' + which;
             console.log(currElt);
             data = data.replaceAll('NaN', 'null');
@@ -3447,11 +3537,13 @@
             <span class="spanClick" onclick="openMagcalForm(); return false;">Compass calibration</span>
         </div>
     </div>
-    <span id="missionIndex" hidden="hidden"><span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b></span>
-    <span id="gliderIndex"><span id="gliderIndexText" class="spanClick" onclick="gliderIndex(); return false;">Glider</span> <b>&#124;</b></span>
+    <span id="missionIndex" hidden="hidden"> <span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b> </span>
+    <span id="gliderIndex"><span id="gliderIndexText" class="spanClick" onclick="gliderIndex(); return false;">Glider</span> <b>&#124;</b>
     <a href="help" target="help"> Help </a> 
 {% if runMode == 'pilot' %}
-    <span class="spanClick" id="toggleRight" style="float:right; padding-right: 10px;" onclick="toggleRight(); return false;">Hide pilot</span>
+    <span style="float:right; padding-right: 10px;">
+    <a href="/logout"> Logout </a>  <b>&#124;</b>
+    <span class="spanClick" id="toggleRight" onclick="toggleRight(); return false;"> Hide pilot</span></span>
 {% endif %}
 </div>
 
