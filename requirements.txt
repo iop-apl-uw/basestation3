@@ -48,3 +48,4 @@ pyproj==3.7.0
 pydantic==2.9.2
 asyncudp
 asyncinotify
+PyQRCode==1.2.1
