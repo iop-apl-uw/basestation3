@@ -1770,7 +1770,7 @@ def attachHandlers(app: sanic.Sanic):
 
     # first the safety function
     def applyControls(c, text, filename):
-        forbidden = ['shutdown', 'scuttle', 'wipe', 'reboot', 'pdos']
+        forbidden = ['shutdown', 'scuttle', 'wipe', 'reboot', 'pdos', 'del', 'rm', 'EXIT_TO_MENU']
         for nono in forbidden:
             if nono in text.lower():
                 sanic.log.logger.info(f"{nono} is a nono")
@@ -1890,6 +1890,11 @@ def attachHandlers(app: sanic.Sanic):
         # of protection
         if request.app.config.NO_SAVE:
             return sanic.response.text('not allowed')
+
+        ok = ["cmdfile", "targets", "science", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
+
+        if which not in ok:
+            return sanic.response.text("not allowed")
 
         validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
 
