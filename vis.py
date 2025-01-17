@@ -149,7 +149,7 @@ publicMissionFields = {"glider", "mission", "status",
 
 def getTokenUser(request):
     if request.app.config.SINGLE_MISSION:
-        return (request.app.config.USER, False)
+        return (request.app.config.USER, False, False)
 
     if not 'token' in request.cookies:
         return (False, False, False)
