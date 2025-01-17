@@ -28,10 +28,12 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+set sg = `printf %03d $1`
+
 if ( $#argv >= 2) then
     set base = $2
 else
-    set base = /home/seaglider/sg"$1"
+    set base = /home/seaglider/sg"$sg"
     # set base = "/server/work1/seaglider/www/selftests" 
 endif
 
@@ -60,7 +62,6 @@ if ( $num == "0000" ) then
 
     set fname = `ls -1 "$base"/pt*.cap | tail -n 1`
 else
-    set sg = `printf %03d $1`
     set fname = "$base"/pt"$sg""$num".cap
 endif
 
@@ -131,7 +132,7 @@ echo "Summary of sensor values"
 echo
 
 set press_counts = `grep Mean: $fname | tail -n 1 | cut -f2 -d: | awk '{print $1}'`
-set press_offset = `grep \$PRESSURE_YINT "$base"/pt"$1""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
+set press_offset = `grep \$PRESSURE_YINT "$base"/pt"$sg""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
 if ($press_offset == "") then
     set press_offset = `grep "Current pressure y-intercept is" $fname | cut -f5 -d' '`
 endif
@@ -150,7 +151,7 @@ else
     endif
 endif
 
-set press_slope = `grep \$PRESSURE_SLOPE "$base"/pt"$1""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
+set press_slope = `grep \$PRESSURE_SLOPE "$base"/pt"$sg""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
 if ($press_slope == "") then
     set press_slope = `grep \$PRESSURE_SLOPE $fname | tail -n 1 | cut -f5 -d, | cat`
 endif
@@ -201,8 +202,8 @@ set Cfreq = `grep "^ct:" $fname | tail -n 1 | cut -f2 -d' '`
 set C0 = `grep sbe_cond_freq_C0 "$base"/sg_calib_constants.m | cut -f2 -d= | cut -f1 -d';'`
 
 if ($Cfreq == "") then
-    set col = `grep columns "$base"/pt"$1""$testnum".eng | cut -f2 -d' ' | awk 'BEGIN{FS=","; OFS="\n"} {$1=$1} 1' | grep -i -n condFreq | cut -f1 -d:`
-    set Cfreq = `grep -A 3 %data: "$base"/pt"$1""$testnum".eng | tail -1 | cut -f"$col" -d' '`
+    set col = `grep columns "$base"/pt"$sg""$testnum".eng | cut -f2 -d' ' | awk 'BEGIN{FS=","; OFS="\n"} {$1=$1} 1' | grep -i -n condFreq | cut -f1 -d:`
+    set Cfreq = `grep -A 3 %data: "$base"/pt"$sg""$testnum".eng | tail -1 | cut -f"$col" -d' '`
 else if (`printf %.0f $Cfreq` > 10000) then
     set Cfreq = `echo $Cfreq/1000 | bc -l`
 endif
@@ -229,7 +230,7 @@ endif
 
 set auxSlope = `grep -A 5 "type = auxCompass" $fname | grep coeff | head -n 1 | cut -f2 -d= | dos2unix`
 set auxOffset = `grep -A 5 "type = auxCompass" $fname | grep coeff | tail -n 1 | cut -f2 -d= | dos2unix`
-set gliderSlope = `grep \$PRESSURE_SLOPE "$base"/pt"$1""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
+set gliderSlope = `grep \$PRESSURE_SLOPE "$base"/pt"$sg""$testnum".log | tail -n 1 | cut -f2 -d, | cat`
 if ($auxSlope != "" && $auxOffset != "") then 
     set ratio = `echo "1000*$auxSlope"/"$gliderSlope" | bc`
     if ( !($ratio > 990 && $ratio < 1005) && !($ratio > 2080 && $ratio < 2090) )  then
