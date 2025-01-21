@@ -2115,7 +2115,7 @@
                 currStatus = 'active';
             }
 
-            if (currMission == "" && data.mission.mission != "") {
+            if (currMission == "" && ('mission' in data.mission && data.mission.mission && data.mission.mission != "")) {
                 // should we set currMission as well ... will cause all query links to
                 // include it which should be fine ??
                 $('missionIndex').removeAttribute('hidden');
