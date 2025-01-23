@@ -213,17 +213,15 @@ def mission_pmar_stats(
                 "xanchor": "center",
                 "yanchor": "top",
                 "x": 0.5,
-                "y": 0.85,
+                "y": 0.95,
             },
             "legend": {
                 "x": 1.05,
                 "y": 1,
             },
             "margin": {
-                "t": 200,
-                "b": 120,
+                "t": 120,
             },
-            # "annotations": tuple(l_annotations),
         },
     )
     return (
