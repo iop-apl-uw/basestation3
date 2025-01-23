@@ -46,9 +46,10 @@ if typing.TYPE_CHECKING:
 
 import PlotUtils
 import PlotUtilsPlotly
-import QC
-from BaseLog import log_warning, log_info, log_debug, log_error
+from BaseLog import log_debug, log_error, log_info, log_warning
 from Plotting import plotdivesingle
+
+# import QC
 
 
 def pmar_create_stats_lines(dive_nc_file, ch_tag, plot_type):
@@ -160,9 +161,9 @@ def plot_PMAR(
         else:
             depth = dive_nc_file.variables["eng_depth"][:] / 100.0
     except KeyError as e:
-        log_warning(f"Could not find variable {e.args[0]} - skipping pmar plot")
+        log_info(f"Could not find variable {e.args[0]} - skipping pmar plot")
         return (ret_figs, ret_plots)
-    except:
+    except Exception:
         log_error("Error fetching dive variables - skipping pmar plot", "exc")
         return (ret_figs, ret_plots)
 
@@ -172,10 +173,10 @@ def plot_PMAR(
         ("_ch01", " Channel 01"),
     ):
         if (
-            not (f"pmar_base_time{ch_tag}_a" in dive_nc_file.variables)
-            and not (f"pmar_base_time{ch_tag}_b" in dive_nc_file.variables)
-            and not (f"pmar_logavg_time{ch_tag}_a" in dive_nc_file.variables)
-            and not (f"pmar_logavg_time{ch_tag}_b" in dive_nc_file.variables)
+            (f"pmar_base_time{ch_tag}_a" not in dive_nc_file.variables)
+            and (f"pmar_base_time{ch_tag}_b" not in dive_nc_file.variables)
+            and (f"pmar_logavg_time{ch_tag}_a" not in dive_nc_file.variables)
+            and (f"pmar_logavg_time{ch_tag}_b" not in dive_nc_file.variables)
         ):
             continue
 
@@ -207,7 +208,7 @@ def plot_PMAR(
             ].getValue()
         except KeyError as e:
             log_debug(f"Could not find variable {e.args[0]} - skipping dive plot")
-        except:
+        except Exception:
             log_error("Error fetching dive variables - skipping dive plot", "exc")
         else:
             clip_count_dive = clip_min_count_dive + clip_max_count_dive
@@ -234,7 +235,7 @@ def plot_PMAR(
             ].getValue()
         except KeyError as e:
             log_debug(f"Could not find variable {e.args[0]} - skipping climb plot")
-        except:
+        except Exception:
             log_error("Error fetching variables - skipping climb plot", "exc")
         else:
             clip_count_climb = clip_min_count_climb + clip_max_count_climb
@@ -249,8 +250,8 @@ def plot_PMAR(
                     f"pmar_logavg_clipcount{ch_tag}_a"
                 ][:]
             except KeyError as e:
-                log_warning(f"Could not find variable {e.args[0]} - skipping dive plot")
-            except:
+                log_info(f"Could not find variable {e.args[0]} - skipping dive plot")
+            except Exception:
                 log_error("Error fetching dive variables - skipping dive plot", "exc")
 
             try:
@@ -261,8 +262,8 @@ def plot_PMAR(
                     f"pmar_logavg_clipcount{ch_tag}_b"
                 ][:]
             except KeyError as e:
-                log_warning(f"Could not find variable {e.args[0]} - skipping dive plot")
-            except:
+                log_info(f"Could not find variable {e.args[0]} - skipping dive plot")
+            except Exception:
                 log_error("Error fetching dive variables - skipping dive plot", "exc")
 
         if clip_count_dive is not None and datawindow_dive is not None:
@@ -580,9 +581,10 @@ def plot_PMAR(
             )
 
         # Log average
-        cf = spectra_dive = spectra_dive_qc = spectra_climb = spectra_climb_qc = (
-            spectra_time_dive
-        ) = spectra_time_climb = None
+        # spectra_dive_qc = spectra_climb_qc = None
+        cf = spectra_dive = spectra_climb = spectra_time_dive = spectra_time_climb = (
+            None
+        )
         try:
             cf = dive_nc_file.variables[f"pmar_logavg{ch_tag}_a_center_freqs"][:]
             spectra_dive = dive_nc_file.variables[f"pmar_logavg{ch_tag}_a"][:]
@@ -593,16 +595,16 @@ def plot_PMAR(
             # spectra_dive = ma.array(spectra_dive, mask=(isnan(spectra_dive) | bad_qc(spectra_dive_qc,mask=True)) )
         except KeyError as e:
             log_info(f"Could not find variable {e.args[0]} - skipping related plot")
-        except:
+        except Exception:
             log_error("Error fetching dive variables - skipping related plot", "exc")
 
-        try:
-            spectra_dive_qc = QC.decode_qc(
-                dive_nc_file.variables[f"pmar_logavg{ch_tag}_a_qc"]
-            )
-        except:
-            log_warning("Could not spectra dive qc variable")
-            spectra_dive_qc = None
+        # try:
+        #     spectra_dive_qc = QC.decode_qc(
+        #         dive_nc_file.variables[f"pmar_logavg{ch_tag}_a_qc"]
+        #     )
+        # except Exception:
+        #     log_warning("Could not spectra dive qc variable")
+        #     spectra_dive_qc = None
 
         try:
             cf = dive_nc_file.variables[f"pmar_logavg{ch_tag}_b_center_freqs"][:]
@@ -615,16 +617,16 @@ def plot_PMAR(
             # spectra_climb = ma.array(spectra_climb, mask=(isnan(spectra_climb) | bad_qc(spectra_dive_qc,mask=True)) )
         except KeyError as e:
             log_info(f"Could not find variable {e.args[0]} - skipping dive plot")
-        except:
+        except Exception:
             log_error("Error fetching dive variables - skipping dive plot", "exc")
 
-        try:
-            spectra_climb_qc = QC.decode_qc(
-                dive_nc_file.variables[f"pmar_logavg{ch_tag}_b_qc"]
-            )
-        except:
-            log_warning("Could not spectra climb qc variable")
-            spectra_climb_qc = None
+        # try:
+        #     spectra_climb_qc = QC.decode_qc(
+        #         dive_nc_file.variables[f"pmar_logavg{ch_tag}_b_qc"]
+        #     )
+        # except Exception:
+        #     log_warning("Could not spectra climb qc variable")
+        #     spectra_climb_qc = None
 
         spectra = None
         spectra_time = None
@@ -632,22 +634,22 @@ def plot_PMAR(
         if spectra_dive is not None:
             if spectra_climb is not None:
                 spectra = np.vstack((spectra_dive, spectra_climb))
-                if spectra_dive_qc is not None and spectra_climb_qc is not None:
-                    spectra_qc = np.concatenate(
-                        (np.transpose(spectra_dive_qc), np.transpose(spectra_climb_qc))
-                    )
+                # if spectra_dive_qc is not None and spectra_climb_qc is not None:
+                #     spectra_qc = np.concatenate(
+                #         (np.transpose(spectra_dive_qc), np.transpose(spectra_climb_qc))
+                #     )
                 spectra_time = np.concatenate(
                     (np.transpose(spectra_time_dive), np.transpose(spectra_time_climb))
                 )
             else:
                 spectra = spectra_dive
-                if spectra_dive_qc is not None:
-                    spectra_qc = np.transpose(spectra_dive_qc)
+                # if spectra_dive_qc is not None:
+                #    spectra_qc = np.transpose(spectra_dive_qc)
                 spectra_time = np.transpose(spectra_time_dive)
         elif spectra_climb is not None:
             spectra = spectra_climb
-            if spectra_climb_qc is not None:
-                specta_qc = np.transpose(spectra_climb_qc)
+            # if spectra_climb_qc is not None:
+            #    specta_qc = np.transpose(spectra_climb_qc)
             spectra_time = np.transpose(spectra_time_climb)
 
         # log_info("spectra shape:%s, spectra_qc shape:%s spectra_time shape:%s" % (shape(spectra), shape(spectra_qc), shape(spectra_time)))
@@ -704,7 +706,7 @@ def plot_PMAR(
         # Choose evenly spaced colors
         c_l = plotly.colors.sequential.Plasma
         c_list = []
-        for ii in range(np.ceil(len(cf) / len(c_l)).astype(int)):
+        for _ in range(np.ceil(len(cf) / len(c_l)).astype(int)):
             c_list += c_l
 
         idx = np.round(np.linspace(0, len(c_list) - 1, len(cf))).astype(int)
@@ -761,7 +763,7 @@ def plot_PMAR(
                             "showlegend": False,
                         }
                     )
-            except:
+            except Exception:
                 log_error("Failed to plot spectra - skipping", "exc")
 
         if base_opts.pmar_logavg_min != 0.0:
