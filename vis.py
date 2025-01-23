@@ -79,6 +79,7 @@ import Magcal
 import BaseCtrlFiles
 import parms
 import visauth
+import pilot
 
 async def checkClose(conn):
     try:
@@ -1370,7 +1371,17 @@ def attachHandlers(app: sanic.Sanic):
    
         return sanic.response.text("\n".join(out)) 
                      
-            
+    @app.route('/recs/<glider:int>')
+    # description: pilot recommendations
+    # parameters: mission
+    # returns: JSON formatted dict of recommendations for centers
+    @authorized()
+    async def recsHandler(request, glider:int):
+        p = f'{gliderPath(glider,request)}'
+        (pitch, roll, vbd) = await pilot.pilotRecs(p, glider)
+        x = { 'pitch': pitch, 'roll': roll, 'vbd': vbd }
+        return sanic.response.json(x)
+ 
     # this does setup and is generally only called once at page load
     @app.route('/status/<glider:int>')
     # description: glider latest dive number and visualization config (mission.dat variables, mission plots)
@@ -1960,6 +1971,15 @@ def attachHandlers(app: sanic.Sanic):
 
         mission = activeMission(glider, request)
 
+        synccmd = f'{gliderPath(glider,request)}/.vissync'
+        if await aiofiles.os.path.exists(synccmd):
+            proc = await asyncio.create_subprocess_shell(
+                            synccmd,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        )
+            out, err = await proc.communicate()
+
         if status:
             content = f"status={status}"
             topic = 'status'
@@ -2118,6 +2138,19 @@ def attachHandlers(app: sanic.Sanic):
     async def posHandler(request, glider:int):
         filename = f'{sys.path[0]}/html/pos.html'
         return await sanic.response.file(filename, mime_type='text/html')
+
+    @app.route('/pos/sa/<glider:int>')
+    # description: fetch SA position file
+    # parameters: mission
+    # returns: SA positions file
+    @authorized()
+    async def posSAHandler(request, glider:int):
+        filename = f'{gliderPath(glider, request)}/SG{glider:03d}_positions.txt'
+
+        if not await aiofiles.os.path.exists(filename):
+            return sanic.response.text('not found')
+ 
+        return await sanic.response.file(filename, mime_type='text/plain')
 
     @app.route('/pos/poll/<glider:str>')
     # description: get latest glider position
