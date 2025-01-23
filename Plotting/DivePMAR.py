@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2025  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots PMAR data """
+"""Plots PMAR data"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -62,9 +62,9 @@ def pmar_create_stats_lines(dive_nc_file, ch_tag, plot_type):
         stat_tag = f"{statistic}{ch_tag}"
         var_nm = f"pmar_{stat_tag}"
         if var_nm in dive_nc_file.variables:
-            profile_stats[stat_tag] = climb_stats[stat_tag] = dive_stats[
-                stat_tag
-            ] = dive_nc_file.variables[var_nm].getValue()
+            profile_stats[stat_tag] = climb_stats[stat_tag] = dive_stats[stat_tag] = (
+                dive_nc_file.variables[var_nm].getValue()
+            )
 
     # Half-profile dependent stats
     if plot_type == "logavg":
@@ -179,20 +179,12 @@ def plot_PMAR(
         ):
             continue
 
-        sigmean_dive = (
-            sigstddev_dive
-        ) = (
-            pmar_time_dive
-        ) = (
-            clip_max_count_dive
-        ) = clip_min_count_dive = clip_count_dive = clip_count_dive_normalized = None
-        sigmean_climb = (
-            sigstddev_climb
-        ) = (
-            pmar_time_climb
-        ) = (
-            clip_max_count_climb
-        ) = clip_min_count_climb = clip_count_climb = clip_count_climb_normalized = None
+        sigmean_dive = sigstddev_dive = pmar_time_dive = clip_max_count_dive = (
+            clip_min_count_dive
+        ) = clip_count_dive = clip_count_dive_normalized = None
+        sigmean_climb = sigstddev_climb = pmar_time_climb = clip_max_count_climb = (
+            clip_min_count_climb
+        ) = clip_count_climb = clip_count_climb_normalized = None
         datawindow_dive = datawindow_climb = samplerate_dive = samplerate_climb = None
 
         try:
@@ -469,7 +461,6 @@ def plot_PMAR(
             )
 
         for p in bp_plots:
-
             if p.data is None or p.depth is None:
                 continue
 
@@ -478,7 +469,6 @@ def plot_PMAR(
             show_label = collections.defaultdict(lambda: True)
 
             for gc in p.gc_moves:
-
                 fig.add_trace(
                     {
                         "type": "scatter",
@@ -590,13 +580,9 @@ def plot_PMAR(
             )
 
         # Log average
-        cf = (
-            spectra_dive
-        ) = (
-            spectra_dive_qc
-        ) = (
-            spectra_climb
-        ) = spectra_climb_qc = spectra_time_dive = spectra_time_climb = None
+        cf = spectra_dive = spectra_dive_qc = spectra_climb = spectra_climb_qc = (
+            spectra_time_dive
+        ) = spectra_time_climb = None
         try:
             cf = dive_nc_file.variables[f"pmar_logavg{ch_tag}_a_center_freqs"][:]
             spectra_dive = dive_nc_file.variables[f"pmar_logavg{ch_tag}_a"][:]
@@ -724,6 +710,12 @@ def plot_PMAR(
         idx = np.round(np.linspace(0, len(c_list) - 1, len(cf))).astype(int)
         c_list = np.array(c_list)[idx].tolist()
 
+        x_min = np.nanmin(spectra_time - start_time)
+        x_max = np.nanmax(spectra_time - start_time)
+        x_rng = x_max - x_min
+        x_min = x_min - (x_rng * 0.05)
+        x_max = x_max + (x_rng * 0.05)
+
         for ii in range(len(cf)):
             try:
                 s = spectra[:, ii]
@@ -789,6 +781,7 @@ def plot_PMAR(
                 "xaxis": {
                     "title": "Time Into Dive (s)",
                     "showgrid": True,
+                    "range": (x_min, x_max),
                 },
                 "xaxis2": {
                     "title": "GMT Time",
