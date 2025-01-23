@@ -316,18 +316,20 @@ def plot_pitch_roll(
         conn = dbcon
 
     BaseDB.addValToDB(
-        base_opts, dive_nc_file.dive_number, "implied_C_PITCH", implied_C, con=conn
+        base_opts, dive_nc_file.dive_number, "pitch_flying_rmse", rms_curr, con=conn
     )
     BaseDB.addValToDB(
-        base_opts,
-        dive_nc_file.dive_number,
-        "implied_PITCH_GAIN",
-        implied_gain,
-        con=conn,
+        base_opts, dive_nc_file.dive_number, "pitch_linear_rmse", rms_linear, con=conn
+    )
+    BaseDB.addValToDB(
+        base_opts, dive_nc_file.dive_number, "pitch_linear_C_PITCH", implied_C, con=conn
+    )
+    BaseDB.addValToDB(
+        base_opts, dive_nc_file.dive_number, "pitch_linear_PITCH_GAIN", implied_gain, con=conn
     )
     try:
         BaseDB.addSlopeValToDB(
-            base_opts, dive_nc_file.dive_number, ["implied_C_PITCH"], con=conn
+            base_opts, dive_nc_file.dive_number, ["pitch_linear_C_PITCH"], con=conn
         )
     except:
         log_error("Failed to add slope value to database", "exc")
@@ -340,6 +342,16 @@ def plot_pitch_roll(
                                                                 x0=[c_pitch, pitch_gain],
                                                                 args=(vehicle_pitch_degrees_v[inds], pitchAD[inds], vbd_control[inds], pitch_cnv, vbd_shift),
                                                                 maxiter=500, maxfun=1000, ftol=1e-3, full_output=True, disp=True)
+
+            BaseDB.addValToDB(
+                base_opts, dive_nc_file.dive_number, "pitch_fixed_rmse", rms_0, con=conn
+            )
+            BaseDB.addValToDB(
+                base_opts, dive_nc_file.dive_number, "pitch_fixed_C_PITCH", c0[0], con=conn
+            )
+            BaseDB.addValToDB(
+                base_opts, dive_nc_file.dive_number, "pitch_fixed_PITCH_GAIN", c0[1], con=conn
+            )
         except Exception as e:
             log_error(e)
             pass
@@ -349,6 +361,18 @@ def plot_pitch_roll(
                                                                 x0=[c_pitch, pitch_gain, vbd_shift],
                                                                 args=(vehicle_pitch_degrees_v[inds], pitchAD[inds], vbd_control[inds], pitch_cnv),
                                                                 maxiter=500, maxfun=1000, ftol=1e-3, full_output=True, disp=True)
+            BaseDB.addValToDB(
+                base_opts, dive_nc_file.dive_number, "pitch_shift_rmse", rms_1, con=conn
+            )
+            BaseDB.addValToDB(
+                base_opts, dive_nc_file.dive_number, "pitch_shift_C_PITCH", c1[0], con=conn
+            )
+            BaseDB.addValToDB(
+                base_opts, dive_nc_file.dive_number, "pitch_shift_PITCH_GAIN", c1[1], con=conn
+            )
+            BaseDB.addValToDB(
+                base_opts, dive_nc_file.dive_number, "pitch_shift_PITCH_VBD_SHIFT", c1[2], con=conn
+            )
         except Exception as e:
             log_error(e)
             pass
@@ -597,27 +621,18 @@ def plot_pitch_roll(
     BaseDB.addValToDB(
         base_opts,
         dive_nc_file.dive_number,
-        "implied_roll_C_ROLL_DIVE",
+        "roll_C_ROLL_DIVE",
         c_roll_dive_imp,
         con=conn,
     )
     BaseDB.addValToDB(
         base_opts,
         dive_nc_file.dive_number,
-        "implied_roll_C_ROLL_CLIMB",
+        "roll_C_ROLL_CLIMB",
         c_roll_climb_imp,
         con=conn,
     )
 
-    if dbcon == None:
-        try:
-            conn.commit()
-        except Exception as e:
-            conn.rollback()
-            log_error(f"Failed commit, DivePitchRoll {e}", "exc")
-
-        conn.close()
-        log_info("plot_pitch_roll db closed")
 
     if fitd:
         rollAD_Fit_dive = np.array([min(rollAD), max(rollAD)])
@@ -628,7 +643,7 @@ def plot_pitch_roll(
         roll_Fit_climb = fitc.intercept + fitc.slope * rollAD_Fit_climb
 
     #
-    # roll plot
+    # roll plot - implied centers for roll rate not generated without plots
     #
 
     if generate_plots:
@@ -786,122 +801,156 @@ def plot_pitch_roll(
     #
     # roll rate
     #
-    if generate_plots:
-        n = len(roll_control)
-        i = 0
-        centered = False
-        centeredAD_d = []
-        centeredRate_d = []
-        centeredStart_t_c = []
-        centeredPitch_c = []
-        centeredAD_c = []
-        centeredRate_c = []
-        centeredStart_t_d = []
-        centeredPitch_d = []
+    n = len(roll_control)
+    i = 0
+    centered = False
+    centeredAD_d = []
+    centeredRate_d = []
+    centeredStart_t_c = []
+    centeredPitch_c = []
+    centeredAD_c = []
+    centeredRate_c = []
+    centeredStart_t_d = []
+    centeredPitch_d = []
 
-        while i < n:
-            if centered is False and abs(roll_control[i]) < 10 and t_stable_roll[i]:
-                centered = True
-                centered_start_t = sg_time[i]
-                centered_start_head = vehicle_head_degrees_v[i]
-                centered_pitch = vehicle_pitch_degrees_v[i]
-                centeredAD = rollAD[i]
-                centeredN = 1
-            elif centered is True and (abs(roll_control[i]) > 10 or not t_stable_roll[i]):
-                centered = False
-                if pitch_control[i] < 0 and centeredN > 1:
-                    centeredAD_d.append(centeredAD / centeredN)
-                    centeredRate_d.append(
-                        headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
-                        / (sg_time[i - 1] - centered_start_t)
-                    )
-                    centeredStart_t_d.append(centered_start_t)
-                    centeredPitch_d.append(centered_pitch)
-                elif centeredN > 1:
-                    centeredAD_c.append(centeredAD / centeredN)
-                    centeredRate_c.append(
-                        headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
-                        / (sg_time[i - 1] - centered_start_t)
-                    )
-                    centeredStart_t_c.append(centered_start_t)
-                    centeredPitch_c.append(centered_pitch)
+    while i < n:
+        if centered is False and abs(roll_control[i]) < 10 and t_stable_roll[i]:
+            centered = True
+            centered_start_t = sg_time[i]
+            centered_start_head = vehicle_head_degrees_v[i]
+            centered_pitch = vehicle_pitch_degrees_v[i]
+            centeredAD = rollAD[i]
+            centeredN = 1
+        elif centered is True and (abs(roll_control[i]) > 10 or not t_stable_roll[i]):
+            centered = False
+            if pitch_control[i] < 0 and centeredN > 1:
+                centeredAD_d.append(centeredAD / centeredN)
+                centeredRate_d.append(
+                    headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
+                    / (sg_time[i - 1] - centered_start_t)
+                )
+                centeredStart_t_d.append(centered_start_t)
+                centeredPitch_d.append(centered_pitch)
+            elif centeredN > 1:
+                centeredAD_c.append(centeredAD / centeredN)
+                centeredRate_c.append(
+                    headingDiff(centered_start_head, vehicle_head_degrees_v[i - 1])
+                    / (sg_time[i - 1] - centered_start_t)
+                )
+                centeredStart_t_c.append(centered_start_t)
+                centeredPitch_c.append(centered_pitch)
 
-            elif centered and abs(vehicle_pitch_degrees_v[i]) < 45:
-                centeredAD = centeredAD + rollAD[i]
-                centeredN = centeredN + 1
+        elif centered and abs(vehicle_pitch_degrees_v[i]) < 45:
+            centeredAD = centeredAD + rollAD[i]
+            centeredN = centeredN + 1
 
-            i = i + 1
+        i = i + 1
 
-        ADs = []
-        if len(centeredAD_d) > 1:
-            try:
-                fitd = scipy.stats.linregress(centeredAD_d, centeredRate_d)
-                c_roll_dive_imp = -fitd.intercept / fitd.slope
-                ADs = ADs + centeredAD_d + [c_roll_dive_imp]
-            except:
-                c_roll_dive_imp = 0
-                fitd = False
-        else:
+    ADs = []
+    if len(centeredAD_d) > 1:
+        try:
+            fitd = scipy.stats.linregress(centeredAD_d, centeredRate_d)
+            c_roll_dive_imp = -fitd.intercept / fitd.slope
+            ADs = ADs + centeredAD_d + [c_roll_dive_imp]
+
+            BaseDB.addValToDB(
+                base_opts,
+                dive_nc_file.dive_number,
+                "turn_centered_C_ROLL_DIVE",
+                c_roll_dive_imp,
+                con=conn,
+            )
+        except:
+            c_roll_dive_imp = 0
             fitd = False
 
-        if len(centeredAD_c) > 1:
-            try:
-                fitc = scipy.stats.linregress(centeredAD_c, centeredRate_c)
-                c_roll_climb_imp = -fitc.intercept / fitc.slope
-                ADs = ADs + centeredAD_c + [c_roll_climb_imp]
-            except:
-                fitc = False
-                c_roll_climb_imp = 0
-        else:
+    else:
+        fitd = False
+
+    if len(centeredAD_c) > 1:
+        try:
+            fitc = scipy.stats.linregress(centeredAD_c, centeredRate_c)
+            c_roll_climb_imp = -fitc.intercept / fitc.slope
+            ADs = ADs + centeredAD_c + [c_roll_climb_imp]
+
+            BaseDB.addValToDB(
+                base_opts,
+                dive_nc_file.dive_number,
+                "turn_centered_C_ROLL_CLIMB",
+                c_roll_climb_imp,
+                con=conn,
+            )
+        except:
             fitc = False
+            c_roll_climb_imp = 0
 
-        if fitc or fitd:
-            rollAD_Fit = np.array([max([0, min(ADs)]), min([max(ADs), 4096])])
+    else:
+        fitc = False
 
-        if fitd is not False:
-            roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit
-        else:
-            roll_Fit_dive = []
+    if fitc or fitd:
+        rollAD_Fit = np.array([max([0, min(ADs)]), min([max(ADs), 4096])])
 
-        if fitc is not False:
-            roll_Fit_climb = fitc.intercept + fitc.slope * rollAD_Fit
-        else:
-            roll_Fit_climb = []
+    if fitd is not False:
+        roll_Fit_dive = fitd.intercept + fitd.slope * rollAD_Fit
+    else:
+        roll_Fit_dive = []
 
-        hdgdiff = np.concatenate((np.array([0]), np.diff(vehicle_head_degrees_v)))
-        hdgdiff = np.mod(hdgdiff, 360)
-        idw = np.where(hdgdiff > 180)
-        hdgdiff[idw] = hdgdiff[idw] - 360
-        hdgwrapped = hdgdiff[0] + np.cumsum(hdgdiff)
-        turnRate = Utils.ctr_1st_diff(hdgwrapped, sg_time)  #  - start_time)
+    if fitc is not False:
+        roll_Fit_climb = fitc.intercept + fitc.slope * rollAD_Fit
+    else:
+        roll_Fit_climb = []
 
-        # ircd = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control < 0))
-        # ircc = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control > 0))
-        ircd = in_fit_d # np.where(pitch_control < 0)
-        ircc = in_fit_c # np.where(pitch_control > 0)
+    hdgdiff = np.concatenate((np.array([0]), np.diff(vehicle_head_degrees_v)))
+    hdgdiff = np.mod(hdgdiff, 360)
+    idw = np.where(hdgdiff > 180)
+    hdgdiff[idw] = hdgdiff[idw] - 360
+    hdgwrapped = hdgdiff[0] + np.cumsum(hdgdiff)
+    turnRate = Utils.ctr_1st_diff(hdgwrapped, sg_time)  #  - start_time)
 
-        rollAD_Fit_all = np.array([max([0, min(rollAD)]), min([max(rollAD), 4096])])
+    # ircd = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control < 0))
+    # ircc = np.where(np.logical_and(np.abs(roll_control) < 5, pitch_control > 0))
+    ircd = in_fit_d # np.where(pitch_control < 0)
+    ircc = in_fit_c # np.where(pitch_control > 0)
 
-        try:
-            fitd = scipy.stats.linregress(rollAD[ircd].ravel(), turnRate[ircd].ravel())
-            c_roll_dive_imp_all = -fitd.intercept / fitd.slope
-            roll_Fit_dive_all = fitd.intercept + fitd.slope * rollAD_Fit_all
-        except:
-            c_roll_dive_imp_all = 0
-            fitd = None
+    rollAD_Fit_all = np.array([max([0, min(rollAD)]), min([max(rollAD), 4096])])
 
-        try:
-            fitc = scipy.stats.linregress(rollAD[ircc].ravel(), turnRate[ircc].ravel())
-            c_roll_climb_imp_all = -fitc.intercept / fitc.slope
-            roll_Fit_climb_all = fitc.intercept + fitc.slope * rollAD_Fit_all
-        except:
-            fitc = None
-            c_roll_climb_imp_all = 0
+    try:
+        fitd = scipy.stats.linregress(rollAD[ircd].ravel(), turnRate[ircd].ravel())
+        c_roll_dive_imp_all = -fitd.intercept / fitd.slope
+        roll_Fit_dive_all = fitd.intercept + fitd.slope * rollAD_Fit_all
+
+        BaseDB.addValToDB(
+            base_opts,
+            dive_nc_file.dive_number,
+            "turn_all_C_ROLL_DIVE",
+            c_roll_dive_imp_all,
+            con=conn,
+        )
+    except:
+        c_roll_dive_imp_all = 0
+        fitd = None
+
+    try:
+        fitc = scipy.stats.linregress(rollAD[ircc].ravel(), turnRate[ircc].ravel())
+        c_roll_climb_imp_all = -fitc.intercept / fitc.slope
+        roll_Fit_climb_all = fitc.intercept + fitc.slope * rollAD_Fit_all
+
+        BaseDB.addValToDB(
+            base_opts,
+            dive_nc_file.dive_number,
+            "turn_all_C_ROLL_CLIMB",
+            c_roll_climb_imp_all,
+            con=conn,
+        )
+    except:
+        fitc = None
+        c_roll_climb_imp_all = 0
 
 
         #
         # roll rate plot
         #
+    if generate_plots:
         roll_rate_template = "AvgRollAD %{x:.0f}<br>AvgRate %{y:.2f} deg/s<br>Time %{customdata[0]:.2f} min<br>PitchObs %{customdata[1]:.2f} deg<extra></extra>"
 
         fig = plotly.graph_objects.Figure()
@@ -1141,5 +1190,16 @@ def plot_pitch_roll(
                 fig,
             )
         )
+
+    if dbcon == None:
+        try:
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            log_error(f"Failed commit, DivePitchRoll {e}", "exc")
+
+        conn.close()
+        log_info("plot_pitch_roll db closed")
+
     # log_info("Leaving dive_pitch_roll")
     return (figs_list, file_list)

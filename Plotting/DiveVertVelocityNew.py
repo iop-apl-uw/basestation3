@@ -140,6 +140,12 @@ def plot_vert_vel_new(
     fit_fig = None
     vels_baseline = None
 
+    if dbcon == None:
+        conn = Utils.open_mission_database(base_opts)
+        log_info("plot_vert_vel db opened")
+    else:
+        conn = dbcon
+
     rms_init = 0
 
     (
@@ -166,6 +172,21 @@ def plot_vert_vel_new(
         rms_init = rms_bo[0]
         implied_cvbd_bo = log["C_VBD"] + bias_bo / log["VBD_CNV"]
 
+        BaseDB.addValToDB(
+            base_opts,
+            dive_nc_file.dive_number,
+            "vert_vel_buoyancy_C_VBD",
+            implied_cvbd_bo,
+            con=conn,
+        )
+        BaseDB.addValToDB(
+            base_opts,
+            dive_nc_file.dive_number,
+            "vert_vel_buoyancy_rmse",
+            rms_bo[1],
+            con=conn,
+        )
+
     bias, hd, vels, rms, _, _, figs = RegressVBD.regress(
         base_opts.mission_dir,
         base_opts.instrument_id,
@@ -182,11 +203,34 @@ def plot_vert_vel_new(
         vels_baseline = vels
         rms_init = rms[0]
 
+    BaseDB.addValToDB(
+        base_opts,
+        dive_nc_file.dive_number,
+        "vert_vel_flying_rmse",
+        rms_init,
+        con=conn,
+    )
+
     if rms[1] > 0:
         min_bias = bias
         best_hd = hd
         fit_fig = figs[0]
         implied_cvbd_dive = log["C_VBD"] + bias / log["VBD_CNV"]
+
+        BaseDB.addValToDB(
+            base_opts,
+            dive_nc_file.dive_number,
+            "vert_vel_hd_rmse",
+            rms[1],
+            con=conn,
+        )
+        BaseDB.addValToDB(
+            base_opts,
+            dive_nc_file.dive_number,
+            "vert_vel_hd_C_VBD",
+            implied_cvbd_dive,
+            con=conn,
+        )
 
     rms_mul = (0, 0)
 
@@ -234,23 +278,25 @@ def plot_vert_vel_new(
             f"min SM_CC {implied_min_smcc_surf:.1f} based on density {density_1m:.5f} at {depth_1m:.2f}m and 150cc to raise the antenna"
         )
 
-        if dbcon == None:
-            conn = Utils.open_mission_database(base_opts)
-            log_info("plot_vert_vel db opened")
-        else:
-            conn = dbcon
 
         BaseDB.addValToDB(
             base_opts,
             dive_nc_file.dive_number,
-            "regressed_C_VBD",
+            "vert_vel_regress_C_VBD",
             implied_cvbd,
             con=conn,
         )
         BaseDB.addValToDB(
             base_opts,
             dive_nc_file.dive_number,
-            "regressed_volmax",
+            "vert_vel_regress_rmse",
+            rms_mul[1],
+            con=conn,
+        )
+        BaseDB.addValToDB(
+            base_opts,
+            dive_nc_file.dive_number,
+            "vert_vel_regress_volmax",
             implied_volmax,
             con=conn,
         )
@@ -266,15 +312,15 @@ def plot_vert_vel_new(
         except:
             log_error("Failed to add values to database", "exc")
 
-        if dbcon == None:
-            try:
-                conn.commit()
-            except Exception as e:
-                conn.rollback()
-                log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
+    if dbcon == None:
+        try:
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            log_error(f"Failed commit, DiveVertVelocity {e}", "exc")
 
-            log_info("plot_vert_vel db closed")
-            conn.close()
+        log_info("plot_vert_vel db closed")
+        conn.close()
 
     if not generate_plots:
         return ([], [])
