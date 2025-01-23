@@ -109,7 +109,7 @@ def pmar_create_stats_lines(dive_nc_file, ch_tag, plot_type):
             "%s:%d " % (s, profile_stats[s]),
         )
         if plot_type == "logavg":
-            if "clipdropped" in s:
+            if "motordropped" in s or "totaldespike" in s:
                 profile_stats_line = f"{profile_stats_line}<br>"
         else:
             if "osc" in s:
@@ -527,10 +527,14 @@ def plot_PMAR(
             mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
             title_text = f"{mission_dive_str}\nPMAR{ch_title} {p.figtitle} vs Depth"
 
+            xaxis_title = p.x_label
+            if len(p.stats_line) > 0:
+                xaxis_title += f"<br>{p.stats_line}"
+
             fig.update_layout(
                 {
                     "xaxis": {
-                        "title": p.x_label,
+                        "title": xaxis_title,
                         "showgrid": True,
                         "type": p.xaxis_type,
                     },
@@ -558,17 +562,6 @@ def plot_PMAR(
                 }
             )
 
-            # Plot the whole file stats
-            # TODO - Add back
-            # if len(p.stats_line) > 0:
-            #     # plt.figtext(0.08, 0.04, dive_nc_file.variables['sg_cal_calibcomm'][:].tobytes().decode('utf-8'), fontproperties=font)
-            #     plt.figtext(
-            #         0.5,
-            #         0.02,
-            #         p.stats_line,
-            #         fontproperties=font,
-            #         horizontalalignment="center",
-            #     )
             output_name = "dv%04d_pmar_%s%s" % (
                 dive_nc_file.dive_number,
                 p.filename,
@@ -662,7 +655,7 @@ def plot_PMAR(
             continue
             # return ret_val
 
-        _, dive_stats_line, climb_stats_line = pmar_create_stats_lines(
+        profile_stats_line, _, _ = pmar_create_stats_lines(
             dive_nc_file, ch_tag, "logavg"
         )
         spectra_depth = None
@@ -778,10 +771,14 @@ def plot_PMAR(
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}\nPMAR{ch_title} Logavg Spectra vs Time"
 
+        xaxis_title = "Time Into Dive (s)"
+        if len(profile_stats_line) > 0:
+            xaxis_title += f"<br>{profile_stats_line}"
+
         fig.update_layout(
             {
                 "xaxis": {
-                    "title": "Time Into Dive (s)",
+                    "title": xaxis_title,
                     "showgrid": True,
                     "range": (x_min, x_max),
                 },
@@ -814,6 +811,7 @@ def plot_PMAR(
                 },
                 "margin": {
                     "t": 150,
+                    # "b": 150,
                 },
                 "legend": {
                     "x": 1.05,
@@ -821,24 +819,6 @@ def plot_PMAR(
                 },
             }
         )
-
-        # Plot the whole file stats
-
-        # TODO - this should be moved to a button that shows the stats overlaying the plot when pressed
-        # if len(profile_stats_line) > 0:
-        #     l_annotations = []
-        #     l_annotations.append(
-        #         {
-        #             "text": profile_stats_line,
-        #             "showarrow": False,
-        #             "xref": "paper",
-        #             "yref": "paper",
-        #             "x": 1.0,
-        #             "y": -0.08,
-        #         }
-        #     )
-
-        # fig.update_layout({"annotations": tuple(l_annotations)})
 
         ret_figs.append(fig)
         ret_plots.extend(
