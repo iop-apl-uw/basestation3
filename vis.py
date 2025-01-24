@@ -3374,6 +3374,6 @@ if __name__ == '__main__':
         #app.run(host="0.0.0.0", port=443, ssl=ssl, access_log=True, debug=False)
     else:
         # app.prepare(host="0.0.0.0", port=port, access_log=True, debug=False, fast=True)
-        app.prepare(host="0.0.0.0", port=port, access_log=True, debug=True, reload_dir="/home/jgobat/work/git/basestation3/html", fast=True)
+        app.prepare(host="0.0.0.0", port=port, access_log=True, debug=True, fast=True)
         sanic.Sanic.serve(primary=app, app_loader=loader)
         # app.run(host='0.0.0.0', port=port, access_log=True, debug=True, fast=True)
