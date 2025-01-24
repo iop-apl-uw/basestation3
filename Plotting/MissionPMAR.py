@@ -34,10 +34,14 @@
 from __future__ import annotations
 
 import collections
+import pdb
+import sys
+import traceback
 import typing
 from dataclasses import dataclass
 from typing import Any
 
+import numpy as np
 import pandas as pd
 import plotly
 
@@ -49,6 +53,16 @@ import PlotUtilsPlotly
 import Utils
 from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
+
+DEBUG_PDB = True
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
 
 
 @plotmissionsingle
@@ -125,13 +139,6 @@ def mission_pmar_stats(
         conn.close()
         log_info("mission_disk db closed")
 
-    # accum_details = collections.namedtuple(
-    #     "accum_details",
-    #     (
-    #         "stat_name",
-    #         "accum",
-    #     ),
-    # )
     @dataclass
     class accum_details:
         stat_name: str
@@ -144,11 +151,12 @@ def mission_pmar_stats(
                 stat_ch = f"{stat}_ch{channel}"
                 var_name = f"{stat}_{profile}_ch{channel}"
                 if var_name in df:
-                    if stat_ch in accums:
-                        accums[stat_ch].accum += df[var_name].to_numpy()
-                    else:
+                    if stat_ch not in accums:
                         accums[stat_ch] = accum_details(stat, df[var_name].to_numpy())
-
+                    else:
+                        accums[stat_ch].accum = np.nansum(
+                            (df[var_name].to_numpy(), accums[stat_ch].accum), axis=0
+                        )
     fig = plotly.graph_objects.Figure()
 
     for var_n, var_details in accums.items():
