@@ -306,7 +306,7 @@ def plot_vert_vel_new(
             BaseDB.addSlopeValToDB(
                 base_opts,
                 dive_nc_file.dive_number,
-                ["vert_vel_regressed_volmax", "vert_vel_regressed_C_VBD"],
+                ["vert_vel_regress_volmax", "vert_vel_regress_C_VBD"],
                 con=conn,
             )
         except:

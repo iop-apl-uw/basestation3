@@ -90,10 +90,10 @@ def mission_volume(
             log_warning("Could not load implied volmax", "exc")
 
     regressed_volmax_df = None
-    if "vert_vel_regressed_volmax" in columns:
+    if "vert_vel_regress_volmax" in columns:
         try:
             regressed_volmax_df = pd.read_sql_query(
-                "SELECT dive,vert_vel_regressed_volmax from dives",
+                "SELECT dive,vert_vel_regress_volmax from dives",
                 conn,
             ).sort_values("dive")
         except (pd.io.sql.DatabaseError, sqlite3.OperationalError):
@@ -156,7 +156,7 @@ def mission_volume(
             {
                 "name": "Basestation Regressed Volmax",
                 "x": regressed_volmax_df["dive"],
-                "y": regressed_volmax_df["vert_vel_regressed_volmax"],
+                "y": regressed_volmax_df["vert_vel_regress_volmax"],
                 "yaxis": "y1",
                 "mode": "lines",
                 "line": {
