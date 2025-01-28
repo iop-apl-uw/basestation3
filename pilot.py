@@ -13,7 +13,7 @@ def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
 async def pilotRecs(path:str, glider:int):
     dbfile = f'{path}/sg{glider:03d}.db'
     if not await Path(dbfile).exists():
-        return None
+        return (None, None, None)
 
 
     row = None
@@ -24,7 +24,7 @@ async def pilotRecs(path:str, glider:int):
             await cur.execute("SELECT dive,pitch_flying_rmse,pitch_linear_C_PITCH,pitch_linear_PITCH_GAIN,pitch_linear_rmse,pitch_fixed_C_PITCH,pitch_fixed_PITCH_GAIN,pitch_fixed_rmse,pitch_shift_C_PITCH,pitch_shift_PITCH_GAIN,pitch_shift_PITCH_VBD_SHIFT,pitch_shift_rmse,roll_C_ROLL_DIVE,roll_C_ROLL_CLIMB,turn_centered_C_ROLL_DIVE,turn_centered_C_ROLL_CLIMB,turn_all_C_ROLL_DIVE,turn_all_C_ROLL_CLIMB,vert_vel_flying_rmse,vert_vel_buoyancy_rmse,vert_vel_buoyancy_C_VBD,vert_vel_hd_C_VBD,vert_vel_hd_rmse,vert_vel_regress_rmse,vert_vel_regress_C_VBD,log_C_PITCH,log_C_VBD,log_C_ROLL_DIVE,log_C_ROLL_CLIMB,log_PITCH_GAIN,log_PITCH_VBD_SHIFT FROM dives ORDER BY dive DESC LIMIT 1")
             row = await cur.fetchone()
         except aiosqlite.OperationalError as e:
-            return None
+            return (None, None, None)
 
     pitch = { 
                 'current': { 'rmse': row['pitch_flying_rmse'], 'C_PITCH': row['log_C_PITCH'], 'PITCH_GAIN': row['log_PITCH_GAIN'], 'PITCH_VBD_SHIFT': row['log_PITCH_VBD_SHIFT'] },

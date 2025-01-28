@@ -2145,12 +2145,26 @@ def attachHandlers(app: sanic.Sanic):
     # returns: SA positions file
     @authorized()
     async def posSAHandler(request, glider:int):
-        filename = f'{gliderPath(glider, request)}/SG{glider:03d}_positions.txt'
+        filename = f'{gliderPath(glider, request)}/SG_{glider:03d}_positions.txt'
+        if await aiofiles.os.path.exists(filename):
+            return await sanic.response.file(filename, mime_type='text/plain')
 
-        if not await aiofiles.os.path.exists(filename):
-            return sanic.response.text('not found')
- 
-        return await sanic.response.file(filename, mime_type='text/plain')
+        dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+            try:
+                conn.row_factory = rowToDict
+                cur = await conn.cursor()
+                q = "SELECT epoch,lat,lon FROM calls ORDER BY epoch DESC;"
+                await cur.execute(q)
+                rows = await cur.fetchall()
+                lines = []
+                for r in rows:
+                    line = f"{time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(r['epoch']))},{r['lat']:.7f},{r['lon']:.7f},0"
+                    lines.append(line)
+
+                return sanic.response.text('\n'.join(lines))
+            except Exception as e:
+                return sanic.response.text(f'error {e}')
 
     @app.route('/pos/poll/<glider:str>')
     # description: get latest glider position
