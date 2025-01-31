@@ -152,9 +152,10 @@ def setupUser(db, username, domain, password_input, code, new_password):
 
 def changeUserPassword(db, username, email, new_password):
     query(db, "UPDATE users SET password=? WHERE name=?", (sha256_crypt.hash(new_password), username))
-    sendMail('no-reply', email, 'your password has been changed',
-             f'Your piloting password has been changed. If you did not\n'
-             + 'request this change contact your administrator immediately.\n')
+    if email:
+        sendMail('no-reply', email, 'your password has been changed',
+                 f'Your piloting password has been changed. If you did not\n'
+                + 'request this change contact your administrator immediately.\n')
 
 def authorizeUser(db, username, domain, password_input, code_input, new_password=None):
     r = query(db, f"SELECT type,email,domain,password,totp,totp_verify_by,otc,otc_expiry,last,last_t,fails,locked from users WHERE name='{username}'", ())
@@ -243,6 +244,10 @@ if __name__ == "__main__":
     elif sys.argv[1] == "unlock" and len(sys.argv) == 3:
         unlockUser('./auth.db', sys.argv[2])
 
+    elif sys.argv[1] == password and len(sys.argv) == 3:
+        print("enter new password:")
+        new_pw = input()
+        changeUserPassword('./auth.db', sys.argv[2], None, new_password)
     else:
         print("unrecognized command")
         print(" auth.py add username email domain type(view|pilot) initialPassword")
