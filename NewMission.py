@@ -215,6 +215,7 @@ def main():
 
     for dotfile in (
         ".pagers",
+        ".canonicals",
         ".urls",
         ".mailer",
         ".ftp",
