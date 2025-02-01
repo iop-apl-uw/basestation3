@@ -213,12 +213,19 @@
 
                 return str;
             }
+        
+            var saLayer = null;
 
             async function loadSA(map, layerControl, urls, labels) {
                 const types = ["triangle", "circle", "square", "triangle"];
                 const colors = ["#ff0000", "#00ff00", "#0000ff", "#ff00ff"];
 
                 let resp = await Promise.all(urls.map(url => fetch(url).then(resp => resp.json())));
+                console.log('loading SA');
+                if (saLayer) {
+                    map.removeLayer(saLayer); 
+                    console.log('removed old SA');
+                } 
                 for (var i = 0 ; i < urls.length ; i++) {
                     data = resp[i];
 
@@ -227,7 +234,6 @@
                     var ctr = [0,0];
                     var nctr;
                     var assetMarkers = [];
-                    var newLayer;
 
                     console.log(data);
                     for (d of data) {
@@ -256,10 +262,11 @@
                         nctr ++;
 
                     } 
-                    newLayer = L.layerGroup(assetMarkers);
-                    layerControl.addOverlay(newLayer, labels[i], "overlays"); 
-                    newLayer.addTo(map);
+                    saLayer = L.layerGroup(assetMarkers);
+                    layerControl.addOverlay(saLayer, labels[i], "overlays"); 
+                    saLayer.addTo(map);
                 }
+                setTimeout(function() { loadSA(map, layerControl, urls, labels) }, 300000);
             }
 
             var activeRoute    = null;
@@ -442,7 +449,7 @@
                     var msg;
                     var line = e.data;
 
-                    console.log(line);
+                    //console.log(line);
 
                     if (line.startsWith('START')) {
                         console.log('got START ping');
@@ -456,7 +463,7 @@
                         return;
                     }
 
-                    console.log(msg);
+                    // console.log(msg);
 
                     if ('ship' in msg && !usingLocation) {
                         var la = ddmm2dd(msg['lat']);
@@ -1030,8 +1037,15 @@
                 }
 
                 fetch(url)
-                .then(resp => resp.json()) 
-                .then(d => {
+                .then(resp => resp.text()) 
+                .then(data => {
+                    try {
+                        d = JSON.parse(data);
+                    } catch {
+                        console.log('could not parse extras');
+                        return;
+                    }
+                     
                     console.log(d);
                     if ('kml' in d && d.kml) {
                         console.log('loading KML');

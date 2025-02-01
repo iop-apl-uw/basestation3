@@ -3176,8 +3176,8 @@ async def watchMonitorPublish(config):
     (watcher, files) = await buildFilesWatchList(config)
 
     if config.SHIP_UDP is not None:
-        udpSock = await asyncudp.create_socket(local_addr=('', int(config.SHIP_UDP)), packets_queue_max_size=1024, reuse_port=True)
-
+        udpSock = await asyncudp.create_socket(local_addr=('0.0.0.0', int(config.SHIP_UDP)), packets_queue_max_size=1024, reuse_port=True)
+        sanic.log.logger.info('udpSocked opened')
     else:
         udpSock = None
 
@@ -3189,11 +3189,13 @@ async def watchMonitorPublish(config):
 
         if udpSock:
             aws.append(asyncio.create_task(udpSock.recvfrom(), name='udp'))
+            sanic.log.logger.info('udp task created')
 
         done, pend = await asyncio.wait(aws, return_when=asyncio.FIRST_COMPLETED)
 
         for task in done:
             name = task.get_name()
+            # sanic.log.logger.info(name)
             r = task.result()
             if name == 'inbound': # r is multipart message
                 d = loads(r[1])
@@ -3238,7 +3240,8 @@ async def watchMonitorPublish(config):
             elif name == 'udp':
                 try:
                     data = r
-                    sanic.log.logger.info(data)
+                    # sanic.log.logger.info(data)
+                    # print(data)
                     if data:
                         sentences = data[0].decode()
                         msg = { 'ship': 'shipname', 'time': time.time() }
