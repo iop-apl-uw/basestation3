@@ -547,7 +547,7 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/user')
     # description: checks whether current session user is valid
     # returns: YES is user is valid
-    @authorized(check=AUTH_ENDPOINT)
+    @authorized(check=AUTH_ENDPOINT, requireLevel=0)
     async def userHandler(request):
         (tU, tG, tD) = getTokenUser(request)
         return sanic.response.text('logged in' if tU else 'not logged in')
@@ -682,7 +682,7 @@ def attachHandlers(app: sanic.Sanic):
     # description: dashboard (engineering diagnostic) view of index (all missions) page
     # parameters: plot (which plot to include in tiles, default=diveplot), mission (comma separated list), glider (comma separated list), status, auth
     # returns: HTML page
-    @authorized(check=AUTH_ENDPOINT)
+    @authorized(check=AUTH_ENDPOINT, requireLevel=0)
     @app.ext.template("index.html")
     async def dashHandler(request):
         return {"runMode": "pilot"}
@@ -744,6 +744,7 @@ def attachHandlers(app: sanic.Sanic):
                     message[k] = mission[k]
 
             grouped = []
+            also = []
             if 'also' in mission and mission['also'] is not None:
                 for i in reversed(range(len(mission['also']))):
                     a = mission['also'][i]
@@ -755,7 +756,6 @@ def attachHandlers(app: sanic.Sanic):
 
                 mission['also'].extend(grouped)
  
-                also = []
                 for a in mission['also']:
                     if not 'mission' in a:
                         a.update( { 'mission': mission['mission'] } )
@@ -965,7 +965,7 @@ def attachHandlers(app: sanic.Sanic):
     @app.post('/post')
     # description: post version of proxy request handler for map tool
     # returns: contents from requested URL
-    @authorized(check=AUTH_ENDPOINT)
+    @authorized(check=AUTH_ENDPOINT, requireLevel=0)
     async def postHandler(request):
         allowed = [
                    'https://realtime.sikuliaq.alaska.edu/realtime/map',
@@ -1010,7 +1010,7 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/proxy/<url:path>')
     # description: proxy requests for map tool
     # returns: contents from requested URL
-    @authorized(check=AUTH_ENDPOINT)
+    @authorized(check=AUTH_ENDPOINT, requireLevel=0)
     async def proxyHandler(request, url):
         allowed = ['https://api.opentopodata.org/v1/gebco2020',
                    'https://marine.weather.gov/MapClick.php',
@@ -1048,7 +1048,7 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/proxykmz/<url:path>')
     # description: proxy and unzip network KMZ sources
     # returns: KML from KMZ downloaded from requested URL
-    @authorized(check=AUTH_ENDPOINT)
+    @authorized(check=AUTH_ENDPOINT, requireLevel=0)
     async def proxykmzHandler(request, url):
         allowed = [
                    'https://usicecenter.gov/File/DownloadCurrent',

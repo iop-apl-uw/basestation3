@@ -282,6 +282,9 @@
             var gliderMarkers  = Object.create(null);
             var usingLocation  = false;
             var shipMarker = null;
+            const shipTailIncrement = 60;
+            var   shipTailCount = 0;
+            var shipTailGroup = null;
 
             function setupLocation() {
                 document.getElementById('basicInfo').innerHTML = 'Pos:';
@@ -486,6 +489,27 @@
                         if (activeRoute != null || activeAsset != null || activeGlider != null) {
                             updateRouteInfo(la, lo, msg['sog']);
                         }
+
+                        if (shipTailCount == 0) {
+                            var tailMarker = L.circleMarker([la, lo], 
+                                                       {
+                                                            radius: 2,
+                                                            color: 'black',
+                                                       })
+                                                        .bindPopup(new Date().toISOString().replace('T', ' ').slice(0,-8));
+
+                            if (shipTailGroup == null) {
+                                shipTailGroup = L.layerGroup( [ tailMarker ]);
+                                layerControl.addOverlay(shipTailGroup, 'ship tail', "chart");
+                            }
+                            else {
+                                tailMarker.addTo(shipTailGroup);
+                            }
+                            shipTailCount = shipTailIncrement;
+                        }
+                        else {
+                            shipTailCount --;
+                        } 
                     }
                     else if ('connected' in msg) {
                         // we don't actually have kml ready yet ...
@@ -528,6 +552,7 @@
                     // newLayer.addTo(map);
                     shipMarker.addTo(map);
                     layerControl.addOverlay(shipMarker, 'ship', "chart"); 
+        
                 }
                 else {
                     shipMarker = marker;
