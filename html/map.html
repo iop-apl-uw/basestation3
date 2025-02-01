@@ -988,9 +988,17 @@
                 console.log(also);
                 for (var i = 0 ; i < also.length ; i++)  {
                     if ('glider' in also[i]) {
-                        gliders.push(also[i].glider);
                         missions.push(also[i].mission);
-                        loadGliderPosition(map, layerControl, also[i].glider, also[i].mission);
+                        if (also[i].glider instanceof Array) {
+                            for (var j = 0 ; j < also[i].glider.length ; j++) {
+                                gliders.push(also[i].glider[j]);
+                                loadGliderPosition(map, layerControl, also[i].glider[j], also[i].mission);
+                            }
+                        }
+                        else {
+                            gliders.push(also[i].glider);
+                            loadGliderPosition(map, layerControl, also[i].glider, also[i].mission);
+                        }
                     }
                     else if ('asset' in also[i]) {
                         assets.push(also[i]); 
