@@ -4,7 +4,7 @@
 
     a:link,.spanClick,.navTab           {color:#0000ff; text-decoration:none}
     a:visited {color:#0000aa; text-decoration:none}
-    a:hover,.spanClick:hover,.navTab    {color:#0000aa; text-decoration:underline}
+    a:hover,.spanClick:hover,.navTab    {color:#0000aa; text-decoration:underline; cursor: pointer; }
     a:active,.spanClick:active,.navTab  {color:#0000aa; text-decoration:underline}
 
     option { background-color:#eeeeee; }
@@ -250,36 +250,43 @@
         height: 100%;
         width: 100%;
     } 
-    #pilotWheelCmdfile {
-        display: flex;
+    #pilotCmdfileNavBar {
+        width: 100%;
+        flex-grow: 0;
+    }
+    #pilotWheelCmdfileControls {
+        display: grid;
         /* overflow-y: none; */
         overflow-x: visible;
         grid-template-columns: 0.5fr 0.5fr;
-        grid-template-rows: 100%;
+        grid-template-rows: min-content 1fr;
         grid-template-areas:
-            "pilotParmList pilotDirectiveList";
+            "pilotParmList pilotDirectiveList"
+            "pilotParmList pilotRecsList";
         /* height: 100%; */
         flex-wrap: wrap;
         flex-direction: row;
         height: 100%;
         width: 100%;
     }
-    #pilotCmdfileNavBar {
-        width: 100%;
-        flex-grow: 0;
-    }
     #pilotParmsList {
         overflow-y: scroll;
         grid-area: pilotParmList;
         overflow-x: visible;
-        width: 40%;
-        flex-grow: 1;
+        // width: 40%;
+        // flex-grow: 1;
     }
     #pilotDirectiveList {
         overflow-y: scroll;
         grid-area: pilotDirectiveList;
-        width: 60%;
-        flex-grow: 1;
+        // width: 60%;
+        // flex-grow: 1;
+    } 
+    #pilotRecsList {
+        overflow-y: scroll;
+        grid-area: pilotRecsList;
+        // width: 60%;
+        // flex-grow: 1;
     } 
     #changelogDiv {
         display: grid;
@@ -291,7 +298,7 @@
         height: 100%;
     }
     #changelogParms {
-        overflow-y:scroll; 
+        overflow-y: scroll; 
         grid-area: parms;
     }
     #changelogFiles {
@@ -317,7 +324,7 @@
         /* width:1040px; */
         overflow-y: scroll;
         overflow-x: scroll;
-        height: 100vh;
+       /* height: 100vh; */
         width: 100vw;
     }
 

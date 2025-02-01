@@ -101,8 +101,7 @@ async def pilotRecs(path:str, glider:int):
         d = None
 
     c1 = row['roll_C_ROLL_CLIMB'] - row['log_C_ROLL_CLIMB']
-    c2 = row['turn_centered_C_ROLL_DIVE'] - row['log_C_ROLL_CLIMB']
-
+    c2 = row['turn_centered_C_ROLL_CLIMB'] - row['log_C_ROLL_CLIMB']
     if c1*c2 > 0:
         if abs(c1) < abs(c2):
             c = {

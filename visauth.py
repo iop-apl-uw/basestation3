@@ -13,6 +13,7 @@ import os.path
 from email.mime.nonmultipart import MIMENonMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
+import getpass
 
 FAILED_LOGIN_LIMIT = 5
 OTC_EXPIRE_TIME    = 300
@@ -244,10 +245,12 @@ if __name__ == "__main__":
     elif sys.argv[1] == "unlock" and len(sys.argv) == 3:
         unlockUser('./auth.db', sys.argv[2])
 
-    elif sys.argv[1] == password and len(sys.argv) == 3:
-        print("enter new password:")
-        new_pw = input()
-        changeUserPassword('./auth.db', sys.argv[2], None, new_password)
+    elif sys.argv[1] == "password" and len(sys.argv) == 3:
+        pw1 = getpass.getpass()
+        print("confirm")
+        pw2 = getpass.getpass()
+        if pw1 == pw2:
+            changeUserPassword('./auth.db', sys.argv[2], None, pw1)
     else:
         print("unrecognized command")
         print(" auth.py add username email domain type(view|pilot) initialPassword")

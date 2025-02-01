@@ -295,6 +295,7 @@
                         loadPlots(newDive, true);
                         buildTable(currGlider, newDive);
                         buildChangelog(3);
+                        loadRecs();
                     }
                 }
                 else if ('lat' in json) {
@@ -1844,6 +1845,11 @@
         }
         
     }
+    function clearParamSearch() {
+        $('txtParamSearch').value = '';
+        $('divParamSearchResults').innerHTML = '';
+        highlightParam('none'); 
+    }
     function doParamSearch() {
         var s = $('txtParamSearch').value;
         var s_upper = s.toUpperCase();
@@ -2110,6 +2116,7 @@
             buildTable(glider, -1);
             buildChangelog(3);
             loadAbout(data.mission, data.organization);
+            loadRecs();
             if (data.mission.status == 'active') {
                 setupStream(glider, true, true);
                 currStatus = 'active';
@@ -2414,6 +2421,71 @@
         } 
     }
 
+    function showRollRecPlot(which) {
+        const basis = $('pilotRecsRoll' + which + 'Basis').innerHTML;
+        if (basis == 'roll')
+            showPlot('dv', 'roll', true);
+        else
+            showPlot('dv', 'roll_rate', true);
+    
+        return false;
+    }
+    function pilotRecsAccept(which) {
+        const val = $('pilotRecsModel' + which).innerHTML;
+        if ($('paramInput_' + which).value != val) {
+            markChanged(which);
+            $('paramInput_' + which).value = val;
+        }
+        return false; 
+    }
+
+    function loadRecs() {
+        fetch(`recs/${currGlider}${mission()}`)
+        .then(res => res.text())
+        .then(data => {
+            var r;
+
+            if (data.includes("authorization failed"))
+                return;
+
+            try { 
+                r = JSON.parse(data);
+            } catch(e) {
+                console.log('provars ' + e);
+                console.log(text);
+                return;
+            }
+
+            $('pilotRecsPitchModelBasis').innerHTML  = r.pitch.rec.model;
+            $('pilotRecsFlyingPitchRMSE').innerHTML  = r.pitch.current.rmse.toFixed(2);
+            $('pilotRecsModelPitchRMSE').innerHTML   = r.pitch.rec.rmse.toFixed(2);
+            $('pilotRecsFlyingC_PITCH').innerHTML    = r.pitch.current.C_PITCH.toFixed(0);
+            $('pilotRecsModelC_PITCH').innerHTML     = r.pitch.rec.C_PITCH.toFixed(0);
+            $('pilotRecsFlyingPITCH_GAIN').innerHTML = r.pitch.current.PITCH_GAIN.toFixed(1);
+            $('pilotRecsModelPITCH_GAIN').innerHTML  = r.pitch.rec.PITCH_GAIN.toFixed(1);
+
+            $('pilotRecsFlyingVBDRMSE').innerHTML = r.vbd.current.rmse.toFixed(3);
+            $('pilotRecsFlyingC_VBD').innerHTML   = r.vbd.current.C_VBD.toFixed(0);
+            $('pilotRecsModelC_VBD').innerHTML    = r.vbd.rec.C_VBD.toFixed(0);
+            $('pilotRecsModelVBDRMSE').innerHTML  = r.vbd.rec.rmse.toFixed(3);
+            $('pilotRecsVBDModelBasis').innerHTML = r.vbd.rec.model;
+
+            if ('dive' in r.roll && r.roll.dive) {
+                $('pilotRecsRollDiveBasis').innerHTML = r.roll.dive.model;
+                $('pilotRecsFlyingC_ROLL_DIVE').innerHTML   = r.roll.current.C_ROLL_DIVE.toFixed(0);
+                $('pilotRecsModelC_ROLL_DIVE').innerHTML    = r.roll.dive.C_ROLL_DIVE.toFixed(0);
+            }
+            
+            if ('climb' in r.roll && r.roll.climb) {
+                $('pilotRecsRollClimbBasis').innerHTML = r.roll.climb.model;
+                $('pilotRecsFlyingC_ROLL_CLIMB').innerHTML   = r.roll.current.C_ROLL_CLIMB.toFixed(0);
+                $('pilotRecsModelC_ROLL_CLIMB').innerHTML    = r.roll.climb.C_ROLL_CLIMB.toFixed(0);
+            }
+
+    
+        });
+    }
+ 
     function loadPlots(dive, setCurr) {
         var plots;
         var img;
@@ -3691,6 +3763,7 @@
                 <span id="tabALTIMETER" class="spanClick" onclick="changeParmGroup('ALTIMETER'); return false;">Altimeter</span> <b>&#124;</b>
                 <span id="tabHARDWARE" class="spanClick" onclick="changeParmGroup('HARDWARE'); return false;">Hardware</span> 
             </div>
+            <div id="pilotWheelCmdfileControls">
             <div id="pilotParmsList">
                 
                 <div id="pilotBASIC" class="hide"></div>
@@ -3707,9 +3780,8 @@
                 <div id="pilotALTIMETER" class="hide"></div>
                 <div id="pilotHARDWARE" class="hide"></div>
             </div>
+            
             <div id="pilotDirectiveList">
-                <input type="button" value="Make cmdfile" onclick="parmsToCmdfile();">
-                <p>
                 <input type="radio" id="radPilotDirectiveGO" name="radPilotDirective" value="GO" checked>
                 <label for="radPilotDirectiveGO">GO</label>
                 <input type="radio" id="radPilotDirectiveQUIT" name="radPilotDirective" value="QUIT">
@@ -3717,11 +3789,56 @@
                 <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" value="RESUME">
                 <label for="radPilotDirectiveRESUME">RESUME</label>
                 <p>
+                <input type="button" value="Send to cmdfile editor" onclick="parmsToCmdfile();">
+                <hr>
                 <input type="button" id="btnParamSearch" onclick="doParamSearch();" value="search">
                 <input id="txtParamSearch" class="parmInputInput">
+                <span onclick="clearParamSearch();" class="spanClick">&otimes;</span>
                 <p>
                 <div id="divParamSearchResults">
                 </div>
+                <hr>
+            </div>
+            <div id="pilotRecsList">
+                <table>
+                    <tr><td colspan="4"><span class="spanClick" onclick="showPlot('dv', 'pitch', true); return false;"><b>Pitch</b></span> (based on <span id="pilotRecsPitchModelBasis"></span> model)</td></tr>
+                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
+                    <tr><td>RMSE</td><td id="pilotRecsFlyingPitchRMSE"></td>
+                                     <td id="pilotRecsModelPitchRMSE"></td><td></td>
+                    <tr><td><b>C_PITCH</b></td>
+                        <td id="pilotRecsFlyingC_PITCH"></td>
+                        <td id="pilotRecsModelC_PITCH"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_PITCH');"</td></tr>
+                    <tr><td><b>PITCH_GAIN</b></td>
+                        <td id="pilotRecsFlyingPITCH_GAIN"></td>
+                        <td id="pilotRecsModelPITCH_GAIN"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('PITCH_GAIN');"</td></tr>
+
+                    <tr><td colspan="4">&nbsp;</td></tr>
+                    <tr><td colspan="4"><span class="spanClick" onclick="showPlot('dv', 'vert_vel_new', true); return false;"><b>VBD</b></span> (based on <span id="pilotRecsVBDModelBasis"></span> model)</td></tr>
+                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
+                    <tr><td>RMSE</td><td id="pilotRecsFlyingVBDRMSE"></td>
+                                     <td id="pilotRecsModelVBDRMSE"></td><td></td>
+                    <tr><td><b>C_VBD</b></td>
+                        <td id="pilotRecsFlyingC_VBD"></td>
+                        <td id="pilotRecsModelC_VBD"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_VBD');"</td></tr>
+
+                    <tr><td colspan="4">&nbsp;</td></tr>
+                    <tr><td colspan="4"><span class="spanClick" onclick="showRollRecPlot('Dive');"><b>Roll: dive</b></span> (based on <span id="pilotRecsRollDiveBasis"></span> model)</td></tr>
+                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
+                    <tr><td><b>C_ROLL_DIVE</b></td>
+                        <td id="pilotRecsFlyingC_ROLL_DIVE"></td>
+                        <td id="pilotRecsModelC_ROLL_DIVE"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_ROLL_DIVE');"</td></tr>
+                    <tr><td colspan="4"><span class="spanClick" onclick="showRollRecPlot('Climb');"><b>Roll: climb</b></span> (based on <span id="pilotRecsRollClimbBasis"></span> model)</td></tr>
+                    <tr><td><b>C_ROLL_CLIMB</b></td>
+                        <td id="pilotRecsFlyingC_ROLL_CLIMB"></td>
+                        <td id="pilotRecsModelC_ROLL_CLIMB"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_ROLL_CLIMB');"</td></tr>
+
+                </table>
+            </div>
             </div>
         </div>
         <div id="pilotWheelScience" class="hide">

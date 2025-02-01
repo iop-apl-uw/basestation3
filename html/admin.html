@@ -1,0 +1,139 @@
+<link rel="stylesheet" href="script/dialogs.css" />
+<link rel="stylesheet" href="script/base.css" />
+
+<style>
+    a:link,.spanClick           {color:#0000ff; text-decoration:none}
+    a:visited {color:#0000aa; text-decoration:none}
+    a:hover,.spanClick:hover    {color:#0000aa; text-decoration:underline; cursor:pointer; }
+    a:active,.spanClick:active  {color:#0000aa; text-decoration:underline}
+
+    body {
+        background-color: #999999;
+        color: #000000;
+        font-family: verdana, arial, tahoma, 'sans serif'; 
+        box-sizing: border-box;
+        /* overflow: none; */
+        font-size: 1rem;
+    }
+
+
+</style>
+<script src="script/util.js"></script>
+<script src="script/dialogs.js"></script>
+<script>
+
+
+    function missionArg(glider) {
+        if (glider.mission != '')
+            return `?mission=${glider.mission}`;
+        else
+            return '';
+    }
+
+    function addRow(m) {
+        var row, cell, text;
+        var tbody = $('table').getElementsByTagName('tbody')[0];
+        var i,j,c;
+        const colors = ["#cccccc", "#eeeeee"];
+
+        row = tbody.insertRow(1);
+            
+        i = $('table').rows.length % 2;
+        row.style.backgroundColor = colors[i];
+        j = 0;
+        cell = row.insertCell(j++);
+        cell.innerHTML = '<a href="../' + m['glider'] + (m['mission'] ? '?' + m['mission'] : '') + '">' + m['glider'] + "</a>";
+        cell = row.insertCell(j++);
+        cell.innerHTML = m['mission'];
+        cell = row.insertCell(j++);
+        cell.innerHTML = new Date(m['first']*1000).toISOString().replace('T', ' ').slice(0,10);
+        cell = row.insertCell(j++);
+        cell.innerHTML = new Date(m['last']*1000).toISOString().replace('T', ' ').slice(0,10);
+        cell = row.insertCell(j++);
+        cell.innerHTML = ((parseFloat(m['last']) - parseFloat(m['first']))/86400.0).toFixed(1);
+        cell = row.insertCell(j++);
+        cell.innerHTML = m['dives'];
+        cell = row.insertCell(j++);
+        cell.innerHTML = (parseFloat(m['dog'])/1000).toFixed(1);
+        cell = row.insertCell(j++);
+        cell.innerHTML = m['reason'];
+        cell = row.insertCell(j++);
+        cell.innerHTML = m['comment'];
+    }
+
+    function createTable(glider, mission) {
+
+        fetch(`admin`)
+        .then(res => res.text())
+        .then(data => {
+            data = data.replaceAll('NaN', 'null');
+            data = JSON.parse(data);
+
+            data.sort((a,b) => {
+                const x = b.glider - a.glider;
+                const y = (a.first && b.first ? a.first - b.first : (a.first ? 1 : (b.first ? -1 : 0)));
+                return x ? x : y;
+            }); 
+            for (m of data) {
+                addRow(m);
+            } 
+        })
+        .catch(error => {
+            console.log(error);
+        });
+    }
+
+    function start() {
+        createTable();
+    }
+
+    function init() {
+        var scale = 'scale(1)';
+        document.body.style.webkitTransform =  scale;    // Chrome, Opera, Safari
+        document.body.style.msTransform =   scale;       // IE 9
+        document.body.style.transform = scale;     // General
+
+        let params = new URLSearchParams(window.location.search);
+
+        if (params.has('gliders')) {
+            gliders = params.get('gliders').split(',');
+        }
+
+        if (params.has('mission')) {
+            showMission = params.get('mission').split(',');
+        }
+        if (params.has('status')) {
+            showStatus = params.get('status').split(',');
+        }
+
+        if (params.has('auth')) {
+            params.delete('auth');
+            openLoginForm(start);// window.location.reload.bind(window.location));
+        }
+
+        start();
+    }
+
+</script>
+
+<html>
+<body onload="init();">
+
+<table id="table">
+<tbody>
+<tr>
+<th>glider
+<th>mission
+<th>start
+<th>end
+<th>days
+<th>dives
+<th>DOG(km)
+<th>reason
+<th>comment
+</tr>
+</tbody>
+</table>
+
+</body>
+</html>

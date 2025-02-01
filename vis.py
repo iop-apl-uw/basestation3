@@ -92,6 +92,7 @@ PERM_INVALID = -1
 PERM_REJECT = 0
 PERM_VIEW   = 1
 PERM_PILOT  = 2
+PERM_ADMIN  = 3
 
 MODE_PUBLIC  = 0
 MODE_PILOT   = 1
@@ -166,7 +167,7 @@ def getTokenUser(request):
     return (False, False, False)
 
 # checks whether the auth token authorizes a user or group in users, groups
-def checkToken(request, users, groups, pilots, pilotgroups):
+def checkToken(request, users, groups, pilots, pilotgroups, admins, admingroups):
     if not 'token' in request.cookies:
         return PERM_REJECT
 
@@ -193,6 +194,13 @@ def checkToken(request, users, groups, pilots, pilotgroups):
         sanic.log.logger.info(f"{tokenUser} authorized to pilot based on group [{request.path}]")
         perm = PERM_PILOT
 
+    if admins and tokenUser in admins:
+        sanic.log.logger.info(f"{tokenUser} authorized as admin [{request.path}]")
+        perm = PERM_ADMIN
+    elif admingroups and tokenGroups and len(set(admingroups) & set(tokenGroups)) > 0:
+        sanic.log.logger.info(f"{tokenUser} authorized as admin based on group [{request.path}]")
+        perm = PERM_ADMIN 
+
     return perm
 
 # checks whether access is authorized for the glider,mission
@@ -208,7 +216,7 @@ def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
             m['pilotusers'] is not None or \
             m['pilotgroups'] is not None): 
 
-            grant = checkToken(request, m['users'], m['groups'], m['pilotusers'], m['pilotgroups'])
+            grant = checkToken(request, m['users'], m['groups'], m['pilotusers'], m['pilotgroups'], None, None)
             if m['users'] is None and m['groups'] is None and grant < PERM_VIEW:
                 grant = PERM_VIEW
 
@@ -237,13 +245,13 @@ def checkEndpoint(request, e):
 
     return PERM_VIEW # don't make a distinction view/pilot at this level
 
-def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint and mission checks applied
+def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endpoint and mission checks applied
     def decorator(f):
         @wraps(f)
         async def decorated_function(request, *args, **kwargs):
             nonlocal modes
             nonlocal check
-            nonlocal requirePilot
+            nonlocal requireLevel
 
             ws = kwargs['ws'] if 'ws' in kwargs else None
 
@@ -262,8 +270,8 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                             return response
                         if 'modes' in e and e['modes'] is not None:
                             modes = e['modes']
-                        if 'requirepilot' in e and e['requirepilot'] is not None:
-                            requirePilot = e['requirepilot']
+                        if 'level' in e and e['level'] is not None:
+                            requireLevel = e['level']
                         
             runningMode = modeNames[request.app.config.RUNMODE]
 
@@ -294,8 +302,8 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                             return response
                         if 'modes' in e and e['modes'] is not None:
                             modes = e['modes']
-                        if 'requirepilot' in e and e['requirepilot'] is not None:
-                            requirePilot = e['requirepilot']
+                        if 'level' in e and e['level'] is not None:
+                            requireLevel = e['level']
                     
                 # modes now has final possible value - so check for pilot restricted API in public run mode
                 if modes is not None and runningMode not in modes:
@@ -305,13 +313,13 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                 # if we're running a private instance of a pilot server then we only require authentication
                 # as a pilot if the pilots/pilotgroups spec is given (similar to how users always work)
                 # so our default (no spec) is to grant pilot access
-                if requirePilot and request.app.config.RUNMODE == MODE_PRIVATE:
+                if requireLevel >= PERM_PILOT and request.app.config.RUNMODE == MODE_PRIVATE:
                     defaultPerm = PERM_PILOT 
                 
                 # this will always fail and return not authorized if glider is None
                 status = checkGliderMission(request, glider, mission, perm=defaultPerm)
-                if status <= PERM_REJECT or (requirePilot and status < PERM_PILOT):
-                    sanic.log.logger.info(f"{url} authorization failed {status}, {requirePilot} {request.ip}")
+                if status <= PERM_REJECT or (status < requireLevel):
+                    sanic.log.logger.info(f"{url} authorization failed {status}, {requireLevel} {request.ip}")
                     if ws is not None:
                         sanic.log.logger.info("closing invalid stream")
                         await ws.send("invalid")
@@ -321,12 +329,20 @@ def authorized(modes=None, check=3, requirePilot=False): # check=3 both endpoint
                         return sanic.response.text("not found")
                     else: 
                         return sanic.response.text("authorization failed")
-
-
+            
+            # the following two else blocks only apply in rare cases of !AUTH_MISSION
             elif modes is not None and runningMode not in modes:
                 # do the public / pilot mode check for AUTH_ENDPOINT only mode
                 sanic.log.logger.info(f"rejecting {url}: mode not allowed")
                 return sanic.response.text("Page not found: {}".format(request.path), status=404)
+            # this will reject everything if the user has no token, so specify requireLevel=0 for truly wide open access
+            else:
+                status = checkToken(request, request.ctx.ctx.users, request.ctx.ctx.groups,
+                                    request.ctx.ctx.pilots, request.ctx.ctx.pilotgroups,
+                                    request.ctx.ctx.admins, request.ctx.ctx.admingroups)
+                if status < requireLevel:
+                    sanic.log.logger.info(f"rejecting {url}: not allowed")
+                    return sanic.response.text("Page not found: {}".format(request.path), status=404)
 
             # the user is authorized.
             # run the handler method and return the response
@@ -354,6 +370,9 @@ def activeMission(gld, request):
     return x
  
 def matchMission(gld, request, mission=None):
+    if gld == None:
+        return None
+
     if mission == None and \
        request and \
        'mission' in request.args and \
@@ -454,6 +473,7 @@ def attachHandlers(app: sanic.Sanic):
     app.static('/robots.txt', f'{sys.path[0]}/html/robots.txt', name='robots')
     app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
     app.static('/manifest.json', f'{sys.path[0]}/scripts/manifest.json', name='manifest')
+    app.static('/history', f'{sys.path[0]}/html/admin.html', name='history')
 
     if os.path.exists(app.config.STATIC_FILE):
         with open(app.config.STATIC_FILE) as f:
@@ -534,7 +554,7 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.text('logged in' if tU else 'not logged in')
 
     @app.get("/setup")
-    @authorized(modes=['pilot'], check=0)
+    @authorized(modes=['pilot'], check=0, requireLevel=0)
     async def setupHandler(request):
         if 'url' in request.args:
             url = request.args['url'][0]
@@ -543,7 +563,7 @@ def attachHandlers(app: sanic.Sanic):
         return await sanic_ext.render("setup.html", context={"mode": "setup", "body": "Finish setting up your account", "url": url}, status=400)
 
     @app.get("/change")
-    @authorized(modes=['pilot'], check=0)
+    @authorized(modes=['pilot'], check=AUTH_ENDPOINT, requireLevel=PERM_PILOT)
     async def changeHandler(request):
         return await sanic_ext.render("setup.html", context={"mode": "password", "body": "Change your password now", "url": "/login"}, status=400)
 
@@ -563,7 +583,7 @@ def attachHandlers(app: sanic.Sanic):
         return await sanic_ext.render("login.html", context={"mode": "login", "body": "Enter your login credentials", "url": url}, status=400)
 
     @app.post("/password")
-    @authorized(modes=['pilot'], check=0)
+    @authorized(modes=['pilot'], check=AUTH_ENDPOINT, requireLevel=PERM_PILOT)
     async def passwordHandler(request):
         username    = request.json.get("username", None).lower()
         curPassword = request.json.get("curPassword", None)
@@ -577,7 +597,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.json({'status': 'error', 'msg': 'error'})
 
     @app.post("/register")
-    @authorized(modes=['pilot'], check=0)
+    @authorized(modes=['pilot'], check=0, requireLevel=0)
     async def registerHandler(request):
         username    = request.json.get("username", None).lower()
         curPassword = request.json.get("curPassword", None)
@@ -720,12 +740,24 @@ def attachHandlers(app: sanic.Sanic):
         mission = matchMission(glider, request) 
         if mission:
             message = {}
-            for k in ['sa', 'kml', 'also']:
+            for k in ['sa', 'kml']:
                 if k in mission:
                     message[k] = mission[k]
 
-            if 'also' in message and message['also'] is not None:
-                for a in message['also']:
+            grouped = []
+            if 'also' in mission and mission['also'] is not None:
+                for i in reversed(range(len(mission['also']))):
+                    a = mission['also'][i]
+                    if 'asset' in a and a['asset'] in request.ctx.ctx.assets.keys() and 'type' in request.ctx.ctx.assets[a['asset']] and request.ctx.ctx.assets[a['asset']]['type'] == 'group' and 'assets' in request.ctx.ctx.assets[a['asset']]:
+                        for item in request.ctx.ctx.assets[a['asset']]['assets']:
+                            grouped.append( { 'asset': item } )
+
+                        mission['also'].pop(i)
+
+                mission['also'].extend(grouped)
+ 
+                also = []
+                for a in mission['also']:
                     if not 'mission' in a:
                         a.update( { 'mission': mission['mission'] } )
                     if 'asset' in a:
@@ -736,7 +768,12 @@ def attachHandlers(app: sanic.Sanic):
                                 if not k in a.keys():
                                     a.update({ k: request.ctx.ctx.assets[a['asset']][k] })
                         else:
-                            a.pop('asset')     
+                            continue
+
+                    also.append(a)
+
+            if len(also):
+                message['also'] = also
 
             if len(request.ctx.ctx.routes):
                 message['routes'] = request.ctx.ctx.routes;
@@ -1249,7 +1286,37 @@ def attachHandlers(app: sanic.Sanic):
         table = await buildAuthTable(request, "")
         msg = { "missions": table, "organization": request.ctx.ctx.organization }
         return sanic.response.json(msg)
-     
+    
+    @app.route('/admin')
+    @authorized(check=AUTH_ENDPOINT, modes=['private', 'pilot'], requireLevel=PERM_ADMIN)
+    async def adminHandler(request):
+        fields = {"glider",  "mission", "status", "path",
+                  "started", "ended",   "planned",
+                  "project", "comment", "reason"} 
+        x = []
+        for m in request.ctx.ctx.missionTable:
+            dbfile = f"{m['path']}/sg{m['glider']:03d}.db"
+            y = { "first": None, "last": None, "dives": None, "dog": None }             
+            if await Path(dbfile).exists():
+                async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
+                    conn.row_factory = rowToDict
+                    cur = await conn.cursor()
+                    try:
+                        await cur.execute("SELECT dive,log_start,distance_over_ground FROM dives ORDER BY dive ASC")
+                        r = await cur.fetchall()
+                        if r and len(r) >= 1:
+                            dog = sum([ (z['distance_over_ground'] if z['distance_over_ground'] else 0) for z in r])
+                            y = { "first": r[0]['log_start'], "last": r[-1]['log_start'], "dives": r[-1]['dive'], "dog": dog }             
+                    except Exception as e:
+                        sanic.log.logger.info(f"exception {e}, {m['glider']}, {m['mission']}")
+                        pass
+
+                await checkClose(conn)
+
+            y.update({ k: m[k] for k in m.keys() & fields })
+            x.append(y)
+        return sanic.response.json(x)
+
     @app.route('/summary/<glider:int>')
     # description: summary status of glider
     # parameters: mission
@@ -1770,7 +1837,7 @@ def attachHandlers(app: sanic.Sanic):
     # parameters: mission, num
     # returns: HTML format summary of latest selftest results
     async def selftestHandler(request, glider:int):
-        table = await buildAuthTable(request, None, glider=glider, mission=None)
+        table = await buildAuthTable(request, None, glider=glider, mission=None, includePaths=True)
         num = int(request.args['num'][0]) if 'num' in request.args else 0
         html = await SelftestHTML.html(glider, gliderPath(glider, request), num, mission=missionFromRequest(request), missions=table)
         return sanic.response.html(purgeSensitive(html))
@@ -1895,7 +1962,7 @@ def attachHandlers(app: sanic.Sanic):
     # payload: (JSON) file, contents
     # parameters: mission
     # returns: validator results and/or error message  
-    @authorized(modes=['private', 'pilot'], requirePilot=True)
+    @authorized(modes=['private', 'pilot'], requireLevel=PERM_PILOT)
     async def saveHandler(request, glider:int, which:str):
         # the no save command line flag allows one more layer
         # of protection
@@ -2720,6 +2787,18 @@ async def buildMissionTable(app, config=None):
         x['routes'] = []
     if 'domain' not in x:
         x['domain'] = None
+    if 'admins' not in x:
+        x['admins'] = None
+    if 'admingroups' not in x:
+        x['admingroups'] = None
+    if 'users' not in x:
+        x['users'] = None       # not currently used, but allows blocking non-mission specific endpoints except to global users
+    if 'groups' not in x:
+        x['groups'] = None
+    if 'pilots' not in x:
+        x['pilots'] = None
+    if 'pilotgroups' not in x:
+        x['pilotgroups'] = None
 
     if 'domains' in x:
         ikey = 'domains'
@@ -2789,6 +2868,12 @@ async def buildMissionTable(app, config=None):
             app.ctx.controls     = x['controls']
             app.ctx.assets       = x['assets']
             app.ctx.routes       = x['routes']
+            app.ctx.admins      = x['admins']
+            app.ctx.admingroups = x['admingroups']
+            app.ctx.pilots      = x['pilots']
+            app.ctx.pilotgroups = x['pilotgroups']
+            app.ctx.users       = x['users']
+            app.ctx.groups      = x['groups']
 
         return (missionTable, None, domains)
      
@@ -2863,7 +2948,7 @@ async def buildMissionTable(app, config=None):
             sanic.log.logger.info(f"error on glider {glider}, {e}")
             continue 
        
-    endpointsDictKeys = [ "modes", "users", "groups", "requirepilot" ]
+    endpointsDictKeys = [ "modes", "users", "groups", "level" ]
     dflts = None
     for k in list(x['endpoints'].keys()):
         if k == 'defaults':
@@ -2897,10 +2982,16 @@ async def buildMissionTable(app, config=None):
         app.ctx.assets = x['assets']
         app.ctx.routes = x['routes']
         app.ctx.domain = x['authdomain']
+        app.ctx.admins      = x['admins']
+        app.ctx.admingroups = x['admingroups']
+        app.ctx.pilots      = x['pilots']
+        app.ctx.pilotgroups = x['pilotgroups']
+        app.ctx.users       = x['users']
+        app.ctx.groups      = x['groups']
 
     return (missions, x, domains)
  
-async def buildAuthTable(request, defaultPath, glider=None, mission=None):
+async def buildAuthTable(request, defaultPath, glider=None, mission=None, includePath=False):
     opTable = []
     for m in request.ctx.ctx.missionTable:
         status = checkGliderMission(request, m['glider'], m['mission'])
@@ -2911,7 +3002,12 @@ async def buildAuthTable(request, defaultPath, glider=None, mission=None):
         missionName = m['mission'] if m['mission'] else ""
         project     = m['project'] if m['project'] else ""
         if (glider is None or glider == m['glider']) and (mission is None or mission == m['mission']):
-            opTable.append({ "mission": missionName, "glider": m['glider'], "path": path, "default": m['default'], "status": m['status'], "project": project })
+            x = { "mission": missionName, "glider": m['glider'], "default": m['default'], "status": m['status'], "project": project }
+
+            if includePath:
+                x.update({ "path": path })
+
+            opTable.append(x)
 
     return opTable
 
