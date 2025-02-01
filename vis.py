@@ -342,7 +342,7 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
                                     request.ctx.ctx.admins, request.ctx.ctx.admingroups)
                 if status < requireLevel:
                     sanic.log.logger.info(f"rejecting {url}: not allowed")
-                    return sanic.response.text("Page not found: {}".format(request.path), status=404)
+                    return sanic.response.text("authorization failed")
 
             # the user is authorized.
             # run the handler method and return the response
@@ -473,7 +473,6 @@ def attachHandlers(app: sanic.Sanic):
     app.static('/robots.txt', f'{sys.path[0]}/html/robots.txt', name='robots')
     app.static('/script/images', f'{sys.path[0]}/scripts/images', name='script_images')
     app.static('/manifest.json', f'{sys.path[0]}/scripts/manifest.json', name='manifest')
-    app.static('/history', f'{sys.path[0]}/html/admin.html', name='history')
 
     if os.path.exists(app.config.STATIC_FILE):
         with open(app.config.STATIC_FILE) as f:
@@ -1288,8 +1287,13 @@ def attachHandlers(app: sanic.Sanic):
         return sanic.response.json(msg)
     
     @app.route('/admin')
-    @authorized(check=AUTH_ENDPOINT, modes=['private', 'pilot'], requireLevel=PERM_ADMIN)
+    @app.ext.template("admin.html")
     async def adminHandler(request):
+        return {} 
+
+    @app.route('/admin/data')
+    @authorized(check=AUTH_ENDPOINT, modes=['private', 'pilot'], requireLevel=PERM_ADMIN)
+    async def adminDataHandler(request):
         fields = {"glider",  "mission", "status", "path",
                   "started", "ended",   "planned",
                   "project", "comment", "reason"} 

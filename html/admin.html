@@ -21,7 +21,10 @@
 <script src="script/util.js"></script>
 <script src="script/dialogs.js"></script>
 <script>
-
+    
+    var showMission = null;
+    var showStatus = null;
+    var showGliders = null;
 
     function missionArg(glider) {
         if (glider.mission != '')
@@ -56,6 +59,8 @@
         cell = row.insertCell(j++);
         cell.innerHTML = (parseFloat(m['dog'])/1000).toFixed(1);
         cell = row.insertCell(j++);
+        cell.innerHTML = m['status'];
+        cell = row.insertCell(j++);
         cell.innerHTML = m['reason'];
         cell = row.insertCell(j++);
         cell.innerHTML = m['comment'];
@@ -63,9 +68,13 @@
 
     function createTable(glider, mission) {
 
-        fetch(`admin`)
+        fetch(`admin/data`)
         .then(res => res.text())
         .then(data => {
+            if (data.includes('authorization failed')) {
+                openLoginForm(start, "");
+                return;
+            }
             data = data.replaceAll('NaN', 'null');
             data = JSON.parse(data);
 
@@ -75,6 +84,13 @@
                 return x ? x : y;
             }); 
             for (m of data) {
+                if (showStatus && !showStatus.includes(m['status']))
+                    continue;
+                if (showMission && showMission.findIndex((p) => { return (m['mission'] && m['mission'].startsWith(p)) }) == -1)
+                    continue;
+                if (showGliders && !showGliders.includes(m['glider'] + ''))
+                    continue;
+
                 addRow(m);
             } 
         })
@@ -95,8 +111,8 @@
 
         let params = new URLSearchParams(window.location.search);
 
-        if (params.has('gliders')) {
-            gliders = params.get('gliders').split(',');
+        if (params.has('glider')) {
+            showGliders = params.get('glider').split(',');
         }
 
         if (params.has('mission')) {
@@ -104,11 +120,6 @@
         }
         if (params.has('status')) {
             showStatus = params.get('status').split(',');
-        }
-
-        if (params.has('auth')) {
-            params.delete('auth');
-            openLoginForm(start);// window.location.reload.bind(window.location));
         }
 
         start();
@@ -129,11 +140,14 @@
 <th>days
 <th>dives
 <th>DOG(km)
+<th>status
 <th>reason
 <th>comment
 </tr>
 </tbody>
 </table>
+
+{% include "dialogs.html" %}
 
 </body>
 </html>

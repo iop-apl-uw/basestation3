@@ -1361,7 +1361,7 @@
 
         if (params.has('auth')) {
             params.delete('auth');
-            openLoginForm(start);// window.location.reload.bind(window.location));
+            openLoginForm(start, "");// window.location.reload.bind(window.location));
         }
 
         start();
@@ -1376,9 +1376,9 @@
     <div id="navLinks">
         <script>
             if (window.location.pathname.includes("dash"))
-                document.write('<a href="./" target="index">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openSearchForm(window.location); return false;">Search</span> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+                document.write('<a href="./" target="index">Index</a> <b>&#124;</b> Dashboard <b>&#124;</b> <span class="spanClick" onclick="openSearchForm(window.location); return false;">Search</span> <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location), null); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
             else
-                document.write('Index <b>&#124;</b> <a href="dash" target="dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openSearchForm(); return false;">Search</span>  <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location)); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
+                document.write('Index <b>&#124;</b> <a href="dash" target="dash"> Dashboard </a> <b>&#124;</b> <span class="spanClick" onclick="openSearchForm(); return false;">Search</span>  <b>&#124;</b> <span class="spanClick" onclick="openLoginForm(window.location.reload.bind(window.location), null); return false;">Credentials</span> <b>&#124;</b> <span class="spanClick" onclick="openAboutForm(); return false;">About</span>');
         </script>
     </div>
 

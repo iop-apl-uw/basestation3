@@ -1,6 +1,7 @@
     var loginCallback = null;
 
-    function openLoginForm(callback) {
+    function openLoginForm(callback, header) {
+        $('loginHeader').innerHTML = header ? header : '';
         $('loginForm').style.display = "block";
         if ($('chkHavePilotCode').checked) {
             $('txtCode').style.display = "block";
@@ -125,15 +126,20 @@
         .then(res => res.text())
         .then(text => {
             closeLoginForm();
-            var d = JSON.parse(text);
             console.log(text);
-            if (d['status'] == 'pending') {
-                window.location.replace('/setup');
+            if (text.includes("failed")) {
+                openLoginForm(loginCallback, "login failed, try again");
             }
-            else if (d['status'] == 'authorized') {
-                console.log(window.location.pathname);
-                console.log(window.location.search);
-                if (loginCallback) loginCallback();
+            else {
+                var d = JSON.parse(text);
+                if (d['status'] == 'pending') {
+                    window.location.replace('/setup');
+                }
+                else if (d['status'] == 'authorized') {
+                    console.log(window.location.pathname);
+                    console.log(window.location.search);
+                    if (loginCallback) loginCallback();
+                }
             }
         })
         .catch(error => {

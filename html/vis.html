@@ -428,7 +428,7 @@
         .then(res => res.text())
         .then(text => {
             if (text.includes("authorization failed")) {
-                openLoginForm(function() { saveControl(force); });
+                openLoginForm(function() { saveControl(force); }, "");
                 return;
             }
             alert(text);
@@ -2070,7 +2070,7 @@
         .then(text => {
             // console.log(text);
             if (text.includes("authorization failed")) {
-                openLoginForm(window.location.reload.bind(window.location));
+                openLoginForm(window.location.reload.bind(window.location), "");
                 return;
             }
             try {
