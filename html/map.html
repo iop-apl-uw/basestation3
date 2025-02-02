@@ -51,6 +51,7 @@
             .leaflet-tooltip-right:before {
                 border: none !important;
             }
+
             .assetLabel {
                 background: transparent;
                 border: none;
@@ -68,6 +69,21 @@
                 z-index: 700;
             }
 
+            .spanClick          {color:#0000ff; text-decoration:none}
+            .spanClick:hover    {color:#0000aa; text-decoration:underline; cursor: pointer; }
+            .spanClick:active   {color:#0000aa; text-decoration:underline}
+
+            .hamDiv {
+                display: none;
+                position: fixed;
+                top: 100px;
+                right: 100px;
+                background-color: rgba(200,200,200,0.5);
+                padding: 4px;
+                z-index: 10000;
+                width: max-content; 
+            }
+
         </style>
     </head>
     <body onunload="saveBounds();">
@@ -82,6 +98,18 @@
             <hr>
             <div id="routeInfo">
             </div>
+        </div>
+
+        <div id="hamDiv" class="hamDiv">
+            <ul>
+                <li><span class="spanClick" onclick="reloadSA(); toggleHamburger(); return false;">reload SA</span>
+                <li><span class="spanClick" onclick="clearTail(100); toggleHamburger(); return false;">clear tail (100)</span>
+                <li><span class="spanClick" onclick="clearTail(0); toggleHamburger(); return false;">clear tail (all)</span>
+                <li><span class="spanClick" onclick="saveTail(); toggleHamburger(); return false;">save tail</span>
+                <li><span class="spanClick" onclick="loadTail(); toggleHamburger(); return false;">load tail</span>
+                <li><span class="spanClick" onclick="loadRoutesFromFile(); toggleHamburger(); return false;">load routes</span>
+                <li><span class="spanClick" onclick="loadMarks(); toggleHamburger(); return false;">load marks</span>
+            </ul>
         </div>
 
         <script type="text/javascript">
@@ -123,6 +151,106 @@
 
             var needLocationSetup = 0;
 
+            function download(filename, text) {
+                var element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+                element.setAttribute('download', filename);
+
+                element.style.display = 'none';
+                document.body.appendChild(element);
+
+                element.click();
+
+                document.body.removeChild(element);
+            }
+
+            function loadRoutesFromFile() {
+                var input = document.createElement('input');
+                input.type = 'file';
+
+                input.onchange = e => { 
+
+                   var file = e.target.files[0]; 
+                   var reader = new FileReader();
+                   reader.readAsText(file,'UTF-8');
+
+                   reader.onload = readerEvent => {
+                      const lines = readerEvent.target.result.split('\n');
+                      var nrt = 0, ddmm = false;
+                      routes = [];
+                      routes.push([]);
+                      var first = 0;
+                      if (lines[0].startsWith('#ddmm')) {
+                          first = 1;
+                          ddmm = true;
+                      } 
+                      for (var i = first ; i < lines.length ; i++) {
+                        const pcs = lines[i].split(' ');
+                        if (pcs.length == 2) {
+                            if (ddmm)
+                                routes[nrt].push({ lat: ddmm2dd(parseFloat(pcs[0])), lon: ddmm2dd(parseFloat(pcs[1])) }); 
+                            else
+                                routes[nrt].push({ lat: parseFloat(pcs[0]), lon: parseFloat(pcs[1]) }); 
+                        }
+                        else {
+                            routes.push([]);
+                            nrt ++; 
+                        }
+                      }
+
+                      console.log(routes);
+                      loadRoutes(map, layerControl, routes);
+                   }
+
+                }
+
+                input.click();
+            }
+    
+            function loadTail() {
+                var input = document.createElement('input');
+                input.type = 'file';
+
+                input.onchange = e => { 
+
+                   // getting a hold of the file reference
+                   var file = e.target.files[0]; 
+
+                   // setting up the reader
+                   var reader = new FileReader();
+                   reader.readAsText(file,'UTF-8');
+
+                   // here we tell the reader what to do when it's done reading...
+                   reader.onload = readerEvent => {
+                      var content = readerEvent.target.result; // this is the content!
+                      const lines = content.split('\n');
+                      for (var i = 0 ; i < lines.length ; i++) {
+                        const pcs = lines[i].split(' ');
+                        addShipTailMarker(parseFloat(pcs[0]), parseFloat(pcs[1]), pcs[2] + ' ' + pcs[3]);
+                      }
+                   }
+
+                }
+
+                input.click();
+            }
+
+            function saveTail() {
+                if (shipTailGroup == null) 
+                    return;
+
+                const marks = shipTailGroup.getLayers();
+                txt = '';
+                for (var i = 0 ; i < marks.length ; i++) {
+                    lalo = marks[i].getLatLng();
+                    lbl  = marks[i].getPopup()._content;
+                    txt = txt + lalo.lat + ' ' + lalo.lng + ' ' + lbl + '\n';
+    
+                }
+                const fname = 'shiptail_' + (new Date().toISOString().slice(0,-8)) + '.dat';
+                download(fname, txt);
+            }
+
             function formatPos(dd) {
                 var deg = Math.trunc(dd);
                 var min = Math.abs(dd - deg)*60;
@@ -140,6 +268,21 @@
                     str = str.toString();
                       
                 return str.replace(re, '');
+            }
+
+            function toggleHamburger() {
+                const state = document.getElementById('hamDiv').style.display;
+                console.log(state);
+                if (state != 'block') {
+                    const btn = hamburgerBtn.getContainer();
+                    const rect = btn.getBoundingClientRect();
+                    document.getElementById('hamDiv').style.display = 'block';
+                    document.getElementById('hamDiv').style.top = rect.top;
+                    document.getElementById('hamDiv').style.left = rect.right;
+                }
+                else {
+                    document.getElementById('hamDiv').style.display = 'none';
+                }
             }
 
             async function fetchWeather(latlng, popup, map) {
@@ -215,6 +358,9 @@
             }
         
             var saLayer = null;
+            var saTimer = null;
+            var saURLs = null;
+            var saLabels = null;
 
             async function loadSA(map, layerControl, urls, labels) {
                 const types = ["triangle", "circle", "square", "triangle"];
@@ -266,7 +412,14 @@
                     layerControl.addOverlay(saLayer, labels[i], "overlays"); 
                     saLayer.addTo(map);
                 }
-                setTimeout(function() { loadSA(map, layerControl, urls, labels) }, 300000);
+                saTimer = setTimeout(function() { loadSA(map, layerControl, urls, labels) }, 300000);
+                saURLs = urls;
+                saLabels = labels; 
+            }
+
+            function reloadSA() {
+                if (saTimer) clearTimeout(saTimer);
+                loadSA(map, layerControl, saURLs, saLabels);
             }
 
             var activeRoute    = null;
@@ -274,6 +427,7 @@
             var activeRouteIdx = -1;
             var activeMk       = null;
             var markerClicked  = false;
+            var routesLayer    = null;
             var activeAsset    = null;
             var activeAssetOriginalColor = null;
             var activeAssetOriginalRadius = 5;
@@ -282,7 +436,7 @@
             var gliderMarkers  = Object.create(null);
             var usingLocation  = false;
             var shipMarker = null;
-            const shipTailIncrement = 60;
+            const shipTailIncrement = 120;
             var   shipTailCount = 0;
             var shipTailGroup = null;
 
@@ -419,6 +573,22 @@
                 }
                 document.getElementById('routeInfo').innerHTML = html;
             }
+            function addShipTailMarker(la, lo, t) {
+                var tailMarker = L.circleMarker([la, lo], 
+                                           {
+                                                radius: 1,
+                                                color: 'black',
+                                           })
+                                           .bindPopup(t);
+
+                if (shipTailGroup == null) {
+                    shipTailGroup = L.layerGroup( [ tailMarker ]);
+                    layerControl.addOverlay(shipTailGroup, 'ship tail', "chart");
+                }
+                else {
+                    tailMarker.addTo(shipTailGroup);
+                }
+            }
  
             function setupStream() {
                 var loc = window.location, new_uri;
@@ -491,20 +661,8 @@
                         }
 
                         if (shipTailCount == 0) {
-                            var tailMarker = L.circleMarker([la, lo], 
-                                                       {
-                                                            radius: 2,
-                                                            color: 'black',
-                                                       })
-                                                        .bindPopup(new Date().toISOString().replace('T', ' ').slice(0,-8));
-
-                            if (shipTailGroup == null) {
-                                shipTailGroup = L.layerGroup( [ tailMarker ]);
-                                layerControl.addOverlay(shipTailGroup, 'ship tail', "chart");
-                            }
-                            else {
-                                tailMarker.addTo(shipTailGroup);
-                            }
+                            const t = new Date().toISOString().replace('T', ' ').slice(0,-8);
+                            addShipTailMarker(la, lo, t);
                             shipTailCount = shipTailIncrement;
                         }
                         else {
@@ -674,7 +832,8 @@
             function loadRoutes(map, layerControl, routes) {
                 var routeMarkers = [];
                 var mk;
-
+                console.log('loading routes');
+                console.log(routes);
                 for (var i = 0 ; i < routes.length ; i++) {
                     for (var j = 0 ; j < routes[i].length ; j++) {
                         mk = L.shapeMarker([ routes[i][j].lat, routes[i][j].lon ],              
@@ -692,12 +851,23 @@
                             activateRoute(this);
                         });
                         routeMarkers.push(mk);
+
+                        if (j < routes[i].length - 1) {
+                            ln = L.polyline( [ [routes[i][j].lat, routes[i][j].lon],
+                                               [routes[i][j+1].lat, routes[i][j+1].lon] ] );
+                            ln.setText('> ', { repeat: false, offset: 6, center: true, attributes: { 'font-weight': 'bold', 'font-size': '18' }});
+                            routeMarkers.push(ln);
+                        }
+
                     }
+                } 
+
+                if (routesLayer != null) { 
+                    layerControl.removeLayer(routesLayer);
                 }
 
-                var newLayer = L.layerGroup(routeMarkers);
-                layerControl.addOverlay(newLayer, 'routes', 'assets')
-                newLayer.addTo(map);
+                var routesLayer = L.layerGroup(routeMarkers);
+                layerControl.addOverlay(routesLayer, 'routes', 'assets')
             }
  
             function loadAssets(map, layerControl, assets, glider, mission) {
@@ -1478,6 +1648,7 @@
 
                 return false;
             }
+
 /*
             var setupHandler = function(e) {
                 setupLocation(map, layerControl);
@@ -1786,6 +1957,24 @@
                 labelFormatterLat : formatPos, //optional default none
             }).addTo(map);
 
+
+            var hamburgerPopup = L.popup().setContent('<ul><li>menu1<li>menu2<li>menu3</ul>');
+
+            var hamburgerBtn = L.easyButton('<span class="hamburger">&#8801;</span>', function(btn, map) {
+                // console.log(btn.getPosition());
+                // console.log(btn.getContainer());
+                // hamburgerPopup.setLatLng(map.getCenter()).openOn(map);
+                toggleHamburger(); // btn.getContainer());
+            }).addTo(map);
+
+            var div = hamburgerBtn.getContainer();
+/*
+            var mnu = document.createElement('div');
+            mnu.classList.add('hamDiv');
+            mnu.innerHTML = '<ul><li>foo1<li>foo2<li>foo3</ul>';
+            mnu.id = 'hamDiv';
+            div.appendChild(mnu);
+*/
             // ruler tool
 
             var options = {
@@ -1940,7 +2129,8 @@
             else {
                 document.title = 'map';
             }
- 
+
+
             loadExtras(map, layerControl, glider, mission, tail);
 
             if (params.has('ship')) {

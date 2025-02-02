@@ -1073,10 +1073,13 @@ def attachHandlers(app: sanic.Sanic):
               
         if request.args and len(request.args) > 0:
             url = url + '?' + request.query_string
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    kmz = await response.read()
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(url) as response:
+                    if response.status == 200:
+                        kmz = await response.read()
+        except:
+            pass
 
         if kmz == None:
             return sanic.response.text(f"Page not found: {request.path}", status=404)
