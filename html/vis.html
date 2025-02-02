@@ -1236,7 +1236,10 @@
             cell.innerHTML = k + ':';
             cell.style = "text-align:right;"
             cell = row.insertCell(1);
-            cell.innerHTML = mission[k];
+            if (k.includes('link'))
+                cell.innerHTML = '<a href="' + mission[k] + '">' + mission[k] + '</a>';
+            else
+                cell.innerHTML = mission[k];
         } 
     }
 
