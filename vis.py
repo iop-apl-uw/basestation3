@@ -1844,7 +1844,7 @@ def attachHandlers(app: sanic.Sanic):
     # parameters: mission, num
     # returns: HTML format summary of latest selftest results
     async def selftestHandler(request, glider:int):
-        table = await buildAuthTable(request, None, glider=glider, mission=None, includePaths=True)
+        table = await buildAuthTable(request, None, glider=glider, mission=None, includePath=True)
         num = int(request.args['num'][0]) if 'num' in request.args else 0
         html = await SelftestHTML.html(glider, gliderPath(glider, request), num, mission=missionFromRequest(request), missions=table)
         return sanic.response.html(purgeSensitive(html))
