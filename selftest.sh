@@ -276,23 +276,4 @@ tr -d '\r' < "$base"/"$fname".cap
 
 echo ""
 echo ------------------------------
-set test = `grep '$ID' "$base"/"$fname".cap`
-if ( "$test" == "" ) then
-    echo "Parameter comparison to log file $fname.log"
-    echo
-    /usr/local/bin/compare.py RevE "$base"/"$fname".log
-else
-    echo "Parameter comparison to capture file $fname.cap"
-    echo
-    /usr/local/bin/compare.py RevE "$base"/"$fname".cap 
-endif
-
-if ( -f "$base"/p"$1"0000.prm ) then
-    set date = `ls -l "$base"/p"$1"0000.prm | awk '{print $6,$7,$8}'`
-    echo ""
-    echo ------------------------------
-    echo Parameter comparison to prm file p"$1"0000.prm \("$date"\)
-    echo
-    /usr/local/bin/compare.py RevE "$base"/p"$1"0000.prm
-endif
 

@@ -37,6 +37,9 @@ import math
 from scipy import stats
 import numpy as np
 import parms
+import aiofiles
+import os.path
+import compare
 
 shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "bathymetry", "software", "hardware"]
 
@@ -400,14 +403,30 @@ def printNav(div):
     print('</span><p>')
 
     
-async def process(sgnum, base, num, mission=None, missions=None):
+async def process(sgnum, base, num, mission=None, missions=None, canon=None):
     selftestFiles = sorted(glob.glob(base + '/pt*.cap'), reverse=True)
 
     print("<html><head><title>%03d-selftest</title>" % sgnum)
     print('<script>var failures=""; function addFailures() { document.getElementById("failureSummary").innerHTML = failures; }</script>')
     print('<script>function jumpToAnchor(a) {   var loc = document.location.toString().split(\'#\')[0]; document.location = loc + a; return false; }</script>')
+    print("""
+<script>
+let params = new URLSearchParams(window.location.search);
+var canonname = null;
+if (params.has('canon')) {
+   canonname = params.get('canon');
+}    
+function reload() {
+    var params = new URLSearchParams(window.location.search);
+    canon  = document.getElementById('canonName').value;
+    params.set("canon", canon); 
+    newURL = new URL(window.location.href);
+    newURL.search = params;
+    window.location.href = newURL;
+}
+</script>""")
     print("<style>table.motors th,td { text-align: center; padding-left: 10px; padding-right: 10px; } a {font-family: verdana, arial, tahoma, 'sans serif'; } a:link {color:#0000ff; text-decoration:none} a:visited {color:#0000aa; text-decoration:none} a:hover {color:#0000aa; text-decoration:underline} a:active {color:#0000aa; text-decoration:underline} pre.inline {display: inline;} h2 {margin-bottom:0px;} </style></head><body onload='addFailures();'>")
-
+    
     firstLink = False
 
     if len(selftestFiles) > 1:
@@ -465,7 +484,7 @@ async def process(sgnum, base, num, mission=None, missions=None):
 
     stdo, stde = await proc.communicate()
     
-    pcolors = {"[crit]": "red", "[warn]": "yellow", "[sers]": "orange"}
+    pcolors = {"crit": "red", "warn": "yellow", "sers": "orange"}
     rcolors = ["#cccccc", "#eeeeee"]
     trow = 0
 
@@ -482,7 +501,6 @@ async def process(sgnum, base, num, mission=None, missions=None):
     showingRaw = False
     insideMoveDump = False
     insideDir = False
-    insideParam = False
     insideMotorSummary = False
     insidePre = False
     highlightSensorResult = False
@@ -576,10 +594,6 @@ async def process(sgnum, base, num, mission=None, missions=None):
                 print("</b>")
                 highlightSensorResult = False
 
-        if insideParam and line.find('not between') == -1 and line.find('skipping') == -1 and line.find('canon') == -1 and line.find('[inf]') == -1 and line.find('[unknown]') == -1: 
-            if len(line) > 2:
-                insideParam = False
-                print("</table>")
 
         if insideMotorSummary and not (line.startswith('Pitch') or line.startswith('Roll') or line.startswith('VBD') or line.startswith('Pump')) and line != '':
             insideMotorSummary = False
@@ -643,13 +657,6 @@ async def process(sgnum, base, num, mission=None, missions=None):
             if line.startswith('Summary of failures'):
                 print('<div id="failureSummary"></div>')
 
-        elif line.startswith('Parameter comparison'):
-            print('<h2 id="parameters" style="margin-bottom:0px;">%s</h2>' % line)
-            # print('<a href="#top">top</a> &bull; <a href="#capture">capture</a> &bull; parameters<br>')
-            printNav('parameters')
-            insideParam = True
-            print("<table>")
-            print("<tr><th></th><th>parameter</th><th>current</th><th>min</th><th>max</th></tr>")
 
         elif line.find(',SUSR,N,---- Self test') > -1:
             parts = line.split(',')
@@ -730,48 +737,70 @@ async def process(sgnum, base, num, mission=None, missions=None):
                             <td>{result['minVolts'] if haveDest else result['avgVolts']}</td></tr>") 
                     moveCountTable = moveCountTable + 1          
      
-        elif insideParam:
-            if line.find('not between') > -1:
-                print('<tr style="background-color:%s;">' % rcolors[trow % 2])
-                parts = line.split(' ')
-                
-                print('<td style="background-color:%s;">%s</td>' % (pcolors[parts[0]], parts[0]))
-                print('<td><a href="../parms#%s">%s</a> &nbsp;</td>' % (parts[1].split(',')[0][1:], parts[1].split(',')[0]))
-                print("<td>%s</td>" % parts[1].split(',')[1])
-                print("<td>%s</td>" % parts[4])
-                print("<td>%s</td>" % parts[6])
-                print("</tr>")
-                trow = trow + 1
-            elif line.find('[unknown]') > -1:
-                pass 
-            elif line.find('[inf]') > -1:
-                # format(line)
-                print('<tr style="background-color:%s;">' % rcolors[trow % 2])
-                parts = line.split(' ')
-                
-                print('<td>%s</td>' % parts[0])
-                print('<td><a href="../parms#%s">%s</a> &nbsp;</td>' % (parts[1].split(',')[0][1:], parts[1].split(',')[0]))
-                print("<td>%s</td>" % parts[1].split(',')[1])
-                print("<td colspan=2>%s</td>" % ' '.join(parts[2:]))
-                print("</tr>")
-                trow = trow + 1
-            else:
-                format(line)
                 
         elif insideDir or insidePre:
             print(line)
         else:
             format(line)
-        
-    if insideParam:
-        print("</table>")
+       
+    capname = os.path.join(base, f'pt{sgnum:03d}{num:04d}.cap')
+    logname = os.path.join(base, f'pt{sgnum:03d}{num:04d}.cap')
+    prmname = os.path.join(base, f'p{sgnum:03d}0000.prm')
+
+    local_canon = os.path.join(base, '.canonicals')
+
+    if canon:
+        which = canon
+    else:
+        which = 'RevE'
+
+    if os.path.exists(local_canon) and not canon:
+        canonname = local_canon
+    else:
+        canonname = os.path.join(sys.path[0], "canonicals/canon_" + which  + ".log")
+
+    if os.path.exists(capname):
+        x = compare.compare(canonname, capname)
+        xname = 'capture file ' + os.path.basename(capname)
+        if not x and os.path.exists(logname):
+            x = compare.compare(canonname, logname)
+            xname = 'log file ' + os.path.basename(logname)
+    else:
+        x = None
+
+    avail = compare.availableCanons()
+   
+    print('available canons <select id="canonName">' )
+    for a in avail:
+        print('<option value="%s" %s>%s</option>' % (a, "selected" if a == which else "", a))
+    if canonname == local_canon:
+        print('<option value="%s" %s>%s</option>' % (a, "selected" if local_canon == which else "", local_canon))
+    print("</select>")
+    print('<input type="button" value="reload with new canonicals" onclick="reload();">')
+ 
+    if os.path.exists(prmname):
+        y = compare.compare(canonname, prmname)
+        yname = 'prm file ' + os.path.basename(prmname)
+    else:
+        y = None
+
+    if x:
+        print('<h2 id="parameters" style="margin-bottom:0px;">Parameter comparison to %s</h2>' % xname)
+        printNav('parameters')
+        compare.renderTable(x, pcolors, rcolors)
+       
+    if y: 
+        print('<h2 id="parameters" style="margin-bottom:0px;">Parameter comparison to %s</h2>' % yname)
+        if not x:
+            printNav('parameters')
+        compare.renderTable(y, pcolors, rcolors)
 
     print("</body></html>")
 
-async def html(sgnum, base, num, mission=None, missions=None):
+async def html(sgnum, base, num, mission=None, missions=None, canon=None):
     f = io.StringIO()
     with redirect_stdout(f):
-        await process(sgnum, base, num, mission=mission, missions=missions)
+        await process(sgnum, base, num, mission=mission, missions=missions, canon=canon)
 
     return f.getvalue()
 
