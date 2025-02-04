@@ -943,13 +943,13 @@ is cleared upon exiting recovery and at selftest and launch.  [1]</p>
  <p><span class="bold">$ROLL_ADJ_DBAND</span> has units of degrees/second. A value of zero disables automatic adjustment of the roll centers. [0.03]</p>
   
 <div class="med"></div>
- <p><span class="bold"><a name="ROLL_ADJ_GAIN">$ROLL_ADJ_GAIN</a></span><br>This parameter, with <span class="bold"><a href="#ROLL_ADJ_DBAND">$ROLL_ADJ_DBAND</a></span>, controls the automatic adjustment of the Seaglider roll centers based on observed turn rate.  The amount of the adjustment is
+ <p><span class="bold"><a name="ROLL_ADJ_GAIN">$ROLL_ADJ_GAIN</a></span><br>This parameter, with <span class="bold"><a href="#ROLL_ADJ_DBAND">$ROLL_ADJ_DBAND</a></span>, controls the automatic adjustment of the Seaglider roll centers based on observed heading change rate while the glider is not turning (trying to fly straight).  The amount of the adjustment (in degrees of battery roll) is
 </p>
 
 <div class="small"></div>
 
-<p style="text-align: center;">	-(turn rate)*<span class="bold"><a href="#ROLL_ADJ_DBAND">$ROLL_ADJ_DBAND</a></span>, if climbing, and,<br>
-<br>	 (turn rate)*<span class="bold"><a href="#ROLL_ADJ_DBAND">$ROLL_ADJ_DBAND</a></span>, if diving.<br></p>
+<p style="text-align: center;">	-(turn rate)*<span class="bold"><a href="#ROLL_ADJ_GAIN">$ROLL_ADJ_GAIN</a></span>, if climbing, and,<br>
+<br>	 (turn rate)*<span class="bold"><a href="#ROLL_ADJ_GAIN">$ROLL_ADJ_GAIN</a></span>, if diving.<br></p>
   
 <div class="med"></div>
  <p><span class="bold"><a name="ROLL_ADJ_GAIN">$ROLL_ADJ_GAIN</a></span> has units of degrees/(degrees/second).  This adjustment is only meaningful the next time the Seaglider turns, as the Seaglider will roll back to this new neutral position on the next turn.  It will not immediately roll from the old neutral to the new neutral at the start of the next active guidance and control (GC) phase.  Note that if <span class="bold"><a href="#HEAD_ERRBAND">$HEAD_ERRBAND</a></span> is large, then several active/passive GC phases might pass before a turn is initiated and the new roll center is used.  A new adjustment is computed only after a turn has been completed.  [1.0]</p>
