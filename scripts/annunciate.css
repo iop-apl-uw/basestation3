@@ -1,0 +1,100 @@
+    [class~="indicatorGreen"] {
+        background-color: #00ff00;
+    }
+    [class~="indicatorRed"] {
+        background-color: #ff0000;
+    }
+    [class~="indicatorYellow"] {
+        background-color: #ffff00;
+    }
+    @media (pointer: coarse) {
+
+        @media screen and (orientation:portrait) {
+            .expander {
+                width: 2vw;
+                max-width: 2vw;
+                cursor: pointer;
+            }
+
+            .indicatorInsideBox {
+                display: flex;
+                min-height: 5vw;
+                margin-top: 5px; 
+                flex-wrap: wrap;
+                gap: 4px;
+                min-width: 0;
+            }
+
+            .indicatorBox {
+                display: flex;
+                flex: 1;
+                align-items: center;
+                margin-top: 5px;
+                overflow: auto;
+                min-width: 0;
+            }
+
+            .indicator {
+                cursor: help;
+                flex-grow: 0;
+                flex-shrink: 0;
+                border: 2px solid black;
+                text-align: center;
+                max-width: 15vw;
+                width: 15vw;
+                border-radius: 1vw;
+                height: 9vw;;
+                max-height: 12vw;
+                z-index: 20;
+                font-size:3vw;
+                min-width: 0;
+            }
+
+            .indicator span {
+                font-size:3vw;
+            }
+      }
+    }
+    @media (pointer: fine) {
+        .expander {
+            width: 8px;
+            max-width: 8px;
+            cursor: pointer;
+        }
+
+        .indicatorInsideBox {
+            display: flex;
+            min-height: 35px;
+            margin-top: 5px;
+            flex-wrap: wrap;
+            gap: 4px;
+        }
+
+        .indicatorBox {
+            display: flex;
+            flex: 1;
+            align-items: center;
+            margin-top: 5px;
+            overflow: auto;
+        }
+
+        .indicator {
+            cursor: help;
+            flex-grow: 0;
+            flex-shrink: 0;
+            border: 2px solid black;
+            text-align: center;
+            max-width: 50px;
+            width: 50px;
+            border-radius: 8px;
+            height: 30px;
+            max-height: 30px;
+            z-index: 20;
+            font-size:11px;
+        }
+
+        .indicator span {
+            font-size:11px;
+        }
+    }
+

@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="script/base.css" />
 <link rel="stylesheet" href="script/plottool.css" />
 <link rel="stylesheet" href="script/spincontrol.css" />
+<link rel="stylesheet" href="script/annunciate.css" />
 
 <script src="script/plotly-latest.min.js"></script>
 <script src="script/util.js"></script>
@@ -18,6 +19,7 @@
 <script src="script/websocket.js"></script>
 <script src="script/tabstats.js"></script>
 <script src="script/spincontrol.js"></script>
+<script src="script/annunciate.js"></script>
 
 {% if runMode == 'pilot' %}
 <script src="script/chat.js"></script>
@@ -296,6 +298,7 @@
                         buildTable(currGlider, newDive);
                         buildChangelog(3);
                         loadRecs();
+                        loadAnnunciators(currGlider);
                     }
                 }
                 else if ('lat' in json) {
@@ -886,10 +889,11 @@
                 txt = '<table id="changeTable">';
                 for (d of data) {
                     if (d[cols[0]] != prev) 
-                        c = (c == 0 ? 1 : 0);
+                        c = !c; // (c == 0 ? 1 : 0);
 
                     txt += '<tr style="background-color: ' + colors[c] + '";>';
 
+                    console.log(d[cols[0]]);
                     if (d[cols[0]] != prev) {
                         txt += '<td>' + d[cols[0]] + '</td>';
                         prev = d[cols[0]];
@@ -897,7 +901,7 @@
                     else 
                         txt += '<td></td>';
                     
-                    txt += '<td>' + d[cols[1]] + '</td>';
+                    txt += '<td><a href="parms#' + d[cols[1]].slice(1) + '">' + d[cols[1]] + '</a></td>';
 
                     txt += '<td>' + d['oldval'] + '</td>';
                     txt += '<td><b>&#10230;</b></td>';
@@ -1935,7 +1939,7 @@
         div.classList.add('paramInputDiv');
         var span = document.createElement('span');
         span.classList.add('paramInputLabel');
-        span.innerHTML = p;
+        span.innerHTML = `<a href="parms#${p}">${p}</a>`;
         span.title = h;
         var inp = document.createElement('input');
         inp.id = 'paramInput_' + p;
@@ -2067,6 +2071,43 @@
         }); 
     }
 {% endif %}
+    var indicators = [ { name: 'humidity', entries: [ 'RH' ] },
+                     { name: 'internalPressure', entries: [ 'intP' ] },
+                     { name: 'depth', entries: [ 'depth' ] },
+                     { name: 'pitch', entries: [ 'pitch' ] },
+                     { name: 'comms', entries: [ 'call' ] },
+                     { name: 'volts', entries: [ 'volts' ] } ];
+ 
+                
+    function loadAnnunciators(glider) {
+        fetch(`summary/${glider}${mission()}`)
+        .then(res => res.text())
+        .then(text => {
+            try {
+                text = text.replaceAll('NaN', 'null');
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log('loadAnnunciators ' + error);
+                console.log(text);
+                return;
+            }
+
+            let { element, reds, yellows } = makeAnnunciators(data, 9);
+            $('annunciators').appendChild(element);
+            console.log(reds);
+            console.log(yellows);
+            console.log(indicators); 
+            for (var x of indicators) {
+                if (reds.includes(x.name)) {
+                    $(x.entries[0]).classList.add('indicatorRed');
+                }
+                else if (yellows.includes(x.name)) {
+                    $(x.entries[0]).classList.add('indicatorYellow');
+                }
+
+            } 
+        });
+    } 
     function loadStatus(glider, dive, setCurr) {
         fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
@@ -2120,6 +2161,7 @@
             buildChangelog(3);
             loadAbout(data.mission, data.organization);
             loadRecs();
+            loadAnnunciators(glider);
             if (data.mission.status == 'active') {
                 setupStream(glider, true, true);
                 currStatus = 'active';
@@ -2339,7 +2381,7 @@
         html += '<h3 onclick="showChangelog(); return false;" style="color:blue;">parameter changes</h3><p><table style="margin-left:40px;">';
         for (i = 0 ; i < deltas['parm'].length; i++) {
             pieces = deltas['parm'][i];
-            html += `<tr><td>${pieces['parm']}&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
+            html += `<tr><td><a href=\"parms#${pieces['parm'].slice(1)}\">${pieces['parm']}</a>&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
         } 
         
         html += '</table><p><h3 onclick="showChangelog(); return false;" style="color:blue;">control files</h3><p>';
@@ -3769,19 +3811,18 @@
             <div id="pilotWheelCmdfileControls">
             <div id="pilotParmsList">
                 
-                <div id="pilotBASIC" class="hide"></div>
-                <div id="pilotNAV" class="hide"></div>
-                <div id="pilotDIVE"> 
+                <div id="pilotBASIC" class="hide" oncontextmenu="parameterHelp('pilotBASIC');"></div>
+                <div id="pilotNAV" class="hide" oncontextmenu="parameterHelp('pilotNAV');"></div>
+                <div id="pilotDIVE" oncontextmenu="parameterHelp('pilotDIVE');> 
                     <input type="checkbox" checked id="selLinkChanges"><label for="selLinkChanges">link target depth/time changes</label>
                 </div>
-                <div id="pilotSURFACE" class="hide"></div>
-                <div id="pilotFLIGHT" class="hide"></div>
-                <div id="pilotPITCH" class="hide"></div>
-                <div id="pilotROLL" class="hide"></div>
-                <div id="pilotVBD" class="hide"></div>
-                <div id="pilotVBD" class="hide"></div>
-                <div id="pilotALTIMETER" class="hide"></div>
-                <div id="pilotHARDWARE" class="hide"></div>
+                <div id="pilotSURFACE" class="hide" oncontextmenu="parameterHelp('piotSURFACE');"></div>
+                <div id="pilotFLIGHT" class="hide" oncontextmenu="parameterHelp('pilotFLIGHT');"></div>
+                <div id="pilotPITCH" class="hide" oncontextmenu="parameterHelp('pilotPITCH');"></div>
+                <div id="pilotROLL" class="hide" oncontextmenu="parameterHelp('pilotROLL');"></div>
+                <div id="pilotVBD" class="hide" oncontextmenu="parameterHelp('pilotVBD');"></div>
+                <div id="pilotALTIMETER" class="hide" oncontextmenu="parameterHelp('pilotALTIMETER');"></div>
+                <div id="pilotHARDWARE" class="hide" oncontextmenu="parameterHelp('pilotHARDWARE');"></div>
             </div>
             
             <div id="pilotDirectiveList">
@@ -4067,6 +4108,7 @@
             </tr>
         </table>
     </div>
+    <div id="annunciators"></div>
 
     <div id="commlog">
 

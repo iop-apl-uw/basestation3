@@ -979,13 +979,16 @@
     .desktop#right {
         grid-area: right;
         display: grid;
-        grid-template-rows: 240px 1fr 380px;
+        grid-template-rows: 230px min-content 1fr 380px;
         grid-template-columns: auto;
         grid-template-areas:
             "status"
+            "annunciators"
             "commlog"
             "cmdfile";
-        row-gap: 10px;
+        row-gap: 5px;
+        width: 580x;
+        max-width: 580px;
         margin-left: 10px;
     }
     .desktop#commlog {
@@ -1005,10 +1008,13 @@
         border:1px solid black; 
         background-color:#dddddd;
         grid-area: status;
-        height: 240px;
-        max-height: 240px;
+        height: 230px;
+        max-height: 230px;
     }
 
+    .desktop#annunciators {
+        grid-area: annunciators;
+    }
     .desktop#statusTable {
         table-layout:auto; 
         width: 100%;
