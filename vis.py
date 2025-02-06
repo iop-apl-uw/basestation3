@@ -2237,6 +2237,43 @@ def attachHandlers(app: sanic.Sanic):
         filename = f'{sys.path[0]}/html/pos.html'
         return await sanic.response.file(filename, mime_type='text/html')
 
+    @app.route('/missionsa/<glider:int>')
+    # description: fetch mission SA file
+    # parameters: mission
+    # returns: json mission SA
+    @authorized()
+    async def missionsaHandler(request, glider:int):
+        mission = matchMission(glider, request) 
+        if not 'sadata' in mission:
+            return sanic.response.json({'error': 'no data'})
+        
+        assets = []
+        if await aiofiles.os.path.exists(mission['sadata']):
+            async with aiofiles.open(mission['sadata'], 'r') as file:
+                async for line in file:
+                    try:
+                        pieces = line.split(' ')
+                        if len(pieces) >= 11:
+                            lat = float(pieces[4]) + float(pieces[5])/60
+                            if pieces[6] == 'S':
+                                lat = -lat
+                            lon = float(pieces[7]) + float(pieces[8])/60
+                            if pieces[9] == 'W':
+                                lon = -lon
+
+                            assets.append( { 'class': pieces[0],
+                                             'id': pieces[1],
+                                             'date': pieces[2],
+                                             'time': pieces[3],
+                                             'lat': lat,
+                                             'lon': lon,
+                                             'subcat': int(pieces[10]),
+                                           })
+                    except:
+                        continue
+            
+        return sanic.response.json(assets)
+ 
     @app.route('/pos/sa/<glider:int>')
     # description: fetch SA position file
     # parameters: mission
@@ -2806,6 +2843,8 @@ async def buildMissionTable(app, config=None):
         x['controls'] = {}
     if 'defaults' not in x:
         x['defaults'] = {}
+    if 'missiondefaults' not in x:
+        x['missiondefaults'] = {}
     if 'pilotdefaults' not in x:
         x['pilotdefaults'] = {}
     if 'privatedefaults' not in x:
@@ -2918,7 +2957,7 @@ async def buildMissionTable(app, config=None):
                         "started", "ended", "planned", 
                         "orgname", "orglink", "contact", "email", 
                         "project", "link", "comment", "reason", "endpoints",
-                        "sa", "also", "kml", 
+                        "sa", "also", "kml", "sadata",
                       ]
     
     dflts         = x['defaults']
@@ -2964,6 +3003,8 @@ async def buildMissionTable(app, config=None):
                         m.update( { mk: dflts[mk] })
                     elif mk in x['organization']:
                         m.update( { mk: x['organization'][mk] })
+                    elif 'mission' in m and m['mission'] and m['mission'] in x['missiondefaults'] and mk in x['missiondefaults'][m['mission']]:
+                        m.update( { mk: x['missiondefaults'][m['mission']][mk] })
                     else:
                         m.update( { mk: None })
 
