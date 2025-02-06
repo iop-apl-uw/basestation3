@@ -2103,6 +2103,7 @@
             }
 
             let { element, divs, reds, yellows } = makeAnnunciators(data, 9);
+            $('annunciators').innerHTML = '';
             $('annunciators').appendChild(element);
             for (var x of indicators) {
                 for (var j = 0 ; j < x.entries.length ; j++) {
