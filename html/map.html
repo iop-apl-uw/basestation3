@@ -199,7 +199,7 @@
                       }
 
                       console.log(routes);
-                      loadRoutes(map, layerControl, routes);
+                      loadRoutes(map, layerControl, routes, true);
                    }
 
                 }
@@ -652,6 +652,7 @@
 
                 if (shipTailGroup == null) {
                     shipTailGroup = L.layerGroup( [ tailMarker ]);
+                    shipTailGroup.addTo(map);
                     layerControl.addOverlay(shipTailGroup, 'ship tail', "chart");
                 }
                 else {
@@ -918,7 +919,7 @@
                 mk.setStyle({ color: "red", radius: 7 });
             }
 
-            function loadRoutes(map, layerControl, routes) {
+            function loadRoutes(map, layerControl, routes, show) {
                 var routeMarkers = [];
                 var mk;
                 console.log('loading routes');
@@ -956,6 +957,7 @@
                 }
 
                 var routesLayer = L.layerGroup(routeMarkers);
+                if (show) routesLayer.addTo(map); 
                 layerControl.addOverlay(routesLayer, 'routes', 'assets')
             }
  
@@ -1357,7 +1359,7 @@
                         loadAssets(map, layerControl, d.assets, glider, mission);
                     }
                     if ('routes' in d) {
-                        loadRoutes(map, layerControl, d.routes);
+                        loadRoutes(map, layerControl, d.routes, false);
                     }
                 })
                 .catch(e => {
@@ -2049,7 +2051,7 @@
 
             var hamburgerPopup = L.popup().setContent('<ul><li>menu1<li>menu2<li>menu3</ul>');
 
-            var hamburgerBtn = L.easyButton('<span class="hamburger">&#8801;</span>', function(btn, map) {
+            var hamburgerBtn = L.easyButton('<span class="hamburger" style="font-size: 28px; margin-top: -3px; display: inline-block;">&#8801;</span>', function(btn, map) {
                 // console.log(btn.getPosition());
                 // console.log(btn.getContainer());
                 // hamburgerPopup.setLatLng(map.getCenter()).openOn(map);
