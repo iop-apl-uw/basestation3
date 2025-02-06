@@ -417,43 +417,66 @@ async def getLatestFile(glider, request, which, dive=None):
     latest = -1
     call = -1;
     filename = None
+    fmt = 0
+    imatch = -1
+
+    rx = [ re.compile(which + '\.(?P<dive>[0-9]{4})\.(?P<cycle>[0-9]{4}?$)'),
+           re.compile(which + '\.(?P<dive>[0-9][0-9]?[0-9]?[0-9]?)\.(?P<cycle>[0-9][0-9]?[0-9]?[0-9]?$)'),
+           re.compile(which + '\.(?P<dive>[0-9][0-9]?[0-9]?[0-9]?$)') ]
+
     if dive:
-        globstr = f'{which}.{dive}*'
+        globs = [f'{which}.{dive:04d}.*', f'{which}.{dive}.*', f'{which}.{dive}*' ]
+        for i in range(3):
+            async for fpath in p.glob(globs[i]):
+                if (m := rx[i].match(fpath.name)) and 'cycle' in m.groupdict() and int(m.group("cycle")) > call:
+                    latest = int(m.group("dive"))
+                    call = int(m.group("cycle"))
+                elif m and int(m.group("dive")) == dive and i == 2:
+                    latest = int(m.group("dive"))
+                    call = -1
+
+            # if we found anything new format, or dive.cycle format it miust be later than .dive 
+            # format so we can return
+            if latest > -1 and call > -1:
+                if i == 0:
+                    filename = f'{gliderPath(glider,request)}/{which}.{latest:04d}.{call:04d}'
+                else:
+                    filename = f'{gliderPath(glider,request)}/{which}.{latest}.{call}'
+
+                return (filename, latest, call)
+
+        if latest > -1:
+            filename = f'{gliderPath(glider,request)}/{which}.{latest}'
+
+    
     else:
         globstr = f'{which}.*'
+        async for fpath in p.glob(globstr):
 
-    async for fpath in p.glob(globstr):
-        try:
-            j = parse('%s.{:d}.{:d}' % which, fpath.name)
-            if dive:
-                if j and hasattr(j, 'fixed') and len(j.fixed) == 2 and j.fixed[0] == dive and j.fixed[1] > call:
-                    latest = j.fixed[0]
-                    call = j.fixed[1]
-                else:
-                    j = parse('%s.{:d}' % which, fpath.name)
-                    if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] == dive and call == -1:
-                        latest = j.fixed[0]
-            else:
-                if j and hasattr(j, 'fixed') and len(j.fixed) == 2:
-                    if  j.fixed[0] > latest:
-                        latest = j.fixed[0]
-                        call = j.fixed[1]
-                    elif j.fixed[0] == latest and j.fixed[1] > call:
-                        call = j.fixed[1]
-                else:
-                    j = parse('%s.{:d}' % which, fpath.name)
-                    if j and hasattr(j, 'fixed') and len(j.fixed) == 1 and j.fixed[0] > latest:
-                        latest = j.fixed[0]
+            for i in range(3):
+                if (m := rx[i].match(fpath.name)):
+                    if 'cycle' in m.groupdict():
+                        if int(m.group("dive")) > latest:
+                            latest = int(m.group("dive"))
+                            call   = int(m.group("cycle"))
+                            fmt = i
+                        elif int(m.group("dive")) == latest and int(m.group("cycle")) > call:
+                            call = int(m.group("cycle"))
+                            fmt = i
+                    elif int(m.group("dive")) > latest:
+                        latest = int(m.group("dive"))
                         call = -1
-        except Exception as e:
-            sanic.log.logger.info(f"getLatestFile: {e}")
-            continue
+                        fmt = i
 
-    if latest > -1:
-        if call > -1:
-            filename = f'{gliderPath(glider,request)}/{which}.{latest}.{call}'
+
+
+    if latest > -1 and call > -1:
+        if fmt == 0:
+            filename = f'{gliderPath(glider,request)}/{which}.{latest:04d}.{call:04d}'
         else:
-            filename = f'{gliderPath(glider,request)}/{which}.{latest}'
+            filename = f'{gliderPath(glider,request)}/{which}.{latest}.{call}'
+    else:
+        filename = f'{gliderPath(glider,request)}/{which}.{latest}'
 
     return (filename, latest, call)
 

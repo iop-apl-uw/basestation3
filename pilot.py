@@ -26,98 +26,106 @@ async def pilotRecs(path:str, glider:int):
         except aiosqlite.OperationalError as e:
             return (None, None, None)
 
-    pitch = { 
-                'current': { 'rmse': row['pitch_flying_rmse'], 'C_PITCH': row['log_C_PITCH'], 'PITCH_GAIN': row['log_PITCH_GAIN'], 'PITCH_VBD_SHIFT': row['log_PITCH_VBD_SHIFT'] },
-                'linear':  { 'rmse': row['pitch_linear_rmse'], 'C_PITCH': row['pitch_linear_C_PITCH'], 'PITCH_GAIN': row['pitch_linear_PITCH_GAIN'] },
-                'fixed':   { 'rmse': row['pitch_fixed_rmse'], 'C_PITCH': row['pitch_fixed_C_PITCH'], 'PITCH_GAIN': row['pitch_fixed_PITCH_GAIN'] },
-                'shift':   { 'rmse': row['pitch_shift_rmse'], 'C_PITCH': row['pitch_shift_C_PITCH'], 'PITCH_GAIN': row['pitch_shift_PITCH_GAIN'], 'PITCH_VBD_SHIFT': row['pitch_shift_PITCH_VBD_SHIFT'] },
-            }
-    if row['pitch_fixed_rmse'] < row['pitch_flying_rmse']:
-        p = { 
-                'C_PITCH':    row['log_C_PITCH'] + 0.5*(row['pitch_fixed_C_PITCH'] - row['log_C_PITCH']),
-                'PITCH_GAIN': row['log_PITCH_GAIN'] + 0.5*(row['pitch_fixed_PITCH_GAIN'] - row['log_PITCH_GAIN']),
-                'rmse':       row['pitch_fixed_rmse'],
-                'model':      'fixed shift',
-            }
-    elif row['pitch_linear_rmse'] < row['pitch_flying_rmse']:
-        p = { 
-                'C_PITCH':    row['log_C_PITCH'] + 0.5*(row['pitch_linear_C_PITCH'] - row['log_C_PITCH']),
-                'PITCH_GAIN': row['log_PITCH_GAIN'] + 0.5*(row['pitch_linear_PITCH_GAIN'] - row['log_PITCH_GAIN']),
-                'rmse':       row['pitch_linear_rmse'],
-                'model':      'linear',
-            }
-    else:
-        p = None
-
-    pitch.update( { 'rec': p } )
-
-    vbd =   { 
-                'current':  { 'rmse': row['vert_vel_flying_rmse'],   'C_VBD': row['log_C_VBD'] },
-                'buoyancy': { 'rmse': row['vert_vel_buoyancy_rmse'], 'C_VBD': row['vert_vel_buoyancy_C_VBD'] },
-                'hd':       { 'rmse': row['vert_vel_hd_rmse'],       'C_VBD': row['vert_vel_hd_C_VBD'] },
-                'regress':  { 'rmse': row['vert_vel_regress_rmse'],  'C_VBD': row['vert_vel_regress_C_VBD'] },
-            }
-    if row['vert_vel_hd_rmse'] < row['vert_vel_flying_rmse']:
-        v = { 
-                'C_VBD': row['log_C_VBD'] + 0.5*(row['vert_vel_hd_C_VBD'] - row['log_C_VBD']),
-                'rmse':  row['vert_vel_hd_rmse'],
-                'model': 'buoyancy + HD',
-            }
-    elif row['vert_vel_buoyancy_rmse'] < row['vert_vel_flying_rmse']:
-        v = { 
-                'C_VBD': row['log_C_VBD'] + 0.5*(row['vert_vel_buoyancy_C_VBD'] - row['log_C_VBD']),
-                'rmse':  row['vert_vel_buoyancy_rmse'],
-                'model': 'buoyancy',
-            }
-    else:
-        v = None
-
-    vbd.update( { 'rec': v } )
-
-    roll =  {
-                'current':  { 'C_ROLL_DIVE': row['log_C_ROLL_DIVE'],           'C_ROLL_CLIMB': row['log_C_ROLL_CLIMB'], },
-                'roll':     { 'C_ROLL_DIVE': row['roll_C_ROLL_DIVE'],          'C_ROLL_CLIMB': row['roll_C_ROLL_CLIMB'], },
-                'centered': { 'C_ROLL_DIVE': row['turn_centered_C_ROLL_DIVE'], 'C_ROLL_CLIMB': row['turn_centered_C_ROLL_CLIMB'], },
-                'all':      { 'C_ROLL_DIVE': row['turn_all_C_ROLL_DIVE'],      'C_ROLL_CLIMB': row['turn_all_C_ROLL_CLIMB'], },
-            }
- 
-
-    d1 = row['roll_C_ROLL_DIVE'] - row['log_C_ROLL_DIVE']
-    d2 = row['turn_centered_C_ROLL_DIVE'] - row['log_C_ROLL_DIVE']
-
-    if d1*d2 > 0:
-        if abs(d1) < abs(d2):
-            d = {
-                    'C_ROLL_DIVE': row['log_C_ROLL_DIVE'] + 0.5*d1,
-                    'model': 'roll',
+    if row['pitch_flying_rmse']:
+        pitch = { 
+                    'current': { 'rmse': row['pitch_flying_rmse'], 'C_PITCH': row['log_C_PITCH'], 'PITCH_GAIN': row['log_PITCH_GAIN'], 'PITCH_VBD_SHIFT': row['log_PITCH_VBD_SHIFT'] },
+                    'linear':  { 'rmse': row['pitch_linear_rmse'], 'C_PITCH': row['pitch_linear_C_PITCH'], 'PITCH_GAIN': row['pitch_linear_PITCH_GAIN'] },
+                    'fixed':   { 'rmse': row['pitch_fixed_rmse'], 'C_PITCH': row['pitch_fixed_C_PITCH'], 'PITCH_GAIN': row['pitch_fixed_PITCH_GAIN'] },
+                    'shift':   { 'rmse': row['pitch_shift_rmse'], 'C_PITCH': row['pitch_shift_C_PITCH'], 'PITCH_GAIN': row['pitch_shift_PITCH_GAIN'], 'PITCH_VBD_SHIFT': row['pitch_shift_PITCH_VBD_SHIFT'] },
+                }
+        if row['pitch_fixed_rmse'] < row['pitch_flying_rmse']:
+            p = { 
+                    'C_PITCH':    row['log_C_PITCH'] + 0.5*(row['pitch_fixed_C_PITCH'] - row['log_C_PITCH']),
+                    'PITCH_GAIN': row['log_PITCH_GAIN'] + 0.5*(row['pitch_fixed_PITCH_GAIN'] - row['log_PITCH_GAIN']),
+                    'rmse':       row['pitch_fixed_rmse'],
+                    'model':      'fixed shift',
+                }
+        elif row['pitch_linear_rmse'] < row['pitch_flying_rmse']:
+            p = { 
+                    'C_PITCH':    row['log_C_PITCH'] + 0.5*(row['pitch_linear_C_PITCH'] - row['log_C_PITCH']),
+                    'PITCH_GAIN': row['log_PITCH_GAIN'] + 0.5*(row['pitch_linear_PITCH_GAIN'] - row['log_PITCH_GAIN']),
+                    'rmse':       row['pitch_linear_rmse'],
+                    'model':      'linear',
                 }
         else:
-            d = {
-                    'C_ROLL_DIVE': row['log_C_ROLL_DIVE'] + 0.5*d2,
-                    'model': 'centered turning',
-                }
- 
-    else:
-        d = None
+            p = None
 
-    c1 = row['roll_C_ROLL_CLIMB'] - row['log_C_ROLL_CLIMB']
-    c2 = row['turn_centered_C_ROLL_CLIMB'] - row['log_C_ROLL_CLIMB']
-    if c1*c2 > 0:
-        if abs(c1) < abs(c2):
-            c = {
-                    'C_ROLL_CLIMB': row['log_C_ROLL_CLIMB'] + 0.5*c1,
-                    'model': 'roll',
+        pitch.update( { 'rec': p } )
+    else:
+        pitch = None
+
+    if row['vert_vel_flying_rmse']:
+        vbd =   { 
+                    'current':  { 'rmse': row['vert_vel_flying_rmse'],   'C_VBD': row['log_C_VBD'] },
+                    'buoyancy': { 'rmse': row['vert_vel_buoyancy_rmse'], 'C_VBD': row['vert_vel_buoyancy_C_VBD'] },
+                    'hd':       { 'rmse': row['vert_vel_hd_rmse'],       'C_VBD': row['vert_vel_hd_C_VBD'] },
+                    'regress':  { 'rmse': row['vert_vel_regress_rmse'],  'C_VBD': row['vert_vel_regress_C_VBD'] },
+                }
+        if row['vert_vel_hd_rmse'] < row['vert_vel_flying_rmse']:
+            v = { 
+                    'C_VBD': row['log_C_VBD'] + 0.5*(row['vert_vel_hd_C_VBD'] - row['log_C_VBD']),
+                    'rmse':  row['vert_vel_hd_rmse'],
+                    'model': 'buoyancy + HD',
+                }
+        elif row['vert_vel_buoyancy_rmse'] < row['vert_vel_flying_rmse']:
+            v = { 
+                    'C_VBD': row['log_C_VBD'] + 0.5*(row['vert_vel_buoyancy_C_VBD'] - row['log_C_VBD']),
+                    'rmse':  row['vert_vel_buoyancy_rmse'],
+                    'model': 'buoyancy',
                 }
         else:
-            c = {
-                    'C_ROLL_CLIMB': row['log_C_ROLL_CLIMB'] + 0.5*c2,
-                    'model': 'centered turning',
+            v = None
+
+        vbd.update( { 'rec': v } )
+    else:   
+        vbd = None
+
+    if row['turn_centered_C_ROLL_DIVE']:
+        roll =  {
+                    'current':  { 'C_ROLL_DIVE': row['log_C_ROLL_DIVE'],           'C_ROLL_CLIMB': row['log_C_ROLL_CLIMB'], },
+                    'roll':     { 'C_ROLL_DIVE': row['roll_C_ROLL_DIVE'],          'C_ROLL_CLIMB': row['roll_C_ROLL_CLIMB'], },
+                    'centered': { 'C_ROLL_DIVE': row['turn_centered_C_ROLL_DIVE'], 'C_ROLL_CLIMB': row['turn_centered_C_ROLL_CLIMB'], },
+                    'all':      { 'C_ROLL_DIVE': row['turn_all_C_ROLL_DIVE'],      'C_ROLL_CLIMB': row['turn_all_C_ROLL_CLIMB'], },
                 }
  
-    else:
-        c = None
+        d1 = row['roll_C_ROLL_DIVE'] - row['log_C_ROLL_DIVE']
+        d2 = row['turn_centered_C_ROLL_DIVE'] - row['log_C_ROLL_DIVE']
 
-    roll.update( { 'dive': d, 'climb': c } )
+        if d1*d2 > 0:
+            if abs(d1) < abs(d2):
+                d = {
+                        'C_ROLL_DIVE': row['log_C_ROLL_DIVE'] + 0.5*d1,
+                        'model': 'roll',
+                    }
+            else:
+                d = {
+                        'C_ROLL_DIVE': row['log_C_ROLL_DIVE'] + 0.5*d2,
+                        'model': 'centered turning',
+                    }
+     
+        else:
+            d = None
+
+        c1 = row['roll_C_ROLL_CLIMB'] - row['log_C_ROLL_CLIMB']
+        c2 = row['turn_centered_C_ROLL_CLIMB'] - row['log_C_ROLL_CLIMB']
+        if c1*c2 > 0:
+            if abs(c1) < abs(c2):
+                c = {
+                        'C_ROLL_CLIMB': row['log_C_ROLL_CLIMB'] + 0.5*c1,
+                        'model': 'roll',
+                    }
+            else:
+                c = {
+                        'C_ROLL_CLIMB': row['log_C_ROLL_CLIMB'] + 0.5*c2,
+                        'model': 'centered turning',
+                    }
+     
+        else:
+            c = None
+
+        roll.update( { 'dive': d, 'climb': c } )
+    else:
+        roll = None
     
     return (pitch, roll, vbd)
  

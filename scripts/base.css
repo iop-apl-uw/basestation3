@@ -922,6 +922,15 @@
         row-gap: 10px;
     }
 
+    .desktop#waitIndicator {
+        position: relative;
+        top: 50%;
+        transform: translateY(-50%);
+        margin-left: auto;
+        margin-right: auto;
+        width: 50%;
+    }
+
     .desktop#toolbar {
         grid-area: toolbar;
         width:50px; 

@@ -34,6 +34,7 @@
                 h.innerHTML = `errors<br>${data.errors + data.crits}`;
                 h.classList.add(thresh(data.errors + data.crits, 0, 0));
                 h.name = 'errors';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
             
@@ -44,6 +45,7 @@
                 h.innerHTML = `alerts<br>${data.alert ? 'yes' : 'none'}`;
                 h.classList.add(thresh(data.alert ? 1 : 0, 0, 0));
                 h.name = 'alerts';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
  
@@ -55,6 +57,7 @@
                 h.innerHTML = `OG eff.<br>${(100*data.dogEfficiency).toFixed(0)}%`;
                 h.classList.add(thresh(data.dogEfficiency, 0.25, 0.5));
                 h.name = 'OGefficiency';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
 
@@ -65,6 +68,7 @@
                 h.innerHTML = `VBD eff.<br>${(100*data.vbdEfficiency).toFixed(0)}%`;
                 h.classList.add(thresh(data.vbdEfficiency, 0.25, 0.4));
                 h.name = 'VBDefficiency';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
 
@@ -75,6 +79,7 @@
                 h.innerHTML = `voltage<br>${(v).toFixed(2)}V`;
                 h.classList.add(thresh(v, 11, 13));
                 h.name = 'volts';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
 
@@ -95,6 +100,7 @@
                     h.innerHTML = `endur.<br><span>${days.toFixed(0)} days</span>`;
                 h.classList.add(thresh(days, 30, 0));
                 h.name = 'endurance';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
 
@@ -105,7 +111,8 @@
                 h.title = `internal pressure slope ${data.internalPressureSlope.toFixed(3)}psi/dv`;
                 h.classList.add(thresh(data.internalPressureSlope, 0.01, 0.005));
                 h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
-                h.name = 'internalPressere'; 
+                h.name = 'internalPressure'; 
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
             else if (data.hasOwnProperty('internalPressure')) {
@@ -113,7 +120,8 @@
                 h.classList.add('indicator');
                 h.innerHTML = `intern P<br>${data.internalPressure.toFixed(2)} psi`;
                 h.classList.add(thresh(data.internalPressure, 12, 10.5));
-                h.name = 'internalPressere'; 
+                h.name = 'internalPressure'; 
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
 
@@ -126,6 +134,7 @@
                 h.classList.add(thresh(data.humiditySlope, 0.2, 0.05));
                 h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
                 h.name = 'humidity';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
             else if (data.hasOwnProperty('humidity')) {
@@ -134,6 +143,7 @@
                 h.classList.add(thresh(data.humidity, 60, 55));
                 h.innerHTML = `humid<br>${data.humidity.toFixed(1)}`;
                 h.name = 'humidity';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
 
@@ -143,6 +153,7 @@
                 h.classList.add(thresh(-data.sm_pitch, 25, 40));
                 h.innerHTML = `pitch<br>${data.sm_pitch.toFixed(1)}`;
                 h.name = 'pitch';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
            
@@ -152,6 +163,7 @@
                 h.classList.add(thresh(data.sm_depth, 2.5, 1.5));
                 h.innerHTML = `depth<br>${data.sm_depth.toFixed(2)}`;
                 h.name = 'depth';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
              
@@ -163,6 +175,7 @@
                 h.innerHTML = `volmax<br><span>${data.impliedVolmaxSlope.toFixed(1)}cc/dv</span>`;
                 h.classList.add(thresh(Math.abs(data.impliedVolmaxSlope), 4, 2));
                 h.name = 'volmax';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
 
@@ -172,6 +185,7 @@
                 h.classList.add('indicator');
                 let callState = data.logout ? "call finished ok" : "call dropped";
                 h.name = 'comms';
+                h.id = 'annunc_' + h.name;
                 if (data.calls == 1 && data.logout) {
                     h.title = 'calls 1, call finished ok';
                     h.innerHTML = 'comms<br>good';
@@ -195,6 +209,7 @@
                 h.innerHTML = `calls ${data.calls}`;
                 h.classList.add(thresh(data.calls, 3, 1));
                 h.name = 'comms';
+                h.id = 'annunc_' + h.name;
                 indicators.push(h);
             }
         
@@ -254,6 +269,6 @@
                 box.insertBefore(h, firstExtra);
             }
 
-            return { 'element': box, 'reds': reds, 'yellows': yellows };
+            return { 'element': box, 'divs': indicators, 'reds': reds, 'yellows': yellows };
     }
 

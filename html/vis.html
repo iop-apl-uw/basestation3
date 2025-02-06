@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="script/plottool.css" />
 <link rel="stylesheet" href="script/spincontrol.css" />
 <link rel="stylesheet" href="script/annunciate.css" />
+<link rel="stylesheet" href="script/loader.css" />
 
 <script src="script/plotly-latest.min.js"></script>
 <script src="script/util.js"></script>
@@ -663,6 +664,7 @@
                     } 
         }
         else {
+            $('waitIndicator').style.display = 'block';
             setVisibility('mainDiv');
             $('diveIndicator').style.display = 'block';
             $('plotlyPopperOuter').style.display = 'block';
@@ -680,9 +682,11 @@
                         popupImage('div', which, currDive, elt); 
                         return false; 
                     } 
+                $('waitIndicator').style.display = 'none';
             })
             .catch(error => {
                 console.log('show plot error'); // error);
+                $('waitIndicator').style.display = 'none';
             });
         }
         currElt = elt;
@@ -2071,12 +2075,18 @@
         }); 
     }
 {% endif %}
-    var indicators = [ { name: 'humidity', entries: [ 'RH' ] },
-                     { name: 'internalPressure', entries: [ 'intP' ] },
-                     { name: 'depth', entries: [ 'depth' ] },
-                     { name: 'pitch', entries: [ 'pitch' ] },
-                     { name: 'comms', entries: [ 'call' ] },
-                     { name: 'volts', entries: [ 'volts' ] } ];
+    var indicators = [ { name: 'humidity',         entries: [ 'RH' ],    link: function() { showPlot('eng', 'mission_int_sensors', true); } },
+                       { name: 'internalPressure', entries: [ 'intP' ],  link: function() { showPlot('eng', 'mission_int_sensors', true); } },
+                       { name: 'depth',            entries: [ 'depth' ], link: function() { showPlot('eng', 'mission_depthangle', true); } },
+                       { name: 'pitch',            entries: [ 'pitch' ], link: function() { showPlot('eng', 'mission_depthangle', true); } },
+                       { name: 'comms',            entries: [ 'call' ],  link: function() { showPlot('eng', 'download_stats', true); } },
+                       { name: 'volts',            entries: [ 'volts' ], link: function() { showPlot('eng', 'mission_energy', true); } },
+                       { name: 'errors',           entries: [],          link: showLog },
+                       { name: 'alerts',           entries: [],          link: showNotifications },
+                       { name: 'OGefficiency',     entries: [],          link: function() { showPlot('dv', 'ctw', true); } },
+                       { name: 'VBDefficiency',    entries: [],          link: function() { showPlot('eng', 'vbd_effic', true); } },
+                       { name: 'endurance',        entries: [],          link: function() { showPlot('eng', 'mission_energy', true); } },
+                       { name: 'volmax',           entries: [],          link: function() { showPlot('eng', 'mission_volmax', true); } } ];
  
                 
     function loadAnnunciators(glider) {
@@ -2092,19 +2102,20 @@
                 return;
             }
 
-            let { element, reds, yellows } = makeAnnunciators(data, 9);
+            let { element, divs, reds, yellows } = makeAnnunciators(data, 9);
             $('annunciators').appendChild(element);
-            console.log(reds);
-            console.log(yellows);
-            console.log(indicators); 
             for (var x of indicators) {
-                if (reds.includes(x.name)) {
-                    $(x.entries[0]).classList.add('indicatorRed');
+                for (var j = 0 ; j < x.entries.length ; j++) {
+                    if (reds.includes(x.name)) {
+                        $(x.entries[j]).classList.add('indicatorRed');
+                    }
+                    else if (yellows.includes(x.name)) {
+                        $(x.entries[j]).classList.add('indicatorYellow');
+                    }
                 }
-                else if (yellows.includes(x.name)) {
-                    $(x.entries[0]).classList.add('indicatorYellow');
-                }
-
+                if (x.link && $('annunc_' + x.name)) {
+                    $('annunc_' + x.name).onclick = x.link;
+                } 
             } 
         });
     } 
@@ -2496,32 +2507,34 @@
             try { 
                 r = JSON.parse(data);
             } catch(e) {
-                console.log('provars ' + e);
-                console.log(text);
+                console.log('recs ' + e);
+                console.log(data);
                 return;
             }
 
-            $('pilotRecsPitchModelBasis').innerHTML  = r.pitch.rec.model;
-            $('pilotRecsFlyingPitchRMSE').innerHTML  = r.pitch.current.rmse.toFixed(2);
-            $('pilotRecsModelPitchRMSE').innerHTML   = r.pitch.rec.rmse.toFixed(2);
-            $('pilotRecsFlyingC_PITCH').innerHTML    = r.pitch.current.C_PITCH.toFixed(0);
-            $('pilotRecsModelC_PITCH').innerHTML     = r.pitch.rec.C_PITCH.toFixed(0);
-            $('pilotRecsFlyingPITCH_GAIN').innerHTML = r.pitch.current.PITCH_GAIN.toFixed(1);
-            $('pilotRecsModelPITCH_GAIN').innerHTML  = r.pitch.rec.PITCH_GAIN.toFixed(1);
-
-            $('pilotRecsFlyingVBDRMSE').innerHTML = r.vbd.current.rmse.toFixed(3);
-            $('pilotRecsFlyingC_VBD').innerHTML   = r.vbd.current.C_VBD.toFixed(0);
-            $('pilotRecsModelC_VBD').innerHTML    = r.vbd.rec.C_VBD.toFixed(0);
-            $('pilotRecsModelVBDRMSE').innerHTML  = r.vbd.rec.rmse.toFixed(3);
-            $('pilotRecsVBDModelBasis').innerHTML = r.vbd.rec.model;
-
-            if ('dive' in r.roll && r.roll.dive) {
+            if (r.pitch) {
+                $('pilotRecsPitchModelBasis').innerHTML  = r.pitch.rec.model;
+                $('pilotRecsFlyingPitchRMSE').innerHTML  = r.pitch.current.rmse.toFixed(2);
+                $('pilotRecsModelPitchRMSE').innerHTML   = r.pitch.rec.rmse.toFixed(2);
+                $('pilotRecsFlyingC_PITCH').innerHTML    = r.pitch.current.C_PITCH.toFixed(0);
+                $('pilotRecsModelC_PITCH').innerHTML     = r.pitch.rec.C_PITCH.toFixed(0);
+                $('pilotRecsFlyingPITCH_GAIN').innerHTML = r.pitch.current.PITCH_GAIN.toFixed(1);
+                $('pilotRecsModelPITCH_GAIN').innerHTML  = r.pitch.rec.PITCH_GAIN.toFixed(1);
+            }
+            if (r.vbd) {
+                $('pilotRecsFlyingVBDRMSE').innerHTML = r.vbd.current.rmse.toFixed(3);
+                $('pilotRecsFlyingC_VBD').innerHTML   = r.vbd.current.C_VBD.toFixed(0);
+                $('pilotRecsModelC_VBD').innerHTML    = r.vbd.rec.C_VBD.toFixed(0);
+                $('pilotRecsModelVBDRMSE').innerHTML  = r.vbd.rec.rmse.toFixed(3);
+                $('pilotRecsVBDModelBasis').innerHTML = r.vbd.rec.model;
+            }
+            if (r.roll && 'dive' in r.roll && r.roll.dive) {
                 $('pilotRecsRollDiveBasis').innerHTML = r.roll.dive.model;
                 $('pilotRecsFlyingC_ROLL_DIVE').innerHTML   = r.roll.current.C_ROLL_DIVE.toFixed(0);
                 $('pilotRecsModelC_ROLL_DIVE').innerHTML    = r.roll.dive.C_ROLL_DIVE.toFixed(0);
             }
             
-            if ('climb' in r.roll && r.roll.climb) {
+            if (r.roll && 'climb' in r.roll && r.roll.climb) {
                 $('pilotRecsRollClimbBasis').innerHTML = r.roll.climb.model;
                 $('pilotRecsFlyingC_ROLL_CLIMB').innerHTML   = r.roll.current.C_ROLL_CLIMB.toFixed(0);
                 $('pilotRecsModelC_ROLL_CLIMB').innerHTML    = r.roll.climb.C_ROLL_CLIMB.toFixed(0);
@@ -3693,6 +3706,15 @@
     <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
     <div id="plotlyPopperOuter">&#x2922;</div>
     <span id="diveIndicator"></span>
+    <div id="waitIndicator" style="display: none;">
+        <div class="loader-container">
+            <div class="bouncing-dots">
+                <div class="dot"></div>
+                <div class="dot dot1"></div>
+                <div class="dot"></div>
+            </div>
+        </div>
+    </div>
     <div id="plotlyPermalink" onclick="showPermalink();">&#x1F517;</div>
     <img id="mainImage" style="mix-blend-mode:multiply;" class="hide">
     <div id="mainDiv" class="mainViewport" style="mix-blend-mode:multiply;" class="hide">
@@ -4079,31 +4101,31 @@
             <col class="statusTableValue">
             <tr>
                 <td>SOG</td><td id="SOG"></td>
-                <td>COG</td><td id="COG"></td>
+                <td class="spanClick" onclick="showPlot('dv', 'ctw', true);">COG</td><td id="COG"></td>
                 <td>last fix</td><td id="lastFix"></td>
             </tr>
             <tr>
-                <td>DOG</td><td id="DOG"></td>
+                <td class="spanClick" onclick="showPlot('dv', 'ctw', true);">DOG</td><td id="DOG"></td>
                 <td>&Delta;t</td><td id="dt"></td>
                 <td>last call</td><td id="lastConnect"></td>
             </tr>
             <tr>
-                <td>pitch</td><td id="pitch"></td>
-                <td>volts</td><td id="volts"></td>
+                <td class="spanClick" onclick="showPlot('eng', 'mission_commlog', true);">pitch</td><td id="pitch"></td>
+                <td class="spanClick" onclick="showPlot('eng', 'mission_commlog', true);">volts</td><td id="volts"></td>
                 <td>next call</td><td id="nextCall"></td>
             </tr>
             <tr>
-                <td>depth</td><td id="depth"></td>
+                <td class="spanClick" onclick="showPlot('eng', 'mission_commlog', true);">depth</td><td id="depth"></td>
                 <td>dive</td><td id="dive"></td>
                 <td>time now</td><td id="currentTime"></td>
             </tr>
             <tr>
-                <td>RH</td><td id="RH"></td>
+                <td class="spanClick" onclick="showPlot('eng', 'mission_commlog', true);">RH</td><td id="RH"></td>
                 <td>cycle</td><td id="cycle"></td>
                 <td>date now</td><td id="currentDate"></td>
             </tr>
             <tr>
-                <td>int P</td><td id="intP"></td>
+                <td class="spanClick" onclick="showPlot('eng', 'mission_commlog', true);">int P</td><td id="intP"></td>
                 <td>call</td><td id="call"></td>
             </tr>
         </table>
