@@ -144,7 +144,7 @@ compress = sanic_gzip.Compress()
 # we use it in filterMission
 publicMissionFields = {"glider", "mission", "status",
                        "started", "ended", "planned",
-                       "orgname", "orglink", "contact", "email",
+                       "orgname", "orglink", "contact", "email", "alert",
                        "project", "link", "comment", "reason"} 
 
 # which modes need full comm.log stream vs just change notices
@@ -2957,7 +2957,7 @@ async def buildMissionTable(app, config=None):
                         "started", "ended", "planned", 
                         "orgname", "orglink", "contact", "email", 
                         "project", "link", "comment", "reason", "endpoints",
-                        "sa", "also", "kml", "sadata",
+                        "sa", "also", "kml", "sadata", "alert"
                       ]
     
     dflts         = x['defaults']

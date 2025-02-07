@@ -203,3 +203,13 @@ const multiSelectWithoutCtrl = ( elem ) => {
   });
 
 }
+
+function changeAlertSound(alertSound) {
+    // set to none or mute to turn off audio alerts
+    if (['bell', 'ping', 'chime', 'beep'].includes(alertSound)) {
+        var scriptTag = document.createElement('script');
+        scriptTag.onload = function() { beep(); };
+        scriptTag.src = 'script/' + alertSound + '.js';
+        document.head.appendChild(scriptTag);
+    }
+}

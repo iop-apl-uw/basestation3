@@ -105,6 +105,7 @@
     }
 
     var mobile = false;
+    var alertOverride = false;
 
     var blurTimer  = false;
     var isBlurred  = false;
@@ -2106,7 +2107,7 @@
                 return;
             }
 
-            let { element, divs, reds, yellows } = makeAnnunciators(data, 9);
+            let { element, divs, reds, yellows } = makeAnnunciators(data, mobile ? 5 : 9);
             $('annunciators').innerHTML = '';
             $('annunciators').appendChild(element);
             for (var x of indicators) {
@@ -2197,6 +2198,9 @@
             console.log('loading parms');
             loadParms(glider); // have to wait for maxDive above to be set
 {% endif %}
+            if ('alert' in data.mission && data.mission.alert && !alertOverride) {
+                changeAlertSound(data.mission.alert);
+            }
         })
         .catch(error => {
             console.log(error);
@@ -3441,15 +3445,10 @@
         if (params.has('alert')) {
             alertSound = params.get('alert');
             localStorage.setItem('alert', alertSound);
+            alertOverride = true;
         }
 
-        // set to none or mute to turn off audio alerts
-        if (['bell', 'ping', 'chime', 'beep'].includes(alertSound)) {
-            var scriptTag = document.createElement('script');
-            scriptTag.onload = function() { beep(); };
-            scriptTag.src = 'script/' + alertSound + '.js';
-            document.head.appendChild(scriptTag);
-        }
+        changeAlertSound(alertSound);
     
         // check local storage to see if user has a 
         // preferred override mode - if so, set it
