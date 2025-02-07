@@ -100,6 +100,10 @@
 
 <script>
 
+    function beep() {
+        console.log('beep');
+    }
+
     var mobile = false;
 
     var blurTimer  = false;
@@ -3430,6 +3434,23 @@
         else if (params.has('desktop'))
             localStorage.setItem('visMode', 'desktop');
 
+        var alertSound = localStorage.getItem('alert');
+        if (alertSound === null)
+            alertSound = '{{ alert }}';
+
+        if (params.has('alert')) {
+            alertSound = params.get('alert');
+            localStorage.setItem('alert', alertSound);
+        }
+
+        // set to none or mute to turn off audio alerts
+        if (['bell', 'ping', 'chime', 'beep'].includes(alertSound)) {
+            var scriptTag = document.createElement('script');
+            scriptTag.onload = function() { beep(); };
+            scriptTag.src = 'script/' + alertSound + '.js';
+            document.head.appendChild(scriptTag);
+        }
+    
         // check local storage to see if user has a 
         // preferred override mode - if so, set it
         let mode = localStorage.getItem('visMode');

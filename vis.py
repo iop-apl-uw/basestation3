@@ -699,7 +699,7 @@ def attachHandlers(app: sanic.Sanic):
         if runMode == MODE_PRIVATE:
             runMode = MODE_PILOT
 
-        return {"runMode": modeNames[runMode], "noSave": request.app.config.NO_SAVE, "noChat": request.app.config.NO_CHAT}
+        return {"runMode": modeNames[runMode], "noSave": request.app.config.NO_SAVE, "noChat": request.app.config.NO_CHAT, "alert": request.app.config.ALERT}
 
     @app.route('/dash')
     # description: dashboard (engineering diagnostic) view of index (all missions) page
@@ -3400,6 +3400,8 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
         app.config.SHIP_UDP = None;
     if 'AUTH_DB' not in app.config:
         app.config.AUTH_DB = "auth.db"
+    if 'ALERT' not in app.config:
+        app.config.ALERT = 'ping'
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
@@ -3425,13 +3427,14 @@ def usage():
     print("  --certs=|-c        certificate file for SSL")
     print("  --ssl|-s           boolean enable SSL")
     print("  --inspector|-i     boolean enable SANIC inspector")
+    print("  --alert|-b         alert sound (bell, ping, chime, beep)")
     print("  --nochat           boolean run without chat support")
     print("  --nosave           boolean run without save support")
     print()
     print("  Environment variables: ")
     print("    SANIC_CERTPATH, SANIC_ROOTDIR, SANIC_SECRET, ")
     print("    SANIC_MISSIONS_FILE, SANIC_USERS_FILE, SANIC_FQDN, ")
-    print("    SANIC_USER, SANIC_SINGLE_MISSION")
+    print("    SANIC_USER, SANIC_SINGLE_MISSION, SANIC_ALERT")
 
 if __name__ == '__main__':
 
@@ -3447,7 +3450,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'a:m:p:o:r:d:f:u:c:w:tsih', ["auth", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
+        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsih', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -3465,6 +3468,8 @@ if __name__ == '__main__':
             overrides['MISSIONS_FILE'] = a
         elif o in ['-u', '--usersfile']:
             overrides['USERS_FILE'] = a
+        elif o in ['-b', '--alert']:
+            overrides['ALERT'] = a
         elif o in ['-w', '--staticfile']:
             overrides['STATIC_FILE'] = a
         elif o in ['--shipudp']:
