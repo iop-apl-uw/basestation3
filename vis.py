@@ -3001,10 +3001,10 @@ async def buildMissionTable(app, config=None):
                         m.update( { mk: mode_dflts[mk] })
                     elif dflts and mk in dflts:
                         m.update( { mk: dflts[mk] })
-                    elif mk in x['organization']:
-                        m.update( { mk: x['organization'][mk] })
                     elif 'mission' in m and m['mission'] and m['mission'] in x['missiondefaults'] and mk in x['missiondefaults'][m['mission']]:
                         m.update( { mk: x['missiondefaults'][m['mission']][mk] })
+                    elif mk in x['organization']:
+                        m.update( { mk: x['organization'][mk] })
                     else:
                         m.update( { mk: None })
 
