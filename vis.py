@@ -2997,14 +2997,14 @@ async def buildMissionTable(app, config=None):
 
             for mk in missionDictKeys:
                 if mk not in m:
-                    if mode_dflts and mk in mode_dflts:
-                        m.update( { mk: mode_dflts[mk] })
-                    elif dflts and mk in dflts:
-                        m.update( { mk: dflts[mk] })
-                    elif 'mission' in m and m['mission'] and m['mission'] in x['missiondefaults'] and mk in x['missiondefaults'][m['mission']]:
+                    if 'mission' in m and m['mission'] and m['mission'] in x['missiondefaults'] and mk in x['missiondefaults'][m['mission']]:
                         m.update( { mk: x['missiondefaults'][m['mission']][mk] })
+                    elif mode_dflts and mk in mode_dflts:
+                        m.update( { mk: mode_dflts[mk] })
                     elif mk in x['organization']:
                         m.update( { mk: x['organization'][mk] })
+                    elif dflts and mk in dflts:
+                        m.update( { mk: dflts[mk] })
                     else:
                         m.update( { mk: None })
 
