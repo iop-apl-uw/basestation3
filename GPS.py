@@ -117,11 +117,19 @@ class GPSFix:
             ):
                 if gps_fields[1] != "" and gps_fields[2] != "":
                     try:
-                        self.datetime = Utils.fix_gps_rollover(
-                            time.strptime(
-                                gps_fields[1] + gps_fields[2][:6], "%d%m%y%H%M%S"
+                        # handle the truncated SMS time stamp
+                        if len(gps_fields[2]) == 4:
+                            self.datetime = Utils.fix_gps_rollover(
+                                time.strptime(
+                                    gps_fields[1] + gps_fields[2], "%d%m%y%H%M"
+                                )
                             )
-                        )
+                        else:
+                            self.datetime = Utils.fix_gps_rollover(
+                                time.strptime(
+                                    gps_fields[1] + gps_fields[2][:6], "%d%m%y%H%M%S"
+                                )
+                            )
                         log_debug(
                             "GPS = %f (%s)"
                             % (time.mktime(self.datetime), self.datetime)
