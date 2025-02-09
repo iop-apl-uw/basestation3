@@ -25,6 +25,7 @@
         <script src="../proxy/https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src/leaflet-reticle.js"></script>
         <script src="../script/websocket.js"></script>
         <script src="../script/util.js"></script>
+        <script src="../script/inferno.js"></script>
 
         <style>
             .leaflet-toggle{
@@ -223,16 +224,31 @@
                    // here we tell the reader what to do when it's done reading...
                    reader.onload = readerEvent => {
                       var content = readerEvent.target.result; // this is the content!
+                      var remap;
                       const lines = content.split('\n');
                       for (var i = 0 ; i < lines.length ; i++) {
                         const pcs = lines[i].split(' ');
-                        addShipTailMarker(parseFloat(pcs[0]), parseFloat(pcs[1]), pcs[2] + ' ' + pcs[3]);
+                        remap = addShipTailMarker(parseFloat(pcs[0]), parseFloat(pcs[1]), pcs[2] + ' ' + pcs[3], pcs.length == 5 ? parseFloat(pcs[4]) : null);
                       }
+                      if (remap)
+                        remapShipTail();
                    }
 
                 }
 
                 input.click();
+            }
+
+            function remapShipTail() {
+                if (shipTailGroup == null) 
+                    return;
+
+                const marks = shipTailGroup.getLayers();
+                for (var i = 0 ; i < marks.length ; i++) {
+                    if (marks[i].heat) {
+                        marks[i].setStyle({color: inferno(marks[i].heat, shipTailHeatMn, shipTailHeatMx) });
+                    }
+                }
             }
 
             function saveTail() {
@@ -313,7 +329,7 @@
                 var m = wind['hourly']['time'].length;
                 var i;
                 var txt = `<a href="https://www.marinetraffic.com/en/ais/home/centerx:${latlng.lng.toFixed(4)}/centery:${latlng.lat.toFixed(4)}/zoom:9" target="_blank">AIS</a> * <a href="https://windy.com?${latlng.lat.toFixed(4)},${latlng.lng.toFixed(4)},8" target="_blank">windy</a><br>`
-                console.log(txt);
+                // console.log(txt);
                 txt = txt + "Forecast for " + formatPos(latlng.lat) + "," + formatPos(latlng.lng) + ',z=' + depth['results'][0]['elevation'] + 'm <table style="text-align:right";>';
                 
                 txt += '<tr style="text-align:center;"><th>UTC</th><th>wind (m/s)</th><th>SWH (m)</th><th>SLP (mbar)</th><th>precip (mm)</th><th>vis (km)</th></tr>';
@@ -396,16 +412,18 @@
                         mk = fnd[0]['mark'];
 
                     if (mk && fnd[0].time != t) {
-                        if (fnd[0].tail.filter((p) => p.time == t).length == 0) {
-                            ta = new L.circleMarker([d.lat, d.lon],
-                                           {
-                                                radius: 1,
-                                                color: colors[d.subcat],
-                                           })
-                                           .bindPopup(html);
+                        if (d.subcat > 0 || shipTailGroup == null) {
+                            if (fnd[0].tail.filter((p) => p.time == t).length == 0) {
+                                ta = new L.circleMarker([d.lat, d.lon],
+                                               {
+                                                    radius: 1,
+                                                    color: colors[d.subcat],
+                                               })
+                                               .bindPopup(html);
 
-                            fnd[0]['tail'].push( { mark: ta, time: t } );
-                            ta.addTo(saTailLayers[i]);
+                                fnd[0]['tail'].push( { mark: ta, time: t } );
+                                ta.addTo(saTailLayers[i]);
+                            }
                         }
                         if (t > fnd[0].time) {
                             mk.setLatLng([d.lat, d.lon]);
@@ -474,8 +492,6 @@
                             if (pcs[9] == 'W') lon = -lon;
                             d.push( { class: pcs[0], id: pcs[1], date: pcs[2], time: pcs[3], subcat: parseInt(pcs[10]), lat: lat, lon: lon });
                         }
-                        else
-                            console.log('skipping ' + lines[i]);
                       }
 
                       if (d.length)  {
@@ -504,9 +520,14 @@
             var shipMarker = null;
             var shipRingsGroup = null;
             var shipRings = null;
-            const shipTailIncrement = 120;
+            const shipTailIncrement = 10;
             var   shipTailCount = 0;
             var shipTailGroup = null;
+            var shipTailHeatMx = -1000000;
+            var shipTailHeatMn = 1000000;
+            var shipTailHeatVal = null;
+
+            var shipTailHeatVal = null;
 
             function setupLocation() {
                 document.getElementById('basicInfo').innerHTML = 'Pos:';
@@ -642,13 +663,34 @@
                 }
                 document.getElementById('routeInfo').innerHTML = html;
             }
-            function addShipTailMarker(la, lo, t) {
+
+            function addShipTailMarker(la, lo, t, hv) {
+                var color = 'black';
+                var remap = false;
+
+                if (hv) {
+                    color = inferno(hv, shipTailHeatMn, shipTailHeatMx);
+                    if (hv > shipTailHeatMx) {
+                        shipTailHeatMx = hv;
+                        console.log('new heat mx ' + hv);
+                        remap = true;
+                    }
+                    if (hv < shipTailHeatMn) {
+                        shipTailHeatMn = hv;
+                        console.log('new heat mn ' + hv);
+                        remap = true;
+                    }
+                }
+
                 var tailMarker = L.circleMarker([la, lo], 
                                            {
-                                                radius: 1,
-                                                color: 'black',
+                                                radius: hv ? 3 : 1,
+                                                fillOpacity: 1,
+                                                color: color,
                                            })
                                            .bindPopup(t);
+
+                tailMarker.heat = hv;
 
                 if (shipTailGroup == null) {
                     shipTailGroup = L.layerGroup( [ tailMarker ]);
@@ -658,7 +700,9 @@
                 else {
                     tailMarker.addTo(shipTailGroup);
                 }
-            }
+
+                return remap;
+            } 
  
             function setupStream() {
                 var loc = window.location, new_uri;
@@ -733,12 +777,17 @@
 
                         if (shipTailCount == 0) {
                             const t = new Date().toISOString().replace('T', ' ').slice(0,-8);
-                            addShipTailMarker(la, lo, t);
+                            if (addShipTailMarker(la, lo, t, shipTailHeatVal))
+                                remapShipTail();
+
                             shipTailCount = shipTailIncrement;
                         }
                         else {
                             shipTailCount --;
                         } 
+                    }
+                    else if ('var' in msg) {
+                        shipTailHeatVal = parseFloat(msg['var']); 
                     }
                     else if ('connected' in msg) {
                         // we don't actually have kml ready yet ...
@@ -834,8 +883,10 @@
             }
 
             function updateShipRings() {
-                for (var i = 0 ; i < shipRings.length ; i++) {
-                    shipRings[i].setLatLng(shipMarker.getLatLng());
+                if (shipRings && shipRings.length) {
+                    for (var i = 0 ; i < shipRings.length ; i++) {
+                        shipRings[i].setLatLng(shipMarker.getLatLng());
+                    }
                 }
             }
 
@@ -954,6 +1005,7 @@
 
                 if (routesLayer != null) { 
                     layerControl.removeLayer(routesLayer);
+                    map.removeLayer(routesLayer);
                 }
 
                 var routesLayer = L.layerGroup(routeMarkers);

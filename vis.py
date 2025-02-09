@@ -2605,6 +2605,7 @@ def attachHandlers(app: sanic.Sanic):
                 msg = await zsock.recv_multipart()
                 topic = msg[0].decode('utf-8')
                 body  = msg[1].decode('utf-8')
+               
                 if '-ship-' in topic: 
                     await ws.send(body)
                 elif '-urls-gpsstr' in topic or '-files' in topic:  
@@ -3253,6 +3254,17 @@ async def watchMonitorPublish(config):
     else:
         udpSock = None
 
+    if config.VAR_UDP is not None:
+        sockNum  = int(config.VAR_UDP.split(',')[0])
+        sanic.log.logger.info(config.VAR_UDP.split(',')[1])
+        # varRE    = re.compile(re.escape(config.VAR_UDP.split(',')[1]))
+        varRE    = re.compile('[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}[ ]+([^,]+)')
+
+        varSock = await asyncudp.create_socket(local_addr=('0.0.0.0', sockNum), packets_queue_max_size=1024, reuse_port=True)
+        sanic.log.logger.info('varSocked opened')
+    else:
+        varSock = None
+
     while True:
         aws = [ asyncio.create_task(messagingSocketWatch(inbound), name='inbound') ]
                 # asyncio.create_task(messagingSocketWatch(configWatchSocket, name='config'),
@@ -3262,6 +3274,9 @@ async def watchMonitorPublish(config):
         if udpSock:
             aws.append(asyncio.create_task(udpSock.recvfrom(), name='udp'))
             sanic.log.logger.info('udp task created')
+        if varSock:
+            aws.append(asyncio.create_task(varSock.recvfrom(), name='var'))
+            sanic.log.logger.info('var task created')
 
         done, pend = await asyncio.wait(aws, return_when=asyncio.FIRST_COMPLETED)
 
@@ -3312,7 +3327,7 @@ async def watchMonitorPublish(config):
             elif name == 'udp':
                 try:
                     data = r
-                    # sanic.log.logger.info(data)
+                    sanic.log.logger.info(data)
                     # print(data)
                     if data:
                         sentences = data[0].decode()
@@ -3339,7 +3354,17 @@ async def watchMonitorPublish(config):
                                 pieces = line.split(',')
                                 msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
 
-                        await zsock.send_multipart(["000-ship-shipname".encode('utf-8'), dumps(msg)])
+                        await zsock.send_multipart(["000-ship-shipgps".encode('utf-8'), dumps(msg)])
+                except:
+                    pass
+
+            elif name == 'var':
+                sanic.log.logger.info(r[0].decode())
+                try:
+                    if m := varRE.match(r[0].decode()):
+                        msg = { 'time': time.time(), 'var': m.group(1) }
+                        sanic.log.logger.info(f'sending {msg}')
+                        await zsock.send_multipart(["000-ship-var".encode('utf-8'), dumps(msg)])
                 except:
                     pass
 
@@ -3398,6 +3423,8 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
         app.config.WEATHERMAP_APPID = ''
     if 'SHIP_UDP' not in app.config:
         app.config.SHIP_UDP = None;
+    if 'VAR_UDP' not in app.config:
+        app.config.VAR_UDP = None;
     if 'AUTH_DB' not in app.config:
         app.config.AUTH_DB = "auth.db"
     if 'ALERT' not in app.config:
@@ -3450,7 +3477,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsih', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp="])
+        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsih', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp=", "varudp="])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -3475,6 +3502,8 @@ if __name__ == '__main__':
         elif o in ['--shipudp']:
             overrides['SHIP_UDP'] = a
             print(f'UDP {a}')
+        elif o in ['--varudp']:
+            overrides['VAR_UDP'] = a
         elif o in ['--shipjson']:
             overrides['SHIP_JSON'] = a
         elif o in ['--nosave']:
