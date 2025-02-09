@@ -102,7 +102,7 @@
 
         <div id="hamDiv" class="hamDiv">
             <ul>
-                <li><span class="spanClick" onclick="reloadSA(); toggleHamburger(); return false;">reload SA</span>
+                 <li><span class="spanClick" onclick="loadSAFromFile(); toggleHamburger(); return false;">load SA from file</span> 
                 <li><span class="spanClick" onclick="clearTail(100); toggleHamburger(); return false;">clear tail (100)</span>
                 <li><span class="spanClick" onclick="clearTail(0); toggleHamburger(); return false;">clear tail (all)</span>
                 <li><span class="spanClick" onclick="saveTail(); toggleHamburger(); return false;">save tail</span>
@@ -357,69 +357,135 @@
                 return str;
             }
         
-            var saLayer = null;
-            var saTimer = null;
-            var saURLs = null;
-            var saLabels = null;
+            var saLayers     = [];
+            var saTailLayers = [];
+            var saAssets     = []; // [ { id: , mark:, time:, tail: [ { mark:, time: } ] } ], 
 
-            async function loadSA(map, layerControl, urls, labels) {
+            function loadSALayer(data, label, i) {
                 const types = ["triangle", "circle", "square", "triangle"];
                 const colors = ["#ff0000", "#00ff00", "#0000ff", "#ff00ff"];
+                var short;
+                var html;
+                var mk, fnd, ta;
+                var t;
+
+                if (saLayers.length <= 0) {
+                    saLayers[i] = new L.layerGroup();
+                    saTailLayers[i] = new L.layerGroup();
+                    layerControl.addOverlay(saLayers[i], label, "overlays"); 
+                    layerControl.addOverlay(saTailLayers[i], label + ' tails', "overlays"); 
+                    saLayers[i].addTo(map);
+                }
+                for (d of data) {
+                    if (d['id'].length > 8)
+                        short = "..." + d['id'].slice(-5);
+                    else
+                        short = d['id'];
+
+                    html = [
+                        d.class + " " + d.id,
+                        formatPos(d.lat) + "," + formatPos(d.lon),
+                        d.date + " " + d.time,
+                    ].join('<br />');
+
+                    t = Date.parse(d.date + 'T' + d.time + 'Z');
+
+                    mk = null;
+                    fnd = saAssets.filter((a) => a.id == short);
+                    if (fnd.length > 0)
+                        mk = fnd[0]['mark'];
+
+                    if (mk && fnd[0].time != t) {
+                        if (fnd[0].tail.filter((p) => p.time == t).length == 0) {
+                            ta = new L.circleMarker([d.lat, d.lon],
+                                           {
+                                                radius: 1,
+                                                color: colors[d.subcat],
+                                           })
+                                           .bindPopup(html);
+
+                            fnd[0]['tail'].push( { mark: ta, time: t } );
+                            ta.addTo(saTailLayers[i]);
+                        }
+                        if (t > fnd[0].time) {
+                            mk.setLatLng([d.lat, d.lon]);
+                            mk.getPopup().setContent(html);
+                            fnd[0].time = t;
+                        }
+                    }
+                    else if (mk == null) {
+                        mk = L.shapeMarker([d.lat, d.lon], 
+                                            {
+                                                shape: types[d.subcat],
+                                                radius: 5,
+                                                color: colors[d.subcat],
+                                            }
+                                           )
+                                            .bindTooltip(short, { permanent: true, className: 'assetLabel' })
+                                            .bindPopup(html);
+
+                        saAssets.push( { mark: mk, id: short, tail: [], time: t } );
+                        mk.addTo(saLayers[i]);
+                    }
+                } 
+            }
+
+
+            async function loadSA(map, layerControl, urls, labels) {
 
                 let resp = await Promise.all(urls.map(url => fetch(url).then(resp => resp.json())));
                 console.log('loading SA');
-                if (saLayer) {
-                    map.removeLayer(saLayer); 
-                    console.log('removed old SA');
-                } 
                 for (var i = 0 ; i < urls.length ; i++) {
                     data = resp[i];
 
-                    var short;
-                    var html;
-                    var ctr = [0,0];
-                    var nctr;
-                    var assetMarkers = [];
+                    loadSALayer(data, labels[i], i);
 
-                    console.log(data);
-                    for (d of data) {
-                        if (d['id'].length > 8)
-                            short = "..." + d['id'].slice(-5);
-                        else
-                            short = d['id'];
-
-                        html = [
-                            d.class + " " + d.id,
-                            formatPos(d.lat) + "," + formatPos(d.lon),
-                            d.date + " " + d.time,
-                        ].join('<br />');
-
-                        assetMarkers.push(L.shapeMarker([d.lat, d.lon], 
-                                                        {
-                                                            shape: types[d.subcat],
-                                                            radius: 5,
-                                                            color: colors[d.subcat],
-                                                        }
-                                                       )
-                                                        .bindTooltip(short, { permanent: true, className: 'assetLabel' })
-                                                        .bindPopup(html));
-                        ctr[0] += d.lon;
-                        ctr[1] += d.lat; 
-                        nctr ++;
-
-                    } 
-                    saLayer = L.layerGroup(assetMarkers);
-                    layerControl.addOverlay(saLayer, labels[i], "overlays"); 
-                    saLayer.addTo(map);
                 }
-                saTimer = setTimeout(function() { loadSA(map, layerControl, urls, labels) }, 300000);
-                saURLs = urls;
-                saLabels = labels; 
+                setTimeout(function() { loadSA(map, layerControl, urls, labels) }, 300000);
             }
 
-            function reloadSA() {
-                if (saTimer) clearTimeout(saTimer);
-                loadSA(map, layerControl, saURLs, saLabels);
+            function loadSAFromFile() {
+                var input = document.createElement('input');
+                input.type = 'file';
+
+                input.onchange = e => { 
+
+                   // getting a hold of the file reference
+                   var file = e.target.files[0]; 
+
+                   // setting up the reader
+                   var reader = new FileReader();
+                   reader.readAsText(file,'UTF-8');
+
+                   // here we tell the reader what to do when it's done reading...
+                   reader.onload = readerEvent => {
+                      var content = readerEvent.target.result; // this is the content!
+                      const lines = content.split('\n');
+                      var k = 0;
+                      var d = [];
+                      var lat, lon;
+ 
+                      for (var i = 0 ; i < lines.length ; i++) {
+                        const pcs = lines[i].split(' ');
+                        if (pcs.length == 11) {
+                            lat = parseFloat(pcs[4]) + parseFloat(pcs[5])/60;
+                            if (pcs[6] == 'S') lat = -lat;
+                            lon = parseFloat(pcs[7]) + parseFloat(pcs[8])/60;
+                            if (pcs[9] == 'W') lon = -lon;
+                            d.push( { class: pcs[0], id: pcs[1], date: pcs[2], time: pcs[3], subcat: parseInt(pcs[10]), lat: lat, lon: lon });
+                        }
+                        else
+                            console.log('skipping ' + lines[i]);
+                      }
+
+                      if (d.length)  {
+                        loadSALayer(d, '/missionsa/1', k);
+                      }
+                   }
+
+                }
+
+                input.click();
             }
 
             var activeRoute    = null;
@@ -436,6 +502,8 @@
             var gliderMarkers  = Object.create(null);
             var usingLocation  = false;
             var shipMarker = null;
+            var shipRingsGroup = null;
+            var shipRings = null;
             const shipTailIncrement = 120;
             var   shipTailCount = 0;
             var shipTailGroup = null;
@@ -460,7 +528,8 @@
                 const locID = navigator.geolocation.watchPosition(
                     (position) => {
                         shipMarker.setLatLng([position.coords.latitude, position.coords.longitude]);
-        
+                        updateShipRings();
+ 
                         const shipLaLo = shipMarker.getLatLng();
 
                         var cog;
@@ -648,6 +717,7 @@
 
                         shipMarker.setLatLng([la, lo]);
                         shipMarker.setRotation(msg['hdt']);
+                        updateShipRings();
 
                         html = [
                           'Pos: ' + formatPos(la) + ',' + formatPos(lo), 
@@ -747,6 +817,25 @@
                     document.getElementById('rangeInfo').innerHTML = html;
                 });
 
+            }
+
+            function setupShipRings(map, layerControl, ranges) {
+                var mk;
+                
+                shipRings = []
+                for (var i = 0 ; i < ranges.length ; i++) {
+                    mk = L.circle(shipMarker.getLatLng(), { radius: ranges[i], color: 'black', fill: false, weight: 1 });
+                    shipRings.push(mk);
+                }
+                shipRingsGroup = L.layerGroup(shipRings);
+                shipRingsGroup.addTo(map);
+                layerControl.addOverlay(shipRingsGroup, 'range rings', "chart"); 
+            }
+
+            function updateShipRings() {
+                for (var i = 0 ; i < shipRings.length ; i++) {
+                    shipRings[i].setLatLng(shipMarker.getLatLng());
+                }
             }
 
             function activateGlider(mk) {
@@ -2143,6 +2232,21 @@
                 else {
                     setupShip(map, layerControl, params.get('ship'), null);
                 }
+            }
+
+            if (params.has('rings')) {
+                var ranges = params.get('rings').split(',');
+                for (var i = 0 ; i < ranges.length ; i++) {
+                    if (ranges[i].includes('nm'))     
+                        ranges[i] = parseFloat(ranges[i].split('n')[0])*1852.0;
+                    else if (ranges[i].includes('km'))
+                        ranges[i] = parseFloat(ranges[i].split('k')[0])*1000.0;
+                    else if (ranges[i].includes('m'))
+                        ranges[i] = parseFloat(ranges[i].split('m')[0]);
+                    else 
+                        ranges[i] = parseFloat(ranges[i]);
+                }
+                setupShipRings(map, layerControl, ranges);
             }
 
             if (params.has('also')) {
