@@ -29,15 +29,11 @@
 
 import pathlib
 
-import pytest
-
-import testutils
-
 import numpy as np
+import pytest
+import testutils
 import xarray as xr
 
-import MakeMissionTimeSeries
-import MakeMissionProfile
 import Reprocess
 
 
@@ -47,11 +43,24 @@ def test_reprocess(caplog):
         pytest.skip(reason=f"{extension_filename} does not exist")
 
     with open(extension_filename) as fi:
-        buffer = fi.read()
-        if "BaseADCP.py" not in buffer:
+        f_found_base_adcp = False
+        f_found_base_adcp_mission = False
+        for line in fi.readlines():
+            if line.startswith("#"):
+                continue
+            if "BaseADCP.py" in line:
+                f_found_base_adcp = True
+                continue
+            if "BaseADCPMission.py" in line:
+                f_found_base_adcp_mission = True
+                continue
+
+        if not f_found_base_adcp:
             pytest.skip(reason=f"BaseADCP.py not installed in {extension_filename}")
-        if "BaseADCPMission.py" not in buffer:
-            pytest.skip(reason=f"BaseADCPMission.py not installed in {extension_filename}")
+        if not f_found_base_adcp_mission:
+            pytest.skip(
+                reason=f"BaseADCPMission.py not installed in {extension_filename}"
+            )
 
     data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24")
     mission_dir = data_dir.joinpath("mission_dir")
@@ -76,7 +85,9 @@ def test_reprocess(caplog):
     )
 
     # Check for variables
-    dsi = xr.load_dataset(mission_dir.joinpath("SG171_EKAMSAT_2024_adcp_profile_timeseries.nc"))
+    dsi = xr.load_dataset(
+        mission_dir.joinpath("SG171_EKAMSAT_2024_adcp_profile_timeseries.nc")
+    )
 
     var_dict = {
         "ad2cp_inv_profile_uocn": np.dtype("float32"),

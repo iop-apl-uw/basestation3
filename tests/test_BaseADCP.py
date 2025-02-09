@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -29,15 +29,13 @@
 
 import pathlib
 
-import pytest
-
-import testutils
-
 import numpy as np
+import pytest
+import testutils
 import xarray as xr
 
-import MakeMissionTimeSeries
 import MakeMissionProfile
+import MakeMissionTimeSeries
 import Reprocess
 
 
@@ -47,7 +45,14 @@ def test_reprocess(caplog):
         pytest.skip(reason=f"{extension_filename} does not exist")
 
     with open(extension_filename) as fi:
-        if "BaseADCP.py" not in fi.read():
+        f_found_base_adcp = False
+        for line in fi.readlines():
+            if line.startswith("#"):
+                continue
+            if "BaseADCP.py" in line:
+                f_found_base_adcp = True
+
+        if not f_found_base_adcp:
             pytest.skip(reason=f"BaseADCP.py not installed in {extension_filename}")
 
     data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24")
@@ -92,7 +97,14 @@ def test_whole_mission(caplog):
         pytest.skip(reason=f"{extension_filename} does not exist")
 
     with open(extension_filename) as fi:
-        if "BaseADCP.py" not in fi.read():
+        f_found_base_adcp = False
+        for line in fi.readlines():
+            if line.startswith("#"):
+                continue
+            if "BaseADCP.py" in line:
+                f_found_base_adcp = True
+
+        if not f_found_base_adcp:
             pytest.skip(reason=f"BaseADCP.py not installed in {extension_filename}")
 
     data_dir = pathlib.Path("testdata/sg171_EKAMSAT_Apr24_with_adcp")
