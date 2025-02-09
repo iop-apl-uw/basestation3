@@ -5,10 +5,6 @@
         <link rel="stylesheet" href="../script/leaflet.css" />
         <link rel="stylesheet" href="../script/leaflet-ruler.css" />
         <link rel="stylesheet" href="../script/easy-button.css" />
-<!--
-        <link rel="stylesheet" href="../script/leaflet-reticle.css" />
--->
-        <link rel="stylesheet" href="../proxy/https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src/leaflet-reticle.css">
         <link rel="stylesheet" href="../script/Control.Coordinates.css" />
         <link rel="stylesheet" href="../script/leaflet.groupedlayercontrol.css" />
         <script src="../script/leaflet.js"></script>
@@ -19,13 +15,58 @@
         <script src="../script/Control.Coordinates.js"></script>
         <script src="../script/leaflet.groupedlayercontrol.js"></script>
         <script src="../script/leaflet.textpath.js"></script>
-<!--
-        <script src="../script/leaflet-reticle.js"></script>
--->
-        <script src="../proxy/https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src/leaflet-reticle.js"></script>
         <script src="../script/websocket.js"></script>
         <script src="../script/util.js"></script>
         <script src="../script/inferno.js"></script>
+        <script src="../script/leaflet-control.js"></script>
+        <script src="../script/leaflet-grids.js"></script>
+
+
+        <script>
+            L.Control.toggle = L.Control.extend({
+                onAdd: function(map) {
+                    this._map = map;
+                    this._container = L.DomUtil.create('div', 'leaflet-bar');
+                    this._container.classList.add('leaflet-toggle');
+                    L.DomEvent.disableClickPropagation(this._container);
+                    L.DomEvent.on(this._container, 'click', this._toggleControl, this);
+                    this._choice = false;
+                    this._defaultCursor = this._map._container.style.cursor;
+                    this._allLayers = L.layerGroup();
+                    this._control = null;
+                    return this._container;
+                },
+
+                onRemove: function(map) {
+                    L.DomEvent.off(this._container, 'click', this._toggleControl, this);
+                    // Nothing more to do here
+                },
+                _toggleControl: function() {
+                    if (this._map.hasLayer(this._control))
+                        this._map.removeLayer(this._control);
+                    else
+                        this._control.addTo(this._map);
+                    /*
+                    if (this._control.style.visibility == "visible")  
+                        this._control.style.visibility = "hidden"; 
+                    else 
+                        this._control.style.visibility = "visible"; 
+                    */
+                    return false;
+                },
+                configure: function(control, image, state) {
+                    this._control = control;
+                    if (this._map.hasLayer(control) && !state) this._map.removeLayer(control);
+                    else if (!this._map.hasLayer(control) && state) control.addTo(this._map);
+                    // control.style.visibility = state ? "visible" : "hidden";
+                    this._container.style.backgroundImage = 'url(' + image + ')';
+                }
+            });
+
+            L.control.toggle = function(opts) {
+                return new L.Control.toggle(opts);
+            }
+        </script>
 
         <style>
             .leaflet-toggle{
@@ -87,6 +128,7 @@
 
         </style>
     </head>
+
     <body onunload="saveBounds();">
         <div style="width: 100vw; height: 100vh" id="map"></div>
 
@@ -116,17 +158,7 @@
         <script type="text/javascript">
             var targetsChannel = null;
             var currentMission = '';
-/*
-            function reckon(pt, range, az) 
-            {
-                const MPD = 111120.0; 
-                var pt2 = [0,0];
 
-                pt2[0] = pt[0] + range*Math.cos(az*Math.PI/180.0)/MPD;
-                pt2[1] = pt[1] + range*Math.sin(az*Math.PI/180.0)/(MPD*Math.cos(pt[0]*Math.PI/180));
-                return pt2;
-            }
-*/
             function xy2magdir(x, y)
             {
                 let mag = Math.sqrt(x*x + y*y);
@@ -135,19 +167,6 @@
                     dir += 360;
 
                 return [mag, dir];
-            }
-
-            function dd2ddmm(x)
-            {
-                var dd = Math.trunc(x);
-                return dd*100.0 + (x - dd)*60.0;
-            }
-
-            function ddmm2dd(x)
-            {
-                var dd = Math.trunc(x/100);
-                var mm = x - dd*100;
-                return dd + mm/60.0;
             }
 
             var needLocationSetup = 0;
@@ -266,14 +285,6 @@
                 const fname = 'shiptail_' + (new Date().toISOString().slice(0,-8)) + '.dat';
                 download(fname, txt);
             }
-
-            function formatPos(dd) {
-                var deg = Math.trunc(dd);
-                var min = Math.abs(dd - deg)*60;
-                var zero = min < 10 ? '0' : '';
-                return (deg + '&deg;' + zero + min.toFixed(3) + '&prime;');
-            }
-
 
             function removeTags(str, tag) {
                 const reStr = `<${tag}.*>.*?<\\\/${tag}>`;
@@ -1803,45 +1814,8 @@
 
         <script type="text/javascript">
 
-            L.Control.toggle = L.Control.extend({
-                onAdd: function(map) {
-                    this._map = map;
-                    this._container = L.DomUtil.create('div', 'leaflet-bar');
-                    this._container.classList.add('leaflet-toggle');
-                    L.DomEvent.disableClickPropagation(this._container);
-                    L.DomEvent.on(this._container, 'click', this._toggleControl, this);
-                    this._choice = false;
-                    this._defaultCursor = this._map._container.style.cursor;
-                    this._allLayers = L.layerGroup();
-                    this._control = null;
-                    return this._container;
-                },
-
-                onRemove: function(map) {
-                    L.DomEvent.off(this._container, 'click', this._toggleControl, this);
-                    // Nothing more to do here
-                },
-                _toggleControl: function() {
-                    if (this._control.style.visibility == "visible")  
-                        this._control.style.visibility = "hidden"; 
-                    else 
-                        this._control.style.visibility = "visible"; 
-
-                    return false;
-                },
-                configure: function(control, image, state) {
-                    this._control = control;
-                    control.style.visibility = state ? "visible" : "hidden";
-                    this._container.style.backgroundImage = 'url(' + image + ')';
-                }
-            });
 
             let params = new URLSearchParams(window.location.search);
-
-            L.control.toggle = function(opts) {
-                return new L.Control.toggle(opts);
-            }
-
 
             // Make basemap
             const map = new L.Map('map', { center: new L.LatLng(47.5, -122.3), zoom: 11 });
@@ -2104,20 +2078,11 @@
             var hamburgerPopup = L.popup().setContent('<ul><li>menu1<li>menu2<li>menu3</ul>');
 
             var hamburgerBtn = L.easyButton('<span class="hamburger" style="font-size: 28px; margin-top: -3px; display: inline-block;">&#8801;</span>', function(btn, map) {
-                // console.log(btn.getPosition());
-                // console.log(btn.getContainer());
-                // hamburgerPopup.setLatLng(map.getCenter()).openOn(map);
                 toggleHamburger(); // btn.getContainer());
             }).addTo(map);
 
             var div = hamburgerBtn.getContainer();
-/*
-            var mnu = document.createElement('div');
-            mnu.classList.add('hamDiv');
-            mnu.innerHTML = '<ul><li>foo1<li>foo2<li>foo3</ul>';
-            mnu.id = 'hamDiv';
-            div.appendChild(mnu);
-*/
+
             // ruler tool
 
             var options = {
@@ -2133,18 +2098,10 @@
             ruler = L.control.ruler(options);
             ruler.addTo(map);
 
-            // reticle
 
-            if (typeof L.control.reticle !== 'undefined') {
-                reticle = L.control.reticle({
-                                                mapId: "map",
-                                                metric: true,
-                                                fetchElevation: false,
-                                            });
-                reticle.addTo(map); 
-                L.control.toggle({ position: 'topleft' }).addTo(map).configure(reticle.canvas, '../script/images/reticle.png', false);
-            } 
-
+            let graticule = L.grids.dms()
+            graticule.addTo(map);
+            L.control.toggle({ position: 'topleft' }).addTo(map).configure(graticule, '../script/images/reticle.png', false);
 
             // layer control
 
@@ -2199,9 +2156,8 @@
             //kmz.load('../proxy/https://usicecenter.gov/File/DownloadCurrent?pId=14', 'Arctic ice edge');
             //kmz.load('../proxy/https://usicecenter.gov/File/DownloadCurrent?pId=22', 'Antarctic ice edge');
 
-            var urls = [];
-            urls.push('../proxykmz/https://usicecenter.gov/File/DownloadCurrent?pId=14');
-            urls.push('../proxykmz/https://usicecenter.gov/File/DownloadCurrent?pId=22');
+            var urls = ['../proxykmz/https://usicecenter.gov/File/DownloadCurrent?pId=14',
+                        '../proxykmz/https://usicecenter.gov/File/DownloadCurrent?pId=22'];
             names = ['Arctic ice edge', 'Antarctic ice edge']
             loadKML(map, layerControl, urls, names);
 
@@ -2319,11 +2275,9 @@
 
             if (params.has('sa')) {
                 let sa = params.get('sa'); 
-                urls = []
-                var labels = []
-                console.log(sa);
-                urls.push('../proxy/https://iop.apl.washington.edu/chart/sa_assets.php?mission=' + sa);
-                labels.push(sa);
+                urls = [ sa ];
+                var labels = [ sa.split('/').slice(-1) ];
+                console.log(sa + ' from query line');
                 loadSA(map, layerControl, urls, labels);
             }
 
