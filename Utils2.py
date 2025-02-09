@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -31,7 +31,7 @@
 """Misc utility routines that require other basestation modules"""
 
 # This is the place for routines that depend on other basestation modules that in turn
-# depend on other modules (with possible circular references).  
+# depend on other modules (with possible circular references).
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -48,6 +48,7 @@ import Utils
 col_ncmeta_map_type = collections.namedtuple(
     "col_ncmeta_map_type", ["nc_var_name", "nc_meta_str"]
 )
+
 
 def read_cnf_file(
     conf_file_name,
@@ -100,9 +101,9 @@ def read_cnf_file(
                 BaseNetCDF.nc_var_metadata[nc_conf_file_name]
             except KeyError:
                 BaseNetCDF.form_nc_metadata(nc_conf_file_name, False, "c")
-            results_d[
-                nc_conf_file_name
-            ] = cnf_file_contents  # save/update cnf file contents
+            results_d[nc_conf_file_name] = (
+                cnf_file_contents  # save/update cnf file contents
+            )
     else:
         if results_d is not None:
             try:
@@ -212,7 +213,7 @@ def extract_calib_consts(dive_nc_file):
     return calib_consts
 
 
-def get_mission_timeseries_name(base_opts, direc=None):
+def get_mission_timeseries_name(base_opts, direc=None, basename="timeseries"):
     ignore_fm = True
     if base_opts:
         mydir = base_opts.mission_dir
@@ -243,7 +244,5 @@ def get_mission_timeseries_name(base_opts, direc=None):
     mission_title = Utils.ensure_basename(calib_consts["mission_title"])
     return os.path.join(
         mydir,
-        "sg%03d_%s_timeseries.nc" % (instrument_id, mission_title),
+        "sg%03d_%s_%s.nc" % (instrument_id, mission_title, basename),
     )
-
-
