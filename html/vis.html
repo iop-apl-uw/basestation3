@@ -1,6 +1,5 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/> 
 
-<link rel="stylesheet" href="script/dialogs.css" />
 {% if runMode == 'pilot' %}
 {% if noChat == false %}
 <link rel="stylesheet" href="script/chat.css" />
@@ -9,6 +8,7 @@
 {% endif %}
 
 <link rel="stylesheet" href="script/base.css" />
+<link rel="stylesheet" href="script/dialogs.css" />
 <link rel="stylesheet" href="script/plottool.css" />
 <link rel="stylesheet" href="script/spincontrol.css" />
 <link rel="stylesheet" href="script/annunciate.css" />
@@ -100,6 +100,7 @@
 
 <script>
 
+    // the default beep is no beep
     function beep() {
         console.log('beep');
     }
@@ -440,7 +441,21 @@
                 openLoginForm(function() { saveControl(force); }, "");
                 return;
             }
-            alert(text);
+            changes = '<table>';
+            other = '';
+            var pcs;
+            for (var line of text.split('\n')) {
+                if (line.includes('will change from')) {
+                    pcs = line.split(' ');
+                    changes = changes + `<tr><td>${pcs[2]}&nbsp;&nbsp;&nbsp;</td><td>${pcs[6]}</td><td>&#10230;</td><td>${pcs[8]}</td></tr>`
+                }
+                else  {
+                    other = other + line + '<br>';
+                }
+            }
+            changes = changes + '</table>';
+            $('alertContents').innerHTML = changes + '<hr>' + other;
+            $('alertPopup').style.display = 'inline-block';    
         })
         .catch(error => {
             alert(error);
@@ -3727,6 +3742,11 @@
     <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
     <div id="plotlyPopperOuter">&#x2922;</div>
     <span id="diveIndicator"></span>
+    <div id="alertPopup" style="display: none;" class="alert-popup">
+        <div id="alertContents">
+        </div>
+        <button type="submit" class="btn" onclick="$('alertPopup').style.display = 'none'; return false;">ok</button>
+    </div>
     <div id="waitIndicator" style="display: none;">
         <div class="loader-container">
             <div class="bouncing-dots">

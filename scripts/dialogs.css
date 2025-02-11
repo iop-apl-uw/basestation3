@@ -89,8 +89,26 @@
       font-size: 1.2rem;
     }
 
+   .alert-popup {
+        display: none;
+        height: min-content;
+        max-height: 90vh;
+        overflow-y: scroll;
+        border: 4px solid black;
+        z-index: 5001;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60%;
+        background: rgba(200, 200, 200, 1.0);
+        justify-content: left;
+        text-align: left;
+        padding: 5px;
+    }
+
     /* Set a style for the submit/login button */
-    .form-login .btn, .about-content .btn {
+    .form-login .btn, .about-content .btn, .alert-popup .btn {
       background-color: #04AA6D;
       color: white;
       border: none;
@@ -126,6 +144,24 @@
       padding-right: 5px;
     }
 
+   .alert-popup {
+        display: none;
+        height: min-content;
+        max-height: 90vh;
+        overflow-y: scroll;
+        border: 4px solid black;
+        z-index: 5001;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 60%;
+        background: rgba(200, 200, 200, 1.0);
+        justify-content: left;
+        text-align: left;
+        padding: 5px;
+    }
+
     label {
         font-size: 1.2rem;
     }
@@ -138,7 +174,7 @@
       font-size: 1.2rem;
     }
 
-    .form-login .btn, .about-content .btn {
+    .form-login .btn, .about-content .btn, .alert-popup .btn {
       background-color: #04AA6D;
       color: white;
       border: none;
@@ -165,6 +201,6 @@
 }
 
 /* Add some hover effects to buttons */
-.form-login .btn:hover, .open-button:hover {
+.form-login .btn:hover, .open-button:hover, .alert-popup .btn:hover {
   opacity: 1;
 } 
