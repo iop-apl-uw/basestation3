@@ -739,7 +739,10 @@ def attachHandlers(app: sanic.Sanic):
         message = {}
 
         if len(request.ctx.ctx.routes):
-            message['routes'] = request.ctx.ctx.routes;
+            message['routes'] = request.ctx.ctx.routes
+
+        if len(request.ctx.ctx.sa):
+            message['sa'] = request.ctx.ctx.sa
 
         a_dicts = []
         for a in request.ctx.ctx.assets.keys():
@@ -992,6 +995,7 @@ def attachHandlers(app: sanic.Sanic):
     async def postHandler(request):
         allowed = [
                    'https://realtime.sikuliaq.alaska.edu/realtime/map',
+                   'https://iopbase3.apl.washington.edu/pos/poll',
                   ]
 
         url = request.json.get('url', None)
@@ -1039,7 +1043,6 @@ def attachHandlers(app: sanic.Sanic):
                    'https://marine.weather.gov/MapClick.php',
                    'https://iop.apl.washington.edu/', 
                    'https://usicecenter.gov/File/DownloadCurrent',
-                   'https://raw.githubusercontent.com/rwev/leaflet-reticle/master/src',
                   ]
 
         found = False
@@ -2856,6 +2859,8 @@ async def buildMissionTable(app, config=None):
         x['assets'] = {}
     if 'routes' not in x:
         x['routes'] = []
+    if 'sa' not in x: # toplevel sa for bare map
+        x['sa'] = []
     if 'domain' not in x:
         x['domain'] = None
     if 'admins' not in x:
@@ -2945,6 +2950,7 @@ async def buildMissionTable(app, config=None):
             app.ctx.pilotgroups = x['pilotgroups']
             app.ctx.users       = x['users']
             app.ctx.groups      = x['groups']
+            app.ctx.sa          = x['sa']
 
         return (missionTable, None, domains)
      
@@ -3061,6 +3067,7 @@ async def buildMissionTable(app, config=None):
         app.ctx.pilotgroups = x['pilotgroups']
         app.ctx.users       = x['users']
         app.ctx.groups      = x['groups']
+        app.ctx.sa          = x['sa']
 
     return (missions, x, domains)
  

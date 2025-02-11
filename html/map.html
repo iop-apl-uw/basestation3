@@ -341,7 +341,7 @@
                 var i;
                 var txt = `<a href="https://www.marinetraffic.com/en/ais/home/centerx:${latlng.lng.toFixed(4)}/centery:${latlng.lat.toFixed(4)}/zoom:9" target="_blank">AIS</a> * <a href="https://windy.com?${latlng.lat.toFixed(4)},${latlng.lng.toFixed(4)},8" target="_blank">windy</a><br>`
                 // console.log(txt);
-                txt = txt + "Forecast for " + formatPos(latlng.lat) + "," + formatPos(latlng.lng) + ',z=' + depth['results'][0]['elevation'] + 'm <table style="text-align:right";>';
+                txt = txt + "Forecast for " + formatPos(dd2ddmm(latlng.lat)) + "," + formatPos(dd2ddmm(latlng.lng)) + ',z=' + depth['results'][0]['elevation'] + 'm <table style="text-align:right";>';
                 
                 txt += '<tr style="text-align:center;"><th>UTC</th><th>wind (m/s)</th><th>SWH (m)</th><th>SLP (mbar)</th><th>precip (mm)</th><th>vis (km)</th></tr>';
                 for (i = 0 ; i < n && i < m && i < 72 ; i += 12) {
@@ -411,7 +411,7 @@
 
                     html = [
                         d.class + " " + d.id,
-                        formatPos(d.lat) + "," + formatPos(d.lon),
+                        formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon)),
                         d.date + " " + d.time,
                     ].join('<br />');
 
@@ -581,7 +581,7 @@
                         prev_shipLaLo = {...shipLaLo};
 
                         html = [
-                          'Pos: ' + formatPos(shipLaLo['lat']) + ',' + formatPos(shipLaLo['lng']), 
+                          'Pos: ' + formatPos(dd2ddmm(shipLaLo['lat'])) + ',' + formatPos(dd2ddmm(shipLaLo['lng'])), 
                           'COG: ' + cog.toFixed(1) + '&deg;',
                           'SOG: ' + (position.coords.speed/0.514).toFixed(2) + ' kts',
                         ].join('<br />');
@@ -606,7 +606,7 @@
                             html = html + '&nbsp;&nbsp; Brg: ' + brng.toFixed(1) + '&deg;' ;
 
                             html = html + '<br />';
-                            html = html + 'Pos: ' + formatPos(lalo['lat']) + ',' + formatPos(lalo['lng']);
+                            html = html + 'Pos: ' + formatPos(dd2ddmm(lalo['lat'])) + ',' + formatPos(dd2ddmm(lalo['lng']));
                             document.getElementById('rangeInfo').innerHTML = html;
                         }
                     }, 
@@ -776,7 +776,7 @@
                         updateShipRings();
 
                         html = [
-                          'Pos: ' + formatPos(la) + ',' + formatPos(lo), 
+                          'Pos: ' + formatPos(dd2ddmm(la)) + ',' + formatPos(dd2ddmm(lo)), 
                           'COG: ' + msg['cog'].toFixed(1) + '&deg;' + '&nbsp;&nbsp;HDT: ' + msg['hdt'].toFixed(1) + '&deg;',
                           'SOG: ' + msg['sog'].toFixed(2) + ' kts',
                         ].join('<br />');
@@ -874,7 +874,7 @@
                     html = html + '&nbsp;&nbsp; Brg: ' + brng.toFixed(1) + '&deg;' ;
 
                     html = html + '<br />';
-                    html = html + 'Pos: ' + formatPos(lalo['lat']) + ',' + formatPos(lalo['lng']);
+                    html = html + 'Pos: ' + formatPos(dd2ddmm(lalo['lat'])) + ',' + formatPos(dd2ddmm(lalo['lng']));
                     document.getElementById('rangeInfo').innerHTML = html;
                 });
 
@@ -1036,7 +1036,7 @@
                     mk = null; 
                     if (a.type == 'fixed') {
                         console.log('adding fixed ' + a.asset);
-                        html = [ a.asset, formatPos(a.lat) + "," + formatPos(a.lon)].join('<br/>');
+                        html = [ a.asset, formatPos(dd2ddmm(a.lat)) + "," + formatPos(dd2ddmm(a.lon))].join('<br/>');
                         try {
                             mk = new L.shapeMarker([a.lat, a.lon],
                                                {
@@ -1098,7 +1098,7 @@
                             .then(d => {
                                 p = d[d.length - 1];
                                     
-                                html = [ aa.asset, formatPos(p['lat']) + "," + formatPos(p['lon']), "@" + new Date(p['t']*1000).toISOString()]
+                                html = [ aa.asset, formatPos(dd2ddmm(p['lat'])) + "," + formatPos(dd2ddmm(p['lon'])), "@" + new Date(p['t']*1000).toISOString()]
                                 if ('BP' in p)
                                     html.push('BP=' + p['BP']);
                                 if ('Ta' in p)
@@ -1172,7 +1172,7 @@
                                 if ('data' in d) {
                                     p = d['data'][d['data'].length - 1];
                                         
-                                    html = [ aa.asset, formatPos(p[2]) + "," + formatPos(p[1]), "@" + new Date(p[0]*1000).toISOString()].join('<br/>');
+                                    html = [ aa.asset, formatPos(dd2ddmm(p[2])) + "," + formatPos(dd2ddmm(p[1])), "@" + new Date(p[0]*1000).toISOString()].join('<br/>');
                                     try {
                                         mk = new L.shapeMarker([p[2], p[1]],
                                                            {
@@ -1249,7 +1249,7 @@
                             .then(d => {
                                 console.log(aa);
                                 if ('lat' in d && 'lon' in d) {
-                                    html = [ aa.asset, formatPos(d.lat) + "," + formatPos(d.lon)].join('<br/>');
+                                    html = [ aa.asset, formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon))].join('<br/>');
                                     if ('sog' in d && 'cog' in d) {
                                         html = html + '<br/>' + d.sog + " @ " + d.cog;
                                     }
@@ -1265,7 +1265,10 @@
                                     layerControl.addOverlay(mk, aa.asset, "assets");
                                     mk.addTo(map);
 
-                                    setupShip(map, layerControl, aa.asset, mk);
+                                    mk.on('click', function(e) {
+                                        activateAsset(this); 
+                                    });
+                                    // setupShip(map, layerControl, aa.asset, mk);
 
                                     if ('interval' in aa && aa.interval > 0) {
 
@@ -1276,7 +1279,7 @@
                                                         })
                                                         .then(resp => resp.json())
                                                         .then(d => {
-                                                            html = [ aa.asset, formatPos(d.lat) + "," + formatPos(d.lon)].join('<br/>');
+                                                            html = [ aa.asset, formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon))].join('<br/>');
                                                             if ('sog' in d && 'cog' in d) { 
                                                                 html = html + '<br/>' + d.sog + " @ " + d.cog;
                                                             }
@@ -1287,7 +1290,7 @@
                                                             }
 
                                                             html = [
-                                                              'Pos: ' + formatPos(d.lat) + ',' + formatPos(d.lon), 
+                                                              'Pos: ' + formatPos(dd2ddmm(d.lat)) + ',' + formatPos(dd2ddmm(d.lon)), 
                                                               'COG: ' + d.cog.toFixed(1) + '&deg;' + '&nbsp;&nbsp;HDT: ' + d.heading.toFixed(1) + '&deg;',
                                                               'SOG: ' + d.sog.toFixed(2) + ' kts',
                                                             ].join('<br />');
