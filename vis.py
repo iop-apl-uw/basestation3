@@ -2608,7 +2608,7 @@ def attachHandlers(app: sanic.Sanic):
                 topic = msg[0].decode('utf-8')
                 body  = msg[1].decode('utf-8')
                
-                if '-ship-' in topic: 
+                if '-chart-' in topic: 
                     await ws.send(body)
                 elif '-urls-gpsstr' in topic or '-files' in topic:  
                     out = loads(body)
@@ -3254,22 +3254,36 @@ async def watchMonitorPublish(config):
 
     (watcher, files) = await buildFilesWatchList(config)
 
-    if config.SHIP_UDP is not None:
-        udpSock = await asyncudp.create_socket(local_addr=('0.0.0.0', int(config.SHIP_UDP)), packets_queue_max_size=1024, reuse_port=True)
-        sanic.log.logger.info('udpSocked opened')
-    else:
-        udpSock = None
+    # read the yml file that controls the data sources that we relay over web socket for the
+    # map when its running in chart mode
+    chart = None
+    if config.CHART is not None and await aiofiles.os.path.exists(config.CHART):
+        async with aiofiles.open(config.CHART, "r") as f:
+            d = await f.read()
+            try:
+                chart = yaml.safe_load(d)
+            except Exception as e:
+                sanic.log.logger.info(f"chart parse error {e}")
+                chart = None
 
-    if config.VAR_UDP is not None:
-        sockNum  = int(config.VAR_UDP.split(',')[0])
-        sanic.log.logger.info(config.VAR_UDP.split(',')[1])
-        # varRE    = re.compile(re.escape(config.VAR_UDP.split(',')[1]))
-        varRE    = re.compile('[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}[ ]+([^,]+)')
+    chartSock = []
+    if chart:
+        if 'data' in chart:
+            for v in chart['data'].keys():
+                if 'udp' in chart['data'][v] and ('regex' in chart['data'][v] or 'format' in chart['data'][v]):
+                    if 'regex' in chart['data'][v]:
+                        rx = re.compile(chart['data'][v]['regex'])
+                    else:
+                        rx = None
 
-        varSock = await asyncudp.create_socket(local_addr=('0.0.0.0', sockNum), packets_queue_max_size=1024, reuse_port=True)
-        sanic.log.logger.info('varSocked opened')
-    else:
-        varSock = None
+                    chartSock.append( { 'sock': await asyncudp.create_socket(local_addr=('0.0.0.0', 
+                                                                                       int(chart['data'][v]['udp'])), 
+                                                                           packets_queue_max_size=1024, reuse_port=True),
+                                      'id': v,
+                                      'regex': rx, 'format': chart['data'][v].get('format') } )
+            # todo - handle serial and json
+                                      
+        # varRE    = re.compile('[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}[ ]+([^,]+)')
 
     while True:
         aws = [ asyncio.create_task(messagingSocketWatch(inbound), name='inbound') ]
@@ -3277,12 +3291,8 @@ async def watchMonitorPublish(config):
         if watcher:
             aws.append(asyncio.create_task(fileWatch(watcher, files), name='files'))
 
-        if udpSock:
-            aws.append(asyncio.create_task(udpSock.recvfrom(), name='udp'))
-            sanic.log.logger.info('udp task created')
-        if varSock:
-            aws.append(asyncio.create_task(varSock.recvfrom(), name='var'))
-            sanic.log.logger.info('var task created')
+        for s in chartSock:
+            aws.append(asyncio.create_task(s['sock'].recvfrom(), name=s['id']))
 
         done, pend = await asyncio.wait(aws, return_when=asyncio.FIRST_COMPLETED)
 
@@ -3330,49 +3340,47 @@ async def watchMonitorPublish(config):
                 sanic.log.logger.info(f"{files[fname]['glider']:03d}-file-{files[fname]['file']}, {sz}")
                 await zsock.send_multipart(msg)
 
-            elif name == 'udp':
-                try:
-                    data = r
-                    sanic.log.logger.info(data)
-                    # print(data)
-                    if data:
-                        sentences = data[0].decode()
-                        msg = { 'ship': 'shipname', 'time': time.time() }
-                        for line in sentences.splitlines():
-                            if 'GGA' in line:
-                                pieces = line.split(',')
-                                msg['hhmmss'] = float(pieces[1])
-                                msg['lat'] = float(pieces[2])
-                                msg['lon'] = float(pieces[4])
-                                if (pieces[3] == 'S'):
-                                    msg['lat'] = -msg['lat']
-                                if (pieces[5] == 'W'):
-                                    msg['lon'] = -msg['lon']
+            elif len(chartSock):
+                for v in chartSock:
+                    if name == v['id']:
+                        if v['format'] == 'nmea':
+                            try:
+                                data = r
+                                if data:
+                                    sentences = data[0].decode()
+                                    msg = { 'ship': v['id'], 'time': time.time() }
+                                    for line in sentences.splitlines():
+                                        if 'GGA' in line:
+                                            pieces = line.split(',')
+                                            msg['hhmmss'] = float(pieces[1])
+                                            msg['lat'] = float(pieces[2])
+                                            msg['lon'] = float(pieces[4])
+                                            if (pieces[3] == 'S'):
+                                                msg['lat'] = -msg['lat']
+                                            if (pieces[5] == 'W'):
+                                                msg['lon'] = -msg['lon']
 
-                            elif 'HDT' in line:
-                                pieces = line.split(',')
-                                msg['hdt'] = float(pieces[1])
-                            elif 'VTG' in line:
-                                pieces = line.split(',')
-                                msg['cog'] = float(pieces[1])
-                                msg['sog'] = float(pieces[5])
-                            elif 'ZDA' in line:
-                                pieces = line.split(',')
-                                msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
+                                        elif 'HDT' in line:
+                                            pieces = line.split(',')
+                                            msg['hdt'] = float(pieces[1])
+                                        elif 'VTG' in line:
+                                            pieces = line.split(',')
+                                            msg['cog'] = float(pieces[1])
+                                            msg['sog'] = float(pieces[5])
+                                        elif 'ZDA' in line:
+                                            pieces = line.split(',')
+                                            msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
 
-                        await zsock.send_multipart(["000-ship-shipgps".encode('utf-8'), dumps(msg)])
-                except:
-                    pass
-
-            elif name == 'var':
-                sanic.log.logger.info(r[0].decode())
-                try:
-                    if m := varRE.match(r[0].decode()):
-                        msg = { 'time': time.time(), 'var': m.group(1) }
-                        sanic.log.logger.info(f'sending {msg}')
-                        await zsock.send_multipart(["000-ship-var".encode('utf-8'), dumps(msg)])
-                except:
-                    pass
+                                    await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
+                            except:
+                                pass
+                        elif v['regex']:
+                            try:
+                                if m := v['regex'].match(r[0].decode()):
+                                    msg = { 'time': time.time(), 'var': m.group(1) }
+                                    await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
+                            except:
+                                pass
 
         if len(pend) > 0:
             for task in pend:
@@ -3427,10 +3435,8 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
         app.config.SINGLE_MISSION = None
     if 'WEATHERMAP_APPID' not in app.config:
         app.config.WEATHERMAP_APPID = ''
-    if 'SHIP_UDP' not in app.config:
-        app.config.SHIP_UDP = None;
-    if 'VAR_UDP' not in app.config:
-        app.config.VAR_UDP = None;
+    if 'CHART' not in app.config:
+        app.config.CHART = None;
     if 'AUTH_DB' not in app.config:
         app.config.AUTH_DB = "auth.db"
     if 'ALERT' not in app.config:
@@ -3483,7 +3489,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsih', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "shipudp=", "varudp="])
+        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsih', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "chart=" ])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -3505,13 +3511,8 @@ if __name__ == '__main__':
             overrides['ALERT'] = a
         elif o in ['-w', '--staticfile']:
             overrides['STATIC_FILE'] = a
-        elif o in ['--shipudp']:
-            overrides['SHIP_UDP'] = a
-            print(f'UDP {a}')
-        elif o in ['--varudp']:
-            overrides['VAR_UDP'] = a
-        elif o in ['--shipjson']:
-            overrides['SHIP_JSON'] = a
+        elif o in ['--chart']:
+            overrides['CHART'] = a
         elif o in ['--nosave']:
             noSave = True
         elif o in ['--nochat']:
