@@ -1,11 +1,35 @@
     var loginCallback = null;
 
+    function testCapsLock(e) {
+        if(e.code === "CapsLock"){
+            let state = e.getModifierState("CapsLock");
+            if (state) $('capLockIndicator').style.display = "inline"; 
+            else $('capLockIndicator').style.display       = "none";
+        }
+    }
+
+    function capsLockOn(e) {
+        if (e.code == 'CapsLock' && e.getModifierState("CapsLock") == false)
+            $('capLockIndicator').style.display = "inline"; 
+        else if (e.code != 'CapsLock' && e.getModifierState("CapsLock") == true)
+            $('capLockIndicator').style.display = "inline"; 
+        else
+            $('capLockIndicator').style.display = "none"; 
+    }
+
+    function capsLockOff(e) {
+        console.log('up ' + e.code + ' ' + e.getModifierState("CapsLock"));
+    }
+
     function openLoginForm(callback, header) {
         $('loginHeader').innerHTML = header ? header : '';
         $('loginForm').style.display = "block";
         if ($('chkHavePilotCode').checked) {
             $('txtCode').style.display = "block";
         }
+
+        $('inpPassword').addEventListener("keydown", capsLockOn);
+//        $('inpPassword').addEventListener("keyup", capsLockOff); 
         loginCallback = callback;
     }
 

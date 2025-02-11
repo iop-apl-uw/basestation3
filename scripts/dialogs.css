@@ -6,7 +6,7 @@
   top: 3vh;
   left: 5vh;
   border: 2px solid #555;
-  z-index: 200;
+  z-index: 10000;
   background-color: #777;
 }
 
@@ -44,6 +44,8 @@
 #searchGlider { grid-area: searchGlider; }
 #searchSubmitBtn { grid-area: searchSubmitBtn; }
 #searchCancelBtn { grid-area: searchCancelBtn; }
+
+#capLockIndicator { font-size: 0.8rem; }
 
 @media (pointer: coarse)  {
 

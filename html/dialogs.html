@@ -17,8 +17,8 @@
     <label for="username"><b>Username</b></label>
     <input type="text" placeholder="Enter username" name="username" required>
 
-    <label for="password"><b>Password</b></label>
-    <input type="password" placeholder="Enter password" name="password" required>
+    <div><span style="font-size: 1.2rem;"><b>Password</b></span><span id="capLockIndicator" style="display: none;">&nbsp;&nbsp;&nbsp;(CapsLock is on)</span></div>
+    <input type="password" placeholder="Enter password" name="password" id="inpPassword" required>
     <label><input type="checkbox" id="chkHavePilotCode" onchange="toggleCode();">I have a code</label>
     <input type="text" name="code" id="txtCode" placeholder="Enter code" style="display: none;">
 
