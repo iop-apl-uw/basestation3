@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2022, 2023, 2024 by University of Washington.  All rights reserved.
+## Copyright (c) 2022, 2023, 2024, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -127,7 +127,10 @@ def plot_pitch_roll(
 
         # SG eng time base
         sg_time = dive_nc_file.variables["time"][:]
-        depth = dive_nc_file.variables["depth"][:]
+        if "depth" in dive_nc_file.variables:
+            depth = dive_nc_file.variables["depth"][:]
+        else:
+            depth = dive_nc_file.variables["eng_depth"][:] / 100.0
         vehicle_pitch_degrees_v = dive_nc_file.variables["eng_pitchAng"][:]
         vehicle_roll_degrees_v = dive_nc_file.variables["eng_rollAng"][:]
         vehicle_head_degrees_v = dive_nc_file.variables["eng_head"][:]
