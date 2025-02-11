@@ -17,7 +17,7 @@
         <script src="../script/leaflet.textpath.js"></script>
         <script src="../script/websocket.js"></script>
         <script src="../script/util.js"></script>
-        <script src="../script/inferno.js"></script>
+        <script src="../script/colormaps.js"></script>
         <script src="../script/leaflet-control.js"></script>
         <script src="../script/leaflet-grids.js"></script>
 
@@ -265,7 +265,7 @@
                 const marks = shipTailGroup.getLayers();
                 for (var i = 0 ; i < marks.length ; i++) {
                     if (marks[i].heat) {
-                        marks[i].setStyle({color: inferno(marks[i].heat, shipTailHeatMn, shipTailHeatMx) });
+                        marks[i].setStyle({color: colormap('turbo', marks[i].heat, shipTailHeatMn, shipTailHeatMx) });
                     }
                 }
             }
@@ -279,7 +279,9 @@
                 for (var i = 0 ; i < marks.length ; i++) {
                     lalo = marks[i].getLatLng();
                     lbl  = marks[i].getPopup()._content;
-                    txt = txt + lalo.lat + ' ' + lalo.lng + ' ' + lbl + '\n';
+                    txt = txt + lalo.lat + ' ' + lalo.lng + ' ' + lbl;
+                    if (marks[i].heat) txt = txt + ' ' + marks[i].heat;
+                    txt = txt + '\n';
     
                 }
                 const fname = 'shiptail_' + (new Date().toISOString().slice(0,-8)) + '.dat';
@@ -532,12 +534,10 @@
             var shipRingsGroup = null;
             var shipRings = null;
             const shipTailIncrement = 10;
-            var   shipTailCount = 0;
+            var shipTailCount = 0;
             var shipTailGroup = null;
             var shipTailHeatMx = -1000000;
             var shipTailHeatMn = 1000000;
-            var shipTailHeatVal = null;
-
             var shipTailHeatVal = null;
 
             function setupLocation() {
@@ -679,8 +679,11 @@
                 var color = 'black';
                 var remap = false;
 
+                if (!la || !lo)
+                    return false;
+ 
                 if (hv) {
-                    color = inferno(hv, shipTailHeatMn, shipTailHeatMx);
+                    color = colormap('turbo', hv, shipTailHeatMn, shipTailHeatMx);
                     if (hv > shipTailHeatMx) {
                         shipTailHeatMx = hv;
                         console.log('new heat mx ' + hv);

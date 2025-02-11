@@ -509,7 +509,6 @@ def attachHandlers(app: sanic.Sanic):
         x = {}
 
     for route in list(x.keys()):
-        print(x[route])
         if 'route' in x[route] and 'path' in x[route]:
             if 'index' in x[route]:
                 app.static(x[route]['route'], x[route]['path'], name=route, index=x[route]['index'])
