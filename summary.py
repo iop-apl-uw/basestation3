@@ -99,11 +99,18 @@ async def collectSummary(glider, path):
             i = i - 1;
 
         session = commlog.sessions[i]
-   
+  
+    prev_connected = None
+ 
     if ongoing_session and ongoing_session.connect_ts:
         connected    = time.mktime(ongoing_session.connect_ts)
+        if session and session.connect_ts:
+            prev_connected = time.mktime(session.connect_ts)
+
     elif session and session.connect_ts:
         connected    = time.mktime(session.connect_ts)
+        if i > 0 and commlog.sessions[i-1] and commlog.sessions[i-1].connect_ts:
+            prev_connected = time.mktime(commlog.sessions[i-1].connect_ts)
     else:
         connected = None
     
@@ -226,7 +233,14 @@ async def collectSummary(glider, path):
     out['dive'] = int(data['dive'])
     out['length'] = int(data['log_gps_time']) - int(data['log_start'])
     out['end']  = int(data['log_gps_time'])
-    out['next'] = int(data['log_gps_time']) + out['length'] # + (int(data['log_gps2_time']) - int(data['log_gps1_time]'))
+
+    if recovery and commDirective == 'RESUME' and 'fix' in out:
+        out['next'] = out['fix'] + out['length'] # + (int(data['log_gps2_time']) - int(data['log_gps1_time]'))
+    elif recovery and connected and prev_connected:
+        out['next'] = out['fix'] + connected - prev_connected
+    else:
+        out['next'] = out['end'] + out['length'] # + (int(data['log_gps2_time']) - int(data['log_gps1_time]'))
+    
 
     out['dmg'] = data['distance_made_good']
     out['dog'] = data['distance_over_ground']
