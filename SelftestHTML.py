@@ -530,7 +530,7 @@ function reload() {
         if not gotHeader:
             pcs = line.split()
             glider   = pcs[0]
-            testnum = pcs[1]
+            testnum = int(pcs[1])
             capname   = pcs[2]
             logname   = capname.replace('cap', 'log')
             paramValues = await parms.read('./', capfile=capname)
@@ -743,8 +743,8 @@ function reload() {
         else:
             format(line)
        
-    capname = os.path.join(base, f'pt{sgnum:03d}{num:04d}.cap')
-    logname = os.path.join(base, f'pt{sgnum:03d}{num:04d}.cap')
+    capname = os.path.join(base, f'pt{sgnum:03d}{testnum:04d}.cap')
+    logname = os.path.join(base, f'pt{sgnum:03d}{testnum:04d}.log')
     prmname = os.path.join(base, f'p{sgnum:03d}0000.prm')
 
     local_canon = os.path.join(base, '.canonicals')
@@ -766,6 +766,7 @@ function reload() {
             x = compare.compare(canonname, logname)
             xname = 'log file ' + os.path.basename(logname)
     else:
+        print('no cap ' + capname)
         x = None
 
     avail = compare.availableCanons()
