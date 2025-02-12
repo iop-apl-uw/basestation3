@@ -3377,7 +3377,7 @@ async def watchMonitorPublish(config):
                         elif v['regex']:
                             try:
                                 if m := v['regex'].match(r[0].decode()):
-                                    msg = { 'time': time.time(), 'var': m.group(1) }
+                                    msg = { 'time': time.time(), v['id']: [ float(x.strip()) for x in m.groups() ] }
                                     await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
                             except:
                                 pass

@@ -12,11 +12,17 @@
 			fill: true,
 			shape: 'triangle',
 			radius: 10,
+            scale: 1.0,
 			rotation: 0
 		},
 
 		setRadius: function (radius) {
 			this.options.radius = radius;
+			return this.redraw();
+		},
+
+		setScale: function (scale) {
+			this.options.scale = scale;
 			return this.redraw();
 		},
 
@@ -57,6 +63,7 @@
 			var s = layer.options.radius;
 			var shape = layer.options.shape;
 			var rotation = layer.options.rotation;
+            var scale = layer.options.scale;
 
 			layer._path.setAttribute('transform', `rotate(${rotation},${p.x},${p.y})`);
 
@@ -86,6 +93,10 @@
 			}
 			if (shape === "arrow1d") {
 				var d = "M " + (p.x + 3) + " " + (p.y + (1.3*s)) + " L " + (p.x) + " " + (p.y - (1.3*s)) + " L " + (p.x - 3) + " " + (p.y + (1.3*s)) + " L " + (p.x) + " " + (p.y + (0.5 * s)) + " L " + (p.x + 3) + " " + (p.y + (1.3*s)) + " Z";
+				this._setPath(layer, d);
+			}
+			if (shape === "arrowline") {
+				var d = "M " + (p.x + 3) + " " + (p.y + 2*s + (1.3*s)) + " L " + (p.x) + " " + (p.y + 2*s + - (1.3*s)) + " L " + (p.x - 3) + " " + (p.y + 2*s + (1.3*s)) + " L " + (p.x - 0.2) + " " + (p.y + 2*s + (0.5 * s)) + " L " + (p.x - 0.2) + " " + (p.y + 2*s + (3.5 * s * scale)) + " L " + (p.x + 0.2) + " " + (p.y + 2*s + (3.5 * s * scale)) + " L " + (p.x + 0.2) + " " + (p.y + 2*s + (0.5 * s)) + " L " + (p.x + 3) + " " + (p.y + 2*s + (1.3*s)) +   " Z";
 				this._setPath(layer, d);
 			}
 			if (shape === "arrowhead-down") {
