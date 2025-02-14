@@ -1382,10 +1382,11 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/parmdata/<glider:int>/<dive:int>')
     @authorized()
     async def parmdataHandler(request, glider:int, dive:int):
-        logfile = f'{gliderPath(glider, request)}/{glider:03d}{dive:04d}.log'
+        logfile = f'{gliderPath(glider, request)}/p{glider:03d}{dive:04d}.log'
         cmdfile = f'{gliderPath(glider, request)}/cmdfile'
+        dbfile = f'{gliderPath(glider, request)}/sg{glider:03d}.db'
         try:
-            o = await parms.state(None, logfile=logfile, cmdfile='cmdfile')
+            o = await parms.state(None, logfile=logfile, cmdfile=cmdfile, dbfile=dbfile)
         except Exception as e:
             print(e)
             return sanic.response.json({'error': f'no parms {e}'})
@@ -1568,6 +1569,8 @@ def attachHandlers(app: sanic.Sanic):
                 message['data'] = await Utils.readTargetsFile(filename)
             elif which == 'science':
                 message['data'] = await Utils.readScienceFile(filename)
+        else:
+            message['contents'] = ''
         
         return sanic.response.json(message)
 

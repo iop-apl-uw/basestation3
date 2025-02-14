@@ -55,6 +55,9 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
                 for p in d:
                     if 'log_' + p in latest:
                         d[p]['current'] = latest['log_' + p]
+
+                if 'log_SENSORS' in latest:
+                    d['SENSORS'] = latest['log_SENSORS'].split(',')
             except:
                 pass
     
@@ -67,10 +70,16 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
                         v = m.groupdict()['value']
                         if p in d:
                             if d[p]['type'] == 'INT':
-                                n = int(v)
+                                try:
+                                    n = int(v)
+                                except:
+                                    continue
                             else:
-                                n = float(v)
-                            
+                                try:
+                                    n = float(v)
+                                except:
+                                    continue
+ 
                             if d[p]['current'] != n:
                                 d[p]['waiting'] = n
         except:

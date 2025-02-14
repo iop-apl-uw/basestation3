@@ -638,6 +638,8 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
     nm = extractStr(nci.variables["log_TGT_NAME"])
     insertColumn(dive, cur, "target_name", nm, "TEXT")
+    insertColumn(dive, cur, "log_SENSORS", extractStr(nci.variables["log_SENSORS"]), "TEXT")
+
     # Fails here
     try:
         for pwr_type in ("SENSOR", "DEVICE"):

@@ -368,7 +368,14 @@
 {% if runMode == 'pilot' %}
             else if (line.startsWith('FILE=')) {
                 json = JSON.parse(line.slice(5));
+                if (controlFileIsDirty(json['file'])) {
+                    let conf = confirm(`${json['file']} has been changed on the basestation, overwrite your changes with those?`);
+                    if (conf == false)
+                        return;
+                }
+
                 $(json['file']).value = json['body'];
+                controlFileMarkClean(json['file']);
                 if (json['file'] == 'science') {
                 }
                 else if (json['file'] == 'targets' && 'data' in json) {
@@ -376,7 +383,7 @@
                 }
                 else if (json['file'] == 'cmdfile') {
                     console.log('loaded cmdfile, updating parms');
-                    updateParmsFromCmdfile();
+                    updateParmsFromCmdfile(true);
                 } 
             }
             else { // new comm.log content comes unprefixed
@@ -463,6 +470,9 @@
             }
             changes = formatValidatorChanges(text);
             openMessagePopup(changes, null);
+            if (changes.includes("saved ok")) {
+                controlFileMarkClean(file);
+            }
         })
         .catch(error => {
             alert(error);
@@ -529,6 +539,20 @@
         return false;
     }
 
+    var controlFileDirty = {};
+    function controlFileMarkDirty(which) {
+        controlFileDirty[which] = true;
+    }
+    function controlFileMarkClean(which) {
+        controlFileDirty[which] = false;
+    }
+    function controlFileIsDirty(which) {
+        if (which in controlFileDirty && controlFileDirty[which] == true)
+            return true;
+        else
+            return false;
+    }
+
     function loadControlFile(file) {
         fetch(`control/${currGlider}/${file}${mission()}`)
         .then(res => res.text())
@@ -550,6 +574,7 @@
 
             if ('file' in data && data['file'] == file) {
                 $(file).value = data['contents'];
+                console.log(file + '=' + data['contents']);
                 if (file == 'science') {
                     initScienceFileTable('data' in data ? data['data'] : null);
                 }
@@ -559,11 +584,16 @@
                 }
                 if (file == 'cmdfile') {
                     console.log('updated cmdfile value, updating parms');
-                    updateParmsFromCmdfile();
+                    updateParmsFromCmdfile(true);
                 }
             }
             if ('dive' in data && data['dive'] > -1) {
-                controlFileDive[file] = data['dive'];
+                if ('call' in data && data['call'] > -1) {
+                    controlFileDive[file] = `${data['dive']}.${data['call']}`;
+                }
+                else {
+                    controlFileDive[file] = `${data['dive']}`;
+                }
             }
 
         })
@@ -591,7 +621,7 @@
         }
 
         if (file in controlFileDive) {
-            $('fileDive').innerHTML = '(' + controlFileDive[file] + ')';
+            $('fileDive').innerHTML = '.' + controlFileDive[file];
             $('fileDive').removeAttribute('hidden');
         }
         else {
@@ -1907,7 +1937,7 @@
 
     const directives = ['GO', 'RESUME', 'QUIT'];
       
-    function updateParmsFromCmdfile() {
+    function updateParmsFromCmdfile(wholeFile) {
         const re = /\$([A-Z][A-Z0-9_]+),([+-]?([0-9]*[.])?[0-9]+)/;
         let text = $('cmdfile').value.trim().split('\n');
         var pcs;
@@ -1961,6 +1991,7 @@
         newtext.push(directive);
         console.log('new');
         console.log(newtext);
+        controlFileMarkDirty('cmdfile');
         $('cmdfile').value = newtext.join('\n');
     }
 
@@ -2020,35 +2051,32 @@
         $('paramInput_' + w).title = 'was ' + $('paramInput_' + w).value;
         $('paramInput_' + w).style.fontWeight = "bold";
     }
-    function paramInputChange(w) {
-        var prev = parms[w]['current'];
-        markChanged(w);
-        parms[w]['current'] = $('paramInput_' + w).value;
-        updateCmdfileFromParm(w);
-
+    function checkLinkedChanges(w, prev) {
         if ($('selLinkChanges').checked == false || (w != 'T_DIVE' && w != 'D_TGT')) {
             return;
         }
+
         console.log('linking');
-        var prev_t = w == 'T_DIVE' ? prev : parseFloat(parms['T_DIVE']['current']);
-        var prev_d = w == 'D_TGT' ? prev : parseFloat(parms['D_TGT']['current']);
+
+        var prev_t = w == 'T_DIVE' ? prev : parms['T_DIVE']['current'];
+        var prev_d = w == 'D_TGT' ? prev : parms['D_TGT']['current'];
         var ratio = prev_d / prev_t;
-        console.log(ratio);
+        console.log(parms['T_DIVE'])
+        console.log(parms['D_TGT'])
+        console.log('ratio = ' + ratio);
+        
         if (w == 'T_DIVE') {
             
-            // $('paramInput_D_TGT').onchange = null;
             markChanged('D_TGT');
             $('paramInput_D_TGT').value = (ratio*parseFloat($('paramInput_T_DIVE').value)).toFixed(0);
-            console.log($('paramInput_D_TGT').value);
+            console.log('D_TGT = ' + $('paramInput_D_TGT').value);
             updateCmdfileFromParm('D_TGT');
-            // $('paramInput_D_TGT').onchange = function() { paramInputChange('D_TGT'); };
         }
         else {
-            // $('paramInput_T_DIVE').onchange = null;
             markChanged('T_DIVE');
             $('paramInput_T_DIVE').value = (parseFloat($('paramInput_D_TGT').value)/ratio).toFixed(0);
+            console.log('T_DIVE = ' + $('paramInput_T_DIVE').value);
             updateCmdfileFromParm('T_DIVE');
-            // $('paramInput_T_DIVE').onchange = function() { paramInputChange('T_DIVE'); };
         }
 
         prev_t = parseFloat($('paramInput_T_DIVE').value);
@@ -2059,12 +2087,22 @@
         updateCmdfileFromParm('T_MISSION');
         parms['T_DIVE']['current'] = prev_t; 
         parms['D_TGT']['current'] = prev_d; 
-        parms['T_MISSION']['current'] = $('paramInput_T_MISSION').value;
+        parms['T_MISSION']['current'] = parseFloat($('paramInput_T_MISSION').value);
         if (parseFloat($('paramInput_D_ABORT').value) < prev_d) {
             markChanged('D_ABORT');
-            parms['D_ABORT']['current'] = $('paramInput_D_ABORT').value = prev_d + 25;
+            parms['D_ABORT']['current'] = prev_d + 25;
+            $('paramInput_D_ABORT').value = parms['D_ABORT']['current'].toFixed(0);
             updateCmdfileFromParm('D_ABORT');
         }
+    }
+
+    function paramInputChange(w) {
+        var prev = parms[w]['current'];
+        markChanged(w);
+        parms[w]['current'] = parseFloat($('paramInput_' + w).value);
+        updateCmdfileFromParm(w);
+
+        checkLinkedChanges(w, prev);
 
     }
     function addParamInput(g, p, v, h, b, m) {
@@ -2171,8 +2209,12 @@
             }
 
             for (p of Object.keys(parms)) {
+                console.log(p);
                 parms[p]['original'] =  parms[p]['current'];
             }
+            console.log('after setting originals');
+            console.log(parms['T_DIVE']);
+            console.log(parms['D_TGT']);
 
             for (g of Object.keys(order)) {
                 for (p of order[g]) {
@@ -2198,10 +2240,18 @@
                 }
             }
 
+            console.log('after load');
+            console.log(parms['T_DIVE']);
+            console.log(parms['D_TGT']);
             loadControlFile('cmdfile');
             loadControlFile('science');
             loadControlFile('targets');
 
+            console.log('after load 2');
+            console.log(parms['T_DIVE']);
+            console.log(parms['D_TGT']);
+
+            
             // initScienceFileTable();
         }); 
     }
@@ -4289,14 +4339,14 @@
 
     <div id="divCmdfile">
         <div id="cmdfileEditClose" style="display:none;" onclick="defocusEditWindow(); return false;"><b>&#10060;</b></div>
-        <textarea id="cmdfile" class="editFile" oncontextmenu="parameterHelp('cmdfile'); return false;" oninput="updateParmsFromCmdfile(); return false;" >
+        <textarea id="cmdfile" class="editFile" oncontextmenu="parameterHelp('cmdfile'); return false;" oninput="updateParmsFromCmdfile(false); controlFileMarkDirty('cmdfile');" >
         </textarea>
-        <textarea id="targets" class="editFile" hidden="hidden"></textarea>
-        <textarea id="science" class="editFile" hidden="hidden"></textarea>
-        <textarea id="scicon.sch" class="editFile" hidden="hidden"></textarea>
-        <textarea id="pdoscmds.bat" class="editFile" hidden="hidden"></textarea>
-        <textarea id="tcm2mat.cal" class="editFile" hidden="hidden"></textarea>
-        <textarea id="sg_calib_constants.m" class="editFile" hidden="hidden"></textarea>
+        <textarea id="targets" class="editFile" hidden="hidden" oninput="controlFileMarkDirty('targets');"></textarea>
+        <textarea id="science" class="editFile" hidden="hidden" oninput="controlFileMarkDirty('science');"></textarea>
+        <textarea id="scicon.sch" class="editFile" hidden="hidden" oninput="controlFileMarkDirty('scicon.sch');"></textarea>
+        <textarea id="pdoscmds.bat" class="editFile" hidden="hidden" oninput="controlFileMarkDirty('pdoscmds.bat');"></textarea>
+        <textarea id="tcm2mat.cal" class="editFile" hidden="hidden" oninput="controlFileMarkDirty('tcm2mat.cal');"></textarea>
+        <textarea id="sg_calib_constants.m" class="editFile" hidden="hidden" oninput="controlFileMarkDirty('sg_calib_constants.m');"></textarea>
         <div id="fileButtons">
             <button id="btnSubmit" type="button" onclick="submitControl();" style="margin-left:2px;">Submit</button>
             <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
