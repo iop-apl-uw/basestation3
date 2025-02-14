@@ -375,6 +375,8 @@
                     loadTargetsList(json['data']);
                 }
                 else if (json['file'] == 'cmdfile') {
+                    console.log('loaded cmdfile, updating parms');
+                    updateParmsFromCmdfile();
                 } 
             }
             else { // new comm.log content comes unprefixed
@@ -417,15 +419,33 @@
         }
     }
 
+    function formatValidatorChanges(text) {
+        var changes = '<table>';
+        var other = '';
+        var pcs;
+        for (var line of text.split('\n')) {
+            if (line.includes('will change from')) {
+                pcs = line.split(' ');
+                changes = changes + `<tr><td>${pcs[2]}&nbsp;&nbsp;&nbsp;</td><td>${pcs[6]}</td><td>&#10230;</td><td>${pcs[8]}</td></tr>`
+            }
+            else  {
+                other = other + line + '<br>';
+            }
+        }
+        changes = changes + '</table>';
+        return changes + '<hr>' + other;
+    }
+
+    const miniLoader = '<div class="loader-container-mini"><div class="bouncing-dots"><div class="dot"></div><div class="dot dot1"></div><div class="dot"></div></div></div>';
+
 {% if runMode == 'pilot' %}
 {% if noSave == false %}
-    function saveControl(force) {
-        var json = {};
-        var file = $('selectFile').value;
-
-        json['force'] = force;
+    function saveControl(file, json) {
         json['file'] = file;
-        json['contents'] = $(file).value; 
+        json['contents'] = $(file).value;
+
+        $('alertPopup').style.display = 'inline-block';
+        $('alertContents').innerHTML = miniLoader;
 
         fetch(`save/${currGlider}/${file}${mission()}`, 
         {
@@ -438,30 +458,64 @@
         .then(res => res.text())
         .then(text => {
             if (text.includes("authorization failed")) {
-                openLoginForm(function() { saveControl(force); }, "");
+                openLoginForm(function() { saveControl(file, json); }, "");
                 return;
             }
-            changes = '<table>';
-            other = '';
-            var pcs;
-            for (var line of text.split('\n')) {
-                if (line.includes('will change from')) {
-                    pcs = line.split(' ');
-                    changes = changes + `<tr><td>${pcs[2]}&nbsp;&nbsp;&nbsp;</td><td>${pcs[6]}</td><td>&#10230;</td><td>${pcs[8]}</td></tr>`
-                }
-                else  {
-                    other = other + line + '<br>';
-                }
-            }
-            changes = changes + '</table>';
-            $('alertContents').innerHTML = changes + '<hr>' + other;
-            $('alertPopup').style.display = 'inline-block';    
+            changes = formatValidatorChanges(text);
+            openMessagePopup(changes, null);
         })
         .catch(error => {
             alert(error);
         });
     }
+{% else %}
+    function saveControl(file, json) {
+        return;
+    }
 {% endif %}
+    function submitControl() {
+        var file = $('selectFile').value;
+        var json = { file: file, contents: $(file).value };
+
+        $('alertPopup').style.display = 'inline-block';
+        $('alertContents').innerHTML = miniLoader;
+
+        fetch(`validate/${currGlider}/${file}${mission()}`, 
+        {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(json),
+        })
+        .then(res => res.text())
+        .then(text => {
+            if (text.includes("authorization failed")) {
+                openLoginForm(function() { submitControl(); }, "");
+                return;
+            }
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log('validate ' + text + ' ' + error);
+                return;
+            }
+            txt = formatValidatorChanges(data['results']); 
+            if ('status' in data && data['status'] == 'ok') {    
+{% if noSave == false %}
+                openMessagePopup(txt, function() { saveControl(file, data); } );
+{% else %}
+                openMessagePopup(txt, null);
+{% endif %}
+            }
+            else {
+                openMessagePopup(txt, null);
+            }
+        })
+        .catch(error => {
+            console.log('validate ' + error);
+        });
+    }
 
     function changeDirective(cmd) {
         var newCmd = '$' + cmd;
@@ -470,6 +524,7 @@
         $('cmdfile').value = $('cmdfile').value.replace('$QUIT', newCmd);
         $('cmdfile').value = $('cmdfile').value.replace('$RESUME', newCmd);
         $('cmdfile').value = $('cmdfile').value.replace('$EXIT_TO_MENU', newCmd);
+        $('radPilotDirective' + cmd).checked = true;
 
         return false;
     }
@@ -501,6 +556,10 @@
                 else if (file == 'targets' && 'data' in data && data['data']) {
                     console.log(data['data']);
                     loadTargetsList(data['data']);
+                }
+                if (file == 'cmdfile') {
+                    console.log('updated cmdfile value, updating parms');
+                    updateParmsFromCmdfile();
                 }
             }
             if ('dive' in data && data['dive'] > -1) {
@@ -1846,6 +1905,65 @@
         $('science').value = str;  
    }
 
+    const directives = ['GO', 'RESUME', 'QUIT'];
+      
+    function updateParmsFromCmdfile() {
+        const re = /\$([A-Z][A-Z0-9_]+),([+-]?([0-9]*[.])?[0-9]+)/;
+        let text = $('cmdfile').value.trim().split('\n');
+        var pcs;
+       
+        for (line of text) {
+            line = line.trim();
+            if (line.slice(0,1) == '$' && directives.includes(line.slice(1))) {
+                $('radPilotDirective' + line.slice(1)).checked = true;
+            }
+            else if ((pcs = re.exec(line)) && pcs.length >= 3) {
+                if ($('paramInput_' + pcs[1])) {
+                    markChanged(pcs[1]);
+                    $('paramInput_' + pcs[1]).value = pcs[2];
+                }
+                else {
+                    console.log('no input found for ' + pcs[1]);
+                }
+            }
+        }
+    }
+ 
+    function updateCmdfileFromParm(p) {
+        const re = /\$([A-Z][A-Z0-9_]+),([+-]?([0-9]*[.])?[0-9]+)/;
+        let text = $('cmdfile').value.trim().split('\n');
+        var pcs;
+        var newtext = [];
+        var directive = '';
+        var matched = false;
+       
+        console.log('orig');
+        console.log(text);
+ 
+        for (line of text) {
+            line = line.trim();
+            if (line.slice(0,1) == '$' && directives.includes(line.slice(1))) {
+                directive = line;
+            }
+            else if ((pcs  = re.exec(line)) && pcs[1] == p) {
+                newtext.push('$' + p + ',' +  $('paramInput_' + p).value);
+                matched = true;
+            }
+            else if (line.length > 0) {
+                newtext.push(line);
+            }
+        }
+
+        if (!matched) {
+            newtext.push('$' + p + ',' +  $('paramInput_' + p).value);
+        }
+
+        newtext.push(directive);
+        console.log('new');
+        console.log(newtext);
+        $('cmdfile').value = newtext.join('\n');
+    }
+
     /* CMDFILE EDITOR */
 
     var parmGroups = ["BASIC", "NAV", "DIVE", "SURFACE", "FLIGHT", "PITCH", "ROLL", "VBD", "ALTIMETER", "HARDWARE"];
@@ -1863,8 +1981,9 @@
     function highlightParam(p) {
         var el = document.querySelectorAll('.paramInputLabel');
         var txt = '';
+        console.log('highlighting ' + p);
         for (e of el) {
-            if (e.innerHTML == p) {
+            if (e.innerHTML.includes('>' + p + '<')) {
                 e.style.fontWeight = 'bold';
                 changeParmGroup(parms[p]['category']);
                 e.classList.add('paramSearched');
@@ -1897,21 +2016,6 @@
 
         $('divParamSearchResults').innerHTML = results; 
     }
-    function parmsToCmdfile() {
-        $('selectFile').value = 'cmdfile';
-        changeFile();
-        var el = document.querySelectorAll('.paramInputInput');
-        var txt = '';
-        for (e of el) {
-            if (e.style.fontWeight == 'bold') {
-                var p = '$' + e.id.split('_').slice(1).join('_');
-                txt = txt + p + ',' + e.value + '\n';
-            }
-        }
-        const directive = document.querySelector('input[name="radPilotDirective"]:checked').value;
-        txt = txt + '$' + directive + '\n';
-        $('cmdfile').value = txt;
-    }
     function markChanged(w) {
         $('paramInput_' + w).title = 'was ' + $('paramInput_' + w).value;
         $('paramInput_' + w).style.fontWeight = "bold";
@@ -1920,10 +2024,11 @@
         var prev = parms[w]['current'];
         markChanged(w);
         parms[w]['current'] = $('paramInput_' + w).value;
+        updateCmdfileFromParm(w);
 
-        if ($('selLinkChanges').checked == false || (w != 'T_DIVE' && w != 'D_TGT'))
+        if ($('selLinkChanges').checked == false || (w != 'T_DIVE' && w != 'D_TGT')) {
             return;
-
+        }
         console.log('linking');
         var prev_t = w == 'T_DIVE' ? prev : parseFloat(parms['T_DIVE']['current']);
         var prev_d = w == 'D_TGT' ? prev : parseFloat(parms['D_TGT']['current']);
@@ -1935,12 +2040,14 @@
             markChanged('D_TGT');
             $('paramInput_D_TGT').value = (ratio*parseFloat($('paramInput_T_DIVE').value)).toFixed(0);
             console.log($('paramInput_D_TGT').value);
+            updateCmdfileFromParm('D_TGT');
             // $('paramInput_D_TGT').onchange = function() { paramInputChange('D_TGT'); };
         }
         else {
             // $('paramInput_T_DIVE').onchange = null;
             markChanged('T_DIVE');
             $('paramInput_T_DIVE').value = (parseFloat($('paramInput_D_TGT').value)/ratio).toFixed(0);
+            updateCmdfileFromParm('T_DIVE');
             // $('paramInput_T_DIVE').onchange = function() { paramInputChange('T_DIVE'); };
         }
 
@@ -1949,13 +2056,16 @@
 
         markChanged('T_MISSION');
         $('paramInput_T_MISSION').value = (prev_t + (0.25*prev_t > 15 ? 0.25*prev_t : 15)).toFixed(0);
+        updateCmdfileFromParm('T_MISSION');
         parms['T_DIVE']['current'] = prev_t; 
         parms['D_TGT']['current'] = prev_d; 
         parms['T_MISSION']['current'] = $('paramInput_T_MISSION').value;
         if (parseFloat($('paramInput_D_ABORT').value) < prev_d) {
-            parms['D_ABORT']['current'] = $('paramInput_D_ABORT').value = prev_d + 25;
             markChanged('D_ABORT');
+            parms['D_ABORT']['current'] = $('paramInput_D_ABORT').value = prev_d + 25;
+            updateCmdfileFromParm('D_ABORT');
         }
+
     }
     function addParamInput(g, p, v, h, b, m) {
         const colors = ["#cccccc", "#eeeeee"];
@@ -2088,6 +2198,7 @@
                 }
             }
 
+            loadControlFile('cmdfile');
             loadControlFile('science');
             loadControlFile('targets');
 
@@ -3504,7 +3615,7 @@
         loadStatus(glider, dive, !gotCurr);
         // setupStream(glider, true, true);
 {% if runMode == 'pilot' %}
-        loadControlFile('cmdfile');
+        // loadControlFile('cmdfile'); // still do this? vs loadParms?
         // loadControlFile('science'); call these from fetch of loadStatus
         // loadControlFile('targets');
         loadControlFile('scicon.sch');
@@ -3745,7 +3856,8 @@
     <div id="alertPopup" style="display: none;" class="alert-popup">
         <div id="alertContents">
         </div>
-        <button type="submit" class="btn" onclick="$('alertPopup').style.display = 'none'; return false;">ok</button>
+        <button id="alertOk" type="submit" class="btn">ok</button>
+        <button id="alertCancel" type="submit" class="btn cancel" style="display: none"; onclick="$('alertPopup').style.display = 'none';">cancel</button>
     </div>
     <div id="waitIndicator" style="display: none;">
         <div class="loader-container">
@@ -3876,7 +3988,7 @@
                 
                 <div id="pilotBASIC" class="hide" oncontextmenu="parameterHelp('pilotBASIC');"></div>
                 <div id="pilotNAV" class="hide" oncontextmenu="parameterHelp('pilotNAV');"></div>
-                <div id="pilotDIVE" oncontextmenu="parameterHelp('pilotDIVE');> 
+                <div id="pilotDIVE" oncontextmenu="parameterHelp('pilotDIVE');"> 
                     <input type="checkbox" checked id="selLinkChanges"><label for="selLinkChanges">link target depth/time changes</label>
                 </div>
                 <div id="pilotSURFACE" class="hide" oncontextmenu="parameterHelp('piotSURFACE');"></div>
@@ -3889,14 +4001,12 @@
             </div>
             
             <div id="pilotDirectiveList">
-                <input type="radio" id="radPilotDirectiveGO" name="radPilotDirective" value="GO" checked>
+                <input type="radio" id="radPilotDirectiveGO" name="radPilotDirective" value="GO" checked onclick="changeDirective('GO');">
                 <label for="radPilotDirectiveGO">GO</label>
-                <input type="radio" id="radPilotDirectiveQUIT" name="radPilotDirective" value="QUIT">
+                <input type="radio" id="radPilotDirectiveQUIT" name="radPilotDirective" value="QUIT" onclick="changeDirective('QUIT');">
                 <label for="radPilotDirectiveQUIT">QUIT</label>
-                <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" value="RESUME">
+                <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" onclick="changeDirective('RESUME');" value="RESUME">
                 <label for="radPilotDirectiveRESUME">RESUME</label>
-                <p>
-                <input type="button" value="Send to cmdfile editor" onclick="parmsToCmdfile();">
                 <hr>
                 <input type="button" id="btnParamSearch" onclick="doParamSearch();" value="search">
                 <input id="txtParamSearch" class="parmInputInput">
@@ -4179,7 +4289,7 @@
 
     <div id="divCmdfile">
         <div id="cmdfileEditClose" style="display:none;" onclick="defocusEditWindow(); return false;"><b>&#10060;</b></div>
-        <textarea id="cmdfile" class="editFile" oncontextmenu="parameterHelp('cmdfile'); return false;">
+        <textarea id="cmdfile" class="editFile" oncontextmenu="parameterHelp('cmdfile'); return false;" oninput="updateParmsFromCmdfile(); return false;" >
         </textarea>
         <textarea id="targets" class="editFile" hidden="hidden"></textarea>
         <textarea id="science" class="editFile" hidden="hidden"></textarea>
@@ -4188,10 +4298,7 @@
         <textarea id="tcm2mat.cal" class="editFile" hidden="hidden"></textarea>
         <textarea id="sg_calib_constants.m" class="editFile" hidden="hidden"></textarea>
         <div id="fileButtons">
-{% if noSave == false %}
-            <button id="btnSave" type="button" onclick="saveControl(0);" style="margin-left:2px;">Save</button>
-            <button id="btnForce" type="button" onclick="saveControl(1);">Force</button>
-{% endif %}
+            <button id="btnSubmit" type="button" onclick="submitControl();" style="margin-left:2px;">Submit</button>
             <button id="btnGO" type="button" onclick="changeDirective('GO');" style="background-color:#00aa00;">GO</button>
             <button id="btnQUIT" type="button" onclick="changeDirective('QUIT');" style="background-color:#ff0020;">QUIT</button>
             <button id="btnRESUME" type="button" onclick="changeDirective('RESUME');" style="background-color:yellow;">RESUME</button>

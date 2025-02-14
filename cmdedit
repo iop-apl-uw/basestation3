@@ -30,6 +30,9 @@ import subprocess
 import sys
 import tempfile
 import zlib
+import validate
+import asyncio
+import parms
 
 from time import strftime, time, gmtime
 from os.path import basename,dirname
@@ -63,6 +66,7 @@ available options:
                     not be started and you will not be prompted. Changes
                     will be accepted automatically if the validation
                     stage is clean (or always if -i is used). 
+    -v              validate only - do not save changes
     -i              Ignore errors when running non-interactively (-q).
                      
                  
@@ -75,19 +79,19 @@ available options:
 progname = basename(sys.argv[0])
 
 try:
-    opts, args = getopt.getopt(sys.argv[1:], "hiqaf:d:u:g:")
+    opts, args = getopt.getopt(sys.argv[1:], "vhiqaf:d:u:g:")
 except getopt.GetoptError:
-    print(f"usage: {progname} [-f file] [-q] [-i] [-d directory] [-g gliderID]")
+    print(f"usage: {progname} [-f file] [-q] [-i] [-v] [-d directory] [-g gliderID]")
     sys.exit(1)
 
 interactive = True
 input_file = ""
 wd = os.getcwd()
-validator = f"{dirname(__file__)}/validate"
 always_validate = False
 ignore_errors = False
 username = None
 glider = -1
+validateOnly = False
 
 for o, a in opts:
     if o == "-h":
@@ -107,6 +111,8 @@ for o, a in opts:
         username = a
     elif o == "-g":
         glider = a
+    elif o == "-v":
+        validateOnly = True
 
 if input_file == "-" and interactive:
     print("cannot run interactively with input from stdin, must use -q with -f -")
@@ -133,10 +139,13 @@ if glider == -1:
 
 if progname == "cmdedit":
     filename = "cmdfile"
+    validator = validate.cmdfile
 elif progname == "sciedit":
     filename = "science"
+    validator = validate.science
 elif progname == "targedit":
     filename = "targets"
+    validator = validate.targets
 
 ctrlfile = wd + "/" + filename
 if os.path.isfile(ctrlfile) and not os.access(ctrlfile, os.W_OK):
@@ -161,7 +170,7 @@ except IOError:
 
 # determine the name of the most recent (in a dive number sense) logfile
 
-logfile = "-"
+logfile = None
 
 n = latest
 while n >= 1:
@@ -171,6 +180,12 @@ while n >= 1:
         break
 
     n = n - 1
+
+dbfile = f"{wd}/sg{glider}.db"
+if not os.access(dbfile, os.R_OK):
+    dbfile = None
+
+d = asyncio.run(parms.state(None, logfile=logfile, cmdfile=None, dbfile=dbfile))
 
 # If no input file was specified then copy the current control file (if it
 # exists) to a temp file and edit that.  If the input file was
@@ -241,21 +256,15 @@ while done_editing == 0:
     # validate the proposed new control file, using state from the best available
     # logfile (or none if logfile is "-")
 
-    p = subprocess.Popen(
-        [validator, logfile, "-" + filename[0], newfile],
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        close_fds=True,
-    )
-    validate_output, validate_stderr = p.communicate()
-    validate_output = validate_output.decode('utf-8')
+    f = open(newfile, 'r')
+    (res, err, warn) = validator(f.read(), parms=d)
+    f.close()  
 
-    print(validate_output)
+    print('\n'.join(res))
 
     done_editing = 1
     if interactive:
-        if p.returncode > 0:
+        if err > 0:
             answer = input("Errors detected, keep changes anyway (yes/no/edit)? ")
         else:
             answer = input("New file check ok, accept it (yes/no/edit)? ")
@@ -264,23 +273,25 @@ while done_editing == 0:
             done_editing = 0
                 
     else:
-        if p.returncode > 0 and not ignore_errors:
+        if err > 0 and not ignore_errors:
             answer = "no"
         else:
             answer = "yes"
+            print("New file check ok")
 
-if answer in ["yes", "Y", "y"]:
-    shutil.copyfile(newfile, ctrlfile)
-    print(f"Changes accepted, {filename} has been modified")
-else:
-    print(f"Ignoring changes, original {filename} has not been changed")
-    if newfile_is_temp:
-        os.remove(newfile)
-        backup_file = newfile + "~"
-        if os.path.exists(backup_file):
-            os.remove(backup_file)  # delete possible emacs backup file
+if not validateOnly:
+    if answer in ["yes", "Y", "y"]:
+        shutil.copyfile(newfile, ctrlfile)
+        print(f"Changes accepted, {filename} has been modified")
+    else:
+        print(f"Ignoring changes, original {filename} has not been changed")
+        if newfile_is_temp:
+            os.remove(newfile)
+            backup_file = newfile + "~"
+            if os.path.exists(backup_file):
+                os.remove(backup_file)  # delete possible emacs backup file
 
-    sys.exit(2)
+        sys.exit(2)
 
 if newfile_is_temp:
     os.remove(newfile)
@@ -288,26 +299,27 @@ if newfile_is_temp:
     if os.path.exists(backup_file):
         os.remove(backup_file)  # delete possible emacs backup file
 
-if "USER" in list(os.environ.keys()):
-    pilot = os.environ["USER"]
-else:
-    pilot = "unknown"
+if not validateOnly:
+    if "USER" in list(os.environ.keys()):
+        pilot = os.environ["USER"]
+    else:
+        pilot = "unknown"
 
-date = strftime("%m/%d/%y %H:%M:%S", gmtime(time()))
+    date = strftime("%m/%d/%y %H:%M:%S", gmtime(time()))
 
-ctrlfile_text = open(ctrlfile, "rb").read()
+    ctrlfile_text = open(ctrlfile, "rb").read()
 
-checksum = zlib.crc32(ctrlfile_text)
-size = os.path.getsize(ctrlfile)
+    checksum = zlib.crc32(ctrlfile_text)
+    size = os.path.getsize(ctrlfile)
 
-try:
-    log = open(wd + "/" + progname + ".log", "a")
-    log.write(f"### {pilot} ({username}) {date}\n")
-    log.write(f"+++ {filename} ({size:d} bytes, {checksum:d} checksum)\n")
-    log.write(ctrlfile_text.decode('utf-8'))
-    log.write(f"--- validation against {logfile} (latest dive is {latest:d})\n")
-    log.write(validate_output)
-except:
-    print("changes not logged")
+    try:
+        log = open(wd + "/" + progname + ".log", "a")
+        log.write(f"### {pilot} ({username}) {date}\n")
+        log.write(f"+++ {filename} ({size:d} bytes, {checksum:d} checksum)\n")
+        log.write(ctrlfile_text.decode('utf-8'))
+        log.write(f"--- validation against {logfile} (latest dive is {latest:d})\n")
+        log.write('\n'.join(res))
+    except Exception as e:
+        print(f"changes not logged {e}")
 
 sys.exit(0)

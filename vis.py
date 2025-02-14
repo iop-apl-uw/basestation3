@@ -28,6 +28,7 @@
 
 
 from orjson import dumps,loads
+import random
 import time
 import calendar
 import os
@@ -80,6 +81,7 @@ import BaseCtrlFiles
 import parms
 import visauth
 import pilot
+import validate
 
 async def checkClose(conn):
     try:
@@ -1380,10 +1382,12 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/parmdata/<glider:int>/<dive:int>')
     @authorized()
     async def parmdataHandler(request, glider:int, dive:int):
-        logfile = f'p{glider:03d}{dive:04d}.log'
+        logfile = f'{gliderPath(glider, request)}/{glider:03d}{dive:04d}.log'
+        cmdfile = f'{gliderPath(glider, request)}/cmdfile'
         try:
-            o = await parms.read(gliderPath(glider, request), logfile, 'cmdfile')
+            o = await parms.state(None, logfile=logfile, cmdfile='cmdfile')
         except Exception as e:
+            print(e)
             return sanic.response.json({'error': f'no parms {e}'})
         else:
             return sanic.response.json(o)
@@ -1994,7 +1998,7 @@ def attachHandlers(app: sanic.Sanic):
     # args: which=cmdfile|targets|science|scicon.sch|tcm2mat.cal|pdoscmds.bat|sg_calib_constants.m
     # payload: (JSON) file, contents
     # parameters: mission
-    # returns: validator results and/or error message  
+    # returns: validator results and/or error message
     @authorized(modes=['private', 'pilot'], requireLevel=PERM_PILOT)
     async def saveHandler(request, glider:int, which:str):
         # the no save command line flag allows one more layer
@@ -2007,51 +2011,87 @@ def attachHandlers(app: sanic.Sanic):
         if which not in ok:
             return sanic.response.text("not allowed")
 
-        validator = {"cmdfile": "cmdedit", "science": "sciedit", "targets": "targedit"}
-
         message = request.json
-        if 'file' not in message or message['file'] != which:
+        if 'file' not in message or message['file'] != which or 'contents' not in message:
             return sanic.response.text('oops')
 
         if applyControls(request.ctx.ctx.controls, message['contents'], which) == True:
             return sanic.response.text('not allowed')
-         
-        path = gliderPath(glider, request)
-        if which in validator:
+
+        expiry = message['expiry']
+        if time.time() > int(expiry):
+            return sanic.response.text('validation expired')
+
+        salt = message['salt']
+        sigProvided = message['signature']
+
+        sigComputed = hmac.new((salt + expiry + request.app.config.VALIDATE_SECRET).encode('ascii'), 
+                               (salt + expiry + message['contents']).encode('ascii'), 'md5').hexdigest()
+
+        if not hmac.compare_digest(sigComputed, sigProvided):
+            return sanic.response.text('validation not valid')
+
+        dbfile = f'{gliderPath(glider, request)}/sg{glider:03d}.db'
+        d = await parms.state(None, dbfile=dbfile)
+        if which in [ "cmdfile", "science", "targets" ]:
+            (res, err, warn) = validate.validate(which, message['contents'], parms=d)
+        else:
+            res = [ 'no validator available for this file type, new file automatically accepted' ]
+            err = 0
+            warn = 0
+
+        if err == 0:
             try:
-                async with aiofiles.tempfile.NamedTemporaryFile('w', delete=False) as file:
+                async with aiofiles.open(f'{gliderPath(glider, request)}/{which}', 'w') as file:
                     await file.write(message['contents'])
-                    await file.close()
-                    sanic.log.logger.debug("saved to %s" % file.name)
-
-                    (tU, _, _) = getTokenUser(request)
-
-                    if 'force' in message and message['force'] == 1:
-                        cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -i -f {file.name} -u {tU}"
-                    else:
-                        cmd = f"{sys.path[0]}/{validator[which]} -d {path} -q -f {file.name} -u {tU}"
-            
-                    proc = await asyncio.create_subprocess_shell(
-                        cmd, 
-                        stdout=asyncio.subprocess.PIPE, 
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    out, err = await proc.communicate()
-                    results = out.decode('utf-8', errors='ignore') 
-                    await aiofiles.os.remove(file.name)
+                res.append(f"{which} saved ok")
             except Exception as e:
-                results = f"error saving {which}, {str(e)}"
+                res.append(f"error saving {which}, {str(e)}")
 
-            return sanic.response.text(results)
+        return sanic.response.text('\n'.join(res))
 
-        else: # no validator for this file type
-            try:
-                async with aiofiles.open(f'{path}/{which}', 'w') as file:
-                    await file.write(message['contents'])
-                return sanic.response.text(f"{which} saved ok")
-            except Exception as e:
-                return sanic.response.text(f"error saving {which}, {str(e)}")
-                
+
+    @app.post('/validate/<glider:int>/<which:str>')
+    # description: validate glider control file
+    # args: which=cmdfile|targets|science|scicon.sch|tcm2mat.cal|pdoscmds.bat|sg_calib_constants.m
+    # payload: (JSON) file, contents
+    # parameters: mission
+    # returns: validator results and/or error message  
+    @authorized(modes=['private', 'pilot'])
+    async def validateHandler(request, glider:int, which:str):
+
+        ok = ["cmdfile", "targets", "science", 
+              "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
+
+        if which not in ok:
+            return sanic.response.text("not allowed")
+
+        message = request.json
+        if 'file' not in message or message['file'] != which or 'contents' not in message:
+            return sanic.response.text('oops')
+
+        dbfile = f'{gliderPath(glider, request)}/sg{glider:03d}.db'
+        d = await parms.state(None, dbfile=dbfile)
+        if which in [ "cmdfile", "science", "targets" ]:
+            (res, err, warn) = validate.validate(which, message['contents'], parms=d)
+        else:
+            res = [ 'no validator available for this file type, new file automatically accepted' ]
+            err = 0
+            warn = 0
+
+        if err == 0:
+            salt = f'{random.getrandbits(32):08x}'
+            expiry = f'{int(time.time()) + 60}'
+            signature = hmac.new((salt + expiry + request.app.config.VALIDATE_SECRET).encode('ascii'), 
+                                 (salt + expiry + message['contents']).encode('ascii'), 'md5').hexdigest()
+        
+            msg = { 'results': '\n'.join(res), 'status': 'ok', 'salt': salt, 'signature': signature, 'expiry': expiry }
+        else:
+            msg = { 'results': '\n'.join(res), 'status': 'error' }
+
+        return sanic.response.json(msg)
+
+
     # The get handler for http POST based notifications from the basestation.
     # Run a route to receive notifications remotely. Typically only used 
     # when running vis on a server different from the basestation proper
@@ -2278,22 +2318,45 @@ def attachHandlers(app: sanic.Sanic):
  
     @app.route('/pos/sa/<glider:int>')
     # description: fetch SA position file
-    # parameters: mission
+    # parameters: mission, t (signals send only if there is data newer than t), latest (signals send only positions newer than t)
     # returns: SA positions file
     @authorized()
     async def posSAHandler(request, glider:int):
+        if 't' in request.args:
+            try:
+                newer_t = int(request.args['t'][0])
+            except:
+                newer_t = 0
+        else:
+            newer_t = 0
+
+        if 'recent' in request.args:
+            recent = True
+        else:
+            recent = False
+ 
         filename = f'{gliderPath(glider, request)}/SG_{glider:03d}_positions.txt'
-        if await aiofiles.os.path.exists(filename):
-            return await sanic.response.file(filename, mime_type='text/plain')
+        if not recent and await aiofiles.os.path.exists(filename):
+            if aoifiles.os.path.getmtime(filename) > newer_t:
+                return await sanic.response.file(filename, mime_type='text/plain')
+            else:
+                return sanic.response.text('nothing new')
 
         dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         async with aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True) as conn:
             try:
                 conn.row_factory = rowToDict
                 cur = await conn.cursor()
-                q = "SELECT epoch,lat,lon FROM calls ORDER BY epoch DESC;"
+                if recent and newer_t > 0:
+                    q = f"SELECT epoch,lat,lon FROM calls WHERE epoch > {newer_t} ORDER BY epoch ASC;"
+                else: # we might need all of them
+                    q = f"SELECT epoch,lat,lon FROM calls ORDER BY epoch ASC;"
                 await cur.execute(q)
                 rows = await cur.fetchall()
+    
+                if not rows or len(rows) == 0 or (newer_t > rows[-1]['epoch']):
+                    return sanic.response.text('nothing new')
+
                 lines = []
                 for r in rows:
                     line = f"{time.strftime('%Y-%m-%dT%H:%M:%SZ',time.gmtime(r['epoch']))},{r['lat']:.7f},{r['lon']:.7f},0"
@@ -2573,8 +2636,8 @@ def attachHandlers(app: sanic.Sanic):
                             m.update( { "data": await Utils.readScienceFile(m['full']) } )
                         elif m['file'] == 'targets':
                             m.update( { "data": await Utils.readTargetsFile(m['full']) } )
-                        elif m['file'] == 'cmdfile':
-                            m.update( { "data": await parms.cmdfile(gliderPath(glider, request), 'cmdfile') } )
+                        #elif m['file'] == 'cmdfile':
+                        #    m.update( { "data": await parms.cmdfile(gliderPath(glider, request), 'cmdfile') } )
             
                         await ws.send(f"FILE={dumps(m).decode('utf-8')}")
 
@@ -3421,6 +3484,8 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
 
     if 'SECRET' not in app.config:
         app.config.SECRET = secrets.token_hex()
+    if 'VALIDATE_SECRET' not in app.config:
+        app.config.VALIDATE_SECRET = secrets.token_hex()
     if 'MISSIONS_FILE' not in app.config:
         app.config.MISSIONS_FILE = "missions.yml"
     if 'USERS_FILE' not in app.config:
@@ -3558,6 +3623,8 @@ if __name__ == '__main__':
     # make sessions persist across processes
     if "SANIC_SECRET" not in os.environ:
         overrides["SECRET"] = secrets.token_hex()
+    if "VALIDATE_SECRET" not in os.environ:
+        overrides["VALIDATE_SECRET"] = secrets.token_hex()
 
     if test:
         app = createApp(overrides, test=True)

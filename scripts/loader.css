@@ -6,6 +6,14 @@
     z-index: 5000;
 }
 
+.loader-container-mini {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 30vh;
+    z-index: 5000;
+}
+
 .bouncing-dots {
     display: flex;
     justify-content: space-between;

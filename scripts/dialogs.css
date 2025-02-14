@@ -196,7 +196,7 @@
 }
 
 /* Add a red background color to the cancel button */
-.form-login .cancel, .about-content .cancel {
+.form-login .cancel, .about-content .cancel, .alert-popup .cancel {
   background-color: red;
 }
 

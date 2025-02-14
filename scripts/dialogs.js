@@ -21,6 +21,13 @@
         console.log('up ' + e.code + ' ' + e.getModifierState("CapsLock"));
     }
 
+    function openMessagePopup(content, callback) {
+        $('alertCancel').style.display = callback ? 'inline-block' : 'none';
+        $('alertPopup').style.display = 'inline-block';
+        $('alertContents').innerHTML = content;
+        $('alertOk').onclick = callback ? callback : function() { $('alertPopup').style.display = 'none'; };
+    }
+    
     function openLoginForm(callback, header) {
         $('loginHeader').innerHTML = header ? header : '';
         $('loginForm').style.display = "block";
