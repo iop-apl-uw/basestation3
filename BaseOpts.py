@@ -1301,7 +1301,7 @@ global_options_dict = {
         str,
         {
             "help": "What targets to plot",
-            "choices": ["all", "current", "none"],
+            "choices": ["all", "current", "none", "hide_non_active"],
             "section": "makekml",
             "option_group": "kml generation",
         },

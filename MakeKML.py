@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -320,6 +320,7 @@ def printTarget(
     instrument_id,
     print_radius,
     fo,
+    visible=True,
 ):
     """Prints out a target"""
 
@@ -350,6 +351,8 @@ def printTarget(
     # Start dive place mark
     fo.write("    <Placemark>\n")
     fo.write(f"        <name>{name}</name>\n")
+    if not visible:
+        fo.write("        <visibility>0</visibility>\n")
     fo.write(f"        <description>{description}</description>\n")
     fo.write('        <Style><BalloonStyle><text><![CDATA[<div align="center">\n')
     fo.write('        <table width="400" bgcolor="white">\n')
@@ -372,6 +375,8 @@ def printTarget(
     # Draw the target radius, if so supplied
     if radius and print_radius:
         fo.write("    <Placemark>\n")
+        if not visible:
+            fo.write("        <visibility>0</visibility>\n")
         fo.write("        <styleUrl>#targetLine</styleUrl>\n")
         fo.write("        <LineString>\n")
         fo.write("            <extrude>0</extrude>\n")
@@ -392,10 +397,14 @@ def printTarget(
     # TODO - add depth target as comment
 
 
-def printTargetLine(from_name, from_lat, from_lon, to_name, to_lat, to_lon, escape, fo):
+def printTargetLine(
+    from_name, from_lat, from_lon, to_name, to_lat, to_lon, escape, fo, visible=True
+):
     """Draws the line between to two targets"""
     fo.write("    <Placemark>\n")
     fo.write(f"        <name>{from_name} to {to_name}</name>\n")
+    if not visible:
+        fo.write("        <visibility>0</visibility>\n")
     if escape:
         fo.write(
             "        <description>Escape route from target %s to target %s</description>\n"
@@ -447,6 +456,7 @@ def printTargets(
     tgt_lon=None,
     tgt_lat=None,
     tgt_radius=None,
+    hide_non_active_targets=False,
 ):
     """Proceses a target file"""
     try:
@@ -559,6 +569,7 @@ def printTargets(
                 instrument_id,
                 print_radius,
                 fo,
+                visible=not hide_non_active_targets,
             )
 
     # Draw course between targets
@@ -575,6 +586,7 @@ def printTargets(
                     target_dict[target_dict[targ].goto_target].lon,
                     False,
                     fo,
+                    visible=not hide_non_active_targets,
                 )
             if target_dict[targ].escape_target in target_dict:
                 log_info(f"Escape route {targ} to {target_dict[targ].escape_target}")
@@ -587,6 +599,7 @@ def printTargets(
                     target_dict[target_dict[targ].escape_target].lon,
                     True,
                     fo,
+                    visible=not hide_non_active_targets,
                 )
     fo.write("</Folder>\n")
     return None
@@ -1056,6 +1069,8 @@ def main(
     if not base_opts:
         base_opts = BaseOpts.BaseOptions("Command line app for creating kml/kmz files")
     BaseLogger(base_opts)  # initializes BaseLog
+
+    pdb.set_trace()
 
     processing_start_time = time.time()
     log_info(
@@ -1800,6 +1815,7 @@ def main(
                 tgt_lon=tgt_lon,
                 tgt_lat=tgt_lat,
                 tgt_radius=tgt_radius,
+                hide_non_active_targets=(base_opts.targets == "hide_non_active"),
             )
         else:
             target_file_name = os.path.join(base_opts.mission_dir, "targets")
