@@ -1070,8 +1070,6 @@ def main(
         base_opts = BaseOpts.BaseOptions("Command line app for creating kml/kmz files")
     BaseLogger(base_opts)  # initializes BaseLog
 
-    pdb.set_trace()
-
     processing_start_time = time.time()
     log_info(
         "Started processing "
