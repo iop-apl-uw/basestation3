@@ -1937,6 +1937,7 @@
 
     const directives = ['GO', 'RESUME', 'QUIT'];
       
+    // wholeFile arg is unused
     function updateParmsFromCmdfile(wholeFile) {
         const re = /\$([A-Z][A-Z0-9_]+),([+-]?([0-9]*[.])?[0-9]+)/;
         let text = $('cmdfile').value.trim().split('\n');
@@ -1957,6 +1958,8 @@
                 }
             }
         }
+
+        checkLinkedChanges();
     }
  
     function updateCmdfileFromParm(p) {
@@ -2051,49 +2054,35 @@
         $('paramInput_' + w).title = 'was ' + $('paramInput_' + w).value;
         $('paramInput_' + w).style.fontWeight = "bold";
     }
-    function checkLinkedChanges(w, prev) {
-        if ($('selLinkChanges').checked == false || (w != 'T_DIVE' && w != 'D_TGT')) {
-            return;
-        }
+    function checkLinkedChanges() {
+        var t = parseFloat($('paramInput_T_DIVE').value);
+        var d = parseFloat($('paramInput_D_TGT').value);
+        var w = 2*d*100/(t*60);
 
-        console.log('linking');
+        $('pilotVertVelResult').innerHTML = 'w=' + w.toFixed(1) + ' cm/s';
+    }
+    function pilotVertVel(w) {
 
-        var prev_t = w == 'T_DIVE' ? prev : parms['T_DIVE']['current'];
-        var prev_d = w == 'D_TGT' ? prev : parms['D_TGT']['current'];
-        var ratio = prev_d / prev_t;
-        console.log(parms['T_DIVE'])
-        console.log(parms['D_TGT'])
-        console.log('ratio = ' + ratio);
-        
-        if (w == 'T_DIVE') {
-            
-            markChanged('D_TGT');
-            $('paramInput_D_TGT').value = (ratio*parseFloat($('paramInput_T_DIVE').value)).toFixed(0);
-            console.log('D_TGT = ' + $('paramInput_D_TGT').value);
-            updateCmdfileFromParm('D_TGT');
-        }
-        else {
-            markChanged('T_DIVE');
-            $('paramInput_T_DIVE').value = (parseFloat($('paramInput_D_TGT').value)/ratio).toFixed(0);
-            console.log('T_DIVE = ' + $('paramInput_T_DIVE').value);
-            updateCmdfileFromParm('T_DIVE');
-        }
-
-        prev_t = parseFloat($('paramInput_T_DIVE').value);
-        prev_d = parseFloat($('paramInput_D_TGT').value);
+        var d = parseFloat($('paramInput_D_TGT').value);
+        var t = 2*d*100/60/w;
+        markChanged('T_DIVE');
+        $('paramInput_T_DIVE').value = t.toFixed(0);
+        parms['T_DIVE']['current'] = parseFloat($('paramInput_T_DIVE').value);
+        updateCmdfileFromParm('T_DIVE');
 
         markChanged('T_MISSION');
-        $('paramInput_T_MISSION').value = (prev_t + (0.25*prev_t > 15 ? 0.25*prev_t : 15)).toFixed(0);
-        updateCmdfileFromParm('T_MISSION');
-        parms['T_DIVE']['current'] = prev_t; 
-        parms['D_TGT']['current'] = prev_d; 
+        $('paramInput_T_MISSION').value = (t + (0.25*t > 15 ? 0.25*t : 15)).toFixed(0);
         parms['T_MISSION']['current'] = parseFloat($('paramInput_T_MISSION').value);
-        if (parseFloat($('paramInput_D_ABORT').value) < prev_d) {
+        updateCmdfileFromParm('T_MISSION');
+
+        if (parseFloat($('paramInput_D_ABORT').value) < d + 10) {
             markChanged('D_ABORT');
-            parms['D_ABORT']['current'] = prev_d + 25;
-            $('paramInput_D_ABORT').value = parms['D_ABORT']['current'].toFixed(0);
+            $('paramInput_D_ABORT').value = (d + 25).toFixed(0);
+            parms['D_ABORT']['current'] = parseFloat($('paramInput_D_ABORT').value);
             updateCmdfileFromParm('D_ABORT');
         }
+
+        checkLinkedChanges();
     }
 
     function paramInputChange(w) {
@@ -2102,7 +2091,7 @@
         parms[w]['current'] = parseFloat($('paramInput_' + w).value);
         updateCmdfileFromParm(w);
 
-        checkLinkedChanges(w, prev);
+        checkLinkedChanges();
 
     }
     function addParamInput(g, p, v, h, b, m) {
@@ -4039,7 +4028,19 @@
                 <div id="pilotBASIC" class="hide" oncontextmenu="parameterHelp('pilotBASIC');"></div>
                 <div id="pilotNAV" class="hide" oncontextmenu="parameterHelp('pilotNAV');"></div>
                 <div id="pilotDIVE" oncontextmenu="parameterHelp('pilotDIVE');"> 
-                    <input type="checkbox" checked id="selLinkChanges"><label for="selLinkChanges">link target depth/time changes</label>
+                    &nbsp; <span id="pilotVertVelResult" style="display: inline-block; width: 11ch; min-width: 11ch; max-width: 11ch;">w= cm/s</span>
+                    Quick w:
+                    <span class="spanClick" onclick="pilotVertVel(8);">8</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(9);">9</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(10);">10</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(11);">11</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(12);">12</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(13);">13</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(14);">14</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(15);">15</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(16);">16</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(18);">18</span>&nbsp;
+                    <span class="spanClick" onclick="pilotVertVel(20);">20</span>
                 </div>
                 <div id="pilotSURFACE" class="hide" oncontextmenu="parameterHelp('piotSURFACE');"></div>
                 <div id="pilotFLIGHT" class="hide" oncontextmenu="parameterHelp('pilotFLIGHT');"></div>
