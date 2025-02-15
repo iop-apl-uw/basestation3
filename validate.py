@@ -77,6 +77,8 @@ def cmdfile(body, parms=None):
                 warnings = warnings + 1
                 continue
 
+            note = ''
+
             if d[p]['type'] == 'INT':
                 try:
                     v = int(pcs[1])
@@ -84,6 +86,40 @@ def cmdfile(body, parms=None):
                     res.append(f"${p},{pcs[1]} must be an integer value")
                     errors = errors + 1
                     continue
+
+                if 'menufield' in d[p]:
+                    if not v in [ x['value'] for x in d[p]['menufield'] ]:
+                        res.append(f"${p},{pcs[1]} has an unrecognized value") 
+                        errors = errors + 1
+                        continue
+                    try:
+                        note = '(' + next(x for x in d[p]['menufield'] if x['value'] == v)['function'] + ')'
+                    except:
+                        pass
+                elif 'bitfield' in d[p]:
+                    bits = [ x['value'] for x in d[p]['bitfield'] ]
+                    total = 0
+                    notes = []
+                    if v == 0 and 0 in bits:
+                        notes.append(next(x for x in d[p]['bitfield'] if x['value'] == 0)['function'])
+                    else:    
+                        for b in [ x['value'] for x in d[p]['bitfield'] ]:
+                            if b & v:
+                                try:
+                                    notes.append(next(x for x in d[p]['bitfield'] if x['value'] == b)['function'])
+                                except:
+                                    pass
+                                
+                                total = total + b
+
+                    if len(notes):
+                        note = '(' + ','.join(notes) + ')'
+
+                    if total != v:
+                        res.append(f"${p},{pcs[1]} has an invalid sum for bitmask") 
+                        errors = errors + 1
+                        continue
+                        
             else:
                 try:
                     v = float(pcs[1])
@@ -101,9 +137,9 @@ def cmdfile(body, parms=None):
                     warnings = warnings + 1 
                      
             elif 'current' in d[p] and abs(v - d[p]['current']) > 1e-5:
-                res.append(f"value of ${p} will change from {d[p]['current']} to {v}")
+                res.append(f"value of ${p} will change from {d[p]['current']} to {v} {note}")
             elif 'current' not in d[p]:
-                res.append(f"value of ${p} will be set to {v}")
+                res.append(f"value of ${p} will be set to {v} {note}")
             
         else:
             res.append(f"unknown content line {linenum} ({line})")
