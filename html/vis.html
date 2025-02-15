@@ -1014,7 +1014,7 @@
                     else 
                         txt += '<td></td>';
                     
-                    txt += '<td><a href="parms#' + d[cols[1]].slice(1) + '">' + d[cols[1]] + '</a></td>';
+                    txt += '<td><a target="parms" href="parms#' + d[cols[1]].slice(1) + '">' + d[cols[1]] + '</a></td>';
 
                     txt += '<td>' + d['oldval'] + '</td>';
                     txt += '<td><b>&#10230;</b></td>';
@@ -1363,7 +1363,7 @@
 {% if runMode == 'pilot' %}
 
     function changeWheelPane(file) {
-        const panes = ["Cmdfile", "Science", "Targets"];
+        const panes = ["Trim", "Cmdfile", "Science", "Targets"];
         for (p of panes) {
             if (file != p) {
                 $('pilotWheel' + p).classList.add('hide');
@@ -1904,7 +1904,7 @@
         str = str + '/ ';
 
         if (parms_SENSORS) {
-            for (i = 0 ; i < parms_SENSORS.length ; i++) {
+            for (i = 0 ; i < parms_SENSORS.length && i < 6 ; i++) {
                 str = str + parms_SENSORS[i];
                 if (i < parms_SENSORS.length - 1)
                     str = str + ', ';
@@ -1939,7 +1939,7 @@
       
     // wholeFile arg is unused
     function updateParmsFromCmdfile(wholeFile) {
-        const re = /\$([A-Z][A-Z0-9_]+),([+-]?([0-9]*[.])?[0-9]+)/;
+        const re = /\$([A-Z][A-Z0-9_]+),([+-]?([0-9]*[.])?[0-9]+)$/;
         let text = $('cmdfile').value.trim().split('\n');
         var pcs;
        
@@ -1963,7 +1963,7 @@
     }
  
     function updateCmdfileFromParm(p) {
-        const re = /\$([A-Z][A-Z0-9_]+),([+-]?([0-9]*[.])?[0-9]+)/;
+        const re = /\$([A-Z][A-Z0-9_]+),([+-]?([0-9]*[.])?[0-9]+)$/;
         let text = $('cmdfile').value.trim().split('\n');
         var pcs;
         var newtext = [];
@@ -1979,7 +1979,12 @@
                 directive = line;
             }
             else if ((pcs  = re.exec(line)) && pcs[1] == p) {
-                newtext.push('$' + p + ',' +  $('paramInput_' + p).value);
+                if (floatRE.test($('paramInput_' + p).value.trim())) {
+                    newtext.push('$' + p + ',' +  $('paramInput_' + p).value);
+                }
+                else {
+                    newtext.push(line);
+                }
                 matched = true;
             }
             else if (line.length > 0) {
@@ -2054,17 +2059,24 @@
         $('paramInput_' + w).title = 'was ' + $('paramInput_' + w).value;
         $('paramInput_' + w).style.fontWeight = "bold";
     }
+
+    const floatRE = /[+-]?([0-9]*[.])?[0-9]+$/;
+
     function checkLinkedChanges() {
         var t = parseFloat($('paramInput_T_DIVE').value);
         var d = parseFloat($('paramInput_D_TGT').value);
-        var w = 2*d*100/(t*60);
-
-        $('pilotVertVelResult').innerHTML = 'w=' + w.toFixed(1) + ' cm/s';
+        if (t && d && floatRE.test($('paramInput_T_DIVE').value) && floatRE.test($('paramInput_D_TGT').value)) {
+            var w = 2*d*100/(t*60);
+            $('pilotVertVelResult').innerHTML = 'w=' + w.toFixed(1) + ' cm/s';
+        }
     }
     function pilotVertVel(w) {
 
         var d = parseFloat($('paramInput_D_TGT').value);
         var t = 2*d*100/60/w;
+        if (!d || !t || !floatRE.tes($('paramInput_D_TGT').value))
+            return;
+
         markChanged('T_DIVE');
         $('paramInput_T_DIVE').value = t.toFixed(0);
         parms['T_DIVE']['current'] = parseFloat($('paramInput_T_DIVE').value);
@@ -2100,7 +2112,7 @@
         div.classList.add('paramInputDiv');
         var span = document.createElement('span');
         span.classList.add('paramInputLabel');
-        span.innerHTML = `<a href="parms#${p}">${p}</a>`;
+        span.innerHTML = `<a target="parms" href="parms#${p}">${p}</a>`;
         span.title = h;
         var inp = document.createElement('input');
         inp.id = 'paramInput_' + p;
@@ -2114,6 +2126,7 @@
 
         inp.onchange = function() { paramInputChange(p); };
         if (b || m) {
+            inp.disabled = true;
             var d2 = document.createElement('div');
             d2.classList.add("clickdown")
             var s2 = document.createElement('label');
@@ -2156,6 +2169,7 @@
                 }
                 if (b) inp.value = '' + x;
                 else inp.value = x;
+                updateCmdfileFromParam(p);
             };
             sel.size = n;
             if (b) multiSelectWithoutCtrl(sel);
@@ -2180,7 +2194,7 @@
             }
 
             // console.log(parms);
-            const order = { "DIVE": [ "T_DIVE", "D_TGT", "T_MISSION", "D_ABORT", "N_DIVES"],
+            const order = { "DIVE": [ "D_TGT", "T_DIVE", "T_MISSION", "D_ABORT", "N_DIVES"],
                             "NAV": [ "COMPASS_USE", "NAV_MODE", "HEADING", "T_GPS", "N_GPS" ],
                             "SURFACE": [ "SM_CC", "N_NOCOMM", "NOCOMM_ACTION", "T_RSLEEP", "CAPUPLOAD", "COMM_SEQ", "CALL_NIVES", "N_FILEKB", "PROTOCOL", "CALL_TRIES", "CALL_WAIT" ],
                             "VBD":  ["C_VBD", "C_VBD_AUTO_DELTA", "C_VBD_AUTO_MAX", "W_ADJ_DBAND", "VBD_TIMEOUT"],
@@ -2566,7 +2580,7 @@
         html += '<h3 onclick="showChangelog(); return false;" style="color:blue;">parameter changes</h3><p><table style="margin-left:40px;">';
         for (i = 0 ; i < deltas['parm'].length; i++) {
             pieces = deltas['parm'][i];
-            html += `<tr><td><a href=\"parms#${pieces['parm'].slice(1)}\">${pieces['parm']}</a>&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
+            html += `<tr><td><a target="parms" href=\"parms#${pieces['parm'].slice(1)}\">${pieces['parm']}</a>&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
         } 
         
         html += '</table><p><h3 onclick="showChangelog(); return false;" style="color:blue;">control files</h3><p>';
@@ -2666,6 +2680,7 @@
             markChanged(which);
             $('paramInput_' + which).value = val;
         }
+        updateCmdfileFromParm(which);
         return false; 
     }
 
@@ -4004,11 +4019,55 @@
 {% if runMode == 'pilot' %}
     <div id="pilotWheelDiv" class="hide" style="text-align: left;">
         <div id="pilotWheelNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
+            <span id="tabTrim" class="spanClick" onclick="changeWheelPane('Trim'); return false;">trim</span> <b>&#124;</b>
             <span id="tabCmdfile" class="spanClick" onclick="changeWheelPane('Cmdfile'); return false;">cmdfile</span> <b>&#124;</b>
             <span id="tabScience" class="spanClick" onclick="changeWheelPane('Science'); return false;">science</span> <b>&#124;</b>
             <span id="tabTargets" class="spanClick" onclick="changeWheelPane('Targets'); return false;">targets</span> 
         </div>
-        
+       
+        <div id="pilotWheelTrim" class="hide">
+            <div id="pilotRecsList">
+                <table>
+                    <tr><td colspan="4"><span class="spanClick" onclick="showPlot('dv', 'pitch', true); return false;"><b>Pitch</b></span> (based on <span id="pilotRecsPitchModelBasis"></span> model)</td></tr>
+                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
+                    <tr><td>RMSE</td><td id="pilotRecsFlyingPitchRMSE"></td>
+                                     <td id="pilotRecsModelPitchRMSE"></td><td></td>
+                    <tr><td><b><a href="parms#C_PITCH" target="parms">C_PITCH</a></b></td>
+                        <td id="pilotRecsFlyingC_PITCH"></td>
+                        <td id="pilotRecsModelC_PITCH"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_PITCH');"</td></tr>
+                    <tr><td><b><a href="parms#PITCH_GAIN" target="parms">PITCH_GAIN</a></b></td>
+                        <td id="pilotRecsFlyingPITCH_GAIN"></td>
+                        <td id="pilotRecsModelPITCH_GAIN"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('PITCH_GAIN');"</td></tr>
+
+                    <tr><td colspan="4">&nbsp;</td></tr>
+                    <tr><td colspan="4"><span class="spanClick" onclick="showPlot('dv', 'vert_vel_new', true); return false;"><b>VBD</b></span> (based on <span id="pilotRecsVBDModelBasis"></span> model)</td></tr>
+                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
+                    <tr><td>RMSE</td><td id="pilotRecsFlyingVBDRMSE"></td>
+                                     <td id="pilotRecsModelVBDRMSE"></td><td></td>
+                    <tr><td><b><a href="parms#C_VBD" target="parms">C_VBD</a></b></td>
+                        <td id="pilotRecsFlyingC_VBD"></td>
+                        <td id="pilotRecsModelC_VBD"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_VBD');"</td></tr>
+
+                    <tr><td colspan="4">&nbsp;</td></tr>
+                    <tr><td colspan="4"><span class="spanClick" onclick="showRollRecPlot('Dive');"><b>Roll: dive</b></span> (based on <span id="pilotRecsRollDiveBasis"></span> model)</td></tr>
+                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
+                    <tr><td><b><a href="parms#C_ROLL_DIVE" target="parms">C_ROLL_DIVE</a></b></td>
+                        <td id="pilotRecsFlyingC_ROLL_DIVE"></td>
+                        <td id="pilotRecsModelC_ROLL_DIVE"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_ROLL_DIVE');"</td></tr>
+                    <tr><td colspan="4"><span class="spanClick" onclick="showRollRecPlot('Climb');"><b>Roll: climb</b></span> (based on <span id="pilotRecsRollClimbBasis"></span> model)</td></tr>
+                    <tr><td><b><a href="parms#C_ROLL_CLIMB" target="parms">C_ROLL_CLIMB</a></b></td>
+                        <td id="pilotRecsFlyingC_ROLL_CLIMB"></td>
+                        <td id="pilotRecsModelC_ROLL_CLIMB"></td>
+                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_ROLL_CLIMB');"</td></tr>
+
+                </table>
+            </div>
+        </div>
+ 
         <div id="pilotWheelCmdfile">
             <div id="pilotCmdfileNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
                 <span id="tabBASIC" class="spanClick" onclick="changeParmGroup('BASIC'); return false;">Basic</span> <b>&#124;</b>
@@ -4023,90 +4082,50 @@
                 <span id="tabHARDWARE" class="spanClick" onclick="changeParmGroup('HARDWARE'); return false;">Hardware</span> 
             </div>
             <div id="pilotWheelCmdfileControls">
-            <div id="pilotParmsList">
+                <div id="pilotParmsList">
+                    
+                    <div id="pilotBASIC" class="hide" oncontextmenu="parameterHelp('pilotBASIC');"></div>
+                    <div id="pilotNAV" class="hide" oncontextmenu="parameterHelp('pilotNAV');"></div>
+                    <div id="pilotDIVE" oncontextmenu="parameterHelp('pilotDIVE');"> 
+                        &nbsp; <span id="pilotVertVelResult" style="display: inline-block; width: 11ch; min-width: 11ch; max-width: 11ch;">w= cm/s</span>
+                        Quick w:
+                        <span class="spanClick" onclick="pilotVertVel(8);">8</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(9);">9</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(10);">10</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(11);">11</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(12);">12</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(13);">13</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(14);">14</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(15);">15</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(16);">16</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(18);">18</span>&nbsp;
+                        <span class="spanClick" onclick="pilotVertVel(20);">20</span>
+                    </div>
+                    <div id="pilotSURFACE" class="hide" oncontextmenu="parameterHelp('piotSURFACE');"></div>
+                    <div id="pilotFLIGHT" class="hide" oncontextmenu="parameterHelp('pilotFLIGHT');"></div>
+                    <div id="pilotPITCH" class="hide" oncontextmenu="parameterHelp('pilotPITCH');"></div>
+                    <div id="pilotROLL" class="hide" oncontextmenu="parameterHelp('pilotROLL');"></div>
+                    <div id="pilotVBD" class="hide" oncontextmenu="parameterHelp('pilotVBD');"></div>
+                    <div id="pilotALTIMETER" class="hide" oncontextmenu="parameterHelp('pilotALTIMETER');"></div>
+                    <div id="pilotHARDWARE" class="hide" oncontextmenu="parameterHelp('pilotHARDWARE');"></div>
+                </div>
                 
-                <div id="pilotBASIC" class="hide" oncontextmenu="parameterHelp('pilotBASIC');"></div>
-                <div id="pilotNAV" class="hide" oncontextmenu="parameterHelp('pilotNAV');"></div>
-                <div id="pilotDIVE" oncontextmenu="parameterHelp('pilotDIVE');"> 
-                    &nbsp; <span id="pilotVertVelResult" style="display: inline-block; width: 11ch; min-width: 11ch; max-width: 11ch;">w= cm/s</span>
-                    Quick w:
-                    <span class="spanClick" onclick="pilotVertVel(8);">8</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(9);">9</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(10);">10</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(11);">11</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(12);">12</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(13);">13</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(14);">14</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(15);">15</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(16);">16</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(18);">18</span>&nbsp;
-                    <span class="spanClick" onclick="pilotVertVel(20);">20</span>
+                <div id="pilotDirectiveList">
+                    <input type="radio" id="radPilotDirectiveGO" name="radPilotDirective" value="GO" checked onclick="changeDirective('GO');">
+                    <label for="radPilotDirectiveGO">GO</label>
+                    <input type="radio" id="radPilotDirectiveQUIT" name="radPilotDirective" value="QUIT" onclick="changeDirective('QUIT');">
+                    <label for="radPilotDirectiveQUIT">QUIT</label>
+                    <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" onclick="changeDirective('RESUME');" value="RESUME">
+                    <label for="radPilotDirectiveRESUME">RESUME</label>
+                    <hr>
+                    <input type="button" id="btnParamSearch" onclick="doParamSearch();" value="search">
+                    <input id="txtParamSearch" class="parmInputInput">
+                    <span onclick="clearParamSearch();" class="spanClick">&otimes;</span>
+                    <p>
+                    <div id="divParamSearchResults">
+                    </div>
+                    <hr>
                 </div>
-                <div id="pilotSURFACE" class="hide" oncontextmenu="parameterHelp('piotSURFACE');"></div>
-                <div id="pilotFLIGHT" class="hide" oncontextmenu="parameterHelp('pilotFLIGHT');"></div>
-                <div id="pilotPITCH" class="hide" oncontextmenu="parameterHelp('pilotPITCH');"></div>
-                <div id="pilotROLL" class="hide" oncontextmenu="parameterHelp('pilotROLL');"></div>
-                <div id="pilotVBD" class="hide" oncontextmenu="parameterHelp('pilotVBD');"></div>
-                <div id="pilotALTIMETER" class="hide" oncontextmenu="parameterHelp('pilotALTIMETER');"></div>
-                <div id="pilotHARDWARE" class="hide" oncontextmenu="parameterHelp('pilotHARDWARE');"></div>
-            </div>
-            
-            <div id="pilotDirectiveList">
-                <input type="radio" id="radPilotDirectiveGO" name="radPilotDirective" value="GO" checked onclick="changeDirective('GO');">
-                <label for="radPilotDirectiveGO">GO</label>
-                <input type="radio" id="radPilotDirectiveQUIT" name="radPilotDirective" value="QUIT" onclick="changeDirective('QUIT');">
-                <label for="radPilotDirectiveQUIT">QUIT</label>
-                <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" onclick="changeDirective('RESUME');" value="RESUME">
-                <label for="radPilotDirectiveRESUME">RESUME</label>
-                <hr>
-                <input type="button" id="btnParamSearch" onclick="doParamSearch();" value="search">
-                <input id="txtParamSearch" class="parmInputInput">
-                <span onclick="clearParamSearch();" class="spanClick">&otimes;</span>
-                <p>
-                <div id="divParamSearchResults">
-                </div>
-                <hr>
-            </div>
-            <div id="pilotRecsList">
-                <table>
-                    <tr><td colspan="4"><span class="spanClick" onclick="showPlot('dv', 'pitch', true); return false;"><b>Pitch</b></span> (based on <span id="pilotRecsPitchModelBasis"></span> model)</td></tr>
-                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
-                    <tr><td>RMSE</td><td id="pilotRecsFlyingPitchRMSE"></td>
-                                     <td id="pilotRecsModelPitchRMSE"></td><td></td>
-                    <tr><td><b>C_PITCH</b></td>
-                        <td id="pilotRecsFlyingC_PITCH"></td>
-                        <td id="pilotRecsModelC_PITCH"></td>
-                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_PITCH');"</td></tr>
-                    <tr><td><b>PITCH_GAIN</b></td>
-                        <td id="pilotRecsFlyingPITCH_GAIN"></td>
-                        <td id="pilotRecsModelPITCH_GAIN"></td>
-                        <td><input type="button" value="accept" onclick="pilotRecsAccept('PITCH_GAIN');"</td></tr>
-
-                    <tr><td colspan="4">&nbsp;</td></tr>
-                    <tr><td colspan="4"><span class="spanClick" onclick="showPlot('dv', 'vert_vel_new', true); return false;"><b>VBD</b></span> (based on <span id="pilotRecsVBDModelBasis"></span> model)</td></tr>
-                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
-                    <tr><td>RMSE</td><td id="pilotRecsFlyingVBDRMSE"></td>
-                                     <td id="pilotRecsModelVBDRMSE"></td><td></td>
-                    <tr><td><b>C_VBD</b></td>
-                        <td id="pilotRecsFlyingC_VBD"></td>
-                        <td id="pilotRecsModelC_VBD"></td>
-                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_VBD');"</td></tr>
-
-                    <tr><td colspan="4">&nbsp;</td></tr>
-                    <tr><td colspan="4"><span class="spanClick" onclick="showRollRecPlot('Dive');"><b>Roll: dive</b></span> (based on <span id="pilotRecsRollDiveBasis"></span> model)</td></tr>
-                    <tr><th></th><th>current</th><th>model suggests</th><th></th></tr>
-                    <tr><td><b>C_ROLL_DIVE</b></td>
-                        <td id="pilotRecsFlyingC_ROLL_DIVE"></td>
-                        <td id="pilotRecsModelC_ROLL_DIVE"></td>
-                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_ROLL_DIVE');"</td></tr>
-                    <tr><td colspan="4"><span class="spanClick" onclick="showRollRecPlot('Climb');"><b>Roll: climb</b></span> (based on <span id="pilotRecsRollClimbBasis"></span> model)</td></tr>
-                    <tr><td><b>C_ROLL_CLIMB</b></td>
-                        <td id="pilotRecsFlyingC_ROLL_CLIMB"></td>
-                        <td id="pilotRecsModelC_ROLL_CLIMB"></td>
-                        <td><input type="button" value="accept" onclick="pilotRecsAccept('C_ROLL_CLIMB');"</td></tr>
-
-                </table>
-            </div>
             </div>
         </div>
         <div id="pilotWheelScience" class="hide">
