@@ -2074,7 +2074,7 @@
 
         var d = parseFloat($('paramInput_D_TGT').value);
         var t = 2*d*100/60/w;
-        if (!d || !t || !floatRE.tes($('paramInput_D_TGT').value))
+        if (!d || !t || !floatRE.test($('paramInput_D_TGT').value))
             return;
 
         markChanged('T_DIVE');

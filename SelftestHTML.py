@@ -533,9 +533,9 @@ function reload() {
             testnum = int(pcs[1])
             capname   = pcs[2]
             logname   = capname.replace('cap', 'log')
-            paramValues = await parms.state(None, './', capfile=capname)
+            paramValues = await parms.state(None, capfile=capname)
             if not paramValues or not 'VBD_MIN' in paramValues or not 'current' in paramValues:
-                paramValues = await parms.state(None, './', logfile=logname)
+                paramValues = await parms.state(None, logfile=logname)
             gotHeader = True
             continue
 
