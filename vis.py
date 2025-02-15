@@ -66,6 +66,7 @@ import base64
 import re
 import zmq
 import zmq.asyncio
+import zlib
 # import urllib.parse 
 import BaseOpts
 import Utils
@@ -1529,6 +1530,23 @@ def attachHandlers(app: sanic.Sanic):
         message['mission'] = filterMission(glider, request) 
         return sanic.response.json(message)
 
+    @app.route('/cmdedit/<glider:int>')
+    # description: glider control files
+    # parameters: mission
+    # returns: latest cmdedit.log
+    @authorized(modes=['private', 'pilot'], requireLevel=PERM_PILOT)
+    async def cmdeditHandler(request, glider:int):
+        message = { 'file': 'cmdedit.log' }
+        filename = f'{gliderPath(glider,request)}/cmdedit.log'
+
+        if await aiofiles.os.path.exists(filename):
+            async with aiofiles.open(filename, 'r') as file:
+                message.update( { 'contents': await file.read() })
+        else:
+            message.update( { 'contents': '' } )
+        
+        return sanic.response.json(message)
+
     @app.route('/control/<glider:int>/<which:str>')
     # description: glider control files
     # args: which=cmdfile|targets|science|scicon.sch|tcm2mat.cal|pdoscmds.bat|sg_calib_constants.m
@@ -2011,6 +2029,8 @@ def attachHandlers(app: sanic.Sanic):
 
         ok = ["cmdfile", "targets", "science", "scicon.sch", "tcm2mat.cal", "pdoscmds.bat", "sg_calib_constants.m"]
 
+        logs = { "cmdfile": "cmdedit.log", "targets": "targedit.log", "science": "sciedit.log" }
+
         if which not in ok:
             return sanic.response.text("not allowed")
 
@@ -2047,7 +2067,25 @@ def attachHandlers(app: sanic.Sanic):
             try:
                 async with aiofiles.open(f'{gliderPath(glider, request)}/{which}', 'w') as file:
                     await file.write(message['contents'])
+
                 res.append(f"{which} saved ok")
+
+                (tU, _, _) = getTokenUser(request)
+                date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()))
+                size = len(message['contents'])
+                checksum = zlib.crc3(message['contents'])
+
+                if which in logs:
+                    logname = logs[which]
+                else:
+                    logname = 'pilot.log'
+
+                async with aiofiles.open(f'{gliderPath(glider, request)}/{logname}', 'a') as log:
+                    log.write(f"### {tU} () {date}\n")
+                    log.write(f"+++ {which} ({size} bytes, {checksum} checksum)\n")
+                    log.write(message['contents'])
+                    log.write('\n'.join(res))
+
             except Exception as e:
                 res.append(f"error saving {which}, {str(e)}")
 
@@ -3270,7 +3308,7 @@ async def buildFilesWatchList(config):
             if await aiofiles.os.path.exists(fname):
                 watcher.add_watch(fname, asyncinotify.Mask.CLOSE_WRITE)
 
-                for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat", f"sg{m['glider']:03d}.kmz"]:
+                for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat", f"sg{m['glider']:03d}.kmz", "cmdedit.log"]:
                     if m['path']:
                         fname = f"{m['path']}/{f}"
                     else:

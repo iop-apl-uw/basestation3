@@ -66,6 +66,16 @@ def updateFails(db, fails, locked, username):
     query(db, "UPDATE users SET fails=?,locked=? WHERE name=?", (fails, locked, username))
 
 def addUser(db, username, email, domain, authType, password):
+    if password is None:
+        pw1 = getpass.getpass()
+        print("confirm")
+        pw2 = getpass.getpass()
+        if pw1 == pw2:
+            password = pw1
+        else:
+            print("passwords do not match")
+            return
+
     query(db, f"INSERT INTO users(name,email,domain,type,password,fails,locked) VALUES(?,?,?,?,?,?,?)", 
           (username, email, domain, authType, sha256_crypt.hash(password), 0, 0))
 
@@ -234,8 +244,8 @@ if __name__ == "__main__":
     # '....' -> file(authlib.txt) -> date: secret
 
     # add username email domain type(view|pilot) initialPassword
-    if sys.argv[1] == 'add' and len(sys.argv) == 7:
-        addUser('./auth.db', sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6])
+    if sys.argv[1] == 'add' and len(sys.argv) >= 6:
+        addUser('./auth.db', sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6] if len(sys.argv) == 7 else None)
 
     # auth username
     elif sys.argv[1] == "auth" and len(sys.argv) == 4:

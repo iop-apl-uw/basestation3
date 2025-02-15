@@ -258,18 +258,21 @@
     }
     #pilotWheelCmdfileControls {
         display: grid;
-        /* overflow-y: none; */
+        overflow-y: none; 
         overflow-x: visible;
         grid-template-columns: 0.5fr 0.5fr;
         grid-template-rows: min-content 1fr;
         grid-template-areas:
             "pilotParmList pilotDirectiveList"
-            "pilotParmList pilotRecsList";
+            "pilotParmList pilotCmdeditLog";
         /* height: 100%; */
         flex-wrap: wrap;
         flex-direction: row;
-        height: 100%;
+        height: 100vh;
         width: 100%;
+    }
+    #pilotCmdeditLog {
+        grid-area: pilotCmdeditLog;
     }
     #pilotParmsList {
         overflow-y: scroll;

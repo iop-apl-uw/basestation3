@@ -374,7 +374,12 @@
                         return;
                 }
 
-                $(json['file']).value = json['body'];
+                if (json['file'] == 'cmdedit.log') {
+                    loadCmdeditContent(json['body']);
+                }
+                else
+                    $(json['file']).value = json['body'];
+
                 controlFileMarkClean(json['file']);
                 if (json['file'] == 'science') {
                 }
@@ -465,7 +470,7 @@
         .then(res => res.text())
         .then(text => {
             if (text.includes("authorization failed")) {
-                openLoginForm(function() { saveControl(file, json); }, "");
+                openLoginForm(function() { loggedIn(); saveControl(file, json); }, "");
                 return;
             }
             changes = formatValidatorChanges(text);
@@ -501,7 +506,7 @@
         .then(res => res.text())
         .then(text => {
             if (text.includes("authorization failed")) {
-                openLoginForm(function() { submitControl(); }, "");
+                openLoginForm(function() { loggedIn(); submitControl(); }, "");
                 return;
             }
             try {
@@ -553,6 +558,65 @@
             return false;
     }
 
+    function cmdeditShowEntry(n) {
+        if ($(`cmdeditEntry${n}`)) {
+            if ($(`cmdeditEntry${n}`).style.display == 'none') 
+                $(`cmdeditEntry${n}`).style.display = 'inline-block';
+            else
+                $(`cmdeditEntry${n}`).style.display = 'none';
+        }
+    }
+    function loadCmdeditContent(contents) {
+        var txt = '';
+        var n = 0;
+        var divOpened = false;
+
+        lines = contents.split('\n');
+        for (var i = 0 ; i < lines.length ; i++) {
+            if (lines[i].startsWith('###')) {
+                if (divOpened) {
+                    txt = txt + '</div>';
+                }
+                txt = txt + `<span class="spanClick" onclick="cmdeditShowEntry(${n});">${lines[i]}\n</span>`; 
+                txt = txt + `<div id="cmdeditEntry${n}" style="display: none;">`
+                divOpened = true;
+                n = n + 1;
+            }
+            else {
+                txt = txt + lines[i] + '\n';
+            }
+        }
+
+        if (divOpened) {
+            txt = txt + '</div>';
+        }
+        $('cmdedit.log').innerHTML = txt;
+        if (n > 0) {
+            console.log('showing ' + n - 1);
+            cmdeditShowEntry(n - 1);
+            $(`cmdeditEntry${n-1}`).scrollIntoView(true);
+            $('cmdedit.log').scrollTop = $('cmdedit.log').scrollHeight;
+        }
+    }
+
+    function loadCmdeditLog() {
+        fetch(`cmdedit/${currGlider}${mission()}`)
+        .then(res => res.text())
+        .then(text => {
+            if (text == "none" || text.includes("authorization failed"))
+                return;
+
+            try {
+                data = JSON.parse(text);
+            } catch (error) {
+                console.log(text + ' ' + error);
+                return;
+            }
+            
+            loadCmdeditContent(data['contents']);
+        });
+    }
+
     function loadControlFile(file) {
         fetch(`control/${currGlider}/${file}${mission()}`)
         .then(res => res.text())
@@ -574,7 +638,6 @@
 
             if ('file' in data && data['file'] == file) {
                 $(file).value = data['contents'];
-                console.log(file + '=' + data['contents']);
                 if (file == 'science') {
                     initScienceFileTable('data' in data ? data['data'] : null);
                 }
@@ -2212,12 +2275,8 @@
             }
 
             for (p of Object.keys(parms)) {
-                console.log(p);
                 parms[p]['original'] =  parms[p]['current'];
             }
-            console.log('after setting originals');
-            console.log(parms['T_DIVE']);
-            console.log(parms['D_TGT']);
 
             for (g of Object.keys(order)) {
                 for (p of order[g]) {
@@ -2243,18 +2302,10 @@
                 }
             }
 
-            console.log('after load');
-            console.log(parms['T_DIVE']);
-            console.log(parms['D_TGT']);
             loadControlFile('cmdfile');
             loadControlFile('science');
             loadControlFile('targets');
 
-            console.log('after load 2');
-            console.log(parms['T_DIVE']);
-            console.log(parms['D_TGT']);
-
-            
             // initScienceFileTable();
         }); 
     }
@@ -2304,13 +2355,53 @@
             } 
         });
     } 
+
+    
+    function loggedIn() {
+        $('LoginLogout').innerHTML = ' Logout ';
+    }
+    function loggedOut() {
+        $('LoginLogout').innerHTML = ' Login ';
+    }
+    function checkUser() {
+        fetch('user')
+        .then(res => res.text())
+        .then(text => {
+            console.log(text);
+            if (text == 'logged in') {
+                loggedIn();
+            }
+            else {
+                loggedOut();
+            }
+        });
+    }
+
+    function logInOutUser() {
+        if ($('LoginLogout').innerHTML == ' Logout ') {
+            $('alertPopup').style.display = 'inline-block';
+            $('alertContents').innerHTML = miniLoader;
+
+            fetch("logout")
+            .then(res => res.text())
+            .then(text => {
+                $('alertContents').innerHTML = text;
+                openMessagePopup(text, null);
+                loggedOut();
+            });
+        }
+        else {
+            openLoginForm(function() { window.location.reload.bind(window.location); loggedIn(); }, "");
+        }
+    }
+
     function loadStatus(glider, dive, setCurr) {
         fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
             // console.log(text);
             if (text.includes("authorization failed")) {
-                openLoginForm(window.location.reload.bind(window.location), "");
+                openLoginForm(function() { loggedIn(); window.location.reload.bind(window.location); }, "");
                 return;
             }
             try {
@@ -3661,6 +3752,8 @@
             $('missionIndexText').innerHTML = currMission.replaceAll('_', ' ');
         }
 
+        checkUser();
+
         $('gliderIndexText').innerHTML = 'SG' + glider;
 
         currGlider = glider;
@@ -3676,6 +3769,7 @@
         loadControlFile('tcm2mat.cal');
         loadControlFile('pdoscmds.bat');
         loadControlFile('sg_calib_constants.m');
+        loadCmdeditLog();
         $('selectFile').value = 'cmdfile';
         changeFile();
         initTargetsEntryTable();
@@ -3873,8 +3967,8 @@
     <a href="help" target="help"> Help </a> 
 {% if runMode == 'pilot' %}
     <span style="float:right; padding-right: 10px;">
-    <a href="/logout"> Logout </a>  <b>&#124;</b>
-    <span class="spanClick" id="toggleRight" onclick="toggleRight(); return false;"> Hide pilot</span></span>
+    <span class="spanClick" id="LoginLogout" onclick="logInOutUser();"> Login </span>  
+    <b>&#124;</b><span class="spanClick" id="toggleRight" onclick="toggleRight(); return false;"> Hide pilot</span></span>
 {% endif %}
 </div>
 
@@ -4017,7 +4111,7 @@
     </div>
 
 {% if runMode == 'pilot' %}
-    <div id="pilotWheelDiv" class="hide" style="text-align: left;">
+    <div id="pilotWheelDiv" class="hide" style="text-align: left; height: 100vh; overflow-y: none;">
         <div id="pilotWheelNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
             <span id="tabTrim" class="spanClick" onclick="changeWheelPane('Trim'); return false;">trim</span> <b>&#124;</b>
             <span id="tabCmdfile" class="spanClick" onclick="changeWheelPane('Cmdfile'); return false;">cmdfile</span> <b>&#124;</b>
@@ -4025,7 +4119,7 @@
             <span id="tabTargets" class="spanClick" onclick="changeWheelPane('Targets'); return false;">targets</span> 
         </div>
        
-        <div id="pilotWheelTrim" class="hide">
+        <div id="pilotWheelTrim" class="hide" style="padding: 4px;">
             <div id="pilotRecsList">
                 <table>
                     <tr><td colspan="4"><span class="spanClick" onclick="showPlot('dv', 'pitch', true); return false;"><b>Pitch</b></span> (based on <span id="pilotRecsPitchModelBasis"></span> model)</td></tr>
@@ -4068,7 +4162,7 @@
             </div>
         </div>
  
-        <div id="pilotWheelCmdfile">
+        <div id="pilotWheelCmdfile" style="height: 100vh;">
             <div id="pilotCmdfileNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
                 <span id="tabBASIC" class="spanClick" onclick="changeParmGroup('BASIC'); return false;">Basic</span> <b>&#124;</b>
                 <span id="tabNAV" class="spanClick" onclick="changeParmGroup('NAV'); return false;">Navigation</span> <b>&#124;</b>
@@ -4125,6 +4219,11 @@
                     <div id="divParamSearchResults">
                     </div>
                     <hr>
+                </div>
+                <div style="display: flex; flex-direction: column; overflow: hidden; padding: 4px;" id="pilotCmdeditLog">
+                    Command history
+                    <div id="cmdedit.log" class="pre" style="overflow-y: auto;">
+                    </div>
                 </div>
             </div>
         </div>
