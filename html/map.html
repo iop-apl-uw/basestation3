@@ -944,12 +944,15 @@
                             return;
 
                         shipMarker.setLatLng([la, lo]);
-                        windMarker.setLatLng([la, lo]);
                         shipMarker.setRotation(msg['hdt']);
                         updateShipRings();
-                        console.log(shipCenterToggle.toggled);
                         if (shipCenterToggle && shipCenterToggle.toggled) {
                             map.panTo([la, lo]);
+                        }
+                        shipMarker.bringToFront();
+                        if (windMarker) {
+                            windMarker.setLatLng([la, lo]);
+                            windMarker.bringToFront();
                         }
 
                         html = [
