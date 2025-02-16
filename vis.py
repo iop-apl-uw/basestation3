@@ -104,6 +104,10 @@ MODE_PRIVATE = 2
 AUTH_ENDPOINT = 1
 AUTH_MISSION  = 2 
 
+AUTH_TYPE_NONE = 0
+AUTH_TYPE_BASIC = 1
+AUTH_TYPE_ADVANCED = 2
+
 runModes = { 'public': MODE_PUBLIC, 'pilot': MODE_PILOT, 'private': MODE_PRIVATE }
 modeNames = ['public', 'pilot', 'private']
 
@@ -157,24 +161,24 @@ def getTokenUser(request):
         return (request.app.config.USER, False, False)
 
     if not 'token' in request.cookies:
-        return (False, False, False)
+        return (False, False, False, False)
 
     try:
          token = jwt.decode(request.cookies.get("token"), request.app.config.SECRET, algorithms=["HS256"])
     except jwt.exceptions.InvalidTokenError:
-        return (False, False, False)
+        return (False, False, False, False)
 
-    if 'user' in token and 'groups' in token and 'domain' in token:
-        return (token['user'], token['groups'], token['domain'])
+    if 'user' in token and 'groups' in token and 'domain' in token and 'type' in token:
+        return (token['user'], token['groups'], token['domain'], token['type'])
 
-    return (False, False, False)
+    return (False, False, False, False)
 
 # checks whether the auth token authorizes a user or group in users, groups
 def checkToken(request, users, groups, pilots, pilotgroups, admins, admingroups):
     if not 'token' in request.cookies:
         return PERM_REJECT
 
-    (tokenUser, tokenGroups, tokenDomain) = getTokenUser(request)
+    (tokenUser, tokenGroups, tokenDomain, tokenType) = getTokenUser(request)
     if not tokenUser:
         return PERM_REJECT
 
@@ -190,17 +194,17 @@ def checkToken(request, users, groups, pilots, pilotgroups, admins, admingroups)
         sanic.log.logger.info(f"{tokenUser} authorized based on group [{request.path}]")
         perm = PERM_VIEW
 
-    if pilots and tokenUser in pilots:
+    if pilots and tokenUser in pilots and tokenType >= request.app.config.PILOT_AUTH_TYPE:
         perm = PERM_PILOT
         sanic.log.logger.info(f"{tokenUser} authorized to pilot [{request.path}]")
-    elif pilotgroups and tokenGroups and len(set(pilotgroups) & set(tokenGroups)) > 0:
+    elif pilotgroups and tokenGroups and len(set(pilotgroups) & set(tokenGroups)) > 0 and tokenType >= request.app.config.PILOT_AUTH_TYPE:
         sanic.log.logger.info(f"{tokenUser} authorized to pilot based on group [{request.path}]")
         perm = PERM_PILOT
 
-    if admins and tokenUser in admins:
+    if admins and tokenUser in admins and tokenType >= request.app.config.PILOT_AUTH_TYPE:
         sanic.log.logger.info(f"{tokenUser} authorized as admin [{request.path}]")
         perm = PERM_ADMIN
-    elif admingroups and tokenGroups and len(set(admingroups) & set(tokenGroups)) > 0:
+    elif admingroups and tokenGroups and len(set(admingroups) & set(tokenGroups)) > 0 and tokenType >= request.app.config.PILOT_AUTH_TYPE:
         sanic.log.logger.info(f"{tokenUser} authorized as admin based on group [{request.path}]")
         perm = PERM_ADMIN 
 
@@ -542,6 +546,7 @@ def attachHandlers(app: sanic.Sanic):
                     if sha256_crypt.verify(password, prop['password']):
                         sanic.log.logger.info(f'{username} basic authorized')
                         response = sanic.response.json({'status': 'authorized', 'msg': 'authorizoration ok'})
+                        tokenType = 1
                         authed = True
                     else:
                         response = sanic.response.json({'status': 'error', 'msg': 'authorization failed'})
@@ -552,12 +557,14 @@ def attachHandlers(app: sanic.Sanic):
                     sanic.log.logger.info(status)     
                     if status and 'status' in status and status['status'] == 'authorized':
                         sanic.log.logger.info(f'{username} basic authorized')
+                        tokenType = 2
                         authed = True
                     else:
                         sanic.log.logger.info('auth failed')
 
                 if authed:
-                    token = jwt.encode({ "user": username, "groups": prop['groups'], "domain": request.ctx.ctx.domain}, request.app.config.SECRET)
+                    token = jwt.encode({"type": tokenType, "user": username, "groups": prop['groups'], "domain": request.ctx.ctx.domain}, request.app.config.SECRET)
+
                     response.add_cookie(
                         "token", token,
                         max_age=86400,
@@ -574,7 +581,7 @@ def attachHandlers(app: sanic.Sanic):
     # returns: YES is user is valid
     @authorized(check=AUTH_ENDPOINT, requireLevel=0)
     async def userHandler(request):
-        (tU, tG, tD) = getTokenUser(request)
+        (tU, tG, tD, tT) = getTokenUser(request)
         return sanic.response.text('logged in' if tU else 'not logged in')
 
     @app.get("/setup")
@@ -2073,7 +2080,7 @@ def attachHandlers(app: sanic.Sanic):
 
                 res.append(f"{which} saved ok")
 
-                (tU, _, _) = getTokenUser(request)
+                (tU, _, _, _) = getTokenUser(request)
                 date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()))
                 size = len(message['contents'])
                 checksum = zlib.crc3(message['contents'])
@@ -2250,7 +2257,7 @@ def attachHandlers(app: sanic.Sanic):
         if request.app.config.NO_CHAT:
             return sanic.response.json({'error': 'not allowed'})
 
-        (tU, _, _) = getTokenUser(request)
+        (tU, _, _, _) = getTokenUser(request)
         if tU == False:
             return sanic.response.json({'error': 'authorization failed'})
 
@@ -2269,7 +2276,7 @@ def attachHandlers(app: sanic.Sanic):
 
         # we could have gotten here by virtue of no restrictions specified for this glider/mission,
         # but chat only worked if someone is logged in, so we check that we have a user
-        (tU, _, _) = getTokenUser(request)
+        (tU, _, _, _) = getTokenUser(request)
         if tU == False:
             return sanic.response.text('authorization failed')
 
@@ -2602,7 +2609,7 @@ def attachHandlers(app: sanic.Sanic):
         else:
             await ws.send('no comm.log\n')
 
-        (tU, _, _) = getTokenUser(request)
+        (tU, _, _, _) = getTokenUser(request)
         
         prev_db_t = time.time()
         conn = None
@@ -3550,6 +3557,11 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
         app.config.AUTH_DB = "auth.db"
     if 'ALERT' not in app.config:
         app.config.ALERT = 'ping'
+    if 'PILOT_AUTH_TYPE' not in app.config:
+        app.config.PILOT_AUTH_TYPE = AUTH_TYPE_ADVANCED
+
+    if isinstance(app.config.PILOT_AUTH_TYPE, str):
+        app.config.PILOT_AUTH_TYPE = int(app.config.PILOT_AUTH_TYPE)
 
     app.config.TEMPLATING_PATH_TO_TEMPLATES=f"{sys.path[0]}/html"
 
