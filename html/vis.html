@@ -115,6 +115,7 @@
 
     var currGlider = '';
     var currMission = '';
+    var currProject = '';
     var currStatus = '';
     var targetsChannel = null;
 
@@ -762,6 +763,13 @@
             window.open('dash?mission=' + currMission);
         else
             window.open('./?mission=' + currMission);
+    }
+
+    function projectIndex() {
+        if (!currProject || currProject == '')
+            return;
+
+        window.open('./?mission=' + currProject);
     }
 
     function setVisibility(elt) {
@@ -2485,6 +2493,11 @@
                 $('missionIndex').removeAttribute('hidden');
                 $('missionIndexText').innerHTML = data.mission.mission.replaceAll('_', ' ');
             }
+            if ('project' in data.mission && data.mission.project && data.mission.project != "") {
+                $('projectIndex').removeAttribute('hidden');
+                $('projectIndexText').innerHTML = currProject = data.mission.project;
+            }
+
 {% if runMode == 'pilot' %}
             targetsChannel = new BroadcastChannel(glider + '-targets');
             targetsChannel.onmessage = (event) => {
@@ -3989,6 +4002,7 @@
             <span class="spanClick" onclick="openMagcalForm(); return false;">Compass calibration</span>
         </div>
     </div>
+    <span id="projectIndex" hidden="hidden"> <span id="projectIndexText" class="spanClick" onclick="projectIndex(); return false;">Project</span> <b>&#124;</b> </span>
     <span id="missionIndex" hidden="hidden"> <span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b> </span>
     <span id="gliderIndex"><span id="gliderIndexText" class="spanClick" onclick="gliderIndex(); return false;">Glider</span> <b>&#124;</b>
     <a href="help" target="help"> Help </a> 
