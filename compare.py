@@ -175,7 +175,7 @@ def renderTable(x, pcolors, rcolors):
             if p['set']:
                 print("<td colspan=2>set for %s</td>" % p['set'])
             else:
-                print("<td colspan=2>not a default value</td>" % p['set'])
+                print("<td colspan=2>%s is not a default value</td>" % p['set'])
             print("</tr>")
             trow = trow + 1
 
