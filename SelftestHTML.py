@@ -777,11 +777,8 @@ function reload() {
     for a in avail:
         print('<option value="%s" %s>%s</option>' % (a, "selected" if a == which else "", a))
     if local_canon_exists:
-<<<<<<< HEAD
-        print('<option value=".canonicals" %s>local .canonicals</option>' % (a, "selected" if local_canon == which else "", local_canon))
-=======
         print('<option value=".canonicals" %s>local .canonicals</option>' % ("selected" if local_canon == which else ""))
->>>>>>> 83e5316 (more bug fixes for getting correct canonical in selftest comparison)
+
     print("</select>")
     print('<input type="button" value="reload with new canonicals" onclick="reload();">')
  
