@@ -1530,14 +1530,17 @@ def attachHandlers(app: sanic.Sanic):
         message['mission'] = filterMission(glider, request) 
         return sanic.response.json(message)
 
-    @app.route('/cmdedit/<glider:int>')
+    @app.route('/editlog/<glider:int>/<which:str>')
     # description: glider control files
     # parameters: mission
     # returns: latest cmdedit.log
     @authorized(modes=['private', 'pilot'], requireLevel=PERM_PILOT)
-    async def cmdeditHandler(request, glider:int):
-        message = { 'file': 'cmdedit.log' }
-        filename = f'{gliderPath(glider,request)}/cmdedit.log'
+    async def cmdeditHandler(request, glider:int, which:str):
+        if which not in [ 'cmdedit', 'sciedit', 'targedit' ]:
+            return sanic.response.text('none')
+
+        message = { 'file': f'{which}.log' }
+        filename = f'{gliderPath(glider,request)}/{which}.log'
 
         if await aiofiles.os.path.exists(filename):
             async with aiofiles.open(filename, 'r') as file:
@@ -3308,7 +3311,7 @@ async def buildFilesWatchList(config):
             if await aiofiles.os.path.exists(fname):
                 watcher.add_watch(fname, asyncinotify.Mask.CLOSE_WRITE)
 
-                for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat", f"sg{m['glider']:03d}.kmz", "cmdedit.log"]:
+                for f in ["comm.log", "cmdfile", "science", "targets", "scicon.sch", "tcm2mat.cal", "sg_calib_constants.m", "pdoscmds.bat", f"sg{m['glider']:03d}.kmz", "cmdedit.log", "sciedit.log", "targedit.log"]:
                     if m['path']:
                         fname = f"{m['path']}/{f}"
                     else:

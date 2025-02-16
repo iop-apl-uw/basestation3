@@ -374,8 +374,8 @@
                         return;
                 }
 
-                if (json['file'] == 'cmdedit.log') {
-                    loadCmdeditContent(json['body']);
+                if (json['file'].includes('.log')) {
+                    loadEditlogContent(json['file'], json['body']);
                 }
                 else
                     $(json['file']).value = json['body'];
@@ -559,15 +559,15 @@
             return false;
     }
 
-    function cmdeditShowEntry(n) {
-        if ($(`cmdeditEntry${n}`)) {
-            if ($(`cmdeditEntry${n}`).style.display == 'none') 
-                $(`cmdeditEntry${n}`).style.display = 'inline-block';
+    function editlogShowEntry(which, n) {
+        if ($(`${which}Entry${n}`)) {
+            if ($(`${which}Entry${n}`).style.display == 'none') 
+                $(`${which}Entry${n}`).style.display = 'block';
             else
-                $(`cmdeditEntry${n}`).style.display = 'none';
+                $(`${which}Entry${n}`).style.display = 'none';
         }
     }
-    function loadCmdeditContent(contents) {
+    function loadEditlogContent(which, contents) {
         var txt = '';
         var n = 0;
         var divOpened = false;
@@ -578,8 +578,8 @@
                 if (divOpened) {
                     txt = txt + '</div>';
                 }
-                txt = txt + `<span class="spanClick" onclick="cmdeditShowEntry(${n});">${lines[i]}\n</span>`; 
-                txt = txt + `<div id="cmdeditEntry${n}" style="display: none;">`
+                txt = txt + `<span class="spanClick" onclick="editlogShowEntry('${which}',${n});">${lines[i]}</span>\n`; 
+                txt = txt + `<div id="${which}Entry${n}" style="display: none;">`
                 divOpened = true;
                 n = n + 1;
             }
@@ -591,17 +591,17 @@
         if (divOpened) {
             txt = txt + '</div>';
         }
-        $('cmdedit.log').innerHTML = txt;
+        $(which).innerHTML = txt;
         if (n > 0) {
             console.log('showing ' + n - 1);
-            cmdeditShowEntry(n - 1);
-            $(`cmdeditEntry${n-1}`).scrollIntoView(true);
-            $('cmdedit.log').scrollTop = $('cmdedit.log').scrollHeight;
+            editlogShowEntry(which, n - 1);
+            $(`${which}Entry${n-1}`).scrollIntoView(true);
+            $(which).scrollTop = $(which).scrollHeight;
         }
     }
 
-    function loadCmdeditLog() {
-        fetch(`cmdedit/${currGlider}${mission()}`)
+    function loadEditlog(which) {
+        fetch(`editlog/${currGlider}/${which}/${mission()}`)
         .then(res => res.text())
         .then(text => {
             if (text == "none" || text.includes("authorization failed"))
@@ -614,7 +614,7 @@
                 return;
             }
             
-            loadCmdeditContent(data['contents']);
+            loadEditlogContent(which, data['contents']);
         });
     }
 
@@ -1438,8 +1438,20 @@
 
 {% if runMode == 'pilot' %}
 
+    function changeEditlog(which) {
+        const panes = ["Cmdedit", "Sciedit", "Targedit"];
+        for (p of panes) {
+            if (p != which) {
+                $('pilot' + p).classList.add('hide');
+                $('tab' + p).classList.remove('bold');
+            }
+        }
+        $('pilot' + which).classList.remove('hide');
+        $('tab' + which).classList.add('bold');
+    }
+
     function changeWheelPane(file) {
-        const panes = ["Trim", "Cmdfile", "Science", "Targets"];
+        const panes = ["Trim", "Cmdfile", "Science", "Targets", "Logs"];
         for (p of panes) {
             if (file != p) {
                 $('pilotWheel' + p).classList.add('hide');
@@ -3782,7 +3794,9 @@
         loadControlFile('tcm2mat.cal');
         loadControlFile('pdoscmds.bat');
         loadControlFile('sg_calib_constants.m');
-        loadCmdeditLog();
+        loadEditlog('cmdedit');
+        loadEditlog('targedit');
+        loadEditlog('sciedit');
         $('selectFile').value = 'cmdfile';
         changeFile();
         initTargetsEntryTable();
@@ -4129,7 +4143,8 @@
             <span id="tabTrim" class="spanClick" onclick="changeWheelPane('Trim'); return false;">trim</span> <b>&#124;</b>
             <span id="tabCmdfile" class="spanClick" onclick="changeWheelPane('Cmdfile'); return false;">cmdfile</span> <b>&#124;</b>
             <span id="tabScience" class="spanClick" onclick="changeWheelPane('Science'); return false;">science</span> <b>&#124;</b>
-            <span id="tabTargets" class="spanClick" onclick="changeWheelPane('Targets'); return false;">targets</span> 
+            <span id="tabTargets" class="spanClick" onclick="changeWheelPane('Targets'); return false;">targets</span> <b>&#124;</b>
+            <span id="tabLogs" class="spanClick" onclick="changeWheelPane('Logs'); return false;">logs</span> 
         </div>
        
         <div id="pilotWheelTrim" class="hide" style="padding: 4px;">
@@ -4233,11 +4248,6 @@
                     </div>
                     <hr>
                 </div>
-                <div style="display: flex; flex-direction: column; overflow: hidden; padding: 4px;" id="pilotCmdeditLog">
-                    Command history
-                    <div id="cmdedit.log" class="pre" style="overflow-y: auto;">
-                    </div>
-                </div>
             </div>
         </div>
         <div id="pilotWheelScience" class="hide">
@@ -4306,6 +4316,25 @@
                 number <input value="3" id="intermediateCount" size="4">
                 radius <input value="1000" id="intermediateRadius" size="5">
                 <input type="button" value="insert" onclick="insertTargets();">
+            </div>
+        </div>
+        <div id="pilotWheelLogs" class="hide">
+            <div id="pilotLogsNavBar" style="padding: 5px; top: 0px; position: sticky; background: rgba(170,170,170,1);">
+                <span id="tabCmdedit" class="spanClick" onclick="changeEditlog('Cmdedit'); return false;">Cmdfile</span> <b>&#124;</b>
+                <span id="tabTargedit" class="spanClick" onclick="changeEditlog('Targedit'); return false;">Targets</span> <b>&#124;</b>
+                <span id="tabSciedit" class="spanClick" onclick="changeEditlog('Sciedit'); return false;">Science</span> 
+            </div>
+            <div id="pilotCmdedit">
+                <div id="cmdedit" class="pre">
+                </div>
+            </div>
+            <div id="pilotTargedit" class="hide">
+                <div id="targedit" class="pre">
+                </div>
+            </div>
+            <div id="pilotSciedit" class="hide">
+                <div id="sciedit" class="pre">
+                </div>
             </div>
         </div>
     </div>

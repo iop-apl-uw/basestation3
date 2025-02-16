@@ -222,6 +222,8 @@
     #pilotWheelDiv {
         display: flex;
         flex-direction: column;
+        overflow-y: none;
+        height: 100vh;
     }
 
     #pilotWheelNavBar {
@@ -264,15 +266,12 @@
         grid-template-rows: min-content 1fr;
         grid-template-areas:
             "pilotParmList pilotDirectiveList"
-            "pilotParmList pilotCmdeditLog";
+            "pilotParmList pilotDirectiveList";
         /* height: 100%; */
         flex-wrap: wrap;
         flex-direction: row;
         height: 100vh;
         width: 100%;
-    }
-    #pilotCmdeditLog {
-        grid-area: pilotCmdeditLog;
     }
     #pilotParmsList {
         overflow-y: scroll;
@@ -287,6 +286,10 @@
         // width: 60%;
         // flex-grow: 1;
     } 
+    #pilotLogNavBar {
+        width: 100%;
+        flex-grow: 0;
+    }
     #pilotRecsList {
         overflow-y: scroll;
         grid-area: pilotRecsList;
