@@ -755,8 +755,9 @@ function reload() {
         which = 'RevE'
 
     local_canon_exists = os.path.exists(local_canon)
-    if local_canon_exists and not canon:
+    if local_canon_exists and (canon is not None or canon == '.canonicals'):
         canonname = local_canon
+        which = '.canonicals'
     else:
         canonname = os.path.join(sys.path[0], "canonicals/canon_" + which  + ".log")
 
@@ -776,7 +777,11 @@ function reload() {
     for a in avail:
         print('<option value="%s" %s>%s</option>' % (a, "selected" if a == which else "", a))
     if local_canon_exists:
+<<<<<<< HEAD
         print('<option value=".canonicals" %s>local .canonicals</option>' % (a, "selected" if local_canon == which else "", local_canon))
+=======
+        print('<option value=".canonicals" %s>local .canonicals</option>' % ("selected" if local_canon == which else ""))
+>>>>>>> 83e5316 (more bug fixes for getting correct canonical in selftest comparison)
     print("</select>")
     print('<input type="button" value="reload with new canonicals" onclick="reload();">')
  
