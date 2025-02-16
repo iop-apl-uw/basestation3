@@ -190,6 +190,7 @@ async def collectSummary(glider, path):
             out['lat']      = Utils.ddmm2dd(last_GPS.lat)
             out['lon']      = Utils.ddmm2dd(last_GPS.lon)
     except Exception as e:
+        out['commDirective'] = 'unknown'
         print(e)
         
     try:
@@ -234,7 +235,7 @@ async def collectSummary(glider, path):
     out['length'] = int(data['log_gps_time']) - int(data['log_start'])
     out['end']  = int(data['log_gps_time'])
 
-    if recovery and commDirective == 'RESUME' and 'fix' in out:
+    if recovery and out['commDirective'] == 'RESUME' and 'fix' in out:
         out['next'] = out['fix'] + out['length'] # + (int(data['log_gps2_time']) - int(data['log_gps1_time]'))
     elif recovery and connected and prev_connected:
         out['next'] = out['fix'] + connected - prev_connected
