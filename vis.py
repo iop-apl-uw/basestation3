@@ -2083,7 +2083,7 @@ def attachHandlers(app: sanic.Sanic):
                 (tU, _, _, _) = getTokenUser(request)
                 date = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime(time.time()))
                 size = len(message['contents'])
-                checksum = zlib.crc3(message['contents'])
+                checksum = zlib.crc32(message['contents'])
 
                 if which in logs:
                     logname = logs[which]
