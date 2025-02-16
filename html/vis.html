@@ -459,6 +459,7 @@
         $('alertPopup').style.display = 'inline-block';
         $('alertContents').innerHTML = miniLoader;
 
+        controlFileMarkClean(file);
         fetch(`save/${currGlider}/${file}${mission()}`, 
         {
             method: 'POST',
@@ -475,8 +476,8 @@
             }
             changes = formatValidatorChanges(text);
             openMessagePopup(changes, null);
-            if (changes.includes("saved ok")) {
-                controlFileMarkClean(file);
+            if (!changes.includes("saved ok")) {
+                controlFileMarkDirty(file);
             }
         })
         .catch(error => {
