@@ -1024,13 +1024,14 @@
         var q, sort;
         var prev, c, cols;
 
-        console.log("building table");
+        console.log("building change table");
   
 
         const colors = ["#cccccc", "#eeeeee"];
  
         if (which == 1 || which == 3) {
             sort = document.querySelector('input[name="changelogSortParm"]:checked').value;
+            console.log(sort);
             q = `changes/${glider}/-1/parms/${sort}${mission()}`
 
             fetch(q)
@@ -1046,7 +1047,9 @@
                     console.log(text);
                     return;
                 }
-        
+       
+                console.log(data);
+ 
                 if ('error' in data) {
                     console.log('buildChangelog ' + data['error']);
                     return;
@@ -1063,6 +1066,8 @@
                 }
                 
                 txt = '<table id="changeTable">';
+                txt = txt + `<tr><th>${cols[0]}</th><th>${cols[1]}</th><th>old</th><th></th><th>new</th></tr>`;
+
                 for (d of data) {
                     if (d[cols[0]] != prev) 
                         c = !c; // (c == 0 ? 1 : 0);
@@ -1071,13 +1076,20 @@
 
                     console.log(d[cols[0]]);
                     if (d[cols[0]] != prev) {
-                        txt += '<td>' + d[cols[0]] + '</td>';
+                        if (cols[0] == 'parm')
+                            txt += `<td><a target="parms" href="parms#${d['parm'].slice(1)}">${d['parm']}</a></td>`;
+                        else
+                            txt += '<td>' + d['dive'] + '</td>';
+
                         prev = d[cols[0]];
                     }    
                     else 
                         txt += '<td></td>';
                     
-                    txt += '<td><a target="parms" href="parms#' + d[cols[1]].slice(1) + '">' + d[cols[1]] + '</a></td>';
+                    if (cols[1] == 'parm')
+                        txt += `<td><a target="parms" href="parms#${d['parm'].slice(1)}">${d['parm']}</a></td>`;
+                    else
+                        txt += '<td>' + d['dive'] + '</td>';
 
                     txt += '<td>' + d['oldval'] + '</td>';
                     txt += '<td><b>&#10230;</b></td>';
