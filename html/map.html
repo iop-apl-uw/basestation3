@@ -7,6 +7,7 @@
         <link rel="stylesheet" href="../script/easy-button.css" />
         <link rel="stylesheet" href="../script/Control.Coordinates.css" />
         <link rel="stylesheet" href="../script/leaflet.groupedlayercontrol.css" />
+        <link rel="stylesheet" href="../script/leaflet-slider.css" />
         <script src="../script/leaflet.js"></script>
         <script src="../script/leaflet-ruler.js"></script>
         <script src="../script/easy-button.js"></script>
@@ -20,6 +21,7 @@
         <script src="../script/colormaps.js"></script>
         <script src="../script/leaflet-control.js"></script>
         <script src="../script/leaflet-grids.js"></script>
+        <script src="../script/leaflet-slider.js"></script>
 
 
         <script>
@@ -69,6 +71,10 @@
         </script>
 
         <style>
+            .incrButton {
+                height: 24px;
+                width: 24px;
+            }
             .leaflet-toggle{
               height: 35px;
               width: 35px;
@@ -147,12 +153,24 @@
             <ul>
                  <li><span class="spanClick" onclick="loadSAFromFile(); toggleHamburger(); return false;">load SA from file</span> 
                 <li><span class="spanClick" onclick="clearTail(100); toggleHamburger(); return false;">clear tail (100)</span>
+                <li><span class="spanClick" onclick="clearTail(-1); toggleHamburger(); return false;">clear tail (half)</span>
                 <li><span class="spanClick" onclick="clearTail(0); toggleHamburger(); return false;">clear tail (all)</span>
-                <li><span class="spanClick" onclick="saveTail(); toggleHamburger(); return false;">save tail</span>
-                <li><span class="spanClick" onclick="loadTail(); toggleHamburger(); return false;">load tail</span>
+                <li><span class="spanClick" onclick="saveTail(); toggleHamburger(); return false;">save ship tail</span>
+                <li><span class="spanClick" onclick="loadTail(); toggleHamburger(); return false;">load ship tail</span>
                 <li><span class="spanClick" onclick="loadRoutesFromFile(); toggleHamburger(); return false;">load routes</span>
                 <li><span class="spanClick" onclick="loadMarks(); toggleHamburger(); return false;">load marks</span>
             </ul>
+        </div>
+        <div id="heatControlDiv" class="hamDiv">
+            <span style="min-width:10px; background-color: rgb(48,18,59); color: white;">min</span>&nbsp;<input id="txtHeatMin" size=7 value="0" oninput="heatControlInputMin();">
+            <label for="heatControlAutoMn">auto</label><input type="checkbox" value="auto" id="heatControlAutoMn" checked>
+            <input type="button" onclick="heatControlAdjust(false, 1);" value="+" class="incrButton">
+            <input type="button" onclick="heatControlAdjust(false, -1);" value="-" class="incrButton">
+            <p>
+            <span style="min-width:10px; background-color: rgb(122,4,3); color: white;">max</span>&nbsp;<input id="txtHeatMax" size=7 value="0" oninput="heatControlInputMax();">
+            <label for="heatControlAutoMx">auto</label><input type="checkbox" value="auto" id="heatControlAutoMx" checked>
+            <input type="button" onclick="heatControlAdjust(true, 1);" value="+" class="incrButton">
+            <input type="button" onclick="heatControlAdjust(true, -1);" value="-" class="incrButton">
         </div>
 
         <script type="text/javascript">
@@ -243,14 +261,17 @@
                    // here we tell the reader what to do when it's done reading...
                    reader.onload = readerEvent => {
                       var content = readerEvent.target.result; // this is the content!
-                      var remap;
+                      var remap = false;
                       const lines = content.split('\n');
                       for (var i = 0 ; i < lines.length ; i++) {
                         const pcs = lines[i].split(' ');
-                        remap = addShipTailMarker(parseFloat(pcs[0]), parseFloat(pcs[1]), pcs[2] + ' ' + pcs[3], pcs.length == 5 ? parseFloat(pcs[4]) : null);
+                        const t = Date.parse(pcs[2] + 'T' + pcs[3] + ':00Z')/1000;
+                        remap = addShipTailMarker(parseFloat(pcs[0]), parseFloat(pcs[1]), t, 
+                                                  pcs.length == 5 ? parseFloat(pcs[4]) : null) || remap;
                       }
-                      if (remap)
+                      if (remap) {
                         remapShipTail();
+                      }
                    }
 
                 }
@@ -268,6 +289,87 @@
                         marks[i].setStyle({color: colormap('turbo', marks[i].heat, shipTailHeatMn, shipTailHeatMx) });
                     }
                 }
+
+                if ($('heatControlAutoMn').checked)
+                    $('txtHeatMin').value = shipTailHeatMn;
+                if ($('heatControlAutoMx').checked)
+                    $('txtHeatMax').value = shipTailHeatMx;
+            }
+
+            function heatControlInputMin() {
+                let v = parseFloat($('txtHeatMin').value);
+                if (v && !isNaN(v)) {
+                    shipTailHeatMn = v;
+                    remapShipTail();
+                }
+                else {
+                    $('txtHeatMin').value = shipTailHeatMn;
+                }
+                $('heatControlAutoMn').checked = false;
+            }
+            function heatControlInputMax() {
+                let v = parseFloat($('txtHeatMax').value);
+                if (v && !isNaN(v)) {
+                    shipTailHeatMx = v;
+                    remapShipTail();
+                }
+                else {
+                    $('txtHeatMax').value = shipTailHeatMx;
+                }
+                $('heatControlAutoMx').checked = false;
+            }
+
+            function heatControlAdjust(mx, direc) {
+                const curmn = parseFloat($('txtHeatMin').value);
+                const curmx = parseFloat($('txtHeatMax').value);
+                if (!curmn || !curmx) {
+                    console.log(curmn + ' ' + curmx);
+                    return;
+                }
+                var diff = (curmx - curmn);
+                var incr;
+                if (isNaN(diff)) {
+                    console.log(diff + ' ' + curmn + ' ' + curmx);
+                    return;
+                }
+
+                if (diff <= 0.01)
+                    incr = 0.05;
+                else
+                    incr = diff/10;
+
+                var v;
+                console.log('diff = ' + diff);
+                if (mx)  {
+                    v = curmx + direc*incr; 
+                    if (v < curmn) v = curmn;
+                    $('txtHeatMax').value = v;
+                    heatControlInputMax();
+                }
+                else {
+                    v = curmn + direc*incr; 
+                    if (v > curmx) v = curmx;
+                    $('txtHeatMin').value = v;
+                    heatControlInputMin();
+                }
+            }
+
+            function clearTail(n) {
+                if (shipTailGroup == null) 
+                    return;
+
+                const marks = shipTailGroup.getLayers();
+                if (n == 0) n = marks.length;
+                else if (n == -1) n = marks.length / 2;
+                
+                let m = marks.length;
+                console.log('length ' + m);
+                for (var i = 0 ; i < n ; i++) {
+                    shipTailGroup.removeLayer(marks[i]);
+                    map.removeLayer(marks[i]);
+                }
+                m = shipTailGroup.getLayers().length
+                console.log('length ' + m);
             }
 
             function saveTail() {
@@ -301,7 +403,6 @@
 
             function toggleHamburger() {
                 const state = document.getElementById('hamDiv').style.display;
-                console.log(state);
                 if (state != 'block') {
                     const btn = hamburgerBtn.getContainer();
                     const rect = btn.getBoundingClientRect();
@@ -314,6 +415,22 @@
                 }
             }
 
+            function toggleHeatControl() {
+                const state = document.getElementById('heatControlDiv').style.display;
+                console.log(state);
+                if (state != 'block') {
+                    const btn = heatControlBtn.getContainer();
+                    const rect = btn.getBoundingClientRect();
+                    document.getElementById('heatControlDiv').style.display = 'block';
+                    document.getElementById('heatControlDiv').style.top = rect.top;
+                    document.getElementById('heatControlDiv').style.left = rect.right;
+                }
+                else {
+                    document.getElementById('heatControlDiv').style.display = 'none';
+                }
+            }
+
+            
             async function fetchWeather(latlng, popup, map) {
                 var url1 = "https://marine-api.open-meteo.com/v1/marine?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=wave_height";
                 var url2 = "https://api.open-meteo.com/v1/forecast?latitude=" + latlng.lat.toFixed(4) + "&longitude=" + latlng.lng.toFixed(4) + "&hourly=windspeed_10m,pressure_msl,precipitation,visibility";
@@ -417,8 +534,16 @@
                         d.date + " " + d.time,
                     ].join('<br />');
 
-                    t = Date.parse(d.date + 'T' + d.time + 'Z');
-
+                    t = Date.parse(d.date + 'T' + d.time + 'Z')/1000;
+                    if (tailMinTime == 0 || t < tailMinTime)
+                        tailMinTime = t;
+                    if (t > tailMaxTime) {
+                        tailMaxTime = t;
+                        console.log('new max time');
+                        if (slider.value == 100) {
+                            slider.updateText();
+                        }
+                    } 
                     mk = null;
                     fnd = saAssets.filter((a) => a.id == short);
                     if (fnd.length > 0)
@@ -539,9 +664,11 @@
             const shipTailIncrement = 10;
             var shipTailCount = 0;
             var shipTailGroup = null;
-            var shipTailHeatMx = -1000000;
-            var shipTailHeatMn = 1000000;
+            var shipTailHeatMx = null;
+            var shipTailHeatMn = null;
             var shipTailHeatVal = null;
+            var tailMinTime = 0;
+            var tailMaxTime = 0;
 
             function setupLocation() {
                 document.getElementById('basicInfo').innerHTML = 'Pos:';
@@ -700,18 +827,27 @@
                 if (!la || !lo)
                     return false;
  
+                let ttext = new Date(t*1000).toISOString().replace('T', ' ').slice(0,-8);
+                if (t > tailMaxTime) {
+                    tailMaxTime = t;
+                    if (slider.value == 100) {
+                        slider.updateText();
+                    }
+                }
+                if (tailMinTime == 0 || t < tailMinTime)
+                    tailMinTime = t;
+
                 if (hv) {
                     color = colormap('turbo', hv, shipTailHeatMn, shipTailHeatMx);
-                    if (hv > shipTailHeatMx) {
+                    if (shipTailHeatMx == null || (hv > shipTailHeatMx && $('heatControlAutoMx').checked)) {
                         shipTailHeatMx = hv;
-                        console.log('new heat mx ' + hv);
                         remap = true;
                     }
-                    if (hv < shipTailHeatMn) {
+                    if (shipTailHeatMn == null || (hv < shipTailHeatMn && $('heatControlAutoMn').checked)) {
                         shipTailHeatMn = hv;
-                        console.log('new heat mn ' + hv);
                         remap = true;
                     }
+                    ttext = ttext + ' ' + hv;
                 }
 
                 var tailMarker = L.circleMarker([la, lo], 
@@ -720,9 +856,10 @@
                                                 fillOpacity: 1,
                                                 color: color,
                                            })
-                                           .bindPopup(t);
+                                           .bindPopup(ttext);
 
                 tailMarker.heat = hv;
+                tailMarker.t = t;
 
                 if (shipTailGroup == null) {
                     shipTailGroup = L.layerGroup( [ tailMarker ]);
@@ -818,8 +955,7 @@
                         }
 
                         if (shipTailCount == 0) {
-                            const t = new Date().toISOString().replace('T', ' ').slice(0,-8);
-                            if (addShipTailMarker(la, lo, t, shipTailHeatVal))
+                            if (addShipTailMarker(la, lo, Date.now()/1000, shipTailHeatVal))
                                 remapShipTail();
 
                             shipTailCount = shipTailIncrement;
@@ -1846,6 +1982,36 @@
                 return false;
             }
 
+            function sliderUpdateTime(v) {
+                t = v/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
+                return new Date(t*1000).toISOString().replace('T', ' ').slice(0,-8);
+            }
+
+            function sliderUpdateDisplay(v) {
+                t = v/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
+                // var saAssets     = []; // [ { id: , mark:, time:, tail: [ { mark:, time: } ] } ], 
+                for (var a of saAssets) {
+                    if ('tail' in a && a.tail.length > 0) {
+                        for (var tl of a.tail) {
+                            if (map.hasLayer(tl.mark) && tl.time >= t)
+                                map.removeLayer(tl.mark); 
+                            else if (map.hasLayer(tl.mark) == false && tl.time <= t)
+                                tl.mark.addTo(map);
+                        }
+                    }     
+                }
+
+                if (shipTailGroup == null)
+                    return;
+
+                const marks = shipTailGroup.getLayers();
+                for (var i = 0 ; i < marks.length ; i++) {
+                    if (map.hasLayer(marks[i]) && marks[i].t > t)
+                        map.removeLayer(marks[i]);
+                    else if (map.hasLayer(marks[i]) == false && marks[i].t < t)
+                        marks[i].addTo(map);
+                }
+            }
 /*
             var setupHandler = function(e) {
                 setupLocation(map, layerControl);
@@ -2113,18 +2279,18 @@
                 enableUserInput:true, //optional default true
                 useDMS:false, //optional default false
                 useLatLngOrder: true, //ordering of labels, default false-> lng-lat
-                labelFormatterLng : formatPos, //optional default none,
-                labelFormatterLat : formatPos, //optional default none
+                labelFormatterLng : formatPosDD, //optional default none,
+                labelFormatterLat : formatPosDD, //optional default none
             }).addTo(map);
 
 
-            var hamburgerPopup = L.popup().setContent('<ul><li>menu1<li>menu2<li>menu3</ul>');
+            // var hamburgerPopup = L.popup().setContent('<ul><li>menu1<li>menu2<li>menu3</ul>');
 
             var hamburgerBtn = L.easyButton('<span class="hamburger" style="font-size: 28px; margin-top: -3px; display: inline-block;">&#8801;</span>', function(btn, map) {
                 toggleHamburger(); // btn.getContainer());
             }).addTo(map);
 
-            var div = hamburgerBtn.getContainer();
+            // var div = hamburgerBtn.getContainer();
 
             // ruler tool
 
@@ -2145,6 +2311,15 @@
             let graticule = L.grids.dms()
             graticule.addTo(map);
             L.control.toggle({ position: 'topleft' }).addTo(map).configure(graticule, '../script/images/reticle.png', false);
+
+            let slider = L.control.slider(sliderUpdateDisplay, {id: 'timeSlider', orientation: 'vertical', position: 'topleft', getValue: sliderUpdateTime });
+            slider.addTo(map);
+
+            // var heat = L.popup().setContent('<ul><li>menu1<li>menu2<li>menu3</ul>');
+
+            var heatControlBtn = L.easyButton('<span class="hamburger" style="font-size: 28px; margin-top: -3px; display: inline-block;">&#x1F321;&nbsp;</span>', function(btn, map) {
+                toggleHeatControl(); // btn.getContainer());
+            }).addTo(map);
 
             // layer control
 

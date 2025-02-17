@@ -148,6 +148,10 @@ function dd2ddmm(dd) {
     return deg*100 + min;
 }
 
+function formatPosDD(dd) {
+    return formatPos(dd2ddmm(dd));
+}
+
 function positionFix(lat, lon, t) {
     var fix =   { 
                     pt: {
