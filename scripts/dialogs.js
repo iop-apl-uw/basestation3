@@ -112,12 +112,12 @@
             obj['depth1'] == '' ||
             obj['depth2'] == '' ||
             obj['initBias'] == '') {
-            alert('missing required input (dives, min depth, max depth, init bias)');
+            openMessagePopup('missing required input (dives, min depth, max depth, init bias)', null);
             return;
         }
 
         if (parseFloat(obj['initBias']) == 0) {
-            alert('zero value for init bias not recommended');
+            openMessagePopup('zero value for init bias not recommended', null);
         } 
 
         if (mission() != '')
@@ -154,23 +154,19 @@
             },
             body: json
         })
-        .then(res => res.text())
-        .then(text => {
+        .then(res => res.json())
+        .then(d => {
             closeLoginForm();
-            console.log(text);
-            if (text.includes("failed")) {
-                openLoginForm(loginCallback, "login failed, try again");
+            if (d['status'] == 'pending') {
+                window.location.replace('/setup');
+            }
+            else if (d['status'] == 'authorized') {
+                openMessagePopup('successfully logged in', null);
+                if (loginCallback) loginCallback();
             }
             else {
-                var d = JSON.parse(text);
-                if (d['status'] == 'pending') {
-                    window.location.replace('/setup');
-                }
-                else if (d['status'] == 'authorized') {
-                    console.log(window.location.pathname);
-                    console.log(window.location.search);
-                    if (loginCallback) loginCallback();
-                }
+                openMessagePopup(d['msg'], null);
+                openLoginForm(loginCallback, null);
             }
         })
         .catch(error => {

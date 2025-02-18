@@ -28,6 +28,7 @@
 
 
 from orjson import dumps,loads
+from json2html import *
 import random
 import time
 import calendar
@@ -536,9 +537,7 @@ def attachHandlers(app: sanic.Sanic):
         password = request.json.get("password", None)
         code     = request.json.get("code", None)
 
-
         authed = False
-        response = None
         for user,prop in request.ctx.ctx.userTable.items():
             if user.lower() == username:
                 if 'password' in prop:
@@ -574,7 +573,7 @@ def attachHandlers(app: sanic.Sanic):
                 
                 return response
 
-        return sanic.response.json({'status': 'error', 'msg': 'error'})
+        return sanic.response.json({'status': 'error', 'msg': 'auth error'})
 
     @app.route('/user')
     # description: checks whether current session user is valid
@@ -1602,6 +1601,28 @@ def attachHandlers(app: sanic.Sanic):
         
         return sanic.response.json(message)
 
+    @app.route('/sources')
+    @authorized(check=AUTH_ENDPOINT, requireLevel=0)
+    async def sourcesHandler(request):
+        
+        if 'format' in request.args:
+            format = request.args['format'][0]
+        else:
+            format = 'json'
+
+        srcdb = f'{sys.path[0]}/data/sources.json'
+        if not await aiofiles.os.path.exists(srcdb):
+            return sanic.response.json({ 'error': 'no data' })
+
+        async with aiofiles.open(srcdb, 'r') as file:
+            d = loads(await file.read())
+
+        if format == 'json':
+            return sanic.response.json(d)
+        else:
+            return sanic.response.html(json2html.convert(json=d)) 
+
+             
     @app.route('/rafos/<glider:int>')
     @authorized()
     async def rafosHandler(request, glider:int):

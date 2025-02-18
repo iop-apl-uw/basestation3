@@ -126,16 +126,16 @@ def setupTOTP(db, username):
 def setupUser(db, username, domain, password_input, code, new_password):
     r = query(db, f"SELECT type,domain,password,totp,totp_verify_by,otc,otc_expiry,last,last_t,fails,locked from users WHERE name='{username}'", ())
     if r == False:
-        return {'status': 'error'}
+        return {'msg': 'error', 'status': 'error'}
 
     if not r['otc'] or r['otc'] == '': 
-        return {'msg': 'OTC error', 'status': 'error'}
+        return {'msg': 'one-time-code error', 'status': 'error'}
 
     if r['otc_expiry'] < time.time():
         return {'msg': 'one-time-code expired', 'status': 'error'}
         
     if r['locked']:
-        return {'msg': 'locked', 'status': 'error'}
+        return {'msg': 'account locked', 'status': 'error'}
 
     if r['type'] == 'view':
         return {'msg': 'invalid', 'status': 'error'}
@@ -171,10 +171,10 @@ def changeUserPassword(db, username, email, new_password):
 def authorizeUser(db, username, domain, password_input, code_input, new_password=None):
     r = query(db, f"SELECT type,email,domain,password,totp,totp_verify_by,otc,otc_expiry,last,last_t,fails,locked from users WHERE name='{username}'", ())
     if r == False:
-        return {'status': 'error'}
+        return {'status': 'error', 'msg': 'error1'}
 
     if r['locked']:
-        return {'msg': 'locked', 'status': 'error'}
+        return {'msg': 'account locked', 'status': 'error'}
 
     if r['domain'] != domain:
         return {'msg': 'unauthorized', 'status': 'error'}
@@ -215,8 +215,8 @@ def authorizeUser(db, username, domain, password_input, code_input, new_password
             libname = os.path.join(os.path.dirname(db), 'authlib.txt')
             fact = TOTP.using(secrets_path=libname, issuer="seaglider")
             token = fact.from_source(r['totp'])
-        except:
-            return { 'status': 'error', 'msg': 'invalid' }
+        except Exception as e:
+            return { 'status': 'error', 'msg': f'OTP invalid {e}' }
 
         try:
             match = fact.verify(code_input, token, last_counter=r['last'])
