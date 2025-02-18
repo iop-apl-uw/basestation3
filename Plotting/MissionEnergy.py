@@ -37,18 +37,17 @@ from __future__ import annotations
 import collections
 import pdb
 import sys
-import sqlite3
-import pandas
 import time
 import traceback
 import typing
-
-import plotly
-import BaseDB
 from datetime import datetime
 
 import numpy as np
+import pandas
 import pandas as pd
+import plotly
+
+import BaseDB
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -56,10 +55,8 @@ if typing.TYPE_CHECKING:
 
 import PlotUtilsPlotly
 import Utils
-
-from BaseLog import log_info, log_error
+from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
-
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
@@ -97,7 +94,7 @@ def mission_energy(
     """Plots mission energy consumption and projections"""
     log_info(f"Starting mission_energy {dive}")
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts)
         log_info("mission_energy db opened")
     else:
@@ -128,7 +125,7 @@ def mission_energy(
             log_error(f"Could not fetch {missing_col} - skipping mission_energy plot")
         else:
             log_error("Failed database call", "exc")
-        if dbcon == None:
+        if dbcon is None:
             try:
                 conn.commit()
             except Exception as e:
@@ -256,11 +253,11 @@ def mission_energy(
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               f"energy_days_remain_{type_str}", 
-                              days_remaining, conn);
+                              days_remaining, conn)
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               f"energy_days_total_{type_str}", 
-                              (end_t - start)/86400, conn);
+                              (end_t - start)/86400, conn)
             BaseDB.addValToDB(base_opts, 
                               int(batt_df["dive"].to_numpy()[-1]), 
                               f"energy_end_time_{type_str}", 
@@ -268,7 +265,7 @@ def mission_energy(
             BaseDB.addValToDB(base_opts, 
                               int(batt_df["dive"].to_numpy()[-1]), 
                               f"energy_dives_back_{type_str}", 
-                              float(p_dives_back), conn);
+                              float(p_dives_back), conn)
 
         p_dives_back = (
             base_opts.mission_energy_dives_back
@@ -352,7 +349,7 @@ def mission_energy(
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               "energy_days_remain_FG", 
-                              days_remaining, conn);
+                              days_remaining, conn)
             BaseDB.addValToDB(base_opts, 
                               int(dive_col.to_numpy()[-1]), 
                               "energy_end_time_FG", 
@@ -416,7 +413,7 @@ def mission_energy(
             f"SELECT dive,{','.join(sensor_joule_cols)} from dives", conn
         ).sort_values("dive")
 
-        if dbcon == None:
+        if dbcon is None:
             try:
                 conn.commit()
             except Exception as e:
@@ -664,13 +661,13 @@ def mission_energy(
             ),
         )
 
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
             pdb.post_mortem(traceb)
         log_error("Could not fetch needed columns", "exc")
-        if dbcon == None:
+        if dbcon is None:
             try:
                 conn.commit()
             except Exception as e:
