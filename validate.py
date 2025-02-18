@@ -228,16 +228,17 @@ def targets(body, parms=None):
 
     if errors == 0:
         for t in targets:
+            txt = ''
             if currTarget and t['name'] == currTarget['name']: 
-                res.append(f" => {t['name']}", end='')
+                txt = txt + f" => {t['name']}"
             else:
-                res.append(f"    {t['name']}", end='')
+                txt = txt + f"    {t['name']}"
 
             for fld in t.keys():
                 if fld != 'name':
-                    res.append(f" {fld}={t[fld]}", end='')
+                    txt = txt + f" {fld}={t[fld]}"
         
-            res.append('')
+            res.append(txt)
 
     return (res, errors, warnings)
 
@@ -261,7 +262,7 @@ def science(body, parms=None):
         if dev in d and d[dev]['current'] > -1:
             sensors = sensors + 1
 
-    for line in f:
+    for line in body.split('\n'):
         linenum = linenum + 1
         line = line.strip()
         if len(line) == 0 or line == '' or line[0] == '/':
@@ -324,12 +325,12 @@ def science(body, parms=None):
 
     if errors == 0:
         for s in specs:
-            res.append(f"  {s['depth']}", end='')
+            txt = f"  {s['depth']}"
             for fld in s.keys():
                 if fld != 'depth':
-                    res.append(f" {fld}={s[fld]}", end='')
+                    txt = txt + f" {fld}={s[fld]}"
             
-            res.append('') 
+            res.append(txt) 
 
     return (res, errors, warnings)
 

@@ -73,7 +73,9 @@
     .selected-target {
         background-color: #FFFF00;
     }
-
+    .fileDirty {
+        background-color: rgb(152,255,152);
+    }
     .processing:after {
       overflow: hidden;
       display: inline-block;
@@ -272,7 +274,7 @@
             var bolds = {"targets":0, "science":0, "cmdfile":0, "pdoscmds.bat":0, "Connected":0, "QUIT":1, "RECOV_CODE":1, "GO":2};
 
             var line = e.data;
-            console.log(line);
+            
             if (line == 'invalid') {
                 console.log('invalid');
                 wsocket.close();
@@ -549,9 +551,13 @@
     var controlFileDirty = {};
     function controlFileMarkDirty(which) {
         controlFileDirty[which] = true;
+        if ($('selectFile').value == which)
+            $('btnSubmit').classList.add('fileDirty');
     }
     function controlFileMarkClean(which) {
         controlFileDirty[which] = false;
+        if ($('selectFile').value == which)
+            $('btnSubmit').classList.remove('fileDirty');
     }
     function controlFileIsDirty(which) {
         if (which in controlFileDirty && controlFileDirty[which] == true)
@@ -672,8 +678,13 @@
     function changeFile() {
         var file = $('selectFile').value;
         for (var f of knownFiles) {
-            if (f == file)
+            if (f == file) {
                 $(f).removeAttribute('hidden');
+                if (controlFileDirty[f])
+                    $('btnSubmit').classList.add('fileDirty');
+                else
+                    $('btnSubmit').classList.remove('fileDirty');
+            }
             else
                 $(f).setAttribute('hidden', '');
         }
@@ -2050,6 +2061,10 @@
                 if ($('paramInput_' + pcs[1])) {
                     markChanged(pcs[1]);
                     $('paramInput_' + pcs[1]).value = pcs[2];
+                    if (wholeFile) {     // wholeFile flag is set when loading a cmdfile from basestation, so update waiting value
+                        parms[pcs[1]]['waiting'] = parseFloat(pcs[2]);
+                        $('paramInput_' + pcs[1]).title = makeParmHint(parms[pcs[1]]);
+                    }
                 }
                 else {
                     console.log('no input found for ' + pcs[1]);
@@ -2154,7 +2169,7 @@
         $('divParamSearchResults').innerHTML = results; 
     }
     function markChanged(w) {
-        $('paramInput_' + w).title = 'was ' + $('paramInput_' + w).value;
+        // $('paramInput_' + w).title = 'was ' + $('paramInput_' + w).value;
         $('paramInput_' + w).style.fontWeight = "bold";
     }
 
@@ -2177,18 +2192,18 @@
 
         markChanged('T_DIVE');
         $('paramInput_T_DIVE').value = t.toFixed(0);
-        parms['T_DIVE']['current'] = parseFloat($('paramInput_T_DIVE').value);
+        // parms['T_DIVE']['current'] = parseFloat($('paramInput_T_DIVE').value);
         updateCmdfileFromParm('T_DIVE');
 
         markChanged('T_MISSION');
         $('paramInput_T_MISSION').value = (t + (0.25*t > 15 ? 0.25*t : 15)).toFixed(0);
-        parms['T_MISSION']['current'] = parseFloat($('paramInput_T_MISSION').value);
+        // parms['T_MISSION']['current'] = parseFloat($('paramInput_T_MISSION').value);
         updateCmdfileFromParm('T_MISSION');
 
         if (parseFloat($('paramInput_D_ABORT').value) < d + 10) {
             markChanged('D_ABORT');
             $('paramInput_D_ABORT').value = (d + 25).toFixed(0);
-            parms['D_ABORT']['current'] = parseFloat($('paramInput_D_ABORT').value);
+            // parms['D_ABORT']['current'] = parseFloat($('paramInput_D_ABORT').value);
             updateCmdfileFromParm('D_ABORT');
         }
 
@@ -2196,15 +2211,15 @@
     }
 
     function paramInputChange(w) {
-        var prev = parms[w]['current'];
+        // var prev = parms[w]['current'];
         markChanged(w);
-        parms[w]['current'] = parseFloat($('paramInput_' + w).value);
+        // parms[w]['current'] = parseFloat($('paramInput_' + w).value);
         updateCmdfileFromParm(w);
 
         checkLinkedChanges();
 
     }
-    function addParamInput(g, p, v, h, b, m) {
+    function addParamInput(g, p, hint, v, h, b, m) {
         const colors = ["#cccccc", "#eeeeee"];
         var div = document.createElement('div');
         div.classList.add('paramInputDiv');
@@ -2216,6 +2231,7 @@
         inp.id = 'paramInput_' + p;
         inp.classList.add('paramInputInput');
         inp.value = v;
+        inp.title = hint;
         div.appendChild(span);
         var holder = document.createElement('div');
         holder.classList.add('paramInputHolder');
@@ -2277,6 +2293,16 @@
         $(g).appendChild(div);
         div.style.backgroundColor = colors[$(g).childElementCount % 2];
     }
+
+    function makeParmHint(p) {
+        hint = '';
+        if ('current' in p)
+            hint += `on glider: ${p['current']}  `;
+        if ('waiting' in p)
+            hint += `waiting on basestation: ${p['waiting']}`;
+        return hint;
+    }
+
     function loadParms(glider) {
         fetch(`parmdata/${glider}/${maxDive}${mission()}`)
         .then(res => res.text())
@@ -2310,13 +2336,18 @@
             }
 
             for (p of Object.keys(parms)) {
-                parms[p]['original'] =  parms[p]['current'];
+                if ('current' in parms[p])
+                    parms[p]['original'] =  parms[p]['current'];
+                else    
+                    parms[p]['original'] = null;
             }
 
+            var hint;
             for (g of Object.keys(order)) {
+
                 for (p of order[g]) {
                     if (Object.keys(parms).includes(p))  
-                        addParamInput('pilot' + g, p, 'current' in parms[p] ? parms[p]['current'] : '', parms[p]['help'], 'bitfield' in parms[p] ? parms[p]['bitfield'] : null, 'menufield' in parms[p] ? parms[p]['menufield'] : null);
+                        addParamInput('pilot' + g, p, makeParmHint(parms[p]), 'current' in parms[p] ? parms[p]['current'] : '', parms[p]['help'], 'bitfield' in parms[p] ? parms[p]['bitfield'] : null, 'menufield' in parms[p] ? parms[p]['menufield'] : null);
                 }
             }
             for (p of Object.keys(parms)) {
@@ -2326,17 +2357,17 @@
                 if (parmGroups.includes(parms[p]['category'])) {
                     if (!(Object.keys(order).includes(parms[p]['category'])) ||
                         !(order[parms[p]['category']].includes(p)))
-                            addParamInput('pilot' + parms[p]['category'], p, 'current' in parms[p] ? parms[p]['current'] : '', parms[p]['help'], 'bitfield' in parms[p] ? parms[p]['bitfield'] : null, 'menufield' in parms[p] ? parms[p]['menufield'] : null);
+                            addParamInput('pilot' + parms[p]['category'], p, makeParmHint(parms[p]), 'current' in parms[p] ? parms[p]['current'] : '', parms[p]['help'], 'bitfield' in parms[p] ? parms[p]['bitfield'] : null, 'menufield' in parms[p] ? parms[p]['menufield'] : null);
                 }
             }
             for (p of Object.keys(parms)) {
                 if ('waiting' in parms[p]) {
-                    parms[p]['current'] = parms[p]['waiting']; 
+                    // parms[p]['current'] = parms[p]['waiting']; 
                     markChanged(p);
                     $('paramInput_' + p).value = parms[p]['waiting'];
                 }
             }
-
+parms[p]
             loadControlFile('cmdfile');
             loadControlFile('science');
             loadControlFile('targets');
@@ -4256,7 +4287,7 @@
                     <input type="radio" id="radPilotDirectiveRESUME" name="radPilotDirective" onclick="changeDirective('RESUME');" value="RESUME">
                     <label for="radPilotDirectiveRESUME">RESUME</label>
                     <hr>
-                    <input type="button" id="btnParamSearch" onclick="doParamSearch();" value="search">
+                    <input type="button" id="btnParamSearch" onclick="doParamSearch();" value="search parameters">
                     <input id="txtParamSearch" class="parmInputInput">
                     <span onclick="clearParamSearch();" class="spanClick">&otimes;</span>
                     <p>
