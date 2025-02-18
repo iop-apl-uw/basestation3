@@ -29,6 +29,7 @@
               height: 35px;
               width: 35px;
               border-color: chartreuse !important;
+              border-width: 4px !important;
           }
         </style>
         <script>
@@ -1229,7 +1230,7 @@
                     map.removeLayer(routesLayer);
                 }
 
-                var routesLayer = L.layerGroup(routeMarkers);
+                routesLayer = L.layerGroup(routeMarkers);
                 if (show) routesLayer.addTo(map); 
                 layerControl.addOverlay(routesLayer, 'routes', 'assets')
             }
@@ -1969,6 +1970,12 @@
                     }
                 }
                 else if (fmt == 114 || fmt == 82) { // 'r' = route
+                    var pts = [];
+                    for(var i = 0; i < points.length ; i++) {
+                        pts.push( { lat: points[i].lat, lon: points[i].lng } );
+                    }
+                    loadRoutes(map, layerControl, [ pts ], true);
+/*
                     buffText += '  - [ ';
                     for(var i = 0; i < points.length ; i++) {
                         latA = points[i].lat;
@@ -1979,6 +1986,7 @@
                         else
                             buffText += ' ]\n';
                     }
+*/
                 }
     
                 if (targetsChannel) {
