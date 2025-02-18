@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -600,11 +600,12 @@ def mission_energy(
 
         title_text = f"{mission_str}<br>Energy Consumption and Endurance"
 
+        est_str = f"{fg_est_str}<br>{batt_est_str}" if fg_est_str else batt_est_str
         fig.update_layout(
             {
                 "xaxis": {
                     #"title": "Dive Number",
-                    "title": f"Dive Number<br>{batt_est_str}<br>{fg_est_str}",
+                    "title": f"Dive Number<br>{est_str}",
                     "showgrid": True,
                     # "side": "top"
                     "domain": [0.0, 0.925],
