@@ -163,7 +163,7 @@ def targets(body, parms=None):
     warnings = 0
     res = []
 
-    knownFields = ["lat", "lon", "goto", "head", "depth", "finish", "dives", "exec", 
+    knownFields = ["lat", "lon", "goto", "head", "depth", "finish", "dives", "exec", "radius",
                    "timeout", "timeout-exec", "timeout-goto", 
                    "src", "src-timeout", "src-timeout-exec", "src-timeout-goto", 
                    "slow-progress", "slow-progress-goto", "slow-progress-exec",
@@ -223,7 +223,7 @@ def targets(body, parms=None):
                 res.append(f"invalid goto on target {t['name']}")
                 errors = errors + 1 
     
-            if '$TGT_NAME' in curr and t['name'] == curr['$TGT_NAME']:
+            if parms and '$TGT_NAME' in parms and t['name'] == parms['$TGT_NAME']:
                 currTarget = t
 
     if errors == 0:

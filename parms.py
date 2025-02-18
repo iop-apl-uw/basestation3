@@ -42,6 +42,8 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
                     elif line.startswith('$SENSORS'):
                         sensors = line.strip().split(',')[1:]
                         d['SENSORS'] = sensors;
+                    elif line.startswith('$TGT_NAME'):
+                        d['TGT_NAME'] = line.strip().split(',')[1]
         except:
             pass
 
@@ -58,6 +60,8 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
 
                 if 'log_SENSORS' in latest:
                     d['SENSORS'] = latest['log_SENSORS'].split(',')
+                if 'log_TGT_NAME' in latest:
+                    d['TGT_NAME'] = latest['log_TGT_NAME']
             except:
                 pass
     

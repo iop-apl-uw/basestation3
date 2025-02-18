@@ -138,6 +138,7 @@
 
     var parms = [];
     var parms_SENSORS = null;
+    var parms_TGT_NAME = null;
  
     var sectionSortMajor = 'number';
     var sectionNumberSort = 'reverse';
@@ -2333,6 +2334,10 @@
             if ('SENSORS' in parms) {
                 parms_SENSORS = [...parms['SENSORS']];
                 delete parms['SENSORS'];
+            }
+            if ('TGT_NAME' in parms) {
+                parms_TGT_NAME = parms['TGT_NAME'];
+                delete parms['TGT_NAME'];
             }
 
             for (p of Object.keys(parms)) {
