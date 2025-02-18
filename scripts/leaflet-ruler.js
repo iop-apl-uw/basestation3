@@ -144,7 +144,8 @@
           this._toggleMeasure();
         }
       }
-      if (e.keyCode === 84 || e.keyCode === 116 || e.keyCode == 77 || e.keyCode == 109 || e.keyCode == 82 || e.keyCode == 114) {
+        // T or t (targets), M (marks), R or r (routes)
+      if (e.keyCode === 84 || e.keyCode === 116 || e.keyCode == 77 || e.keyCode == 82 || e.keyCode == 114) {
         var pts = null;
         if (this.options.export) {
             if (this._clickCount > 0) {

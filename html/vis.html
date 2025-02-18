@@ -1648,6 +1648,7 @@
         $('selectFile').value = 'targets';
         changeFile();
         $('targets').value = str;  
+        controlFileMarkDirty('targets');
     }
 
     function getTargetsFromMap(pts) 
@@ -2029,6 +2030,7 @@
         $('selectFile').value = 'science';
         changeFile();
         $('science').value = str;  
+        controlFileMarkDirty('science');
    }
 
     const directives = ['GO', 'RESUME', 'QUIT'];

@@ -36,7 +36,7 @@ L.Control.Coordinates = L.Control.extend({
 		//leaflet marker properties
 		markerProps: {}
 	},
-
+    latlng: null,
 	onAdd: function(map) {
 		this._map = map;
 
@@ -267,6 +267,7 @@ L.Control.Coordinates = L.Control.extend({
 		var pos = evt.latlng,
 			opts = this.options;
 		if (pos) {
+            this.latlng = structuredClone(pos);
 			pos = pos.wrap();
 			this._currentPos = pos;
 			this._inputY.value = pos.lat; // L.NumberFormatter.round(pos.lat, opts.decimals, opts.decimalSeperator);

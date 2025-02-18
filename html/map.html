@@ -24,6 +24,13 @@
         <script src="../script/leaflet-slider.js"></script>
 
 
+        <style>
+          .leaflet-toggle-clicked{
+              height: 35px;
+              width: 35px;
+              border-color: chartreuse !important;
+          }
+        </style>
         <script>
             L.Control.toggle = L.Control.extend({
                 onAdd: function(map) {
@@ -35,37 +42,34 @@
                     this._choice = false;
                     this._defaultCursor = this._map._container.style.cursor;
                     this._allLayers = L.layerGroup();
-                    this._control = null;
+                    this._toggle = null;
+                    this.toggled = false;
                     return this._container;
                 },
-
+                toggled: false,
                 onRemove: function(map) {
                     L.DomEvent.off(this._container, 'click', this._toggleControl, this);
                     // Nothing more to do here
                 },
                 _toggleControl: function() {
-                    if (this._map.hasLayer(this._control))
-                        this._map.removeLayer(this._control);
+                    this.toggled = !this.toggled;
+                    console.log('toggled');
+                    if (this.toggled)
+                        this._container.classList.add("leaflet-toggle-clicked");
                     else
-                        this._control.addTo(this._map);
-                    /*
-                    if (this._control.style.visibility == "visible")  
-                        this._control.style.visibility = "hidden"; 
-                    else 
-                        this._control.style.visibility = "visible"; 
-                    */
+                        this._container.classList.remove("leaflet-toggle-clicked");
+                    if (this._toggle) this._toggle(this.toggled);
                     return false;
                 },
-                configure: function(control, image, state) {
-                    this._control = control;
-                    if (this._map.hasLayer(control) && !state) this._map.removeLayer(control);
-                    else if (!this._map.hasLayer(control) && state) control.addTo(this._map);
-                    // control.style.visibility = state ? "visible" : "hidden";
-                    this._container.style.backgroundImage = 'url(' + image + ')';
+                configure: function(toggle, html) {
+                    this._toggle = toggle;
+                    this._container.innerHTML = html; // style.backgroundImage = 'url(' + image + ')';
+                    return this;
                 }
             });
 
             L.control.toggle = function(opts) {
+                
                 return new L.Control.toggle(opts);
             }
         </script>
@@ -532,6 +536,7 @@
                         d.class + " " + d.id,
                         formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon)),
                         d.date + " " + d.time,
+                        `<span onclick="activateAsset('${short}');">activate</span>`,
                     ].join('<br />');
 
                     t = Date.parse(d.date + 'T' + d.time + 'Z')/1000;
@@ -659,6 +664,7 @@
             var windDir = null;
             var windMarker = null;
             var shipMarker = null;
+            var shipCenterToggle = null;
             var shipRingsGroup = null;
             var shipRings = null;
             const shipTailIncrement = 10;
@@ -669,6 +675,8 @@
             var shipTailHeatVal = null;
             var tailMinTime = 0;
             var tailMaxTime = 0;
+            var droppedMarks = [];
+            var assetMarkers = [];
 
             function setupLocation() {
                 document.getElementById('basicInfo').innerHTML = 'Pos:';
@@ -939,6 +947,10 @@
                         windMarker.setLatLng([la, lo]);
                         shipMarker.setRotation(msg['hdt']);
                         updateShipRings();
+                        console.log(shipCenterToggle.toggled);
+                        if (shipCenterToggle && shipCenterToggle.toggled) {
+                            map.panTo([la, lo]);
+                        }
 
                         html = [
                           'Pos: ' + formatPos(dd2ddmm(la)) + ',' + formatPos(dd2ddmm(lo)), 
@@ -1132,7 +1144,26 @@
                 mk.setStyle({ color: "red", radius: 7 });
             }
     
-            function activateAsset(mk) {
+            function activateAsset(id) {
+                var mk = null;
+                var fnd = assetMarkers.filter((a) => a.id == id);
+                if (fnd.length > 0) {
+                    mk = fnd[0];
+                }
+                else {
+                    fnd = droppedMarks.filter((a) => a.id == id); 
+                    if (fnd.length > 0)
+                        mk = fnd[0];
+                    else {
+                        fnd = saAssets.filter((a) => a.id == id);
+                        if (fnd.length > 0)
+                            mk = fnd[0]['mark'];
+                    }
+                }
+    
+                if (mk == null)
+                    return;
+ 
                 console.log('activating asset');
                 if (mk == activeAsset) {
                     activeAsset.setStyle({ color: activeAssetOriginalColor, radius: activeAssetOriginalRadius });
@@ -1201,7 +1232,6 @@
             }
  
             function loadAssets(map, layerControl, assets, glider, mission) {
-                var assetMarkers = [];
                 var mk;
                 console.log(assets);
 
@@ -1212,7 +1242,8 @@
                     mk = null; 
                     if (a.type == 'fixed') {
                         console.log('adding fixed ' + a.asset);
-                        html = [ a.asset, formatPos(dd2ddmm(a.lat)) + "," + formatPos(dd2ddmm(a.lon))].join('<br/>');
+                        html = [ a.asset, formatPos(dd2ddmm(a.lat)) + "," + formatPos(dd2ddmm(a.lon)), 
+                                 `<span onclick="activateAsset('${a.id}');">activate</span>` ].join('<br/>');
                         try {
                             mk = new L.shapeMarker([a.lat, a.lon],
                                                {
@@ -1223,9 +1254,10 @@
                                               ).bindTooltip(a.asset, { permanent: true, className: 'assetLabel' })
                                                .bindPopup(html);
                             assetMarkers.push(mk); 
-                            mk.on('click', function(e) {
-                                activateAsset(this); 
-                            });
+                            mk.id = a.asset;
+                            //mk.on('click', function(e) {
+                            //    activateAsset(this); 
+                            //});
                             layerControl.addOverlay(mk, a.asset, "assets");
                             mk.addTo(map);
                         }
@@ -1280,6 +1312,7 @@
                                 if ('Ta' in p)
                                     html.push('Ta=' + p['Ta']);
 
+                                html.push(`<span onclick="activateAsset('${aa.asset}');">activate</span>`);
                                 html = html.join('<br/>');
                                 try {
                                     mk = new L.shapeMarker([p['lat'], p['lon']],
@@ -1291,10 +1324,10 @@
                                                       ).bindTooltip(aa.asset, { permanent: true, className: 'assetLabel' })
                                                        .bindPopup(html);
                                     assetMarkers.push(mk); 
-                                    mk.on('click', function(e) {
-                                        activateAsset(this); 
-                                    });
-                                    
+                                    mk.id = aa.asset;
+                                    //mk.on('click', function(e) {
+                                    //    activateAsset(this.id); 
+                                    //});
                                     mks.push(mk); 
                                     //layerControl.addOverlay(mk, aa.asset, "assets");
                                     //mk.addTo(map);
@@ -1348,7 +1381,8 @@
                                 if ('data' in d) {
                                     p = d['data'][d['data'].length - 1];
                                         
-                                    html = [ aa.asset, formatPos(dd2ddmm(p[2])) + "," + formatPos(dd2ddmm(p[1])), "@" + new Date(p[0]*1000).toISOString()].join('<br/>');
+                                    html = [ aa.asset, formatPos(dd2ddmm(p[2])) + "," + formatPos(dd2ddmm(p[1])), "@" + new Date(p[0]*1000).toISOString(),
+                                            `<span onclick="activateAsset('${a.id}');">activate</span>` ].join('<br/>');
                                     try {
                                         mk = new L.shapeMarker([p[2], p[1]],
                                                            {
@@ -1359,9 +1393,10 @@
                                                           ).bindTooltip(aa.asset, { permanent: true, className: 'assetLabel' })
                                                            .bindPopup(html);
                                         assetMarkers.push(mk); 
-                                        mk.on('click', function(e) {
-                                            activateAsset(this); 
-                                        });
+                                        mk.id = aa.asset;
+                                        //mk.on('click', function(e) {
+                                        //    activateAsset(this.id); 
+                                        //});
                                         
                                         mks.push(mk); 
                                         //layerControl.addOverlay(mk, aa.asset, "assets");
@@ -1425,7 +1460,8 @@
                             .then(d => {
                                 console.log(aa);
                                 if ('lat' in d && 'lon' in d) {
-                                    html = [ aa.asset, formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon))].join('<br/>');
+                                    html = [ aa.asset, formatPos(dd2ddmm(d.lat)) + "," + formatPos(dd2ddmm(d.lon)),
+                                            `<span onclick="activateAsset('${aa.asset}');">activate</span>` ].join('<br/>');
                                     if ('sog' in d && 'cog' in d) {
                                         html = html + '<br/>' + d.sog + " @ " + d.cog;
                                     }
@@ -1440,10 +1476,10 @@
                                     assetMarkers.push(mk); 
                                     layerControl.addOverlay(mk, aa.asset, "assets");
                                     mk.addTo(map);
-
-                                    mk.on('click', function(e) {
-                                        activateAsset(this); 
-                                    });
+                                    mk.id = aa.asset;
+                                    //mk.on('click', function(e) {
+                                    //    activateAsset(this.id); 
+                                    //});
                                     // setupShip(map, layerControl, aa.asset, mk);
 
                                     if ('interval' in aa && aa.interval > 0) {
@@ -1983,19 +2019,19 @@
             }
 
             function sliderUpdateTime(v) {
-                t = v/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
+                t = (100 - v)/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
                 return new Date(t*1000).toISOString().replace('T', ' ').slice(0,-8);
             }
 
             function sliderUpdateDisplay(v) {
-                t = v/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
+                t = (100-v)/100.0*(tailMaxTime - tailMinTime) + tailMinTime;
                 // var saAssets     = []; // [ { id: , mark:, time:, tail: [ { mark:, time: } ] } ], 
                 for (var a of saAssets) {
                     if ('tail' in a && a.tail.length > 0) {
                         for (var tl of a.tail) {
-                            if (map.hasLayer(tl.mark) && tl.time >= t)
+                            if (map.hasLayer(tl.mark) && tl.time <= t)
                                 map.removeLayer(tl.mark); 
-                            else if (map.hasLayer(tl.mark) == false && tl.time <= t)
+                            else if (map.hasLayer(tl.mark) == false && tl.time >= t)
                                 tl.mark.addTo(map);
                         }
                     }     
@@ -2006,11 +2042,41 @@
 
                 const marks = shipTailGroup.getLayers();
                 for (var i = 0 ; i < marks.length ; i++) {
-                    if (map.hasLayer(marks[i]) && marks[i].t > t)
+                    if (map.hasLayer(marks[i]) && marks[i].t <= t) {
                         map.removeLayer(marks[i]);
-                    else if (map.hasLayer(marks[i]) == false && marks[i].t < t)
+                    }
+                    else if (map.hasLayer(marks[i]) == false && marks[i].t >= t)
                         marks[i].addTo(map);
                 }
+            }
+    
+            function deleteMark(id) {
+                let fnd = droppedMarks.filter((a) => a.id == id);
+                if (fnd.length > 0)
+                    m = fnd[0];
+                map.removeLayer(m);
+            }
+
+            function draggableMarker(map, m) {
+                function drag(e) {
+                    let html = [
+                        formatPos(dd2ddmm(e.latlng.lat)) + "," + formatPos(dd2ddmm(e.latlng.lng)),
+                        `<span onclick="deleteMark('${m.id}');">delete</span> <span onclick="activateAsset('${m.id}');">activate</span>`
+                    ].join('<br />');
+
+                    m.setLatLng(e.latlng);
+                    m.getPopup().setContent(html);
+                }
+
+                m.on("mousedown", () => {
+                    map.dragging.disable();
+                    map.on("mousemove", drag);
+                });
+
+               m.on("mouseup", () => {
+                    map.dragging.enable();
+                     map.off("mousemove", drag);
+                });
             }
 /*
             var setupHandler = function(e) {
@@ -2018,7 +2084,7 @@
                 document.getElementById('basicInfo').innerHTML = 'Pos:');
                 document.getElementById('basicInfo').removeEventListener('click', setupHandler);
             };
-*/
+*/ 
         </script>
 
         <script type="text/javascript">
@@ -2270,7 +2336,7 @@
             
             // coordinate display
 
-            L.control.coordinates({
+            coord = L.control.coordinates({
                 position:"bottomleft", //optional default "bootomright"
                 decimals:2, //optional default 4
                 decimalSeperator:".", //optional default "."
@@ -2307,10 +2373,33 @@
             ruler = L.control.ruler(options);
             ruler.addTo(map);
 
+            map.on('keypress', function(e) { 
+                // console.log(e);
+                if (e.originalEvent.charCode == 109) { 
+                    let id = '' + Math.floor(Date.now()/1000);
+                    let html = [
+                        formatPos(dd2ddmm(coord.latlng.lat)) + "," + formatPos(dd2ddmm(coord.latlng.lng)),
+                        `<span onclick="deleteMark('${id}');">delete</span> <span onclick="activateAsset('${id}');">activate</span>`
+                    ].join('<br />');
+                    let m = L.shapeMarker(coord.latlng, 
+                              {
+                                    shape: 'square',
+                                    radius: 5,
+                                    color: 'magenta',
+                                    draggable: 'true',
+                              })
+                              .bindPopup(html)
+                              .addTo(map);
+    
+                    m.id = id;
+                    draggableMarker(map, m);
+                    droppedMarks.push(m);
 
-            let graticule = L.grids.dms()
-            graticule.addTo(map);
-            L.control.toggle({ position: 'topleft' }).addTo(map).configure(graticule, '../script/images/reticle.png', false);
+                 } 
+            });
+
+            shipCenterToggle = L.control.toggle({ position: 'topleft' }).addTo(map).configure(null, '<span style="font-size: 20px;">&nbsp;&#x1F6A2;</span>');
+            console.log('added shipCenterToggle');
 
             let slider = L.control.slider(sliderUpdateDisplay, {id: 'timeSlider', orientation: 'vertical', position: 'topleft', getValue: sliderUpdateTime });
             slider.addTo(map);
@@ -2362,7 +2451,10 @@
 
             var layerControl = L.control.groupedLayers(baseLayers, overlayLayers, options).addTo(map);
 
-
+            let graticule = L.grids.dms()
+            // graticule.addTo(map);
+            layerControl.addOverlay(graticule, 'grid', "chart"); 
+            
             // ice edge first
 
             //kmz = L.kmzLayer();
