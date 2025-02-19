@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -39,9 +39,9 @@ import functools
 import glob
 import math
 import os
+import pdb
 import pprint
 import pstats
-import pdb
 import re
 import shutil
 import signal
@@ -50,8 +50,8 @@ import struct
 import sys
 import tarfile
 import threading
-import traceback
 import time
+import traceback
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -84,18 +84,18 @@ import Strip1A
 import Utils
 import Ver65
 from BaseLog import (
-    log_critical,
-    log_error,
-    log_warning,
-    log_info,
-    log_debug,
+    BaseLogger,
+    log_alerts,
     log_conversion_alert,
     log_conversion_alerts,
-    log_alerts,
+    log_critical,
+    log_debug,
+    log_error,
+    log_info,
     log_warn_errors,
-    BaseLogger,
+    log_warning,
 )
-from Globals import known_files, known_mailer_tags, known_ftp_tags
+from Globals import known_files, known_ftp_tags, known_mailer_tags
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
@@ -760,7 +760,7 @@ def process_file_group(
                         f"Extracting {tarmember.name} from {defrag_file_name} to directory {base_opts.mission_dir}"
                     )
                     try:
-                        if sys.version_info < (3, 10, 11):
+                        if sys.version_info < (3, 10, 11):  # noqa: UP036
                             tar.extract(tarmember.name, base_opts.mission_dir)
                         else:
                             tar.extract(
@@ -1308,8 +1308,8 @@ def expunge_secrets_st(selftest_name):
         )
         return 1
 
-    public_lines = "".encode("utf-8")
-    private_lines = "".encode("utf-8")
+    public_lines = b""
+    private_lines = b""
 
     base, _ = os.path.splitext(selftest_name)
     pvt_name = base + ".pvtst"
@@ -1318,7 +1318,7 @@ def expunge_secrets_st(selftest_name):
 
     line_count = 0
     for raw_line in pub:
-        line_count += 1
+        line_count += 1  # noqa: SIM113
         try:
             s = raw_line.decode("utf-8")
         except UnicodeDecodeError:
@@ -1836,9 +1836,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             os.path.basename(i) not in processed_pdos_logfiles_dict
             or os.path.getmtime(os.path.join(base_opts.mission_dir, i))
             > processed_pdos_logfiles_dict[os.path.basename(i)]
-        ):
-            if not process_pdoscmd_log(i, instrument_id):
-                new_pdos_logfiles_processed.append(os.path.basename(i))
+        ) and not process_pdoscmd_log(i, instrument_id):
+            new_pdos_logfiles_processed.append(os.path.basename(i))
 
     # PDos logs notification
     if new_pdos_logfiles_processed:
@@ -2091,7 +2090,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 )
 
     if backup_dive_num is not None and int(backup_dive_num) >= 1:
-        cmdfile_name = f"cmdfile.{int(backup_dive_num):04d}.{int(backup_call_cycle):04d}"
+        cmdfile_name = (
+            f"cmdfile.{int(backup_dive_num):04d}.{int(backup_call_cycle):04d}"
+        )
 
         fullname = os.path.join(base_opts.mission_dir, cmdfile_name)
         if os.path.exists(fullname):
@@ -2136,37 +2137,35 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 base_opts.delete_upload_files
                 and not os.path.exists(preserve_files[ii])
                 and known_files[ii] != "cmdfile"
+                and os.path.exists(known_file)
             ):
                 # Remove the uploaded file if it was transferred in the most recent comm session
                 # and the size and date criteria are met
-                if os.path.exists(known_file):
-                    session = comm_log.last_complete_surfacing()
+                session = comm_log.last_complete_surfacing()
+                if (
+                    known_files[ii] in session.file_stats
+                    and time.mktime(session.disconnect_ts)
+                    > os.stat(known_file).st_mtime
+                ):
                     if (
-                        known_files[ii] in session.file_stats
-                        and time.mktime(session.disconnect_ts)
-                        > os.stat(known_file).st_mtime
+                        session.file_stats[known_files[ii]].receivedsize
+                        != os.stat(known_file).st_size
                     ):
-                        if (
-                            session.file_stats[known_files[ii]].receivedsize
-                            != os.stat(known_file).st_size
-                        ):
-                            log_info(
-                                "File %s appear to be uploaded, but file size does not match (%d:%d) - not deleting"
-                                % (
-                                    known_file,
-                                    session.file_stats[known_files[ii]].receivedsize,
-                                    os.stat(known_file).st_size,
-                                )
+                        log_info(
+                            "File %s appear to be uploaded, but file size does not match (%d:%d) - not deleting"
+                            % (
+                                known_file,
+                                session.file_stats[known_files[ii]].receivedsize,
+                                os.stat(known_file).st_size,
                             )
+                        )
+                    else:
+                        try:
+                            os.unlink(known_file)
+                        except Exception:
+                            log_error(f"Could not remove uploaded file {known_file}")
                         else:
-                            try:
-                                os.unlink(known_file)
-                            except Exception:
-                                log_error(
-                                    f"Could not remove uploaded file {known_file}"
-                                )
-                            else:
-                                log_info(f"{known_file} was uploaded and deleted")
+                            log_info(f"{known_file} was uploaded and deleted")
 
     if base_opts.make_dive_profiles:
         last_session = comm_log.last_surfacing()
@@ -2461,7 +2460,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             )
             with open(resend_file_name, "w") as resend_file:
                 for _, alert_tuple in conversion_alerts_d.items():
-                    for msg, resend_cmd in alert_tuple:
+                    for _, resend_cmd in alert_tuple:
                         if resend_cmd:
                             resend_file.write(f"{resend_cmd}\n")
 
