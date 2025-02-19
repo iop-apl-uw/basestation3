@@ -1,7 +1,7 @@
 # /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,37 +35,35 @@
 
 import contextlib
 import glob
+import math
 import os
 import pdb
 import sqlite3
-import stat
 import sys
 import time
 import traceback
-import math
 import warnings
 
 import numpy
 import pandas as pd
 
-import CmdHistory
 import BaseOpts
 import BaseOptsType
 import BasePlot
 import CalibConst
+import CmdHistory
 import CommLog
 import PlotUtils
 import Utils
-from CalibConst import getSGCalibrationConstants
-
 from BaseLog import (
     BaseLogger,
-    log_info,
     log_critical,
-    log_error,
     log_debug,
+    log_error,
+    log_info,
     log_warning,
 )
+from CalibConst import getSGCalibrationConstants
 
 #DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
@@ -106,7 +104,7 @@ def getVarNames(nci):
     """Collect var names from netcdf file - used only for debugging"""
     nc_vars = []
 
-    for k in nci.variables.keys():
+    for k in nci.variables:
         if (
             len(nci.variables[k].dimensions)
             and "_data_point" in nci.variables[k].dimensions[0]
@@ -281,7 +279,7 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
     try:
         nci = Utils.open_netcdf_file(filename)
-    except:
+    except Exception:
         log_error(f"Could not open {filename} - bailing out", "exc")
         return
 
@@ -347,14 +345,14 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
             < nci.variables["start_of_climb_time"].getValue()
         )
         pi_div = numpy.nanmean(nci.variables["eng_pitchAng"][i])
-        ro_div = numpy.nanmean(nci.variables["eng_rollAng"][i])
+        # ro_div = numpy.nanmean(nci.variables["eng_rollAng"][i])
 
         i = numpy.where(
             nci.variables["eng_elaps_t"][:]
             > nci.variables["start_of_climb_time"].getValue()
         )
         pi_clm = numpy.nanmean(nci.variables["eng_pitchAng"][i])
-        ro_clm = numpy.nanmean(nci.variables["eng_rollAng"][i])
+        # ro_clm = numpy.nanmean(nci.variables["eng_rollAng"][i])
         insertColumn(dive, cur, "pitch_dive", pi_div, "FLOAT")
         insertColumn(dive, cur, "pitch_climb", pi_clm, "FLOAT")
 
@@ -512,7 +510,7 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
         dmg = dtg1 - dtg2
         dogEff = dmg/bestDOG
-    except:
+    except Exception:
         dmg = 0
         dog = 0
         dogEff = 0
@@ -540,7 +538,7 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
             log_debug(
                 f"Failed to fetch batt_ah columns for dive {dive-1} - not generating ah/kj columns",
             )
-        except:
+        except Exception:
             log_error(
                 f"Failed to fetch batt_ah columns for dive {dive-1} - not generating ah/kj columns",
                 "exc",
@@ -616,13 +614,13 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
     if len(mhead_line) > 3:
         [mhead, rng, pitchd, wd] = list(map(float, mhead_line[:4]))
-    if len(mhead_line) > 4:
-        theta = float(mhead_line[4])
-    if len(mhead_line) > 5:
-        dbdw = float(mhead_line[5])
+    # if len(mhead_line) > 4:
+    #     theta = float(mhead_line[4])
+    # if len(mhead_line) > 5:
+    #     dbdw = float(mhead_line[5])
 
-    if len(mhead_line) > 6:
-        pressureNoise = float(mhead_line[6])
+    # if len(mhead_line) > 6:
+    #     pressureNoise = float(mhead_line[6])
 
     insertColumn(dive, cur, "mag_heading_to_target", mhead, "FLOAT")
     insertColumn(dive, cur, "meters_to_target", rng, "FLOAT")
@@ -707,7 +705,7 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
                 dive, cur, "implied_volmax_glider", glider_implied_volmax, "FLOAT"
             )
 
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
@@ -736,11 +734,11 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
 def loadNetworkFileToDB(base_opts, cur, filename, con):
     """Process single network netcdf file into the database"""
-    gpsVars = [ "time", "lat", "lon", "hdop"]
+    # gpsVars = [ "time", "lat", "lon", "hdop"]
 
     try:
         nci = Utils.open_netcdf_file(filename)
-    except:
+    except Exception:
         log_error(f"Could not open {filename} - bailing out", "exc")
         return
 
@@ -776,11 +774,11 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
     else:
         log_warning(f'gc time not in {filename}')
 
-    insertColumn(dive, cur, "log_start", nci.variables["start_time"].getValue(), "FLOAT");
+    insertColumn(dive, cur, "log_start", nci.variables["start_time"].getValue(), "FLOAT")
     if "log_GPS" in nci.variables:
-        insertColumn(dive, cur, "log_gps_lat", nci.variables["log_GPS"][1], "FLOAT");
-        insertColumn(dive, cur, "log_gps_lon", nci.variables["log_GPS"][2], "FLOAT");
-        insertColumn(dive, cur, "log_gps_hdop", nci.variables["log_GPS"][3], "FLOAT");
+        insertColumn(dive, cur, "log_gps_lat", nci.variables["log_GPS"][1], "FLOAT")
+        insertColumn(dive, cur, "log_gps_lon", nci.variables["log_GPS"][2], "FLOAT")
+        insertColumn(dive, cur, "log_gps_hdop", nci.variables["log_GPS"][3], "FLOAT")
     else:
         log_warning(f'gps fixes not in {filename}')
         
@@ -801,9 +799,9 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
         v10 = 0
         ah10 = 0
 
-    if "log_SDFILEDIR" in nci.variables:
-        sdfiles = nci.variables["log_SDFILEDIR"][0]
-        sddirs  = nci.variables["log_SDFILEDIR"][1]
+    # if "log_SDFILEDIR" in nci.variables:
+    #     sdfiles = nci.variables["log_SDFILEDIR"][0]
+    #     sddirs  = nci.variables["log_SDFILEDIR"][1]
 
     insertColumn(dive, cur, "batt_volts_10V", v10, "FLOAT")
     insertColumn(dive, cur, "batt_volts_24V", v24, "FLOAT")
@@ -814,11 +812,11 @@ def loadNetworkFileToDB(base_opts, cur, filename, con):
     if "log_MHEAD_RNG_PITCHd_Wd" in nci.variables:
         mhead  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][0]
         rng    = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][1]
-        pitchd = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][2]
-        wd     = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][3]
-        theta  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][4]
-        dbdw   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][5]
-        pressureNoise   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][6]
+        #pitchd = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][2]
+        #wd     = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][3]
+        #theta  = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][4]
+        #dbdw   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][5]
+        #pressureNoise   = nci.variables["log_MHEAD_RNG_PITCHd_Wd"][6]
 
         insertColumn(dive, cur, "mag_heading_to_target", mhead, "FLOAT")
         insertColumn(dive, cur, "meters_to_target", rng, "FLOAT")
@@ -908,7 +906,7 @@ def updateDBFromFM(base_opts, ncfs, cur):
                     insertColumn(nci.dive_number, cur, "fm_implied_hd_a", fm_dict["hd_a"], "FLOAT")
                 if "hd_b" in fm_dict:
                     insertColumn(nci.dive_number, cur, "fm_implied_hd_b", fm_dict["hd_b"], "FLOAT")
-        except:
+        except Exception:
             log_error(f"Problem opening FM data associated with {ncf}")
 
 def prepCallsChangesFiles(base_opts, dbfile=None):
@@ -1047,19 +1045,19 @@ def checkSchema(base_opts, con):
                 # if somehow the schema versioning is out of sync
                 cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(calls)').fetchall() ]
                 if 'sms' not in cols:
-                    mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN sms INTEGER;")
+                    mycon.cursor().execute("ALTER TABLE calls ADD COLUMN sms INTEGER;")
                 if 'iridLat' not in cols:
-                    mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN iridLat FLOAT;")
+                    mycon.cursor().execute("ALTER TABLE calls ADD COLUMN iridLat FLOAT;")
                 if 'iridLon' not in cols:
-                    mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN iridLon FLOAT;")
+                    mycon.cursor().execute("ALTER TABLE calls ADD COLUMN iridLon FLOAT;")
                 if 'irid_t' not in cols:
-                    mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN irid_t FLOAT;")
+                    mycon.cursor().execute("ALTER TABLE calls ADD COLUMN irid_t FLOAT;")
             # elif i == 1: # step from 1 to 2
             # elif i == 2:
             # elif i == 3:
         
         mycon.cursor().execute(f'PRAGMA user_version = {currentSchemaVersion}')
-    except:
+    except Exception:
         log_error("could not check schema", "exc")
 
     if con is None:
@@ -1206,7 +1204,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
         log_debug(f"Loading {var_n}:{val} dive:{dive_num} to db")
         insertColumn(dive_num, cur, var_n, val, db_type)
         cur.close()
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
@@ -1257,7 +1255,7 @@ def addSlopeValToDB(base_opts, dive_num, var, con=None):
             with warnings.catch_warnings():
                 # For very small number of dives, we get
                 # RankWarning: Polyfit may be poorly conditioned
-                warnings.simplefilter('ignore', numpy.RankWarning)
+                warnings.simplefilter('ignore', numpy.RankWarning) 
                 m,_ = Utils.dive_var_trend(base_opts, df["dive"].to_numpy(), df[v].to_numpy())
             addValToDB(base_opts, dive_num, f"{v}_slope", m, con=mycon)
 
@@ -1308,7 +1306,7 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
                 with open(pathed, 'r') as f:
                     contents = f.read()
             except Exception as e:
-                log_error('{e} reading control file for logging')
+                log_error(f'{e} reading control file for logging')
                 contents = ''
 
         try:
@@ -1331,13 +1329,13 @@ def rebuildControlHistory(base_opts):
     con = Utils.open_mission_database(base_opts)
     log_info("rebuildControlHistory db opened")
 
-    path = base_opts.mission_dir;
+    path = base_opts.mission_dir
 
     cur = con.cursor()
     try:
         cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
         maxdv = cur.fetchone()[0]
-    except:
+    except Exception:
         maxdv = -1
 
     cur.close()
@@ -1529,7 +1527,7 @@ def main():
     )
     BaseLogger(base_opts, include_time=True)
 
-    if base_opts.schema == True:
+    if base_opts.schema:
         checkSchema(base_opts, None)
         return
 
@@ -1553,7 +1551,7 @@ def main():
             return
         try:
             base_opts.instrument_id = int(tail[-3:])
-        except:
+        except Exception:
             log_error("Can't figure out the instrument id - bailing out")
             return
 
@@ -1570,7 +1568,7 @@ def main():
             for ncf in base_opts.netcdf_files:
                 loadDB(base_opts, ncf)
         else:
-            rebuildDivesGC(base_opts, "nc" if base_opts.network == False else "ncdf")
+            rebuildDivesGC(base_opts, "nc" if not base_opts.network else "ncdf")
 
     elif base_opts.subparser_name == "addval":
         addValToDB(base_opts, base_opts.dive_num, base_opts.value_name, base_opts.value)
@@ -1593,7 +1591,7 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         pass
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
