@@ -29,8 +29,6 @@ include = ["./*py", "tests/*py"]
 target-version = "py310"
 
 [tool.ruff.lint]
-# Check for numpy 2 issues
-#select = ["NPY201"]
 select = [
     # pycodestyle
     "E",
@@ -45,7 +43,7 @@ select = [
     # isort
     "I",
     # Numpy 2.0 compat
-    "NPY201"
+    #"NPY201"
 ]
 # Note: when migrating to numpy2.0, grep for NPY201 for locations that need updating
 ignore = [
