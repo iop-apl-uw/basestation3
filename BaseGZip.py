@@ -28,8 +28,7 @@
 ## ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 ## POSSIBILITY OF SUCH DAMAGE.
 
-""" Basestation implimentation of gzip and gunzip
-"""
+"""Basestation implimentation of gzip and gunzip"""
 
 import cProfile
 import io
@@ -41,8 +40,8 @@ import zlib
 
 import BaseOpts
 import BaseOptsType
-from BaseLog import BaseLogger, log_error, log_debug, log_critical, log_info
 import Utils
+from BaseLog import BaseLogger, log_critical, log_debug, log_error, log_info
 
 FTEXT, FHCRC, FEXTRA, FNAME, FCOMMENT = 1, 2, 4, 8, 16
 
@@ -75,14 +74,14 @@ def compress(input_file_name, output_file_or_file_name):
     """
     try:
         input_file = open(input_file_name, "rb")
-    except IOError as exception:
+    except OSError as exception:
         log_error("Could not open %s (%s)" % (input_file_name, exception.args))
         return 1
 
     if isinstance(output_file_or_file_name, str):
         try:
             output_file = open(output_file_or_file_name, "wb")
-        except IOError as exception:
+        except OSError as exception:
             log_error(
                 "Could not open %s (%s)" % (output_file_or_file_name, exception.args)
             )
@@ -141,14 +140,14 @@ def decompress(input_file_name, output_file_or_file_name):
 
     try:
         input_file = open(input_file_name, "rb")
-    except IOError as exception:
+    except OSError as exception:
         log_error("Could not open %s (%s)" % (input_file_name, exception.args))
         return 1
 
     if isinstance(output_file_or_file_name, str):
         try:
             output_file = open(output_file_or_file_name, "wb")
-        except IOError as exception:
+        except OSError as exception:
             log_error(
                 "Could not open %s (%s)" % (output_file_or_file_name, exception.args)
             )
@@ -194,7 +193,7 @@ def decompress(input_file_name, output_file_or_file_name):
         input_file.read(2)  # Read & discard the 16-bit header CRC
 
     decompobj = zlib.decompressobj(-zlib.MAX_WBITS)
-    crcval = zlib.crc32("".encode())
+    crcval = zlib.crc32(b"")
 
     length = 0
     data_block = 0
@@ -237,7 +236,7 @@ def decompress(input_file_name, output_file_or_file_name):
     if (crc32 != U32(crcval)) and (isize != length):
         input_file.seek(-1, 2)
         check_1a = input_file.read(1)
-        if check_1a == "\x1a".encode():
+        if check_1a == b"\x1a":
             # Found a trailing 1a - try to re-calc the crc and filelen w/o this value
             log_info(
                 "Bad CRC and file len and %s has a trailing 1a - trying to recalc the crc and file length without it"
