@@ -62,6 +62,9 @@ ignore = [
   # Use ternary operator
   # Does not generally improve readability
   "SIM108",
+  # Use a context manager for opening files
+  # TODO - at some point, do the rewrite/targetting ignore for these
+  "SIM115",
 ]
 [tool.coverage.html]
 directory = "coverage_html_report"
