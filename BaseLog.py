@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -38,7 +38,6 @@ import os
 import sys
 import traceback
 from io import StringIO
-from typing import DefaultDict, Dict, List, Tuple
 
 # CONSIDER make adding code location an option for debugging
 # e.g., BaseLogger.opts.log_code_location
@@ -75,8 +74,8 @@ class BaseLogger:
 
     # support adding messages to a set of final alerts to send to pilots
     # these are keyed by a section and  are an appended list of strings
-    alerts_d: Dict[str, List[str]] = {}
-    conversion_alerts_d: Dict[str, List[Tuple[str, str]]] = {}
+    alerts_d: dict[str, list[str]] = {}
+    conversion_alerts_d: dict[str, list[tuple[str, str]]] = {}
 
     # Stream to catch WARN-CRITICAL errors
     warn_error_stream: StringIO = StringIO()
@@ -270,12 +269,12 @@ def log_warn_errors() -> StringIO:
     return BaseLogger.warn_error_stream
 
 
-def log_alerts() -> Dict[str, List[str]]:
+def log_alerts() -> dict[str, list[str]]:
     """Fetches the alerts dictionary"""
     return BaseLogger.alerts_d
 
 
-def log_conversion_alerts() -> Dict[str, List[Tuple[str, str]]]:
+def log_conversion_alerts() -> dict[str, list[tuple[str, str]]]:
     """Fetches the conversion alerts dictionary"""
     return BaseLogger.conversion_alerts_d
 
@@ -320,7 +319,7 @@ def log_critical(
         sys.stderr.write("CRITICAL: %s\n" % s)
 
 
-log_error_max_count: DefaultDict[str, int] = collections.defaultdict(int)
+log_error_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
 def log_error(
@@ -355,7 +354,7 @@ def log_error(
         sys.stderr.write("ERROR: %s\n" % s)
 
 
-log_warning_max_count: DefaultDict[str, int] = collections.defaultdict(int)
+log_warning_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
 def log_warning(
@@ -396,7 +395,7 @@ def log_warning(
         sys.stderr.write("WARNING: %s\n" % s)
 
 
-log_info_max_count: DefaultDict[str, int] = collections.defaultdict(int)
+log_info_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
 def log_info(
@@ -434,7 +433,7 @@ def log_info(
         sys.stderr.write("INFO: %s\n" % s)
 
 
-log_debug_max_count: DefaultDict[str, int] = collections.defaultdict(int)
+log_debug_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
 
 
 def log_debug(
