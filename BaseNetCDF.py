@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,7 +33,6 @@
 # import configparser
 import contextlib
 import os
-import pdb
 import sys
 import time
 import uuid

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,12 +35,14 @@ Commlog.py: Contains all routines for extracting data from a glider's comm logfi
 """
 
 import argparse
-import cProfile
 import collections
+import contextlib
+import copy
+import cProfile
 import inspect
+import io
 import json
 import math
-import io
 import os
 import pdb
 import pstats
@@ -48,8 +50,8 @@ import re
 import sys
 import time
 import traceback
-import copy
 
+import BaseDB
 import BaseOpts
 import BaseOptsType
 import BaseTime
@@ -59,13 +61,12 @@ import Utils
 import Ver65
 from BaseLog import (
     BaseLogger,
+    log_critical,
     log_debug,
+    log_error,
     log_info,
     log_warning,
-    log_error,
-    log_critical,
 )
-import BaseDB
 
 DEBUG_PDB = False  # Set to True to enter debugger on exceptions
 
@@ -215,7 +216,7 @@ class CommLog:
             lambda: file_expected_actual_nt(8192, -1)
         )
         for ii in range(len(self.sessions)):
-            for k in self.sessions[ii].file_stats.keys():
+            for k in self.sessions[ii].file_stats:
                 try:
                     frag_counter = FileMgr.FileCode(k, 0).get_fragment_counter()
                 except ValueError:
@@ -314,7 +315,7 @@ class CommLog:
 
         try:
             return GPS_lat_lon_and_recov(fmt, dive_prefix, self.sessions[-1])
-        except:
+        except Exception:
             log_error("Failed GPS_lat_lon_and_recov", "exc")
             return ("No GPS fix available for this call", None, None, "")
 
@@ -445,7 +446,7 @@ class CommLog:
                     drift_message = "Time delta zero - cannot calculate drift"
                     log_error(drift_message)
                     return drift_message
-                except:
+                except Exception:
                     drift_message = "Error calculating drift"
                     log_error(drift_message, "exc")
                     return drift_message
@@ -520,7 +521,7 @@ class CommLog:
         try:
             out_filename = os.path.abspath(out_filename)
             out_file = open(out_filename, "w")
-        except IOError:
+        except OSError:
             log_critical("Could not open %s for writing." % out_filename)
             return
         for session in self.sessions:
@@ -545,7 +546,7 @@ class CommLog:
                     for i in self.files_transfered[file_name]:
                         try:
                             temp_sector.index(i[0])
-                        except:
+                        except Exception:
                             temp_sector.append(i[0])
                         else:
                             print(
@@ -582,7 +583,7 @@ class CommLog:
                         for i in self.files_transfered[file_name]:
                             try:
                                 temp_sector.index(i[0])
-                            except:
+                            except Exception:
                                 temp_sector.append(i[0])
                             else:
                                 ret_val = (
@@ -900,12 +901,10 @@ def crack_connect_line(input_line):
             cts_parts[5],
         )
         time_zone = cts_parts[4]
-        try:
+        with contextlib.suppress(ValueError):
             connect_ts_tstruct = BaseTime.convert_commline_to_utc(
                 connect_ts_notz_string, time_zone
             )
-        except ValueError:
-            pass
 
     payload = None
     try:
@@ -913,7 +912,7 @@ def crack_connect_line(input_line):
             tmp = cts_parts[-1].rstrip().lstrip()
             if len(tmp) > 3 and tmp[0] == "(" and tmp[-1] == ")":
                 payload = tmp[1:-1]
-    except:
+    except Exception:
         log_error("Failed to process connect/disconnect payload")
 
     return (connect_ts_tstruct, time_zone, payload)
@@ -1162,7 +1161,7 @@ def process_comm_log(
             log_debug("Scanning backwards")
             try:
                 comm_log_file = open(comm_log_file_name, "rb")
-            except IOError:
+            except OSError:
                 log_error("Could not open %s for reading." % comm_log_file_name)
                 return (None, None, None, None, 1)
 
@@ -1184,7 +1183,7 @@ def process_comm_log(
                         break
                     else:
                         comm_log_file.seek(curr_pos - 2, os.SEEK_SET)
-            except IOError:
+            except OSError:
                 # Didn't find a line starting with connected - fall through
                 start_pos = 0
             comm_log_file.close()
@@ -1200,7 +1199,7 @@ def process_comm_log(
         # Start of regular processing
         try:
             comm_log_file = open(comm_log_file_name, "rb")
-        except IOError:
+        except OSError:
             log_error("Could not open %s for reading." % comm_log_file_name)
             return (None, None, None, None, 1)
 
@@ -1304,7 +1303,7 @@ def process_comm_log(
                         m_dir, _ = os.path.split(comm_log_file_name)
                         _, sg_id = os.path.split(m_dir)
                         sg_id = int(sg_id[2:])
-                    except:
+                    except Exception:
                         pass
                     else:
                         session.sg_id = sg_id
@@ -1314,7 +1313,7 @@ def process_comm_log(
                 if call_back and "connected" in call_back.callbacks:
                     try:
                         call_back.callbacks["connected"](connect_ts)
-                    except:
+                    except Exception:
                         log_error("Connected callback failed", "exc")
                 continue
             elif raw_strs[0] == "Reconnected":
@@ -1345,7 +1344,7 @@ def process_comm_log(
                 if call_back and "reconnected" in call_back.callbacks:
                     try:
                         call_back.callbacks["reconnected"](reconnect_ts)
-                    except:
+                    except Exception:
                         log_error("Reconnected callback failed", "exc")
                 continue
             elif raw_strs[0] == "Disconnected":
@@ -1367,7 +1366,7 @@ def process_comm_log(
                 if call_back and "disconnected" in call_back.callbacks:
                     try:
                         call_back.callbacks["disconnected"](session)
-                    except:
+                    except Exception:
                         log_error("Disconnected callback failed", "exc")
                 session = None
                 continue
@@ -1387,7 +1386,7 @@ def process_comm_log(
                     if call_back and "counter_line" in call_back.callbacks:
                         try:
                             call_back.callbacks["counter_line"](session)
-                        except:
+                        except Exception:
                             log_error("counter_line callback failed", "exc")
                     continue
 
@@ -1405,14 +1404,14 @@ def process_comm_log(
                             msg = parse_strs[1]
                         try:
                             call_back.callbacks["recovery"](msg)
-                        except:
+                        except Exception:
                             log_error("recovery callback failed", "exc")
                     continue
                 else:
                     if call_back and "recovery" in call_back.callbacks:
                         try:
                             call_back.callbacks["recovery"](None)
-                        except:
+                        except Exception:
                             log_error("recovery callback failed", "exc")
                 if parse_strs[0] == "ESCAPE_REASON":
                     session.escape_reason = parse_strs[1]
@@ -1437,7 +1436,7 @@ def process_comm_log(
                         if call_back and "iridium" in call_back.callbacks:
                             try:
                                 call_back.callbacks["iridium"](session)
-                            except:
+                            except Exception:
                                 log_error("iridium callback failed", "exc")
                         continue
                     elif iridium_strs[0] == "Iridium geolocation":
@@ -1450,7 +1449,7 @@ def process_comm_log(
                             session.phone_fix_lat = float(lat_lon[0])
                             session.phone_fix_lon = float(lat_lon[1])
                         continue
-                except:
+                except Exception:
                     pass
 
                 # Files uploaded to the glider via X/Y MODEM are of the form
@@ -1478,7 +1477,7 @@ def process_comm_log(
                             session.file_stats[filename] = file_stats_nt(
                                 expectedsize, transfersize, receivedsize, bps
                             )
-                        except:
+                        except Exception:
                             log_error(
                                 "Could not process %s: lineno %d"
                                 % (raw_strs, line_count),
@@ -1490,7 +1489,7 @@ def process_comm_log(
                                     call_back.callbacks["received"](
                                         filename, receivedsize
                                     )
-                                except:
+                                except Exception:
                                     log_error("received callback failed", "exc")
                     continue
 
@@ -1503,12 +1502,10 @@ def process_comm_log(
                     ts_string = ts_line[0].lstrip().rstrip()
                     # Try ISO8601 first
                     utc_time_stamp = None
-                    try:
+                    with contextlib.suppress(ValueError):
                         utc_time_stamp = time.mktime(
                             time.strptime(ts_string, "%Y-%m-%dT%H:%M:%SZ")
                         )
-                    except ValueError:
-                        pass
                     if utc_time_stamp:
                         raw_file_lines[-1][0] = utc_time_stamp
                     else:
@@ -1537,7 +1534,7 @@ def process_comm_log(
                                 session.file_stats[filename] = file_stats_nt(
                                     int(action_strs[1]), -1, -1, -1
                                 )
-                            except:
+                            except Exception:
                                 log_error(
                                     "Could not process %s: lineno %d"
                                     % (raw_strs, line_count),
@@ -1560,7 +1557,7 @@ def process_comm_log(
                                 session.file_stats[filename] = file_stats_nt(
                                     -1, int(action_strs[1]), int(action_strs[1]), -1
                                 )
-                            except:
+                            except Exception:
                                 log_error(
                                     "Could not process %s: lineno %d"
                                     % (raw_strs, line_count),
@@ -1572,7 +1569,7 @@ def process_comm_log(
                                     call_back.callbacks["received"](
                                         action_strs[4], int(action_strs[1])
                                     )
-                                except:
+                                except Exception:
                                     log_error("received callback failed", "exc")
                             continue
 
@@ -1587,7 +1584,7 @@ def process_comm_log(
                                 session.file_stats[filename] = file_stats_nt(
                                     int(action_strs[1]), -1, -1, -1
                                 )
-                            except:
+                            except Exception:
                                 log_error(
                                     "Could not process %s: lineno %d"
                                     % (raw_strs, line_count),
@@ -1634,7 +1631,7 @@ def process_comm_log(
                                     # Do not issue the callback
                                     continue
 
-                            except:
+                            except Exception:
                                 log_error(
                                     "Could not process %s: lineno %d"
                                     % (raw_strs, line_count),
@@ -1646,7 +1643,7 @@ def process_comm_log(
                                     call_back.callbacks["transfered"](
                                         action_strs[4], int(action_strs[1])
                                     )
-                                except:
+                                except Exception:
                                     log_error("transfered callback failed", "exc")
 
                             continue
@@ -1732,7 +1729,7 @@ def process_comm_log(
                                 if call_back and k in call_back.callbacks:
                                     try:
                                         call_back.callbacks[k](filename, transfersize)
-                                    except:
+                                    except Exception:
                                         log_error("%s callback failed" % k, "exc")
 
                         continue
@@ -1768,7 +1765,7 @@ def process_comm_log(
                             try:
                                 front, end = raw_line.split(", block length = ")
                                 sector_num = int(front.split("=")[1])
-                            except:
+                            except Exception:
                                 log_warning(
                                     "Malformed line %d in comm.log (%s) - skipping"
                                     % (line_count, raw_line)
@@ -1781,7 +1778,7 @@ def process_comm_log(
                         elif "CRC error" in raw_line:
                             try:
                                 sector_num = int(raw_line.split("=")[1])
-                            except:
+                            except Exception:
                                 log_warning(
                                     "Malformed line %d in comm.log (%s) - skipping"
                                     % (line_count, raw_line)
@@ -1813,7 +1810,7 @@ def process_comm_log(
                     try:
                         # Base.py expects this in bytes
                         session.fragment_size = int(tmp[2].split("=")[1]) * 1024
-                    except:
+                    except Exception:
                         log_error(
                             "Could not parse fragment size out of %s - assuming 4 "
                             % raw_strs[0]
@@ -1828,7 +1825,7 @@ def process_comm_log(
                             tmp.extend(
                                 tmp2[1:]
                             )  # drop directory, and add the rest to tmp
-                    except:
+                    except Exception:
                         log_error(
                             "Could not parse software revision out of %s - assuming 0 "
                             % raw_strs[0]
@@ -1839,7 +1836,7 @@ def process_comm_log(
                         session.fragment_size = (
                             int(tmp[2].split("=")[1]) * 1024
                         )  # Base.py expects this in bytes
-                    except:
+                    except Exception:
                         log_error(
                             "Could not parse fragment size out of %s - assuming 4 "
                             % raw_strs[0]
@@ -1860,7 +1857,7 @@ def process_comm_log(
                     if call_back and "ver" in call_back.callbacks:
                         try:
                             call_back.callbacks["ver"](session)
-                        except:
+                        except Exception:
                             log_error("ver callback failed", "exc")
                     continue
 
@@ -1894,7 +1891,7 @@ def process_comm_log(
         )
         log_debug("process_comm_log finished")
         return (commlog, start_pos, session, line_count, 0)
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, tb = sys.exc_info()
             traceback.print_exc()
@@ -1911,7 +1908,7 @@ def process_history_log(history_log_file_name):
     """
     try:
         history_log_file = open(history_log_file_name, "rb")
-    except IOError:
+    except OSError:
         log_critical("Could not open %s for reading." % history_log_file_name)
         return None
 
@@ -2113,19 +2110,17 @@ def main():
             try:
                 se = comm_log.sessions[-1]
                 print(json.dumps(se.to_message_dict()))
-            except:
+            except Exception:
                 log_error("Couldn't dump last session", "exc")
 
             print(f"{len(comm_log.sessions)} sessions")
             for session in comm_log.sessions:
                 BaseDB.addSession(base_opts, session)
                 if session.dive_num is not None and int(session.dive_num) > 0:
-                    if session.call_cycle == None:
+                    if session.call_cycle is None:
                         cmdname = f"cmdfile.{int(session.dive_num):04d}"
                     else:
-                        cmdname = (
-                            f"cmdfile.{int(session.dive_num):04d}.{int(session.call_cycle):04d}"
-                        )
+                        cmdname = f"cmdfile.{int(session.dive_num):04d}.{int(session.call_cycle):04d}"
 
                     BaseDB.logParameterChanges(
                         base_opts, int(session.dive_num), cmdname

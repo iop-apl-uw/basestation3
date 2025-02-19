@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -72,8 +72,8 @@ glzipcmd = bin_dir + "/glzip /c" # Glider zip code, based on the glider code and
 md5cmd = bin_dir + "/glmd5" # compute md5 signature
 
 # TODO: list only python modules as they become available
-convert   = python_exe + src_dir + "/Convert.py";
-expunge = src_dir + "/ExpungeSecrets.py";
+convert   = python_exe + src_dir + "/Convert.py"
+expunge = src_dir + "/ExpungeSecrets.py"
 # asc2eng = perl_exe  + src_dir + "/asc2eng.pl";
 # bogue   = perl_exe  + src_dir + "/bogue.pl";
 # create_logfiles = perl_exe  + src_dir + "/logfile_cache.pl";

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,8 +34,11 @@ Note: These routines are legacy from running the basestations .login/.logout in 
 In the future, these will be removed.
 
 """
-from datetime import tzinfo, timedelta, datetime
-from BaseLog import *
+import time as _time
+from datetime import datetime, timedelta, tzinfo
+
+import BaseOpts
+from BaseLog import BaseLogger, log_error
 
 ZERO = timedelta(0)
 HOUR = timedelta(hours=1)
@@ -78,7 +81,7 @@ class FixedOffset(tzinfo):
 
 # A class capturing the platform's idea of local time.
 
-import time as _time
+
 
 STDOFFSET = timedelta(seconds = -_time.timezone)
 if _time.daylight:
@@ -207,13 +210,13 @@ def convert_commline_to_utc(ts_string, time_zone):
     convert that line to a time_struc in utc
     '''
 
-    import time
     import datetime
+    import time
 
     loc_t = time.strptime(ts_string, "%a %b %d %H:%M:%S %Y")
     try:
         t_zone = tz_lookup[time_zone.upper()]
-    except:
+    except Exception:
         log_error("Unknown timezone %s - assuming UTC" % time_zone, max_count=5)
         t_zone = tz_lookup['UTC']
 
@@ -233,5 +236,5 @@ if __name__ == "__main__":
     ts_string = "Mon Jan 4 12:59:13 2007"
     time_zone = 'FOO'
     ts = convert_commline_to_utc(ts_string, time_zone)
-    print(("%s %s" % (ts_string, time_zone)))
-    print((time.strftime("%a %b %d %H:%M:%S %Y %Z", ts)))
+    print("%s %s" % (ts_string, time_zone))
+    print(time.strftime("%a %b %d %H:%M:%S %Y %Z", ts))

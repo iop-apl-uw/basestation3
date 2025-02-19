@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 
 #
-## Copyright (C) 2005  Chad J. Schroeder
+## Copyright (C) 2005, 2025  Chad J. Schroeder
 ## Portions Copyright (C) 2007 by University of Washington.
 ##
 ## Drived from https://code.activestate.com/recipes/278731-creating-a-daemon-the-python-way/?in=user-1760491
@@ -44,8 +44,9 @@ __copyright__ = "Copyright (C) 2005 Chad J. Schroeder, 2007 University of Washin
 __revision__ = "$Id$"
 
 # Standard Python modules.
-import os               # Miscellaneous OS interfaces.
-import sys              # System-specific parameters and functions.
+import contextlib
+import os  # Miscellaneous OS interfaces.
+import sys  # System-specific parameters and functions.
 
 # Default daemon parameters.
 # File mode creation mask of the daemon.
@@ -85,7 +86,7 @@ def createDaemon(workdir, closehandles):
       # to insure that the next call to os.setsid is successful.
       pid = os.fork()
    except OSError as e:
-      raise Exception("%s [%d]" % (e.strerror, e.errno))
+      raise Exception("%s [%d]" % (e.strerror, e.errno)) from e
 
    if (pid == 0):	# The first child.
       # To become the session leader of this new session and the process group
@@ -133,7 +134,7 @@ def createDaemon(workdir, closehandles):
          # a controlling terminal.
          pid = os.fork()	# Fork a second child.
       except OSError as e:
-         raise Exception("%s [%d]" % (e.strerror, e.errno))
+         raise Exception("%s [%d]" % (e.strerror, e.errno)) from e
 
       if (pid == 0):	# The second child.
          # Since the current working directory may be a mounted filesystem, we
@@ -183,17 +184,15 @@ def createDaemon(workdir, closehandles):
    # resource, use the default value.
    #
    if(closehandles):
-       import resource		# Resource usage information.
+       import resource  # Resource usage information.
        maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
        if (maxfd == resource.RLIM_INFINITY):
           maxfd = MAXFD
 
        # Iterate through and close all file descriptors.
        for fd in range(0, maxfd):
-          try:
+          with contextlib.suppress(OSError):  # ERROR, fd wasn't open to begin with (ignored)
              os.close(fd)
-          except OSError:	# ERROR, fd wasn't open to begin with (ignored)
-             pass
 
        # Redirect the standard I/O file descriptors to the specified file.  Since
        # the daemon has no controlling terminal, most daemons redirect stdin,
@@ -211,8 +210,8 @@ def createDaemon(workdir, closehandles):
    return 0
 
 if __name__ == "__main__":
-    print((os.getcwd()))
-    print((sys.argv))
+    print(os.getcwd())
+    print(sys.argv)
     try:
         retCode = createDaemon(os.getcwd(), True)
     except Exception:

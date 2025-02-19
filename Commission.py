@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -40,13 +40,13 @@ Commission.py: Sets up a new glider account on a basestation.
 import grp
 import os
 import pwd
+import shutil
 import subprocess
 import sys
-import shutil
 
+import BaseDB
 import BaseOpts
 import BaseOptsType
-import BaseDB
 from BaseLog import BaseLogger, log_critical, log_error, log_info
 
 
@@ -263,7 +263,7 @@ def main():
                     return 1
         except FileNotFoundError:
             pass
-        except:
+        except Exception:
             log_error(f"Could not open {jail_pwd}", "exc")
             return 0
         leading_newline = ""
@@ -274,14 +274,14 @@ def main():
                     leading_newline = "\n"
         except FileNotFoundError:
             pass
-        except:
+        except Exception:
             log_error(f"Could not read {jail_pwd}", "exc")
             return 1
         try:
             with open(jail_pwd, "a") as fo:
                 log_info(f"Writing {pwd_str} to {jail_pwd}")
                 fo.write(f"{leading_newline}{pwd_str}\n")
-        except:
+        except Exception:
             log_error(f"Could not write to {jail_pwd}", "exc")
             return 1
 
@@ -302,9 +302,9 @@ def main():
             try:
                 with open(jail_grp, "w") as fo:
                     fo.write(f"{grp_str}\n")
-            except:
+            except Exception:
                 log_error(f"Failed to create {jail_grp} - jail will not work", "exc")
-        except:
+        except Exception:
             log_error(f"Could not open {jail_grp} - not updating", "exc")
         else:
             f_update = False
@@ -335,7 +335,7 @@ def main():
                     with open(jail_grp, "w") as fo:
                         for ll in grp_lines:
                             fo.write(ll)
-                except:
+                except Exception:
                     log_error(f"Error updating {jail_grp}")
         print(
             "You must manually change the gliders entry in /etc/password to look like this"

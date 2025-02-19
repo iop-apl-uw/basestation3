@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -30,15 +30,15 @@
 
 """Items to be done at glider login time"""
 
-import sys
 import os
+import sys
 import time
 
 import BaseOpts
 import Sensors
-from BaseLog import BaseLogger, log_warning, log_info, log_error
 from Base import run_extension_script
 from BaseDotFiles import process_extensions
+from BaseLog import BaseLogger, log_error, log_info, log_warning
 
 
 def main():
@@ -105,7 +105,7 @@ def main():
 
     try:
         fo = open(upload_files_name, "w")
-    except:
+    except Exception:
         log_error("Unable to open %s for write" % upload_files_name)
         ret_val = 1
     else:

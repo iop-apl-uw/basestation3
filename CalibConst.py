@@ -35,10 +35,9 @@ CalibConst.py: seaglider calibration constants (matlab file) parser
 import re
 import sys
 
-
 import BaseNetCDF
-from BaseLog import BaseLogger, log_error, log_debug, log_warning
-from Globals import ignore_tags, ignore_tag
+from BaseLog import BaseLogger, log_debug, log_error, log_warning
+from Globals import ignore_tag, ignore_tags
 
 
 def getSGCalibrationConstants(

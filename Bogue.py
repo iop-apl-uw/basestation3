@@ -42,7 +42,7 @@ import time
 
 import BaseOpts
 import BaseOptsType
-from BaseLog import BaseLogger, log_debug, log_error, log_info, log_critical
+from BaseLog import BaseLogger, log_critical, log_debug, log_error, log_info
 
 
 def Bogue(in_filename):

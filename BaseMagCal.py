@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,11 +28,11 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Routines to read and apply mag calibrations to compass headings
-"""
+"""Routines to read and apply mag calibrations to compass headings"""
+
 import numpy as np
 
-from BaseLog import log_info, log_error
+from BaseLog import log_error, log_info
 
 
 # TODO - multiple calibrations not handled
@@ -61,7 +61,7 @@ def readMagCalFile(mag_cal_filename):
         )  #  HV pack signature for testing HV Hi drift (DG)
         fi.close()
         return contents
-    except:
+    except Exception:
         # Trouble with open or close; readline never complains
         log_error("Could not process %s" % mag_cal_filename, "exc")
         return None
@@ -98,7 +98,7 @@ def parseMagCal(contents):
         for i in range(3):
             pqr[i] = float(abc_pqr[i + 9])
         # Create the stock closure that ignores pitchAD values
-        pqrc = lambda p: pqr
+        pqrc = lambda p: pqr  # noqa: E731
 
         # DG correction has five lines exactly.  SG with second compass
         # has a second compass definition right after the first
@@ -126,19 +126,19 @@ def parseMagCal(contents):
                     cP = np.polyval(Pc, pitch_ref)
                     cQ = np.polyval(Qc, pitch_ref)
                     cR = np.polyval(Rc, pitch_ref)
-                    pqrc = lambda p: (
+                    pqrc = lambda p: (  # noqa: E731
                         np.polyval(Pc, p) - cP + pqr[0],
                         np.polyval(Qc, p) - cQ + pqr[1],
                         np.polyval(Rc, p) - cR + pqr[2],
                     )
-            except:
+            except Exception:
                 log_error(
                     "Could not parse hard-iron scale coefficients in '%s'" % lines[4],
                     "exc",
                 )
                 # fall through - use the default closure
         return (abc, pqrc)
-    except:
+    except Exception:
         log_error("Could not parse %s as abc/pqr line" % abc_pqr)
         return (None, None)
 

@@ -43,20 +43,20 @@ import threading
 import time
 import traceback
 
-from inotify_simple import INotify, flags
 import sdnotify
+from inotify_simple import INotify, flags
 
 import BaseOpts
 import BaseOptsType
+import Utils
 from BaseLog import (
     BaseLogger,
+    log_critical,
+    log_debug,
     log_error,
     log_info,
-    log_critical,
     log_warning,
-    log_debug,
 )
-import Utils
 
 basestation_dir = str(pathlib.Path(__file__).parent.absolute())
 

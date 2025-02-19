@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -31,29 +31,28 @@
 """Contains all routines for extracting data from a glider's data file"""
 
 import os
+import re
 import sys
 import time
-import re
 
 import numpy as np
 
-import FileMgr
-import LogFile
 import BaseOpts
 import BaseOptsType
+import CalibConst
+import FileMgr
+import Globals
+import LogFile
+import Sensors
+import Utils
 from BaseLog import (
     BaseLogger,
-    log_error,
-    log_warning,
-    log_debug,
-    log_info,
     log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
 )
-import Sensors
-import Globals
-import Utils
-import CalibConst
-
 
 # A number that we can clear identify as a standing for "NaN"
 # inf = 1e300000
@@ -439,7 +438,7 @@ def process_data_file(in_filename, file_type, calib_consts):
 
     try:
         raw_data_file = open(in_filename, "r")
-    except IOError:
+    except OSError:
         log_error("Could not open " + in_filename + " for reading")
         return None
 
@@ -532,7 +531,7 @@ def process_data_file(in_filename, file_type, calib_consts):
             else:
                 try:
                     row.append(float(raw_strs[i]))
-                except:
+                except Exception:
                     log_error(
                         "Problems converting [%s] to float from line [%s] (%s, line %d) -- skipping"
                         % (raw_strs[i], raw_line, in_filename, line_count)
@@ -557,7 +556,7 @@ def process_data_file(in_filename, file_type, calib_consts):
     raw_data_file.close()
     try:
         data_file.data = np.array(rows, float)
-    except:
+    except Exception:
         log_error(
             "Not all data rows the same length in %s - skipping (%d)"
             % (in_filename, line_count),

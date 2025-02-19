@@ -45,19 +45,19 @@ import numpy as np
 import xarray as xr
 
 import BaseDB
-from BaseLog import (
-    BaseLogger,
-    log_error,
-    log_info,
-    log_critical,
-    log_warning,
-    log_debug,
-)
 import BaseOpts
 import BaseOptsType
 import LogFile
 import NetCDFUtils
 import Utils
+from BaseLog import (
+    BaseLogger,
+    log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
+)
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
