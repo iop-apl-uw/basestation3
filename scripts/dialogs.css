@@ -100,7 +100,9 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 60%;
+        min-width: 320px;
+        width: auto;
+        max-width: 60%;
         background: rgba(200, 200, 200, 1.0);
         justify-content: left;
         text-align: left;
@@ -155,7 +157,9 @@
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 60%;
+        width: auto;
+        min-width: 320px;
+        max-width: 60%;
         background: rgba(200, 200, 200, 1.0);
         justify-content: left;
         text-align: left;

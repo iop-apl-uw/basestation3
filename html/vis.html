@@ -479,7 +479,7 @@
                 return;
             }
             changes = formatValidatorChanges(text);
-            openMessagePopup(changes, null);
+            openMessagePopup(changes, false, null);
             if (!changes.includes("saved ok")) {
                 controlFileMarkDirty(file);
             }
@@ -523,13 +523,13 @@
             txt = formatValidatorChanges(data['results']); 
             if ('status' in data && data['status'] == 'ok') {    
 {% if noSave == false %}
-                openMessagePopup(txt, function() { saveControl(file, data); } );
+                openMessagePopup(txt, true, function() { saveControl(file, data); } );
 {% else %}
-                openMessagePopup(txt, null);
+                openMessagePopup(txt, false, null);
 {% endif %}
             }
             else {
-                openMessagePopup(txt, null);
+                openMessagePopup(txt, false, null);
             }
         })
         .catch(error => {
@@ -540,12 +540,19 @@
     function changeDirective(cmd) {
         var newCmd = '$' + cmd;
         console.log(newCmd + ' ' + cmd);
-        $('cmdfile').value = $('cmdfile').value.replace('$GO', newCmd);
-        $('cmdfile').value = $('cmdfile').value.replace('$QUIT', newCmd);
-        $('cmdfile').value = $('cmdfile').value.replace('$RESUME', newCmd);
-        $('cmdfile').value = $('cmdfile').value.replace('$EXIT_TO_MENU', newCmd);
+        var txt = $('cmdfile').value;
+
         $('radPilotDirective' + cmd).checked = true;
 
+        for (var d of ['$GO', '$QUIT', '$RESUME', '$EXIT_TO_MENU']) {
+            if (txt.includes(d)) {
+                $('cmdfile').value = $('cmdfile').value.replace(d, newCmd);
+                return false;
+            }
+        }
+        txt = txt.trim();
+        if (txt != '') txt = txt + '\n';
+        $('cmdfile').value = txt + newCmd + '\n'
         return false;
     }
 
@@ -2457,12 +2464,12 @@ parms[p]
             .then(res => res.text())
             .then(text => {
                 $('alertContents').innerHTML = text;
-                openMessagePopup(text, null);
+                openMessagePopup(text, false, null);
                 loggedOut();
             });
         }
         else {
-            openLoginForm(function() { window.location.reload.bind(window.location); loggedIn(); }, "");
+            openLoginForm(function() { loggedIn(); }, "");
         }
     }
 
@@ -2472,7 +2479,7 @@ parms[p]
         .then(text => {
             // console.log(text);
             if (text.includes("authorization failed")) {
-                openLoginForm(function() { loggedIn(); window.location.reload.bind(window.location); }, "");
+                openLoginForm(function() { window.location.reload.bind(window.location); }, "");
                 return;
             }
             try {
@@ -4080,12 +4087,14 @@ parms[p]
     <div id="ribbonExpander" onclick="showRibbon(); return false;">&#10063;&#10063&#10063;</div>
     <div id="plotlyPopperOuter">&#x2922;</div>
     <span id="diveIndicator"></span>
+<!--
     <div id="alertPopup" style="display: none;" class="alert-popup">
         <div id="alertContents">
         </div>
         <button id="alertOk" type="submit" class="btn">ok</button>
         <button id="alertCancel" type="submit" class="btn cancel" style="display: none"; onclick="$('alertPopup').style.display = 'none';">cancel</button>
     </div>
+-->
     <div id="waitIndicator" style="display: none;">
         <div class="loader-container">
             <div class="bouncing-dots">

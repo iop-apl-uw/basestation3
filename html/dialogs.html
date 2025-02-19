@@ -19,7 +19,6 @@
 
     <div><span style="font-size: 1.2rem;"><b>Password</b></span><span id="capLockIndicator" style="display: none;">&nbsp;&nbsp;&nbsp;(CapsLock is on)</span></div>
     <input type="password" placeholder="Enter password" name="password" id="inpPassword" required>
-    <span style="font-size: 1.2rem;" class="spanClick" onclick="openMessagePopup('contact your administrator', null);">forgot password</span>
     <label><input type="checkbox" id="chkHavePilotCode" onchange="toggleCode();">I have a code</label>
     <input type="text" name="code" id="txtCode" placeholder="authenticator code" style="display: none;">
 
@@ -92,3 +91,11 @@
     <button id="searchCancelBtn" type="button" class="btn cancel" onclick="closeSearchForm(); return false;">cancel</button>
     </div>
 </div>
+
+    <div id="alertPopup" style="display: none;" class="alert-popup">
+        <div id="alertContents">
+        </div>
+        <button id="alertOk" type="submit" class="btn">ok</button>
+        <button id="alertCancel" type="submit" class="btn cancel" style="display: none;">cancel</button>
+    </div>
+

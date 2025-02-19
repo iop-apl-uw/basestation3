@@ -21,13 +21,26 @@
         console.log('up ' + e.code + ' ' + e.getModifierState("CapsLock"));
     }
 
-    function openMessagePopup(content, callback) {
-        $('alertCancel').style.display = callback ? 'inline-block' : 'none';
+
+    const openMessageAsync = async() => {
+        return new Promise((resolve) => {
+            $('alertOk').onclick = function() { resolve('ok'); }
+            $('alertCancel').onclick = function() { resolve('cancel'); }
+        });
+    }
+
+    function openMessagePopup(content, cancel, callback) {
+        $('alertCancel').style.display = cancel ? 'inline-block' : 'none';
         $('alertPopup').style.display = 'inline-block';
         $('alertContents').innerHTML = content;
-        $('alertOk').onclick = callback ? callback : function() { $('alertPopup').style.display = 'none'; };
+        (async function() { 
+            let state = await openMessageAsync(); 
+            $('alertPopup').style.display = 'none';
+            if (state == 'ok' && callback) callback();
+        })();
     }
     
+   
     function openLoginForm(callback, header) {
         $('loginHeader').innerHTML = header ? header : '';
         $('loginForm').style.display = "block";
@@ -112,12 +125,12 @@
             obj['depth1'] == '' ||
             obj['depth2'] == '' ||
             obj['initBias'] == '') {
-            openMessagePopup('missing required input (dives, min depth, max depth, init bias)', null);
+            openMessagePopup('missing required input (dives, min depth, max depth, init bias)', false, null);
             return;
         }
 
         if (parseFloat(obj['initBias']) == 0) {
-            openMessagePopup('zero value for init bias not recommended', null);
+            openMessagePopup('zero value for init bias not recommended', false, null);
         } 
 
         if (mission() != '')
@@ -161,12 +174,10 @@
                 window.location.replace('/setup');
             }
             else if (d['status'] == 'authorized') {
-                openMessagePopup('successfully logged in', null);
-                if (loginCallback) loginCallback();
+                openMessagePopup('successfully logged in', false, loginCallback);
             }
             else {
-                openMessagePopup(d['msg'], null);
-                openLoginForm(loginCallback, null);
+                openMessagePopup(d['msg'], true, function() { openLoginForm(loginCallback, null); });
             }
         })
         .catch(error => {
