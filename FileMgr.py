@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2025  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,17 +28,16 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""FileMgr.py: contains classes for naming conventions & listing version 65/66 basestation files
-"""
+"""FileMgr.py: contains classes for naming conventions & listing version 65/66 basestation files"""
 
+import functools
 import glob
 import os
 import re
 import string
-import functools
 
-from BaseLog import log_debug, log_info
 import Utils
+from BaseLog import log_debug, log_info
 
 # pylint: disable=missing-function-docstring
 
@@ -173,7 +172,7 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
     # Patterns take a bit to compile so cache in addition to determining if they are needed
     logger_basename_pattern_d = {}
     loggers_present = []
-    for l in logger_prefixes:
+    for l_prefix in logger_prefixes:
         for c in c_list:
             # [0] is sg# and dive_num
             # [1] is sensor_type, if it exists
@@ -183,18 +182,19 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
             # If so, add the pattern, which tells to the dive_list mapping below
             # that it should spend the time to glob and get the individual files in different locations
             g1 = glob.glob(
-                r"%sp%s%03d*%s[_\.]*eng" % (base_opts.mission_dir, l, instrument_id, c)
+                r"%sp%s%03d*%s[_\.]*eng"
+                % (base_opts.mission_dir, l_prefix, instrument_id, c)
             )  # any direct logger files for any dive?
             g2 = glob.glob(
-                f"{base_opts.mission_dir}{l}*{c}"
+                f"{base_opts.mission_dir}{l_prefix}*{c}"
             )  # any logger subdirs for any dive?
             if len(g1) + len(g2) > 0:
-                logger_basename_pattern_d[l + c] = [
+                logger_basename_pattern_d[l_prefix + c] = [
                     len(g1),
                     len(g2),
-                    re.compile("p" + l + r"\d+" + c + "(.+)"),
+                    re.compile("p" + l_prefix + r"\d+" + c + "(.+)"),
                 ]
-                loggers_present.append(l)
+                loggers_present.append(l_prefix)
 
     if len(loggers_present) > 0 and len(dive_list) > 1:
         # Give a hint this could take a while
@@ -211,11 +211,13 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
         # Now add on all possible contributions from loggers and add to the list
         # along with the eng file reader
         logger_eng_files[dive_path] = []
-        for l in logger_prefixes:
+        for l_prefix in logger_prefixes:
             typed_files = {}  # {type: [ordered files], ...}
             for c in c_list:
                 try:
-                    ng1, ng2, logger_basename_pattern = logger_basename_pattern_d[l + c]
+                    ng1, ng2, logger_basename_pattern = logger_basename_pattern_d[
+                        l_prefix + c
+                    ]
                 except KeyError:
                     continue  # no files or subdirs
 
@@ -229,14 +231,23 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
                 if ng1:
                     globs.append(
                         r"%sp%s%03d%04d%s[_\.]*eng"
-                        % (base_opts.mission_dir, l, instrument_id, d, c)
+                        % (base_opts.mission_dir, l_prefix, instrument_id, d, c)
                     )
                 # e.g., <mission_dir/>scDDDDa/pscGGGDDDDa[_.]*eng (for different sensors)
                 # /home/seagliders/sg099/sc0022a/psc0990022a_depth_depth.eng
                 if ng2:
                     globs.append(
                         r"%s%s%04d%s/p%s%03d%04d%s[_\.]*eng"
-                        % (base_opts.mission_dir, l, d, c, l, instrument_id, d, c)
+                        % (
+                            base_opts.mission_dir,
+                            l_prefix,
+                            d,
+                            c,
+                            l_prefix,
+                            instrument_id,
+                            d,
+                            c,
+                        )
                     )
                 for glob_expr in globs:
                     for logger_eng_filename in glob.glob(glob_expr):
@@ -248,7 +259,7 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
                             sensor_type = base_match.group(1)
                             sensor_type = sensor_type.split("_")[1]  # extract the type
                         else:
-                            sensor_type = l
+                            sensor_type = l_prefix
                         try:
                             file_list = typed_files[sensor_type]
                         except KeyError:
@@ -272,9 +283,9 @@ def find_dive_logger_eng_files(dive_list, base_opts, instrument_id, init_dict):
             if len(list(typed_files.keys())) > 0:
                 logger_eng_files[dive_path].append(
                     {
-                        "logger_prefix": l,
+                        "logger_prefix": l_prefix,
                         "eng_files": typed_files,
-                        "eng_file_reader": logger_eng_readers[l],
+                        "eng_file_reader": logger_eng_readers[l_prefix],
                     }
                 )
     log_debug("Logger eng list")
@@ -334,7 +345,7 @@ def get_instrument_id(filename):
     if name:
         try:
             return int(name[1:4])
-        except:
+        except Exception:
             return -1
     return -1
 
