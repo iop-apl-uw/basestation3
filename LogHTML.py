@@ -1,4 +1,4 @@
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -25,12 +25,14 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-import sys
+import asyncio
 import io
+import sys
 from contextlib import redirect_stdout
+
 import aiofiles
 import aiofiles.os
-import asyncio
+
 
 def ctext(text, color):
     x = f'<font color="{color}">{text}</font>'
@@ -63,7 +65,7 @@ async def displayTables(fname):
             if len(pieces) == 2:
                 try:
                     L[key] = float(pieces[1])
-                except:
+                except Exception:
                     L[key] = pieces[1] 
             elif key == 'GC':
                 GC.append(list(map(float, pieces[1:])))
@@ -75,10 +77,10 @@ async def displayTables(fname):
             else:
                 try:
                     L[key] = list(map(float, pieces[1:]))
-                except:
+                except Exception:
                     L[key] = pieces[1:]
    
-    if not 'GCHEAD' in L:
+    if 'GCHEAD' not in L:
         return
  
     L['GCHEAD'] = L['GCHEAD'] + ["pitch_rate", "roll_rate", "vbd_rate", "vbd_eff"]
@@ -301,7 +303,7 @@ async def displayTables(fname):
     print("</td>")
 
     print("<td>") # row 4, col 2 
-    if 'XPDR_PINGS' in L and isinstance(L['XPDR_PINGS'], (list, tuple)):
+    if 'XPDR_PINGS' in L and isinstance(L['XPDR_PINGS'], list | tuple):
         print("&#8226 Transponder ping count: %d" % L['XPDR_PINGS'][0])
     elif 'XPDR_PINGS' in L:
         print("&#8226 Transponder ping count: %d" % L['XPDR_PINGS'])
@@ -501,7 +503,7 @@ async def displayTables(fname):
             if (g[k_t] != 0):
                 rate  = (g[k_ad] - GC[j][k_ad]) / g[k_t]
             else:
-                rate  = 0;
+                rate  = 0
 
             if (abs(g[k_ad] - GC[j][k_ad]) > 2):
                 g[k_vbd] = "%.1f" % rate
@@ -545,7 +547,7 @@ async def displayTables(fname):
                     p = int(g[k_phase])
                     idx = p & 31
                     y = ""
-                    for k in phase.keys():
+                    for k in phase:
                         if k & idx:
                             y = y + phase[k] + ","
 
@@ -576,13 +578,13 @@ async def displayTables(fname):
                         flags = flags + "bleed,"
 
                 else:
-                    if not GC_out_names[j] in L['GCHEAD']:
+                    if GC_out_names[j] not in L['GCHEAD']:
                         y = '-'
                     else:
                         k_col = L['GCHEAD'].index(GC_out_names[j])
                         if (k_col < len(g)):
                             y = g[k_col]
-                            if (y == 0) and not GC_out_names[j].find("_st") > -1:
+                            if (y == 0) and not GC_out_names[j].find("_st") > -1: # noqa : SIM114
                                 y = "-"
                             elif GC_out_names[j].find("_volts") > -1 and y > 28:
                                 y = "-"

@@ -31,14 +31,14 @@
 """
 Thermal-iniertia corrections for legato ctd
 """
+import gsw
 import numpy as np
-from scipy import signal
 import scipy.interpolate
 import seawater
-import gsw
+from scipy import signal
 
-from BaseLog import log_debug, log_info
 import QC
+from BaseLog import log_debug, log_info
 
 
 def interp1(t1, data, t2, assume_sorted=False, extrapolate=False, extend=False):

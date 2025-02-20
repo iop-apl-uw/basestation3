@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -45,6 +45,7 @@
 # pylint: disable=too-many-locals
 # pylint: disable=too-many-statements
 
+import contextlib
 import copy
 import cProfile
 import glob
@@ -166,9 +167,7 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
         for var, default_value in list(config.items()):
             try:
                 previous_value = calib_consts[var]  # override?
-                if var not in Globals.flight_variables and var not in [
-                    "mass_comp"
-                ]:  # We report these separately below
+                if var not in Globals.flight_variables and var not in ["mass_comp"]:  # noqa: SIM102 We report these separately below
                     if previous_value != default_value:
                         log_info(
                             "Overriding %s=%s (default: %s)"
@@ -940,7 +939,7 @@ def cond_anomaly(
                 else:  # negative transition
                     a.add_anomaly_point(iv, anomaly)
 
-        if a.collecting():  # we had an active anomaly when we ran out
+        if a.collecting():  # noqa: SIM102 # we had an active anomaly when we ran out
             # we added negative excursion(s) without sufficient positive return excursion(s)
             # if we have signficant excursion under development, warn about that
             if a.max_excursion() > acceptable_anomaly_threshold:
@@ -1637,482 +1636,459 @@ def load_dive_profile_data(
             nc_dive_file_name if ncf_file_exists else log_file_name
         )
         directives = QC.ProfileDirectives(base_opts.mission_dir, dive_num)
-        if ncf_file_exists:
-            if load_from_nc:  # TODO eventually lose this and outdent
-                nc_file_parsable = True  # assume the best
+        if ncf_file_exists and load_from_nc:
+            nc_file_parsable = True  # assume the best
+            try:
+                dive_nc_file = Utils.open_netcdf_file(nc_dive_file_name, "r")
                 try:
-                    dive_nc_file = Utils.open_netcdf_file(nc_dive_file_name, "r")
+                    version = dive_nc_file.file_version
+                except Exception:
+                    version = 1.0
+                if isinstance(version, bytes):
+                    version = version.decode("utf-8")
+                if not isinstance(version, str):
+                    # Old file; convert to string
+                    version = "%.02f" % version
+                if Utils.normalize_version(version) < Utils.normalize_version(
+                    Globals.required_nc_fileversion
+                ):
+                    log_error(
+                        "%s is a version %s netCDF file - this basestation requires %s or later"
+                        % (
+                            nc_dive_file_name,
+                            version,
+                            Globals.required_nc_fileversion,
+                        )
+                    )
+                    dive_nc_file.close()  # close the file
+                    nc_file_parsable = False  # can't really trust our inversion scheme so re-read from raw files
+                    status = 0  # unable to read
+                if Utils.normalize_version(version) < Utils.normalize_version(
+                    Globals.mission_per_dive_nc_fileversion
+                ):
+                    log_info(
+                        "%s is a version %s netCDF file - requires updating to %s"
+                        % (
+                            nc_dive_file_name,
+                            version,
+                            Globals.mission_per_dive_nc_fileversion,
+                        )
+                    )
+                    status = 2  # requires update
+                else:
+                    status = 1  # looks up-to-date
+            except Exception:  # can't open file
+                log_error("Unable to open %s" % nc_dive_file_name, "exc")
+                nc_file_parsable = False
+                ncf_file_exists = False
+                ncf_file_time = 0
+
+            if nc_file_parsable:
+                log_debug("Reloading data from %s" % nc_dive_file_name)
+                # reload and initialize from nc file
+                # this will contain the last gc and gps arrays
+                log_f = LogFile.LogFile()
+                log_f.data = {}
+                log_f.gc_data = {}
+                # Initialize in case this is an old version nc file
+                log_f.gc_state_data = {"secs": [], "state": [], "eop_code": []}
+                eng_f = DataFiles.DataFile("eng", None)
+                eng_cols = []
+                eng_data = []
+
+                sgc_var = re.compile("^%s" % BaseNetCDF.nc_sg_cal_prefix)
+                log_var = re.compile("^%s" % BaseNetCDF.nc_sg_log_prefix)
+                eng_var = re.compile("^%s" % BaseNetCDF.nc_sg_eng_prefix)
+                gc_var = re.compile("^%s" % BaseNetCDF.nc_gc_prefix)
+                gc_state_var = re.compile("^%s" % BaseNetCDF.nc_gc_state_prefix)
+                gc_msg_var = re.compile("^%s" % BaseNetCDF.nc_gc_msg_prefix)
+
+                for global_var in list(
+                    BaseNetCDF.nc_global_variables.keys()
+                ):  # see comment in BaseNetCDF.py about dir(dive_nc_file):
                     try:
-                        version = getattr(dive_nc_file, "file_version")
+                        globals_d[global_var] = getattr(dive_nc_file, global_var)
                     except Exception:
-                        version = 1.0
-                    if isinstance(version, bytes):
-                        version = version.decode("utf-8")
-                    if not isinstance(version, str):
-                        # Old file; convert to string
-                        version = "%.02f" % version
-                    if Utils.normalize_version(version) < Utils.normalize_version(
-                        Globals.required_nc_fileversion
-                    ):
-                        log_error(
-                            "%s is a version %s netCDF file - this basestation requires %s or later"
-                            % (
-                                nc_dive_file_name,
-                                version,
-                                Globals.required_nc_fileversion,
-                            )
-                        )
-                        dive_nc_file.close()  # close the file
-                        nc_file_parsable = False  # can't really trust our inversion scheme so re-read from raw files
-                        status = 0  # unable to read
-                    if Utils.normalize_version(version) < Utils.normalize_version(
-                        Globals.mission_per_dive_nc_fileversion
-                    ):
-                        log_info(
-                            "%s is a version %s netCDF file - requires updating to %s"
-                            % (
-                                nc_dive_file_name,
-                                version,
-                                Globals.mission_per_dive_nc_fileversion,
-                            )
-                        )
-                        status = 2  # requires update
+                        pass  # optional variable
                     else:
-                        status = 1  # looks up-to-date
-                except Exception:  # can't open file
-                    log_error("Unable to open %s" % nc_dive_file_name, "exc")
-                    nc_file_parsable = False
-                    ncf_file_exists = False
-                    ncf_file_time = 0
+                        if isinstance(globals_d[global_var], bytes):
+                            globals_d[global_var] = globals_d[global_var].decode(
+                                "utf-8"
+                            )
 
-                if nc_file_parsable:
-                    log_debug("Reloading data from %s" % nc_dive_file_name)
-                    # reload and initialize from nc file
-                    # this will contain the last gc and gps arrays
-                    log_f = LogFile.LogFile()
-                    log_f.data = {}
-                    log_f.gc_data = {}
-                    # Initialize in case this is an old version nc file
-                    log_f.gc_state_data = {"secs": [], "state": [], "eop_code": []}
-                    eng_f = DataFiles.DataFile("eng", None)
-                    eng_cols = []
-                    eng_data = []
+                # Reconstitute the header information from globals
+                # these globals are always available on later versions
+                start_ts = globals_d["start_time"]
+                eng_f.start_ts = time.gmtime(start_ts)
+                log_f.start_ts = eng_f.start_ts
+                log_f.version = globals_d["seaglider_software_version"]
+                eng_f.version = log_f.version
+                log_f.mission = globals_d["mission"]
+                eng_f.mission = log_f.mission
+                log_f.glider = globals_d["glider"]
+                eng_f.glider = log_f.glider
+                log_f.dive = globals_d["dive_number"]
+                eng_f.dive = log_f.dive
 
-                    sgc_var = re.compile("^%s" % BaseNetCDF.nc_sg_cal_prefix)
-                    log_var = re.compile("^%s" % BaseNetCDF.nc_sg_log_prefix)
-                    eng_var = re.compile("^%s" % BaseNetCDF.nc_sg_eng_prefix)
-                    gc_var = re.compile("^%s" % BaseNetCDF.nc_gc_prefix)
-                    gc_state_var = re.compile("^%s" % BaseNetCDF.nc_gc_state_prefix)
-                    gc_msg_var = re.compile("^%s" % BaseNetCDF.nc_gc_msg_prefix)
-
-                    for global_var in list(
-                        BaseNetCDF.nc_global_variables.keys()
-                    ):  # see comment in BaseNetCDF.py about dir(dive_nc_file):
-                        try:
-                            globals_d[global_var] = getattr(dive_nc_file, global_var)
-                        except Exception:
-                            pass  # optional variable
+                # IMPORTANT NOTE: if we don't .copy() all vectors then when we (re)open the nc file for write below
+                # the underlying data is mapped out and crashes python and the debugger!
+                # (This is critical for raw data that is retained by the caller; not so much for results, etc. that are rebuilt)
+                for dive_nc_varname, nc_var in list(dive_nc_file.variables.items()):
+                    # scipy version: nc_typecode = nc_var.typecode()
+                    nc_typecode = NetCDFUtils.typecode_mapper(nc_var.dtype)
+                    nc_string = nc_typecode == "c"
+                    nc_is_scalar = len(nc_var.shape) == 0  # treat strings as scalars
+                    nc_dims = (
+                        nc_var.dimensions
+                    )  # tuple of dim_names ('sg_data_point',) or ()
+                    l_nc_dims = len(nc_dims)
+                    try:
+                        md = BaseNetCDF.nc_var_metadata[dive_nc_varname]
+                    except KeyError:
+                        # This variable/data came from a prior version of the basestation
+                        # where the metadata was created at least once before, perhaps in the dim past.
+                        # Preserve any attributes.  At worst complain under debug that a variable wasn't predeclared before
+                        # but that could be because a sensor cnf, extension, or scicon eng file isn't available locally.
+                        # We also preserve the data and pass it along without complaint.
+                        attributes = {}
+                        # pylint: disable=protected-access
+                        if getattr(nc_var, "_attributes", False):
+                            for key, value in list(nc_var._attributes.items()):
+                                attributes[key] = value
+                        # pylint: enable=protected-access
+                        if nc_is_scalar or nc_string:
+                            # Let caller complain if they can't handle this scalar...
+                            # This often happens with sg_cal variables.  We provide a default entry
+                            # NOTE: create_nc_var makes a similar complaint but also writes them.
+                            log_debug(
+                                "Undeclared scalar variable %s of type %s"
+                                % (dive_nc_varname, nc_typecode)
+                            )
+                            # this will add it to the appropriate datastructure below depending on prefix
+                            md = BaseNetCDF.form_nc_metadata(
+                                None,
+                                nc_data_type=nc_typecode,
+                                meta_data_d=attributes,
+                            )  # treat as a scalar
                         else:
-                            if isinstance(globals_d[global_var], bytes):
-                                globals_d[global_var] = globals_d[global_var].decode(
-                                    "utf-8"
-                                )
-
-                    # Reconstitute the header information from globals
-                    # these globals are always available on later versions
-                    start_ts = globals_d["start_time"]
-                    eng_f.start_ts = time.gmtime(start_ts)
-                    log_f.start_ts = eng_f.start_ts
-                    log_f.version = globals_d["seaglider_software_version"]
-                    eng_f.version = log_f.version
-                    log_f.mission = globals_d["mission"]
-                    eng_f.mission = log_f.mission
-                    log_f.glider = globals_d["glider"]
-                    eng_f.glider = log_f.glider
-                    log_f.dive = globals_d["dive_number"]
-                    eng_f.dive = log_f.dive
-
-                    # IMPORTANT NOTE: if we don't .copy() all vectors then when we (re)open the nc file for write below
-                    # the underlying data is mapped out and crashes python and the debugger!
-                    # (This is critical for raw data that is retained by the caller; not so much for results, etc. that are rebuilt)
-                    for dive_nc_varname, nc_var in list(dive_nc_file.variables.items()):
-                        # scipy version: nc_typecode = nc_var.typecode()
-                        nc_typecode = NetCDFUtils.typecode_mapper(nc_var.dtype)
-                        nc_string = nc_typecode == "c"
-                        nc_is_scalar = (
-                            len(nc_var.shape) == 0
-                        )  # treat strings as scalars
-                        nc_dims = (
-                            nc_var.dimensions
-                        )  # tuple of dim_names ('sg_data_point',) or ()
-                        l_nc_dims = len(nc_dims)
-                        try:
-                            md = BaseNetCDF.nc_var_metadata[dive_nc_varname]
-                        except KeyError:
-                            # This variable/data came from a prior version of the basestation
-                            # where the metadata was created at least once before, perhaps in the dim past.
-                            # Preserve any attributes.  At worst complain under debug that a variable wasn't predeclared before
-                            # but that could be because a sensor cnf, extension, or scicon eng file isn't available locally.
-                            # We also preserve the data and pass it along without complaint.
-                            attributes = {}
-                            # pylint: disable=protected-access
-                            if getattr(nc_var, "_attributes", False):
-                                for key, value in list(nc_var._attributes.items()):
-                                    attributes[key] = value
-                            # pylint: enable=protected-access
-                            if nc_is_scalar or nc_string:
-                                # Let caller complain if they can't handle this scalar...
-                                # This often happens with sg_cal variables.  We provide a default entry
-                                # NOTE: create_nc_var makes a similar complaint but also writes them.
-                                log_debug(
-                                    "Undeclared scalar variable %s of type %s"
-                                    % (dive_nc_varname, nc_typecode)
-                                )
-                                # this will add it to the appropriate datastructure below depending on prefix
-                                md = BaseNetCDF.form_nc_metadata(
-                                    None,
-                                    nc_data_type=nc_typecode,
-                                    meta_data_d=attributes,
-                                )  # treat as a scalar
-                            else:
-                                log_debug(
-                                    "Metadata for variable %s%s was not pre-declared"
-                                    % (dive_nc_varname, nc_dims)
-                                )
-                                nc_dim_infos = ()
-                                for nc_sensor_mdp_dim in nc_dims:
-                                    if nc_sensor_mdp_dim in list(
-                                        BaseNetCDF.nc_mdp_data_info.values()
+                            log_debug(
+                                "Metadata for variable %s%s was not pre-declared"
+                                % (dive_nc_varname, nc_dims)
+                            )
+                            nc_dim_infos = ()
+                            for nc_sensor_mdp_dim in nc_dims:
+                                if nc_sensor_mdp_dim in list(
+                                    BaseNetCDF.nc_mdp_data_info.values()
+                                ):
+                                    # find the associated info for this dimension
+                                    for info, dim in list(
+                                        BaseNetCDF.nc_mdp_data_info.items()
                                     ):
-                                        # find the associated info for this dimension
-                                        for info, dim in list(
-                                            BaseNetCDF.nc_mdp_data_info.items()
-                                        ):
-                                            if nc_sensor_mdp_dim == dim:
-                                                nc_sensor_mdp_info = info
-                                                break
-                                    else:
-                                        # make one up and register it...this can happen if you are reading an nc file
-                                        # and the dimension was created on the fly from a sensor that needed to look at its eng file
-                                        nc_sensor_mdp_info = (
-                                            "%s_info" % nc_sensor_mdp_dim
+                                        if nc_sensor_mdp_dim == dim:
+                                            nc_sensor_mdp_info = info
+                                            break
+                                else:
+                                    # make one up and register it...this can happen if you are reading an nc file
+                                    # and the dimension was created on the fly from a sensor that needed to look at its eng file
+                                    nc_sensor_mdp_info = "%s_info" % nc_sensor_mdp_dim
+                                    log_debug(
+                                        "%s: %s assigned to %s"
+                                        % (
+                                            dive_nc_varname,
+                                            nc_sensor_mdp_dim,
+                                            nc_sensor_mdp_info,
+                                        )
+                                    )
+                                    BaseNetCDF.register_sensor_dim_info(
+                                        nc_sensor_mdp_info,
+                                        nc_sensor_mdp_dim,
+                                        None,
+                                        True,
+                                        None,
+                                    )  # No clue about time var
+                                nc_dim_infos = nc_dim_infos + (nc_sensor_mdp_info,)
+                            # Don't include in MMT/MMP
+                            md = BaseNetCDF.form_nc_metadata(
+                                None, False, nc_typecode, attributes, nc_dim_infos
+                            )
+                        # if we make it here, intern the created md, which will silence on write
+                        BaseNetCDF.nc_var_metadata[dive_nc_varname] = md
+
+                    (
+                        _,
+                        nc_data_type,
+                        _,
+                        mdp_dim_info,
+                    ) = md
+                    log_debug(
+                        "Processing %s%s (%s)" % (dive_nc_varname, nc_dims, nc_typecode)
+                    )
+                    # NOTE: Every time we skip a variable below it is lost if we rewrite the nc file.  If it is a bit of raw data
+                    # this violates the stricture that all raw data is preserved.  The only recourse is to rebuild from the original files
+                    # with an updated basestation
+                    if nc_typecode != nc_data_type:
+                        if (
+                            (nc_data_type == "Q" and nc_typecode == "c")
+                            or (  # QC vectors are encoded as strings
+                                nc_data_type == "d" and nc_typecode == "i"
+                            )
+                        ):  # netcdf/numpy handles i to d conversion (e.g., gc_pitch_ad was i, now d)
+                            pass
+                        else:
+                            # We have an expected type mismatch we can't deal with easily...
+                            # When we 'upgrade' a log parameters (e.g., $MEM) from a double to a string because of extra members, we need to convert types
+                            # Also, if we define new log parameters but don't declare them, they are saved as strings and later we may need to convert them
+                            # This works for scalars only...
+                            nc_var_convert = None
+                            if len(mdp_dim_info) == 0:  # scalar?
+                                if nc_typecode == "c" and nc_data_type in [
+                                    "d",
+                                    "i",
+                                ]:  # convert string to single scalar
+                                    try:
+                                        nc_dims = mdp_dim_info
+                                        nc_var_convert = dive_nc_file.createVariable(
+                                            dive_nc_varname,
+                                            nc_data_type,
+                                            nc_dims,
+                                        )
+                                        convert_f = (
+                                            float if nc_data_type == "d" else int
+                                        )
+                                        # this can fail if you have a string like '1234,5678,9012' etc.
+                                        nc_var_convert.assignValue(
+                                            convert_f(
+                                                nc_var[:].tobytes().decode("utf-8")
+                                            )
                                         )
                                         log_debug(
-                                            "%s: %s assigned to %s"
+                                            "Converted %s from '%s' to '%s'"
                                             % (
                                                 dive_nc_varname,
-                                                nc_sensor_mdp_dim,
-                                                nc_sensor_mdp_info,
+                                                nc_typecode,
+                                                nc_data_type,
                                             )
                                         )
-                                        BaseNetCDF.register_sensor_dim_info(
-                                            nc_sensor_mdp_info,
-                                            nc_sensor_mdp_dim,
-                                            None,
-                                            True,
-                                            None,
-                                        )  # No clue about time var
-                                    nc_dim_infos = nc_dim_infos + (nc_sensor_mdp_info,)
-                                # Don't include in MMT/MMP
-                                md = BaseNetCDF.form_nc_metadata(
-                                    None, False, nc_typecode, attributes, nc_dim_infos
-                                )
-                            # if we make it here, intern the created md, which will silence on write
-                            BaseNetCDF.nc_var_metadata[dive_nc_varname] = md
+                                    except Exception:
+                                        log_error(
+                                            "Failed to convert %s from string '%s' to type '%s'"
+                                            % (
+                                                dive_nc_varname,
+                                                nc_var[:].to_string(),
+                                                nc_data_type,
+                                            )
+                                        )
+                                        nc_var_convert = None  # oh well...
 
-                        (
-                            _,
-                            nc_data_type,
-                            _,
-                            mdp_dim_info,
-                        ) = md
-                        log_debug(
-                            "Processing %s%s (%s)"
-                            % (dive_nc_varname, nc_dims, nc_typecode)
-                        )
-                        # NOTE: Every time we skip a variable below it is lost if we rewrite the nc file.  If it is a bit of raw data
-                        # this violates the stricture that all raw data is preserved.  The only recourse is to rebuild from the original files
-                        # with an updated basestation
-                        if nc_typecode != nc_data_type:
+                                elif (
+                                    nc_typecode in ["d", "i"] and nc_data_type == "c"
+                                ):  # convert a scalar to a string
+                                    try:
+                                        value_string = "%g" % nc_var.getValue().item()
+                                        l_value_string = len(value_string)
+                                        dim_name = "__%s_convert" % dive_nc_varname
+                                        nc_dims = (dim_name,)
+                                        dive_nc_file.createDimension(
+                                            dim_name, l_value_string
+                                        )
+                                        nc_var_convert = dive_nc_file.createVariable(
+                                            dive_nc_varname,
+                                            nc_data_type,
+                                            nc_dims,
+                                        )
+                                        nc_var_convert[:] = value_string
+                                        log_debug(
+                                            "Converted %s from type '%s' to a string"
+                                            % (dive_nc_varname, nc_typecode)
+                                        )
+                                    except Exception:
+                                        log_error(
+                                            "Failed to convert %s from %g to a string"
+                                            % (
+                                                dive_nc_varname,
+                                                nc_var.getValue().item(),
+                                            )
+                                        )
+                                        nc_var_convert = None  # oh well...
+
                             if (
-                                (nc_data_type == "Q" and nc_typecode == "c")
-                                or (  # QC vectors are encoded as strings
-                                    nc_data_type == "d" and nc_typecode == "i"
-                                )
-                            ):  # netcdf/numpy handles i to d conversion (e.g., gc_pitch_ad was i, now d)
-                                pass
+                                nc_var_convert
+                            ):  # were we able to coerce to a new variable?
+                                # reset these variables to reflect the new variable
+                                nc_typecode = nc_data_type
+                                nc_string = nc_typecode == "c"
+                                l_nc_dims = len(nc_dims)
+                                nc_var = nc_var_convert  # use this new nc_var below
                             else:
-                                # We have an expected type mismatch we can't deal with easily...
-                                # When we 'upgrade' a log parameters (e.g., $MEM) from a double to a string because of extra members, we need to convert types
-                                # Also, if we define new log parameters but don't declare them, they are saved as strings and later we may need to convert them
-                                # This works for scalars only...
-                                nc_var_convert = None
-                                if len(mdp_dim_info) == 0:  # scalar?
-                                    if nc_typecode == "c" and nc_data_type in [
-                                        "d",
-                                        "i",
-                                    ]:  # convert string to single scalar
-                                        try:
-                                            nc_dims = mdp_dim_info
-                                            nc_var_convert = (
-                                                dive_nc_file.createVariable(
-                                                    dive_nc_varname,
-                                                    nc_data_type,
-                                                    nc_dims,
-                                                )
-                                            )
-                                            convert_f = (
-                                                float if nc_data_type == "d" else int
-                                            )
-                                            # this can fail if you have a string like '1234,5678,9012' etc.
-                                            nc_var_convert.assignValue(
-                                                convert_f(
-                                                    nc_var[:].tobytes().decode("utf-8")
-                                                )
-                                            )
-                                            log_debug(
-                                                "Converted %s from '%s' to '%s'"
-                                                % (
-                                                    dive_nc_varname,
-                                                    nc_typecode,
-                                                    nc_data_type,
-                                                )
-                                            )
-                                        except Exception:
-                                            log_error(
-                                                "Failed to convert %s from string '%s' to type '%s'"
-                                                % (
-                                                    dive_nc_varname,
-                                                    nc_var[:].to_string(),
-                                                    nc_data_type,
-                                                )
-                                            )
-                                            nc_var_convert = None  # oh well...
-
-                                    elif (
-                                        nc_typecode in ["d", "i"]
-                                        and nc_data_type == "c"
-                                    ):  # convert a scalar to a string
-                                        try:
-                                            value_string = (
-                                                "%g" % nc_var.getValue().item()
-                                            )
-                                            l_value_string = len(value_string)
-                                            dim_name = "__%s_convert" % dive_nc_varname
-                                            nc_dims = (dim_name,)
-                                            dive_nc_file.createDimension(
-                                                dim_name, l_value_string
-                                            )
-                                            nc_var_convert = (
-                                                dive_nc_file.createVariable(
-                                                    dive_nc_varname,
-                                                    nc_data_type,
-                                                    nc_dims,
-                                                )
-                                            )
-                                            nc_var_convert[:] = value_string
-                                            log_debug(
-                                                "Converted %s from type '%s' to a string"
-                                                % (dive_nc_varname, nc_typecode)
-                                            )
-                                        except Exception:
-                                            log_error(
-                                                "Failed to convert %s from %g to a string"
-                                                % (
-                                                    dive_nc_varname,
-                                                    nc_var.getValue().item(),
-                                                )
-                                            )
-                                            nc_var_convert = None  # oh well...
-
-                                if (
-                                    nc_var_convert
-                                ):  # were we able to coerce to a new variable?
-                                    # reset these variables to reflect the new variable
-                                    nc_typecode = nc_data_type
-                                    nc_string = nc_typecode == "c"
-                                    l_nc_dims = len(nc_dims)
-                                    nc_var = nc_var_convert  # use this new nc_var below
-                                else:
-                                    # Must rebuild the file from the original log/eng files
-                                    log_error(
-                                        "Expecting %s as type for %s but got %s -- skipping"
-                                        % (nc_data_type, dive_nc_varname, nc_typecode)
-                                    )
-                                    continue  # drop it
-
-                        if mdp_dim_info:
-                            if l_nc_dims != len(mdp_dim_info):
+                                # Must rebuild the file from the original log/eng files
                                 log_error(
-                                    "Expecting %s as dimensions for %s but got %s -- skipping"
-                                    % (mdp_dim_info, dive_nc_varname, nc_dims)
+                                    "Expecting %s as type for %s but got %s -- skipping"
+                                    % (nc_data_type, dive_nc_varname, nc_typecode)
                                 )
                                 continue  # drop it
 
-                            # NOTE: this dim name could be different from what was registered (pre-declared)
-                            # because, e.g., some scicon data was not pre-declared, we wrote with made up dim_names
-                            # then later it was pre-declared and now we are reading that old nc file, which wasn't re-made
-                            # The problem is the order in which variables are presented from the nc file is random
-                            # so there is no way to know which given nc dim name from the file is the 'right' one to use
-                            # FIX: If it is a data info we can see if the name matches and if not, use the default instead?? else punt
-                            for dim in range(l_nc_dims):
-                                # likely neeeds .size method
-                                this_dim = nc_dims[dim]
-                                this_mdi = mdp_dim_info[dim]
-                                if this_mdi in BaseNetCDF.nc_data_infos:
-                                    default_dim = BaseNetCDF.nc_mdp_data_info[this_mdi]
-                                    if this_dim != default_dim:
-                                        log_warning(
-                                            "Reassigning %s dimension from %s to %s"
-                                            % (dive_nc_varname, this_dim, default_dim)
-                                        )
-                                        this_dim = default_dim
-                                        status = (
-                                            2  # force reconstruction with new dim names
-                                        )
-                                else:
-                                    pass  # punt (warn?)
-                                BaseNetCDF.assign_dim_info_dim_name(
-                                    nc_info_d, this_mdi, this_dim
-                                )
-                                BaseNetCDF.assign_dim_info_size(
-                                    nc_info_d,
-                                    this_mdi,
-                                    dive_nc_file.dimensions[this_dim].size,
-                                )
-                        elif l_nc_dims:  # expecting no array (BaseNetCDF.nc_scalar) but we have an array...
-                            if nc_data_type not in ["c", "Q"]:  # ignore strings
-                                log_error(
-                                    "Expecting a scalar for %s but got %s -- skipping"
-                                    % (dive_nc_varname, nc_dims)
-                                )
-                                continue  # drop it
+                    if mdp_dim_info:
+                        if l_nc_dims != len(mdp_dim_info):
+                            log_error(
+                                "Expecting %s as dimensions for %s but got %s -- skipping"
+                                % (mdp_dim_info, dive_nc_varname, nc_dims)
+                            )
+                            continue  # drop it
 
-                        if sgc_var.search(dive_nc_varname):
-                            _, variable = sgc_var.split(dive_nc_varname)
-                            if nc_is_scalar:
-                                calib_consts[variable] = nc_var.getValue().item()
-                            else:  # nc_string
-                                calib_consts[variable] = (
-                                    nc_var[:].tobytes().decode("utf-8")
-                                )  # string comments
-
-                        elif log_var.search(dive_nc_varname):
-                            if dive_nc_varname in [
-                                "log_gps_lat",
-                                "log_gps_lon",
-                                "log_gps_time",
-                                "log_gps_first_fix_time",
-                                "log_gps_final_fix_time",
-                                "log_gps_hdop",
-                                "log_gps_magvar",
-                                "log_gps_driftspeed",
-                                "log_gps_driftheading",
-                                "log_gps_n_satellites",
-                                "log_gps_hpe",
-                                "log_gps_qc",
-                            ]:
-                                # move these arrays to results_d, not log_f
-                                results_d[dive_nc_varname] = nc_var[
-                                    :
-                                ].copy()  # always an array
-                                continue
-                            _, variable = log_var.split(dive_nc_varname)
-                            variable = (
-                                "$" + variable
-                            )  # restore leading parameter character
-                            # log_info(variable) # DEBUG when unknown variables fail to load
-                            if nc_data_type == "c" or nc_string:
-                                value = nc_var[:].tobytes().decode("utf-8")
-                                # deal w/ GPS strings
-                                if variable in ["$GPS1", "$GPS2", "$GPS"]:
-                                    value = GPS.GPSFix(
-                                        value,
-                                        start_date_str=time.strftime(
-                                            "%m %d %y", eng_f.start_ts
-                                        ),
+                        # NOTE: this dim name could be different from what was registered (pre-declared)
+                        # because, e.g., some scicon data was not pre-declared, we wrote with made up dim_names
+                        # then later it was pre-declared and now we are reading that old nc file, which wasn't re-made
+                        # The problem is the order in which variables are presented from the nc file is random
+                        # so there is no way to know which given nc dim name from the file is the 'right' one to use
+                        # FIX: If it is a data info we can see if the name matches and if not, use the default instead?? else punt
+                        for dim in range(l_nc_dims):
+                            # likely neeeds .size method
+                            this_dim = nc_dims[dim]
+                            this_mdi = mdp_dim_info[dim]
+                            if this_mdi in BaseNetCDF.nc_data_infos:
+                                default_dim = BaseNetCDF.nc_mdp_data_info[this_mdi]
+                                if this_dim != default_dim:
+                                    log_warning(
+                                        "Reassigning %s dimension from %s to %s"
+                                        % (dive_nc_varname, this_dim, default_dim)
                                     )
-                            else:  # 'd' or 'i'
-                                value = nc_var.getValue().item()
-                            log_f.data[variable] = value
+                                    this_dim = default_dim
+                                    status = (
+                                        2  # force reconstruction with new dim names
+                                    )
+                            else:
+                                pass  # punt (warn?)
+                            BaseNetCDF.assign_dim_info_dim_name(
+                                nc_info_d, this_mdi, this_dim
+                            )
+                            BaseNetCDF.assign_dim_info_size(
+                                nc_info_d,
+                                this_mdi,
+                                dive_nc_file.dimensions[this_dim].size,
+                            )
+                    elif l_nc_dims:  # expecting no array (BaseNetCDF.nc_scalar) but we have an array...
+                        if nc_data_type not in ["c", "Q"]:  # ignore strings
+                            log_error(
+                                "Expecting a scalar for %s but got %s -- skipping"
+                                % (dive_nc_varname, nc_dims)
+                            )
+                            continue  # drop it
 
-                        # Parse for gc_state_ vars before gc_ vars since they share a prefix
-                        elif gc_state_var.search(dive_nc_varname):
-                            _, col_name = gc_state_var.split(dive_nc_varname)
-                            log_f.gc_state_data[col_name] = nc_var[
+                    if sgc_var.search(dive_nc_varname):
+                        _, variable = sgc_var.split(dive_nc_varname)
+                        if nc_is_scalar:
+                            calib_consts[variable] = nc_var.getValue().item()
+                        else:  # nc_string
+                            calib_consts[variable] = (
+                                nc_var[:].tobytes().decode("utf-8")
+                            )  # string comments
+
+                    elif log_var.search(dive_nc_varname):
+                        if dive_nc_varname in [
+                            "log_gps_lat",
+                            "log_gps_lon",
+                            "log_gps_time",
+                            "log_gps_first_fix_time",
+                            "log_gps_final_fix_time",
+                            "log_gps_hdop",
+                            "log_gps_magvar",
+                            "log_gps_driftspeed",
+                            "log_gps_driftheading",
+                            "log_gps_n_satellites",
+                            "log_gps_hpe",
+                            "log_gps_qc",
+                        ]:
+                            # move these arrays to results_d, not log_f
+                            results_d[dive_nc_varname] = nc_var[
                                 :
                             ].copy()  # always an array
+                            continue
+                        _, variable = log_var.split(dive_nc_varname)
+                        variable = "$" + variable  # restore leading parameter character
+                        # log_info(variable) # DEBUG when unknown variables fail to load
+                        if nc_data_type == "c" or nc_string:
+                            value = nc_var[:].tobytes().decode("utf-8")
+                            # deal w/ GPS strings
+                            if variable in ["$GPS1", "$GPS2", "$GPS"]:
+                                value = GPS.GPSFix(
+                                    value,
+                                    start_date_str=time.strftime(
+                                        "%m %d %y", eng_f.start_ts
+                                    ),
+                                )
+                        else:  # 'd' or 'i'
+                            value = nc_var.getValue().item()
+                        log_f.data[variable] = value
 
-                        elif gc_msg_var.search(dive_nc_varname):
-                            _, msg_col_name = gc_msg_var.split(dive_nc_varname)
-                            msg, col_name = msg_col_name.split("_", 1)
-                            if msg not in log_f.gc_msg_dict:
-                                log_f.gc_msg_dict[msg] = {}
-                            log_f.gc_msg_dict[msg][col_name] = nc_var[
-                                :
-                            ].copy()  # always an array
+                    # Parse for gc_state_ vars before gc_ vars since they share a prefix
+                    elif gc_state_var.search(dive_nc_varname):
+                        _, col_name = gc_state_var.split(dive_nc_varname)
+                        log_f.gc_state_data[col_name] = nc_var[
+                            :
+                        ].copy()  # always an array
 
-                        elif gc_var.search(dive_nc_varname):
-                            _, col_name = gc_var.split(dive_nc_varname)
-                            log_f.gc_data[col_name] = nc_var[
-                                :
-                            ].copy()  # always an array
+                    elif gc_msg_var.search(dive_nc_varname):
+                        _, msg_col_name = gc_msg_var.split(dive_nc_varname)
+                        msg, col_name = msg_col_name.split("_", 1)
+                        if msg not in log_f.gc_msg_dict:
+                            log_f.gc_msg_dict[msg] = {}
+                        log_f.gc_msg_dict[msg][col_name] = nc_var[
+                            :
+                        ].copy()  # always an array
 
-                        elif eng_var.search(dive_nc_varname):
-                            # CONSIDER change eng reader to build columns as it goes and make a dictionary
-                            _, col_name = eng_var.split(dive_nc_varname)
-                            eng_cols.append(col_name)
-                            eng_data.append(nc_var[:].copy())  # always an array
-                            try:
-                                instruments_d[dive_nc_varname] = getattr(
-                                    nc_var, "instrument"
-                                ).decode("utf-8")
-                            except Exception:
-                                pass
+                    elif gc_var.search(dive_nc_varname):
+                        _, col_name = gc_var.split(dive_nc_varname)
+                        log_f.gc_data[col_name] = nc_var[:].copy()  # always an array
 
+                    elif eng_var.search(dive_nc_varname):
+                        # CONSIDER change eng reader to build columns as it goes and make a dictionary
+                        _, col_name = eng_var.split(dive_nc_varname)
+                        eng_cols.append(col_name)
+                        eng_data.append(nc_var[:].copy())  # always an array
+                        with contextlib.suppress(Exception):
+                            instruments_d[dive_nc_varname] = nc_var.instrument.decode(
+                                "utf-8"
+                            )
+
+                    else:
+                        # must be another array or scalar
+                        # put it on results
+                        if nc_data_type == "Q":  # Handle QC encoding
+                            # verify nc_typecode == 'c'
+                            qc_v = nc_var[:]  # get the characters
+                            results_d[dive_nc_varname] = QC.decode_qc(qc_v)
+                            continue  # move on...
+
+                        if dive_nc_varname == "directives":
+                            directives.parse_string(nc_var[:].tobytes().decode("utf-8"))
+                            continue
+
+                        if nc_data_type == "c" or nc_string:
+                            results_d[dive_nc_varname] = (
+                                nc_var[:].tobytes().decode("utf-8")
+                            )
+                        elif nc_is_scalar:
+                            results_d[dive_nc_varname] = nc_var.getValue().item()
                         else:
-                            # must be another array or scalar
-                            # put it on results
-                            if nc_data_type == "Q":  # Handle QC encoding
-                                # verify nc_typecode == 'c'
-                                qc_v = nc_var[:]  # get the characters
-                                results_d[dive_nc_varname] = QC.decode_qc(qc_v)
-                                continue  # move on...
-
-                            if dive_nc_varname == "directives":
-                                directives.parse_string(
-                                    nc_var[:].tobytes().decode("utf-8")
+                            results_d[dive_nc_varname] = nc_var[:].copy()
+                            with contextlib.suppress(Exception):
+                                instruments_d[dive_nc_varname] = (
+                                    nc_var.instrument.decode("utf-8")
                                 )
-                                continue
 
-                            if nc_data_type == "c" or nc_string:
-                                results_d[dive_nc_varname] = (
-                                    nc_var[:].tobytes().decode("utf-8")
-                                )
-                            elif nc_is_scalar:
-                                results_d[dive_nc_varname] = nc_var.getValue().item()
-                            else:
-                                results_d[dive_nc_varname] = nc_var[:].copy()
-                                try:
-                                    instruments_d[dive_nc_varname] = getattr(
-                                        nc_var, "instrument"
-                                    ).decode("utf-8")
-                                except Exception:
-                                    pass
-
-                    dive_nc_file.close()
-                    num_rows = len(eng_data)
-                    sg_np = len(eng_data[0])
-                    data = np.zeros((sg_np, num_rows), float)
-                    for i in range(num_rows):
-                        for j in range(sg_np):
-                            data[j][i] = eng_data[i][j]  # transpose
-                    # column order doesn't actually matter as long as they are in sync with data
-                    eng_f.data = data
-                    eng_f.columns = eng_cols
-                    # all done with these vars
-                    del data, eng_cols, eng_data
-                    # now see if we need to update the nc data from raw files
+                dive_nc_file.close()
+                num_rows = len(eng_data)
+                sg_np = len(eng_data[0])
+                data = np.zeros((sg_np, num_rows), float)
+                for i in range(num_rows):
+                    for j in range(sg_np):
+                        data[j][i] = eng_data[i][j]  # transpose
+                # column order doesn't actually matter as long as they are in sync with data
+                eng_f.data = data
+                eng_f.columns = eng_cols
+                # all done with these vars
+                del data, eng_cols, eng_data
+                # now see if we need to update the nc data from raw files
 
         # reload from original data or update nc data
         if sgc_file_exists and sgc_file_time > ncf_file_time:
@@ -3288,68 +3264,67 @@ def make_dive_profile(
             log_error("No $GC records; truncated dive? - bailing out")
             raise RuntimeError(True)
 
-        if auxcompass_present:
-            # Correct the heading?
-            if base_opts.auxmagcalfile or "auxmagcalfile_contents" in globals_d:
-                # Now see if we can actually correct headings
+        if auxcompass_present and (
+            base_opts.auxmagcalfile or "auxmagcalfile_contents" in globals_d
+        ):
+            # Now see if we can actually correct headings
+            try:
                 try:
-                    try:
-                        Mx = results_d["auxCompass_Mx"]
-                        My = results_d["auxCompass_My"]
-                        Mz = results_d["auxCompass_Mz"]
-                    except:
-                        log_error(
-                            "auxCompass correction requested, but magnetometer data missing - skipping corrections",
-                            "exc",
-                        )
-                        raise
-                    try:
-                        head = results_d["auxCompass_hdg"]
-                        pitch = results_d["auxCompass_pit"]
-                        roll = results_d["auxCompass_rol"]
-                    except:
-                        log_error(
-                            "auxCompass correction requested, but pitch/roll missing - skpping corrections",
-                            "exc",
-                        )
-                        raise
-                except Exception:
-                    pass
-                else:
-                    pitch_ctl = eng_f.get_col("pitchCtl")
-                    if pitch_ctl is None:
-                        # TODO For RevE and DG - this column will need to be created
-                        pitchAD_interp = None
-                    else:
-                        # For DG - interpolate onto the compass time grid
-                        pitchAD = np.fix(
-                            pitch_ctl * log_f.data["$PITCH_CNV"]
-                            + log_f.data["$C_PITCH"]
-                        )
-                        pitchAD_interp = Utils.interp1d(
-                            sg_epoch_time_s_v,
-                            pitchAD,
-                            results_d["auxCompass_time"],
-                            kind="linear",
-                        )
-
-                    new_head = correct_heading(
-                        "Aux compass",
-                        globals_d,
-                        base_opts.auxmagcalfile,
-                        "auxmagcalfile_contents",
-                        "scicon.tcm",
-                        base_opts.mission_dir,
-                        Mx,
-                        My,
-                        Mz,
-                        head,
-                        pitch,
-                        roll,
-                        pitchAD_interp,
+                    Mx = results_d["auxCompass_Mx"]
+                    My = results_d["auxCompass_My"]
+                    Mz = results_d["auxCompass_Mz"]
+                except:
+                    log_error(
+                        "auxCompass correction requested, but magnetometer data missing - skipping corrections",
+                        "exc",
                     )
-                    if new_head is not None:
-                        results_d["auxCompass_hdg"] = new_head
+                    raise
+                try:
+                    head = results_d["auxCompass_hdg"]
+                    pitch = results_d["auxCompass_pit"]
+                    roll = results_d["auxCompass_rol"]
+                except:
+                    log_error(
+                        "auxCompass correction requested, but pitch/roll missing - skpping corrections",
+                        "exc",
+                    )
+                    raise
+            except Exception:
+                pass
+            else:
+                pitch_ctl = eng_f.get_col("pitchCtl")
+                if pitch_ctl is None:
+                    # TODO For RevE and DG - this column will need to be created
+                    pitchAD_interp = None
+                else:
+                    # For DG - interpolate onto the compass time grid
+                    pitchAD = np.fix(
+                        pitch_ctl * log_f.data["$PITCH_CNV"] + log_f.data["$C_PITCH"]
+                    )
+                    pitchAD_interp = Utils.interp1d(
+                        sg_epoch_time_s_v,
+                        pitchAD,
+                        results_d["auxCompass_time"],
+                        kind="linear",
+                    )
+
+                new_head = correct_heading(
+                    "Aux compass",
+                    globals_d,
+                    base_opts.auxmagcalfile,
+                    "auxmagcalfile_contents",
+                    "scicon.tcm",
+                    base_opts.mission_dir,
+                    Mx,
+                    My,
+                    Mz,
+                    head,
+                    pitch,
+                    roll,
+                    pitchAD_interp,
+                )
+                if new_head is not None:
+                    results_d["auxCompass_hdg"] = new_head
 
         # Assumptions on auxCompass and auxPressure
         #
@@ -3810,7 +3785,7 @@ def make_dive_profile(
                     log_error(
                         f"Legato CT scicon data found, but had problems loading {e} - bailing out"
                     )
-                    raise RuntimeError(True)
+                    raise RuntimeError(True) from e
             else:
                 ctd_temp_v = eng_f.get_col("rbr_temp")
                 ctd_cond_v = eng_f.get_col("rbr_conduc")
@@ -3954,7 +3929,7 @@ def make_dive_profile(
                 ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
                     BaseNetCDF.nc_sbect_data_info
                 ]
-            except KeyError:
+            except KeyError as e:
                 # Next, try for the glider eng file
                 (_, tempFreq_v) = eng_f.find_col(
                     ["tempFreq", "sbect_tempFreq", "sailct_tempFreq"]
@@ -3964,7 +3939,7 @@ def make_dive_profile(
                 )
                 if tempFreq_v is None and condFreq_v is None:
                     log_error("No CT data found - bailing out")
-                    raise RuntimeError(True)
+                    raise RuntimeError(True) from e
                 ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
                     BaseNetCDF.nc_sg_data_info
                 ]
@@ -4404,7 +4379,7 @@ def make_dive_profile(
                 ctd_cond_v = results_d["gpctd_conductivity"]
             except KeyError as e:
                 log_error(f"No pumped CT data found {e} - bailing out")
-                raise RuntimeError(True)
+                raise RuntimeError(True) from e
 
             # CONSIDER: should we support kistler cnf files in this branch?
             # UPDATE_PRESS
@@ -7063,16 +7038,14 @@ def make_dive_profile(
         for _, nc_dim_name in list(BaseNetCDF.nc_mdp_data_info.items()):
             if (
                 nc_dim_name
+                and nc_dim_name in nc_info_d
+                and nc_dim_name not in created_dims
             ):  # any registered?  normally only data infos are but see ctd_results_info
-                if (
-                    nc_dim_name in nc_info_d and nc_dim_name not in created_dims
-                ):  # do we have a size? which implies we have that data (and possibly results)
-                    log_debug(
-                        "Creating dimension %s (%s)"
-                        % (nc_dim_name, nc_info_d[nc_dim_name])
-                    )
-                    nc_dive_file.createDimension(nc_dim_name, nc_info_d[nc_dim_name])
-                    created_dims.append(nc_dim_name)  # Do this once
+                log_debug(
+                    "Creating dimension %s (%s)" % (nc_dim_name, nc_info_d[nc_dim_name])
+                )
+                nc_dive_file.createDimension(nc_dim_name, nc_info_d[nc_dim_name])
+                created_dims.append(nc_dim_name)  # Do this once
 
         # if False:
         #     # attempt to dump a byte array as an alternative for QC vectors

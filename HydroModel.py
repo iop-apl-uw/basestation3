@@ -35,7 +35,6 @@ import warnings
 import numpy as np
 
 import Utils
-
 from BaseLog import log_debug
 
 # from TraceArray import * # REMOVE use this only only if we are tracing/comparing computations w/ matlab

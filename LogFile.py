@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -51,8 +51,8 @@ import Utils
 from BaseLog import (
     BaseLogger,
     log_debug,
-    log_info,
     log_error,
+    log_info,
     log_warning,
 )
 
@@ -334,11 +334,11 @@ def parse_log_file(in_filename, issue_warn=False):
                 pass  # drop for now
             elif parm_name == "$STATE":
                 log_file.state.append(value)
-            elif parm_name == "$RAFOS":
+            elif parm_name == "$RAFOS":  # noqa: SIM114
                 pass  # drop for now
-            elif parm_name == "$FREEZE":
+            elif parm_name == "$FREEZE":  # noqa: SIM114
                 pass  # drop for now
-            elif parm_name == "$INTR":  # interrupt details
+            elif parm_name == "$INTR":  # noqa: SIM114 interrupt details
                 pass  # drop for now
             elif parm_name == "$WARN":  # various warnings (PPS, flight parms, etc.)
                 if issue_warn:
@@ -346,11 +346,11 @@ def parse_log_file(in_filename, issue_warn=False):
                     log_warning(
                         "WARN:(%s) in %s" % (value, in_filename), alert="LOGFILE_WARN"
                     )
-            elif parm_name == "MODEM":  # Handle like RAFOS
+            elif parm_name == "MODEM":  # noqa: SIM114 Handle like RAFOS
                 pass
-            elif parm_name == "MODEM_MSG":
+            elif parm_name == "MODEM_MSG":  # noqa: SIM114
                 pass
-            elif parm_name == "EKF":
+            elif parm_name == "EKF":  # noqa: SIM114
                 pass
             # Message GC entries
             elif parm_name.lstrip("$") in ("NEWHEAD",):
@@ -393,82 +393,88 @@ def parse_log_file(in_filename, issue_warn=False):
                 log_file.data[parm_name] = value
 
     # If GPS2 is earlier the GPS1, midnight happend between these times - correct GPS1
-    if "$GPS1" in log_file.data and "$GPS2" in log_file.data:
-        if time.mktime(log_file.data["$GPS2"].datetime) < time.mktime(
-            log_file.data["$GPS1"].datetime
-        ):
-            log_info(
-                "%s: GPS2 = %f (%s) less then GPS1 = %f (%s), subtracting a day from GPS1 (midnight rollover between GPS1 and GPS2)"
-                % (
-                    in_filename,
-                    time.mktime(log_file.data["$GPS2"].datetime),
-                    log_file.data["$GPS2"].datetime,
-                    time.mktime(log_file.data["$GPS1"].datetime),
-                    log_file.data["$GPS1"].datetime,
-                )
+    if (
+        "$GPS1" in log_file.data
+        and "$GPS2" in log_file.data
+        and time.mktime(log_file.data["$GPS2"].datetime)
+        < time.mktime(log_file.data["$GPS1"].datetime)
+    ):
+        log_info(
+            "%s: GPS2 = %f (%s) less then GPS1 = %f (%s), subtracting a day from GPS1 (midnight rollover between GPS1 and GPS2)"
+            % (
+                in_filename,
+                time.mktime(log_file.data["$GPS2"].datetime),
+                log_file.data["$GPS2"].datetime,
+                time.mktime(log_file.data["$GPS1"].datetime),
+                log_file.data["$GPS1"].datetime,
             )
-            log_file.data["$GPS1"].datetime = time.gmtime(
-                time.mktime(log_file.data["$GPS1"].datetime) - 86400
+        )
+        log_file.data["$GPS1"].datetime = time.gmtime(
+            time.mktime(log_file.data["$GPS1"].datetime) - 86400
+        )
+        log_info(
+            "New GPS1 = %f (%s)"
+            % (
+                time.mktime(log_file.data["$GPS1"].datetime),
+                log_file.data["$GPS1"].datetime,
             )
-            log_info(
-                "New GPS1 = %f (%s)"
-                % (
-                    time.mktime(log_file.data["$GPS1"].datetime),
-                    log_file.data["$GPS1"].datetime,
-                )
-            )
+        )
 
     # There is a slight chance that the midnight roll over happened between the GPS2 and the logfile start time - in which case,
     # the two readings need to be set back a day.  Detect based on the both GPS1 and GPS2 being later then GPS
-    if "$GPS" in log_file.data and "$GPS1" in log_file.data:
-        if time.mktime(log_file.data["$GPS"].datetime) < time.mktime(
-            log_file.data["$GPS1"].datetime
-        ):
-            log_info(
-                "%s: GPS = %f (%s) less then GPS1 = %f (%s), subtracting a day from GPS1 (midnight rollover between GPS2 and log start - very rare)"
-                % (
-                    in_filename,
-                    time.mktime(log_file.data["$GPS"].datetime),
-                    log_file.data["$GPS"].datetime,
-                    time.mktime(log_file.data["$GPS1"].datetime),
-                    log_file.data["$GPS1"].datetime,
-                )
+    if (
+        "$GPS" in log_file.data
+        and "$GPS1" in log_file.data
+        and time.mktime(log_file.data["$GPS"].datetime)
+        < time.mktime(log_file.data["$GPS1"].datetime)
+    ):
+        log_info(
+            "%s: GPS = %f (%s) less then GPS1 = %f (%s), subtracting a day from GPS1 (midnight rollover between GPS2 and log start - very rare)"
+            % (
+                in_filename,
+                time.mktime(log_file.data["$GPS"].datetime),
+                log_file.data["$GPS"].datetime,
+                time.mktime(log_file.data["$GPS1"].datetime),
+                log_file.data["$GPS1"].datetime,
             )
-            log_file.data["$GPS1"].datetime = time.gmtime(
-                time.mktime(log_file.data["$GPS1"].datetime) - 86400
+        )
+        log_file.data["$GPS1"].datetime = time.gmtime(
+            time.mktime(log_file.data["$GPS1"].datetime) - 86400
+        )
+        log_info(
+            "New GPS1 = %f (%s)"
+            % (
+                time.mktime(log_file.data["$GPS1"].datetime),
+                log_file.data["$GPS1"].datetime,
             )
-            log_info(
-                "New GPS1 = %f (%s)"
-                % (
-                    time.mktime(log_file.data["$GPS1"].datetime),
-                    log_file.data["$GPS1"].datetime,
-                )
-            )
+        )
 
-    if "$GPS" in log_file.data and "$GPS2" in log_file.data:
-        if time.mktime(log_file.data["$GPS"].datetime) < time.mktime(
-            log_file.data["$GPS2"].datetime
-        ):
-            log_info(
-                "%s: GPS = %f (%s) less then GPS2 = %f (%s), subtracting a day from GPS2 (midnight rollover between GPS2 and log start - very rare)"
-                % (
-                    in_filename,
-                    time.mktime(log_file.data["$GPS"].datetime),
-                    log_file.data["$GPS"].datetime,
-                    time.mktime(log_file.data["$GPS2"].datetime),
-                    log_file.data["$GPS2"].datetime,
-                )
+    if (
+        "$GPS" in log_file.data
+        and "$GPS2" in log_file.data
+        and time.mktime(log_file.data["$GPS"].datetime)
+        < time.mktime(log_file.data["$GPS2"].datetime)
+    ):
+        log_info(
+            "%s: GPS = %f (%s) less then GPS2 = %f (%s), subtracting a day from GPS2 (midnight rollover between GPS2 and log start - very rare)"
+            % (
+                in_filename,
+                time.mktime(log_file.data["$GPS"].datetime),
+                log_file.data["$GPS"].datetime,
+                time.mktime(log_file.data["$GPS2"].datetime),
+                log_file.data["$GPS2"].datetime,
             )
-            log_file.data["$GPS2"].datetime = time.gmtime(
-                time.mktime(log_file.data["$GPS2"].datetime) - 86400
+        )
+        log_file.data["$GPS2"].datetime = time.gmtime(
+            time.mktime(log_file.data["$GPS2"].datetime) - 86400
+        )
+        log_info(
+            "New GPS2 = %f (%s)"
+            % (
+                time.mktime(log_file.data["$GPS2"].datetime),
+                log_file.data["$GPS2"].datetime,
             )
-            log_info(
-                "New GPS2 = %f (%s)"
-                % (
-                    time.mktime(log_file.data["$GPS2"].datetime),
-                    log_file.data["$GPS2"].datetime,
-                )
-            )
+        )
 
     gc_data = {}
     log_file_start_time = int(

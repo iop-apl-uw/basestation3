@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,29 +34,29 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import argparse
+import contextlib
+import datetime
 import math
-import typing
 import os
 import sys
+import typing
+import warnings
+from typing import Any
 
 import numpy as np
 import plotly.graph_objects
-import datetime
-import warnings
 import ppigrf
-import random
-import argparse
 
 if typing.TYPE_CHECKING:
     import scipy
 
-import PlotUtils
 import BaseOpts
 import BaseOptsType
-import Utils
 import CommLog
+import PlotUtils
 import RegressVBD
-
+import Utils
 from BaseLog import (
     log_info,
 )
@@ -73,10 +73,8 @@ def magcal(
     nc_files = []
     for d in dives:
         fname = os.path.join(path, f'p{glider:03d}{d:04d}.nc')
-        try:
+        with contextlib.suppress(Exception):
             nc_files.append(Utils.open_netcdf_file(fname))
-        except:
-            pass
 
     if len(nc_files) == 0:
         return ([], [], 0, 0, None)
@@ -246,7 +244,7 @@ def magcal_worker(
         P = P - dP
 
         if it > 0:
-            x = np.divide(dP, P_prev)
+            x = np.divide(dP, P_prev) # noqa: F821
             conv = np.dot(x.reshape(4,), x.reshape(4,))
             if conv < 1e-4:
                 converged = 1
@@ -291,11 +289,11 @@ def magcal_worker(
         P[1] = Ph[1] / norm
         P[2] = Ph[2] / norm
         for j in range(4,12):
-            P[j] = 0;
+            P[j] = 0
        
-        P[3] = 1;
-        P[7] = 1;
-        P[11] = 1;
+        P[3] = 1
+        P[7] = 1
+        P[11] = 1
 
         fxm = fxm / norm
         fym = fym / norm
@@ -613,10 +611,10 @@ def magcal_worker(
                 "hovertemplate": "X:%{x:.0f},Y:%{y:.0f}<br>obs:%{customdata[0]},roll:%{customdata[1]:.1f},pitch:%{customdata[2]:.1f}<extra></extra>",
             }
         )
-        minx = min([minx, min(fx_pqr)]);
-        maxx = max([maxx, max(fx_pqr)]);
-        miny = min([miny, min(fy_pqr)]);
-        maxy = max([maxy, max(fy_pqr)]);
+        minx = min([minx, min(fx_pqr)])
+        maxx = max([maxx, max(fx_pqr)])
+        miny = min([miny, min(fy_pqr)])
+        maxy = max([maxy, max(fy_pqr)])
 
     fig.add_trace(
         {
@@ -661,10 +659,10 @@ def magcal_worker(
                 "hovertemplate": "X:%{x:.0f},Y:%{y:.0f}<br>obs:%{customdata[0]},roll:%{customdata[1]:.1f},pitch:%{customdata[2]:.1f}<extra></extra>",
             }
         )
-        minx = min([minx, min(fx_sg)]);
-        maxx = max([maxx, max(fx_sg)]);
-        miny = min([miny, min(fy_sg)]);
-        maxy = max([maxy, max(fy_sg)]);
+        minx = min([minx, min(fx_sg)])
+        maxx = max([maxx, max(fx_sg)])
+        miny = min([miny, min(fy_sg)])
+        maxy = max([maxy, max(fy_sg)])
 
     if doMAGCAL:
         fig.add_trace(
@@ -687,10 +685,10 @@ def magcal_worker(
                 "hovertemplate": "X:%{x:.0f},Y:%{y:.0f}<br>obs:%{customdata[0]},roll:%{customdata[1]:.1f},pitch:%{customdata[2]:.1f}<extra></extra>",
             }
         )
-        minx = min([minx, min(fx_mc)]);
-        maxx = max([maxx, max(fx_mc)]);
-        miny = min([miny, min(fy_mc)]);
-        maxy = max([maxy, max(fy_mc)]);
+        minx = min([minx, min(fx_mc)])
+        maxx = max([maxx, max(fx_mc)])
+        miny = min([miny, min(fy_mc)])
+        maxy = max([maxy, max(fy_mc)])
 
     minlim = min([minx, miny])
     maxlim = max([maxx, maxy])
@@ -799,7 +797,7 @@ def main():
             return
         try:
             base_opts.instrument_id = int(tail[-3:])
-        except:
+        except Exception:
             print("Can't figure out the instrument id - bailing out")
             return
 

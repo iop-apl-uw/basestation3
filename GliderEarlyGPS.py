@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -37,6 +37,7 @@ import sys
 import time
 import traceback
 from urllib.parse import urlencode
+
 import orjson
 
 import BaseCtrlFiles
@@ -47,7 +48,7 @@ import BaseOptsType
 import CommLog
 import Daemon
 import Utils
-from BaseLog import BaseLogger, log_info, log_warning, log_error, log_critical
+from BaseLog import BaseLogger, log_critical, log_error, log_info, log_warning
 
 # Early process for gps - call back for ver= line in comm.log - at that point, recovery condition has been seen
 # Form up the GPS line and call proceess .pagers
@@ -137,16 +138,17 @@ class GliderEarlyGPSClient:
                             f"Failed to set the instrument id ({self.__base_opts.instrument_id})"
                         )
                 self._first_time = False
-                if self.__base_opts.csh_pid:
-                    if not Utils.check_for_pid(self.__base_opts.csh_pid):
-                        shell_missing_count += 1
-                        log_info(
-                            f"login shell has gone away ({shell_missing_count}, logout_seen:{self._commlog_session.logout_seen})"
-                        )
-                        # Wait 4 seconds before doing anything
-                        if shell_missing_count >= 4:
-                            self.closeout_commlog()
-                        # Let the normal disconnect code will handle the rest of closeout and shutdown
+                if self.__base_opts.csh_pid and not Utils.check_for_pid(
+                    self.__base_opts.csh_pid
+                ):
+                    shell_missing_count += 1
+                    log_info(
+                        f"login shell has gone away ({shell_missing_count}, logout_seen:{self._commlog_session.logout_seen})"
+                    )
+                    # Wait 4 seconds before doing anything
+                    if shell_missing_count >= 4:
+                        self.closeout_commlog()
+                    # Let the normal disconnect code will handle the rest of closeout and shutdown
                 time.sleep(1)
 
             except KeyboardInterrupt:
@@ -181,7 +183,7 @@ class GliderEarlyGPSClient:
                 session=self._commlog_session,
                 scan_back=self._first_time,
             )
-        except:
+        except Exception:
             log_error("comm_log processing failed", "exc")
             return 1
         else:
@@ -196,14 +198,14 @@ class GliderEarlyGPSClient:
         if os.path.exists(connected_file):
             try:
                 os.remove(connected_file)
-            except:
+            except Exception:
                 log_error(f"Unable to remove {connected_file} -- permissions?", "exc")
 
         try:
             # (_, fo) = Utils.run_cmd_shell("date")
             # (_, fo) = Utils.run_cmd_shell('date +"%a %b %d %R:%S %Z %Y"')
             (_, fo) = Utils.run_cmd_shell('date -u +"%Y-%m-%dT%H:%M:%SZ"')
-        except:
+        except Exception:
             log_error("Error running date", "exc")
         else:
             ts = fo.readline().decode().rstrip()
@@ -214,7 +216,7 @@ class GliderEarlyGPSClient:
             try:
                 with open(comm_log_filename, "a") as fo:
                     fo.write(f"Disconnected at {ts} (shell_disappeared)\n\n\n")
-            except:
+            except Exception:
                 log_error("Could not update {commlog}")
 
     def cleanup_shutdown(self):
@@ -290,7 +292,7 @@ class GliderEarlyGPSClient:
                     Utils.notifyVis(
                         session.sg_id, "urls-status", orjson.dumps(msg).decode("utf-8")
                     )
-                except:
+                except Exception:
                     log_error("notifyVis failed", "exc")
                 self.cleanup_shutdown()
 
@@ -308,10 +310,9 @@ class GliderEarlyGPSClient:
 
     def callback_recovery(self, recovery_msg):
         """Callback for a comm.log In Recovery line"""
-        if not self._first_time:
-            if recovery_msg is not None:
-                msg = "In Recovery: %s" % recovery_msg
-                log_info(msg)
+        if not self._first_time and recovery_msg is not None:
+            msg = "In Recovery: %s" % recovery_msg
+            log_info(msg)
 
     def callback_counter_line(self, session):
         """Callback for comm.log counter line (begining and end of session)"""
@@ -390,10 +391,10 @@ class GliderEarlyGPSClient:
                         "urls-gpsstr",
                         orjson.dumps(payload).decode("utf-8"),
                     )
-                except:
+                except Exception:
                     log_error("notifyVis failed", "exc")
 
-            except:
+            except Exception:
                 ret_val = "Failed to process gps position (%s)" % traceback.format_exc()
 
         if ret_val is not None:
@@ -439,10 +440,9 @@ def main():
         log_critical("Dive directory must be supplied or path to comm.log.")
         return 1
 
-    if base_opts.daemon:
-        if Daemon.createDaemon(base_opts.mission_dir, False):
-            log_error("Could not launch as a daemon - bailing out")
-            return 1
+    if base_opts.daemon and Daemon.createDaemon(base_opts.mission_dir, False):
+        log_error("Could not launch as a daemon - bailing out")
+        return 1
 
     log_info("PID:%d" % os.getpid())
     log_info("login_shell PID:%d" % base_opts.csh_pid)
@@ -484,7 +484,7 @@ def main():
             return 1
         try:
             glider_client.process_counter_line(comm_log.sessions[-1], testing=True)
-        except:
+        except Exception:
             log_error("Problem in process_counter_line", "exc")
             return 1
         return 0
@@ -492,7 +492,7 @@ def main():
     try:
         log_info("Starting the GliderEarlyGPS client....")
         glider_client.run()
-    except:
+    except Exception:
         log_error("GliderEarlyGPS failed", "exc")
         return 1
 

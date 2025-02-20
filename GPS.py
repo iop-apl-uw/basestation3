@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -37,7 +37,7 @@ import time
 from enum import IntEnum
 
 import Utils
-from BaseLog import log_error, log_debug, log_info
+from BaseLog import log_debug, log_error, log_info
 
 
 class GPS_I(IntEnum):
@@ -134,7 +134,7 @@ class GPSFix:
                             "GPS = %f (%s)"
                             % (time.mktime(self.datetime), self.datetime)
                         )
-                    except:
+                    except Exception:
                         self.datetime = None
                         log_error(
                             "Could not process %s" % gps_fields[1] + gps_fields[2],

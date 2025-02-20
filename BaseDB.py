@@ -33,6 +33,7 @@
 """ Add selected data from per-dive netcdf file to the mission sqllite db
 """
 
+import asyncio
 import contextlib
 import glob
 import math
@@ -52,10 +53,9 @@ import BaseOptsType
 import BasePlot
 import CalibConst
 import CommLog
+import parms
 import PlotUtils
 import Utils
-import parms
-import asyncio
 from BaseLog import (
     BaseLogger,
     log_critical,
