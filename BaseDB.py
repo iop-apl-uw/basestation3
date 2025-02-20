@@ -51,7 +51,6 @@ import BaseOpts
 import BaseOptsType
 import BasePlot
 import CalibConst
-import CmdHistory
 import CommLog
 import PlotUtils
 import Utils
