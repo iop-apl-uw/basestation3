@@ -84,7 +84,8 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
                                 except:
                                     continue
  
-                            if d[p]['current'] != n:
+                            if f"{d[p]['current']}" != f"{n}":
+                                print(f"changing {p} {d[p]['current']} to {n}")
                                 d[p]['waiting'] = n
         except:
             pass
@@ -98,7 +99,19 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
                                     {'value': 8, 'function': loggers[1]}];
     
     return d
-    
+  
+async def parameterChanges(dive, logname, cmdname):
+
+    p = await state(None, logfile=logname, cmdfile=cmdname)
+
+    changes = []
+    for x in p.keys():
+        if 'waiting' in p[x]:
+            changes.append(  { "dive": dive, "parm": x, "oldval": p[x]['current'], "newval": p[x]['waiting'] } )
+
+    return changes
+
+
 if __name__ == "__main__":
     if '.cap' in sys.argv[1]:
         d = asyncio.run(state(None, capfile=sys.argv[1], cmdfile=(sys.argv[2] if len(sys.argv) == 3 else None)))

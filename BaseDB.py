@@ -55,6 +55,8 @@ import CmdHistory
 import CommLog
 import PlotUtils
 import Utils
+import parms
+import asyncio
 from BaseLog import (
     BaseLogger,
     log_critical,
@@ -1388,7 +1390,7 @@ def logParameterChanges(base_opts, dive_num, cmdname, con=None):
 
     logfile = os.path.join(base_opts.mission_dir, f'p{base_opts.instrument_id:03d}{dive_num:04d}.log')
     cmdfile = os.path.join(base_opts.mission_dir, cmdname) 
-    changes = CmdHistory.parameterChanges(dive_num, logfile, cmdfile)
+    changes = asyncio.run(parms.parameterChanges(dive_num, logfile, cmdfile))
 
     for d in changes:
         try:
