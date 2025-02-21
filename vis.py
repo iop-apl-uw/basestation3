@@ -2112,7 +2112,7 @@ def attachHandlers(app: sanic.Sanic):
                     logname = 'pilot.log'
 
                 async with aiofiles.open(f'{gliderPath(glider, request)}/{logname}', 'a') as log:
-                    log.write(f"### {tU} () {date}\n")
+                    log.write(f"\n### {tU} () {date}\n")
                     log.write(f"+++ {which} ({size} bytes, {checksum} checksum)\n")
                     log.write(message['contents'])
                     log.write('\n'.join(res))

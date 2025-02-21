@@ -314,7 +314,7 @@ if not validateOnly:
 
     try:
         log = open(wd + "/" + progname + ".log", "a")
-        log.write(f"### {pilot} ({username}) {date}\n")
+        log.write(f"\n### {pilot} ({username}) {date}\n")
         log.write(f"+++ {filename} ({size:d} bytes, {checksum:d} checksum)\n")
         log.write(ctrlfile_text.decode('utf-8'))
         log.write(f"--- validation against {logfile} (latest dive is {latest:d})\n")
