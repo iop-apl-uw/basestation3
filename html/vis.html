@@ -143,6 +143,8 @@
     var sectionSortMajor = 'number';
     var sectionNumberSort = 'reverse';
 
+    var edit_log_auth_failure = false;
+
 {% if runMode == 'pilot' %}
     var fixes = [];
     var connect_t = 0;
@@ -619,8 +621,17 @@
         fetch(`editlog/${currGlider}/${which}/${mission()}`)
         .then(res => res.text())
         .then(text => {
-            if (text == "none" || text.includes("authorization failed"))
+            if (text == "none") 
                 return;
+            if (text.includes("authorization failed")) {
+                // fail silently but remember this in the event the user comes
+                // to the tab so we can prompt them to login
+                edit_log_auth_failure = true;
+                return;
+            }
+            else {
+                edit_log_auth_failure = false;
+            }
 
             try {
                 data = JSON.parse(text);
@@ -637,7 +648,7 @@
         fetch(`control/${currGlider}/${file}${mission()}`)
         .then(res => res.text())
         .then(text => {
-            if (text == "none" || text.includes("authorization failed"))
+            if (text == "none" || text.includes("not found") || text.includes("authorization failed"))
                 return;
 
             try {
@@ -1487,6 +1498,10 @@
         }
         $('pilotWheel' + file).classList.remove('hide');
         $('tab' + file).classList.add('bold');
+
+        if (file == 'Logs' && edit_log_auth_failure) {
+            openLoginForm(function() { loggedIn(); loadEditlog('cmdedit'); loadEditlog('targedit'); loadEditlog('sciedit');  }, "");
+        }
     }
 
     /* TARGETS EDITOR */
@@ -2478,10 +2493,14 @@ parms[p]
         .then(res => res.text())
         .then(text => {
             // console.log(text);
+            if (text.includes("not found")) {
+                return;
+            }
             if (text.includes("authorization failed")) {
                 openLoginForm(function() { window.location.reload.bind(window.location); }, "");
                 return;
             }
+
             try {
                 data = JSON.parse(text);
             } catch (error) {
@@ -3529,7 +3548,7 @@ parms[p]
         fetch(`timevars/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
-            if (text == 'authorization failed') 
+            if (text.includes("not found") || text == 'authorization failed') 
                 return;
 
             try {
