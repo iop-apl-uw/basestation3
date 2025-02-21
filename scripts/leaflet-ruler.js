@@ -156,7 +156,8 @@
             }
             if (pts) {
                 var txt = this.options.export(pts, e.keyCode);
-                navigator.clipboard.writeText(txt);
+                if (navigator && 'clipboard' in navigator && navigator.clipboard)
+                    navigator.clipboard.writeText(txt);
                 L.circleMarker(pts[0], this.options.circleMarker).bindTooltip('<pre>' + txt + '</pre> (copied to clipboard)', {sticky: true, className: 'result-tooltip'}).addTo(this._pointLayer).openTooltip();
             }
         }
