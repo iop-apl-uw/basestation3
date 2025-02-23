@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,27 +34,26 @@ MoveData.py: Move all raw data and processed files from the dive directory
     if necessary).
 """
 
-import sys
+import contextlib
+import glob
 import os
 import shutil
-import glob
+import sys
 import traceback
 
-import CommLog
 import BaseOpts
-from BaseLog import (
-    BaseLogger,
-    log_debug,
-    log_info,
-    log_critical,
-    log_error,
-    log_warning,
-)
-import BaseDB
+import CommLog
 import Const
 import FileMgr
 import Sensors
-
+from BaseLog import (
+    BaseLogger,
+    log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
+)
 from Globals import known_files
 
 
@@ -84,7 +83,7 @@ def moveFiles(file_re_str, src, dest, copy=False):
             try:
                 op(file, dest)
                 log_info("    %s %s" % (op_past, os.path.basename(file)))
-            except:
+            except Exception:
                 log_error(
                     "%s %s failed (%s)" % (op_gerund, file, traceback.format_exc())
                 )
@@ -117,7 +116,7 @@ def moveFileList(files, target_dir, copy=False):
             try:
                 op(file, target_dir)
                 log_info("    %s %s" % (op_past, os.path.basename(file)))
-            except:
+            except Exception:
                 log_error("%s %s failed" % (op_gerund, str(file)))
                 ret_val = 1
     return ret_val
@@ -160,7 +159,7 @@ def main():
         try:
             os.makedirs(base_opts.target_dir)
             log_info("created directory: " + base_opts.target_dir)
-        except:
+        except Exception:
             log_critical("Unable to create directory: " + base_opts.target_dir)
             return 1
 
@@ -179,7 +178,7 @@ def main():
             return 1
         try:
             base_opts.instrument_id = int(tail[-3:])
-        except:
+        except Exception:
             log_error("Can't figure out the instrument id - bailing out")
             return 1
 
@@ -332,19 +331,17 @@ def main():
         mv_file = known_file + ".*.*"  # recovery files
         moveFiles(mv_file, base_opts.mission_dir, base_opts.target_dir)
 
-    try:
+    with contextlib.suppress(Exception):
         # ensure we start out next mission connected...
         # this could happen if the pilot was in the middle of a transmissions when they move data (unlikely)
         # or (more likely) they wanded off the glider during recovery in the middle of a transmission/
         # in any case, if this file is not removed, the next call, which will start a new comm.log
         # will start off with a "Reconnected" and foul comm.log parsing
         os.remove(os.path.abspath(base_opts.mission_dir + "/.connected"))
-    except:
-        pass  # ok if it doesn't exist
 
     # Look for sub-directories created by loggers and move those
-    for l in FileMgr.logger_prefixes:
-        g = "%s/%s[0-9][0-9][0-9][0-9][abcd]" % (base_opts.mission_dir, l)
+    for logger_prefix in FileMgr.logger_prefixes:
+        g = "%s/%s[0-9][0-9][0-9][0-9][abcd]" % (base_opts.mission_dir, logger_prefix)
         for d in glob.glob(g):
             _, tmp = os.path.split(d)
             t = os.path.join(base_opts.target_dir, tmp)
@@ -352,7 +349,7 @@ def main():
                 try:
                     shutil.move(d, t)
                     log_info("Moved %s" % d)
-                except:
+                except Exception:
                     log_error("Moving %s failed (%s)" % (d, traceback.format_exc()))
 
     # If exists, move the sub-directories
@@ -374,7 +371,7 @@ def main():
             try:
                 shutil.move(mnt_dir, mnt_tgt_dir)
                 log_info("Moved %s" % mnt_dir)
-            except:
+            except Exception:
                 log_error("Moving %s failed" % mnt_dir)
 
     moveFiles("monitor_dive*log", base_opts.mission_dir, base_opts.target_dir)

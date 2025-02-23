@@ -34,17 +34,6 @@
 
 """Routines for creating dive profiles from a Seaglider's eng and log files"""
 
-# pylint: disable=fixme
-# TODO - remove all uses of globals(), locals() and exec()
-# pylint: disable=possibly-unused-variable
-# TODO - remove and fix these
-# pylint: disable=too-many-lines
-# pylint: disable=missing-function-docstring
-# pylint: disable=missing-class-docstring
-# pylint: disable=too-many-branches
-# pylint: disable=too-many-locals
-# pylint: disable=too-many-statements
-
 import contextlib
 import copy
 import cProfile
@@ -141,6 +130,13 @@ sb_ct_type_map = {
     3: "gun-style Seabird unpumped SAILCT",
     4: "unpumped RBR Legato",
 }
+
+# This are all overwritten in sg_config_constants via the exec call - these
+# are here to satisfy static linters
+sg_ct_type = None
+sg_vehicle_geometry = None
+sg_sensor_geometry = None
+sg_ct_geometry = None
 
 
 def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=False):
@@ -2395,7 +2391,9 @@ def SBECT_coefficents(sbect_type, calib_consts, log_f, sgc_vars, log_vars):
             acceptable_precision = 0.8e-7  # TT8 has single-precision floats
             if sbect_type not in SBECT_mismatch_reported:
                 # mismatch_alert = False
-                for var_values in zip(sgc_vars, sgc_values, log_vars, log_values):
+                for var_values in zip(
+                    sgc_vars, sgc_values, log_vars, log_values, strict=True
+                ):
                     sgc_value = var_values[1]
                     log_value = var_values[3]
                     if np.isclose([sgc_value], [0.0], atol=acceptable_precision):
@@ -5965,7 +5963,7 @@ def make_dive_profile(
             mass_kg = calib_consts["mass"]  # critical to have this in kg
             gravity = 9.82  # m/s2
             rhoxl2_2m = (rho0 * glider_length * glider_length) / (2 * mass_kg)
-            if fm_isopycnal:
+            if base_opts.fm_isopycnal:
                 dens_raw_v = seawater.pden(salin_raw_v, temp_raw_v, ctd_press_v)
             else:
                 dens_raw_v = seawater.dens(salin_raw_v, temp_raw_v, ctd_press_v)
