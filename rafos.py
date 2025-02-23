@@ -1,3 +1,5 @@
+# ruff: noqa
+
 import sys
 import datetime
 import Utils

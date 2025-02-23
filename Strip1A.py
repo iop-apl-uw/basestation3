@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -36,7 +36,7 @@ import sys
 
 import BaseOpts
 import BaseOptsType
-from BaseLog import BaseLogger, log_error, log_warning, log_debug
+from BaseLog import BaseLogger, log_debug, log_error, log_warning
 
 
 def strip1A(in_filename, out_filename, size=0):
@@ -52,12 +52,12 @@ def strip1A(in_filename, out_filename, size=0):
 
     try:
         in_file = open(in_filename, "rb")
-    except IOError:
+    except OSError:
         log_error("Could not open %s for reading" % in_filename)
         return 1
     try:
         out_file = open(out_filename, "wb")
-    except IOError:
+    except OSError:
         log_error("Could not open %s for writing" % out_filename)
         return 1
 

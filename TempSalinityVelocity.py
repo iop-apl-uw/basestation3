@@ -34,22 +34,20 @@ import math
 import os
 import time
 
-import numpy as np
-from scipy.integrate import cumulative_trapezoid
-import scipy.signal  # for convolve
-import scipy.io  # for loadmat
-from scipy.interpolate import RectBivariateSpline
-
-import seawater
 import gsw
+import numpy as np
+import scipy.io  # for loadmat
+import scipy.signal  # for convolve
+import seawater
+from scipy.integrate import cumulative_trapezoid
+from scipy.interpolate import RectBivariateSpline
 
 import QC
 import TraceArray
 import Utils
-
-from pchip import pchip
-from HydroModel import hydro_model
 from BaseLog import log_debug, log_error, log_info, log_warning
+from HydroModel import hydro_model
+from pchip import pchip
 
 c3515 = (
     4.2914  # Conductivity at S=35, T=15, P=0, mS/10cm, where conductivity ratio is 1

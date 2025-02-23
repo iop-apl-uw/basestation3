@@ -1,3 +1,5 @@
+# ruff: noqa
+
 import pickle
 import sys
 import re

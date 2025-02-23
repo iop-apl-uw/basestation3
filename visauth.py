@@ -1,3 +1,4 @@
+# ruff: noqa
 # CREATE TABLE users (name PRIMARY KEY, email, domain, password, type, totp, totp_verify_by int, otc, otc_expiry int, last int, last_t int, fails int, locked int);
 import sys
 import sqlite3

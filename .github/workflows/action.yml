@@ -22,9 +22,9 @@ jobs:
         python -m pip install --upgrade pip
         #pip install ruff
         if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
-    #- name: Check with Ruff
-    #  run: |
-    #    ruff check --output-format=github
+    - name: Check with Ruff
+      run: |
+        ruff check --output-format=github
     - name: Test with pytest
       run: |
         pytest -rsx --cov --cov-report term-missing tests/

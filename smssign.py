@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,9 @@
 
 # wraps a cmdfile for sending as SMS (via email to IMEI@msg.iridium.com or 
 # https://messaging.iriiridiudium.com (leave reply email blank to save
-# space)). 
+# space)).
+
+# ruff: noqa
 
 import hmac
 import sys

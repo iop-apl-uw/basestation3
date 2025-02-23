@@ -37,13 +37,14 @@
 from __future__ import annotations
 
 import collections
-import re
+import contextlib
 import os
+import re
 
-from BaseLog import log_debug, log_error, log_warning
 import BaseNetCDF
 import CalibConst
 import Utils
+from BaseLog import log_debug, log_error, log_warning
 
 col_ncmeta_map_type = collections.namedtuple(
     "col_ncmeta_map_type", ["nc_var_name", "nc_meta_str"]
@@ -79,7 +80,7 @@ def read_cnf_file(
     if os.path.exists(filename):
         try:
             cnf_file = open(filename, "r")
-        except IOError as exception:
+        except OSError as exception:
             log_debug("Could not open %s (%s)" % (filename, exception.args))
             # fallthrough
         else:
@@ -161,11 +162,10 @@ def read_cnf_file(
         try:
             value = int(value)
         except Exception:
-            try:
+            # TODO? If string is enclosed in "", remove them?
+            with contextlib.suppress(Exception):
+                # encode as-is, a string
                 value = float(value)
-            except Exception:
-                # TODO? If string is enclosed in "", remove them?
-                pass  # encode as-is, a string
         try:
             values = cnf_dict[prop]
         except KeyError:
@@ -239,7 +239,7 @@ def get_mission_timeseries_name(base_opts, direc=None, basename="timeseries"):
     if instrument_id == 0:
         log_warning("Unable to determine instrument id; assuming 0")
 
-    platform_id = "SG%03d" % instrument_id
+    # platform_id = "SG%03d" % instrument_id
 
     mission_title = Utils.ensure_basename(calib_consts["mission_title"])
     return os.path.join(

@@ -32,21 +32,22 @@ import os
 import pdb
 import sys
 import traceback
+
 import yaml
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 import BaseOpts
-from BaseLog import (
-    BaseLogger,
-    log_error,
-    #log_warning,
-    log_info,
-    log_critical
-)
 import CommLog
 import MakeDiveProfiles
 import Utils
+from BaseLog import (
+    BaseLogger,
+    log_critical,
+    log_error,
+    #log_warning,
+    log_info,
+)
 
 # Options
 DEBUG_PDB = True

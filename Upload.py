@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,14 +33,13 @@ Upload.py
 Creates an glider upload and verification script and file chunks for a large file
 """
 
-import string
-import sys
-import os
-import shutil
-import subprocess
-import hashlib
 import getopt
 import gzip
+import hashlib
+import os
+import subprocess
+import sys
+
 
 def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pdos_md5_filename):
     """Given a file to upload to a glider, zip the file, break it into pieces
@@ -52,9 +51,8 @@ def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pd
     # Gzip original file
     base_upload_file_name = os.path.basename(upload_file_name)
     base_upload_md5 = hashlib.md5()
-    fi = open(base_upload_file_name, "rb")
-    base_upload_md5.update(fi.read())
-    fi.close
+    with open(base_upload_file_name, "rb") as fi:
+        base_upload_md5.update(fi.read())
 
     gzip_upload_file_name = "CHUNK.GZ"
     if(glider_zip == "gzip"):
@@ -68,13 +66,12 @@ def create_upload(upload_file_name, chunk_size, glider_zip, pdos_xr_filename, pd
         cmd = "%s /c %s %s" % (glider_zip, base_upload_file_name, gzip_upload_file_name)
         status, output = subprocess.getstatusoutput(cmd)
         if(status):
-            print(("Error %d executing %s (%s)- bailing out" % (status, cmd, output)))
+            print("Error %d executing %s (%s)- bailing out" % (status, cmd, output))
         
     # md5 hash the gzipped file original
     gzip_upload_md5 = hashlib.md5()
-    fi = open(gzip_upload_file_name, "rb")
-    gzip_upload_md5.update(fi.read())
-    fi.close
+    with open(gzip_upload_file_name, "rb") as fi:
+        gzip_upload_md5.update(fi.read())
     
     # Break it up into uniform sizes
     gzip_upload_file_size = os.stat(gzip_upload_file_name).st_size
@@ -150,7 +147,7 @@ if __name__ == "__main__":
     try:
         opts, args = getopt.getopt(sys.argv[1:], "c:", ["chunksize=", "pdoscmds="])
     except getopt.GetoptError:
-        print((usage_string % sys.argv[0]))
+        print(usage_string % sys.argv[0])
         sys.exit(1)
 
     for o, a in opts:
@@ -166,7 +163,7 @@ if __name__ == "__main__":
     #    gliderzip_binary = os.path.join(sys.path[0], "gliderzip")
 
     if (len(args) != 1):
-        print((usage_string % sys.argv[0]))
+        print(usage_string % sys.argv[0])
         sys.exit(1)
 
     #if(not os.path.exists(gliderzip_binary) and gliderzip_binary != "gzip"):

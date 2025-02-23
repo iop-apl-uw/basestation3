@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025, 2025  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,13 +33,13 @@
 
 import glob
 import os
-import BaseOpts
-from BaseLog import *
-import Utils
-import re
-import string
 import shutil
 import stat
+import sys
+
+import BaseOpts
+from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
+
 
 def ver_65_to_ver_66_filename(f_name):
     o_name = None
@@ -71,7 +71,7 @@ def ver_65_to_ver_66_filename(f_name):
         type_char = "k" # We don't really know what we are dealing with here
                         # so this is as good as any
     else:
-        log_error("Don't know what the type is for %s - skipping" % fname)
+        log_error(f"Don't know what the type is for {f_name} - skipping")
         return o_name
 
     dive_num = int(f_name[4:8])

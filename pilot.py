@@ -1,3 +1,4 @@
+# ruff: noqa
 import aiosqlite
 import asyncio
 import sys

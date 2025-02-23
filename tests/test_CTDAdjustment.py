@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,7 +35,6 @@ import xarray as xr
 
 import Base
 import CTDAdjustment
-import MakeMissionTimeSeries
 
 
 def test_base(caplog):

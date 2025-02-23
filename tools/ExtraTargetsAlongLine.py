@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -38,7 +38,7 @@ from pyproj import Geod
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 import BaseOpts
-from BaseLog import BaseLogger, log_error, log_warning, log_info
+from BaseLog import BaseLogger, log_error
 
 # Options
 DEBUG_PDB = True

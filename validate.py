@@ -1,6 +1,6 @@
 #!/usr/bin/python3
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -32,6 +32,8 @@
 # with glider binaries. Particularly, it does not warn
 # about parameter values and is more sensitive to 
 # proper selection of the logfile used as the reference
+
+# ruff: noqa
 
 import sys
 import os

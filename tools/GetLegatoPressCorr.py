@@ -37,12 +37,7 @@ from scanf import scanf
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
 
 import BaseOpts
-from BaseLog import (
-    BaseLogger,
-    log_error,
-    log_warning,
-    log_info
-)
+from BaseLog import BaseLogger, log_error, log_info, log_warning
 
 # Options
 DEBUG_PDB = False
