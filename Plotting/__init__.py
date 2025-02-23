@@ -42,10 +42,9 @@ import typing
 
 # Avoid circular input for type checking
 if typing.TYPE_CHECKING:
-    import BaseOpts
     import scipy
 
-from BaseLog import log_error, log_info
+    import BaseOpts
 
 dive_plot_funcs = {}
 mission_plot_funcs = {}
@@ -88,7 +87,7 @@ def compare_sigs(sig_a, sig_b):
     if len(sig_a.parameters) != len(sig_b.parameters):
         return False
 
-    for t1, t2 in zip(sig_a.parameters.items(), sig_b.parameters.items()):
+    for t1, t2 in zip(sig_a.parameters.items(), sig_b.parameters.items(), strict=True):
         if not t1 or not t2:
             return False
         if t1[1].annotation != t2[1].annotation:
@@ -133,50 +132,47 @@ def plotmissionsingle(func):
     return func
 
 
-# pylint: disable=wrong-import-position
-
-# Per-dive plotting routines
-from . import DivePlot
-
-# from . import DiveCOG # deprecated in favor of the COG trace on the CTW plot
-from . import DiveCTW
-from . import DiveOptode
-from . import DiveWetlabs
-from . import DiveOCR504i
-from . import DiveCTD
-from . import DiveTS
-from . import DiveTMICL
-from . import DivePMAR
-from . import DiveCompassCompare
-from . import DiveLegatoPressure
-from . import DiveLegatoData
-from . import DiveCTDCorrections
-
-# from . import DiveVertVelocity
-from . import DiveVertVelocityNew
-from . import DivePitchRoll
-from . import DiveMagCal
-from . import DiveSBE43
-
-# Whole mission plotting routines
-from . import MissionEnergy
-from . import MissionVolume
-from . import MissionMotors
-from . import MissionIntSensors
-from . import MissionDepthAngle
-from . import MissionMap
-from . import MissionDisk
-from . import MissionCommLog
-from . import MissionProfiles
-from . import MissionCallStats
-from . import MissionPMAR
+from . import (  # noqa : E402, F401
+    # Per-dive plotting routines
+    DiveCompassCompare,
+    DiveCTD,
+    DiveCTDCorrections,
+    DiveCTW,
+    # DiveCOG # deprecated in favor of the COG trace on the CTW plot
+    DiveLegatoData,
+    DiveLegatoPressure,
+    DiveMagCal,
+    DiveOCR504i,
+    DiveOptode,
+    DivePitchRoll,
+    DivePlot,
+    DivePMAR,
+    DiveSBE43,
+    DiveTMICL,
+    DiveTS,
+    # DiveVertVelocity    # deprecated in favor of the DiveVertVelocityNew
+    DiveVertVelocityNew,
+    DiveWetlabs,
+    # Whole mission plotting routines
+    MissionCallStats,
+    MissionCommLog,
+    MissionDepthAngle,
+    MissionDisk,
+    MissionEnergy,
+    MissionIntSensors,
+    MissionMap,
+    MissionMotors,
+    MissionPMAR,
+    MissionProfiles,
+    MissionVolume,
+)
 
 # Load any other plotting routines located in the local directory
 # Note: symlinks to other modules will be followed
 l_dir = pathlib.Path(__file__).parent.joinpath("local")
 if l_dir.exists() and l_dir.is_dir():
     for l_file in l_dir.iterdir():
-        if l_file.suffix == ".py":
+        if l_file.suffix == ".py":  # noqa: SIM102
             if l_file.stem not in sys.modules:
                 spec = importlib.util.spec_from_file_location(l_file.stem, l_file)
                 mod = importlib.util.module_from_spec(spec)

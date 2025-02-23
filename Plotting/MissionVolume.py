@@ -33,12 +33,11 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import typing
 import sqlite3
-
-import plotly
+import typing
 
 import pandas as pd
+import plotly
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -46,8 +45,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtilsPlotly
 import Utils
-
-from BaseLog import log_error, log_warning, log_info
+from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
 
 

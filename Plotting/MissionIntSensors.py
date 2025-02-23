@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,25 +28,23 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots internal pressure and RH
-"""
+"""Plots internal pressure and RH"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
 import typing
 
-import plotly
-
 import pandas as pd
+import plotly
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     import BaseOpts
 
+import BaseDB
 import PlotUtilsPlotly
 import Utils
-import BaseDB
-
 from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
 
@@ -62,7 +60,7 @@ def mission_int_sensors(
     """Plots internal pressure, RH, temp"""
     log_info("Starting mission_int_sensors")
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts)
         log_info("mission_int_sensors db opened")
     else:
@@ -72,7 +70,7 @@ def mission_int_sensors(
         log_error("Could not open mission database")
         return ([], [])
 
-    if dive == None:
+    if dive is None:
         clause = ""
     else:
         clause = f"WHERE dive <= {dive}"
@@ -84,9 +82,9 @@ def mission_int_sensors(
             f"SELECT dive,log_HUMID,log_INTERNAL_PRESSURE from dives {clause} ORDER BY dive ASC",
             conn,
         ).sort_values("dive")
-    except:
+    except Exception:
         log_error("Could not fetch needed columns", "exc")
-        if dbcon == None:
+        if dbcon is None:
             conn.close()
             log_info("mission_int_sensors db closed")
         return ([], [])
@@ -112,7 +110,7 @@ def mission_int_sensors(
                 base_opts, df["dive"].to_numpy()[-1], f"{v}_slope", m, con=conn
             )
 
-    if dbcon == None:
+    if dbcon is None:
         try:
             conn.commit()
         except Exception as e:

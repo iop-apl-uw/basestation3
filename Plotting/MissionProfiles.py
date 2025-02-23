@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,15 +35,15 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import typing
-import time
-
-import plotly
-
 import os
-import yaml
+import time
+import typing
+
 import cmocean
 import numpy
+import plotly
+import yaml
+
 import ExtractTimeseries
 
 # pylint: disable=wrong-import-position
@@ -53,8 +53,7 @@ if typing.TYPE_CHECKING:
 import PlotUtilsPlotly
 import Utils
 import Utils2
-
-from BaseLog import log_error, log_warning, log_info
+from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
 
 
@@ -78,7 +77,7 @@ def cmocean_to_plotly(cmapname, pl_entries):
              "tempo": cmocean.cm.tempo, "phase": cmocean.cm.phase, "balance": cmocean.cm.balance, 
              "delta": cmocean.cm.delta, "curl": cmocean.cm.curl }
 
-    if cmapname in maps:
+    if cmapname in maps:     # noqa: SIM401
         cmap = maps[cmapname]
     else:
         cmap = cmocean.cm.thermal

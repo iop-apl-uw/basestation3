@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,37 +34,32 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import collections
-import sys
-import time
-import traceback
+import os
 import typing
 import warnings
 
-import cartopy.crs as ccrs
 import cartopy
-import matplotlib.pyplot as plt
-import matplotlib.path as mpath
-import matplotlib.patches as patches
-import os
-from CalibConst import getSGCalibrationConstants
+import cartopy.crs as ccrs
 import matplotlib.colors as mcolors
-import xarray as xr
-
-
+import matplotlib.patches as patches
+import matplotlib.path as mpath
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import xarray as xr
+
+from CalibConst import getSGCalibrationConstants
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     import BaseOpts
 
-import PlotUtilsPlotly
-import Utils
+from cartopy.mpl.ticker import LatitudeFormatter, LongitudeFormatter
 
-from BaseLog import log_info, log_error, log_warning
+import Utils
+from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
-from cartopy.mpl.ticker import LatitudeFormatter,LongitudeFormatter
+
 
 class MyLatFormatter(LatitudeFormatter):
     def _get_dms(self, x):
@@ -112,7 +107,7 @@ def truncate_colormap(cmap, minval=0.0, maxval=1.0, n=-1):
     if n == -1:
         n = cmap.N
     new_cmap = mcolors.LinearSegmentedColormap.from_list(
-         'trunc({name},{a:.2f},{b:.2f})'.format(name=cmap.name, a=minval, b=maxval),
+         'trunc({name},{a:.2f},{b:.2f})'.format(name=cmap.name, a=minval, b=maxval),      # noqa : UP032
          cmap(np.linspace(minval, maxval, n)))
     return new_cmap
 
@@ -128,7 +123,7 @@ def mission_map(
 
     log_info("Starting mission_map")
     
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts, ro=True)
         if not conn:
             log_error("Could not open mission database")
@@ -140,14 +135,14 @@ def mission_map(
     try:
         df = pd.read_sql_query("SELECT dive,log_gps_lat AS lat,log_gps_lon AS lon FROM dives ORDER BY dive ASC", conn) \
                .sort_values("dive")
-    except:
+    except Exception:
         log_error("database error")
-        if dbcon == None:
+        if dbcon is None:
             conn.close()
             log_info("mission_map db closed")
         return([], [])
 
-    if dbcon == None:
+    if dbcon is None:
         conn.close()
         log_info("mission_map db closed")
 
@@ -182,7 +177,7 @@ def mission_map(
     # The lat-long projection
     noProj = ccrs.PlateCarree(central_longitude=0)
     # The projection of the map:
-    extent = [ll_lon,ur_lon,ll_lat,ur_lat];
+    extent = [ll_lon,ur_lon,ll_lat,ur_lat]
     myProj = ccrs.Orthographic(central_longitude=ctrlon, central_latitude=ctrlat)
     myProj._threshold = myProj._threshold/40.  #for higher precision plot
 
@@ -231,17 +226,17 @@ def mission_map(
     yp = []
     for x in xt:
         xp.append(x)
-    for i in range(0,len(yt)-1):
+    for _ in range(0,len(yt)-1):
         xp.append(xt[-1])
     for i in range(len(xt)-2, -1, -1):
         xp.append(xt[i])
-    for i in range(0,len(yt)-1):
+    for _ in range(0,len(yt)-1):
         xp.append(xt[0])
-    for i in range(0,len(xt)):
+    for _ in range(0,len(xt)):
         yp.append(yt[0])
     for i in range(1,len(yt)):
         yp.append(yt[i])
-    for i in range(0,len(xt) - 1):
+    for _ in range(0,len(xt) - 1):
         yp.append(yt[-1])
     for i in range(len(yt)-2,-1,-1):
         yp.append(yt[i])

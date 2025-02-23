@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,18 +33,15 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import collections
 import pdb
 import sys
-import time
 import traceback
 import typing
 
-import plotly
-import plotly.subplots
-
 import numpy as np
 import pandas as pd
+import plotly
+import plotly.subplots
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -53,10 +50,8 @@ if typing.TYPE_CHECKING:
 import BaseOptsType
 import PlotUtilsPlotly
 import Utils
-
-from BaseLog import log_info, log_error
-from Plotting import plotmissionsingle, add_arguments
-
+from BaseLog import log_error, log_info
+from Plotting import add_arguments, plotmissionsingle
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
@@ -103,7 +98,7 @@ def mission_motors(
 
     log_info("Starting mission_motors")
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts, ro=True)
         if not conn:
             log_error("Could not open mission database")
@@ -122,19 +117,19 @@ def mission_motors(
             "SELECT dive,roll_rate,roll_i,pitch_rate,pitch_i,vbd_rate,vbd_i,vbd_secs,depth,vbd_eff,pitch_volts,roll_volts,vbd_volts from gc",
             conn,
         ).sort_values("dive")
-    except:
+    except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
             traceback.print_exc()
             pdb.post_mortem(traceb)
         log_error("Could not fetch needed columns", "exc")
-        if dbcon == None:
+        if dbcon is None:
             conn.close()
             log_info("mission_motors db closed")
 
         return ([], [])
 
-    if dbcon == None:
+    if dbcon is None:
         conn.close()
         log_info("mission_motors db closed")
 
