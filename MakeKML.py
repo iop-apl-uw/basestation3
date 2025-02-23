@@ -30,41 +30,39 @@
 
 """Routines for creating KML files from netCDF data, comm.log and target files"""
 
-import cProfile
 import collections
+import cProfile
 import functools
-import io
 import glob
+import io
 import math
-import re
 import os
 import pstats
+import re
 import sys
 import time
 import zipfile
-import pdb
+
 # import importlib.util
 # import importlib
-
 import numpy as np
 
-import Utils
 import BaseNetCDF
 import BaseOpts
+import CommLog
+import FileMgr
+import LogFile
+import MakeDiveProfiles
+import Utils
 from BaseLog import (
     BaseLogger,
-    log_warning,
-    log_info,
-    log_error,
-    log_debug,
     log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
 )
-import FileMgr
 from CalibConst import getSGCalibrationConstants
-import MakeDiveProfiles
-
-import CommLog
-import LogFile
 
 make_kml_conf = None
 
@@ -758,18 +756,17 @@ def printDive(
                     and lat[i] >= -90.0
                     and lon[i] >= -180.0
                     and lon[i] <= 180.0
-                ):
-                    if (i % base_opts.skip_points) == 0 or i == 0:
-                        if base_opts.surface_track:
-                            fo.write(
-                                "                %f,%f,%f \n"
-                                % (float(lon[i]), float(lat[i]), 0.0)
-                            )
-                        else:
-                            fo.write(
-                                "                %f,%f,%f \n"
-                                % (float(lon[i]), float(lat[i]), -float(depth[i]))
-                            )
+                ) and ((i % base_opts.skip_points) == 0 or i == 0):
+                    if base_opts.surface_track:
+                        fo.write(
+                            "                %f,%f,%f \n"
+                            % (float(lon[i]), float(lat[i]), 0.0)
+                        )
+                    else:
+                        fo.write(
+                            "                %f,%f,%f \n"
+                            % (float(lon[i]), float(lat[i]), -float(depth[i]))
+                        )
         # Connect the last to the GPS fix
         fo.write(
             f"                {float(gps_lon_end):f},{float(gps_lat_end):f},{0.0:f} \n"
@@ -800,12 +797,11 @@ def printDive(
                 and lat[i] >= -90.0
                 and lon[i] >= -180.0
                 and lon[i] <= 180.0
-            ):
-                if (i % base_opts.skip_points) == 0 or i == 0:
-                    fo.write(
-                        "                %f,%f,%f \n"
-                        % (float(lon[i]), float(lat[i]), -float(depth[i]))
-                    )
+            ) and ((i % base_opts.skip_points) == 0 or i == 0):
+                fo.write(
+                    "                %f,%f,%f \n"
+                    % (float(lon[i]), float(lat[i]), -float(depth[i]))
+                )
         # Connect the last to the GPS fix
         fo.write(
             f"                {float(gps_lon_end):f},{float(gps_lat_end):f},{0.0:f} \n"
@@ -1121,16 +1117,16 @@ def main(
 
     if True:
         mission_kml_file_name_base = "sg%03d.kml" % (base_opts.instrument_id)
-        mission_kmz_file_name_base = "sg%03d.kmz" % (base_opts.instrument_id)
+        # mission_kmz_file_name_base = "sg%03d.kmz" % (base_opts.instrument_id)
     else:
         mission_kml_file_name_base = "sg%03d_%s.kml" % (
             base_opts.instrument_id,
             mission_title,
         )
-        mission_kmz_file_name_base = "sg%03d_%s.kmz" % (
-            base_opts.instrument_id,
-            mission_title,
-        )
+        # mission_kmz_file_name_base = "sg%03d_%s.kmz" % (
+        #     base_opts.instrument_id,
+        #     mission_title,
+        # )
 
     mission_kml_name = os.path.join(base_opts.mission_dir, mission_kml_file_name_base)
 
@@ -1711,55 +1707,54 @@ def main(
     fo.write("</Folder>\n")
 
     # Print the last known position outside the tree structure
-    if last_surface_position:
-        if last_surface_position:
-            try:
-                ballon_pairs = []
-                ballon_pairs.append(("Seaglider", "SG%03d" % base_opts.instrument_id))
-                ballon_pairs.append(
-                    (
-                        "Dive/CallCycle",
-                        "%d:%d"
-                        % (
-                            last_surface_position.dive_num,
-                            last_surface_position.call_cycle,
-                        ),
-                    )
-                )
-                ballon_pairs.append(
-                    (
-                        "Fix time",
-                        time.strftime(
-                            "%H:%M:%S %m/%d/%y %Z",
-                            time.gmtime(last_surface_position.gps_fix_time),
-                        ),
-                    )
-                )
-                ballon_pairs.append(("Lat", f"{last_surface_position.gps_fix_lat:.4f}"))
-                ballon_pairs.append(("Lon", f"{last_surface_position.gps_fix_lon:.4f}"))
-                if position.sms:
-                    ballon_pairs.append(("ViaSMS", position.sms))
-
-                # printDivePlacemark("Last reported position SG%03d %d:%d"
-                #                   % (base_opts.instrument_id, last_surface_position.dive_num, last_surface_position.call_cycle),
-                printDivePlacemark(
-                    "SG%03d" % (base_opts.instrument_id),
-                    "Last GPS fix at %s"
+    if last_surface_position and last_surface_position:
+        try:
+            ballon_pairs = []
+            ballon_pairs.append(("Seaglider", "SG%03d" % base_opts.instrument_id))
+            ballon_pairs.append(
+                (
+                    "Dive/CallCycle",
+                    "%d:%d"
                     % (
-                        time.strftime(
-                            "%H:%M:%S %m/%d/%y %Z",
-                            time.gmtime(last_surface_position.gps_fix_time),
-                        )
+                        last_surface_position.dive_num,
+                        last_surface_position.call_cycle,
                     ),
-                    last_surface_position.gps_fix_lon,
-                    last_surface_position.gps_fix_lat,
-                    0.0,
-                    fo,
-                    False,
-                    ballon_pairs,
                 )
-            except Exception:
-                log_error("Could not print surface position placemark", "exc")
+            )
+            ballon_pairs.append(
+                (
+                    "Fix time",
+                    time.strftime(
+                        "%H:%M:%S %m/%d/%y %Z",
+                        time.gmtime(last_surface_position.gps_fix_time),
+                    ),
+                )
+            )
+            ballon_pairs.append(("Lat", f"{last_surface_position.gps_fix_lat:.4f}"))
+            ballon_pairs.append(("Lon", f"{last_surface_position.gps_fix_lon:.4f}"))
+            if position.sms:
+                ballon_pairs.append(("ViaSMS", position.sms))
+
+            # printDivePlacemark("Last reported position SG%03d %d:%d"
+            #                   % (base_opts.instrument_id, last_surface_position.dive_num, last_surface_position.call_cycle),
+            printDivePlacemark(
+                "SG%03d" % (base_opts.instrument_id),
+                "Last GPS fix at %s"
+                % (
+                    time.strftime(
+                        "%H:%M:%S %m/%d/%y %Z",
+                        time.gmtime(last_surface_position.gps_fix_time),
+                    )
+                ),
+                last_surface_position.gps_fix_lon,
+                last_surface_position.gps_fix_lat,
+                0.0,
+                fo,
+                False,
+                ballon_pairs,
+            )
+        except Exception:
+            log_error("Could not print surface position placemark", "exc")
 
     # Targets file processing
 

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -36,40 +36,41 @@
 
 """An attempt to turn 'experimental' regress_vbd.m into a Maytag washer, an automatic reliable appliance"""
 
+import contextlib
+import copy
 import cProfile
-import pstats
-import sys
 import os
-import shutil
-import time
-import copy  # must be after numpy (and flight_data) import, since numpy has its own 'copy'
-import stat
 import pdb
-import traceback
 import pickle
+import pstats
+import shutil
+import stat
+import sys
+import time
+import traceback
 
 import numpy as np
-import seawater
 import scipy.io as sio  # for savemat
 import scipy.optimize  # fminbound
+import seawater
 
 import BaseOpts
+import Globals  # versions, esp basestation_version
 import MakeDiveProfiles  # for collect_nc_perdive_files() compressee_density(), compute_displacements(), compute_dac() etc
+import QC
 import Utils
 import Utils2
-import Globals  # versions, esp basestation_version
-import QC
-from CalibConst import getSGCalibrationConstants
-from HydroModel import hydro_model
-from Globals import flight_variables
 from BaseLog import (
     BaseLogger,
-    log_info,
-    log_error,
-    log_debug,
-    log_warning,
     log_critical,
+    log_debug,
+    log_error,
+    log_info,
+    log_warning,
 )
+from CalibConst import getSGCalibrationConstants
+from Globals import flight_variables
+from HydroModel import hydro_model
 
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
@@ -121,7 +122,7 @@ kg_per_g = 1 / g_per_kg
 
 
 def set_globals() -> None:
-    """ Allows globals to be reset externally"""
+    """Allows globals to be reset externally"""
     global \
         dive_data_vector_names, \
         old_basestation, \
@@ -406,8 +407,8 @@ if generate_figures:
     matplotlib.rcParams["mathtext.default"] = "regular"
 
     # from pylab import *
-    from matplotlib.font_manager import FontProperties
     import matplotlib.pyplot as plt
+    from matplotlib.font_manager import FontProperties
 
 
 class flight_data:  # deliberately no (object) so we can pickle these puppies
@@ -502,12 +503,12 @@ def write_figure(basename, delete=False):
             try:
                 if os.path.exists(plots_figure_output_name):
                     os.remove(plots_figure_output_name)
-            except:
+            except Exception:
                 log_warning(f"Failed to remove {plots_figure_output_name}", "exc")
         else:
             try:
                 shutil.copyfile(figure_output_name, plots_figure_output_name)
-            except:
+            except Exception:
                 log_warning(
                     f"Failed to copy {figure_output_name} to {plots_figure_output_name}"
                 )
@@ -546,10 +547,8 @@ def pfdd(verbose=False):
     """print flight_dive_data_d status"""
     if verbose:
         print(
-            (
-                "Flight database as of %s:"
-                % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-            )
+            "Flight database as of %s:"
+            % time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
         )
     for fv in header_variables:
         if fv == "history":
@@ -600,7 +599,7 @@ def load_flight_database(
                 | stat.S_IXOTH,
             )
             flight_directory_ok = True
-        except:
+        except Exception:
             log_error(f"Could not create {flight_directory}", "exc")
             # fall though
 
@@ -611,7 +610,7 @@ def load_flight_database(
             fh = open(flight_dive_data_filename, "rb")
             (flight_dive_data_d) = pickle.load(fh)  # reload
             fh.close()
-        except:
+        except Exception:
             pass  # file corrupt or doesn't exist
 
     if flight_dive_data_d is not None:  # prior version exists?
@@ -644,10 +643,8 @@ def load_flight_database(
         # DEBUG remove flush_ab_grid_cache_entries to force recomputation
         ab_grid_cache_d = flight_dive_data_d["ab_grid_cache"]
         for dive_num in flush_ab_grid_cache_entries:
-            try:
+            with contextlib.suppress(KeyError):
                 del ab_grid_cache_d[dive_num]
-            except KeyError:
-                pass
         return False
 
     if not create_db:
@@ -753,7 +750,7 @@ def load_flight_database(
 #         if changed_lines:
 #             changed_lines = 'FlightModel commented out %d lines in sg_calib_constants.m' % changed_lines
 #             log_warning(changed_lines, alert='SGC') # use SGC rather than FM since we might have other FM alerts
-#     except:
+#     except Exception:
 #         # Typically we are running as the glider and it might not have write access
 #         # to sg_calib_constants.m (unlike pilot) if it is owned by pilot:gliders, but no g+w or even a+w prives.
 #         # We cannot run FM unless sg_calib_constants is cleansed since our ideas will be overwritten by sgc
@@ -765,7 +762,7 @@ def load_flight_database(
 
 #         try:
 #             os.remove(save_sg_calib_file_name)
-#         except:
+#         except Exception:
 #             log_error("Unable to remove %s" % save_sg_calib_file_name, 'exc')
 
 #         if flight_directory is not None: # this should always be True since this fn is called only after reinitialization
@@ -773,7 +770,7 @@ def load_flight_database(
 #             try:
 #                 # force the system to restart and try overwriting sg_calib_constants.m again
 #                 shutil.rmtree(flight_directory)
-#             except:
+#             except Exception:
 #                 log_error("Unable to remove %s" % flight_directory, 'exc')
 #             else:
 #                 # Subsequent code assumes this directory already exists
@@ -799,7 +796,7 @@ def save_flight_database(base_opts, dump_mat=False):
             fh = open(flight_dive_data_filename, "wb")
             pickle.dump((flight_dive_data_d), fh)
             fh.close()
-        except:
+        except Exception:
             log_warning(f"Unable to rebuild {flight_dive_data_filename}!")
 
         dump_mat = dump_mat or dump_checkpoint_data_matfiles
@@ -843,7 +840,7 @@ def save_flight_database(base_opts, dump_mat=False):
                 dives_ib = []
                 dives_misfit = []
                 dives_pitch_d_diff = []
-                for d_n, i in zip(dives, list(range(n_dives))):
+                for d_n, i in zip(dives, list(range(n_dives)), strict=True):
                     (
                         W_misfit_RMS,
                         ia,
@@ -1075,7 +1072,7 @@ def dump_fm_values(dive_data):
 
         # rho0? glider_length?
         fh.close()
-    except:
+    except Exception:
         log_error(f"Unable to write {fm_filename}", "exc")
 
 
@@ -1101,7 +1098,7 @@ def load_dive_data(base_opts, dive_data):
     dive_nc_file_name = nc_path_format % dive_num
     try:
         dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, "r")
-    except:
+    except Exception:
         log_error(f"Unable to open {dive_nc_file_name}", "exc")
         return data_d
 
@@ -1143,7 +1140,8 @@ def load_dive_data(base_opts, dive_data):
         # Wherever, those values are cached in the sgc_ variables in the nc file
         # It is possible for the values to be the defaults, in which case there are no explicit values in the nc file
         # provide defaults in that case
-        for sgc_var, fdd_var, nc_var in zip(
+        # Note: _ below used to be fdd_var
+        for sgc_var, _, nc_var in zip(
             [
                 "sg_cal_hd_a",
                 "sg_cal_hd_b",
@@ -1153,6 +1151,7 @@ def load_dive_data(base_opts, dive_data):
             ],
             ["hd_a", "hd_b", "volmax", "vbdbias", "abs_compress"],
             ["nc_hd_a", "nc_hd_b", "nc_volmax", "nc_vbdbias", "nc_abs_compress"],
+            strict=True,
         ):
             try:
                 value = dive_nc_file.variables[sgc_var].getValue()
@@ -1242,7 +1241,7 @@ def load_dive_data(base_opts, dive_data):
                     avg_longitude,
                     dive_nc_file.variables["avg_latitude"].getValue(),
                 )
-        except:
+        except Exception:
             log_error(f"Failed density calculation for {dive_num} - skipping", "exc")
             return None
 
@@ -1280,7 +1279,7 @@ def load_dive_data(base_opts, dive_data):
                     velo_speed = velo_data_d["velo_speed"]
                     velo_speed = np.reshape(velo_speed, num_pts, 1)
                     correct_aoa_velo = False  # externally measured
-                except:
+                except Exception:
                     pass
                 else:
                     n_velo = len(
@@ -1711,10 +1710,9 @@ def solve_vbdbias_abs_compress(base_opts, dive_data):
     for vbdbias in np.linspace(vmin, vmax, coarse_step + 1):
         w_rms = w_rms_func(base_opts, vbdbias, hd_a, hd_b, abs_compress, dive_data_d)
         # DEBUG print "%d %.2f" % (vbdbias,w_rms) # DEBUG (see HIST)
-        if w_rms is not w_rms_func_bad:
-            if min_w_rms is None or w_rms < min_w_rms:
-                min_w_rms_vbdbias = vbdbias
-                min_w_rms = w_rms
+        if w_rms is not w_rms_func_bad and (min_w_rms is None or w_rms < min_w_rms):
+            min_w_rms_vbdbias = vbdbias
+            min_w_rms = w_rms
 
     if min_w_rms_vbdbias is not None:
         HIST = []
@@ -1769,10 +1767,9 @@ def solve_vbdbias_abs_compress(base_opts, dive_data):
         min_w_rms = None
         for ac in np.linspace(ac_min, ac_max, coarse_step + 1):
             w_rms = w_rms_func(base_opts, vbdbias, hd_a, hd_b, ac, dive_data_d)
-            if w_rms is not w_rms_func_bad:
-                if min_w_rms is None or w_rms < min_w_rms:
-                    min_w_rms_ac = ac
-                    min_w_rms = w_rms
+            if w_rms is not w_rms_func_bad and (min_w_rms is None or w_rms < min_w_rms):
+                min_w_rms_ac = ac
+                min_w_rms = w_rms
 
         if min_w_rms_ac is not None:
             HIST = []
@@ -1858,8 +1855,8 @@ def solve_ab_grid(base_opts, dive_set, reprocess_count, dive_num=None):
     min_w_rms = 1000  # w_rms_func_bad
     min_ia = 0
     min_ib = 0
-    for grid_a, ia in zip(hd_a_grid, list(range(na))):
-        for grid_b, ib in zip(hd_b_grid, list(range(nb))):
+    for grid_a, ia in zip(hd_a_grid, list(range(na)), strict=True):
+        for grid_b, ib in zip(hd_b_grid, list(range(nb)), strict=True):
             # explicitly zero vbdbias since the dive-by-dive vbdbias has already been applied to combined_data_d
             w_rms = w_rms_func(
                 base_opts, 0, grid_a, grid_b, abs_compress, combined_data_d
@@ -1935,7 +1932,7 @@ def load_dive_data_DAC(base_opts, dive_data):
     dive_nc_file_name = nc_path_format % dive_num
     try:
         dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, "r")
-    except:
+    except Exception:
         log_error(f"Unable to open {dive_nc_file_name}", "exc")
         return data_d
     try:
@@ -2081,8 +2078,8 @@ def solve_ab_DAC(base_opts, dive_num, W_misfit_RMS, min_ia, min_ib, min_misfit):
     DAC_v[:, :] = np.nan
 
     start_time = time.time()
-    for grid_a, ia in zip(hd_a_grid, list(range(na))):
-        for grid_b, ib in zip(hd_b_grid, list(range(nb))):
+    for grid_a, ia in zip(hd_a_grid, list(range(na)), strict=True):
+        for grid_b, ib in zip(hd_b_grid, list(range(nb)), strict=True):
             flight_consts_d["hd_a"] = grid_a
             flight_consts_d["hd_b"] = grid_b
             (
@@ -2406,7 +2403,7 @@ def process_dive(
             restart_from_dive_num = flight_dive_nums[d_n_i[-1]]
             # restore predicted ab and trust from restart_from_dive_num
             log_debug(restart_cache_d.keys())
-            if restart_from_dive_num in restart_cache_d.keys():
+            if restart_from_dive_num in restart_cache_d:
                 (
                     mr_dives_pitches,
                     mr_index,
@@ -2867,9 +2864,8 @@ def process_dive(
                     prev_pitch_diff,
                 ) = ab_grid_cache_d[dive_num]
                 trusted_ab = trusted_drag(prev_pitch_diff)
-                compute_ab_grid = not (
-                    dive_set == prev_dive_set
-                )  # different dives with the same max dive_num forces recomputation
+                # different dives with the same max dive_num forces recomputation
+                compute_ab_grid = dive_set != prev_dive_set
             except KeyError:
                 compute_ab_grid = True
 
@@ -3078,7 +3074,7 @@ def process_dive(
                     # Mark stall (no solution) points
                     stall_value = w_rms_func_bad - min_misfit
                     x_i = np.where(W_misfit_RMS == stall_value)
-                    for a_i, b_i in zip(x_i[1], x_i[0]):
+                    for a_i, b_i in zip(x_i[1], x_i[0], strict=True):
                         plt.plot(
                             hd_a_grid[a_i],
                             hd_b_grid[b_i],
@@ -3206,7 +3202,10 @@ def process_dive(
                 ddc.hd_ab_trusted = predicted_hd_ab_trusted
                 ddc.recompute_vbdbias_abs_compress = True  # permit recomputation
                 if solve_vbdbias_abs_compress(base_opts, ddc):
-                    # DEBUG log_info("Dive %d RMS=%5.4f -> %5.4f" % (d_n,dd.w_rms_vbdbias,ddc.w_rms_vbdbias)) # DEBUG
+                    log_debug(
+                        "Dive %d RMS=%5.4f -> %5.4f"
+                        % (d_n, dd.w_rms_vbdbias, ddc.w_rms_vbdbias)
+                    )
                     if ddc.w_rms_vbdbias < dd.w_rms_vbdbias:
                         flight_dive_data_d[d_n] = ddc
                         log_info(
@@ -3258,7 +3257,7 @@ def process_dive(
                 median_vbdbias, L=min(len(median_vbdbias), vbdbias_filter)
             )
             for vbd_dive_num, dive_median_vbdbias in zip(
-                median_vbdbias_flight_dive_nums, median_vbdbias
+                median_vbdbias_flight_dive_nums, median_vbdbias, strict=True
             ):
                 dd = flight_dive_data_d[vbd_dive_num]  # ensured
                 # update dive_data with median value (to be used when computing grid)
@@ -3802,16 +3801,17 @@ def main(
     # Important NOTE:
     # all the names (but NOT the values) in the name,value pairs are coerced to lowercase!
     # build from globals_d and declarations
-    files = []
+    # files = []
     cp = configparser.RawConfigParser({})
     try:
-        files = cp.read(
+        # files = cp.read(
+        cp.read(
             [
                 os.path.join(base_opts.basestation_directory, cnf_file),
                 os.path.join(mission_directory, cnf_file),
             ]
         )
-    except:
+    except Exception:
         # One way to get here is to have continuation lines on an entry
         # that are not indented by a single space AND have a colon somewhere in the line
         # In this case you'll get a complaint about an unknown global variable with that phrase in lower case
@@ -3828,7 +3828,7 @@ def main(
                 continue
             try:
                 evalue = eval(value)  # can't use = in expressions to eval
-            except:
+            except Exception:
                 log_error(f" Unable to interpret {value} as a value for {name}")
                 continue
             log_info(f" Updating {name} from {ovalue} to {evalue}")  # echo to log file
@@ -3941,7 +3941,7 @@ def main(
         dive_nc_file_name = dive_nc_file_names[0]  # open first found filename
         try:
             dive_nc_file = Utils.open_netcdf_file(dive_nc_file_name, "r")
-        except:
+        except Exception:
             log_error(f"Unable to open {dive_nc_file_name} to establish glider type")
             return 1
         try:
@@ -3957,7 +3957,7 @@ def main(
         has_gpctd = False  # for the moment, since they are rare
         if compare_velo < 0:
             compare_velo = abs(compare_velo)  # trust but don't verify
-        elif compare_velo and not "velo_speed" in dive_nc_file.variables:
+        elif compare_velo and "velo_speed" not in dive_nc_file.variables:
             # if data is present then use default CONTROL value in main globals declaration
             # otherwise disable velo comparison
             compare_velo = 0
@@ -4046,8 +4046,7 @@ def main(
             )
             flight_dive_data_d["mass_comp"] = mass_comp / g_per_kg
         if len(mass_alerts) > 0:
-            log_alert("FM_mass", mass_alerts)
-            log_warning(mass_alerts)
+            log_warning(mass_alerts, alert="FM_mass")
 
         # Initial estimate of volmax
         # TODO when we compute a better global guess, restate any cached displaced_volume
@@ -4202,7 +4201,7 @@ def main(
     dd = flight_data(
         dive_num
     )  # make up a temporary dive data instance but don't intern into flight_dive_data_d
-    data_d = load_dive_data(base_opts, dd)  # ignore result
+    _ = load_dive_data(base_opts, dd)  # ignore result
     alert_dive_num = None
     # Deepgliders can take 2 days down and back
     # if the load_dive_data fails to update start_time, the value is 0 and we don't set alert_dive_num
@@ -4232,20 +4231,20 @@ def main(
             log_error("process_dive returned %d - bailing out" % ret_val)
             break
     log_debug("Main loop ended")
-    if not ret_val:
+    if not ret_val and len(list(updated_dives_d.keys())) > 0:
         # recompute the keys() in case the process_dive() calls removed them by side-effect
-        if len(list(updated_dives_d.keys())) > 0:  # any residual updated files
-            # in case there are no new dives but some dives were updated (via external reprocessing)
-            log_debug(f"Processing remaining dives {list(updated_dives_d.keys())}")
-            ret_val = process_dive(
-                base_opts,
-                None,
-                updated_dives_d,
-                nc_files_created,
-                alert_dive_num,
-                exit_event=exit_event,
-            )
-            log_debug("Done processing remaining dives")
+        # any residual updated files
+        # in case there are no new dives but some dives were updated (via external reprocessing)
+        log_debug(f"Processing remaining dives {list(updated_dives_d.keys())}")
+        ret_val = process_dive(
+            base_opts,
+            None,
+            updated_dives_d,
+            nc_files_created,
+            alert_dive_num,
+            exit_event=exit_event,
+        )
+        log_debug("Done processing remaining dives")
 
     save_flight_database(
         base_opts
@@ -4294,7 +4293,7 @@ def process_directory(base_opts):
 
     try:
         instrument_id = int(sg_calib_constants_d["id_str"])
-    except:
+    except Exception:
         # base_opts always supplies a default (0)
         instrument_id = int(base_opts.instrument_id)
     if instrument_id == 0:

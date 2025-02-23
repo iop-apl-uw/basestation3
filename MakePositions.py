@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -29,17 +29,16 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
-"""Extension for creating a text file containing glider positions from the comm.log
-"""
+"""Extension for creating a text file containing glider positions from the comm.log"""
 
-import sys
 import os
+import sys
 import time
 
 import BaseOpts
 import CommLog
 import Utils
-from BaseLog import BaseLogger, log_info, log_error, log_critical
+from BaseLog import BaseLogger, log_critical, log_error, log_info
 
 
 # pylint: disable=unused-argument
@@ -89,7 +88,7 @@ def main(
 
     try:
         fo = open(txt_file_name, "w")
-    except:
+    except Exception:
         log_error("Could not open %s" % txt_file_name, "exc")
         return 1
 
@@ -108,7 +107,7 @@ def main(
             predictedLon = float(splits[1])
             fi.close()
             del fi
-        except:
+        except Exception:
             log_error("Unable to read %s" % glider_predict_position_file, "exc")
             glider_predict_position_file = None
 
@@ -124,16 +123,15 @@ def main(
         ):
             continue
         try:
-            if predictedTime:
-                if predictedTime > time.mktime(this_fix.datetime):
-                    predicted_ts = time.strftime(
-                        "%Y-%m-%dT%H:%M:%SZ", time.gmtime(predictedTime)
-                    )
-                    fo.write(
-                        "%s,%.7f,%.7f,1\n" % (predicted_ts, predictedLat, predictedLon)
-                    )
+            if predictedTime and predictedTime > time.mktime(this_fix.datetime):
+                predicted_ts = time.strftime(
+                    "%Y-%m-%dT%H:%M:%SZ", time.gmtime(predictedTime)
+                )
+                fo.write(
+                    "%s,%.7f,%.7f,1\n" % (predicted_ts, predictedLat, predictedLon)
+                )
             predictedTime = predictedLat = predictedLon = None
-        except:
+        except Exception:
             log_error("Could not process predicted time", "exc")
 
         try:
@@ -141,7 +139,7 @@ def main(
             this_lat = Utils.ddmm2dd(this_fix.lat)
             this_lon = Utils.ddmm2dd(this_fix.lon)
             fo.write("%s,%.7f,%.7f,0\n" % (this_ts, this_lat, this_lon))
-        except:
+        except Exception:
             log_error("Could not process session", "exc")
             continue
 
