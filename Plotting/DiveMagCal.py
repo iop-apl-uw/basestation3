@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,27 +34,18 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import math
 import typing
 
-import numpy as np
 import scipy.interpolate
-import plotly.graph_objects
-import datetime
-import warnings
-import ppigrf
 
 if typing.TYPE_CHECKING:
-    import BaseOpts
     import scipy
 
+    import BaseOpts
+
+import Magcal
 import PlotUtils
 import PlotUtilsPlotly
-import Magcal
-
-from BaseLog import (
-    log_info,
-)
 from Plotting import plotdivesingle
 
 

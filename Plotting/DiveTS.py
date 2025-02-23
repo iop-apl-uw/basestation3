@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -48,7 +48,7 @@ import PlotUtils
 import PlotUtilsPlotly
 import QC
 import Utils
-from BaseLog import log_warning, log_info
+from BaseLog import log_info, log_warning
 from Plotting import plotdivesingle
 
 
@@ -157,7 +157,7 @@ def plot_TS(
         except KeyError as e:
             log_warning(f"Could not find variable {str(e)} - skipping plot_ts")
             continue
-        except:
+        except Exception:
             log_info("Could not load nc varibles for plot_ts - skipping", "exc")
             continue
 

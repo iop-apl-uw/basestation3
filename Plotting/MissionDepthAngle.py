@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,16 +28,15 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots surface depth and angle
-"""
+"""Plots surface depth and angle"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
 import typing
 
-import plotly
-
 import pandas as pd
+import plotly
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -45,21 +44,24 @@ if typing.TYPE_CHECKING:
 
 import PlotUtilsPlotly
 import Utils
-
 from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
 
 
 @plotmissionsingle
 def mission_depthangle(
-    base_opts: BaseOpts.BaseOptions, mission_str: list, dive=None, generate_plots=True, dbcon=None
+    base_opts: BaseOpts.BaseOptions,
+    mission_str: list,
+    dive=None,
+    generate_plots=True,
+    dbcon=None,
 ) -> tuple[list, list]:
     """Plots surface depth and angle"""
 
     if not generate_plots:
         return ([], [])
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts, ro=True)
         if not conn:
             log_error("Could not open mission database")
@@ -75,14 +77,14 @@ def mission_depthangle(
             "SELECT dive,log__SM_DEPTHo,log__SM_ANGLEo from dives",
             conn,
         ).sort_values("dive")
-    except:
+    except Exception:
         log_error("Could not fetch needed columns", "exc")
-        if dbcon == None:
+        if dbcon is None:
             conn.close()
             log_info("mission_depthangle db closed")
         return ([], [])
 
-    if dbcon == None:
+    if dbcon is None:
         conn.close()
         log_info("mission_depthangle db closed")
 

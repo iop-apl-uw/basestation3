@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-""" Plots file transfer stats from comm.log
-"""
+"""Plots file transfer stats from comm.log"""
+
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
@@ -37,9 +37,9 @@ import collections
 import os
 import typing
 
+import numpy as np
 import plotly
 import scipy
-import numpy as np
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -47,8 +47,7 @@ if typing.TYPE_CHECKING:
 
 import CommLog
 import PlotUtilsPlotly
-
-from BaseLog import log_error, log_info, log_debug
+from BaseLog import log_debug, log_error
 from Plotting import plotmissionsingle
 
 call_plot_map_nt = collections.namedtuple("call_plot_map_nt", ["description", "color"])
@@ -380,7 +379,7 @@ def mission_callstats(
 
     buttons = []
 
-    for c in ctlTraces.keys():
+    for c in ctlTraces:
         buttons.append(
             dict(
                 args=[

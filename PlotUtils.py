@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -65,15 +65,15 @@ def get_mission_dive(dive_nc_file):
     dive_num = 0
     mission_title = ""
     if hasattr(dive_nc_file, "glider"):
-        glider_id = getattr(dive_nc_file, "glider")
+        glider_id = dive_nc_file.glider
     elif "log_ID" in dive_nc_file.variables:
         glider_id = dive_nc_file.variables["log_ID"].getValue()
     if hasattr(dive_nc_file, "dive_number"):
-        dive_num = getattr(dive_nc_file, "dive_number")
+        dive_num = dive_nc_file.dive_number
     elif "log_DIVE" in dive_nc_file.variables:
         dive_num = dive_nc_file.variables["log_DIVE"].getValue()
     if hasattr(dive_nc_file, "project"):
-        mission_title = getattr(dive_nc_file, "project")
+        mission_title = dive_nc_file.project
     elif "sg_cal_mission_title" in dive_nc_file.variables:
         mission_title = (
             dive_nc_file.variables["sg_cal_mission_title"][:].tobytes().decode("utf-8")

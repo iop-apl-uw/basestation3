@@ -32,22 +32,21 @@
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
-import pdb
-import warnings
-import typing
 
-import plotly
+import typing
+import warnings
 
 import pandas as pd
+import plotly
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
     import BaseOpts
 
-import PlotUtilsPlotly
-import Utils
 import numpy as np
 
+import PlotUtilsPlotly
+import Utils
 from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
 
@@ -78,8 +77,12 @@ def mission_disk(
     columns = [i[1] for i in res]
 
     qcols = list(
-        filter(lambda x: x.startswith("SD_") or x.endswith("_FREEKB"), columns)
-        or x.endswith("_FREE")
+        filter(
+            lambda x: x.startswith("SD_")
+            or x.endswith("_FREEKB")
+            or x.endswith("_FREE"),
+            columns,
+        )
     )
 
     if len(qcols) == 0:

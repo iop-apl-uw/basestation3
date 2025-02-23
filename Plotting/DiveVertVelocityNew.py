@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -32,32 +32,27 @@
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
+
+import os
 import typing
 
 import numpy as np
-import os
-
-import scipy.interpolate
 import plotly.graph_objects
+import scipy.interpolate
 
 if typing.TYPE_CHECKING:
-    import BaseOpts
     import scipy
 
-import math
+    import BaseOpts
+
 import BaseDB
-import HydroModel
-import MakeDiveProfiles
+import CalibConst
 import PlotUtils
 import PlotUtilsPlotly
-import Utils
 import RegressVBD
-import CalibConst
-
-from BaseLog import log_warning, log_error, log_info, log_debug
+import Utils
+from BaseLog import log_error, log_info
 from Plotting import plotdivesingle
-
-import pdb
 
 
 # TODO typing.List(plotly.fig)
@@ -73,7 +68,9 @@ def plot_vert_vel_new(
     calfile = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
     if os.path.exists(calfile):
-        calConst = CalibConst.getSGCalibrationConstants(calfile, suppress_required_error=True)
+        calConst = CalibConst.getSGCalibrationConstants(
+            calfile, suppress_required_error=True
+        )
     else:
         calConst = {}
 
@@ -85,11 +82,14 @@ def plot_vert_vel_new(
 
     # Preliminaries
     try:
-        start_time = dive_nc_file.start_time
+        dive_num = dive_nc_file.dive_number
 
-        dive_num = getattr(dive_nc_file, "dive_number")
-
-        mhead = dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:].tobytes().decode("utf-8").split(",")
+        mhead = (
+            dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
+            .tobytes()
+            .decode("utf-8")
+            .split(",")
+        )
 
         ctd_depth = dive_nc_file.variables["ctd_depth"][:]
         density_ctd = dive_nc_file.variables["density"][:]
@@ -119,7 +119,9 @@ def plot_vert_vel_new(
         )
         return ([], [])
     except Exception:
-        log_error("Could not fetch needed variables - skipping vertical velocity plot", "exc")
+        log_error(
+            "Could not fetch needed variables - skipping vertical velocity plot", "exc"
+        )
         return ([], [])
 
     depth_max = np.nanmax(ctd_depth)
@@ -140,7 +142,7 @@ def plot_vert_vel_new(
     fit_fig = None
     vels_baseline = None
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts)
         log_info("plot_vert_vel db opened")
     else:
@@ -262,10 +264,14 @@ def plot_vert_vel_new(
 
     if best_hd:
         implied_volmax = (
-            log["VOL0"] * 1e6 - ((log["C_VBD"] + min_bias / log["VBD_CNV"]) - log["VBD_MIN"]) * log["VBD_CNV"]
+            log["VOL0"] * 1e6
+            - ((log["C_VBD"] + min_bias / log["VBD_CNV"]) - log["VBD_MIN"])
+            * log["VBD_CNV"]
         )
         implied_cvbd = log["C_VBD"] + min_bias / log["VBD_CNV"]
-        implied_max_maxbuoy = -(implied_cvbd - log["VBD_MAX"]) * log["VBD_CNV"] * log["RHO"]
+        implied_max_maxbuoy = (
+            -(implied_cvbd - log["VBD_MAX"]) * log["VBD_CNV"] * log["RHO"]
+        )
         implied_max_smcc = -(implied_cvbd - log["VBD_MIN"]) * log["VBD_CNV"]
         implied_min_smcc_surf = log["MASS"] * (1 / density_1m - 1 / log["RHO"]) + 150
 
@@ -277,7 +283,6 @@ def plot_vert_vel_new(
         log_info(
             f"min SM_CC {implied_min_smcc_surf:.1f} based on density {density_1m:.5f} at {depth_1m:.2f}m and 150cc to raise the antenna"
         )
-
 
         BaseDB.addValToDB(
             base_opts,
@@ -300,8 +305,12 @@ def plot_vert_vel_new(
             implied_volmax,
             con=conn,
         )
-        BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "regressed_HD_A", best_hd[0], con=conn)
-        BaseDB.addValToDB(base_opts, dive_nc_file.dive_number, "regressed_HD_B", best_hd[1], con=conn)
+        BaseDB.addValToDB(
+            base_opts, dive_nc_file.dive_number, "regressed_HD_A", best_hd[0], con=conn
+        )
+        BaseDB.addValToDB(
+            base_opts, dive_nc_file.dive_number, "regressed_HD_B", best_hd[1], con=conn
+        )
         try:
             BaseDB.addSlopeValToDB(
                 base_opts,
@@ -309,10 +318,10 @@ def plot_vert_vel_new(
                 ["vert_vel_regress_volmax", "vert_vel_regress_C_VBD"],
                 con=conn,
             )
-        except:
+        except Exception:
             log_error("Failed to add values to database", "exc")
 
-    if dbcon == None:
+    if dbcon is None:
         try:
             conn.commit()
         except Exception as e:
@@ -420,7 +429,7 @@ def plot_vert_vel_new(
     fig.update_layout(
         {
             "xaxis": {
-                "title": f"Vertical Velocity (cm/sec)",  # <br>{fit_line}",
+                "title": "Vertical Velocity (cm/sec)",  # <br>{fit_line}",
                 "showgrid": True,
                 # "side": "top"
             },

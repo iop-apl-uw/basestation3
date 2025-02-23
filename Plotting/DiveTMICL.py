@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import collections
+import contextlib
 import typing
 
 import numpy as np
@@ -45,7 +46,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtils
 import PlotUtilsPlotly
-from BaseLog import log_warning, log_info, log_debug, log_error
+from BaseLog import log_debug, log_error, log_warning
 from Plotting import plotdivesingle
 
 
@@ -78,18 +79,19 @@ def plot_TMICL(
     except KeyError as e:
         log_warning(f"Could not find variable {e.args[0]} - skipping this plot")
         return (ret_figs, ret_plots)
-    except:
+    except Exception:
         log_error("Error fetching depth variables - skipping this plot", "exc")
         return (ret_figs, ret_plots)
 
     try:
         start_time = dive_nc_file.start_time
-    except:
+    except Exception:
         start_time = ttime[0]
 
     for ch in ("ch0", "ch1", "shear", "temp", "temp0", "temp1"):
-        if not (f"tmicl_time_{ch}_a" in dive_nc_file.variables) and not (
-            f"tmicl_time_{ch}_b" in dive_nc_file.variables
+        if (
+            f"tmicl_time_{ch}_a" not in dive_nc_file.variables
+            and f"tmicl_time_{ch}_b" not in dive_nc_file.variables
         ):
             continue
 
@@ -107,14 +109,14 @@ def plot_TMICL(
             tmicl_time_dive = dive_nc_file.variables[f"tmicl_time_{ch}_a"][:]
         except KeyError as e:
             log_debug(f"Could not find variable {e.args[0]} - skipping dive plot")
-        except:
+        except Exception:
             log_error("Error fetching dive variables - skipping dive plot", "exc")
 
         try:
             sigvar_dive = dive_nc_file.variables[f"tmicl_sigvar_{ch}_a"][:]
         except KeyError as e:
             log_debug(f"Could not find variable {e.args[0]} - skipping dive plot")
-        except:
+        except Exception:
             log_error("Error fetching dive variables - skipping dive plot", "exc")
 
         try:
@@ -122,14 +124,14 @@ def plot_TMICL(
             tmicl_time_climb = dive_nc_file.variables[f"tmicl_time_{ch}_b"][:]
         except KeyError as e:
             log_debug(f"Could not find variable {e.args[0]} - skipping climb plot")
-        except:
+        except Exception:
             log_error("Error fetching variables - skipping climb plot", "exc")
 
         try:
             sigvar_climb = dive_nc_file.variables[f"tmicl_sigvar_{ch}_b"][:]
         except KeyError as e:
             log_debug(f"Could not find variable {e.args[0]} - skipping climb plot")
-        except:
+        except Exception:
             log_error("Error fetching variables - skipping climb plot", "exc")
 
         # Older version of the code generated this - failing to find it is not
@@ -138,21 +140,19 @@ def plot_TMICL(
             intvar_dive = dive_nc_file.variables["tmicl_intvar_%s_a" % ch][:]
         except KeyError as e:
             log_debug("Could not find variable %s - skipping dive plot" % e.args[0])
-        except:
+        except Exception:
             log_warning("Error fetching variable - skipping climb plot", "exc")
 
         try:
             intvar_climb = dive_nc_file.variables["tmicl_intvar_%s_b" % ch][:]
         except KeyError as e:
             log_debug("Could not find variable %s - skipping climb plot" % e.args[0])
-        except:
+        except Exception:
             log_warning("Error fetching variables - skipping climb plot", "exc")
 
         is_shear = None
-        try:
+        with contextlib.suppress(Exception):
             is_shear = dive_nc_file.tmicl_S
-        except:
-            pass
 
         # Interp
         f = scipy.interpolate.interp1d(
@@ -335,7 +335,7 @@ def plot_TMICL(
                 center_freqs = dive_nc_file.variables[
                     f"tmicl_logavg_{ch}_{cast}_center_freqs"
                 ][:]
-            except:
+            except Exception:
                 log_warning(
                     "Could not find tmicl variable (but found matching time variable) - skipping this plot",
                     "exc",
@@ -351,7 +351,7 @@ def plot_TMICL(
             except KeyError as e:
                 log_warning(f"Could not find variable {e.args[0]} - skipping this plot")
                 continue
-            except:
+            except Exception:
                 log_error("Error fetching depth variables - skipping this plot", "exc")
                 continue
 

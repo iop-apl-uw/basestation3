@@ -50,8 +50,8 @@ import BaseOptsType
 import PlotUtils
 import PlotUtilsPlotly
 import Utils
-from BaseLog import log_warning, log_info, log_debug, log_error
-from Plotting import plotdivesingle, add_arguments
+from BaseLog import log_debug, log_error, log_info, log_warning
+from Plotting import add_arguments, plotdivesingle
 
 
 def plot_compass_compare(

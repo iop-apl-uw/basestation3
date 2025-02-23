@@ -35,9 +35,9 @@ from __future__ import annotations
 
 import typing
 
-import plotly
-import pandas as pd
 import numpy as np
+import pandas as pd
+import plotly
 import scipy
 
 # pylint: disable=wrong-import-position
@@ -46,8 +46,6 @@ if typing.TYPE_CHECKING:
 
 import PlotUtilsPlotly
 import Utils
-
-
 from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
 

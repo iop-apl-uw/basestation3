@@ -26,26 +26,26 @@
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
+
 import typing
 
 import numpy as np
-
-import scipy.interpolate
 import plotly.graph_objects
+import scipy.interpolate
 
 if typing.TYPE_CHECKING:
-    import BaseOpts
     import scipy
+
+    import BaseOpts
 
 import BaseDB
 import PlotUtils
 import PlotUtilsPlotly
 import Utils
-
 from BaseLog import (
-    log_warning,
     log_error,
     log_info,
+    log_warning,
 )
 from Plotting import plotdivesingle
 
@@ -217,7 +217,7 @@ def plot_pitch_roll(
         pitch_AD_rate = Utils.ctr_1st_diff(pitchAD, sg_time)
         pitch_rate = Utils.ctr_1st_diff(vehicle_pitch_degrees_v, sg_time)
 
-        iwn = np.argwhere(pitch_control < 0)
+        #unused iwn = np.argwhere(pitch_control < 0)
         iwp = np.argwhere(pitch_control > 0)
 
         gc_x = np.concatenate((GC_roll_AD_start, GC_roll_AD_end))
@@ -254,7 +254,7 @@ def plot_pitch_roll(
         )
         vbdAD = f(sg_time)
         vbd_control = (vbdAD - c_vbd) * vbd_cnv
-    except:
+    except Exception:
         vbd_control = None
 
     t_stable_pitch = sg_time.copy()
@@ -312,7 +312,7 @@ def plot_pitch_roll(
 
     log_info(f"implied_cpitch {implied_C}, implied_pitchgain {implied_gain}, RMS={rms_linear}")
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts)
         log_info("plot_pitch_roll db opened")
     else:
@@ -334,7 +334,7 @@ def plot_pitch_roll(
         BaseDB.addSlopeValToDB(
             base_opts, dive_nc_file.dive_number, ["pitch_linear_C_PITCH"], con=conn
         )
-    except:
+    except Exception:
         log_error("Failed to add slope value to database", "exc")
 
     c0 = [0, 0]
@@ -394,8 +394,8 @@ def plot_pitch_roll(
     file_list = []
 
     if generate_plots:
-        pitchAD_Fit = [min(pitchAD), max(pitchAD)]
-        pitch_Fit = (pitchAD_Fit - implied_C) * implied_gain * pitch_cnv
+        #ununsed pitchAD_Fit = [min(pitchAD), max(pitchAD)]
+        #Unused pitch_Fit = (pitchAD_Fit - implied_C) * implied_gain * pitch_cnv
 
         #
         # pitch plot
@@ -530,7 +530,7 @@ def plot_pitch_roll(
             {
                 "xaxis": {
                     "title": {
-                        "text": f"pitch control (counts)",
+                        "text": "pitch control (counts)",
                         "font": {"family": "Courier New, Arial"},
                     },
                     "showgrid": True,
@@ -606,7 +606,7 @@ def plot_pitch_roll(
             rollAD[in_fit_d].ravel(), vehicle_roll_degrees_v[in_fit_d].ravel()
         )
         c_roll_dive_imp = -fitd.intercept / fitd.slope
-    except:
+    except Exception:
         c_roll_dive_imp = 0
         fitd = None
 
@@ -615,7 +615,7 @@ def plot_pitch_roll(
             rollAD[in_fit_c].ravel(), vehicle_roll_degrees_v[in_fit_c].ravel()
         )
         c_roll_climb_imp = -fitc.intercept / fitc.slope
-    except:
+    except Exception:
         c_roll_climb_imp = 0
         fitc = None
  
@@ -758,7 +758,7 @@ def plot_pitch_roll(
             {
                 "xaxis": {
                     "title": {
-                        "text": f"roll control (counts)",
+                        "text": "roll control (counts)",
                         "font": {
                             "family": "Courier New, Arial",
                         },
@@ -863,7 +863,7 @@ def plot_pitch_roll(
                 c_roll_dive_imp,
                 con=conn,
             )
-        except:
+        except Exception:
             c_roll_dive_imp = 0
             fitd = False
 
@@ -883,7 +883,7 @@ def plot_pitch_roll(
                 c_roll_climb_imp,
                 con=conn,
             )
-        except:
+        except Exception:
             fitc = False
             c_roll_climb_imp = 0
 
@@ -929,7 +929,7 @@ def plot_pitch_roll(
             c_roll_dive_imp_all,
             con=conn,
         )
-    except:
+    except Exception:
         c_roll_dive_imp_all = 0
         fitd = None
 
@@ -945,7 +945,7 @@ def plot_pitch_roll(
             c_roll_climb_imp_all,
             con=conn,
         )
-    except:
+    except Exception:
         fitc = None
         c_roll_climb_imp_all = 0
 
@@ -1125,7 +1125,7 @@ def plot_pitch_roll(
 
         buttons = [ ]
 
-        for c in ctlTraces.keys():
+        for c in ctlTraces:
             buttons.append(
                 dict(
                     args2=[
@@ -1162,7 +1162,7 @@ def plot_pitch_roll(
             {
                 "xaxis": {
                     "title": {
-                        "text": f"roll control (counts)",
+                        "text": "roll control (counts)",
                         "font": {"family": "Courier New, Arial"},
                     },
                     "showgrid": True,
@@ -1194,7 +1194,7 @@ def plot_pitch_roll(
             )
         )
 
-    if dbcon == None:
+    if dbcon is None:
         try:
             conn.commit()
         except Exception as e:

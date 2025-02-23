@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -34,15 +34,17 @@
 from __future__ import annotations
 
 import collections
+import contextlib
 import typing
 
 import numpy as np
-import scipy.interpolate
 import plotly.graph_objects
+import scipy.interpolate
 
 if typing.TYPE_CHECKING:
-    import BaseOpts
     import scipy
+
+    import BaseOpts
 
 import PlotUtils
 import PlotUtilsPlotly
@@ -105,17 +107,13 @@ def plot_diveplot(
         if gc_pitch_pos is not None:
             eng_pitch_pos = gc_pitch_pos * 10.0
             eng_pitch_time = gc_pitch_time / 60.0
-            try:
+            with contextlib.suppress(ValueError):
                 apogee_time = min(eng_pitch_time[eng_pitch_pos > 0])
-            except ValueError:
-                pass
         elif "eng_pitchCtl" in dive_nc_file.variables:
             eng_pitch_pos = dive_nc_file.variables["eng_pitchCtl"][:] * 10.0
             eng_pitch_time = eng_time
-            try:
+            with contextlib.suppress(ValueError):
                 apogee_time = min(eng_pitch_time[eng_pitch_pos > 0])
-            except ValueError:
-                pass
         else:
             log_error("Pitch position not available")
             eng_pitch_pos = eng_pitch_time = None
@@ -179,10 +177,8 @@ def plot_diveplot(
 
         # CTD time base
         ctd_time = None
-        try:
+        with contextlib.suppress(KeyError):
             ctd_time = (dive_nc_file.variables["ctd_time"][:] - start_time) / 60.0
-        except KeyError:
-            pass
 
         vert_speed_gsm = horz_speed_gsm = glide_angle_gsm = None
         try:
@@ -221,10 +217,8 @@ def plot_diveplot(
         if "legato_pressure" in dive_nc_file.variables:
             # In this case, ctd_depth is derived from the legato, not the truck
             # so we show it as well
-            try:
+            with contextlib.suppress(KeyError):
                 ctd_depth = dive_nc_file.variables["ctd_depth"][:]
-            except KeyError:
-                pass
 
         aux_depth_name = None
         if "auxB_press" in dive_nc_file.variables:
@@ -790,7 +784,7 @@ def plot_diveplot(
         )
     ]
 
-    for c in ctlTraces.keys():
+    for c in ctlTraces:
         buttons.append(
             dict(
                 args2=[

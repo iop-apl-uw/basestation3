@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -32,18 +32,20 @@
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
+
 import typing
 
 import numpy as np
-
-import scipy.interpolate
 import plotly.graph_objects
+import scipy.interpolate
 
 if typing.TYPE_CHECKING:
-    import BaseOpts
     import scipy
 
+    import BaseOpts
+
 import math
+
 import BaseDB
 import HydroModel
 import MakeDiveProfiles
@@ -51,11 +53,8 @@ import PlotUtils
 import PlotUtilsPlotly
 import Utils
 import Utils2
-
-from BaseLog import log_warning, log_error, log_info, log_debug
+from BaseLog import log_debug, log_error, log_info, log_warning
 from Plotting import plotdivesingle
-
-import pdb
 
 
 #
@@ -129,7 +128,7 @@ def compute_w_obs(elapsed_time, sample_depth):
                 break
             sumx2 += dt[ii - jj] * dt[ii - jj]
             sumxy += dt[ii - jj] * dd[ii - jj]
-            m += 1
+            m += 1  # noqa: SIM113
             if m >= 5 and (
                 (sample_depth[ii - jj] > sample_depth[ii] + 3)
                 or (sample_depth[ii - jj] < sample_depth[ii] - 3)
@@ -336,7 +335,7 @@ def plot_vert_vel(
             depth_1m = ctd_depth[isurf]
 
         # print(density_1m, depth_1m)
-    except:
+    except Exception:
         log_error(
             "Could not fetch needed variables - skipping vertical velocity plot", "exc"
         )
@@ -371,13 +370,13 @@ def plot_vert_vel(
     vert_speed_press = Utils.ctr_1st_diff(-depth * 100, sg_time - start_time)
 
     obs_w = compute_w_obs(sg_time, depth)
-    smooth_window = 10  # In seconds
+    # smooth_window = 10  # In seconds
 
-    smoothed_w = compute_smoothed_w(
-        sg_time,
-        Utils.ctr_1st_diff(-depth, sg_time - start_time),
-        window=smooth_window,
-    )
+    # smoothed_w = compute_smoothed_w(
+    #     sg_time,
+    #     Utils.ctr_1st_diff(-depth, sg_time - start_time),
+    #     window=smooth_window,
+    # )
 
     # TODO - Convert this display to use the smoothed output and have the crt_1st_diff displayed on a vertical velocity
     # comparision plot
@@ -678,7 +677,7 @@ def plot_vert_vel(
         f"min SM_CC {implied_min_smcc_surf:.1f} based on density {density_1m:.5f} at {depth_1m:.2f}m and 150cc to raise the antenna"
     )
 
-    if dbcon == None:
+    if dbcon is None:
         conn = Utils.open_mission_database(base_opts)
         log_info("plot_vert_vel db opened")
     else:
@@ -732,10 +731,10 @@ def plot_vert_vel(
             ["implied_volmax", "implied_C_VBD"],
             con=conn,
         )
-    except:
+    except Exception:
         log_error("Failed to add values to database", "exc")
 
-    if dbcon == None:
+    if dbcon is None:
         try:
             conn.commit()
         except Exception as e:

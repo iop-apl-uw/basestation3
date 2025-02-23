@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots sbe43 data """
+"""Plots sbe43 data"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -84,7 +84,7 @@ def plot_sbe43(
     # - then just give up.
     try:
         start_time = dive_nc_file.start_time
-    except:
+    except Exception:
         start_time = None
 
     binned_profile = "profile_data_point" in dive_nc_file.dimensions
@@ -128,7 +128,7 @@ def plot_sbe43(
             sat_O2_time = sg_time
             if "dissolved_oxygen_sat" in dive_nc_file.variables:
                 sat_O2 = dive_nc_file.variables["dissolved_oxygen_sat"][:]
-    except:
+    except Exception:
         log_warning("Could not load oxygen data", "exc")
 
     if sbe43_correctedO2 is not None:

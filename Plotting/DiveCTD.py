@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2025  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots CTD data """
+"""Plots CTD data"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -45,7 +45,7 @@ if typing.TYPE_CHECKING:
 import PlotUtils
 import PlotUtilsPlotly
 import QC
-from BaseLog import log_warning, log_info, log_debug, log_error
+from BaseLog import log_debug, log_error, log_info, log_warning
 from Plotting import plotdivesingle
 
 
@@ -80,7 +80,7 @@ def plot_CTD(
 
     try:
         start_time = dive_nc_file.start_time
-    except:
+    except Exception:
         start_time = None
 
     aa4831_temp_dive = aa4831_temp_climb = optode_name = None
@@ -133,7 +133,7 @@ def plot_CTD(
             point_num_aa4831_dive = np.arange(0, max_depth_sample_index)
             point_num_aa4831_climb = np.arange(max_depth_sample_index, len(aa4831_temp))
 
-        except:
+        except Exception:
             log_error("Error processing optode temp", "exc")
 
     if "sg_cal_sg_ct_type" in dive_nc_file.variables:
@@ -167,47 +167,49 @@ def plot_CTD(
                 else:
                     conductivity = None
                 qc_tag = ""
-                if "temperature_qc" in dive_nc_file.variables:
-                    if "raw" not in temp_name:
-                        temp_qc = QC.decode_qc(dive_nc_file.variables["temperature_qc"])
-                        temp = np.ma.array(
-                            temp,
-                            mask=np.logical_not(
-                                QC.find_qc(temp_qc, QC.only_good_qc_values, mask=True)
-                            ),
-                        )
-                        qc_tag = " - QC_GOOD"
+                if (
+                    "temperature_qc" in dive_nc_file.variables
+                    and "raw" not in temp_name
+                ):
+                    temp_qc = QC.decode_qc(dive_nc_file.variables["temperature_qc"])
+                    temp = np.ma.array(
+                        temp,
+                        mask=np.logical_not(
+                            QC.find_qc(temp_qc, QC.only_good_qc_values, mask=True)
+                        ),
+                    )
+                    qc_tag = " - QC_GOOD"
 
-                if "salinity_qc" in dive_nc_file.variables:
-                    if "raw" not in salinity_name:
-                        salinity_qc = QC.decode_qc(
-                            dive_nc_file.variables["salinity_qc"]
-                        )
-                        salinity = np.ma.array(
-                            salinity,
-                            mask=np.logical_not(
-                                QC.find_qc(
-                                    salinity_qc, QC.only_good_qc_values, mask=True
-                                )
-                            ),
-                        )
-                        qc_tag = " - QC_GOOD"
+                if (
+                    "salinity_qc" in dive_nc_file.variables
+                    and "raw" not in salinity_name
+                ):
+                    salinity_qc = QC.decode_qc(dive_nc_file.variables["salinity_qc"])
+                    salinity = np.ma.array(
+                        salinity,
+                        mask=np.logical_not(
+                            QC.find_qc(salinity_qc, QC.only_good_qc_values, mask=True)
+                        ),
+                    )
+                    qc_tag = " - QC_GOOD"
 
-                if "conductivity_qc" in dive_nc_file.variables:
-                    if "raw" not in conductivity_name:
-                        conductivity_qc = QC.decode_qc(
-                            dive_nc_file.variables["conductivity_qc"]
-                        )
-                        conductivity = np.ma.array(
-                            conductivity,
-                            mask=np.logical_not(
-                                QC.find_qc(
-                                    conductivity_qc, QC.only_good_qc_values, mask=True
-                                )
-                            ),
-                        )
+                if (
+                    "conductivity_qc" in dive_nc_file.variables
+                    and "raw" not in conductivity_name
+                ):
+                    conductivity_qc = QC.decode_qc(
+                        dive_nc_file.variables["conductivity_qc"]
+                    )
+                    conductivity = np.ma.array(
+                        conductivity,
+                        mask=np.logical_not(
+                            QC.find_qc(
+                                conductivity_qc, QC.only_good_qc_values, mask=True
+                            )
+                        ),
+                    )
 
-            except:
+            except Exception:
                 log_info(
                     "Could not load nc varibles for plot_ctd_data - skipping", "exc"
                 )

@@ -31,8 +31,8 @@
 """Supporting routines for creating plots from netCDF data
 """
 import io
-import os
 import json
+import os
 import warnings
 
 import brotli

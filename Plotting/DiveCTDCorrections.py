@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,19 +28,19 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots ctd corrections """
+"""Plots ctd corrections"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
+
 import collections
 import typing
 
 import gsw
+import numpy as np
 import plotly.graph_objects
 import scipy
 import seawater
-
-import numpy as np
 
 if typing.TYPE_CHECKING:
     import BaseOpts
@@ -48,7 +48,6 @@ if typing.TYPE_CHECKING:
 import PlotUtils
 import PlotUtilsPlotly
 import QC
-
 from BaseLog import log_error, log_warning
 from Plotting import plotdivesingle
 
@@ -140,7 +139,7 @@ def plot_ctd_corrections(
             )
             salinity_qc = QC.decode_qc(dive_nc_file.variables[f"salinity{raw}_qc"][:])
             qc_counts = {}
-            for qc_val in QC.qc_name_d.keys():
+            for qc_val in QC.qc_name_d:
                 qc_counts[qc_val] = np.nonzero(
                     np.logical_and(
                         QC.find_qc(temperature_qc, [qc_val], mask=True),
@@ -191,7 +190,7 @@ def plot_ctd_corrections(
             for ii in range(len(qc_list)):
                 tmp_list.append(np.transpose(qc_list[ii]))
                 cust_hv_txt[jj] = f"{cust_hv_txt[jj]}%{{customdata[{ii+2}]}}"
-            cust_data[jj] = np.dstack((tmp_list))
+            cust_data[jj] = np.dstack(tmp_list)
     else:
         for jj in range(2):
             cust_data[jj] = np.dstack(

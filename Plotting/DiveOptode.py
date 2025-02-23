@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2025  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots optode data """
+"""Plots optode data"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -96,7 +96,7 @@ def plot_optode(
     # - then just give up.
     try:
         start_time = dive_nc_file.start_time
-    except:
+    except Exception:
         start_time = None
 
     binned_profile = "profile_data_point" in dive_nc_file.dimensions
@@ -151,7 +151,7 @@ def plot_optode(
                 optode_instrument_O2 = dive_nc_file.variables[
                     f"eng_aa{optode_type}_O2"
                 ][:]
-    except:
+    except Exception:
         log_warning("Could not load oxygen data", "exc")
 
     if optode_correctedO2 is not None:
@@ -174,7 +174,7 @@ def plot_optode(
     drift_gain_var = f"aanderaa{optode_type}_drift_gain"
     try:
         drift_gain = dive_nc_file.variables[drift_gain_var].getValue()
-    except:
+    except Exception:
         log_warning(f"Could not find {drift_gain_var} - drift gain not set?")
 
     if binned_profile:

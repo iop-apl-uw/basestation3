@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2025  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots gliders course through the water """
+"""Plots gliders course through the water"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -39,8 +39,9 @@ import numpy as np
 import plotly.graph_objects
 
 if typing.TYPE_CHECKING:
-    import BaseOpts
     import scipy
+
+    import BaseOpts
 
 import PlotUtils
 import PlotUtilsPlotly
@@ -76,7 +77,7 @@ def plot_COG(
         lons = dive_nc_file.variables["longitude"][:]
         lat_gps = dive_nc_file.variables["log_gps_lat"][:]
         lon_gps = dive_nc_file.variables["log_gps_lon"][:]
-    except:
+    except Exception:
         log_error("Problems in plot_COG", "exc")
         return ([], [])
 
@@ -89,7 +90,7 @@ def plot_COG(
         eng_roll_ang = dive_nc_file.variables["eng_rollAng"][:]
     except KeyError:
         pass
-    except:
+    except Exception:
         log_error("Unexpected problem with NEWHEAD variables", "exc")
     else:
         pitch_ang = Utils.interp1d(eng_time, eng_pitch_ang, ctd_time, kind="linear")
@@ -104,7 +105,7 @@ def plot_COG(
         ctd_time = dive_nc_file.variables["ctd_time"][:]
     except KeyError:
         pass
-    except:
+    except Exception:
         log_error("Unexpected problem with NEWHEAD variables", "exc")
     else:
         newhead_lats = Utils.interp1d(ctd_time, lats, newhead_secs, kind="linear")

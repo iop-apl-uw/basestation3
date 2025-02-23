@@ -1,22 +1,22 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
-## 
+## Copyright (c) 2023, 2025  University of Washington.
+##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
-## 
+##
 ## 1. Redistributions of source code must retain the above copyright notice, this
 ##    list of conditions and the following disclaimer.
-## 
+##
 ## 2. Redistributions in binary form must reproduce the above copyright notice,
 ##    this list of conditions and the following disclaimer in the documentation
 ##    and/or other materials provided with the distribution.
-## 
+##
 ## 3. Neither the name of the University of Washington nor the names of its
 ##    contributors may be used to endorse or promote products derived from this
 ##    software without specific prior written permission.
-## 
+##
 ## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
 ## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 ## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -72,7 +72,7 @@ def plot_ocr504i(
 
     try:
         start_time = dive_nc_file.start_time
-    except:
+    except Exception:
         start_time = None
 
     binned_profile = "profile_data_point" in dive_nc_file.dimensions
@@ -92,14 +92,14 @@ def plot_ocr504i(
                 np.round(np.average(np.diff(depth[0, :])), decimals=1),
             )
 
-    except:
+    except Exception:
         log_error("Could not ocr504i variables", "exc")
         return ([], [])
 
     if scicon:
         try:
             ocr504i_time = dive_nc_file.variables["ocr504i_time"][:]
-        except:
+        except Exception:
             log_error("Could not ocr504i variables", "exc")
             return ([], [])
 
