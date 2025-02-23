@@ -2,7 +2,7 @@
 # -*- python-fmt -*-.
 
 ##
-## Copyright (c) 2018, 2019, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2018, 2019, 2023, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -28,9 +28,8 @@ AEM1-G-ZR (velo) basestation sensor extension
 import numpy as np
 
 import BaseNetCDF
-
 from BaseLog import log_error, log_warning
-from MakeDiveProfiles import compute_displacements, compute_dac
+from MakeDiveProfiles import compute_dac, compute_displacements
 
 # from TraceArray import *  # REMOVE use only if we are tracing...
 
@@ -228,12 +227,14 @@ def init_sensor(module_name, init_dict=None):
 
 
 # pylint: disable=unused-argument
-def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=None):
+def sensor_data_processing(
+    base_opts, module, l_dict=None, eng_f=None, calib_consts=None
+):
     """
     Called from MakeDiveProfiles.py to do sensor specific processing
 
     Arguments:
-    l - MakeDiveProfiles locals() dictionary
+    l_dict - MakeDiveProfiles locals() dictionary
     eng_f - engineering file
     calib_constants - sg_calib_constants object
 
@@ -243,7 +244,12 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
      1 - no appropriate data found
     """
 
-    if l is None or eng_f is None or calib_consts is None or "results_d" not in l:
+    if (
+        l_dict is None
+        or eng_f is None
+        or calib_consts is None
+        or "results_d" not in l_dict
+    ):
         log_error("Missing arguments for sensor_data_processing - version mismatch?")
         return -1
 
@@ -253,9 +259,9 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
 
     required_vars_present = True
     try:
-        results_d = l["results_d"]
-        sg_epoch_time_s_v = l["sg_epoch_time_s_v"]
-        nc_info_d = l["nc_info_d"]
+        results_d = l_dict["results_d"]
+        sg_epoch_time_s_v = l_dict["sg_epoch_time_s_v"]
+        nc_info_d = l_dict["nc_info_d"]
         # vehicle_pitch_degrees_v = eng_f.get_col('pitchAng')
     except KeyError:
         required_vars_present = False
@@ -287,9 +293,9 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
             speed_cm_s_v = np.mean(speeds_v, axis=0)
             std_v = np.std(speeds_v, axis=0)
             # save the results
-            velo_instrument_metadata_d[
-                "ancillary_variables"
-            ] = ancillary_variables  # update
+            velo_instrument_metadata_d["ancillary_variables"] = (
+                ancillary_variables  # update
+            )
             velo_np = len(velo_time_s_v)
             BaseNetCDF.assign_dim_info_dim_name(
                 nc_info_d, nc_velo_results_info, velo_results_dim
@@ -304,13 +310,13 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
             )
 
             try:
-                # vehicle_pitch_rad_v = l["vehicle_pitch_rad_v"]
-                # gsm_glide_angle_rad_v = l["gsm_glide_angle_rad_v"]
-                hdm_glide_angle_rad_v = l["hdm_glide_angle_rad_v"]
-                total_flight_and_SM_time_s = l["total_flight_and_SM_time_s"]
-                head_polar_rad_v = l["head_polar_rad_v"]
-                ctd_delta_time_s_v = l["ctd_delta_time_s_v"]
-                compute_DAC = l["compute_DAC"]
+                # vehicle_pitch_rad_v = l_dict["vehicle_pitch_rad_v"]
+                # gsm_glide_angle_rad_v = l_dict["gsm_glide_angle_rad_v"]
+                hdm_glide_angle_rad_v = l_dict["hdm_glide_angle_rad_v"]
+                total_flight_and_SM_time_s = l_dict["total_flight_and_SM_time_s"]
+                head_polar_rad_v = l_dict["head_polar_rad_v"]
+                ctd_delta_time_s_v = l_dict["ctd_delta_time_s_v"]
+                compute_DAC = l_dict["compute_DAC"]
             except KeyError:
                 log_warning("Unable to compute displacements and DAC from velo data.")
             else:
@@ -346,8 +352,8 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
 
                 if compute_DAC:
                     try:
-                        dive_delta_GPS_lat_m = l["dive_delta_GPS_lat_m"]
-                        dive_delta_GPS_lon_m = l["dive_delta_GPS_lon_m"]
+                        dive_delta_GPS_lat_m = l_dict["dive_delta_GPS_lat_m"]
+                        dive_delta_GPS_lon_m = l_dict["dive_delta_GPS_lon_m"]
 
                         dac_east_speed_m_s, dac_north_speed_m_s = compute_dac(
                             north_displacement_m_v,

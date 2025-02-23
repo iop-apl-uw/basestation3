@@ -27,7 +27,6 @@ sbect basestation sensor extension
 """
 import BaseNetCDF
 import FileMgr
-
 from BaseLog import log_error
 
 

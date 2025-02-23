@@ -31,7 +31,6 @@ import struct
 
 import BaseNetCDF
 import Utils
-
 from BaseLog import log_error, log_warning
 
 # channel			flag

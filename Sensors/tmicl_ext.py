@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022, 2024 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2020, 2021, 2022, 2024, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -37,10 +37,10 @@ import re
 
 import numpy as np
 
-from BaseLog import log_error, log_debug, log_warning, log_info
 import BaseNetCDF
 import FileMgr
 import Utils
+from BaseLog import log_debug, log_error, log_info, log_warning
 
 # Globals
 tmicl_prefix = "tm"
@@ -691,7 +691,7 @@ def process_tar_members(
                 # print(ed)
                 try:
                     fo = open(output_file, "w")
-                except IOError:
+                except OSError:
                     log_error(
                         "Could not open %s for output - skipping %s"
                         % (output_file, tmicl_file),
@@ -785,7 +785,7 @@ def process_tar_members(
                         )
                 fo.close()
                 processed_logger_eng_files.append(output_file)
-        except:
+        except Exception:
             log_error("Failed to process %s" % tmicl_file, "exc")
             ret_val = 1
 
@@ -801,7 +801,7 @@ def extract_file_metadata(inp_file_name, channel):
     """
     try:
         inp_file = open(inp_file_name, "rb")
-    except:
+    except Exception:
         log_error("Unable to open %s" % inp_file_name)
         return None
 
@@ -920,7 +920,7 @@ def extract_file_metadata(inp_file_name, channel):
                             ret_list.append(
                                 ("tmicl_%s_%s" % (i, channel), eng_file_meta[i])
                             )
-                        except:
+                        except Exception:
                             log_error(
                                 "Could not process %s %s %s"
                                 % (inp_file_name, raw_strs[0], raw_strs[1]),
@@ -954,7 +954,7 @@ def extract_file_data(inp_file_name):
     """
     try:
         inp_file = open(inp_file_name, "rb")
-    except:
+    except Exception:
         log_error("Unable to open %s" % inp_file_name)
         return None
 
@@ -1018,7 +1018,7 @@ def extract_file_data(inp_file_name):
         for i in range(len(raw_strs)):
             try:
                 row.append(np.float64(raw_strs[i]))
-            except:
+            except Exception:
                 log_error(
                     "Problems converting [%s] to float from line [%s] (%s, line %d)"
                     % (raw_strs[i], inp_line, inp_file_name, line_count)
@@ -1029,9 +1029,9 @@ def extract_file_data(inp_file_name):
 
     # Handle the binary case
     if binaryoutput:
-        data_start = buffer.find("%start".encode("utf-8"))
-        data_start = buffer.find("\n".encode("utf-8"), data_start) + 1
-        data_end = buffer.find("\n%stop".encode("utf-8"))
+        data_start = buffer.find(b"%start")
+        data_start = buffer.find(b"\n", data_start) + 1
+        data_end = buffer.find(b"\n%stop")
 
         # How many cols?
         if eng_file_class == "base":
@@ -1162,7 +1162,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 # load_dive_profile_data() will reload such data also with complaint
                 # If you write files with constructed dim info and later declare it
                 # then when the nc file is rebuilt it will use the new, declared dim name
-                if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
+                if nc_var_name not in BaseNetCDF.nc_var_metadata:
                     log_debug(
                         "Metadata for tmicl data %s was not pre-declared" % nc_var_name
                     )
@@ -1175,7 +1175,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         elif eng_file_class in ("logavg", "dvdt", "specavg"):
             try:
                 fi = open(filename, "r")
-            except:
+            except Exception:
                 log_error("Unable to open %s" % filename)
                 continue
 
@@ -1184,18 +1184,18 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
             effectiverate = None
             logmap = None
             columns = None
-            for l in fi:
-                if l.startswith("%columns:"):
-                    columns = l.split()[1:]
-                if l.startswith("%nfft: "):
-                    nfft = int(l.split(" ", 1)[1].rstrip().lstrip())
-                if l.startswith("%samplerate: "):
-                    rate = int(l.split(" ", 1)[1].rstrip().lstrip())
-                if l.startswith("%effectivesamplerate: "):
-                    effectiverate = float(l.split(" ", 1)[1].rstrip().lstrip())
+            for l_line in fi:
+                if l_line.startswith("%columns:"):
+                    columns = l_line.split()[1:]
+                if l_line.startswith("%nfft: "):
+                    nfft = int(l_line.split(" ", 1)[1].rstrip().lstrip())
+                if l_line.startswith("%samplerate: "):
+                    rate = int(l_line.split(" ", 1)[1].rstrip().lstrip())
+                if l_line.startswith("%effectivesamplerate: "):
+                    effectiverate = float(l_line.split(" ", 1)[1].rstrip().lstrip())
 
-                if l.startswith("%logmap: "):
-                    logmap = l.split(" ", 1)[1]
+                if l_line.startswith("%logmap: "):
+                    logmap = l_line.split(" ", 1)[1]
                     # Fix for broken log map writer in tmicl of the form
                     # %logmap: 0-0,1-1,2-2,3-5,6-10,11-17,18-29,30-49,50-83,84-138,139-231,232-385386-511
                     split_lm = logmap.split(",")
@@ -1215,7 +1215,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
             try:
                 data = np.genfromtxt(filename, comments="%")
-            except:
+            except Exception:
                 log_error("Error processing %s - skipping" % filename, "exc")
                 continue
 
@@ -1247,7 +1247,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 )
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, sig_var))
-                if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
+                if nc_var_name not in BaseNetCDF.nc_var_metadata:
                     log_debug(
                         "Metadata for tmicl data %s was not pre-declared" % nc_var_name
                     )
@@ -1263,7 +1263,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 "time",
             )
             ret_list.append((nc_var_name, time_col))
-            if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
+            if nc_var_name not in BaseNetCDF.nc_var_metadata:
                 nc_eng_file_mdp_dim = "%s_data_point" % nc_var_name
                 nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
                 if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
@@ -1295,7 +1295,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                         "center_freqs",
                     )
                     ret_list.append((nc_var_name, center_freqs))
-                    if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
+                    if nc_var_name not in BaseNetCDF.nc_var_metadata:
                         nc_eng_file_mdp_dim = "%s_data_point" % nc_var_name
                         nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
                         if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:

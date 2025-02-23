@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2020, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2020, 2023, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -31,7 +31,6 @@ import numpy as np
 import BaseNetCDF
 import QC
 import Utils
-
 from BaseLog import log_error, log_info, log_warning
 
 nc_sbe43_data_info = "sbe43_data_info"  # from eng/scicon/gpctd
@@ -272,13 +271,14 @@ def asc2eng(base_opts, module_name, datafile=None):
     if sbe43_o2_freq is None:
         sbe43_o2_freq = datafile.remove_col("sbe43.O2Freq")
 
-
     if sbe43_o2_freq is not None:
         for i in range(len(sbe43_o2_freq)):
             if np.isfinite(sbe43_o2_freq[i]):
                 # Rev E (67.00 and later) - just divide by 1000.
                 if datafile.version >= 67.0:
-                    sbe43_o2_freq[i] = sbe43_o2_freq[i] / 1000 # 4000000.0 / (sbe43_o2_freq[i] / 255.0)
+                    sbe43_o2_freq[i] = (
+                        sbe43_o2_freq[i] / 1000
+                    )  # 4000000.0 / (sbe43_o2_freq[i] / 255.0)
                 else:
                     sbe43_o2_freq[i] = 4000000.0 / (sbe43_o2_freq[i] / 255.0)
 
@@ -308,12 +308,14 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
     return Utils.remap_column_names(replace_dict, column_names)
 
 
-def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=None):
+def sensor_data_processing(
+    base_opts, module, l_dict=None, eng_f=None, calib_consts=None
+):
     """
     Called from MakeDiveProfiles.py to do sensor specific processing
 
     Arguments:
-    l - MakeDiveProfiles locals() dictionary
+    l_dict - MakeDiveProfiles locals() dictionary
     eng_f - engineering file
     calib_constants - sg_calib_constants object
 
@@ -323,17 +325,17 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
     -1 - error during processing
     """
     if (
-        l is None
+        l_dict is None
         or eng_f is None
         or calib_consts is None
-        or "results_d" not in l
-        or "nc_info_d" not in l
+        or "results_d" not in l_dict
+        or "nc_info_d" not in l_dict
     ):
         log_error("Missing arguments for sensor_data_processing - version mismatch?")
         return -1
 
-    results_d = l["results_d"]
-    nc_info_d = l["nc_info_d"]
+    results_d = l_dict["results_d"]
+    nc_info_d = l_dict["nc_info_d"]
     sbe43_instrument_metadata_d = BaseNetCDF.fetch_instrument_metadata(
         nc_sbe43_data_info
     )
@@ -341,8 +343,8 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         del sbe43_instrument_metadata_d["ancillary_variables"]  # eliminate
 
     # needed on most paths below
-    # sg_np = l["sg_np"]
-    sg_epoch_time_s_v = l["sg_epoch_time_s_v"]
+    # sg_np = l_dict["sg_np"]
+    sg_epoch_time_s_v = l_dict["sg_epoch_time_s_v"]
 
     SBE43_qc = QC.QC_GOOD  # assume the best
     (eng_SBE43_present, sbe43_o2_freq) = eng_f.find_col(
@@ -352,10 +354,10 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         sbe43_time_s_v = sg_epoch_time_s_v
         sbe43_results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_sg_data_info]
     elif "gpctd_oxygen" in results_d:
-        if "valid_gpctd_oxygen_v" in l:
+        if "valid_gpctd_oxygen_v" in l_dict:
             # reduced against reduced
-            sbe43_o2_freq = l["valid_gpctd_oxygen_v"]
-            sbe43_time_s_v = l["ctd_epoch_time_s_v"]
+            sbe43_o2_freq = l_dict["valid_gpctd_oxygen_v"]
+            sbe43_time_s_v = l_dict["ctd_epoch_time_s_v"]
             sbe43_results_dim = BaseNetCDF.nc_mdp_data_info[
                 BaseNetCDF.nc_ctd_results_info
             ]
@@ -382,13 +384,13 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
     if eng_SBE43_present:
         sbe43_np = len(sbe43_time_s_v)
         try:
-            # ctd_np = l["ctd_np"]
-            ctd_epoch_time_s_v = l["ctd_epoch_time_s_v"]
-            temp_cor_v = l["temp_cor_v"]
-            temp_cor_qc_v = l["temp_cor_qc_v"]
+            # ctd_np = l_dict["ctd_np"]
+            ctd_epoch_time_s_v = l_dict["ctd_epoch_time_s_v"]
+            temp_cor_v = l_dict["temp_cor_v"]
+            temp_cor_qc_v = l_dict["temp_cor_qc_v"]
             # NOTE: SBE43 corrections use  44.6596 rather than 44.6145 as o2_molar_mass
             oxygen_sat_um_kg_v = results_d["dissolved_oxygen_sat"]
-            ctd_press_v = l["ctd_press_v"]
+            ctd_press_v = l_dict["ctd_press_v"]
             # hdm_qc = results_d["hdm_qc"]
             speed_cm_s_v = results_d["speed"]
             # speed_qc_v = results_d[
@@ -485,11 +487,11 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                 )
             except KeyError:
                 pass  # typical case...no worries and no warning?
-            except KeyError:
-                log_warning(
-                    "SBE43 O2 data found but calibration constant(s) missing - skipping SBE43 O2 corrections"
-                )
-                return -1
+            # except KeyError:
+            #    log_warning(
+            #        "SBE43 O2 data found but calibration constant(s) missing - skipping SBE43 O2 corrections"
+            #    )
+            #    return -1
             SBE43_qc = QC.QC_GOOD
             coefs.reverse()
             try:
@@ -499,7 +501,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                     * np.polyval(coefs, temp_cor_v)
                     * (oxygen_sat_um_kg_v * np.exp(E * ctd_press_v / temp_cor_K_v))
                 )
-            except:
+            except Exception:
                 log_error(
                     "Failed to process SBE43 O2 data skipping SBE43 O2 corrections",
                     "exc",

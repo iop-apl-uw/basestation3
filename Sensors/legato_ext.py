@@ -26,9 +26,9 @@
 rbr legato basestation sensor extension
 """
 
+import BaseNetCDF
 import Utils
 from BaseLog import log_error
-import BaseNetCDF
 
 
 def init_sensor(module_name, init_dict=None):

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -33,9 +33,7 @@ from scipy.io import loadmat
 
 import BaseNetCDF
 import Utils
-
 from BaseLog import log_debug, log_error, log_info
-
 
 # Globals
 cp_prefix = "cp"
@@ -264,7 +262,7 @@ def process_data_files(
         log_info(f"Running {cmdline}")
         try:
             Utils.run_cmd_shell(cmdline)
-        except:
+        except Exception:
             log_error(f"Error running {cmdline}", "exc")
             return 1
 
@@ -297,7 +295,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
         try:
             mf = loadmat(filename)
-        except:
+        except Exception:
             log_error(f"Unable to load {filename}", "exc")
             continue
 

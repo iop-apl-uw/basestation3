@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2024 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2013, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2024, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -33,11 +33,11 @@ import traceback
 
 import numpy as np
 
-from BaseLog import log_error, log_info, log_debug, log_warning
 import BaseNetCDF
 import FileMgr
 import QC
 import Utils
+from BaseLog import log_debug, log_error, log_info, log_warning
 
 # Globals
 pmar_prefix = "pm"
@@ -452,7 +452,7 @@ def process_tar_members(
                     log_debug("Output file %s" % output_file)
                     try:
                         fo = open(output_file, "w")
-                    except IOError:
+                    except OSError:
                         log_error(
                             "Could not open %s for output - skipping %s"
                             % (output_file, pmar_file),
@@ -504,7 +504,7 @@ def process_tar_members(
                     log_info("Output file %s" % output_file)
                     try:
                         fo = open(output_file, "w")
-                    except IOError:
+                    except OSError:
                         log_error(
                             "Could not open %s for output - skipping %s"
                             % (output_file, pmar_file),
@@ -560,7 +560,7 @@ def process_tar_members(
 
                     # File is a sample - convert to .wav?
                     log_info("Conversion to wav NYI")
-        except:
+        except Exception:
             log_error("Failed to process %s" % pmar_file)
             log_error(traceback.format_exc())
             ret_val = 1
@@ -577,7 +577,7 @@ def extract_file_metadata(inp_file_name, cast, channel):
     """
     try:
         inp_file = open(inp_file_name, "r")
-    except:
+    except Exception:
         log_error("Unable to open %s" % inp_file_name)
         return None
 
@@ -718,7 +718,7 @@ def extract_file_data(inp_file_name):
     """
     try:
         inp_file = open(inp_file_name, "r")
-    except:
+    except Exception:
         log_error("Unable to open %s" % inp_file_name)
         return None
 
@@ -743,11 +743,9 @@ def extract_file_data(inp_file_name):
             raw_strs = inp_line.split(":", 1)
             if raw_strs[0] == "%binaryoutput":
                 binaryoutput = int(raw_strs[1].rstrip().lstrip())
-            if raw_strs[0] == "%start":
-                # log_info("Found start")
-                if binaryoutput:
-                    # Handle this below
-                    break
+            if raw_strs[0] == "%start" and binaryoutput:
+                # Handle this below
+                break
 
         else:
             raw_strs = inp_line.split()
@@ -755,7 +753,7 @@ def extract_file_data(inp_file_name):
             for i in range(len(raw_strs)):
                 try:
                     row.append(np.float64(raw_strs[i].rstrip().lstrip()))
-                except:
+                except Exception:
                     log_error(
                         "Problems converting [%s] to float from line [%s] (%s, line %d)"
                         % (raw_strs[i], inp_line, inp_file_name, line_count)
@@ -880,7 +878,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 )
                 log_debug("%s(%s)" % (nc_var_name, nc_eng_file_mdp_dim))
                 ret_list.append((nc_var_name, data[i]))
-                if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
+                if nc_var_name not in BaseNetCDF.nc_var_metadata:
                     log_debug(
                         "Metadata for pmar data %s was not pre-declared" % nc_var_name
                     )
@@ -905,7 +903,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                     "center_freqs",
                 )
                 ret_list.append((nc_var_name, center_freqs))
-                if nc_var_name not in BaseNetCDF.nc_var_metadata.keys():
+                if nc_var_name not in BaseNetCDF.nc_var_metadata:
                     nc_eng_file_mdp_dim = "%s_data_point" % nc_var_name
                     nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
                     if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
@@ -947,12 +945,14 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
     return ret_list, netcdf_dict
 
 
-def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=None):
+def sensor_data_processing(
+    base_opts, module, l_dict=None, eng_f=None, calib_consts=None
+):
     """
     Called from MakeDiveProfiles.py to do sensor specific processing
 
     Arguments:
-    l - MakeDiveProfiles locals() dictionary
+    l_dict - MakeDiveProfiles locals() dictionary
     eng_f - engineering file
     calib_constants - sg_calib_constants object
 
@@ -963,22 +963,22 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
     """
 
     if (
-        l is None
+        l_dict is None
         or eng_f is None
         or calib_consts is None
-        or "results_d" not in l
-        or "nc_info_d" not in l
+        or "results_d" not in l_dict
+        or "nc_info_d" not in l_dict
     ):
         log_error("Missing arguments for sensor_data_processing - version mismatch?")
         return -1
 
-    results_d = l["results_d"]
+    results_d = l_dict["results_d"]
 
     try:
-        gc_st_secs = l["gc_st_secs"]
-        gc_vbd_secs = l["gc_vbd_secs"]
-        gc_vbd_ctl = l["gc_vbd_ctl"]
-    except:
+        gc_st_secs = l_dict["gc_st_secs"]
+        gc_vbd_secs = l_dict["gc_vbd_secs"]
+        gc_vbd_ctl = l_dict["gc_vbd_ctl"]
+    except Exception:
         log_error("Unable to extract needed variables", "exc")
         return -1
 
@@ -993,7 +993,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                     pmar_samplerate = results_d["pmar_samplerate%s" % ch_tag]
                     pmar_nfft = results_d["pmar_nfft%s" % ch_tag]
                     pmar_navg = results_d["pmar_navg%s" % ch_tag]
-                except:
+                except Exception:
                     log_error(
                         "Unable to get variables for cast %c%s"
                         % (cast, "" if ch is None else " channel %d" % ch),
@@ -1005,7 +1005,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
                         float(pmar_nfft) * (float(pmar_navg) / 2.0)
                     ) / float(pmar_samplerate)
                     log_debug("ensemble_duration = %f" % ensemble_duration)
-                except:
+                except Exception:
                     log_error("Could not calculate ensemble_duration - skipping", "exc")
                     continue
 

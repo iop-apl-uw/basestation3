@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -28,10 +28,9 @@ WETlabs puck basestation sensor extension
 
 import copy
 
-from BaseLog import log_error, log_debug
 import BaseNetCDF
 import Utils
-
+from BaseLog import log_debug, log_error
 
 # The basic idea:
 # We define four different canonical wetlab puck type names
@@ -576,12 +575,14 @@ def remap_engfile_columns_netcdf(
     return 1 if r1 or r2 else 0
 
 
-def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=None):
+def sensor_data_processing(
+    base_opts, module, l_dict=None, eng_f=None, calib_consts=None
+):
     """
     Called from MakeDiveProfiles.py to do sensor specific processing
 
     Arguments:
-    l - MakeDiveProfiles locals() dictionary
+    l_dict - MakeDiveProfiles locals() dictionary
     eng_f - engineering file
     calib_constants - sg_calib_constants object
 
@@ -592,19 +593,19 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
     """
 
     if (
-        l is None
+        l_dict is None
         or eng_f is None
         or calib_consts is None
-        or "results_d" not in l
-        or "nc_info_d" not in l
+        or "results_d" not in l_dict
+        or "nc_info_d" not in l_dict
     ):
         log_error(
             "Missing arguments for WETlabs sensor_data_processing - version mismatch?"
         )
         return -1
 
-    results_d = l["results_d"]
-    nc_info_d = l["nc_info_d"]
+    results_d = l_dict["results_d"]
+    nc_info_d = l_dict["nc_info_d"]
 
     for data_var, directives in canonical_data_to_results_d.items():
         (
@@ -619,7 +620,7 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
 
         (data_present, data) = eng_f.find_col([data_var])
         if data_present:
-            time_s_v = l["sg_epoch_time_s_v"]
+            time_s_v = l_dict["sg_epoch_time_s_v"]
             results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_sg_data_info]
         else:
             try:

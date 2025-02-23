@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2023, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -30,8 +30,7 @@ import numpy as np
 import BaseNetCDF
 import QC
 import Utils
-
-from BaseLog import log_error, log_warning, log_debug
+from BaseLog import log_debug, log_error, log_warning
 
 nc_aa3830_data_info = "aa3830_data_info"  # from eng/scicon
 nc_dim_aa3830_data_point = "aa3830_data_point"
@@ -359,12 +358,14 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
 
 
 # pylint: disable=unused-argument
-def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=None):
+def sensor_data_processing(
+    base_opts, module, l_dict=None, eng_f=None, calib_consts=None
+):
     """
     Called from MakeDiveProfiles.py to do sensor specific processing
 
     Arguments:
-    l - MakeDiveProfiles locals() dictionary
+    l_dict - MakeDiveProfiles locals() dictionary
     eng_f - engineering file
     calib_constants - sg_calib_constants object
 
@@ -373,7 +374,12 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
      0 - data found and processed
      1 - no appropriate data found
     """
-    if l is None or eng_f is None or calib_consts is None or "results_d" not in l:
+    if (
+        l_dict is None
+        or eng_f is None
+        or calib_consts is None
+        or "results_d" not in l_dict
+    ):
         log_error("Missing arguments for sensor_data_processing - version mismatch?")
         return -1
     aa3830_instrument_metadata_d = BaseNetCDF.fetch_instrument_metadata(
@@ -384,21 +390,21 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
 
     required_vars_present = True
     try:
-        results_d = l["results_d"]
-        nc_info_d = l["nc_info_d"]
+        results_d = l_dict["results_d"]
+        nc_info_d = l_dict["nc_info_d"]
 
-        sg_np = l["sg_np"]
-        sg_epoch_time_s_v = l["sg_epoch_time_s_v"]
+        sg_np = l_dict["sg_np"]
+        sg_epoch_time_s_v = l_dict["sg_epoch_time_s_v"]
 
         # these should be ctd_np long
-        # ctd_np = l["ctd_np"]
-        ctd_epoch_time_s_v = l["ctd_epoch_time_s_v"]
-        temp_cor_v = l["temp_cor_v"]
-        temp_cor_qc_v = l["temp_cor_qc_v"]
-        salin_cor_v = l["salin_cor_v"]
-        salin_cor_qc_v = l["salin_cor_qc_v"]
-        ctd_depth_m_v = l["ctd_depth_m_v"]
-        ctd_density_v = l["density_insitu_v"]
+        # ctd_np = l_dict["ctd_np"]
+        ctd_epoch_time_s_v = l_dict["ctd_epoch_time_s_v"]
+        temp_cor_v = l_dict["temp_cor_v"]
+        temp_cor_qc_v = l_dict["temp_cor_qc_v"]
+        salin_cor_v = l_dict["salin_cor_v"]
+        salin_cor_qc_v = l_dict["salin_cor_qc_v"]
+        ctd_depth_m_v = l_dict["ctd_depth_m_v"]
+        ctd_density_v = l_dict["density_insitu_v"]
         ancillary_variables = "temperature salinity ctd_depth density_insitu"
     except KeyError:
         required_vars_present = False
@@ -467,9 +473,9 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
         nc_info_d, nc_aa3830_results_info, aa3830_results_dim
     )
     BaseNetCDF.assign_dim_info_size(nc_info_d, nc_aa3830_results_info, aa3830_np)
-    aa3830_instrument_metadata_d[
-        "ancillary_variables"
-    ] = ancillary_variables  # checkpoint
+    aa3830_instrument_metadata_d["ancillary_variables"] = (
+        ancillary_variables  # checkpoint
+    )
 
     # We have all variables needed; do we have the optode calibration constants?
     try:

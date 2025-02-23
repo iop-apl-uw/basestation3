@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021, 2022, 2023, 2024 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2014, 2015, 2016, 2017, 2019, 2021, 2022, 2023, 2024, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -27,8 +27,9 @@ Optode aa4XXX basestation sensor extension
 
 import numpy as np
 
-from BaseLog import log_error, log_warning, log_debug
 import BaseNetCDF
+import Utils
+from BaseLog import log_debug, log_error, log_warning
 from QC import (
     QC_BAD,
     QC_GOOD,
@@ -39,7 +40,6 @@ from QC import (
     nc_qc_type,
 )
 from TraceArray import trace_array
-import Utils
 
 # instrument types
 instruments = ["aa4330", "aa4831", "aa4831F"]
@@ -509,12 +509,14 @@ def asc2eng(base_opts, module_name, datafile=None):
 
 
 # pylint: disable=too-many-locals
-def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=None):
+def sensor_data_processing(
+    base_opts, module, l_dict=None, eng_f=None, calib_consts=None
+):
     """
     Called from MakeDiveProfiles.py to do sensor specific processing
 
     Arguments:
-    l - MakeDiveProfiles locals() dictionary
+    l_dict - MakeDiveProfiles locals() dictionary
     eng_f - engineering file
     calib_constants - sg_calib_constants object
 
@@ -524,27 +526,32 @@ def sensor_data_processing(base_opts, module, l=None, eng_f=None, calib_consts=N
      1 - no appropriate data found
     """
 
-    if l is None or eng_f is None or calib_consts is None or "results_d" not in l:
+    if (
+        l_dict is None
+        or eng_f is None
+        or calib_consts is None
+        or "results_d" not in l_dict
+    ):
         log_error("Missing arguments for sensor_data_processing - version mismatch?")
         return -1
 
     required_vars_present = True
     try:
-        results_d = l["results_d"]
-        nc_info_d = l["nc_info_d"]
+        results_d = l_dict["results_d"]
+        nc_info_d = l_dict["nc_info_d"]
 
-        sg_epoch_time_s_v = l["sg_epoch_time_s_v"]
+        sg_epoch_time_s_v = l_dict["sg_epoch_time_s_v"]
 
-        ctd_epoch_time_s_v = l["ctd_epoch_time_s_v"]
-        temp_cor_v = l["temp_cor_v"]
-        temp_cor_qc_v = l["temp_cor_qc_v"]
+        ctd_epoch_time_s_v = l_dict["ctd_epoch_time_s_v"]
+        temp_cor_v = l_dict["temp_cor_v"]
+        temp_cor_qc_v = l_dict["temp_cor_qc_v"]
         # NOTE: the use of corrected salinity means we don't get salinities (hence o2)
         # at QC_BAD points, notably at apogee but elsewhere in the water column
         # should we use raw temp and salin (and density?)
-        salin_cor_v = l["salin_cor_v"]
-        salin_cor_qc_v = l["salin_cor_qc_v"]
-        ctd_pressure_v = l["ctd_press_v"]
-        ctd_density_v = l[
+        salin_cor_v = l_dict["salin_cor_v"]
+        salin_cor_qc_v = l_dict["salin_cor_qc_v"]
+        ctd_pressure_v = l_dict["ctd_press_v"]
+        ctd_density_v = l_dict[
             "density_v"
         ]  # Use potential density (per Uchida, et al. 2008)
         ancillary_variables = "temperature salinity ctd_pressure density"

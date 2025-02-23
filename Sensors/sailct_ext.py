@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2010, 2011, 2012, 2020, 2022, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2010, 2011, 2012, 2020, 2022, 2023, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -119,12 +119,12 @@ def ConvertDatToEng(inp_file_name, out_file_name):
     """
     try:
         inp_file = open(inp_file_name, "r")
-    except:
+    except Exception:
         log_error(f"Unable to open {inp_file_name}")
         return 1
     try:
         out_file = open(out_file_name, "w")
-    except:
+    except Exception:
         log_error(f"Unable to open {out_file_name}")
         return 1
 

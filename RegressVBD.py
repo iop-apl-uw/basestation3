@@ -33,6 +33,7 @@ using just nc files (does not use log, eng, or sg_calib_constants)
 """
 
 # fmt: off
+# ruff: noqa
 
 import numpy as np
 import CommLog

@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2023, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -29,11 +29,8 @@ Rockland Micropod logdev basestation sensor extension
 import os
 import shutil
 
-
 import BaseNetCDF
 import Strip1A
-import Utils
-
 from BaseLog import log_error
 
 

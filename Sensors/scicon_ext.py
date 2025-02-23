@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2024 by University of Washington.  All rights reserved.
+## Copyright (c) 2024, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -36,11 +36,10 @@ from scipy.io import loadmat
 
 import BaseNetCDF
 import DataFiles
-import Sensors
 import FileMgr
+import Sensors
 import Utils
-
-from BaseLog import log_error, log_info, log_warning, log_debug
+from BaseLog import log_debug, log_error, log_info, log_warning
 from CalibConst import getSGCalibrationConstants
 
 # Globals
@@ -128,7 +127,7 @@ def process_adcp_dat(
     log_info("Running %s" % cmdline)
     try:
         (sts, _) = Utils.run_cmd_shell(cmdline, timeout=10)
-    except:
+    except Exception:
         log_error("Error running %s" % cmdline, "exc")
         return 1
 
@@ -222,7 +221,7 @@ def process_ctx3_dat(base_opts, scicon_file, output_file, processed_logger_other
     log_info("Running %s" % cmdline)
     try:
         (sts, _) = Utils.run_cmd_shell(cmdline, timeout=10)
-    except:
+    except Exception:
         log_error("Error running %s" % cmdline, "exc")
         return 1
 
@@ -784,7 +783,7 @@ def extract_file_metadata(inp_file_name):
     """
     try:
         inp_file = open(inp_file_name, "rb")
-    except:
+    except Exception:
         log_error("Unable to open %s" % inp_file_name)
         return None, None
 
@@ -936,7 +935,7 @@ def extract_file_data(inp_file_name):
     """
     try:
         inp_file = open(inp_file_name, "r")
-    except:
+    except Exception:
         log_error("Unable to open %s" % inp_file_name)
         return None
 
@@ -953,7 +952,7 @@ def extract_file_data(inp_file_name):
         for i in range(len(raw_strs)):
             try:
                 row.append(np.float64(raw_strs[i]))
-            except:
+            except Exception:
                 log_warning(
                     "Problems converting [%s] to float from line [%s] (%s, line %d) - skipping"
                     % (raw_strs[i], inp_line, inp_file_name, line_count)
@@ -980,12 +979,12 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
     """
     try:
         inp_file = open(inp_file_name, "rb")
-    except:
+    except Exception:
         log_error("Unable to open %s" % inp_file_name)
         return 1
     try:
         out_file = open(out_file_name, "w")
-    except:
+    except Exception:
         log_error("Unable to open %s" % out_file_name)
         return 1
 
@@ -1042,7 +1041,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
                 for s in sg_auxcompass_pqr.split():
                     auxcompass_pqr.append(np.float32(s))
 
-            except:
+            except Exception:
                 log_error(f"Problems processing {auxname} calibration values", "exc")
                 auxcompass_accelcoeff = auxcompass_abc = auxcompass_pqr = None
             else:
@@ -1178,17 +1177,13 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
             for i in range(1, len(cols)):
                 if i == pressure_col_index:
                     out_cols.append(
-                        (
-                            ((cols[i] - sealevel) / df_meta.scale_off[i].scale)
-                            + df_meta.scale_off[i].offset
-                        )
+                        ((cols[i] - sealevel) / df_meta.scale_off[i].scale)
+                        + df_meta.scale_off[i].offset
                     )
                 else:
                     out_cols.append(
-                        (
-                            (cols[i] / df_meta.scale_off[i].scale)
-                            + df_meta.scale_off[i].offset
-                        )
+                        (cols[i] / df_meta.scale_off[i].scale)
+                        + df_meta.scale_off[i].offset
                     )
 
             if auxcompass_accelcoeff is not None:
@@ -1207,7 +1202,7 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
                         auxcompass_abc,
                         auxcompass_pqr,
                     )
-                except:
+                except Exception:
                     log_warning("Error processing %s - listing as NaN" % (out_cols,))
                     for ii in range(3):
                         out_cols[aux_cols.index(outputs[ii])] = np.nan
@@ -1226,9 +1221,9 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
             if (
                 df_meta.instrument.instr_class == "auxCompass"
                 and "pressureCounts" in aux_cols
+                and out_cols[aux_cols.index("pressureCounts")] < 0
             ):
-                if out_cols[aux_cols.index("pressureCounts")] < 0:
-                    out_cols[aux_cols.index("pressureCounts")] += 16777216
+                out_cols[aux_cols.index("pressureCounts")] += 16777216
 
         if out_cols is not None:
             for i in range(len(out_cols)):
@@ -1308,7 +1303,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         for fn in adcp_list:
             try:
                 mf = loadmat(fn["file_name"])
-            except:
+            except Exception:
                 log_error("Unable to load %s" % fn["file_name"], "exc")
                 continue
 
@@ -1338,7 +1333,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                     else:
                         data_cols[col_name] = mf[col_name].transpose()
                     ad2cp_multi_dim_actual.append(col_name)
-            except:
+            except Exception:
                 log_error("Problem processing multi-dim adcp data", "exc")
                 # data_cols.pop(col_name, None)
 
@@ -1381,7 +1376,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
 
     # Create one profile
     data_vectors = []
-    for i in range(num_columns):
+    for _ in range(num_columns):
         data_vectors.append(None)
 
     for c in casts:
@@ -1407,17 +1402,16 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         try:
             BaseNetCDF.nc_var_metadata[nc_var_name]
         except KeyError:
-            if not nc_sensor_mdp_info:
-                if sensor_md:
-                    sensor_tag = "scicon_%s_%s" % (
-                        sensor_md.instrument.instr_instance,
-                        sensor_md.instrument.instr_class,
-                    )
-                    nc_sensor_mdp_dim = "%s_data_point" % sensor_tag
-                    nc_sensor_mdp_info = "%s_info" % nc_sensor_mdp_dim
-                    BaseNetCDF.register_sensor_dim_info(
-                        nc_sensor_mdp_info, nc_sensor_mdp_dim, None, True, None
-                    )  # No clue about time var or instrument
+            if not nc_sensor_mdp_info and sensor_md:
+                sensor_tag = "scicon_%s_%s" % (
+                    sensor_md.instrument.instr_instance,
+                    sensor_md.instrument.instr_class,
+                )
+                nc_sensor_mdp_dim = "%s_data_point" % sensor_tag
+                nc_sensor_mdp_info = "%s_info" % nc_sensor_mdp_dim
+                BaseNetCDF.register_sensor_dim_info(
+                    nc_sensor_mdp_info, nc_sensor_mdp_dim, None, True, None
+                )  # No clue about time var or instrument
             log_warning(
                 "NOTE: Metadata for scicon data %s was not pre-declared by an extension; assuming 'd'"
                 % nc_var_name

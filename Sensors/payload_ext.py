@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2020, 2021, 2022, 2023, 2024 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2020, 2021, 2022, 2023, 2024, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -26,15 +26,15 @@
 Seabird payload CTD basestation sensor extension
 """
 
-import shutil
 import re
+import shutil
 import time
 
 import numpy as np
-import Utils
 
 import BaseNetCDF
-from BaseLog import log_error, log_info, log_debug, log_warning
+import Utils
+from BaseLog import log_debug, log_error, log_info, log_warning
 
 
 def init_logger(module_name, init_dict=None):
@@ -173,12 +173,12 @@ def process_data_files(
         # Convert from hex to eng units
         try:
             fi = open(fc.mk_base_datfile_name(), "r")
-        except:
+        except Exception:
             log_error(f"Could not open {fc.mk_base_datfile_name()} for conversion")
             return 1
         try:
             fo = open(fc.mk_base_engfile_name(), "w")
-        except:
+        except Exception:
             log_error(f"Could not open {fc.mk_base_engfile_name()} for conversion")
             return 1
 
@@ -196,17 +196,17 @@ def process_data_files(
         line_size = 15
         has_O2 = False
 
-        for l in fi.readlines():
-            l = l.rstrip()
-            line += 1
+        for l_line in fi.readlines():
+            l_line = l_line.rstrip()
+            line += 1  # noqa:  SIM113
 
-            values = re.search(pattern, l)
+            values = re.search(pattern, l_line)
             if values and len(values.groupdict()) == n_groups:
                 if header:
                     header = 0
                     # First time through - see if we get a hit with the O2 column.  If so, it
                     # has O2
-                    values_temp = re.search(pattern_O2, l)
+                    values_temp = re.search(pattern_O2, l_line)
                     if values_temp and len(values_temp.groupdict()) == 4:
                         has_O2 = True
                         pattern = pattern_O2
@@ -223,10 +223,10 @@ def process_data_files(
                             "%columns: gpctd.Pressure,gpctd.Temp,gpctd.Cond\n%data:\n"
                         )
 
-                if len(l) > line_size:
+                if len(l_line) > line_size:
                     try:
-                        fo.write(f"%{l}\n")
-                    except:
+                        fo.write(f"%{l_line}\n")
+                    except Exception:
                         log_error(
                             f"Could not write to {fc.mk_base_engfile_name()}", "exc"
                         )
@@ -254,12 +254,12 @@ def process_data_files(
                                 )
                             )
 
-                    except IOError:
+                    except OSError:
                         log_error(
                             f"Could not write to {fc.mk_base_engfile_name()}", "exc"
                         )
                         return 1
-                    except:
+                    except Exception:
                         log_error(
                             "Error processing line %d from %s"
                             % (line, fc.mk_base_datfile_name())
@@ -267,8 +267,8 @@ def process_data_files(
                         ret_val = 1
             else:
                 try:
-                    fo.write(f"%{l}\n")
-                except:
+                    fo.write(f"%{l_line}\n")
+                except Exception:
                     log_error(f"Could not write to {fc.mk_base_engfile_name()}", "exc")
                     return 1
 
@@ -322,12 +322,12 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         # Check the profile for integrity and record the start time
         casts = {}
         cast = None
-        for l in ef["file_header"]:
-            v = re.search(cast_pattern, l)
+        for l_line in ef["file_header"]:
+            v = re.search(cast_pattern, l_line)
             if v:
                 vals = v.groupdict()
                 casts[int(vals["cast"])] = vals
-            v = re.search(upload_pattern, l)
+            v = re.search(upload_pattern, l_line)
             if v:
                 cast = int(v.groupdict()["cast"])
 
@@ -344,7 +344,7 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
         # if "gpctd_start_time_adjust" in calib_consts:
         #    try:
         #        starttime += float(calib_consts["gpctd_start_time_adjust"])
-        #    except:
+        #    except Exception:
         #        log_error("Failed to update GPCTD start time", alert="BAD_GPCTD_CLOCK")
 
         reported_samples = int(c["end"]) - int(c["start"]) + 1

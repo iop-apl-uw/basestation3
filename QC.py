@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -916,9 +916,8 @@ class ProfileDirectives:
         function_tag = values[1]
         f = function_tag
         l_no = len(self.no_prefix)
-        if len(f) > l_no:
-            if f[0:l_no] == self.no_prefix:
-                f = f[l_no:]
+        if len(f) > l_no and f[0:l_no] == self.no_prefix:
+            f = f[l_no:]
         if not (f in self.drv_functions or f in self.drv_predicates):
             if filename and linenum is not None:
                 log_warning(
@@ -1001,9 +1000,8 @@ class ProfileDirectives:
         indices = []
         f = function_tag
         l_no = len(self.no_prefix)
-        if len(f) > l_no:
-            if f[0:l_no] == self.no_prefix:
-                f = f[l_no:]
+        if len(f) > l_no and f[0:l_no] == self.no_prefix:
+            f = f[l_no:]
         if f in self.drv_functions:
             indices = self.eval_set(f, indices)
         elif f in self.drv_predicates:
@@ -1387,7 +1385,7 @@ skip_qc_list = [
 
 def check_in_list(qc_str, qc_list):
     """Check for inclusion of qc_str in a qc list"""
-    for skip_qc in qc_list:
+    for skip_qc in qc_list:  # noqa: SIM110
         if re.match(skip_qc, qc_str):
             return True
     return False
@@ -1399,7 +1397,7 @@ def qc_list_to_points_list(qc_log_list, max_points, is_temp):
     """
     ret_list = []
     qc_pts = set()
-    for jj in range(len(qc_log_list)):
+    for _ in range(len(qc_log_list)):
         ret_list.append(["" for ii in range(max_points)])
     for jj, qc_log_line in enumerate(qc_log_list):
         (qc_str, qc_type, qc_points) = qc_log_line
@@ -1422,7 +1420,7 @@ def qc_list_to_points_list(qc_log_list, max_points, is_temp):
         for ii in qc_points:
             qc_pts.add(ii)
             qc_t = int(qc_type)
-            if qc_t in qc_name_d:
+            if qc_t in qc_name_d:  # noqa: SIM401
                 qc_type_name = qc_name_d[qc_t]
             else:
                 qc_type_name = ""
