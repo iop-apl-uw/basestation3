@@ -346,6 +346,7 @@ main(int argc, char *argv[])
     short          hVel[65536];
     unsigned char  hCorr[65536];
     short          magnHxHyHz[3];
+    int            missing_header_block = 0;
 
     count = 0;
     countAtt = 0;
@@ -382,6 +383,11 @@ main(int argc, char *argv[])
                     printf("\n");
                 }
                 continue;
+            }
+            else if (sync1 == 0xa1) {
+                printf("probably missing heading block\n"); 
+                missing_header_block = 1;
+                break;
             }
             else  if (sync1 != 0xa5) {
                 printf("sync 1 after header block = %x\n", sync1);
@@ -423,6 +429,11 @@ main(int argc, char *argv[])
                 break;
             }
         }
+
+        if (missing_header_block) {
+            fseek(fp, -1, SEEK_CUR);
+        }
+
         while(!feof(fp)) {
             if (fread(&sync, sizeof(unsigned short), 1, fp) != 1)
                 break;
