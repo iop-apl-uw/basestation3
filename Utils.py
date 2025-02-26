@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -52,6 +52,7 @@ import os
 import pathlib
 import pickle
 import re
+import select
 import signal
 import sqlite3
 import stat
@@ -115,6 +116,7 @@ netcdf4_datatypes_nonchar = (
 
 # NC_CHAR
 netcdf4_datatypes = ("S1", "c") + netcdf4_datatypes_nonchar
+
 
 def open_netcdf_file(
     filename: str,
@@ -534,6 +536,39 @@ def check_call(cmd, use_shell=False):
         return 0
 
 
+def read_from_process(p):
+    """Reads stdout and stdeerr from a running process until complete
+    Args:
+        p: open process (from subprocess.Popen)
+
+    Returns:
+        Byte stream of stdout and stderr output from the process
+
+    """
+    outf = io.BytesIO()
+    while p.returncode is None:
+        p.poll()
+
+        ready = select.select([p.stdout, p.stderr], [], [], 0.1)
+
+        if p.stderr in ready[0]:
+            data = p.stderr.read(1024)
+            if len(data) > 0:
+                outf.write(data)
+
+        if p.stdout in ready[0]:
+            data = p.stdout.read(1024)
+            # Read of zero bytes means EOF
+            if len(data) == 0:
+                # break
+                continue
+            else:
+                outf.write(data)
+
+    outf.seek(0)
+    return outf
+
+
 def run_cmd_shell(cmd, timeout=None, shell=True):
     """Runs a program with arguments in a shell context"""
     if not shell:
@@ -545,17 +580,20 @@ def run_cmd_shell(cmd, timeout=None, shell=True):
         shell=shell,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stderr=subprocess.PIPE,
         close_fds=True,
     )
+
+    out_f = None
     if timeout is None:
-        # sts >> 8 to get return code
-        _, sts = os.waitpid(p.pid, 0)
+        out_f = read_from_process(p)
+        sts = p.returncode
     else:
         handler = signal.signal(signal.SIGALRM, _timeout)
         try:
             signal.alarm(timeout)
-            _, sts = os.waitpid(p.pid, 0)
+            out_f = read_from_process(p)
+            sts = p.returncode
         except Exception:
             log_error("Timeout running (%s)" % cmd, "exc")
             sts = None
@@ -563,7 +601,7 @@ def run_cmd_shell(cmd, timeout=None, shell=True):
             signal.signal(signal.SIGALRM, handler)
             signal.alarm(0)
 
-    return (sts, p.stdout)
+    return (sts, out_f)
 
 
 def read_eng_file(eng_file_name):
@@ -1878,7 +1916,10 @@ def dump_mission_cfg(stream: io.TextIO, meta_data_d: dict[str, Any]) -> None:
         for k, v in meta_data_d.items():
             stream.write(f"#  {k}:{v[0]}  #default_type:{v[1]}\n")
 
-def strip_vars(dsi:netCDF4.Dataset, dso:netCDF4.Dataset, strip_names:list[str])->None:
+
+def strip_vars(
+    dsi: netCDF4.Dataset, dso: netCDF4.Dataset, strip_names: list[str]
+) -> None:
     """Copies dsi to dso, excliding any varables in the var_meta dict
 
     Args:
@@ -1922,4 +1963,3 @@ def strip_vars(dsi:netCDF4.Dataset, dso:netCDF4.Dataset, strip_names:list[str])-
 
     for a in dsi.ncattrs():
         dso.setncattr(a, dsi.getncattr(a))
-
