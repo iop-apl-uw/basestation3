@@ -5,8 +5,11 @@
 // unpublished property of the University of Washington. Use, disclosure,
 // or reproduction is prohibited.
 //
+//
+// CRITICAL -fsigned-char
+// gcc -fsigned-char -o sc2mat sc2mat.c
 
-// gcc -o sc2mat sc2mat.c
+#warning "REQUIRED: compile with -fsigned-char"
 
 # include <stdio.h>
 # include <math.h>
