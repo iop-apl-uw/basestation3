@@ -31,8 +31,6 @@ import pytest
 
 import Utils
 
-import pdb
-
 
 @pytest.mark.parametrize("test_timeout", (10, None))
 def test_run_cmd_shell(caplog, test_timeout):
