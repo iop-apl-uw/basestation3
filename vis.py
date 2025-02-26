@@ -430,9 +430,9 @@ async def getLatestFile(glider, request, which, dive=None):
     fmt = 0
     imatch = -1
 
-    rx = [ re.compile(which + '\.(?P<dive>[0-9]{4})\.(?P<cycle>[0-9]{4}?$)'),
-           re.compile(which + '\.(?P<dive>[0-9][0-9]?[0-9]?[0-9]?)\.(?P<cycle>[0-9][0-9]?[0-9]?[0-9]?$)'),
-           re.compile(which + '\.(?P<dive>[0-9][0-9]?[0-9]?[0-9]?$)') ]
+    rx = [ re.compile(which + r'\.(?P<dive>[0-9]{4})\.(?P<cycle>[0-9]{4}?$)'),
+           re.compile(which + r'\.(?P<dive>[0-9][0-9]?[0-9]?[0-9]?)\.(?P<cycle>[0-9][0-9]?[0-9]?[0-9]?$)'),
+           re.compile(which + r'\.(?P<dive>[0-9][0-9]?[0-9]?[0-9]?$)') ]
 
     if dive:
         globs = [f'{which}.{dive:04d}.*', f'{which}.{dive}.*', f'{which}.{dive}*' ]
@@ -1440,13 +1440,13 @@ def attachHandlers(app: sanic.Sanic):
             # files = sorted(files)
 
         if file in ['log', 'eng', 'cap']:
-            pattern = re.compile('p(?P<glider>[0-9]{3})(?P<dive>[0-9]{4})\.[a-z]{3}')
+            pattern = re.compile(r'p(?P<glider>[0-9]{3})(?P<dive>[0-9]{4})\.[a-z]{3}')
         elif file == 'pdoslog':
-            pattern = re.compile('p(?P<glider>[0-9]{3})(?P<dive>[0-9]{4})\.(?P<cycle>[0-9]{3})\.pdos')
+            pattern = re.compile(r'p(?P<glider>[0-9]{3})(?P<dive>[0-9]{4})\.(?P<cycle>[0-9]{3})\.pdos')
         elif file == 'cmdfile':
-            pattern = re.compile('cmdfile\.(?P<dive>[0-9]+).(?P<cycle>[0-9]+)')
+            pattern = re.compile(r'cmdfile\.(?P<dive>[0-9]+).(?P<cycle>[0-9]+)')
         elif file == 'pdosbat':
-            pattern = re.compile('pdoscmds\.bat\.(?P<dive>[0-9]+).(?P<cycle>[0-9]+)')
+            pattern = re.compile(r'pdoscmds\.bat\.(?P<dive>[0-9]+).(?P<cycle>[0-9]+)')
         else:
             pattern = None
  
@@ -3187,7 +3187,7 @@ async def buildMissionTable(app, config=None):
     for k in x['controls'].keys():
         for da in x['controls'][k].keys():
             for index,exp in enumerate(x['controls'][k][da]):
-                x['controls'][k][da][index] = re.compile(exp, re.IGNORECASE)
+                x['controls'][k][da][index] = re.compile(re.escape(exp), re.IGNORECASE)
 
     if app:
         app.ctx.missionTable = missions

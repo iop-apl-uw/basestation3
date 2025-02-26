@@ -24,10 +24,10 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
 
     if capfile and logfile == None:
         currfile = capfile
-        r = re.compile('[0-9]+.[0-9]+,SUSR,N,\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
+        r = re.compile(r'[0-9]+.[0-9]+,SUSR,N,\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
     else:
         currfile = logfile
-        r = re.compile('\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
+        r = re.compile(r'\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
 
     if currfile and await aiofiles.os.path.exists(currfile):
         try:
