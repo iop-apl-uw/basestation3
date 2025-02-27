@@ -83,6 +83,7 @@ import RegressVBD
 import Magcal
 import BaseCtrlFiles
 import parms
+import scicon
 import visauth
 import pilot
 import validate
@@ -2087,9 +2088,13 @@ def attachHandlers(app: sanic.Sanic):
         if not hmac.compare_digest(sigComputed, sigProvided):
             return sanic.response.text('validation not valid')
 
-        dbfile = f'{gliderPath(glider, request)}/sg{glider:03d}.db'
-        d = await parms.state(None, dbfile=dbfile)
-        if which in [ "cmdfile", "science", "targets" ]:
+        if which in [ "cmdfile", "science", "targets", "scicon.sch" ]:
+            if which.startswith("scicon"):
+                (d, _, _, _) = await scicon.state(gliderPath(glider, request))
+            else:
+                dbfile = f'{gliderPath(glider, request)}/sg{glider:03d}.db'
+                d = await parms.state(None, dbfile=dbfile)
+
             (res, err, warn) = validate.validate(which, message['contents'], parms=d)
         else:
             res = [ 'no validator available for this file type, new file automatically accepted' ]
@@ -2144,9 +2149,13 @@ def attachHandlers(app: sanic.Sanic):
         if 'file' not in message or message['file'] != which or 'contents' not in message:
             return sanic.response.text('oops')
 
-        dbfile = f'{gliderPath(glider, request)}/sg{glider:03d}.db'
-        d = await parms.state(None, dbfile=dbfile)
-        if which in [ "cmdfile", "science", "targets" ]:
+        if which in [ "cmdfile", "science", "targets", "scicon.sch" ]:
+            if which.startswith("scicon"):
+                (d, _, _, _) = await scicon.state(gliderPath(glider, request))
+            else:
+                dbfile = f'{gliderPath(glider, request)}/sg{glider:03d}.db'
+                d = await parms.state(None, dbfile=dbfile)
+
             (res, err, warn) = validate.validate(which, message['contents'], parms=d)
         else:
             res = [ 'no validator available for this file type, new file automatically accepted' ]
@@ -3622,7 +3631,11 @@ def usage():
 if __name__ == '__main__':
 
     root = os.getenv('SANIC_ROOTDIR')
-    runMode = MODE_PRIVATE
+    if os.getuid() > 0:
+        runMode = MODE_PRIVATE
+    else:
+        runMode = MODE_PUBLIC
+
     port = 20001
     ssl = False
     certPath = os.getenv("SANIC_CERTPATH") 

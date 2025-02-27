@@ -35,11 +35,13 @@
 
 # ruff: noqa
 
+import re
 import sys
 import os
 import parmdata
 import parms
 import asyncio
+import scicon
  
 def cmdfile(body, parms=None):
     if not parms:
@@ -336,6 +338,61 @@ def science(body, parms=None):
 
     return (res, errors, warnings)
 
+def sciconsch(body, state=None):
+    exp = re.compile(r'(?P<lead>^#[\S\s]*?)?(?P<inst>^[A-Za-z0-9_]+)\s+=\s+{$\s+(?P<def>[^}]*)}$', re.MULTILINE)
+    keys = [ "profile", "dive", "xmit", "dec", "avg", "coeff", "conf", "conf_file" ]
+    defs = [m.groupdict() for m in exp.finditer(body)]
+    res = []
+    errors = 0
+    
+    for d in defs:
+        if state and d['inst'] not in state:        
+            errors = errors + 1
+            res.append(f"unknown instrument {d['inst']}")
+
+        binprev = 0
+        res.append(f"{d['inst']} = {{")
+        for line in d['def'].split('\n'):
+            line = line.strip()
+            if len(line) == 0 or line[0] == '#':
+                continue
+               
+            line = line.split('#', 1)[0] 
+            if len(pcs := [p.strip() for p in line.split('=', 1)]) == 2:
+                if not pcs[0].strip() in keys:
+                    errors = errors + 1
+                    res.append(f"# !! unknown key {pcs[0]} on {d['inst']}") 
+                else:
+                    res.append("   " + line)
+
+            elif len(pcs := line.split(',')) == 2:
+                try: 
+                    dep = float(pcs[0])
+                    secs = float(pcs[1])
+                except:
+                    res.append(f"# !! could not parse depth,secs in {line} on {d['inst']}")
+                    errors = errors + 1
+                    continue
+
+                if dep < binprev:
+                    res.append(f"# !! depth bin out of order in {line} on {d['inst']}")
+                    errors = errors + 1
+                    continue
+
+                if secs == 0:
+                    res.append("   " + line + f" # {binprev:.0f}m-{dep:.0f}m = off")
+                else:
+                    res.append("   " + line + f" # {binprev:.0f}m-{dep:.0f}m = {secs:.2f}s")
+                binprev = dep
+
+            else:
+                res.append(f"# !! unrecognized line {line}")
+                errors = errors + 1
+
+        res.append(f"}} # off below {binprev:.0f}m")
+
+    return (res, errors, 0)
+
 def validate(which, body, parms=None):
     if which == 'cmdfile':
         return cmdfile(body, parms)
@@ -343,12 +400,14 @@ def validate(which, body, parms=None):
         return science(body, parms)
     elif which == 'targets':
         return targets(body, parms)
+    elif which == 'scicon.sch':
+        return sciconsch(body, parms)
 
     return ([ "unknown" ], 1, 0)
 
 if __name__ == "__main__":
     if len(sys.argv) != 4:
-        print("usage: validate logfile [-c|-s|-t] file_to_validate")
+        print("usage: validate logfile [-c|-s|-t|-i] file_to_validate")
         sys.exit(1)
 
     if sys.argv[1] != '-' and os.path.exists(sys.argv[1]):
@@ -368,8 +427,11 @@ if __name__ == "__main__":
     elif which == '-s':
         d = asyncio.run(parms.state(None, logfile=sys.argv[1], cmdfile=(sys.argv[2] if len(sys.argv) == 3 else None)))
         (res, e, w) = science(f.read(), parms=d)
+    elif which == '-i':
+        (d, _, _, _) = asyncio.run(scicon.state(os.path.dirname(sys.argv[3])))
+        (res, e, w) = sciconsch(f.read(), state=d)
     else:
-        print("usage: validate logfile [-c|-s|-t] file_to_validate")
+        print("usage: validate logfile [-c|-s|-t|-i] file_to_validate")
         sys.exit(1)
  
     print('\n'.join(res))

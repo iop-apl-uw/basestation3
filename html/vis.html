@@ -437,21 +437,26 @@
         }
     }
 
-    function formatValidatorChanges(text) {
-        var changes = '<table>';
-        var other = '';
-        var pcs;
-        for (var line of text.split('\n')) {
-            if (line.includes('will change from')) {
-                pcs = line.split(' ');
-                changes = changes + `<tr><td>${pcs[2]}&nbsp;&nbsp;&nbsp;</td><td>${pcs[6]}</td><td>&#10230;</td><td>${pcs[8]}</td></tr>`
+    function formatValidatorChanges(file, text) {
+        if (file == 'cmdfile') {
+            var changes = '<table>';
+            var other = '';
+            var pcs;
+            for (var line of text.split('\n')) {
+                if (line.includes('will change from')) {
+                    pcs = line.split(' ');
+                    changes = changes + `<tr><td>${pcs[2]}&nbsp;&nbsp;&nbsp;</td><td>${pcs[6]}</td><td>&#10230;</td><td>${pcs[8]}</td></tr>`
+                }
+                else  {
+                    other = other + line + '<br>';
+                }
             }
-            else  {
-                other = other + line + '<br>';
-            }
+            changes = changes + '</table>';
+            return changes + '<hr>' + other;
         }
-        changes = changes + '</table>';
-        return changes + '<hr>' + other;
+        else {
+            return '<pre>' + text + '</pre>';
+        }
     }
 
     const miniLoader = '<div class="loader-container-mini"><div class="bouncing-dots"><div class="dot"></div><div class="dot dot1"></div><div class="dot"></div></div></div>';
@@ -480,7 +485,9 @@
                 openLoginForm(function() { loggedIn(); saveControl(file, json); }, "");
                 return;
             }
-            changes = formatValidatorChanges(text);
+            changes = formatValidatorChanges(file, text);
+           
+            changes = changes.replace('saved ok', '<b>saved ok</b>'); 
             openMessagePopup(changes, false, null);
             if (!changes.includes("saved ok")) {
                 controlFileMarkDirty(file);
@@ -522,7 +529,7 @@
                 console.log('validate ' + text + ' ' + error);
                 return;
             }
-            txt = formatValidatorChanges(data['results']); 
+            txt = formatValidatorChanges(file, data['results']); 
             if ('status' in data && data['status'] == 'ok') {    
 {% if noSave == false %}
                 openMessagePopup(txt, true, function() { saveControl(file, data); } );
@@ -531,6 +538,7 @@
 {% endif %}
             }
             else {
+                txt = txt + '<p><b>errors detected</b>'
                 openMessagePopup(txt, false, null);
             }
         })
