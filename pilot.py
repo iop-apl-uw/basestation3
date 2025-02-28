@@ -1,8 +1,36 @@
-# ruff: noqa
-import aiosqlite
+## Copyright (c) 2025  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 import asyncio
 import sys
+
+import aiosqlite
 from anyio import Path
+
 
 def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
     data = {}
@@ -24,7 +52,7 @@ async def pilotRecs(path:str, glider:int):
         try:
             await cur.execute("SELECT dive,pitch_flying_rmse,pitch_linear_C_PITCH,pitch_linear_PITCH_GAIN,pitch_linear_rmse,pitch_fixed_C_PITCH,pitch_fixed_PITCH_GAIN,pitch_fixed_rmse,pitch_shift_C_PITCH,pitch_shift_PITCH_GAIN,pitch_shift_PITCH_VBD_SHIFT,pitch_shift_rmse,roll_C_ROLL_DIVE,roll_C_ROLL_CLIMB,turn_centered_C_ROLL_DIVE,turn_centered_C_ROLL_CLIMB,turn_all_C_ROLL_DIVE,turn_all_C_ROLL_CLIMB,vert_vel_flying_rmse,vert_vel_buoyancy_rmse,vert_vel_buoyancy_C_VBD,vert_vel_hd_C_VBD,vert_vel_hd_rmse,vert_vel_regress_rmse,vert_vel_regress_C_VBD,log_C_PITCH,log_C_VBD,log_C_ROLL_DIVE,log_C_ROLL_CLIMB,log_PITCH_GAIN,log_PITCH_VBD_SHIFT FROM dives ORDER BY dive DESC LIMIT 1")
             row = await cur.fetchone()
-        except aiosqlite.OperationalError as e:
+        except aiosqlite.OperationalError:
             return (None, None, None)
 
     if row['pitch_flying_rmse']:

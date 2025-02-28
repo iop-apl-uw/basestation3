@@ -33,16 +33,16 @@
 # about parameter values and is more sensitive to 
 # proper selection of the logfile used as the reference
 
-# ruff: noqa
-
+import asyncio
+import os
 import re
 import sys
-import os
+
 import parmdata
 import parms
-import asyncio
 import scicon
- 
+
+
 def cmdfile(body, parms=None):
     if not parms:
         d = parmdata.parms
@@ -69,7 +69,7 @@ def cmdfile(body, parms=None):
 
         try:
             pcs = line.split(',')
-        except:
+        except Exception:
             res.append(f"unknown content line {linenum} ({line})")
             warnings = warnings + 1
             continue
@@ -86,19 +86,19 @@ def cmdfile(body, parms=None):
             if d[p]['type'] == 'INT':
                 try:
                     v = int(pcs[1])
-                except:
+                except Exception:
                     res.append(f"${p},{pcs[1]} must be an integer value")
                     errors = errors + 1
                     continue
 
                 if 'menufield' in d[p]:
-                    if not v in [ x['value'] for x in d[p]['menufield'] ]:
+                    if v not in [ x['value'] for x in d[p]['menufield'] ]:
                         res.append(f"${p},{pcs[1]} has an unrecognized value") 
                         errors = errors + 1
                         continue
-                    try:
+                    try: # noqa: SIM105
                         note = '(' + next(x for x in d[p]['menufield'] if x['value'] == v)['function'] + ')'
-                    except:
+                    except Exception:
                         pass
                 elif 'bitfield' in d[p]:
                     bits = [ x['value'] for x in d[p]['bitfield'] ]
@@ -109,9 +109,9 @@ def cmdfile(body, parms=None):
                     else:    
                         for b in [ x['value'] for x in d[p]['bitfield'] ]:
                             if b & v:
-                                try:
+                                try: # noqa: SIM105
                                     notes.append(next(x for x in d[p]['bitfield'] if x['value'] == b)['function'])
-                                except:
+                                except Exception:
                                     pass
                                 
                                 total = total + b
@@ -127,7 +127,7 @@ def cmdfile(body, parms=None):
             else:
                 try:
                     v = float(pcs[1])
-                except:
+                except Exception:
                     res.append(f"${p},{pcs[1]} must be a numeric value")
                     errors = errors + 1
                     continue
@@ -187,7 +187,7 @@ def targets(body, parms=None):
                 res.append(f"parse error line {linenum}")
                 errors = errors + 1
                 continue
-        except:
+        except Exception:
             res.append(f"parse error line {linenum}")
             errors = errors + 1
             continue
@@ -206,9 +206,9 @@ def targets(body, parms=None):
                 res.append(f"target {name} has unknown field {flds[0]}")
                 warnings = warnings + 1
     
-        if 'lat' in target and 'lon' in target and 'radius' in target and 'goto' in target:
+        if 'lat' in target and 'lon' in target and 'radius' in target and 'goto' in target:  # noqa: SIM114
             targets.append(target)
-        elif 'head' in target and 'goto' in target:
+        elif 'head' in target and 'goto' in target:  # noqa: SIM114
             targets.append(target) 
         else:
             res.append(f"target {name} is missing required fields")
@@ -223,7 +223,7 @@ def targets(body, parms=None):
                     match = True
                     break
 
-            if match == False:
+            if not match:
                 res.append(f"invalid goto on target {t['name']}")
                 errors = errors + 1 
     
@@ -238,7 +238,7 @@ def targets(body, parms=None):
             else:
                 txt = txt + f"    {t['name']}"
 
-            for fld in t.keys():
+            for fld in t:
                 if fld != 'name':
                     txt = txt + f" {fld}={t[fld]}"
         
@@ -251,7 +251,7 @@ def science(body, parms=None):
         d = parmdata.parms
     else:
         d = parms
-    if d == None:
+    if d is None:
         d = parmdata.parms
 
     errors = 0
@@ -330,7 +330,7 @@ def science(body, parms=None):
     if errors == 0:
         for s in specs:
             txt = f"  {s['depth']}"
-            for fld in s.keys():
+            for fld in s:
                 if fld != 'depth':
                     txt = txt + f" {fld}={s[fld]}"
             
@@ -359,7 +359,7 @@ def sciconsch(body, state=None):
                
             line = line.split('#', 1)[0] 
             if len(pcs := [p.strip() for p in line.split('=', 1)]) == 2:
-                if not pcs[0].strip() in keys:
+                if pcs[0].strip() not in keys:
                     errors = errors + 1
                     res.append(f"# !! unknown key {pcs[0]} on {d['inst']}") 
                 else:
@@ -369,7 +369,7 @@ def sciconsch(body, state=None):
                 try: 
                     dep = float(pcs[0])
                     secs = float(pcs[1])
-                except:
+                except Exception:
                     res.append(f"# !! could not parse depth,secs in {line} on {d['inst']}")
                     errors = errors + 1
                     continue

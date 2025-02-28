@@ -25,21 +25,18 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# ruff: noqa
-
-import time
-import os.path
-from parse import parse
-import aiosqlite
-from datetime import datetime
-import math
-import Utils
-import aiofiles
-import CommLog
-import sys
 import asyncio
-import aiofiles.os
+import os.path
 import sys
+import time
+
+import aiofiles
+import aiofiles.os
+import aiosqlite
+
+import CommLog
+import Utils
+
 
 async def getCmdfileDirective(cmdfile):
     cmdfileDirective = 'unknown'
@@ -63,12 +60,11 @@ def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
     return data
 
 async def collectSummary(glider, path):
-    import CalibConst
 
     commlogfile = f'{path}/comm.log'
     dbfile      = f'{path}/sg{glider:03d}.db'
     cmdfile     = f'{path}/cmdfile'
-    calibfile   = f'{path}/sg_calib_constants.m'
+    # calibfile   = f'{path}/sg_calib_constants.m'
 
     try:
         statinfo = await aiofiles.os.stat(commlogfile)
@@ -98,7 +94,7 @@ async def collectSummary(glider, path):
     elif hasattr(commlog, 'sessions'):
         i = len(commlog.sessions) - 1
         while i >= 0 and commlog.sessions[i].gps_fix is None: 
-            i = i - 1;
+            i = i - 1
 
         session = commlog.sessions[i]
   
@@ -164,14 +160,14 @@ async def collectSummary(glider, path):
      
     try:
         mtime = await aiofiles.os.path.getctime(commlogfile) 
-    except:
+    except Exception:
         mtime = 0
 
     out = {}
 
     try:
         cmdfileDirective = await getCmdfileDirective(cmdfile)
-    except:
+    except Exception:
         cmdfileDirective = 'unknown'
 
     try:
@@ -268,8 +264,8 @@ async def collectSummary(glider, path):
     out['internalPressure'] = data['log_INTERNAL_PRESSURE']
     out['internalPressureSlope'] = data['log_INTERNAL_PRESSURE_slope']
 
-    out['sm_pitch'] = data['log__SM_ANGLEo'];
-    out['sm_depth'] = data['log__SM_DEPTHo'];
+    out['sm_pitch'] = data['log__SM_ANGLEo']
+    out['sm_depth'] = data['log__SM_DEPTHo']
 
     out['impliedVolmax'] = data['implied_volmax']
     out['impliedVolmaxSlope'] = data['implied_volmax_slope']
@@ -279,12 +275,12 @@ async def collectSummary(glider, path):
     out['crits']  = data['criticals']
 
     out['enduranceBasis'] = 'model'
-    out['enduranceEndT'] = data['log_gps_time'] + data['energy_days_remain_Modeled']*86400;
+    out['enduranceEndT'] = data['log_gps_time'] + data['energy_days_remain_Modeled']*86400
     out['enduranceDays'] = data['energy_days_remain_Modeled']
     out['enduranceDives'] = data['energy_dives_remain_Modeled']
     try:
         out['missionStart'] = start['log_gps2_time']
-    except:
+    except Exception:
         out['missionStart'] = 0
  
     return out
