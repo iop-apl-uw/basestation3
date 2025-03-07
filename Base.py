@@ -1204,7 +1204,7 @@ def process_pdoscmd_log(base_opts, pdos_logfile_name, instrument_id):
                                fc.dive_number(),
                                int(ext),
                                'pdoslog',
-                               os.path.basename(fc.mk_base_pdos_logfile_name()) );
+                               os.path.basename(fc.mk_base_pdos_logfile_name()) )
         return 0
     else:
         log_error("Don't know how to deal with a non-seaglider pdos file")

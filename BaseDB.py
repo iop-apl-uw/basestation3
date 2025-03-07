@@ -44,7 +44,6 @@ import sys
 import time
 import traceback
 import warnings
-
 from pathlib import Path
 
 import numpy
@@ -1340,10 +1339,8 @@ def rebuildControlHistory(base_opts):
     cur = con.cursor()
     try:
         cur.execute("SELECT dive FROM calls ORDER BY dive DESC LIMIT 1")
-        maxdv = cur.fetchone()[0]
     except Exception:
         print("no dive info available")
-        maxdv = -1
 
     cur.close()
 
