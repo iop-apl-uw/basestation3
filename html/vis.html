@@ -812,11 +812,11 @@
 
     function setVisibility(elt) {
 {% if runMode == 'pilot' %}
-        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv', 'pilotWheelDiv', 'searchToolDiv'];
+        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv', 'pilotWheelDiv', 'searchToolDiv'];
 {% else %}
-        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'changelogDiv', 'engfileDiv', 'capfileDiv'];
+        const divs = ['mainImage', 'mainDiv', 'mainTable', 'logDiv', 'plotlyDiv', 'logfileDiv', 'notificationsDiv', 'engfileDiv', 'capfileDiv'];
 {% endif %}
-        const noflowDivs = ['searchToolDiv', 'changelogDiv'];
+        const noflowDivs = ['searchToolDiv']; // , 'changelogDiv'];
 
         for (var d of divs) {
             if (d != elt) $(d).classList.add('hide');
@@ -1157,6 +1157,8 @@
             fetch(q)
             .then(res => res.text())
             .then(text => {
+                var pdl, pdc;
+
                 if (text == "none" || text.includes("authorization failed"))
                     return;
 
@@ -1178,8 +1180,31 @@
                 
                 html = '';
                 for (d of data) {
-                    html += '<b>' + d['fullname'] + '</b>';
-                    html += '<div style="margin-left:40px;"><pre>' + d['contents'] + '</pre></div>';
+                    if (!('used' in d)) {
+                        if (d['file'] != 'pdoslog') {
+                            html += '<b>' + d['fullname'] + '</b>';
+                            html += '<div style="margin-left:40px;"><pre>' + d['contents'] + '</pre></div>';
+                            if (d['file'] == 'pdoscmds.bat' && 'cycle' in d) {
+                                pdl = data.find(e => e['file'] == 'pdoslog' && e['cycle'] == d['cycle'] && e['dive'] == d['dive']);                            
+                                if (pdl && !('used' in pdl)) {
+                                    html += '<b>' + pdl['fullname'] + '</b>';
+                                    html += '<div style="margin-left:40px;"><pre>' + pdl['contents'] + '</pre></div>';
+                                    pdl['used'] = true;
+                                }
+                            }
+                        }
+                        else {
+                            pdc = data.find(e => e['file'] == 'pdoscmds.bat' && e['cycle'] == d['cycle'] && e['dive'] == d['dive']);
+                            if (pdc && !('used' in pdc)) {
+                                html += '<b>' + pdc['fullname'] + '</b>';
+                                html += '<div style="margin-left:40px;"><pre>' + pdc['contents'] + '</pre></div>';
+                                pdc['used'] = true;
+                            }
+                            html += '<b>' + d['fullname'] + '</b>';
+                            html += '<div style="margin-left:40px;"><pre>' + d['contents'] + '</pre></div>';
+                        }
+                    }
+                    d['used'] = true;
                 }
                 $('changelogFilesContent').innerHTML = html;
             })
@@ -1451,11 +1476,11 @@
         }
     }
 
-    function showChangelog() {
-        setVisibility('changelogDiv');
-        currElt = 'changelog';
-        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
-    }
+//    function showChangelog() {
+//        setVisibility('changelogDiv');
+//        currElt = 'changelog';
+//        $('diveIndicator').innerHTML = 'dive ' + currDive + ': ' + currElt;
+//    }
 
     function loadAbout(mission, org) {
         var cell, t, tbody, row;
@@ -1497,7 +1522,7 @@
     }
 
     function changeWheelPane(file) {
-        const panes = ["Trim", "Cmdfile", "Science", "Targets", "Logs"];
+        const panes = ["Trim", "Cmdfile", "Science", "Targets", "Logs", "History"];
         for (p of panes) {
             if (file != p) {
                 $('pilotWheel' + p).classList.add('hide');
@@ -2778,13 +2803,13 @@ parms[p]
                 notify = 'notify';
         }
 
-        html += '<h3 onclick="showChangelog(); return false;" style="color:blue;">parameter changes</h3><p><table style="margin-left:40px;">';
+        html += '<h3 onclick="showPilotWheel(); changeWheelPane(\'History\'); return false;" style="color:blue;">parameter changes</h3><p><table style="margin-left:40px;">';
         for (i = 0 ; i < deltas['parm'].length; i++) {
             pieces = deltas['parm'][i];
             html += `<tr><td><a target="parms" href=\"parms#${pieces['parm'].slice(1)}\">${pieces['parm']}</a>&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
         } 
         
-        html += '</table><p><h3 onclick="showChangelog(); return false;" style="color:blue;">control files</h3><p>';
+        html += '</table><p><h3 onclick="showPilotWheel(); changeWheelPane(\'History\'); return false;" style="color:blue;">control files</h3><p>';
         for (i = 0 ; i < deltas['file'].length; i++) {
             html += '<b>' + deltas['file'][i]['file'] + '</b>';
             html += '<div style="margin-left:40px;"><pre>' + deltas['file'][i]['contents'] + '</pre></div>';
@@ -3075,8 +3100,8 @@ parms[p]
                 showCap();
             else if (currElt == 'notifications')
                 showNotifications();
-            else if (currElt == 'changelog')
-                showChangelog();
+            else if (currElt == 'pilotWheel') // 'changelog')
+                showPilotWheel(); // showChangelog();
             else if (currElt == 'table')
                 showTable();
             else if (currElt.includes('plotly')) {
@@ -4232,6 +4257,7 @@ parms[p]
             <span id="tabCmdfile" class="spanClick" onclick="changeWheelPane('Cmdfile'); return false;">cmdfile</span> <b>&#124;</b>
             <span id="tabScience" class="spanClick" onclick="changeWheelPane('Science'); return false;">science</span> <b>&#124;</b>
             <span id="tabTargets" class="spanClick" onclick="changeWheelPane('Targets'); return false;">targets</span> <b>&#124;</b>
+            <span id="tabHistory" class="spanClick" onclick="changeWheelPane('History'); return false;">history</span> <b>&#124;</b>
             <span id="tabLogs" class="spanClick" onclick="changeWheelPane('Logs'); return false;">logs</span> 
         </div>
        
@@ -4425,32 +4451,32 @@ parms[p]
                 </div>
             </div>
         </div>
+        <div id="pilotWheelHistory" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('pilotWheelHistory');" class="hide">
+            <div id="changelogParms">
+                Sort by
+                <input type="radio" id="radSortDives" name="changelogSortParm" value="dive" checked onchange="buildChangelog(1);">
+                <label for="radSortDives">dive</label>
+                <input type="radio" id="radSortParms" name="changelogSortParm" value="parm" onchange="buildChangelog(1);"> 
+                <label for="radSortParms">parameter</label>
+                <p>
+                <div id="changelogTable">
+                </div>
+            </div>
+            <div id="changelogFiles">
+                Sort by
+                <input type="radio" id="radFileDives" name="changelogSortFile" value="dive" checked onchange="buildChangelog(2);">
+                <label for="radFileDives">dive</label>
+                <input type="radio" id="radFileParms" name="changelogSortFile" value="file" onchange="buildChangelog(2);"> 
+                <label for="radFileParms">file</label>
+                <p>
+                <div id="changelogFilesContent">
+                </div>
+            </div>
+        </div>
     </div>
 {% endif %}
     <div id="logDiv" class="hide"></div>
     <div id="notificationsDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('notificationsDiv');" class="hide"></div>
-    <div id="changelogDiv" style="margin-left:20px; text-align:left;" oncontextmenu="parameterHelp('changelogDiv');" class="hide">
-        <div id="changelogParms">
-            Sort by
-            <input type="radio" id="radSortDives" name="changelogSortParm" value="dive" checked onchange="buildChangelog(1);">
-            <label for="radSortDives">dive</label>
-            <input type="radio" id="radSortParms" name="changelogSortParm" value="parm" onchange="buildChangelog(1);"> 
-            <label for="radSortParms">parameter</label>
-            <p>
-            <div id="changelogTable">
-            </div>
-        </div>
-        <div id="changelogFiles">
-            Sort by
-            <input type="radio" id="radFileDives" name="changelogSortFile" value="dive" checked onchange="buildChangelog(2);">
-            <label for="radFileDives">dive</label>
-            <input type="radio" id="radFileParms" name="changelogSortFile" value="file" onchange="buildChangelog(2);"> 
-            <label for="radFileParms">file</label>
-            <p>
-            <div id="changelogFilesContent">
-            </div>
-        </div>
-    </div>
     
     
     <div id="plotlyDiv" class="hide">

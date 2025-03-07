@@ -296,7 +296,7 @@
         // width: 60%;
         // flex-grow: 1;
     } 
-    #changelogDiv {
+    #pilotWheelHistory {
         display: grid;
         /* overflow-y: none; */
         grid-template-columns: 0.5fr 0.5fr;

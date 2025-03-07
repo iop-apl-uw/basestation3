@@ -45,6 +45,8 @@ import time
 import traceback
 import warnings
 
+from pathlib import Path
+
 import numpy
 import pandas as pd
 
@@ -921,7 +923,7 @@ def prepCallsChangesFiles(base_opts, dbfile=None):
     cur.execute("DROP TABLE IF EXISTS files;")
     cur.execute("CREATE TABLE calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, sms INTEGER, iridLat FLOAT, iridLon FLOAT, irid_t FLOAT, PRIMARY KEY (dive,cycle,call));")
     cur.execute("CREATE TABLE changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
-    cur.execute("CREATE TABLE files(dive INTEGER NOT NULL, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
+    cur.execute("CREATE TABLE files(dive INTEGER NOT NULL, cycle INTEGER, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
 
     cur.close()
 
@@ -1012,7 +1014,7 @@ def prepDivesGC(base_opts):
 
     log_info("prepDivesGC db closed")
 
-currentSchemaVersion = 1
+currentSchemaVersion = 2
 
 def checkSchema(base_opts, con):
     if con is None:
@@ -1053,7 +1055,10 @@ def checkSchema(base_opts, con):
                     mycon.cursor().execute("ALTER TABLE calls ADD COLUMN iridLon FLOAT;")
                 if 'irid_t' not in cols:
                     mycon.cursor().execute("ALTER TABLE calls ADD COLUMN irid_t FLOAT;")
-            # elif i == 1: # step from 1 to 2
+            elif i == 1: # step from 1 to 2
+                cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(files)').fetchall() ]
+                if 'cycle' not in cols:
+                    mycon.cursor().execute("ALTER TABLE files ADD COLUMN cycle INTEGER;")
             # elif i == 2:
             # elif i == 3:
         
@@ -1270,7 +1275,7 @@ def addSlopeValToDB(base_opts, dive_num, var, con=None):
         mycon.close()
         log_info("addSlopeValToDB db closed")
 
-def logControlFile(base_opts, dive, filename, fullname, con=None):
+def logControlFile(base_opts, dive, cycle, filename, fullname, con=None):
 
     if con is None:
         mycon = Utils.open_mission_database(base_opts)
@@ -1311,7 +1316,7 @@ def logControlFile(base_opts, dive, filename, fullname, con=None):
                 contents = ''
 
         try:
-            cur.execute("REPLACE INTO files(dive,file,fullname,contents) VALUES(?,?,?,?);", (dive, os.path.basename(filename), os.path.basename(fullname), contents))
+            cur.execute("REPLACE INTO files(dive,cycle,file,fullname,contents) VALUES(?,?,?,?,?);", (dive, cycle, os.path.basename(filename), os.path.basename(fullname), contents))
         except Exception as e:
             log_error(f"{e} inserting file")
 
@@ -1330,29 +1335,35 @@ def rebuildControlHistory(base_opts):
     con = Utils.open_mission_database(base_opts)
     log_info("rebuildControlHistory db opened")
 
-    path = base_opts.mission_dir
+    path = Path(base_opts.mission_dir)
 
     cur = con.cursor()
     try:
-        cur.execute("SELECT dive FROM dives ORDER BY dive DESC LIMIT 1")
+        cur.execute("SELECT dive FROM calls ORDER BY dive DESC LIMIT 1")
         maxdv = cur.fetchone()[0]
     except Exception:
+        print("no dive info available")
         maxdv = -1
 
     cur.close()
 
-    for i in range(0, maxdv + 1):
-        for which in ['targets', 'science', 'scicon.sch', 'pdoscmds.bat', 'tcm2mat.cal']:
-            fullname = f'{which}.{i}'
-            cmdname = os.path.join(path, fullname)
-            r = glob.glob(f'{cmdname}.*')
-            if len(r) > 0:
-                mx = max( [ x.split('.')[-1] for x in r ] )
-                fullname = f'{which}.{i}.{mx}'
-                cmdname = os.path.join(path, fullname)
-                
-            if os.path.exists(cmdname):
-                logControlFile(base_opts, i, which, fullname, con=con)
+    for which in ['targets', 'science', 'scicon.sch', 'pdoscmds.bat', 'tcm2mat.cal', 'pdoslog']:
+        if which == 'pdoslog':
+            r = sorted(path.glob(f'p{base_opts.instrument_id:03d}????.???.pdos'))
+        else:
+            r = sorted(path.glob(f'{which}.????.????'))
+
+        for f in r:
+            if which == 'pdoslog':
+                pcs = f.name.split('.')
+                dv = int(pcs[0][4:8])
+                cyc = int(pcs[1])
+            else:
+                pcs = f.name.split('.')
+                dv = int(pcs[-2])
+                cyc = int(pcs[-1])        
+
+            logControlFile(base_opts, dv, cyc, which, f.name, con=con)
 
     try:
         con.commit()

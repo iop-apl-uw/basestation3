@@ -174,7 +174,14 @@
                 window.location.replace('/setup');
             }
             else if (d['status'] == 'authorized') {
-                openMessagePopup('successfully logged in', false, loginCallback);
+                var txt = 'successfully logged in';
+                if ('fails' in d && d['fails'] > 0)
+                    txt = txt + `<br>${d['fails']} previous failed attempts`;
+                if ('previous' in d) {
+                    var date = new Date(Math.floor(d['previous'])*1000).toISOString().replace('T', ' ');
+                    txt = txt + `<br>last login attempt ${date}`;
+                }
+                openMessagePopup(txt, false, loginCallback);
             }
             else {
                 openMessagePopup(d['msg'], true, function() { openLoginForm(loginCallback, null); });

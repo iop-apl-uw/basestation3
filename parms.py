@@ -112,7 +112,7 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
                                     continue
  
                             if f"{d[p]['current']}" != f"{n}":
-                                print(f"changing {p} {d[p]['current']} to {n}")
+                                # print(f"changing {p} {d[p]['current']} to {n}")
                                 d[p]['waiting'] = n
         except Exception:
             pass

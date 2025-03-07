@@ -1171,7 +1171,7 @@ def check_file_fragments(
     return ret_val
 
 
-def process_pdoscmd_log(pdos_logfile_name, instrument_id):
+def process_pdoscmd_log(base_opts, pdos_logfile_name, instrument_id):
     """Processes a pdos_logfile.  These file names are outside the normal rules of
     file processing, so are handled in this different routine
 
@@ -1198,6 +1198,13 @@ def process_pdoscmd_log(pdos_logfile_name, instrument_id):
                 return 1
         else:
             shutil.copyfile(pdos_logfile_1a_name, fc.mk_base_pdos_logfile_name())
+
+        _, ext = os.path.splitext(fc.full_filename())
+        BaseDB.logControlFile( base_opts,
+                               fc.dive_number(),
+                               int(ext),
+                               'pdoslog',
+                               os.path.basename(fc.mk_base_pdos_logfile_name()) );
         return 0
     else:
         log_error("Don't know how to deal with a non-seaglider pdos file")
@@ -1836,7 +1843,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             os.path.basename(i) not in processed_pdos_logfiles_dict
             or os.path.getmtime(os.path.join(base_opts.mission_dir, i))
             > processed_pdos_logfiles_dict[os.path.basename(i)]
-        ) and not process_pdoscmd_log(i, instrument_id):
+        ) and not process_pdoscmd_log(base_opts, i, instrument_id):
             new_pdos_logfiles_processed.append(os.path.basename(i))
 
     # PDos logs notification
@@ -2081,6 +2088,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     BaseDB.logControlFile(
                         base_opts,
                         backup_dive_num,
+                        backup_call_cycle,
                         os.path.basename(backup_filename),
                         os.path.basename(backup_target_filename),
                     )
