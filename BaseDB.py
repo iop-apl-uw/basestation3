@@ -1531,6 +1531,16 @@ def main():
                     "action": "store_true",
                 },
             ),
+            "rebuild_history": BaseOptsType.options_t(
+                False,
+                ("BaseDB",),
+                ("--rebuild_history",),
+                bool,
+                {
+                    "help": "rebuild control file history",
+                    "action": "store_true",
+                },
+            ),
 
         },
     )
@@ -1566,6 +1576,9 @@ def main():
 
     if base_opts.init_db:
         createDB(base_opts)
+
+    if base_opts.rebuild_history:
+        rebuildControlHistory(base_opts)
 
     if PlotUtils.setup_plot_directory(base_opts):
         log_warning(
