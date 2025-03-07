@@ -2119,10 +2119,10 @@ def attachHandlers(app: sanic.Sanic):
                     logname = 'pilot.log'
 
                 async with aiofiles.open(f'{gliderPath(glider, request)}/{logname}', 'a') as log:
-                    log.write(f"\n### {tU} () {date}\n")
-                    log.write(f"+++ {which} ({size} bytes, {checksum} checksum)\n")
-                    log.write(message['contents'])
-                    log.write('\n'.join(res))
+                    await log.write(f"\n### {tU} () {date}\n")
+                    await log.write(f"+++ {which} ({size} bytes, {checksum} checksum)\n")
+                    await log.write(message['contents'])
+                    await log.write('\n'.join(res))
 
             except Exception as e:
                 res.append(f"error saving {which}, {str(e)}")
