@@ -217,7 +217,8 @@ def get_mission_timeseries_name(base_opts, direc=None, basename="timeseries"):
     ignore_fm = True
     if base_opts:
         mydir = base_opts.mission_dir
-        ignore_fm = base_opts.ignore_flight_model
+        if hasattr(base_opts, "ignore_flight_model"):
+            ignore_fm = base_opts.ignore_flight_model
     elif direc:
         mydir = direc
     else:
