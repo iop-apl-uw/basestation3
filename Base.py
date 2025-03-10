@@ -1200,11 +1200,13 @@ def process_pdoscmd_log(base_opts, pdos_logfile_name, instrument_id):
             shutil.copyfile(pdos_logfile_1a_name, fc.mk_base_pdos_logfile_name())
 
         _, ext = os.path.splitext(fc.full_filename())
-        BaseDB.logControlFile( base_opts,
-                               fc.dive_number(),
-                               int(ext),
-                               'pdoslog',
-                               os.path.basename(fc.mk_base_pdos_logfile_name()) )
+        BaseDB.logControlFile(
+            base_opts,
+            fc.dive_number(),
+            int(ext.lstrip(".")),
+            "pdoslog",
+            os.path.basename(fc.mk_base_pdos_logfile_name()),
+        )
         return 0
     else:
         log_error("Don't know how to deal with a non-seaglider pdos file")
