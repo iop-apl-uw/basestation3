@@ -30,7 +30,7 @@
 
 
 from orjson import dumps,loads
-from json2html import *
+from json2html import json2html
 import random
 import time
 import calendar
