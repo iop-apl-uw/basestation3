@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -31,6 +31,7 @@
 """Run processing on behalf of glider accounts"""
 
 import argparse
+import collections
 import os
 import pathlib
 import pdb
@@ -42,7 +43,9 @@ import sys
 import threading
 import time
 import traceback
+import uuid
 
+import orjson
 import sdnotify
 from inotify_simple import INotify, flags
 
@@ -64,14 +67,18 @@ base_runner_lockfile_name = ".base_runner_lockfile"
 previous_runner_time_out = 10
 
 known_scripts = ("BaseLogin.py", "GliderEarlyGPS.py", "Base.py")
-docker_scripts = "Base.py"
+queued_scripts = ("Base.py",)
+docker_scripts = ("Base.py",)
 
 dog_stroke_interval = 10
-inotify_read_timeout = 5 * 1000  # In milliseconds
+inotify_read_timeout = 1 * 1000  # In milliseconds
 
 DEBUG_PDB = False
 
 exit_event = threading.Event()
+
+job_queues = collections.defaultdict(collections.deque)
+running_jobs = {}
 
 
 def quit_func(signo, _frame):
@@ -173,6 +180,16 @@ def main():
                     "nargs": "*",
                 },
             ),
+            "queue_scripts": BaseOptsType.options_t(
+                True,
+                ("BaseRunner",),
+                ("--queue_scripts",),
+                bool,
+                {
+                    "help": "Additional mounts for the docker container",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
         },
     )
     BaseLogger(base_opts, include_time=True)
@@ -232,7 +249,7 @@ def main():
             ):
                 continue
             # Removal of the run file signals the runner it is okay to proceed
-            log_debug(f"Found {run_file}")
+            # log_debug(f"Found {run_file}")
             try:
                 runfile_line = open(run_file, "r").readline()
                 log_debug(runfile_line)
@@ -245,11 +262,29 @@ def main():
                 seaglider_home_dir = seaglider_home_dir.rstrip()
                 seaglider_mission_dir = seaglider_mission_dir.rstrip()
                 log_file = log_file.rstrip()
-                if base_opts.jail_root and log_file.startswith(seaglider_mission_dir):
-                    log_file = os.path.join(base_opts.jail_root, log_file[1:])
+                if base_opts.jail_root:
+                    if log_file.startswith(seaglider_mission_dir):
+                        log_file = os.path.join(base_opts.jail_root, log_file[1:])
+                    seaglider_home_dir = os.path.join(
+                        base_opts.jail_root, seaglider_home_dir[1:]
+                    )
+                    seaglider_mission_dir = os.path.join(
+                        base_opts.jail_root, seaglider_mission_dir[1:]
+                    )
+
+                try:
+                    glider_id = int(os.path.split(seaglider_home_dir)[1][2:])
+                except Exception:
+                    log_error(
+                        f"Unable to get glider id from {seaglider_home_dir} - using 000",
+                        "exc",
+                    )
+                    glider_id = 0
+
                 log_info(
-                    f"seaglider_home_dir:{seaglider_home_dir} seaglider_mission_dir:{seaglider_mission_dir} log_file:{log_file}, cmd_line:{cmd_line}"
+                    f"run_file:{run_file} seaglider_home_dir:{seaglider_home_dir} seaglider_mission_dir:{seaglider_mission_dir} log_file:{log_file}, cmd_line:{cmd_line}"
                 )
+
                 script_name = cmd_line.split(" ", 1)[0].rstrip()
                 if script_name not in known_scripts:
                     log_error(f"Unknown script ({cmd_line}) - skipping")
@@ -268,15 +303,42 @@ def main():
                         full_path_script = os.path.join(basestation_dir, script)
                     cmd_line = f"{base_opts.python_version} {full_path_script} {tail}"
 
-                    if base_opts.jail_root:
-                        # Convert to the path outside the jail
+                    # If this is a script to be queued, do that here.
+                    if base_opts.queue_scripts and script_name in queued_scripts:
+                        job_id = str(uuid.uuid4())
                         cmd_line_parts = cmd_line.split()
-                        for ii in range(len(cmd_line_parts)):
-                            if cmd_line_parts[ii].startswith(seaglider_mission_dir):
-                                cmd_line_parts[ii] = os.path.join(
-                                    base_opts.jail_root, cmd_line_parts[ii][1:]
-                                )
+                        if "--daemon" in cmd_line_parts:
+                            cmd_line_parts.pop(cmd_line_parts.index("--daemon"))
+                        cmd_line_parts.append("--job_id")
+                        cmd_line_parts.append(job_id)
                         cmd_line = " ".join(cmd_line_parts)
+                        cmd_line += f" >> {log_file} 2>&1"
+                        log_info(
+                            f"Enqueuing job_id:{job_id} in [{seaglider_mission_dir}:{script_name}] cmd_line:{cmd_line}"
+                        )
+                        que = (seaglider_mission_dir, script_name, glider_id)
+                        job_queues[que].appendleft((job_id, cmd_line))
+
+                        uuids = []
+                        for job in job_queues[que]:
+                            uuids.append(job[0])
+                        msg = {
+                            "glider": glider_id,
+                            "queue_id": f"{seaglider_mission_dir}||{script_name}",
+                            "time": time.time(),
+                            "uuids": uuids,
+                            "action": "add",
+                            "target": job_id,
+                        }
+                        payload = orjson.dumps(msg).decode("utf-8")
+                        log_debug(payload)
+                        Utils.notifyVis(
+                            glider_id,
+                            f"proc-queue-{glider_id:3d}",
+                            payload,
+                        )
+
+                        continue
 
                     # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
                     cmd_line += f" >> {log_file} 2>&1"
@@ -289,16 +351,6 @@ def main():
                             docker_detach = "-d"
                             cmd_line_parts.pop(cmd_line_parts.index("--daemon"))
                         cmd_line = " ".join(cmd_line_parts)
-                        if base_opts.jail_root:
-                            home_dir = os.path.join(
-                                base_opts.jail_root, seaglider_home_dir
-                            )
-                            mission_dir = os.path.join(
-                                base_opts.jail_root, seaglider_mission_dir
-                            )
-                        else:
-                            home_dir = seaglider_home_dir
-                            mission_dir = seaglider_mission_dir
                         basestation_mount = ""
                         if not base_opts.use_docker_basestation:
                             basestation_mount = (
@@ -310,11 +362,13 @@ def main():
                             user_str = f" --user {base_opts.docker_uid}:{base_opts.docker_gid} "
                         else:
                             user_str = ""
-                        if home_dir != mission_dir:
-                            home_dir_str = f"--volume {home_dir}:{home_dir}"
+                        if seaglider_home_dir != seaglider_mission_dir:
+                            home_dir_str = (
+                                f"--volume {seaglider_home_dir}:{seaglider_home_dir}"
+                            )
                         else:
                             home_dir_str = ""
-                        cmd_line = f'docker run {docker_detach} {user_str} {home_dir_str} --ipc="host" --volume {mission_dir}:{mission_dir} --volume /tmp:/tmp {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
+                        cmd_line = f'docker run {docker_detach} {user_str} {home_dir_str} --ipc="host" --volume {seaglider_mission_dir}:{seaglider_mission_dir} --volume /tmp:/tmp {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
                     # May not be critical, but for now, this script when launched out of systemd is
                     # running with unbuffered stdin/stdout - no need to launch other scripts this way
                     my_env = os.environ.copy()
@@ -329,14 +383,14 @@ def main():
                     )
                     if completed_process.returncode:
                         log_warning(
-                            f"{cmd_line} returned {completed_process.returncode}", "exc"
+                            f"{cmd_line} returned {completed_process.returncode}"
                         )
             except KeyboardInterrupt:
                 exit_event.set()
             except Exception:
                 log_error(f"Error processing {run_file}", "exc")
             finally:
-                log_info("Cleanup")
+                log_debug("Cleanup")
                 if os.path.exists(run_file):
                     f_archive_failed = False
                     if base_opts.archive:
@@ -362,6 +416,74 @@ def main():
                             os.unlink(run_file)
                         except Exception:
                             log_critical(f"Failed to remove {run_file}", "exc")
+
+        ## Check for process completion here
+        # log_debug("Checking running jobs")
+        for que in list(running_jobs):
+            try:
+                sg_mission_dir, script_name, glider_id = que
+                job_id, popen, cmd_line = running_jobs[que]
+                returncode = popen.poll()
+                if returncode is not None:
+                    if returncode:
+                        log_warning(f"{job_id}:{cmd_line} returned {returncode}")
+                    else:
+                        log_info(f"Completed {job_id}:{cmd_line}")
+                    # TODO: Check for any pid files left behind
+                    running_jobs.pop(que)
+
+                    uuids = []
+                    for job in job_queues[que]:
+                        uuids.append(job[0])
+                    uuids.append(job_id)
+
+                    msg = {
+                        "glider": glider_id,
+                        "queue_id": f"{seaglider_mission_dir}||{script_name}",
+                        "time": time.time(),
+                        "uuids": uuids,
+                        "action": "remove",
+                        "returncode": returncode,
+                        "target": job_id,
+                    }
+                    payload = orjson.dumps(msg).decode("utf-8")
+                    log_debug(payload)
+                    Utils.notifyVis(
+                        glider_id,
+                        f"proc-queue-{glider_id:3d}",
+                        payload,
+                    )
+            except KeyboardInterrupt:
+                exit_event.set()
+            except Exception:
+                log_error(f"Error processing {que}", "exc")
+
+        ## Deque and launch here
+        # log_debug("Checking for new jobs to launch")
+        for que in list(job_queues):
+            try:
+                if que not in running_jobs:
+                    try:
+                        job_id, cmd_line = job_queues[que].pop()
+                    except IndexError:
+                        continue
+                    seaglider_mission_dir, script_name, glider_id = que
+                    my_env = os.environ.copy()
+                    if "PYTHONUNBUFFERED" in my_env:
+                        del my_env["PYTHONUNBUFFERED"]
+                    log_info(f"Starting {job_id}:{cmd_line}")
+                    popen = subprocess.Popen(
+                        cmd_line,
+                        shell=True,
+                        env=my_env,
+                        # TODO - check if this is needed
+                        start_new_session=True,
+                    )
+                    running_jobs[que] = (job_id, popen, cmd_line)
+            except KeyboardInterrupt:
+                exit_event.set()
+            except Exception:
+                log_error(f"Error processing {que}", "exc")
 
     log_info("Shutdown signal received")
 
