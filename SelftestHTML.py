@@ -26,22 +26,20 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# ruff: noqa
-
-import sys
-import glob
-import re
-import plotly.graph_objects
-import io
-from contextlib import redirect_stdout
 import asyncio
+import glob
+import io
 import math
-from scipy import stats
-import numpy as np
-import parms
-import aiofiles
 import os.path
+import re
+import sys
+from contextlib import redirect_stdout
+
+import plotly.graph_objects
+
+import capture
 import compare
+import parms
 
 shortcuts = ["top", "capture", "parameters", "pitch", "roll", "VBD", "GPS", "SciCon", "pressure", "compass", "bathymetry", "software", "hardware"]
 
@@ -64,7 +62,7 @@ helpDict = { "Failed to send sms message": "Iridium SMS sending is a good backup
            }
 
 def checkHelp(line):
-    for k in helpDict.keys():
+    for k in helpDict:
         if k in line:
             return helpDict[k]
 
@@ -95,7 +93,7 @@ def format(line):
                 b = re.search('(\$[A-Z_0-9]+),(-?[0-9]+(?:\.[0-9e\-]+)?$)', a.group(2))
                 c = re.search('\s*[A-Za-z0-9_]+:\s*[0-9]+\.[0-9]+\s*amp-sec\s*/\s*[0-9]+\.[0-9]+\s*sec', a.group(2))
                 d = re.search('Updating parameter \$([A-Z0-9_]+) to (.+)', a.group(2))
-            except:
+            except Exception:
                 pass
 
         if b:
@@ -180,209 +178,6 @@ def warnMoveAnalysis(str):
         h = f' <span style="color: red;">[{h}]</span>'
     print("<script>failures += '<span style=\"background-color: orange;\">WARNING</span>: " + str + h + "<br>'</script>")
 
-def rmse(f, x, y):
-    s = 0
-    n = len(x)
-    if n < 2:
-        return 0
-    for i in range(n):
-        e = y[i] - (f.intercept + f.slope*x[i])
-        s = s + e*e
-     
-    return math.sqrt(s/n)
-
-def analyzeMoveRecord(x, which, param):
-    p = [y[2] for y in x]
-    r = [y[3] for y in x]
-    v1 = [y[0] for y in x]
-    v2 = [y[1] for y in x]
-
-    n = len(p)
-    idx = range(n)
-
-    pitch = stats.describe(p)
-    roll  = stats.describe(r)
-    vbd1  = stats.describe(v1)
-    vbd2  = stats.describe(v2)
-
-    z_pitch = abs(pitch.minmax[1] - pitch.minmax[0])
-    z_roll = abs(roll.minmax[1] - roll.minmax[0])
-    z_vbd1 = abs(vbd1.minmax[1] - vbd1.minmax[0])
-    z_vbd2 = abs(vbd2.minmax[1] - vbd2.minmax[0])
-   
-    if param and 'current' in param['PITCH_MIN'] and (pitch.minmax[0] < param['PITCH_MIN']['current']-10 or pitch.minmax[1] > param['PITCH_MAX']['current']+10):
-        p_flag = True
-    else:
-        p_flag = False
-    if param and 'current' in param['ROLL_MIN'] and (roll.minmax[0] < param['ROLL_MIN']['current']-10 or roll.minmax[1] > param['ROLL_MAX']['current']+10):
-        r_flag = True
-    else:
-        r_flag = False
-    if param and 'current' in param['VBD_MIN'] and ((vbd1.minmax[0] + vbd2.minmax[0])/2 < param['VBD_MIN']['current']-10 or (vbd1.minmax[1] + vbd2.minmax[1])/2 > param['VBD_MAX']['current'] + 10):
-        v_flag = True
-    else:
-        v_flag = False
-
-
-    l_pitch = stats.linregress(idx, p) 
-    pitche = rmse(l_pitch, idx, p)
-    l_roll = stats.linregress(idx, r) 
-    rolle = rmse(l_roll, idx, r)
-    l_vbd1 = stats.linregress(idx, v1) 
-    vbd1e = rmse(l_vbd1, idx, v1)
-    l_vbd2 = stats.linregress(idx, v2) 
-    vbd2e = rmse(l_vbd2, idx, v2)
-
-    if which == "VBD":
-        if vbd1e > 20:
-            warnMoveAnalysis(f"VBD pot A count linearity is low (RMSE={vbd1e} counts)")
-        if vbd2e > 20:
-            warnMoveAnalysis(f"VBD pot B count linearity is low (RMSE={vbd2e} counts)")
-
-        if z_pitch > 10:
-            warnMoveAnalysis(f"possible outliers in pitch AD during VBD move (max-min={z_pitch})") 
-        elif p_flag:
-            warnMoveAnalysis(f"possible outliers in pitch AD during VBD move (AD values outside _MIN/_MAX)") 
-        if z_roll > 10:
-            warnMoveAnalysis(f"possible outliers in roll AD during VBD move (max-min={z_roll})") 
-        elif r_flag:
-            warnMoveAnalysis(f"possible outliers in roll AD during VBD move (AD values outside _MIN/_MAX)") 
-    elif which == "Roll":
-        if rolle > 20:
-            warnMoveAnalysis(f"roll AD count linearity is low (RMSE={rolle} counts)")
-        if z_pitch > 10:
-            warnMoveAnalysis(f"possible outliers in pitch AD during roll move (max-min={z_pitch})") 
-        elif p_flag:
-            warnMoveAnalysis(f"possible outliers in pitch AD during roll move (AD values outside _MIN/_MAX)") 
-        if z_vbd1 > 10:
-            warnMoveAnalysis(f"possible outliers in VBD A AD during roll move (max-min={z_vbd1})") 
-        if z_vbd2 > 10:
-            warnMoveAnalysis(f"possible outliers in VBD B AD during roll move (max-min={z_vbd2})")
-        if v_flag:
-            warnMoveAnalysis(f"possible outliers in VBD AD during roll move (AD values outside _MIN/_MAX)") 
-    elif which == "Pitch":
-        if pitche > 20:
-            warnMoveAnalysis(f"pitch AD count linearity is low (RMSE={pitche} counts)")
-        if z_roll > 10:
-            warnMoveAnalysis(f"possible outliers in roll AD during pitch move (max-min={z_roll}") 
-        elif r_flag:
-            warnMoveAnalysis(f"possible outliers in roll AD during pitch move (AD values outside _MIN/_MAX)") 
-        if z_vbd1 > 10:
-            warnMoveAnalysis(f"possible outliers in VBD A AD during pitch move (max-min={z_vbd1})") 
-        if z_vbd2 > 10:
-            warnMoveAnalysis(f"possible outliers in VBD B AD during pitch move (max-min={z_vbd2})") 
-        if v_flag:
-            warnMoveAnalysis(f"possible outliers in VBD AD during pitch move (AD values outside _MIN/_MAX)") 
-
-        
-def plotMoveRecord(x, which, includes):
-    fig = plotly.graph_objects.Figure()
-    n = len(x)
-    curr = [y[4] for y in x]
-       
-    if which == "VBD":
-        ad1 = [y[0] for y in x]
-        ad2 = [y[1] for y in x]
-        t = [idx/1.0 for idx in range(n)]
-        fig.add_trace(
-            {
-                "x": t, 
-                "y": ad1,
-                "name": "linpot A",
-                "type": "scatter",
-                "mode": "lines",
-                "line": {"color": "Black"},
-                "hovertemplate": "%{x:.1f},%{y:.1f}<br><extra></extra>",
-            }
-        )
-        fig.add_trace(
-            {
-                "x": t, 
-                "y": ad2,
-                "name": "linpot B",
-                "type": "scatter",
-                "mode": "lines",
-                "line": {"color": "Red"},
-                "hovertemplate": "%{x:.1f},%{y:.1f}<br><extra></extra>",
-            }
-        )
-    else:
-        if which == "Pitch":
-            ad = [y[2] for y in x]
-        elif which == "Roll":
-            ad = [y[3] for y in x]
-
-        t = [idx/10.0 for idx in range(n)]
-        fig.add_trace(
-            {
-                "x": t, 
-                "y": ad,
-                "name": which,
-                "type": "scatter",
-                "mode": "lines",
-                "line": {"color": "Black"},
-                "hovertemplate": "%{x:.3f},%{y:.1f}<br><extra></extra>",
-            }
-        )
-
-    fig.add_trace(
-        {
-            "x": t, 
-            "y": curr,
-            "yaxis": "y2",
-            "xaxis": "x1",
-            "name": "current",
-            "type": "scatter",
-            "mode": "lines",
-            "line": {"color": "Blue"},
-            "hovertemplate": "%{x:.1f},%{y:.0f}mA<br><extra></extra>",
-        }
-    )
-
-    fig.update_layout(
-        {
-            "xaxis": {
-                "title": "time (s)",
-                "showgrid": True,
-            },
-            "yaxis": {
-                "title": "AD counts",
-                "showgrid": True,
-            },
-            "yaxis2": {
-                "title": "current (mA)",  
-                "overlaying": "y1",
-                "side": "right",
-            },
-
-            "title": {
-                "text": f"{which} move record",
-                "xanchor": "center",
-                "yanchor": "top",
-                "x": 0.5,
-                "y": 0.95,
-            },
-            "height": 800,
-            "width": 800,
-#            "margin": {
-#                "t": 20,
-#                "b": 20,
-#            },
-        }
-    )
-
-    return fig.to_html(
-                        include_plotlyjs=includes,
-                        include_mathjax=includes,
-                        full_html=False,
-                        validate=True,
-                        config={
-                            "modeBarButtonsToRemove": ["lasso2d", "select2d"],
-                            "scrollZoom": False,
-                        },
-                      )
-     
-
 def motorCheck(valueToPrint, valueToCheck, minVal, maxVal):
     if float(valueToCheck) < minVal:
          return "<span style='background-color:yellow;'>%s</span>" % valueToPrint
@@ -443,7 +238,7 @@ function reload() {
             stnums.remove(num)
 
         for stn in stnums:
-            if firstLink == True:
+            if firstLink:
                 print(" &bull; ")
             else:
                 print("Selftest history: ")
@@ -464,7 +259,7 @@ function reload() {
             for stf in m_selftestFiles:
                 a = re.search(f".+pt{sgnum:03d}(\d+).cap", stf)
                 stnum = a.group(1)
-                if firstLink == True:
+                if firstLink:
                     print(" &bull; ")
                 else:
                     print("Selftest history: ")
@@ -488,7 +283,6 @@ function reload() {
     
     pcolors = {"crit": "red", "warn": "yellow", "sers": "orange"}
     rcolors = ["#cccccc", "#eeeeee"]
-    trow = 0
 
     # try:
     #     st = open(selftestFiles[0], "rb")
@@ -522,21 +316,22 @@ function reload() {
     paramValues = None
     moveCountTable = 0
     moveCountLink = 0
+    moveRecord = []
 
     for raw_line in stdo.splitlines(): # proc.stdout:
         try:
             line = raw_line.decode('utf-8').rstrip()
-        except:
+        except Exception:
             continue
 
         if not gotHeader:
             pcs = line.split()
-            glider   = pcs[0]
+            # glider   = pcs[0]
             testnum = int(pcs[1])
             capname   = pcs[2]
             logname   = capname.replace('cap', 'log')
             paramValues = await parms.state(None, capfile=capname)
-            if not paramValues or not 'VBD_MIN' in paramValues or not 'current' in paramValues:
+            if not paramValues or 'VBD_MIN' not in paramValues or 'current' not in paramValues:
                 paramValues = await parms.state(None, logfile=logname)
             gotHeader = True
             continue
@@ -546,10 +341,10 @@ function reload() {
             print('</div>')
             if len(moveRecord) > 0:
                 print('<div id=plot%d style="display: block;">' % idnum)
-                plot = plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
+                plot = capture.plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
                 print(plot)
                 print("</div>")
-                analyzeMoveRecord(moveRecord, insideMoveDump, paramValues)
+                capture.analyzeMoveRecord(moveRecord, insideMoveDump, paramValues, warnMoveAnalysis)
                 firstPlot = False
             insideMoveDump = False
             idnum = idnum + 1
@@ -561,7 +356,7 @@ function reload() {
                 for i in d:
                     print(f"<td>{i}")
                 continue
-            except:
+            except Exception:
                 pass
 
             
@@ -614,8 +409,8 @@ function reload() {
             print(f"<a id='move{moveCountLink}'>")
             moveCountLink = moveCountLink + 1
             format(line)
-            print('<a href="#" onclick="document.getElementById(\'div%d\').style.display == \'none\' ? document.getElementById(\'div%d\').style.display = \'block\' : document.getElementById(\'div%d\').style.display = \'none\'; return false;">details</a>' % (idnum, idnum, idnum));
-            print(' &bull; <a href="#" onclick="document.getElementById(\'plot%d\').style.display == \'none\' ? document.getElementById(\'plot%d\').style.display = \'block\' : document.getElementById(\'plot%d\').style.display = \'none\'; return false;">plot</a><br>' % (idnum, idnum, idnum));
+            print('<a href="#" onclick="document.getElementById(\'div%d\').style.display == \'none\' ? document.getElementById(\'div%d\').style.display = \'block\' : document.getElementById(\'div%d\').style.display = \'none\'; return false;">details</a>' % (idnum, idnum, idnum))
+            print(' &bull; <a href="#" onclick="document.getElementById(\'plot%d\').style.display == \'none\' ? document.getElementById(\'plot%d\').style.display = \'block\' : document.getElementById(\'plot%d\').style.display = \'none\'; return false;">plot</a><br>' % (idnum, idnum, idnum))
             print('<div id=div%d style="display: block;">' % idnum)
             print('<table><tr>')
             print('<th>VBD1 AD')
@@ -817,7 +612,7 @@ if __name__ == "__main__":
 
     try:
         sgnum = int(sys.argv[1])
-    except:
+    except Exception:
         sys.exit(1)
 
     if len(sys.argv) >= 3:
