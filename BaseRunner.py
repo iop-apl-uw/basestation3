@@ -334,7 +334,7 @@ def main():
                         log_debug(payload)
                         Utils.notifyVis(
                             glider_id,
-                            f"proc-queue-{glider_id:3d}",
+                            f"{glider_id:03d}-proc-queue",
                             payload,
                         )
 
@@ -450,7 +450,7 @@ def main():
                     log_debug(payload)
                     Utils.notifyVis(
                         glider_id,
-                        f"proc-queue-{glider_id:3d}",
+                        f"{glider_id:03d}-proc-queue",
                         payload,
                     )
             except KeyboardInterrupt:

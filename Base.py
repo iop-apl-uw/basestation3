@@ -1479,7 +1479,7 @@ class ProcessProgress:
             # log_info(payload)
             Utils.notifyVis(
                 self.glider_id,
-                f"proc-progress-{self.glider_id:3d}",
+                f"{self.glider_id:03d}-proc-progress",
                 payload,
             )
 
