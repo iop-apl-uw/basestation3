@@ -322,12 +322,14 @@ def main():
                         uuids = []
                         for job in job_queues[que]:
                             uuids.append(job[0])
+                        if que in running_jobs:
+                            uuids.append(running_jobs[que][0])
                         msg = {
                             "glider": glider_id,
                             "queue_id": f"{seaglider_mission_dir}||{script_name}",
                             "time": time.time(),
                             "uuids": uuids,
-                            "action": "add",
+                            "action": "queued",
                             "target": job_id,
                         }
                         payload = orjson.dumps(msg).decode("utf-8")
@@ -341,7 +343,7 @@ def main():
                         continue
 
                     # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
-                    cmd_line += f" >> {log_file} 2>&1"
+                    cmd_line = cmd_line.rstrip() + f" >> {log_file} 2>&1"
 
                     if base_opts.docker_image and script in docker_scripts:
                         # docker run -d --user 1000:1000 --volume /home/sg090:/home/sg090 --volume ~/work/git/basestation3:/usr/local/basestation3  basestation:3.10.10
@@ -442,7 +444,7 @@ def main():
                         "queue_id": f"{seaglider_mission_dir}||{script_name}",
                         "time": time.time(),
                         "uuids": uuids,
-                        "action": "remove",
+                        "action": "complete",
                         "returncode": returncode,
                         "target": job_id,
                     }
@@ -480,6 +482,28 @@ def main():
                         start_new_session=True,
                     )
                     running_jobs[que] = (job_id, popen, cmd_line)
+
+                    uuids = []
+                    for job in job_queues[que]:
+                        uuids.append(job[0])
+                    uuids.append(job_id)
+
+                    msg = {
+                        "glider": glider_id,
+                        "queue_id": f"{seaglider_mission_dir}||{script_name}",
+                        "time": time.time(),
+                        "uuids": uuids,
+                        "action": "start",
+                        "target": job_id,
+                    }
+                    payload = orjson.dumps(msg).decode("utf-8")
+                    log_debug(payload)
+                    Utils.notifyVis(
+                        glider_id,
+                        f"{glider_id:03d}-proc-queue",
+                        payload,
+                    )
+
             except KeyboardInterrupt:
                 exit_event.set()
             except Exception:
