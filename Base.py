@@ -1426,13 +1426,16 @@ class ProcessProgress:
         "mission_timeseries",
         "mission_plots",
         "mission_kml",
-        "mission_extension",
+        "mission_extensions",
         "notifications",
     )
 
     # TODO - add in comm.log data - dive_number, call_cycle, calls_made for stats building
     def __init__(self, base_opts):
         self.update_base_opts(base_opts)
+        self.times = {
+            k: {"start": 0, "stop": 0} for k in ProcessProgress.known_sections
+        }
 
     def update_base_opts(self, base_opts):
         self.glider_id = base_opts.instrument_id
@@ -1444,6 +1447,10 @@ class ProcessProgress:
     # TODO - add in call to re-hydrate stats from database?  file?
 
     # TODO - add in call to generate updated stats for expectation of run time
+    def write_stats(self):
+        log_info("Base.py::main() stats")
+        for k, v in self.times.items():
+            log_info(f"{k}:{v['stop']-v['start']:.3f}")
 
     def process_progress(
         self, section: str, start_stop: str, send: bool = True
@@ -1453,6 +1460,10 @@ class ProcessProgress:
         # TODO - add in code to cacluate run-time for each section and update stats file
 
         t0 = time.time()
+        try:
+            self.times[section][start_stop] = t0
+        except KeyError:
+            log_error(f"Uknown section:{section}", "exc")
 
         if send:
             msg = {
@@ -2277,7 +2288,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         else:
             # Run FlightModel here and before mission processing so combined data reflects best flight model results
             # Run before alert processing occurs so FM complaints are reported to the pilot
-            po.process_progress("flight_model", "stop")
+            po.process_progress("flight_model", "start")
             try:
                 fm_nc_files_created = []
                 FlightModel.main(
@@ -2479,13 +2490,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         po.process_progress("mission_plots", "start")
         mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
         plot_dict = BasePlot.get_mission_plots(base_opts)
-        po.process_progress("mission_plots", "stop")
         _, output_files = BasePlot.plot_mission(base_opts, plot_dict, mission_str)
         if stop_processing_event.is_set():
             log_warning("Caught SIGUSR1 - bailing out")
             return 1
         for output_file in output_files:
             processed_other_files.append(output_file)
+        po.process_progress("mission_plots", "stop")
 
     # Generate KML
     po.process_progress("mission_kml", "start")
@@ -3110,6 +3121,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     Utils.cleanup_lock_file(base_opts, base_lockfile_name)
     po.process_progress("notifications", "stop", send=False)
+    po.write_stats()
 
     # looked at processed_other_files list to decide if we should be more
     # granular about what is completed
