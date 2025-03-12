@@ -183,6 +183,25 @@
         height: 100%;
     }
 
+    #processReport {
+        display: inline-block;
+    }
+    #processProgressBar {
+        display: inline-block;
+        border-right:1px solid black; 
+    }
+    #processProgressBar span {
+        width: 20px;
+        height: 20px;
+        min-width: 20px;
+        min-height: 20px;
+        border-left:1px solid black; 
+        border-top:1px solid black; 
+        border-bottom:1px solid black; 
+        display: inline-block;
+    }
+    #processPendingCount {
+    }
     #changeTable {
         border-left: none;
         border-right: none;

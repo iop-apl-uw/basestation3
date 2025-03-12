@@ -194,6 +194,9 @@
     }
 
 {% if runMode == 'pilot' %}
+
+    var currProcess = null;
+
     function updateTimer() {
         if (fixes.length > 0) {
             $('lastFix').innerHTML = '' + (Date.now()/1000 - fixes.at(-1).t).toFixed(0) + 's';
@@ -206,7 +209,60 @@
         var d = new Date().toISOString();
         $('currentDate').innerHTML = d.slice(0,10);
         $('currentTime').innerHTML = d.slice(11,19);
+
+        if (currProcess)
+            updateProcessBar();
     }
+
+    const process_progress_sections = [
+        "dive_files", "per_dive_netcdfs", "flight_model", "per_dive_plots", "mission_profile",
+        "mission_timeseries", "mission_plots", "mission_kml"
+    ];
+
+    function setupProcessBar()
+    {
+        var s;
+        for (var i = 0 ; i < process_progress_sections.length ; i++) {
+            s = document.createElement('span');
+            s.id = 'process_' + process_progress_sections[i];
+            s.title = process_progress_sections[i];
+            $('processProgressBar').appendChild(s);
+        }
+    }
+
+    function completeProcessBar(b)
+    {
+        var s;
+        for (var i = 0 ; i < process_progress_sections.length ; i++) {
+            s = 'process_' + process_progress_sections[i];
+            if ($(s).innerHTML == '')
+                $(s).innerHTML = b;
+        }
+    }
+
+    function clearProcessBar()
+    {
+        var s;
+        for (var i = 0 ; i < process_progress_sections.length ; i++) {
+            s = 'process_' + process_progress_sections[i];
+            $(s).style.backgroundColor = '';
+            $(s).innerHTML = '';
+        }
+    }
+
+    function updateProcessBar()
+    {
+        if (currProcess == null) 
+            return;
+  
+        const s = 'process_' + currProcess['section']; 
+        const now = Date.now()/1000; 
+        if (currProcess['red'] > 0 && now > currProcess['time'] + currProcess['red'])
+            $(s).style.backgroundColor = '#ff0000';
+        else if (currProcess['yellow'] > 0 && now > currProcess['time'] + currProcess['yellow'])    
+            $(s).style.backgroundColor = '#ffff00';
+    }
+
 {% endif %}
 
     let wsocket  = null;
@@ -363,6 +419,26 @@
                     $('dive').innerHTML = json['dive'];
                     $('cycle').innerHTML = json['cycle'];
                     $('call').innerHTML = json['call'];
+                }
+                else if ('uuids' in json) {
+                    $('processPendingCount').innerHTML = '' + json['uuids'].length;
+                    if (json['action'] == 'start') {
+                        clearProcessBar();
+                    }
+                    else if (json['action'] == 'complete') {
+                        currProcess = null;
+                        fillProcessBar('&times;');
+                    }
+                }
+                else if ('section' in json) {
+                    if (json['action'] == 'start') {
+                        $('process_' + json['section']).style.backgroundColor = '#00ff00';
+                        currProcess = structuredClone(json);
+                    }
+                    else {
+                        $('process_' + json['action']).innerHTML = '&check;';
+                        currProcess = null;
+                    }
                 }
                 else {
                     // loadStatus(currGlider, -1);
@@ -4039,6 +4115,8 @@ parms[p]
             }, true); 
         }
 
+        setupProcessBar();
+
         const elements = document.querySelectorAll('body *');
 
         elements.forEach((element) => {
@@ -4101,9 +4179,21 @@ parms[p]
     </div>
     <span id="projectIndex" hidden="hidden"> <span id="projectIndexText" class="spanClick" onclick="projectIndex(); return false;">Project</span> <b>&#124;</b> </span>
     <span id="missionIndex" hidden="hidden"> <span id="missionIndexText" class="spanClick" onclick="missionIndex(); return false;">Mission</span> <b>&#124;</b> </span>
-    <span id="gliderIndex"><span id="gliderIndexText" class="spanClick" onclick="gliderIndex(); return false;">Glider</span> <b>&#124;</b>
+    <span id="gliderIndex"><span id="gliderIndexText" class="spanClick" onclick="gliderIndex(); return false;">Glider</span> <b>&#124;</b> </span>
     <a href="help" target="help"> Help </a> 
+
+    
 {% if runMode == 'pilot' %}
+
+    <div id="processReport">
+        running:
+        <div id="processProgressBar">
+        </div>
+        pending:
+        <span id="processPendingCount">
+        0
+        </span> 
+    </div>
     <span style="float:right; padding-right: 10px;">
     <span class="spanClick" id="LoginLogout" onclick="logInOutUser();"> Login </span>  
     <b>&#124;</b><span class="spanClick" id="toggleRight" onclick="toggleRight(); return false;"> Hide pilot</span></span>

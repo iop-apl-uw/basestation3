@@ -2706,9 +2706,10 @@ def attachHandlers(app: sanic.Sanic):
                         sanic.log.logger.info(f"comm.log read, position = {commTell}")
                         if data:
                             await ws.send(data)
-                elif 'urls' in topic:
-                    # m = loads(body)
-                    await ws.send(f"NEW={body}")
+                elif 'urls' in topic or 'proc-' in topic:
+                    msg = loads(body)
+                    msg.update({ "what": topic })
+                    await ws.send(f"NEW={dumps(msg).decode('utf-8')}")
                 elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC and not 'km' in topic:
                     m = loads(body) 
                     async with aiofiles.open(m['full'], 'rb') as file:
@@ -2861,10 +2862,10 @@ def attachHandlers(app: sanic.Sanic):
                                 "content": data
                               }
                         await ws.send(f"{dumps(out).decode('utf-8')}")
-                elif 'urls' in topic:
+                elif 'urls' in topic or 'proc-' in topic:
                     try:
                         msg = loads(body)
-                        msg.update({ "what": "urls" })
+                        msg.update({ "what": topic })
                         if 'glider' not in msg:
                             msg.update({ "glider": glider} ) # in case it's not in the payload (session), watch payloads must always include it
                         if 'mission' not in msg:
