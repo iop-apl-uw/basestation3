@@ -39,6 +39,7 @@ import functools
 import glob
 import math
 import os
+import pathlib
 import pdb
 import pprint
 import pstats
@@ -1410,6 +1411,68 @@ def signal_handler_abort_processing(signum, frame):
         stop_processing_event.set()
 
 
+class ProcessProgress:
+    known_sections = (
+        "setup",
+        "dive_files",
+        "per_dive_netcdfs",
+        "backup_files",
+        "flight_model",
+        "per_dive_scripts",
+        "update_db",
+        "per_dive_plots",
+        "per_dive_extensions",
+        "mission_profile",
+        "mission_timeseries",
+        "mission_plots",
+        "mission_kml",
+        "mission_extension",
+        "notifications",
+    )
+
+    # TODO - add in comm.log data - dive_number, call_cycle, calls_made for stats building
+    def __init__(self, base_opts):
+        self.update_base_opts(base_opts)
+
+    def update_base_opts(self, base_opts):
+        self.glider_id = base_opts.instrument_id
+        self.job_id = base_opts.job_id
+        self.mission_dir = pathlib.Path(base_opts.mission_dir)
+        # TODO - possibly drop
+        self.base_opts = base_opts
+
+    # TODO - add in call to re-hydrate stats from database?  file?
+
+    # TODO - add in call to generate updated stats for expectation of run time
+
+    def process_progress(
+        self, section: str, start_stop: str, send: bool = True
+    ) -> None:
+        """Notifiy vis of progress through main() and calcuate runtime stats"""
+
+        # TODO - add in code to cacluate run-time for each section and update stats file
+
+        t0 = time.time()
+
+        if send:
+            msg = {
+                "section": section,
+                "glider": self.glider_id,
+                "action": start_stop,
+                "time": f"{t0:.3f}",
+                "id": self.job_id,
+                "yellow": 0,  # warning_time_length
+                "red": 0,  # probably_stuck_time_length
+            }
+            payload = orjson.dumps(msg).decode("utf-8")
+            # log_info(payload)
+            Utils.notifyVis(
+                self.glider_id,
+                f"proc-progress-{self.glider_id:3d}",
+                payload,
+            )
+
+
 def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     """Command line driver for the all basestation processing.
 
@@ -1481,7 +1544,14 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     log_info(f"Invoked with command line [{cmdline}]")
 
-    log_info("PID:%d" % os.getpid())
+    log_info(f"PID:{os.getpid():d} job_id:{base_opts.job_id}")
+
+    po = ProcessProgress(base_opts)
+    po.process_progress("setup", "start", send=False)
+
+    # sleep_secs = 0
+    # log_info(f"Sleeping for {sleep_secs} secs")
+    # time.sleep(sleep_secs)
 
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
@@ -1584,6 +1654,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         base_opts.instrument_id = instrument_id
 
     log_info(f"Instrument ID = {str(instrument_id)}")
+
+    po.update_base_opts(base_opts)
 
     # Catch signal from later started processing
     signal.signal(signal.SIGUSR1, signal_handler_abort_processing)
@@ -1794,6 +1866,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     fc.is_seaglider() or fc.is_logger()
                 ) and fc.dive_number() == base_opts.reprocess:
                     del complete_files_dict[ff]
+    po.process_progress("setup", "stop", send=False)
+    po.process_progress("dive_files", "start")
 
     # Start with self tests
     log_info("Processing seaglider selftests")
@@ -1905,7 +1979,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         write_processed_dives(
             base_opts.mission_dir, complete_files_dict, processed_pdos_logfiles_dict
         )
-
+    po.process_progress("dive_files", "stop")
+    po.process_progress("per_dive_netcdfs", "start")
     #
     # Per dive profile, netcdf and KKYY file processing
     #
@@ -2072,6 +2147,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         backup_call_cycle,
     ) = comm_log.get_last_dive_num_and_call_counter()
 
+    po.process_progress("per_dive_netcdfs", "stop")
+    po.process_progress("backup_files", "start", send=False)
+
     # Back up all files - using the dive # and call_cycle # from the comm log
     # Do this without regard to what dives got processed
     for known_file in known_files:
@@ -2177,6 +2255,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                         else:
                             log_info(f"{known_file} was uploaded and deleted")
 
+    po.process_progress("backup_files", "stop", send=False)
+
     if base_opts.make_dive_profiles:
         last_session = comm_log.last_surfacing()
         if base_opts.skip_flight_model:
@@ -2197,6 +2277,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         else:
             # Run FlightModel here and before mission processing so combined data reflects best flight model results
             # Run before alert processing occurs so FM complaints are reported to the pilot
+            po.process_progress("flight_model", "stop")
             try:
                 fm_nc_files_created = []
                 FlightModel.main(
@@ -2212,10 +2293,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 log_info(f"FM files updated {fm_nc_files_created}")
                 nc_files_created += fm_nc_files_created
                 nc_files_created = sorted(nc_files_created)
+            po.process_progress("flight_model", "stop")
             if stop_processing_event.is_set():
                 log_warning("Caught SIGUSR1 - bailing out")
                 return 1
 
+    po.process_progress("per_dive_scripts", "start", send=False)
     # Run extension scripts for any new logger files
     # TODO GBS - combine ALL logger lists and invoke the extension with the complete list
     # processed_file_names.append(processed_logger_eng_files)
@@ -2230,6 +2313,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Run the post dive processing script
     run_extension_script(os.path.join(base_opts.mission_dir, ".post_dive"), None)
 
+    po.process_progress("per_dive_scripts", "stop", send=False)
+
     dive_nc_file_names = []
     # Collect up the possible files
     if base_opts.make_mission_profile or base_opts.make_mission_timeseries:
@@ -2238,6 +2323,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Add netcdf files to mission sql database
     if base_opts.add_sqlite:
         log_info("Starting netcdf load to db")
+        po.process_progress("update_db", "start", send=False)
+
         if base_opts.force:
             try:
                 BaseDB.rebuildDivesGC(base_opts, "nc")
@@ -2250,6 +2337,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 except Exception:
                     log_error(f"Failed to add {ncf} to mission sqlite db", "exc")
             log_info("netcdf load to db done")
+        po.process_progress("update_db", "stop", send=False)
 
     # Run and dive extensions
     processed_file_names = []
@@ -2264,6 +2352,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Per-dive plotting
     if "dives" in base_opts.plot_types:
         log_info("Starting per-dive plots")
+        po.process_progress("per_dive_plots", "start")
         plot_dict = BasePlot.get_dive_plots(base_opts)
         _, output_files = BasePlot.plot_dives(base_opts, plot_dict, nc_files_created)
         if stop_processing_event.is_set():
@@ -2272,6 +2361,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         for output_file in output_files:
             processed_other_files.append(output_file)
         log_info("Per-dive plots complete")
+        po.process_progress("per_dive_plots", "stop")
+
+    po.process_progress("per_dive_extensions", "start", send=False)
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
@@ -2286,6 +2378,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         processed_file_names=processed_file_names,
     )
     del processed_file_names
+
+    po.process_progress("per_dive_extensions", "stop", send=False)
 
     (dive_num, _) = comm_log.get_last_dive_num_and_call_counter()
     # Process the urls file for the first pass (before mission profile, timeseries, etc).
@@ -2319,6 +2413,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 "No dive netCDF file created - mission netCDF file will not be updated"
             )
         else:
+            po.process_progress("mission_profile", "start")
             try:
                 (
                     mp_ret_val,
@@ -2336,6 +2431,11 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             except Exception:
                 log_error("Failed to create mission profile", "exc")
                 failed_mission_profile = True
+            po.process_progress(
+                "mission_profile",
+                "stop",
+            )
+
     #
     # Create the mission timeseries file
     #
@@ -2345,6 +2445,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 "No dive netCDF file created - mission timeseries file will not be updated"
             )
         else:
+            po.process_progress("mission_timeseries", "start")
             try:
                 (
                     mt_retval,
@@ -2362,6 +2463,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             except Exception:
                 log_error("Failed to create mission timeseries", "exc")
                 failed_mission_timeseries = True
+            po.process_progress("mission_timeseries", "stop")
 
     processed_file_names = []
     processed_file_names.append(processed_eng_and_log_files)
@@ -2374,8 +2476,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # Whole mission plotting
     if "mission" in base_opts.plot_types:
+        po.process_progress("mission_plots", "start")
         mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
         plot_dict = BasePlot.get_mission_plots(base_opts)
+        po.process_progress("mission_plots", "stop")
         _, output_files = BasePlot.plot_mission(base_opts, plot_dict, mission_str)
         if stop_processing_event.is_set():
             log_warning("Caught SIGUSR1 - bailing out")
@@ -2384,6 +2488,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             processed_other_files.append(output_file)
 
     # Generate KML
+    po.process_progress("mission_kml", "start")
     try:
         if not base_opts.skip_kml:
             MakeKML.main(
@@ -2393,11 +2498,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             )
     except Exception:
         log_error("Failed to generate KML", "exc")
+    po.process_progress("mission_kml", "stop")
 
     if stop_processing_event.is_set():
         log_warning("Caught SIGUSR1 - bailing out")
         return 1
 
+    po.process_progress("mission_extensions", "start", send=False)
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
         ("global", "mission"),
@@ -2411,6 +2518,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         processed_file_names=processed_file_names,
     )
     del processed_file_names
+
+    po.process_progress("mission_extensions", "stop", send=False)
+    po.process_progress("notifications", "start", send=False)
 
     # Alert message and file processing
     alerts_d = log_alerts()
@@ -2999,6 +3109,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             )
 
     Utils.cleanup_lock_file(base_opts, base_lockfile_name)
+    po.process_progress("notifications", "stop", send=False)
 
     # looked at processed_other_files list to decide if we should be more
     # granular about what is completed

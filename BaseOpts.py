@@ -52,6 +52,7 @@ import pdb
 import sys
 import time
 import traceback
+import uuid
 
 import Plotting
 from BaseOptsType import DeprecateAction, deprecated_options, options_t
@@ -475,6 +476,15 @@ global_options_dict = {
         {
             "help": "Run Bogue processing on files transferred via XMODEM",
             "action": argparse.BooleanOptionalAction,
+        },
+    ),
+    "job_id": options_t(
+        str(uuid.uuid4()),
+        ("Base",),
+        ("--job_id",),
+        str,
+        {
+            "help": "Job id - used to track processes in vis",
         },
     ),
     #
