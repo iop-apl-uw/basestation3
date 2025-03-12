@@ -93,6 +93,20 @@ def updateFails(db, fails, locked, username):
 
     query(db, "UPDATE users SET fails=?,locked=?,last_t=? WHERE name=?", (fails, locked, time.time(), username))
 
+def resetUser(db, username, password):
+    if password is None:
+        pw1 = getpass.getpass()
+        print("confirm")
+        pw2 = getpass.getpass()
+        if pw1 == pw2:
+            password = pw1
+        else:
+            print("passwords do not match")
+            return
+
+    query(db, "UPDATE users SET password=?,fails=?,locked=?,totp=?,otc=? WHERE name=?",
+          (sha256_crypt.hash(password), 0, 0, '', '', username))
+
 def addUser(db, username, email, domain, authType, password):
     if password is None:
         pw1 = getpass.getpass()
@@ -264,26 +278,45 @@ if __name__ == "__main__":
     # generate_secret()
     # '....' -> file(authlib.txt) -> date: secret
 
+    db = os.getcwd() + '/auth.db'
+    try:
+        i = sys.argv.index("-a")
+        sys.argv.pop(i) 
+        db = sys.argv.pop(i)
+    except (ValueError, IndexError):
+        pass
+
+    print(f"current database: {db}")
+
     # add username email domain type(view|pilot) initialPassword
-    if sys.argv[1] == 'add' and len(sys.argv) >= 6:
-        addUser('./auth.db', sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6] if len(sys.argv) == 7 else None)
+    if len(sys.argv) >= 6 and sys.argv[1] == 'add':
+        addUser(db, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6] if len(sys.argv) == 7 else None)
+
+    # reset username newInitialPassword
+    elif len(sys.argv) >= 3 and sys.argv[1] == 'reset':
+        resetUser(db, sys.argv[2], sys.argv[3] if len(sys.argv) == 4 else None)
 
     # auth username
-    elif sys.argv[1] == "auth" and len(sys.argv) == 4:
-        status = authorizeUser('./auth.db', sys.argv[2], sys.argv[3])
+    elif len(sys.argv) == 4 and sys.argv[1] == "auth":
+        pw1 = getpass.getpass()
+        print("mfa code:")
+        pw2 = input()
+        status = authorizeUser(db, sys.argv[2], sys.argv[3], pw1, pw2)
         print(status['msg'], status['status'])
 
-    elif sys.argv[1] == "unlock" and len(sys.argv) == 3:
-        unlockUser('./auth.db', sys.argv[2])
+    elif len(sys.argv) == 3 and sys.argv[1] == "unlock":
+        unlockUser(db, sys.argv[2])
 
-    elif sys.argv[1] == "password" and len(sys.argv) == 3:
+    elif len(sys.argv) == 3 and sys.argv[1] == "password":
         pw1 = getpass.getpass()
         print("confirm")
         pw2 = getpass.getpass()
         if pw1 == pw2:
-            changeUserPassword('./auth.db', sys.argv[2], None, pw1)
+            changeUserPassword(db, sys.argv[2], None, pw1)
     else:
-        print("unrecognized command")
-        print(" auth.py add username email domain type(view|pilot) initialPassword")
-        print(" auth.py unlock username")
-        print(" auth.py auth username domain")
+        print("unrecognized command - valid options are add, reset, unlock, auth, password")
+        print(f" {sys.argv[0]} add username email domain type(view|pilot) [initialPassword]")
+        print(f" {sys.argv[0]} reset username [newInitialPassword]")
+        print(f" {sys.argv[0]} unlock username")
+        print(f" {sys.argv[0]} auth username domain (test authentication on the command-line)")
+        print(f" {sys.argv[0]} password username")
