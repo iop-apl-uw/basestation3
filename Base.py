@@ -2341,7 +2341,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Add netcdf files to mission sql database
     if base_opts.add_sqlite:
         log_info("Starting netcdf load to db")
-        po.process_progress("update_db", "start", send=False)
+        po.process_progress("update_db", "start")
 
         if base_opts.force:
             try:
@@ -2355,9 +2355,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 except Exception:
                     log_error(f"Failed to add {ncf} to mission sqlite db", "exc")
             log_info("netcdf load to db done")
-        po.process_progress("update_db", "stop", send=False)
+        po.process_progress("update_db", "stop")
     else:
-        po.process_progress("update_db", "skip", send=False, reason="Per option")
+        po.process_progress("update_db", "skip", reason="Per option")
 
     # Run and dive extensions
     processed_file_names = []
@@ -2385,7 +2385,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     else:
         po.process_progress("per_dive_plots", "skip", reason="Per option")
 
-    po.process_progress("per_dive_extensions", "start", send=False)
+    po.process_progress("per_dive_extensions", "start")
 
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
@@ -2401,7 +2401,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     )
     del processed_file_names
 
-    po.process_progress("per_dive_extensions", "stop", send=False)
+    po.process_progress("per_dive_extensions", "stop")
 
     (dive_num, _) = comm_log.get_last_dive_num_and_call_counter()
     # Process the urls file for the first pass (before mission profile, timeseries, etc).
@@ -2541,7 +2541,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         log_warning("Caught SIGUSR1 - bailing out")
         return 1
 
-    po.process_progress("mission_extensions", "start", send=False)
+    po.process_progress("mission_extensions", "start")
     # Invoke extensions, if any
     BaseDotFiles.process_extensions(
         ("global", "mission"),
@@ -2556,7 +2556,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     )
     del processed_file_names
 
-    po.process_progress("mission_extensions", "stop", send=False)
+    po.process_progress("mission_extensions", "stop")
     po.process_progress("notifications", "start", send=False)
 
     # Alert message and file processing
