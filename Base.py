@@ -1470,7 +1470,7 @@ class ProcessProgress:
                 "section": section,
                 "glider": self.glider_id,
                 "action": action,
-                "time": f"{t0:.3f}",
+                "time": float(f"{t0:.3f}"),
                 "id": self.job_id,
                 "yellow": self.section_times[section]["yellow"],  # warning_time_length
                 "red": self.section_times[section]["red"],  # probably_stuck_time_length
@@ -1481,7 +1481,7 @@ class ProcessProgress:
             # log_info(payload)
             Utils.notifyVis(
                 self.glider_id,
-                f"{self.glider_id:03d}-proc-progress",
+                "proc-progress",
                 payload,
             )
 

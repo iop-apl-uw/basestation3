@@ -196,7 +196,7 @@
 {% if runMode == 'pilot' %}
 
     var currProcess = null;
-
+    
     function updateTimer() {
         if (fixes.length > 0) {
             $('lastFix').innerHTML = '' + (Date.now()/1000 - fixes.at(-1).t).toFixed(0) + 's';
@@ -215,13 +215,15 @@
     }
 
     const process_progress_sections = [
-        "dive_files", "per_dive_netcdfs", "flight_model", "per_dive_plots", "mission_profile",
-        "mission_timeseries", "mission_plots", "mission_kml"
+        "dive_files",      "per_dive_netcdfs",   "flight_model",  "update_db",   "per_dive_plots", "per_dive_extensions",
+        "mission_profile", "mission_timeseries", "mission_plots", "mission_kml", "mission_extensions"
     ];
 
     const processClasses = ["processBarGreen", "processBarRed", "processBarYellow", "processBarX", "processBarCheck"];
     const processColors = ["processBarGreen", "processBarRed", "processBarYellow"];
     const processMarks  = ["processBarX", "processBarCheck"];
+
+    var processResults = {}
 
     function setupProcessBar()
     {
@@ -231,8 +233,6 @@
             s.id = 'process_' + process_progress_sections[i];
             s.title = process_progress_sections[i];
             $('processProgressBar').appendChild(s);
-            if (i == 1) 
-                s.classList.add('processBarCheck');    
         }
 
     }
@@ -257,6 +257,7 @@
             s.classList.remove(...processClasses);
             s.title = process_progress_sections[i];
         }
+        processReults = {};
     }
 
     function updateProcessBar()
@@ -266,12 +267,15 @@
   
         const s = $('process_' + currProcess['section']); 
         const now = Date.now()/1000; 
-        if (currProcess['red'] > 0 && now > currProcess['time'] + currProcess['red']) {
+        if (!s.classList.contains('processBarRed') && currProcess['red'] > 0 && now > currProcess['time'] + currProcess['red']) {
+            console.log('changing to red');
+            console.log(now);
+            console.log(currProcess['time']);
+            console.log(currProcess['red']);
             s.classList.remove(...processColors);
             s.classList.add('processBarRed');
         }
-        else if (currProcess['yellow'] > 0 && now > currProcess['time'] + currProcess['yellow']) {
-            s.classList.remove(...processColors);
+        else if (!s.classList.contains('processBarRed') && !s.classList.contains('processBarYellow') && currProcess['yellow'] > 0 && now > currProcess['time'] + currProcess['yellow']) {
             s.classList.add('processBarYellow');
         }
     }
@@ -456,19 +460,27 @@
                 else if ('section' in json) {
                     const s = $('process_' + json['section']);
                     if (json['action'] == 'start') {
-                        $('processLabel').innerHTML = 'Running job:'; // in case we missed queue start
+                        $('processLabel').innerHTML = json['section'].replaceAll('_', ' ');
                         s.classList.add('processBarGreen');
                         currProcess = structuredClone(json);
+                        processResults[json['section']] = { start: json['time'] };
+                        console.log('started ' + json['section']);
                     }
-                    else if (json['action'] == 'skipped') {
+                    else if (json['action'] == 'skip') {
                         s.title += ' skipped: ' + json['reason'];
                         // consider: ever need to clean up currProcess that didn't get a completed?
                         s.classList.add('processBarX'); // color?
                         currProcess = null;
+                        console.log('skipped ' + json['section']);
                     }
                     else { // completed
                         s.classList.add('processBarCheck');
+                        $('processLabel').innerHTML = 'Running job:';
                         currProcess = null;
+                        if (json['section'] in processResults && 'start' in processResults[json['section']]) {
+                            processResults[json['section']].elapsed = json['time'] - processResults[json['section']];
+                        }
+                        console.log('completed ' + json['section']);
                     }
                 }
                 else {
@@ -4662,7 +4674,7 @@ parms[p]
 <div id="right">
     <div id="rightHeader">
         <div id="processReport" style="display: inline-flex; aligin-items: center; min-height: 20px;">
-            <span id="processLabel">
+            <span id="processLabel" style="display:inline-block; width:160px;">
                 Latest job:
             </span>
             <div id="processProgressBar">
