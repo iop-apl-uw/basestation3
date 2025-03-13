@@ -464,14 +464,12 @@
                         s.classList.add('processBarGreen');
                         currProcess = structuredClone(json);
                         processResults[json['section']] = { start: json['time'] };
-                        console.log('started ' + json['section']);
                     }
                     else if (json['action'] == 'skip') {
                         s.title += ' skipped: ' + json['reason'];
                         // consider: ever need to clean up currProcess that didn't get a completed?
                         s.classList.add('processBarX'); // color?
                         currProcess = null;
-                        console.log('skipped ' + json['section']);
                     }
                     else { // completed
                         s.classList.add('processBarCheck');
@@ -480,7 +478,6 @@
                         if (json['section'] in processResults && 'start' in processResults[json['section']]) {
                             processResults[json['section']].elapsed = json['time'] - processResults[json['section']];
                         }
-                        console.log('completed ' + json['section']);
                     }
                 }
                 else {
