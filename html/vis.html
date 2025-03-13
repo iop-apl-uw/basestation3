@@ -2823,33 +2823,17 @@ parms[p]
                 if (ext == 'cap') {
                     const re = new RegExp("[\d]*\.[\d]*,[HS][A-Z]*,C,.*")
 
-                    critLine = null;
-
-                    if (data.search(re) > -1) {
-                        var i = 0;
-                        var txt = '';
-                        for (var x of data.split('\n')) {      
-                            if (x.search(re) > -1) {
-                                if (critLine == null) 
-                                    critLine = 'crit' + i;
-                                txt += `<span id="crit${i}"><b>${x}</b></span>\n`;
-                            }
-                            else {
-                                txt += x + '\n';
-                            }
-                            i++;
-                        } 
-                        $(div).innerHTML = '<pre>' + txt + '</pre>';
-                        
+                    if (data.search(re) > -1)  {
+                        critLine = 'crit0';
                         $('btnCapFile').style.backgroundImage = "url('script/images/cap-crit-icon.png')";
                     }
                     else {
-                        $(div).innerHTML = '<pre>' + data + '</pre>';
+                        critLine = null;
                         $('btnCapFile').style.backgroundImage = "url('script/images/cap-icon.png')";
-                    }
-                }
-                else {
-                    $(div).innerHTML = '<pre>' + data + '</pre>';
+                    } 
+
+                    
+                    setInnerHTML($(div), '<pre>' + data + '</pre>');
                 }
             }
         })

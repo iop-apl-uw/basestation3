@@ -72,6 +72,7 @@ import zmq.asyncio
 import zlib
 # import urllib.parse 
 import BaseOpts
+import capture
 import Utils
 import Utils2
 import secrets
@@ -1215,9 +1216,9 @@ def attachHandlers(app: sanic.Sanic):
             if ext in ['log', 'eng']:
                 return await sanic.response.file(filename, mime_type='text/plain')
             else:
-                async with aiofiles.open(filename, 'rb') as file:
-                    out = purgeSensitive((await file.read()).decode('utf-8', errors="ignore"))
-                    return sanic.response.text(out)
+                (x, crits) = await capture.formatCaptureFile(filename, firstPlot=True)
+                out = purgeSensitive(x)
+                return sanic.response.text(out)
         else:
             if ext == 'cap':
                 return sanic.response.text('none')

@@ -26,7 +26,11 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import math
+import re
+import sys
 
+import aiofiles
+import asyncio
 import plotly.graph_objects
 from scipy import stats
 
@@ -232,3 +236,75 @@ def plotMoveRecord(x, which, includes):
                             "scrollZoom": False,
                         },
                       )
+
+async def formatCaptureFile(file, firstPlot=False):
+    insideMoveDump = False
+    moveRecord = []
+
+    out = ''
+
+    inside = re.compile(r'^\s*[0-9]+\.[0-9]+\s+[0-9]+')
+    summary = re.compile(r'^[0-9]+\.[0-9]+,SMOTOR,N,[0-9]+\.[0-9]+,[0-9]+\.[0-9]+,[0-9]+\.[0-9]+,[0-9]+\.[0-9]+,[0-9]+\.[0-9]+')
+    crit = re.compile(r'^[0-9]+\.[0-9]+,[SH][A-Z_0-9]+,C,')
+    completed = re.compile(r',(\w+) completed from ')
+
+    crits = 0
+    linenum = 0 
+    async with aiofiles.open(file, 'rb') as capfile:
+        async for line in capfile:
+            line = line.decode('utf-8', errors='ignore').rstrip()
+            linenum = linenum + 1
+
+            if insideMoveDump:
+                if inside.search(line):
+                    try:
+                        d = list(map(lambda x: float(x), line.split()))
+                        moveRecord.append(d)
+                        out = out + "<tr>"
+                        for i in d:
+                            out = out + f"<td>{i}"
+                        continue
+                    except:
+                        pass
+                elif summary.search(line):
+                    pass
+                else:
+                    if len(moveRecord) > 0:
+                        out = out + '</table><div>'
+                        out = out + plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
+                        firstPlot = False
+                        out = out + "</div>"
+                    insideMoveDump = False
+
+            elif line.find(' completed from ') > -1:
+                a = completed.search(line)
+                insideMoveDump = a.group(1)
+                moveRecord = []
+                out = out + line + "\n"
+                out = out + '<table><tr>'
+                out = out + '<th>VBD1 AD'
+                out = out + '<th>VBD2 AD'
+                out = out + '<th>pitch AD'
+                out = out + '<th>roll AD'
+                out = out + '<th>curr mA'
+                out = out + '<th>volts'
+                out = out + '<th>pressure'
+                out = out + '<th>heading'
+                out = out + '<th>pitch'
+                out = out + '<th>roll</tr>'
+                continue
+
+            if crit.search(line):
+                out = out + f'<span id="crits{crits}"><b>' + line + "</b></span>\n"                
+                crits = crits + 1
+            else:
+                out = out + line + "\n"                
+
+    return (out, crits)
+
+if __name__ == "__main__":
+    if len(sys.argv) != 2:
+        sys.exit(1)
+
+    (out, crits) = asyncio.run(formatCaptureFile(sys.argv[1], firstPlot=True))
+    print(out)
