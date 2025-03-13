@@ -25,12 +25,12 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import asyncio
 import math
 import re
 import sys
 
 import aiofiles
-import asyncio
 import plotly.graph_objects
 from scipy import stats
 
@@ -264,7 +264,7 @@ async def formatCaptureFile(file, firstPlot=False):
                         for i in d:
                             out = out + f"<td>{i}"
                         continue
-                    except:
+                    except Exception:
                         pass
                 elif summary.search(line):
                     pass
