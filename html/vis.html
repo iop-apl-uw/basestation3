@@ -219,6 +219,10 @@
         "mission_timeseries", "mission_plots", "mission_kml"
     ];
 
+    const processClasses = ["processBarGreen", "processBarRed", "processBarYellow", "processBarX", "processBarCheck"];
+    const processColors = ["processBarGreen", "processBarRed", "processBarYellow"];
+    const processMarks  = ["processBarX", "processBarCheck"];
+
     function setupProcessBar()
     {
         var s;
@@ -227,17 +231,20 @@
             s.id = 'process_' + process_progress_sections[i];
             s.title = process_progress_sections[i];
             $('processProgressBar').appendChild(s);
+            if (i == 1) 
+                s.classList.add('processBarCheck');    
         }
+
     }
 
     function completeProcessBar(b, note)
     {
         var s;
         for (var i = 0 ; i < process_progress_sections.length ; i++) {
-            s = 'process_' + process_progress_sections[i];
-            if ($(s).innerHTML == '') {
-                $(s).innerHTML = b;
-                $(s).title += ' ' + note;
+            s = $('process_' + process_progress_sections[i]);
+            if (!s.classList.contains('processBarCheck') && !s.classList.contains('processBarX')) {
+                s.classList.add('processBarX');
+                s.title += ' ' + note;
             }
         }
     }
@@ -246,10 +253,9 @@
     {
         var s;
         for (var i = 0 ; i < process_progress_sections.length ; i++) {
-            s = 'process_' + process_progress_sections[i];
-            $(s).style.backgroundColor = '';
-            $(s).innerHTML = '';
-            $(s).title = process_progress_sections[i];
+            s = $('process_' + process_progress_sections[i]);
+            s.classList.remove(...processClasses);
+            s.title = process_progress_sections[i];
         }
     }
 
@@ -258,12 +264,16 @@
         if (currProcess == null) 
             return;
   
-        const s = 'process_' + currProcess['section']; 
+        const s = $('process_' + currProcess['section']); 
         const now = Date.now()/1000; 
-        if (currProcess['red'] > 0 && now > currProcess['time'] + currProcess['red'])
-            $(s).style.backgroundColor = '#ff0000';
-        else if (currProcess['yellow'] > 0 && now > currProcess['time'] + currProcess['yellow'])    
-            $(s).style.backgroundColor = '#ffff00';
+        if (currProcess['red'] > 0 && now > currProcess['time'] + currProcess['red']) {
+            s.classList.remove(...processColors);
+            s.classList.add('processBarRed');
+        }
+        else if (currProcess['yellow'] > 0 && now > currProcess['time'] + currProcess['yellow']) {
+            s.classList.remove(...processColors);
+            s.classList.add('processBarYellow');
+        }
     }
 
 {% endif %}
@@ -444,19 +454,20 @@
                     }
                 }
                 else if ('section' in json) {
+                    const s = $('process_' + json['section']);
                     if (json['action'] == 'start') {
                         $('processLabel').innerHTML = 'Running job:'; // in case we missed queue start
-                        $('process_' + json['section']).style.backgroundColor = '#00ff00';
+                        s.classList.add('processBarGreen');
                         currProcess = structuredClone(json);
                     }
                     else if (json['action'] == 'skipped') {
-                        $('process_' + json['section']).style.backgroundColor = '#00ff00';
-                        $('process_' + json['section']).innerHTML = '&times;';
-                        $('process_' + json['section']).title += ' skipped: ' + json['reason'];
+                        s.title += ' skipped: ' + json['reason'];
                         // consider: ever need to clean up currProcess that didn't get a completed?
+                        s.classList.add('processBarX'); // color?
+                        currProcess = null;
                     }
-                    else {
-                        $('process_' + json['section']).innerHTML = '&check;';
+                    else { // completed
+                        s.classList.add('processBarCheck');
                         currProcess = null;
                     }
                 }
