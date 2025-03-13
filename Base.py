@@ -1412,32 +1412,29 @@ def signal_handler_abort_processing(signum, frame):
 
 
 class ProcessProgress:
-    # TODO - convert to dict with typical yellow and red times (and move to be per-instance, not class level)
-    # Enter default values, but allow for optional read from ??? for the actual values
-    known_sections = (
-        "setup",
-        "dive_files",
-        "per_dive_netcdfs",
-        "backup_files",
-        "flight_model",
-        "per_dive_scripts",
-        "update_db",
-        "per_dive_plots",
-        "per_dive_extensions",
-        "mission_profile",
-        "mission_timeseries",
-        "mission_plots",
-        "mission_kml",
-        "mission_extensions",
-        "notifications",
-    )
-
     # TODO - add in comm.log data - dive_number, call_cycle, calls_made for stats building
     def __init__(self, base_opts):
         self.update_base_opts(base_opts)
-        self.times = {
-            k: {"start": 0, "stop": 0} for k in ProcessProgress.known_sections
+
+        # Default section times.  Numbers from AWS instance with NFS file system
+        self.section_times = {
+            "setup": {"yellow": 6.0, "red": 11.0},
+            "dive_files": {"yellow": 9.0, "red": 18.0},
+            "per_dive_netcdfs": {"yellow": 14.0, "red": 29.0},
+            "backup_files": {"yellow": 2.0, "red": 4.0},
+            "flight_model": {"yellow": 22.0, "red": 45.0},
+            "per_dive_scripts": {"yellow": 2.0, "red": 4.0},
+            "update_db": {"yellow": 3.0, "red": 6.0},
+            "per_dive_plots": {"yellow": 182.0, "red": 364.0},
+            "per_dive_extensions": {"yellow": 5.0, "red": 10.0},
+            "mission_profile": {"yellow": 125.0, "red": 250.0},
+            "mission_timeseries": {"yellow": 125.0, "red": 250.0},
+            "mission_plots": {"yellow": 90.0, "red": 180.0},
+            "mission_kml": {"yellow": 128.0, "red": 256.0},
+            "mission_extensions": {"yellow": 60.0, "red": 120.0},
+            "notifications": {"yellow": 8.0, "red": 15.0},
         }
+        self.times = {k: {"start": 0, "stop": 0} for k in self.section_times}
 
     def update_base_opts(self, base_opts):
         self.glider_id = base_opts.instrument_id
@@ -1457,6 +1454,10 @@ class ProcessProgress:
     ) -> None:
         """Notifiy vis of progress through main() and calcuate runtime stats"""
 
+        if section not in self.section_times:
+            log_warning("Uknown section name {section}")
+            return
+
         t0 = time.time()
         if action in ("start", "stop"):
             try:
@@ -1471,8 +1472,8 @@ class ProcessProgress:
                 "action": action,
                 "time": f"{t0:.3f}",
                 "id": self.job_id,
-                "yellow": 0,  # warning_time_length
-                "red": 0,  # probably_stuck_time_length
+                "yellow": self.section_times[section]["yellow"],  # warning_time_length
+                "red": self.section_times[section]["red"],  # probably_stuck_time_length
             }
             if reason:
                 msg["reason"] = reason
@@ -2161,7 +2162,6 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         backup_dive_num,
         backup_call_cycle,
     ) = comm_log.get_last_dive_num_and_call_counter()
-
 
     po.process_progress("backup_files", "start", send=False)
 
