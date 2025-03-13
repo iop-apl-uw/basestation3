@@ -1412,6 +1412,8 @@ def signal_handler_abort_processing(signum, frame):
 
 
 class ProcessProgress:
+    # TODO - convert to dict with typical yellow and red times (and move to be per-instance, not class level)
+    # Enter default values, but allow for optional read from ??? for the actual values
     known_sections = (
         "setup",
         "dive_files",
@@ -1444,37 +1446,36 @@ class ProcessProgress:
         # TODO - possibly drop
         self.base_opts = base_opts
 
-    # TODO - add in call to re-hydrate stats from database?  file?
-
-    # TODO - add in call to generate updated stats for expectation of run time
     def write_stats(self):
+        # TODO - convert to write to a database - under option (off by default)
         log_info("Base.py::main() stats")
         for k, v in self.times.items():
             log_info(f"{k}:{v['stop']-v['start']:.3f}")
 
     def process_progress(
-        self, section: str, start_stop: str, send: bool = True
+        self, section: str, action: str, send: bool = True, reason: str | None = None
     ) -> None:
         """Notifiy vis of progress through main() and calcuate runtime stats"""
 
-        # TODO - add in code to cacluate run-time for each section and update stats file
-
         t0 = time.time()
-        try:
-            self.times[section][start_stop] = t0
-        except KeyError:
-            log_error(f"Uknown section:{section}", "exc")
+        if action in ("start", "stop"):
+            try:
+                self.times[section][action] = t0
+            except KeyError:
+                log_error(f"Uknown section:{section}", "exc")
 
         if send:
             msg = {
                 "section": section,
                 "glider": self.glider_id,
-                "action": start_stop,
+                "action": action,
                 "time": f"{t0:.3f}",
                 "id": self.job_id,
                 "yellow": 0,  # warning_time_length
                 "red": 0,  # probably_stuck_time_length
             }
+            if reason:
+                msg["reason"] = reason
             payload = orjson.dumps(msg).decode("utf-8")
             # log_info(payload)
             Utils.notifyVis(
@@ -1991,7 +1992,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             base_opts.mission_dir, complete_files_dict, processed_pdos_logfiles_dict
         )
     po.process_progress("dive_files", "stop")
-    po.process_progress("per_dive_netcdfs", "start")
+
     #
     # Per dive profile, netcdf and KKYY file processing
     #
@@ -2002,6 +2003,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         or base_opts.make_mission_profile
         or base_opts.make_mission_timeseries
     ):
+        po.process_progress("per_dive_netcdfs", "start")
         if not base_opts.skip_flight_model and base_opts.backup_flight:
             # Start with a fresh flight directory
             flight_dir = os.path.join(base_opts.mission_dir, "flight")
@@ -2152,13 +2154,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
         if not dives_to_profile:
             log_info("No dives found to profile")
-
+        po.process_progress("per_dive_netcdfs", "stop")
+    else:
+        po.process_progress("per_dive_netcdfs", "skip", reason="By option setting")
     (
         backup_dive_num,
         backup_call_cycle,
     ) = comm_log.get_last_dive_num_and_call_counter()
 
-    po.process_progress("per_dive_netcdfs", "stop")
+
     po.process_progress("backup_files", "start", send=False)
 
     # Back up all files - using the dive # and call_cycle # from the comm log
@@ -2271,8 +2275,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if base_opts.make_dive_profiles:
         last_session = comm_log.last_surfacing()
         if base_opts.skip_flight_model:
+            po.process_progress("flight_model", "skip", reason="Per directive")
             log_info("Skipping flight model processing per directive")
         elif last_session and last_session.recov_code and not base_opts.force:
+            po.process_progress("flight_model", "skip", reason="In recovery")
             log_info(f"Skipping flight model due to recovery {last_session.recov_code}")
         elif (
             last_session
@@ -2281,6 +2287,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             and last_session.dive_num > FlightModel.early_volmax_adjust
             and not base_opts.force
         ):
+            po.process_progress("flight_model", "skip", reason="In QUIT")
             log_info("Skipping flight model due to QUIT command")
         elif stop_processing_event.is_set():
             log_warning("Caught SIGUSR1 - bailing out")
@@ -2349,6 +2356,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                     log_error(f"Failed to add {ncf} to mission sqlite db", "exc")
             log_info("netcdf load to db done")
         po.process_progress("update_db", "stop", send=False)
+    else:
+        po.process_progress("update_db", "skip", send=False, reason="Per option")
 
     # Run and dive extensions
     processed_file_names = []
@@ -2373,6 +2382,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             processed_other_files.append(output_file)
         log_info("Per-dive plots complete")
         po.process_progress("per_dive_plots", "stop")
+    else:
+        po.process_progress("per_dive_plots", "skip", reason="Per option")
 
     po.process_progress("per_dive_extensions", "start", send=False)
 
@@ -2418,10 +2429,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     #
     # Create the mission profile file
     #
-    if base_opts.make_mission_profile and len(nc_files_created) > 0:
-        if len(nc_dive_file_names) < 1:
-            log_warning(
-                "No dive netCDF file created - mission netCDF file will not be updated"
+    if not base_opts.make_mission_profile:
+        po.process_progress("mission_profile", "skip", reason="By option setting")
+    else:
+        if len(nc_files_created) < 1:
+            log_info(
+                "No new dive netCDF file created - mission netCDF file will not be updated"
+            )
+            po.process_progress(
+                "mission_profile", "skip", reason="No new dive netCDF file created"
             )
         else:
             po.process_progress("mission_profile", "start")
@@ -2450,10 +2466,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     #
     # Create the mission timeseries file
     #
-    if base_opts.make_mission_timeseries and len(nc_files_created) > 0:
-        if len(nc_dive_file_names) < 1:
-            log_warning(
-                "No dive netCDF file created - mission timeseries file will not be updated"
+    if not base_opts.make_mission_timeseries:
+        po.process_progress("mission_timeseries", "skip", reason="By option setting")
+    else:
+        if len(nc_files_created) < 1:
+            log_info(
+                "No dive new netCDF file created - mission timeseries file will not be updated"
+            )
+            po.process_progress(
+                "mission_timeseries", "skip", reason="No dive new netCDF file created"
             )
         else:
             po.process_progress("mission_timeseries", "start")
@@ -2497,19 +2518,24 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         for output_file in output_files:
             processed_other_files.append(output_file)
         po.process_progress("mission_plots", "stop")
+    else:
+        po.process_progress("mission_plots", "skip", reason="Per option")
 
     # Generate KML
-    po.process_progress("mission_kml", "start")
+
     try:
         if not base_opts.skip_kml:
+            po.process_progress("mission_kml", "start")
             MakeKML.main(
                 base_opts,
                 calib_consts,
                 processed_other_files,
             )
+            po.process_progress("mission_kml", "stop")
+        else:
+            po.process_progress("mission_kml", "skip", reason="Per option")
     except Exception:
         log_error("Failed to generate KML", "exc")
-    po.process_progress("mission_kml", "stop")
 
     if stop_processing_event.is_set():
         log_warning("Caught SIGUSR1 - bailing out")
