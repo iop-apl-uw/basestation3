@@ -262,15 +262,8 @@ def main():
                 seaglider_home_dir = seaglider_home_dir.rstrip()
                 seaglider_mission_dir = seaglider_mission_dir.rstrip()
                 log_file = log_file.rstrip()
-                if base_opts.jail_root:
-                    if log_file.startswith(seaglider_mission_dir):
-                        log_file = os.path.join(base_opts.jail_root, log_file[1:])
-                    seaglider_home_dir = os.path.join(
-                        base_opts.jail_root, seaglider_home_dir[1:]
-                    )
-                    seaglider_mission_dir = os.path.join(
-                        base_opts.jail_root, seaglider_mission_dir[1:]
-                    )
+                if base_opts.jail_root and log_file.startswith(seaglider_mission_dir):
+                    log_file = os.path.join(base_opts.jail_root, log_file[1:])
 
                 try:
                     glider_id = int(os.path.split(seaglider_home_dir)[1][2:])
@@ -302,6 +295,23 @@ def main():
                     else:
                         full_path_script = os.path.join(basestation_dir, script)
                     cmd_line = f"{base_opts.python_version} {full_path_script} {tail}"
+
+                    if base_opts.jail_root:
+                        # Convert to the path outside the jail
+                        cmd_line_parts = cmd_line.split()
+                        for ii in range(len(cmd_line_parts)):
+                            if cmd_line_parts[ii].startswith(seaglider_mission_dir):
+                                cmd_line_parts[ii] = os.path.join(
+                                    base_opts.jail_root, cmd_line_parts[ii][1:]
+                                )
+                        cmd_line = " ".join(cmd_line_parts)
+
+                        seaglider_home_dir = os.path.join(
+                            base_opts.jail_root, seaglider_home_dir[1:]
+                        )
+                        seaglider_mission_dir = os.path.join(
+                            base_opts.jail_root, seaglider_mission_dir[1:]
+                        )
 
                     # If this is a script to be queued, do that here.
                     if base_opts.queue_scripts and script_name in queued_scripts:
@@ -345,32 +355,35 @@ def main():
                     # Re-direct on the cmdline, so scripts run with --daemon launch async and return right away
                     cmd_line = cmd_line.rstrip() + f" >> {log_file} 2>&1"
 
-                    if base_opts.docker_image and script in docker_scripts:
-                        # docker run -d --user 1000:1000 --volume /home/sg090:/home/sg090 --volume ~/work/git/basestation3:/usr/local/basestation3  basestation:3.10.10
-                        docker_detach = ""
-                        cmd_line_parts = cmd_line.split()
-                        if "--daemon" in cmd_line_parts:
-                            docker_detach = "-d"
-                            cmd_line_parts.pop(cmd_line_parts.index("--daemon"))
-                        cmd_line = " ".join(cmd_line_parts)
-                        basestation_mount = ""
-                        if not base_opts.use_docker_basestation:
-                            basestation_mount = (
-                                f"--volume {basestation_dir}:{basestation_dir}"
-                            )
-                        for m in base_opts.docker_mount:
-                            basestation_mount += f" --volume {m[0]}"
-                        if base_opts.docker_uid >= 0 and base_opts.docker_gid >= 0:
-                            user_str = f" --user {base_opts.docker_uid}:{base_opts.docker_gid} "
-                        else:
-                            user_str = ""
-                        if seaglider_home_dir != seaglider_mission_dir:
-                            home_dir_str = (
-                                f"--volume {seaglider_home_dir}:{seaglider_home_dir}"
-                            )
-                        else:
-                            home_dir_str = ""
-                        cmd_line = f'docker run {docker_detach} {user_str} {home_dir_str} --ipc="host" --volume {seaglider_mission_dir}:{seaglider_mission_dir} --volume /tmp:/tmp {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
+                    # This is (likely) broken by the conversion of seaglider_home_dir and seaglider_mission_dir to be outside of the jail above
+
+                    # if base_opts.docker_image and script in docker_scripts:
+                    #     # docker run -d --user 1000:1000 --volume /home/sg090:/home/sg090 --volume ~/work/git/basestation3:/usr/local/basestation3  basestation:3.10.10
+                    #     docker_detach = ""
+                    #     cmd_line_parts = cmd_line.split()
+                    #     if "--daemon" in cmd_line_parts:
+                    #         docker_detach = "-d"
+                    #         cmd_line_parts.pop(cmd_line_parts.index("--daemon"))
+                    #     cmd_line = " ".join(cmd_line_parts)
+                    #     basestation_mount = ""
+                    #     if not base_opts.use_docker_basestation:
+                    #         basestation_mount = (
+                    #             f"--volume {basestation_dir}:{basestation_dir}"
+                    #         )
+                    #     for m in base_opts.docker_mount:
+                    #         basestation_mount += f" --volume {m[0]}"
+                    #     if base_opts.docker_uid >= 0 and base_opts.docker_gid >= 0:
+                    #         user_str = f" --user {base_opts.docker_uid}:{base_opts.docker_gid} "
+                    #     else:
+                    #         user_str = ""
+                    #     if seaglider_home_dir != seaglider_mission_dir:
+                    #         home_dir_str = (
+                    #             f"--volume {seaglider_home_dir}:{seaglider_home_dir}"
+                    #         )
+                    #     else:
+                    #         home_dir_str = ""
+                    #     cmd_line = f'docker run {docker_detach} {user_str} {home_dir_str} --ipc="host" --volume {seaglider_mission_dir}:{seaglider_mission_dir} --volume /tmp:/tmp {basestation_mount} {base_opts.docker_image} /usr/bin/sh -c "{cmd_line}"'
+
                     # May not be critical, but for now, this script when launched out of systemd is
                     # running with unbuffered stdin/stdout - no need to launch other scripts this way
                     my_env = os.environ.copy()
