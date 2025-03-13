@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -30,6 +30,7 @@
 
 """Routines for creating mission profile from a Seaglider's dive profiles"""
 
+import contextlib
 import cProfile
 import functools
 import os
@@ -52,6 +53,7 @@ import MakeDiveProfiles
 import QC
 import Sensors
 import Utils
+import Utils2
 from BaseLog import (
     BaseLogger,
     log_critical,
@@ -103,6 +105,17 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
     )
 
     mission_timeseries_name = None  # not known yet
+    instrument_id = None  # not known yet
+
+    # First try for the mission name from the sg_calib_constants.m file
+    with contextlib.suppress(Exception):
+        mission_timeseries_name = Utils2.get_mission_timeseries_name(base_opts)
+
+    if mission_timeseries_name is None:
+        log_warning(
+            "Unable to determine timeseries file name from sg_calib_constants.m  - will use per-dive netcdf files",
+        )
+
     BaseNetCDF.reset_nc_char_dims()
 
     # These vectors are related to the CTD's time basis (and dimension).  The CTD
@@ -243,7 +256,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                     "No dive_number attribute in %s" % dive_nc_profile_name
                 ) from e
 
-            if not mission_timeseries_name:
+            if not instrument_id:
                 # calib_consts is set; figure out filename, etc.
                 try:
                     instrument_id = int(calib_consts["id_str"])
@@ -255,6 +268,7 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
                 platform_id = "SG%03d" % instrument_id
                 platform_var = globals_d["platform"]
 
+            if not mission_timeseries_name:
                 mission_title = Utils.ensure_basename(calib_consts["mission_title"])
                 mission_timeseries_name = os.path.join(
                     base_opts.mission_dir,
