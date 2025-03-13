@@ -185,6 +185,7 @@
 
     #processReport {
         display: inline-block;
+        text-align: center;
     }
     #processProgressBar {
         display: inline-block;
@@ -940,13 +941,18 @@
         /* position: relative; */
         display: grid;
         grid-template-columns: 50px 1fr max-content;
-        grid-template-rows: 0.98fr 205px;
+        grid-template-rows: min-content 0.98fr 205px;
         grid-template-areas:
+            "navLinks navLinks right"
             "toolbar main right"
             "plotRibbonBox plotRibbonBox right";
         height: 99%;
         max-height: 99%;
         row-gap: 10px;
+    }
+
+    .desktop#navLinks {
+        grid-area: navLinks;
     }
 
     .desktop#waitIndicator {
@@ -1015,18 +1021,23 @@
     .desktop#right {
         grid-area: right;
         display: grid;
-        grid-template-rows: 230px min-content 1fr 380px;
+        grid-template-rows: 230px min-content 1fr min-content 380px;
         grid-template-columns: auto;
         grid-template-areas:
             "status"
             "annunciators"
             "commlog"
+            "rightHeader"
             "cmdfile";
         row-gap: 5px;
         width: 580x;
         max-width: 580px;
         margin-left: 10px;
     }
+    .desktop#rightHeader {
+        grid-area: rightHeader;
+    }
+
     .desktop#commlog {
         overflow:auto; 
         font-size: 10px; 

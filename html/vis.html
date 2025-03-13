@@ -230,13 +230,15 @@
         }
     }
 
-    function completeProcessBar(b)
+    function completeProcessBar(b, note)
     {
         var s;
         for (var i = 0 ; i < process_progress_sections.length ; i++) {
             s = 'process_' + process_progress_sections[i];
-            if ($(s).innerHTML == '')
+            if ($(s).innerHTML == '') {
                 $(s).innerHTML = b;
+                $(s).title += ' ' + note;
+            }
         }
     }
 
@@ -247,6 +249,7 @@
             s = 'process_' + process_progress_sections[i];
             $(s).style.backgroundColor = '';
             $(s).innerHTML = '';
+            $(s).title = process_progress_sections[i];
         }
     }
 
@@ -421,22 +424,39 @@
                     $('call').innerHTML = json['call'];
                 }
                 else if ('uuids' in json) {
-                    $('processPendingCount').innerHTML = '' + json['uuids'].length;
+                    $('processPendingCount').style.display = 'inline-block';
                     if (json['action'] == 'start') {
+                        $('processPendingCount').innerHTML = 'pending: ' + (json['uuids'].length - 1);
+                        $('processLabel').innerHTML = 'Running job:';
                         clearProcessBar();
                     }
                     else if (json['action'] == 'complete') {
                         currProcess = null;
-                        fillProcessBar('&times;');
+                        completeProcessBar('&times;', json['returncode'] == 0 ? 'skipped' : 'skipped: basestation error');
+                        $('processPendingCount').innerHTML = 'pending: ' + (json['uuids'].length - 1);
+                        if (json['uuids'].length - 1 == 0) {
+                            $('processPendingCount').style.display = 'none';
+                            $('processLabel').innerHTML = 'Latest job:';
+                        }
+                    }
+                    else {
+                        $('processPendingCount').innerHTML = 'pending: ' + json['uuids'].length;
                     }
                 }
                 else if ('section' in json) {
                     if (json['action'] == 'start') {
+                        $('processLabel').innerHTML = 'Running job:'; // in case we missed queue start
                         $('process_' + json['section']).style.backgroundColor = '#00ff00';
                         currProcess = structuredClone(json);
                     }
+                    else if (json['action'] == 'skipped') {
+                        $('process_' + json['section']).style.backgroundColor = '#00ff00';
+                        $('process_' + json['section']).innerHTML = '&times;';
+                        $('process_' + json['section']).title += ' skipped: ' + json['reason'];
+                        // consider: ever need to clean up currProcess that didn't get a completed?
+                    }
                     else {
-                        $('process_' + json['action']).innerHTML = '&check;';
+                        $('process_' + json['section']).innerHTML = '&check;';
                         currProcess = null;
                     }
                 }
@@ -4159,6 +4179,8 @@ parms[p]
 <html>
 <body onload="init();" style="font-family: verdana, arial, tahoma, 'sans serif';">
 
+<div id="bodyView">
+
 <div id="navLinks">
     <a href="./" target="index">Index</a> <b>&#124;</b> 
     <a href="dash" target="dash"> Dashboard </a> <b>&#124;</b> 
@@ -4185,22 +4207,13 @@ parms[p]
     
 {% if runMode == 'pilot' %}
 
-    <div id="processReport">
-        running:
-        <div id="processProgressBar">
-        </div>
-        pending:
-        <span id="processPendingCount">
-        0
-        </span> 
-    </div>
     <span style="float:right; padding-right: 10px;">
     <span class="spanClick" id="LoginLogout" onclick="logInOutUser();"> Login </span>  
     <b>&#124;</b><span class="spanClick" id="toggleRight" onclick="toggleRight(); return false;"> Hide pilot</span></span>
 {% endif %}
 </div>
 
-<div id="bodyView">
+
 
 <div id="toolbar">
     <div class="toolTop">
@@ -4652,6 +4665,19 @@ parms[p]
 {% if runMode == 'pilot' %}
 
 <div id="right">
+    <div id="rightHeader">
+        <div id="processReport" style="display: inline-flex; aligin-items: center; min-height: 20px;">
+            <span id="processLabel">
+                Latest job:
+            </span>
+            <div id="processProgressBar">
+            </div>
+            &nbsp;&nbsp;&nbsp;
+            <span id="processPendingCount">
+                pending jobs: 0
+            </span> 
+        </div>
+    </div>
 
     <div id="status">
         <div id="position">
