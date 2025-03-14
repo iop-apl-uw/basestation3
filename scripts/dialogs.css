@@ -89,7 +89,7 @@
       font-size: 1.2rem;
     }
 
-   .alert-popup {
+   .alert-popup, #processPopup {
         display: none;
         height: min-content;
         max-height: 90vh;
@@ -109,8 +109,15 @@
         padding: 5px;
     }
 
+    #processPopup {
+        top: 0px;
+        left: 0px;
+        transform: translate(-50%, -50%); 
+        z-index: 5000;
+    }
+
     /* Set a style for the submit/login button */
-    .form-login .btn, .about-content .btn, .alert-popup .btn {
+    .form-login .btn, .about-content .btn, .alert-popup .btn, .process-popup .btn {
       background-color: #04AA6D;
       color: white;
       border: none;
@@ -146,7 +153,7 @@
       padding-right: 5px;
     }
 
-   .alert-popup {
+   .alert-popup, .process-popup {
         display: none;
         height: min-content;
         max-height: 90vh;
@@ -166,6 +173,13 @@
         padding: 5px;
     }
 
+    .process-popup {
+        top: 0px;
+        left: 0px;
+        transform: translate(-50%, -50%);
+        max-width: 75%;
+    }
+
     label {
         font-size: 1.2rem;
     }
@@ -178,7 +192,7 @@
       font-size: 1.2rem;
     }
 
-    .form-login .btn, .about-content .btn, .alert-popup .btn {
+    .form-login .btn, .about-content .btn, .alert-popup .btn, .process-popup .btn {
       background-color: #04AA6D;
       color: white;
       border: none;

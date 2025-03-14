@@ -225,13 +225,63 @@
 
     var processResults = {}
 
+
+
+    function formatProcessResults() 
+    {
+        var s;
+        out = '<table>';
+        for (var i = 0 ; i < process_progress_sections.length ; i++) {
+            out += '<tr><td>' + process_progress_sections[i].replaceAll('_', ' ');
+            if (process_progress_sections[i] in processResults) {
+                const status = processResults[process_progress_sections[i]].status;
+                if (status == 'skipped') {
+                    out += '<td>skipped<td>' + processResults[process_progress_sections[i]].reason;
+                }
+                else if (status == 'completed') {
+                    out += '<td>completed<td>ran ' + processResults[process_progress_sections[i]].elapsed.toFixed(2) + ' s';
+                }
+                else if (status == 'started') {
+                    const now = Date.now()/1000;
+                    out += '<td>started<td>running ' + (now - processResults[process_progress_sections[i]].start).toFixed(2) + ' s';
+                }
+            }
+            else {
+                out += '<td><td>';
+            }
+            out += '</tr>';
+        } 
+        out += '</table>';
+        return out;
+    }
+
+    var processTimer = null;
+
+    function updateProcessTimer() {
+        $('processPopupContents').innerHTML = formatProcessResults();
+        processTimer = setTimeout('updateProcessTimer()', 100);
+    }
+
+    function popupProcessResults() {
+        $('processPopup').style.display = 'block';
+        $('processPopupContents').innerHTML = formatProcessResults();
+    }
+
+    function closeProcessResults() {
+        $('processPopup').style.display = 'none';
+        if (processTimer)
+            clearTimeout(processTimer);
+
+        processTimer = null;
+    }
+ 
     function setupProcessBar()
     {
         var s;
         for (var i = 0 ; i < process_progress_sections.length ; i++) {
             s = document.createElement('span');
             s.id = 'process_' + process_progress_sections[i];
-            s.title = process_progress_sections[i];
+            s.title = process_progress_sections[i].replaceAll('_', ' ');
             $('processProgressBar').appendChild(s);
         }
 
@@ -255,7 +305,7 @@
         for (var i = 0 ; i < process_progress_sections.length ; i++) {
             s = $('process_' + process_progress_sections[i]);
             s.classList.remove(...processClasses);
-            s.title = process_progress_sections[i];
+            s.title = process_progress_sections[i].replaceAll('_', ' ');
         }
         processReults = {};
     }
@@ -268,14 +318,11 @@
         const s = $('process_' + currProcess['section']); 
         const now = Date.now()/1000; 
         if (!s.classList.contains('processBarRed') && currProcess['red'] > 0 && now > currProcess['time'] + currProcess['red']) {
-            console.log('changing to red');
-            console.log(now);
-            console.log(currProcess['time']);
-            console.log(currProcess['red']);
             s.classList.remove(...processColors);
             s.classList.add('processBarRed');
         }
         else if (!s.classList.contains('processBarRed') && !s.classList.contains('processBarYellow') && currProcess['yellow'] > 0 && now > currProcess['time'] + currProcess['yellow']) {
+            s.classList.remove(...processColors);
             s.classList.add('processBarYellow');
         }
     }
@@ -452,6 +499,7 @@
                             $('processPendingCount').style.display = 'none';
                             $('processLabel').innerHTML = 'Latest job:';
                         }
+                        if (processTimer) clearTimeout(processTimer);
                     }
                     else {
                         $('processPendingCount').innerHTML = 'pending: ' + json['uuids'].length;
@@ -463,21 +511,28 @@
                         $('processLabel').innerHTML = json['section'].replaceAll('_', ' ');
                         s.classList.add('processBarGreen');
                         currProcess = structuredClone(json);
-                        processResults[json['section']] = { start: json['time'] };
+                        processResults[json['section']] = { start: json['time'], status: 'started' };
+                        updateProcessTimer();
                     }
                     else if (json['action'] == 'skip') {
                         s.title += ' skipped: ' + json['reason'];
                         // consider: ever need to clean up currProcess that didn't get a completed?
                         s.classList.add('processBarX'); // color?
                         currProcess = null;
+                        processResults[json['section']] = { status: 'skipped', reason: json['reason'] };
+                        $('processPopupContents').innerHTML = formatProcessResults();
                     }
                     else { // completed
                         s.classList.add('processBarCheck');
                         $('processLabel').innerHTML = 'Running job:';
                         currProcess = null;
                         if (json['section'] in processResults && 'start' in processResults[json['section']]) {
-                            processResults[json['section']].elapsed = json['time'] - processResults[json['section']];
+                            processResults[json['section']].elapsed = json['time'] - processResults[json['section']].start;
+                            processResults[json['section']].status = 'completed';
+                            s.title += ': ' + processResults[json['section']].elapsed.toFixed(2) + ' s';
                         }
+                        $('processPopupContents').innerHTML = formatProcessResults();
+                        if (processTimer) clearTimeout(processTimer);
                     }
                 }
                 else {
@@ -4669,18 +4724,25 @@ parms[p]
 {% if runMode == 'pilot' %}
 
 <div id="right">
-    <div id="rightHeader">
+    <div id="rightHeader" style="position: relative;">
         <div id="processReport" style="display: inline-flex; aligin-items: center; min-height: 20px;">
             <span id="processLabel" style="display:inline-block; width:160px;">
                 Latest job:
             </span>
-            <div id="processProgressBar">
+            <div id="processProgressBar" onclick="popupProcessResults();">
             </div>
             &nbsp;&nbsp;&nbsp;
             <span id="processPendingCount">
                 pending jobs: 0
             </span> 
         </div>
+
+        <div id="processPopup" style="display: none;" class="process-popup">
+            <div id="processPopupContents">
+            </div>
+            <button id="processOk" type="submit" class="btn" onclick="closeProcessResults();">ok</button>
+        </div>
+
     </div>
 
     <div id="status">
