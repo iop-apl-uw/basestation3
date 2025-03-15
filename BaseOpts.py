@@ -281,7 +281,9 @@ def find_additional_options(basestation_directory, cmdline_args):
 
     basestation_etc = os.path.join(basestation_directory, "etc")
 
-    for extension_directory in (basestation_etc, args.group_etc, args.mission_dir):
+    for extension_directory, additional_search_path in ((basestation_etc, None),
+                                                        (args.group_etc, args.group_etc),
+                                                        (args.mission_dir, args.mission_dir)):
         if extension_directory and os.path.exists(extension_directory):
             extensions_file_name = os.path.join(extension_directory, ".extensions")
             if os.path.exists(extensions_file_name):
@@ -313,34 +315,34 @@ def find_additional_options(basestation_directory, cmdline_args):
                             if extension_elts[0] in extensions_to_skip:
                                 continue
 
-                            extension_module_name = os.path.join(
-                                basestation_directory, extension_elts[0]
-                            )
-                            extension_module = loadmodule(extension_module_name)
-                            if extension_module is None or not hasattr(extension_module, "load_additional_arguments"):
-                                continue
-                            else:
-                                try:
-                                    extension_ret_val = extension_module.load_additional_arguments()
-                                except Exception:
-                                    sys.stderr.write(
-                                        f"Extension {extension_module_name} raised an exception {traceback.format_exc()}"
-                                    )
+                            for search_path in (basestation_directory, additional_search_path):
+                                if search_path is None:
                                     continue
+                                extension_module_name = os.path.join(
+                                    search_path, extension_elts[0]
+                                )
+                                extension_module = loadmodule(extension_module_name)
+                                if extension_module is None or not hasattr(extension_module, "load_additional_arguments"):
+                                    continue
+                                else:
+                                    try:
+                                        extension_ret_val = extension_module.load_additional_arguments()
+                                    except Exception:
+                                        sys.stderr.write(
+                                            f"Extension {extension_module_name} raised an exception {traceback.format_exc()}"
+                                        )
+                                        continue
 
-                                # ToDo - this is actually a tuple -
-                                # one is list of arguments to add the calling module to and the secons is new arguments to
-                                # add to the list
-                                if isinstance(extension_ret_val, tuple) and len(extension_ret_val) == 3:
-                                    if isinstance(extension_ret_val[0], list):
-                                        _, name = os.path.split(extension_module_name)
-                                        name, _ = os.path.splitext(name)
-                                        add_arguments[name] = extension_ret_val[0]
-                                    if isinstance(extension_ret_val[1], dict):
-                                        new_option_groups |= extension_ret_val[1]
-                                    if isinstance(extension_ret_val[2], dict):
-                                        # TODO - typecheck the dict members to be sure they are options_t
-                                        new_arguments |= extension_ret_val[2]
+                                    if isinstance(extension_ret_val, tuple) and len(extension_ret_val) == 3:
+                                        if isinstance(extension_ret_val[0], list):
+                                            _, name = os.path.split(extension_module_name)
+                                            name, _ = os.path.splitext(name)
+                                            add_arguments[name] = extension_ret_val[0]
+                                        if isinstance(extension_ret_val[1], dict):
+                                            new_option_groups |= extension_ret_val[1]
+                                        if isinstance(extension_ret_val[2], dict):
+                                            # TODO - typecheck the dict members to be sure they are options_t
+                                            new_arguments |= extension_ret_val[2]
     return (add_arguments, new_option_groups, new_arguments)
 
 
@@ -354,27 +356,6 @@ def find_additional_options(basestation_directory, cmdline_args):
 #                        group "required"
 # subparsers: list of str - list of sub-commands this argument belongs to
 #
-# options_t = collections.namedtuple(
-#    "options_t", ("default_val", "group", "args", "var_type", "kwargs")
-# )
-# @dataclasses.dataclass
-# class options_t:
-#     """Data that drives options processing"""
-
-#     default_val: typing.Any
-#     group: set
-#     args: tuple
-#     var_type: typing.Any
-#     kwargs: dict
-
-#     def __post_init__(self):
-#         """Type conversions"""
-#         if not isinstance(self.args, tuple):
-#             raise ValueError("args is not a tuple")
-#         if self.group is not None and not isinstance(self.group, set):
-#             self.group = set(self.group)
-#         if not isinstance(self.kwargs, dict):
-#             raise ValueError("kwargs is not a dict")
 
 
 global_options_dict = {
