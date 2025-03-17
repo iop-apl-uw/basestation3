@@ -26,68 +26,71 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# ruff: noqa
+# ruff: noqa: SIM910
+# ruff: noqa: UP012
 
-
-from orjson import dumps,loads
-from json2html import json2html
-import random
-import time
+import asyncio
 import calendar
 import os
 import os.path
-from parse import parse
+import random
 import sys
-from zipfile import ZipFile
+import time
 from io import BytesIO
-from anyio import Path
-import websockets
-import aiosqlite
+from zipfile import ZipFile
+
 import aiofiles
-import asyncio
 import aiohttp
+import aiosqlite
 import asyncudp
+from anyio import Path
+from json2html import json2html
+from orjson import dumps, loads
+from parse import parse
+
 if "darwin" not in sys.platform:
     import asyncinotify
-import sanic
-import sanic_gzip
-import sanic_ext
-import pprint
-from functools import wraps,partial
-import jwt
-from passlib.hash import sha256_crypt
-from types import SimpleNamespace
+import base64
+import getopt
 import hashlib
 import hmac
-import yaml
-import LogHTML
-import SelftestHTML
-import summary
-import multiprocessing
-import getopt
-import base64
+import pprint
 import re
+import secrets
+import zlib
+from functools import partial, wraps
+from types import SimpleNamespace
+
+import jwt
+import sanic
+import sanic_ext
+import sanic_gzip
+import yaml
 import zmq
 import zmq.asyncio
-import zlib
+from passlib.hash import sha256_crypt
+from sanic.worker.manager import WorkerManager
+
+import BaseCtrlFiles
+
 # import urllib.parse 
 import BaseOpts
 import capture
+import ExtractTimeseries
+import LogHTML
+import Magcal
+import parms
+import pilot
+import rafos
+import RegressVBD
+import scicon
+import SelftestHTML
+import summary
 import Utils
 import Utils2
-import secrets
-import ExtractTimeseries
-import socket
-import rafos
-from sanic.worker.manager import WorkerManager
-import RegressVBD
-import Magcal
-import BaseCtrlFiles
-import parms
-import scicon
-import visauth
-import pilot
 import validate
+import visauth
+
 
 async def checkClose(conn):
     try:
@@ -165,7 +168,7 @@ def getTokenUser(request):
     if request.app.config.SINGLE_MISSION:
         return (request.app.config.USER, False, False, False)
 
-    if not 'token' in request.cookies:
+    if 'token' not in request.cookies:
         return (False, False, False, False)
 
     try:
@@ -180,7 +183,7 @@ def getTokenUser(request):
 
 # checks whether the auth token authorizes a user or group in users, groups
 def checkToken(request, users, groups, pilots, pilotgroups, admins, admingroups):
-    if not 'token' in request.cookies:
+    if 'token' not in request.cookies:
         return PERM_REJECT
 
     (tokenUser, tokenGroups, tokenDomain, tokenType) = getTokenUser(request)
@@ -246,7 +249,7 @@ def checkEndpoint(request, e):
         (tU, tG, tD) = getTokenUser(request)
         allowAccess = False
 
-        if tU and 'users' in e and e['users'] and tU in e['users']:
+        if tU and 'users' in e and e['users'] and tU in e['users']:  # noqa: SIM114
             allowAccess = True
         elif tG and 'groups' in e and e['groups'] and len(set(tG) & set(e['groups'])) > 0:
             allowAccess = True
@@ -265,25 +268,24 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
             nonlocal check
             nonlocal requireLevel
 
-            ws = kwargs['ws'] if 'ws' in kwargs else None
+            ws = kwargs.get('ws', None)
 
             # url = request.server_path[1:].split('/')[0]
             url = request.path[1:].split('/')[0]
-            if check & AUTH_ENDPOINT:
-                if url in request.ctx.ctx.endpoints:
-                    e = request.ctx.ctx.endpoints[url]
-                    status = checkEndpoint(request, e)
-                    if status == PERM_REJECT:
-                        return sanic.response.text("authorization failed")
+            if check & AUTH_ENDPOINT and url in request.ctx.ctx.endpoints:
+                e = request.ctx.ctx.endpoints[url]
+                status = checkEndpoint(request, e)
+                if status == PERM_REJECT:
+                    return sanic.response.text("authorization failed")
 
-                    else:
-                        if 'allow' in e and e['allow'] == True:
-                            response = await f(request, *args, **kwargs)
-                            return response
-                        if 'modes' in e and e['modes'] is not None:
-                            modes = e['modes']
-                        if 'level' in e and e['level'] is not None:
-                            requireLevel = e['level']
+                else:
+                    if 'allow' in e and e['allow']:
+                        response = await f(request, *args, **kwargs)
+                        return response
+                    if 'modes' in e and e['modes'] is not None:
+                        modes = e['modes']
+                    if 'level' in e and e['level'] is not None:
+                        requireLevel = e['level']
                         
             runningMode = modeNames[request.app.config.RUNMODE]
 
@@ -294,11 +296,11 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
                 # we require positive authentication as a pilot against mission specified 
                 # list of allowed pilots (and pilotgroups). Access to missions without 
                 # pilots: and/or pilotgroups: specs will be denied for all. 
-                glider = kwargs['glider'] if 'glider' in kwargs else None
+                glider = kwargs.get('glider', None)
                 mission = request.args['mission'][0] if 'mission' in request.args else None
 
                 m = matchMission(glider, request, mission)
-                if m is not None and 'allow' in m and m['allow'] == True:
+                if m is not None and 'allow' in m and m['allow']:
                     # allow in a mission overrides everything else
                     response = await f(request, *args, **kwargs)
                     return response
@@ -309,7 +311,7 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
                     if status == PERM_REJECT:
                         return sanic.response.text("authorization failed")
                     else:
-                        if 'allow' in e and e['allow'] == True:
+                        if 'allow' in e and e['allow']:
                             response = await f(request, *args, **kwargs)
                             return response
                         if 'modes' in e and e['modes'] is not None:
@@ -320,7 +322,7 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
                 # modes now has final possible value - so check for pilot restricted API in public run mode
                 if modes is not None and runningMode not in modes:
                     sanic.log.logger.info(f"rejecting {url}: mode not allowed")
-                    return sanic.response.text("Page not found: {}".format(request.path), status=404)
+                    return sanic.response.text(f"Page not found: {format(request.path)}", status=404)
                     
                 # if we're running a private instance of a pilot server then we only require authentication
                 # as a pilot if the pilots/pilotgroups spec is given (similar to how users always work)
@@ -346,7 +348,7 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
             elif modes is not None and runningMode not in modes:
                 # do the public / pilot mode check for AUTH_ENDPOINT only mode
                 sanic.log.logger.info(f"rejecting {url}: mode not allowed")
-                return sanic.response.text("Page not found: {}".format(request.path), status=404)
+                return sanic.response.text(f"Page not found: {format(request.path)}", status=404)
             # this will reject everything if the user has no token, so specify requireLevel=0 for truly wide open access
             else:
                 status = checkToken(request, request.ctx.ctx.users, request.ctx.ctx.groups,
@@ -382,10 +384,10 @@ def activeMission(gld, request):
     return x
  
 def matchMission(gld, request, mission=None):
-    if gld == None:
+    if gld is None:
         return None
 
-    if mission == None and \
+    if mission is None and \
        request and \
        'mission' in request.args and \
        len(request.args['mission'][0]) > 0:
@@ -399,7 +401,7 @@ def matchMission(gld, request, mission=None):
     if mission:
         return None
 
-    x = next(filter(lambda d: d['glider'] == int(gld) and d['default'] == True, request.ctx.ctx.missionTable), None)
+    x = next(filter(lambda d: d['glider'] == int(gld) and d['default'], request.ctx.ctx.missionTable), None)
     return x 
 
 def filterMission(gld, request, mission=None):
@@ -426,8 +428,8 @@ def baseOpts(instrument_id, mission_dir, module_name):
 
 
 async def getLatestCall(request, glider, conn=None, limit=1, path=None):
-    if conn == None:
-        if path == None:
+    if conn is None:
+        if path is None:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
         else:
             dbfile = f'{path}/sg{glider:03d}.db'
@@ -452,7 +454,7 @@ async def getLatestCall(request, glider, conn=None, limit=1, path=None):
     except Exception as e:
         sanic.log.logger.info(e)
 
-    if conn == None:
+    if conn is None:
         Utils.logDB(f'getLatestCall close {glider}')
         await myconn.close()
 
@@ -461,10 +463,9 @@ async def getLatestCall(request, glider, conn=None, limit=1, path=None):
 async def getLatestFile(glider, request, which, dive=None):
     p = Path(gliderPath(glider,request))
     latest = -1
-    call = -1;
+    call = -1
     filename = None
     fmt = 0
-    imatch = -1
 
     rx = [ re.compile(which + r'\.(?P<dive>[0-9]{4})\.(?P<cycle>[0-9]{4}?$)'),
            re.compile(which + r'\.(?P<dive>[0-9][0-9]?[0-9]?[0-9]?)\.(?P<cycle>[0-9][0-9]?[0-9]?[0-9]?$)'),
@@ -564,7 +565,7 @@ def attachHandlers(app: sanic.Sanic):
     
     @app.exception(sanic.exceptions.NotFound)
     def pageNotFound(request, exception):
-        return sanic.response.text("Page not found: {}".format(request.path), status=404)
+        return sanic.response.text(f"Page not found: {format(request.path)}", status=404)
 
     @app.post('/auth')
     # description: user authorization 
@@ -718,9 +719,9 @@ def attachHandlers(app: sanic.Sanic):
                 if 'wrap' in request.args and request.args['wrap'][0] == 'page':
                     mission = missionFromRequest(request)
                     mission = f"?mission={mission}" if mission else ''
-                    wrap = '?wrap=page' if mission == '' else '&wrap=page'
+                    # wrap = '?wrap=page' if mission == '' else '&wrap=page'
 
-                    filename = f'{sys.path[0]}/html/wrap.html'
+                    filename = f'{sys.path[0]}/html/wrap.html{mission}'
                     return await sanic.response.file(filename, mime_type='text/html')
                 else:
                     if fmt == 'div':
@@ -791,7 +792,7 @@ def attachHandlers(app: sanic.Sanic):
             message['sa'] = request.ctx.ctx.sa
 
         a_dicts = []
-        for a in request.ctx.ctx.assets.keys():
+        for a in request.ctx.ctx.assets:
             d = request.ctx.ctx.assets[a]
             d.update( { 'asset': a } )
             a_dicts.append(d)
@@ -820,7 +821,7 @@ def attachHandlers(app: sanic.Sanic):
             if 'also' in mission and mission['also'] is not None:
                 for i in reversed(range(len(mission['also']))):
                     a = mission['also'][i]
-                    if 'asset' in a and a['asset'] in request.ctx.ctx.assets.keys() and 'type' in request.ctx.ctx.assets[a['asset']] and request.ctx.ctx.assets[a['asset']]['type'] == 'group' and 'assets' in request.ctx.ctx.assets[a['asset']]:
+                    if 'asset' in a and a['asset'] in request.ctx.ctx.assets and 'type' in request.ctx.ctx.assets[a['asset']] and request.ctx.ctx.assets[a['asset']]['type'] == 'group' and 'assets' in request.ctx.ctx.assets[a['asset']]:
                         for item in request.ctx.ctx.assets[a['asset']]['assets']:
                             grouped.append( { 'asset': item } )
 
@@ -829,14 +830,14 @@ def attachHandlers(app: sanic.Sanic):
                 mission['also'].extend(grouped)
  
                 for a in mission['also']:
-                    if not 'mission' in a:
+                    if 'mission' not in a:
                         a.update( { 'mission': mission['mission'] } )
                     if 'asset' in a:
-                        if a['asset'] in request.ctx.ctx.assets.keys():
+                        if a['asset'] in request.ctx.ctx.assets:
                             # don't copy the whole dict because maybe we have local
                             # overrides in this per mission version
-                            for k in request.ctx.ctx.assets[a['asset']].keys():
-                                if not k in a.keys():
+                            for k in request.ctx.ctx.assets[a['asset']]:
+                                if k not in a:
                                     a.update({ k: request.ctx.ctx.assets[a['asset']][k] })
                         else:
                             continue
@@ -847,7 +848,7 @@ def attachHandlers(app: sanic.Sanic):
                 message['also'] = also
 
             if len(request.ctx.ctx.routes):
-                message['routes'] = request.ctx.ctx.routes;
+                message['routes'] = request.ctx.ctx.routes
 
             #if 'assets' in mission:
             #    a_dicts = []
@@ -896,7 +897,7 @@ def attachHandlers(app: sanic.Sanic):
     # returns: json array of data
     @authorized()
     async def csvHandler(request, glider:int):
-        if not 'file' in request.args:
+        if 'file' not in request.args:
             return sanic.response.json({'error': 'no file'})
         
         filename = request.args['file'][0]
@@ -911,9 +912,9 @@ def attachHandlers(app: sanic.Sanic):
                 async for line in file:
                     try:
                         x.append([float(y) for y in line.split(',')])
-                    except:
+                    except Exception:
                         continue
-        except:
+        except Exception:
             return sanic.response.json({'error': 'invalid file'})
  
         return sanic.response.json({'data': x})
@@ -952,7 +953,7 @@ def attachHandlers(app: sanic.Sanic):
                     zip = ZipFile(BytesIO(await file.read()))
                     kml = zip.open(f'sg{glider}.kml', 'r').read()
                     return sanic.response.raw(kml)
-            except:
+            except Exception:
                 return sanic.response.text('no file')
 
     # Not currently linked on a public facing page, but available.
@@ -1001,7 +1002,7 @@ def attachHandlers(app: sanic.Sanic):
 
         url = 'https://iabp.apl.washington.edu/download?bid=' + str(bid) + '&ndays=' + str(tail + 1)
 
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession() as session: # noqa: SIM117
             async with session.get(url, ssl=False) as response:
                 if response.status == 200:
                     body = await response.read()
@@ -1056,7 +1057,7 @@ def attachHandlers(app: sanic.Sanic):
                 found = True
                 break
 
-        if found == False:
+        if not found:
             return sanic.response.text(f"Page not found: {request.path}", status=404)
               
         user     = request.json.get('user', None) 
@@ -1102,7 +1103,7 @@ def attachHandlers(app: sanic.Sanic):
                 found = True
                 break
 
-        if found == False:
+        if not found:
             return sanic.response.text(f"Page not found: {request.path}", status=404)
               
         if request.args and len(request.args) > 0:
@@ -1114,7 +1115,7 @@ def attachHandlers(app: sanic.Sanic):
                     if response.status == 200:
                         body = await response.read()
                         return sanic.response.raw(body)
-            except:
+            except Exception:
                 return sanic.response.html('empty')
         
     @app.route('/proxykmz/<url:path>')
@@ -1138,7 +1139,7 @@ def attachHandlers(app: sanic.Sanic):
                 found = True
                 break
 
-        if found == False:
+        if not found:
             return sanic.response.text(f"Page not found: {request.path}", status=404)
 
         kmz = None
@@ -1146,14 +1147,14 @@ def attachHandlers(app: sanic.Sanic):
         if request.args and len(request.args) > 0:
             url = url + '?' + request.query_string
         try:
-            async with aiohttp.ClientSession() as session:
+            async with aiohttp.ClientSession() as session: # noqa: SIM117
                 async with session.get(url) as response:
                     if response.status == 200:
                         kmz = await response.read()
-        except:
+        except Exception:
             pass
 
-        if kmz == None:
+        if kmz is None:
             return sanic.response.text(f"Page not found: {request.path}", status=404)
 
         nm = None
@@ -1168,7 +1169,7 @@ def attachHandlers(app: sanic.Sanic):
             print(f'exception {e}')
             pass
 
-        if nm == None:
+        if nm is None:
             return sanic.response.text('not found')
  
         kml = zip.open(nm).read()
@@ -1222,9 +1223,9 @@ def attachHandlers(app: sanic.Sanic):
                 sanic.log.logger.info("purging known password debugging")
                 prior = True
             elif 'assword' in line \
-                 and not 'Password:]' in line \
-                 and not 'no password: prompt' in line \
-                 and not 'no shell prompt' in line:
+                 and 'Password:]' not in line \
+                 and 'no password: prompt' not in line \
+                 and 'no shell prompt' not in line:
                 line = '---- deleted ----'
                 sanic.log.logger.info("purging unknown password")
             else:
@@ -1278,7 +1279,7 @@ def attachHandlers(app: sanic.Sanic):
                     elif line.startswith('Traceback'):
                         baseout = baseout + '<b>\n'
                         trace = True
-                    elif line in ['\n', '\r\n'] and trace == True:
+                    elif line in ['\n', '\r\n'] and trace:
                         baseout = baseout + '</b>\n'
                         trace = False 
 
@@ -1441,13 +1442,13 @@ def attachHandlers(app: sanic.Sanic):
     @app.route('/grep/<glider:int>/<file:str>/<dives:str>/<dive1:int>/<diveN:int>/<search:str>')
     @authorized()
     async def grepHandler(request, glider:int, file:str, dives:str, dive1:int, diveN:int, search:str):
-        if not file in ['comm', 'log', 'eng', 'cap', 'pdoslog', 'pdosbat', 'cmdfile', 'baselog']:
+        if file not in ['comm', 'log', 'eng', 'cap', 'pdoslog', 'pdosbat', 'cmdfile', 'baselog']:
             return sanic.response.text('invalid file')
-        if not dives in ['selftest', 'all', 'range']:
+        if dives not in ['selftest', 'all', 'range']:
             return sanic.response.text('invalid dives')
 
-        showfile = 'showfile' in request.args;
-        showdive = 'showdive' in request.args;
+        showfile = 'showfile' in request.args
+        showdive = 'showdive' in request.args
 
         if file == 'comm':
             files = [ f'{gliderPath(glider, request)}/comm.log' ]
@@ -1494,9 +1495,8 @@ def attachHandlers(app: sanic.Sanic):
                 m = pattern.search(os.path.basename(f))    
                 if m:
                     dv = int(m.group("dive"))
-                    if dives == 'range':
-                        if dv < dive1 or dv > diveN:
-                            continue
+                    if dives == 'range' and (dv < dive1 or dv > diveN):
+                        continue
                     if 'cycle' in m.groupdict():
                         cy = int(m.group("cycle"))
 
@@ -1551,7 +1551,7 @@ def attachHandlers(app: sanic.Sanic):
 
                 try:
                     maxdv = (await cur.fetchone())[0]
-                except:
+                except Exception:
                     maxdv = 0
 
                 Utils.logDB(f'status close {glider}')
@@ -1686,7 +1686,7 @@ def attachHandlers(app: sanic.Sanic):
     async def magcalHandler(request, glider:int, dives:str):
         path = gliderPath(glider, request)
 
-        softiron = True if 'softiron' in request.args else False
+        softiron = 'softiron' in request.args
         dives = RegressVBD.parseRangeList(dives)
 
         hard, soft, cover, circ, plt = Magcal.magcal(path, glider, dives, softiron, 'html')
@@ -1706,7 +1706,7 @@ def attachHandlers(app: sanic.Sanic):
                              depth1:float, depth2:float, initBias:float):
         path = gliderPath(glider, request)
 
-        ballast = True if 'ballast' in request.args else False
+        ballast = 'ballast' in request.args
         print(ballast)
 
         dives = RegressVBD.parseRangeList(dives)
@@ -1937,7 +1937,7 @@ def attachHandlers(app: sanic.Sanic):
             cur = await conn.cursor()
             try:
                 await cur.execute(q)
-            except:
+            except Exception:
                 Utils.logDB(f'query close (except) {glider}')
                 return sanic.response.json({'error': 'db error'})
 
@@ -1996,13 +1996,13 @@ def attachHandlers(app: sanic.Sanic):
                         if a.search(line):
                             sanic.log.logger.info(f"global allow {line} ({d})")
                             status = False
-                            break;
+                            break
                     if status:
                         for a in a2:
                             if a.search(line):
                                 sanic.log.logger.info(f"{filename} allow {line} ({d})")
                                 status = False
-                                break;
+                                break
 
                     if status:
                         return status
@@ -2049,12 +2049,12 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('no')
         
         res = request.json
-        if not 'glider' in res:
+        if 'glider' not in res:
             return sanic.response.text('no')
 
         try:
             bo = baseOpts(glider, gliderPath(glider, request), 'BaseCtrlFiles')
-        except:
+        except Exception:
             bo = None
 
         if 'body' in res and 'file' in res:
@@ -2107,7 +2107,7 @@ def attachHandlers(app: sanic.Sanic):
         if 'file' not in message or message['file'] != which or 'contents' not in message:
             return sanic.response.text('oops')
 
-        if applyControls(request.ctx.ctx.controls, message['contents'], which) == True:
+        if applyControls(request.ctx.ctx.controls, message['contents'], which):
             return sanic.response.text('not allowed')
 
         expiry = message['expiry']
@@ -2134,7 +2134,6 @@ def attachHandlers(app: sanic.Sanic):
         else:
             res = [ 'no validator available for this file type, new file automatically accepted' ]
             err = 0
-            warn = 0
 
         if err == 0:
             try:
@@ -2148,10 +2147,7 @@ def attachHandlers(app: sanic.Sanic):
                 size = len(message['contents'])
                 checksum = zlib.crc32(message['contents'].encode('utf-8'))
 
-                if which in logs:
-                    logname = logs[which]
-                else:
-                    logname = 'pilot.log'
+                logname = logs.get(which, 'pilot.log')
 
                 async with aiofiles.open(f'{gliderPath(glider, request)}/{logname}', 'a') as log:
                     await log.write(f"\n### {tU} () {date}\n")
@@ -2195,7 +2191,6 @@ def attachHandlers(app: sanic.Sanic):
         else:
             res = [ 'no validator available for this file type, new file automatically accepted' ]
             err = 0
-            warn = 0
 
         if err == 0:
             salt = f'{random.getrandbits(32):08x}'
@@ -2274,13 +2269,13 @@ def attachHandlers(app: sanic.Sanic):
             sanic.log.logger.info(f"msg={msg}")
             await zsock.send_multipart([(f"{glider:03d}-urls-{topic}").encode('utf-8'), dumps(msg)]) 
             zsock.close()
-        except:
+        except Exception:
             return sanic.response.text('error')
      
         return sanic.response.text('ok')
 
     async def getChatMessages(request, glider, t, conn=None):
-        if conn == None:
+        if conn is None:
             dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
             if not await aiofiles.os.path.exists(dbfile):
                 return (None, time.time())
@@ -2301,7 +2296,7 @@ def attachHandlers(app: sanic.Sanic):
             sanic.log.logger.info(e)
             rows = None
 
-        if conn == None:
+        if conn is None:
             await myconn.close()
             Utils.logDB(f'getChatMessages close {glider}')
 
@@ -2325,7 +2320,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.json({'error': 'not allowed'})
 
         (tU, _, _, _) = getTokenUser(request)
-        if tU == False:
+        if not tU:
             return sanic.response.json({'error': 'authorization failed'})
 
         (rows, _) = await getChatMessages(request, glider, 0)
@@ -2344,7 +2339,7 @@ def attachHandlers(app: sanic.Sanic):
         # we could have gotten here by virtue of no restrictions specified for this glider/mission,
         # but chat only worked if someone is logged in, so we check that we have a user
         (tU, _, _, _) = getTokenUser(request)
-        if tU == False:
+        if not tU:
             return sanic.response.text('authorization failed')
 
         attach = None
@@ -2371,10 +2366,10 @@ def attachHandlers(app: sanic.Sanic):
 
             try:
                 if attach:
-                    q = f"INSERT INTO chat(timestamp, user, message, attachment, mime) VALUES(?, ?, ?, ?, ?)"
+                    q = "INSERT INTO chat(timestamp, user, message, attachment, mime) VALUES(?, ?, ?, ?, ?)"
                     values = (now, tU, msg, attach.body, attach.type)
                 else:
-                    q = f"INSERT INTO chat(timestamp, user, message) VALUES(?, ?, ?)"
+                    q = "INSERT INTO chat(timestamp, user, message) VALUES(?, ?, ?)"
                     values = ( now, tU, msg )
                 await cur.execute(q, values)
                 await conn.commit()
@@ -2404,7 +2399,7 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     async def missionsaHandler(request, glider:int):
         mission = matchMission(glider, request) 
-        if not 'sadata' in mission:
+        if 'sadata' not in mission:
             return sanic.response.json({'error': 'no data'})
         
         assets = []
@@ -2429,7 +2424,7 @@ def attachHandlers(app: sanic.Sanic):
                                              'lon': lon,
                                              'subcat': int(pieces[10]),
                                            })
-                    except:
+                    except Exception:
                         continue
             
         return sanic.response.json(assets)
@@ -2443,7 +2438,7 @@ def attachHandlers(app: sanic.Sanic):
         if 't' in request.args:
             try:
                 newer_t = int(request.args['t'][0])
-            except:
+            except Exception:
                 newer_t = 0
         else:
             newer_t = 0
@@ -2468,7 +2463,7 @@ def attachHandlers(app: sanic.Sanic):
                 if recent and newer_t > 0:
                     q = f"SELECT epoch,lat,lon FROM calls WHERE epoch > {newer_t} ORDER BY epoch ASC;"
                 else: # we might need all of them
-                    q = f"SELECT epoch,lat,lon FROM calls ORDER BY epoch ASC;"
+                    q = "SELECT epoch,lat,lon FROM calls ORDER BY epoch ASC;"
                 await cur.execute(q)
                 rows = await cur.fetchall()
     
@@ -2492,12 +2487,12 @@ def attachHandlers(app: sanic.Sanic):
         if ',' in glider:
             try:
                 gliders = map(int, glider.split(','))
-            except:
+            except Exception:
                 return sanic.response.json({'error': 'invalid'})
         else:
             try:
                 gliders = [ int(glider) ]
-            except:
+            except Exception:
                 return sanic.response.json({'error': 'invalid'})
 
         opTable = await buildAuthTable(request, None)
@@ -2512,11 +2507,11 @@ def attachHandlers(app: sanic.Sanic):
             try:
                 t = int(request.args['t'][0])
             except ValueError:
-                q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+                q = "SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
             else:
                 q = f"SELECT * FROM calls WHERE epoch > {t} ORDER BY epoch DESC LIMIT 1;"
         else:
-            q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
+            q = "SELECT * FROM calls ORDER BY epoch DESC LIMIT 1;"
                 
         # xurvey uses this but nothing else - easy enough to add
         # nmea = 'format' in request.args and request.args['format'][0] == 'nmea'
@@ -2614,7 +2609,7 @@ def attachHandlers(app: sanic.Sanic):
 
         filename = f'{gliderPath(glider,request)}/comm.log'
 
-        await ws.send(f"START") # send something to ack the connection opened
+        await ws.send("START") # send something to ack the connection opened
 
         sanic.log.logger.debug(f"streamHandler start {filename}")
 
@@ -2642,7 +2637,7 @@ def attachHandlers(app: sanic.Sanic):
                 row = await getLatestCall(request, glider, limit=3)
                 for i in range(len(row)-1, -1, -1):
                     await ws.send(f"NEW={dumps(row[i]).decode('utf-8')}")
-            except:
+            except Exception:
                 pass
         else:
             await ws.send('no comm.log\n')
@@ -2671,7 +2666,6 @@ def attachHandlers(app: sanic.Sanic):
         sanic.log.logger.info(f"subscribing to {glider:03d}-")
 
         
-        prev = ""
         while True:
             try:
                 msg = await zsock.recv_multipart()
@@ -2716,7 +2710,7 @@ def attachHandlers(app: sanic.Sanic):
                     msg = loads(body)
                     msg.update({ "what": topic })
                     await ws.send(f"NEW={dumps(msg).decode('utf-8')}")
-                elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC and not 'km' in topic:
+                elif 'file' in topic and request.app.config.RUNMODE > MODE_PUBLIC and 'km' not in topic:
                     m = loads(body) 
                     async with aiofiles.open(m['full'], 'rb') as file:
                         Utils.logDB(f'stream 3 open {glider}')
@@ -2733,6 +2727,7 @@ def attachHandlers(app: sanic.Sanic):
 
                     Utils.logDB(f'stream 3 close {glider}')
                 elif 'file-cmdfile' in topic:
+                    cmdfilename = os.path.join(gliderPath(glider, request), 'cmdfile')
                     directive = await summary.getCmdfileDirective(cmdfilename)
                     await ws.send(f"CMDFILE={directive}")
                 else:
@@ -2748,7 +2743,7 @@ def attachHandlers(app: sanic.Sanic):
     
     @app.websocket('/map/stream')
     async def mapStreamHandler(request: sanic.Request, ws: sanic.Websocket):
-        await ws.send(f"START") # send something to ack the connection opened
+        await ws.send("START") # send something to ack the connection opened
 
         zsock = zmq.asyncio.Context().socket(zmq.SUB)
         zsock.setsockopt(zmq.LINGER, 0)
@@ -2765,10 +2760,10 @@ def attachHandlers(app: sanic.Sanic):
                     await ws.send(body)
                 elif '-urls-gpsstr' in topic or '-files' in topic:  
                     out = loads(body)
-                    if (not 'glider' in out) :
+                    if ('glider' not in out) :
                         out.update( { 'glider': int(topic[0:3]) } )
 
-                    if (not 'mission' in out):
+                    if ('mission' not in out):
                         mission = activeMission(out['glider'], request)
                         out.update( { 'mission': mission['mission'] if mission else '' } )
 
@@ -2816,7 +2811,7 @@ def attachHandlers(app: sanic.Sanic):
 
         sanic.log.logger.info("watchHandler start")
         opTable = await buildAuthTable(request, None)
-        await ws.send(f"START") # send something to ack the connection opened
+        await ws.send("START") # send something to ack the connection opened
 
         zsock = zmq.asyncio.Context().socket(zmq.SUB)
         zsock.setsockopt(zmq.LINGER, 0)
@@ -2838,7 +2833,7 @@ def attachHandlers(app: sanic.Sanic):
                 if m is None: # must not be authorized
                     continue
 
-                if gliders and not glider in gliders:
+                if gliders and glider not in gliders:
                     continue
  
                 if 'cmdfile' in topic:
@@ -2933,7 +2928,7 @@ def attachHandlers(app: sanic.Sanic):
 #
 
 async def buildUserTable(app, config=None):
-    if config == None:
+    if config is None:
         config = app.config
 
     if await aiofiles.os.path.exists(config.USERS_FILE):
@@ -2957,7 +2952,7 @@ async def buildUserTable(app, config=None):
             continue
         
         for uk in userDictKeys:
-            if uk not in x[user].keys():
+            if uk not in x[user]:
                 x[user].update( { uk: dflts[uk] if dflts and uk in dflts else None } )
 
     if app:
@@ -2966,7 +2961,7 @@ async def buildUserTable(app, config=None):
     return x
 
 async def buildMissionTable(app, config=None):
-    if config == None:
+    if config is None:
         config = app.config
 
     if 'SINGLE_MISSION' in config and config.SINGLE_MISSION:
@@ -3054,7 +3049,7 @@ async def buildMissionTable(app, config=None):
             mfile = x[ikey][domain]['missions']
             try:
                 (tbl, xx, _) = await buildMissionTable(None, config={'MISSIONS_FILE': mfile})
-            except:
+            except Exception:
                 continue
 
             for k in tbl:
@@ -3068,7 +3063,7 @@ async def buildMissionTable(app, config=None):
                     ufile = x[ikey][domain]['users']
                     try:
                         userTbl = await buildUserTable(None, config={ 'USERS_FILE': ufile })
-                    except:
+                    except Exception:
                         userTbl = {}
                 else:
                     ufile = None
@@ -3120,7 +3115,7 @@ async def buildMissionTable(app, config=None):
      
     orgDictKeys = ["orgname", "orglink", "text", "contact", "email"]
     for ok in orgDictKeys:
-        if ok not in x['organization'].keys():
+        if ok not in x['organization']:
             x['organization'].update( { ok: None } )
 
 
@@ -3141,7 +3136,7 @@ async def buildMissionTable(app, config=None):
     gliders  = []
     ids      = []
     actives  = []
-    for n, m in enumerate(x['missions']):
+    for m in x['missions']:
 
         if 'glider' not in m:
             sanic.log.logger.info('skipping {m}')
@@ -3163,7 +3158,7 @@ async def buildMissionTable(app, config=None):
                 else:
                     actives.append(glider)
 
-            m.update({ "default": (not glider in gliders) })
+            m.update({ "default": (glider not in gliders) })
             gliders.append(glider)
 
             for mk in missionDictKeys:
@@ -3200,7 +3195,7 @@ async def buildMissionTable(app, config=None):
             continue    
 
         for ek in endpointsDictKeys:
-            if ek not in x['endpoints'][k].keys():
+            if ek not in x['endpoints'][k]:
                 if dflts and ek in dflts:
                     x['endpoints'][k].update( { ek: dflts[ek] })
                 else:
@@ -3208,12 +3203,12 @@ async def buildMissionTable(app, config=None):
                     
     if dflts:
         for k in protectableRoutes:
-            if k not in x['endpoints'].keys():
+            if k not in x['endpoints']:
                 x['endpoints'][k] = dict.fromkeys(endpointsDictKeys)
                 x['endpoints'][k].update( dflts )        
 
-    for k in x['controls'].keys():
-        for da in x['controls'][k].keys():
+    for k in x['controls']:
+        for da in x['controls'][k]:
             for index,exp in enumerate(x['controls'][k][da]):
                 x['controls'][k][da][index] = re.compile(re.escape(exp), re.IGNORECASE)
 
@@ -3309,7 +3304,6 @@ async def findNextPlot(path, plot, dive, direc):
 
 async def buildMissionPlotList(path):
     plots = { "eng": { ".webp": [], ".div": [] }, "sg": { ".webp": [], ".div": [] } }
-    maxdv = -1
     p = Path(path)
     p = p / 'plots' 
     exts = ['.div', '.webp']
@@ -3338,7 +3332,7 @@ async def configWatcher(app):
     zsock.setsockopt(zmq.LINGER, 0)
     zsock.connect(app.config.WATCH_IPC)
     sanic.log.logger.info('opened context for configWatcher')
-    zsock.setsockopt(zmq.SUBSCRIBE, (f"000-file-").encode('utf-8'))
+    zsock.setsockopt(zmq.SUBSCRIBE, "000-file-")
     while True:
         try:
             msg = await zsock.recv_multipart()
@@ -3349,7 +3343,7 @@ async def configWatcher(app):
             elif app.config['USERS_FILE'] in topic:
                 await buildUserTable(app)
 
-        except BaseException as e: # websockets.exceptions.ConnectionClosed:
+        except BaseException: # websockets.exceptions.ConnectionClosed:
             zsock.close()
             return
 
@@ -3455,23 +3449,22 @@ async def watchMonitorPublish(config):
                 chart = None
 
     chartSock = []
-    if chart:
-        if 'data' in chart:
-            for v in chart['data'].keys():
-                if 'udp' in chart['data'][v] and ('regex' in chart['data'][v] or 'format' in chart['data'][v]):
-                    if 'regex' in chart['data'][v]:
-                        rx = re.compile(chart['data'][v]['regex'])
-                    else:
-                        rx = None
+    if chart and 'data' in chart:
+        for v in chart['data']:
+            if 'udp' in chart['data'][v] and ('regex' in chart['data'][v] or 'format' in chart['data'][v]):
+                if 'regex' in chart['data'][v]:
+                    rx = re.compile(chart['data'][v]['regex'])
+                else:
+                    rx = None
 
-                    chartSock.append( { 'sock': await asyncudp.create_socket(local_addr=('0.0.0.0', 
-                                                                                       int(chart['data'][v]['udp'])), 
-                                                                           packets_queue_max_size=1024, reuse_port=True),
-                                      'id': v,
-                                      'regex': rx, 'format': chart['data'][v].get('format') } )
-            # todo - handle serial and json
-                                      
-        # varRE    = re.compile('[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}[ ]+([^,]+)')
+                chartSock.append( { 'sock': await asyncudp.create_socket(local_addr=('0.0.0.0', 
+                                                                                   int(chart['data'][v]['udp'])), 
+                                                                       packets_queue_max_size=1024, reuse_port=True),
+                                  'id': v,
+                                  'regex': rx, 'format': chart['data'][v].get('format') } )
+        # todo - handle serial and json
+                                  
+    # varRE    = re.compile('[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}[ ]+([^,]+)')
 
     try:
         while True:
@@ -3561,14 +3554,14 @@ async def watchMonitorPublish(config):
                                                 msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
 
                                         await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
-                                except:
+                                except Exception:
                                     pass
                             elif v['regex']:
                                 try:
                                     if m := v['regex'].match(r[0].decode()):
                                         msg = { 'time': time.time(), v['id']: [ float(x.strip()) for x in m.groups() ] }
                                         await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
-                                except:
+                                except Exception:
                                     pass
 
             if len(pend) > 0:
@@ -3623,7 +3616,7 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
     if 'STATIC_FILE' not in app.config:
         app.config.STATIC_FILE = "static.yml"
     if 'FQDN' not in app.config:
-        app.config.FQDN = None;
+        app.config.FQDN = None
     if 'USER' not in app.config:
         app.config.USER = os.getlogin()
     if 'SINGLE_MISSION' not in app.config:
@@ -3631,7 +3624,7 @@ def createApp(overrides: dict, test=False) -> sanic.Sanic:
     if 'WEATHERMAP_APPID' not in app.config:
         app.config.WEATHERMAP_APPID = ''
     if 'CHART' not in app.config:
-        app.config.CHART = None;
+        app.config.CHART = None
     if 'AUTH_DB' not in app.config:
         app.config.AUTH_DB = "auth.db"
     if 'ALERT' not in app.config:
@@ -3746,7 +3739,7 @@ if __name__ == '__main__':
             usage()
             sys.exit(1)
                  
-    if root is None and not 'SINGLE_MISSION' in overrides:
+    if root is None and 'SINGLE_MISSION' not in overrides:
         root = '/home/seaglider'
 
     if root is not None:
