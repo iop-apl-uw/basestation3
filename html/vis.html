@@ -2910,6 +2910,9 @@ parms[p]
                     
                     setInnerHTML($(div), '<pre>' + data + '</pre>');
                 }
+                else {
+                    $(div).innerHTML = '<pre>' + data + '</pre>';
+                }
             }
         })
         .catch(error => {

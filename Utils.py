@@ -1748,12 +1748,12 @@ def cleanupZombieVisSockets():
     running_pids = []
     for f in p.glob("sanic-*-*.ipc"):
         pid = int(f.name.split('-')[1])
-        if not pid in running_pids:
+        if pid not in running_pids:
             if not check_for_pid(pid):
                 try:
                     os.remove(f)
                     print(f"removed {f}")
-                except Error as e:
+                except Exception as e:
                     print(f"error removing {f}: {e}")
             else:
                 print(f"{f} still attached to running PID")

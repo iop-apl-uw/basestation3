@@ -717,11 +717,11 @@ def attachHandlers(app: sanic.Sanic):
         for filename in filenames:
             if await aiofiles.os.path.exists(filename):
                 if 'wrap' in request.args and request.args['wrap'][0] == 'page':
-                    mission = missionFromRequest(request)
-                    mission = f"?mission={mission}" if mission else ''
+                    # mission = missionFromRequest(request)
+                    # mission = f"?mission={mission}" if mission else ''
                     # wrap = '?wrap=page' if mission == '' else '&wrap=page'
 
-                    filename = f'{sys.path[0]}/html/wrap.html{mission}'
+                    filename = f'{sys.path[0]}/html/wrap.html'
                     return await sanic.response.file(filename, mime_type='text/html')
                 else:
                     if fmt == 'div':
@@ -3332,7 +3332,7 @@ async def configWatcher(app):
     zsock.setsockopt(zmq.LINGER, 0)
     zsock.connect(app.config.WATCH_IPC)
     sanic.log.logger.info('opened context for configWatcher')
-    zsock.setsockopt(zmq.SUBSCRIBE, "000-file-")
+    zsock.setsockopt(zmq.SUBSCRIBE, b"000-file-")
     while True:
         try:
             msg = await zsock.recv_multipart()
