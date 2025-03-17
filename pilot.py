@@ -109,7 +109,7 @@ async def pilotRecs(path:str, glider:int):
     else:   
         vbd = None
 
-    if row['turn_centered_C_ROLL_DIVE']:
+    if row['turn_centered_C_ROLL_DIVE'] and row['turn_centered_C_ROLL_CLIMB']:
         roll =  {
                     'current':  { 'C_ROLL_DIVE': row['log_C_ROLL_DIVE'],           'C_ROLL_CLIMB': row['log_C_ROLL_CLIMB'], },
                     'roll':     { 'C_ROLL_DIVE': row['roll_C_ROLL_DIVE'],          'C_ROLL_CLIMB': row['roll_C_ROLL_CLIMB'], },

@@ -287,14 +287,20 @@
 
     }
 
-    function completeProcessBar(b, note)
+    function completeProcessBar(returnCode)
     {
         var s;
-        for (var i = 0 ; i < process_progress_sections.length ; i++) {
+        if (!currProcess || returnCode == 0)
+            return;
+
+        const last = process_progress_sections.indexOf(currProcess['section']);
+        for (var i = last ; i < process_progress_sections.length ; i++) {
             s = $('process_' + process_progress_sections[i]);
             if (!s.classList.contains('processBarCheck') && !s.classList.contains('processBarX')) {
                 s.classList.add('processBarX');
-                s.title += ' ' + note;
+                s.title += ' ' + 'skipped: basestation error';
+                processResults[process_progress_sections[i]].status = 'skipped';
+                processResults[process_progress_sections[i]].reason = 'basestation error';
             }
         }
     }
@@ -492,8 +498,8 @@
                         clearProcessBar();
                     }
                     else if (json['action'] == 'complete') {
+                        completeProcessBar(json['returncode']);
                         currProcess = null;
-                        completeProcessBar('&times;', json['returncode'] == 0 ? 'skipped' : 'skipped: basestation error');
                         $('processPendingCount').innerHTML = 'pending: ' + (json['uuids'].length - 1);
                         if (json['uuids'].length - 1 == 0) {
                             $('processPendingCount').style.display = 'none';
