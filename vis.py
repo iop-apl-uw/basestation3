@@ -350,7 +350,7 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
             # this will reject everything if the user has no token, so specify requireLevel=0 for truly wide open access
             else:
                 status = checkToken(request, request.ctx.ctx.users, request.ctx.ctx.groups,
-                                    request.ctx.ctx.pilots, request.ctx.ctx.pilotgroups,
+                                    request.ctx.ctx.pilotusers, request.ctx.ctx.pilotgroups,
                                     request.ctx.ctx.admins, request.ctx.ctx.admingroups)
                 if status < requireLevel:
                     sanic.log.logger.info(f"rejecting {url}: not allowed")
@@ -423,6 +423,40 @@ def baseOpts(instrument_id, mission_dir, module_name):
     )
 
     return base_opts
+
+
+async def getLatestCall(request, glider, conn=None, limit=1, path=None):
+    if conn == None:
+        if path == None:
+            dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
+        else:
+            dbfile = f'{path}/sg{glider:03d}.db'
+        sanic.log.logger.info(dbfile)
+        if not await aiofiles.os.path.exists(dbfile):
+            return None
+
+        myconn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
+        Utils.logDB(f'getLatestCall open {glider}')
+        myconn.row_factory = rowToDict
+    else:
+        myconn = conn
+
+    row = None
+    try:
+        cur = await myconn.cursor()
+        q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT {limit};"
+        sanic.log.logger.info(q)
+        await cur.execute(q)
+        row = await cur.fetchall()
+        await cur.close()
+    except Exception as e:
+        sanic.log.logger.info(e)
+
+    if conn == None:
+        Utils.logDB(f'getLatestCall close {glider}')
+        await myconn.close()
+
+    return row
 
 async def getLatestFile(glider, request, which, dive=None):
     p = Path(gliderPath(glider,request))
@@ -2421,7 +2455,7 @@ def attachHandlers(app: sanic.Sanic):
  
         filename = f'{gliderPath(glider, request)}/SG_{glider:03d}_positions.txt'
         if not recent and await aiofiles.os.path.exists(filename):
-            if aoifiles.os.path.getmtime(filename) > newer_t:
+            if await aiofiles.os.path.getmtime(filename) > newer_t:
                 return await sanic.response.file(filename, mime_type='text/plain')
             else:
                 return sanic.response.text('nothing new')
@@ -2531,35 +2565,6 @@ def attachHandlers(app: sanic.Sanic):
             else:
                 return sanic.response.json(out)
            
-    async def getLatestCall(request, glider, conn=None, limit=1):
-        if conn == None:
-            dbfile = f'{gliderPath(glider,request)}/sg{glider:03d}.db'
-            sanic.log.logger.info(dbfile)
-            if not await aiofiles.os.path.exists(dbfile):
-                return None
-
-            myconn = await aiosqlite.connect('file:' + dbfile + '?immutable=1', uri=True)
-            Utils.logDB(f'getLatestCall open {glider}')
-            myconn.row_factory = rowToDict
-        else:
-            myconn = conn
-
-        row = None
-        try:
-            cur = await myconn.cursor()
-            q = f"SELECT * FROM calls ORDER BY epoch DESC LIMIT {limit};"
-            sanic.log.logger.info(q)
-            await cur.execute(q)
-            row = await cur.fetchall()
-            await cur.close()
-        except Exception as e:
-            sanic.log.logger.info(e)
-
-        if conn == None:
-            Utils.logDB(f'getLatestCall close {glider}')
-            await myconn.close()
-
-        return row
  
     #
     # web socket (real-time streams), 
@@ -3018,10 +3023,12 @@ async def buildMissionTable(app, config=None):
         x['users'] = None       # not currently used, but allows blocking non-mission specific endpoints except to global users
     if 'groups' not in x:
         x['groups'] = None
-    if 'pilots' not in x:
-        x['pilots'] = None
+    if 'pilotusers' not in x:
+        x['pilotusers'] = None
     if 'pilotgroups' not in x:
         x['pilotgroups'] = None
+    if 'autocomplete' not in x:
+        x['autocomplete'] = 0
 
     if 'domains' in x:
         ikey = 'domains'
@@ -3075,6 +3082,13 @@ async def buildMissionTable(app, config=None):
                                                    controls=xx['controls'],
                                                    assets=xx['assets'],
                                                    routes=xx['routes'],
+                                                   users=xx['users'],
+                                                   groups=xx['groups'],
+                                                   admins=xx['admins'],
+                                                   admingroups=xx['admingroups'],
+                                                   pilotusers=xx['pilotusers'],
+                                                   pilotgroups=xx['pilotgroups'],
+                                                   autocomplete=xx['autocomplete'],
                                                    missionsFile=mfile,
                                                    usersFile=ufile )
 
@@ -3093,11 +3107,14 @@ async def buildMissionTable(app, config=None):
             app.ctx.routes       = x['routes']
             app.ctx.admins      = x['admins']
             app.ctx.admingroups = x['admingroups']
-            app.ctx.pilots      = x['pilots']
+            app.ctx.pilotusers  = x['pilotusers']
             app.ctx.pilotgroups = x['pilotgroups']
             app.ctx.users       = x['users']
             app.ctx.groups      = x['groups']
             app.ctx.sa          = x['sa']
+            app.ctx.autocomplete = x['autocomplete']
+            app.ctx.missionsFile = config['MISSIONS_FILE']
+            app.ctx.usersFile = config['USERS_FILE']
 
         return (missionTable, None, domains)
      
@@ -3210,11 +3227,14 @@ async def buildMissionTable(app, config=None):
         app.ctx.domain = x['authdomain']
         app.ctx.admins      = x['admins']
         app.ctx.admingroups = x['admingroups']
-        app.ctx.pilots      = x['pilots']
+        app.ctx.pilotusers  = x['pilotusers']
         app.ctx.pilotgroups = x['pilotgroups']
         app.ctx.users       = x['users']
         app.ctx.groups      = x['groups']
         app.ctx.sa          = x['sa']
+        app.ctx.autocomplete = x['autocomplete']
+        app.ctx.missionsFile = config['MISSIONS_FILE']
+        app.ctx.usersFile = config['USERS_FILE']
 
     return (missions, x, domains)
  
@@ -3228,8 +3248,28 @@ async def buildAuthTable(request, defaultPath, glider=None, mission=None, includ
         path        = m['path'] if m['path'] else defaultPath
         missionName = m['mission'] if m['mission'] else ""
         project     = m['project'] if m['project'] else ""
+
         if (glider is None or glider == m['glider']) and (mission is None or mission == m['mission']):
+            note = None
+            if request.ctx.ctx.autocomplete > 0 and m['status'] == 'active':
+                call = await getLatestCall(request, m['glider'], limit=1, path=m['path'])
+                if call:
+                    t = call[0]['epoch']
+                    if time.time() > call[0]['epoch'] + request.ctx.ctx.autocomplete*86400:
+                        m['status'] = 'complete'
+                        note = 'auto complete by last call time' 
+                else:
+                    try:
+                        t = await aiofiles.os.path.getmtime(m['path'])
+                        if time.time() > t + request.ctx.ctx.autocomplete*86400:
+                            m['status'] = 'complete'
+                            note = 'auto complete by last directory activity'
+                    except Exception:
+                        pass
+
             x = { "mission": missionName, "glider": m['glider'], "default": m['default'], "status": m['status'], "project": project }
+            if note:
+                x.update({ "note": note })
 
             if includePath:
                 x.update({ "path": path })
