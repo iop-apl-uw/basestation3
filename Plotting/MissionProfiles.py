@@ -203,7 +203,7 @@ def mission_profiles(
                                            top, bott, binZ, None, extnci=nci, x=prev_x)
 
             if not d:
-                log_warning(f"Could not extract timeseries for {vk} - skipping")
+                log_warning(f"Could not extract timeseries for {vk} - skipping", max_count=1)
                 continue
 
             contours={
