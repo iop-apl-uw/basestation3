@@ -1743,6 +1743,21 @@ async def notifyVisAsync(glider: int, topic: str, body: str):
         await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
 
+def cleanupZombieVisSockets():
+    p = pathlib.Path("/tmp")
+    running_pids = []
+    for f in p.glob("sanic-*-*.ipc"):
+        pid = int(f.name.split('-')[1])
+        if not pid in running_pids:
+            if not check_for_pid(pid):
+                try:
+                    os.remove(f)
+                    print(f"removed {f}")
+                except Error as e:
+                    print(f"error removing {f}: {e}")
+            else:
+                print(f"{f} still attached to running PID")
+                running_pids.append(pid)
 
 def logDB(msg):
     pass

@@ -3433,109 +3433,114 @@ async def watchMonitorPublish(config):
                                       
         # varRE    = re.compile('[0-9]{2}-[0-9]{2}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}[ ]+([^,]+)')
 
-    while True:
-        aws = [ asyncio.create_task(messagingSocketWatch(inbound), name='inbound') ]
-                # asyncio.create_task(messagingSocketWatch(configWatchSocket, name='config'),
-        if watcher:
-            aws.append(asyncio.create_task(fileWatch(watcher, files), name='files'))
+    try:
+        while True:
+            aws = [ asyncio.create_task(messagingSocketWatch(inbound), name='inbound') ]
+                    # asyncio.create_task(messagingSocketWatch(configWatchSocket, name='config'),
+            if watcher:
+                aws.append(asyncio.create_task(fileWatch(watcher, files), name='files'))
 
-        for s in chartSock:
-            aws.append(asyncio.create_task(s['sock'].recvfrom(), name=s['id']))
+            for s in chartSock:
+                aws.append(asyncio.create_task(s['sock'].recvfrom(), name=s['id']))
 
-        done, pend = await asyncio.wait(aws, return_when=asyncio.FIRST_COMPLETED)
+            done, pend = await asyncio.wait(aws, return_when=asyncio.FIRST_COMPLETED)
 
-        for task in done:
-            name = task.get_name()
-            # sanic.log.logger.info(name)
-            r = task.result()
-            if name == 'inbound': # r is multipart message
-                d = loads(r[1])
-                if 'when' not in d:
-                    d.update({"when": "socket"})
+            for task in done:
+                name = task.get_name()
+                # sanic.log.logger.info(name)
+                r = task.result()
+                if name == 'inbound': # r is multipart message
+                    d = loads(r[1])
+                    if 'when' not in d:
+                        d.update({"when": "socket"})
 
-                r[1] = dumps(d)
-                sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
-                await zsock.send_multipart(r)
-#
-#            elif name == 'config':
-#                
-#                topic = r[0].decode('utf-8')
-#                if config['MISSIONS_FILE'] in topic:
-#                    watcher.close()
-#                    (watcher, files) = await buildFilesWatchList(config)
-#
-            elif name == 'files':
-                fname = r[0]
-                if r[1] and watcher:             # r is tuple (name, config boolean)
-                    watcher.close()
-                    print('rebuilding list')
-                    (watcher, files) = await buildFilesWatchList(config)
-                    # rebuild the watch list, but re-reading the tables is a per app thing
-                    # so relies on this notification going out and then configWatcher
-                    # picking it up
-                if 'comm.log' in fname:
-                    sz = await aiofiles.os.path.getsize(fname)
-                    if sz > files[fname]['size']:
-                        files[fname]['delta'] = sz - files[fname]['size']
+                    r[1] = dumps(d)
+                    sanic.log.logger.info("notifier got {r[0].decode('utf-8')}")
+                    await zsock.send_multipart(r)
+    #
+    #            elif name == 'config':
+    #                
+    #                topic = r[0].decode('utf-8')
+    #                if config['MISSIONS_FILE'] in topic:
+    #                    watcher.close()
+    #                    (watcher, files) = await buildFilesWatchList(config)
+    #
+                elif name == 'files':
+                    fname = r[0]
+                    if r[1] and watcher:             # r is tuple (name, config boolean)
+                        watcher.close()
+                        print('rebuilding list')
+                        (watcher, files) = await buildFilesWatchList(config)
+                        # rebuild the watch list, but re-reading the tables is a per app thing
+                        # so relies on this notification going out and then configWatcher
+                        # picking it up
+                    if 'comm.log' in fname:
+                        sz = await aiofiles.os.path.getsize(fname)
+                        if sz > files[fname]['size']:
+                            files[fname]['delta'] = sz - files[fname]['size']
+                        else:
+                            files[fname]['delta'] = sz
+
+                        files[fname]['size']  = sz
                     else:
-                        files[fname]['delta'] = sz
+                        sz = 0
 
-                    files[fname]['size']  = sz
-                else:
-                    sz = 0
+                    msg = [(f"{files[fname]['glider']:03d}-file-{files[fname]['file']}").encode('utf-8'), dumps(files[fname])]
+                    sanic.log.logger.info(f"{files[fname]['glider']:03d}-file-{files[fname]['file']}, {sz}")
+                    await zsock.send_multipart(msg)
 
-                msg = [(f"{files[fname]['glider']:03d}-file-{files[fname]['file']}").encode('utf-8'), dumps(files[fname])]
-                sanic.log.logger.info(f"{files[fname]['glider']:03d}-file-{files[fname]['file']}, {sz}")
-                await zsock.send_multipart(msg)
+                elif len(chartSock):
+                    for v in chartSock:
+                        if name == v['id']:
+                            if v['format'] == 'nmea':
+                                try:
+                                    data = r
+                                    if data:
+                                        sentences = data[0].decode()
+                                        msg = { 'ship': v['id'], 'time': time.time() }
+                                        for line in sentences.splitlines():
+                                            if 'GGA' in line:
+                                                pieces = line.split(',')
+                                                msg['hhmmss'] = float(pieces[1])
+                                                msg['lat'] = float(pieces[2])
+                                                msg['lon'] = float(pieces[4])
+                                                if (pieces[3] == 'S'):
+                                                    msg['lat'] = -msg['lat']
+                                                if (pieces[5] == 'W'):
+                                                    msg['lon'] = -msg['lon']
 
-            elif len(chartSock):
-                for v in chartSock:
-                    if name == v['id']:
-                        if v['format'] == 'nmea':
-                            try:
-                                data = r
-                                if data:
-                                    sentences = data[0].decode()
-                                    msg = { 'ship': v['id'], 'time': time.time() }
-                                    for line in sentences.splitlines():
-                                        if 'GGA' in line:
-                                            pieces = line.split(',')
-                                            msg['hhmmss'] = float(pieces[1])
-                                            msg['lat'] = float(pieces[2])
-                                            msg['lon'] = float(pieces[4])
-                                            if (pieces[3] == 'S'):
-                                                msg['lat'] = -msg['lat']
-                                            if (pieces[5] == 'W'):
-                                                msg['lon'] = -msg['lon']
+                                            elif 'HDT' in line:
+                                                pieces = line.split(',')
+                                                msg['hdt'] = float(pieces[1])
+                                            elif 'VTG' in line:
+                                                pieces = line.split(',')
+                                                msg['cog'] = float(pieces[1])
+                                                msg['sog'] = float(pieces[5])
+                                            elif 'ZDA' in line:
+                                                pieces = line.split(',')
+                                                msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
 
-                                        elif 'HDT' in line:
-                                            pieces = line.split(',')
-                                            msg['hdt'] = float(pieces[1])
-                                        elif 'VTG' in line:
-                                            pieces = line.split(',')
-                                            msg['cog'] = float(pieces[1])
-                                            msg['sog'] = float(pieces[5])
-                                        elif 'ZDA' in line:
-                                            pieces = line.split(',')
-                                            msg['yyyymmdd'] = int(pieces[4] + pieces[3] + pieces[2])
+                                        await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
+                                except:
+                                    pass
+                            elif v['regex']:
+                                try:
+                                    if m := v['regex'].match(r[0].decode()):
+                                        msg = { 'time': time.time(), v['id']: [ float(x.strip()) for x in m.groups() ] }
+                                        await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
+                                except:
+                                    pass
 
-                                    await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
-                            except:
-                                pass
-                        elif v['regex']:
-                            try:
-                                if m := v['regex'].match(r[0].decode()):
-                                    msg = { 'time': time.time(), v['id']: [ float(x.strip()) for x in m.groups() ] }
-                                    await zsock.send_multipart([f"000-chart-{v['id']}".encode('utf-8'), dumps(msg)])
-                            except:
-                                pass
+            if len(pend) > 0:
+                for task in pend:
+                    task.cancel()
 
-        if len(pend) > 0:
-            for task in pend:
-                task.cancel()
+                await asyncio.wait(pend)
 
-            await asyncio.wait(pend)
-
+    finally:
+        zsock.close()
+        inbound.close()
+        ctx.term() 
 
                 
 def backgroundWatcher(config):
@@ -3619,11 +3624,13 @@ def usage():
     print("  --usersfile=|-u    users.yml file (default ROOT/users.yml)")
     print("  --staticfile=|-w   static.yml file (default ROOT/static.yml)")
     print("  --certs=|-c        certificate file for SSL")
-    print("  --ssl|-s           boolean enable SSL")
-    print("  --inspector|-i     boolean enable SANIC inspector")
+    print("  --ssl|-s           boolean: enable SSL")
+    print("  --inspector|-i     boolean: enable SANIC inspector")
     print("  --alert|-b         alert sound (bell, ping, chime, beep)")
-    print("  --nochat           boolean run without chat support")
-    print("  --nosave           boolean run without save support")
+    print("  --nochat           boolean: run without chat support")
+    print("  --nosave           boolean: run without save support")
+    print("  --test|-t          yml confidg syntax test mode")
+    print("  -z                 cleanup zombie sockets and exit")
     print()
     print("  Environment variables: ")
     print("    SANIC_CERTPATH, SANIC_ROOTDIR, SANIC_SECRET, ")
@@ -3648,7 +3655,7 @@ if __name__ == '__main__':
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsih', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "chart=" ])
+        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsihz', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "chart=" ])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -3692,6 +3699,9 @@ if __name__ == '__main__':
             if len(pieces) != 2:
                 print("-m sgNNN:/abs/mission/path")
                 sys.exit(1)
+        elif o in ['-z']:
+            Utils.cleanupZombieVisSockets()
+            sys.exit(1)
         elif o in ['-h', '--help']:
             usage()
             sys.exit(1)
