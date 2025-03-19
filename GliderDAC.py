@@ -416,6 +416,9 @@ def main(
             add_to_arguments=add_to_arguments,
         )
 
+        global DEBUG_PDB
+        DEBUG_PDB = base_opts.debug_pdb
+
     BaseLogger(base_opts)
 
     if base_opts.delayed_submission:

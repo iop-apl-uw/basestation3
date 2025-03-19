@@ -32,11 +32,8 @@
 
 import collections
 import os
-import pdb
 import pickle
 import re
-import sys
-import traceback
 
 import numpy as np
 from scipy.interpolate import interp1d
@@ -44,17 +41,6 @@ from scipy.interpolate import interp1d
 import Utils
 from BaseLog import log_debug, log_error, log_info, log_warning
 from TraceArray import trace_array
-
-DEBUG_PDB = False
-
-
-def DEBUG_PDB_F() -> None:
-    """Enter the debugger on exceptions"""
-    if DEBUG_PDB:
-        _, __, traceb = sys.exc_info()
-        traceback.print_exc()
-        pdb.post_mortem(traceb)
-
 
 f_qclog = None  # File for logging QC vectors
 

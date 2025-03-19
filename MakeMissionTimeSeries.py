@@ -808,6 +808,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     BaseLogger(base_opts)  # initializes BaseLog
 
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     # Reset priority
     if base_opts.nice:
         try:

@@ -1521,6 +1521,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         "Command line driver for the all basestation processing.",
         cmdline_args=cmdline_args,
     )
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     # Initialize log
     BaseLogger(base_opts, include_time=True)
 

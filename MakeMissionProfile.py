@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -1367,6 +1367,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         cmdline_args=cmdline_args,
     )
     BaseLogger(base_opts)  # initializes BaseLog
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     # Reset priority
     if base_opts.nice:

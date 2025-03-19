@@ -194,6 +194,9 @@ def main():
     )
     BaseLogger(base_opts, include_time=True)
 
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     for sig in ("TERM", "HUP", "INT"):
         signal.signal(getattr(signal, "SIG" + sig), quit_func)
 

@@ -67,7 +67,6 @@ from BaseLog import (
 )
 from CalibConst import getSGCalibrationConstants
 
-#DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
 slopeVars = [
@@ -1545,6 +1544,9 @@ def main():
         },
     )
     BaseLogger(base_opts, include_time=True)
+    
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     if base_opts.schema:
         checkSchema(base_opts, None)

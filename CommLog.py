@@ -2084,6 +2084,9 @@ def main():
     )
     BaseLogger(base_opts)
 
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     comm_log_path = os.path.join(base_opts.mission_dir, "comm.log")
     if not os.path.exists(comm_log_path):
         log_error(f"{comm_log_path} does not exist")

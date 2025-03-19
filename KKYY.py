@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -47,7 +47,6 @@ import Utils
 from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
 from Globals import WhichHalf
 
-# DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
 
@@ -206,6 +205,9 @@ def main(
             add_option_groups=add_option_groups,
             add_to_arguments=add_to_arguments,
         )
+
+        global DEBUG_PDB
+        DEBUG_PDB = base_opts.debug_pdb
 
     BaseLogger(base_opts)  # initializes BaseLog
 

@@ -56,7 +56,6 @@ from BaseLog import (
     log_warning,
 )
 
-# DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
 # Handles message GC table entries
@@ -670,6 +669,9 @@ def main():
         },
     )
     BaseLogger(base_opts)  # initializes BaseLog
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     log_info("Processing file: %s" % base_opts.log_file)
 

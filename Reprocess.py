@@ -69,7 +69,6 @@ from BaseLog import (
 )
 from CalibConst import getSGCalibrationConstants
 
-# DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
 
@@ -115,6 +114,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
     )
 
     BaseLogger(base_opts, include_time=True)  # initializes BaseLog
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     Utils.check_versions()
 

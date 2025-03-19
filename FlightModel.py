@@ -72,7 +72,6 @@ from CalibConst import getSGCalibrationConstants
 from Globals import flight_variables
 from HydroModel import hydro_model
 
-# DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
 # If you change
@@ -4276,6 +4275,9 @@ def cmdline_main():
     )
 
     BaseLogger(base_opts, include_time=True)  # initializes BaseLog
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     mission_directory = base_opts.mission_dir
 

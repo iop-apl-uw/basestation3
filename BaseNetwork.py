@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -59,7 +59,6 @@ from BaseLog import (
     log_warning,
 )
 
-# DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
 
@@ -1462,6 +1461,9 @@ def main(
         )
 
     BaseLogger(base_opts, include_time=True)
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     log_info(
         "Started processing "

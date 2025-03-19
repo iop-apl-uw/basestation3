@@ -439,6 +439,16 @@ global_options_dict = {
             "action": FullPathTrailingSlashAction,
         },
     ),
+    "debug_pdb": options_t(
+        False,
+        None,
+        ("--debug_pdb",),
+        bool,
+        {
+            "help": "Enter the debugger for selected exceptions",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
     "add_sqlite": options_t(
         True,
         ("Base",),

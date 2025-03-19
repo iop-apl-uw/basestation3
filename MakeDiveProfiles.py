@@ -7508,6 +7508,9 @@ def main():
 
     BaseLogger(base_opts)  # initializes BaseLog
 
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     Utils.check_versions()
 
     # Reset priority

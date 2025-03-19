@@ -95,6 +95,9 @@ def main(
 
     BaseLogger(base_opts)
 
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
     log_info(
         f"Started processing {time.strftime('%H:%M:%S %d %b %Y %Z', time.gmtime(time.time()))}"
     )
