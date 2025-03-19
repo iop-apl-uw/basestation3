@@ -130,69 +130,99 @@ def analyzeMoveRecord(x, which, param, warn):
             warn("possible outliers in VBD AD during pitch move (AD values outside _MIN/_MAX)") 
 
         
-def plotMoveRecord(x, which, includes):
+def plotMoveRecord(x, which, time, includes):
     fig = plotly.graph_objects.Figure()
     n = len(x)
-    curr = [y[4] for y in x]
-       
-    if which == "VBD":
-        ad1 = [y[0] for y in x]
-        ad2 = [y[1] for y in x]
-        t = [idx/1.0 for idx in range(n)]
-        fig.add_trace(
-            {
-                "x": t, 
-                "y": ad1,
-                "name": "linpot A",
-                "type": "scatter",
-                "mode": "lines",
-                "line": {"color": "Black"},
-                "hovertemplate": "%{x:.1f},%{y:.1f}<br><extra></extra>",
-            }
-        )
-        fig.add_trace(
-            {
-                "x": t, 
-                "y": ad2,
-                "name": "linpot B",
-                "type": "scatter",
-                "mode": "lines",
-                "line": {"color": "Red"},
-                "hovertemplate": "%{x:.1f},%{y:.1f}<br><extra></extra>",
-            }
-        )
-    else:
-        if which == "Pitch":
-            ad = [y[2] for y in x]
-        elif which == "Roll":
-            ad = [y[3] for y in x]
+      
+    i = 0
+    j = 0
+    t0 = 0
+#    if len(which) > 1:
+#        print(which)
+#        print(time)
+    colors = { "VBD": "Black", "Pitch": "Blue", "Roll": "Green" }
 
-        t = [idx/10.0 for idx in range(n)]
+    for move in which: 
+        if move == "VBD":
+            n = int(time[j])
+            ad1 = [ y[0] for y in x[i:i+n] ]
+            ad2 = [ y[1] for y in x[i:i+n] ]
+            t = [t0 + idx/1.0 for idx in range(n)]
+            fig.add_trace(
+                {
+                    "x": t, 
+                    "y": ad1,
+                    "name": "linpot A",
+                    "type": "scatter",
+                    "mode": "lines",
+                    "line": {"color": "Black"},
+                    "hovertemplate": "VBD1 %{x:.1f},%{y:.1f}<br><extra></extra>",
+                }
+            )
+            fig.add_trace(
+                {
+                    "x": t, 
+                    "y": ad2,
+                    "name": "linpot B",
+                    "type": "scatter",
+                    "mode": "lines",
+                    "line": {"color": "Red"},
+                    "hovertemplate": "VBD2 %{x:.1f},%{y:.1f}<br><extra></extra>",
+                }
+            )
+        elif move == "Pitch":
+            n = int(time[j]*10)
+            ad = [ y[2] for y in x[i:i+n] ]
+
+            t = [t0 + idx/10.0 for idx in range(n)]
+            fig.add_trace(
+                {
+                    "x": t, 
+                    "y": ad,
+                    "name": "Pitch",
+                    "type": "scatter",
+                    "mode": "lines",
+                    "line": {"color": "Blue"},
+                    "hovertemplate": "pitch %{x:.3f},%{y:.1f}<br><extra></extra>",
+                }
+            )
+        elif move == "Roll":
+            n = int(time[j]*10)
+            ad = [ y[3] for y in x[i:i+n] ]
+
+            t = [t0 + idx/10.0 for idx in range(n)]
+            fig.add_trace(
+                {
+                    "x": t, 
+                    "y": ad,
+                    "name": "Roll",
+                    "type": "scatter",
+                    "mode": "lines",
+                    "line": {"color": "Green"},
+                    "hovertemplate": "roll %{x:.3f},%{y:.1f}<br><extra></extra>",
+                }
+            )
+
+        curr = [ y[4] for y in x[i:i+n] ]
         fig.add_trace(
             {
                 "x": t, 
-                "y": ad,
-                "name": which,
+                "y": curr,
+                "yaxis": "y2",
+                "xaxis": "x1",
+                "name": f"{move} current",
                 "type": "scatter",
                 "mode": "lines",
-                "line": {"color": "Black"},
-                "hovertemplate": "%{x:.3f},%{y:.1f}<br><extra></extra>",
+                "line": {"color": colors[move], "dash": "dash" },
+                "hovertemplate": "%{x:.1f},%{y:.0f}mA<br><extra></extra>",
             }
         )
 
-    fig.add_trace(
-        {
-            "x": t, 
-            "y": curr,
-            "yaxis": "y2",
-            "xaxis": "x1",
-            "name": "current",
-            "type": "scatter",
-            "mode": "lines",
-            "line": {"color": "Blue"},
-            "hovertemplate": "%{x:.1f},%{y:.0f}mA<br><extra></extra>",
-        }
-    )
+
+        j = j + 1
+        i = i + n
+        if len(t):
+            t0 = t[-1]
 
     fig.update_layout(
         {
@@ -211,7 +241,7 @@ def plotMoveRecord(x, which, includes):
             },
 
             "title": {
-                "text": f"{which} move record",
+                "text": f"move record",
                 "xanchor": "center",
                 "yanchor": "top",
                 "x": 0.5,
@@ -238,15 +268,16 @@ def plotMoveRecord(x, which, includes):
                       )
 
 async def formatCaptureFile(file, firstPlot=False):
-    insideMoveDump = False
+    insideMoveDump = []
     moveRecord = []
+    moveTime = []
 
     out = ''
 
     inside = re.compile(r'^\s*[0-9]+\.[0-9]+\s+[0-9]+')
     summary = re.compile(r'^[0-9]+\.[0-9]+,SMOTOR,N,[0-9]+\.[0-9]+,[0-9]+\.[0-9]+,[0-9]+\.[0-9]+,[0-9]+\.[0-9]+,[0-9]+\.[0-9]+')
     crit = re.compile(r'^[0-9]+\.[0-9]+,[SH][A-Z_0-9]+,C,')
-    completed = re.compile(r',(\w+) completed from ')
+    completed = re.compile(r',(\w+) completed from [A-Za-z0-9\.()\[\]\->, ]+ took ([0-9\.]+) sec')
 
     crits = 0
     linenum = 0 
@@ -255,8 +286,29 @@ async def formatCaptureFile(file, firstPlot=False):
             line = line.decode('utf-8', errors='ignore').rstrip()
             linenum = linenum + 1
 
-            if insideMoveDump:
-                if inside.search(line):
+            if len(insideMoveDump) > 0:
+                if line.find(' completed from ') > -1:
+                    a = completed.search(line)
+                    insideMoveDump.append(a.group(1))
+                    moveTime.append(float(a.group(2)))
+                    moveRecord = []
+                    pass
+
+                elif inside.search(line):
+                    if len(moveRecord) == 0:
+                        out = out + line + "\n"
+                        out = out + '<table><tr>'
+                        out = out + '<th>VBD1 AD'
+                        out = out + '<th>VBD2 AD'
+                        out = out + '<th>pitch AD'
+                        out = out + '<th>roll AD'
+                        out = out + '<th>curr mA'
+                        out = out + '<th>volts'
+                        out = out + '<th>pressure'
+                        out = out + '<th>heading'
+                        out = out + '<th>pitch'
+                        out = out + '<th>roll</tr>'
+
                     try:
                         d = list(map(lambda x: float(x), line.split()))
                         moveRecord.append(d)
@@ -271,28 +323,17 @@ async def formatCaptureFile(file, firstPlot=False):
                 else:
                     if len(moveRecord) > 0:
                         out = out + '</table><div>'
-                        out = out + plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
+                        out = out + plotMoveRecord(moveRecord, insideMoveDump, moveTime, "cdn" if firstPlot else False)
                         firstPlot = False
                         out = out + "</div>"
-                    insideMoveDump = False
+                    insideMoveDump = []
+                    moveTime = []
 
             elif line.find(' completed from ') > -1:
                 a = completed.search(line)
-                insideMoveDump = a.group(1)
+                insideMoveDump.append(a.group(1))
+                moveTime.append(float(a.group(2)))
                 moveRecord = []
-                out = out + line + "\n"
-                out = out + '<table><tr>'
-                out = out + '<th>VBD1 AD'
-                out = out + '<th>VBD2 AD'
-                out = out + '<th>pitch AD'
-                out = out + '<th>roll AD'
-                out = out + '<th>curr mA'
-                out = out + '<th>volts'
-                out = out + '<th>pressure'
-                out = out + '<th>heading'
-                out = out + '<th>pitch'
-                out = out + '<th>roll</tr>'
-                continue
 
             if crit.search(line):
                 out = out + f'<span id="crits{crits}"><b>' + line + "</b></span>\n"                
@@ -307,4 +348,4 @@ if __name__ == "__main__":
         sys.exit(1)
 
     (out, crits) = asyncio.run(formatCaptureFile(sys.argv[1], firstPlot=True))
-    print(out)
+    print(f"<html><pre>{out}</pre></html>")
