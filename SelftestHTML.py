@@ -296,6 +296,7 @@ function reload() {
 
     showingRaw = False
     insideMoveDump = False
+    moveTime = False
     insideDir = False
     insideMotorSummary = False
     insidePre = False
@@ -317,6 +318,8 @@ function reload() {
     moveCountTable = 0
     moveCountLink = 0
     moveRecord = []
+
+    completed = re.compile(r',(\w+) completed from [A-Za-z0-9\.()\[\]\->, ]+ took ([0-9\.]+) sec')
 
     for raw_line in stdo.splitlines(): # proc.stdout:
         try:
@@ -341,7 +344,7 @@ function reload() {
             print('</div>')
             if len(moveRecord) > 0:
                 print('<div id=plot%d style="display: block;">' % idnum)
-                plot = capture.plotMoveRecord(moveRecord, insideMoveDump, "cdn" if firstPlot else False)
+                plot = capture.plotMoveRecord(moveRecord, [ insideMoveDump ], [ moveTime ], "cdn" if firstPlot else False)
                 print(plot)
                 print("</div>")
                 capture.analyzeMoveRecord(moveRecord, insideMoveDump, paramValues, warnMoveAnalysis)
@@ -403,8 +406,9 @@ function reload() {
             insideDir = True
 
         elif line.find(' completed from ') > -1 and showingRaw:
-            a = re.search(",(\w+) completed from ", line)
+            a = completed.search(line)
             insideMoveDump = a.group(1)
+            moveTime = float(a.group(2))
             moveRecord = []
             print(f"<a id='move{moveCountLink}'>")
             moveCountLink = moveCountLink + 1
