@@ -1,0 +1,72 @@
+## Copyright (c) 2023, 2025  University of Washington.
+## 
+## Redistribution and use in source and binary forms, with or without
+## modification, are permitted provided that the following conditions are met:
+## 
+## 1. Redistributions of source code must retain the above copyright notice, this
+##    list of conditions and the following disclaimer.
+## 
+## 2. Redistributions in binary form must reproduce the above copyright notice,
+##    this list of conditions and the following disclaimer in the documentation
+##    and/or other materials provided with the distribution.
+## 
+## 3. Neither the name of the University of Washington nor the names of its
+##    contributors may be used to endorse or promote products derived from this
+##    software without specific prior written permission.
+## 
+## THIS SOFTWARE IS PROVIDED BY THE UNIVERSITY OF WASHINGTON AND CONTRIBUTORS “AS
+## IS” AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+## IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+## DISCLAIMED. IN NO EVENT SHALL THE UNIVERSITY OF WASHINGTON OR CONTRIBUTORS BE
+## LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+## CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE
+## GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+## HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
+## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+
+#
+# This systemd service can forward iridum traffic from one basestation server to another
+# (bypassing the glider accounts on the server this is running on.
+#
+
+# To use, replace:
+# {log_file_location} with the fully qualified path to the output logfile
+#                     For example /home/username/socat.log - where username is the
+#                     user account for running this service
+# 
+# {incoming_rudics_port} with the current rudics port (ie. 11113 for most cases)
+# {new_basestation} with the name of the new basestation to forward iridium traffic to
+#                     (ie. seaglider.pub)
+# {new_basestation_port} with the port on the new basestation (ie. 11113)
+
+# then, copy to /etc/systemd/system and:
+
+# sudo systemctl daemon-reload
+# sudo systemctl enable socat@username.service
+# sudo systemctl start socat@username.service
+# sudo systemctl status socat@username.service
+#
+# Supplying a user account for username in the above lines.
+#
+# Note - the RUIDCS entry in xinetd must be shut down before starting this service
+#
+[Unit]
+Description=RUIDICS Port forwarder
+After=network.target
+# No limit on number of times to retry - not clear if needed
+#StartLimitIntervalSec=0
+
+[Service]
+User=%i
+ExecStart=/usr/bin/socat -d -d TCP4-LISTEN:{incoming_rudics_port},fork,reuseaddr TCP4:{new_basestation}:{new_basestation_port}
+StandardOutput=append:{log_file_location}
+StandardError=append:{log_file_location}
+Restart=always
+RuntimeMaxSec=86400
+TimeoutStopSec=10
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
