@@ -758,18 +758,18 @@ def main(
         )
 
         # This varibles are just to hold the attched metadata
-        create_nc_var(
-            dso,
-            template,
-            "platform",
-            template["variables"]["instrument_ctd"]["attributes"]["_FillValue"],
-        )
-        create_nc_var(
-            dso,
-            template,
-            "instrument_ctd",
-            template["variables"]["instrument_ctd"]["attributes"]["_FillValue"],
-        )
+        metadata_vars = ["platform"]
+        for var_n in template["variables"]:
+            if var_n.startswith("instrument_"):
+                metadata_vars.append(var_n)
+
+        for var_n in metadata_vars:
+            create_nc_var(
+                dso,
+                template,
+                var_n,
+                template["variables"][var_n]["attributes"]["_FillValue"],
+            )
 
         # attributes
         dso.attrs["history"] = (
