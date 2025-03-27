@@ -241,7 +241,7 @@ def plotMoveRecord(x, which, time, includes):
             },
 
             "title": {
-                "text": f"move record",
+                "text": "move record",
                 "xanchor": "center",
                 "yanchor": "top",
                 "x": 0.5,
