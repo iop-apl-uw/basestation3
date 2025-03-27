@@ -800,9 +800,9 @@ def sensor_data_processing(
                 ]
                 C5_coef = [calib_consts["optode_FoilCoefA1"], 0.0, 0.0, 0.0, 0.0, 0.0]
                 ancillary_variables = ancillary_variables + " sg_cal_optode_FoilCoef*"
-            except KeyError:
+            except KeyError as e:
                 log_warning(
-                    "Optode data found but foil calibration constant(s) missing - skipping foil optode corrections"
+                    f"Optode data found but foil calibration constant {e} missing - skipping foil optode corrections"
                 )
             else:
                 coefficients_available = True
