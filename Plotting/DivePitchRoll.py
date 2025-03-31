@@ -303,7 +303,12 @@ def plot_pitch_roll(
     rms_curr = np.sqrt(np.nanmean((pitch_curr - vehicle_pitch_degrees_v[inds])**2))
 
     # linear model
-    fit = scipy.stats.linregress(pitchAD[inds], vehicle_pitch_degrees_v[inds])
+    try:
+        fit = scipy.stats.linregress(pitchAD[inds], vehicle_pitch_degrees_v[inds])
+    except Exception as e:
+        log_error(f"Could not calculate pitch fit: ({e}) - skipping plot_pitch_roll")
+        return ([], [])
+    
     implied_C = -fit.intercept / fit.slope
     implied_gain = fit.slope / pitch_cnv
     
