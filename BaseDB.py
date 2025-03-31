@@ -317,9 +317,6 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     elif 'eng_depth' in nci.variables:
         dep_mx = numpy.nanmax(nci.variables["eng_depth"][:])/100
         insertColumn(dive, cur, "max_depth", dep_mx, "FLOAT")
-        print(f'using eng for depth {filename}')
-    else:
-        print(f'no depth {filename}')
 
     # Last state time is begin surface
     if "gc_state_secs" in nci.variables:
@@ -1079,7 +1076,6 @@ def rebuildDivesGC(base_opts, ext):
     """Rebuild the database tables from scratch"""
     prepDivesGC(base_opts)
 
-    print(ext)
     log_info(f"rebuilding database, ext={ext}")
     con = Utils.open_mission_database(base_opts)
     log_info("rebuildDivesGC db opened")
