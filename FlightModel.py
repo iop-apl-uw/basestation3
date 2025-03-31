@@ -3930,8 +3930,9 @@ def main(
         except KeyError:
             pass
         if deck_dives:
-            # TODO eliminate this complaint since we said it once on creation?
-            log_error("Unable to run flight model on deck dives!", "FMS_DECK_DIVES")
+            log_warning(
+                "Unable to run flight model on deck dives!", alert="FMS_DECK_DIVES"
+            )
             return 1
 
     if glider_type is None:
@@ -4142,7 +4143,7 @@ def main(
         save_flight_database(base_opts)
 
     if deck_dives:  # test this after the DB is saved
-        log_error("Unable to run flight model on deck dives!")
+        log_warning("Unable to run flight model on deck dives")
         return 1
 
     # setup flight_consts_d for use with hydromodel once since we either override hd_a/b or we ignore values for vbdbias and abs_compress
