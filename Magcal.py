@@ -145,11 +145,11 @@ def magcal_worker(
     for f in dive_nc_file:
         mpts = f.dimensions["sg_data_point"].size
         idx = range(0, mpts, decimate)
-        print(idx)
+        #print(idx)
         mpts = len(idx)
-        print(npts, k, mpts)
-        print(len(f.variables["eng_pitchAng"][idx]))
-        print(len(pitch[k:k+mpts]))
+        #print(npts, k, mpts)
+        #print(len(f.variables["eng_pitchAng"][idx]))
+        #print(len(pitch[k:k+mpts]))
         pitch[k:k+mpts]     = f.variables["eng_pitchAng"][idx] * math.pi / 180.0
         roll[k:k+mpts]      = f.variables["eng_rollAng"][idx] * math.pi / 180.0
         fxm[k:k+mpts]       = f.variables["eng_mag_x"][idx]
@@ -357,9 +357,18 @@ def magcal_worker(
 
                 # eqT = np.transpose(np.copy(eq))
                 Jac = Jac + np.outer(eq,eq) # eq * eqT
-                resid = resid + eq * fi
+                with warnings.catch_warnings():
+                    # GBS 2025/03/31 - RuntimeWarning: overflow encountered in multiply
+                    # on some sim dives - catch and ignore
+                    warnings.simplefilter('ignore', RuntimeWarning)            
+                    resid = resid + eq * fi
 
-            dP = np.matmul(np.linalg.inv(Jac), resid)
+            with warnings.catch_warnings():
+                # GBS 2025/03/31 - RuntimeWarning: invalid value encountered in matmul
+                #   on some sim dives - catch and ignore
+                warnings.simplefilter('ignore', RuntimeWarning)            
+                dP = np.matmul(np.linalg.inv(Jac), resid)
+                
             P = P - dP
 
             if it > 0:
