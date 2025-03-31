@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,9 +35,13 @@ using just nc files (does not use log, eng, or sg_calib_constants)
 # fmt: off
 # ruff: noqa
 
+import warnings
+
 import numpy as np
 import CommLog
+import io
 import os
+import sys
 import scipy.interpolate
 import scipy.optimize
 import plotly.graph_objects
@@ -68,7 +72,9 @@ def flightModelW(bu, ph, xl, a, b, c, rho, s):
 
     buoyforce = 0.001 * gravity * bu
 
-    q = pow(np.sign(bu) * buoyforce / (xl * xl * b), 1.0 / (1.0 + s))
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', RuntimeWarning)            
+        q = pow(np.sign(bu) * buoyforce / (xl * xl * b), 1.0 / (1.0 + s))
     alpha = 0
 
     q_old = 0
@@ -335,10 +341,20 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
         hd_c = abc[2]
     else:
         x0 = [init_bias, basis_HD_A, basis_HD_B] # , basis_HD_C]
-        x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, 
-                                                                x0=x0, 
-                                                                args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), 
-                                                                maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
+        # No way to capture prints in fmin through the API
+        prev_stdout = sys.stdout
+        redirected_output = io.StringIO()
+        sys.stdout = redirected_output
+        try:
+            x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, 
+                                                                    x0=x0, 
+                                                                    args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), 
+                                                                    maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
+        finally:
+            sys.stdout = prev_stdout
+        redirected_output.seek(0)
+        for lline in redirected_output.readlines():
+            log_info(lline.rstrip())
 
         bias = x[0]
         hd_a = x[1]
