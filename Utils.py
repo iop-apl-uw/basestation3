@@ -1700,6 +1700,12 @@ def estimate_endurance(base_opts, dive_col, gauge_col, dive_times, dive_end):
     lastdive_num = np.int32((base_opts.mission_energy_reserve_percent - b) / m)
     dives_remaining = lastdive_num - dive_col[-1]
     secs_remaining = dives_remaining * np.mean(dive_times[-p_dives_back:])
+    if secs_remaining > (50 * 3.154e7):
+        # Cap to 50 years endurance - extreame values cause strftime to return non-sensical results
+        log_warning(
+            f"Non-sensical dive time remaining estimate ({secs_remaining:.2f}) - limiting value"
+        )
+        secs_remaining = 50 * 3.154e7
     end_date = time.strftime(
         "%Y-%m-%dT%H:%M:%SZ", time.gmtime(dive_end[-1] + secs_remaining)
     )
@@ -1743,11 +1749,12 @@ async def notifyVisAsync(glider: int, topic: str, body: str):
         await socket.send_multipart([topic.encode("utf-8"), body.encode("utf-8")])
         socket.close()
 
+
 def cleanupZombieVisSockets():
     p = pathlib.Path("/tmp")
     running_pids = []
     for f in p.glob("sanic-*-*.ipc"):
-        pid = int(f.name.split('-')[1])
+        pid = int(f.name.split("-")[1])
         if pid not in running_pids:
             if not check_for_pid(pid):
                 try:
@@ -1758,6 +1765,7 @@ def cleanupZombieVisSockets():
             else:
                 print(f"{f} still attached to running PID")
                 running_pids.append(pid)
+
 
 def logDB(msg):
     pass
