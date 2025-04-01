@@ -1986,3 +1986,17 @@ def strip_vars(
 
     for a in dsi.ncattrs():
         dso.setncattr(a, dsi.getncattr(a))
+
+
+class RedirStdout:
+    """Context manager for redirecting stdout"""
+
+    def __enter__(self):
+        self._redirected_output = io.StringIO()
+        self._prev_stdout = sys.stdout
+        sys.stdout = self._redirected_output
+        return self._redirected_output
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        sys.stdout = self._prev_stdout
+        self._redirected_output.seek(0)

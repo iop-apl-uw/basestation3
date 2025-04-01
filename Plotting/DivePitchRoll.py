@@ -346,10 +346,14 @@ def plot_pitch_roll(
     c1 = [0, 0, 0]
     if vbd_control is not None:
         try:
-            c0, rms_0, niter, calls, warns = scipy.optimize.fmin(func=pitchfun_shift_fixed,
-                                                                x0=[c_pitch, pitch_gain],
-                                                                args=(vehicle_pitch_degrees_v[inds], pitchAD[inds], vbd_control[inds], pitch_cnv, vbd_shift),
-                                                                maxiter=500, maxfun=1000, ftol=1e-3, full_output=True, disp=True)
+            with Utils.RedirStdout() as redirected_output:
+                c0, rms_0, niter, calls, warns = scipy.optimize.fmin(func=pitchfun_shift_fixed,
+                                                                    x0=[c_pitch, pitch_gain],
+                                                                    args=(vehicle_pitch_degrees_v[inds], pitchAD[inds], vbd_control[inds], pitch_cnv, vbd_shift),
+                                                                    maxiter=500, maxfun=1000, ftol=1e-3, full_output=True, disp=True)
+            for lline in redirected_output.readlines():
+                log_info(lline.rstrip())
+
 
             BaseDB.addValToDB(
                 base_opts, dive_nc_file.dive_number, "pitch_fixed_rmse", rms_0, con=conn
@@ -365,10 +369,14 @@ def plot_pitch_roll(
             pass
 
         try:
-            c1, rms_1, niter, calls, warns = scipy.optimize.fmin(func=pitchfun_shift_solved,
-                                                                x0=[c_pitch, pitch_gain, vbd_shift],
-                                                                args=(vehicle_pitch_degrees_v[inds], pitchAD[inds], vbd_control[inds], pitch_cnv),
-                                                                maxiter=500, maxfun=1000, ftol=1e-3, full_output=True, disp=True)
+            with Utils.RedirStdout() as redirected_output:
+                c1, rms_1, niter, calls, warns = scipy.optimize.fmin(func=pitchfun_shift_solved,
+                                                                    x0=[c_pitch, pitch_gain, vbd_shift],
+                                                                    args=(vehicle_pitch_degrees_v[inds], pitchAD[inds], vbd_control[inds], pitch_cnv),
+                                                                    maxiter=500, maxfun=1000, ftol=1e-3, full_output=True, disp=True)
+            for lline in redirected_output.readlines():
+                log_info(lline.rstrip())
+                
             BaseDB.addValToDB(
                 base_opts, dive_nc_file.dive_number, "pitch_shift_rmse", rms_1, con=conn
             )

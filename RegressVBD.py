@@ -342,17 +342,11 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
     else:
         x0 = [init_bias, basis_HD_A, basis_HD_B] # , basis_HD_C]
         # No way to capture prints in fmin through the API
-        prev_stdout = sys.stdout
-        redirected_output = io.StringIO()
-        sys.stdout = redirected_output
-        try:
+        with Utils.RedirStdout() as redirected_output:
             x, rms_final, niter, calls, warns = scipy.optimize.fmin(func=w_misfit_abc, 
                                                                     x0=x0, 
                                                                     args=(W, Vol, Dens, Pit, basis_MASS, basis_RHO0, vol0), 
                                                                     maxiter=800, maxfun=1600, ftol=1e-3, full_output=True, disp=True)
-        finally:
-            sys.stdout = prev_stdout
-        redirected_output.seek(0)
         for lline in redirected_output.readlines():
             log_info(lline.rstrip())
 
