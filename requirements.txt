@@ -41,7 +41,7 @@ PyJWT
 aiosqlite
 orjson
 anyio
-pyzmq --no-binary=pyzmq
+pyzmq==26.3.0
 ppigrf>=2.0.0
 scanf
 pyproj==3.7.0
