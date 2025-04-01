@@ -93,19 +93,48 @@ def fix_ints(data_type, attrs):
     return new_attrs
 
 
-def create_nc_var(dso, template, var_name, data, qc_val=None, qc_missing_val=None):
+def lookup_qc_val(value):
+    for k, v in QC.qc_name_d.items():
+        if value.rstrip().lstrip() == v:
+            return np.int8(k)
+    log_warning(f"Unkown QC string {value} - ignoring")
+    return None
+
+
+def create_nc_var(
+    dso,
+    template,
+    var_name,
+    data,
+    qc_val=None,
+    qc_missing_val=None,
+):
     """Creates a nc variable and sets meta data
     Input:
         dso - output dataset
         template - dictionary of metadata
         var_name - name of variable as appears in teamplate
         data - input data
-        qc_val - the qc value to use
+        qc_val - override the qc value to use (normally comes from the template)
+        qc_missing_val - override the qc value to use
 
     Returns:
         dataarray for variable and matching qc variable
 
     """
+
+    if qc_val is None and "qc_data" in template["variables"][var_name]:
+        qc_val = lookup_qc_val(template["variables"][var_name]["qc_data"])
+
+    if qc_missing_val is None:
+        if "qc_missing_data" in template["variables"][var_name]:
+            qc_missing_val = lookup_qc_val(
+                template["variables"][var_name]["qc_missing_data"]
+            )
+        else:
+            # Only has impact if qc_val is not None
+            qc_missing_val = QC.QC_MISSING
+
     is_str = False
     if isinstance(data, str):
         inp_data = np.array(data, dtype=np.dtype(("S", len(data))))
@@ -141,9 +170,11 @@ def create_nc_var(dso, template, var_name, data, qc_val=None, qc_missing_val=Non
         if np.ndim(data) == 0:
             qc_v = np.dtype(template["variables"][qc_name]["type"]).type(qc_val)
         else:
+            # Populate the initial vector with qc_val...
             qc_v = np.zeros((np.size(inp_data)), dtype="b") + np.dtype(
                 template["variables"][qc_name]["type"]
             ).type(qc_val)
+            # ...and mark the missing data
             if qc_missing_val is not None:
                 qc_v[
                     inp_data
@@ -509,7 +540,7 @@ def main(
             log_error("Could not load variables - skipping", "exc")
             continue
 
-        # TODO: Inventory timeseries variables - construct a master time vector and interpolate missing depth points
+        # Inventory timeseries variables - construct a master time vector and interpolate missing depth points
         time_vars = set()
         for var_name in timeseries_vars:
             dims = dsi[var_name].dims
@@ -521,8 +552,6 @@ def main(
                 ):
                     time_vars.add((vv, dims))
 
-        # log_info(time_vars)
-
         unsorted_master_time = np.zeros(0)
         dims_map = {}
         last_i = 0
@@ -533,6 +562,8 @@ def main(
             last_i += len(new_time_v)
             unsorted_master_time = np.concatenate((unsorted_master_time, new_time_v))
         sort_i = np.argsort(unsorted_master_time)
+        # NOTE: A possible issue is if there are repeated time values in different time_vars.
+        # A solution is to wrap the call below with np.unique(), but is not tested
         master_time = unsorted_master_time[sort_i]
 
         master_depth = NetCDFUtils.interp1_extend(
@@ -540,8 +571,6 @@ def main(
             dsi["ctd_depth"].data,
             master_time,
         )
-
-        # log_info(dims_map)
 
         if base_opts.gliderdac_bin_width:
             max_depth = np.floor(np.nanmax(master_depth))
@@ -584,7 +613,6 @@ def main(
         reduced_pts_i = None
         for var_name in timeseries_vars:
             log_debug(f"Adding variable {var_name}")
-            # TODO - Add master time variable here to provide the expansion on load for variables
             data = load_var(
                 dsi,
                 var_name,
@@ -643,10 +671,6 @@ def main(
                 template,
                 timeseries_vars[var_name],
                 reduced_vars[var_name],
-                qc_val=QC.QC_GOOD
-                if var_name not in ("latitude", "longitude", "pressure")
-                else QC.QC_NO_CHANGE,
-                qc_missing_val=QC.QC_MISSING,
             )
             # This is just for debugging
             # if base_opts.gliderdac_bin_width and var_name == "temperature":
@@ -674,13 +698,28 @@ def main(
             reduced_vars["temperature"],
             np.zeros(salinity_absolute.size),
         )
-        create_nc_var(dso, template, "density", density, qc_val=QC.QC_GOOD)
+        create_nc_var(
+            dso,
+            template,
+            "density",
+            density,
+        )
 
         del binned_vars, reduced_pts_i
 
         # Depth and time
-        create_nc_var(dso, template, "depth", reduced_depth, qc_val=QC.QC_NO_CHANGE)
-        create_nc_var(dso, template, "time", reduced_time, qc_val=QC.QC_NO_CHANGE)
+        create_nc_var(
+            dso,
+            template,
+            "depth",
+            reduced_depth,
+        )
+        create_nc_var(
+            dso,
+            template,
+            "time",
+            reduced_time,
+        )
 
         # Singleton variables
 
@@ -704,21 +743,18 @@ def main(
             template,
             "profile_time",
             reduced_time[median_time_i],
-            qc_val=QC.QC_NO_CHANGE,
         )
         create_nc_var(
             dso,
             template,
             "profile_lat",
             reduced_vars["latitude"][median_time_i],
-            qc_val=QC.QC_NO_CHANGE,
         )
         create_nc_var(
             dso,
             template,
             "profile_lon",
             reduced_vars["longitude"][median_time_i],
-            qc_val=QC.QC_NO_CHANGE,
         )
 
         create_nc_var(
@@ -740,21 +776,18 @@ def main(
             template,
             "time_uv",
             reduced_time[median_time_i],
-            qc_val=QC.QC_NO_CHANGE,
         )
         create_nc_var(
             dso,
             template,
             "lat_uv",
             reduced_vars["latitude"][median_time_i],
-            qc_val=QC.QC_NO_CHANGE,
         )
         create_nc_var(
             dso,
             template,
             "lon_uv",
             reduced_vars["longitude"][median_time_i],
-            qc_val=QC.QC_NO_CHANGE,
         )
 
         # This varibles are just to hold the attched metadata
