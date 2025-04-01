@@ -181,10 +181,7 @@ class CommLog:
         """Returns what transfer protocol has used to transmit a fragment
         "xmodem", "ymodem", "raw" or "unknown"
         """
-        if fragment_name in list(self.file_transfer_method.keys()):
-            return self.file_transfer_method[fragment_name]
-        else:
-            return "unknown"
+        return self.file_transfer_method.get(fragment_name, "unknown")
 
     def get_fragment_dictionary(self):
         """Returns a dictionary that maps a dive num to a fragment size"""
