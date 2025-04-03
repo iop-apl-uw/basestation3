@@ -2325,7 +2325,7 @@
                 directive = line;
             }
             else if ((pcs  = re.exec(line)) && pcs[1] == p) {
-                if (floatRE.test($('paramInput_' + p).value.trim())) {
+                if ($('paramInput_' + p) && floatRE.test($('paramInput_' + p).value.trim())) {
                     newtext.push('$' + p + ',' +  $('paramInput_' + p).value);
                 }
                 else {
@@ -2338,7 +2338,7 @@
             }
         }
 
-        if (!matched) {
+        if (!matched && $('paramInput_' + p)) {
             newtext.push('$' + p + ',' +  $('paramInput_' + p).value);
         }
 
@@ -2403,7 +2403,10 @@
     }
     function markChanged(w) {
         // $('paramInput_' + w).title = 'was ' + $('paramInput_' + w).value;
-        $('paramInput_' + w).style.fontWeight = "bold";
+        if ($('paramInput_' + w))
+            $('paramInput_' + w).style.fontWeight = "bold";
+        else
+            console.log(w + ' not found to mark change');
     }
 
     const floatRE = /[+-]?([0-9]*[.])?[0-9]+$/;
@@ -3066,7 +3069,7 @@ parms[p]
     }
     function pilotRecsAccept(which) {
         const val = $('pilotRecsModel' + which).innerHTML;
-        if ($('paramInput_' + which).value != val) {
+        if ($('paramInput_' + which) && $('paramInput_' + which).value != val) {
             markChanged(which);
             $('paramInput_' + which).value = val;
         }
