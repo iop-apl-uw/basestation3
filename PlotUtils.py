@@ -279,11 +279,19 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
 
                     st += m[1]
 
+    # GBS 2025/04/03 - very corner case for bug with gc_state lines being garbage in the
+    # GC table
+    try:
+        gc_state_state = ncf.variables["gc_state_state"][:]
+        gc_state_time = ncf.variables["gc_state_secs"][:]
+        # 1 is the code for 'end dive'
+        gc_dive_end = gc_state_time[np.argwhere(gc_state_state == 1)[0]][0]
+    except KeyError as e:
+        log_warning(f"Could not variable find {e}")
+        gc_state_state = gc_state_time = None
+        gc_dive_end = gc_time[-1]
+
     # Convert Roll to engineering units
-    gc_state_state = ncf.variables["gc_state_state"][:]
-    gc_state_time = ncf.variables["gc_state_secs"][:]
-    # 1 is the code for 'end dive'
-    gc_dive_end = gc_state_time[np.argwhere(gc_state_state == 1)[0]][0]
     roll_ctr = np.zeros(len(gc_roll_pos_ad))
     roll_ctr[np.argwhere(gc_roll_time <= gc_dive_end)] = ncf.variables[
         "log_C_ROLL_DIVE"
