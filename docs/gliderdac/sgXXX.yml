@@ -2,22 +2,22 @@
 ## This is a sample glider configuration for a single deployment. A number of fields contain
 ## example data - replace with what is appropriate for you situation.
 # 
-# config:
-#
 ##   This section allows the addition of other instruments.  The mapping
 ##   changes the internal name in the per-dive netcdf file (the key) to
 ##   the output name as defined by the GliderDAC standard.  The default mapping
 ##   stops with ctd_pressure:pressure.
-#
-#   timeseries_vars:
-#     temperature: temperature
-#     salinity: salinity
-#     conductivity: conductivity
-#     latitude: lat
-#     longitude: lon
-#     ctd_pressure: pressure
-#     aanderaa4831_dissolved_oxygen: dissolved_oxygen
-#
+config:
+  timeseries_vars:
+    temperature: temperature
+    salinity: salinity
+    conductivity: conductivity
+    latitude: lat
+    longitude: lon
+    ctd_pressure: pressure
+    aanderaa4831_dissolved_oxygen: oxygen
+    wlbb2fl_sig695nm_adjusted: fluorescence
+    wlbb2fl_sig470nm_adjusted: optical_backscatter_470
+    wlbb2fl_sig700nm_adjusted: optical_backscatter_700
 global_attributes:
   ctd_make_model: RBRlegato3
   instrument: RBRlegato3
@@ -32,6 +32,22 @@ variables:
       long_name: RBRlegato3 CTD
       make_model: RBRlegato3
       serial_number: '205607'
+  instrument_O2:
+    attributes:
+      calibration_date: '2020-03-12T00:00:00Z'
+      calibration_report: ' '
+      factory_calibrated: '2020-03-12T00:00:00Z'
+      long_name: Aanderaa Optode 4831
+      make_model: Aanderaa Optode
+      serial_number: '940'
+  instrument_wetlabs:
+    attributes:
+      calibration_date: '2021-03-24T00:00:00Z'
+      calibration_report: ' '
+      factory_calibrated: '2021-03-24T00:00:00Z'
+      long_name: Wetlabs BB2FLIRB2 6732
+      make_model: Wetlabs BB2FLIRB2
+      serial_number: '6732'
   platform:
     attributes:
       comment: Seaglider sg249

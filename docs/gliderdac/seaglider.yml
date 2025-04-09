@@ -39,18 +39,19 @@ variables:
   conductivity:
     attributes:
       _FillValue: -999
-      accuracy: ' '
+      accuracy: +/- 0.003 mS/cm
       ancillary_variables: conductivity_qc
       instrument: instrument_ctd
       long_name: Conductivity
       observation_type: measured
       platform: platform
-      precision: ' '
-      resolution: ' '
+      precision: +/- 0.010 mS/cm
+      resolution: 0.001 mS/cm
       standard_name: sea_water_electrical_conductivity
       units: S m-1
       valid_max: 10
       valid_min: 0
+    qc_data: QC_GOOD
     dimensions: [ time ]
     num_digits: 3
     type: f8
@@ -69,18 +70,19 @@ variables:
   density:
     attributes:
       _FillValue: -999
-      accuracy: ' '
+      accuracy: 0.02
       ancillary_variables: density_qc
       instrument: instrument_ctd
       long_name: Density
       observation_type: calculated
       platform: platform
-      precision: ' '
-      resolution: ' '
+      precision: 0.01
+      resolution: 0.01
       standard_name: sea_water_density
       units: kg m-3
       valid_max: 1040
       valid_min: 1015
+    qc_data: QC_NO_CHANGE
     dimensions: [ time ]
     num_digits: 2
     type: f8
@@ -110,9 +112,11 @@ variables:
       reference_datum: sea-surface
       resolution: 0.001 percent
       standard_name: depth
+      comment: "Depth below the surface, corrected for average latitude"
       units: m
       valid_max: 2000
       valid_min: 0
+    qc_data: QC_NO_CHANGE
     dimensions: [ time ]
     num_digits: 2
     type: f8
@@ -150,6 +154,7 @@ variables:
       units: degrees_north
       valid_max: 90
       valid_min: -90
+    qc_data: QC_NO_CHANGE
     dimensions: [ time ]
     num_digits: 4
     type: f8
@@ -179,6 +184,7 @@ variables:
       units: degrees_north
       valid_max: 90
       valid_min: -90
+    qc_data: QC_NO_CHANGE
     dimensions: []
     num_digits: 4
     type: f8
@@ -208,6 +214,7 @@ variables:
       units: degrees_east
       valid_max: 180
       valid_min: -180
+    qc_data: QC_NO_CHANGE
     dimensions: [ time ]
     num_digits: 4
     type: f8
@@ -237,6 +244,7 @@ variables:
       units: degrees_east
       valid_max: 180
       valid_min: -180
+    qc_data: QC_NO_CHANGE
     dimensions: []
     num_digits: 4
     type: f8
@@ -273,9 +281,11 @@ variables:
       reference_datum: sea-surface
       resolution: '0.001 percent'
       standard_name: sea_water_pressure
+      comment: "Depth below the surface"
       units: dbar
       valid_max: 2000
       valid_min: 0
+    qc_data: QC_NO_CHANGE      
     dimensions: [ time ]
     num_digits: 2
     type: f8
@@ -314,6 +324,7 @@ variables:
       units: degrees_north
       valid_max: 90
       valid_min: -90
+    qc_data: QC_NO_CHANGE
     dimensions: []
     num_digits: 4
     type: f8
@@ -342,6 +353,7 @@ variables:
       units: degrees_north
       valid_max: 180
       valid_min: -180
+    qc_data: QC_NO_CHANGE
     dimensions: []
     num_digits: 4
     type: f8
@@ -368,6 +380,7 @@ variables:
       platform: platform
       standard_name: time
       units: seconds since 1970-01-01T00:00:00Z
+    qc_data: QC_NO_CHANGE
     dimensions: []
     num_digits: 0
     type: f8
@@ -386,7 +399,7 @@ variables:
   salinity:
     attributes:
       _FillValue: -999
-      accuracy: ' '
+      accuracy: +/- 0.003
       ancillary_variables: salinity_qc
       coordinates: time lon lat depth
       instrument: instrument_ctd
@@ -399,6 +412,7 @@ variables:
       units: '1'
       valid_max: 40
       valid_min: 0
+    qc_data: QC_GOOD
     dimensions: [ time ]
     num_digits: 2
     type: f8
@@ -417,19 +431,20 @@ variables:
   temperature:
     attributes:
       _FillValue: -999
-      accuracy: ' '
+      accuracy: +/-0.002 Celsius
       ancillary_variables: temperature_qc
       coordinates: time lon lat depth
       instrument: instrument_ctd
       long_name: Temperature
       observation_type: measured
       platform: platform
-      precision: ' '
-      resolution: ' '
+      precision: +/-0.002 Celsius
+      resolution: 0.00005 Celsius
       standard_name: sea_water_temperature
       units: Celsius
       valid_max: 40
       valid_min: -5
+    qc_data: QC_GOOD
     dimensions: [ time ]
     num_digits: 3
     type: f8
@@ -459,8 +474,9 @@ variables:
       observation_type: measured
       standard_name: time
       units: seconds since 1970-01-01T00:00:00Z
+    qc_data: QC_NO_CHANGE
     dimensions: [ time ]
-    num_digits: 0
+    num_digits: 3
     type: f8
   time_qc:
     attributes:
@@ -486,6 +502,7 @@ variables:
       observation_type: calculated
       standard_name: time
       units: seconds since 1970-01-01T00:00:00Z
+    qc_data: QC_NO_CHANGE
     dimensions: []
     num_digits: 0
     type: f8
@@ -524,6 +541,7 @@ variables:
       units: m s-1
       valid_max: 10
       valid_min: -10
+    qc_data: QC_GOOD      
     dimensions: []
     num_digits: 2
     type: f8
@@ -554,6 +572,7 @@ variables:
       units: m s-1
       valid_max: 10
       valid_min: -10
+    qc_data: QC_GOOD
     dimensions: []
     num_digits: 2
     type: f8
@@ -569,47 +588,138 @@ variables:
       valid_min: 0
     dimensions: []
     type: b
-
-  # instrument_optode:
-  #   attributes:
-  #     _FillValue: -999
-  #     comment: Andera4831 Optode
-  #     platform: platform
-  #     type: platform
-  #   dimensions: []
-  #   type: i4
-  # dissolved_oxygen:
-  #   attributes:
-  #     _FillValue: -999
-  #     accuracy: 
-  #     ancillary_variables: dissolved_oxygen_qc
-  #     coordinates: time lon lat depth
-  #     instrument: instrument_optode
-  #     long_name: Dissolved_Oxygen
-  #     observation_type: measured
-  #     platform: platform
-  #     precision: 
-  #     resolution: 
-  #     standard_name: dissolved oxygen
-  #     units: micromoles/kg
-  #   dimensions: [ time ]
-  #   num_digits: 4
-  #   type: f8
-  # dissolved_oxygen_n:
-  #   attributes:
-  #     _FillValue: -999
-  #   dimensions: [ time ]
-  #   type: i2
-  # dissolved_oxygen_qc:
-  #   attributes:
-  #     _FillValue: -127
-  #     flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
-  #       bad_data value_changed not_used not_used interpolated_value missing_value
-  #     flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-  #     long_name: dissolved_oxygen Quality Flag
-  #     standard_name: dissolved oxgen status_flag
-  #     valid_max: 9
-  #     valid_min: 0
-  #   dimensions: [ time ]
-  #   type: b
-    
+  instrument_O2:
+    attributes:
+      _FillValue: -999
+      comment: Dissolved Oxygen Sensor
+      platform: platform
+      type: platform
+    dimensions: []
+    type: i4
+  instrument_wetlabs:
+    attributes:
+      _FillValue: -999
+      comment: Wetlabs Sensor
+      platform: platform
+      type: platform
+    dimensions: []
+    type: i4
+  oxygen:
+    attributes:
+      _FillValue: -999
+      accuracy: 0.001
+      ancillary_variables: oxygen_qc
+      instrument: instrument_O2
+      long_name: moles_of_oxygen_per_unit_mass_in_sea_water
+      observation_type: measured
+      platform: platform
+      precision: 0.002
+      resolution: 0.001
+      standard_name: moles_of_oxygen_per_unit_mass_in_sea_water
+      units: micromol/kg
+      valid_max: 400
+      valid_min: 0
+    qc_data: QC_NO_CHANGE
+    dimensions: [ time ]
+    num_digits: 3
+    type: f8
+  oxygen_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: Oxygen Quality Flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  fluorescence:
+    attributes:
+      _FillValue: -999
+      accuracy: 0.001
+      ancillary_variables: fluorescence_qc
+      instrument: instrument_wetlabs
+      long_name: mass_concentration_of_chlorophyll_in_sea_water
+      observation_type: measured
+      platform: platform
+      precision: 0.001
+      resolution: 0.001
+      standard_name: mass_concentration_of_chlorophyll_in_sea_water
+      units: ug/l
+      valid_max: 19
+      valid_min: 0
+    qc_data: QC_NO_CHANGE
+    dimensions: [ time ]
+    num_digits: 3
+    type: f8
+  fluorescence_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: Fluorescence Quality Flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  optical_backscatter_470:
+    attributes:
+      _FillValue: -999
+      accuracy: 0.001
+      ancillary_variables: optical_backscatter_470_qc
+      instrument: instrument_wetlabs
+      long_name: optical_backscatter_coefficient 470nm
+      observation_type: measured
+      platform: platform
+      precision: 0.001
+      resolution: 0.001
+      units: m-1sr-1
+      valid_max: 200
+      valid_min: 0
+    qc_data: QC_NO_CHANGE
+    dimensions: [ time ]
+    num_digits: 6
+    type: f8
+  optical_backscatter_470_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: Optical Backscatter 470 Quality Flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+  optical_backscatter_700:
+    attributes:
+      _FillValue: -999
+      accuracy: 0.001
+      ancillary_variables: optical_backscatter_700_qc
+      instrument: instrument_wetlabs
+      long_name: optical_backscatter_coefficient 700nm
+      observation_type: measured
+      platform: platform
+      precision: 0.001
+      resolution: 0.001
+      units: m-1sr-1
+      valid_max: 200
+      valid_min: 0
+    qc_data: QC_NO_CHANGE
+    dimensions: [ time ]
+    num_digits: 6
+    type: f8
+  optical_backscatter_700_qc:
+    attributes:
+      _FillValue: -127
+      flag_meanings: no_qc_performed good_data probably_good_data bad_data_that_are_potentially_correctable
+        bad_data value_changed not_used not_used interpolated_value missing_value
+      flag_values: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+      long_name: Optical Backscatter 700 Quality Flag
+      valid_max: 9
+      valid_min: 0
+    dimensions: [ time ]
+    type: b
+   
