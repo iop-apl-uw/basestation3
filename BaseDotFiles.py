@@ -450,7 +450,7 @@ def process_pagers(
                     if "drift" in tags_to_process and pagers_tag == "drift":
                         if comm_log:
                             drift_message = comm_log.predict_drift(fmt)
-                            subject_line = "Drift"
+                            subject_line = f"Drift SG{instrument_id:03d}"
                             log_info(
                                 "Sending %s (%s) to %s"
                                 % (subject_line, drift_message, email_addr)

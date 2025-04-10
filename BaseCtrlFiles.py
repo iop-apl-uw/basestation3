@@ -661,7 +661,7 @@ def process_pagers_yml(
                 case "drift":
                     if comm_log:
                         drift_message = comm_log.predict_drift(si["latlon"])
-                        subject_line = "Drift"
+                        subject_line = f"Drift SG{instrument_id:03d}"
                         si["send_func"](
                             base_opts,
                             instrument_id,
