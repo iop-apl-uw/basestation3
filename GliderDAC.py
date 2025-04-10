@@ -513,7 +513,7 @@ def main(
 
     # Default timeseries variables and the name mapping
     # Can be overridden by same names in the "config" dictionary from the template(s)
-    timeseries_vars = {
+    requested_timeseries_vars = {
         "temperature": "temperature",
         "salinity": "salinity",
         "conductivity": "conductivity",
@@ -524,7 +524,7 @@ def main(
 
     # Update anything overridden by config
     if "config" in template and "timeseries_vars" in template["config"]:
-        timeseries_vars = template["config"]["timeseries_vars"]
+        requested_timeseries_vars = template["config"]["timeseries_vars"]
 
     for dive_nc_file_name in dive_nc_file_names:
         log_info("Processing %s" % dive_nc_file_name)
@@ -542,7 +542,15 @@ def main(
 
         # Inventory timeseries variables - construct a master time vector and interpolate missing depth points
         time_vars = set()
-        for var_name in timeseries_vars:
+        # Reset this every time in case of processing multiple files
+        timeseries_vars = {}
+        for var_name, var_content in requested_timeseries_vars.items():
+            if var_name not in dsi.variables:
+                log_warning(
+                    f"Requested variable {var_name} not in {dive_nc_file_name} - skipping"
+                )
+                continue
+            timeseries_vars[var_name] = var_content
             dims = dsi[var_name].dims
             for vv in dsi.variables:
                 if (
