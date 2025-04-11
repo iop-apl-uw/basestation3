@@ -37,10 +37,12 @@ import glob
 import io
 import math
 import os
+import pdb
 import pstats
 import re
 import sys
 import time
+import traceback
 import zipfile
 
 # import importlib.util
@@ -1062,9 +1064,13 @@ def main(
     Raises:
         Any exceptions raised are considered critical errors and not expected
     """
+
     if not base_opts:
         base_opts = BaseOpts.BaseOptions("Command line app for creating kml/kmz files")
-    BaseLogger(base_opts)  # initializes BaseLog
+    BaseLogger(base_opts, include_time=True)  # initializes BaseLog
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
     processing_start_time = time.time()
     log_info(
@@ -1131,7 +1137,10 @@ def main(
     mission_kml_name = os.path.join(base_opts.mission_dir, mission_kml_file_name_base)
 
     try:
-        fo = open(mission_kml_name, "w")
+        if base_opts.use_inmemory:
+            fo = io.StringIO()
+        else:
+            fo = open(mission_kml_name, "w")
     except Exception:
         log_error(f"Could not open {mission_kml_name}", "exc")
         log_info("Bailing out...")
@@ -1911,7 +1920,10 @@ def main(
 
     printFooter(fo)
 
-    fo.close()
+    if base_opts.use_inmemory:
+        fo.seek(0)
+    else:
+        fo.close()
 
     # Stop processing if signaled
     try:
@@ -1936,18 +1948,34 @@ def main(
             mission_kml_zip_file = zipfile.ZipFile(
                 mission_kml_zip_name, "w", zipfile.ZIP_DEFLATED
             )
-            mission_kml_zip_file.write(mission_kml_name, mission_kml_file_name_base)
+            if base_opts.use_inmemory:
+                mission_kml_zip_file.writestr(
+                    mission_kml_file_name_base,
+                    fo.read(),
+                )
+                fo.close()
+                del fo
+            else:
+                mission_kml_zip_file.write(mission_kml_name, mission_kml_file_name_base)
             for k, v in add_files.items():
                 mission_kml_zip_file.write(v, k)
             mission_kml_zip_file.close()
-            os.remove(mission_kml_name)
+            if not base_opts.use_inmemory:
+                os.remove(mission_kml_name)
         except Exception:
+            if DEBUG_PDB:
+                _, _, traceb = sys.exc_info()
+                traceback.print_exc()
+                pdb.post_mortem(traceb)
             log_error(f"Could not process {mission_kml_zip_name}", "exc")
             log_info("Bailing out...")
             return 1
         if processed_other_files is not None:
             processed_other_files.append(mission_kml_zip_name)
     else:
+        if base_opts.use_inmemory:
+            with open(mission_kml_name, "w") as mission_kml_file:
+                mission_kml_file.write(fo.read())
         if processed_other_files is not None:
             processed_other_files.append(mission_kml_name)
 
@@ -1987,6 +2015,11 @@ if __name__ == "__main__":
     except SystemExit:
         pass
     except Exception:
+        if DEBUG_PDB:
+            _, _, traceb = sys.exc_info()
+            traceback.print_exc()
+            pdb.post_mortem(traceb)
+
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)

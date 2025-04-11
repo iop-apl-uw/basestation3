@@ -1402,6 +1402,22 @@ global_options_dict = {
             "option_group": "kml generation",
         },
     ),
+    "use_inmemory": options_t(
+        True,
+        (
+            "Base",
+            "Reprocess",
+            "MakeKML",
+        ),
+        ("--use_inmemory",),
+        bool,
+        {
+            "help": "Use an inmemory file to build the KML output",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
     "plot_dives": options_t(
         True,
         (
