@@ -52,7 +52,7 @@ from BaseLog import log_error, log_warning
 #
 # Utility Routines
 #
-def get_mission_dive(dive_nc_file):
+def get_mission_dive(dive_nc_file, dives_str=None):
     """Gets common information for all plot headers
 
     Input:
@@ -86,7 +86,12 @@ def get_mission_dive(dive_nc_file):
     else:
         start_time = "(No start time found)"
 
-    return f"SG{glider_id:03d} {mission_title} Dive {dive_num:d} Started {start_time}"
+    if dives_str:
+        dive_str = dives_str
+    else:
+        dive_str = f"Dive {dive_num:d}"
+
+    return f"SG{glider_id:03d} {mission_title} {dive_str} Started {start_time}"
 
 
 def get_mission_str(dive_nc_file):

@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,8 +28,8 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Supporting routines for creating plots from netCDF data
-"""
+"""Supporting routines for creating plots from netCDF data"""
+
 import io
 import json
 import os
@@ -131,6 +131,7 @@ def write_output_files(base_opts, base_file_name, fig):
             validate=True,
             config=std_config_dict,
             include_mathjax="cdn",
+            auto_play=False,
         )
         ret_list.append(output_name)
 
@@ -149,6 +150,7 @@ def write_output_files(base_opts, base_file_name, fig):
         validate=True,
         config=std_config_dict,
         include_mathjax="cdn",
+        auto_play=False,
     )
 
     if base_opts.compress_div:
