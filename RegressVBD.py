@@ -549,7 +549,7 @@ def regress(path, glider, dives, depthlims, init_bias, mass, doplot, plot_dives,
             }
         )
 
-        title = f"SG{glider:03d} {mission} dive {i}<br>(correct model (red) closer to observed (black) is better)"
+        title = f"SG{glider:03d} {mission} dive {i}<br>(corrected model (red) closer to observed (black) is better)"
 
         fig.update_layout(
             {
