@@ -122,7 +122,7 @@ def init_sensor(module_name, init_dict=None):
         },
         (BaseNetCDF.nc_sg_data_info,),
     ]
-    meta_data_adds["%s%s_airsat" % eng_tuple] = [
+    meta_data_adds["%s%s_O2_sat" % eng_tuple] = [
         False,
         "d",
         {
@@ -193,7 +193,7 @@ def init_sensor(module_name, init_dict=None):
         },
         (data_info,),
     ]
-    meta_data_adds["%s_airsat" % instrument] = [
+    meta_data_adds["%s_O2_sat" % instrument] = [
         "f",
         "d",
         {
@@ -227,7 +227,6 @@ def init_sensor(module_name, init_dict=None):
     ]
 
     # derived results
-    # Why, oh why, didn't we name these, e.g., aa4330_dissolved_oxygen etc rather than aanderaa4330_dissolved_oxygen?
     meta_data_adds[results_time_var] = [
         True,
         "d",
@@ -309,7 +308,7 @@ def remap_engfile_columns_netcdf(
     replace_dict = {
         "codaTODO_temp" : f"{instrument}_temp",
         "codaTODO_doxy21" : f"{instrument}_compensated_O2",
-        "codaTODO_doxy22" : f"{instrument}_airsat",
+        "codaTODO_doxy22" : f"{instrument}_O2_sat",
         "codaTODO_doxy24" : f"{instrument}_uncompensated_O2",
         "codaTODO_opt05" : f"{instrument}_phase", 
     }
