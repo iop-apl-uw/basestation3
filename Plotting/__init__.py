@@ -150,6 +150,7 @@ from . import (  # noqa : E402, F401
     DivePMAR,
     DiveSBE43,
     DiveTMICL,
+    DiveTridente,
     DiveTS,
     # DiveVertVelocity    # deprecated in favor of the DiveVertVelocityNew
     DiveVertVelocityNew,
