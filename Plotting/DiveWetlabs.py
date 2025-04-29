@@ -50,15 +50,6 @@ from BaseLog import log_debug, log_error, log_warning
 from Plotting import plotdivesingle
 
 
-def find_matching_time(ncf, nc_var):
-    """Given a variable from the netcdf file, locate the matching time vector"""
-    dim = nc_var.dimensions
-    for k, v in ncf.variables.items():
-        if v.dimensions == dim and k.endswith("_time"):
-            return ncf.variables[k][:]
-    return None
-
-
 @plotdivesingle
 def plot_wetlabs(
     base_opts: BaseOpts.BaseOptions,
