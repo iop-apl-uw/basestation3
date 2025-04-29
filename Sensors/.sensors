@@ -15,6 +15,7 @@ cp_ext.py,init_logger,process_data_files
 legato_logdev_ext.py,init_logger,process_data_files,eng_file_reader
 rockland_micropod_ext.py,init_logger,process_data_files
 tridente_ext.py,init_sensor
+coda_ext.py,init_sensor,remap_engfile_columns_netcdf
 # Place all cnf files at the end of this file!
 scct.cnf,init_sensor,asc2eng
 mag.cnf,init_sensor,asc2eng
