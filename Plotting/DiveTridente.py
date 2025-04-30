@@ -64,7 +64,7 @@ def plot_tridente(
 
     tridente_types = []
     varlist = "".join(filter(lambda x: "sg_cal" not in x, dive_nc_file.variables))
-    
+
     # Note: The instrument can be auto generated from the valid channels list, but
     # to conserve memory and runtime, the list is kept the those known variantes, and expanded
     # with the possible instance number.  This list matches that in trident_ext.py.
@@ -268,30 +268,31 @@ def plot_tridente(
                         }
                     )
 
-                    # TODO - add in
-                    # if "sg_cal_calibcomm_wetlabs" in dive_nc_file.variables:
-                    #     cal_text = (
-                    #         dive_nc_file.variables["sg_cal_calibcomm_wetlabs"][:]
-                    #         .tobytes()
-                    #         .decode()
-                    #     )
+                    if f"sg_cal_calibcomm_{tridente_type}" in dive_nc_file.variables:
+                        cal_text = (
+                            dive_nc_file.variables[f"sg_cal_calibcomm_{tridente_type}"][
+                                :
+                            ]
+                            .tobytes()
+                            .decode()
+                        )
 
-                    #     fig.update_layout(
-                    #         {
-                    #             "annotations": tuple(
-                    #                 [
-                    #                     {
-                    #                         "text": cal_text,
-                    #                         "showarrow": False,
-                    #                         "xref": "paper",
-                    #                         "yref": "paper",
-                    #                         "x": 0.0,
-                    #                         "y": -0.08,
-                    #                     }
-                    #                 ]
-                    #             )
-                    #         }
-                    #     )
+                        fig.update_layout(
+                            {
+                                "annotations": tuple(
+                                    [
+                                        {
+                                            "text": cal_text,
+                                            "showarrow": False,
+                                            "xref": "paper",
+                                            "yref": "paper",
+                                            "x": 0.0,
+                                            "y": -0.08,
+                                        }
+                                    ]
+                                )
+                            }
+                        )
 
                     ret_figs.append(fig)
                     ret_plots.extend(
@@ -309,9 +310,9 @@ def plot_tridente(
         bs_chans = collections.OrderedDict(
             (
                 ("bb470nm", bs("470nm scattering coefficient", "Blue", "DarkBlue")),
-                #("sig532nm", bs("Green scattering", "GreenYellow", "DarkGreen")),
+                # ("sig532nm", bs("Green scattering", "GreenYellow", "DarkGreen")),
                 ("bb700nm", bs("700nm scattering coefficient", "Red", "DarkRed")),
-                #("sig880nm", bs("Infrared scattering", "Yellow", "Gold")),
+                # ("sig880nm", bs("Infrared scattering", "Yellow", "Gold")),
             )
         )
 
@@ -390,7 +391,10 @@ def plot_tridente(
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
         title_text = f"{mission_dive_str}<br>Backscattering vs Depth{binned_tag}"
-        output_name = "dv%04d_%s_backscatter" % (dive_nc_file.dive_number, tridente_type)
+        output_name = "dv%04d_%s_backscatter" % (
+            dive_nc_file.dive_number,
+            tridente_type,
+        )
 
         fig.update_layout(
             {
@@ -417,28 +421,29 @@ def plot_tridente(
             }
         )
 
-        # TODO - Add in 
-        # if "sg_cal_calibcomm_wetlabs" in dive_nc_file.variables:
-        #     cal_text = (
-        #         dive_nc_file.variables["sg_cal_calibcomm_wetlabs"][:].tobytes().decode()
-        #     )
+        if f"sg_cal_calibcomm_{tridente_type}" in dive_nc_file.variables:
+            cal_text = (
+                dive_nc_file.variables[f"sg_cal_calibcomm_{tridente_type}"][:]
+                .tobytes()
+                .decode()
+            )
 
-        #     fig.update_layout(
-        #         {
-        #             "annotations": tuple(
-        #                 [
-        #                     {
-        #                         "text": cal_text,
-        #                         "showarrow": False,
-        #                         "xref": "paper",
-        #                         "yref": "paper",
-        #                         "x": 0.0,
-        #                         "y": -0.08,
-        #                     }
-        #                 ]
-        #             )
-        #         }
-        #     )
+            fig.update_layout(
+                {
+                    "annotations": tuple(
+                        [
+                            {
+                                "text": cal_text,
+                                "showarrow": False,
+                                "xref": "paper",
+                                "yref": "paper",
+                                "x": 0.0,
+                                "y": -0.08,
+                            }
+                        ]
+                    )
+                }
+            )
 
         ret_figs.append(fig)
         ret_plots.extend(
