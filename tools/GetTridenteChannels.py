@@ -176,7 +176,7 @@ def main():
                 elif values["label"].startswith("fdom"):
                     instrument_name += f"fdom{wl}"
                 else:
-                    instrument_name += f"UNKNOWN"
+                    instrument_name += "UNKNOWN"
 
         if not found_one:
             print("No Tridente channels found")
