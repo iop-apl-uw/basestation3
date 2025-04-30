@@ -42,6 +42,19 @@ from BaseLog import BaseLogger, log_error, log_info
 # Options
 DEBUG_PDB = False
 
+known_labels = (
+    "backscatter_00",
+    "backscatter_01",
+    "backscatter_02",
+    "chlorophyll_00",
+    "chlorophyll_01",
+    "chlorophyll_02",
+    "fdom_00",
+    "fdom_01",
+    "fdom_03",
+)
+known_typs = ("turb21", "fluo49", "fluo46")
+
 
 def main():
     base_opts = BaseOpts.BaseOptions(
@@ -80,8 +93,27 @@ def main():
                         f"Could not decode line {line_count} in {base_opts.capture} - skipping"
                     )
                     continue
-                s = s.rstrip().lstrip()
-                if s.startswith("channel "):
+                s = s.rstrip().lstrip("Ready:").lstrip()
+                if s.startswith("calibration "):
+                    for sensor_line in s.split("||"):
+                        try:
+                            sensor_str, tail = sensor_line.split(" ", 2)[1:]
+                            sensor = int(sensor_str)
+                        except Exception:
+                            continue
+                        if not tail:
+                            continue
+                        splits = tail.split(",")
+                        for ss in splits:
+                            k, v = (x.strip() for x in ss.split("="))
+                            if k == "label" and v not in known_labels:
+                                break
+                            if k == "datetime":
+                                channels[sensor]["datetime"] = time.strftime(
+                                    "%Y-%m-%dT%H:%M:%SZ",
+                                    time.strptime(v, "%Y%m%d%H%M%S"),
+                                )
+                elif s.startswith("channel "):
                     for channel_line in s.split("||"):
                         try:
                             channel_str, tail = channel_line.split(" ", 2)[1:]
@@ -92,6 +124,8 @@ def main():
                         for ss in splits:
                             k, v = (x.strip() for x in ss.split("="))
                             if k == "type":
+                                if v not in known_typs:
+                                    break
                                 channels[channel]["typ"] = v
                             if k == "label":
                                 channels[channel]["label"] = v
@@ -104,28 +138,13 @@ def main():
                             continue
                         if not tail:
                             continue
+                        if sensor not in channels:
+                            break
                         splits = tail.split(",")
                         for ss in splits:
                             k, v = (x.strip() for x in ss.split("="))
                             if k == "wavelength":
                                 channels[sensor]["wavelength"] = v
-                elif s.startswith("calibration "):
-                    for sensor_line in s.split("||"):
-                        try:
-                            sensor_str, tail = sensor_line.split(" ", 2)[1:]
-                            sensor = int(sensor_str)
-                        except Exception:
-                            continue
-                        if not tail:
-                            continue
-                        splits = tail.split(",")
-                        for ss in splits:
-                            k, v = (x.strip() for x in ss.split("="))
-                            if k == "datetime":
-                                channels[sensor]["datetime"] = time.strftime(
-                                    "%Y-%m-%dT%H:%M:%SZ",
-                                    time.strptime(v, "%Y%m%d%H%M%S"),
-                                )
                 elif s.startswith("id model"):
                     for ss in s.split(","):
                         k, v = (x.rstrip().lstrip() for x in ss.split("="))
@@ -135,13 +154,13 @@ def main():
                             serial_num = v
                     if model is None or serial_num is None:
                         model = serial_num = None
-
         calib_comm = ""
         if model is not None:
             calib_comm += f"{model} "
         if serial_num is not None:
             calib_comm += f"serialnum:{serial_num} "
         found_one = None
+        instrument_name = ""
         for channel, values in channels.items():
             if all(x in values for x in ("typ", "label", "wavelength", "datetime")):
                 if not found_one:
@@ -149,15 +168,22 @@ def main():
                     print("Tridente channels found")
                 print(f"{channel}:{values}")
                 calib_comm += f"{values['label']}:{values['datetime']} "
+                wl = values["wavelength"][:3]
+                if values["label"].startswith("back"):
+                    instrument_name += f"bb{wl}"
+                elif values["label"].startswith("chlo"):
+                    instrument_name += f"chla{wl}"
+                elif values["label"].startswith("fdom"):
+                    instrument_name += f"fdom{wl}"
+                else:
+                    instrument_name += f"UNKNOWN"
 
         if not found_one:
             print("No Tridente channels found")
 
         if calib_comm:
-            print(
-                "Add to sg_calib_constants.m (replaceing [tridente_instrument] with the instments name"
-            )
-            print(f"calibcomm_[tridente_instrument]='{calib_comm.rstrip()}';")
+            print("Add to sg_calib_constants.m")
+            print(f"calibcomm_{instrument_name}='{calib_comm.rstrip()}';")
 
     except Exception:
         if DEBUG_PDB:
