@@ -31,6 +31,7 @@ import collections
 import os
 import pdb
 import sys
+import time
 import traceback
 
 sys.path.append(os.path.join(os.path.dirname(os.path.realpath(__file__)), os.pardir))
@@ -58,7 +59,7 @@ def main():
             ),
         },
     )
-    
+
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
 
@@ -67,6 +68,7 @@ def main():
     line_count = 0
 
     channels = collections.defaultdict(dict)
+    model = serial_num = None
     try:
         with open(base_opts.capture, "rb") as fi:
             for raw_line in fi:
@@ -88,7 +90,7 @@ def main():
                             continue
                         splits = tail.split(",")
                         for ss in splits:
-                            k,v = (x.strip() for x in ss.split("="))
+                            k, v = (x.strip() for x in ss.split("="))
                             if k == "type":
                                 channels[channel]["typ"] = v
                             if k == "label":
@@ -104,20 +106,59 @@ def main():
                             continue
                         splits = tail.split(",")
                         for ss in splits:
-                            k,v = (x.strip() for x in ss.split("="))
+                            k, v = (x.strip() for x in ss.split("="))
                             if k == "wavelength":
                                 channels[sensor]["wavelength"] = v
-        found_one = False
+                elif s.startswith("calibration "):
+                    for sensor_line in s.split("||"):
+                        try:
+                            sensor_str, tail = sensor_line.split(" ", 2)[1:]
+                            sensor = int(sensor_str)
+                        except Exception:
+                            continue
+                        if not tail:
+                            continue
+                        splits = tail.split(",")
+                        for ss in splits:
+                            k, v = (x.strip() for x in ss.split("="))
+                            if k == "datetime":
+                                channels[sensor]["datetime"] = time.strftime(
+                                    "%Y-%m-%dT%H:%M:%SZ",
+                                    time.strptime(v, "%Y%m%d%H%M%S"),
+                                )
+                elif s.startswith("id model"):
+                    for ss in s.split(","):
+                        k, v = (x.rstrip().lstrip() for x in ss.split("="))
+                        if k == "id model" and v == "RBRtridente":
+                            model = v
+                        elif k == "serial":
+                            serial_num = v
+                    if model is None or serial_num is None:
+                        model = serial_num = None
+
+        calib_comm = ""
+        if model is not None:
+            calib_comm += f"{model} "
+        if serial_num is not None:
+            calib_comm += f"serialnum:{serial_num} "
+        found_one = None
         for channel, values in channels.items():
-            if all(x in values for x in ('typ', 'label', 'wavelength')):
+            if all(x in values for x in ("typ", "label", "wavelength", "datetime")):
                 if not found_one:
                     found_one = True
                     print("Tridente channels found")
                 print(f"{channel}:{values}")
+                calib_comm += f"{values['label']}:{values['datetime']} "
 
         if not found_one:
             print("No Tridente channels found")
-                        
+
+        if calib_comm:
+            print(
+                "Add to sg_calib_constants.m (replaceing [tridente_instrument] with the instments name"
+            )
+            print(f"calibcomm_[tridente_instrument]='{calib_comm.rstrip()}';")
+
     except Exception:
         if DEBUG_PDB:
             _, _, tb = sys.exc_info()
