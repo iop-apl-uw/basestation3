@@ -139,6 +139,14 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         ctd_vars.optode_name = "aa4330"
         optode_temp_name = "eng_aa4330_Temp"
         is_scicon = False
+    elif "codatodo_temp" in dive_nc_file.variables:
+        ctd_vars.optode_name = "codatodo"
+        optode_temp_name = "codatodo_temp"
+        is_scicon = True
+    elif "eng_codatodo_temp" in dive_nc_file.variables:
+        ctd_vars.optode_name = "codatodo"
+        optode_temp_name = "eng_codatodo_temp"
+        is_scicon = False
 
     if ctd_vars.optode_name is not None:
         try:
