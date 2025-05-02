@@ -1883,7 +1883,7 @@ def set_globals() -> None:
         "log_UNCOM_BLEED": [False, "i", {}, nc_scalar],
         "log_UPLOAD_DIVES_MAX": [False, "i", {}, nc_scalar],
         "log_USE_BATHY": [False, "i", {}, nc_scalar],
-        "log_BATHY_OFFSET": [False, "d", {}, nc_scalar],
+        "log_D_BATHY_OFFSET": [False, "d", {}, nc_scalar],
         "log_USE_ICE": [False, "i", {}, nc_scalar],
         "log_VBD_BLEED_AD_RATE": [False, "d", {}, nc_scalar],
         "log_VBD_CNV": [False, "d", {}, nc_scalar],
@@ -1928,7 +1928,7 @@ def set_globals() -> None:
         "log_TE": [False, "c", {}, nc_scalar],  # multi-valued string in gc table
         "log_MODEM": [
             False,
-            "i",
+            "c",
             {},
             nc_scalar,
         ],  # multi-valued string in its own table
