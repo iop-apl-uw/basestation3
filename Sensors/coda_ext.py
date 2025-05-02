@@ -27,18 +27,20 @@ RBR codeTODO basestation sensor extension
 
 import BaseNetCDF
 import Utils
+import Utils2
 from BaseLog import log_error
 from QC import (
-#     QC_BAD,
-#     QC_GOOD,
-#     QC_UNSAMPLED,
-#     assert_qc,
-#     inherit_qc,
-#     initialize_qc,
-     nc_qc_type,
+    #     QC_BAD,
+    #     QC_GOOD,
+    #     QC_UNSAMPLED,
+    #     assert_qc,
+    #     inherit_qc,
+    #     initialize_qc,
+    nc_qc_type,
 )
 
-instrument = "codatodo"
+instrument = "codaTODO"
+
 
 def init_sensor(module_name, init_dict=None):
     """
@@ -55,12 +57,11 @@ def init_sensor(module_name, init_dict=None):
     # initialize with the *single* set of calibration constants
     # BUG: in this version of the extension, in the case of two or more optodes aboard,
     # exactly one optode's data will be processed and the choice is random
-    meta_data_adds = {
-    }
+    meta_data_adds = {}
 
     # create data info
     data_info = f"{instrument}_data_info"
-    data_time_var = f"{instrument}_time" 
+    data_time_var = f"{instrument}_time"
     BaseNetCDF.register_sensor_dim_info(
         data_info,
         f"{instrument}_data_point",
@@ -107,7 +108,7 @@ def init_sensor(module_name, init_dict=None):
         },
         (BaseNetCDF.nc_sg_data_info,),
     ]
-            
+
     eng_o2_var = f"{instrument}_compensated_O2"
     md_var = f"{BaseNetCDF.nc_sg_eng_prefix}{eng_o2_var}"
     meta_data_adds[md_var] = [
@@ -259,35 +260,8 @@ def init_sensor(module_name, init_dict=None):
         },
         (results_info,),
     ]
-            
-    for cast, tag in (("a", "dive"), ("b", "climb")):
-        meta_data_adds["%s_ontime_%s" % (instrument, cast)] = [
-            False,
-            "d",
-            {
-                "description": "%s total time turned on %s" % (instrument, tag),
-                "units": "secs",
-            },
-            BaseNetCDF.nc_scalar,
-        ]
-        meta_data_adds["%s_samples_%s" % (instrument, cast)] = [
-            False,
-            "i",
-            {
-                "description": "%s total number of samples taken %s"
-                % (instrument, tag)
-            },
-            BaseNetCDF.nc_scalar,
-        ]
-        meta_data_adds["%s_timeouts_%s" % (instrument, cast)] = [
-            False,
-            "i",
-            {
-                "description": "%s total number of samples timed out on %s"
-                % (instrument, tag)
-            },
-            BaseNetCDF.nc_scalar,
-        ]
+
+    meta_data_adds = meta_data_adds | Utils2.add_scicon_stats(instrument)
 
     init_dict[module_name] = {"netcdf_metadata_adds": meta_data_adds}
     return 0
@@ -305,11 +279,11 @@ def remap_engfile_columns_netcdf(
     1 - no match found
     """
 
+    instrument = "codaTODO"
     replace_dict = {
-        "codaTODO_temp" : f"{instrument}_temp",
-        "codaTODO_doxy21" : f"{instrument}_compensated_O2",
-        "codaTODO_doxy22" : f"{instrument}_O2_sat",
-        "codaTODO_doxy24" : f"{instrument}_uncompensated_O2",
-        "codaTODO_opt05" : f"{instrument}_phase", 
+        f"{instrument}_doxy21": f"{instrument}_compensated_O2",
+        f"{instrument}_doxy22": f"{instrument}_O2_sat",
+        f"{instrument}_doxy24": f"{instrument}_uncompensated_O2",
+        f"{instrument}_opt05": f"{instrument}_phase",
     }
     return Utils.remap_column_names(replace_dict, column_names)

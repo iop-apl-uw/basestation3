@@ -247,3 +247,49 @@ def get_mission_timeseries_name(base_opts, direc=None, basename="timeseries"):
         mydir,
         "sg%03d_%s_%s.nc" % (instrument_id, mission_title, basename),
     )
+
+
+def add_scicon_stats(instrument: str) -> dict:
+    meta_data_adds = {}
+
+    for cast, tag in (
+        ("a", "dive"),
+        ("b", "climb"),
+        ("c", "loiter"),
+        ("d", "surfaceloiter"),
+    ):
+        meta_data_adds["%s_ontime_%s" % (instrument, cast)] = [
+            False,
+            "d",
+            {
+                "description": "%s total time turned on %s" % (instrument, tag),
+                "units": "secs",
+            },
+            BaseNetCDF.nc_scalar,
+        ]
+        meta_data_adds["%s_samples_%s" % (instrument, cast)] = [
+            False,
+            "i",
+            {"description": "%s total number of samples taken %s" % (instrument, tag)},
+            BaseNetCDF.nc_scalar,
+        ]
+        meta_data_adds["%s_timeouts_%s" % (instrument, cast)] = [
+            False,
+            "i",
+            {
+                "description": "%s total number of samples timed out on %s"
+                % (instrument, tag)
+            },
+            BaseNetCDF.nc_scalar,
+        ]
+        meta_data_adds["%s_errors_%s" % (instrument, cast)] = [
+            False,
+            "i",
+            {
+                "description": "%s total number of samples errored out on %s"
+                % (instrument, tag)
+            },
+            BaseNetCDF.nc_scalar,
+        ]
+
+    return meta_data_adds

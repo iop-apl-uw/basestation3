@@ -29,6 +29,7 @@ Tridente Sensor extension
 # extension simply generates metadata
 
 import BaseNetCDF
+import Utils2
 from BaseLog import log_error
 
 
@@ -174,44 +175,46 @@ def init_sensor(module_name, init_dict=None):
             (data_info,),
         ]
 
-        # Stats for each data file
-        for channel, md in channels.items():
-            md["instrument"] = instrument
-            meta_data_adds[f"{BaseNetCDF.nc_sg_eng_prefix}{instrument}_{channel}"] = [
-                "f",
-                "d",
-                md,
-                (data_info,),
-            ]
+        meta_data_adds = meta_data_adds | Utils2.add_scicon_stats(instrument)
 
-        for cast, tag in (("a", "dive"), ("b", "climb")):
-            meta_data_adds["%s_ontime_%s" % (instrument, cast)] = [
-                False,
-                "d",
-                {
-                    "description": "%s total time turned on %s" % (instrument, tag),
-                    "units": "secs",
-                },
-                BaseNetCDF.nc_scalar,
-            ]
-            meta_data_adds["%s_samples_%s" % (instrument, cast)] = [
-                False,
-                "i",
-                {
-                    "description": "%s total number of samples taken %s"
-                    % (instrument, tag)
-                },
-                BaseNetCDF.nc_scalar,
-            ]
-            meta_data_adds["%s_timeouts_%s" % (instrument, cast)] = [
-                False,
-                "i",
-                {
-                    "description": "%s total number of samples timed out on %s"
-                    % (instrument, tag)
-                },
-                BaseNetCDF.nc_scalar,
-            ]
+        # # Stats for each data file
+        # for channel, md in channels.items():
+        #     md["instrument"] = instrument
+        #     meta_data_adds[f"{BaseNetCDF.nc_sg_eng_prefix}{instrument}_{channel}"] = [
+        #         "f",
+        #         "d",
+        #         md,
+        #         (data_info,),
+        #     ]
+
+        # for cast, tag in (("a", "dive"), ("b", "climb")):
+        #     meta_data_adds["%s_ontime_%s" % (instrument, cast)] = [
+        #         False,
+        #         "d",
+        #         {
+        #             "description": "%s total time turned on %s" % (instrument, tag),
+        #             "units": "secs",
+        #         },
+        #         BaseNetCDF.nc_scalar,
+        #     ]
+        #     meta_data_adds["%s_samples_%s" % (instrument, cast)] = [
+        #         False,
+        #         "i",
+        #         {
+        #             "description": "%s total number of samples taken %s"
+        #             % (instrument, tag)
+        #         },
+        #         BaseNetCDF.nc_scalar,
+        #     ]
+        #     meta_data_adds["%s_timeouts_%s" % (instrument, cast)] = [
+        #         False,
+        #         "i",
+        #         {
+        #             "description": "%s total number of samples timed out on %s"
+        #             % (instrument, tag)
+        #         },
+        #         BaseNetCDF.nc_scalar,
+        #     ]
 
     init_dict[module_name] = {"netcdf_metadata_adds": meta_data_adds}
     return 0

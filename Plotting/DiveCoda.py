@@ -61,13 +61,13 @@ def plot_coda(
     if not generate_plots:
         return ([], [])
     is_scicon = False
-    if "codatodo_time" in dive_nc_file.variables:
+    if "codaTODO_time" in dive_nc_file.variables:
         is_scicon = True
-    elif "codatodo" in "".join(dive_nc_file.variables):
+    elif "codaTODO" in "".join(dive_nc_file.variables):
         pass
     else:
         return ([], [])
-    
+
     codatodo_correctedO2 = None
     o2_qc_good = False
 
@@ -76,7 +76,9 @@ def plot_coda(
     except Exception:
         start_time = None
 
-    codatodo_instrument_sat_O2 = codatodo_instrument_compensated_O2 = codatodo_instrument_uncompensated_O2 = codatodo_correctedO2 = None
+    codatodo_instrument_sat_O2 = codatodo_instrument_compensated_O2 = (
+        codatodo_instrument_uncompensated_O2
+    ) = codatodo_correctedO2 = None
     try:
         sg_time = dive_nc_file.variables["time"][:]
         sg_depth = None
@@ -87,24 +89,30 @@ def plot_coda(
                 sg_depth = dive_nc_file.variables["eng_depth"][:] / 100.0
             except KeyError:
                 log_warning("No depth variable found")
-        if "codatodo_dissolved_oxygen" in dive_nc_file.variables:
-            codatodo_correctedO2 = dive_nc_file.variables[
-                "codatodo_dissolved_oxygen"
-            ][:]
+        if "codaTODO_dissolved_oxygen" in dive_nc_file.variables:
+            codatodo_correctedO2 = dive_nc_file.variables["codaTODO_dissolved_oxygen"][
+                :
+            ]
         else:
             log_warning("Did not find corrected codatodo O2")
 
         if is_scicon:
-            codatodo_instrument_O2_time = dive_nc_file.variables["codatodo_time"][:]
-            if "codatodo_compensated_O2" in dive_nc_file.variables:
-                codatodo_instrument_compensated_O2 = dive_nc_file.variables["codatodo_compensated_O2"][:]
-                
-            if "codatodo_uncompensated_O2" in dive_nc_file.variables:
-                codatodo_instrument_uncompensated_O2 = dive_nc_file.variables["codatodo_uncompensated_O2"][:]
+            codatodo_instrument_O2_time = dive_nc_file.variables["codaTODO_time"][:]
+            if "codaTODO_compensated_O2" in dive_nc_file.variables:
+                codatodo_instrument_compensated_O2 = dive_nc_file.variables[
+                    "codaTODO_compensated_O2"
+                ][:]
 
-            if "codatodo_O2_sat" in dive_nc_file.variables:
-                codatodo_instrument_sat_O2 = dive_nc_file.variables["codatodo_O2_sat"][:]
-                
+            if "codaTODO_uncompensated_O2" in dive_nc_file.variables:
+                codatodo_instrument_uncompensated_O2 = dive_nc_file.variables[
+                    "codaTODO_uncompensated_O2"
+                ][:]
+
+            if "codaTODO_O2_sat" in dive_nc_file.variables:
+                codatodo_instrument_sat_O2 = dive_nc_file.variables["codaTODO_O2_sat"][
+                    :
+                ]
+
             f = scipy.interpolate.interp1d(
                 sg_time, sg_depth, kind="linear", bounds_error=False, fill_value=0.0
             )
@@ -113,7 +121,9 @@ def plot_coda(
             # Truck
             codatodo_instrument_O2_time = sg_time
             if "eng_codatodo_O2_sat" in dive_nc_file.variables:
-                codatodo_instrument_sat_O2 = dive_nc_file.variables["eng_codatodo_O2_sat"][:]
+                codatodo_instrument_sat_O2 = dive_nc_file.variables[
+                    "eng_codatodo_O2_sat"
+                ][:]
             if "eng_codatodo_compensated_O2" in dive_nc_file.variables:
                 codatodo_instrument_compensated_O2 = dive_nc_file.variables[
                     "eng_codatodo_compensated_O2"
@@ -127,14 +137,16 @@ def plot_coda(
         log_warning("Could not load oxygen data", "exc")
 
     if codatodo_correctedO2 is not None:
-        if "codatodo_dissolved_oxygen_qc" in dive_nc_file.variables:
+        if "codaTODO_dissolved_oxygen_qc" in dive_nc_file.variables:
             codatodo_correctedO2_qc = QC.decode_qc(
-                dive_nc_file.variables["codatodo_dissolved_oxygen_qc"][:]
+                dive_nc_file.variables["codaTODO_dissolved_oxygen_qc"][:]
             )
             codatodo_correctedO2 = np.ma.array(
                 codatodo_correctedO2,
                 mask=np.logical_not(
-                    QC.find_qc(codatodo_correctedO2_qc, QC.only_good_qc_values, mask=True)
+                    QC.find_qc(
+                        codatodo_correctedO2_qc, QC.only_good_qc_values, mask=True
+                    )
                 ),
             )
             o2_qc_good = True
@@ -150,21 +162,33 @@ def plot_coda(
     depth_climb = codatodo_instrument_O2_depth[max_depth_sample_index:]
 
     if codatodo_instrument_compensated_O2 is not None:
-        codatodo_instrument_compensated_O2_dive = codatodo_instrument_compensated_O2[0:max_depth_sample_index]
-        codatodo_instrument_compensated_O2_climb = codatodo_instrument_compensated_O2[max_depth_sample_index:]
-        
+        codatodo_instrument_compensated_O2_dive = codatodo_instrument_compensated_O2[
+            0:max_depth_sample_index
+        ]
+        codatodo_instrument_compensated_O2_climb = codatodo_instrument_compensated_O2[
+            max_depth_sample_index:
+        ]
+
     if codatodo_instrument_uncompensated_O2 is not None:
-        codatodo_instrument_uncompensated_O2_dive = codatodo_instrument_uncompensated_O2[0:max_depth_sample_index]
-        codatodo_instrument_uncompensated_O2_climb = codatodo_instrument_uncompensated_O2[max_depth_sample_index:]
+        codatodo_instrument_uncompensated_O2_dive = (
+            codatodo_instrument_uncompensated_O2[0:max_depth_sample_index]
+        )
+        codatodo_instrument_uncompensated_O2_climb = (
+            codatodo_instrument_uncompensated_O2[max_depth_sample_index:]
+        )
 
     if codatodo_instrument_sat_O2 is not None:
-        codatodo_instrument_sat_O2_dive = codatodo_instrument_sat_O2[0:max_depth_sample_index]
-        codatodo_instrument_sat_O2_climb = codatodo_instrument_sat_O2[max_depth_sample_index:]
+        codatodo_instrument_sat_O2_dive = codatodo_instrument_sat_O2[
+            0:max_depth_sample_index
+        ]
+        codatodo_instrument_sat_O2_climb = codatodo_instrument_sat_O2[
+            max_depth_sample_index:
+        ]
 
     if codatodo_correctedO2 is not None:
         codatodo_correctedO2_dive = codatodo_correctedO2[0:max_depth_sample_index]
         codatodo_correctedO2_climb = codatodo_correctedO2[max_depth_sample_index:]
-        
+
     if not start_time:
         start_time = codatodo_instrument_O2_time[0]
     codatodo_instrument_O2_time_dive = (
@@ -247,7 +271,7 @@ def plot_coda(
                 "hovertemplate": "Inst Reported Uncompensated O2 Climb<br>%{x:.2f} umol/kg<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
             }
         )
-        
+
     if o2_qc_good:
         qc_tag = "- QC_GOOD"
     else:
@@ -330,7 +354,7 @@ def plot_coda(
     title_text = "%s\nOxygen vs Depth (%scorrected for salinity and depth%s)" % (
         mission_dive_str,
         "" if codatodo_correctedO2 is not None else "not ",
-        " - QC_GOOD" if o2_qc_good else ""
+        " - QC_GOOD" if o2_qc_good else "",
     )
     output_name = "dv%04d_codatodo" % dive_nc_file.dive_number
 
