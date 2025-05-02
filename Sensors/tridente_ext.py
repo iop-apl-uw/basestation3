@@ -96,7 +96,7 @@ def init_sensor(module_name, init_dict=None):
     instruments = []
     for ki in known_instruments:
         for inst in instances:
-            instruments.append(f"{inst}_{ki}")
+            instruments.append(f"{inst}{ki}")
 
     for instrument in instruments:
         # Calibration string
