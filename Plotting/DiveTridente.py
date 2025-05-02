@@ -68,13 +68,13 @@ def plot_tridente(
     # Note: The instrument can be auto generated from the valid channels list, but
     # to conserve memory and runtime, the list is kept the those known variantes, and expanded
     # with the possible instance number.  This list matches that in trident_ext.py.
-    known_instruments = ("bb700bb470chla470", "bb700chl470fdom365")
+    known_instruments = ("bb700bb470chla470", "bb700chla470fdom365")
     # We keep this list to 3 possible installed instruments, even though the name space allows for up to 9 installed instruments
     instances = ("tridente", "tridente1", "tridente2", "tridente3")
     instruments = []
     for ki in known_instruments:
         for inst in instances:
-            instruments.append(f"{inst}_{ki}")
+            instruments.append(f"{inst}{ki}")
 
     for typ in instruments:
         if "%s_time" % typ in dive_nc_file.variables:
@@ -309,10 +309,10 @@ def plot_tridente(
         bs = collections.namedtuple("bs_chan", ["name", "dive_color", "climb_color"])
         bs_chans = collections.OrderedDict(
             (
-                ("bb470nm", bs("470nm scattering coefficient", "Blue", "DarkBlue")),
-                # ("sig532nm", bs("Green scattering", "GreenYellow", "DarkGreen")),
-                ("bb700nm", bs("700nm scattering coefficient", "Red", "DarkRed")),
-                # ("sig880nm", bs("Infrared scattering", "Yellow", "Gold")),
+                ("bb470", bs("470nm scattering coefficient", "Blue", "DarkBlue")),
+                # ("sig532", bs("Green scattering", "GreenYellow", "DarkGreen")),
+                ("bb700", bs("700nm scattering coefficient", "Red", "DarkRed")),
+                # ("sig880", bs("Infrared scattering", "Yellow", "Gold")),
             )
         )
 

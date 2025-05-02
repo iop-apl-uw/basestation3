@@ -90,7 +90,7 @@ def init_sensor(module_name, init_dict=None):
     # to conserve memory and runtime, the list is kept the those known variantes, and expanded
     # with the possible instance number.
     # If this list is updated, the matching code in DiveTridente.py in the Plotting directory should be updated
-    known_instruments = ("bb700bb470chla470", "bb700chl470fdom365")
+    known_instruments = ("bb700bb470chla470", "bb700chla470fdom365")
     # We keep this list to 3 possible installed instruments, even though the name space allows for up to 9 installed instruments
     instances = ("tridente", "tridente1", "tridente2", "tridente3")
     instruments = []
