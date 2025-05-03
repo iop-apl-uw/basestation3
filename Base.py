@@ -1572,6 +1572,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
+    # If present, this file indicates that FMS, MMT, MMP, MakeKML and WholeMission plots should be skipped
+    go_fast_file = pathlib.Path(base_opts.mission_dir).joinpath(".go_fast")
+
     calib_consts = CalibConst.getSGCalibrationConstants(
         sg_calib_file_name, ignore_fm_tags=not base_opts.ignore_flight_model
     )
@@ -2278,12 +2281,16 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     if base_opts.make_dive_profiles:
         last_session = comm_log.last_surfacing()
-        if base_opts.skip_flight_model:
+        if go_fast_file.exists():
+            po.process_progress("flight_model", "skip", reason="Per .go_fast")
+            log_info("Skipping flight model processing per .go_fast")
+        elif base_opts.skip_flight_model:
             po.process_progress("flight_model", "skip", reason="Per directive")
             log_info("Skipping flight model processing per directive")
         elif last_session and last_session.recov_code and not base_opts.force:
             po.process_progress("flight_model", "skip", reason="In recovery")
             log_info(f"Skipping flight model due to recovery {last_session.recov_code}")
+        # This covers the case where the first call in has a QUIT in place, but the glider isn't in recovery yet
         elif (
             last_session
             and last_session.cmd_directive
@@ -2433,7 +2440,10 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     #
     # Create the mission profile file
     #
-    if not base_opts.make_mission_profile:
+    if go_fast_file.exists():
+        po.process_progress("mission_profile", "skip", reason="Per .go_fast")
+        log_info("Skipping mission profile processing per .go_fast")
+    elif not base_opts.make_mission_profile:
         po.process_progress("mission_profile", "skip", reason="By option setting")
     else:
         if len(nc_files_created) < 1:
@@ -2470,36 +2480,39 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     #
     # Create the mission timeseries file
     #
-    if not base_opts.make_mission_timeseries:
+    if go_fast_file.exists():
+        po.process_progress("mission_timeseries", "skip", reason="Per .go_fast")
+        log_info("Skipping mission timeseries processing per .go_fast")
+    elif not base_opts.make_mission_timeseries:
         po.process_progress("mission_timeseries", "skip", reason="By option setting")
+        log_info("Skipping mission_timeseries due to option setting")
+    elif len(nc_files_created) < 1:
+        log_info(
+            "No dive new netCDF file created - mission timeseries file will not be updated"
+        )
+        po.process_progress(
+            "mission_timeseries", "skip", reason="No dive new netCDF file created"
+        )
     else:
-        if len(nc_files_created) < 1:
-            log_info(
-                "No dive new netCDF file created - mission timeseries file will not be updated"
+        po.process_progress("mission_timeseries", "start")
+        try:
+            (
+                mt_retval,
+                mission_timeseries_name,
+            ) = MakeMissionTimeSeries.make_mission_timeseries(
+                dive_nc_file_names, base_opts
             )
-            po.process_progress(
-                "mission_timeseries", "skip", reason="No dive new netCDF file created"
-            )
-        else:
-            po.process_progress("mission_timeseries", "start")
-            try:
-                (
-                    mt_retval,
-                    mission_timeseries_name,
-                ) = MakeMissionTimeSeries.make_mission_timeseries(
-                    dive_nc_file_names, base_opts
-                )
-                if stop_processing_event.is_set():
-                    log_warning("Caught SIGUSR1 - bailing out")
-                    return 1
-                if mt_retval:
-                    failed_mission_timeseries = True
-                else:
-                    data_product_file_names.append(mission_timeseries_name)
-            except Exception:
-                log_error("Failed to create mission timeseries", "exc")
+            if stop_processing_event.is_set():
+                log_warning("Caught SIGUSR1 - bailing out")
+                return 1
+            if mt_retval:
                 failed_mission_timeseries = True
-            po.process_progress("mission_timeseries", "stop")
+            else:
+                data_product_file_names.append(mission_timeseries_name)
+        except Exception:
+            log_error("Failed to create mission timeseries", "exc")
+            failed_mission_timeseries = True
+        po.process_progress("mission_timeseries", "stop")
 
     processed_file_names = []
     processed_file_names.append(processed_eng_and_log_files)
@@ -2511,7 +2524,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Whole mission plotting
-    if "mission" in base_opts.plot_types:
+    if go_fast_file.exists():
+        po.process_progress("mission_plots", "skip", reason="Per .go_fast")
+        log_info("Skipping mission plots processing per .go_fast")
+    elif "mission" not in base_opts.plot_types:
+        po.process_progress("mission_plots", "skip", reason="Per option")
+    else:
         po.process_progress("mission_plots", "start")
         mission_str = BasePlot.get_mission_str(base_opts, calib_consts)
         plot_dict = BasePlot.get_mission_plots(base_opts)
@@ -2522,13 +2540,18 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         for output_file in output_files:
             processed_other_files.append(output_file)
         po.process_progress("mission_plots", "stop")
-    else:
-        po.process_progress("mission_plots", "skip", reason="Per option")
+
+    # Change to look for the a .skip_whole_mission file - to skip FMS, MMP, MMT, mission_plots and KML
 
     # Generate KML
-
     try:
-        if not base_opts.skip_kml:
+        if go_fast_file.exists():
+            po.process_progress("mission_kml", "skip", reason="Per .go_fast")
+            log_info("Skipping mission kml processing per .go_fast")
+        elif base_opts.skip_kml:
+            po.process_progress("mission_kml", "skip", reason="Per option")
+            log_info("Skipping mission_kml per opion")
+        else:
             po.process_progress("mission_kml", "start")
             MakeKML.main(
                 base_opts,
@@ -2536,8 +2559,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
                 processed_other_files,
             )
             po.process_progress("mission_kml", "stop")
-        else:
-            po.process_progress("mission_kml", "skip", reason="Per option")
+
     except Exception:
         log_error("Failed to generate KML", "exc")
 

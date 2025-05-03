@@ -494,6 +494,12 @@ for arg in $*; do
 done
 ```
 
+# Misc dot files
+
+## go_fast
+
+If a file named ```.go_fast``` is present in the Seaglider's mission directory, processing for the following areas will be skipped `FlightModel`, `MissionPlots`, `MakeMissionTimeseries`, `MakeMissionProfile` and `MakeKML` during the running of `Base.py` regardless of any other switches or settings.  The intent of this option is to allow the pilot to get rapid turn around of processing on slow systems when directly working on a glider and rapid processing of `pdoscmds.bat` output and `pagers` is needed.  It should be used with caution.
+
 # Differences from previous versions
 
 ## FlightModel
