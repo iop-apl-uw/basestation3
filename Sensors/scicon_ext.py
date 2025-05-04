@@ -883,6 +883,7 @@ def extract_file_metadata(inp_file_name):
                 raw_strs[0] == "%samples"
                 or raw_strs[0] == "%timeouts"
                 or raw_strs[0] == "%errors"
+                or raw_strs[0] == "%ontime"                    
             ):
                 if not Utils.is_integer(raw_strs[1].strip()):
                     log_warning(

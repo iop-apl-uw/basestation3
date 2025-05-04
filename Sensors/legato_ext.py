@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022, 2023, 2024 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022, 2023, 2024, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -28,6 +28,7 @@ rbr legato basestation sensor extension
 
 import BaseNetCDF
 import Utils
+import Utils2
 from BaseLog import log_error
 
 
@@ -53,162 +54,113 @@ def init_sensor(module_name, init_dict=None):
     )
 
     # results are computed in MDP
-    init_dict[module_name] = {
-        "netcdf_metadata_adds": {
-            "legato": [
-                False,
-                "c",
-                {
-                    "long_name": "underway thermosalinograph",
-                    "nodc_name": "thermosalinograph",
-                    "make_model": "unpumped RBR Legato",
-                },
-                BaseNetCDF.nc_scalar,
-            ],  # always scalar
-            # legato via truck
-            "eng_rbr_conduc": [
-                "f",
-                "d",
-                {
-                    "standard_name": "sea_water_electrical_conductivity",
-                    "units": "mS/cm",
-                    "description": "Conductivity as reported by the instrument",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            "eng_rbr_temp": [
-                "f",
-                "d",
-                {
-                    "standard_name": "sea_water_temperature",
-                    "units": "degrees_Celsius",
-                    "description": "Termperature (in situ) as reported by the instrument",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            "eng_rbr_conducTemp": [
-                False,
-                "d",
-                {
-                    "units": "degrees_Celsius",
-                    "description": "As reported by the instrument",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            "eng_rbr_pressure": [
-                "f",
-                "d",
-                {
-                    "standard_name": "sea_water_pressure",
-                    "units": "dbar",
-                    "description": "CTD reported pressure",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            # legato via scicon
-            "legato_time": [
-                True,
-                "d",
-                {
-                    "standard_name": "time",
-                    "units": "seconds since 1970-1-1 00:00:00",
-                    "description": "sbe41 time in GMT epoch format",
-                },
-                (BaseNetCDF.nc_legato_data_info,),
-            ],
-            "legato_conduc": [
-                "f",
-                "d",
-                {
-                    "standard_name": "sea_water_electrical_conductivity",
-                    "units": "mS/cm",
-                    "description": "Conductivity as reported by the instrument",
-                },
-                (BaseNetCDF.nc_legato_data_info,),
-            ],
-            "legato_temp": [
-                "f",
-                "d",
-                {
-                    "standard_name": "sea_water_temperature",
-                    "units": "degrees_Celsius",
-                    "description": "Termperature (in situ) as reported by the instrument",
-                },
-                (BaseNetCDF.nc_legato_data_info,),
-            ],
-            "legato_conducTemp": [
-                False,
-                "d",
-                {
-                    "units": "degrees_Celsius",
-                    "description": "As reported by the instrument",
-                },
-                (BaseNetCDF.nc_legato_data_info,),
-            ],
-            "legato_pressure": [
-                "f",
-                "d",
-                {
-                    "standard_name": "sea_water_pressure",
-                    "units": "dbar",
-                    "description": "CTD reported pressure",
-                },
-                (BaseNetCDF.nc_legato_data_info,),
-            ],
-            "legato_ontime_a": [
-                False,
-                "d",
-                {"description": "legato total time turned on dive", "units": "secs"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "legato_samples_a": [
-                False,
-                "i",
-                {"description": "legato total number of samples taken dive"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "legato_timeouts_a": [
-                False,
-                "i",
-                {"description": "legato total number of samples timed out on dive"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "legato_errors_a": [
-                False,
-                "i",
-                {
-                    "description": "legato total number of errors reported during sampling on dive"
-                },
-                BaseNetCDF.nc_scalar,
-            ],
-            "legato_ontime_b": [
-                False,
-                "d",
-                {"description": "legato total time turned on climb", "units": "secs"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "legato_samples_b": [
-                False,
-                "i",
-                {"description": "legato total number of samples taken climb"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "legato_timeouts_b": [
-                False,
-                "i",
-                {"description": "legato total number of samples timed out on climb"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "legato_errors_b": [
-                False,
-                "i",
-                {
-                    "description": "legato total number of errors reported during sampling on climb"
-                },
-                BaseNetCDF.nc_scalar,
-            ],
-        }
+    meta_data_adds = {
+        "legato": [
+            False,
+            "c",
+            {
+                "long_name": "underway thermosalinograph",
+                "nodc_name": "thermosalinograph",
+                "make_model": "unpumped RBR Legato",
+            },
+            BaseNetCDF.nc_scalar,
+        ],  # always scalar
+        # legato via truck
+        "eng_rbr_conduc": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_electrical_conductivity",
+                "units": "mS/cm",
+                "description": "Conductivity as reported by the instrument",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        "eng_rbr_temp": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_temperature",
+                "units": "degrees_Celsius",
+                "description": "Termperature (in situ) as reported by the instrument",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        "eng_rbr_conducTemp": [
+            False,
+            "d",
+            {
+                "units": "degrees_Celsius",
+                "description": "As reported by the instrument",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        "eng_rbr_pressure": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_pressure",
+                "units": "dbar",
+                "description": "CTD reported pressure",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        # legato via scicon
+        "legato_time": [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "sbe41 time in GMT epoch format",
+            },
+            (BaseNetCDF.nc_legato_data_info,),
+        ],
+        "legato_conduc": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_electrical_conductivity",
+                "units": "mS/cm",
+                "description": "Conductivity as reported by the instrument",
+            },
+            (BaseNetCDF.nc_legato_data_info,),
+        ],
+        "legato_temp": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_temperature",
+                "units": "degrees_Celsius",
+                "description": "Termperature (in situ) as reported by the instrument",
+            },
+            (BaseNetCDF.nc_legato_data_info,),
+        ],
+        "legato_conducTemp": [
+            False,
+            "d",
+            {
+                "units": "degrees_Celsius",
+                "description": "As reported by the instrument",
+            },
+            (BaseNetCDF.nc_legato_data_info,),
+        ],
+        "legato_pressure": [
+            "f",
+            "d",
+            {
+                "standard_name": "sea_water_pressure",
+                "units": "dbar",
+                "description": "CTD reported pressure",
+            },
+            (BaseNetCDF.nc_legato_data_info,),
+        ],
     }
+    meta_data_adds =  meta_data_adds | Utils2.add_scicon_stats("legato")
+    init_dict[module_name] = {
+        "netcdf_metadata_adds": meta_data_adds
+    }
+
     return 0
 
 

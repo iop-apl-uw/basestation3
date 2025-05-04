@@ -26,7 +26,7 @@
 sbect basestation sensor extension
 """
 import BaseNetCDF
-import FileMgr
+import Utils2
 from BaseLog import log_error
 
 
@@ -116,25 +116,7 @@ def init_sensor(module_name, init_dict=None):
         }
     }
 
-    for cast, descr in FileMgr.cast_descr:
-        init_dict[module_name]["netcdf_metadata_adds"][f"sbect_ontime_{cast}"] = [
-            False,
-            "d",
-            {"description": f"sbect total time turned on {descr}", "units": "secs"},
-            BaseNetCDF.nc_scalar,
-        ]
-        init_dict[module_name]["netcdf_metadata_adds"][f"sbect_samples_{cast}"] = [
-            False,
-            "i",
-            {"description": f"sbect total number of samples taken {descr}"},
-            BaseNetCDF.nc_scalar,
-        ]
-        init_dict[module_name]["netcdf_metadata_adds"][f"sbect_timeouts_{cast}"] = [
-            False,
-            "i",
-            {"description": f"sbect total number of samples time out on {descr}"},
-            BaseNetCDF.nc_scalar,
-        ]
+    init_dict[module_name]["netcdf_metadata_adds"] = init_dict[module_name]["netcdf_metadata_adds"] | Utils2.add_scicon_stats("sbect")
 
     return 0
 

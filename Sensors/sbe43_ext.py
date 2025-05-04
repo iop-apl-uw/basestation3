@@ -31,6 +31,7 @@ import numpy as np
 import BaseNetCDF
 import QC
 import Utils
+import Utils2
 from BaseLog import log_error, log_info, log_warning
 
 nc_sbe43_data_info = "sbe43_data_info"  # from eng/scicon/gpctd
@@ -58,189 +59,159 @@ def init_sensor(module_name, init_dict=None):
     BaseNetCDF.register_sensor_dim_info(
         nc_sbe43_results_info, nc_dim_sbe43_results, nc_sbe43_time_var, False, None
     )  # no instrument since it could be pumped
-    init_dict[module_name] = {
-        "netcdf_metadata_adds": {
-            "sbe43": [
-                False,
-                "c",
-                {
-                    "long_name": "underway oxygen sensor",
-                    "nodc_name": "oxygen sensor",
-                    "make_model": "unpumped Seabird SBE43",
-                },
-                BaseNetCDF.nc_scalar,
-            ],  # always scalar
-            # SBE 43 O2 sensor coefficients (calib constants)
-            "sg_cal_calibcomm_oxygen": [False, "c", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_Foffset": [
-                False,
-                "d",
-                {"description": "SBE43 O2 frequency offset", "units": "Hz"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "sg_cal_Soc": [False, "d", {}, BaseNetCDF.nc_scalar],
-            # for new style calibation alg
-            "sg_cal_A": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_B": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_C": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_E": [False, "d", {}, BaseNetCDF.nc_scalar],
-            # These are synonyms for A,B,C,E
-            "sg_cal_o_a": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_o_b": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_o_c": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_o_e": [False, "d", {}, BaseNetCDF.nc_scalar],
-            # for original calibration alg
-            # See note about PCor (note capitalization) below
-            "sg_cal_Pcor": [
-                False,
-                "d",
-                {"description": "SBE43 pressure correction factor"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "sg_cal_Tcor": [
-                False,
-                "d",
-                {"description": "SBE43 temperature correction factor"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "sg_cal_Boc": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_Voffset": [False, "d", {}, BaseNetCDF.nc_scalar],  # UNUSED
-            # for the SBE43f (see AppNote 64)
-            "sg_cal_tau20": [
-                False,
-                "d",
-                {},
-                BaseNetCDF.nc_scalar,
-            ],  # Sensor time constant tau at 20defC, STP
-            "sg_cal_D1": [
-                False,
-                "d",
-                {},
-                BaseNetCDF.nc_scalar,
-            ],  # Pressure correction factor for tau calculation
-            "sg_cal_D2": [
-                False,
-                "d",
-                {},
-                BaseNetCDF.nc_scalar,
-            ],  # Temperature correction factor for tau calculation
-            # NG: H1, H2, and H3 are hysteresis corrections factors but SBE does not describe how to use them...
-            "sg_cal_comm_oxy_type": [False, "c", {}, BaseNetCDF.nc_scalar],
-            "sbe43_ontime_a": [
-                False,
-                "d",
-                {"description": "sbe43 total time turned on dive", "units": "secs"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "sbe43_samples_a": [
-                False,
-                "i",
-                {"description": "sbe43 total number of samples taken dive"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "sbe43_timeouts_a": [
-                False,
-                "i",
-                {"description": "sbe43 total number of samples timed out on dive"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "sbe43_ontime_b": [
-                False,
-                "d",
-                {"description": "sbe43 total time turned on climb", "units": "secs"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "sbe43_samples_b": [
-                False,
-                "i",
-                {"description": "sbe43 total number of samples taken climb"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "sbe43_timeouts_b": [
-                False,
-                "i",
-                {"description": "sbe43 total number of samples timed out on climb"},
-                BaseNetCDF.nc_scalar,
-            ],
-            # SBE43 sensor inputs
-            # DEAD (v66) 'eng_sbe43_o2_freq' : [False, 'd', {'_FillValue':nc_nan, 'units':'Hz', 'description':'As reported by instrument'}, (nc_sg_data_info,)], # transient name for O2Freq
-            "eng_sbe43_O2Freq": [
-                False,
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "units": "Hz",
-                    "description": "As reported by instrument",
-                    "instrument": "sbe43",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            # NOTE gpctd sbe43 is declared as in payload_ext.py
-            # The gpctd does all the ml/L corrections itself so sbe43_dissolved_oxygen is a copy of gpctd_oxygen
-            # scicon
-            "sbe43_o2Freq": [
-                False,
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "units": "Hz",
-                    "description": "As reported by instrument",
-                    "instrument": "sbe43",
-                },
-                (nc_sbe43_data_info,),
-            ],
-            "sbe43_time": [
-                True,
-                "d",
-                {
-                    "standard_name": "time",
-                    "units": "seconds since 1970-1-1 00:00:00",
-                    "description": "SBE43 time in GMT epoch format",
-                },
-                (nc_sbe43_data_info,),
-            ],
-            # SBE43 sensor outputs
-            nc_sbe43_time_var: [
-                True,
-                "d",
-                {
-                    "standard_name": "time",
-                    "units": "seconds since 1970-1-1 00:00:00",
-                    "description": "SBE43 time in GMT epoch format",
-                },
-                (nc_sbe43_results_info,),
-            ],
-            "sbe43_dissolved_oxygen": [
-                True,
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "standard_name": "mole_concentration_of_dissolved_molecular_oxygen_in_sea_water",
-                    "units": "micromoles/kg",
-                    "description": "Oxygen concentration corrected for salinity",
-                },
-                (nc_sbe43_results_info,),
-            ],
-            "sbe43_dissolved_oxygen_qc": [
-                False,
-                QC.nc_qc_type,
-                {
-                    "units": "qc_flag",
-                    "description": "Whether to trust each SBE43 dissolved oxygen value",
-                },
-                (nc_sbe43_results_info,),
-            ],
-            "SBE43_qc": [
-                False,
-                QC.nc_qc_type,
-                {
-                    "units": "qc_flag",
-                    "description": "Whether to trust the SBE43 results",
-                },
-                BaseNetCDF.nc_scalar,
-            ],
-        }
+
+    meta_data_adds = {
+        "sbe43": [
+            False,
+            "c",
+            {
+                "long_name": "underway oxygen sensor",
+                "nodc_name": "oxygen sensor",
+                "make_model": "unpumped Seabird SBE43",
+            },
+            BaseNetCDF.nc_scalar,
+        ],  # always scalar
+        # SBE 43 O2 sensor coefficients (calib constants)
+        "sg_cal_calibcomm_oxygen": [False, "c", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_Foffset": [
+            False,
+            "d",
+            {"description": "SBE43 O2 frequency offset", "units": "Hz"},
+            BaseNetCDF.nc_scalar,
+        ],
+        "sg_cal_Soc": [False, "d", {}, BaseNetCDF.nc_scalar],
+        # for new style calibation alg
+        "sg_cal_A": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_B": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_C": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_E": [False, "d", {}, BaseNetCDF.nc_scalar],
+        # These are synonyms for A,B,C,E
+        "sg_cal_o_a": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_o_b": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_o_c": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_o_e": [False, "d", {}, BaseNetCDF.nc_scalar],
+        # for original calibration alg
+        # See note about PCor (note capitalization) below
+        "sg_cal_Pcor": [
+            False,
+            "d",
+            {"description": "SBE43 pressure correction factor"},
+            BaseNetCDF.nc_scalar,
+        ],
+        "sg_cal_Tcor": [
+            False,
+            "d",
+            {"description": "SBE43 temperature correction factor"},
+            BaseNetCDF.nc_scalar,
+        ],
+        "sg_cal_Boc": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_Voffset": [False, "d", {}, BaseNetCDF.nc_scalar],  # UNUSED
+        # for the SBE43f (see AppNote 64)
+        "sg_cal_tau20": [
+            False,
+            "d",
+            {},
+            BaseNetCDF.nc_scalar,
+        ],  # Sensor time constant tau at 20defC, STP
+        "sg_cal_D1": [
+            False,
+            "d",
+            {},
+            BaseNetCDF.nc_scalar,
+        ],  # Pressure correction factor for tau calculation
+        "sg_cal_D2": [
+            False,
+            "d",
+            {},
+            BaseNetCDF.nc_scalar,
+        ],  # Temperature correction factor for tau calculation
+        # NG: H1, H2, and H3 are hysteresis corrections factors but SBE does not describe how to use them...
+        "sg_cal_comm_oxy_type": [False, "c", {}, BaseNetCDF.nc_scalar],
+        # SBE43 sensor inputs
+        # DEAD (v66) 'eng_sbe43_o2_freq' : [False, 'd', {'_FillValue':nc_nan, 'units':'Hz', 'description':'As reported by instrument'}, (nc_sg_data_info,)], # transient name for O2Freq
+        "eng_sbe43_O2Freq": [
+            False,
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "units": "Hz",
+                "description": "As reported by instrument",
+                "instrument": "sbe43",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        # NOTE gpctd sbe43 is declared as in payload_ext.py
+        # The gpctd does all the ml/L corrections itself so sbe43_dissolved_oxygen is a copy of gpctd_oxygen
+        # scicon
+        "sbe43_o2Freq": [
+            False,
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "units": "Hz",
+                "description": "As reported by instrument",
+                "instrument": "sbe43",
+            },
+            (nc_sbe43_data_info,),
+        ],
+        "sbe43_time": [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "SBE43 time in GMT epoch format",
+            },
+            (nc_sbe43_data_info,),
+        ],
+        # SBE43 sensor outputs
+        nc_sbe43_time_var: [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "SBE43 time in GMT epoch format",
+            },
+            (nc_sbe43_results_info,),
+        ],
+        "sbe43_dissolved_oxygen": [
+            True,
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "standard_name": "mole_concentration_of_dissolved_molecular_oxygen_in_sea_water",
+                "units": "micromoles/kg",
+                "description": "Oxygen concentration corrected for salinity",
+            },
+            (nc_sbe43_results_info,),
+        ],
+        "sbe43_dissolved_oxygen_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each SBE43 dissolved oxygen value",
+            },
+            (nc_sbe43_results_info,),
+        ],
+        "SBE43_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the SBE43 results",
+            },
+            BaseNetCDF.nc_scalar,
+        ],
     }
+
+    meta_data_adds =  meta_data_adds | Utils2.add_scicon_stats("sbe43")
+
+    init_dict[module_name] = {
+        "netcdf_metadata_adds": meta_data_adds
+    }
+
     return 0
 
 

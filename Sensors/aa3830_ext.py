@@ -30,6 +30,7 @@ import numpy as np
 import BaseNetCDF
 import QC
 import Utils
+import Utils2
 from BaseLog import log_debug, log_error, log_warning
 
 nc_aa3830_data_info = "aa3830_data_info"  # from eng/scicon
@@ -68,238 +69,205 @@ def init_sensor(module_name, init_dict=None):
         False,
         "aa3830",
     )
-    init_dict[module_name] = {
-        "netcdf_metadata_adds": {
-            # AA3830 (and some AA4330) optode coefficients
-            "sg_cal_calibcomm_optode": [
-                False,
-                "c",
-                {},
-                BaseNetCDF.nc_scalar,
-            ],  # aa3830 and aa4330
-            "sg_cal_optode_C00Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C01Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C02Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C03Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C10Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C11Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C12Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C13Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C20Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C21Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C22Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C23Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C30Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C31Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C32Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C33Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C40Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C41Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C42Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            "sg_cal_optode_C43Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
-            # instrument
-            "aa3830": [
-                False,
-                "c",
-                {
-                    "long_name": "underway optode",
-                    "nodc_name": "optode",
-                    "make_model": "Aanderaa 3830",
-                },
-                BaseNetCDF.nc_scalar,
-            ],  # always scalar
-            # AA3830 sensor inputs
-            # NOTE since we have ml/l this is a volume fraction we have 1e-3 ml/l
-            # The new correction will change this to umoles/m^3 so that will change the name to mole_concentration_of_dissolved_molecular_oxygen_in_sea_water
-            # Add instrument explicitly for eng file data since they all share the same dim info
-            "eng_aa3830_O2": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "units": "micromoles/L",
-                    "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data, assuming optode temperature but without depth or salinity correction",
-                    "instrument": "aa3830",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            "eng_aa3830_temp": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "standard_name": "temperature_of_sensor_for_oxygen_in_sea_water",
-                    "units": "degrees_Celsius",
-                    "description": "As reported by the instrument",
-                    "instrument": "aa3830",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            "eng_aa3830_dphase": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "description": "As reported by the instrument",
-                    "instrument": "aa3830",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            "eng_aa3830_bphase": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "description": "As reported by the instrument",
-                    "instrument": "aa3830",
-                },
-                (BaseNetCDF.nc_sg_data_info,),
-            ],
-            # from scicon eng file
-            nc_aa3830_data_time: [
-                True,
-                "d",
-                {
-                    "standard_name": "time",
-                    "units": "seconds since 1970-1-1 00:00:00",
-                    "description": "AA3830 time in GMT epoch format",
-                },
-                (nc_aa3830_data_info,),
-            ],
-            "aa3830_O2": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "units": "micromoles/L",
-                    "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data, assuming optode temperature but without depth or salinity correction",
-                },
-                (nc_aa3830_data_info,),
-            ],
-            "aa3830_temp": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "standard_name": "temperature_of_sensor_for_oxygen_in_sea_water",
-                    "units": "degrees_Celsius",
-                    "description": "As reported by the instrument",
-                },
-                (nc_aa3830_data_info,),
-            ],
-            "aa3830_dphase": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "description": "As reported by the instrument",
-                },
-                (nc_aa3830_data_info,),
-            ],
-            "aa3830_bphase": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "description": "As reported by the instrument",
-                },
-                (nc_aa3830_data_info,),
-            ],
-            # derived results
-            # Why, oh why, didn't we name these aa3830_dissolved_oxygen etc?
-            nc_aa3830_time_var: [
-                True,
-                "d",
-                {
-                    "standard_name": "time",
-                    "units": "seconds since 1970-1-1 00:00:00",
-                    "description": "time for Aanderaa 3830 in GMT epoch format",
-                },
-                (nc_aa3830_results_info,),
-            ],
-            "aanderaa3830_dissolved_oxygen": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "standard_name": "mole_concentration_of_dissolved_molecular_oxygen_in_sea_water",
-                    "units": "micromoles/kg",
-                    "description": "Oxygen concentration, calculated from optode dphase, corrected for salinity",
-                },
-                (nc_aa3830_results_info,),
-            ],
-            "aanderaa3830_dissolved_oxygen_qc": [
-                False,
-                QC.nc_qc_type,
-                {
-                    "units": "qc_flag",
-                    "description": "Whether to trust each optode dissolved oxygen value",
-                },
-                (nc_aa3830_results_info,),
-            ],
-            "aanderaa3830_instrument_dissolved_oxygen": [
-                "f",
-                "d",
-                {
-                    "_FillValue": BaseNetCDF.nc_nan,
-                    "units": "micromoles/kg",
-                    "description": "Dissolved oxygen concentration reported from optode corrected for salinity",
-                },
-                (nc_aa3830_results_info,),
-            ],
-            "aanderaa3830_qc": [
-                False,
-                QC.nc_qc_type,
-                {
-                    "units": "qc_flag",
-                    "description": "Whether to trust the Aanderaa 3880 results",
-                },
-                BaseNetCDF.nc_scalar,
-            ],
-            "aanderaa3830_drift_gain": [
-                False,
-                "d",
-                {"description": "Drift gain correction for the Aanderaa 3880"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "aa3830_ontime_a": [
-                False,
-                "d",
-                {"description": "aa3830 total time turned on dive", "units": "secs"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "aa3830_samples_a": [
-                False,
-                "i",
-                {"description": "aa3830 total number of samples taken dive"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "aa3830_timeouts_a": [
-                False,
-                "i",
-                {"description": "aa3830 total number of samples timed out on dive"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "aa3830_ontime_b": [
-                False,
-                "d",
-                {"description": "aa3830 total time turned on climb", "units": "secs"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "aa3830_samples_b": [
-                False,
-                "i",
-                {"description": "aa3830 total number of samples taken climb"},
-                BaseNetCDF.nc_scalar,
-            ],
-            "aa3830_timeouts_b": [
-                False,
-                "i",
-                {"description": "aa3830 total number of samples timed out on climb"},
-                BaseNetCDF.nc_scalar,
-            ],
-        }
+    meta_data_adds = {
+        # AA3830 (and some AA4330) optode coefficients
+        "sg_cal_calibcomm_optode": [
+            False,
+            "c",
+            {},
+            BaseNetCDF.nc_scalar,
+        ],  # aa3830 and aa4330
+        "sg_cal_optode_C00Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C01Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C02Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C03Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C10Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C11Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C12Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C13Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C20Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C21Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C22Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C23Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C30Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C31Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C32Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C33Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C40Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C41Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C42Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        "sg_cal_optode_C43Coef": [False, "d", {}, BaseNetCDF.nc_scalar],
+        # instrument
+        "aa3830": [
+            False,
+            "c",
+            {
+                "long_name": "underway optode",
+                "nodc_name": "optode",
+                "make_model": "Aanderaa 3830",
+            },
+            BaseNetCDF.nc_scalar,
+        ],  # always scalar
+        # AA3830 sensor inputs
+        # NOTE since we have ml/l this is a volume fraction we have 1e-3 ml/l
+        # The new correction will change this to umoles/m^3 so that will change the name to mole_concentration_of_dissolved_molecular_oxygen_in_sea_water
+        # Add instrument explicitly for eng file data since they all share the same dim info
+        "eng_aa3830_O2": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "units": "micromoles/L",
+                "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data, assuming optode temperature but without depth or salinity correction",
+                "instrument": "aa3830",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        "eng_aa3830_temp": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "standard_name": "temperature_of_sensor_for_oxygen_in_sea_water",
+                "units": "degrees_Celsius",
+                "description": "As reported by the instrument",
+                "instrument": "aa3830",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        "eng_aa3830_dphase": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "description": "As reported by the instrument",
+                "instrument": "aa3830",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        "eng_aa3830_bphase": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "description": "As reported by the instrument",
+                "instrument": "aa3830",
+            },
+            (BaseNetCDF.nc_sg_data_info,),
+        ],
+        # from scicon eng file
+        nc_aa3830_data_time: [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "AA3830 time in GMT epoch format",
+            },
+            (nc_aa3830_data_info,),
+        ],
+        "aa3830_O2": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "units": "micromoles/L",
+                "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data, assuming optode temperature but without depth or salinity correction",
+            },
+            (nc_aa3830_data_info,),
+        ],
+        "aa3830_temp": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "standard_name": "temperature_of_sensor_for_oxygen_in_sea_water",
+                "units": "degrees_Celsius",
+                "description": "As reported by the instrument",
+            },
+            (nc_aa3830_data_info,),
+        ],
+        "aa3830_dphase": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "description": "As reported by the instrument",
+            },
+            (nc_aa3830_data_info,),
+        ],
+        "aa3830_bphase": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "description": "As reported by the instrument",
+            },
+            (nc_aa3830_data_info,),
+        ],
+        # derived results
+        # Why, oh why, didn't we name these aa3830_dissolved_oxygen etc?
+        nc_aa3830_time_var: [
+            True,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "time for Aanderaa 3830 in GMT epoch format",
+            },
+            (nc_aa3830_results_info,),
+        ],
+        "aanderaa3830_dissolved_oxygen": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "standard_name": "mole_concentration_of_dissolved_molecular_oxygen_in_sea_water",
+                "units": "micromoles/kg",
+                "description": "Oxygen concentration, calculated from optode dphase, corrected for salinity",
+            },
+            (nc_aa3830_results_info,),
+        ],
+        "aanderaa3830_dissolved_oxygen_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust each optode dissolved oxygen value",
+            },
+            (nc_aa3830_results_info,),
+        ],
+        "aanderaa3830_instrument_dissolved_oxygen": [
+            "f",
+            "d",
+            {
+                "_FillValue": BaseNetCDF.nc_nan,
+                "units": "micromoles/kg",
+                "description": "Dissolved oxygen concentration reported from optode corrected for salinity",
+            },
+            (nc_aa3830_results_info,),
+        ],
+        "aanderaa3830_qc": [
+            False,
+            QC.nc_qc_type,
+            {
+                "units": "qc_flag",
+                "description": "Whether to trust the Aanderaa 3880 results",
+            },
+            BaseNetCDF.nc_scalar,
+        ],
+        "aanderaa3830_drift_gain": [
+            False,
+            "d",
+            {"description": "Drift gain correction for the Aanderaa 3880"},
+            BaseNetCDF.nc_scalar,
+        ],
     }
+    meta_data_adds =  meta_data_adds | Utils2.add_scicon_stats("aa3830")
+    init_dict[module_name] = {
+        "netcdf_metadata_adds": meta_data_adds
+    }
+
     return 0
 
 

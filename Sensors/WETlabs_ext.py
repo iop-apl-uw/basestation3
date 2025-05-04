@@ -30,6 +30,7 @@ import copy
 
 import BaseNetCDF
 import Utils
+import Utils2
 from BaseLog import log_debug, log_error
 
 # The basic idea:
@@ -309,35 +310,7 @@ def init_sensor(module_name, init_dict=None):
         ]
         meta_data_adds[results_time_var] = md
 
-        for cast, tag in (("a", "dive"), ("b", "climb")):
-            meta_data_adds["%s_ontime_%s" % (canonical_instrument, cast)] = [
-                False,
-                "d",
-                {
-                    "description": "%s total time turned on %s"
-                    % (canonical_instrument, tag),
-                    "units": "secs",
-                },
-                BaseNetCDF.nc_scalar,
-            ]
-            meta_data_adds["%s_samples_%s" % (canonical_instrument, cast)] = [
-                False,
-                "i",
-                {
-                    "description": "%s total number of samples taken %s"
-                    % (canonical_instrument, tag)
-                },
-                BaseNetCDF.nc_scalar,
-            ]
-            meta_data_adds["%s_timeouts_%s" % (canonical_instrument, cast)] = [
-                False,
-                "i",
-                {
-                    "description": "%s total number of samples timed out on %s"
-                    % (canonical_instrument, tag)
-                },
-                BaseNetCDF.nc_scalar,
-            ]
+        meta_data_adds =  meta_data_adds | Utils2.add_scicon_stats(canonical_instrument)
 
         for canonical_column, defn_d in columns_d.items():
             # create the canonical meta data that everything gets mapped to

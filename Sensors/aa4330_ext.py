@@ -29,6 +29,7 @@ import numpy as np
 
 import BaseNetCDF
 import Utils
+import Utils2
 from BaseLog import log_debug, log_error, log_warning
 from QC import (
     QC_BAD,
@@ -375,34 +376,7 @@ def init_sensor(module_name, init_dict=None):
             BaseNetCDF.nc_scalar,
         ]
 
-        for cast, tag in (("a", "dive"), ("b", "climb")):
-            meta_data_adds["%s_ontime_%s" % (instrument, cast)] = [
-                False,
-                "d",
-                {
-                    "description": "%s total time turned on %s" % (instrument, tag),
-                    "units": "secs",
-                },
-                BaseNetCDF.nc_scalar,
-            ]
-            meta_data_adds["%s_samples_%s" % (instrument, cast)] = [
-                False,
-                "i",
-                {
-                    "description": "%s total number of samples taken %s"
-                    % (instrument, tag)
-                },
-                BaseNetCDF.nc_scalar,
-            ]
-            meta_data_adds["%s_timeouts_%s" % (instrument, cast)] = [
-                False,
-                "i",
-                {
-                    "description": "%s total number of samples timed out on %s"
-                    % (instrument, tag)
-                },
-                BaseNetCDF.nc_scalar,
-            ]
+        meta_data_adds =  meta_data_adds | Utils2.add_scicon_stats(instrument)        
 
         canonical_data_to_results_d[instrument] = [
             data_info,
