@@ -1,0 +1,13 @@
+name=AA4831B
+prefix=aa4831b
+timeout=2000
+baud=9600
+warmup=1000
+voltage=10
+current=0.100
+format="%s %d %00 %01 %02 %03 %04"
+column=O2(1000,0)
+column=AirSat(1000,0)
+column=Temp(1000,0)
+column=CalPhase(1000,0)
+column=TCPhase(1000,0)

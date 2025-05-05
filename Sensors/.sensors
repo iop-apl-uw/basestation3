@@ -26,3 +26,4 @@ ocr504i_scicon.cnf,add_netcdf_meta
 echo.cnf,init_logger,process_data_files
 irrad.cnf,init_sensor,asc2eng
 sat1000.cnf,init_sensor,asc2eng
+aa4831b.cnf,init_sensor,asc2eng
