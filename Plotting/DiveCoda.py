@@ -393,13 +393,9 @@ def plot_coda(
 
     # Instrument cal date
 
-    if "sg_cal_calibcomm_oxygen" in dive_nc_file.variables:
+    if "sg_cal_calibcomm_coda" in dive_nc_file.variables:
         cal_text = (
-            dive_nc_file.variables["sg_cal_calibcomm_oxygen"][:].tobytes().decode()
-        )
-    elif "sg_cal_calibcomm_optode" in dive_nc_file.variables:
-        cal_text = (
-            dive_nc_file.variables["sg_cal_calibcomm_optode"][:].tobytes().decode()
+            dive_nc_file.variables["sg_cal_calibcomm_coda"][:].tobytes().decode()
         )
     else:
         cal_text = ""
