@@ -93,7 +93,7 @@ def main():
                         f"Could not decode line {line_count} in {base_opts.capture} - skipping"
                     )
                     continue
-                s = s.rstrip().lstrip("Ready:").lstrip()
+                s = s.rstrip().removeprefix("Ready:").lstrip()
                 if s.startswith("calibration "):
                     for sensor_line in s.split("||"):
                         try:
