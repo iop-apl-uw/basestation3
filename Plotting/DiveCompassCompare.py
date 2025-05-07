@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -198,6 +198,10 @@ def plot_compass_compare(
         and second_compass_time[ii] <= eng_time[-1]
         and np.fabs(second_compass_pitch_ang[ii]) < 70.0
     ]
+
+    if not len(filter_i_v):
+        log_error("No valid compass points found to plot - skipping")
+        return ([], [])
 
     log_debug(min(filter_i_v), max(filter_i_v))
 
