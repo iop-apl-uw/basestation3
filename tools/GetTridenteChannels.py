@@ -183,7 +183,7 @@ def main():
 
         if calib_comm:
             print("Add to sg_calib_constants.m")
-            print(f"calibcomm_{instrument_name}='{calib_comm.rstrip()}';")
+            print(f"calibcomm_tridente{instrument_name}='{calib_comm.rstrip()}';")
 
     except Exception:
         if DEBUG_PDB:
