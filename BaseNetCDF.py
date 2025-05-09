@@ -1934,6 +1934,8 @@ def set_globals() -> None:
         ],  # multi-valued string in its own table
         "log_CKPRE": [False, "i", {}, nc_scalar],
         "log_CKPOST": [False, "c", {}, nc_scalar],  # multi-valued string
+        "log_MAMPS": [False, "c", {}, nc_scalar],  # multi-valued string
+        "log_VOC": [False, "d", {}, nc_scalar],
         # $STATE line entries (gc_state)
         "gc_state_secs": [
             True,
