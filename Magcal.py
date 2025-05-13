@@ -150,9 +150,9 @@ def magcal_worker(
         # Check for NaNs in mag data
         non_nan_pts_i = np.squeeze(np.nonzero(np.logical_not(
             np.logical_or.reduce(
-                (np.isnan(f.variables[f"eng_mag_x"]),
-                 np.isnan(f.variables[f"eng_mag_y"]),
-                 np.isnan(f.variables[f"eng_mag_z"])
+                (np.isnan(f.variables["eng_mag_x"]),
+                 np.isnan(f.variables["eng_mag_y"]),
+                 np.isnan(f.variables["eng_mag_z"])
                  )
             ))))
         
