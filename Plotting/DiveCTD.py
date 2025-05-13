@@ -867,7 +867,7 @@ def plot_CTD_series(
                         {
                             "y": ctd_vars.depth_climb,
                             "x": ctd_vars.conductivity_climb,
-                            "meta": ctd_vars.aa4831_time_climb,
+                            "meta": ctd_vars.time_climb,
                             "customdata": ctd_vars.point_num_ctd_climb,
                             "name": "Conductivity Climb",
                             "type": "scatter",
@@ -890,7 +890,7 @@ def plot_CTD_series(
                         {
                             "y": ctd_vars.aa4831_depth_dive,
                             "x": ctd_vars.aa4831_temp_dive,
-                            "meta": ctd_vars.time_dive,
+                            "meta": ctd_vars.aa4831_time_dive,
                             "customdata": ctd_vars.point_num_aa4831_dive,
                             "name": f"{ctd_vars.optode_name} Temp Dive",
                             "type": "scatter",
