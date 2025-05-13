@@ -376,7 +376,7 @@ def init_sensor(module_name, init_dict=None):
             BaseNetCDF.nc_scalar,
         ]
 
-        meta_data_adds =  meta_data_adds | Utils2.add_scicon_stats(instrument)        
+        meta_data_adds = meta_data_adds | Utils2.add_scicon_stats(instrument)
 
         canonical_data_to_results_d[instrument] = [
             data_info,
@@ -644,24 +644,53 @@ def sensor_data_processing(
 
         # First expand some other data we need for conversions to O2 concentration:
         if optode_results_dim != nc_info_d[BaseNetCDF.nc_ctd_results_info]:
+            # Eliminate unsampled data points from the CTD data
+            sampled_pts_i = np.squeeze(
+                np.nonzero(
+                    np.logical_not(
+                        np.logical_or(
+                            temp_cor_qc_v == QC_UNSAMPLED,
+                            salin_cor_qc_v == QC_UNSAMPLED,
+                        )
+                    )
+                )
+            )
             # interpolate the CTD data we need
             temp_cor_v = Utils.interp1d(
-                ctd_epoch_time_s_v, temp_cor_v, optode_time_s_v, kind="linear"
+                ctd_epoch_time_s_v[sampled_pts_i],
+                temp_cor_v[sampled_pts_i],
+                optode_time_s_v,
+                kind="linear",
             )
             temp_cor_qc_v = Utils.interp1d(
-                ctd_epoch_time_s_v, temp_cor_qc_v, optode_time_s_v, kind="nearest"
+                ctd_epoch_time_s_v[sampled_pts_i],
+                temp_cor_qc_v[sampled_pts_i],
+                optode_time_s_v,
+                kind="nearest",
             )
             salin_cor_v = Utils.interp1d(
-                ctd_epoch_time_s_v, salin_cor_v, optode_time_s_v, kind="linear"
+                ctd_epoch_time_s_v[sampled_pts_i],
+                salin_cor_v[sampled_pts_i],
+                optode_time_s_v,
+                kind="linear",
             )
             salin_cor_qc_v = Utils.interp1d(
-                ctd_epoch_time_s_v, salin_cor_qc_v, optode_time_s_v, kind="nearest"
+                ctd_epoch_time_s_v[sampled_pts_i],
+                salin_cor_qc_v[sampled_pts_i],
+                optode_time_s_v,
+                kind="nearest",
             )
             ctd_pressure_v = Utils.interp1d(
-                ctd_epoch_time_s_v, ctd_pressure_v, optode_time_s_v, kind="linear"
+                ctd_epoch_time_s_v[sampled_pts_i],
+                ctd_pressure_v[sampled_pts_i],
+                optode_time_s_v,
+                kind="linear",
             )
             ctd_density_v = Utils.interp1d(
-                ctd_epoch_time_s_v, ctd_density_v, optode_time_s_v, kind="linear"
+                ctd_epoch_time_s_v[sampled_pts_i],
+                ctd_density_v[sampled_pts_i],
+                optode_time_s_v,
+                kind="linear",
             )
 
         optode_np = len(optode_time_s_v)
