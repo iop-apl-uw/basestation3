@@ -132,7 +132,7 @@ def magcal_worker(
         npts = len(idx) + len(dive_nc_file)
     else:
         decimate = 1
-
+                      
     pitch     = np.empty(shape=(npts,))
     roll      = np.empty(shape=(npts,))
     fxm       = np.empty(shape=(npts,))
@@ -144,7 +144,20 @@ def magcal_worker(
     k = 0
     for f in dive_nc_file:
         mpts = f.dimensions["sg_data_point"].size
-        idx = range(0, mpts, decimate)
+
+        idx = list(range(0, mpts, decimate))
+        
+        # Check for NaNs in mag data
+        non_nan_pts_i = np.squeeze(np.nonzero(np.logical_not(
+            np.logical_or.reduce(
+                (np.isnan(f.variables[f"eng_mag_x"]),
+                 np.isnan(f.variables[f"eng_mag_y"]),
+                 np.isnan(f.variables[f"eng_mag_z"])
+                 )
+            ))))
+        
+        idx = np.intersect1d(idx, non_nan_pts_i, return_indices=True)[0]
+
         #print(idx)
         mpts = len(idx)
         #print(npts, k, mpts)
@@ -162,7 +175,7 @@ def magcal_worker(
     npts = max([k, npts])
 
     obs_num = np.arange(0,npts)
-    
+
     norm = 0
     mx = 0
     my = 0
@@ -562,9 +575,10 @@ def magcal_worker(
     maxy = max(fy)
 
     circ_sg = "nan"
+    circ_mc = "nan"
     if Radius_mc > 0:
         Radius_mc = Radius_mc / len(fx_mc)
-        circ_mc = math.sqrt(Radius_mc2/len(fx_mc) - Radius_mc*Radius_mc) / Radius_mc
+        circ_mc = f"{math.sqrt(Radius_mc2/len(fx_mc) - Radius_mc*Radius_mc) / Radius_mc:.2f}"
         log_info(f"calculated mc circ={circ_mc}, reported={mc_quality}")
     if Radius_sg > 0:
         Radius_sg = Radius_sg / len(fx_sg)
@@ -685,7 +699,7 @@ def magcal_worker(
                         (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
                     )
                 ),
-                "name": f"autocal<br>cover={mc_cover:.0f}<br>circ={mc_quality:.2f}({circ_mc:.2f})<br>used={mc_used:.0f}",
+                "name": f"autocal<br>cover={mc_cover:.0f}<br>circ={mc_quality:.2f}({circ_mc})<br>used={mc_used:.0f}",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
