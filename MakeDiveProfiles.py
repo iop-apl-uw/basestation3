@@ -1870,7 +1870,7 @@ def load_dive_profile_data(
                                             "Failed to convert %s from string '%s' to type '%s'"
                                             % (
                                                 dive_nc_varname,
-                                                nc_var[:].to_string(),
+                                                nc_var[:].tostring(),
                                                 nc_data_type,
                                             )
                                         )
