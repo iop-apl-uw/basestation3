@@ -124,7 +124,7 @@ def mission_disk(
                     "color": "red",
                     "width": 1,
                 },
-                "hovertemplate": "Dive %{x}<br>SD free space %{y} kb<extra></extra>",
+                "hovertemplate": "Dive %{x}<br>SD free space %{y:,} kb<extra></extra>",
             }
         )
 
@@ -190,7 +190,7 @@ def mission_disk(
                     "dash": "solid",
                     "width": 1,
                 },
-                "hovertemplate": f"Dive %{{x}}<br>{sensor_tag} free space %{{y}} kb<extra></extra>",
+                "hovertemplate": f"Dive %{{x}}<br>{sensor_tag} free space %{{y:,}} kb<extra></extra>",
             }
         )
 
@@ -222,7 +222,7 @@ def mission_disk(
             "yaxis": {
                 "title": "free space (kB)",
                 "showgrid": True,
-                "tickformat": ".0f",
+                "tickformat": ",.0f",
             },
             "yaxis2": {
                 "title": "count",
@@ -337,7 +337,7 @@ def mission_pmar_disk(
                 },
                 "hovertemplate": "Dive %{x}<br>PM "
                 + f"{drive_id:02d}"
-                + " free space %{y} kb<extra></extra>",
+                + " free space %{y:,} kb<extra></extra>",
             }
         )
     pm_free_est = ""
@@ -355,7 +355,7 @@ def mission_pmar_disk(
                     "color": "black",
                     "width": 1,
                 },
-                "hovertemplate": "Dive %{x}<br>PM Total free space %{y} kb<extra></extra>",
+                "hovertemplate": "Dive %{x}<br>PM Total free space %{y:,} kb<extra></extra>",
             }
         )
         with warnings.catch_warnings():
@@ -381,7 +381,7 @@ def mission_pmar_disk(
             "yaxis": {
                 "title": "free space (kB)",
                 "showgrid": True,
-                "tickformat": ".0f",
+                "tickformat": ",.0f",
             },
             "yaxis2": {
                 "title": "count",
