@@ -2391,7 +2391,7 @@
         
         var results = ''
         for (p of Object.keys(parms)) {
-            if (p.includes(s_upper) || parms[p]['help'].includes(s)) {
+            if (p.includes(s_upper) || parms[p]['help'].toUpperCase().includes(s_upper)) {
                 results = results + '<span class="spanClick" onclick="highlightParam(\'' + p + '\'); return false;">$' + p + '</span>: ' + parms[p]['help'] + '<br>';
             } 
         }

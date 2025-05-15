@@ -29,10 +29,18 @@ assets:
   A: { type: fixed, lat: 74.5717, lon: -145.6676, marker: circle, color: "#0000ff" }
   B: { type: fixed, lat: 75.4969, lon: -144.1361, marker: square, color: "#0000ff" }
   C: { type: fixed, lat: 76.4129, lon: -142.4220, marker: circle, color: "#ffff00"  }
+  # csv file must be name.csv (do not include .csv in file:) and in the glider mission directory
+  # data must be t,lat,lon where t is epoch time, lat and lon are decimal degrees
   drifter: { type: csv, marker: triangle, color: "#ff00ff", file: buoypos, tail: 4 }
+  # json must return variables named lat and lon (in decimal degrees)
   ship: { type: json, url: url: "/post", method: POST, payload: { url: "https://school.org/getFleetPosition.php", user: guest, password: OurFleetPassword, ssl: false}, marker: triangle, color: "#000000", interval: 120 }
   exclude: { type: circle, center: { lat: 75, lon: -142}, radius: 25000, color: "#ff0000" }
   habitat: { type: polygon, points: [{lat: 74, lon: -140}, {lat: 73, lon: 140}, {lat: 73.5, lon: -142}], color: "#800000" }
+  imagery: { type: tileset, url: "https://tiles.server.net/sg/tile/{z}/{x}/{y}" }
+  # type image is a single geo-referenced (lower-left, upper-right) image from url: or file: (in glider mission directory)
+  image: { type: image, url: "https://enviro.com/sat.png", extents: [34, -132, 37, -130] }
+  moorings: { type: group, assets: [ A, B, C ] }
+
 
 # protections adds additional restrictions to who can access certain API
 # endpoints. By default only the /save endpoint is protected - it is only
@@ -76,6 +84,9 @@ defaults: { link: http://iop.apl.washington.edu }
 # defaults applied to all missions when running in pilot mode
 pilotdefaults: { pilotgroups: [analysts] }
 
+missiondefaults:
+   Experiment_May24: { planned: 2023-07-30, link: https://experimentprojectpage.org }
+
 # 4 sets of defaults can be specified: defaults (fallback)
 # privatedefaltis, pilotdefaults, and publicdefaults corresponding to
 # the different run modes. If a value is specified for a mission it
@@ -96,8 +107,10 @@ missions:
 # which would mean we were running as in pilot mode
 #
 # now the actual missions
- - { glider: 249, mission: Experiment_May24, path: sg249, planned: 2023-07-30 }
- - { glider: 236, mission: Experiment_May24, path: sg236, also: [ {glider: 249, mission: Experiment_May24}, {asset: habitat} ] }
+ - { glider: 249, mission: Experiment_May24, path: sg249, also: [ {asset: moorings} ] }
+ - { glider: 242, mission: Experiment_May24, path: sg242, also: [ {glider: 249} ] }
+ - { glider: 236, mission: Experiment_May24, path: sg236, also: [ {glider: [249,241]}, {glider: 233, mission: Experiment_Jun24}, {asset: habitat} ] }
+ - { glider: 233, mission: Experiment_Jun24, path: sg234, also: [ {glider: [236, 249, 242], mission: Experiment_May24}, {asset: habitat} ] }
  - { glider: 241, Mission: DeepSeaEx_23, path: sg241, also: [ {asset: exclude}, {asset: A} ] }
  - 
     glider:180
