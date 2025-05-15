@@ -113,7 +113,7 @@ def magcal_worker(
     
     if "eng_mag_x" not in dive_nc_file[0].variables:
         return ([], [], 0, 0, None)
-
+   
     npts      = 0
     for f in dive_nc_file:
         npts = npts + f.dimensions["sg_data_point"].size
@@ -129,10 +129,11 @@ def magcal_worker(
     if npts > 2000:
         decimate = math.ceil(npts / 2000)
         idx = range(0, npts, decimate)
-        npts = len(idx) + len(dive_nc_file)
+        #npts = len(idx) + len(dive_nc_file)
+        npts = len(idx)
     else:
         decimate = 1
-                      
+
     pitch     = np.empty(shape=(npts,))
     roll      = np.empty(shape=(npts,))
     fxm       = np.empty(shape=(npts,))
@@ -140,24 +141,12 @@ def magcal_worker(
     fzm       = np.empty(shape=(npts,))
     pitch_deg = np.empty(shape=(npts,))
     roll_deg  = np.empty(shape=(npts,))
+    obs_num   = np.empty(shape=(npts,), dtype=(np.int16))
 
     k = 0
     for f in dive_nc_file:
         mpts = f.dimensions["sg_data_point"].size
-
-        idx = list(range(0, mpts, decimate))
-        
-        # Check for NaNs in mag data
-        non_nan_pts_i = np.squeeze(np.nonzero(np.logical_not(
-            np.logical_or.reduce(
-                (np.isnan(f.variables["eng_mag_x"]),
-                 np.isnan(f.variables["eng_mag_y"]),
-                 np.isnan(f.variables["eng_mag_z"])
-                 )
-            ))))
-        
-        idx = np.intersect1d(idx, non_nan_pts_i, return_indices=True)[0]
-
+        idx = range(0, mpts, decimate)
         #print(idx)
         mpts = len(idx)
         #print(npts, k, mpts)
@@ -170,11 +159,10 @@ def magcal_worker(
         fzm[k:k+mpts]       = -f.variables["eng_mag_z"][idx]
         pitch_deg[k:k+mpts] = f.variables["eng_pitchAng"][idx]
         roll_deg[k:k+mpts]  = f.variables["eng_rollAng"][idx]
+        obs_num[k:k+mpts]   = list(idx)
         k = k + mpts
-        
-    npts = max([k, npts])
 
-    obs_num = np.arange(0,npts)
+    npts = max([k, npts])
 
     norm = 0
     mx = 0
@@ -285,7 +273,8 @@ def magcal_worker(
             igrf = ppigrf.igrf(dive_nc_file[0]['log_gps_lon'][0],
                                dive_nc_file[0]['log_gps_lat'][0],
                                0, datetime.datetime.fromtimestamp(dive_nc_file[0]['log_gps_time'][0]))
-
+        log_info(igrf)
+        log_info(np.geterr())
         Wf = 0.1
         Wfh = 1.0
         F = 1.0
@@ -574,15 +563,13 @@ def magcal_worker(
     miny = min(fy)
     maxy = max(fy)
 
-    circ_sg = "nan"
-    circ_mc = "nan"
     if Radius_mc > 0:
         Radius_mc = Radius_mc / len(fx_mc)
-        circ_mc = f"{math.sqrt(Radius_mc2/len(fx_mc) - Radius_mc*Radius_mc) / Radius_mc:.2f}"
+        circ_mc = math.sqrt(Radius_mc2/len(fx_mc) - Radius_mc*Radius_mc) / Radius_mc
         log_info(f"calculated mc circ={circ_mc}, reported={mc_quality}")
     if Radius_sg > 0:
         Radius_sg = Radius_sg / len(fx_sg)
-        circ_sg = f"{math.sqrt(Radius_sg2/len(fx_sg) - Radius_sg*Radius_sg) / Radius_sg:.2f}"
+        circ_sg = math.sqrt(Radius_sg2/len(fx_sg) - Radius_sg*Radius_sg) / Radius_sg
 
     Radius_h = Radius_h / len(fx)
     circ_h = math.sqrt(Radius_h2/len(fx) - Radius_h*Radius_h) / Radius_h
@@ -673,7 +660,7 @@ def magcal_worker(
                         (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
                     )
                 ),
-                "name": f"onboard ({circ_sg})",
+                "name": f"onboard ({circ_sg:.2f})",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
@@ -699,7 +686,7 @@ def magcal_worker(
                         (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
                     )
                 ),
-                "name": f"autocal<br>cover={mc_cover:.0f}<br>circ={mc_quality:.2f}({circ_mc})<br>used={mc_used:.0f}",
+                "name": f"autocal<br>cover={mc_cover:.0f}<br>circ={mc_quality:.2f}({circ_mc:.2f})<br>used={mc_used:.0f}",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
