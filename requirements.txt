@@ -42,7 +42,7 @@ aiosqlite
 orjson
 anyio
 pyzmq==26.3.0
-ppigrf>=2.0.0
+ppigrf==2.1.0
 scanf
 pyproj==3.7.0
 pydantic==2.9.2
