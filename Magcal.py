@@ -129,8 +129,8 @@ def magcal_worker(
     if npts > 2000:
         decimate = math.ceil(npts / 2000)
         idx = range(0, npts, decimate)
-        #npts = len(idx) + len(dive_nc_file)
-        npts = len(idx)
+        npts = len(idx) + len(dive_nc_file)
+        # npts = len(idx)
     else:
         decimate = 1
 
@@ -162,7 +162,16 @@ def magcal_worker(
         obs_num[k:k+mpts]   = list(idx)
         k = k + mpts
 
-    npts = max([k, npts])
+    npts = k # max([k, npts])
+
+    pitch     = pitch[:npts] 
+    roll      = roll[:npts]
+    fxm       = fxm[:npts]
+    fym       = fym[:npts]
+    fzm       = fzm[:npts]
+    pitch_deg = pitch_deg[:npts]
+    roll_deg  = roll_deg[:npts]
+    obs_num   = obs_num[:npts]
 
     norm = 0
     mx = 0
