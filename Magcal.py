@@ -282,8 +282,6 @@ def magcal_worker(
             igrf = ppigrf.igrf(dive_nc_file[0]['log_gps_lon'][0],
                                dive_nc_file[0]['log_gps_lat'][0],
                                0, datetime.datetime.fromtimestamp(dive_nc_file[0]['log_gps_time'][0]))
-        log_info(igrf)
-        log_info(np.geterr())
         Wf = 0.1
         Wfh = 1.0
         F = 1.0
