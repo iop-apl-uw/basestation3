@@ -570,13 +570,16 @@ def magcal_worker(
     miny = min(fy)
     maxy = max(fy)
 
+
+    circ_mc = "nan"
+    circ_sg = "nan"
     if Radius_mc > 0:
         Radius_mc = Radius_mc / len(fx_mc)
-        circ_mc = math.sqrt(Radius_mc2/len(fx_mc) - Radius_mc*Radius_mc) / Radius_mc
+        circ_mc = f"{math.sqrt(Radius_mc2/len(fx_mc) - Radius_mc*Radius_mc) / Radius_mc:.2f}"
         log_info(f"calculated mc circ={circ_mc}, reported={mc_quality}")
     if Radius_sg > 0:
         Radius_sg = Radius_sg / len(fx_sg)
-        circ_sg = math.sqrt(Radius_sg2/len(fx_sg) - Radius_sg*Radius_sg) / Radius_sg
+        circ_sg = f"{math.sqrt(Radius_sg2/len(fx_sg) - Radius_sg*Radius_sg) / Radius_sg:.2f}"
 
     Radius_h = Radius_h / len(fx)
     circ_h = math.sqrt(Radius_h2/len(fx) - Radius_h*Radius_h) / Radius_h
@@ -667,7 +670,7 @@ def magcal_worker(
                         (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
                     )
                 ),
-                "name": f"onboard ({circ_sg:.2f})",
+                "name": f"onboard ({circ_sg})",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
@@ -693,7 +696,7 @@ def magcal_worker(
                         (np.transpose(obs_num), np.transpose(roll_deg), np.transpose(pitch_deg))
                     )
                 ),
-                "name": f"autocal<br>cover={mc_cover:.0f}<br>circ={mc_quality:.2f}({circ_mc:.2f})<br>used={mc_used:.0f}",
+                "name": f"autocal<br>cover={mc_cover:.0f}<br>circ={mc_quality:.2f}({circ_mc})<br>used={mc_used:.0f}",
                 "type": "scatter",
                 "mode": "markers",
                 "marker": {
