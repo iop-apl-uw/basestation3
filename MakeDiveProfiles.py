@@ -2556,6 +2556,14 @@ def make_dive_profile(
 
     BaseLogger.self.startStringCapture()
 
+    # Fix up the TC events start and end times
+    if (
+        log_f.tc_data
+        and "start_time_est" in log_f.tc_data
+        and "start_time" not in log_f.tc_data
+    ):
+        Utils.fix_TC_times(log_f, eng_f)
+
     # Ask FlightModel for its ideas on flight model values
     if not base_opts.ignore_flight_model:
         FlightModel.get_flight_parameters(dive_num, base_opts, explicit_calib_consts)

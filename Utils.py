@@ -2000,3 +2000,38 @@ class RedirStdout:
     def __exit__(self, exc_type, exc_val, exc_tb):
         sys.stdout = self._prev_stdout
         self._redirected_output.seek(0)
+
+
+def fix_TC_times(log_f, eng_f):
+    try:
+        tc_start_time_est = log_f.tc_data["start_time_est"]
+        tc_secs = log_f.tc_data["secs"]
+        eng_file_start_time = time.mktime(eng_f.start_ts)
+        elapsed_time_s_v = eng_f.get_col("elaps_t")
+        # First attempt - nearest time
+        sg_epoch_time_s_v = eng_file_start_time + elapsed_time_s_v
+
+        log_f.tc_data["start_time"] = sg_epoch_time_s_v[
+            np.abs(sg_epoch_time_s_v[:, None] - tc_start_time_est).argmin(axis=0)
+        ]
+        log_f.tc_data["end_time"] = log_f.tc_data["start_time"] + tc_secs
+
+        # An attempt to match using the compass heading
+        # sg_head = eng_f.get_col("head")
+        # dhead = float(log_f.data["$MHEAD_RNG_PITCHd_Wd"].split(",")[0])
+        # v_mod360 = np.vectorize(mod360)
+        # tc_head = v_mod360(np.array(log_f.tc_data["headingErr"]) + dhead)
+        # tc_head = np.trunc(tc_head * 10.0) / 10.0
+        # window = 120
+        # for ii, tt in enumerate(tc_start_time_est):
+        #     sg_pts_i = np.logical_and(
+        #         sg_epoch_time_s_v <= tt + window, sg_epoch_time_s_v >= tt - window
+        #     )
+        #     matching_pts_i = np.squeeze(
+        #         np.argwhere(np.isclose(sg_head[sg_pts_i], tc_head[ii], atol=1e-03))
+        #     )
+        #     if matching_pts_i.size != 1:
+        #         pdb.set_trace()
+
+    except Exception:
+        log_error("Failed to generate updated start_times for TC data", "exc")

@@ -2196,6 +2196,26 @@ def set_globals() -> None:
             (nc_gc_event_info,),
         ],
         # Turn controller
+        f"{nc_tc_prefix}start_time": [
+            False,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Start of TC event in GMT epoch format",
+            },
+            (nc_sg_data_info,),
+        ],
+        f"{nc_tc_prefix}end_time": [
+            False,
+            "d",
+            {
+                "standard_name": "time",
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "End of TC event in GMT epoch format",
+            },
+            (nc_sg_data_info,),
+        ],
         f"{nc_tc_prefix}start_time_est": [
             False,
             "d",

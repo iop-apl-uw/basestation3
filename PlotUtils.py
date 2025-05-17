@@ -290,11 +290,31 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
         gc_state_state = ncf.variables["gc_state_state"][:]
         gc_state_time = ncf.variables["gc_state_secs"][:]
         # 1 is the code for 'end dive'
-        gc_dive_end = gc_state_time[np.argwhere(gc_state_state == 1)[0]][0]
+        gc_dive_end = gc_state_time[np.argwhere(gc_state_state == 1)[0]][0] - start_time
     except KeyError as e:
         log_warning(f"Could not variable find {e}")
         gc_state_state = gc_state_time = None
         gc_dive_end = gc_time[-1]
+
+    # Add in turn controller into the mix
+    if "tc_start_time" in ncf.variables:
+        try:
+            gc_roll_pos_ad = np.hstack(
+                (gc_roll_pos_ad, ncf.variables["tc_startAD"], ncf.variables["tc_endAD"])
+            )
+            gc_roll_time = np.hstack(
+                (
+                    gc_roll_time,
+                    ncf.variables["tc_start_time"][:] - start_time,
+                    ncf.variables["tc_end_time"][:] - start_time,
+                )
+            )
+
+            roll_sort_i = np.argsort(gc_roll_time)
+            gc_roll_time = gc_roll_time[roll_sort_i]
+            gc_roll_pos_ad = gc_roll_pos_ad[roll_sort_i]
+        except Exception:
+            log_error("Failed to add TC data to roll data", "exc")
 
     # Convert Roll to engineering units
     roll_ctr = np.zeros(len(gc_roll_pos_ad))

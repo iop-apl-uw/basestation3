@@ -635,7 +635,7 @@ def parse_log_file(in_filename, issue_warn=False):
             "headingErr",
             "headingErrRate",
             "headingErrInt",
-            "turnCorrection,",
+            "turnCorrection",
             "startAD",
             "targetAD",
             "secs",  # te_offset
@@ -673,7 +673,9 @@ def parse_log_file(in_filename, issue_warn=False):
                     else:
                         log_file.tc_data[te_header].append(float(val))
                 # Esimate start times
-                log_file.tc_data["start_time_est"].append(gc_line_f(line_num))
+                log_file.tc_data["start_time_est"].append(
+                    np.float64(gc_line_f(line_num))
+                )
             except Exception:
                 log_error("Error processing ", "exc")
                 continue
