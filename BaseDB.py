@@ -719,6 +719,10 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     pitch_J = numpy.sum(data['pitch_i'][:] * data['pitch_volts'][:] * data['pitch_secs'][:])
     data = pd.read_sql_query(f"SELECT roll_i,roll_secs,roll_volts FROM gc WHERE dive={dive}", con)
     roll_J = numpy.sum(data['roll_i'][:] * data['roll_volts'][:] * data['roll_secs'][:])
+    if "tc_start_time" in nci.variables:
+        tc_J = numpy.sum((v24 if v24 else v10) * nci.variables["tc_current"][:] * (nci.variables["tc_end_time"][:] - nci.variables["tc_start_time"][:]))
+        roll_J += tc_J
+        
 
     insertColumn(dive, cur, "GC_pitch_joules", pitch_J, "FLOAT")
     insertColumn(dive, cur, "GC_VBD_joules", VBD_J, "FLOAT")
