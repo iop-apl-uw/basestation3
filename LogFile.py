@@ -34,6 +34,7 @@
 # MODEM_MSG, EKF, FINISH, RAFOS, FREEZE INTR WARN
 
 import collections
+import contextlib
 import os
 import pdb
 import sys
@@ -41,6 +42,7 @@ import time
 import traceback
 
 import numpy as np
+import scipy
 
 import BaseNetCDF
 import BaseOpts
@@ -308,6 +310,8 @@ def parse_log_file(in_filename, issue_warn=False):
 
     # Process the paramters
     log_file.data = {}
+    gc_line_numbers = []
+    gc_line_times = []
     while True:
         line_count = line_count + 1
         try:
@@ -336,14 +340,23 @@ def parse_log_file(in_filename, issue_warn=False):
                 )
             elif parm_name == "$GC":
                 log_file.gc.append(value)
+                with contextlib.suppress(Exception):
+                    gc_line_times.append(float(value.split(",")[0]))
+                    gc_line_numbers.append(line_count)
+
             elif parm_name == "$TS":
-                log_file.gc_ts.append(value)
+                log_file.gc_ts.append((value, line_count))
             elif parm_name == "$TE":
                 log_file.gc_te.append(value)
             elif parm_name == "$FINISH":
                 pass  # drop for now
             elif parm_name == "$STATE":
                 log_file.state.append(value)
+                with contextlib.suppress(Exception):
+                    if value.split(",")[1].split()[0] == "begin":
+                        gc_line_times.append(float(value.split(",")[0]))
+                        gc_line_numbers.append(line_count)
+
             elif parm_name == "$RAFOS":  # noqa: SIM114
                 pass  # drop for now
             elif parm_name == "$FREEZE":  # noqa: SIM114
@@ -633,11 +646,23 @@ def parse_log_file(in_filename, issue_warn=False):
         )
         te_offset = 6
 
-        for ii, (ts_line, te_line) in enumerate(
+        for ii in range(len(gc_line_times)):
+            gc_line_times[ii] += log_file_start_time
+
+        gc_line_f = scipy.interpolate.interp1d(
+            gc_line_numbers,
+            gc_line_times,
+            kind="linear",
+            bounds_error=False,
+            # fill_value=(gc_x[0], gc_x[-1]),  # "extrapolate"
+        )
+
+        for ii, ((ts_line, line_num), te_line) in enumerate(
             zip(log_file.gc_ts, log_file.gc_te, strict=True)
         ):
             if not log_file.tc_data:
                 log_file.tc_data = {k: [] for k in tc_headers}
+                log_file.tc_data["start_time_est"] = []
             try:
                 for ii, val in enumerate(ts_line.split(",")):
                     log_file.tc_data[tc_headers[ii]].append(float(val))
@@ -647,6 +672,8 @@ def parse_log_file(in_filename, issue_warn=False):
                         log_file.tc_data[te_header].append(float(val) / 1000.0)
                     else:
                         log_file.tc_data[te_header].append(float(val))
+                # Esimate start times
+                log_file.tc_data["start_time_est"].append(gc_line_f(line_num))
             except Exception:
                 log_error("Error processing ", "exc")
                 continue
