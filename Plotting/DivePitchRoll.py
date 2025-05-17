@@ -145,6 +145,13 @@ def plot_pitch_roll(
         GC_roll_AD_start = dive_nc_file.variables["gc_roll_ad_start"][:]
         GC_roll_AD_end = dive_nc_file.variables["gc_roll_ad"][:]
 
+        tc_startAD = tc_endAD = tc_start_time = tc_end_time = None
+        if "tc_startAD" in dive_nc_file.variables and "tc_endAD" in dive_nc_file.variables:
+            tc_startAD = dive_nc_file.variables["tc_startAD"][:]
+            tc_endAD = dive_nc_file.variables["tc_endAD"][:]
+            tc_start_time = dive_nc_file.variables["tc_start_time"][:]
+            tc_end_time = dive_nc_file.variables["tc_end_time"][:]
+
         pot1_start = dive_nc_file.variables["gc_vbd_pot1_ad_start"][:]
         pot2_start = dive_nc_file.variables["gc_vbd_pot2_ad_start"][:]
         pot1 = dive_nc_file.variables["gc_vbd_pot1_ad"][:]
@@ -220,11 +227,17 @@ def plot_pitch_roll(
         #unused iwn = np.argwhere(pitch_control < 0)
         iwp = np.argwhere(pitch_control > 0)
 
-        gc_x = np.concatenate((GC_roll_AD_start, GC_roll_AD_end))
+        if tc_startAD is not None:
+            gc_x = np.concatenate((GC_roll_AD_start, GC_roll_AD_end, tc_startAD, tc_endAD))
+            roll_t = np.concatenate((GC_st_secs, GC_end_secs,tc_start_time, tc_end_time ))
+            roll_t = np.transpose(roll_t).ravel()
+        else:
+            gc_x = np.concatenate((GC_roll_AD_start, GC_roll_AD_end))
+            roll_t = gc_t
         gc_x = np.transpose(gc_x).ravel()
 
         f = scipy.interpolate.interp1d(
-            gc_t,
+            roll_t,
             gc_x,
             kind="linear",
             bounds_error=False,
