@@ -402,6 +402,7 @@ def set_globals() -> None:
 
     sensor_extensions = None
 
+
 # Set globals on import
 set_globals()
 
@@ -459,6 +460,14 @@ def init_extensions(base_opts):
             False,
             None,
         )
+
+    BaseNetCDF.register_sensor_dim_info(
+        BaseNetCDF.nc_tc_event_info,
+        BaseNetCDF.nc_dim_tc_event,
+        None,  # TODO: Change to tc_time
+        False,
+        None,
+    )
 
     BaseNetCDF.register_sensor_dim_info(
         BaseNetCDF.nc_ctd_results_info,

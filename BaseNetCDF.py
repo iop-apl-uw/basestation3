@@ -596,6 +596,10 @@ nc_dim_gc_event = "gc_event"  # rather than 'gc_time'
 nc_gc_state_info = "gc_state_info"
 nc_dim_gc_state = "gc_state"  # rather than 'gc_time'
 
+nc_tc_prefix = "tc_"
+nc_tc_event_info = "tc_event_info"
+nc_dim_tc_event = "tc_event"
+
 nc_sg_data_info = "sg_data_info"  # eng
 nc_dim_sg_data_point = "sg_data_point"  # rather than 'time'
 nc_sg_time_var = (
@@ -2190,6 +2194,83 @@ def set_globals() -> None:
             "d",
             {"description": "Internal relative humidity", "units": "percent"},
             (nc_gc_event_info,),
+        ],
+        # Turn controller
+        # f"{nc_tc_prefix}time": [
+        #     False,
+        #     "d",
+        #     {
+        #         "standard_name": "time",
+        #         "units": "seconds since 1970-1-1 00:00:00",
+        #         "description": "GPS times in GMT epoch format",
+        #     },
+        #     (nc_sg_data_info,),
+        # ],
+        f"{nc_tc_prefix}headingErr": [
+            False,
+            "d",
+            {"description": "Difference in heading from desired", "units": "degrees"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}headingErrRate": [
+            False,
+            "d",
+            {"description": "Rate of headingErr change", "units": "degrees/second"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}headingErrInt": [
+            False,
+            "d",
+            {"description": "Integral of headingError", "units": "degree seconds"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}turnCorrection": [
+            False,
+            "d",
+            {"description": "Heading correction", "units": "degrees"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}startAD": [
+            False,
+            "d",
+            {"description": "Starting AD position", "units": "AD counts"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}targetAD": [
+            False,
+            "d",
+            {"description": "Target AD for turn", "units": "AD counts"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}secs": [
+            False,
+            "d",
+            {"description": "Duration of the turn event", "units": "seconds"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}destAD": [
+            False,
+            "d",
+            {"description": "Desitination AD for turn", "units": "AD counts"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}endAD": [
+            False,
+            "d",
+            {"description": "Final AD for turn", "units": "AD counts"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}current": [
+            False,
+            "d",
+            {"description": "Average current for turn", "units": "amps"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}currentMax": [
+            False,
+            "d",
+            {"description": "Max current for turn", "units": "amps"},
+            (nc_tc_event_info,),
         ],
         # Columns in the engineering file
         "eng_elaps_t_0000": [

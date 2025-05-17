@@ -152,6 +152,9 @@ class LogFile:
         self.warn = []
         self.gc_msg_list = []  # All message entries
         self.gc_msg_dict = {}  # Message entries as arrays
+        self.gc_ts = []
+        self.gc_te = []
+        self.tc_data = {}
 
     def dump(self, fo=sys.stdout):
         """Dumps out the logfile"""
@@ -210,6 +213,7 @@ def parse_log_file(in_filename, issue_warn=False):
         log_error("Could not open " + in_filename + " for reading")
         return None
 
+    log_file_start_time = 0
     line_count = 0
     # Process the header
     while True:
@@ -271,6 +275,9 @@ def parse_log_file(in_filename, issue_warn=False):
             log_file.start_ts = Utils.fix_gps_rollover(
                 time.strptime(time_string, "%m %d %y %H %M %S")
             )
+            log_file_start_time = int(
+                time.mktime(log_file.start_ts)
+            )  # make st_secs and end_secs 'i'
 
             log_debug(
                 "%s %s %s"
@@ -329,6 +336,10 @@ def parse_log_file(in_filename, issue_warn=False):
                 )
             elif parm_name == "$GC":
                 log_file.gc.append(value)
+            elif parm_name == "$TS":
+                log_file.gc_ts.append(value)
+            elif parm_name == "$TE":
+                log_file.gc_te.append(value)
             elif parm_name == "$FINISH":
                 pass  # drop for now
             elif parm_name == "$STATE":
@@ -476,9 +487,9 @@ def parse_log_file(in_filename, issue_warn=False):
         )
 
     gc_data = {}
-    log_file_start_time = int(
-        time.mktime(log_file.start_ts)
-    )  # make st_secs and end_secs 'i'
+    # log_file_start_time = int(
+    #    time.mktime(log_file.start_ts)
+    # )  # make st_secs and end_secs 'i'
     try:
         gc_header_parts = log_file.data["$GCHEAD"].split(",")
     except Exception:
@@ -596,6 +607,53 @@ def parse_log_file(in_filename, issue_warn=False):
                     gc_data[f"{motor}_end_time"].append(np.nan)
 
     log_file.gc_data = gc_data
+
+    # Turn controller
+    if len(log_file.gc_ts) != len(log_file.gc_te):
+        log_error(
+            f"Number of $TS:{len(log_file.gc_ts)} does not equal number of $TE:{len(log_file.gc_te)} in {in_filename} - possible corruption - skipping"
+        )
+    else:
+        # This code accuate as of version 67.01, rev:7223M
+        # $TS,97.78,0.2649,2933.70,40.0000,2644.9,4114.9
+        # $TE,2.18,3750.0,3767.6,88.6,441.8
+
+        tc_headers = (
+            "headingErr",
+            "headingErrRate",
+            "headingErrInt",
+            "turnCorrection,",
+            "startAD",
+            "targetAD",
+            "secs",  # te_offset
+            "destAD",
+            "endAD",
+            "current",
+            "currentMax",
+        )
+        te_offset = 6
+
+        for ii, (ts_line, te_line) in enumerate(
+            zip(log_file.gc_ts, log_file.gc_te, strict=True)
+        ):
+            if not log_file.tc_data:
+                log_file.tc_data = {k: [] for k in tc_headers}
+            try:
+                for ii, val in enumerate(ts_line.split(",")):
+                    log_file.tc_data[tc_headers[ii]].append(float(val))
+                for ii, val in enumerate(te_line.split(",")):
+                    te_header = tc_headers[ii + te_offset]
+                    if te_header in ("current", "currentMax"):
+                        log_file.tc_data[te_header].append(float(val) / 1000.0)
+                    else:
+                        log_file.tc_data[te_header].append(float(val))
+            except Exception:
+                log_error("Error processing ", "exc")
+                continue
+
+        # TODO - map turn controller data into the GC table
+        # ('roll_start_time', 'roll_end_time', 'roll_ctl', 'roll_ad_start', 'roll_secs',
+        # 'roll_i', 'roll_ad', 'roll_errors', 'roll_volts', 'roll_st')
 
     state_data = {"secs": [], "state": [], "eop_code": []}
     # State

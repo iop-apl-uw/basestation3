@@ -1686,6 +1686,7 @@ def load_dive_profile_data(
                 log_f = LogFile.LogFile()
                 log_f.data = {}
                 log_f.gc_data = {}
+                log_f.tc_data = {}
                 # Initialize in case this is an old version nc file
                 log_f.gc_state_data = {"secs": [], "state": [], "eop_code": []}
                 eng_f = DataFiles.DataFile("eng", None)
@@ -1698,6 +1699,7 @@ def load_dive_profile_data(
                 gc_var = re.compile("^%s" % BaseNetCDF.nc_gc_prefix)
                 gc_state_var = re.compile("^%s" % BaseNetCDF.nc_gc_state_prefix)
                 gc_msg_var = re.compile("^%s" % BaseNetCDF.nc_gc_msg_prefix)
+                tc_var = re.compile("^%s" % BaseNetCDF.nc_tc_prefix)
 
                 for global_var in list(
                     BaseNetCDF.nc_global_variables.keys()
@@ -2036,6 +2038,10 @@ def load_dive_profile_data(
                         _, col_name = gc_var.split(dive_nc_varname)
                         log_f.gc_data[col_name] = nc_var[:].copy()  # always an array
 
+                    elif tc_var.search(dive_nc_varname):
+                        _, col_name = tc_var.split(dive_nc_varname)
+                        log_f.tc_data[col_name] = nc_var[:].copy()  # always an array
+
                     elif eng_var.search(dive_nc_varname):
                         # CONSIDER change eng reader to build columns as it goes and make a dictionary
                         _, col_name = eng_var.split(dive_nc_varname)
@@ -2120,6 +2126,15 @@ def load_dive_profile_data(
             BaseNetCDF.assign_dim_info_size(
                 nc_info_d, BaseNetCDF.nc_gc_event_info, len(log_f.gc_data["st_secs"])
             )
+
+            # Any turn controller data?
+            if log_f.tc_data:
+                # TODO - replace with tc_time - not headingErr
+                BaseNetCDF.assign_dim_info_size(
+                    nc_info_d,
+                    BaseNetCDF.nc_tc_event_info,
+                    len(log_f.tc_data["headingErr"]),
+                )
             if len(log_f.gc_state_data["secs"]) > 0:  # any STATE data?
                 BaseNetCDF.assign_dim_info_size(
                     nc_info_d,
@@ -7174,6 +7189,15 @@ def make_dive_profile(
                         False,
                         data,
                     )
+        # Turn controller table
+        for tc_var, tc_values in list(log_f.tc_data.items()):
+            BaseNetCDF.create_nc_var(
+                nc_dive_file,
+                BaseNetCDF.nc_tc_prefix + tc_var,
+                (BaseNetCDF.nc_dim_tc_event,),
+                False,
+                tc_values,
+            )
 
         # First record the actual GPS lines for future processing
         for gps_string in ["$GPS1", "$GPS2", "$GPS"]:
