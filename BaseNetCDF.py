@@ -2204,7 +2204,7 @@ def set_globals() -> None:
                 "units": "seconds since 1970-1-1 00:00:00",
                 "description": "Start of TC event in GMT epoch format",
             },
-            (nc_sg_data_info,),
+            (nc_tc_event_info,),
         ],
         f"{nc_tc_prefix}end_time": [
             False,
@@ -2214,7 +2214,7 @@ def set_globals() -> None:
                 "units": "seconds since 1970-1-1 00:00:00",
                 "description": "End of TC event in GMT epoch format",
             },
-            (nc_sg_data_info,),
+            (nc_tc_event_info,),
         ],
         f"{nc_tc_prefix}start_time_est": [
             False,
@@ -2224,7 +2224,7 @@ def set_globals() -> None:
                 "units": "seconds since 1970-1-1 00:00:00",
                 "description": "Estimated start of TC event in GMT epoch format",
             },
-            (nc_sg_data_info,),
+            (nc_tc_event_info,),
         ],
         f"{nc_tc_prefix}headingErr": [
             False,
