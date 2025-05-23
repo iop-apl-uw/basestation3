@@ -307,6 +307,13 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
                 insertColumn(dive, cur, name, nci.variables[v][i], "FLOAT")
 
+
+    # r7263 latched intP to $INTERNAL_PRESSURE so it won't process above as a scalar
+    int_pressure_line = extractStr(nci.variables["log_INTERNAL_PRESSURE"]).split(",")
+    if len(int_pressure_line) == 2:
+        insertColumn(dive, cur, "log_INTERNAL_PRESSURE", float(int_pressure_line[0]), "FLOAT")
+        insertColumn(dive, cur, "log_INTERNAL_PRESSURE_LATCH", float(int_pressure_line[1]), "FLOAT")
+
     # this appears to do nothing
     if 'log_24V_AH' in nci.variables:
         nci.variables["log_24V_AH"][:].tobytes().decode("utf-8").split(",")
