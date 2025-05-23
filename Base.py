@@ -1561,6 +1561,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     log_info(f"Invoked with command line [{cmdline}]")
 
+    if cmdline_args:
+        cmdline_args_str = ""
+        for ii in cmdline_args:
+            cmdline_args_str += f"{ii} "
+        log_info(f"cmdline_args [{cmdline_args_str}]")
+
     log_info(f"PID:{os.getpid():d} job_id:{base_opts.job_id}")
 
     po = ProcessProgress(base_opts)
