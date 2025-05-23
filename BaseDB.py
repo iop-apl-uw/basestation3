@@ -543,8 +543,16 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
             )
 
         else:
-            batt_ah_used_10V = ah10 - data[1]
-            batt_ah_used_24V = (ah24 if ah24 else ah10)  - data[0]
+            if ah10 > 0:
+                batt_ah_used_10V = ah10 - data[1]
+            else:
+                batt_ah_used_10V = 0
+
+            if ah24 > 0:
+                batt_ah_used_24V = ah24  - data[0]
+            else:
+                batt_ah_used_24V = 0
+
             batt_kJ_used_10V = batt_ah_used_10V * v10 * 3600.0 / 1000.0
             batt_kJ_used_24V = batt_ah_used_24V * (v24 if v24 else v10) * 3600.0 / 1000.0
 
