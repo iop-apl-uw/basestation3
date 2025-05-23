@@ -1674,7 +1674,7 @@ def set_globals() -> None:
         "log_ID": [False, "i", {}, nc_scalar],
         "log_IMPLIED_C_PITCH": [False, "c", {}, nc_scalar],  # Multi-valued string
         "log_IMPLIED_C_VBD": [False, "c", {}, nc_scalar],  # Multi-valued string
-        "log_INTERNAL_PRESSURE": [False, "d", {}, nc_scalar],
+        "log_INTERNAL_PRESSURE": [False, "c", {}, nc_scalar], # multi-valued string starting r7263
         "log_INT_PRESSURE_SLOPE": [False, "d", {}, nc_scalar],
         "log_INT_PRESSURE_YINT": [False, "d", {}, nc_scalar],
         "log_IRIDIUM_FIX": [False, "c", {}, nc_scalar],  # Multi-valued string
