@@ -620,6 +620,10 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
 
     if len(mhead_line) > 3:
         [mhead, rng, pitchd, wd] = list(map(float, mhead_line[:4]))
+    else:
+        mhead = 0
+        rng = 0
+
     # if len(mhead_line) > 4:
     #     theta = float(mhead_line[4])
     # if len(mhead_line) > 5:
