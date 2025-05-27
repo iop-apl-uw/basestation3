@@ -147,7 +147,7 @@ class GliderEarlyGPSClient:
                     )
                     # Wait 4 seconds before doing anything
                     if shell_missing_count >= 4:
-                        self.closeout_commlog()
+                        self.closeout_session()
                     # Let the normal disconnect code will handle the rest of closeout and shutdown
                 time.sleep(1)
 
@@ -190,10 +190,29 @@ class GliderEarlyGPSClient:
             return err_code
         # log_info(f"start_pos out:{self._start_pos}")
 
-    def closeout_commlog(self):
+    def closeout_session(self):
         """
         Closes out the comm.log and removes the .connected file
         """
+        # If we have a path to the logout script - run that
+        if self.__base_opts.path_to_logout and os.path.exists(
+            self.__base_opts.path_to_logout
+        ):
+            try:
+                my_env = os.environ.copy()
+                my_env["logout"] = "shell_disappeared_logout"
+                (_, fo) = Utils.run_cmd_shell(
+                    f"/usr/bin/tcsh {self.__base_opts.path_to_logout}", env=my_env
+                )
+            except Exception:
+                log_error(f"Error running {self.__base_opts.path_to_logout}", "exc")
+            else:
+                ts = fo.readline().decode().rstrip()
+                log_info(ts)
+                fo.close()
+                return
+
+        # If above fails, fall through to here and do what is possible
         connected_file = os.path.join(self.__base_opts.mission_dir, ".connected")
         if os.path.exists(connected_file):
             try:
@@ -414,6 +433,17 @@ def main():
                 str,
                 {
                     "help": "comm.log file (for testing only)",
+                    "nargs": "?",
+                    "action": BaseOpts.FullPathAction,
+                },
+            ),
+            "path_to_logout": BaseOptsType.options_t(
+                "",
+                ("GliderEarlyGPS",),
+                ("--path_to_logout",),
+                str,
+                {
+                    "help": "Path to the .logout file",
                     "nargs": "?",
                     "action": BaseOpts.FullPathAction,
                 },

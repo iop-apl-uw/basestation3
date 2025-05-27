@@ -569,7 +569,7 @@ def read_from_process(p):
     return outf
 
 
-def run_cmd_shell(cmd, timeout=None, shell=True):
+def run_cmd_shell(cmd, timeout=None, shell=True, env=None):
     """Runs a program with arguments in a shell context"""
     if not shell:
         cmd = cmd.split()
@@ -577,6 +577,7 @@ def run_cmd_shell(cmd, timeout=None, shell=True):
 
     p = subprocess.Popen(
         cmd,
+        env=env,
         shell=shell,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,

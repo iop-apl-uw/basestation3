@@ -1,5 +1,5 @@
 #!/usr/bin/tcsh
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -30,6 +30,12 @@
 # NOTE: Ensure this and the .login file do not contain hidden ^M's or things will fail
 
 umask 2
+if( -f .logout ) then
+    set path_to_logout = "`pwd`/.logout"
+else
+    set path_to_logout = "nologout"
+endif
+
 if( -l current ) then
     cd current
 endif
@@ -55,7 +61,7 @@ printf "\n" >>! glider_early_gps.log
 printf "\n" >>! glider_early_gps.log
 
 set glider_early_gps_time = `date -u +%y%m%d%H%M%S`
-set glider_early_gps_cmd_line = "GliderEarlyGPS.py --daemon ${GLIDER_OPTIONS} --mission_dir `pwd` --verbose --base_log `pwd`/glider_early_gps_${glider_early_gps_time} --config `pwd`/${user}.conf --csh_pid $$"
+set glider_early_gps_cmd_line = "GliderEarlyGPS.py --daemon ${GLIDER_OPTIONS} --mission_dir `pwd` --verbose --base_log `pwd`/glider_early_gps_${glider_early_gps_time} --config `pwd`/${user}.conf --csh_pid $$ --path_to_logout ${path_to_logout}"
 set glider_early_gps_log = `pwd`/glider_early_gps.log
 if( $?RUNNER_DIR ) then
   set glider_early_gps_run_file = ${RUNNER_DIR}/${glider_early_gps_time}.run
