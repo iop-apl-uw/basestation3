@@ -76,6 +76,9 @@ def query(db, q, args):
     with closing(sqlite3.connect(db)) as con, con, closing(con.cursor()) as cur:
         try:
             cur.execute(q, args)
+            if 'UPDATE' in q:
+                return cur.rowcount
+
             row = cur.fetchone()
             data = {}
             if row and len(row) > 0:
@@ -131,7 +134,6 @@ def generateOneTimeCode(db, username, email):
 
     s = query(db, "UPDATE users SET otc=?,otc_expiry=? WHERE name=?",
               (otc_hash, otc_expires, username))
-
     if s:
         sendMail('no-reply', email, 'setup your pilot account',
                  f'Your one-time-code is {otc}. It expires in 5 minutes.\n\n'

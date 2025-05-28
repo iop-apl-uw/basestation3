@@ -184,13 +184,16 @@ def getTokenUser(request):
 # checks whether the auth token authorizes a user or group in users, groups
 def checkToken(request, users, groups, pilots, pilotgroups, admins, admingroups):
     if 'token' not in request.cookies:
+        sanic.log.logger.info('no token')
         return PERM_REJECT
 
     (tokenUser, tokenGroups, tokenDomain, tokenType) = getTokenUser(request)
     if not tokenUser:
+        sanic.log.logger.info('no user')
         return PERM_REJECT
 
     if tokenDomain != request.ctx.ctx.domain:
+        sanic.log.logger.info('domain mismatch')
         return PERM_REJECT
 
     perm = PERM_REJECT
@@ -276,7 +279,7 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
                 e = request.ctx.ctx.endpoints[url]
                 status = checkEndpoint(request, e)
                 if status == PERM_REJECT:
-                    return sanic.response.text("authorization failed")
+                    return sanic.response.text("endpoint 1 authorization failed")
 
                 else:
                     if 'allow' in e and e['allow']:
@@ -309,7 +312,7 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
                     e = m['endpoints'][url]
                     status = checkEndpoint(request, e)
                     if status == PERM_REJECT:
-                        return sanic.response.text("authorization failed")
+                        return sanic.response.text("endpoint 2 authorization failed")
                     else:
                         if 'allow' in e and e['allow']:
                             response = await f(request, *args, **kwargs)
@@ -355,7 +358,11 @@ def authorized(modes=None, check=3, requireLevel=PERM_VIEW): # check=3 both endp
                                     request.ctx.ctx.pilotusers, request.ctx.ctx.pilotgroups,
                                     request.ctx.ctx.admins, request.ctx.ctx.admingroups)
                 if status < requireLevel:
-                    sanic.log.logger.info(f"rejecting {url}: not allowed")
+                    sanic.log.logger.info(f"{request.ctx.ctx.users}")
+                    sanic.log.logger.info(f"{request.ctx.ctx.groups}")
+                    sanic.log.logger.info(f"{request.ctx.ctx.pilotusers}")
+                    sanic.log.logger.info(f"{request.ctx.ctx.pilotgroups}")
+                    sanic.log.logger.info(f"rejecting {url}: not allowed {status} {requireLevel}")
                     return sanic.response.text("authorization failed")
 
             # the user is authorized.
@@ -577,6 +584,7 @@ def attachHandlers(app: sanic.Sanic):
         code     = request.json.get("code", None)
 
         authed = False
+        sanic.log.logger.info(f'authenticating {username}')
         for user,prop in request.ctx.ctx.userTable.items():
             if user.lower() == username:
                 if 'password' in prop:
@@ -594,13 +602,14 @@ def attachHandlers(app: sanic.Sanic):
                     response = sanic.response.json(status)
                     sanic.log.logger.info(status)     
                     if status and 'status' in status and status['status'] == 'authorized':
-                        sanic.log.logger.info(f'{username} basic authorized')
+                        sanic.log.logger.info(f'{username} adv authorized')
                         tokenType = 2
                         authed = True
                     else:
                         sanic.log.logger.info('auth failed')
 
                 if authed:
+                    sanic.log.logger.info(f"{username} groups={prop['groups']}, domain={request.ctx.ctx.domain}")
                     token = jwt.encode({"type": tokenType, "user": username, "groups": prop['groups'], "domain": request.ctx.ctx.domain}, request.app.config.SECRET)
 
                     response.add_cookie(
@@ -2940,6 +2949,7 @@ async def buildUserTable(app, config=None):
                 sanic.log.logger.info(f"users parse error {e}")
                 x = {}
     else:
+        sanic.log.logger.info(f'{config.USERS_FILE} does not exist')
         x = {}
 
     userDictKeys = [ "groups" ] # password is optional - if not spec'd user is in auth.db
@@ -2981,7 +2991,7 @@ async def buildMissionTable(app, config=None):
                     sanic.log.logger.info(f"mission file parse error {e}")
                     x = {}
         else:
-            print('config file does not exist')
+            sanic.log.logger.info(f"{config['MISSIONS_FILE']} does not exist")
             x = {}
 
     if 'organization' not in x:
@@ -3048,7 +3058,7 @@ async def buildMissionTable(app, config=None):
 
             mfile = x[ikey][domain]['missions']
             try:
-                (tbl, xx, _) = await buildMissionTable(None, config={'MISSIONS_FILE': mfile})
+                (tbl, xx, _) = await buildMissionTable(None, config={'MISSIONS_FILE': mfile, 'RUNMODE': config['RUNMODE']})
             except Exception:
                 continue
 
@@ -3062,10 +3072,14 @@ async def buildMissionTable(app, config=None):
                 if 'users' in x[ikey][domain]:
                     ufile = x[ikey][domain]['users']
                     try:
-                        userTbl = await buildUserTable(None, config={ 'USERS_FILE': ufile })
-                    except Exception:
+                        userTbl = await buildUserTable(None, config=SimpleNamespace(USERS_FILE=ufile))
+                        sanic.log.logger.info(f'building user table {domain}')
+                        sanic.log.logger.info(userTbl)
+                    except Exception as e:
+                        sanic.log.logger.info(f'could not build user table {e}')
                         userTbl = {}
                 else:
+                    sanic.log.logger.info(f'no user file for {domain}')
                     ufile = None
                     userTbl = {}
 
@@ -3128,7 +3142,7 @@ async def buildMissionTable(app, config=None):
     
     dflts         = x['defaults']
     if 'RUNMODE' in config:
-        mode_dflts    = x[modeNames[config.RUNMODE] + 'defaults']
+        mode_dflts    = x[modeNames[config['RUNMODE']] + 'defaults']
     else:
         mode_dflts = {}
 

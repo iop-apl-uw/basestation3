@@ -2706,8 +2706,10 @@ parms[p]
         fetch(`status/${glider}${mission()}`)
         .then(res => res.text())
         .then(text => {
-            // console.log(text);
             if (text.includes("not found")) {
+                loadControlFile('cmdfile');
+                loadControlFile('targets');
+                loadControlFile('science');
                 return;
             }
             if (text.includes("authorization failed")) {
@@ -2782,7 +2784,7 @@ parms[p]
                 getTargetsFromMap(event.data);
             };
             console.log('loading parms');
-            loadParms(glider); // have to wait for maxDive above to be set
+            loadParms(glider); // have to wait for maxDive above to be set, also loads, science, targets and cmdfile
 {% endif %}
             if ('alert' in data.mission && data.mission.alert && !alertOverride) {
                 changeAlertSound(data.mission.alert);
@@ -2792,6 +2794,7 @@ parms[p]
             console.log(error);
         });
 
+	return 0;
     }
 
     function clearPlots() {
@@ -3804,6 +3807,10 @@ parms[p]
                 return;
             }
 
+	    if (!('names' in data)) {
+	    	console.log('no names in data vars');
+		return;
+	    }
             names = data['names'].sort();
             dv = names.indexOf('dive');
             names.splice(names.indexOf('dive'), 1);
@@ -4062,9 +4069,11 @@ parms[p]
         currGlider = glider;
         console.log(glider);
         window.name = 'SG' + glider;
+
         loadStatus(glider, dive, !gotCurr);
         // setupStream(glider, true, true);
 {% if runMode == 'pilot' %}
+	    // called by loadStatus or loadParms now
         // loadControlFile('cmdfile'); // still do this? vs loadParms?
         // loadControlFile('science'); call these from fetch of loadStatus
         // loadControlFile('targets');
