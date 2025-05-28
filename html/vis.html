@@ -278,6 +278,7 @@
     function setupProcessBar()
     {
         var s;
+        $('processProgressBar').innerHTML = '';
         for (var i = 0 ; i < process_progress_sections.length ; i++) {
             s = document.createElement('span');
             s.id = 'process_' + process_progress_sections[i];
@@ -2710,7 +2711,7 @@ parms[p]
                 return;
             }
             if (text.includes("authorization failed")) {
-                openLoginForm(function() { window.location.reload.bind(window.location); }, "");
+                openLoginForm(function() { loggedIn(); init(); }, "");
                 return;
             }
 
