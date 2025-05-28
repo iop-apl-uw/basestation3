@@ -85,7 +85,7 @@ def compare(canonname, logname):
             try:
                 logdata[key] = float(columns[4])
             except ValueError:
-                print(f"Could not process line {line_count} - skipping")
+                print(f"Could not process line {line_count} [{line}] - skipping")
                 continue
 
     log.close()

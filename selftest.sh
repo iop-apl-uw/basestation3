@@ -121,7 +121,7 @@ if ( "$offcounts" == "0, 0" ) then
     echo "WARNING: fuel gauge might not be calibrated for offset"
 endif
 
-set watchdog = `grep "HSUPER,N,watchdog period=" $fname | cut -f 3 -d' '`
+set watchdog = `grep "HSUPER,N,watchdog period=" $fname | tail -n 1 | cut -f 3 -d' '`
 if ( "$watchdog" != "7" ) then
     echo "WARNING: Watchdog "$watchdog" is not default value (7)"
 endif
