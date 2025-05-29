@@ -48,6 +48,7 @@ import time
 import traceback
 
 import gsw
+import netCDF4
 import numpy as np
 import scipy.integrate
 import seawater
@@ -1844,11 +1845,17 @@ def load_dive_profile_data(
                                     "i",
                                 ]:  # convert string to single scalar
                                     try:
+                                        # Create a temp dataset to generate the netcdf variable from
+                                        dive_nc_file_temp = netCDF4.Dataset(
+                                            nc_dive_file_name, "w", diskless=True
+                                        )
                                         nc_dims = mdp_dim_info
-                                        nc_var_convert = dive_nc_file.createVariable(
-                                            dive_nc_varname,
-                                            nc_data_type,
-                                            nc_dims,
+                                        nc_var_convert = (
+                                            dive_nc_file_temp.createVariable(
+                                                dive_nc_varname,
+                                                nc_data_type,
+                                                nc_dims,
+                                            )
                                         )
                                         convert_f = (
                                             float if nc_data_type == "d" else int
@@ -1874,7 +1881,8 @@ def load_dive_profile_data(
                                                 dive_nc_varname,
                                                 nc_var[:].tostring(),
                                                 nc_data_type,
-                                            )
+                                            ),
+                                            "exc",
                                         )
                                         nc_var_convert = None  # oh well...
 
@@ -1882,17 +1890,23 @@ def load_dive_profile_data(
                                     nc_typecode in ["d", "i"] and nc_data_type == "c"
                                 ):  # convert a scalar to a string
                                     try:
+                                        # Create a temp dataset to generate the netcdf variable from
+                                        dive_nc_file_temp = netCDF4.Dataset(
+                                            nc_dive_file_name, "w", diskless=True
+                                        )
                                         value_string = "%g" % nc_var.getValue().item()
                                         l_value_string = len(value_string)
                                         dim_name = "__%s_convert" % dive_nc_varname
                                         nc_dims = (dim_name,)
-                                        dive_nc_file.createDimension(
+                                        dive_nc_file_temp.createDimension(
                                             dim_name, l_value_string
                                         )
-                                        nc_var_convert = dive_nc_file.createVariable(
-                                            dive_nc_varname,
-                                            nc_data_type,
-                                            nc_dims,
+                                        nc_var_convert = (
+                                            dive_nc_file_temp.createVariable(
+                                                dive_nc_varname,
+                                                nc_data_type,
+                                                nc_dims,
+                                            )
                                         )
                                         nc_var_convert[:] = value_string
                                         log_debug(
@@ -1905,7 +1919,8 @@ def load_dive_profile_data(
                                             % (
                                                 dive_nc_varname,
                                                 nc_var.getValue().item(),
-                                            )
+                                            ),
+                                            "exc",
                                         )
                                         nc_var_convert = None  # oh well...
 
