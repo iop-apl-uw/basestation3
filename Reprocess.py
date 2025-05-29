@@ -440,6 +440,19 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
                 )
 
+            if base_opts.reprocess_mission_extensions:
+                BaseDotFiles.process_extensions(
+                    ("missionearly",),
+                    base_opts,
+                    sg_calib_file_name=sg_calib_file_name,
+                    dive_nc_file_names=all_dive_nc_file_names,
+                    nc_files_created=nc_files_created,
+                    # processed_other_files=processed_other_files,  # Output list for extension created files
+                    # known_mailer_tags=known_mailer_tags,
+                    # known_ftp_tags=known_ftp_tags,
+                    # processed_file_names=processed_file_names,
+                )
+
             if base_opts.reprocess_plots:
                 log_info(
                     "Started PLOT processing "

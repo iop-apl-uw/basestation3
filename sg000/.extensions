@@ -56,8 +56,12 @@
 # A simple/sample extension - starting point for writing a new extension
 # SimpleExtension.py
 #
+[missionearly]
+# Extensions listed in this section are run after whole mission processing has occured, but
+# before the whole mission plots are generated
 [mission]
-# Extensions listed in this section are run after whole mission processing has occured.
+# Extensions listed in this section are run after whole mission processing has occured and
+# whole mission plots have been generated
 [postnetcdf]
 # Extensions listed in this section are run immediately after a per-dive netcdf file has been created,
 # to allow for additional science processing.  The extension is invoked once for each file.

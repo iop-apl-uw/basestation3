@@ -1431,6 +1431,7 @@ class ProcessProgress:
             "mission_timeseries": {"yellow": 125.0, "red": 250.0},
             "mission_plots": {"yellow": 90.0, "red": 180.0},
             "mission_kml": {"yellow": 128.0, "red": 256.0},
+            "mission_early_extensions": {"yellow": 60.0, "red": 120.0},
             "mission_extensions": {"yellow": 60.0, "red": 120.0},
             "notifications": {"yellow": 8.0, "red": 15.0},
         }
@@ -2528,6 +2529,22 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     processed_file_names.append(processed_logger_eng_files)
     processed_file_names.append(processed_logger_other_files)
     processed_file_names = Utils.flatten(processed_file_names)
+
+    # Any extensions that need to be run before the whole mission plots are generated
+    po.process_progress("mission_early_extensions", "start")
+    # Invoke extensions, if any
+    BaseDotFiles.process_extensions(
+        ("missionearly",),
+        base_opts,
+        sg_calib_file_name=sg_calib_file_name,
+        dive_nc_file_names=dive_nc_file_names,
+        nc_files_created=nc_files_created,
+        processed_other_files=processed_other_files,
+        known_mailer_tags=known_mailer_tags,
+        known_ftp_tags=known_ftp_tags,
+        processed_file_names=processed_file_names,
+    )
+    po.process_progress("mission_early_extensions", "stop")
 
     # Whole mission plotting
     if go_fast_file.exists():
