@@ -626,7 +626,7 @@ def parse_log_file(in_filename, issue_warn=False):
         log_error(
             f"Number of $TS:{len(log_file.gc_ts)} does not equal number of $TE:{len(log_file.gc_te)} in {in_filename} - possible corruption - skipping"
         )
-    else:
+    elif len(log_file.gc_ts) > 0:
         # This code accuate as of version 67.01, rev:7223M
         # $TS,97.78,0.2649,2933.70,40.0000,2644.9,4114.9
         # $TE,2.18,3750.0,3767.6,88.6,441.8
