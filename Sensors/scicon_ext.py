@@ -125,11 +125,20 @@ def process_adcp_dat(
 
     cmdline = "%s %s %s" % (convertor, scicon_file, matfile)
     log_info("Running %s" % cmdline)
+    fo = []
     try:
-        (sts, _) = Utils.run_cmd_shell(cmdline, timeout=10)
+        (sts, fo) = Utils.run_cmd_shell(cmdline, timeout=10)
     except Exception:
         log_error("Error running %s" % cmdline, "exc")
+        for f in fo:
+            log_error(f.decode().rstrip())
+        fo.close()
+
         return 1
+
+    for f in fo:
+        log_info(f.decode().rstrip())
+    fo.close()
 
     if sts is None:
         log_error(
@@ -883,7 +892,7 @@ def extract_file_metadata(inp_file_name):
                 raw_strs[0] == "%samples"
                 or raw_strs[0] == "%timeouts"
                 or raw_strs[0] == "%errors"
-                or raw_strs[0] == "%ontime"                    
+                or raw_strs[0] == "%ontime"
             ):
                 if not Utils.is_integer(raw_strs[1].strip()):
                     log_warning(
