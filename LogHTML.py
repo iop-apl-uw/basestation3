@@ -49,6 +49,8 @@ async def displayTables(fname):
     L = {}
     GC = []
     PING = []
+    SM_CCo = []
+    FREEZE = []
 
     last_real_GC = 0
     async with aiofiles.open(fname, 'r') as file:
@@ -74,6 +76,10 @@ async def displayTables(fname):
                 GC.append(['state'] + pieces[1:])
             elif key == 'PING':
                 PING.append(list(map(float, pieces[1:])))
+            elif key == 'SM_CCo':
+                SM_CCo.append(list(map(float, pieces[1:])))
+            elif key == 'FREEZE':
+                FREEZE.append(list(map(float, pieces[1:])))
             else:
                 try:
                     L[key] = list(map(float, pieces[1:]))
@@ -287,19 +293,22 @@ async def displayTables(fname):
     print("<tr>") #row 4
 
     print("<td>") # row 4, col 1
-    if 'SM_CCo' in L:
-        if len(L['SM_CCo']) > 7:
+    if len(SM_CCo) > 0: 
+        if len(SM_CCo[0]) > 7:
             i = 7
         else:
             i = 6
         
-        if (L['SM_CCo'][i] > GC[last_real_GC - 1][2] + 5):
-            if (L['SM_CCo'][i] >= L['SM_CC'] + 1):
-                print("&#8226 %s" % ctext(f"VBD pumped to {L['SM_CCo'][i]} (beyond SM_CC={L['SM_CC']})", "red"))
+        if len(SM_CCo) > 1:
+            print("&#8226 %s" % ctext(f"Multiple surface pumps. Final VBD was {SM_CCo[-1][i]}cc, SM_CC={L['SM_CC']}", "red"))
+        else:        
+            if (SM_CCo[-1][i] > GC[last_real_GC - 1][2] + 5):
+                if (SM_CCo[-1][i] >= L['SM_CC'] + 1):
+                    print("&#8226 %s" % ctext(f"VBD pumped to {SM_CCo[-1][i]}cc (beyond SM_CC={L['SM_CC']})", "red"))
+                else:
+                    print("&#8226 %s" % ctext(f"VBD pumped to {SM_CCo[-1][i]}cc (SM_CC={L['SM_CC']})", "green"))
             else:
-                print("&#8226 %s" % ctext(f"VBD pumped to {L['SM_CCo'][i]} (SM_CC={L['SM_CC']})", "green"))
-        else:
-            print(f"&#8226 No surface pump (final VBD was {L['SM_CCo'][6]}, SM_CC={L['SM_CC']})")
+                print(f"&#8226 No surface pump (final VBD was {SM_CCo[-1][i]}cc, SM_CC={L['SM_CC']})")
     print("</td>")
 
     print("<td>") # row 4, col 2 
