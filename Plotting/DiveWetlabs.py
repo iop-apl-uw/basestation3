@@ -151,6 +151,7 @@ def plot_wetlabs(
                 ("sig460nm", fc("CDOM fluorescence", "1e-9")),
                 ("sig530nm", fc("Uranine fluorescence", "1e-9")),
                 ("sig570nm", fc("Phycoerythrin/Rhodamine fluorescence", "1e-9")),
+                ("sig595nm", fc("Phycoerythrin fluorescence", "1e-9")),
                 ("sig680nm", fc("Phycocyanin fluorescence", "1e-9")),
                 ("sig695nm", fc("Chlorophyll fluorescence", "ug/l")),
             )

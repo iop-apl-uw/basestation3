@@ -189,6 +189,11 @@ columns_d = {
         "units": ppb_units,
         "synonyms": ["sig680"],
     },
+    "sig595nm": {
+        "name": "phycoerythrin fluorescence",
+        "units": ppb_units,
+        "synonyms": ["sig595"],
+    },
     # iRobot Chlsig1
     "sig695nm": {
         "name": "chlorophyll fluorescence",
@@ -310,7 +315,7 @@ def init_sensor(module_name, init_dict=None):
         ]
         meta_data_adds[results_time_var] = md
 
-        meta_data_adds =  meta_data_adds | Utils2.add_scicon_stats(canonical_instrument)
+        meta_data_adds = meta_data_adds | Utils2.add_scicon_stats(canonical_instrument)
 
         for canonical_column, defn_d in columns_d.items():
             # create the canonical meta data that everything gets mapped to
