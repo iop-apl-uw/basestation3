@@ -2793,7 +2793,7 @@ def attachHandlers(app: sanic.Sanic):
             return sanic.response.text('invalid')
 
         filename = f'{gliderPath(glider,request)}/images/{name}.{fmt}'
-        if await aiofiles.os.path.exists(path):
+        if await aiofiles.os.path.exists(filename):
             return await sanic.response.file(filename, mime_type=f"image/{fmt}")
         else:
             return sanic.response.text('not found', status=404)
