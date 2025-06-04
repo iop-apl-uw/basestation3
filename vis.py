@@ -2784,6 +2784,20 @@ def attachHandlers(app: sanic.Sanic):
                 await ws.close()
                 return
 
+    @app.route('/image/<glider:int>/<name:str>/<fmt:str>')
+    # description: download map overlay image
+    async def imageHandler(request, glider:int, name:str, fmt: str)
+        if re.match(r'[^0-9A-Za-z_]', name):
+            return sanic.response.text('invalid')
+        if fmt not in ['png', 'jpg']:
+            return sanic.response.text('invalid')
+
+        filename = f'{gliderPath(glider,request)}/images/{name}.{fmt}'
+        if await aiofiles.os.path.exists(path):
+            return await sanic.response.file(filename, mime_type=f"image/{fmt}")
+        else:
+            return sanic.response.text('not found', status=404)
+         
     @app.route('/tile/<path:str>/<z:int>/<x:int>/<y:int>')
     # description: download map tile
     async def tileHandler(request, path:str, z:int, x:int, y:int):

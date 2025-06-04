@@ -1551,6 +1551,20 @@
                         if (newLayer)
                             layerControl.addOverlay(newLayer, a.asset, 'imagery');
                     }
+                    else if (a.type == 'image' && 'extents' in a) {
+                        console.log('adding ' + a.asset);
+                        var bounds = [ [ a.extents[0], a.extents[1] ], [ a.extents[2], a.extents[3] ] ];
+                        var url;
+                        if ('file' in a && 'format' in a && glider > 0) {
+                            url = `../image/${glider}/${a.file}/${a.format}`;
+                        }
+                        else if ('url' in a) {
+                            url = a.url;
+                        } 
+                        newLayer = L.imageOverlay(a.url, bounds);
+                        if (newLayer)
+                            layerControl.addOverlay(newLayer, a.asset, 'imagery');
+                    }
                 }
                 
             }
