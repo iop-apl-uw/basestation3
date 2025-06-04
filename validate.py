@@ -263,7 +263,7 @@ def science(body, parms=None):
     sensors = 0
     for i in range(1,7):
         dev = f'DEVICE{i}'
-        if dev in d and d[dev]['current'] > -1:
+        if dev in d and 'current' in d[dev] and d[dev]['current'] > -1:
             sensors = sensors + 1
 
     for line in body.split('\n'):
