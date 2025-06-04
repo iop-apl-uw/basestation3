@@ -38,9 +38,9 @@ from email.mime.nonmultipart import MIMENonMultipart
 from email.utils import formatdate
 
 import pyqrcode
+from passlib import pwd
 from passlib.hash import sha256_crypt
 from passlib.totp import TOTP
-from passlib import pwd
 
 # CREATE TABLE users (name PRIMARY KEY, email, domain, password, type, totp, totp_verify_by int, otc, otc_expiry int, last int, last_t int, fails int, locked int);
 
@@ -108,14 +108,14 @@ def resetUser(db, username, password, sendEmail):
             print("passwords do not match")
             return
     elif password == "auto":
-        password = pwd.genword();
+        password = pwd.genword()
         if not sendEmail:
             print(f"password={password}")
 
     status = query(db, "UPDATE users SET password=?,fails=?,locked=?,totp=?,otc=? WHERE name=?",
           (sha256_crypt.hash(password), 0, 0, '', '', username))
 
-    if status == False:
+    if not status:
         return
 
     if sendEmail:
@@ -125,7 +125,7 @@ def resetUser(db, username, password, sendEmail):
             return
 
         sendMail('no-reply', r['email'], 'Your glider piloting account reset',
-                 f'Your glider piloting account has been reset.\n\n'
+                  'Your glider piloting account has been reset.\n\n'
                + f'Your username is {username} and your new password is {password}\n\n'
                +  'When you next login you will be prompted to go through a\n'
                +  'setup process to reset your password and re-configure MFA. You\n'
@@ -147,19 +147,19 @@ def addUser(db, username, email, domain, authType, password, sendEmail):
             print("passwords do not match")
             return
     elif password == "auto":
-        password = pwd.genword();
+        password = pwd.genword()
         if not sendEmail:
             print(f"password={password}")
 
     status = query(db, "INSERT INTO users(name,email,domain,type,password,fails,locked) VALUES(?,?,?,?,?,?,?)", 
                    (username, email, domain, authType, sha256_crypt.hash(password), 0, 0))
 
-    if status == False:
+    if not status:
         return
 
     if sendEmail:
         sendMail('no-reply', email, 'Your glider piloting account',
-                 f'Your glider piloting account has been setup.\n\n'
+                  'Your glider piloting account has been setup.\n\n'
                + f'Your username is {username} and your initial password is {password}\n\n'
                +  'When you first login you will be prompted to go through a\n'
                +  'setup process to set your password and configure MFA. You\n'
@@ -337,11 +337,11 @@ if __name__ == "__main__":
 
     # add username email domain type(view|pilot) initialPassword
     if len(sys.argv) >= 6 and sys.argv[1] == 'add':
-        addUser(db, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6] if len(sys.argv) >= 7 else None, True if len(sys.argv) == 8 and sys.argv[7] == 'send' else False)
+        addUser(db, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6] if len(sys.argv) >= 7 else None, len(sys.argv) == 8 and sys.argv[7] == 'send')
 
     # reset username newInitialPassword
     elif len(sys.argv) >= 3 and sys.argv[1] == 'reset':
-        resetUser(db, sys.argv[2], sys.argv[3] if len(sys.argv) >= 4 else None, True if len(sys.argv) == 5 and sys.argv[4] == 'send' else False)
+        resetUser(db, sys.argv[2], sys.argv[3] if len(sys.argv) >= 4 else None, len(sys.argv) == 5 and sys.argv[4] == 'send')
 
     # auth username
     elif len(sys.argv) == 4 and sys.argv[1] == "auth":
