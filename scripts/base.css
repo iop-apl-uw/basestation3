@@ -532,6 +532,7 @@
     @media screen and (orientation:portrait) {
         .mobile#navLinks {
             font-size: 1rem;
+            display: none;
         }
 
         .mobile#bodyView {
@@ -638,6 +639,14 @@
             overflow-x: scroll;
             overflow-y: hidden
         }
+
+        .mobile#annunciators {
+            display: none;
+        }
+        .mobile#rightHeader {
+            display: none;
+        }
+
         .mobile#commlog {
             scroll-snap-align: center;
             overflow-y:auto; 
@@ -740,6 +749,13 @@
     @media screen and (orientation:landscape) {
         .mobile#navLinks {
             font-size: 4vh;
+            display: none;
+        }
+        .mobile#annunciators {
+            display: none;
+        }
+        .mobile#rightHeader {
+            display: none;
         }
 
         .mobile#bodyView {
