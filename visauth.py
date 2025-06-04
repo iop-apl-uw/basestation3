@@ -40,6 +40,7 @@ from email.utils import formatdate
 import pyqrcode
 from passlib.hash import sha256_crypt
 from passlib.totp import TOTP
+from passlib import pwd
 
 # CREATE TABLE users (name PRIMARY KEY, email, domain, password, type, totp, totp_verify_by int, otc, otc_expiry int, last int, last_t int, fails int, locked int);
 
@@ -96,7 +97,7 @@ def updateFails(db, fails, locked, username):
 
     query(db, "UPDATE users SET fails=?,locked=?,last_t=? WHERE name=?", (fails, locked, time.time(), username))
 
-def resetUser(db, username, password):
+def resetUser(db, username, password, sendEmail):
     if password is None:
         pw1 = getpass.getpass()
         print("confirm")
@@ -106,11 +107,36 @@ def resetUser(db, username, password):
         else:
             print("passwords do not match")
             return
+    elif password == "auto":
+        password = pwd.genword();
+        if not sendEmail:
+            print(f"password={password}")
 
-    query(db, "UPDATE users SET password=?,fails=?,locked=?,totp=?,otc=? WHERE name=?",
+    status = query(db, "UPDATE users SET password=?,fails=?,locked=?,totp=?,otc=? WHERE name=?",
           (sha256_crypt.hash(password), 0, 0, '', '', username))
 
-def addUser(db, username, email, domain, authType, password):
+    if status == False:
+        return
+
+    if sendEmail:
+        r = query(db, f"SELECT email from users WHERE name='{username}'", ())
+        if not r:
+            print("could not get email")
+            return
+
+        sendMail('no-reply', r['email'], 'Your glider piloting account reset',
+                 f'Your glider piloting account has been reset.\n\n'
+               + f'Your username is {username} and your new password is {password}\n\n'
+               +  'When you next login you will be prompted to go through a\n'
+               +  'setup process to reset your password and re-configure MFA. You\n'
+               +  'will need an authenticator app on your phone if you do not\n'
+               +  'already have one. After MFA is setup, at the login prompt,\n'
+               +  'always check the box #I have a code# to enter your MFA code\n'
+               +  'along with your username annd password.\n')
+
+
+
+def addUser(db, username, email, domain, authType, password, sendEmail):
     if password is None:
         pw1 = getpass.getpass()
         print("confirm")
@@ -120,9 +146,28 @@ def addUser(db, username, email, domain, authType, password):
         else:
             print("passwords do not match")
             return
+    elif password == "auto":
+        password = pwd.genword();
+        if not sendEmail:
+            print(f"password={password}")
 
-    query(db, "INSERT INTO users(name,email,domain,type,password,fails,locked) VALUES(?,?,?,?,?,?,?)", 
-          (username, email, domain, authType, sha256_crypt.hash(password), 0, 0))
+    status = query(db, "INSERT INTO users(name,email,domain,type,password,fails,locked) VALUES(?,?,?,?,?,?,?)", 
+                   (username, email, domain, authType, sha256_crypt.hash(password), 0, 0))
+
+    if status == False:
+        return
+
+    if sendEmail:
+        sendMail('no-reply', email, 'Your glider piloting account',
+                 f'Your glider piloting account has been setup.\n\n'
+               + f'Your username is {username} and your initial password is {password}\n\n'
+               +  'When you first login you will be prompted to go through a\n'
+               +  'setup process to set your password and configure MFA. You\n'
+               +  'will need an authenticator app on your phone if you do not\n'
+               +  'already have one. After MFA is setup, at the login prompt,\n'
+               +  'always check the box #I have a code# to enter your MFA code\n'
+               +  'along with your username annd password.\n\n')
+
 
 def unlockUser(db, username):
     query(db, "UPDATE users SET fails=?,locked=? WHERE name=?", (0,0,username))
@@ -292,11 +337,11 @@ if __name__ == "__main__":
 
     # add username email domain type(view|pilot) initialPassword
     if len(sys.argv) >= 6 and sys.argv[1] == 'add':
-        addUser(db, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6] if len(sys.argv) == 7 else None)
+        addUser(db, sys.argv[2], sys.argv[3], sys.argv[4], sys.argv[5], sys.argv[6] if len(sys.argv) >= 7 else None, True if len(sys.argv) == 8 and sys.argv[7] == 'send' else False)
 
     # reset username newInitialPassword
     elif len(sys.argv) >= 3 and sys.argv[1] == 'reset':
-        resetUser(db, sys.argv[2], sys.argv[3] if len(sys.argv) == 4 else None)
+        resetUser(db, sys.argv[2], sys.argv[3] if len(sys.argv) >= 4 else None, True if len(sys.argv) == 5 and sys.argv[4] == 'send' else False)
 
     # auth username
     elif len(sys.argv) == 4 and sys.argv[1] == "auth":
@@ -317,7 +362,7 @@ if __name__ == "__main__":
             changeUserPassword(db, sys.argv[2], None, pw1)
     else:
         print("unrecognized command - valid options are add, reset, unlock, auth, password")
-        print(f" {sys.argv[0]} add username email domain type(view|pilot) [initialPassword]")
+        print(f" {sys.argv[0]} add username email domain type(view|pilot) [initialPassword | auto] [send]")
         print(f" {sys.argv[0]} reset username [newInitialPassword]")
         print(f" {sys.argv[0]} unlock username")
         print(f" {sys.argv[0]} auth username domain (test authentication on the command-line)")
