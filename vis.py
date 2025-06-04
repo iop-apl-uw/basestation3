@@ -2786,7 +2786,7 @@ def attachHandlers(app: sanic.Sanic):
 
     @app.route('/image/<glider:int>/<name:str>/<fmt:str>')
     # description: download map overlay image
-    async def imageHandler(request, glider:int, name:str, fmt: str)
+    async def imageHandler(request, glider:int, name:str, fmt: str):
         if re.match(r'[^0-9A-Za-z_]', name):
             return sanic.response.text('invalid')
         if fmt not in ['png', 'jpg']:
