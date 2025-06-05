@@ -172,6 +172,13 @@ def plot_diveplot(
             .split(",")[2]
         )
 
+        desired_vert_vel = float(
+            dive_nc_file.variables["log_MHEAD_RNG_PITCHd_Wd"][:]
+            .tobytes()
+            .decode("utf-8")
+            .split(",")[3]
+        )
+
         eng_pitch_ang = dive_nc_file.variables["eng_pitchAng"][:]
         eng_roll_ang = dive_nc_file.variables["eng_rollAng"][:]
 
@@ -381,6 +388,26 @@ def plot_diveplot(
             "mode": "lines",
             "line": {"dash": "solid", "color": "DarkBlue"},
             "hovertemplate": "Vert Speed dz/dt<br>%{y:.2f} cm/sec<br>%{x:.2f} mins<br><extra></extra>",
+        }
+    )
+
+    fig.add_trace(
+        {
+            "y": [
+                desired_vert_vel,
+                desired_vert_vel,
+                -desired_vert_vel,
+                -desired_vert_vel,
+            ],
+            "x": [eng_time[0], apogee_time, apogee_time + 1, eng_time[-1]],
+            # "legendgroup": "attitude",
+            "name": "Vert Speed desired (cm/s)",
+            "type": "scatter",
+            "xaxis": "x1",
+            "yaxis": "y1",
+            "mode": "lines",
+            "line": {"dash": "dot", "color": "DarkBlue"},
+            "hovertemplate": "Vert Speed desired<br>%{y:.2f} deg<br>%{x:.2f} mins<br><extra></extra>",
         }
     )
 
