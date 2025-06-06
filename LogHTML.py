@@ -80,6 +80,9 @@ async def displayTables(fname):
                 SM_CCo.append(list(map(float, pieces[1:])))
             elif key == 'FREEZE':
                 FREEZE.append(list(map(float, pieces[1:])))
+            elif '=' in pieces[1]:
+                d = dict(list(map(lambda x:  (x.split('=')[0], float(x.split('=')[1])), pieces[1:])))
+                L[key] = d
             else:
                 try:
                     L[key] = list(map(float, pieces[1:]))
@@ -178,7 +181,12 @@ async def displayTables(fname):
 
     print("</td>")
 
-    if len(L['ERRORS']) == 16:
+    if isinstance(L['ERRORS'], dict):
+        e = list(L['ERRORS'].values())
+        errorLabels = list(L['ERRORS'].keys())
+        motor1 = list(L['ERRORS'].keys()).index('pit')
+        motorN = list(L['ERRORS'].keys()).index('vbdR')
+    elif len(L['ERRORS']) == 16:
         # RevB
         errorLabels = [
             "buffer_overruns",
@@ -198,8 +206,9 @@ async def displayTables(fname):
             "GPS_line_timeouts",
             "sensor_timeouts",
         ]
-        motor_errors = sum(L['ERRORS'][8:14])
-        motor_i = range(8,14)
+        motor1 = 8
+        motorN = 13
+        e = L['ERRORS']
     # RevE - note - pre rev3049, there was not GPS_line_timeout
     # we do not handle that possibility here
     # last KHH version did not have pressure_timeouts (length=18 case)
@@ -225,8 +234,9 @@ async def displayTables(fname):
             "logger_timeouts2",
             "logger_timeouts3",
         ]
-        motor_errors = sum(L['ERRORS'][0:6])
-        motor_i = range(0,6) 
+        motor1 = 0
+        motorN = 5
+        e = L['ERRORS']
     elif len(L['ERRORS']) == 18:
         errorLabels = [
             "pitchErrors",
@@ -248,10 +258,13 @@ async def displayTables(fname):
             "logger_timeouts2",
             "logger_timeouts3",
         ]
-        motor_errors = sum(L['ERRORS'][0:6])
-        motor_i = range(0,6)
+        motor1 = 0
+        motorN = 5
+        e = L['ERRORS']
 
-    sensor_errors = sum(L['ERRORS']) - motor_errors
+    motor_i = range(motor1, motorN+1)
+    motor_errors = sum(e[motor1:motorN+1])
+    sensor_errors = sum(e) - motor_errors
 
     if sensor_errors == 0:
         print("<td>") # row 2, col 3 
@@ -259,9 +272,9 @@ async def displayTables(fname):
         print("</td>")
     else:
         text = ''
-        for i in range(0, len(L['ERRORS'])):
-            if i not in motor_i and L['ERRORS'][i] > 0:    
-                text = text + f"{L['ERRORS'][i]:.0f} {errorLabels[i]} &#13;"
+        for i in range(0, len(e)):
+            if i not in motor_i and e[i] > 0:    
+                text = text + f"{e[i]:.0f} {errorLabels[i]} &#13;"
         print("<td>") # row 2, col 3 
         print('&#8226 Sensor errors: %.0f (<span style="color:maroon" title="%s">details</span>)' % (sensor_errors, text))
         print("</td>")
