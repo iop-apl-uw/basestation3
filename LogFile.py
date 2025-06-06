@@ -627,55 +627,77 @@ def parse_log_file(in_filename, issue_warn=False):
             f"Number of $TS:{len(log_file.gc_ts)} does not equal number of $TE:{len(log_file.gc_te)} in {in_filename} - possible corruption - skipping"
         )
     elif len(log_file.gc_ts) > 0:
-        # This code accuate as of version 67.01, rev:7223M
-        # $TS,97.78,0.2649,2933.70,40.0000,2644.9,4114.9
-        # $TE,2.18,3750.0,3767.6,88.6,441.8
+        if set(("$TSHEAD", "$TEHEAD")).issubset(log_file.data.keys()):
+            # Test for the headers and setup if present
+            tc_headers = tuple(log_file.data["$TSHEAD"].split(","))
+            te_offset = len(tc_headers)
+            tc_headers = tc_headers + tuple(log_file.data["$TEHEAD"].split(","))
+        else:
+            # This code accuate as of version 67.01, rev:7223M
+            # $TS,97.78,0.2649,2933.70,40.0000,2644.9,4114.9
+            # $TE,2.18,3750.0,3767.6,88.6,441.8
+            tc_headers = (
+                "p",  # "headingErr",
+                "d",  # "headingErrRate",
+                "i",  # "headingErrInt",
+                "rollDeg",  # "turnCorrection",
+                "rollAD",
+                "targetAD",
+                "sec",  # "secs",  # te_offset
+                "destAD",
+                "endAD",
+                "amps",  # "current",
+                "maxAmps",  # "currentMax",
+            )
+            te_offset = 6
 
-        tc_headers = (
-            "headingErr",
-            "headingErrRate",
-            "headingErrInt",
-            "turnCorrection",
-            "startAD",
-            "targetAD",
-            "secs",  # te_offset
-            "destAD",
-            "endAD",
-            "current",
-            "currentMax",
-        )
-        te_offset = 6
+            for ii in range(len(gc_line_times)):
+                gc_line_times[ii] += log_file_start_time
 
-        for ii in range(len(gc_line_times)):
-            gc_line_times[ii] += log_file_start_time
-
-        gc_line_f = scipy.interpolate.interp1d(
-            gc_line_numbers,
-            gc_line_times,
-            kind="linear",
-            bounds_error=False,
-            # fill_value=(gc_x[0], gc_x[-1]),  # "extrapolate"
-        )
+            gc_line_f = scipy.interpolate.interp1d(
+                gc_line_numbers,
+                gc_line_times,
+                kind="linear",
+                bounds_error=False,
+                # fill_value=(gc_x[0], gc_x[-1]),  # "extrapolate"
+            )
 
         for ii, ((ts_line, line_num), te_line) in enumerate(
             zip(log_file.gc_ts, log_file.gc_te, strict=True)
         ):
             if not log_file.tc_data:
                 log_file.tc_data = {k: [] for k in tc_headers}
-                log_file.tc_data["start_time_est"] = []
+                if "t" in tc_headers:
+                    log_file.tc_data["start_time"] = []
+                    log_file.tc_data["end_time"] = []
+                else:
+                    log_file.tc_data["start_time_est"] = []
             try:
                 for ii, val in enumerate(ts_line.split(",")):
                     log_file.tc_data[tc_headers[ii]].append(float(val))
                 for ii, val in enumerate(te_line.split(",")):
                     te_header = tc_headers[ii + te_offset]
-                    if te_header in ("current", "currentMax"):
+                    if te_header in ("amps", "maxAmps"):
                         log_file.tc_data[te_header].append(float(val) / 1000.0)
                     else:
                         log_file.tc_data[te_header].append(float(val))
-                # Esimate start times
-                log_file.tc_data["start_time_est"].append(
-                    np.float64(gc_line_f(line_num))
-                )
+                if "t" in tc_headers:
+                    log_file.tc_data["start_time"].append(
+                        np.float64(
+                            (log_file.tc_data["t"][-1] / 1000.0) + log_file_start_time
+                        )
+                    )
+                    log_file.tc_data["end_time"].append(
+                        np.float64(
+                            log_file.tc_data["start_time"][-1]
+                            + log_file.tc_data["sec"][-1]
+                        )
+                    )
+                else:
+                    # Esimate start times
+                    log_file.tc_data["start_time_est"].append(
+                        np.float64(gc_line_f(line_num))
+                    )
             except Exception:
                 log_error("Error processing ", "exc")
                 continue

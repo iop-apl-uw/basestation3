@@ -1674,7 +1674,12 @@ def set_globals() -> None:
         "log_ID": [False, "i", {}, nc_scalar],
         "log_IMPLIED_C_PITCH": [False, "c", {}, nc_scalar],  # Multi-valued string
         "log_IMPLIED_C_VBD": [False, "c", {}, nc_scalar],  # Multi-valued string
-        "log_INTERNAL_PRESSURE": [False, "c", {}, nc_scalar], # multi-valued string starting r7263
+        "log_INTERNAL_PRESSURE": [
+            False,
+            "c",
+            {},
+            nc_scalar,
+        ],  # multi-valued string starting r7263
         "log_INT_PRESSURE_SLOPE": [False, "d", {}, nc_scalar],
         "log_INT_PRESSURE_YINT": [False, "d", {}, nc_scalar],
         "log_IRIDIUM_FIX": [False, "c", {}, nc_scalar],  # Multi-valued string
@@ -2196,6 +2201,8 @@ def set_globals() -> None:
             (nc_gc_event_info,),
         ],
         # Turn controller
+        "log_TS_HEAD": [False, "c", {}, nc_scalar],  # multi-valued string
+        "log_TE_HEAD": [False, "c", {}, nc_scalar],  # multi-valued string
         f"{nc_tc_prefix}start_time": [
             False,
             "d",
@@ -2226,31 +2233,31 @@ def set_globals() -> None:
             },
             (nc_tc_event_info,),
         ],
-        f"{nc_tc_prefix}headingErr": [
+        f"{nc_tc_prefix}p": [
             False,
             "d",
             {"description": "Difference in heading from desired", "units": "degrees"},
             (nc_tc_event_info,),
         ],
-        f"{nc_tc_prefix}headingErrRate": [
+        f"{nc_tc_prefix}d": [
             False,
             "d",
-            {"description": "Rate of headingErr change", "units": "degrees/second"},
+            {"description": "Rate of heading error change", "units": "degrees/second"},
             (nc_tc_event_info,),
         ],
-        f"{nc_tc_prefix}headingErrInt": [
+        f"{nc_tc_prefix}i": [
             False,
             "d",
-            {"description": "Integral of headingError", "units": "degree seconds"},
+            {"description": "Integral of heading error", "units": "degree seconds"},
             (nc_tc_event_info,),
         ],
-        f"{nc_tc_prefix}turnCorrection": [
+        f"{nc_tc_prefix}rollDeg": [
             False,
             "d",
             {"description": "Heading correction", "units": "degrees"},
             (nc_tc_event_info,),
         ],
-        f"{nc_tc_prefix}startAD": [
+        f"{nc_tc_prefix}rollAD": [
             False,
             "d",
             {"description": "Starting AD position", "units": "AD counts"},
@@ -2262,7 +2269,7 @@ def set_globals() -> None:
             {"description": "Target AD for turn", "units": "AD counts"},
             (nc_tc_event_info,),
         ],
-        f"{nc_tc_prefix}secs": [
+        f"{nc_tc_prefix}sec": [
             False,
             "d",
             {"description": "Duration of the turn event", "units": "seconds"},
@@ -2271,25 +2278,37 @@ def set_globals() -> None:
         f"{nc_tc_prefix}destAD": [
             False,
             "d",
-            {"description": "Desitination AD for turn", "units": "AD counts"},
+            {"description": "Desitination AD for turn event", "units": "AD counts"},
             (nc_tc_event_info,),
         ],
         f"{nc_tc_prefix}endAD": [
             False,
             "d",
-            {"description": "Final AD for turn", "units": "AD counts"},
+            {"description": "Final AD for the turn event", "units": "AD counts"},
             (nc_tc_event_info,),
         ],
-        f"{nc_tc_prefix}current": [
+        f"{nc_tc_prefix}amps": [
             False,
             "d",
-            {"description": "Average current for turn", "units": "amps"},
+            {"description": "Average current for the turn event", "units": "amps"},
             (nc_tc_event_info,),
         ],
-        f"{nc_tc_prefix}currentMax": [
+        f"{nc_tc_prefix}maxAmps": [
             False,
             "d",
-            {"description": "Max current for turn", "units": "amps"},
+            {"description": "Max current for the turn event", "units": "amps"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}volts": [
+            False,
+            "d",
+            {"description": "Measured voltage for the turn event", "units": "amps"},
+            (nc_tc_event_info,),
+        ],
+        f"{nc_tc_prefix}errors": [
+            False,
+            "d",
+            {"description": "Errors for the turn event"},
             (nc_tc_event_info,),
         ],
         # Columns in the engineering file

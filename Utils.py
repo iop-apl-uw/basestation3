@@ -2006,7 +2006,7 @@ class RedirStdout:
 def fix_TC_times(log_f, eng_f):
     try:
         tc_start_time_est = log_f.tc_data["start_time_est"]
-        tc_secs = log_f.tc_data["secs"]
+        tc_secs = log_f.tc_data["sec"]
         eng_file_start_time = time.mktime(eng_f.start_ts)
         elapsed_time_s_v = eng_f.get_col("elaps_t")
         # First attempt - nearest time

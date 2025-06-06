@@ -2148,7 +2148,7 @@ def load_dive_profile_data(
                 BaseNetCDF.assign_dim_info_size(
                     nc_info_d,
                     BaseNetCDF.nc_tc_event_info,
-                    len(log_f.tc_data["headingErr"]),
+                    len(log_f.tc_data["rollDeg"]),
                 )
             if len(log_f.gc_state_data["secs"]) > 0:  # any STATE data?
                 BaseNetCDF.assign_dim_info_size(

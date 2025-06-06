@@ -300,7 +300,7 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
     if "tc_start_time" in ncf.variables:
         try:
             gc_roll_pos_ad = np.hstack(
-                (gc_roll_pos_ad, ncf.variables["tc_startAD"], ncf.variables["tc_endAD"])
+                (gc_roll_pos_ad, ncf.variables["tc_rollAD"], ncf.variables["tc_endAD"])
             )
             gc_roll_time = np.hstack(
                 (
