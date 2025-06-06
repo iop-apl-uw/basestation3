@@ -435,7 +435,7 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
                 logger_timeouts3
             ] = errors_line
 
-    errors = sum(list(map(int, extractStr(nci.variables["log_ERRORS"]).split(','))))
+    errors = sum(list(map(lambda x: int(x.split("=")[1] if "=" in x else x), extractStr(nci.variables["log_ERRORS"]).split(","))))
     insertColumn(dive, cur, "error_count", errors, "INTEGER")
 
     [minSpeed, maxSpeed] = list(
