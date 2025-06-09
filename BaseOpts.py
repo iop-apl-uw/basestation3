@@ -449,6 +449,15 @@ global_options_dict = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
+    "sc2mat_convertor": options_t(
+        "sc2mat",
+        ("Base",),
+        ("--sc2mat_convertor",),
+        str,
+        {
+            "help": "Name for the ADCP data file convertor (must be in Sensor sub-directory)",
+        },
+    ),
     "add_sqlite": options_t(
         True,
         ("Base",),

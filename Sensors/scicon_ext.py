@@ -109,7 +109,8 @@ def process_adcp_dat(
     matfile = scicon_eng_file.replace(".eng", ".mat")
     # Run the convertor
     convertor = os.path.join(
-        os.path.join(base_opts.basestation_directory, "Sensors"), "sc2mat"
+        os.path.join(base_opts.basestation_directory, "Sensors"),
+        base_opts.sc2mat_convertor,
     )
     if not os.path.isfile(convertor):
         log_error(
