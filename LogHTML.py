@@ -81,7 +81,7 @@ async def displayTables(fname):
             elif key == 'FREEZE':
                 FREEZE.append(list(map(float, pieces[1:])))
             elif '=' in pieces[1]:
-                d = dict(list(map(lambda x:  (x.split('=')[0], float(x.split('=')[1])), pieces[1:])))
+                d = dict(list(map(lambda x:  (x.split('=')[0] if '=' in x else x, float(x.split('=')[1] if '=' in x else x)), pieces[1:])))
                 L[key] = d
             else:
                 try:
