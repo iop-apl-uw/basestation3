@@ -69,6 +69,14 @@ from CalibConst import getSGCalibrationConstants
 
 DEBUG_PDB = False
 
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
+
 slopeVars = [
                 "batt_volts_10V",
                 "batt_volts_24V",
@@ -274,6 +282,41 @@ def processGC(dive, cur, nci):
             
         cur.execute(insert_str + val_str)
 
+def processTC(dive, cur, nci):
+    cur.execute(f"DELETE FROM tc WHERE dive={dive};")
+
+    if "tc_event" not in  nci.dimensions:
+        return
+
+    # TODO - calculate:
+    #"roll_i," 
+    #"roll_ad," 
+    #"roll_rate," 
+    
+    vars_n = ("p","d","i","rollDeg","rollAD","sec","destAD","endAD","amps","maxAmps","volts","errors","start_time","end_time")
+
+    insert_str = "INSERT INTO tc(dive,"
+    for var_n in vars_n:
+        insert_str += f"{var_n},"
+    insert_str += "roll_ad,roll_rate)"
+
+    for ii in range(0, nci.dimensions["tc_event"].size):
+        try:
+            val_str = f"VALUES({dive}," 
+            for var_n in vars_n:
+                val_str += str(nci.variables[f"tc_{var_n}"][ii]) + ","
+            roll_ad = nci.variables['tc_endAD'][ii] - nci.variables['tc_rollAD'][ii]
+            try:
+                roll_rate = float(roll_ad) / float(nci.variables['tc_sec'][ii])
+            except ZeroDivisionError:
+                roll_rate = 0.0
+            val_str += f"{numpy.abs(roll_ad)},{roll_rate});"
+
+            cur.execute(insert_str + val_str)
+        except Exception:
+            log_error("Failed to load tc event", "exc")
+
+        
 def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
     """Process single netcdf file into the database"""
     gpsVars = [ "time", "lat", "lon", "magvar", "hdop", "first_fix_time", "final_fix_time" ]
@@ -728,13 +771,16 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
             )
 
     except Exception:
-        if DEBUG_PDB:
-            _, _, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
+        DEBUG_PDB_F()
         log_error("Failed to add SENSOR/DEVICE power use", "exc")
 
     processGC(dive, cur, nci)
+
+    try:
+        processTC(dive, cur, nci)
+    except Exception:
+        DEBUG_PDB_F()
+        log_error("Failed to add TC data", "exc")
 
     # calculate better per whole dive energy numbers for the motors
     data = pd.read_sql_query(f"SELECT vbd_i,vbd_secs,vbd_volts FROM gc WHERE dive={dive}", con)
@@ -1014,16 +1060,19 @@ def createDivesTable(cur):
     for c in columns:
         addColumn(cur, c, 'TEXT')
    
-def prepDivesGC(base_opts):
+def prepDivesOthers(base_opts):
     dbfile = Utils.mission_database_filename(base_opts)
     con = sqlite3.connect(dbfile)
-    log_info("prepDivesGC db opened direct")
+    log_info("prepDivesOthers db opened direct")
 
     cur = con.cursor()
     cur.execute("DROP TABLE IF EXISTS dives;")
     cur.execute("DROP TABLE IF EXISTS gc;")
+    cur.execute("DROP TABLE IF EXISTS tc;")
     createDivesTable(cur)
     cur.execute("CREATE TABLE gc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,st_secs FLOAT,depth FLOAT,ob_vertv FLOAT,end_secs FLOAT,flags INT,pitch_ctl FLOAT,pitch_secs FLOAT,pitch_i FLOAT,pitch_ad FLOAT,pitch_rate FLOAT,roll_ctl FLOAT,roll_secs FLOAT,roll_i FLOAT,roll_ad FLOAT,roll_rate FLOAT,vbd_ctl FLOAT,vbd_secs FLOAT,vbd_i FLOAT,vbd_ad FLOAT,vbd_rate FLOAT,vbd_eff FLOAT,vbd_pot1_ad FLOAT,vbd_pot2_ad,pitch_errors INT,roll_errors INT,vbd_errors INT,pitch_volts FLOAT,roll_volts FLOAT,vbd_volts FLOAT);")
+    
+    cur.execute("CREATE TABLE tc(idx INTEGER PRIMARY KEY AUTOINCREMENT,dive INT,p FLOAT,d FLOAT,i FLOAT,rollDeg FLOAT,rollAD FLOAT,sec FLOAT,destAD FLOAT,endAD FLOAT,amps FLOAT,maxAmps FLOAT,volts FLOAT,errors FLOAT,start_time FLOAT,end_time, roll_ad FLOAT, roll_rate FLOAT);")
 
     cur.execute("CREATE TABLE IF NOT EXISTS chat(idx INTEGER PRIMARY KEY AUTOINCREMENT, timestamp REAL, user TEXT, message TEXT, attachment BLOB, mime TEXT);")
 
@@ -1033,11 +1082,11 @@ def prepDivesGC(base_opts):
         con.commit()
     except Exception as e:
         con.rollback()
-        log_error(f"Failed commit, prepDivesGC {e}", "exc", alert="DB_LOCKED")
+        log_error(f"Failed commit, prepDivesOthers {e}", "exc", alert="DB_LOCKED")
 
     con.close()
 
-    log_info("prepDivesGC db closed")
+    log_info("prepDivesOthers db closed")
 
 currentSchemaVersion = 2
 
@@ -1096,7 +1145,7 @@ def checkSchema(base_opts, con):
         mycon.close()
 
 def createDB(base_opts):
-    prepDivesGC(base_opts)
+    prepDivesOthers(base_opts)
     prepCallsChangesFiles(base_opts)
     con = Utils.open_mission_database(base_opts)
     con.cursor().execute(f'PRAGMA user_version = {currentSchemaVersion}')
@@ -1104,7 +1153,7 @@ def createDB(base_opts):
  
 def rebuildDivesGC(base_opts, ext):
     """Rebuild the database tables from scratch"""
-    prepDivesGC(base_opts)
+    prepDivesOthers(base_opts)
 
     log_info(f"rebuilding database, ext={ext}")
     con = Utils.open_mission_database(base_opts)
@@ -1235,10 +1284,7 @@ def addValToDB(base_opts, dive_num, var_n, val, con=None):
         insertColumn(dive_num, cur, var_n, val, db_type)
         cur.close()
     except Exception:
-        if DEBUG_PDB:
-            _, _, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
+        DEBUG_PDB_F()
         log_error(f"Failed to add {var_n} to dive {dive_num}", "exc")
         
         status = 1 
@@ -1642,10 +1688,6 @@ if __name__ == "__main__":
     except SystemExit:
         pass
     except Exception:
-        if DEBUG_PDB:
-            _, _, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
-
+        DEBUG_PDB_F()
         log_critical("Unhandled exception in main -- exiting", "exc")
 # fmt: on

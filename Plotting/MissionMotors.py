@@ -57,6 +57,14 @@ from Plotting import add_arguments, plotmissionsingle
 DEBUG_PDB = False
 
 
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
+
 @add_arguments(
     additional_arguments={
         "max_vbd_effic": BaseOptsType.options_t(
@@ -118,10 +126,7 @@ def mission_motors(
             conn,
         ).sort_values("dive")
     except Exception:
-        if DEBUG_PDB:
-            _, _, traceb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(traceb)
+        DEBUG_PDB_F()
         log_error("Could not fetch needed columns", "exc")
         if dbcon is None:
             conn.close()
@@ -129,20 +134,42 @@ def mission_motors(
 
         return ([], [])
 
-    if dbcon is None:
-        conn.close()
-        log_info("mission_motors db closed")
-
     rdf = df[df["roll_rate"] != 0]
     pdf = df[df["pitch_rate"] != 0]
     vdf = df[df["vbd_rate"] != 0]
+
+    roll_dive = rdf["dive"]
+    roll_i = rdf["roll_i"]
+    roll_rate = rdf["roll_rate"]
+
+    res = conn.cursor().execute("PRAGMA table_info(tc)")
+    columns = [i[1] for i in res]
+    if columns:
+        try:
+            df_tc = pd.read_sql_query(
+                "SELECT dive,roll_rate,amps from tc",
+                conn,
+            ).sort_values("dive")
+        except Exception:
+            DEBUG_PDB_F()
+            log_error("Could not fetch tc columns", "exc")
+        else:
+            # TODO Filter out zero rate - like above - and append columns
+            rdf_tc = df_tc[df_tc["roll_rate"] != 0]
+            roll_dive = np.hstack((roll_dive, rdf_tc["dive"]))
+            roll_i = np.hstack((roll_i, rdf_tc["amps"]))
+            roll_rate = np.hstack((roll_rate, rdf_tc["roll_rate"]))
+
+    if dbcon is None:
+        conn.close()
+        log_info("mission_motors db closed")
 
     fig = plotly.subplots.make_subplots(specs=[[{"secondary_y": True}]])
 
     fig.add_trace(
         {
-            "x": rdf["dive"],
-            "y": rdf["roll_i"],
+            "x": roll_dive,
+            "y": roll_i,
             "name": "roll current",
             "type": "scatter",
             "mode": "markers",
@@ -156,8 +183,8 @@ def mission_motors(
     )
     fig.add_trace(
         {
-            "x": rdf["dive"],
-            "y": rdf["roll_rate"],
+            "x": roll_dive,
+            "y": roll_rate,
             "name": "roll rate",
             "type": "scatter",
             "mode": "markers",

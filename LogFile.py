@@ -701,10 +701,16 @@ def parse_log_file(in_filename, issue_warn=False):
             except Exception:
                 log_error("Error processing ", "exc")
                 continue
-
-        # TODO - map turn controller data into the GC table
-        # ('roll_start_time', 'roll_end_time', 'roll_ctl', 'roll_ad_start', 'roll_secs',
-        # 'roll_i', 'roll_ad', 'roll_errors', 'roll_volts', 'roll_st')
+        if "volts" not in tc_headers and log_file.tc_data:
+            if "$24V_AH" in log_file.data:
+                volts = float(log_file.data["$24V_AH"].split(",")[0])
+            elif "$10V_AH" in log_file.data:
+                volts = float(log_file.data["$10V_AH"].split(",")[0])
+            else:
+                volts = 0.0
+            log_file.tc_data["volts"] = [volts] * len(log_file.tc_data["p"])
+        if "errors" not in tc_headers:
+            log_file.tc_data["errors"] = [0] * len(log_file.tc_data["p"])
 
     state_data = {"secs": [], "state": [], "eop_code": []}
     # State
