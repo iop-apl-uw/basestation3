@@ -142,19 +142,23 @@ def getVars(fname, basis_C_VBD, basis_VBD_CNV):
     c_vbd = nc.variables["log_C_VBD"].getValue()
 
     # SG eng time base
-    time  = nc.variables["time"][:]
-    depth = nc.variables["depth"][:]
-    pitch = nc.variables["eng_pitchAng"][:]
-    vbd   = nc.variables["eng_vbdCC"][:] + (c_vbd - basis_C_VBD)*basis_VBD_CNV
+    try:
+        time  = nc.variables["time"][:]
+        depth = nc.variables["depth"][:]
+        pitch = nc.variables["eng_pitchAng"][:]
+        vbd   = nc.variables["eng_vbdCC"][:] + (c_vbd - basis_C_VBD)*basis_VBD_CNV
 
-    # CTD time base
-    ctd_time = nc.variables["ctd_time"][:]
-    ctd_time = nc.variables["ctd_time"][:]
-    ctd_depth = nc.variables["ctd_depth"][:]
-    # density_ctd = nc.variables["density"][:]
-    # use raw 
-    temp_ctd = nc.variables["temperature_raw"][:]
-    salin_ctd = nc.variables["salinity_raw"][:]
+        # CTD time base
+        ctd_time = nc.variables["ctd_time"][:]
+        ctd_time = nc.variables["ctd_time"][:]
+        ctd_depth = nc.variables["ctd_depth"][:]
+        # density_ctd = nc.variables["density"][:]
+        # use raw 
+        temp_ctd = nc.variables["temperature_raw"][:]
+        salin_ctd = nc.variables["salinity_raw"][:]
+    except KeyError as e:
+        log_error(f"Could not fetch needed var {e} from {fname} - skipping")
+        return None, None, None, None, None
 
     density_ctd = seawater.pden(salin_ctd, temp_ctd, ctd_depth)
 
