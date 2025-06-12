@@ -501,9 +501,13 @@ def process_data_file(in_filename, file_type, calib_consts):
                 time_parts[4],
                 time_parts[5],
             )
-            data_file.start_ts = Utils.fix_gps_rollover(
-                time.strptime(time_string, "%m %d %y %H %M %S")
-            )
+            try:
+                data_file.start_ts = Utils.fix_gps_rollover(
+                    time.strptime(time_string, "%m %d %y %H %M %S")
+                )
+            except ValueError:
+                log_error(f"Bad time string found {time_string}")
+                data_file.start_ts = time.strptime("1 1 70 0 0 0", "%m %d %y %H %M %S")
         elif raw_strs[0] == "columns" or raw_strs[0] == "%columns":
             for i in raw_strs[1].rstrip().split(","):
                 if len(i):

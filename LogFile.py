@@ -274,9 +274,14 @@ def parse_log_file(in_filename, issue_warn=False):
                 time_parts[4],
                 time_parts[5],
             )
-            log_file.start_ts = Utils.fix_gps_rollover(
-                time.strptime(time_string, "%m %d %y %H %M %S")
-            )
+            try:
+                log_file.start_ts = Utils.fix_gps_rollover(
+                    time.strptime(time_string, "%m %d %y %H %M %S")
+                )
+            except ValueError:
+                log_error(f"Bad time string found {time_string}")
+                log_file.start_ts = time.strptime("1 1 70 0 0 0", "%m %d %y %H %M %S")
+
             log_file_start_time = int(
                 time.mktime(log_file.start_ts)
             )  # make st_secs and end_secs 'i'
