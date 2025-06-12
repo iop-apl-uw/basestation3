@@ -770,7 +770,7 @@ def plot_pitch_roll(
                 {
                     "x": rollAD_Fit_climb,
                     "y": roll_Fit_climb,
-                    "name": f"<b>Linear model - climb</b><br>&#8594;C_ROLL_DIVE={c_roll_climb_imp:.0f}",
+                    "name": f"<b>Linear model - climb</b><br>&#8594;C_ROLL_CLIMB={c_roll_climb_imp:.0f}",
                     "mode": "lines",
                     "line": {"dash": "solid", "color": "Red"},
                     "hovertemplate": f"Fit C_ROLL_CLIMB={c_roll_climb_imp:.0f}<extra></extra>",
