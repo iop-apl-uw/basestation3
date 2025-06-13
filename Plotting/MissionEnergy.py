@@ -55,7 +55,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtilsPlotly
 import Utils
-from BaseLog import log_error, log_info
+from BaseLog import log_error, log_info, log_warning
 from Plotting import plotmissionsingle
 
 # DEBUG_PDB = "darwin" in sys.platform
@@ -143,10 +143,14 @@ def mission_energy(
             conn,
         ).sort_values("dive")
 
-        start = pd.read_sql_query(
+        start_df = pd.read_sql_query(
             "SELECT dive,log_gps2_time FROM dives ORDER BY dive ASC LIMIT 1",
             conn,
-        )["log_gps2_time"].iloc()[0]
+        )
+        if start_df.size == 0:
+            log_warning(f"No log_gps2_time values in {Utils.mission_database_filename(base_opts)} - skipping mission_energy")
+            return([], [])
+        start = start_df["log_gps2_time"].iloc()[0]
 
         start_t = pd.read_sql_query(
             "SELECT dive,log_gps2_time FROM dives ORDER BY dive",
@@ -660,7 +664,6 @@ def mission_energy(
                 fig,
             ),
         )
-
     except Exception:
         if DEBUG_PDB:
             _, _, traceb = sys.exc_info()
