@@ -206,6 +206,14 @@ def mission_profiles(
                 log_warning(f"Could not extract timeseries for {vk} - skipping", max_count=1)
                 continue
 
+            # GBS 2025/06/13 The plotly engine has problems with single dive section plots, often, but not always
+            # throwing the following exception:
+            # ValueError: Transform failed with error code 525: Invalid array length
+            # For now, filter these section plots out.
+            if len(d['dive']) <= 1:
+                log_info(f"At least two dives needed for a section plot {vk} - skipping", max_count=1)
+                continue
+
             contours={
                         "coloring": "heatmap",
                         "showlabels": True,
