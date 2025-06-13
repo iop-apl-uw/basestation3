@@ -171,8 +171,16 @@ def mission_map(
     else:
         log_info("no sg_plot_constants.m found - using bounding box")
 
+    if df['lat'].size == 0 or df['lon'].size == 0:
+        log_warning(f"No lat/lon found in {Utils.mission_database_filename(base_opts)} - skipping mission_map")
+        return([], [])
+    
     ctrlat = df['lat'].mean()
     ctrlon = df['lon'].mean()
+
+    if np.isnan(ctrlat) or np.isnan(ctrlon):
+        log_warning("Mean of lat or lon is nan - skipping mission_map")
+        return([], [])
 
     # The lat-long projection
     noProj = ccrs.PlateCarree(central_longitude=0)
