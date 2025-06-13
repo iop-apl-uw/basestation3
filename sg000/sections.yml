@@ -53,7 +53,7 @@ variables:
 
 sections:
   "000": {start: 1, stop: -1, step: 5}
-  # "001": {start: 1, stop: 34 }
+  "001": {start: 1, stop: -1, step: 1 }
   # "002": {start: 35, stop: 72, flip: true }
   # "003": {start: 73, stop: 121 }
   # "004": {start: 122, stop: 163, flip: true }
