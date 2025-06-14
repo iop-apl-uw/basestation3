@@ -2352,7 +2352,7 @@
 
     /* CMDFILE EDITOR */
 
-    var parmGroups = ["BASIC", "NAV", "DIVE", "SURFACE", "FLIGHT", "PITCH", "ROLL", "VBD", "ALTIMETER", "HARDWARE"];
+    var parmGroups = ["BASIC", "NAV", "DIVE", "SURFACE", "FLIGHT", "PITCH", "ROLL", "VBD", "ALTIMETER", "POWER", "HARDWARE"];
     function changeParmGroup(group) {
         for (g of parmGroups) {
             console.log(g);
@@ -2563,6 +2563,7 @@
                             "PITCH": ["C_PITCH", "PITCH_GAIN", "PITCH_ADJ_GAIN", "PITCH_ADJ_DBAND", "PITCH_W_GAIN", "PITCH_W_DBAND", "C_PITCH_AUTO_DELTA", "C_PITCH_AUTO_MAX", "PITCH_GAIN_AUTO_DELTA", "PITCH_GAIN_AUTO_MAX", "PITCH_TIMEOUT"],
                             "FLIGHT": ["MAX_BUOY", "HEAD_ERRBAND", "RHO", "MASS", ],
                             "ALTIMETER": ["XPDR_INT", "XPDR_REP", "XPDR_VALID", "XPDR_INHIBIT"],
+                            "POWER": ["MAXI_10V"],
                             "HARDWARE": ["LOGGERS"],
                         };
             const ignore = ["DIVE", "MISSION", "ID", "DEEPGLIDER", "DEEPGLIDERMB", "MOTHERBOARD"];
@@ -4499,6 +4500,7 @@ parms[p]
                 <span id="tabROLL" class="spanClick" onclick="changeParmGroup('ROLL'); return false;">Roll</span> <b>&#124;</b>
                 <span id="tabVBD" class="spanClick" onclick="changeParmGroup('VBD'); return false;">VBD</span> <b>&#124;</b>
                 <span id="tabALTIMETER" class="spanClick" onclick="changeParmGroup('ALTIMETER'); return false;">Altimeter</span> <b>&#124;</b>
+                <span id="tabPOWER" class="spanClick" onclick="changeParmGroup('POWER'); return false;">Power</span> <b>&#124;</b>
                 <span id="tabHARDWARE" class="spanClick" onclick="changeParmGroup('HARDWARE'); return false;">Hardware</span> 
             </div>
             <div id="pilotWheelCmdfileControls">
@@ -4527,6 +4529,7 @@ parms[p]
                     <div id="pilotROLL" class="hide" oncontextmenu="parameterHelp('pilotROLL');"></div>
                     <div id="pilotVBD" class="hide" oncontextmenu="parameterHelp('pilotVBD');"></div>
                     <div id="pilotALTIMETER" class="hide" oncontextmenu="parameterHelp('pilotALTIMETER');"></div>
+                    <div id="pilotPOWER" class="hide" oncontextmenu="parameterHelp('pilotPOWER');"></div>
                     <div id="pilotHARDWARE" class="hide" oncontextmenu="parameterHelp('pilotHARDWARE');"></div>
                 </div>
                 
