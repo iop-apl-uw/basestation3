@@ -66,6 +66,7 @@ def sendMail(fromAddr, toAddr, subj, body):
         smtp = smtplib.SMTP("localhost")
         smtp.sendmail(fromAddr, [toAddr], email_msg.as_string())
         smtp.close()
+        print("message sent")
     except Exception:
         print("Unable to send message")
         return False
@@ -77,7 +78,8 @@ def query(db, q, args):
     with closing(sqlite3.connect(db)) as con, con, closing(con.cursor()) as cur:
         try:
             cur.execute(q, args)
-            if 'UPDATE' in q:
+            if 'UPDATE' in q or 'INSERT' in q:
+                print(f'updated {cur.rowcount} rows')
                 return cur.rowcount
 
             row = cur.fetchone()
@@ -155,6 +157,7 @@ def addUser(db, username, email, domain, authType, password, sendEmail):
                    (username, email, domain, authType, sha256_crypt.hash(password), 0, 0))
 
     if not status:
+        print("insert error")
         return
 
     if sendEmail:
