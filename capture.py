@@ -29,6 +29,7 @@ import asyncio
 import math
 import re
 import sys
+import copy
 
 import aiofiles
 import plotly.graph_objects
@@ -142,9 +143,23 @@ def plotMoveRecord(x, which, time, includes):
 #        print(time)
     colors = { "VBD": "Black", "Pitch": "Blue", "Roll": "Green" }
 
+    if "Roll" in which and len(which) > 1:
+        k = which.index("Roll")
+        roll_n = int(time[k]*10)
+        if abs(x[0][3] - x[roll_n][3]) > abs(x[-roll_n][3] - x[-1][3]):
+            tempw = copy.deepcopy(which)
+            tempt = copy.deepcopy(time)
+            which[0] = 'Roll'
+            time[0] = time[k]          
+            for m in range(1,len(which)):
+                time[m] = tempt[m-1]
+                which[m] = tempw[m-1]
+   
+    indices = [] 
     for move in which: 
         if move == "VBD":
             n = int(time[j])
+            indices.append([i, i+n])
             ad1 = [ y[0] for y in x[i:i+n] ]
             ad2 = [ y[1] for y in x[i:i+n] ]
             t = [t0 + idx/1.0 for idx in range(n)]
@@ -174,6 +189,7 @@ def plotMoveRecord(x, which, time, includes):
             n = int(time[j]*10)
             ad = [ y[2] for y in x[i:i+n] ]
 
+            indices.append([i, i+n])
             t = [t0 + idx/10.0 for idx in range(n)]
             fig.add_trace(
                 {
@@ -190,6 +206,7 @@ def plotMoveRecord(x, which, time, includes):
             n = int(time[j]*10)
             ad = [ y[3] for y in x[i:i+n] ]
 
+            indices.append([i, i+n])
             t = [t0 + idx/10.0 for idx in range(n)]
             fig.add_trace(
                 {
@@ -256,7 +273,7 @@ def plotMoveRecord(x, which, time, includes):
         }
     )
 
-    return fig.to_html(
+    html = fig.to_html(
                         include_plotlyjs=includes,
                         include_mathjax=includes,
                         full_html=False,
@@ -266,6 +283,8 @@ def plotMoveRecord(x, which, time, includes):
                             "scrollZoom": False,
                         },
                       )
+
+    return (html, which, time, indices)
 
 async def formatCaptureFile(file, firstPlot=False):
     insideMoveDump = []
@@ -281,6 +300,7 @@ async def formatCaptureFile(file, firstPlot=False):
 
     crits = 0
     linenum = 0 
+    rowcolor =  {"VBD": "pink", "Pitch": "cyan", "Roll": "lightgreen"}
     async with aiofiles.open(file, 'rb') as capfile:
         async for line in capfile:
             line = line.decode('utf-8', errors='ignore').rstrip()
@@ -295,8 +315,17 @@ async def formatCaptureFile(file, firstPlot=False):
                     pass
 
                 elif inside.search(line):
-                    if len(moveRecord) == 0:
-                        out = out + line + "\n"
+                    try:
+                        d = list(map(lambda x: float(x), line.split()))
+                        moveRecord.append(d)
+                        continue
+                    except Exception:
+                        pass
+                elif summary.search(line):
+                    pass
+                else:
+                    if len(moveRecord) > 0:
+                        (html, order, tm, idx) = plotMoveRecord(moveRecord, insideMoveDump, moveTime, "cdn" if firstPlot else False)
                         out = out + '<table><tr>'
                         out = out + '<th>VBD1 AD'
                         out = out + '<th>VBD2 AD'
@@ -308,22 +337,16 @@ async def formatCaptureFile(file, firstPlot=False):
                         out = out + '<th>heading'
                         out = out + '<th>pitch'
                         out = out + '<th>roll</tr>'
+                        for m in range(0,len(order)):
+                            for ii in range(idx[m][0],idx[m][1]):
+                                out = out + f'<tr bgcolor="{rowcolor[order[m]]}">'
+                                for i in moveRecord[ii]:
+                                    out = out + f"<td>{i}"
 
-                    try:
-                        d = list(map(lambda x: float(x), line.split()))
-                        moveRecord.append(d)
-                        out = out + "<tr>"
-                        for i in d:
-                            out = out + f"<td>{i}"
-                        continue
-                    except Exception:
-                        pass
-                elif summary.search(line):
-                    pass
-                else:
-                    if len(moveRecord) > 0:
-                        out = out + '</table><div>'
-                        out = out + plotMoveRecord(moveRecord, insideMoveDump, moveTime, "cdn" if firstPlot else False)
+                                out = out + "</tr>" 
+                        out = out + "</table>"
+                         
+                        out = out + "<div>" + html
                         firstPlot = False
                         out = out + "</div>"
                     insideMoveDump = []
