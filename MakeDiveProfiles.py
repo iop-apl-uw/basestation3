@@ -1637,6 +1637,13 @@ def load_dive_profile_data(
             nc_file_parsable = True  # assume the best
             try:
                 dive_nc_file = Utils.open_netcdf_file(nc_dive_file_name, "r")
+                # When handling type mismatches (see nc_var_convert code below), we need to create a new
+                # temporary nc_var.  netCDF3 from scipy, allowed this to be done in a file opened read-ony - for
+                # netCDF4, we use a diskless dataset and create it here because netCDF4 does not allow multiple diskless
+                # files of the same name to be opened.
+                dive_nc_file_temp = netCDF4.Dataset(
+                    nc_dive_file_name, "w", diskless=True
+                )
                 try:
                     version = dive_nc_file.file_version
                 except Exception:
@@ -1845,10 +1852,6 @@ def load_dive_profile_data(
                                     "i",
                                 ]:  # convert string to single scalar
                                     try:
-                                        # Create a temp dataset to generate the netcdf variable from
-                                        dive_nc_file_temp = netCDF4.Dataset(
-                                            nc_dive_file_name, "w", diskless=True
-                                        )
                                         nc_dims = mdp_dim_info
                                         nc_var_convert = (
                                             dive_nc_file_temp.createVariable(
@@ -1890,10 +1893,6 @@ def load_dive_profile_data(
                                     nc_typecode in ["d", "i"] and nc_data_type == "c"
                                 ):  # convert a scalar to a string
                                     try:
-                                        # Create a temp dataset to generate the netcdf variable from
-                                        dive_nc_file_temp = netCDF4.Dataset(
-                                            nc_dive_file_name, "w", diskless=True
-                                        )
                                         value_string = "%g" % nc_var.getValue().item()
                                         l_value_string = len(value_string)
                                         dim_name = "__%s_convert" % dive_nc_varname
@@ -1924,8 +1923,9 @@ def load_dive_profile_data(
                                         )
                                         nc_var_convert = None  # oh well...
 
+                            # Need to compare against None because netCDF4 singletons do not have a len() attribute
                             if (
-                                nc_var_convert
+                                nc_var_convert is not None
                             ):  # were we able to coerce to a new variable?
                                 # reset these variables to reflect the new variable
                                 nc_typecode = nc_data_type
