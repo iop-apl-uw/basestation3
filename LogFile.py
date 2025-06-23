@@ -332,7 +332,6 @@ def parse_log_file(in_filename, issue_warn=False):
         # Convert to the canonical logfile format and fall through
         for escape in ("ESCAPE_REASON", "ESCAPE_STARTED_DIVE"):
             if raw_line.startswith(f"{escape}="):
-                pdb.set_trace()
                 try:
                     escape_split = raw_line.split("=", 1)
                     raw_line = f"${escape_split[0]},{escape_split[1]}"
