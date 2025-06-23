@@ -26,10 +26,10 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import asyncio
+import copy
 import math
 import re
 import sys
-import copy
 
 import aiofiles
 import plotly.graph_objects
