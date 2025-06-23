@@ -181,6 +181,11 @@ def mission_map(
     if np.isnan(ctrlat) or np.isnan(ctrlon):
         log_warning("Mean of lat or lon is nan - skipping mission_map")
         return([], [])
+    
+    if np.abs(ctrlat) > 90.0 or np.abs(ctrlon) > 180.0:
+        log_warning(f"lat:{ctrlat} or lon:{ctrlon} is nonsensical - skipping mission_map")
+        return([], [])
+    
 
     # The lat-long projection
     noProj = ccrs.PlateCarree(central_longitude=0)
