@@ -1,5 +1,5 @@
 # For Plotly persistence
-kaleido>=0.2.1; platform_machine != 'armv7l'
+kaleido==0.2.1; platform_machine != 'armv7l'
 brotlipy
 matplotlib>=3.6.0
 cmocean==4.0.3
