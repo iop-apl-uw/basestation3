@@ -283,6 +283,13 @@ def processGC(dive, cur, nci):
         cur.execute(insert_str + val_str)
 
 def processTC(dive, cur, nci):
+    res = cur.execute("PRAGMA table_info(tc)")
+    columns = [i[1] for i in res]
+    if not columns:
+        if "tc_event" in  nci.dimensions:
+            log_warning(f"TC events found for dive:{dive}, but not tc table in db - database may want to be regenerated")
+        return
+        
     cur.execute(f"DELETE FROM tc WHERE dive={dive};")
 
     if "tc_event" not in  nci.dimensions:
