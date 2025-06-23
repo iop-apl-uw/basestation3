@@ -328,6 +328,18 @@ def parse_log_file(in_filename, issue_warn=False):
         if raw_line == "":
             break  # done with the file? BUG continue?
 
+        # The escape output appears at the end of the logfile, in the form normally seen in the comm.log
+        # Convert to the canonical logfile format and fall through
+        for escape in ("ESCAPE_REASON", "ESCAPE_STARTED_DIVE"):
+            if raw_line.startswith(f"{escape}="):
+                pdb.set_trace()
+                try:
+                    escape_split = raw_line.split("=", 1)
+                    raw_line = f"${escape_split[0]},{escape_split[1]}"
+                except Exception:
+                    log_warning("Failed processing escape", "exc")
+                break
+
         raw_strs = raw_line.split(",", 1)
         if len(raw_strs) != 2:  # we expect $PARM,value[,value]+
             log_error(
