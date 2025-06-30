@@ -376,7 +376,7 @@ def init_sensor(module_name, init_dict=None):
             BaseNetCDF.nc_scalar,
         ]
 
-        meta_data_adds = meta_data_adds | Utils2.add_scicon_stats(instrument)
+        meta_data_adds |= Utils2.add_scicon_stats(instrument)
 
         canonical_data_to_results_d[instrument] = [
             data_info,

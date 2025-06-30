@@ -175,7 +175,7 @@ def init_sensor(module_name, init_dict=None):
             (data_info,),
         ]
 
-        meta_data_adds = meta_data_adds | Utils2.add_scicon_stats(instrument)
+        meta_data_adds |= Utils2.add_scicon_stats(instrument)
 
     init_dict[module_name] = {"netcdf_metadata_adds": meta_data_adds}
     return 0

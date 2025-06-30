@@ -44,6 +44,7 @@ DEBUG_PDB = False
 
 known_typs = ("temp15", "doxy24", "opt_05")
 
+
 def main():
     base_opts = BaseOpts.BaseOptions(
         "Get coda calib comm str and cal coefficient from a Seaglider selftest capture file",
@@ -139,7 +140,7 @@ def main():
             calib_comm += f"serialnum:{serial_num} "
 
         found_one = None
-        instrument_name = "coda"
+        instrument_name = "codaTODO"
         for channel, values in channels.items():
             if all(x in values for x in ("typ", "datetime")):
                 if not found_one:

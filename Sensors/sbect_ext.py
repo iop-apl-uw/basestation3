@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2021, 2023 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2021, 2023, 2025 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -25,6 +25,7 @@
 """
 sbect basestation sensor extension
 """
+
 import BaseNetCDF
 import Utils2
 from BaseLog import log_error
@@ -116,7 +117,7 @@ def init_sensor(module_name, init_dict=None):
         }
     }
 
-    init_dict[module_name]["netcdf_metadata_adds"] = init_dict[module_name]["netcdf_metadata_adds"] | Utils2.add_scicon_stats("sbect")
+    init_dict[module_name]["netcdf_metadata_adds"] |= Utils2.add_scicon_stats("sbect")
 
     return 0
 

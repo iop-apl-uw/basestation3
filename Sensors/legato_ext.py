@@ -156,10 +156,8 @@ def init_sensor(module_name, init_dict=None):
             (BaseNetCDF.nc_legato_data_info,),
         ],
     }
-    meta_data_adds =  meta_data_adds | Utils2.add_scicon_stats("legato")
-    init_dict[module_name] = {
-        "netcdf_metadata_adds": meta_data_adds
-    }
+    meta_data_adds |= Utils2.add_scicon_stats("legato")
+    init_dict[module_name] = {"netcdf_metadata_adds": meta_data_adds}
 
     return 0
 
