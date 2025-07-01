@@ -1194,9 +1194,14 @@ def process_pdoscmd_log(base_opts, pdos_logfile_name, instrument_id):
             return 1
         if fc.is_gzip():
             pdos_uc_logfile_name = fc.mk_base_pdos_logfile_name()
-            if BaseGZip.decompress(pdos_logfile_1a_name, pdos_uc_logfile_name) > 0:
-                log_error(f"Error decompressing {pdos_logfile_name}")
+            try:
+                if BaseGZip.decompress(pdos_logfile_1a_name, pdos_uc_logfile_name) > 0:
+                    log_error(f"Error decompressing {pdos_logfile_name}")
+                    return 1
+            except Exception:
+                log_error(f"Error decompressing {pdos_logfile_name}", "exc")
                 return 1
+
         else:
             shutil.copyfile(pdos_logfile_1a_name, fc.mk_base_pdos_logfile_name())
 
