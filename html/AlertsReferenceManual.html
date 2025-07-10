@@ -93,7 +93,7 @@ There was an error processing the supplied compass calibration file.
 </p>
 
 <p><a name="MASS_MISMATCH">MASS_MISMATCH<br>
-The specified mass in <code>sg_calib_constants.m</code> differs from what is on the Seaglider.  The value in  <code>sg_calib_constants.m</code> is what the basestation will use to process data.
+The specified mass in <code>sg_calib_constants.m</code> differs from what is on the Seaglider.  The value in  <code>sg_calib_constants.m</code> is what the basestation will use to process data.  Note: the FMS will use the mass listed in the sg_calib_constants.m file as part of the initial estimate of volmax.  If this value is this mass is significantly different (more the 1kg off) and changed after the start of a mission, the FMS system may need to be restarted (delete/rename the flight directory).
 </p>
 
 <p><a name="MISSING_SEABIRD_CAL">MISSING_SEABIRD_CAL<br>

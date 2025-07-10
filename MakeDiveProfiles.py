@@ -5134,7 +5134,7 @@ def make_dive_profile(
             mass = mass * kg2g  # [g]
             if np.abs(mass - log_f.data["$MASS"]) > 1:  # [g]
                 log_warning(
-                    "Mass of vehicle in sg_calib_constants (%.1f) does not match $MASS in log file (%.1f); using sg_calib_constants"
+                    "Mass of vehicle in sg_calib_constants (%.1f) does not match $MASS in log file (%.1f); using sg_calib_constants.  (See notes in html/AlertsReferenceManual.html)"
                     % (mass, log_f.data["$MASS"]),
                     alert="MASS_MISMATCH",
                 )
