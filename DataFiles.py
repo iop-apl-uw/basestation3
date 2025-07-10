@@ -261,8 +261,8 @@ class DataFile:
 
         # Default handler
         if len(unhandled_cols) > 0:
-            log_warning(
-                "No handler found for columns %s - using default handler"
+            log_info(
+                "asc2eng - no handler found for columns %s - using default handler (no scaling or offset applied)"
                 % unhandled_cols
             )
             for x in unhandled_cols:
