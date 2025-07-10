@@ -194,6 +194,11 @@ columns_d = {
         "units": ppb_units,
         "synonyms": ["sig595"],
     },
+    "ref595nm": {
+        "name": "phycoerythrin fluorescence reference",
+        "units": None,
+        "synonyms": ["ref595"],
+    },
     # iRobot Chlsig1
     "sig695nm": {
         "name": "chlorophyll fluorescence",
