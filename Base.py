@@ -2296,6 +2296,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         if go_fast_file.exists():
             po.process_progress("flight_model", "skip", reason="Per .go_fast")
             log_info("Skipping flight model processing per .go_fast")
+        elif base_opts.queue_length:
+            po.process_progress(
+                "flight_model",
+                "skip",
+                reason=f"Non-zero queue length {base_opts.queue_length}",
+            )
+            log_info(
+                f"Skipping flight model processing per non-zero queue length {base_opts.queue_length}"
+            )
         elif base_opts.skip_flight_model:
             po.process_progress("flight_model", "skip", reason="Per directive")
             log_info("Skipping flight model processing per directive")
@@ -2455,6 +2464,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if go_fast_file.exists():
         po.process_progress("mission_profile", "skip", reason="Per .go_fast")
         log_info("Skipping mission profile processing per .go_fast")
+    elif base_opts.queue_length:
+        po.process_progress(
+            "mission_profile",
+            "skip",
+            reason=f"Non-zero queue length {base_opts.queue_length}",
+        )
+        log_info(
+            f"Skipping mission_profile processing per non-zero queue length {base_opts.queue_length}"
+        )
     elif not base_opts.make_mission_profile:
         po.process_progress("mission_profile", "skip", reason="By option setting")
     else:
@@ -2495,6 +2513,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if go_fast_file.exists():
         po.process_progress("mission_timeseries", "skip", reason="Per .go_fast")
         log_info("Skipping mission timeseries processing per .go_fast")
+    elif base_opts.queue_length:
+        po.process_progress(
+            "mission_timeseries",
+            "skip",
+            reason=f"Non-zero queue length {base_opts.queue_length}",
+        )
+        log_info(
+            f"Skipping mission_timeseries processing per non-zero queue length {base_opts.queue_length}"
+        )
     elif not base_opts.make_mission_timeseries:
         po.process_progress("mission_timeseries", "skip", reason="By option setting")
         log_info("Skipping mission_timeseries due to option setting")
@@ -2536,25 +2563,44 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     processed_file_names = Utils.flatten(processed_file_names)
 
     # Any extensions that need to be run before the whole mission plots are generated
-    po.process_progress("mission_early_extensions", "start")
-    # Invoke extensions, if any
-    BaseDotFiles.process_extensions(
-        ("missionearly",),
-        base_opts,
-        sg_calib_file_name=sg_calib_file_name,
-        dive_nc_file_names=dive_nc_file_names,
-        nc_files_created=nc_files_created,
-        processed_other_files=processed_other_files,
-        known_mailer_tags=known_mailer_tags,
-        known_ftp_tags=known_ftp_tags,
-        processed_file_names=processed_file_names,
-    )
-    po.process_progress("mission_early_extensions", "stop")
+    if base_opts.queue_length:
+        po.process_progress(
+            "mission_early_extensions",
+            "skip",
+            reason=f"Non-zero queue length {base_opts.queue_length}",
+        )
+        log_info(
+            f"Skipping mission_early_extension processing per non-zero queue length {base_opts.queue_length}"
+        )
+    else:
+        po.process_progress("mission_early_extensions", "start")
+        # Invoke extensions, if any
+        BaseDotFiles.process_extensions(
+            ("missionearly",),
+            base_opts,
+            sg_calib_file_name=sg_calib_file_name,
+            dive_nc_file_names=dive_nc_file_names,
+            nc_files_created=nc_files_created,
+            processed_other_files=processed_other_files,
+            known_mailer_tags=known_mailer_tags,
+            known_ftp_tags=known_ftp_tags,
+            processed_file_names=processed_file_names,
+        )
+        po.process_progress("mission_early_extensions", "stop")
 
     # Whole mission plotting
     if go_fast_file.exists():
         po.process_progress("mission_plots", "skip", reason="Per .go_fast")
         log_info("Skipping mission plots processing per .go_fast")
+    elif base_opts.queue_length:
+        po.process_progress(
+            "mission_plots",
+            "skip",
+            reason=f"Non-zero queue length {base_opts.queue_length}",
+        )
+        log_info(
+            f"Skipping mission_plots processing per non-zero queue length {base_opts.queue_length}"
+        )
     elif "mission" not in base_opts.plot_types:
         po.process_progress("mission_plots", "skip", reason="Per option")
     else:
@@ -2576,6 +2622,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         if go_fast_file.exists():
             po.process_progress("mission_kml", "skip", reason="Per .go_fast")
             log_info("Skipping mission kml processing per .go_fast")
+        elif base_opts.queue_length:
+            po.process_progress(
+                "mission_kml",
+                "skip",
+                reason=f"Non-zero queue length {base_opts.queue_length}",
+            )
+            log_info(
+                f"Skipping mission_kml processing per non-zero queue length {base_opts.queue_length}"
+            )
         elif base_opts.skip_kml:
             po.process_progress("mission_kml", "skip", reason="Per option")
             log_info("Skipping mission_kml per opion")
@@ -2595,22 +2650,33 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         log_warning("Caught SIGUSR1 - bailing out")
         return 1
 
-    po.process_progress("mission_extensions", "start")
-    # Invoke extensions, if any
-    BaseDotFiles.process_extensions(
-        ("global", "mission"),
-        base_opts,
-        sg_calib_file_name=sg_calib_file_name,
-        dive_nc_file_names=dive_nc_file_names,
-        nc_files_created=nc_files_created,
-        processed_other_files=processed_other_files,  # Output list for extension created files
-        known_mailer_tags=known_mailer_tags,
-        known_ftp_tags=known_ftp_tags,
-        processed_file_names=processed_file_names,
-    )
+    if base_opts.queue_length:
+        po.process_progress(
+            "mission_extensions",
+            "skip",
+            reason=f"Non-zero queue length {base_opts.queue_length}",
+        )
+        log_info(
+            f"Skipping mission_extensions processing per non-zero queue length {base_opts.queue_length}"
+        )
+    else:
+        po.process_progress("mission_extensions", "start")
+        # Invoke extensions, if any
+        BaseDotFiles.process_extensions(
+            ("global", "mission"),
+            base_opts,
+            sg_calib_file_name=sg_calib_file_name,
+            dive_nc_file_names=dive_nc_file_names,
+            nc_files_created=nc_files_created,
+            processed_other_files=processed_other_files,  # Output list for extension created files
+            known_mailer_tags=known_mailer_tags,
+            known_ftp_tags=known_ftp_tags,
+            processed_file_names=processed_file_names,
+        )
+        po.process_progress("mission_extensions", "stop")
+
     del processed_file_names
 
-    po.process_progress("mission_extensions", "stop")
     po.process_progress("notifications", "start", send=False)
 
     # Alert message and file processing

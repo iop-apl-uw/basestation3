@@ -324,6 +324,8 @@ def main():
                             cmd_line_parts.pop(cmd_line_parts.index("--daemon"))
                         cmd_line_parts.append("--job_id")
                         cmd_line_parts.append(job_id)
+                        cmd_line_parts.append("--queue_length")
+                        cmd_line_parts.append("0")
                         cmd_line = " ".join(cmd_line_parts)
                         cmd_line += f" >> {log_file} 2>&1"
                         log_info(
@@ -485,6 +487,12 @@ def main():
                         job_id, cmd_line = job_queues[que].pop()
                     except IndexError:
                         continue
+
+                    cmd_line = cmd_line.replace(
+                        "--queue_length 0",
+                        f"--queue_length {len(job_queues[que])}",
+                    )
+
                     seaglider_mission_dir, script_name, glider_id = que
                     my_env = os.environ.copy()
                     if "PYTHONUNBUFFERED" in my_env:

@@ -701,6 +701,13 @@ global_options_dict = {
         bool,
         {"help": "Launch conversion as a daemon process", "action": "store_true"},
     ),
+    "queue_length": options_t(
+        0,
+        ("Base", "GliderEarlyGPS", "BaseLogin"),
+        ("--queue_length",),
+        int,
+        {"help": "Length of processing queue from BaseRunner"},
+    ),
     "csh_pid": options_t(
         0,
         ("GliderEarlyGPS",),
