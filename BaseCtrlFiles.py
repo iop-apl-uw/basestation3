@@ -100,7 +100,7 @@ def send_email(
             log_error("Unknown email format:{endpoint['format']} - defaulting to text")
 
     log_info(
-        f"Sending email {subject_line} ({message_body}) {endpoint['address']} to {user}"
+        f"Sending email subject:{subject_line} message_body:({message_body}) endpoint:{endpoint['address']} to user:{user}"
     )
 
     BaseDotFiles.send_email(
