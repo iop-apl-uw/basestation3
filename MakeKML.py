@@ -660,22 +660,22 @@ def printDive(
             log_error(f"Could not process {dive_nc_file_name} due to missing variables")
             return None
 
-    if "processing_error" in nc.variables:
-        log_warning(
-            f"{dive_nc_file_name} is marked as having a processing error - skipping"
-        )
-        return dive_gps_position(
-            gps_lat_one,
-            gps_lon_one,
-            gps_time_one,
-            gps_lat_start,
-            gps_lon_start,
-            gps_time_start,
-            gps_lat_end,
-            gps_lon_end,
-            gps_time_end,
-            dive_num,
-        )
+    # if "processing_error" in nc.variables:
+    #     log_warning(
+    #         f"{dive_nc_file_name} is marked as having a processing error - skipping"
+    #     )
+    #     return dive_gps_position(
+    #         gps_lat_one,
+    #         gps_lon_one,
+    #         gps_time_one,
+    #         gps_lat_start,
+    #         gps_lon_start,
+    #         gps_time_start,
+    #         gps_lat_end,
+    #         gps_lon_end,
+    #         gps_time_end,
+    #         dive_num,
+    #     )
 
     if "skipped_profile" in nc.variables:
         log_warning(f"{dive_nc_file_name} is marked as a skipped_profile - skipping")
@@ -692,30 +692,51 @@ def printDive(
             dive_num,
         )
 
+    error_dive_positions = dive_gps_position(
+        gps_lat_one,
+        gps_lon_one,
+        gps_time_one,
+        gps_lat_start,
+        gps_lon_start,
+        gps_time_start,
+        gps_lat_end,
+        gps_lon_end,
+        gps_time_end,
+        dive_num,
+    )
+
+    # Dive Track
     try:
-        # Dive Track
         depth = nc.variables["ctd_depth"][:]
         lon = nc.variables["longitude"][:]
         lat = nc.variables["latitude"][:]
         time_vals = nc.variables[BaseNetCDF.nc_ctd_time_var][:]
         num_points = len(time_vals)
+    except KeyError:
+        # Check for GSM only versions
+        try:
+            depth = nc.variables["depth"][:]
+            lon = nc.variables["longitude_gsm"][:]
+            lat = nc.variables["latitude_gsm"][:]
+            time_vals = nc.variables["time"][:]
+            num_points = len(time_vals)
+        except KeyError as e:
+            log_warning(
+                f"Could not process {dive_nc_file_name} due to missing variables {e}"
+            )
+            log_info("Skipping this dive...")
+            return error_dive_positions
+        else:
+            if len(lon) != num_points:
+                log_warning(
+                    f"Could not process {dive_nc_file_name} due to mismatch in dimensions",
+                )
+                log_info("Skipping this dive...")
+                return error_dive_positions
     except Exception:
-        log_warning(
-            f"Could not process {dive_nc_file_name} due to missing variables", "exc"
-        )
+        log_warning(f"Could not process {dive_nc_file_name}", "exc")
         log_info("Skipping this dive...")
-        return dive_gps_position(
-            gps_lat_one,
-            gps_lon_one,
-            gps_time_one,
-            gps_lat_start,
-            gps_lon_start,
-            gps_time_start,
-            gps_lat_end,
-            gps_lon_end,
-            gps_time_end,
-            dive_num,
-        )
+        return error_dive_positions
 
     # Start placemark - this is quite distracting in a large deployment
     # ballon_pairs = []
@@ -831,10 +852,12 @@ def printDive(
     try:
         nd = nc.variables["north_displacement"][:]
         ed = nc.variables["east_displacement"][:]
+        f_disp_gsm = False
     except Exception:
         try:
             nd = nc.variables["north_displacement_gsm"][:]
             ed = nc.variables["east_displacement_gsm"][:]
+            f_disp_gsm = True
         except Exception:
             log_error(
                 f"Could not find any displacements in {dive_nc_file_name} - skipping",
@@ -911,14 +934,30 @@ def printDive(
             ballon_pairs.append(("Course over ground", f"{cog:.2f} degrees"))
             ballon_pairs.append(("Distance over ground", f"{dog:.2f} km"))
         if dtw is not None and ctw is not None:
-            ballon_pairs.append(("Course through water", f"{ctw:.2f} degrees"))
-            ballon_pairs.append(("Distance through water", f"{dtw:.2f} km"))
+            ballon_pairs.append(
+                (
+                    f"Course through water{' (GSM)' if f_disp_gsm else ''}",
+                    f"{ctw:.2f} degrees",
+                )
+            )
+            ballon_pairs.append(
+                (
+                    f"Distance through water{' (GSM)' if f_disp_gsm else ''}",
+                    f"{dtw:.2f} km",
+                )
+            )
         if dtg is not None and ctg is not None:
             ballon_pairs.append(("Course to go", f"{ctg:.2f} degrees"))
             ballon_pairs.append(("Distance to go", f"{dtg:.2f} km"))
 
-        dac_east = nc.variables["depth_avg_curr_east"].getValue()
-        dac_north = nc.variables["depth_avg_curr_north"].getValue()
+        try:
+            dac_east = nc.variables["depth_avg_curr_east"].getValue()
+            dac_north = nc.variables["depth_avg_curr_north"].getValue()
+            f_dac_gsm = False
+        except KeyError:
+            dac_east = nc.variables["depth_avg_curr_east_gsm"].getValue()
+            dac_north = nc.variables["depth_avg_curr_north_gsm"].getValue()
+            f_dac_gsm = True
         DAC_mag = np.sqrt((dac_east * dac_east) + (dac_north * dac_north))
         try:
             dac_polar_rad = math.atan2(dac_north, dac_east)
@@ -928,8 +967,12 @@ def printDive(
         if DAC_dir < 0.0:
             DAC_dir += 360.0
 
-        ballon_pairs.append(("DAC dir", f"{DAC_dir:.2f} degrees"))
-        ballon_pairs.append(("DAC mag", f"{DAC_mag:.3f} m/s"))
+        ballon_pairs.append(
+            (f"DAC dir{' (GSM)' if f_dac_gsm else ''}", f"{DAC_dir:.2f} degrees")
+        )
+        ballon_pairs.append(
+            (f"DAC mag{' (GSM)' if f_dac_gsm else ''}", f"{DAC_mag:.3f} m/s")
+        )
 
         if "surface_curr_east" in nc.variables and "surface_curr_north" in nc.variables:
             surf_east = nc.variables["surface_curr_east"].getValue()

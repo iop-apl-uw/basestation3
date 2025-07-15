@@ -88,6 +88,15 @@ from TempSalinityVelocity import TSV_iterative, load_thermal_inertia_modes
 
 DEBUG_PDB = False
 
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
+
 kg2g = 1000.0
 L2cc = 1000.0  # cc per liter
 cm2m = 0.01
@@ -2471,6 +2480,233 @@ def avg_longitude(lon1, lon2):
         return (lon1 + lon2) / 2.0
 
 
+def compute_GSM_simple(
+    vehicle_heading_mag_degrees_v,
+    vehicle_pitch_rad_v,
+    sg_depth_m_v,
+    elapsed_time_s_v,
+    GPS1,
+    GPS2,
+    GPSE,
+    calib_consts,
+    nc_info_d,
+    results_d,
+):
+    """In the event the CTD data fails to load/initial process, this routine calculates
+    the GSM displacements and estimated lat/lons, along with a number of additional
+    caclculations that are helpful for piloting.
+
+    All variables here are assumed to be on truck's time grid.
+
+    This is clearly a hack (as it just duplicates code from MDP) and MDP
+    should be refactored/reorganized to hoist the non-CTD
+    dependent parts up earlier as well as handling the possible non-CTD time base
+
+    No QC is currently asserted.
+    """
+    dive_mean_lat_factor = math.cos(math.radians((GPS2.lat_dd + GPSE.lat_dd) / 2.0))
+
+    head_true_deg_v = vehicle_heading_mag_degrees_v + GPS2.magvar
+    head_true_deg_v = 90.0 - head_true_deg_v
+    bad_deg_i_v = np.nonzero(head_true_deg_v >= 360.0)
+    head_true_deg_v[bad_deg_i_v] = head_true_deg_v[bad_deg_i_v] - 360.0
+    bad_deg_i_v = np.nonzero(head_true_deg_v < 0.0)
+    head_true_deg_v[bad_deg_i_v] = head_true_deg_v[bad_deg_i_v] + 360.0
+    head_polar_rad_v = np.radians(head_true_deg_v)
+
+    sg_np = len(elapsed_time_s_v)
+
+    # Here, we gin up some dimension info so the netcdf output machinery will go
+    ctd_results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_sbect_data_info]
+
+    BaseNetCDF.assign_dim_info_dim_name(
+        nc_info_d, BaseNetCDF.nc_ctd_results_info, ctd_results_dim
+    )
+    BaseNetCDF.assign_dim_info_size(nc_info_d, BaseNetCDF.nc_ctd_results_info, sg_np)
+
+    delta_time_s_v = np.zeros(sg_np, np.float64)
+    delta_time_s_v[1:] = np.diff(elapsed_time_s_v)  # time increments
+
+    gps_dive_time_s = GPSE.time_s - GPS2.time_s
+    SM_time_s = gps_dive_time_s - elapsed_time_s_v[-1]  # time of surface maneuver
+
+    # NB: this will be the same as ctd_elapsed_time_s_v if no bottom time
+    flight_time_v = np.cumsum(delta_time_s_v)  # actual elapsed times flying
+    # NOTE do not include gps_drift_time_s because we compute DAC between GPS2 and final GPS, ignoring surface current
+    # We report that separately
+    total_flight_and_SM_time_s = (
+        flight_time_v[-1] + SM_time_s
+    )  # final elapsed time flying and drifting
+    log_info(
+        "Estimated total flight and drift time: %.1fs (SM: %.1fs)"
+        % (total_flight_and_SM_time_s, SM_time_s)
+    )
+
+    # Calculate the displacements between GPS2 and final GPS positions
+    dive_delta_GPS_lat_dd = GPSE.lat_dd - GPS2.lat_dd
+    dive_delta_GPS_lon_dd = GPSE.lon_dd - GPS2.lon_dd
+    if np.fabs(dive_delta_GPS_lon_dd) > 180.0:
+        # We have crossed the international dateline
+        dive_delta_GPS_lon_dd = 360.0 - np.fabs(dive_delta_GPS_lon_dd)
+        if GPS2.lon_dd < GPSE.lon_dd:
+            # If the start is less then the final, then we crossed western hemisphere to eastern hemisphere,
+            # so the "direction" should be negative
+            dive_delta_GPS_lon_dd = -dive_delta_GPS_lon_dd
+
+    dive_delta_GPS_lat_m = dive_delta_GPS_lat_dd * m_per_deg
+    dive_delta_GPS_lon_m = dive_delta_GPS_lon_dd * m_per_deg * dive_mean_lat_factor
+
+    # Save intermediate calculations that went into displacement and DAC calculations
+    results_d.update(
+        {
+            "delta_time_s": delta_time_s_v,
+            "polar_heading": head_polar_rad_v,
+            "GPS_north_displacement_m": dive_delta_GPS_lat_m,
+            "GPS_east_displacement_m": dive_delta_GPS_lon_m,
+            "total_flight_time_s": total_flight_and_SM_time_s,
+        }
+    )
+
+    good_depth_pts = np.logical_not(np.isnan(sg_depth_m_v))
+    try:
+        w_cm_s_v = Utils.ctr_1st_diff(
+            -sg_depth_m_v[good_depth_pts] * m2cm, elapsed_time_s_v[good_depth_pts]
+        )
+    except Exception:
+        log_error("Failed calculating dz/dt - skipping profile", "exc")
+        return
+
+    converged, gsm_speed_cm_s_v, gsm_glide_angle_rad_v, _ = glide_slope(
+        w_cm_s_v, vehicle_pitch_rad_v, calib_consts
+    )
+    if not converged:
+        log_warning("Unable to converge during initial glide-slope speed calculations")
+    # gsm_glide_angle_deg_v is used in call to TSV below (rather than gsm_glide_angle_rad_v)
+    gsm_glide_angle_deg_v = np.degrees(gsm_glide_angle_rad_v)
+    gsm_horizontal_speed_cm_s_v = gsm_speed_cm_s_v * np.cos(gsm_glide_angle_rad_v)
+    gsm_w_speed_cm_s_v = gsm_speed_cm_s_v * np.sin(gsm_glide_angle_rad_v)
+    results_d.update(
+        {
+            "speed_gsm": gsm_speed_cm_s_v,
+            "glide_angle_gsm": gsm_glide_angle_deg_v,
+            "horz_speed_gsm": gsm_horizontal_speed_cm_s_v,
+            "vert_speed_gsm": gsm_w_speed_cm_s_v,
+        }
+    )
+    (
+        gsm_east_displacement_m_v,
+        gsm_north_displacement_m_v,
+        gsm_east_displacement_m,
+        gsm_north_displacement_m,
+        gsm_east_average_speed_m_s,
+        gsm_north_average_speed_m_s,
+    ) = compute_displacements(
+        "gsm",
+        gsm_horizontal_speed_cm_s_v,
+        delta_time_s_v,
+        total_flight_and_SM_time_s,
+        head_polar_rad_v,
+    )
+    results_d.update(
+        {
+            "flight_avg_speed_east_gsm": gsm_east_average_speed_m_s,
+            "flight_avg_speed_north_gsm": gsm_north_average_speed_m_s,
+            "east_displacement_gsm": gsm_east_displacement_m_v,
+            "north_displacement_gsm": gsm_north_displacement_m_v,
+        }
+    )
+
+    gsm_dac_east_speed_m_s, gsm_dac_north_speed_m_s = compute_dac(
+        gsm_north_displacement_m_v,
+        gsm_east_displacement_m_v,
+        gsm_north_displacement_m,
+        gsm_east_displacement_m,
+        dive_delta_GPS_lat_m,
+        dive_delta_GPS_lon_m,
+        total_flight_and_SM_time_s,
+    )
+    results_d.update(
+        {
+            "depth_avg_curr_east_gsm": gsm_dac_east_speed_m_s,
+            "depth_avg_curr_north_gsm": gsm_dac_north_speed_m_s,
+        }
+    )
+    gsm_lat_dd_v, gsm_lon_dd_v = compute_lat_lon(
+        gsm_dac_east_speed_m_s,
+        gsm_dac_north_speed_m_s,
+        GPS2.lat_dd,
+        GPS2.lon_dd,
+        gsm_east_displacement_m_v,
+        gsm_north_displacement_m_v,
+        delta_time_s_v,
+        dive_mean_lat_factor,
+    )
+    results_d.update(
+        {
+            "latitude_gsm": gsm_lat_dd_v,
+            "longitude_gsm": gsm_lon_dd_v,
+        }
+    )
+    # Calculate the drift speed and direction between GPS1 and GPS2
+    gps_drift_time_s = GPS2.time_s - GPS1.time_s
+    log_debug("gps_drift_time_s = %f" % gps_drift_time_s)
+
+    surface_GPS_mean_lat_dd = (GPS1.lat_dd + GPS2.lat_dd) / 2.0
+    surface_mean_lat_factor = math.cos(math.radians(surface_GPS_mean_lat_dd))
+
+    surface_delta_GPS_lat_dd = GPS2.lat_dd - GPS1.lat_dd
+    surface_delta_GPS_lon_dd = GPS2.lon_dd - GPS1.lon_dd
+
+    surface_delta_GPS_lat_m = surface_delta_GPS_lat_dd * m_per_deg
+    surface_delta_GPS_lon_m = (
+        surface_delta_GPS_lon_dd * m_per_deg * surface_mean_lat_factor
+    )
+
+    log_debug(
+        "surface_delta_GPS_lat_m = %f, surface_delta_GPS_lon_m = %f"
+        % (surface_delta_GPS_lat_m, surface_delta_GPS_lon_m)
+    )
+
+    surface_current_drift_cm_s = (
+        m2cm
+        * math.sqrt(
+            surface_delta_GPS_lat_m * surface_delta_GPS_lat_m
+            + surface_delta_GPS_lon_m * surface_delta_GPS_lon_m
+        )
+        / gps_drift_time_s
+    )
+    try:
+        # compute polar (not compass!) angle of surface current
+        # convert to degrees to handle bounds checking below
+        surface_current_set_deg = math.degrees(
+            math.atan2(surface_delta_GPS_lat_m, surface_delta_GPS_lon_m)
+        )
+    except ZeroDivisionError:  #  atan2
+        surface_current_set_deg = 0.0
+
+    if surface_current_set_deg < 0:
+        surface_current_set_deg = surface_current_set_deg + 360.0
+
+    surface_current_set_rad = math.radians(surface_current_set_deg)
+
+    # given polar (not compass) angle cos() gets the east (U) component; sin() get the north (V) component of drift speed
+    surface_curr_east = surface_current_drift_cm_s * np.cos(surface_current_set_rad)
+    surface_curr_north = surface_current_drift_cm_s * np.sin(surface_current_set_rad)
+
+    log_debug(
+        "surface_current_drift_cm_s = %f, polar surface_current_set_deg = %f"
+        % (surface_current_drift_cm_s, surface_current_set_deg)
+    )
+    surface_curr_error = (GPS1.error + GPS2.error) / gps_drift_time_s  # [m/s]
+    results_d.update(
+        {
+            "surface_curr_east": surface_curr_east,
+            "surface_curr_north": surface_curr_north,
+            "surface_curr_error": surface_curr_error,
+        }
+    )
+
+
 # TODO add None for eng_file_name, log_file_name, sg_calib_file_name
 # TODO config_file_name -- is this actually used by by anyone in this path?  it is passed around but not parsed..
 def make_dive_profile(
@@ -3806,784 +4042,850 @@ def make_dive_profile(
         salin_raw_qc_v = None
         salin_raw_v = None
 
-        if sg_ct_type == 4:
-            ## UnPumped RBR Legato data ##
-            if set(
-                ("legato_pressure", "legato_temp", "legato_conduc", "legato_time")
-            ) <= set(results_d):
-                try:
-                    tmp_press_v = results_d["legato_pressure"]
-                    ctd_temp_v = results_d["legato_temp"]
-                    ctd_cond_v = results_d["legato_conduc"] / 10.0
-                    ctd_condtemp_v = results_d["legato_conducTemp"]
-                    ctd_epoch_time_s_v = results_d["legato_time"]
-                except KeyError as e:
-                    log_error(
-                        f"Legato CT scicon data found, but had problems loading {e} - bailing out"
+        ### Begin CTD init
+
+        try:
+            if sg_ct_type == 4:
+                ## UnPumped RBR Legato data ##
+                if set(
+                    ("legato_pressure", "legato_temp", "legato_conduc", "legato_time")
+                ) <= set(results_d):
+                    try:
+                        tmp_press_v = results_d["legato_pressure"]
+                        ctd_temp_v = results_d["legato_temp"]
+                        ctd_cond_v = results_d["legato_conduc"] / 10.0
+                        ctd_condtemp_v = results_d["legato_conducTemp"]
+                        ctd_epoch_time_s_v = results_d["legato_time"]
+                    except KeyError as e:
+                        log_error(
+                            f"Legato CT scicon data found, but had problems loading {e} - bailing out"
+                        )
+                        raise RuntimeError(True) from e
+                else:
+                    ctd_temp_v = eng_f.get_col("rbr_temp")
+                    ctd_cond_v = eng_f.get_col("rbr_conduc")
+                    ctd_condtemp_v = eng_f.get_col("rbr_conducTemp")
+                    if ctd_cond_v is not None:
+                        ctd_cond_v /= 10.0
+                    ctd_epoch_time_s_v = sg_epoch_time_s_v.copy()
+                    if (
+                        ctd_temp_v is None
+                        or ctd_cond_v is None
+                        or ctd_condtemp_v is None
+                        or ctd_epoch_time_s_v is None
+                    ):
+                        log_error(
+                            "Legato CT data specified, but no data found for scicon or truck - bailing out"
+                        )
+                        raise RuntimeError(True)
+
+                    tmp_press_v = eng_f.get_col("rbr_pressure")
+
+                ctd_np = len(ctd_epoch_time_s_v)
+                ctd_temp_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                ctd_cond_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                ctd_salin_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                if eng_f.get_col("rbr_temp") is not None:
+                    # Note: this assumes the rbr_pressure, if present, has been interpolated for missing points
+                    unsampled_i = np.nonzero(np.isnan(ctd_temp_v))[0]
+                    QC.assert_qc(
+                        QC.QC_UNSAMPLED, ctd_temp_qc, unsampled_i, "Legato unsampled"
                     )
-                    raise RuntimeError(True) from e
-            else:
-                ctd_temp_v = eng_f.get_col("rbr_temp")
-                ctd_cond_v = eng_f.get_col("rbr_conduc")
-                ctd_condtemp_v = eng_f.get_col("rbr_conducTemp")
-                if ctd_cond_v is not None:
-                    ctd_cond_v /= 10.0
-                ctd_epoch_time_s_v = sg_epoch_time_s_v.copy()
-                if (
-                    ctd_temp_v is None
-                    or ctd_cond_v is None
-                    or ctd_condtemp_v is None
-                    or ctd_epoch_time_s_v is None
-                ):
-                    log_error(
-                        "Legato CT data specified, but no data found for scicon or truck - bailing out"
+                    QC.assert_qc(
+                        QC.QC_UNSAMPLED, ctd_cond_qc, unsampled_i, "Legato unsampled"
                     )
-                    raise RuntimeError(True)
-
-                tmp_press_v = eng_f.get_col("rbr_pressure")
-
-            ctd_np = len(ctd_epoch_time_s_v)
-            ctd_temp_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-            ctd_cond_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-            ctd_salin_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-            if eng_f.get_col("rbr_temp") is not None:
-                # Note: this assumes the rbr_pressure, if present, has been interpolated for missing points
-                unsampled_i = np.nonzero(np.isnan(ctd_temp_v))[0]
-                QC.assert_qc(
-                    QC.QC_UNSAMPLED, ctd_temp_qc, unsampled_i, "Legato unsampled"
-                )
-                QC.assert_qc(
-                    QC.QC_UNSAMPLED, ctd_cond_qc, unsampled_i, "Legato unsampled"
-                )
-                QC.assert_qc(
-                    QC.QC_UNSAMPLED, ctd_salin_qc, unsampled_i, "Legato unsampled"
-                )
-
-            # CONSIDER: should we support kistler cnf files in case?
-            sg_press_v = (
-                eng_f.get_col("depth") * cm2m * calib_consts["depth_slope_correction"]
-                - calib_consts["depth_bias"]
-            ) * psi_per_meter
-            sg_press_v *= dbar_per_psi  # convert to dbar
-            if not base_opts.use_gsw:
-                sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
-            else:
-                sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
-
-            results_d.update(
-                {
-                    "pressure": sg_press_v,
-                    "depth": sg_depth_m_v,
-                }
-            )
-
-            # Handle pressure spikes in legato pressure signal
-            ctd_press_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-            if tmp_press_v is None or calib_consts["legato_use_truck_pressure"]:
-                # ctd_press_v = sg_press_v.copy()
-                ctd_press_v = Utils.interp1d(
-                    sg_epoch_time_s_v, sg_press_v, ctd_epoch_time_s_v, kind="linear"
-                )
-                if calib_consts["legato_use_truck_pressure"]:
-                    log_info(
-                        "Using Truck pressure sensor instead of legato pressure sensor"
+                    QC.assert_qc(
+                        QC.QC_UNSAMPLED, ctd_salin_qc, unsampled_i, "Legato unsampled"
                     )
-                    # TODO - Need a ztp correction for this case
-                    pass
-                results_d.update({"ctd_pressure_qc": ctd_press_qc_v})
-            else:
-                ctd_press_v, bad_points = QC.smooth_legato_pressure(
-                    tmp_press_v, ctd_epoch_time_s_v
-                )
-                QC.assert_qc(
-                    QC.QC_INTERPOLATED,
-                    ctd_press_qc_v,
-                    bad_points,
-                    "despiked pressure",
-                )
-                results_d.update({"ctd_pressure_qc": ctd_press_qc_v})
 
-            if not base_opts.use_gsw:
-                ctd_salin_v = seawater.salt(
-                    ctd_cond_v / c3515, ctd_temp_v, ctd_press_v
-                )  # temporary, not the real salinity raw
-                ctd_depth_m_v = seawater.dpth(
-                    ctd_press_v, latitude
-                )  # initial depth estimate
-            else:
-                ctd_salin_v = gsw.SP_from_C(
-                    ctd_cond_v * 10.0, ctd_temp_v, ctd_press_v
-                )  # temporary, not the real salinity raw
-                ctd_depth_m_v = -1.0 * gsw.z_from_p(
-                    ctd_press_v, latitude, 0.0, 0.0
-                )  # initial depth estimate
-
-            # CONSIDER - this may not be entirely correct for legato
-            temp_raw_qc_v, cond_raw_qc_v, salin_raw_qc_v = QC.qc_checks(
-                ctd_temp_v,
-                ctd_temp_qc,
-                ctd_cond_v,
-                ctd_cond_qc,
-                ctd_salin_v,
-                ctd_salin_qc,
-                ctd_depth_m_v,
-                calib_consts,
-                QC.QC_BAD,
-                QC.QC_NO_CHANGE,
-                "raw legato ",
-            )
-            # Map to names used in rest of code
-            temp_raw_v = ctd_temp_v.copy()
-            cond_raw_v = ctd_cond_v.copy()
-            salin_raw_v = ctd_salin_v.copy()
-
-            ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
-                BaseNetCDF.nc_legato_data_info
-            ]
-
-            # For Legato we don't correct their pressure sensor so we just take it as is
-            # and assume the pressure/depth is wrt thermistor already. So no zTP correction here
-
-            # Done w/ these vars...
-            del ctd_temp_v, ctd_cond_v, ctd_salin_v
-
-            ## End Legatto ##
-
-        elif sbect_unpumped:
-            ## Regular sbect sensor ##
-
-            # First - see if we have scicon data...
-            # Why not eng file first you ask?  Read and weep below...
-            try:
-                # scicon unpumped SBECT
-                ctd_epoch_time_s_v = results_d["sbect_time"]
-                tempFreq_v = results_d["sbect_tempFreq"]
-                condFreq_v = results_d["sbect_condFreq"]
-                have_scicon_ct = True
-                # CONSIDER use scicon 'depth_depth', converted to 'sbect_time' as the ctd_depth??
-
-                ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
-                    BaseNetCDF.nc_sbect_data_info
-                ]
-            except KeyError as e:
-                # Next, try for the glider eng file
-                (_, tempFreq_v) = eng_f.find_col(
-                    ["tempFreq", "sbect_tempFreq", "sailct_tempFreq"]
-                )
-                (_, condFreq_v) = eng_f.find_col(
-                    ["condFreq", "sbect_condFreq", "sailct_condFreq"]
-                )
-                if tempFreq_v is None and condFreq_v is None:
-                    log_error("No CT data found - bailing out")
-                    raise RuntimeError(True) from e
-                ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
-                    BaseNetCDF.nc_sg_data_info
-                ]
-                ctd_epoch_time_s_v = sg_epoch_time_s_v
-            # TODO: ensure sg_epoch_time_s_v and ctd_epoch_time_s_v overlap substantially (SG189 'test' dive 99 in hibay)
-            # MDP automatically asserts instrument when writing
-            # DEAD results_d['sbe41'] = 'unpumped Seabird SBE41' # record the instrument used for CTD
-            ctd_np = len(ctd_epoch_time_s_v)
-
-            # Initially all is well...
-            temp_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-            cond_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-
-            # Adjust temp and cond freq, if any
-            if calib_consts["sbe_temp_freq_offset"]:
-                tempFreq_v = tempFreq_v + calib_consts["sbe_temp_freq_offset"]
-                ctd_ancillary_variables = (
-                    ctd_ancillary_variables + " sg_cal_sbe_temp_freq_offset"
-                )
-
-            bad_i_v = [i for i in range(ctd_np) if np.isnan(tempFreq_v[i])]
-            QC.assert_qc(
-                QC.QC_UNSAMPLED, temp_raw_qc_v, bad_i_v, "unsampled temperature"
-            )
-
-            # Warn on attemped use of old temp freq limit types
-            try:
-                if (
-                    calib_consts["sbe_temp_freq_min"]
-                    or calib_consts["sbe_temp_freq_max"]
-                ):
-                    log_warning(
-                        "Ignoring temperature frequency limits - use QC_temp_min and QC_temp_max instead."
-                    )
-            except KeyError:
-                pass
-
-            bad_i_v = [i for i in range(ctd_np) if np.isnan(condFreq_v[i])]
-            QC.assert_qc(
-                QC.QC_UNSAMPLED, cond_raw_qc_v, bad_i_v, "unsampled conductivity"
-            )
-
-            # Warn on attemped use of old cond freq limit types
-            try:
-                if (
-                    calib_consts["sbe_cond_freq_min"]
-                    or calib_consts["sbe_cond_freq_max"]
-                ):
-                    # or QC_salin_min/max (PSU)
-                    log_warning(
-                        "Ignoring conductivity frequency limits - use QC_cond_min and QC_cond_max instead."
-                    )
-            except KeyError:
-                pass
-
-            # Convert temperature and conductivity frequenceies to initial temperatures and conductivities
-            # before applying first-order lag and thermal-inertia corrections below
-            # Compute temperature first so we can compute pressure properly before computing conductivity
-
-            # pylint: disable=unbalanced-tuple-unpacking
-            t_g, t_h, t_i, t_j, vars_used = SBECT_coefficents(
-                "temperature",
-                calib_consts,
-                log_f,
-                ["t_g", "t_h", "t_i", "t_j"],
-                ["$SEABIRD_T_G", "$SEABIRD_T_H", "$SEABIRD_T_I", "$SEABIRD_T_J"],
-            )
-            # pylint: enable=unbalanced-tuple-unpacking
-            ctd_ancillary_variables = ctd_ancillary_variables + vars_used
-
-            LogTempFreqScaled_v = np.log(f0 / tempFreq_v)
-            temp_raw_v = (
-                1.0
-                / (
-                    t_g
-                    + (t_h + (t_i + t_j * LogTempFreqScaled_v) * LogTempFreqScaled_v)
-                    * LogTempFreqScaled_v
-                )
-            ) - Kelvin_offset
-
-            # Hack to pull in the optode temperature - used for sg562
-            # on the NorEMSO_Iceland 2021 deployment.  Note - assumes
-            # optode and CTD are on the truck
-            # if False:
-            #     # if id_str == "562":
-            #     from scipy.interpolate import InterpolatedUnivariateSpline
-
-            #     temp_raw_v = eng_f.get_col("aa4330_Temp")
-            #     if False:
-            #         # sg_depth = eng_f.get_col("depth")
-            #         # temp_raw_v = InterpolatedUnivariateSpline(sg_depth, optode_temp)
-            #         elapsed_t = eng_f.get_col("elaps_t")
-            #         good_i_v = [i for i in range(ctd_np) if not np.isnan(temp_raw_v[i])]
-            #         f = InterpolatedUnivariateSpline(
-            #             elapsed_t[good_i_v], temp_raw_v[good_i_v]
-            #         )
-            #         bad_i_v = [i for i in range(ctd_np) if np.isnan(temp_raw_v[i])]
-            #         temp_raw_v[bad_i_v] = f(elapsed_t[bad_i_v])
-
-            #     temp_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-            #     bad_i_v = [i for i in range(ctd_np) if np.isnan(temp_raw_v[i])]
-            #     QC.assert_qc(
-            #         QC.QC_UNSAMPLED, temp_raw_qc_v, bad_i_v, "unsampled temperature"
-            #     )
-
-            # The Kistler pressure sensor, used on DGs and some SGs, responds quadratically in pressure and temperature
-            # The glider code encodes depth (counts) using a linear transformation.  If we have the proper fit in sgc
-            # we invert
-
-            # What if we are using scicon?  We need to know if it was passed through from the glider or separate.
-            # We need to know the gain and the (linear) transform used to get pressure from counts
-
-            # With the GPCTD we must use pressure as given
-
-            # eng.depth is psuedo-depth in meters, as computed onboard by SG
-            # using pressure gauge and linear conversion.  These values
-            # were used for control purposes.
-
-            # The glider code misrepresents depth for a number of reasons related to
-            # oversimplification of the hydrostatic relationship, principally because,
-            # in decreasing order of importance:
-
-            # 1) the density of seawater @ standard T & S (0 deg C & 35) varies with
-            #    pressure (by 2.6% between the surface & 6000 dbar)
-            # 2) gravity increases by over 0.5 % between the equator and poles and
-            # 3) gravity increases with depth by ~0.1% between the sea surface and 6000 m depth.
-
-            # Because of these variations, using a fixed constant (0.685 m/psi) to estimate depth
-            # from pressure can't do better than ~1% in accuracy over the depth range
-            # of a Deepglider dive cycle to the ocean floor, considerably worse than
-            # the 0.04% accuracy quoted for the Druck 4020 pressure sensor on sg033
-            # itself.
-
-            # NOTE: CCE observed that while sw_dpth.m converts from pressure using the
-            # accepted equation of state & gravity models, the routine sw_pres
-            # simplifies the behavior to a quadratic one between depth and pressure so
-            # sw_pres(sw_dpth(pressure, latitude), latitude) returns something that
-            # differs by up to 0.4 dbar from pressure from the surface to 6000 dbar.
-            press_counts_v = eng_f.get_col(
-                "press_counts"
-            )  # returns None if not present
-            # Try reading a possibly updated kistler.cnf file; returns None if not present
-            kistler_cnf, _ = Utils2.read_cnf_file(
-                "kistler.cnf",
-                mission_dir=base_opts.mission_dir,
-                encode_list=False,
-                lower=False,
-                results_d=results_d,
-            )
-            sg_temp_raw_v = temp_raw_v
-            if kistler_cnf and ctd_np is not sg_np:
-                sg_temp_raw_v = Utils.interp1d(
-                    ctd_epoch_time_s_v, temp_raw_v, sg_epoch_time_s_v, kind="linear"
-                )
-
-            if press_counts_v is None:
-                # Recover the depth the SG used onboard (in cm) and recorded at elapsed_time_s_v
-                # Recover sg measured pressure [dbar] from the depth record using any depth bias
-                # First convert from psuedo-meters to psi
+                # CONSIDER: should we support kistler cnf files in case?
                 sg_press_v = (
                     eng_f.get_col("depth")
                     * cm2m
                     * calib_consts["depth_slope_correction"]
                     - calib_consts["depth_bias"]
                 ) * psi_per_meter
-                if kistler_cnf:
-                    # Old mission without a kistler.cnf but calibration constructed afterwards
-                    press_counts_v = (
-                        sg_press_v - log_f.data["$PRESSURE_YINT"]
-                    ) / log_f.data["$PRESSURE_SLOPE"]
-                    sg_press_v = compute_kistler_pressure(
-                        kistler_cnf, log_f, press_counts_v, sg_temp_raw_v
-                    )
-                    # We can't use the YINT on board (since it was computed wrt to PRESSURE_SLOPE)
-                    # TODO compute likely psi at surface and tare to it
-                    # We know at the beginning of the dive she is mostly just under water w/ the shoe just exposed
-                    # Use surface angle and distance to pressure sensor to compute a new yint for this kistler.cnf (and this dive)
-                    shoe_to_pressure_sensor = 1.5  # [m] approximate distance from antenna shoe for all vehicles
-                    bleed_time = (
-                        60  # takes roughly a minute to bleed and leave the surface
-                    )
-                    # TODO should ensure it is before time of flare
-                    sfc_i = [
-                        i for i in range(sg_np) if elapsed_time_s_v[i] <= bleed_time
-                    ]
-                    computed_yint = (
-                        np.mean(sg_press_v[sfc_i])
-                        - shoe_to_pressure_sensor
-                        * np.sin(np.mean(np.abs(vehicle_pitch_rad_v[sfc_i])))
-                        * psi_per_meter
-                    )
-                    sg_press_v -= computed_yint
+                sg_press_v *= dbar_per_psi  # convert to dbar
+                if not base_opts.use_gsw:
+                    sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
                 else:
-                    # Original code...take sg_press as-is
-                    pass
-            else:
-                if kistler_cnf is None:
-                    # used kistler onboard but not overriding it here
-                    # use pressure that was computed onboard with CT temp with log_f.data['$PRESSURE_YINT']
-                    sg_press_v = eng_f.get_col("pressure")
-                else:
-                    sg_press_v = compute_kistler_pressure(
-                        kistler_cnf, log_f, press_counts_v, sg_temp_raw_v
-                    )
-                    sg_press_v += log_f.data["$PRESSURE_YINT"]
+                    sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
 
-            sg_press_v *= dbar_per_psi  # convert to dbar
-            # Done with these variables
-            del press_counts_v, sg_temp_raw_v
-            # DEBUG ONLY
-            try:
-                prev_sg_press_v = results_d["pressure"]
-                diff_max = max(sg_press_v) - max(prev_sg_press_v)
-                if np.abs(diff_max) > 10:
-                    log_info(
-                        "Max pressure since last processing changed by %.2f psi"
-                        % diff_max
-                    )
-                prev_sg_press_v = None
-            except KeyError:
-                pass
-
-            # TODO? Argo tests for monotonically increasing (and then, for us, decreasing) pressures
-            # They have a sg_press_qc_v and mark QC_BAD any data points that reverse direction
-            # Any bad points propagate to T/C/S
-            # but since we can stall and even fly down if we want, we avoid this QC test
-
-            # This is the latitude corrected depth given the measure pressure
-            # The force of gravity varies by latitude given the oblate spheroid shape and unequal mass distributions in the Earth
-            if not base_opts.use_gsw:
-                sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
-            else:
-                sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
-            results_d.update(
-                {
-                    "pressure": sg_press_v,
-                    "depth": sg_depth_m_v,
-                }
-            )
-
-            # There are two other possible 'depth' measurements from scicon
-            # Both are based on the same pressure sensor used by the glider.
-
-            # The first is 'depth_depth', which is the depth reported from the
-            # glider via the logger interface and hence it comes from the AD7714
-            # circuit and reflects the slope and yint and conversion factors
-            # used by the truck.  In fact, it is an exact copy (well, subset) of
-            # truck depth recorded in the depth.dat file just slightly later,
-            # using the scicon clock.  Thus, we use sg_depth_m in preference.
-
-            # The second comes from the (optional) so-called 'auxCompass' board
-            # attached to the scicon.  This auxillary board can support an
-            # auxillary compass and can sample the glider's pressure sensor
-            # directly using a different A-to-D circuit. Pressure counts from
-            # the sensor are recorded at typically higher frequency than the
-            # truck.  For CT processing we use this auxillary pressure (and
-            # derived depth, hence ctd_depth), if available, in preference to
-            # the truck depth.
-
-            # TestData/Sg187_NANOOS_Jun15 dives 182:788
-
-            ###            # TODO - hoist this out from here
-            ###            # Always create auxPressure_press and auxPressure_depth vectors
-            ###            if(auxpressure_present):
-            ###                auxPress_counts_v = results_d[f'{auxpressure_name}_pressureCounts']
-            ###                aux_epoch_time_s_v = results_d[f'{auxpressure_name}_time']
-            ###
-            ###                # Convert pressure counts to pressure
-            ###                if aux_pressure_slope is not None and  aux_pressure_offset is not None:
-            ###                    auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
-            ###                    log_info("auxCompass_pressure_offset = %f, auxCompass_pressure_slope = %f" %
-            ###                             (aux_pressure_offset, aux_pressure_slope))
-            ###                else:
-            ###                    if kistler_cnf is None:
-            ###                        auxPress_v = auxPress_counts_v * log_f.data['$PRESSURE_SLOPE'] # [psi]
-            ###                    else:
-            ###                        aux_temp_v = Utils.interp1d(ctd_epoch_time_s_v, temp_raw_v, aux_epoch_time_s_v, kind='linear')
-            ###                        auxPress_v = compute_kistler_pressure(kistler_cnf, log_f, auxPress_counts_v, aux_temp_v) # [psi]
-            ###
-            ###                    # Why not simply + log_f.data['$PRESSURE_YINT'] to get final pressure?
-            ###                    # Because while we trust the conversion slope of the sensor to be independent of sampling scheme,
-            ###                    # the log value of yint encodes information about the AD7714, etc.  We need to see how the
-            ###                    # aux AD is offset from that and compute an implied yint. So...
-            ###                    # Convert glider pressure to PSI and interpolate to aux time grid
-            ###                    glider_press_v = Utils.interp1d(sg_epoch_time_s_v, sg_press_v / dbar_per_psi, aux_epoch_time_s_v, kind='linear') # [psi]
-            ###                    # Adjust for yint based on truck values
-            ###                    # Note - this will go very wrong if you only have a half profile
-            ###                    auxPress_yint = -np.mean(auxPress_v - glider_press_v)
-            ###                    log_info("auxPress_yint = %f, $PRESSURE_YINT = %f (%f psi)" %
-            ###                             (auxPress_yint, log_f.data['$PRESSURE_YINT'], (auxPress_yint - log_f.data['$PRESSURE_YINT'])))
-            ###
-            ###                    auxCompass_pressure_v = (auxPress_v + auxPress_yint)*dbar_per_psi # [dbar]
-            ###                    aux_temp_v = None
-            ###                    auxPress_v = None
-            ###
-            ###                if False:
-            ###                    # This hack is to handle bad truck pressure, but to auxcompass pressure
-            ###                    log_warning("Re-writing truck pressure and depth from auxCompass pressure")
-            ###                    sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')
-            ###                    if not base_opts.use_gsw:
-            ###                        sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
-            ###                    else:
-            ###                        sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
-            ###
-            ###                #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
-            ###                auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
-            ###                results_d.update({f'{auxpressure_name}_press' : auxCompass_pressure_v,
-            ###                                  f'{auxpressure_name}_depth' : auxCompass_depth_v})
-
-            adcp_time = None
-            adcp_pressure = None
-
-            if calib_consts["use_adcppressure"]:
-                if all(x in results_d for x in ["cp_time", "cp_pressure"]):
-                    adcp_time = "cp_time"
-                    adcp_pressure = "cp_pressure"
-                elif all(x in results_d for x in ["ad2cp_time", "ad2cp_pressure"]):
-                    adcp_time = "ad2cp_time"
-                    adcp_pressure = "ad2cp_pressure"
-                else:
-                    log_error(
-                        "use_adcppressure specified in sg_calib_constants, but no adcp pressure found"
-                    )
-
-            if use_auxpressure:
-                ctd_press_v = Utils.interp1d(
-                    aux_epoch_time_s_v,
-                    auxCompass_pressure_v,
-                    ctd_epoch_time_s_v,
-                    kind="linear",
-                )  # [dbar]
-                # Map pressure and depth signals to thermistor location
-                zTP = Utils.interp1d(
-                    compass_time, zTP, ctd_epoch_time_s_v, kind="linear"
+                results_d.update(
+                    {
+                        "pressure": sg_press_v,
+                        "depth": sg_depth_m_v,
+                    }
                 )
-                # BUG: Really we should get pressure_sensor_depth from corrected pressure via sw_depth()
-                # then subtract zTP to get ctd_depth and the use a sw_press() routine to get ctd_press
-                # This might be close though...
-                # Negative because the CT sail is above the pressure sensor so is shallower
-                ctd_press_v = ctd_press_v - zTP * psi_per_meter * dbar_per_psi  # [dbar]
-                if not base_opts.use_gsw:
-                    ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) - zTP  # [m]
-                else:
-                    ctd_depth_m_v = (
-                        -1.0 * gsw.z_from_p(ctd_press_v, latitude, 0.0, 0.0) - zTP
-                    )  # [m]
-            elif adcp_time:
-                ctd_press_v = Utils.interp1d(
-                    results_d[adcp_time],
-                    results_d[adcp_pressure],
-                    ctd_epoch_time_s_v,
-                    kind="linear",
-                )  # [dbar]
-                # TODO - Map pressure and depth signals to thermistor location
-                # zTP = Utils.interp1d(
-                #    compass_time, zTP, ctd_epoch_time_s_v, kind="linear"
-                # )
-                zTP = np.zeros(len(ctd_epoch_time_s_v))
-                # BUG: Really we should get pressure_sensor_depth from corrected pressure via sw_depth()
-                # then subtract zTP to get ctd_depth and the use a sw_press() routine to get ctd_press
-                # This might be close though...
-                # Negative because the CT sail is above the pressure sensor so is shallower
-                ctd_press_v = ctd_press_v - zTP * psi_per_meter * dbar_per_psi  # [dbar]
-                if not base_opts.use_gsw:
-                    ctd_depth_m_v = seawater.dpth(ctd_press_v, latitude) - zTP  # [m]
-                else:
-                    ctd_depth_m_v = (
-                        -1.0 * gsw.z_from_p(ctd_press_v, latitude, 0.0, 0.0) - zTP
-                    )  # [m]
-            else:
-                # Truck pressure and depth
-                # Really we should get pressure_sensor_depth from corrected pressure via sw_depth()
-                # then subtract zTP to get ctd_depth and the use a sw_press() routine to get ctd_press
-                # This might be close though...
-                # Negative because the CT sail is above the pressure sensor so is shallower
-                ctd_depth_m_v = sg_depth_m_v - zTP  # [m]
-                ctd_press_v = sg_press_v - zTP * psi_per_meter * dbar_per_psi  # [dbar]
-                if ctd_results_dim != nc_info_d[BaseNetCDF.nc_sg_data_info]:
-                    # need these for freq to measurement below
-                    ctd_depth_m_v = Utils.interp1d(
-                        sg_epoch_time_s_v,
-                        ctd_depth_m_v,
-                        ctd_epoch_time_s_v,
-                        kind="linear",
-                    )
+
+                # Handle pressure spikes in legato pressure signal
+                ctd_press_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                if tmp_press_v is None or calib_consts["legato_use_truck_pressure"]:
+                    # ctd_press_v = sg_press_v.copy()
                     ctd_press_v = Utils.interp1d(
-                        sg_epoch_time_s_v,
-                        ctd_press_v,
-                        ctd_epoch_time_s_v,
-                        kind="linear",
+                        sg_epoch_time_s_v, sg_press_v, ctd_epoch_time_s_v, kind="linear"
+                    )
+                    if calib_consts["legato_use_truck_pressure"]:
+                        log_info(
+                            "Using Truck pressure sensor instead of legato pressure sensor"
+                        )
+                        # TODO - Need a ztp correction for this case
+                        pass
+                    results_d.update({"ctd_pressure_qc": ctd_press_qc_v})
+                else:
+                    ctd_press_v, bad_points = QC.smooth_legato_pressure(
+                        tmp_press_v, ctd_epoch_time_s_v
+                    )
+                    QC.assert_qc(
+                        QC.QC_INTERPOLATED,
+                        ctd_press_qc_v,
+                        bad_points,
+                        "despiked pressure",
+                    )
+                    results_d.update({"ctd_pressure_qc": ctd_press_qc_v})
+
+                if not base_opts.use_gsw:
+                    ctd_salin_v = seawater.salt(
+                        ctd_cond_v / c3515, ctd_temp_v, ctd_press_v
+                    )  # temporary, not the real salinity raw
+                    ctd_depth_m_v = seawater.dpth(
+                        ctd_press_v, latitude
+                    )  # initial depth estimate
+                else:
+                    ctd_salin_v = gsw.SP_from_C(
+                        ctd_cond_v * 10.0, ctd_temp_v, ctd_press_v
+                    )  # temporary, not the real salinity raw
+                    ctd_depth_m_v = -1.0 * gsw.z_from_p(
+                        ctd_press_v, latitude, 0.0, 0.0
+                    )  # initial depth estimate
+
+                # CONSIDER - this may not be entirely correct for legato
+                temp_raw_qc_v, cond_raw_qc_v, salin_raw_qc_v = QC.qc_checks(
+                    ctd_temp_v,
+                    ctd_temp_qc,
+                    ctd_cond_v,
+                    ctd_cond_qc,
+                    ctd_salin_v,
+                    ctd_salin_qc,
+                    ctd_depth_m_v,
+                    calib_consts,
+                    QC.QC_BAD,
+                    QC.QC_NO_CHANGE,
+                    "raw legato ",
+                )
+                # Map to names used in rest of code
+                temp_raw_v = ctd_temp_v.copy()
+                cond_raw_v = ctd_cond_v.copy()
+                salin_raw_v = ctd_salin_v.copy()
+
+                ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
+                    BaseNetCDF.nc_legato_data_info
+                ]
+
+                # For Legato we don't correct their pressure sensor so we just take it as is
+                # and assume the pressure/depth is wrt thermistor already. So no zTP correction here
+
+                # Done w/ these vars...
+                del ctd_temp_v, ctd_cond_v, ctd_salin_v
+
+                ## End Legatto ##
+
+            elif sbect_unpumped:
+                ## Regular sbect sensor ##
+
+                # First - see if we have scicon data...
+                # Why not eng file first you ask?  Read and weep below...
+                try:
+                    # scicon unpumped SBECT
+                    ctd_epoch_time_s_v = results_d["sbect_time"]
+                    tempFreq_v = results_d["sbect_tempFreq"]
+                    condFreq_v = results_d["sbect_condFreq"]
+                    have_scicon_ct = True
+                    # CONSIDER use scicon 'depth_depth', converted to 'sbect_time' as the ctd_depth??
+
+                    ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
+                        BaseNetCDF.nc_sbect_data_info
+                    ]
+                except KeyError as e:
+                    # Next, try for the glider eng file
+                    (_, tempFreq_v) = eng_f.find_col(
+                        ["tempFreq", "sbect_tempFreq", "sailct_tempFreq"]
+                    )
+                    (_, condFreq_v) = eng_f.find_col(
+                        ["condFreq", "sbect_condFreq", "sailct_condFreq"]
+                    )
+                    if tempFreq_v is None and condFreq_v is None:
+                        log_error("No CT data found - bailing out")
+                        raise RuntimeError(True) from e
+                    ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
+                        BaseNetCDF.nc_sg_data_info
+                    ]
+                    ctd_epoch_time_s_v = sg_epoch_time_s_v
+                # TODO: ensure sg_epoch_time_s_v and ctd_epoch_time_s_v overlap substantially (SG189 'test' dive 99 in hibay)
+                # MDP automatically asserts instrument when writing
+                # DEAD results_d['sbe41'] = 'unpumped Seabird SBE41' # record the instrument used for CTD
+                ctd_np = len(ctd_epoch_time_s_v)
+
+                # Initially all is well...
+                temp_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                cond_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+
+                # Adjust temp and cond freq, if any
+                if calib_consts["sbe_temp_freq_offset"]:
+                    tempFreq_v = tempFreq_v + calib_consts["sbe_temp_freq_offset"]
+                    ctd_ancillary_variables = (
+                        ctd_ancillary_variables + " sg_cal_sbe_temp_freq_offset"
                     )
 
-            # Done with this vector (if created)
-            # del auxCompass_pressure_v
-
-            # Conductivity calculation from SBE4 data sheet
-            # Open-coded version of water_properties.m
-
-            # pylint: disable=unbalanced-tuple-unpacking
-            c_g, c_h, c_i, c_j, vars_used = SBECT_coefficents(
-                "conductivity",
-                calib_consts,
-                log_f,
-                ["c_g", "c_h", "c_i", "c_j"],
-                ["$SEABIRD_C_G", "$SEABIRD_C_H", "$SEABIRD_C_I", "$SEABIRD_C_J"],
-            )
-            # pylint: enable=unbalanced-tuple-unpacking
-            ctd_ancillary_variables = ctd_ancillary_variables + vars_used
-            cpcor = calib_consts["cpcor"]
-            ctcor = calib_consts["ctcor"]
-
-            CondFreqHz_v = condFreq_v / f0
-            if calib_consts["sbe_cond_freq_offset"]:
-                CondFreqHz_v = CondFreqHz_v + calib_consts["sbe_cond_freq_offset"]
-                ctd_ancillary_variables = (
-                    ctd_ancillary_variables + " sg_cal_sbe_cond_freq_offset"
+                bad_i_v = [i for i in range(ctd_np) if np.isnan(tempFreq_v[i])]
+                QC.assert_qc(
+                    QC.QC_UNSAMPLED, temp_raw_qc_v, bad_i_v, "unsampled temperature"
                 )
 
-            # Correct conductivity at the ctd_press_v, where the data was taken
-            cond_raw_v = (
-                c_g
-                + (c_h + (c_i + c_j * CondFreqHz_v) * CondFreqHz_v)
-                * CondFreqHz_v
-                * CondFreqHz_v
-            ) / (10.0 * (1.0 + ctcor * temp_raw_v + cpcor * ctd_press_v))
-            ctd_metadata_d = BaseNetCDF.fetch_instrument_metadata(
-                BaseNetCDF.nc_sbect_data_info
-            )
-            ctd_metadata_d["ancillary_variables"] = ctd_ancillary_variables
-        else:
-            ## Pumped (GPCTD) data
-            try:
-                # the timestamps can be off between the glider and the GPCTD by ~1s tops.  Ignore it.
-                ctd_epoch_time_s_v = results_d["gpctd_time"]
-                ctd_press_v = results_d["gpctd_pressure"]
-                ctd_temp_v = results_d["gpctd_temperature"]
-                ctd_cond_v = results_d["gpctd_conductivity"]
-            except KeyError as e:
-                log_error(f"No pumped CT data found {e} - bailing out")
-                raise RuntimeError(True) from e
+                # Warn on attemped use of old temp freq limit types
+                try:
+                    if (
+                        calib_consts["sbe_temp_freq_min"]
+                        or calib_consts["sbe_temp_freq_max"]
+                    ):
+                        log_warning(
+                            "Ignoring temperature frequency limits - use QC_temp_min and QC_temp_max instead."
+                        )
+                except KeyError:
+                    pass
 
-            # CONSIDER: should we support kistler cnf files in this branch?
-            # UPDATE_PRESS
-            sg_press_v = (
-                eng_f.get_col("depth") * cm2m * calib_consts["depth_slope_correction"]
-                - calib_consts["depth_bias"]
-            ) * psi_per_meter
-            sg_press_v *= dbar_per_psi  # convert to dbar
-            if not base_opts.use_gsw:
-                sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
-            else:
-                sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
-            results_d.update(
-                {
-                    "pressure": sg_press_v,
-                    "depth": sg_depth_m_v,
-                }
-            )
+                bad_i_v = [i for i in range(ctd_np) if np.isnan(condFreq_v[i])]
+                QC.assert_qc(
+                    QC.QC_UNSAMPLED, cond_raw_qc_v, bad_i_v, "unsampled conductivity"
+                )
 
-            # MDP automatically asserts instrument when writing
-            # DEAD results_d['gpctd'] = 'pumped Seabird SBE41 (gpctd)' # record the instrument used for CTD
-            ctd_np = len(ctd_epoch_time_s_v)
+                # Warn on attemped use of old cond freq limit types
+                try:
+                    if (
+                        calib_consts["sbe_cond_freq_min"]
+                        or calib_consts["sbe_cond_freq_max"]
+                    ):
+                        # or QC_salin_min/max (PSU)
+                        log_warning(
+                            "Ignoring conductivity frequency limits - use QC_cond_min and QC_cond_max instead."
+                        )
+                except KeyError:
+                    pass
 
-            if not base_opts.use_gsw:
-                ctd_salin_v = seawater.salt(
-                    ctd_cond_v / c3515, ctd_temp_v, ctd_press_v
-                )  # temporary, not the real salinity raw
-                ctd_depth_m_v = seawater.dpth(
-                    ctd_press_v, latitude
-                )  # initial depth estimate
-            else:
-                ctd_salin_v = gsw.SP_from_C(
-                    ctd_cond_v * 10.0, ctd_temp_v, ctd_press_v
-                )  # temporary, not the real salinity raw
-                ctd_depth_m_v = -1.0 * gsw.z_from_p(
-                    ctd_press_v, latitude, 0.0, 0.0
-                )  # initial depth estimate
+                # Convert temperature and conductivity frequenceies to initial temperatures and conductivities
+                # before applying first-order lag and thermal-inertia corrections below
+                # Compute temperature first so we can compute pressure properly before computing conductivity
 
-            # GPCTD dumps invalid values at the end of each record; use QC.qc_checks() to discover them...
-            # but disable spike detection (using QC.QC_NO_CHANGE)
-            ctd_temp_qc_v, ctd_cond_qc_v, ctd_salin_qc_v = QC.qc_checks(
-                ctd_temp_v,
-                QC.initialize_qc(ctd_np, QC.QC_GOOD),
-                ctd_cond_v,
-                QC.initialize_qc(ctd_np, QC.QC_GOOD),
-                ctd_salin_v,
-                QC.initialize_qc(ctd_np, QC.QC_GOOD),
-                ctd_depth_m_v,
-                calib_consts,
-                QC.QC_BAD,
-                QC.QC_NO_CHANGE,
-                "raw gpctd ",
-            )
-            # Find the valid GPCTD data
-            # The last several points in each profile are junk. Pressures are typically 0 or 'full-scale', which likely varies with instrument.
-            # Geoff reports: Due to the way their firmware works, the last N samples of each cast are garbage.
-            # We can bound the limit of bad points - 18 when you have CTP and O2, 22 when you have CTP.
-            # The number of points are independent of timing.  They basically are dumping data in units of a buffer, and the tail of the buffer contains garbage.
-            bad_gpctd_i_v = [
-                i
-                for i in range(ctd_np)
-                if (ctd_press_v[i] == 0.0) or (ctd_press_v[i] > 10000.0)
-            ]
-            # The timestamps should be off between the glider and the GPCTD by ~1s tops if they respond to the logger commands properly.
-            # Trust but verify?
-            # if False:
-            #     # DEAD We use apogee as an event that both vehicle and GPCTD can agree on...
-            #     # This doesn't work out well since we stop the GPCTD at apogee but the truck keeps reading depths
-            #     # and we falsely think the deepest the GPCTD got is the same as the deepest point the vehicle recorded,
-            #     # which could been 10s of seconds later
-            #     max_sg_depth_i = sg_press_v.argmax()
-            #     # We need to avoid the bad pressure points found above...
-            #     valid_gpctd_i_v = Utils.setdiff(list(range(ctd_np)), bad_gpctd_i_v)
-            #     max_gp_depth_i = valid_gpctd_i_v[ctd_press_v[valid_gpctd_i_v].argmax()]
-            #     delta_t_s = (
-            #         ctd_epoch_time_s_v[max_gp_depth_i]
-            #         - sg_epoch_time_s_v[max_sg_depth_i]
-            #     )
-            #     if np.abs(delta_t_s) > 1.0:
-            #         log_info(
-            #             "GPCTD time off by %.2f seconds from vehicle time" % delta_t_s
-            #         )
-            #         # if delta_t_s is negative, GPCTD looks early; retard the time difference to align apogee
-            #         ctd_epoch_time_s_v -= delta_t_s
+                # pylint: disable=unbalanced-tuple-unpacking
+                t_g, t_h, t_i, t_j, vars_used = SBECT_coefficents(
+                    "temperature",
+                    calib_consts,
+                    log_f,
+                    ["t_g", "t_h", "t_i", "t_j"],
+                    ["$SEABIRD_T_G", "$SEABIRD_T_H", "$SEABIRD_T_I", "$SEABIRD_T_J"],
+                )
+                # pylint: enable=unbalanced-tuple-unpacking
+                ctd_ancillary_variables = ctd_ancillary_variables + vars_used
 
-            bad_gpctd_i_v.extend(QC.bad_qc(ctd_temp_qc_v))
-            bad_gpctd_i_v.extend(QC.bad_qc(ctd_cond_qc_v))
-            bad_gpctd_i_v.extend(QC.bad_qc(ctd_salin_qc_v))
+                LogTempFreqScaled_v = np.log(f0 / tempFreq_v)
+                temp_raw_v = (
+                    1.0
+                    / (
+                        t_g
+                        + (
+                            t_h
+                            + (t_i + t_j * LogTempFreqScaled_v) * LogTempFreqScaled_v
+                        )
+                        * LogTempFreqScaled_v
+                    )
+                ) - Kelvin_offset
 
-            # Check for bad GPCTD clock in header of eng file
-            if not [
-                i
-                for i in range(ctd_np)
-                if (ctd_epoch_time_s_v[i] >= sg_epoch_time_s_v[0])
-                and (ctd_epoch_time_s_v[i] <= sg_epoch_time_s_v[-1])
-            ]:
-                # The following is to address the case seen on sg654 where the GPCTD clock
-                # was not being set by the Seaglider at the start of the profile, but was
-                # running while the GPCTD was on and the clock was latched over the power off/on
-                #
-                # If all the GPCTD payload data times are outside the time range of the glider's
-                # dive time range, all the GPCTD times are adjusted so the first GPCTD time is the
-                # start of the glider's dive time. This correction won't work (or work very well)
-                # if only the up profile is being sampled and it is dependent on what looks like
-                # the way the Kongsberg Seaglider code works - to run the GPCTD through the dive,
-                # apogee and up to the start of the climb.
-                if (
-                    "gpctd_align_start_time" in calib_consts
-                    and calib_consts["gpctd_align_start_time"]
-                ):
-                    gpctd_t_corr = sg_epoch_time_s_v[0] - ctd_epoch_time_s_v[0]
-                    ctd_epoch_time_s_v += gpctd_t_corr
-                else:
-                    log_error(
-                        "All GPCTD data time is outside of glider data time - possible bad clock data on GPCTD",
-                        alert="BAD_GPCTD_CLOCK",
+                # Hack to pull in the optode temperature - used for sg562
+                # on the NorEMSO_Iceland 2021 deployment.  Note - assumes
+                # optode and CTD are on the truck
+                # if False:
+                #     # if id_str == "562":
+                #     from scipy.interpolate import InterpolatedUnivariateSpline
+
+                #     temp_raw_v = eng_f.get_col("aa4330_Temp")
+                #     if False:
+                #         # sg_depth = eng_f.get_col("depth")
+                #         # temp_raw_v = InterpolatedUnivariateSpline(sg_depth, optode_temp)
+                #         elapsed_t = eng_f.get_col("elaps_t")
+                #         good_i_v = [i for i in range(ctd_np) if not np.isnan(temp_raw_v[i])]
+                #         f = InterpolatedUnivariateSpline(
+                #             elapsed_t[good_i_v], temp_raw_v[good_i_v]
+                #         )
+                #         bad_i_v = [i for i in range(ctd_np) if np.isnan(temp_raw_v[i])]
+                #         temp_raw_v[bad_i_v] = f(elapsed_t[bad_i_v])
+
+                #     temp_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                #     bad_i_v = [i for i in range(ctd_np) if np.isnan(temp_raw_v[i])]
+                #     QC.assert_qc(
+                #         QC.QC_UNSAMPLED, temp_raw_qc_v, bad_i_v, "unsampled temperature"
+                #     )
+
+                # The Kistler pressure sensor, used on DGs and some SGs, responds quadratically in pressure and temperature
+                # The glider code encodes depth (counts) using a linear transformation.  If we have the proper fit in sgc
+                # we invert
+
+                # What if we are using scicon?  We need to know if it was passed through from the glider or separate.
+                # We need to know the gain and the (linear) transform used to get pressure from counts
+
+                # With the GPCTD we must use pressure as given
+
+                # eng.depth is psuedo-depth in meters, as computed onboard by SG
+                # using pressure gauge and linear conversion.  These values
+                # were used for control purposes.
+
+                # The glider code misrepresents depth for a number of reasons related to
+                # oversimplification of the hydrostatic relationship, principally because,
+                # in decreasing order of importance:
+
+                # 1) the density of seawater @ standard T & S (0 deg C & 35) varies with
+                #    pressure (by 2.6% between the surface & 6000 dbar)
+                # 2) gravity increases by over 0.5 % between the equator and poles and
+                # 3) gravity increases with depth by ~0.1% between the sea surface and 6000 m depth.
+
+                # Because of these variations, using a fixed constant (0.685 m/psi) to estimate depth
+                # from pressure can't do better than ~1% in accuracy over the depth range
+                # of a Deepglider dive cycle to the ocean floor, considerably worse than
+                # the 0.04% accuracy quoted for the Druck 4020 pressure sensor on sg033
+                # itself.
+
+                # NOTE: CCE observed that while sw_dpth.m converts from pressure using the
+                # accepted equation of state & gravity models, the routine sw_pres
+                # simplifies the behavior to a quadratic one between depth and pressure so
+                # sw_pres(sw_dpth(pressure, latitude), latitude) returns something that
+                # differs by up to 0.4 dbar from pressure from the surface to 6000 dbar.
+                press_counts_v = eng_f.get_col(
+                    "press_counts"
+                )  # returns None if not present
+                # Try reading a possibly updated kistler.cnf file; returns None if not present
+                kistler_cnf, _ = Utils2.read_cnf_file(
+                    "kistler.cnf",
+                    mission_dir=base_opts.mission_dir,
+                    encode_list=False,
+                    lower=False,
+                    results_d=results_d,
+                )
+                sg_temp_raw_v = temp_raw_v
+                if kistler_cnf and ctd_np is not sg_np:
+                    sg_temp_raw_v = Utils.interp1d(
+                        ctd_epoch_time_s_v, temp_raw_v, sg_epoch_time_s_v, kind="linear"
                     )
 
-            # Turns out the gpctd can be left running a while after the glider takes it last data point (during surfacing); remove those points
-            bad_gpctd_i_v.extend(
-                [
+                if press_counts_v is None:
+                    # Recover the depth the SG used onboard (in cm) and recorded at elapsed_time_s_v
+                    # Recover sg measured pressure [dbar] from the depth record using any depth bias
+                    # First convert from psuedo-meters to psi
+                    sg_press_v = (
+                        eng_f.get_col("depth")
+                        * cm2m
+                        * calib_consts["depth_slope_correction"]
+                        - calib_consts["depth_bias"]
+                    ) * psi_per_meter
+                    if kistler_cnf:
+                        # Old mission without a kistler.cnf but calibration constructed afterwards
+                        press_counts_v = (
+                            sg_press_v - log_f.data["$PRESSURE_YINT"]
+                        ) / log_f.data["$PRESSURE_SLOPE"]
+                        sg_press_v = compute_kistler_pressure(
+                            kistler_cnf, log_f, press_counts_v, sg_temp_raw_v
+                        )
+                        # We can't use the YINT on board (since it was computed wrt to PRESSURE_SLOPE)
+                        # TODO compute likely psi at surface and tare to it
+                        # We know at the beginning of the dive she is mostly just under water w/ the shoe just exposed
+                        # Use surface angle and distance to pressure sensor to compute a new yint for this kistler.cnf (and this dive)
+                        shoe_to_pressure_sensor = 1.5  # [m] approximate distance from antenna shoe for all vehicles
+                        bleed_time = (
+                            60  # takes roughly a minute to bleed and leave the surface
+                        )
+                        # TODO should ensure it is before time of flare
+                        sfc_i = [
+                            i for i in range(sg_np) if elapsed_time_s_v[i] <= bleed_time
+                        ]
+                        computed_yint = (
+                            np.mean(sg_press_v[sfc_i])
+                            - shoe_to_pressure_sensor
+                            * np.sin(np.mean(np.abs(vehicle_pitch_rad_v[sfc_i])))
+                            * psi_per_meter
+                        )
+                        sg_press_v -= computed_yint
+                    else:
+                        # Original code...take sg_press as-is
+                        pass
+                else:
+                    if kistler_cnf is None:
+                        # used kistler onboard but not overriding it here
+                        # use pressure that was computed onboard with CT temp with log_f.data['$PRESSURE_YINT']
+                        sg_press_v = eng_f.get_col("pressure")
+                    else:
+                        sg_press_v = compute_kistler_pressure(
+                            kistler_cnf, log_f, press_counts_v, sg_temp_raw_v
+                        )
+                        sg_press_v += log_f.data["$PRESSURE_YINT"]
+
+                sg_press_v *= dbar_per_psi  # convert to dbar
+                # Done with these variables
+                del press_counts_v, sg_temp_raw_v
+                # DEBUG ONLY
+                try:
+                    prev_sg_press_v = results_d["pressure"]
+                    diff_max = max(sg_press_v) - max(prev_sg_press_v)
+                    if np.abs(diff_max) > 10:
+                        log_info(
+                            "Max pressure since last processing changed by %.2f psi"
+                            % diff_max
+                        )
+                    prev_sg_press_v = None
+                except KeyError:
+                    pass
+
+                # TODO? Argo tests for monotonically increasing (and then, for us, decreasing) pressures
+                # They have a sg_press_qc_v and mark QC_BAD any data points that reverse direction
+                # Any bad points propagate to T/C/S
+                # but since we can stall and even fly down if we want, we avoid this QC test
+
+                # This is the latitude corrected depth given the measure pressure
+                # The force of gravity varies by latitude given the oblate spheroid shape and unequal mass distributions in the Earth
+                if not base_opts.use_gsw:
+                    sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+                else:
+                    sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+                results_d.update(
+                    {
+                        "pressure": sg_press_v,
+                        "depth": sg_depth_m_v,
+                    }
+                )
+
+                # There are two other possible 'depth' measurements from scicon
+                # Both are based on the same pressure sensor used by the glider.
+
+                # The first is 'depth_depth', which is the depth reported from the
+                # glider via the logger interface and hence it comes from the AD7714
+                # circuit and reflects the slope and yint and conversion factors
+                # used by the truck.  In fact, it is an exact copy (well, subset) of
+                # truck depth recorded in the depth.dat file just slightly later,
+                # using the scicon clock.  Thus, we use sg_depth_m in preference.
+
+                # The second comes from the (optional) so-called 'auxCompass' board
+                # attached to the scicon.  This auxillary board can support an
+                # auxillary compass and can sample the glider's pressure sensor
+                # directly using a different A-to-D circuit. Pressure counts from
+                # the sensor are recorded at typically higher frequency than the
+                # truck.  For CT processing we use this auxillary pressure (and
+                # derived depth, hence ctd_depth), if available, in preference to
+                # the truck depth.
+
+                # TestData/Sg187_NANOOS_Jun15 dives 182:788
+
+                ###            # TODO - hoist this out from here
+                ###            # Always create auxPressure_press and auxPressure_depth vectors
+                ###            if(auxpressure_present):
+                ###                auxPress_counts_v = results_d[f'{auxpressure_name}_pressureCounts']
+                ###                aux_epoch_time_s_v = results_d[f'{auxpressure_name}_time']
+                ###
+                ###                # Convert pressure counts to pressure
+                ###                if aux_pressure_slope is not None and  aux_pressure_offset is not None:
+                ###                    auxCompass_pressure_v = (auxPress_counts_v - aux_pressure_offset) * aux_pressure_slope * dbar_per_psi
+                ###                    log_info("auxCompass_pressure_offset = %f, auxCompass_pressure_slope = %f" %
+                ###                             (aux_pressure_offset, aux_pressure_slope))
+                ###                else:
+                ###                    if kistler_cnf is None:
+                ###                        auxPress_v = auxPress_counts_v * log_f.data['$PRESSURE_SLOPE'] # [psi]
+                ###                    else:
+                ###                        aux_temp_v = Utils.interp1d(ctd_epoch_time_s_v, temp_raw_v, aux_epoch_time_s_v, kind='linear')
+                ###                        auxPress_v = compute_kistler_pressure(kistler_cnf, log_f, auxPress_counts_v, aux_temp_v) # [psi]
+                ###
+                ###                    # Why not simply + log_f.data['$PRESSURE_YINT'] to get final pressure?
+                ###                    # Because while we trust the conversion slope of the sensor to be independent of sampling scheme,
+                ###                    # the log value of yint encodes information about the AD7714, etc.  We need to see how the
+                ###                    # aux AD is offset from that and compute an implied yint. So...
+                ###                    # Convert glider pressure to PSI and interpolate to aux time grid
+                ###                    glider_press_v = Utils.interp1d(sg_epoch_time_s_v, sg_press_v / dbar_per_psi, aux_epoch_time_s_v, kind='linear') # [psi]
+                ###                    # Adjust for yint based on truck values
+                ###                    # Note - this will go very wrong if you only have a half profile
+                ###                    auxPress_yint = -np.mean(auxPress_v - glider_press_v)
+                ###                    log_info("auxPress_yint = %f, $PRESSURE_YINT = %f (%f psi)" %
+                ###                             (auxPress_yint, log_f.data['$PRESSURE_YINT'], (auxPress_yint - log_f.data['$PRESSURE_YINT'])))
+                ###
+                ###                    auxCompass_pressure_v = (auxPress_v + auxPress_yint)*dbar_per_psi # [dbar]
+                ###                    aux_temp_v = None
+                ###                    auxPress_v = None
+                ###
+                ###                if False:
+                ###                    # This hack is to handle bad truck pressure, but to auxcompass pressure
+                ###                    log_warning("Re-writing truck pressure and depth from auxCompass pressure")
+                ###                    sg_press_v = Utils.interp1d(aux_epoch_time_s_v, auxCompass_pressure_v, sg_epoch_time_s_v, kind='linear')
+                ###                    if not base_opts.use_gsw:
+                ###                        sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+                ###                    else:
+                ###                        sg_depth_m_v = -1. * gsw.z_from_p(sg_press_v, latitude, 0., 0.)
+                ###
+                ###                #auxCompass_depth_v = sewater.dpth(auxCompass_pressure_v, latitude)
+                ###                auxCompass_depth_v = -1. * gsw.z_from_p(auxCompass_pressure_v, latitude, 0., 0.)
+                ###                results_d.update({f'{auxpressure_name}_press' : auxCompass_pressure_v,
+                ###                                  f'{auxpressure_name}_depth' : auxCompass_depth_v})
+
+                adcp_time = None
+                adcp_pressure = None
+
+                if calib_consts["use_adcppressure"]:
+                    if all(x in results_d for x in ["cp_time", "cp_pressure"]):
+                        adcp_time = "cp_time"
+                        adcp_pressure = "cp_pressure"
+                    elif all(x in results_d for x in ["ad2cp_time", "ad2cp_pressure"]):
+                        adcp_time = "ad2cp_time"
+                        adcp_pressure = "ad2cp_pressure"
+                    else:
+                        log_error(
+                            "use_adcppressure specified in sg_calib_constants, but no adcp pressure found"
+                        )
+
+                if use_auxpressure:
+                    ctd_press_v = Utils.interp1d(
+                        aux_epoch_time_s_v,
+                        auxCompass_pressure_v,
+                        ctd_epoch_time_s_v,
+                        kind="linear",
+                    )  # [dbar]
+                    # Map pressure and depth signals to thermistor location
+                    zTP = Utils.interp1d(
+                        compass_time, zTP, ctd_epoch_time_s_v, kind="linear"
+                    )
+                    # BUG: Really we should get pressure_sensor_depth from corrected pressure via sw_depth()
+                    # then subtract zTP to get ctd_depth and the use a sw_press() routine to get ctd_press
+                    # This might be close though...
+                    # Negative because the CT sail is above the pressure sensor so is shallower
+                    ctd_press_v = (
+                        ctd_press_v - zTP * psi_per_meter * dbar_per_psi
+                    )  # [dbar]
+                    if not base_opts.use_gsw:
+                        ctd_depth_m_v = (
+                            seawater.dpth(ctd_press_v, latitude) - zTP
+                        )  # [m]
+                    else:
+                        ctd_depth_m_v = (
+                            -1.0 * gsw.z_from_p(ctd_press_v, latitude, 0.0, 0.0) - zTP
+                        )  # [m]
+                elif adcp_time:
+                    ctd_press_v = Utils.interp1d(
+                        results_d[adcp_time],
+                        results_d[adcp_pressure],
+                        ctd_epoch_time_s_v,
+                        kind="linear",
+                    )  # [dbar]
+                    # TODO - Map pressure and depth signals to thermistor location
+                    # zTP = Utils.interp1d(
+                    #    compass_time, zTP, ctd_epoch_time_s_v, kind="linear"
+                    # )
+                    zTP = np.zeros(len(ctd_epoch_time_s_v))
+                    # BUG: Really we should get pressure_sensor_depth from corrected pressure via sw_depth()
+                    # then subtract zTP to get ctd_depth and the use a sw_press() routine to get ctd_press
+                    # This might be close though...
+                    # Negative because the CT sail is above the pressure sensor so is shallower
+                    ctd_press_v = (
+                        ctd_press_v - zTP * psi_per_meter * dbar_per_psi
+                    )  # [dbar]
+                    if not base_opts.use_gsw:
+                        ctd_depth_m_v = (
+                            seawater.dpth(ctd_press_v, latitude) - zTP
+                        )  # [m]
+                    else:
+                        ctd_depth_m_v = (
+                            -1.0 * gsw.z_from_p(ctd_press_v, latitude, 0.0, 0.0) - zTP
+                        )  # [m]
+                else:
+                    # Truck pressure and depth
+                    # Really we should get pressure_sensor_depth from corrected pressure via sw_depth()
+                    # then subtract zTP to get ctd_depth and the use a sw_press() routine to get ctd_press
+                    # This might be close though...
+                    # Negative because the CT sail is above the pressure sensor so is shallower
+                    ctd_depth_m_v = sg_depth_m_v - zTP  # [m]
+                    ctd_press_v = (
+                        sg_press_v - zTP * psi_per_meter * dbar_per_psi
+                    )  # [dbar]
+                    if ctd_results_dim != nc_info_d[BaseNetCDF.nc_sg_data_info]:
+                        # need these for freq to measurement below
+                        ctd_depth_m_v = Utils.interp1d(
+                            sg_epoch_time_s_v,
+                            ctd_depth_m_v,
+                            ctd_epoch_time_s_v,
+                            kind="linear",
+                        )
+                        ctd_press_v = Utils.interp1d(
+                            sg_epoch_time_s_v,
+                            ctd_press_v,
+                            ctd_epoch_time_s_v,
+                            kind="linear",
+                        )
+
+                # Done with this vector (if created)
+                # del auxCompass_pressure_v
+
+                # Conductivity calculation from SBE4 data sheet
+                # Open-coded version of water_properties.m
+
+                # pylint: disable=unbalanced-tuple-unpacking
+                c_g, c_h, c_i, c_j, vars_used = SBECT_coefficents(
+                    "conductivity",
+                    calib_consts,
+                    log_f,
+                    ["c_g", "c_h", "c_i", "c_j"],
+                    ["$SEABIRD_C_G", "$SEABIRD_C_H", "$SEABIRD_C_I", "$SEABIRD_C_J"],
+                )
+                # pylint: enable=unbalanced-tuple-unpacking
+                ctd_ancillary_variables = ctd_ancillary_variables + vars_used
+                cpcor = calib_consts["cpcor"]
+                ctcor = calib_consts["ctcor"]
+
+                CondFreqHz_v = condFreq_v / f0
+                if calib_consts["sbe_cond_freq_offset"]:
+                    CondFreqHz_v = CondFreqHz_v + calib_consts["sbe_cond_freq_offset"]
+                    ctd_ancillary_variables = (
+                        ctd_ancillary_variables + " sg_cal_sbe_cond_freq_offset"
+                    )
+
+                # Correct conductivity at the ctd_press_v, where the data was taken
+                cond_raw_v = (
+                    c_g
+                    + (c_h + (c_i + c_j * CondFreqHz_v) * CondFreqHz_v)
+                    * CondFreqHz_v
+                    * CondFreqHz_v
+                ) / (10.0 * (1.0 + ctcor * temp_raw_v + cpcor * ctd_press_v))
+                ctd_metadata_d = BaseNetCDF.fetch_instrument_metadata(
+                    BaseNetCDF.nc_sbect_data_info
+                )
+                ctd_metadata_d["ancillary_variables"] = ctd_ancillary_variables
+            else:
+                ## Pumped (GPCTD) data
+                try:
+                    # the timestamps can be off between the glider and the GPCTD by ~1s tops.  Ignore it.
+                    ctd_epoch_time_s_v = results_d["gpctd_time"]
+                    ctd_press_v = results_d["gpctd_pressure"]
+                    ctd_temp_v = results_d["gpctd_temperature"]
+                    ctd_cond_v = results_d["gpctd_conductivity"]
+                except KeyError as e:
+                    log_error(f"No pumped CT data found {e} - bailing out")
+                    raise RuntimeError(True) from e
+
+                # CONSIDER: should we support kistler cnf files in this branch?
+                # UPDATE_PRESS
+                sg_press_v = (
+                    eng_f.get_col("depth")
+                    * cm2m
+                    * calib_consts["depth_slope_correction"]
+                    - calib_consts["depth_bias"]
+                ) * psi_per_meter
+                sg_press_v *= dbar_per_psi  # convert to dbar
+                if not base_opts.use_gsw:
+                    sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+                else:
+                    sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+                results_d.update(
+                    {
+                        "pressure": sg_press_v,
+                        "depth": sg_depth_m_v,
+                    }
+                )
+
+                # MDP automatically asserts instrument when writing
+                # DEAD results_d['gpctd'] = 'pumped Seabird SBE41 (gpctd)' # record the instrument used for CTD
+                ctd_np = len(ctd_epoch_time_s_v)
+
+                if not base_opts.use_gsw:
+                    ctd_salin_v = seawater.salt(
+                        ctd_cond_v / c3515, ctd_temp_v, ctd_press_v
+                    )  # temporary, not the real salinity raw
+                    ctd_depth_m_v = seawater.dpth(
+                        ctd_press_v, latitude
+                    )  # initial depth estimate
+                else:
+                    ctd_salin_v = gsw.SP_from_C(
+                        ctd_cond_v * 10.0, ctd_temp_v, ctd_press_v
+                    )  # temporary, not the real salinity raw
+                    ctd_depth_m_v = -1.0 * gsw.z_from_p(
+                        ctd_press_v, latitude, 0.0, 0.0
+                    )  # initial depth estimate
+
+                # GPCTD dumps invalid values at the end of each record; use QC.qc_checks() to discover them...
+                # but disable spike detection (using QC.QC_NO_CHANGE)
+                ctd_temp_qc_v, ctd_cond_qc_v, ctd_salin_qc_v = QC.qc_checks(
+                    ctd_temp_v,
+                    QC.initialize_qc(ctd_np, QC.QC_GOOD),
+                    ctd_cond_v,
+                    QC.initialize_qc(ctd_np, QC.QC_GOOD),
+                    ctd_salin_v,
+                    QC.initialize_qc(ctd_np, QC.QC_GOOD),
+                    ctd_depth_m_v,
+                    calib_consts,
+                    QC.QC_BAD,
+                    QC.QC_NO_CHANGE,
+                    "raw gpctd ",
+                )
+                # Find the valid GPCTD data
+                # The last several points in each profile are junk. Pressures are typically 0 or 'full-scale', which likely varies with instrument.
+                # Geoff reports: Due to the way their firmware works, the last N samples of each cast are garbage.
+                # We can bound the limit of bad points - 18 when you have CTP and O2, 22 when you have CTP.
+                # The number of points are independent of timing.  They basically are dumping data in units of a buffer, and the tail of the buffer contains garbage.
+                bad_gpctd_i_v = [
                     i
                     for i in range(ctd_np)
-                    if (ctd_epoch_time_s_v[i] < sg_epoch_time_s_v[0])
-                    or (ctd_epoch_time_s_v[i] > sg_epoch_time_s_v[-1])
+                    if (ctd_press_v[i] == 0.0) or (ctd_press_v[i] > 10000.0)
                 ]
-            )
+                # The timestamps should be off between the glider and the GPCTD by ~1s tops if they respond to the logger commands properly.
+                # Trust but verify?
+                # if False:
+                #     # DEAD We use apogee as an event that both vehicle and GPCTD can agree on...
+                #     # This doesn't work out well since we stop the GPCTD at apogee but the truck keeps reading depths
+                #     # and we falsely think the deepest the GPCTD got is the same as the deepest point the vehicle recorded,
+                #     # which could been 10s of seconds later
+                #     max_sg_depth_i = sg_press_v.argmax()
+                #     # We need to avoid the bad pressure points found above...
+                #     valid_gpctd_i_v = Utils.setdiff(list(range(ctd_np)), bad_gpctd_i_v)
+                #     max_gp_depth_i = valid_gpctd_i_v[ctd_press_v[valid_gpctd_i_v].argmax()]
+                #     delta_t_s = (
+                #         ctd_epoch_time_s_v[max_gp_depth_i]
+                #         - sg_epoch_time_s_v[max_sg_depth_i]
+                #     )
+                #     if np.abs(delta_t_s) > 1.0:
+                #         log_info(
+                #             "GPCTD time off by %.2f seconds from vehicle time" % delta_t_s
+                #         )
+                #         # if delta_t_s is negative, GPCTD looks early; retard the time difference to align apogee
+                #         ctd_epoch_time_s_v -= delta_t_s
 
-            valid_gpctd_i_v = Utils.setdiff(list(range(ctd_np)), bad_gpctd_i_v)
-            if not valid_gpctd_i_v:
-                log_error("No valid GPCTD data found - bailing out")
-                raise RuntimeError(True)
+                bad_gpctd_i_v.extend(QC.bad_qc(ctd_temp_qc_v))
+                bad_gpctd_i_v.extend(QC.bad_qc(ctd_cond_qc_v))
+                bad_gpctd_i_v.extend(QC.bad_qc(ctd_salin_qc_v))
 
-            # Reduce the data
-            ctd_epoch_time_s_v = ctd_epoch_time_s_v[valid_gpctd_i_v]
-            temp_raw_v = ctd_temp_v[valid_gpctd_i_v]
-            cond_raw_v = ctd_cond_v[valid_gpctd_i_v]
-            ctd_press_v = ctd_press_v[valid_gpctd_i_v]
-            ctd_depth_m_v = ctd_depth_m_v[valid_gpctd_i_v]
-            # pylint: disable=possibly-unused-variable
-            if "gpctd_oxygen" in results_d:
-                # See code in sbe43_ext.py
-                valid_gpctd_oxygen_v = results_d["gpctd_oxygen"][valid_gpctd_i_v]
-            # pylint: enable=possibly-unused-variable
+                # Check for bad GPCTD clock in header of eng file
+                if not [
+                    i
+                    for i in range(ctd_np)
+                    if (ctd_epoch_time_s_v[i] >= sg_epoch_time_s_v[0])
+                    and (ctd_epoch_time_s_v[i] <= sg_epoch_time_s_v[-1])
+                ]:
+                    # The following is to address the case seen on sg654 where the GPCTD clock
+                    # was not being set by the Seaglider at the start of the profile, but was
+                    # running while the GPCTD was on and the clock was latched over the power off/on
+                    #
+                    # If all the GPCTD payload data times are outside the time range of the glider's
+                    # dive time range, all the GPCTD times are adjusted so the first GPCTD time is the
+                    # start of the glider's dive time. This correction won't work (or work very well)
+                    # if only the up profile is being sampled and it is dependent on what looks like
+                    # the way the Kongsberg Seaglider code works - to run the GPCTD through the dive,
+                    # apogee and up to the start of the climb.
+                    if (
+                        "gpctd_align_start_time" in calib_consts
+                        and calib_consts["gpctd_align_start_time"]
+                    ):
+                        gpctd_t_corr = sg_epoch_time_s_v[0] - ctd_epoch_time_s_v[0]
+                        ctd_epoch_time_s_v += gpctd_t_corr
+                    else:
+                        log_error(
+                            "All GPCTD data time is outside of glider data time - possible bad clock data on GPCTD",
+                            alert="BAD_GPCTD_CLOCK",
+                        )
 
-            # For GPCTD we don't know how to correct their Kistler sensor so we just take it as is
-            # and assume the pressure/depth is wrt thermistor already. So no zTP correction here
+                # Turns out the gpctd can be left running a while after the glider takes it last data point (during surfacing); remove those points
+                bad_gpctd_i_v.extend(
+                    [
+                        i
+                        for i in range(ctd_np)
+                        if (ctd_epoch_time_s_v[i] < sg_epoch_time_s_v[0])
+                        or (ctd_epoch_time_s_v[i] > sg_epoch_time_s_v[-1])
+                    ]
+                )
 
-            ctd_results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_gpctd_data_info]
-            ctd_np = len(ctd_epoch_time_s_v)
+                valid_gpctd_i_v = Utils.setdiff(list(range(ctd_np)), bad_gpctd_i_v)
+                if not valid_gpctd_i_v:
+                    log_error("No valid GPCTD data found - bailing out")
+                    raise RuntimeError(True)
 
-            # Initially all is well...
-            temp_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-            cond_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                # Reduce the data
+                ctd_epoch_time_s_v = ctd_epoch_time_s_v[valid_gpctd_i_v]
+                temp_raw_v = ctd_temp_v[valid_gpctd_i_v]
+                cond_raw_v = ctd_cond_v[valid_gpctd_i_v]
+                ctd_press_v = ctd_press_v[valid_gpctd_i_v]
+                ctd_depth_m_v = ctd_depth_m_v[valid_gpctd_i_v]
+                # pylint: disable=possibly-unused-variable
+                if "gpctd_oxygen" in results_d:
+                    # See code in sbe43_ext.py
+                    valid_gpctd_oxygen_v = results_d["gpctd_oxygen"][valid_gpctd_i_v]
+                # pylint: enable=possibly-unused-variable
 
-            # Done w/ these vars...
-            del (
-                ctd_temp_v,
-                ctd_temp_qc_v,
-                ctd_cond_v,
-                ctd_cond_qc_v,
-                ctd_salin_v,
-                ctd_salin_qc_v,
-            )
+                # For GPCTD we don't know how to correct their Kistler sensor so we just take it as is
+                # and assume the pressure/depth is wrt thermistor already. So no zTP correction here
 
-            # NOTYET ctd_metadata_d = fetch_instrument_metadata(nc_gpctd_data_info)
-            # No ancillary_variables to add yet (all internal to the GPCTD unit)
-            ## End GPDCTD
+                ctd_results_dim = BaseNetCDF.nc_mdp_data_info[
+                    BaseNetCDF.nc_gpctd_data_info
+                ]
+                ctd_np = len(ctd_epoch_time_s_v)
+
+                # Initially all is well...
+                temp_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                cond_raw_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+
+                # Done w/ these vars...
+                del (
+                    ctd_temp_v,
+                    ctd_temp_qc_v,
+                    ctd_cond_v,
+                    ctd_cond_qc_v,
+                    ctd_salin_v,
+                    ctd_salin_qc_v,
+                )
+
+                # NOTYET ctd_metadata_d = fetch_instrument_metadata(nc_gpctd_data_info)
+                # No ancillary_variables to add yet (all internal to the GPCTD unit)
+                ## End GPDCTD
+
+        except RuntimeError as e:
+            # In the event the CTD is not present, or its init doesn't work, calculate a GSM estimate
+            # for velocity and displacement, so there is something to go on for the pilot
+
+            try:
+                sg_press_v = (
+                    eng_f.get_col("depth")
+                    * cm2m
+                    * calib_consts["depth_slope_correction"]
+                    - calib_consts["depth_bias"]
+                ) * psi_per_meter
+                sg_press_v *= dbar_per_psi  # convert to dbar
+                if not base_opts.use_gsw:
+                    sg_depth_m_v = seawater.dpth(sg_press_v, latitude)
+                else:
+                    sg_depth_m_v = -1.0 * gsw.z_from_p(sg_press_v, latitude, 0.0, 0.0)
+
+                results_d.update(
+                    {
+                        "pressure": sg_press_v,
+                        "depth": sg_depth_m_v,
+                    }
+                )
+
+                compute_GSM_simple(
+                    vehicle_heading_mag_degrees_v,
+                    vehicle_pitch_rad_v,
+                    sg_depth_m_v,
+                    elapsed_time_s_v,
+                    GPS1,
+                    GPS2,
+                    GPSE,
+                    calib_consts,
+                    nc_info_d,
+                    results_d,
+                )
+            except Exception:
+                DEBUG_PDB_F()
+                log_error("Failed to generate GSM estimates", "exc")
+
+            raise RuntimeError(True) from e
+
+        ### End CTD init
 
         del zTP  # Done with this variable
 
@@ -7409,6 +7711,7 @@ def make_dive_profile(
                     nc_dive_file, nc_var, dim_names, False, value, instrument_info
                 )
             except KeyError:
+                DEBUG_PDB_F()
                 log_error("Unknown result variable %s -- dropped" % nc_var)
 
         # add the trajectory variable (array of length 1)

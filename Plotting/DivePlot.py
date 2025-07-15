@@ -184,8 +184,13 @@ def plot_diveplot(
 
         # CTD time base
         ctd_time = None
-        with contextlib.suppress(KeyError):
+        try:
             ctd_time = (dive_nc_file.variables["ctd_time"][:] - start_time) / 60.0
+        except KeyError:
+            # It is now possible that some of the GSM columns are calculated w/o the
+            # CTD derived columns - if so, then the timebase is the truck
+            with contextlib.suppress(KeyError):
+                ctd_time = (dive_nc_file.variables["time"][:] - start_time) / 60.0
 
         vert_speed_gsm = horz_speed_gsm = glide_angle_gsm = None
         try:
