@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import contextlib
 import typing
 
 import numpy as np
@@ -71,15 +72,18 @@ def plot_CTW(
         # start_time = dive_nc_file.start_time
         time_gps = dive_nc_file.variables["log_gps_time"][:]
         start_time = time_gps[1]
-        ctd_time = (dive_nc_file.variables["ctd_time"][:] - start_time) / 60.0
-        ctd_depth = dive_nc_file.variables["ctd_depth"][:]
-        north_disp = dive_nc_file.variables["north_displacement"][:]
-        east_disp = dive_nc_file.variables["east_displacement"][:]
+        #        ctd_time = (dive_nc_file.variables["ctd_time"][:] - start_time) / 60.0
+        #        ctd_depth = dive_nc_file.variables["ctd_depth"][:]
+        #        north_disp = dive_nc_file.variables["north_displacement"][:]
+        #        east_disp = dive_nc_file.variables["east_displacement"][:]
+
+        sg_time = (dive_nc_file.variables["time"][:] - start_time) / 60.0
+        sg_depth = dive_nc_file.variables["depth"][:]
         north_disp_gsm = dive_nc_file.variables["north_displacement_gsm"][:]
         east_disp_gsm = dive_nc_file.variables["east_displacement_gsm"][:]
 
-        lats = dive_nc_file.variables["latitude"][:]
-        lons = dive_nc_file.variables["longitude"][:]
+        lats_gsm = dive_nc_file.variables["latitude_gsm"][:]
+        lons_gsm = dive_nc_file.variables["longitude_gsm"][:]
         lat_gps = dive_nc_file.variables["log_gps_lat"][:]
         lon_gps = dive_nc_file.variables["log_gps_lon"][:]
 
@@ -106,24 +110,57 @@ def plot_CTW(
         log_error("Problems in plot_CTW", "exc")
         return ([], [])
 
-    x = lats.copy()
-    y = lons.copy()
-    x[0] = 0
-    y[0] = 0
-    for i in range(len(x)):
-        (_, _, x[i], y[i]) = Utils.rangeBearing(lats[0], lons[0], lats[i], lons[i])
+    ctd_time = ctd_depth = north_disp = east_disp = lats = lons = None
+
+    with contextlib.suppress(KeyError):
+        ctd_time = (dive_nc_file.variables["ctd_time"][:] - start_time) / 60.0
+        ctd_depth = dive_nc_file.variables["ctd_depth"][:]
+        north_disp = dive_nc_file.variables["north_displacement"][:]
+        east_disp = dive_nc_file.variables["east_displacement"][:]
+        lats = dive_nc_file.variables["latitude"][:]
+        lons = dive_nc_file.variables["longitude"][:]
+
+    # In the event there is no CTD columns, the assumption is the GSM model
+    # was computed against the truck time grid
+    if ctd_time is None:
+        ctd_time = sg_time
+        ctd_depth = sg_depth
+
+    x = y = None
+    if lats is not None and lons is not None:
+        x = lats.copy()
+        y = lons.copy()
+        x[0] = 0
+        y[0] = 0
+        for i in range(len(x)):
+            (_, _, x[i], y[i]) = Utils.rangeBearing(lats[0], lons[0], lats[i], lons[i])
+
+    x_gsm = lats_gsm.copy()
+    y_gsm = lons_gsm.copy()
+    x_gsm[0] = 0
+    y_gsm[0] = 0
+    for i in range(len(x_gsm)):
+        (_, _, x_gsm[i], y_gsm[i]) = Utils.rangeBearing(
+            lats_gsm[0], lons_gsm[0], lats_gsm[i], lons_gsm[i]
+        )
 
     desired_head = mhead[0]
-    north_disp_cum = np.cumsum(north_disp)
-    east_disp_cum = np.cumsum(east_disp)
+
+    disp = north_disp_cum = east_disp_cum = None
+    if north_disp is not None and east_disp is not None:
+        north_disp_cum = np.cumsum(north_disp)
+        east_disp_cum = np.cumsum(east_disp)
+        disp = np.sqrt(north_disp_cum[-1] ** 2 + east_disp_cum[-1] ** 2)
+
+        log_debug(
+            f"Total displacement {disp} (m) desired heading {desired_head:f} (deg), magvar {magvar:f} (deg)"
+        )
 
     north_disp_gsm_cum = np.cumsum(north_disp_gsm)
     east_disp_gsm_cum = np.cumsum(east_disp_gsm)
-
-    disp = np.sqrt(north_disp_cum[-1] ** 2 + east_disp_cum[-1] ** 2)
-
+    disp_gsm = np.sqrt(north_disp_gsm_cum[-1] ** 2 + east_disp_gsm_cum[-1] ** 2)
     log_debug(
-        f"Total displacement {disp} (m) desired heading {desired_head:f} (deg), magvar {magvar:f} (deg)"
+        f"Total displacement (GSM) {disp_gsm} (m) desired heading {desired_head:f} (deg), magvar {magvar:f} (deg)"
     )
 
     # Check for AD2CP output
@@ -168,23 +205,24 @@ def plot_CTW(
 
     fig = plotly.graph_objects.Figure()
 
-    fig.add_trace(
-        {
-            "y": north_disp_cum,
-            "x": east_disp_cum,
-            "meta": ctd_time,
-            "name": "Course Through Water HDM",
-            "type": "scatter",
-            "mode": "markers",
-            "marker": {
-                "symbol": "circle",
-                "color": "DarkBlue",
-                "size": 2,
-                #'line':{'width':1, 'color':'LightSlateGrey'}
-            },
-            "hovertemplate": "CTW HDM<br>Northward %{y:.1f} m<br>Eastward %{x:.1f} m<br>%{meta:.2f} mins<extra></extra>",
-        }
-    )
+    if north_disp_cum is not None and east_disp_cum is not None:
+        fig.add_trace(
+            {
+                "y": north_disp_cum,
+                "x": east_disp_cum,
+                "meta": ctd_time,
+                "name": "Course Through Water HDM",
+                "type": "scatter",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "circle",
+                    "color": "DarkBlue",
+                    "size": 2,
+                    #'line':{'width':1, 'color':'LightSlateGrey'}
+                },
+                "hovertemplate": "CTW HDM<br>Northward %{y:.1f} m<br>Eastward %{x:.1f} m<br>%{meta:.2f} mins<extra></extra>",
+            }
+        )
 
     fig.add_trace(
         {
@@ -225,34 +263,68 @@ def plot_CTW(
             }
         )
 
+    if lats is not None and lons is not None:
+        customdata = np.squeeze(
+            np.dstack(
+                (
+                    np.transpose(ctd_time),
+                    np.transpose(ctd_depth),
+                    np.transpose(lats),
+                    np.transpose(lons),
+                )
+            )
+        )
+
+        hovertemplate = "COG HDM<br>lat %{customdata[2]:.4f}, lon %{customdata[3]:.4f}<br>time %{customdata[0]:.2f} min, depth %{customdata[1]:.2f} m<extra></extra>"
+
+        fig.add_trace(
+            {
+                "y": y,
+                "x": x,
+                "meta": ctd_time,
+                "name": "Course Over Ground HDM",
+                "type": "scatter",
+                "mode": "markers",
+                "customdata": customdata,
+                "marker": {
+                    "symbol": "circle",
+                    "color": "Cyan",
+                    "size": 2,
+                    #'line':{'width':1, 'color':'LightSlateGrey'}
+                },
+                "hovertemplate": hovertemplate,
+            }
+        )
+
     customdata = np.squeeze(
         np.dstack(
             (
                 np.transpose(ctd_time),
                 np.transpose(ctd_depth),
-                np.transpose(lats),
-                np.transpose(lons),
+                np.transpose(lats_gsm),
+                np.transpose(lons_gsm),
             )
         )
     )
 
-    hovertemplate = "COG<br>lat %{customdata[2]:.4f}, lon %{customdata[3]:.4f}<br>time %{customdata[0]:.2f} min, depth %{customdata[1]:.2f} m<extra></extra>"
+    hovertemplate = "COG GSM<br>lat %{customdata[2]:.4f}, lon %{customdata[3]:.4f}<br>time %{customdata[0]:.2f} min, depth %{customdata[1]:.2f} m<extra></extra>"
 
     fig.add_trace(
         {
-            "y": y,
-            "x": x,
+            "y": y_gsm,
+            "x": x_gsm,
             "meta": ctd_time,
-            "name": "Course Over Ground",
+            "name": "Course Over Ground GSM",
             "type": "scatter",
             "mode": "markers",
             "customdata": customdata,
             "marker": {
                 "symbol": "circle",
-                "color": "Cyan",
+                "color": "steelblue",
                 "size": 2,
                 #'line':{'width':1, 'color':'LightSlateGrey'}
             },
+            "visible": True if lats is None or lons is None else "legendonly",
             "hovertemplate": hovertemplate,
         }
     )
@@ -295,10 +367,17 @@ def plot_CTW(
         }
     )
 
+    if y is not None and x is not None:
+        gps_y = (y[-1],)
+        gps_x = (x[-1],)
+    else:
+        gps_y = (y_gsm[-1],)
+        gps_x = (x_gsm[-1],)
+
     fig.add_trace(
         {
-            "y": (y[-1],),
-            "x": (x[-1],),
+            "y": gps_y,
+            "x": gps_x,
             "name": "GPSEND",
             "type": "scatter",
             "mode": "markers",
@@ -335,8 +414,11 @@ def plot_CTW(
         )
 
     for head, head_label, head_color in heading_list:
-        x, y = line_end(head + magvar, disp * 1.1)
-        log_debug(f"head:{head:f} x:{x:f} y:{y:f}")
+        if disp is not None:
+            head_x, head_y = line_end(head + magvar, disp * 1.1)
+        else:
+            head_x, head_y = line_end(head + magvar, disp_gsm * 1.1)
+        log_debug(f"head:{head:f} x:{head_x:f} y:{head_y:f}")
         # fig.add_shape(
         #     plotly.graph_objects.layout.Shape(
         #         name="Desired Heading",
@@ -355,8 +437,8 @@ def plot_CTW(
         fig.add_trace(
             {
                 "name": f"{head_label} {head:.2f} deg mag",
-                "y": [0, y],
-                "x": [0, x],
+                "y": [0, head_y],
+                "x": [0, head_x],
                 "type": "scatter",
                 "mode": "lines",
                 "line": {"dash": "solid", "color": head_color},
