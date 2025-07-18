@@ -975,10 +975,12 @@ def sensor_data_processing(
         )
         # Sometimes the airsat and instrument O2 values are large offscale and other data is negative
         # See SG189 dive 37 in SPURS_Sep12, recorded on scicon.  Typically the first and/or last point in the dive or climb file
+        #
+        # After some timeouts on the scicon, the next sample can be bad, with out of range/negative values being reported
         bad_i = [i for i in range(optode_np) if optode_tcphase_v[i] < 0]
         assert_qc(QC_BAD, optode_oxygen_qc_v, bad_i, "bad %s oyxgen" % instrument)
-        optode_tcphase_v[bad_i] = BaseNetCDF.nc_nan
         optode_o2_v[bad_i] = BaseNetCDF.nc_nan
+        optode_dissolved_oxygen_v[bad_i] = BaseNetCDF.nc_nan
 
         ## NOTE: we use CTD temperature, not optode_tempc_v, and we use insitu density, not potential density
         inherit_qc(
