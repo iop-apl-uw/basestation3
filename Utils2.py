@@ -282,6 +282,15 @@ def add_scicon_stats(instrument: str) -> dict:
             },
             BaseNetCDF.nc_scalar,
         ]
+        meta_data_adds["%s_timeouts_times_%s" % (instrument, cast)] = [
+            False,
+            "c",
+            {
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "%s epoch times for of timeouts %s" % (instrument, tag),
+            },
+            BaseNetCDF.nc_scalar,
+        ]
         meta_data_adds["%s_errors_%s" % (instrument, cast)] = [
             False,
             "i",

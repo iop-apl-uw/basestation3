@@ -27,6 +27,7 @@ SCICON basestation sensor extension
 """
 
 import collections
+import contextlib
 import os
 import re
 import shutil
@@ -811,6 +812,7 @@ def extract_file_metadata(inp_file_name):
     sealevel = None
 
     ret_list = []
+    timeouts = ""
 
     line_count = 0
     for raw_line in inp_file:
@@ -823,6 +825,13 @@ def extract_file_metadata(inp_file_name):
             continue
 
         if raw_line[0] == "%":
+            # Test for timeouts - in eng: %11562368 T-O {}
+            splits = raw_line.split()
+            if len(splits) >= 3 and splits[1] == "T-O":
+                with contextlib.suppress(Exception):
+                    if start_time is not None:
+                        timeouts += f"{start_time + float(splits[0][1:])/1000.0:.3f},"
+
             raw_strs = raw_line.split(":", 1)
             raw_strs[0] = raw_strs[0].replace("% ", "%")
             if raw_strs[0] == "%instrument":
@@ -910,7 +919,11 @@ def extract_file_metadata(inp_file_name):
                         ret_list.append(
                             (
                                 "%s_%s_%s"
-                                % (instrument_name[0], raw_strs[0][1:], container[-1]),
+                                % (
+                                    instrument_name[0],
+                                    raw_strs[0][1:],
+                                    container[-1],
+                                ),
                                 int(raw_strs[1].strip()),
                             )
                         )
@@ -918,6 +931,24 @@ def extract_file_metadata(inp_file_name):
                         log_warning(
                             "Can't extract dive value from cotainer (%s)" % container
                         )
+
+        if (
+            container is not None
+            and (container[-1] in ("a", "b", "c", "d"))
+            and timeouts
+        ):
+            instrument_name = [instrument.instr_class]
+            Sensors.process_sensor_extensions("remap_instrument_names", instrument_name)
+            if instrument_name[0] != "depth":
+                if timeouts.endswith(","):
+                    timeouts = timeouts[:-1]
+                ret_list.append(
+                    (
+                        "%s_%s_%s"
+                        % (instrument_name[0], "timeouts_times", container[-1]),
+                        timeouts,
+                    )
+                )
 
     # Create the output tuple
     return (
