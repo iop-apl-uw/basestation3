@@ -90,6 +90,8 @@ class CTDVars:
     min_temperature: float | None = None
     max_temperature: float | None = None
     is_legato: bool = False
+    sigmat_t_dive: npt.NDArray[np.float64] | None = None
+    sigmat_t_climb: npt.NDArray[np.float64] | None = None
 
 
 def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
@@ -200,7 +202,7 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         ) = None
 
     # Preliminaries
-    temp = salinity = None
+    temp = salinity = sigma_t = None
 
     if temp_name in dive_nc_file.variables and salinity_name in dive_nc_file.variables:
         try:
@@ -212,6 +214,10 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
                 ctd_vars.conductivity = dive_nc_file.variables[conductivity_name][:]
             else:
                 ctd_vars.conductivity = None
+            if "sigma_t" in dive_nc_file.variables:
+                sigma_t = dive_nc_file.variables["sigma_t"][:]
+            else:
+                sigma_t = None
             # ctd_vars.qc_tag = ""
             if "temperature_qc" in dive_nc_file.variables and "raw" not in temp_name:
                 temp_qc = QC.decode_qc(dive_nc_file.variables["temperature_qc"])
@@ -274,6 +280,9 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         if conductivity is not None:
             ctd_vars.conductivity_dive = conductivity[0, :]
             ctd_vars.conductivity_climb = conductivity[1, :]
+        if sigma_t is not None:
+            ctd_vars.sigma_t_dive = sigma_t[0, :]
+            ctd_vars.sigma_t_climb = sigma_t[1, :]
     else:
         if not start_time:
             start_time = ctd_vars.ctd_time_v[0]
@@ -320,6 +329,10 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
             ctd_vars.conductivity_climb = ctd_vars.conductivity[
                 max_depth_sample_index:dive_end
             ]
+
+        if sigma_t is not None:
+            ctd_vars.sigma_t_dive = sigma_t[dive_start:max_depth_sample_index]
+            ctd_vars.sigma_t_climb = sigma_t[max_depth_sample_index:dive_end]
 
     if ctd_vars.is_legato:
         ctd_vars.max_salinity = ctd_vars.min_salinity = ctd_vars.max_temperature = (
@@ -495,6 +508,50 @@ def plot_CTD(
                 }
             )
 
+        if ctd_vars.sigma_t_dive is not None:
+            fig.add_trace(
+                {
+                    "y": ctd_vars.depth_dive,
+                    "x": ctd_vars.sigma_t_dive,
+                    "meta": ctd_vars.time_dive,
+                    "customdata": ctd_vars.point_num_ctd_dive,
+                    "name": "Sigma_T Dive",
+                    "type": "scatter",
+                    "xaxis": "x4",
+                    "yaxis": "y1",
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "triangle-down",
+                        "color": "orange",
+                    },
+                    "hovertemplate": "Sigma_T Dive<br>%{x:.2f} g/m^3<br>%{y:.2f}"
+                    + "meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
+                    "visible": "legendonly",
+                }
+            )
+
+        if ctd_vars.sigma_t_climb is not None:
+            fig.add_trace(
+                {
+                    "y": ctd_vars.depth_climb,
+                    "x": ctd_vars.sigma_t_climb,
+                    "meta": ctd_vars.time_climb,
+                    "customdata": ctd_vars.point_num_ctd_climb,
+                    "name": "Sigma_T Climb",
+                    "type": "scatter",
+                    "xaxis": "x4",
+                    "yaxis": "y1",
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "triangle-up",
+                        "color": "darkgoldenrod",
+                    },
+                    "hovertemplate": "Sigma_T Climb<br>%{x:.2f} g/m^3<br>%{y:.2f}"
+                    + " meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
+                    "visible": "legendonly",
+                }
+            )
+
         if ctd_vars.aa4831_temp_dive is not None:
             fig.add_trace(
                 {
@@ -583,6 +640,16 @@ def plot_CTD(
                 # Not visible - no good way to control the bottom margin so there is room for this
                 "xaxis3": {
                     "title": "Conductivity (S/m)",
+                    "showgrid": False,
+                    "overlaying": "x1",
+                    "side": "bottom",
+                    "anchor": "free",
+                    "position": 0.05,
+                    "visible": False,
+                },
+                # Not visible - no good way to control the bottom margin so there is room for this
+                "xaxis4": {
+                    "title": "Sigma_t (g/m^3)",
                     "showgrid": False,
                     "overlaying": "x1",
                     "side": "bottom",
