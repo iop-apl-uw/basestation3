@@ -2873,7 +2873,7 @@ def set_globals() -> None:
             (nc_ctd_results_info,),
         ],
         "sigma_t": [
-            False,
+            "f",
             "d",
             {
                 "standard_name": "sea_water_sigma_t",
