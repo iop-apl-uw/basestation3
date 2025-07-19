@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import argparse
 import typing
 
 import numpy as np
@@ -43,15 +44,32 @@ import seawater
 if typing.TYPE_CHECKING:
     import BaseOpts
 
+import BaseOptsType
 import MakeDiveProfiles
 import PlotUtils
 import PlotUtilsPlotly
 import QC
 import Utils
 from BaseLog import log_info, log_warning
-from Plotting import plotdivesingle
+from Plotting import add_arguments, plotdivesingle
 
 
+@add_arguments(
+    additional_arguments={
+        "plot_ts_raw": BaseOptsType.options_t(
+            False,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--plot_ts_raw",),
+            bool,
+            {
+                "help": "Plot the raw TS",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": argparse.BooleanOptionalAction,
+            },
+        ),
+    }
+)
 @plotdivesingle
 def plot_TS(
     base_opts: BaseOpts.BaseOptions,
@@ -80,10 +98,16 @@ def plot_TS(
         max_salinity = min_salinity = max_temperature = min_temperature = None
 
     # Order matters here
-    for temp_name, salinity_name in (
-        ("temperature", "salinity"),
-        ("temperature_raw", "salinity_raw"),
-    ):
+    # for temp_name, salinity_name in (
+    #     ("temperature", "salinity"),
+    #     ("temperature_raw", "salinity_raw"),
+    # ):
+    ctd_var_names = [("temperature", "salinity")]
+
+    if base_opts.plot_ts_raw:
+        ctd_var_names.append(("temperature_raw", "salinity_raw"))
+
+    for temp_name, salinity_name in ctd_var_names:
         # Preliminaries
         pressure = freeze_pt = None
         good_mask = None

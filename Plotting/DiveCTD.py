@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import argparse
 import pathlib
 import typing
 from dataclasses import dataclass
@@ -359,6 +360,22 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
     return ctd_vars
 
 
+@add_arguments(
+    additional_arguments={
+        "plot_ctd_raw": BaseOptsType.options_t(
+            None,
+            ("Base", "BasePlot", "Reprocess"),
+            ("--plot_ctd_raw",),
+            bool,
+            {
+                "help": "Plot the CTD raw data (if not set, depends on the if a legato is in use)",
+                "section": "plotting",
+                "option_group": "plotting",
+                "action": argparse.BooleanOptionalAction,
+            },
+        ),
+    }
+)
 @plotdivesingle
 def plot_CTD(
     base_opts: BaseOpts.BaseOptions,
@@ -374,10 +391,15 @@ def plot_CTD(
     ret_figs = []
     ret_plots = []
 
-    for temp_name, salinity_name, conductivity_name in (
-        ("temperature", "salinity", "conductivity"),
-        ("temperature_raw", "salinity_raw", "conductivity_raw"),
+    ctd_var_names = [("temperature", "salinity", "conductivity")]
+
+    if base_opts.plot_ctd_raw or (
+        base_opts.plot_ctd_raw is None
+        and dive_nc_file.variables["sg_cal_sg_ct_type"].getValue() != 4
     ):
+        ctd_var_names.append(("temperature_raw", "salinity_raw", "conductivity_raw"))
+
+    for temp_name, salinity_name, conductivity_name in ctd_var_names:
         ctd_vars = load_ctd_vars(
             dive_nc_file, temp_name, salinity_name, conductivity_name
         )
@@ -807,10 +829,19 @@ def plot_CTD_series(
         if nc_file:
             nc_files.append(nc_file)
 
-    for temp_name, salinity_name, conductivity_name in (
-        ("temperature", "salinity", "conductivity"),
-        ("temperature_raw", "salinity_raw", "conductivity_raw"),
+    #    for temp_name, salinity_name, conductivity_name in (
+    #        ("temperature", "salinity", "conductivity"),
+    #        ("temperature_raw", "salinity_raw", "conductivity_raw"),
+    #    ):
+    ctd_var_names = [("temperature", "salinity", "conductivity")]
+
+    if base_opts.plot_ctd_raw or (
+        base_opts.plot_ctd_raw is None
+        and dive_nc_file.variables["sg_cal_sg_ct_type"].getValue() != 4
     ):
+        ctd_var_names.append(("temperature_raw", "salinity_raw", "conductivity_raw"))
+
+    for temp_name, salinity_name, conductivity_name in ctd_var_names:
         fig = None
         frames = []
         n_frames = 0
