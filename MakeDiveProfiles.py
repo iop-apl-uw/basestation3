@@ -446,7 +446,6 @@ def sg_config_constants(base_opts, calib_consts, log_deepglider=0, has_gpctd=Fal
             if val in calib_consts:
                 del fm_consts[val]
 
-    #    pdb.set_trace()
     config.update(fm_consts)
 
     config.update(
@@ -1749,6 +1748,16 @@ def load_dive_profile_data(
                 # the underlying data is mapped out and crashes python and the debugger!
                 # (This is critical for raw data that is retained by the caller; not so much for results, etc. that are rebuilt)
                 for dive_nc_varname, nc_var in list(dive_nc_file.variables.items()):
+                    # Deal with timeouts from the truck eng file
+                    if dive_nc_varname.endswith("timeouts_times_truck"):
+                        cls = dive_nc_varname.split("_", 1)[0]
+                        eng_f.timeouts_times[cls] = nc_var[:].tobytes().decode("utf-8")
+                        continue
+                    if dive_nc_varname.endswith("timeouts_truck"):
+                        cls = dive_nc_varname.split("_", 1)[0]
+                        eng_f.timeouts[cls] = nc_var[0]
+                        continue
+
                     # scipy version: nc_typecode = nc_var.typecode()
                     nc_typecode = NetCDFUtils.typecode_mapper(nc_var.dtype)
                     nc_string = nc_typecode == "c"
@@ -2222,6 +2231,13 @@ def load_dive_profile_data(
             # If the eng_f object was created before the calib_consts was reconstructed, apply it here
             # before the call to remap_engfile_columns
             eng_f.calib_consts = calib_consts
+
+        # Write out timeouts
+        # Note: the _obs are not written out as the time for the timeouts is
+        for cls, timeouts in eng_f.timeouts.items():
+            results_d[f"{cls}_timeouts_truck"] = timeouts
+        for cls, times in eng_f.timeouts_times.items():
+            results_d[f"{cls}_timeouts_times_truck"] = times
 
         # regardless of source, remap these column names
         eng_f.remap_engfile_columns()

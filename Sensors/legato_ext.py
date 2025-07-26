@@ -183,6 +183,7 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
         "legatoFast_temp": "legato_temp",
         "legatoFast_pressure": "legato_pressure",
         "legatoFast_conducTemp": "legato_conducTemp",
+        "rbr": "legato",
     }
     if (
         "ignore_truck_legato" in calib_constants

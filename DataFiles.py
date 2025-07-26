@@ -30,10 +30,14 @@
 
 """Contains all routines for extracting data from a glider's data file"""
 
+import collections
+import copy
 import os
+import pdb
 import re
 import sys
 import time
+import traceback
 
 import numpy as np
 
@@ -53,6 +57,17 @@ from BaseLog import (
     log_info,
     log_warning,
 )
+
+DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
 
 # A number that we can clear identify as a standing for "NaN"
 # inf = 1e300000
@@ -90,6 +105,20 @@ class DataFile:
         self.eng_cols = None
         self.eng_dict = None
         self.calib_consts = calib_consts
+        self.timeouts = collections.defaultdict(list)
+        self.timeouts_obs = collections.defaultdict(list)
+        self.timeouts_times = collections.defaultdict(str)
+
+    def lookup_class_name(self, col_name):
+        if col_name in ("heading", "pitch", "roll", "mag.x", "mag.y", "mag.z"):
+            return "compass"
+        elif "." in col_name:
+            return col_name.split(".", 1)[0]
+        else:
+            return col_name
+
+    def row_time(self, raw_strs):
+        time.mktime(self.start_ts) + raw_strs[self.columns.index("")]
 
     def dat_to_asc(self):
         """Converts a data file to a an ASC file"""
@@ -279,6 +308,29 @@ class DataFile:
         self.eng_cols = None
         self.eng_dict = None
 
+        # Process timeouts
+
+        # Remap the class names
+        old_cls_names = list(self.timeouts_obs.keys())
+        new_cls_names = copy.deepcopy(old_cls_names)
+        Sensors.process_sensor_extensions(
+            "remap_engfile_columns_netcdf", self.calib_consts, new_cls_names
+        )
+        for old_cls, new_cls in zip(old_cls_names, new_cls_names, strict=True):
+            self.timeouts_obs[new_cls] = self.timeouts_obs.pop(old_cls)
+
+        # Convert obs to epoch times and count up timeouts
+        start_time = time.mktime(self.start_ts)
+        for cls, obs in self.timeouts_obs.items():
+            self.timeouts[cls] = len(obs)
+            try:
+                for ob in obs:
+                    self.timeouts_times[cls] += (
+                        f"{start_time + self.data[ob,self.columns.index('elaps_t')]:.3f},"
+                    )
+            except Exception:
+                log_error(f'Failed processing timeouts for instrument "{cls}"', "exc")
+
         # Mark the new data type
         self.file_type = "eng"
         return 0
@@ -308,6 +360,13 @@ class DataFile:
         else:
             log_error("Neither dive nor selftest was set")
         fo.write("%sbasestation_version: %s\n" % (prefix, Globals.basestation_version))
+        # Timeouts
+        for cls, timeouts in self.timeouts.items():
+            fo.write(f"%{cls}_timeouts:{timeouts}\n")
+        for cls, obs in self.timeouts_obs.items():
+            fo.write(f"%{cls}_timeouts_obs:{','.join([str(x) for x in obs])}\n")
+        for cls, times in self.timeouts_times.items():
+            fo.write(f"%{cls}_timeouts_times:{times}\n")
         time_string = time.strftime("%m %d %y %H %M %S", self.start_ts)
         time_parts = time_string.split()
         fo.write(
@@ -449,7 +508,7 @@ def process_data_file(in_filename, file_type, calib_consts):
         raw_line_temp = raw_data_file.readline()
         log_debug("[%s]" % raw_line_temp)
         raw_line = raw_line_temp.rstrip()
-        line_count = line_count + 1
+        line_count += 1
         if raw_line == "":
             log_error("No valid header found in %s" % in_filename)
             return None
@@ -513,24 +572,51 @@ def process_data_file(in_filename, file_type, calib_consts):
                 if len(i):
                     data_file.columns.append(i.lstrip().rstrip(chr(0x1A)))
             continue
+        elif (
+            "timeouts_obs" in raw_strs[0]
+            or "timeouts_times" in raw_strs[0]
+            or "timeouts" in raw_strs[0]
+        ):
+            try:
+                tmp = raw_strs[0]
+                if tmp.startswith("%"):
+                    tmp = tmp[1:]
+                cls, ttype = tmp.split("_", 1)
+                if "obs" in ttype:
+                    data_file.timeouts_obs[cls] = [
+                        int(x) for x in raw_strs[1].rstrip().split(",")
+                    ]
+                elif "times" in ttype:
+                    data_file.timeouts_times[cls] = raw_strs[1]
+                else:
+                    data_file.timeouts[cls] = raw_strs[1]
+            except Exception:
+                log_error(f"Problems processing timeouts line {line_count}", "exc")
+            continue
         elif raw_strs[0] == "data" or raw_strs[0] == "%data":
             break
 
     # Process the data
     prev_len = -1
     timeout_count = 0
+    data_row = -1
     while True:
         raw_line = raw_data_file.readline().rstrip()
-        line_count = line_count + 1
+        line_count += 1
+        data_row += 1
         if raw_line == "" or raw_line[-1] == "\x1a":
             break
         raw_strs = raw_line.split()
         row = []
+        l_timeouts_obs = collections.defaultdict(int)
         for i in range(len(raw_strs)):
             if (raw_strs[i])[0:1] == "N":
                 row.append(nan)
             elif (raw_strs[i])[0:1] == "T":
                 timeout_count += 1
+                l_timeouts_obs[data_file.lookup_class_name(data_file.columns[i])] = (
+                    data_row
+                )
                 row.append(nan)
             else:
                 try:
@@ -545,6 +631,9 @@ def process_data_file(in_filename, file_type, calib_consts):
 
         if len(row):
             rows.append(row)
+            for k, v in l_timeouts_obs.items():
+                data_file.timeouts_obs[k].append(v)
+
             if prev_len > -1 and len(row) != prev_len:
                 log_error(
                     "line length problem line %d,%d,%d"
@@ -593,7 +682,7 @@ def main():
                 str,
                 {
                     "help": "Seaglider .dat file to process",
-                    "action": BaseOpts.FullPathAction,
+                    # "action": BaseOpts.FullPathAction,
                 },
             ),
             "log_file": BaseOptsType.options_t(
@@ -603,7 +692,7 @@ def main():
                 str,
                 {
                     "help": "Seaglider .log file matching the .dat file",
-                    "action": BaseOpts.FullPathAction,
+                    # "action": BaseOpts.FullPathAction,
                     "nargs": "?",
                 },
             ),
@@ -611,11 +700,16 @@ def main():
     )
     BaseLogger(base_opts)  # initializes BaseLog
 
-    datafile_name = base_opts.data_file
-    logfile_name = base_opts.log_file
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
 
-    head, _ = os.path.split(datafile_name)
-    sg_calib_file_name = os.path.join(head, "sg_calib_constants.m")
+    datafile_name = os.path.join(base_opts.mission_dir, base_opts.data_file)
+    if base_opts.log_file:
+        logfile_name = os.path.join(base_opts.mission_dir, base_opts.log_file)
+    else:
+        logfile_name = None
+
+    sg_calib_file_name = os.path.join(base_opts.mission_dir, "sg_calib_constants.m")
 
     calib_consts = CalibConst.getSGCalibrationConstants(sg_calib_file_name)
     if not calib_consts:
@@ -636,35 +730,32 @@ def main():
         elif not fc.is_received():
             log_info("Don't know how to handle %s" % datafile_name)
             return 1
+        elif fc.is_data():
+            log_info("Processing %s from a data to asc format" % datafile_name)
+            data_file = process_data_file(datafile_name, "dat", calib_consts)
+            if not data_file:
+                return 1
+
+            data_file.dat_to_asc()
+
+            if logfile_name:
+                log_file = LogFile.parse_log_file(
+                    logfile_name,
+                    issue_warn=True,
+                )
+                if not log_file:
+                    return 1
+                if data_file.asc_to_eng(log_file):
+                    log_error("%s failed in conversion from asc to eng" % datafile_name)
+
+            data_file.dump(sys.stdout)
         else:
-            if fc.is_data():
-                log_info("Processing %s from a data to asc format" % datafile_name)
-                data_file = process_data_file(datafile_name, "dat", calib_consts)
-                data_file.dat_to_asc()
-
-                if logfile_name:
-                    log_fc = FileMgr.FileCode(logfile_name, 0)
-                    if not (
-                        (log_fc.is_seaglider() or log_fc.is_seaglider_selftest())
-                        and log_fc.is_log()
-                    ):
-                        log_error(
-                            "Error - %s is not a seaglider log filename" % logfile_name
-                        )
-                        return 1
-                    log_file = LogFile.parse_log_file(
-                        logfile_name,
-                    )
-                    if data_file.asc_to_eng(log_file):
-                        log_error(
-                            "%s failed in conversion from asc to eng" % datafile_name
-                        )
-
-                data_file.dump(sys.stdout)
-            else:
-                log_info("Don't know how to process %s" % datafile_name)
+            log_info("Don't know how to process %s" % datafile_name)
+            return 1
     else:
-        log_error("File %s not a seaglider file name" % datafile_name)
+        # Assume its an eng file
+        data_file = process_data_file(datafile_name, "eng", calib_consts)
+        data_file.dump(sys.stdout)
         return 1
 
     #     log_file = LogFile.parse_log_file(logfile_name, base_opts.mission_dir)
@@ -695,6 +786,7 @@ if __name__ == "__main__":
     except SystemExit:
         pass
     except Exception:
+        DEBUG_PDB_F()
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(retval)

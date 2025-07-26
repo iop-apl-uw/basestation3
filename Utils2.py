@@ -253,6 +253,7 @@ def add_scicon_stats(instrument: str) -> dict:
     meta_data_adds = {}
 
     for cast, tag in (
+        ("truck", "truck"),
         ("a", "dive"),
         ("b", "climb"),
         ("c", "loiter"),

@@ -714,6 +714,21 @@ def set_globals() -> None:
     nc_var_metadata = {
         # The platform variable; NODC requires the name 'glider'
         "glider": [False, "c", {"nodc_name": "glider"}, nc_scalar],
+        "compass_timeouts_times_truck": [
+            False,
+            "c",
+            {
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "compass epoch times for of timeouts truck",
+            },
+            nc_scalar,
+        ],
+        "compass_timeouts_truck": [
+            False,
+            "i",
+            {"description": "compass total number of samples timed out on truck"},
+            nc_scalar,
+        ],
         "sg_cal_id_str": [
             False,
             "c",
