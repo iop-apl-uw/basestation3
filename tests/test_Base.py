@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024  University of Washington.
+## Copyright (c) 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -60,7 +60,7 @@ test_cases = (
         "--plot_types none --make_mission_timeseries --make_mission_profile",
         (
             "Found Disconnect with no previous Connected:",
-            "timeout(s) seen in",
+            "timeout(s) seen for compass",
             "CTD out of the water after",
             "Large mis-match between predicted and observed w",
             "Compass invalid out for",

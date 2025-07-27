@@ -322,7 +322,6 @@ class DataFile:
         # Convert obs to epoch times and count up timeouts
         start_time = time.mktime(self.start_ts)
         for cls, obs in self.timeouts_obs.items():
-            self.timeouts[cls] = len(obs)
             try:
                 for ob in obs:
                     self.timeouts_times[cls] += (
@@ -598,7 +597,6 @@ def process_data_file(in_filename, file_type, calib_consts):
 
     # Process the data
     prev_len = -1
-    timeout_count = 0
     data_row = -1
     while True:
         raw_line = raw_data_file.readline().rstrip()
@@ -613,7 +611,6 @@ def process_data_file(in_filename, file_type, calib_consts):
             if (raw_strs[i])[0:1] == "N":
                 row.append(nan)
             elif (raw_strs[i])[0:1] == "T":
-                timeout_count += 1
                 l_timeouts_obs[data_file.lookup_class_name(data_file.columns[i])] = (
                     data_row
                 )
@@ -641,10 +638,15 @@ def process_data_file(in_filename, file_type, calib_consts):
                 )
             prev_len = len(row)
 
-    if timeout_count > 0:
-        log_warning(
-            "%d timeout(s) seen in %s" % (timeout_count, in_filename), alert="TIMEOUT"
-        )
+    # Timeouts only appear in the .dat file - for asc and eng they are transformed into NaNs (N)
+    # Calls for processing eng files populate this field from the header section
+    if file_type == "dat":
+        for cls, obs in data_file.timeouts_obs.items():
+            data_file.timeouts[cls] = len(obs)
+            log_warning(
+                f"{data_file.timeouts[cls]:d} timeout(s) seen for {cls} in {in_filename}",
+                alert="TIMEOUT",
+            )
 
     raw_data_file.close()
     try:
