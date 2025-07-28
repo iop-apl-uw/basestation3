@@ -812,7 +812,7 @@ def extract_file_metadata(inp_file_name):
     sealevel = None
 
     ret_list = []
-    timeouts = ""
+    timeouts_times = ""
 
     line_count = 0
     for raw_line in inp_file:
@@ -830,7 +830,9 @@ def extract_file_metadata(inp_file_name):
             if len(splits) >= 3 and splits[1] == "T-O":
                 with contextlib.suppress(Exception):
                     if start_time is not None:
-                        timeouts += f"{start_time + float(splits[0][1:])/1000.0:.3f},"
+                        timeouts_times += (
+                            f"{start_time + float(splits[0][1:])/1000.0:.3f},"
+                        )
 
             raw_strs = raw_line.split(":", 1)
             raw_strs[0] = raw_strs[0].replace("% ", "%")
@@ -932,23 +934,20 @@ def extract_file_metadata(inp_file_name):
                             "Can't extract dive value from cotainer (%s)" % container
                         )
 
-        if (
-            container is not None
-            and (container[-1] in ("a", "b", "c", "d"))
-            and timeouts
-        ):
-            instrument_name = [instrument.instr_class]
-            Sensors.process_sensor_extensions("remap_instrument_names", instrument_name)
-            if instrument_name[0] != "depth":
-                if timeouts.endswith(","):
-                    timeouts = timeouts[:-1]
-                ret_list.append(
-                    (
-                        "%s_%s_%s"
-                        % (instrument_name[0], "timeouts_times", container[-1]),
-                        timeouts,
-                    )
+    if (
+        container is not None
+        and (container[-1] in ("a", "b", "c", "d"))
+        and timeouts_times
+    ):
+        instrument_name = [instrument.instr_class]
+        Sensors.process_sensor_extensions("remap_instrument_names", instrument_name)
+        if instrument_name[0] != "depth":
+            ret_list.append(
+                (
+                    "%s_%s_%s" % (instrument_name[0], "timeouts_times", container[-1]),
+                    timeouts_times.rstrip(","),
                 )
+            )
 
     # Create the output tuple
     return (
