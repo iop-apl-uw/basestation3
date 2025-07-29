@@ -26,7 +26,6 @@ RBR codeTODO basestation sensor extension
 """
 
 import numpy as np
-from numpy.polynomial import polynomial as P
 
 import BaseNetCDF
 import Utils
@@ -492,10 +491,11 @@ def sensor_data_processing(
         Gb = [-6.24097e-3, -6.93498e-3, -6.90358e-3, -4.29155e-3]
         Gc0 = -3.11680e-7
 
-        Fcs = np.exp(
-            (salin_cor_v * np.sum(P.polyval(Gb, [Ts] * 4), axis=1))
-            + Gc0 * np.power(salin_cor_v, 2)
-        )
+        tmp = 0.0
+        for ii in range(4):
+            tmp += Gb[ii] * np.power(Ts, ii)
+
+        Fcs = np.exp((salin_cor_v * tmp) + (Gc0 * np.power(salin_cor_v, 2)))
 
         # Equation 3
         coda_comp_o2_v = coda_uncomp_o2_v * Fcs * Fcp
