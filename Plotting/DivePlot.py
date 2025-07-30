@@ -225,6 +225,11 @@ def plot_diveplot(
         else:
             buoy_veh = None
 
+        if "sigma_t" in dive_nc_file.variables:
+            sigma_t = dive_nc_file.variables["sigma_t"][:]
+        else:
+            sigma_t = None
+
         ctd_depth = None
         if "legato_pressure" in dive_nc_file.variables:
             # In this case, ctd_depth is derived from the legato, not the truck
@@ -377,6 +382,39 @@ def plot_diveplot(
                 "hovertemplate": "Legato Depth<br>%{meta:.1f} meters<br>%{x:.2f} mins<br><extra></extra>",
             }
         )
+
+    if sigma_t is not None:
+        valid_i = np.logical_not(np.isnan(sigma_t))
+        # sigma_t_floor = min(sigma_t[valid_i])
+        sigma_t_floor = 15.0
+
+        if max(sigma_t[valid_i] - sigma_t_floor) > 40.0:
+            sigma_t_scl = 1.0
+        elif max(sigma_t[valid_i] - sigma_t_floor) > 30.0:
+            sigma_t_scl = 2.0
+        elif max(sigma_t[valid_i] - sigma_t_floor) > 20.0:
+            sigma_t_scl = 3.0
+        else:
+            sigma_t_scl = 4.0
+
+        fig.add_trace(
+            {
+                "y": (sigma_t[valid_i] - sigma_t_floor) * sigma_t_scl,
+                "x": ctd_time[valid_i],
+                "meta": sigma_t[valid_i],
+                "name": f"sigma_t {sigma_t_scl:.0f} g/m^3 - {sigma_t_floor:.1f}",
+                "type": "scatter",
+                "xaxis": "x1",
+                "yaxis": "y1",
+                # "mode": "lines",
+                "visible": "legendonly",
+                "mode": "lines",
+                # "marker": {"symbol": "cross", "size": 3},
+                "line": {"dash": "solid", "color": "DarkGrey"},
+                "hovertemplate": "sigma_t<br>%{meta:.1f} g/m^3<br>%{x:.2f} mins<br><extra></extra>",
+            }
+        )
+
     # End Depth traces
 
     # Vehicle attitude from compass and pressure
