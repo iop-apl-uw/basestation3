@@ -451,3 +451,24 @@ gc_move = collections.namedtuple("gc_move", ["start_time", "end_time", "move_typ
 gc_move_depth = collections.namedtuple(
     "gc_move_depth", ["start_depth", "end_depth", "move_type"]
 )
+
+
+def collect_timeouts(dive_nc_file, instr_cls):
+    timeouts = 0
+    timeouts_times = []
+
+    for profile in ("", "_a", "_b", "_c", "_d"):
+        timeouts_str = f"{instr_cls}_timeouts{profile}"
+        if timeouts_str in dive_nc_file.variables:
+            timeouts += dive_nc_file.variables[timeouts_str].getValue()
+        timeouts_times_str = f"{instr_cls}_timeouts_times{profile}"
+        if timeouts_times_str in dive_nc_file.variables:
+            timeouts_times += [
+                float(x)
+                for x in dive_nc_file.variables[timeouts_times_str][:]
+                .tobytes()
+                .decode()
+                .rstrip()
+                .split(",")
+            ]
+    return (timeouts, np.array(timeouts_times))

@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import collections
 import typing
 
 import numpy as np
@@ -88,6 +89,10 @@ def plot_optode(
         optode_type = "3830"
     if optode_type is None:
         return ([], [])
+
+    timeouts, timeouts_times = PlotUtils.collect_timeouts(
+        dive_nc_file, f"aa{optode_type}"
+    )
 
     optode_correctedO2 = None
     o2_qc_good = False
@@ -177,6 +182,8 @@ def plot_optode(
     except Exception:
         log_warning(f"Could not find {drift_gain_var} - drift gain not set?")
 
+    timeouts_depth_dive = timeouts_depth_climb = None
+
     if binned_profile:
         # Create dive and climb vectors
         depth_dive = optode_instrument_O2_depth[0, :]
@@ -228,6 +235,40 @@ def plot_optode(
         optode_instrument_O2_time_climb = (
             optode_instrument_O2_time[max_depth_sample_index:] - start_time
         ) / 60.0
+
+        if timeouts_times is not None:
+            f_depth = scipy.interpolate.PchipInterpolator(
+                optode_instrument_O2_time, optode_instrument_O2_depth, extrapolate=True
+            )
+            timeouts_times_dive = timeouts_times[
+                timeouts_times < optode_instrument_O2_time[max_depth_sample_index]
+            ]
+            timeouts_depth_dive = f_depth(timeouts_times_dive)
+            timeouts_times_climb = timeouts_times[
+                timeouts_times >= optode_instrument_O2_time[max_depth_sample_index]
+            ]
+            timeouts_depth_climb = f_depth(timeouts_times_climb)
+            data_arrays = np.hstack(
+                (
+                    [] if sat_O2 is None else sat_O2,
+                    optode_instrument_O2,
+                    [] if optode_correctedO2 is None else optode_correctedO2,
+                )
+            )
+            min_x = np.nanmin(data_arrays)
+            max_x = np.nanmax(data_arrays)
+            max_depth = np.nanmax(
+                np.hstack(
+                    (
+                        [] if sat_O2_depth is None else sat_O2_depth,
+                        []
+                        if optode_instrument_O2_depth is None
+                        else optode_instrument_O2_depth,
+                    )
+                )
+            )
+            min_x = np.nanmin(data_arrays)
+            max_x = np.nanmax(data_arrays)
 
         if optode_correctedO2 is not None:
             optode_correctedO2_dive = optode_correctedO2[0:max_depth_sample_index]
@@ -365,6 +406,55 @@ def plot_optode(
             }
         )
 
+    show_label = collections.defaultdict(lambda: True)
+    for timeouts_times, timeouts_depth, name, tag, color in (
+        (
+            timeouts_times_dive,
+            timeouts_depth_dive,
+            "timeouts_dive",
+            "Dive timeout",
+            "Green",
+        ),
+        (
+            timeouts_times_climb,
+            timeouts_depth_climb,
+            "timeouts_climb",
+            "Climb timeout",
+            "Goldenrod",
+        ),
+    ):
+        if timeouts_depth is None:
+            continue
+        for t_d, t_t in zip(timeouts_depth, timeouts_times, strict=True):
+            fig.add_trace(
+                {
+                    "type": "scatter",
+                    "x": [min_x, min_x, max_x, max_x],
+                    "y": [
+                        t_d,
+                        t_d + (0.001 * max_depth),
+                        t_d + (0.001 * max_depth),
+                        t_d,
+                    ],
+                    "fill": "toself",
+                    "fillcolor": color,
+                    "line": {
+                        "dash": "solid",
+                        # proxy for line opacity
+                        "width": 0.25,
+                        "color": color,
+                    },
+                    "mode": "lines",
+                    "legendgroup": f"{name}_group",
+                    "name": f"{tag}s",
+                    "showlegend": show_label[name],
+                    "visible": "legendonly",
+                    "text": f"{tag} {(t_t - start_time)/6.0:.2f} mins ({t_t:.3f} secs)",
+                    "hoverinfo": "text",
+                }
+            )
+            show_label[name] = False
+
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = "%s\nOxygen vs Depth (%scorrected for salinity and depth%s)%s" % (
         mission_dive_str,
@@ -422,6 +512,9 @@ def plot_optode(
 
     if drift_gain is not None:
         cal_text += f" Drift Gain:{drift_gain:.2f}"
+
+    if timeouts:
+        cal_text += f" Timeouts:{timeouts:d}"
 
     if cal_text:
         fig.update_layout(
