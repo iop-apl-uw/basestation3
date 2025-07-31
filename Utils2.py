@@ -287,7 +287,8 @@ def add_scicon_stats(instrument: str) -> dict:
             False,
             "c",
             {
-                "units": "seconds since 1970-1-1 00:00:00",
+                # Do not specify - xarray gets horribly confused if the units are supplied
+                # "units": "seconds since 1970-1-1 00:00:00",
                 "description": "%s epoch times for of timeouts %s" % (instrument, tag),
             },
             BaseNetCDF.nc_scalar,
