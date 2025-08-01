@@ -150,7 +150,7 @@ def create_nc_var(
 
     # Check for scalar variables
     if np.ndim(inp_data) == 0:
-        if inp_data == np.nan:
+        if np.issubdtype(inp_data.dtype, np.number) and np.isnan(inp_data):
             inp_data = template["variables"][var_name]["attributes"]["_FillValue"]
     else:
         inp_data[np.isnan(inp_data)] = template["variables"][var_name]["attributes"][
@@ -752,19 +752,39 @@ def main(
             "profile_time",
             reduced_time[median_time_i],
         )
+
+        # Lat and Lon may not be dense - interpolate the missing points
+        # for use in median location variables
+        full_lat = reduced_vars["latitude"].copy()
+        lat_nan_v = np.isnan(reduced_vars["latitude"])
+        if np.nonzero(lat_nan_v)[0].size:
+            full_lat[lat_nan_v] = NetCDFUtils.interp1_extend(
+                reduced_time[np.logical_not(lat_nan_v)],
+                full_lat[np.logical_not(lat_nan_v)],
+                reduced_time[lat_nan_v],
+            )
+
+        full_lon = reduced_vars["longitude"].copy()
+        lon_nan_v = np.isnan(reduced_vars["longitude"])
+        if np.nonzero(lon_nan_v)[0].size:
+            full_lon[lon_nan_v] = NetCDFUtils.interp1_extend(
+                reduced_time[np.logical_not(lon_nan_v)],
+                full_lon[np.logical_not(lon_nan_v)],
+                reduced_time[lon_nan_v],
+            )
+
         create_nc_var(
             dso,
             template,
             "profile_lat",
-            reduced_vars["latitude"][median_time_i],
+            full_lat[median_time_i],
         )
         create_nc_var(
             dso,
             template,
             "profile_lon",
-            reduced_vars["longitude"][median_time_i],
+            full_lon[median_time_i],
         )
-
         create_nc_var(
             dso,
             template,
@@ -789,13 +809,13 @@ def main(
             dso,
             template,
             "lat_uv",
-            reduced_vars["latitude"][median_time_i],
+            full_lat[median_time_i],
         )
         create_nc_var(
             dso,
             template,
             "lon_uv",
-            reduced_vars["longitude"][median_time_i],
+            full_lon[median_time_i],
         )
 
         # This varibles are just to hold the attched metadata
