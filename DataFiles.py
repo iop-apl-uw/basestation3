@@ -642,9 +642,16 @@ def process_data_file(in_filename, file_type, calib_consts):
     # Calls for processing eng files populate this field from the header section
     if file_type == "dat":
         for cls, obs in data_file.timeouts_obs.items():
-            data_file.timeouts[cls] = len(obs)
+            new_cls = [cls]
+            Sensors.process_sensor_extensions(
+                "remap_engfile_columns_netcdf", data_file.calib_consts, new_cls
+            )
+            data_file.timeouts[new_cls[0]] = len(obs)
+            # Note: The warning is issued for the old class name, since that is what is in the .dat file,
+            # but the time out is tracked for the renamed class name, which is what will be in the
+            # .eng and .nc file
             log_warning(
-                f"{data_file.timeouts[cls]:d} timeout(s) seen for {cls} in {in_filename}",
+                f"{data_file.timeouts[new_cls[0]]:d} timeout(s) seen for {cls} in {in_filename}",
                 alert="TIMEOUT",
             )
 
