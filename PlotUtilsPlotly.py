@@ -40,7 +40,7 @@ import plotly
 import plotly.graph_objects
 import plotly.io
 
-from BaseLog import log_warning
+from BaseLog import log_error, log_warning
 
 # IOP Standard Figure size
 std_width = 1058
@@ -142,23 +142,26 @@ def write_output_files(base_opts, base_file_name, fig):
     else:
         fo_t = output_name
 
-    fig.write_html(
-        file=fo_t,
-        include_plotlyjs=False,
-        full_html=False,
-        auto_open=False,
-        validate=True,
-        config=std_config_dict,
-        include_mathjax="cdn",
-        auto_play=False,
-    )
+    try:
+        fig.write_html(
+            file=fo_t,
+            include_plotlyjs=False,
+            full_html=False,
+            auto_open=False,
+            validate=True,
+            config=std_config_dict,
+            include_mathjax="cdn",
+            auto_play=False,
+        )
 
-    if base_opts.compress_div:
-        fo_t.seek(0, 0)
-        with open(output_name, "wb") as fo:
-            fo.write(brotli.compress(fo_t.read().encode("utf-8")))
-        fo_t.close()
-    ret_list.append(output_name)
+        if base_opts.compress_div:
+            fo_t.seek(0, 0)
+            with open(output_name, "wb") as fo:
+                fo.write(brotli.compress(fo_t.read().encode("utf-8")))
+            fo_t.close()
+        ret_list.append(output_name)
+    except Exception:
+        log_error(f"Failed to write out {output_name}", "exc")
 
     def save_img_file(output_fmt):
         output_name = base_file_name + "." + output_fmt
@@ -183,16 +186,28 @@ def write_output_files(base_opts, base_file_name, fig):
         return output_name
 
     if base_opts.save_png:
-        ret_list.append(save_img_file("png"))
+        try:
+            ret_list.append(save_img_file("png"))
+        except Exception:
+            log_error(f"Failed to write out {base_file_name}.png", "exc")
 
     if base_opts.save_jpg:
-        ret_list.append(save_img_file("jpg"))
+        try:
+            ret_list.append(save_img_file("jpg"))
+        except Exception:
+            log_error(f"Failed to write out {base_file_name}.png", "exc")
 
     if base_opts.save_webp:
-        ret_list.append(save_img_file("webp"))
+        try:
+            ret_list.append(save_img_file("webp"))
+        except Exception:
+            log_error(f"Failed to write out {base_file_name}.webp", "exc")
 
     if base_opts.save_svg:
-        ret_list.append(save_img_file("svg"))
+        try:
+            ret_list.append(save_img_file("svg"))
+        except Exception:
+            log_error(f"Failed to write out {base_file_name}.svg", "exc")
 
     def isnotebook():
         try:
