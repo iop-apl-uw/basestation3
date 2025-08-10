@@ -2955,13 +2955,17 @@ async def buildUserTable(app, config=None):
         config = app.config
 
     if await aiofiles.os.path.exists(config.USERS_FILE):
-        async with aiofiles.open(config.USERS_FILE, "r") as f:
-            d = await f.read()
-            try:
-                x = yaml.safe_load(d)
-            except Exception as e:
-                sanic.log.logger.info(f"users parse error {e}")
-                x = {}
+        try:
+            async with aiofiles.open(config.USERS_FILE, "r") as f:
+                d = await f.read()
+                try:
+                    x = yaml.safe_load(d)
+                except Exception as e:
+                    sanic.log.logger.info(f"users parse error {e}")
+                    x = {}
+        except Exception as e:
+            sanic.log.logger.info(f'{config.USERS_FILE} could not be read {e}')
+            x = {}
     else:
         sanic.log.logger.info(f'{config.USERS_FILE} does not exist')
         x = {}
