@@ -47,6 +47,13 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
     if not d:
         d = parmdata.parms
 
+    for p in d:
+        if isinstance(d[p], dict):
+            d[p]['current'] = None
+
+    d['SENSORS'] = []
+    d['TGT_NAME'] = ''
+
     if capfile and logfile is None:
         currfile = capfile
         r = re.compile(r'[0-9]+.[0-9]+,SUSR,N,\$(?P<param>\w+),(?P<value>[+-]?([0-9]*[.])?[0-9]+)')
@@ -117,7 +124,7 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
         except Exception:
             pass
 
-    if 'SENSORS' in d and d['SENSORS'] and 'LOGGERS' in d:
+    if 'SENSORS' in d and d['SENSORS'] and len(d['SENSORS']) and 'LOGGERS' in d:
         loggers = d['SENSORS'][6:]
         d['LOGGERS']['help'] = f'Logger devices enable/disable control (1: {loggers[0]}, 2: {loggers[1]}, 4: {loggers[2]}, 8: {loggers[3]})'
         d['LOGGERS']['bitfield'] = [{'value': 1, 'function': loggers[0]}, 

@@ -140,9 +140,9 @@ def cmdfile(body, parms=None):
                     res.append(f"${p} recommended range between {d[p]['min']} and {d[p]['max']}")
                     warnings = warnings + 1 
                      
-            elif 'current' in d[p] and abs(v - d[p]['current']) > 1e-5:
+            elif 'current' in d[p] and d[p]['current'] and abs(v - d[p]['current']) > 1e-5:
                 res.append(f"value of ${p} will change from {d[p]['current']} to {v} {note}")
-            elif 'current' not in d[p]:
+            elif not 'current' in d[p] or not d[p]['current']:
                 res.append(f"value of ${p} will be set to {v} {note}")
             
         else:
