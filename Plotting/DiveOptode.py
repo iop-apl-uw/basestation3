@@ -184,6 +184,7 @@ def plot_optode(
 
     timeouts_depth_dive = timeouts_depth_climb = None
 
+    max_depth_sample_index = None
     if binned_profile:
         # Create dive and climb vectors
         depth_dive = optode_instrument_O2_depth[0, :]
@@ -236,10 +237,10 @@ def plot_optode(
             optode_instrument_O2_time[max_depth_sample_index:] - start_time
         ) / 60.0
 
+        f_depth = scipy.interpolate.PchipInterpolator(
+            optode_instrument_O2_time, optode_instrument_O2_depth, extrapolate=True
+        )
         if timeouts_times is not None:
-            f_depth = scipy.interpolate.PchipInterpolator(
-                optode_instrument_O2_time, optode_instrument_O2_depth, extrapolate=True
-            )
             timeouts_times_dive = timeouts_times[
                 timeouts_times < optode_instrument_O2_time[max_depth_sample_index]
             ]
@@ -255,38 +256,39 @@ def plot_optode(
                     [] if optode_correctedO2 is None else optode_correctedO2,
                 )
             )
-            min_x = np.nanmin(data_arrays)
-            max_x = np.nanmax(data_arrays)
-            max_depth = np.nanmax(
-                np.hstack(
-                    (
-                        [] if sat_O2_depth is None else sat_O2_depth,
-                        []
-                        if optode_instrument_O2_depth is None
-                        else optode_instrument_O2_depth,
-                    )
+
+        min_x = np.nanmin(data_arrays)
+        max_x = np.nanmax(data_arrays)
+        max_depth = np.nanmax(
+            np.hstack(
+                (
+                    [] if sat_O2_depth is None else sat_O2_depth,
+                    []
+                    if optode_instrument_O2_depth is None
+                    else optode_instrument_O2_depth,
                 )
             )
-            min_x = np.nanmin(data_arrays)
-            max_x = np.nanmax(data_arrays)
+        )
+        min_x = np.nanmin(data_arrays)
+        max_x = np.nanmax(data_arrays)
 
         if optode_correctedO2 is not None:
             optode_correctedO2_dive = optode_correctedO2[0:max_depth_sample_index]
             optode_correctedO2_climb = optode_correctedO2[max_depth_sample_index:]
 
         if sat_O2 is not None:
-            max_depth_sample_index = np.argmax(sat_O2_depth)
-            sat_O2_depth_dive = sat_O2_depth[0:max_depth_sample_index]
-            sat_O2_depth_climb = sat_O2_depth[max_depth_sample_index:]
+            max_depth_satO2_index = np.argmax(sat_O2_depth)
+            sat_O2_depth_dive = sat_O2_depth[0:max_depth_satO2_index]
+            sat_O2_depth_climb = sat_O2_depth[max_depth_satO2_index:]
 
-            sat_O2_dive = sat_O2[0:max_depth_sample_index]
-            sat_O2_climb = sat_O2[max_depth_sample_index:]
+            sat_O2_dive = sat_O2[0:max_depth_satO2_index]
+            sat_O2_climb = sat_O2[max_depth_satO2_index:]
 
             sat_O2_time_dive = (
-                sat_O2_time[0:max_depth_sample_index] - start_time
+                sat_O2_time[0:max_depth_satO2_index] - start_time
             ) / 60.0
             sat_O2_time_climb = (
-                sat_O2_time[max_depth_sample_index:] - start_time
+                sat_O2_time[max_depth_satO2_index:] - start_time
             ) / 60.0
 
     fig = plotly.graph_objects.Figure()
@@ -454,6 +456,17 @@ def plot_optode(
                 }
             )
             show_label[name] = False
+
+    if max_depth_sample_index:
+        PlotUtils.add_sample_range_overlay(
+            optode_instrument_O2_time,
+            max_depth_sample_index,
+            start_time,
+            fig,
+            min_x,
+            max_x,
+            f_depth,
+        )
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = "%s\nOxygen vs Depth (%scorrected for salinity and depth%s)%s" % (

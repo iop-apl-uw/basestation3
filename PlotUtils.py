@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import collections
+import copy
 import os
 import stat
 import time
@@ -46,6 +47,7 @@ import scipy
 if typing.TYPE_CHECKING:
     import BaseOpts
 
+import NetCDFUtils
 from BaseLog import log_error, log_warning
 
 
@@ -472,3 +474,223 @@ def collect_timeouts(dive_nc_file, instr_cls):
                 .split(",")
             ]
     return (timeouts, np.array(timeouts_times))
+
+
+run_t = collections.namedtuple("run_t", ("run_value", "run_length", "run_index"))
+
+
+def find_identical_runs(arr):
+    """Finds runs of identical values in an array
+    Input:
+    numpy array
+
+    Return:
+    List of tuples of value, length and index
+    """
+    if not isinstance(arr, np.ndarray):
+        return []
+    if arr.ndim != 1 or not arr.size:
+        return []
+
+    runs = []
+    current_run_value = None
+    current_run_length = None
+
+    for ii, val in enumerate(arr):
+        if current_run_value is None:
+            current_run_value = val
+            current_run_length = 1
+            current_run_start = ii
+            continue
+
+        if current_run_value == val:
+            current_run_length += 1
+        else:
+            runs.append(run_t(current_run_value, current_run_length, current_run_start))
+            current_run_value = val
+            current_run_length = 1
+            current_run_start = ii
+
+    # Add the last run
+    runs.append(run_t(current_run_value, current_run_length, current_run_start))
+    return runs
+
+
+def coalesce_short_runs(run_list, min_len):
+    """Given a list of run tuples, coalesce short runs into the
+    immediate run
+    """
+
+    tmp_run_list = copy.deepcopy(run_list)
+
+    new_run = []
+
+    while tmp_run_list:
+        current_run_value, current_run_length, current_run_index = tmp_run_list.pop(0)
+        while tmp_run_list:
+            if (
+                tmp_run_list[0].run_length > min_len
+                and tmp_run_list[0].run_value != current_run_value
+            ):
+                break
+            _, tmp_len, _ = tmp_run_list.pop(0)
+            current_run_length += tmp_len
+        new_run.append(run_t(current_run_value, current_run_length, current_run_index))
+    return new_run
+
+
+def add_sample_range_overlay(
+    time_var, max_time_i, start_time, fig, min_x, max_x, f_depth
+):
+    """ """
+    if time_var.size < 4:
+        return
+    # First and last
+    time_var = time_var[1:]
+
+    # import pdb
+
+    # pdb.set_trace()
+    # Note - this bucketing assumes
+    # 1) Sample intervals are no greater then 360 seconds
+    # 2) Typical sampling on even seconds
+
+    time_dive = time_var[:max_time_i]
+    time_diff_dive = np.digitize(np.diff(time_dive), np.arange(360) + 0.5)
+    time_climb = time_var[max_time_i:]
+    time_diff_climb = np.digitize(np.diff(time_climb), np.arange(360) + 0.5)
+
+    # color_map = ("LightGrey", "DarkGrey")
+    color_map = ("lightgrey", "grey", "darkgrey")
+
+    for ttime, name, color in (
+        (
+            time_dive,
+            "Dive samples",
+            "steelblue",
+        ),
+        (time_climb, "Climb samples", "skyblue"),
+    ):
+        if time_dive.size < 2:
+            continue
+
+        # Generate the samples/meter trace
+        depth = f_depth(ttime)
+        max_depth = np.nanmax(depth)
+        bin_width = 5.0
+        bin_edges = np.arange(
+            -bin_width / 2.0,
+            max_depth + bin_width / 2.0 + 0.01,
+            bin_width,
+        )
+        bin_centers = np.arange(0.0, max_depth + 0.01, bin_width)
+        bin_centers = np.concatenate((bin_centers, bin_centers[:-1][::-1]))
+
+        # Do this to ensure everything is caught in the binned statistic
+        bin_edges[0] = -20.0
+        bin_edges[-1] = max_depth + 50.0
+        _, n_obs, *_ = NetCDFUtils.bindata(depth, ttime, bin_edges)
+        meta = n_obs / bin_width
+        fig.add_trace(
+            {
+                "type": "scatter",
+                "x": n_obs,
+                "y": bin_centers,
+                "meta": meta,
+                "xaxis": "x10",
+                "line": {
+                    "dash": "solid",
+                    # proxy for line opacity
+                    # "width": 1,
+                    "color": color,
+                },
+                "mode": "lines",
+                "name": f"{name} stats",
+                "visible": "legendonly",
+                "hovertemplate": f"{name} {bin_width}m grid<br>%{{x:d}} samples<br>%{{y:.1f}} meters<br>%{{meta:.2f}} samples/m<extra></extra>",
+                "hoverinfo": "text",
+                "zorder": -9,
+            }
+        )
+
+    fig.update_layout(
+        {
+            # Not visible - no good way to control the bottom margin so there is room for this
+            "xaxis10": {
+                "title": f"Samples per {bin_width}m",
+                "showgrid": False,
+                "overlaying": "x1",
+                "side": "bottom",
+                "anchor": "free",
+                "position": 0.05,
+                "visible": False,
+            }
+        }
+    )
+
+    for ttime, time_diff, name in (
+        (time_dive, time_diff_dive, "Dive sample grid"),
+        (time_climb, time_diff_climb, "Climb sample grid"),
+    ):
+        if time_dive.size < 2:
+            continue
+
+        # Find and plot the sample grid
+        tmp_runs = find_identical_runs(time_diff)
+
+        # print("Full runs")
+        # for run in tmp_runs:
+        #     print(run)
+        # runs = tmp_runs
+        # print("Collapsed runs")
+        runs = coalesce_short_runs(tmp_runs, 1)
+        # for run in runs:
+        #     print(run)
+        show_label = collections.defaultdict(lambda: True)
+
+        for ii, (run_value, run_length, run_index) in enumerate(
+            runs[:: 1 if "Dive" in name else -1]
+        ):
+            color = color_map[ii % len(color_map)]
+            start_range_time = ttime[run_index]
+            start_range_depth = f_depth(start_range_time)
+            end_range_time = ttime[run_index + run_length]
+            end_range_depth = f_depth(end_range_time)
+
+            # Sample calcs for the grid
+            samples_tot = run_length
+            samples_per_meter = float(samples_tot) / np.abs(
+                start_range_depth - end_range_depth
+            )
+
+            tag = f"{run_value} secs"
+            fig.add_trace(
+                {
+                    "type": "scatter",
+                    "x": [min_x, min_x, max_x, max_x],
+                    "y": [
+                        start_range_depth,
+                        end_range_depth,
+                        end_range_depth,
+                        start_range_depth,
+                    ],
+                    "fill": "toself",
+                    "fillcolor": color,
+                    "opacity": 0.50,
+                    "line": {
+                        "dash": "solid",
+                        # proxy for line opacity
+                        "width": 0.25,
+                        "color": color,
+                    },
+                    "mode": "lines",
+                    "legendgroup": f"{name}_group",
+                    "name": name,
+                    "showlegend": show_label[name],
+                    "visible": "legendonly",
+                    "text": f"{name}:{tag}<br>Start:{(start_range_time - start_time)/6.0:.2f} mins, End:Start:{(end_range_time - start_time)/6.0:.2f} mins<br>{samples_tot} samples, {samples_per_meter:.2f} samples per meter:",
+                    "hoverinfo": "text",
+                    "zorder": -10,
+                }
+            )
+            show_label[name] = False
