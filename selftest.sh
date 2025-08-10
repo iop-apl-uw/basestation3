@@ -113,6 +113,11 @@ grep -i warning $fname
 grep -i retr $fname | grep -v gc=
 echo ""
 echo "--------------------------------------------"
+echo "Summary of firmware versions"
+echo
+grep -e "Version" -e "Rev " -e ,LPD, -e firmware_version -e HCOMPASS,N,version: $fname 
+echo ""
+echo "--------------------------------------------"
 echo "Summary of supervisor settings"
 echo
 set offcounts = `grep "HSUPER,N,offset counts =" $fname | cut -f 4,5 -d' '`

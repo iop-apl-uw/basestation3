@@ -73,6 +73,7 @@ def format(line):
 
     reds = ["errors", "error", "Failed", "failed", "[crit]", "timed out"]
     yellows = ["WARNING"]
+    bolds = ["SSYS,N,Rev", "SSYS,N,Version 6"]
     for r in reds:
         if line.find(r) > -1:
             line = line.replace(r, "<span style='background-color:red;'>%s</span>" % r)
@@ -103,7 +104,14 @@ def format(line):
         elif d:
             print(f'Updating parameter <a href="../parms#{d.group(1)}">${d.group(1)}</a> to {d.group(2)}')
         else:
-            print(f"<span>{a.group(2) if a.group(2) else ''}</span>")    
+            bolded = False
+            for b in bolds:
+                if a.group(2) and line.find(b) > -1:
+                    print(f"<span><b>{a.group(2) if a.group(2) else ''}</b></span>")    
+                    bolded = True
+                    break
+            if not bolded:
+                print(f"<span>{a.group(2) if a.group(2) else ''}</span>")    
     else:
         print(line)
 
