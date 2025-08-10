@@ -300,7 +300,7 @@ async def formatCaptureFile(file, firstPlot=False):
 
     crits = 0
     linenum = 0 
-    rowcolor =  {"VBD": "pink", "Pitch": "cyan", "Roll": "lightgreen"}
+    rowcolor =  {"VBD": "#FFF3F0", "Pitch": "#E2FFFF", "Roll": "#E7F8E6"}
     async with aiofiles.open(file, 'rb') as capfile:
         async for line in capfile:
             line = line.decode('utf-8', errors='ignore').rstrip()
