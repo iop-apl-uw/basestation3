@@ -1140,14 +1140,23 @@
         // cell.appendChild(text);
 
         // date = new Date(1000*(d['log_start'] + d['total_flight_time_s']));
+        var epoch_rollover_detected = false;
+        if (d['log_start'] - d['log_gps_time'] > 1023*7*86400 && d['log_start'] - d['log_gps_time'] < 1025*7*86400) {
+            d['log_gps_time'] += 86400*1024*7;
+            epoch_rollover_detected = true;
+        }
+
         date = new Date(1000*(d['log_gps_time']));
         cell = row.insertCell(1); 
-        text = document.createTextNode((date.getUTCFullYear() - 2000) + '/' +
+        var datestr = (date.getUTCFullYear() - 2000) + '/' +
                                        (date.getUTCMonth() + 1).zeroPad() + '/' + 
                                        date.getUTCDate().zeroPad() + ' ' + 
                                        date.getUTCHours().zeroPad() + ':' + 
-                                       date.getUTCMinutes().zeroPad());
-        cell.appendChild(text);
+                                       date.getUTCMinutes().zeroPad();
+        if (epoch_rollover_detected)
+            datestr = '<span title="corrected for likely GPS epoch rollover" style="color:red">' + datestr + '</span>';
+
+        cell.innerHTML = datestr; // appendChild(text);
 
         cell = row.insertCell(2); 
         text = document.createTextNode('' + ((d['log_gps_time'] - d['log_start'])/60).toFixed(0));
