@@ -1005,26 +1005,26 @@ def crack_counter_line(
 
             if len(cnt_vals) == 20 and Utils.is_float(cnt_vals[16]):
                 # first counter r7312 (added sea surface T,S,density)
-                session.dive_num        = convert_f(cnt_vals, 0, int)
-                session.call_cycle      = convert_f(cnt_vals, 1, int)
-                session.calls_made      = convert_f(cnt_vals, 2, int)
-                session.no_comm         = convert_f(cnt_vals, 3, int)
-                session.mission_num     = convert_f(cnt_vals, 4, int)
-                session.reboot_count    = convert_f(cnt_vals, 5, int)
+                session.dive_num = convert_f(cnt_vals, 0, int)
+                session.call_cycle = convert_f(cnt_vals, 1, int)
+                session.calls_made = convert_f(cnt_vals, 2, int)
+                session.no_comm = convert_f(cnt_vals, 3, int)
+                session.mission_num = convert_f(cnt_vals, 4, int)
+                session.reboot_count = convert_f(cnt_vals, 5, int)
                 session.last_call_error = convert_f(cnt_vals, 6, int)
                 session.pitch_ad = convert_f(cnt_vals, 7, int)
-                session.roll_ad  = convert_f(cnt_vals, 8, int)
-                session.vbd_ad   = convert_f(cnt_vals, 9, int)
-                session.obs_pitch   = convert_f(cnt_vals, 10, float)
-                session.depth       = convert_f(cnt_vals, 11, float)
+                session.roll_ad = convert_f(cnt_vals, 8, int)
+                session.vbd_ad = convert_f(cnt_vals, 9, int)
+                session.obs_pitch = convert_f(cnt_vals, 10, float)
+                session.depth = convert_f(cnt_vals, 11, float)
                 session.temperature = convert_f(cnt_vals, 12, float)
                 session.volt_10V = convert_f(cnt_vals, 13, float)
                 session.volt_24V = convert_f(cnt_vals, 14, float)
                 session.int_press = convert_f(cnt_vals, 15, float)
-                session.rh        = convert_f(cnt_vals, 16, float)
+                session.rh = convert_f(cnt_vals, 16, float)
                 session.sea_temperature = convert_f(cnt_vals, 17, float)
-                session.sea_salinity    = convert_f(cnt_vals, 18, float)
-                session.sea_density     = convert_f(cnt_vals, 19, float)
+                session.sea_salinity = convert_f(cnt_vals, 18, float)
+                session.sea_density = convert_f(cnt_vals, 19, float)
             elif len(cnt_vals) == 17 and Utils.is_float(cnt_vals[16]):
                 # Version 66.09 - 66.10 First counter
                 session.dive_num = convert_f(cnt_vals, 0, int)
@@ -1299,6 +1299,38 @@ def process_comm_log(
             if raw_strs[0] == "Parsed" and raw_strs[2] == "from":
                 if session:
                     session.cmd_directive = raw_strs[1]
+                cmd_run = None
+                if len(raw_strs) >= 4 and raw_strs[3] == "./callend":
+                    cmd_run = "callend"
+                elif len(raw_strs) >= 5 and raw_strs[3] == "cmdfile":
+                    cmd_run = "cmdfile"
+                if cmd_run:
+                    try:
+                        # In either of these cases, there are no transfer stats in the comm.log,
+                        # so just use the file size for all (assumes best case of file
+                        # actually transferring)
+                        statinfo = os.stat(os.path.join(base_opts.mission_dir, cmd_run))
+                        file_transfer_method[cmd_run] = "raw"
+                        session.transfer_method[cmd_run] = "raw"
+                        session.transfered_size[cmd_run] = statinfo.st_size
+                        session.transfer_direction[cmd_run] = "sent"
+                        session.file_stats[cmd_run] = file_stats_nt(
+                            -1, statinfo.st_size, statinfo.st_size, 0.0
+                        )
+                    except Exception:
+                        log_error(
+                            "Could not process %s: lineno %d" % (raw_strs, line_count),
+                            "exc",
+                        )
+                    else:
+                        if call_back and "received" in call_back.callbacks:
+                            try:
+                                call_back.callbacks["received"](
+                                    cmd_run, statinfo.st_size
+                                )
+                            except Exception:
+                                log_error("received callback failed", "exc")
+
                 continue
 
             # XMODEM to glider
