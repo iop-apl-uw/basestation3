@@ -686,6 +686,9 @@ class ConnectSession:
         self.volt_24V = None
         self.int_press = None
         self.rh = None
+        self.sea_temperature = None
+        self.sea_salinity = None
+        self.sea_density = None
         self.temperature = None
         self.launch_time = None
         self.eop_code = None
@@ -737,6 +740,9 @@ class ConnectSession:
             "pitchAD": self.pitch_ad,
             "rollAD": self.roll_ad,
             "vbdAD": self.vbd_ad,
+            "sst": self.sea_temperature,
+            "sss": self.sea_salinity,
+            "density": self.sea_density,
             "iridLat": Utils.ddmm2dd(self.phone_fix_lat) if self.phone_fix_lat else 0,
             "iridLon": Utils.ddmm2dd(self.phone_fix_lon) if self.phone_fix_lon else 0,
             "irid_t": time.mktime(self.phone_fix_datetime)
@@ -825,6 +831,12 @@ class ConnectSession:
             print("rh %f" % self.rh, file=fo)
         if self.temperature is not None:
             print("temperature %f" % self.temperature, file=fo)
+        if self.sea_temperature is not None:
+            print("sea temperature %f" % self.sea_temperature, file=fo)
+        if self.sea_salinity is not None:
+            print("sea salinity %f" % self.sea_salinity, file=fo)
+        if self.sea_density is not None:
+            print("sea density %f" % self.sea_density, file=fo)
         if self.logout_status is not None:
             print("logout_status (%s)" % self.logout_status, file=fo)
         if self.launch_time is not None:
@@ -952,6 +964,8 @@ def crack_counter_line(
             # First - counter line with optional GPS string on end
             # Final - counter line with logout at end
             #
+            # 67.00 (r7322): First: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, last_open_error,
+            #       pitch_ad, roll_ad, vbd_ad, angle, depth, temperature, v10, v24, int_press, rh, sst, sss, ssd
             # 67.00 (r6718) First: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, last_open_error,
             #       pitch_ad, roll_ad, vbd_ad, angle, depth, temperature, v10, v24, int_press, rh
             # 67.00 (r6718) Final: dive_num, callCycle, callsMade, cnt_NoComm, p_mission_num, NVStore.boot_count, status
@@ -989,7 +1003,29 @@ def crack_counter_line(
                     )
                     return None
 
-            if len(cnt_vals) == 17 and Utils.is_float(cnt_vals[16]):
+            if len(cnt_vals) == 20 and Utils.is_float(cnt_vals[16]):
+                # first counter r7312 (added sea surface T,S,density)
+                session.dive_num        = convert_f(cnt_vals, 0, int)
+                session.call_cycle      = convert_f(cnt_vals, 1, int)
+                session.calls_made      = convert_f(cnt_vals, 2, int)
+                session.no_comm         = convert_f(cnt_vals, 3, int)
+                session.mission_num     = convert_f(cnt_vals, 4, int)
+                session.reboot_count    = convert_f(cnt_vals, 5, int)
+                session.last_call_error = convert_f(cnt_vals, 6, int)
+                session.pitch_ad = convert_f(cnt_vals, 7, int)
+                session.roll_ad  = convert_f(cnt_vals, 8, int)
+                session.vbd_ad   = convert_f(cnt_vals, 9, int)
+                session.obs_pitch   = convert_f(cnt_vals, 10, float)
+                session.depth       = convert_f(cnt_vals, 11, float)
+                session.temperature = convert_f(cnt_vals, 12, float)
+                session.volt_10V = convert_f(cnt_vals, 13, float)
+                session.volt_24V = convert_f(cnt_vals, 14, float)
+                session.int_press = convert_f(cnt_vals, 15, float)
+                session.rh        = convert_f(cnt_vals, 16, float)
+                session.sea_temperature = convert_f(cnt_vals, 17, float)
+                session.sea_salinity    = convert_f(cnt_vals, 18, float)
+                session.sea_density     = convert_f(cnt_vals, 19, float)
+            elif len(cnt_vals) == 17 and Utils.is_float(cnt_vals[16]):
                 # Version 66.09 - 66.10 First counter
                 session.dive_num = convert_f(cnt_vals, 0, int)
                 session.call_cycle = convert_f(cnt_vals, 1, int)

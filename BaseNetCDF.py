@@ -1564,6 +1564,7 @@ def set_globals() -> None:
         "log_CALL_NDIVES": [False, "i", {}, nc_scalar],
         "log_CALL_TRIES": [False, "i", {}, nc_scalar],
         "log_CALL_WAIT": [False, "i", {}, nc_scalar],
+        "log_N_CYCLES": [False, "i", {}, nc_scalar],
         "log_CAPMAXSIZE": [False, "i", {}, nc_scalar],
         "log_CAPUPLOAD": [False, "i", {}, nc_scalar],
         "log_CAP_FILE_SIZE": [False, "c", {}, nc_scalar],  # Multi-valued string
@@ -1759,6 +1760,7 @@ def set_globals() -> None:
         "log_N_FILEKB": [False, "i", {}, nc_scalar],
         "log_N_GPS": [False, "i", {}, nc_scalar],
         "log_N_NOCOMM": [False, "i", {}, nc_scalar],
+        "log_N_NOCOMM_RESUME": [False, "i", {}, nc_scalar],
         "log_N_NOSURFACE": [False, "i", {}, nc_scalar],
         "log_N_DIVES": [False, "i", {}, nc_scalar],
         "log_NET": [False, "c", {}, nc_scalar],

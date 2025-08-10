@@ -78,6 +78,7 @@ known_files = [
     "nav1.dat",
     "nav0.scr",
     "nav1.scr",
+    "callend",
 ]
 known_mailer_tags = [
     "eng",
