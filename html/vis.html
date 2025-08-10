@@ -645,8 +645,9 @@
         json['file'] = file;
         json['contents'] = $(file).value;
 
-        $('alertPopup').style.display = 'inline-block';
-        $('alertContents').innerHTML = miniLoader;
+        // $('alertPopup').style.display = 'inline-block';
+        // $('alertContents').innerHTML = miniLoader;
+        openMessagePopup(miniLoader, true, null);
 
         controlFileMarkClean(file);
         fetch(`save/${currGlider}/${file}${mission()}`, 
@@ -684,8 +685,10 @@
         var file = $('selectFile').value;
         var json = { file: file, contents: $(file).value };
 
-        $('alertPopup').style.display = 'inline-block';
-        $('alertContents').innerHTML = miniLoader;
+        openMessagePopup(miniLoader, true, null);
+
+        // $('alertPopup').style.display = 'inline-block';
+        // $('alertContents').innerHTML = miniLoader;
 
         fetch(`validate/${currGlider}/${file}${mission()}`, 
         {
