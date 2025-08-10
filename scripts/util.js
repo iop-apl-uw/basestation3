@@ -124,7 +124,7 @@ function formatDate(d) {
     if (h < 10) h = "0" + h;
     if (m < 10) m = "0" + m;
 
-    return yr + '-' + mon + '-' + day + ' ' + h + ':' + m;
+    return yr + '-' + mon + '-' + day + ' ' + h + ':' + m + 'Z';
 }
 
 function formatPos(ddmm) {
