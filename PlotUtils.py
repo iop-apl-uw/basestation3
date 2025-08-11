@@ -539,10 +539,8 @@ def coalesce_short_runs(run_list, min_len):
     return new_run
 
 
-def add_sample_range_overlay(
-    time_var, max_time_i, start_time, fig, min_x, max_x, f_depth
-):
-    """ """
+def add_sample_range_overlay(time_var, max_time_i, start_time, fig, f_depth):
+    """Add sample grid overlays and sample stats traces to a plot"""
     if time_var.size < 4:
         return
     # First and last
@@ -563,6 +561,8 @@ def add_sample_range_overlay(
     # color_map = ("LightGrey", "DarkGrey")
     color_map = ("lightgrey", "grey", "darkgrey")
 
+    min_x = np.iinfo(np.int32).max
+    max_x = np.iinfo(np.int32).min
     for ttime, name, color in (
         (
             time_dive,
@@ -591,6 +591,8 @@ def add_sample_range_overlay(
         bin_edges[-1] = max_depth + 50.0
         _, n_obs, *_ = NetCDFUtils.bindata(depth, ttime, bin_edges)
         meta = n_obs / bin_width
+        min_x = np.nanmin(np.hstack((min_x, n_obs)))
+        max_x = np.nanmax(np.hstack((max_x, n_obs)))
         fig.add_trace(
             {
                 "type": "scatter",
@@ -624,6 +626,7 @@ def add_sample_range_overlay(
                 "anchor": "free",
                 "position": 0.05,
                 "visible": False,
+                "range": [min_x, max_x],
             }
         }
     )
@@ -667,13 +670,14 @@ def add_sample_range_overlay(
             fig.add_trace(
                 {
                     "type": "scatter",
-                    "x": [min_x, min_x, max_x, max_x],
+                    "x": [0.0, 0.0, 1.0, 1.0],
                     "y": [
                         start_range_depth,
                         end_range_depth,
                         end_range_depth,
                         start_range_depth,
                     ],
+                    "xaxis": "x11",
                     "fill": "toself",
                     "fillcolor": color,
                     "opacity": 0.50,
@@ -694,3 +698,104 @@ def add_sample_range_overlay(
                 }
             )
             show_label[name] = False
+
+    fig.update_layout(
+        {
+            "xaxis11": {
+                "title": "Samples grid",
+                "showgrid": False,
+                "overlaying": "x1",
+                "side": "bottom",
+                "anchor": "free",
+                "position": 0.05,
+                "visible": False,
+                "range": [0.0, 1.0],
+            }
+        }
+    )
+
+
+def add_timeout_overlays(
+    timeout,
+    timeouts_times,
+    fig,
+    f_depth,
+    instrument_time,
+    max_depth_sample_index,
+    max_depth,
+    start_time,
+    dive_color,
+    climb_color,
+):
+    """Add timeout overlays to a plot"""
+    timeouts_times_dive = timeouts_times[
+        timeouts_times < instrument_time[max_depth_sample_index]
+    ]
+    timeouts_depth_dive = f_depth(timeouts_times_dive)
+    timeouts_times_climb = timeouts_times[
+        timeouts_times >= instrument_time[max_depth_sample_index]
+    ]
+    timeouts_depth_climb = f_depth(timeouts_times_climb)
+
+    show_label = collections.defaultdict(lambda: True)
+    for timeouts_times, timeouts_depth, name, tag, color in (
+        (
+            timeouts_times_dive,
+            timeouts_depth_dive,
+            "timeouts_dive",
+            "Dive timeout",
+            dive_color,
+        ),
+        (
+            timeouts_times_climb,
+            timeouts_depth_climb,
+            "timeouts_climb",
+            "Climb timeout",
+            climb_color,
+        ),
+    ):
+        if timeouts_depth is None:
+            continue
+        for t_d, t_t in zip(timeouts_depth, timeouts_times, strict=True):
+            fig.add_trace(
+                {
+                    "type": "scatter",
+                    "x": [0.0, 0.0, 1.0, 1.0],
+                    "y": [
+                        t_d,
+                        t_d + (0.001 * max_depth),
+                        t_d + (0.001 * max_depth),
+                        t_d,
+                    ],
+                    "xaxis": "x12",
+                    "fill": "toself",
+                    "fillcolor": color,
+                    "line": {
+                        "dash": "solid",
+                        "width": 0.25,
+                        "color": color,
+                    },
+                    "mode": "lines",
+                    "legendgroup": f"{name}_group",
+                    "name": f"{tag}s",
+                    "showlegend": show_label[name],
+                    "visible": "legendonly",
+                    "text": f"{tag} {(t_t - start_time)/6.0:.2f} mins ({t_t:.3f} secs)",
+                    "hoverinfo": "text",
+                }
+            )
+            show_label[name] = False
+    fig.update_layout(
+        {
+            "xaxis12": {
+                "title": "Samples grid",
+                "showgrid": False,
+                "overlaying": "x1",
+                "side": "bottom",
+                "anchor": "free",
+                "position": 0.05,
+                "visible": False,
+                "range": [0.0, 1.0],
+            }
+        }
+    )
