@@ -142,7 +142,7 @@ def cmdfile(body, parms=None):
                      
             elif 'current' in d[p] and d[p]['current'] and abs(v - d[p]['current']) > 1e-5:
                 res.append(f"value of ${p} will change from {d[p]['current']} to {v} {note}")
-            elif not 'current' in d[p] or not d[p]['current']:
+            elif 'current' not in d[p] or not d[p]['current']:
                 res.append(f"value of ${p} will be set to {v} {note}")
             
         else:
