@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023  University of Washington.
+## Copyright (c) 2023, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,7 +28,7 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""Plots raw legato data """
+"""Plots raw legato data"""
 
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
@@ -95,6 +95,11 @@ def plot_legato_data(
     else:
         depth = -1.0 * gsw.z_from_p(pressure, log_gps_lat[0], 0.0, 0.0)
 
+    try:
+        start_time = dive_nc_file.start_time
+    except Exception:
+        start_time = legato_time[0]
+
     if "aa4831_temp" in dive_nc_file.variables:
         aa4831_temp = dive_nc_file.variables["aa4831_temp"][:]
         aa4831_time = dive_nc_file.variables["aa4831_time"][:]
@@ -126,6 +131,7 @@ def plot_legato_data(
     cond_temp = cond_temp[mask]
     conductivity = conductivity[mask]
     pressure = pressure[mask]
+    legato_time = legato_time[mask]
 
     # Find the deepest sample
     max_depth_sample_index = np.argmax(depth)
@@ -155,6 +161,14 @@ def plot_legato_data(
 
     time_dive = (legato_time[0:max_depth_sample_index] - legato_time[0]) / 60.0
     time_climb = (legato_time[max_depth_sample_index:] - legato_time[0]) / 60.0
+
+    # For samples and timeout plots
+    f_depth = scipy.interpolate.PchipInterpolator(
+        legato_time,
+        depth,
+        extrapolate=True,
+    )
+    max_depth = np.nanmax(depth)
 
     fig = plotly.graph_objects.Figure()
 
@@ -344,6 +358,33 @@ def plot_legato_data(
             }
         )
 
+    timeouts, timeouts_times = PlotUtils.collect_timeouts(
+        dive_nc_file,
+        "legato",
+    )
+
+    if timeouts:
+        PlotUtils.add_timeout_overlays(
+            timeouts,
+            timeouts_times,
+            fig,
+            f_depth,
+            legato_time,
+            max_depth_sample_index,
+            max_depth,
+            start_time,
+            "DarkMagenta",  # To match insturment dive trace
+            "DarkRed",  # To match instrument climb trace
+        )
+
+    PlotUtils.add_sample_range_overlay(
+        legato_time,
+        max_depth_sample_index,
+        start_time,
+        fig,
+        f_depth,
+    )
+
     # fig.update_yaxes(autorange="reversed")
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
@@ -365,6 +406,7 @@ def plot_legato_data(
                     ),
                     0,
                 ],
+                "domain": (0.1, 1.0),
             },
             "xaxis2": {
                 "title": "Temperature (C)",
@@ -380,7 +422,8 @@ def plot_legato_data(
                 "position": 0.05,
             },
             "yaxis2": {
-                "title": "Depth (m)",
+                # Interfers with other legend items
+                # "title": "Depth (m)",
                 "overlaying": "y1",
                 "side": "right",
                 #'autorange' : 'reversed',
@@ -401,9 +444,35 @@ def plot_legato_data(
             },
             "margin": {
                 "t": 150,
+                # "b": 150,
             },
         }
     )
+
+    # Instrument cal date
+    if "sg_cal_calibcomm" in dive_nc_file.variables:
+        cal_text = (
+            dive_nc_file.variables["sg_cal_calibcomm"][:].tobytes().decode("utf-8")
+        )
+        # if timeouts:
+        #    cal_text += f" Timeouts:{timeouts:d}"
+
+        fig.update_layout(
+            {
+                "annotations": tuple(
+                    [
+                        {
+                            "text": cal_text,
+                            "showarrow": False,
+                            "xref": "paper",
+                            "yref": "paper",
+                            "x": 0.0,
+                            "y": -0.08,
+                        }
+                    ]
+                )
+            }
+        )
 
     return (
         [fig],

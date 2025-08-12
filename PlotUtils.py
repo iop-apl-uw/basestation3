@@ -787,7 +787,7 @@ def add_timeout_overlays(
                     "name": f"{tag}s",
                     "showlegend": show_label[name],
                     "visible": "legendonly",
-                    "text": f"{tag} {(t_t - start_time)/6.0:.2f} mins ({t_t:.3f} secs)",
+                    "text": f"{tag} {(t_t - start_time)/60.0:.2f} mins ({t_t:.3f} epoch secs)",
                     "hoverinfo": "text",
                 }
             )
