@@ -387,6 +387,7 @@ def plot_optode(
         )
 
     # Only for time series plots
+    timeouts = None
     if max_depth_sample_index:
         timeouts, timeouts_times = PlotUtils.collect_timeouts(
             dive_nc_file, f"aa{optode_type}"

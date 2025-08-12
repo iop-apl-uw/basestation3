@@ -656,6 +656,7 @@ def plot_CTD(
             )
 
         # Only for time series plots
+        timeouts = None
         if not ctd_vars.binned_profile:
             if ctd_vars.is_legato:
                 ctd_type = "legato"
@@ -786,6 +787,9 @@ def plot_CTD(
             sg_cal_calib_str = (
                 dive_nc_file.variables["sg_cal_calibcomm"][:].tobytes().decode("utf-8")
             )
+            if timeouts:
+                sg_cal_calib_str += f" Timeouts:{timeouts:d}"
+
             l_annotations = [
                 {
                     "text": sg_cal_calib_str,
