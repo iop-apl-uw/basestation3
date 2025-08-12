@@ -753,7 +753,8 @@ def plot_CTD(
                     "visible": False,
                 },
                 "yaxis2": {
-                    "title": "Depth (m)",
+                    # Interfers with timeout and samples legend items
+                    # "title": "Depth (m)",
                     "overlaying": "y1",
                     "side": "right",
                     #'autorange' : 'reversed',
