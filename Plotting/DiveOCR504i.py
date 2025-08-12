@@ -87,6 +87,9 @@ def plot_ocr504i(
             ][:]
         depth = dive_nc_file.variables["depth"][:]
         sg_time = dive_nc_file.variables["time"][:]
+        # Interpolate around missing depth observations
+        depth = PlotUtils.interp_missing_depth(sg_time, depth)
+
         if binned_profile:
             binned_tag = " - binned %.1f m" % (
                 np.round(np.average(np.diff(depth[0, :])), decimals=1),

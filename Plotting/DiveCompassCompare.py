@@ -122,7 +122,11 @@ def plot_compass_compare(
                 depth = dive_nc_file.variables["eng_depth"][:] / 100.0
             except KeyError:
                 log_warning("No depth variable found")
+                return ([], [])
         depth_time = dive_nc_file.variables["time"][:]
+        # Interpolate around missing depth observations
+        depth = PlotUtils.interp_missing_depth(depth_time, depth)
+
     except Exception:
         log_error("Could not process compass_compare", "exc")
         return ([], [])

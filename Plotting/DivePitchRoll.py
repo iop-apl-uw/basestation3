@@ -131,6 +131,9 @@ def plot_pitch_roll(
             depth = dive_nc_file.variables["depth"][:]
         else:
             depth = dive_nc_file.variables["eng_depth"][:] / 100.0
+        # Interpolate around missing depth observations
+        depth = PlotUtils.interp_missing_depth(sg_time, depth)
+            
         vehicle_pitch_degrees_v = dive_nc_file.variables["eng_pitchAng"][:]
         vehicle_roll_degrees_v = dive_nc_file.variables["eng_rollAng"][:]
         vehicle_head_degrees_v = dive_nc_file.variables["eng_head"][:]

@@ -112,6 +112,9 @@ def plot_optode(
                 sg_depth = dive_nc_file.variables["eng_depth"][:] / 100.0
             except KeyError:
                 log_warning("No depth variable found")
+        # Interpolate around missing depth observations
+        sg_depth = PlotUtils.interp_missing_depth(sg_time, sg_depth)
+
         if binned_profile:
             bin_width = np.round(np.average(np.diff(sg_depth[0, :])), decimals=1)
         if f"aanderaa{optode_type}_dissolved_oxygen" in dive_nc_file.variables:
@@ -232,7 +235,9 @@ def plot_optode(
 
         # For samples and timeout plots
         f_depth = scipy.interpolate.PchipInterpolator(
-            optode_instrument_O2_time, optode_instrument_O2_depth, extrapolate=True
+            optode_instrument_O2_time,
+            optode_instrument_O2_depth,
+            extrapolate=True,
         )
         max_depth = np.nanmax(
             np.hstack(

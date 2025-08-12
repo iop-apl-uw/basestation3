@@ -89,6 +89,10 @@ def plot_coda(
                 sg_depth = dive_nc_file.variables["eng_depth"][:] / 100.0
             except KeyError:
                 log_warning("No depth variable found")
+                return ([], [])
+        # Interpolate around missing depth observations
+        sg_depth = PlotUtils.interp_missing_depth(sg_time, sg_depth)
+
         if "codaTODO_dissolved_oxygen" in dive_nc_file.variables:
             codatodo_correctedO2 = dive_nc_file.variables["codaTODO_dissolved_oxygen"][
                 :

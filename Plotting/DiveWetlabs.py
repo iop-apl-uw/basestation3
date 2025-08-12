@@ -98,6 +98,9 @@ def plot_wetlabs(
                 except KeyError:
                     log_warning("No depth variable found")
             sg_time = dive_nc_file.variables["time"][:]
+            # Interpolate around missing depth observations
+            sg_depth = PlotUtils.interp_missing_depth(sg_time, sg_depth)
+
             if binned_profile:
                 binned_tag = " - binned %.1f m" % (
                     np.round(np.average(np.diff(sg_depth[0, :])), decimals=1),

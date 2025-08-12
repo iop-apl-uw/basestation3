@@ -76,6 +76,9 @@ def plot_TMICL(
             depth = dive_nc_file.variables["depth"][:]
         else:
             depth = dive_nc_file.variables["eng_depth"][:] / 100.0
+        # Interpolate around missing depth observations
+        depth = PlotUtils.interp_missing_depth(ttime, depth)
+
     except KeyError as e:
         log_warning(f"Could not find variable {e.args[0]} - skipping this plot")
         return (ret_figs, ret_plots)
@@ -348,6 +351,9 @@ def plot_TMICL(
                     depth = dive_nc_file.variables["depth"][:]
                 else:
                     depth = dive_nc_file.variables["eng_depth"][:] / 100.0
+                # Interpolate around missing depth observations
+                depth = PlotUtils.interp_missing_depth(ttime, depth)
+
             except KeyError as e:
                 log_warning(f"Could not find variable {e.args[0]} - skipping this plot")
                 continue

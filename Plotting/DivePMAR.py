@@ -160,6 +160,9 @@ def plot_PMAR(
             depth = dive_nc_file.variables["depth"][:]
         else:
             depth = dive_nc_file.variables["eng_depth"][:] / 100.0
+        # Interpolate around missing depth observations
+        depth = PlotUtils.interp_missing_depth(depth_time, depth)
+
     except KeyError as e:
         log_info(f"Could not find variable {e.args[0]} - skipping pmar plot")
         return (ret_figs, ret_plots)

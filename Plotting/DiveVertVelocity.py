@@ -292,6 +292,9 @@ def plot_vert_vel(
         # SG eng time base
         sg_time = dive_nc_file.variables["time"][:]
         depth = dive_nc_file.variables["depth"][:]
+        # Interpolate around missing depth observations
+        depth = PlotUtils.interp_missing_depth(sg_time, depth)
+
         vehicle_pitch_degrees_v = dive_nc_file.variables["eng_pitchAng"][:]
         sg_np = dive_nc_file.dimensions["sg_data_point"].size
         vbd = dive_nc_file.variables["eng_vbdCC"][:]  # - vbdbias

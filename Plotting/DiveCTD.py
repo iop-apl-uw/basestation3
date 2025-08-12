@@ -91,8 +91,17 @@ class CTDVars:
     min_temperature: float | None = None
     max_temperature: float | None = None
     is_legato: bool = False
-    sigmat_t_dive: npt.NDArray[np.float64] | None = None
-    sigmat_t_climb: npt.NDArray[np.float64] | None = None
+    is_gpctd: bool = False
+    is_seabird: bool = False
+    sigma_t_dive: npt.NDArray[np.float64] | None = None
+    sigma_t_climb: npt.NDArray[np.float64] | None = None
+    buoy_freq_dive: npt.NDArray[np.float64] | None = None
+    buoy_freqclimb: npt.NDArray[np.float64] | None = None
+    max_depth_sampled_i: float | None = None
+    max_depth_sampled: float | None = None
+    f_depth: typing.Any | None = None
+    start_time: float | None = None
+    ctd_time_sampled: npt.NDArray[np.float64] | None = None
 
 
 def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
@@ -116,9 +125,9 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         return None
 
     try:
-        start_time = dive_nc_file.start_time
+        ctd_vars.start_time = dive_nc_file.start_time
     except Exception:
-        start_time = None
+        ctd_vars.start_time = None
 
     ctd_vars.aa4831_temp_dive = ctd_vars.aa4831_temp_climb = ctd_vars.optode_name = None
 
@@ -161,6 +170,8 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
                 aa4831_time = sg_time
 
             depth = dive_nc_file.variables["depth"][:]
+            # Interpolate around missing depth observations
+            depth = PlotUtils.interp_missing_depth(sg_time, depth)
 
             depth_f = scipy.interpolate.interp1d(
                 sg_time, depth, kind="linear", bounds_error=False, fill_value=0.0
@@ -176,10 +187,10 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
             ctd_vars.aa4831_temp_climb = aa4831_temp[max_depth_sample_index:]
 
             ctd_vars.aa4831_time_dive = (
-                aa4831_time[0:max_depth_sample_index] - start_time
+                aa4831_time[0:max_depth_sample_index] - ctd_vars.start_time
             ) / 60.0
             ctd_vars.aa4831_time_climb = (
-                aa4831_time[max_depth_sample_index:] - start_time
+                aa4831_time[max_depth_sample_index:] - ctd_vars.start_time
             ) / 60.0
 
             ctd_vars.point_num_aa4831_dive = np.arange(0, max_depth_sample_index)
@@ -190,10 +201,16 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         except Exception:
             log_error("Error processing optode temp", "exc")
 
-    if "sg_cal_sg_ct_type" in dive_nc_file.variables:
-        ctd_vars.is_legato = dive_nc_file.variables["sg_cal_sg_ct_type"].getValue() == 4
+    ctd_vars.is_seabird = ctd_vars.is_gpctd = ctd_vars.is_legato = False
+    if (
+        "sg_cal_sg_ct_type" in dive_nc_file.variables
+        and dive_nc_file.variables["sg_cal_sg_ct_type"].getValue() == 4
+    ):
+        ctd_vars.is_legato = True
+    elif "gpctd_time" in dive_nc_file.variables:
+        ctd_vars.is_gpctd = True
     else:
-        ctd_vars.is_legato = False
+        ctd_vars.is_seabird = True
 
     if not ctd_vars.is_legato:
         # The range of the raw plot is constrained by the range of the QC_GOOD plot for
@@ -219,7 +236,9 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
                 sigma_t = dive_nc_file.variables["sigma_t"][:]
             else:
                 sigma_t = None
+
             # ctd_vars.qc_tag = ""
+            sampled_mask = None
             if "temperature_qc" in dive_nc_file.variables and "raw" not in temp_name:
                 temp_qc = QC.decode_qc(dive_nc_file.variables["temperature_qc"])
                 temp = np.ma.array(
@@ -229,6 +248,7 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
                     ),
                 )
                 ctd_vars.qc_tag = " - QC_GOOD"
+                sampled_mask = temp_qc != QC.QC_UNSAMPLED
 
             if "salinity_qc" in dive_nc_file.variables and "raw" not in salinity_name:
                 salinity_qc = QC.decode_qc(dive_nc_file.variables["salinity_qc"])
@@ -239,6 +259,7 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
                     ),
                 )
                 ctd_vars.qc_tag = " - QC_GOOD"
+                sampled_mask = salinity_qc != QC.QC_UNSAMPLED
 
             if (
                 "conductivity_qc" in dive_nc_file.variables
@@ -253,6 +274,22 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
                         QC.find_qc(conductivity_qc, QC.only_good_qc_values, mask=True)
                     ),
                 )
+                sampled_mask = conductivity_qc != QC.QC_UNSAMPLED
+
+            # For samples and timeout plots
+            if sampled_mask is not None:
+                ctd_vars.ctd_time_sampled = ctd_vars.ctd_time_v[sampled_mask]
+                ctd_vars.f_depth = scipy.interpolate.PchipInterpolator(
+                    ctd_vars.ctd_time_sampled,
+                    ctd_vars.ctd_depth_m_v[sampled_mask],
+                    extrapolate=True,
+                )
+                ctd_vars.max_depth_sampled_i = np.nanargmax(
+                    ctd_vars.ctd_depth_m_v[sampled_mask]
+                )
+                ctd_vars.max_depth_sampled = ctd_vars.ctd_depth_m_v[sampled_mask][
+                    ctd_vars.max_depth_sampled_i
+                ]
 
         except Exception:
             log_info("Could not load nc varibles for plot_ctd_data - skipping", "exc")
@@ -268,12 +305,12 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
     # ctd_vars.surface_depth = 2.0
     # ctd_vars.surface_depth = 0.0
     if ctd_vars.binned_profile:
-        if not start_time:
-            start_time = ctd_vars.ctd_time_v[0, 0]
+        if not ctd_vars.start_time:
+            ctd_vars.start_time = ctd_vars.ctd_time_v[0, 0]
         ctd_vars.depth_dive = ctd_vars.ctd_depth_m_v[0, :]
         ctd_vars.depth_climb = ctd_vars.ctd_depth_m_v[1, :]
-        ctd_vars.time_dive = (ctd_vars.ctd_time_v[0, :] - start_time) / 60.0
-        ctd_vars.time_climb = (ctd_vars.ctd_time_v[1, :] - start_time) / 60.0
+        ctd_vars.time_dive = (ctd_vars.ctd_time_v[0, :] - ctd_vars.start_time) / 60.0
+        ctd_vars.time_climb = (ctd_vars.ctd_time_v[1, :] - ctd_vars.start_time) / 60.0
         ctd_vars.temp_dive = temp[0, :]
         ctd_vars.temp_climb = temp[1, :]
         ctd_vars.salinity_dive = salinity[0, :]
@@ -285,8 +322,8 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
             ctd_vars.sigma_t_dive = sigma_t[0, :]
             ctd_vars.sigma_t_climb = sigma_t[1, :]
     else:
-        if not start_time:
-            start_time = ctd_vars.ctd_time_v[0]
+        if not ctd_vars.start_time:
+            ctd_vars.start_time = ctd_vars.ctd_time_v[0]
         if "raw" in temp_name and ctd_vars.surface_depth > 0.0:
             dive_start = np.amin(
                 np.where(ctd_vars.ctd_depth_m_v > ctd_vars.surface_depth)
@@ -308,10 +345,10 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         ctd_vars.depth_climb = ctd_vars.ctd_depth_m_v[max_depth_sample_index:dive_end]
 
         ctd_vars.time_dive = (
-            ctd_vars.ctd_time_v[dive_start:max_depth_sample_index] - start_time
+            ctd_vars.ctd_time_v[dive_start:max_depth_sample_index] - ctd_vars.start_time
         ) / 60.0
         ctd_vars.time_climb = (
-            ctd_vars.ctd_time_v[max_depth_sample_index:dive_end] - start_time
+            ctd_vars.ctd_time_v[max_depth_sample_index:dive_end] - ctd_vars.start_time
         ) / 60.0
 
         ctd_vars.temp_dive = temp[dive_start:max_depth_sample_index]
@@ -616,6 +653,41 @@ def plot_CTD(
                     + "<br>%{x:.3f} C<br>%{y:.2f} meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
                     "visible": "legendonly",
                 }
+            )
+
+        # Only for time series plots
+        if not ctd_vars.binned_profile:
+            if ctd_vars.is_legato:
+                ctd_type = "legato"
+            elif ctd_vars.is_gpctd:
+                ctd_type = "gpctd"
+            else:
+                ctd_type = "sbect"
+
+            timeouts, timeouts_times = PlotUtils.collect_timeouts(
+                dive_nc_file, ctd_type
+            )
+
+            if timeouts:
+                PlotUtils.add_timeout_overlays(
+                    timeouts,
+                    timeouts_times,
+                    fig,
+                    ctd_vars.f_depth,
+                    ctd_vars.ctd_time_sampled,
+                    ctd_vars.max_depth_sampled_i,
+                    ctd_vars.max_depth_sampled,
+                    ctd_vars.start_time,
+                    "DarkMagenta",  # To match instrument T trace
+                    "DarkRed",  # To match instrument T trace
+                )
+
+            PlotUtils.add_sample_range_overlay(
+                ctd_vars.ctd_time_sampled,
+                ctd_vars.max_depth_sampled_i,
+                ctd_vars.start_time,
+                fig,
+                ctd_vars.f_depth,
             )
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)

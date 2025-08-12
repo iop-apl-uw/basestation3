@@ -48,6 +48,7 @@ if typing.TYPE_CHECKING:
     import BaseOpts
 
 import NetCDFUtils
+import Utils
 from BaseLog import log_error, log_warning
 
 
@@ -459,7 +460,7 @@ def collect_timeouts(dive_nc_file, instr_cls):
     timeouts = 0
     timeouts_times = []
 
-    for profile in ("", "_a", "_b", "_c", "_d"):
+    for profile in ("", "_a", "_b", "_c", "_d", "_truck"):
         timeouts_str = f"{instr_cls}_timeouts{profile}"
         if timeouts_str in dive_nc_file.variables:
             timeouts += dive_nc_file.variables[timeouts_str].getValue()
@@ -471,6 +472,7 @@ def collect_timeouts(dive_nc_file, instr_cls):
                 .tobytes()
                 .decode()
                 .rstrip()
+                .rstrip(",")
                 .split(",")
             ]
     return (timeouts, np.array(timeouts_times))
@@ -539,27 +541,11 @@ def coalesce_short_runs(run_list, min_len):
     return new_run
 
 
-def add_sample_range_overlay(time_var, max_time_i, start_time, fig, f_depth):
+def add_sample_range_overlay(time_var, max_depth_i, start_time, fig, f_depth):
     """Add sample grid overlays and sample stats traces to a plot"""
-    if time_var.size < 4:
-        return
-    # First and last
-    time_var = time_var[1:]
 
-    # import pdb
-
-    # pdb.set_trace()
-    # Note - this bucketing assumes
-    # 1) Sample intervals are no greater then 360 seconds
-    # 2) Typical sampling on even seconds
-
-    time_dive = time_var[:max_time_i]
-    time_diff_dive = np.digitize(np.diff(time_dive), np.arange(360) + 0.5)
-    time_climb = time_var[max_time_i:]
-    time_diff_climb = np.digitize(np.diff(time_climb), np.arange(360) + 0.5)
-
-    # color_map = ("LightGrey", "DarkGrey")
-    color_map = ("lightgrey", "grey", "darkgrey")
+    time_dive = time_var[:max_depth_i]
+    time_climb = time_var[max_depth_i:]
 
     min_x = np.iinfo(np.int32).max
     max_x = np.iinfo(np.int32).min
@@ -631,88 +617,109 @@ def add_sample_range_overlay(time_var, max_time_i, start_time, fig, f_depth):
         }
     )
 
-    for ttime, time_diff, name in (
-        (time_dive, time_diff_dive, "Dive sample grid"),
-        (time_climb, time_diff_climb, "Climb sample grid"),
-    ):
-        if time_dive.size < 2:
-            continue
+    return
 
-        # Find and plot the sample grid
-        tmp_runs = find_identical_runs(time_diff)
+    # This method of detecting the sampling grid is too error prone to be of use
+    # Preserving it here in case the alternate strategy of processing the science and
+    # scicon files proves too brittle
 
-        # print("Full runs")
-        # for run in tmp_runs:
-        #     print(run)
-        # runs = tmp_runs
-        # print("Collapsed runs")
-        runs = coalesce_short_runs(tmp_runs, 1)
-        # for run in runs:
-        #     print(run)
-        show_label = collections.defaultdict(lambda: True)
+    # Note - this bucketing assumes
+    # 1) Sample intervals are no greater then 360 seconds
+    # 2) Typical sampling on even seconds
+    # if time_var.size < 4:
+    #     return
 
-        for ii, (run_value, run_length, run_index) in enumerate(
-            runs[:: 1 if "Dive" in name else -1]
-        ):
-            color = color_map[ii % len(color_map)]
-            start_range_time = ttime[run_index]
-            start_range_depth = f_depth(start_range_time)
-            end_range_time = ttime[run_index + run_length]
-            end_range_depth = f_depth(end_range_time)
+    # time_var = time_var[1:]
+    # time_dive = time_var[:max_depth_i]
+    # time_climb = time_var[max_depth_i:]
+    # time_diff_dive = np.digitize(np.diff(time_dive), np.arange(360) + 0.5)
+    # time_diff_climb = np.digitize(np.diff(time_climb), np.arange(360) + 0.5)
 
-            # Sample calcs for the grid
-            samples_tot = run_length
-            samples_per_meter = float(samples_tot) / np.abs(
-                start_range_depth - end_range_depth
-            )
+    # # color_map = ("LightGrey", "DarkGrey")
+    # color_map = ("lightgrey", "grey", "darkgrey")
 
-            tag = f"{run_value} secs"
-            fig.add_trace(
-                {
-                    "type": "scatter",
-                    "x": [0.0, 0.0, 1.0, 1.0],
-                    "y": [
-                        start_range_depth,
-                        end_range_depth,
-                        end_range_depth,
-                        start_range_depth,
-                    ],
-                    "xaxis": "x11",
-                    "fill": "toself",
-                    "fillcolor": color,
-                    "opacity": 0.50,
-                    "line": {
-                        "dash": "solid",
-                        # proxy for line opacity
-                        "width": 0.25,
-                        "color": color,
-                    },
-                    "mode": "lines",
-                    "legendgroup": f"{name}_group",
-                    "name": name,
-                    "showlegend": show_label[name],
-                    "visible": "legendonly",
-                    "text": f"{name}:{tag}<br>Start:{(start_range_time - start_time)/6.0:.2f} mins, End:Start:{(end_range_time - start_time)/6.0:.2f} mins<br>{samples_tot} samples, {samples_per_meter:.2f} samples per meter:",
-                    "hoverinfo": "text",
-                    "zorder": -10,
-                }
-            )
-            show_label[name] = False
+    # for ttime, time_diff, name in (
+    #     (time_dive, time_diff_dive, "Dive sample grid"),
+    #     (time_climb, time_diff_climb, "Climb sample grid"),
+    # ):
+    #     if time_dive.size < 2:
+    #         continue
 
-    fig.update_layout(
-        {
-            "xaxis11": {
-                "title": "Samples grid",
-                "showgrid": False,
-                "overlaying": "x1",
-                "side": "bottom",
-                "anchor": "free",
-                "position": 0.05,
-                "visible": False,
-                "range": [0.0, 1.0],
-            }
-        }
-    )
+    #     # Find and plot the sample grid
+    #     tmp_runs = find_identical_runs(time_diff)
+
+    #     print("Full runs")
+    #     for run in tmp_runs:
+    #         print(run)
+    #     runs = tmp_runs
+    #     print("Collapsed runs")
+    #     runs = coalesce_short_runs(tmp_runs, 1)
+    #     for run in runs:
+    #         print(run)
+    #     show_label = collections.defaultdict(lambda: True)
+
+    #     for ii, (run_value, run_length, run_index) in enumerate(
+    #         runs[:: 1 if "Dive" in name else -1]
+    #     ):
+    #         color = color_map[ii % len(color_map)]
+    #         start_range_time = ttime[run_index]
+    #         start_range_depth = f_depth(start_range_time)
+    #         end_range_time = ttime[run_index + run_length]
+    #         end_range_depth = f_depth(end_range_time)
+
+    #         # Sample calcs for the grid
+    #         samples_tot = run_length
+    #         samples_per_meter = float(samples_tot) / np.abs(
+    #             start_range_depth - end_range_depth
+    #         )
+
+    #         tag = f"{run_value} secs"
+    #         fig.add_trace(
+    #             {
+    #                 "type": "scatter",
+    #                 "x": [0.0, 0.0, 1.0, 1.0],
+    #                 "y": [
+    #                     start_range_depth,
+    #                     end_range_depth,
+    #                     end_range_depth,
+    #                     start_range_depth,
+    #                 ],
+    #                 "xaxis": "x11",
+    #                 "fill": "toself",
+    #                 "fillcolor": color,
+    #                 "opacity": 0.50,
+    #                 "line": {
+    #                     "dash": "solid",
+    #                     # proxy for line opacity
+    #                     "width": 0.25,
+    #                     "color": color,
+    #                 },
+    #                 "mode": "lines",
+    #                 "legendgroup": f"{name}_group",
+    #                 "name": name,
+    #                 "showlegend": show_label[name],
+    #                 "visible": "legendonly",
+    #                 "text": f"{name}:{tag}<br>Start:{(start_range_time - start_time)/6.0:.2f} mins, End:Start:{(end_range_time - start_time)/6.0:.2f} mins<br>{samples_tot} samples, {samples_per_meter:.2f} samples per meter:",
+    #                 "hoverinfo": "text",
+    #                 "zorder": -10,
+    #             }
+    #         )
+    #         show_label[name] = False
+
+    # fig.update_layout(
+    #     {
+    #         "xaxis11": {
+    #             "title": "Samples grid",
+    #             "showgrid": False,
+    #             "overlaying": "x1",
+    #             "side": "bottom",
+    #             "anchor": "free",
+    #             "position": 0.05,
+    #             "visible": False,
+    #             "range": [0.0, 1.0],
+    #         }
+    #     }
+    # )
 
 
 def add_timeout_overlays(
@@ -799,3 +806,17 @@ def add_timeout_overlays(
             }
         }
     )
+
+
+def interp_missing_depth(sg_time, sg_depth):
+    sg_depth_good_b = np.logical_not(np.isnan(sg_depth))
+    if len(np.squeeze(np.nonzero(sg_depth_good_b))) < 2:
+        log_warning("No non-nan depth points - skipping interpolation")
+    else:
+        sg_depth = Utils.interp1d(
+            sg_time[sg_depth_good_b],
+            sg_depth[sg_depth_good_b],
+            sg_time,
+            kind="linear",
+        )
+    return sg_depth

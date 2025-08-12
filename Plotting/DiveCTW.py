@@ -79,6 +79,9 @@ def plot_CTW(
 
         sg_time = (dive_nc_file.variables["time"][:] - start_time) / 60.0
         sg_depth = dive_nc_file.variables["depth"][:]
+        # Interpolate around missing depth observations
+        sg_depth = PlotUtils.interp_missing_depth(sg_time, sg_depth)
+
         north_disp_gsm = dive_nc_file.variables["north_displacement_gsm"][:]
         east_disp_gsm = dive_nc_file.variables["east_displacement_gsm"][:]
 

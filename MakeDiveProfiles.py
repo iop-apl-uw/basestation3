@@ -2241,25 +2241,6 @@ def load_dive_profile_data(
 
         # regardless of source, remap these column names
         eng_f.remap_engfile_columns()
-        if sg_ct_type == 4 and eng_f.get_col("rbr_pressure") is not None:
-            rbr_good_press_i_v = np.logical_not(np.isnan(eng_f.get_col("rbr_pressure")))
-            if len(np.squeeze(np.nonzero(rbr_good_press_i_v))) < 2:
-                log_warning("No non-nan rbr_pressure - skipping interpolation")
-            else:
-                rbr_pressure = Utils.interp1d(
-                    eng_f.get_col("elaps_t")[rbr_good_press_i_v],
-                    eng_f.get_col("rbr_pressure")[rbr_good_press_i_v],
-                    eng_f.get_col("elaps_t"),
-                    kind="linear",
-                )
-                eng_f.update_col("rbr_pressure", rbr_pressure)
-                sg_depth = Utils.interp1d(
-                    eng_f.get_col("elaps_t")[rbr_good_press_i_v],
-                    eng_f.get_col("depth")[rbr_good_press_i_v],
-                    eng_f.get_col("elaps_t"),
-                    kind="linear",
-                )
-                eng_f.update_col("depth", sg_depth)
 
         sg_np = len(eng_f.get_col(eng_f.columns[0]))
         BaseNetCDF.assign_dim_info_size(nc_info_d, BaseNetCDF.nc_sg_data_info, sg_np)
@@ -4063,9 +4044,11 @@ def make_dive_profile(
         try:
             if sg_ct_type == 4:
                 ## UnPumped RBR Legato data ##
+                rbr_good_press_i_v = None
                 if set(
                     ("legato_pressure", "legato_temp", "legato_conduc", "legato_time")
                 ) <= set(results_d):
+                    # Scicon case
                     try:
                         tmp_press_v = results_d["legato_pressure"]
                         ctd_temp_v = results_d["legato_temp"]
@@ -4077,7 +4060,14 @@ def make_dive_profile(
                             f"Legato CT scicon data found, but had problems loading {e} - bailing out"
                         )
                         raise RuntimeError(True) from e
+
+                    ctd_np = len(ctd_epoch_time_s_v)
+                    ctd_temp_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                    ctd_cond_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                    ctd_salin_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                    ctd_press_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
                 else:
+                    # Truck case
                     ctd_temp_v = eng_f.get_col("rbr_temp")
                     ctd_cond_v = eng_f.get_col("rbr_conduc")
                     ctd_condtemp_v = eng_f.get_col("rbr_conducTemp")
@@ -4095,14 +4085,28 @@ def make_dive_profile(
                         )
                         raise RuntimeError(True)
 
-                    tmp_press_v = eng_f.get_col("rbr_pressure")
+                    ctd_np = len(ctd_epoch_time_s_v)
+                    ctd_temp_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                    ctd_cond_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                    ctd_salin_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
+                    ctd_press_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
 
-                ctd_np = len(ctd_epoch_time_s_v)
-                ctd_temp_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-                ctd_cond_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-                ctd_salin_qc = QC.initialize_qc(ctd_np, QC.QC_GOOD)
-                if eng_f.get_col("rbr_temp") is not None:
-                    # Note: this assumes the rbr_pressure, if present, has been interpolated for missing points
+                    tmp_press_v = eng_f.get_col("rbr_pressure")
+                    rbr_good_press_i_v = np.logical_not(np.isnan(tmp_press_v))
+                    # Smooth through the unsampled/bad points for remaining calcs
+                    if len(np.squeeze(np.nonzero(rbr_good_press_i_v))) < 2:
+                        log_warning("No non-nan rbr_pressure - skipping interpolation")
+                        rbr_good_press_i_v = None
+                    else:
+                        tmp_press_v = Utils.interp1d(
+                            eng_f.get_col("elaps_t")[rbr_good_press_i_v],
+                            eng_f.get_col("rbr_pressure")[rbr_good_press_i_v],
+                            eng_f.get_col("elaps_t"),
+                            kind="linear",
+                        )
+                        # Defer QC update until after the decision on using the truck pressure sensor
+
+                    # Note: this marks both unsampled and timeouts as "Legato unsampled"
                     unsampled_i = np.nonzero(np.isnan(ctd_temp_v))[0]
                     QC.assert_qc(
                         QC.QC_UNSAMPLED, ctd_temp_qc, unsampled_i, "Legato unsampled"
@@ -4135,9 +4139,10 @@ def make_dive_profile(
                 )
 
                 # Handle pressure spikes in legato pressure signal
-                ctd_press_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
                 if tmp_press_v is None or calib_consts["legato_use_truck_pressure"]:
-                    # ctd_press_v = sg_press_v.copy()
+                    # Reset QC here because of new source
+                    # TODO - when sg_press_v_qc is added - propagate that from there to here
+                    ctd_press_qc_v = QC.initialize_qc(ctd_np, QC.QC_GOOD)
                     ctd_press_v = Utils.interp1d(
                         sg_epoch_time_s_v, sg_press_v, ctd_epoch_time_s_v, kind="linear"
                     )
@@ -4149,6 +4154,14 @@ def make_dive_profile(
                         pass
                     results_d.update({"ctd_pressure_qc": ctd_press_qc_v})
                 else:
+                    if rbr_good_press_i_v is not None:
+                        QC.assert_qc(
+                            QC.QC_INTERPOLATED,
+                            ctd_press_qc_v,
+                            np.nonzero(np.logical_not(rbr_good_press_i_v))[0],
+                            "Legato interpolated",
+                        )
+
                     ctd_press_v, bad_points = QC.smooth_legato_pressure(
                         tmp_press_v, ctd_epoch_time_s_v
                     )

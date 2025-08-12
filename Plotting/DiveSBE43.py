@@ -100,6 +100,10 @@ def plot_sbe43(
                 sg_depth = dive_nc_file.variables["eng_depth"][:] / 100.0
             except KeyError:
                 log_warning("No depth variable found")
+                return ([], [])
+        # Interpolate around missing depth observations
+        sg_depth = PlotUtils.interp_missing_depth(sg_time, sg_depth)
+
         if binned_profile:
             bin_width = np.round(np.average(np.diff(sg_depth[0, :])), decimals=1)
         if "sbe43_dissolved_oxygen" in dive_nc_file.variables:

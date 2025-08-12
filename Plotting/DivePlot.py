@@ -256,6 +256,8 @@ def plot_diveplot(
             except KeyError:
                 log_warning("No depth variable found")
                 return ([], [])
+        # Note - no interpolation for missing values done here to keep the
+        # dive trace as accurate as possible
 
         depth_time = dive_nc_file.variables["time"][:]
     except Exception:
