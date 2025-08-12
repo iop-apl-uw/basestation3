@@ -1366,6 +1366,8 @@ skip_qc_list = [
     "unsampled temperature",
     "unsampled conductivity",
     "unsampled optode oyxgen",
+    "Legato interpolated",
+    "Legato unsampled",
 ]
 
 
