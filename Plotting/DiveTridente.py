@@ -240,7 +240,7 @@ def plot_tridente(
 
                     # Only for time series plots
                     timeouts = None
-                    if max_depth_sample_index:
+                    if max_depth_sample_index is not None:
                         timeouts, timeouts_times = PlotUtils.collect_timeouts(
                             dive_nc_file,
                             tridente_type,
@@ -438,7 +438,7 @@ def plot_tridente(
 
         # Only for time series plots
         timeouts = None
-        if max_depth_sample_index:
+        if max_depth_sample_index is not None:
             timeouts, timeouts_times = PlotUtils.collect_timeouts(
                 dive_nc_file,
                 tridente_type,
