@@ -202,6 +202,14 @@ def plot_coda(
         codatodo_instrument_O2_time[max_depth_sample_index:] - start_time
     ) / 60.0
 
+    # For samples and timeout plots
+    f_depth = scipy.interpolate.PchipInterpolator(
+        codatodo_instrument_O2_time,
+        codatodo_instrument_O2_depth,
+        extrapolate=True,
+    )
+    max_depth = np.nanmax(codatodo_instrument_O2_depth)
+
     fig = plotly.graph_objects.Figure()
 
     if codatodo_instrument_compensated_O2 is not None:
@@ -353,6 +361,33 @@ def plot_coda(
                 "hovertemplate": "Sat O2 Climb<br>%{x:.2f} umol/kg<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
             }
         )
+
+    timeouts, timeouts_times = PlotUtils.collect_timeouts(
+        dive_nc_file,
+        "codaTODO",
+    )
+
+    if timeouts:
+        PlotUtils.add_timeout_overlays(
+            timeouts,
+            timeouts_times,
+            fig,
+            f_depth,
+            codatodo_instrument_O2_time,
+            max_depth_sample_index,
+            max_depth,
+            start_time,
+            "Green",  # To match insturment dive trace
+            "Goldenrod",  # To match instrument climb trace
+        )
+
+    PlotUtils.add_sample_range_overlay(
+        codatodo_instrument_O2_time,
+        max_depth_sample_index,
+        start_time,
+        fig,
+        f_depth,
+    )
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = "%s\nOxygen vs Depth (%scorrected for salinity and depth%s)" % (
