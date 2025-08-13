@@ -549,6 +549,7 @@ def add_sample_range_overlay(time_var, max_depth_i, start_time, fig, f_depth):
 
     min_x = np.iinfo(np.int32).max
     max_x = np.iinfo(np.int32).min
+    bin_width = None
     for ttime, name, color in (
         (
             time_dive,
@@ -557,7 +558,7 @@ def add_sample_range_overlay(time_var, max_depth_i, start_time, fig, f_depth):
         ),
         (time_climb, "Climb samples", "skyblue"),
     ):
-        if time_dive.size < 2:
+        if ttime.size < 2:
             continue
 
         # Generate the samples/meter trace
@@ -601,21 +602,22 @@ def add_sample_range_overlay(time_var, max_depth_i, start_time, fig, f_depth):
             }
         )
 
-    fig.update_layout(
-        {
-            # Not visible - no good way to control the bottom margin so there is room for this
-            "xaxis10": {
-                "title": f"Samples per {bin_width}m",
-                "showgrid": False,
-                "overlaying": "x1",
-                "side": "bottom",
-                "anchor": "free",
-                "position": 0.05,
-                "visible": False,
-                "range": [min_x, max_x],
+    if bin_width is not None:
+        fig.update_layout(
+            {
+                # Not visible - no good way to control the bottom margin so there is room for this
+                "xaxis10": {
+                    "title": f"Samples per {bin_width}m",
+                    "showgrid": False,
+                    "overlaying": "x1",
+                    "side": "bottom",
+                    "anchor": "free",
+                    "position": 0.05,
+                    "visible": False,
+                    "range": [min_x, max_x],
+                }
             }
-        }
-    )
+        )
 
     return
 
