@@ -118,6 +118,7 @@ def plot_ocr504i(
     chans_climb = [None] * 4
 
     if binned_profile:
+        max_depth_sample_index = None
         # Create dive and climb vectors
         depth_dive = depth[0, :]
         depth_climb = depth[1, :]
@@ -148,6 +149,14 @@ def plot_ocr504i(
         for ii in range(4):
             chans_dive[ii] = chans[ii][0:max_depth_sample_index]
             chans_climb[ii] = chans[ii][max_depth_sample_index:]
+
+        # For samples and timeout plots
+        f_depth = scipy.interpolate.PchipInterpolator(
+            ocr504i_time,
+            depth,
+            extrapolate=True,
+        )
+        max_depth = np.nanmax(depth)
 
     fig = plotly.graph_objects.Figure()
 
@@ -243,6 +252,36 @@ def plot_ocr504i(
                 + "<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
             }
         )
+
+        # Only for time series plots
+        timeouts = None
+        if max_depth_sample_index is not None:
+            timeouts, timeouts_times = PlotUtils.collect_timeouts(
+                dive_nc_file,
+                "ocr504i",
+            )
+
+            if timeouts:
+                PlotUtils.add_timeout_overlays(
+                    timeouts,
+                    timeouts_times,
+                    fig,
+                    f_depth,
+                    ocr504i_time,
+                    max_depth_sample_index,
+                    max_depth,
+                    start_time,
+                    "Red",  # To match insturment dive trace
+                    "DarkRed",  # To match instrument climb trace
+                )
+
+            PlotUtils.add_sample_range_overlay(
+                ocr504i_time,
+                max_depth_sample_index,
+                start_time,
+                fig,
+                f_depth,
+            )
 
     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
     title_text = f"{mission_dive_str}<br>PAR OCR504i Output vs Depth{binned_tag}"
