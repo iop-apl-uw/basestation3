@@ -133,6 +133,7 @@ def plot_tridente(
             return (ret_figs, ret_plots)
 
         if binned_profile:
+            max_depth_sample_index = None
             if not start_time:
                 start_time = tr_time[0, 0]
 
@@ -154,6 +155,14 @@ def plot_tridente(
 
             tr_time_dive = (tr_time[0:max_depth_sample_index] - start_time) / 60.0
             tr_time_climb = (tr_time[max_depth_sample_index:] - start_time) / 60.0
+
+            # For samples and timeout plots
+            f_depth = scipy.interpolate.PchipInterpolator(
+                tr_time,
+                tridente_depth_m_v,
+                extrapolate=True,
+            )
+            max_depth = np.nanmax(tridente_depth_m_v)
 
         # Make this one plot for each channel
 
@@ -229,6 +238,36 @@ def plot_tridente(
                         }
                     )
 
+                    # Only for time series plots
+                    timeouts = None
+                    if max_depth_sample_index:
+                        timeouts, timeouts_times = PlotUtils.collect_timeouts(
+                            dive_nc_file,
+                            tridente_type,
+                        )
+
+                        if timeouts:
+                            PlotUtils.add_timeout_overlays(
+                                timeouts,
+                                timeouts_times,
+                                fig,
+                                f_depth,
+                                tr_time,
+                                max_depth_sample_index,
+                                max_depth,
+                                start_time,
+                                "Magenta",  # To match insturment dive trace
+                                "Red",  # To match instrument climb trace
+                            )
+
+                        PlotUtils.add_sample_range_overlay(
+                            tr_time,
+                            max_depth_sample_index,
+                            start_time,
+                            fig,
+                            f_depth,
+                        )
+
                     mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
                     title_text = f"{mission_dive_str}<br>{fluor_chans[ff].name} vs Depth{binned_tag}"
                     output_name = "dv%04d_%s_%s" % (
@@ -280,6 +319,8 @@ def plot_tridente(
                             .tobytes()
                             .decode()
                         )
+                        if timeouts:
+                            cal_text += f" Timeouts:{timeouts:d}"
 
                         fig.update_layout(
                             {
@@ -321,6 +362,7 @@ def plot_tridente(
         )
 
         fig = None
+        last_dive_color = last_climb_color = None
 
         for bb in list(bs_chans.keys()):
             for vv in ("%s_%s", "eng_%s_%s"):
@@ -340,6 +382,9 @@ def plot_tridente(
 
                     units = "m 1e-1 sr 1e-1"
                     fmt = ".3g"
+
+                    last_dive_color = bs_chans[bb].dive_color
+                    last_climb_color = bs_chans[bb].climb_color
 
                     fig.add_trace(
                         {
@@ -390,6 +435,36 @@ def plot_tridente(
         # If we didn't find backscatter, we're done.
         if not fig:
             return (ret_figs, ret_plots)
+
+        # Only for time series plots
+        timeouts = None
+        if max_depth_sample_index:
+            timeouts, timeouts_times = PlotUtils.collect_timeouts(
+                dive_nc_file,
+                tridente_type,
+            )
+
+            if timeouts:
+                PlotUtils.add_timeout_overlays(
+                    timeouts,
+                    timeouts_times,
+                    fig,
+                    f_depth,
+                    tr_time,
+                    max_depth_sample_index,
+                    max_depth,
+                    start_time,
+                    last_dive_color,  # To match insturment dive trace
+                    last_climb_color,  # To match instrument climb trace
+                )
+
+            PlotUtils.add_sample_range_overlay(
+                tr_time,
+                max_depth_sample_index,
+                start_time,
+                fig,
+                f_depth,
+            )
 
         xlabel = r"$m^{-1} sr^{-1}$"
 
