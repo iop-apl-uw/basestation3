@@ -953,7 +953,7 @@ def crack_counter_line(
     # Check for valid counter
     cnt_vals = raw_strs[0].split(":")
 
-    if len(cnt_vals) >= 3 and len(cnt_vals) <= 17:
+    if len(cnt_vals) >= 3 and len(cnt_vals) <= 20:
         for i in range(len(cnt_vals)):
             cnt_vals[i] = cnt_vals[i].lstrip("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
 
