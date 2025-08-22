@@ -249,7 +249,7 @@ def checkGliderMission(request, glider, mission, perm=PERM_VIEW):
 def checkEndpoint(request, e):
 
     if 'users' in e or 'groups' in e:
-        (tU, tG, tD) = getTokenUser(request)
+        (tU, tG, tD, tType) = getTokenUser(request)
         allowAccess = False
 
         if tU and 'users' in e and e['users'] and tU in e['users']:  # noqa: SIM114
