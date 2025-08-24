@@ -101,6 +101,8 @@ def plot_diveplot(
             gc_roll_pos_ad,
             gc_pitch_pos_ad,
             gc_vbd_pos_ad,
+            gc_vbd_pot1_ad,
+            gc_vbd_pot2_ad,
         ) = PlotUtils.extract_gc_moves(dive_nc_file)
 
         apogee_time = None
@@ -412,7 +414,7 @@ def plot_diveplot(
                 "visible": "legendonly",
                 "mode": "lines",
                 # "marker": {"symbol": "cross", "size": 3},
-                "line": {"dash": "solid", "color": "DarkGrey"},
+                "line": {"dash": "solid", "color": "Yellow"},
                 "hovertemplate": "sigma_t<br>%{meta:.1f} g/m^3<br>%{x:.2f} mins<br><extra></extra>",
             }
         )
@@ -723,6 +725,29 @@ def plot_diveplot(
 
     fig.add_trace(temp_dict)
     del temp_dict
+
+    for pot_ad, pot_num, color in (
+        (gc_vbd_pot1_ad, 1, "LightGrey"),
+        (gc_vbd_pot2_ad, 2, "DarkGrey"),
+    ):
+        if pot_ad is None:
+            continue
+        valid_i = np.logical_not(np.isnan(pot_ad))
+        fig.add_trace(
+            {
+                "y": pot_ad[valid_i] / 50.0,
+                "x": eng_vbd_time[valid_i],
+                "meta": pot_ad[valid_i],
+                "name": f"VBD Pot {pot_num:d} (50 ad)",
+                "type": "scatter",
+                "xaxis": "x1",
+                "yaxis": "y1",
+                "mode": "lines",
+                "visible": "legendonly",
+                "line": {"color": color},
+                "hovertemplate": f"VBD Pot {pot_num:d}<br>%{{meta:d}} ad<br>%{{x:.2f}} mins<br><extra></extra>",
+            }
+        )
 
     fig.add_trace(
         {

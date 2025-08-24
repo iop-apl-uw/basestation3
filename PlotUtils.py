@@ -191,6 +191,19 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
     except KeyError:
         vbd_lp_ignore = 0  # both available
 
+    gc_vbd_pot1_ad = np.concatenate(
+        (
+            np.array(ncf.variables["gc_vbd_pot1_ad_start"][:]),
+            np.array(ncf.variables["gc_vbd_pot1_ad"][:]),
+        )
+    )
+    gc_vbd_pot2_ad = np.concatenate(
+        (
+            np.array(ncf.variables["gc_vbd_pot2_ad_start"][:]),
+            np.array(ncf.variables["gc_vbd_pot2_ad"][:]),
+        )
+    )
+
     if vbd_lp_ignore == 0:
         gc_start_vbd_ad_v = (
             np.array(ncf.variables["gc_vbd_pot1_ad_start"][:])
@@ -222,6 +235,8 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
     gc_roll_pos_ad = gc_roll_pos[sort_i]
     gc_pitch_pos_ad = gc_pitch_pos[sort_i]
     gc_vbd_pos_ad = gc_vbd_pos[sort_i]
+    gc_vbd_pot1_ad = gc_vbd_pot1_ad[sort_i]
+    gc_vbd_pot2_ad = gc_vbd_pot2_ad[sort_i]
     gc_roll_time = np.copy(gc_time)
     gc_pitch_time = np.copy(gc_time)
     gc_vbd_time = np.copy(gc_time)
@@ -378,6 +393,8 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
     roll_pos_ad, _ = build_dense_motor_vector(gc_roll_pos_ad, gc_roll_time, eng_time)
     pitch_pos_ad, _ = build_dense_motor_vector(gc_pitch_pos_ad, gc_pitch_time, eng_time)
     vbd_pos_ad, _ = build_dense_motor_vector(gc_vbd_pos_ad, gc_vbd_time, eng_time)
+    vbd_pos_pot1_ad, _ = build_dense_motor_vector(gc_vbd_pot1_ad, gc_vbd_time, eng_time)
+    vbd_pos_pot2_ad, _ = build_dense_motor_vector(gc_vbd_pot2_ad, gc_vbd_time, eng_time)
 
     return (
         gc_moves,
@@ -390,6 +407,8 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
         roll_pos_ad,
         pitch_pos_ad,
         vbd_pos_ad,
+        vbd_pos_pot1_ad,
+        vbd_pos_pot2_ad,
     )
 
 
