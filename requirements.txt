@@ -1,12 +1,16 @@
 # For Plotly persistence
 kaleido==0.2.1; platform_machine != 'armv7l'
+plotly==5.24.1
+# To upgrade to newer plotly, kaleido 1.0 is needed, which requires a separate install of chrome
+# for generating webp.  The implications on a headless system still need to be sorted out
+# kaleido==1.0.0
+# plotly==6.3.0
 brotlipy
 matplotlib>=3.6.0
 cmocean==4.0.3
 numpy==1.26.4
 gsw==3.6.19
 seawater==3.3.4
-plotly==5.24.1
 scipy==1.14.1
 # latest cartopy crashes when shapely is not built from source
 #shapely --no-binary shapely
