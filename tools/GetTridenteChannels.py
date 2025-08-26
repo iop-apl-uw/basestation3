@@ -53,7 +53,7 @@ known_labels = (
     "fdom_01",
     "fdom_03",
 )
-known_typs = ("turb21", "fluo49", "fluo46")
+known_typs = ("turb21", "turb23", "fluo49", "fluo46")
 
 
 def main():
@@ -82,6 +82,7 @@ def main():
 
     channels = collections.defaultdict(dict)
     model = serial_num = None
+    f_in_tridente = False
     try:
         with open(base_opts.capture, "rb") as fi:
             for raw_line in fi:
@@ -92,6 +93,13 @@ def main():
                     log_info(
                         f"Could not decode line {line_count} in {base_opts.capture} - skipping"
                     )
+                    continue
+                if s.startswith("*** tridente"):
+                    f_in_tridente = True
+                elif s.startswith("***"):
+                    f_in_tridente = False
+
+                if not f_in_tridente:
                     continue
                 s = s.rstrip().removeprefix("Ready:").lstrip()
                 if s.startswith("calibration "):
@@ -161,6 +169,7 @@ def main():
             calib_comm += f"serialnum:{serial_num} "
         found_one = None
         instrument_name = ""
+
         for channel, values in channels.items():
             if all(x in values for x in ("typ", "label", "wavelength", "datetime")):
                 if not found_one:
