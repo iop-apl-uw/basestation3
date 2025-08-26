@@ -361,22 +361,11 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
         Creates dense motor position and time vectors that are all gc reported
         positions, plus interpolated values for the engieering file times
         """
-        try:
-            f = scipy.interpolate.interp1d(
-                motor_time,
-                motor_pos,
-                kind="previous",
-                bounds_error=False,
-                # fill_value=0.0,
-                fill_value=(motor_pos[0], motor_pos[-1]),
-            )
-        except NotImplementedError:
-            log_warning(
-                "Interp1d does not impliment kind previous - failing back to linear"
-            )
-            f = scipy.interpolate.interp1d(
-                motor_time, motor_pos, kind="linear", bounds_error=False, fill_value=0.0
-            )
+
+        f = Utils.CopyInterp(
+            motor_time, motor_pos, fill_value=(motor_pos[0], motor_pos[-1])
+        )
+
         motor_pos = np.concatenate((motor_pos, f(eng_time)))
         motor_time = np.concatenate((motor_time, eng_time))
         sort_i = np.argsort(motor_time)

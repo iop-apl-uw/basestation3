@@ -2036,3 +2036,35 @@ def fix_TC_times(log_f, eng_f):
 
     except Exception:
         log_error("Failed to generate updated start_times for TC data", "exc")
+
+
+class CopyInterp:
+    """Interpolation routine that uses the previous known value for the interpolation value
+
+    Note: assumes x is monotonically increasing
+    """
+
+    def __init__(self, x, y, fill_value=None):
+        self._y = y
+        self._x = x
+        if fill_value is None:
+            self._bounds_error = (None, None)
+        elif (
+            isinstance(fill_value, collections.abc.Collection) and len(fill_value) == 2
+        ):
+            self._fill_value = fill_value
+        else:
+            raise ValueError("fill_value must be None or valid Collection of len 2")
+
+    def __call__(self, new_x):
+        new_y = []
+        for val in new_x:
+            if val < self._x[0]:
+                new_y.append(self._fill_value[0])
+            elif val > self._x[-1]:
+                new_y.append(self._fill_value[1])
+            else:
+                for jj in range(len(self._x) - 1):
+                    if self._x[jj] <= val < self._x[jj + 1]:
+                        new_y.append(self._y[jj])
+        return np.array(new_y)
