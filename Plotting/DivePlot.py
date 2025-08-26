@@ -732,12 +732,12 @@ def plot_diveplot(
     ):
         if pot_ad is None:
             continue
-        valid_i = np.logical_not(np.isnan(pot_ad))
+        valid_b = np.logical_not(np.isnan(pot_ad))
         fig.add_trace(
             {
-                "y": pot_ad[valid_i] / 50.0,
-                "x": eng_vbd_time[valid_i],
-                "meta": pot_ad[valid_i],
+                "y": pot_ad[valid_b] / 50.0,
+                "x": eng_vbd_time[valid_b],
+                "meta": pot_ad[valid_b],
                 "name": f"VBD Pot {pot_num:d} (50 ad)",
                 "type": "scatter",
                 "xaxis": "x1",
@@ -745,7 +745,7 @@ def plot_diveplot(
                 "mode": "lines",
                 "visible": "legendonly",
                 "line": {"color": color},
-                "hovertemplate": f"VBD Pot {pot_num:d}<br>%{{meta:d}} ad<br>%{{x:.2f}} mins<br><extra></extra>",
+                "hovertemplate": f"VBD Pot {pot_num:d}<br>%{{meta:.2f}} ad<br>%{{x:.2f}} mins<br><extra></extra>",
             }
         )
 
