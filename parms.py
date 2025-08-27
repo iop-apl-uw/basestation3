@@ -34,7 +34,8 @@ import aiofiles.os
 import aiosqlite
 
 import parmdata
-
+import math
+import copy
 
 def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
     data = {}
@@ -45,7 +46,7 @@ def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
 
 async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
     if not d:
-        d = parmdata.parms
+        d = copy.deepcopy(parmdata.parms)
 
     for p in d:
         if isinstance(d[p], dict):
@@ -98,7 +99,7 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
                     d['TGT_NAME'] = latest['log_TGT_NAME']
             except Exception:
                 pass
-    
+   
     if cmdfile and await aiofiles.os.path.exists(cmdfile):
         try:
             async with aiofiles.open(cmdfile, 'r') as f:
@@ -118,8 +119,7 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
                                 except Exception:
                                     continue
  
-                            if f"{d[p]['current']}" != f"{n}":
-                                # print(f"changing {p} {d[p]['current']} to {n}")
+                            if not math.isclose(d[p]['current'], n, rel_tol=1e-3):
                                 d[p]['waiting'] = n
         except Exception:
             pass
@@ -136,6 +136,9 @@ async def state(d, logfile=None, cmdfile=None, capfile=None, dbfile=None):
   
 async def parameterChanges(dive, logname, cmdname):
 
+    if not await aiofiles.os.path.exists(logname):
+        return []
+
     p = await state(None, logfile=logname, cmdfile=cmdname)
 
     changes = []
@@ -149,7 +152,10 @@ async def parameterChanges(dive, logname, cmdname):
 if __name__ == "__main__":
     if '.cap' in sys.argv[1]:
         d = asyncio.run(state(None, capfile=sys.argv[1], cmdfile=(sys.argv[2] if len(sys.argv) == 3 else None)))
-    else:
+        print(d)
+    elif len(sys.argv) == 3:
         d = asyncio.run(state(None, logfile=sys.argv[1], cmdfile=(sys.argv[2] if len(sys.argv) == 3 else None)))
-
-    print(d)
+        print(d)
+    elif len(sys.argv) == 4:
+        changes = asyncio.run(parameterChanges(int(sys.argv[1]), sys.argv[2], sys.argv[3]))
+        print(changes)

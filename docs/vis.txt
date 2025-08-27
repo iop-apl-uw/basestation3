@@ -47,9 +47,10 @@ By default, firefox does not allow brotli over http, but can be configured to al
 
 about:config -> network.http.accept-encoding and add br to the list
 
-Safari allows brotli over http, and Chrome disallows it with no option to allow it.  
+Safari allows brotli over http, and Chrome disallows it with no option to allow it.  Some browsers may
+allow it when connecting to localhost but not for other connections. 
 
-Authentication, enabled fesatures, and permissions are highly configurable via missions.yml. 
+Authentication, enabled features, and permissions are highly configurable via missions.yml. 
 Always test a publicly available running instance to make sure that permissions are
 appropriate and that features are not being exposed in unintended ways. 
 
