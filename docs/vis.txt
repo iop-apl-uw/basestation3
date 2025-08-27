@@ -41,6 +41,14 @@ To run in private mode, establish an ssh tunnel when connecting to your basestat
 
     browser: http://localhost:20001/217
 
+When using http to access vis, the large sized plots may not be visible in your browser window. This may be
+due to how the browser is configured for handling brotli compressed html content when streamed over http.
+By default, firefox does not allow brotli over http, but can be configured to allow it:
+
+about:config -> network.http.accept-encoding and add br to the list
+
+Safari allows brotli over http, and Chrome disallows it with no option to allow it.  
+
 Authentication, enabled fesatures, and permissions are highly configurable via missions.yml. 
 Always test a publicly available running instance to make sure that permissions are
 appropriate and that features are not being exposed in unintended ways. 
