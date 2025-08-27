@@ -4155,8 +4155,9 @@ def make_dive_profile(
                     results_d.update({"ctd_pressure_qc": ctd_press_qc_v})
                 else:
                     if rbr_good_press_i_v is not None:
+                        # From rbr on the truck
                         QC.assert_qc(
-                            QC.QC_INTERPOLATED,
+                            QC.QC_UNSAMPLED,
                             ctd_press_qc_v,
                             np.nonzero(np.logical_not(rbr_good_press_i_v))[0],
                             "Legato interpolated",
