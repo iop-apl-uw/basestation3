@@ -789,13 +789,27 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
         DEBUG_PDB_F()
         log_error("Failed to add TC data", "exc")
 
-    # calculate better per whole dive energy numbers for the motors
+    # SM_CC power
+    sm_gc_vbd_J = 0.0
+    sm_gc_pitch_J = 0.0
+    sm_gc_pitch_J = 0.0
+    try:
+        sm_gc = numpy.array([float(x) for x in nci.variables["log_SM_GC"][:].tobytes().decode("utf-8").split(",")])
+        # This offsets are correct as of r7325
+        sm_gc_vbd_J = sm_gc[1] * sm_gc[4] * sm_gc[15]
+        sm_gc_pitch_J = sm_gc[2] * sm_gc[5] * sm_gc[16]        
+        sm_gc_roll_J = sm_gc[3] * sm_gc[6] * sm_gc[17]
+        
+    except Exception:
+        log_error("Failed to process log_SM_GC", "exc")
+
+    # calculate better per whole dive energy numbers for the motors        
     data = pd.read_sql_query(f"SELECT vbd_i,vbd_secs,vbd_volts FROM gc WHERE dive={dive}", con)
-    VBD_J = numpy.sum(data['vbd_i'][:] * data['vbd_volts'][:] * data['vbd_secs'][:])
+    VBD_J = numpy.sum(data['vbd_i'][:] * data['vbd_volts'][:] * data['vbd_secs'][:]) + sm_gc_vbd_J
     data = pd.read_sql_query(f"SELECT pitch_i,pitch_secs,pitch_volts FROM gc WHERE dive={dive}", con)
-    pitch_J = numpy.sum(data['pitch_i'][:] * data['pitch_volts'][:] * data['pitch_secs'][:])
+    pitch_J = numpy.sum(data['pitch_i'][:] * data['pitch_volts'][:] * data['pitch_secs'][:]) + sm_gc_pitch_J
     data = pd.read_sql_query(f"SELECT roll_i,roll_secs,roll_volts FROM gc WHERE dive={dive}", con)
-    roll_J = numpy.sum(data['roll_i'][:] * data['roll_volts'][:] * data['roll_secs'][:])
+    roll_J = numpy.sum(data['roll_i'][:] * data['roll_volts'][:] * data['roll_secs'][:]) + sm_gc_roll_J
     if "tc_start_time" in nci.variables:
         if "tc_volts" in nci.variables:
             tc_J = numpy.sum(nci.variables["tc_volts"][:] * nci.variables["tc_amps"][:] * (nci.variables["tc_end_time"][:] - nci.variables["tc_start_time"][:]))
