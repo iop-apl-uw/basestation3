@@ -42,7 +42,7 @@ from BaseLog import BaseLogger, log_error, log_info
 # Options
 DEBUG_PDB = False
 
-known_typs = ("temp15", "doxy24", "opt_05")
+known_typs = ("temp15", "doxy21", "doxy24", "opt_05")
 
 
 def main():
@@ -107,6 +107,8 @@ def main():
                                     "%Y-%m-%dT%H:%M:%SZ",
                                     time.strptime(v, "%Y%m%d%H%M%S"),
                                 )
+                            if k == "c0":
+                                channels[sensor]["c0"] = float(v.strip())
                 elif s.startswith("channel "):
                     if not f_in_coda:
                         continue
@@ -134,6 +136,7 @@ def main():
                     if model is None or serial_num is None:
                         model = serial_num = None
         calib_comm = ""
+        c0_str = ""
         if model is not None:
             calib_comm += f"{model} "
         if serial_num is not None:
@@ -147,14 +150,20 @@ def main():
                     found_one = True
                     print("Coda channels found")
                 print(f"{channel}:{values}")
-                calib_comm += f"{values['typ']}:{values['datetime']} "
+                if values["typ"] == "doxy21":
+                    c0_str = f"{instrument_name}_c0={values['c0']:f};"
+                else:
+                    calib_comm += f"{values['typ']}:{values['datetime']} "
 
         if not found_one:
             print("No Coda channels found")
 
-        if calib_comm:
+        if calib_comm or c0_str:
             print("Add to sg_calib_constants.m")
+        if calib_comm:
             print(f"calibcomm_{instrument_name}='{calib_comm.rstrip()}';")
+        if c0_str:
+            print(c0_str)
 
     except Exception:
         if DEBUG_PDB:
