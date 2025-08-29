@@ -115,7 +115,7 @@ echo ""
 echo "--------------------------------------------"
 echo "Summary of firmware versions"
 echo
-grep -e "Version" -e "Rev " -e ,LPD, -e firmware_version -e HCOMPASS,N,version: -e "IAP v" -e "Super v" $fname 
+grep -e "Version" -e "Rev " -e ,LPD, -e firmware_version -e HCOMPASS,N,version: -e "IAP v" -e "super FW v" $fname 
 echo ""
 echo "--------------------------------------------"
 echo "Summary of supervisor settings"

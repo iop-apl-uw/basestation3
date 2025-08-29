@@ -484,7 +484,7 @@
 
                     $('RH').innerHTML = json['RH'].toFixed(2);
                     $('intP').innerHTML = json['intP'].toFixed(2);
-                    $('volts').innerHTML = json['volts24'].toFixed(2);
+                    $('volts').innerHTML = json['volts24'] > 0 ? json['volts24'].toFixed(2) : json['volts10'].toFixed(2);
                     $('pitch').innerHTML = json['pitch'].toFixed(1);
                     $('depth').innerHTML = json['depth'].toFixed(1);
                     $('dive').innerHTML = json['dive'];

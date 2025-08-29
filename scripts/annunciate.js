@@ -73,7 +73,8 @@
             }
 
             if (data.hasOwnProperty('volts')) {
-                let v = Math.min(...data.volts);
+                let v = Math.min.apply(null, data.volts.filter(Boolean)); // Math.min(...data.volts);
+                if (!Number.isFinite(v)) v = 0;
                 h = document.createElement('div');
                 h.classList.add('indicator');
                 h.innerHTML = `voltage<br>${(v).toFixed(2)}V`;
