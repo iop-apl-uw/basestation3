@@ -2910,9 +2910,12 @@ parms[p]
         });
     }
     function loadFile(dive, ext, div) {
+        if (ext == 'cap') $('waitIndicator').style.display = 'block';
         fetch(`file/${ext}/${currGlider}/${dive}${mission()}`)
         .then(res => res.text())
         .then(data => {
+            if (ext == 'cap') $('waitIndicator').style.display = 'none';
+
             if (data.includes("authorization failed"))
                 return;
 
