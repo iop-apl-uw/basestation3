@@ -352,7 +352,7 @@ function reload() {
             print('</div>')
             if len(moveRecord) > 0:
                 print('<div id=plot%d style="display: block;">' % idnum)
-                plot = capture.plotMoveRecord(moveRecord, [ insideMoveDump ], [ moveTime ], "cdn" if firstPlot else False)
+                (plot, _, _, _) = capture.plotMoveRecord(moveRecord, [ insideMoveDump ], [ moveTime ], "cdn" if firstPlot else False)
                 print(plot)
                 print("</div>")
                 capture.analyzeMoveRecord(moveRecord, insideMoveDump, paramValues, warnMoveAnalysis)
