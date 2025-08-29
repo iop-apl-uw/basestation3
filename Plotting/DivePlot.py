@@ -159,12 +159,12 @@ def plot_diveplot(
             .decode("utf-8")
             .split(",")[0]
         )
-        desired_heading = clock_compass(np.zeros(len(eng_time)) + tmp)
+        desired_heading = clock_compass(np.zeros(len(eng_time)) + tmp +mag_var)
         desired_heading_plus_errband = clock_compass(
-            np.zeros(len(eng_time)) + tmp + errband
+            np.zeros(len(eng_time)) + tmp + errband + mag_var
         )
         desired_heading_minus_errband = clock_compass(
-            np.zeros(len(eng_time)) + tmp - errband
+            np.zeros(len(eng_time)) + tmp - errband + mag_var
         )
 
         desired_pitch = float(
