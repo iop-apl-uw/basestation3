@@ -339,12 +339,12 @@ async def formatCaptureFile(file, firstPlot=False):
                         out = out + '<th>pitch'
                         out = out + '<th>roll</tr>'
                         
-                       
                         for m in range(0,len(order)):
                             for ii in range(idx[m][0],idx[m][1]):
                                 out = out + f'<tr bgcolor="{rowcolor[order[m]]}">'
-                                for i in moveRecord[ii]:
-                                    out = out + f"<td>{i}"
+                                if ii < len(moveRecord):
+                                    for i in moveRecord[ii]:
+                                        out = out + f"<td>{i}"
 
                                 out = out + "</tr>" 
                         out = out + "</table>"
