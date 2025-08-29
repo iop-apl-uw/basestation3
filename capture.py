@@ -145,15 +145,16 @@ def plotMoveRecord(x, which, time, includes):
 
     if "Roll" in which and len(which) > 1:
         k = which.index("Roll")
-        roll_n = int(time[k]*10)
-        if abs(x[0][3] - x[roll_n][3]) > abs(x[-roll_n][3] - x[-1][3]):
-            tempw = copy.deepcopy(which)
-            tempt = copy.deepcopy(time)
-            which[0] = 'Roll'
-            time[0] = time[k]          
-            for m in range(1,len(which)):
-                time[m] = tempt[m-1]
-                which[m] = tempw[m-1]
+        if k > 0:
+            roll_n = int(time[k]*10)
+            if abs(x[0][3] - x[roll_n][3]) > abs(x[-roll_n][3] - x[-1][3]):
+                tempw = copy.deepcopy(which)
+                tempt = copy.deepcopy(time)
+                which[0] = 'Roll'
+                time[0] = time[k]          
+                for m in range(1,len(which)):
+                    time[m] = tempt[m-1]
+                    which[m] = tempw[m-1]
    
     indices = [] 
     for move in which: 
@@ -337,6 +338,8 @@ async def formatCaptureFile(file, firstPlot=False):
                         out = out + '<th>heading'
                         out = out + '<th>pitch'
                         out = out + '<th>roll</tr>'
+                        
+                       
                         for m in range(0,len(order)):
                             for ii in range(idx[m][0],idx[m][1]):
                                 out = out + f'<tr bgcolor="{rowcolor[order[m]]}">'
