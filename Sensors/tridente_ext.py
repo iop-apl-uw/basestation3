@@ -151,17 +151,21 @@ def init_sensor(module_name, init_dict=None):
             (results_info,),
         ]
 
-        # instrument sensor inputs on truck
-        for channel, md in channels.items():
-            md["instrument"] = instrument
-            meta_data_adds[f"{BaseNetCDF.nc_sg_eng_prefix}{instrument}_{channel}"] = [
-                "f",
-                "d",
-                md,
-                (BaseNetCDF.nc_sg_data_info,),
-            ]
+        # Instrument sensor inputs on truck and scicon
+        for prefix, d_i in (
+            (BaseNetCDF.nc_sg_eng_prefix, BaseNetCDF.nc_sg_data_info),
+            ("", data_info),
+        ):
+            for channel, md in channels.items():
+                md["instrument"] = instrument
+                meta_data_adds[f"{prefix}{instrument}_{channel}"] = [
+                    "f",
+                    "d",
+                    md,
+                    (d_i,),
+                ]
 
-        # from scicon eng file
+        # Time var for scicon
         scicon_time_var = "%s_time" % instrument
         meta_data_adds[scicon_time_var] = [
             True,
