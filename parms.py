@@ -26,6 +26,8 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import asyncio
+import copy
+import math
 import re
 import sys
 
@@ -34,8 +36,7 @@ import aiofiles.os
 import aiosqlite
 
 import parmdata
-import math
-import copy
+
 
 def rowToDict(cursor: aiosqlite.Cursor, row: aiosqlite.Row) -> dict:
     data = {}
