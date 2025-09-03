@@ -52,8 +52,11 @@ known_labels = (
     "fdom_00",
     "fdom_01",
     "fdom_03",
+    "turbidity_00",
+    "turbidity_01",
+    "turbidity_02",
 )
-known_typs = ("turb21", "turb23", "fluo49", "fluo46")
+known_typs = ("turb15", "turb21", "turb23", "fluo49", "fluo46")
 
 
 def main():
@@ -184,6 +187,8 @@ def main():
                     instrument_name += f"chla{wl}"
                 elif values["label"].startswith("fdom"):
                     instrument_name += f"fdom{wl}"
+                elif values["label"].startswith("tu"):
+                    instrument_name += f"tu{wl}"
                 else:
                     instrument_name += "UNKNOWN"
 
