@@ -986,9 +986,9 @@
                 elt.innerHTML += json['content'];
                 elt.scrollTop = elt.scrollHeight;
             }
-            else if (json['what'] == 'urls') {
+            else if (json['what'].startsWith('urls')) {
 {% else %}
-            if (json['what'] == 'urls') {
+            if (json['what'].startsWith('urls')) {
 {% endif %}
                 if ( 'content' in json && json['content'] == "files=perdive") {
                     // the only files we care about is perdive which we use 
