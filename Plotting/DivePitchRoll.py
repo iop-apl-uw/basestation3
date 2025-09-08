@@ -315,7 +315,7 @@ def plot_pitch_roll(
     fit_error = ""
    
     if len(inds) < 0.25*len(in_fit):
-        for k, t in enumerate(sg_time):
+        for k, _ in enumerate(sg_time):
             t_stable_roll[k] = True
             t_stable_pitch[k] = True
 
