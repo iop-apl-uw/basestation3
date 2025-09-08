@@ -278,7 +278,7 @@ def plot_pitch_roll(
     
     for k, t in enumerate(sg_time):
         t_stable_roll[k] = False
-        t_stable_pitch[k] = False
+        t_stable_pitch[k] =False
         for j, tg in enumerate(GC_st_secs):
             if t > tg and t < GC_end_secs[j] and GC_vbd_secs[j] == 0:
                 t_stable_pitch[k] = t > (tg + 10)
@@ -311,6 +311,30 @@ def plot_pitch_roll(
     )
 
     inds = np.nonzero(in_fit)[0]
+    
+    fit_error = ""
+   
+    if len(inds) < 0.25*len(in_fit):
+        for k, t in enumerate(sg_time):
+            t_stable_roll[k] = True
+            t_stable_pitch[k] = True
+
+        in_fit = np.logical_and.reduce(
+            (
+                pitch_AD_rate < 2,
+                pitch_AD_rate > -2,
+                pitch_rate > -0.02,
+                pitch_rate < 0.02,
+                pitch_control < xmax,
+                pitch_control > xmin,
+                t_stable_pitch,
+                depth > 7,
+            )
+        )
+
+        fit_error = "selection filters relaxed due to limited data spread"
+        inds = np.nonzero(in_fit)[0]
+
     outside_inds = np.nonzero(np.logical_not(in_fit))[0]
 
     # current "model" result
@@ -319,7 +343,6 @@ def plot_pitch_roll(
 
     # linear model
     fit = None
-    fit_error = ""
     if inds.size == 0:
         fit_error = "No observations meet criteria for pitch regressions"
         log_warning(fit_error)
@@ -559,6 +582,7 @@ def plot_pitch_roll(
 
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file)
+
         title_text = f"{mission_dive_str}<br>Pitch control vs Pitch<br>Models closer to observed (black triangles) are better. Lower RMS values (model pitch - observed pitch) are better."
         
         l_annotations = [
