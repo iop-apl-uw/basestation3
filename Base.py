@@ -2995,7 +2995,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         for processed_file_name in processed_file_names:
             if processed_file_name is None:
                 continue
-            p = processed_file_name.replace(base_opts.mission_dir, "")
+            if isinstance(processed_file_name, str):
+                p = processed_file_name.replace(base_opts.mission_dir, "")
+            else:
+                # pathlib
+                p = processed_file_name.relative_to(pathlib.Path(base_opts.mission_dir))
+
             processed_files_msg += f"{p}\n"
 
         log_info(f"Processed files msg:\n{processed_files_msg}")
