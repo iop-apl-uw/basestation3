@@ -10,6 +10,7 @@ matplotlib>=3.6.0
 cmocean==4.0.3
 numpy==1.26.4
 gsw==3.6.19
+pyarrow==21.0.0
 seawater==3.3.4
 scipy==1.14.1
 # latest cartopy crashes when shapely is not built from source

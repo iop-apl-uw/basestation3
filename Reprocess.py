@@ -35,6 +35,7 @@ Rebuilds per-dive nc files from log and eng files (no comm.log or dat/asc proces
 import cProfile
 import glob
 import os
+import pathlib
 import pdb
 import pstats
 import shutil
@@ -47,6 +48,7 @@ import BaseDotFiles
 import BaseNetCDF
 import BaseOpts
 import BaseOptsType
+import BaseParquet
 import BasePlot
 import FileMgr
 import FlightModel
@@ -205,6 +207,11 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
     if not calib_consts:
         log_warning(f"Could not process {sg_calib_file_name}")
         return 1
+
+    if base_opts.generate_parquet and BaseParquet.setup_parquet_directory(base_opts):
+        log_error(
+            "Failed to setup parquet directory - no parquet files will be generated"
+        )
 
     try:
         instrument_id = int(calib_consts["id_str"])
@@ -374,6 +381,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
                     "Skipping FLIGHT processing "
                     + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
                 )
+
+                if (
+                    base_opts.generate_parquet
+                    and base_opts.parquet_directory is not None
+                ):
+                    log_info("Starting parquet from netcdf generation")
+                    BaseParquet.write_parquet_files(
+                        [pathlib.Path(x) for x in dive_nc_file_names], base_opts
+                    )
 
             if base_opts.reprocess_dive_extensions:
                 BaseDotFiles.process_extensions(

@@ -66,6 +66,7 @@ import BaseGZip
 import BaseNetCDF
 import BaseNetwork
 import BaseOpts
+import BaseParquet
 import BasePlot
 import Bogue
 import CalibConst
@@ -1426,6 +1427,7 @@ class ProcessProgress:
             "setup": {"yellow": 6.0, "red": 11.0},
             "dive_files": {"yellow": 9.0, "red": 18.0},
             "per_dive_netcdfs": {"yellow": 14.0, "red": 29.0},
+            "parquet_generation": {"yellow": 7.0, "red": 20.0},
             "backup_files": {"yellow": 2.0, "red": 4.0},
             "flight_model": {"yellow": 22.0, "red": 45.0},
             "per_dive_scripts": {"yellow": 2.0, "red": 4.0},
@@ -1556,7 +1558,12 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         return 1
 
     if PlotUtils.setup_plot_directory(base_opts):
-        log_error("Failed to setup plot directory - not plots being generated")
+        log_error("Failed to setup plot directory - no plots being generated")
+
+    if base_opts.generate_parquet and BaseParquet.setup_parquet_directory(base_opts):
+        log_error(
+            "Failed to setup parquet directory - no parquet files will be generated"
+        )
 
     if base_opts.daemon and Daemon.createDaemon(base_opts.mission_dir, False):
         log_error("Could not launch as a daemon - continuing synchronously")
@@ -2390,6 +2397,19 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         po.process_progress("update_db", "stop")
     else:
         po.process_progress("update_db", "skip", reason="Per option")
+
+    # Parquet file generation
+    if base_opts.generate_parquet and base_opts.parquet_directory is not None:
+        log_info("Starting parquet from netcdf generation")
+        po.process_progress("parquet_generation", "start")
+        _, parquet_output_files = BaseParquet.write_parquet_files(
+            [pathlib.Path(x) for x in nc_files_created], base_opts
+        )
+        processed_other_files.extend(parquet_output_files)
+
+        po.process_progress("parquet_generation", "stop")
+    else:
+        po.process_progress("parquet_generation", "skip", reason="Per option")
 
     # Run and dive extensions
     processed_file_names = []

@@ -496,6 +496,7 @@ global_options_dict = {
             "BaseDB",
             "BaseDotFiles",
             "BaseLogin",
+            "BaseParquet",
             "BasePlot",
             "BaseSMS",
             "CommLog",
@@ -531,6 +532,7 @@ global_options_dict = {
                 "BaseCtrlFiles",
                 "BaseDB",
                 "BaseDotFiles",
+                "BaseParquet",
                 "BasePlot",
                 "BaseSMS",
                 "BaseLogin",
@@ -877,7 +879,7 @@ global_options_dict = {
     ),
     "whole_mission_config": options_t(
         None,
-        ("Base", "Reprocess", "MakeMissionTimeSeries", "MakeMissionProfile"),
+        ("Base", "BaseParquet", "Reprocess", "MakeMissionTimeSeries", "MakeMissionProfile"),
         ("--whole_mission_config",),
         FullPathlib,
         {
@@ -887,7 +889,7 @@ global_options_dict = {
     ),
     "dump_whole_mission_config": options_t(
         False,
-        ("Base", "Reprocess", "MakeMissionTimeSeries", "MakeMissionProfile"),
+        ("Base", "BaseParquet", "Reprocess", "MakeMissionTimeSeries", "MakeMissionProfile"),
         ("--dump_whole_mission_config",),
         bool,
         {
@@ -1516,7 +1518,52 @@ global_options_dict = {
             "option_group": "kml generation",
         },
     ),
+    "kml_use_parquet": options_t(
+        False,
+        (
+            "Base",
+            "Reprocess",
+            "MakeKML",
+        ),
+        ("--kml_use_parquet",),
+        bool,
+        {
+            "help": "Use parquet files to generate kml",
+            "section": "makekml",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "kml generation",
+        },
+    ),
     # End MakeKML
+    # Start parquet
+    "generate_parquet": options_t(
+        False,
+        (
+            "Base",
+            "Reprocess",
+        ),
+        ("--generate_parquet",),
+        bool,
+        {
+            "help": "Generate parquet files from per-dive netCDF files",
+            "action": argparse.BooleanOptionalAction,
+        },
+    ),
+    "parquet_directory": options_t(
+        None,
+        (
+            "Base",
+            "MakeKML",
+            "Reprocess",
+        ),
+        ("--parquet_directory",),
+        FullPathlib,
+        {
+            "help": "Override default parquet directory location",
+            "action": FullPathlibAction,
+        },
+    ),
+    # End parquet
     "network_log_decompressor": options_t(
         "",
         (

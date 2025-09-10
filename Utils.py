@@ -68,6 +68,7 @@ import anyio
 import gsw
 import netCDF4
 import numpy as np
+import pyarrow.parquet as pq
 import scipy
 import seawater
 import yaml
@@ -2068,3 +2069,18 @@ class CopyInterp:
                     if self._x[jj] <= val < self._x[jj + 1]:
                         new_y.append(self._y[jj])
         return np.array(new_y)
+
+
+def read_parquet(pq_dir, pq_root, expected_schema=None):
+    if not pq_dir.exists():
+        log_error(f"{pq_dir} does not exist - cannot generate dataframe")
+        return None
+    # TODO - May need to check for file permissions here
+    try:
+        file_list = list(pq_dir.glob(f"*{pq_root}.parquet"))
+        dataset = pq.ParquetDataset(file_list, schema=expected_schema)
+        table = dataset.read()
+        return table.to_pandas()
+    except Exception:
+        log_error("Problem generation dataframe from parquet files", "exc")
+        return None

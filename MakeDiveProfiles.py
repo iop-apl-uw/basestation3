@@ -7825,6 +7825,8 @@ def make_dive_profile(
             nc_files_created=[nc_dive_file_name],
         )
 
+        # Generate parquet files
+
         nc_dive_file_name_gz = "%s.gz" % nc_dive_file_name
         if base_opts.gzip_netcdf:
             log_info("Compressing %s to %s" % (nc_dive_file_name, nc_dive_file_name_gz))
