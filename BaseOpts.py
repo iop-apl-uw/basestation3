@@ -1553,6 +1553,7 @@ global_options_dict = {
         None,
         (
             "Base",
+            "BaseParquet",
             "MakeKML",
             "Reprocess",
         ),
