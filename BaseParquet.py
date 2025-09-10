@@ -222,7 +222,7 @@ def write_parquet_file(dive_nc_file_name, base_opts, timeseries_cfg_d):
             else:
                 common_dims[dim_name][var_name] = var.astype(typecode)
 
-    log_info(common_dims.keys())
+    log_debug(common_dims.keys())
 
     for dim_name, ncvars in common_dims.items():
         out_dict = {"trajectory": dsi.variables["trajectory"][0]}
