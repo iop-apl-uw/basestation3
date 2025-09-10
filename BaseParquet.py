@@ -90,7 +90,7 @@ def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
 
     if not base_opts.parquet_directory.exists():
         try:
-            base_opts.parquet_directory.mkdir(base_opts.parquet_directory)
+            base_opts.parquet_directory.mkdir()
             # Ensure that MoveData can move it as pilot if not run as the glider account
             base_opts.parquet_directory.chmod(0o775)
             # os.chmod(
