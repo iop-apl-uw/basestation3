@@ -717,7 +717,7 @@ def printDive(
                     f"Could not process {dive_nc_file_name} due to missing variables",
                     "exc",
                 )
-                return None
+                return err_curr_dive_position
 
             for i in range(3):
                 if (
