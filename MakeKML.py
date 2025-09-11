@@ -686,69 +686,51 @@ def printDive(
     pq_df = None
     if isinstance(nc_file_name_or_pq_df, str):
         dive_nc_file_name = nc_file_name_or_pq_df
+
+        err_curr_dive_position = dive_gps_position(
+            None, None, None, None, None, None, None, None, None, None
+        )
         try:
             nc = Utils.open_netcdf_file(dive_nc_file_name, "r")
         except Exception:
             log_error(f"Could not read {dive_nc_file_name}", "exc")
             log_info("Skipping...")
-            return dive_gps_position(
-                None, None, None, None, None, None, None, None, None, None
-            )
+            return err_curr_dive_position
+        with nc:
+            log_debug(f"Processing {dive_nc_file_name}")
+            gps_lat_start = gps_lon_start = gps_time_start = gps_lat_end = (
+                gps_lon_end
+            ) = gps_time_end = None
 
-        log_debug(f"Processing {dive_nc_file_name}")
-        gps_lat_start = gps_lon_start = gps_time_start = gps_lat_end = gps_lon_end = (
-            gps_time_end
-        ) = None
-
-        try:
-            gps_lat_one = nc.variables["log_gps_lat"][0]
-            gps_lon_one = nc.variables["log_gps_lon"][0]
-            gps_time_one = nc.variables["log_gps_time"][0]
-            gps_lat_start = nc.variables["log_gps_lat"][1]
-            gps_lon_start = nc.variables["log_gps_lon"][1]
-            gps_time_start = nc.variables["log_gps_time"][1]
-            gps_lat_end = nc.variables["log_gps_lat"][2]
-            gps_lon_end = nc.variables["log_gps_lon"][2]
-            gps_time_end = nc.variables["log_gps_time"][2]
-        except Exception:
-            log_error(
-                f"Could not process {dive_nc_file_name} due to missing variables", "exc"
-            )
-            return None
-
-        for i in range(3):
-            if (
-                np.isnan(nc.variables["log_gps_time"][i])
-                or np.isnan(nc.variables["log_gps_lat"][i])
-                or np.isnan(nc.variables["log_gps_lon"][i])
-            ):
+            try:
+                gps_lat_one = nc.variables["log_gps_lat"][0]
+                gps_lon_one = nc.variables["log_gps_lon"][0]
+                gps_time_one = nc.variables["log_gps_time"][0]
+                gps_lat_start = nc.variables["log_gps_lat"][1]
+                gps_lon_start = nc.variables["log_gps_lon"][1]
+                gps_time_start = nc.variables["log_gps_time"][1]
+                gps_lat_end = nc.variables["log_gps_lat"][2]
+                gps_lon_end = nc.variables["log_gps_lon"][2]
+                gps_time_end = nc.variables["log_gps_time"][2]
+            except Exception:
                 log_error(
-                    f"Could not process {dive_nc_file_name} due to missing variables"
+                    f"Could not process {dive_nc_file_name} due to missing variables",
+                    "exc",
                 )
                 return None
 
-        # if "processing_error" in nc.variables:
-        #     log_warning(
-        #         f"{dive_nc_file_name} is marked as having a processing error - skipping"
-        #     )
-        #     return dive_gps_position(
-        #         gps_lat_one,
-        #         gps_lon_one,
-        #         gps_time_one,
-        #         gps_lat_start,
-        #         gps_lon_start,
-        #         gps_time_start,
-        #         gps_lat_end,
-        #         gps_lon_end,
-        #         gps_time_end,
-        #         dive_num,
-        #     )
+            for i in range(3):
+                if (
+                    np.isnan(nc.variables["log_gps_time"][i])
+                    or np.isnan(nc.variables["log_gps_lat"][i])
+                    or np.isnan(nc.variables["log_gps_lon"][i])
+                ):
+                    log_error(
+                        f"Could not process {dive_nc_file_name} due to missing variables"
+                    )
+                    return err_curr_dive_position
 
-        if "skipped_profile" in nc.variables:
-            log_warning(
-                f"{dive_nc_file_name} is marked as a skipped_profile - skipping"
-            )
-            return dive_gps_position(
+            curr_dive_position = dive_gps_position(
                 gps_lat_one,
                 gps_lon_one,
                 gps_time_one,
@@ -760,50 +742,84 @@ def printDive(
                 gps_time_end,
                 dive_num,
             )
-        curr_dive_position = dive_gps_position(
-            gps_lat_one,
-            gps_lon_one,
-            gps_time_one,
-            gps_lat_start,
-            gps_lon_start,
-            gps_time_start,
-            gps_lat_end,
-            gps_lon_end,
-            gps_time_end,
-            dive_num,
-        )
-        # Dive Track
-        try:
-            depth = nc.variables["ctd_depth"][:]
-            lon = nc.variables["longitude"][:]
-            lat = nc.variables["latitude"][:]
-            time_vals = nc.variables[BaseNetCDF.nc_ctd_time_var][:]
-            num_points = len(time_vals)
-        except KeyError:
-            # Check for GSM only versions
-            try:
-                depth = nc.variables["depth"][:]
-                lon = nc.variables["longitude_gsm"][:]
-                lat = nc.variables["latitude_gsm"][:]
-                time_vals = nc.variables["time"][:]
-                num_points = len(time_vals)
-            except KeyError as e:
+
+            # if "processing_error" in nc.variables:
+            #     log_warning(
+            #         f"{dive_nc_file_name} is marked as having a processing error - skipping"
+            #     )
+            #     return curr_dive_position
+
+            if "skipped_profile" in nc.variables:
                 log_warning(
-                    f"Could not process {dive_nc_file_name} due to missing variables {e}"
+                    f"{dive_nc_file_name} is marked as a skipped_profile - skipping"
                 )
-                log_info("Skipping this dive...")
                 return curr_dive_position
-            else:
-                if len(lon) != num_points:
+            # Dive Track
+            try:
+                depth = nc.variables["ctd_depth"][:]
+                lon = nc.variables["longitude"][:]
+                lat = nc.variables["latitude"][:]
+                time_vals = nc.variables[BaseNetCDF.nc_ctd_time_var][:]
+                num_points = len(time_vals)
+            except KeyError:
+                # Check for GSM only versions
+                try:
+                    depth = nc.variables["depth"][:]
+                    lon = nc.variables["longitude_gsm"][:]
+                    lat = nc.variables["latitude_gsm"][:]
+                    time_vals = nc.variables["time"][:]
+                    num_points = len(time_vals)
+                except KeyError as e:
                     log_warning(
-                        f"Could not process {dive_nc_file_name} due to mismatch in dimensions",
+                        f"Could not process {dive_nc_file_name} due to missing variables {e}"
                     )
                     log_info("Skipping this dive...")
                     return curr_dive_position
-        except Exception:
-            log_warning(f"Could not process {dive_nc_file_name}", "exc")
-            log_info("Skipping this dive...")
-            return curr_dive_position
+                else:
+                    if len(lon) != num_points:
+                        log_warning(
+                            f"Could not process {dive_nc_file_name} due to mismatch in dimensions",
+                        )
+                        log_info("Skipping this dive...")
+                        return curr_dive_position
+            except Exception:
+                log_warning(f"Could not process {dive_nc_file_name}", "exc")
+                log_info("Skipping this dive...")
+                return curr_dive_position
+            latlong = nc.variables["log_TGT_LATLONG"][:].tobytes().decode("utf-8")
+            try:
+                nd = nc.variables["north_displacement"][:]
+                ed = nc.variables["east_displacement"][:]
+                f_disp_gsm = False
+            except Exception:
+                try:
+                    nd = nc.variables["north_displacement_gsm"][:]
+                    ed = nc.variables["east_displacement_gsm"][:]
+                    f_disp_gsm = True
+                except Exception:
+                    log_error(
+                        f"Could not find any displacements in {dive_nc_file_name} - skipping",
+                        "exc",
+                    )
+                    nd = ed = None
+            d_grid = nc.variables["log_D_GRID"].getValue()
+            d_tgt = nc.variables["log_D_TGT"].getValue()
+            surf_east = surf_north = None
+            try:
+                surf_east = nc.variables["surface_curr_east"].getValue()
+                surf_north = nc.variables["surface_curr_north"].getValue()
+            except KeyError:
+                pass
+            try:
+                dac_east = nc.variables["depth_avg_curr_east"].getValue()
+                dac_north = nc.variables["depth_avg_curr_north"].getValue()
+                f_dac_gsm = False
+            except KeyError:
+                dac_east = nc.variables["depth_avg_curr_east_gsm"].getValue()
+                dac_north = nc.variables["depth_avg_curr_north_gsm"].getValue()
+                f_dac_gsm = True
+
+        assert not nc._isopen
     else:
         # pq_df case
         pq_df = nc_file_name_or_pq_df
@@ -821,12 +837,6 @@ def printDive(
             _,
         ) = curr_dive_position
 
-        # TODO - this needs to be re-written - longitude_gsm and latiude_gsm can migrated from the ctd to sbect_data point dimension - in this case
-        # the line:
-
-        # if dive_track[dive_track.notna().all(axis=1)].size != 0:
-        #   break
-        #
         # A note to the unsuspecting.  Some of the data columns that make up the
         # pq_df migrate on time basis (different netCDF dimensions) over the course of a mission,
         # and get written out into differnt parquet files.  When the overall
@@ -888,6 +898,46 @@ def printDive(
             return curr_dive_position
         depth, lon, lat, time_vals = dive_track_vectors
         num_points = len(time_vals)
+
+        latlong = (
+            get_df_var(pq_df, dive_num, "log_TGT_LATLONG")
+            .astype(bytes)
+            .tobytes()
+            .decode("utf-8")
+        )
+
+        try:
+            nd = get_df_var(pq_df, dive_num, "north_displacement")
+            ed = get_df_var(pq_df, dive_num, "east_displacement")
+            f_disp_gsm = False
+        except Exception:
+            try:
+                nd = get_df_var(pq_df, dive_num, "north_displacement_gsm")
+                ed = get_df_var(pq_df, dive_num, "east_displacement_gsm")
+                f_disp_gsm = True
+            except Exception:
+                log_error(
+                    f"Could not find any displacements in {dive_nc_file_name} - skipping",
+                    "exc",
+                )
+                nd = ed = None
+        d_grid = get_df_single(pq_df, dive_num, "log_D_GRID")
+        d_tgt = get_df_single(pq_df, dive_num, "log_D_TGT")
+        surf_east = surf_north = None
+        try:
+            surf_east = get_df_single(pq_df, dive_num, "surface_curr_east")
+            surf_north = get_df_single(pq_df, dive_num, "surface_curr_north")
+        except KeyError:
+            pass
+
+        try:
+            dac_east = get_df_single(pq_df, dive_num, "depth_avg_curr_east")
+            dac_north = get_df_single(pq_df, dive_num, "depth_avg_curr_north")
+            f_dac_gsm = False
+        except KeyError:
+            dac_east = get_df_single(pq_df, dive_num, "depth_avg_curr_east_gsm")
+            dac_north = get_df_single(pq_df, dive_num, "depth_avg_curr_north_gsm")
+            f_dac_gsm = True
 
     # Start placemark - this is quite distracting in a large deployment
     # ballon_pairs = []
@@ -991,15 +1041,6 @@ def printDive(
         dog = cog = None
 
     try:
-        if pq_df is None:
-            latlong = nc.variables["log_TGT_LATLONG"][:].tobytes().decode("utf-8")
-        else:
-            latlong = (
-                get_df_var(pq_df, dive_num, "log_TGT_LATLONG")
-                .astype(bytes)
-                .tobytes()
-                .decode("utf-8")
-            )
         tgt_lat, tgt_lon = latlong.split(",")
         tgt_lat = Utils.ddmm2dd(float(tgt_lat))
         tgt_lon = Utils.ddmm2dd(float(tgt_lon))
@@ -1007,30 +1048,6 @@ def printDive(
     except Exception:
         log_error(f"Could not process target lat/log from {dive_nc_file_name}", "exc")
         dtg = ctg = None
-
-    try:
-        if pq_df is None:
-            nd = nc.variables["north_displacement"][:]
-            ed = nc.variables["east_displacement"][:]
-        else:
-            nd = get_df_var(pq_df, dive_num, "north_displacement")
-            ed = get_df_var(pq_df, dive_num, "east_displacement")
-        f_disp_gsm = False
-    except Exception:
-        try:
-            if pq_df is None:
-                nd = nc.variables["north_displacement_gsm"][:]
-                ed = nc.variables["east_displacement_gsm"][:]
-            else:
-                nd = get_df_var(pq_df, dive_num, "north_displacement_gsm")
-                ed = get_df_var(pq_df, dive_num, "east_displacement_gsm")
-            f_disp_gsm = True
-        except Exception:
-            log_error(
-                f"Could not find any displacements in {dive_nc_file_name} - skipping",
-                "exc",
-            )
-            nd = ed = None
 
     if nd is not None and ed is not None:
         north_disp = sum(nd)
@@ -1086,13 +1103,6 @@ def printDive(
     ballon_pairs.append(("Depth achieved", "%d meters" % round(max(abs(depth)))))
 
     if not base_opts.simplified:
-        if pq_df is None:
-            d_grid = nc.variables["log_D_GRID"].getValue()
-            d_tgt = nc.variables["log_D_TGT"].getValue()
-        else:
-            d_grid = get_df_single(pq_df, dive_num, "log_D_GRID")
-            d_tgt = get_df_single(pq_df, dive_num, "log_D_TGT")
-
         ballon_pairs.append(
             (
                 "Depth target",
@@ -1120,22 +1130,6 @@ def printDive(
             ballon_pairs.append(("Course to go", f"{ctg:.2f} degrees"))
             ballon_pairs.append(("Distance to go", f"{dtg:.2f} km"))
 
-        try:
-            if pq_df is None:
-                dac_east = nc.variables["depth_avg_curr_east"].getValue()
-                dac_north = nc.variables["depth_avg_curr_north"].getValue()
-            else:
-                dac_east = get_df_single(pq_df, dive_num, "depth_avg_curr_east")
-                dac_north = get_df_single(pq_df, dive_num, "depth_avg_curr_north")
-            f_dac_gsm = False
-        except KeyError:
-            if pq_df is None:
-                dac_east = nc.variables["depth_avg_curr_east_gsm"].getValue()
-                dac_north = nc.variables["depth_avg_curr_north_gsm"].getValue()
-            else:
-                dac_east = get_df_single(pq_df, dive_num, "depth_avg_curr_east_gsm")
-                dac_north = get_df_single(pq_df, dive_num, "depth_avg_curr_north_gsm")
-            f_dac_gsm = True
         DAC_mag = np.sqrt((dac_east * dac_east) + (dac_north * dac_north))
         try:
             dac_polar_rad = math.atan2(dac_north, dac_east)
@@ -1152,19 +1146,6 @@ def printDive(
             (f"DAC mag{' (GSM)' if f_dac_gsm else ''}", f"{DAC_mag:.3f} m/s")
         )
 
-        surf_east = surf_north = None
-        if pq_df is None:
-            try:
-                surf_east = nc.variables["surface_curr_east"].getValue()
-                surf_north = nc.variables["surface_curr_north"].getValue()
-            except KeyError:
-                pass
-        else:
-            try:
-                surf_east = get_df_single(pq_df, dive_num, "surface_curr_east")
-                surf_north = get_df_single(pq_df, dive_num, "surface_curr_north")
-            except KeyError:
-                pass
         if surf_east is not None:
             surf_mag = (
                 np.sqrt((surf_east * surf_east) + (surf_north * surf_north)) / 100.0
@@ -1753,7 +1734,7 @@ def main(
         else:
             dive_nums = np.unique(pq_df["trajectory"])
 
-        for dive_num in dive_nums:
+        for ii, dive_num in enumerate(dive_nums):
             if dive_num not in dive_gps_positions:
                 continue
             # Removed as this often is confusing with the last reported position
@@ -1775,7 +1756,7 @@ def main(
             # dive_gps_positions[dive_num]
             printDive(
                 base_opts,
-                dive_nc_file_name if pq_df is None else pq_df,
+                dive_nc_file_names[ii] if pq_df is None else pq_df,
                 base_opts.instrument_id,
                 dive_num,
                 False,
