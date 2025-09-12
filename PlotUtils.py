@@ -552,6 +552,10 @@ def coalesce_short_runs(run_list, min_len):
 def add_sample_range_overlay(time_var, max_depth_i, start_time, fig, f_depth):
     """Add sample grid overlays and sample stats traces to a plot"""
 
+    if time_var is None:
+        log_warning("time_var is none - skipping range overlay")
+        return
+
     time_dive = time_var[:max_depth_i]
     time_climb = time_var[max_depth_i:]
 
