@@ -237,45 +237,63 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
             else:
                 sigma_t = None
 
-            # ctd_vars.qc_tag = ""
-            sampled_mask = None
-            if "temperature_qc" in dive_nc_file.variables and "raw" not in temp_name:
-                temp_qc = QC.decode_qc(dive_nc_file.variables["temperature_qc"])
-                temp = np.ma.array(
-                    temp,
-                    mask=np.logical_not(
-                        QC.find_qc(temp_qc, QC.only_good_qc_values, mask=True)
-                    ),
+            temp_sampled_mask = salinity_sampled_mask = conductivity_sampled_mask = None
+            temp_raw_tag = "raw_" if "raw" in temp_name else ""
+            if f"temperature_{temp_raw_tag}qc" in dive_nc_file.variables:
+                temp_qc = QC.decode_qc(
+                    dive_nc_file.variables[f"temperature_{temp_raw_tag}qc"]
                 )
-                ctd_vars.qc_tag = " - QC_GOOD"
-                sampled_mask = temp_qc != QC.QC_UNSAMPLED
+                temp_sampled_mask = temp_qc != QC.QC_UNSAMPLED
+                if not temp_raw_tag:
+                    temp = np.ma.array(
+                        temp,
+                        mask=np.logical_not(
+                            QC.find_qc(temp_qc, QC.only_good_qc_values, mask=True)
+                        ),
+                    )
+                    ctd_vars.qc_tag = " - QC_GOOD"
 
-            if "salinity_qc" in dive_nc_file.variables and "raw" not in salinity_name:
-                salinity_qc = QC.decode_qc(dive_nc_file.variables["salinity_qc"])
-                salinity = np.ma.array(
-                    salinity,
-                    mask=np.logical_not(
-                        QC.find_qc(salinity_qc, QC.only_good_qc_values, mask=True)
-                    ),
+            salinity_raw_tag = "raw_" if "raw" in salinity_name else ""
+            if f"salinity_{salinity_raw_tag}qc" in dive_nc_file.variables:
+                salinity_qc = QC.decode_qc(
+                    dive_nc_file.variables[f"salinity_{salinity_raw_tag}qc"]
                 )
-                ctd_vars.qc_tag = " - QC_GOOD"
-                sampled_mask = salinity_qc != QC.QC_UNSAMPLED
+                salinity_sampled_mask = salinity_qc != QC.QC_UNSAMPLED
+                if not salinity_raw_tag:
+                    salinity = np.ma.array(
+                        salinity,
+                        mask=np.logical_not(
+                            QC.find_qc(salinity_qc, QC.only_good_qc_values, mask=True)
+                        ),
+                    )
+                    ctd_vars.qc_tag = " - QC_GOOD"
 
-            if (
-                "conductivity_qc" in dive_nc_file.variables
-                and "raw" not in conductivity_name
-            ):
+            conductivity_raw_tag = "raw_" if "raw" in conductivity_name else ""
+            if f"conductivity_{conductivity_raw_tag}qc" in dive_nc_file.variables:
                 conductivity_qc = QC.decode_qc(
-                    dive_nc_file.variables["conductivity_qc"]
+                    dive_nc_file.variables[f"conductivity_{conductivity_raw_tag}qc"]
                 )
-                conductivity = np.ma.array(
-                    ctd_vars.conductivity,
-                    mask=np.logical_not(
-                        QC.find_qc(conductivity_qc, QC.only_good_qc_values, mask=True)
-                    ),
-                )
-                sampled_mask = conductivity_qc != QC.QC_UNSAMPLED
+                conductivity_sampled_mask = conductivity_qc != QC.QC_UNSAMPLED
+                if not conductivity_raw_tag:
+                    conductivity = np.ma.array(
+                        ctd_vars.conductivity,
+                        mask=np.logical_not(
+                            QC.find_qc(
+                                conductivity_qc, QC.only_good_qc_values, mask=True
+                            )
+                        ),
+                    )
 
+            valid_mask = [
+                x
+                for x in (
+                    temp_sampled_mask,
+                    salinity_sampled_mask,
+                    conductivity_sampled_mask,
+                )
+                if x is not None
+            ]
+            sampled_mask = np.logical_and.reduce(valid_mask) if valid_mask else None
             # For samples and timeout plots
             if sampled_mask is not None:
                 ctd_vars.ctd_time_sampled = ctd_vars.ctd_time_v[sampled_mask]
