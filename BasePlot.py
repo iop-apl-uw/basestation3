@@ -267,7 +267,7 @@ def main():
             ),
         },
     )
-    BaseLogger(base_opts)
+    BaseLogger(base_opts, include_time=True)
 
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
@@ -299,10 +299,9 @@ def main():
     if PlotUtils.setup_plot_directory(base_opts):
         return 1
 
-    log_info(
-        "Started processing "
-        + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
-    )
+    if base_opts.plotting_use_parquet and Utils.setup_parquet_directory(base_opts):
+        log_error("Unable to setup/find parquet directory")
+        return 1
 
     if not base_opts.instrument_id:
         (comm_log, _, _, _, _) = CommLog.process_comm_log(

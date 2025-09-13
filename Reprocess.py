@@ -208,7 +208,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         log_warning(f"Could not process {sg_calib_file_name}")
         return 1
 
-    if base_opts.generate_parquet and BaseParquet.setup_parquet_directory(base_opts):
+    if base_opts.generate_parquet and Utils.setup_parquet_directory(base_opts):
         log_error(
             "Failed to setup parquet directory - no parquet files will be generated"
         )

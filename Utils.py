@@ -68,6 +68,7 @@ import anyio
 import gsw
 import netCDF4
 import numpy as np
+import pyarrow as pa
 import pyarrow.parquet as pq
 import scipy
 import seawater
@@ -2084,3 +2085,57 @@ def read_parquet(pq_dir, pq_root, expected_schema=None):
     except Exception:
         log_error("Problem generation dataframe from parquet files", "exc")
         return None
+
+
+def generate_parquet_schema(pq_dir, pq_root, promote_options="permissive"):
+    if not pq_dir.exists():
+        log_error(f"{pq_dir} does not exist - cannot generate dataframe")
+        return None
+    schemas = []
+    try:
+        for ff in list(pq_dir.glob(f"*{pq_root}.parquet")):
+            schema = pq.read_schema(ff)
+            schemas.append(schema)
+        merged_schema = pa.unify_schemas(schemas, promote_options=promote_options)
+    except Exception:
+        log_error(
+            f"Problem generation schema from parquet files in dir:{pq_dir} root{pq_root}",
+            "exc",
+        )
+        return None
+    return merged_schema
+
+
+def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
+    """Ensures plot_directory is set in base_opts and creates it if needed
+
+    Returns:
+        0 for success
+        1 for failure
+
+    """
+    if not base_opts.parquet_directory:
+        base_opts.parquet_directory = pathlib.Path(base_opts.mission_dir).joinpath(
+            "parquet"
+        )
+
+    if not base_opts.parquet_directory.exists():
+        try:
+            base_opts.parquet_directory.mkdir()
+            # Ensure that MoveData can move it as pilot if not run as the glider account
+            base_opts.parquet_directory.chmod(0o775)
+            # os.chmod(
+            #     base_opts.parquet_directory,
+            #     stat.S_IRUSR
+            #     | stat.S_IWUSR
+            #     | stat.S_IXUSR
+            #     | stat.S_IRGRP
+            #     | stat.S_IXGRP
+            #     | stat.S_IWGRP
+            #     | stat.S_IROTH
+            #     | stat.S_IXOTH,
+            # )
+        except Exception:
+            log_error(f"Could not create {base_opts.parquet_directory}", "exc")
+            return 1
+    return 0

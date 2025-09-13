@@ -103,6 +103,9 @@ def mission_profiles(
     if not os.path.exists(section_file_name):
         return ([], [])
 
+    t0 = time.time()
+    log_info("Starting mission_profiles")
+    
     with open(section_file_name, "r") as f:
         x = yaml.safe_load(f.read())
 
@@ -152,18 +155,51 @@ def mission_profiles(
  
     figs = []
     outs = []
+    
+    pq_df = None
+    if base_opts.plotting_use_parquet:
+        #
+        # This approach doesn't work because it misses the _time variables for non-ctd vars
+        #
+        # expected_schema_list = [
+        #     pa.field("trajectory", pa.int32()),
+        #     pa.field("dimension", pa.string()),
+        #     pa.field("ctd_depth", pa.float32()),
+        #     pa.field("depth", pa.float32()),
+        #     pa.field("log_gps_time", pa.float64()),
+        #     pa.field("time", pa.float64()),
+        #     pa.field("ctd_time", pa.float64()),
+        # ]
+        # for var_n in x['variables']:
+        #     expected_schema_list.append(pa.field(var_n, pa.float64()))
+        # expected_schema = pa.schema(expected_schema_list)
 
-    ncname = Utils2.get_mission_timeseries_name(base_opts)
+        expected_schema = Utils.generate_parquet_schema(base_opts.parquet_directory, "")
+        log_info(f"Loading files from {base_opts.parquet_directory}")
+        pq_df = Utils.read_parquet(
+            base_opts.parquet_directory, "", expected_schema = expected_schema
+        )
+        if pq_df is None:
+            log_error(
+                "Requested parquet files, but unable to generate data frame - mission profiles"
+            )
+            return ([], [])
+        nci=None
+    else:
+        ncname = Utils2.get_mission_timeseries_name(base_opts)
 
-    try:
-        nci = Utils.open_netcdf_file(ncname, "r")
-    except Exception:
-        log_error(f"Unable to open {ncname}", "exc")
-        return ([], [])
+        try:
+            nci = Utils.open_netcdf_file(ncname, "r")
+        except Exception:
+            log_error(f"Unable to open {ncname}", "exc")
+            return ([], [])
 
     # Simple hack for case where the most recent dives aren't in the timeseries file
     # (due to processing errors typically)
-    latest = min(nci.variables["dive_number"][-1], latest)
+    if pq_df is not None:
+        latest = min(numpy.sort(pq_df["trajectory"].unique())[-1], latest)
+    else:
+        latest = min(nci.variables["dive_number"][-1], latest)
 
     for vk in list(x['variables'].keys()):
         prev_x = None
@@ -199,8 +235,8 @@ def mission_profiles(
             fig = plotly.graph_objects.Figure()
 
             (d, prev_x) = ExtractTimeseries.timeSeriesToProfile(vk, whch,
-                                           start, stop, step,
-                                           top, bott, binZ, None, extnci=nci, x=prev_x)
+                                                                start, stop, step,
+                                                                top, bott, binZ, None, extnci=nci, x=prev_x, pq_df=pq_df)
 
             if not d:
                 log_warning(f"Could not extract timeseries for {vk} - skipping", max_count=1)
@@ -359,6 +395,7 @@ def mission_profiles(
                   ),
             outs.append(out)
 
+    log_info(f"Ending mission_profiles run_time:{time.time() - t0:.2f}sec")
 
     return (
         figs,

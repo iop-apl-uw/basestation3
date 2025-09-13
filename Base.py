@@ -1560,7 +1560,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     if PlotUtils.setup_plot_directory(base_opts):
         log_error("Failed to setup plot directory - no plots being generated")
 
-    if base_opts.generate_parquet and BaseParquet.setup_parquet_directory(base_opts):
+    if base_opts.generate_parquet and Utils.setup_parquet_directory(base_opts):
         log_error(
             "Failed to setup parquet directory - no parquet files will be generated"
         )

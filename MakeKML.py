@@ -52,7 +52,6 @@ import pyarrow as pa
 
 import BaseNetCDF
 import BaseOpts
-import BaseParquet
 import CommLog
 import FileMgr
 import LogFile
@@ -1333,7 +1332,7 @@ def main(
         return 1
 
     if base_opts.kml_use_parquet:
-        if BaseParquet.setup_parquet_directory(base_opts):
+        if Utils.setup_parquet_directory(base_opts):
             log_error("Unable to setup/find parquet directory")
             return 1
         log_info(f"Loading files from {base_opts.parquet_directory}")

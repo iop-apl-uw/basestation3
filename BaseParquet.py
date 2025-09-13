@@ -75,41 +75,6 @@ def DEBUG_PDB_F() -> None:
         pdb.post_mortem(traceb)
 
 
-def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
-    """Ensures plot_directory is set in base_opts and creates it if needed
-
-    Returns:
-        0 for success
-        1 for failure
-
-    """
-    if not base_opts.parquet_directory:
-        base_opts.parquet_directory = pathlib.Path(base_opts.mission_dir).joinpath(
-            "parquet"
-        )
-
-    if not base_opts.parquet_directory.exists():
-        try:
-            base_opts.parquet_directory.mkdir()
-            # Ensure that MoveData can move it as pilot if not run as the glider account
-            base_opts.parquet_directory.chmod(0o775)
-            # os.chmod(
-            #     base_opts.parquet_directory,
-            #     stat.S_IRUSR
-            #     | stat.S_IWUSR
-            #     | stat.S_IXUSR
-            #     | stat.S_IRGRP
-            #     | stat.S_IXGRP
-            #     | stat.S_IWGRP
-            #     | stat.S_IROTH
-            #     | stat.S_IXOTH,
-            # )
-        except Exception:
-            log_error(f"Could not create {base_opts.parquet_directory}", "exc")
-            return 1
-    return 0
-
-
 def write_parquet_file(dive_nc_file_name, base_opts, timeseries_cfg_d):
     output_files = []
     try:
@@ -225,7 +190,7 @@ def write_parquet_file(dive_nc_file_name, base_opts, timeseries_cfg_d):
     log_debug(common_dims.keys())
 
     for dim_name, ncvars in common_dims.items():
-        out_dict = {"trajectory": dsi.variables["trajectory"][0]}
+        out_dict = {"trajectory": dsi.variables["trajectory"][0], "dimension": dim_name}
 
         for k, v in ncvars.items():
             out_dict[k] = v
@@ -348,7 +313,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
     # Initialze the netCDF tables
     BaseNetCDF.init_tables(init_dict)
 
-    if setup_parquet_directory(base_opts):
+    if Utils.setup_parquet_directory(base_opts):
         log_error("Unable to setup/find parquet directory")
         return 1
 

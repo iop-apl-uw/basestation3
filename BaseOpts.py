@@ -1278,6 +1278,23 @@ global_options_dict = {
             "option_group": "plotting",
         },
     ),
+    "plotting_use_parquet": options_t(
+        False,
+        (
+            "Base",
+            "Reprocess",
+            "BasePlot",
+        ),
+        ("--plotting_use_parquet",),
+        bool,
+        {
+            "help": "Use parquet files to generate plots",
+            "section": "plotting",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "plotting",
+        },
+    ),
+
     # End plotting related
     # MakeKML related
     "skip_points": options_t(
@@ -1554,6 +1571,7 @@ global_options_dict = {
         (
             "Base",
             "BaseParquet",
+            "BasePlot",
             "MakeKML",
             "Reprocess",
         ),
