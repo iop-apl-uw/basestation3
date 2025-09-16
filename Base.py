@@ -2564,9 +2564,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             if stop_processing_event.is_set():
                 log_warning("Caught SIGUSR1 - bailing out")
                 return 1
-            if mt_retval:
+            if mt_retval == 1:
                 failed_mission_timeseries = True
-            else:
+            elif mt_retval == 0:
                 data_product_file_names.append(mission_timeseries_name)
         except Exception:
             log_error("Failed to create mission timeseries", "exc")

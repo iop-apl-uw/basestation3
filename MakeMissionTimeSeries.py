@@ -34,6 +34,7 @@ import contextlib
 import cProfile
 import functools
 import os
+import pathlib
 import pdb
 import pstats
 import sys
@@ -116,6 +117,26 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
             "Unable to determine timeseries file name from sg_calib_constants.m  - will use per-dive netcdf files",
         )
 
+    if dive_nc_profile_names is None or dive_nc_profile_names == []:
+        log_error(
+            "No dive profile names provided to make_mission_timeseries - bailing out"
+        )
+        return (1, mission_timeseries_name)
+
+    if mission_timeseries_name is not None and not base_opts.force:
+        # Check timestamps
+        mmt_file_name = pathlib.Path(mission_timeseries_name)
+        if mmt_file_name.exists():
+            mmt_mtime = mmt_file_name.stat().st_mtime
+            for ff in dive_nc_profile_names:
+                if pathlib.Path(ff).stat().st_mtime > mmt_mtime:
+                    break
+            else:
+                log_info(
+                    f"No new netcdf files found - skipping creation of {mission_timeseries_name}"
+                )
+                return (2, mission_timeseries_name)
+
     BaseNetCDF.reset_nc_char_dims()
 
     # These vectors are related to the CTD's time basis (and dimension).  The CTD
@@ -165,11 +186,6 @@ def make_mission_timeseries(dive_nc_profile_names, base_opts):
     new_ctd_data_info = "new_ctd_data_info"
 
     ret_val = 0
-    if dive_nc_profile_names is None or dive_nc_profile_names == []:
-        log_error(
-            "No dive profile names provided to make_mission_timeseries - bailing out"
-        )
-        return (1, mission_timeseries_name)
 
     add_dive_number_coordinates = False
     master_nc_info_d = {}
@@ -851,6 +867,8 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
         "Finished processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
+    if ret_val == 2:
+        ret_val = 0
     return ret_val
 
 

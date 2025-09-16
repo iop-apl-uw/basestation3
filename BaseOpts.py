@@ -828,6 +828,7 @@ global_options_dict = {
         (
             "Base",
             "MakeDiveProfiles",
+            "MakeMissionTimeSeries",
             "Reprocess",
         ),
         ("--force",),
