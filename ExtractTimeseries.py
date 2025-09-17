@@ -55,16 +55,16 @@ class NumpyArrayEncoder(JSONEncoder):
         if isinstance(obj, numpy.ndarray):
             return obj.tolist()
 
-        return JSONEncoder.default(self, obj)    
-   
+        return JSONEncoder.default(self, obj)
+
 def dumps(d):
     return json.dumps(d, cls=NumpyArrayEncoder)
- 
-def timeSeriesToProfile(var, which, 
-                        diveStart, diveStop, diveStride, 
-                        binStart, binStop, binSize, ncfilename, extnci=None, x=None, pq_df=None):
 
-    if pq_df is None and extnci is None:
+def timeSeriesToProfile(var, which,
+                        diveStart, diveStop, diveStride,
+                        binStart, binStop, binSize, ncfilename, extnci=None, x=None, pd_df_c=None):
+
+    if pd_df_c is None and extnci is None:
         try:
             nci = Utils.open_netcdf_file(ncfilename, "r")
         except Exception:
@@ -88,13 +88,13 @@ def timeSeriesToProfile(var, which,
         arr = numpy.zeros((len(bins) - 1, len(dives)))
 
     if x is None:
-        if pq_df is not None:
-            x = extractVarTimeDepth_pq(pq_df, var)
+        if pd_df_c is not None:
+            x = extractVarTimeDepth_pd(pd_df_c, var)
         else:
             x = extractVarTimeDepth(None, var, extnci=nci)
 
-    if x is None:
-        if pq_df is None and extnci is None:
+    if x is None or not x:
+        if pd_df_c is None and extnci is None:
             nci.close()
         return (None, None)
 
@@ -103,18 +103,23 @@ def timeSeriesToProfile(var, which,
 
     i = 0
     for p in dives:
-        if pq_df is not None:
+        if pd_df_c is not None:
+            pq_df = pd_df_c.find_first_col("log_gps_time")
             if pq_df["trajectory"][pq_df["trajectory"] == p].size == 0:
                 t0 = 0
                 t1 = -1
                 t2 = -1
             else:
                 log_gps = pq_df.loc[pq_df["trajectory"] == p]["log_gps_time"]
-                t0, _, t2 = log_gps[log_gps.notna()].to_numpy()
-                depth = pq_df["depth"][pq_df["trajectory"] == p]
-                max_depth_i = numpy.nanargmax(depth[depth.notna()])
-                ttime = pq_df["time"][pq_df["trajectory"] == p]
-                t1 = ttime[ttime.notna()].to_numpy()[max_depth_i]
+                #t0, _, t2 = log_gps[log_gps.notna()].to_numpy()
+                t0, _, t2 = log_gps.to_numpy()
+                sg_df = pd_df_c.find_first_col("depth")
+                depth = sg_df["depth"][sg_df["trajectory"] == p]
+                #max_depth_i = numpy.nanargmax(depth[depth.notna()])
+                max_depth_i = numpy.nanargmax(depth)
+                ttime = sg_df["time"][sg_df["trajectory"] == p]
+                #t1 = ttime[ttime.notna()].to_numpy()[max_depth_i]
+                t1 = ttime.to_numpy()[max_depth_i]
         else:
             idx = numpy.where(nci.variables['dive_number'][:] == p)[0]
             if len(idx) == 0:
@@ -179,7 +184,7 @@ def timeSeriesToProfile(var, which,
                     warnings.simplefilter("ignore", category=RuntimeWarning)
                     d = scipy.stats.binned_statistic(x['depth'][ixs],
                                                      x[var][ixs], statistic=numpy.nanmean, bins=bins).statistic
-                
+
             if d is not None:
                 arr[:,i] = d.T
             else:
@@ -190,7 +195,7 @@ def timeSeriesToProfile(var, which,
     message['depth'] = bins
     message[var] = arr[:,0:i]
 
-    if extnci is None and pq_df is None:
+    if extnci is None and pd_df_c is None:
         nci.close()
 
     return (message, x)
@@ -211,7 +216,7 @@ def getVarNames(nc_filename, ext_nc_file=None):
     for k in nc_file.variables:
         if len(nc_file.variables[k].dimensions) and '_data_point' in nc_file.variables[k].dimensions[0] and '_dive_number' not in k:
             vars.append({'var': k, 'dim': nc_file.variables[k].dimensions[0]})
-            
+
     if ext_nc_file is None:
         nc_file.close()
 
@@ -253,7 +258,7 @@ def extractVars(nc_filename, varNames, dive1, diveN, extnci=None):
             for k in nci.variables:
                 if 'time' in k[-4:] and len(nci.variables[k].dimensions) and '_data_point' in nci.variables[k].dimensions[0] and dim == nci.variables[k].dimensions[0]:
                     var_t = nci.variables[k][:]
-                    break 
+                    break
 
         if len(var_t):
             ixs = (var_t > t0) & (var_t < t2)
@@ -335,65 +340,56 @@ def extractVarTimeDepth(nc_filename, varname, extnci=None):
 
     return message
 
-def getTimeDim(pq_df, varname):
-    # Map out associated time columnn from the df
-    var_loc = []
-    vvars = ["dimension", varname]
-    temp = pq_df[vvars]
-    dimensions = numpy.unique(temp[temp.notna().all(axis=1)]["dimension"].to_numpy())
-    for dimension in dimensions:
-        dim_data = pq_df.loc[pq_df["dimension"] == dimension].dropna(axis=1, how="all")
-        time_vars = dim_data.columns[[x.endswith("time") for x in dim_data.columns]]
-        if len(time_vars) == 0:
-            time_var = None
-        else:
-            time_var = time_vars[0]
-        var_loc.append((dimension, time_var))
-    return var_loc
-    
-def extractVarTimeDepth_pq(pq_df, varname):
-    if varname not in pq_df:
-        log_warning(f"{varname} not found in parquet data set")
-        return None
-
-    var_loc = getTimeDim(pq_df, varname)
+def extractVarTimeDepth_pd(pd_df_c, varname):
+    pq_dfs = pd_df_c.find_all_cols(varname)
 
     # TODO - handle this case - add code to migrate data columns
-    if len(var_loc) > 1:
-        log_error(f"{varname} migrated colunmns/dimensions {[d[2] for d in var_loc]} - NYI")
+    if len(pq_dfs) > 1:
+        log_error(f"{varname} migrated colunmns/dimensions - NYI")
         return None
-    elif len(var_loc) == 0:
-        log_error(f"{varname} dimension not found in the parquet data set")
+    elif len(pq_dfs) == 0:
+        log_error(f"{varname} not found in the parquet data set")
         return None
-    
-    dim, time_var_n = var_loc[0]
-    
+
+    dim, pq_df = pq_dfs.popitem()
+
+    time_var_n = None
+    for var_n in pq_df.columns:
+        if var_n.endswith("time"):
+            time_var_n = var_n
+
     if time_var_n is None:
         log_error(f"No time vector found for variable {varname}")
         return None
 
-    try:
-        ctd_idx = pq_df["ctd_time"].notna()
-        ctd_depth = pq_df["ctd_depth"][ctd_idx].to_numpy()
-        ctd_time = pq_df["ctd_time"][ctd_idx].to_numpy()
-    except Exception:
+    ctd_df = pd_df_c.find_first_col("ctd_time")
+    if ctd_df is None:
         log_warning("Could not get ctd_time/ctd_depth", "exc")
         return {}
 
+    #ctd_idx = pq_df["ctd_time"].notna()
+    #ctd_depth = pq_df["ctd_depth"][ctd_idx].to_numpy()
+    #ctd_time = pq_df["ctd_time"][ctd_idx].to_numpy()
+    ctd_depth = ctd_df["ctd_depth"].to_numpy()
+    ctd_time = ctd_df["ctd_time"].to_numpy()
+
     message = {}
-    
+
     if dim == 'ctd_data_point':
-        message['depth'] = ctd_time
-        message['time'] = ctd_depth
+        message['depth'] = ctd_depth
+        message['time'] = ctd_time
         try:
-            message[varname] = pq_df[varname][ctd_idx].to_numpy()
+            #message[varname] = pq_df[varname][ctd_idx].to_numpy()
+            message[varname] = pq_df[varname].to_numpy()
         except Exception:
             log_warning(f"Could not {varname}", "exc")
             return {}
-        
+        return message
+
     try:
-        var_t_idx = pq_df[time_var_n].notna()
-        var_t = pq_df[time_var_n][var_t_idx].to_numpy()
+        #var_t_idx = pq_df[time_var_n].notna()
+        #var_t = pq_df[time_var_n][var_t_idx].to_numpy()
+        var_t = pq_df[time_var_n].to_numpy()
 
         if (var_t is not None) and (len(var_t)):
             f = scipy.interpolate.interp1d(
@@ -401,14 +397,19 @@ def extractVarTimeDepth_pq(pq_df, varname):
             )
             message['depth'] = f(var_t)
             message['time'] = var_t
-            message[varname] = pq_df[varname][var_t_idx]
+            #message[varname] = pq_df[varname][var_t_idx]
+            message[varname] = pq_df[varname].to_numpy()
+            
         else:
             log_error(f'no time variable found for {varname}({dim})')
+            return message
 
     except Exception:
         log_error(f"Could not extract variable {varname}", "exc")
+        return message
 
     return message
+
 
 if __name__ == "__main__":
 

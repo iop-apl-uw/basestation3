@@ -156,34 +156,17 @@ def mission_profiles(
     figs = []
     outs = []
     
-    pq_df = None
+    pd_df_c = None
     if base_opts.plotting_use_parquet:
-        #
-        # This approach doesn't work because it misses the _time variables for non-ctd vars
-        #
-        # expected_schema_list = [
-        #     pa.field("trajectory", pa.int32()),
-        #     pa.field("dimension", pa.string()),
-        #     pa.field("ctd_depth", pa.float32()),
-        #     pa.field("depth", pa.float32()),
-        #     pa.field("log_gps_time", pa.float64()),
-        #     pa.field("time", pa.float64()),
-        #     pa.field("ctd_time", pa.float64()),
-        # ]
-        # for var_n in x['variables']:
-        #     expected_schema_list.append(pa.field(var_n, pa.float64()))
-        # expected_schema = pa.schema(expected_schema_list)
-
-        expected_schema = Utils.generate_parquet_schema(base_opts.parquet_directory, "")
-        log_info(f"Loading files from {base_opts.parquet_directory}")
-        pq_df = Utils.read_parquet(
-            base_opts.parquet_directory, "", expected_schema = expected_schema
+        pd_df_c = Utils.read_parquet_pd(
+            base_opts.parquet_directory
         )
-        if pq_df is None:
+        if pd_df_c is None:
             log_error(
                 "Requested parquet files, but unable to generate data frame - mission profiles"
             )
             return ([], [])
+
         nci=None
     else:
         ncname = Utils2.get_mission_timeseries_name(base_opts)
@@ -196,7 +179,8 @@ def mission_profiles(
 
     # Simple hack for case where the most recent dives aren't in the timeseries file
     # (due to processing errors typically)
-    if pq_df is not None:
+    if pd_df_c is not None:
+        pq_df = pd_df_c.find_first_col("trajectory")
         latest = min(numpy.sort(pq_df["trajectory"].unique())[-1], latest)
     else:
         latest = min(nci.variables["dive_number"][-1], latest)
@@ -236,8 +220,7 @@ def mission_profiles(
 
             (d, prev_x) = ExtractTimeseries.timeSeriesToProfile(vk, whch,
                                                                 start, stop, step,
-                                                                top, bott, binZ, None, extnci=nci, x=prev_x, pq_df=pq_df)
-
+                                                                top, bott, binZ, None, extnci=nci, x=prev_x, pd_df_c=pd_df_c)
             if not d:
                 log_warning(f"Could not extract timeseries for {vk} - skipping", max_count=1)
                 continue

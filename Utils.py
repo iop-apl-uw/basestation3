@@ -68,6 +68,7 @@ import anyio
 import gsw
 import netCDF4
 import numpy as np
+import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import scipy
@@ -2139,3 +2140,89 @@ def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
             log_error(f"Could not create {base_opts.parquet_directory}", "exc")
             return 1
     return 0
+
+
+class PandasCollection:
+    """
+    A class to manage a list of Pandas DataFrames.
+    """
+
+    def __init__(self, dataframes: dict[str, pa.DataFrame]):
+        """
+        Initializes the PandasCollection with a dict of Pandas DataFrames with dimensions as keys.
+
+        Args:
+            dataframes: Dict of Pandas DataFrames
+        """
+        if not all(isinstance(df, pd.DataFrame) for _, df in dataframes.items()):
+            raise TypeError("All elements in 'dataframes' must be Pandas DataFrames.")
+        self.dataframes = dataframes
+
+    def __contains__(self, item: str) -> bool:
+        """
+        Implements the 'in' operator
+        """
+        return any(item in pl_df.columns for _, pl_df in self.dataframes.items())
+
+    def find_first_col(self, col):
+        """
+        Find the first dataframe the contains the column
+        """
+        for _, df in self.dataframes.items():
+            if col in df:
+                return df
+        else:
+            return None
+
+    def find_all_cols(self, col):
+        """
+        Find all the dataframes the contains the column, returing a dict of dimname/columns
+        """
+        results = {}
+        for dimname, df in self.dataframes.items():
+            if col in df:
+                results[dimname] = df
+        return results
+
+
+def find_common_dimensions(pq_dir):
+    files_by_dimension = collections.defaultdict(list)
+
+    for ff in pq_dir.iterdir():
+        dimension = ff.name.split("_", 1)[1].split(".")[0]
+        files_by_dimension[dimension].append(ff)
+    return {k: sorted(v) for k, v in files_by_dimension.items()}
+
+
+def read_parquet_pd(pq_dir):
+    pd_dfs = {}
+    if not pq_dir.exists():
+        print(f"{pq_dir} does not exist - cannot generate dataframe")
+        return None
+    # TODO - May need to check for file permissions here
+    try:
+        for dimension, file_list in find_common_dimensions(pq_dir).items():
+            # The merging of the schemas is to make sure any columns in any file are
+            # included in the resulting data frame
+            promote_options = "permissive"
+            schemas = []
+            try:
+                for ff in file_list:
+                    schema = pq.read_schema(ff)
+                    schemas.append(schema)
+                    merged_schema = pa.unify_schemas(
+                        schemas, promote_options=promote_options
+                    )
+            except Exception:
+                log_error(
+                    f"Problem generation schema from parquet files in dir:{pq_dir} root:{dimension}",
+                    "exc",
+                )
+                continue
+            dataset = pq.ParquetDataset(file_list, schema=merged_schema)
+            table = dataset.read()
+            pd_dfs[dimension] = table.to_pandas()
+        return PandasCollection(pd_dfs)
+    except Exception:
+        log_error(f"Problem generation dataframe from parquet files in {pq_dir}", "exc")
+        return None
