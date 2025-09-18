@@ -2203,6 +2203,9 @@ class PandasCollection:
         else:
             return None
 
+    def get_all_dfs(self):
+        return dict(self.dataframes)
+
 
 def find_common_dimensions(pq_dir):
     files_by_dimension = collections.defaultdict(list)

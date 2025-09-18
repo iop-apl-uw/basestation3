@@ -33,6 +33,7 @@
 """Routines for extracting profiles from dive timeseries files
 """
 
+import dataclasses
 import json
 import sys
 import warnings
@@ -63,7 +64,7 @@ def dumps(d):
 def timeSeriesToProfile(var, which,
                         diveStart, diveStop, diveStride,
                         binStart, binStop, binSize, ncfilename, extnci=None, x=None, pd_df_c=None):
-
+    
     if pd_df_c is None and extnci is None:
         try:
             nci = Utils.open_netcdf_file(ncfilename, "r")
@@ -200,89 +201,155 @@ def timeSeriesToProfile(var, which,
 
     return (message, x)
 
-def getVarNames(nc_filename, ext_nc_file=None):
+def getVarNames(nc_filename, ext_nc_file=None, pd_df_c=None):
 
-    if ext_nc_file is None:
-        try:
-            nc_file = Utils.open_netcdf_file(nc_filename, "r")
-        except Exception:
-            log_error(f"Unable to open {nc_filename}")
-            return None
+    if pd_df_c is not None:
+        vars = []
+        pq_df_dict = pd_df_c.get_all_dfs()
+        for dim, pq_df in pq_df_dict.items():
+            if dim == "global":
+                continue
+            for col in pq_df.columns:
+                if col in ("dimension", "trajectory"):
+                    continue
+                vars.append({"var":col, "dim":dim})
+        return vars
     else:
-        nc_file = ext_nc_file
-
-    vars = []
-
-    for k in nc_file.variables:
-        if len(nc_file.variables[k].dimensions) and '_data_point' in nc_file.variables[k].dimensions[0] and '_dive_number' not in k:
-            vars.append({'var': k, 'dim': nc_file.variables[k].dimensions[0]})
-
-    if ext_nc_file is None:
-        nc_file.close()
-
-    return vars
-
-def extractVars(nc_filename, varNames, dive1, diveN, extnci=None):
-    if extnci is None:
-        try:
-            nci = Utils.open_netcdf_file(nc_filename, "r")
-        except Exception:
-            log_error(f"Unable to open {nc_filename}")
-            return None
-    else:
-        nci = extnci
-
-    dmax = max(nci.variables['dive_number'][:])
-    if dmax < diveN:
-        diveN = dmax
-
-    d1 = numpy.where(nci.variables['dive_number'][:] == dive1)[0]
-    dN = numpy.where(nci.variables['dive_number'][:] == diveN)[0]
-    t0 = nci.variables['start_time'][d1]
-    t2 = nci.variables['end_time'][dN]
-    base_t = None
-    base_t_len = 0
-    base_p = None
-
-    x = {}
-    for p in varNames:
-        x[p] = {}
-
-        var = nci.variables[p][:]
-        dim = nci.variables[p].dimensions[0]
-
-        var_t = []
-        if 'time' in varNames[-4:]:
-            var_t = var
+        if ext_nc_file is None:
+            try:
+                nc_file = Utils.open_netcdf_file(nc_filename, "r")
+            except Exception:
+                log_error(f"Unable to open {nc_filename}")
+                return None
         else:
-            for k in nci.variables:
-                if 'time' in k[-4:] and len(nci.variables[k].dimensions) and '_data_point' in nci.variables[k].dimensions[0] and dim == nci.variables[k].dimensions[0]:
-                    var_t = nci.variables[k][:]
-                    break
+            nc_file = ext_nc_file
 
-        if len(var_t):
-            ixs = (var_t > t0) & (var_t < t2)
-            x[p]['t'] = var_t[ixs]
-            x[p]['value'] = var[ixs]
+        vars = []
 
-        if len(var_t[ixs]) > base_t_len:
-            base_t = var_t[ixs]
-            base_p = p
+        for k in nc_file.variables:
+            if len(nc_file.variables[k].dimensions) and '_data_point' in nc_file.variables[k].dimensions[0] and '_dive_number' not in k:
+                vars.append({'var': k, 'dim': nc_file.variables[k].dimensions[0]})
 
-    message = {}
-    message['epoch'] = base_t.tolist()
-    message['time']  = (base_t - base_t[0]).tolist()
-    message[base_p] = x[p]['value'].tolist()
-    for p in varNames:
-        if p == base_p:
-            continue
+        if ext_nc_file is None:
+            nc_file.close()
 
-        message[p] = numpy.interp(base_t, x[p]['t'], x[p]['value']).tolist()
+        return vars
 
-    if extnci is None:
-        nci.close()
+def extractVars(nc_filename, varNames, dive1, diveN, extnci=None, pd_df_c=None):
+    if pd_df_c is not None:
+        pq_df = pd_df_c.find_first_col("trajectory")
+        dmax = pq_df['trajectory'].max()
+        if dmax < diveN:
+            diveN = dmax
 
-    return message
+        pq_df = pd_df_c.find_first_col("log_gps_time")
+
+        t0 = pq_df.loc[pq_df["trajectory"] == dive1]["log_gps_time"].to_numpy()[0]
+        t2 = pq_df.loc[pq_df["trajectory"] == diveN]["log_gps_time"].to_numpy()[2]
+
+        base_t = None
+        base_t_len = 0
+        base_p = None
+
+        x = {}
+        for p in varNames:
+            x[p] = {}
+
+            pq_df = pd_df_c.find_first_col(p)
+            if pq_df is None:
+                continue
+
+            var = pq_df[p].to_numpy()
+
+            if 'time' in varNames[-4:]:
+                var_t = var
+
+            var_t = []
+            for col in pq_df.columns:
+                if col.endswith("time"):
+                    var_t = pq_df[col].to_numpy()
+                    
+            if len(var_t):
+                ixs = (var_t > t0) & (var_t < t2)
+                x[p]['t'] = var_t[ixs]
+                x[p]['value'] = var[ixs]
+
+            if len(var_t[ixs]) > base_t_len:
+                base_t = var_t[ixs]
+                base_p = p
+
+        message = {}
+        message['epoch'] = base_t.tolist()
+        message['time']  = (base_t - base_t[0]).tolist()
+        message[base_p] = x[p]['value'].tolist()
+        for p in varNames:
+            if p == base_p:
+                continue
+
+            message[p] = numpy.interp(base_t, x[p]['t'], x[p]['value']).tolist()
+            
+        return message
+    else:
+        if extnci is None:
+            try:
+                nci = Utils.open_netcdf_file(nc_filename, "r")
+            except Exception:
+                log_error(f"Unable to open {nc_filename}")
+                return None
+        else:
+            nci = extnci
+
+        dmax = max(nci.variables['dive_number'][:])
+        if dmax < diveN:
+            diveN = dmax
+
+        d1 = numpy.where(nci.variables['dive_number'][:] == dive1)[0]
+        dN = numpy.where(nci.variables['dive_number'][:] == diveN)[0]
+        t0 = nci.variables['start_time'][d1]
+        t2 = nci.variables['end_time'][dN]
+        base_t = None
+        base_t_len = 0
+        base_p = None
+
+        x = {}
+        for p in varNames:
+            x[p] = {}
+
+            var = nci.variables[p][:]
+            dim = nci.variables[p].dimensions[0]
+
+            var_t = []
+            if 'time' in varNames[-4:]:
+                var_t = var
+            else:
+                for k in nci.variables:
+                    if 'time' in k[-4:] and len(nci.variables[k].dimensions) and '_data_point' in nci.variables[k].dimensions[0] and dim == nci.variables[k].dimensions[0]:
+                        var_t = nci.variables[k][:]
+                        break
+
+            if len(var_t):
+                ixs = (var_t > t0) & (var_t < t2)
+                x[p]['t'] = var_t[ixs]
+                x[p]['value'] = var[ixs]
+
+            if len(var_t[ixs]) > base_t_len:
+                base_t = var_t[ixs]
+                base_p = p
+
+        message = {}
+        message['epoch'] = base_t.tolist()
+        message['time']  = (base_t - base_t[0]).tolist()
+        message[base_p] = x[p]['value'].tolist()
+        for p in varNames:
+            if p == base_p:
+                continue
+
+            message[p] = numpy.interp(base_t, x[p]['t'], x[p]['value']).tolist()
+
+        if extnci is None:
+            nci.close()
+
+        return message
 
 def extractVarTimeDepth(nc_filename, varname, extnci=None):
     if extnci is None:
@@ -410,26 +477,43 @@ def extractVarTimeDepth_pd(pd_df_c, varname):
 
     return message
 
-
-if __name__ == "__main__":
-
-
-    # print(getVarNames(sys.argv[1]))
-
-    #msg = timeSeriesToProfile('temperature', 4, 1, 859, 1, 0, 990, 5, 'sg249_NANOOS_Jul-2022_timeseries.nc')
-    #out = dumps(msg).encode('utf-8')
-    msg = extractVars('sg249_NANOOS_Jul-2022_timeseries.nc', ['temperature'], 10, 10)
-    print(msg)
-    sys.exit(0)
+@dataclasses.dataclass
+class BaseOptsSimple:
+    mission_dir: str
+    parquet_directory: str
 
 
 if __name__ == "__main__":
+    if sys.argv[1] == "p":
+        # Parquet
+        base_opts = BaseOptsSimple
+        base_opts.mission_dir = sys.argv[2]
+        base_opts.parquet_directory = None
+        if Utils.setup_parquet_directory(base_opts):
+            print("Error setting up parquet directory")
+            sys.exit(1)
+        pd_df_c = Utils.read_parquet_pd(base_opts.parquet_directory)
+        if pd_df_c is None:
+            print("Error reading parquet directory")
+            sys.exit(1)
 
+        #msg = timeSeriesToProfile('temperature', 4, 1, 859, 1, 0, 990, 5, None, pd_df_c=pd_df_c)
+        #out = dumps(msg).encode('utf-8')
 
-    # print(getVarNames(sys.argv[1]))
+        #msg = extractVars(None, ['temperature'], 10, 10, pd_df_c=pd_df_c)
+        #print(msg)
 
-    #msg = timeSeriesToProfile('temperature', 4, 1, 859, 1, 0, 990, 5, 'sg249_NANOOS_Jul-2022_timeseries.nc')
-    #out = dumps(msg).encode('utf-8')
-    msg = extractVars('sg249_NANOOS_Jul-2022_timeseries.nc', ['temperature'], 10, 10)
-    print(msg)
+        varnames = getVarNames(None, pd_df_c=pd_df_c)
+        print(varnames)
+    else:
+        # Timeseries
+        #msg = extractVars(sys.argv[1], ['temperature'], 10, 10)
+        #print(msg)
+
+        #msg = timeSeriesToProfile('temperature', 4, 1, 859, 1, 0, 990, 5, 'sg249_NANOOS_Jul-2022_timeseries.nc')
+        #out = dumps(msg).encode('utf-8')
+
+        varnames = getVarNames(sys.argv[1])
+        print(varnames)
+    
     sys.exit(0)
