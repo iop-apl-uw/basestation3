@@ -2073,38 +2073,9 @@ class CopyInterp:
         return np.array(new_y)
 
 
-def read_parquet(pq_dir, pq_root, expected_schema=None):
-    if not pq_dir.exists():
-        log_error(f"{pq_dir} does not exist - cannot generate dataframe")
-        return None
-    # TODO - May need to check for file permissions here
-    try:
-        file_list = list(pq_dir.glob(f"*{pq_root}.parquet"))
-        dataset = pq.ParquetDataset(file_list, schema=expected_schema)
-        table = dataset.read()
-        return table.to_pandas()
-    except Exception:
-        log_error("Problem generation dataframe from parquet files", "exc")
-        return None
-
-
-def generate_parquet_schema(pq_dir, pq_root, promote_options="permissive"):
-    if not pq_dir.exists():
-        log_error(f"{pq_dir} does not exist - cannot generate dataframe")
-        return None
-    schemas = []
-    try:
-        for ff in list(pq_dir.glob(f"*{pq_root}.parquet")):
-            schema = pq.read_schema(ff)
-            schemas.append(schema)
-        merged_schema = pa.unify_schemas(schemas, promote_options=promote_options)
-    except Exception:
-        log_error(
-            f"Problem generation schema from parquet files in dir:{pq_dir} root{pq_root}",
-            "exc",
-        )
-        return None
-    return merged_schema
+#
+# Parquet support
+#
 
 
 def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
@@ -2142,6 +2113,40 @@ def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
     return 0
 
 
+def read_parquet(pq_dir, pq_root, expected_schema=None):
+    if not pq_dir.exists():
+        log_error(f"{pq_dir} does not exist - cannot generate dataframe")
+        return None
+    # TODO - May need to check for file permissions here
+    try:
+        file_list = list(pq_dir.glob(f"*{pq_root}.parquet"))
+        dataset = pq.ParquetDataset(file_list, schema=expected_schema)
+        table = dataset.read()
+        return table.to_pandas()
+    except Exception:
+        log_error("Problem generation dataframe from parquet files", "exc")
+        return None
+
+
+def generate_parquet_schema(pq_dir, pq_root, promote_options="permissive"):
+    if not pq_dir.exists():
+        log_error(f"{pq_dir} does not exist - cannot generate dataframe")
+        return None
+    schemas = []
+    try:
+        for ff in list(pq_dir.glob(f"*{pq_root}.parquet")):
+            schema = pq.read_schema(ff)
+            schemas.append(schema)
+        merged_schema = pa.unify_schemas(schemas, promote_options=promote_options)
+    except Exception:
+        log_error(
+            f"Problem generation schema from parquet files in dir:{pq_dir} root{pq_root}",
+            "exc",
+        )
+        return None
+    return merged_schema
+
+
 class PandasCollection:
     """
     A class to manage a list of Pandas DataFrames.
@@ -2164,6 +2169,10 @@ class PandasCollection:
         """
         return any(item in pl_df.columns for _, pl_df in self.dataframes.items())
 
+    def __bool__(self):
+        # Define the condition for truthiness
+        return bool(self.dataframes)
+
     def find_first_col(self, col):
         """
         Find the first dataframe the contains the column
@@ -2184,6 +2193,16 @@ class PandasCollection:
                 results[dimname] = df
         return results
 
+    def find_dimension(self, dimension):
+        """
+        Find the dataframe for the dimension name
+
+        """
+        if dimension in self.dataframes:
+            return self.dataframes[dimension]
+        else:
+            return None
+
 
 def find_common_dimensions(pq_dir):
     files_by_dimension = collections.defaultdict(list)
@@ -2194,7 +2213,7 @@ def find_common_dimensions(pq_dir):
     return {k: sorted(v) for k, v in files_by_dimension.items()}
 
 
-def read_parquet_pd(pq_dir):
+def read_parquet_pd(pq_dir, expected_schema=None):
     pd_dfs = {}
     if not pq_dir.exists():
         print(f"{pq_dir} does not exist - cannot generate dataframe")
@@ -2206,6 +2225,8 @@ def read_parquet_pd(pq_dir):
             # included in the resulting data frame
             promote_options = "permissive"
             schemas = []
+            if expected_schema is not None:
+                schemas.append(expected_schema)
             try:
                 for ff in file_list:
                     schema = pq.read_schema(ff)

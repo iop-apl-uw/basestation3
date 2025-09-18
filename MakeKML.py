@@ -668,7 +668,7 @@ def printTargets(
 
 def printDive(
     base_opts,
-    nc_file_name_or_pq_df,
+    nc_file_name_or_pq_df_c,
     instrument_id,
     dive_num,
     last_dive,
@@ -683,8 +683,8 @@ def printDive(
     If any measurements are not available, return None for that position
     """
     pq_df = None
-    if isinstance(nc_file_name_or_pq_df, str):
-        dive_nc_file_name = nc_file_name_or_pq_df
+    if isinstance(nc_file_name_or_pq_df_c, str):
+        dive_nc_file_name = nc_file_name_or_pq_df_c
 
         err_curr_dive_position = dive_gps_position(
             None, None, None, None, None, None, None, None, None, None
@@ -821,7 +821,8 @@ def printDive(
         assert not nc._isopen
     else:
         # pq_df case
-        pq_df = nc_file_name_or_pq_df
+        pq_df_c = nc_file_name_or_pq_df_c
+        pq_df = pq_df_c.find_first_col("log_gps_time")
         curr_dive_position = extractGPSPositions_df(pq_df, dive_num=dive_num)[dive_num]
         (
             gps_lat_one,
@@ -836,58 +837,29 @@ def printDive(
             _,
         ) = curr_dive_position
 
-        # A note to the unsuspecting.  Some of the data columns that make up the
-        # pq_df migrate on time basis (different netCDF dimensions) over the course of a mission,
-        # and get written out into differnt parquet files.  When the overall
-        # df is assembled, those migrations end in different data ranges:
-
-        # (Pdb) p dive_track[dive_track.notna().any(axis=1)]
-        #            depth  longitude_gsm  latitude_gsm          time
-        # 3611356       NaN      74.460999      4.797317           NaN
-        # 3611357       NaN      74.460999      4.797314           NaN
-        # 3611358       NaN      74.460991      4.797308           NaN
-        # 3611359       NaN      74.460983      4.797303           NaN
-        # 3611360       NaN      74.460976      4.797298           NaN
-        # ...           ...            ...           ...           ...
-        # 3645774  2.031958            NaN           NaN  1.741268e+09
-        # 3645775  1.631574            NaN           NaN  1.741268e+09
-        # 3645776  1.191150            NaN           NaN  1.741268e+09
-        # 3645777  0.740716            NaN           NaN  1.741268e+09
-        # 3645778  0.320310            NaN           NaN  1.741268e+09
-        #
-        # [3774 rows x 4 columns]
-        #
-        # This results in this check for "consistant" data failing:
-        #
-        # if dive_track[dive_track.notna().all(axis=1)].size != 0:
-        #
-        # Written above, it offers some guarantee that the time column has some relationship
-        # to the data columns
-        #
-        # The solution below is filter out the data column by column from the
-        # df and check for all vectors to be the same length
         for dive_vars in (
             ["ctd_depth", "longitude", "latitude", BaseNetCDF.nc_ctd_time_var],
             ["depth", "longitude_gsm", "latitude_gsm", "time"],
         ):
-            dive_track = pq_df.loc[pq_df["trajectory"] == dive_num][dive_vars]
-            # This would be better, but see note above
-            # if dive_track[dive_track.notna().all(axis=1)].size != 0:
-            #     break
-            if all(
-                dive_track[dive_vars[ii]][dive_track[dive_vars[ii]].notna()].size != 0
-                for ii in range(len(dive_vars))
-            ):
+            f_found_one = False
+            for _, pq_df in pq_df_c.find_all_cols(dive_vars[1]).items():
+                if all(ii in pq_df.columns for ii in dive_vars):
+                    dive_track = pq_df.loc[pq_df["trajectory"] == dive_num][dive_vars]
+                    if all(
+                        dive_track[dive_vars[ii]][
+                            dive_track[dive_vars[ii]].notna()
+                        ].size
+                        != 0
+                        for ii in range(len(dive_vars))
+                    ):
+                        f_found_one = True
+                        break
+            if f_found_one:
                 break
         else:
             log_warning(f"Could not process dive {dive_num}")
             log_info("Skipping this dive...")
             return curr_dive_position
-        # This would be better, but see note above
-        # depth, lon, lat, time_vals = (
-        #    dive_track[dive_track.notna().all(axis=1)][dive_var].to_numpy()
-        #    for dive_var in dive_vars
-        # )
         dive_track_vectors = tuple(
             dive_track[dive_vars[ii]][dive_track[dive_vars[ii]].notna()].to_numpy()
             for ii in range(len(dive_vars))
@@ -895,9 +867,11 @@ def printDive(
         if not all(x.size for x in dive_track_vectors):
             log_error(f"Mismatch in columns {dive_vars} for dive {dive_num} - skipping")
             return curr_dive_position
+
         depth, lon, lat, time_vals = dive_track_vectors
         num_points = len(time_vals)
 
+        pq_df = pq_df_c.find_first_col("log_TGT_LATLONG")
         latlong = (
             get_df_var(pq_df, dive_num, "log_TGT_LATLONG")
             .astype(bytes)
@@ -906,11 +880,13 @@ def printDive(
         )
 
         try:
+            pq_df = pq_df_c.find_first_col("north_displacement")
             nd = get_df_var(pq_df, dive_num, "north_displacement")
             ed = get_df_var(pq_df, dive_num, "east_displacement")
             f_disp_gsm = False
         except Exception:
             try:
+                pq_df = pq_df_c.find_first_col("north_displacement_gsm")
                 nd = get_df_var(pq_df, dive_num, "north_displacement_gsm")
                 ed = get_df_var(pq_df, dive_num, "east_displacement_gsm")
                 f_disp_gsm = True
@@ -920,6 +896,8 @@ def printDive(
                     "exc",
                 )
                 nd = ed = None
+
+        pq_df = pq_df_c.find_first_col("log_D_GRID")
         d_grid = get_df_single(pq_df, dive_num, "log_D_GRID")
         d_tgt = get_df_single(pq_df, dive_num, "log_D_TGT")
         surf_east = surf_north = None
@@ -1260,7 +1238,8 @@ def extractGPSPositions_df(pq_df, dive_num=None):
             log_gps = pq_df.loc[pq_df["trajectory"] == dive_n][
                 ["log_gps_lat", "log_gps_lon", "log_gps_time"]
             ]
-            log_gps = log_gps[log_gps.notna().all(axis=1)]
+            # log_gps = log_gps[log_gps.notna().all(axis=1)]
+            # log_gps = log_gps[log_gps.notna().all(axis=1)]
             gps_pos[dive_n] = dive_gps_position(
                 *(
                     log_gps[log_val].iloc[ii]
@@ -1331,22 +1310,27 @@ def main(
         )
         return 1
 
+    #
+    # A important note:
+    # pq_df_c can be None - failed in processing the parquet data, or and empty dict - there was no data to process
+    #
+    # Beyond the initial check for of pq_df_c being None in the open, pq_df_c = None is a flag used to indicate parequet or
+    # netcdf based processing
+    #
     if base_opts.kml_use_parquet:
         if Utils.setup_parquet_directory(base_opts):
             log_error("Unable to setup/find parquet directory")
             return 1
         log_info(f"Loading files from {base_opts.parquet_directory}")
-        pq_df = Utils.read_parquet(
-            base_opts.parquet_directory, "", expected_schema=expected_schema
-        )
-        if pq_df is None:
+        pq_df_c = Utils.read_parquet_pd(base_opts.parquet_directory)
+        if pq_df_c is None:
             log_error(
                 "Requested parquet files, but unable to generate data frame - skipping KML/KMZ"
             )
         dive_nc_file_names = None
     else:
         dive_nc_file_names = MakeDiveProfiles.collect_nc_perdive_files(base_opts)
-        pq_df = None
+        pq_df_c = None
 
     (comm_log, _, _, _, _) = CommLog.process_comm_log(
         os.path.join(base_opts.mission_dir, "comm.log"), base_opts
@@ -1355,7 +1339,7 @@ def main(
         log_warning("Could not process comm.log - surface positions not plotted")
 
     if (
-        pq_df is None
+        (pq_df_c is None or not pq_df_c)
         and (dive_nc_file_names is None or len(dive_nc_file_names) <= 0)
         and comm_log is None
     ):
@@ -1581,8 +1565,12 @@ def main(
     )
 
     # Pull out the GPS positions
-    if pq_df is not None:
-        dive_gps_positions = extractGPSPositions_df(pq_df)
+    if pq_df_c is not None:
+        if pq_df_c:
+            pq_df = pq_df_c.find_first_col("log_gps_time")
+            dive_gps_positions = extractGPSPositions_df(pq_df)
+        else:
+            dive_gps_positions = {}
     else:
         dive_gps_positions = {}
         if dive_nc_file_names and len(dive_nc_file_names) > 0:
@@ -1704,7 +1692,7 @@ def main(
     surface_positions = [i for i in surface_positions if i.dive_num != 0]
 
     if (
-        (dive_nc_file_names and len(dive_nc_file_names) > 0) or pq_df is not None
+        (dive_nc_file_names and len(dive_nc_file_names) > 0) or pq_df_c is not None
     ) and base_opts.plot_dives:
         if dive_nc_file_names and len(dive_nc_file_names) > 0:
             dive_nc_file_names.sort()
@@ -1731,7 +1719,11 @@ def main(
                 )
                 dive_nums.append(int(tail[4:8]))
         else:
-            dive_nums = np.unique(pq_df["trajectory"])
+            if pq_df_c:
+                pq_df = pq_df_c.find_first_col("log_gps_time")
+                dive_nums = np.unique(pq_df["trajectory"])
+            else:
+                dive_nums = []
 
         for ii, dive_num in enumerate(dive_nums):
             if dive_num not in dive_gps_positions:
@@ -1755,7 +1747,7 @@ def main(
             # dive_gps_positions[dive_num]
             printDive(
                 base_opts,
-                dive_nc_file_names[ii] if pq_df is None else pq_df,
+                dive_nc_file_names[ii] if pq_df_c is None else pq_df_c,
                 base_opts.instrument_id,
                 dive_num,
                 False,

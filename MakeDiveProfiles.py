@@ -2513,11 +2513,10 @@ def compute_GSM_simple(
 
     sg_np = len(elapsed_time_s_v)
 
-    # Here, we gin up some dimension info so the netcdf output machinery will go
-    ctd_results_dim = BaseNetCDF.nc_mdp_data_info[BaseNetCDF.nc_sbect_data_info]
-
     BaseNetCDF.assign_dim_info_dim_name(
-        nc_info_d, BaseNetCDF.nc_ctd_results_info, ctd_results_dim
+        nc_info_d,
+        BaseNetCDF.nc_ctd_results_info,
+        BaseNetCDF.nc_dim_sg_data_point,
     )
     BaseNetCDF.assign_dim_info_size(nc_info_d, BaseNetCDF.nc_ctd_results_info, sg_np)
 
