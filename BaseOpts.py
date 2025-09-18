@@ -865,7 +865,7 @@ global_options_dict = {
         bool,
         {
             "help": "Create mission profile output file",
-            "action": "store_true",
+            "action": argparse.BooleanOptionalAction,
         },
     ),
     "make_mission_timeseries": options_t(
@@ -875,7 +875,7 @@ global_options_dict = {
         bool,
         {
             "help": "Create mission timeseries output file",
-            "action": "store_true",
+            "action": argparse.BooleanOptionalAction,
         },
     ),
     "whole_mission_config": options_t(
