@@ -98,7 +98,6 @@ class BaseOptsSimple:
     mission_dir: str
     parquet_directory: str
 
-f_use_parquet = False
 
 async def checkClose(conn):
     try:
@@ -763,7 +762,7 @@ def attachHandlers(app: sanic.Sanic):
         if runMode == MODE_PRIVATE:
             runMode = MODE_PILOT
 
-        return {"runMode": modeNames[runMode], "noSave": request.app.config.NO_SAVE, "noChat": request.app.config.NO_CHAT, "alert": request.app.config.ALERT}
+        return {"runMode": modeNames[runMode], "noSave": request.app.config.NO_SAVE, "noChat": request.app.config.NO_CHAT, "alert": request.app.config.ALERT, "useParquet": request.app.config.USE_PARQUET}
 
     @app.route('/dash')
     # description: dashboard (engineering diagnostic) view of index (all missions) page
@@ -1878,7 +1877,7 @@ def attachHandlers(app: sanic.Sanic):
     async def proHandler(request, glider:int, whichVar:str, whichProfiles:int, first:int, last:int, stride:int, top:int, bot:int, binSize:int):
         ncfilename = None
         pd_df_c = None
-        if f_use_parquet:
+        if request.app.config.USE_PARQUET:
             sanic.log.logger.info("Using parquet for proHandler")
             base_opts = BaseOptsSimple
             base_opts.mission_dir = gliderPath(glider,request)
@@ -1906,7 +1905,7 @@ def attachHandlers(app: sanic.Sanic):
     async def timeSeriesVarsHandler(request, glider:int):
         ncfilename = None
         pd_df_c = None
-        if f_use_parquet:
+        if request.app.config.USE_PARQUET:
             sanic.log.logger.info("Using parquet for proHandler")
             base_opts = BaseOptsSimple
             base_opts.mission_dir = gliderPath(glider,request)
@@ -1934,7 +1933,7 @@ def attachHandlers(app: sanic.Sanic):
     async def timeSeriesHandler(request, glider:int, dive:int, which:str):
         ncfilename = None
         pd_df_c = None
-        if f_use_parquet:
+        if request.app.config.USE_PARQUET:
             sanic.log.logger.info("Using parquet for proHandler")
             base_opts = BaseOptsSimple
             base_opts.mission_dir = gliderPath(glider,request)
@@ -3741,6 +3740,7 @@ def usage():
     print("  --alert|-b         alert sound (bell, ping, chime, beep)")
     print("  --nochat           boolean: run without chat support")
     print("  --nosave           boolean: run without save support")
+    print("  --parquet          boolean: use parquet files for mission products")
     print("  --test|-t          yml confidg syntax test mode")
     print("  -z                 cleanup zombie sockets and exit")
     print()
@@ -3763,11 +3763,12 @@ if __name__ == '__main__':
     noSave = False
     noChat = False
     test = False
+    useParquet = False
 
     overrides = {}
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsihz', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "chart=" ])
+        opts, args = getopt.getopt(sys.argv[1:], 'a:b:m:p:o:r:d:f:u:c:w:tsihz', ["auth", "alert=", "mission=", "port=", "mode=", "root=", "domain=", "missionsfile=", "usersfile=", "certs=", "staticfile=", "test", "ssl", "inspector", "help", "nosave", "nochat", "chart=", "parquet" ])
     except getopt.GetoptError as err:
         print(err)
         sys.exit(1)
@@ -3793,6 +3794,8 @@ if __name__ == '__main__':
             overrides['CHART'] = a
         elif o in ['--nosave']:
             noSave = True
+        elif o in ['--parquet']:
+            useParquet = True
         elif o in ['--nochat']:
             noChat = True
         elif o in ['-c', '--certs']:
@@ -3828,6 +3831,7 @@ if __name__ == '__main__':
     overrides['RUNMODE'] = runMode
     overrides['NO_SAVE'] = noSave
     overrides['NO_CHAT'] = noChat
+    overrides['USE_PARQUET'] = useParquet
 
     overrides['NOTIFY_IPC'] = f"ipc:///tmp/sanic-{os.getpid()}-notify.ipc" 
     overrides['WATCH_IPC']  = f"ipc:///tmp/sanic-{os.getpid()}-watch.ipc" 
