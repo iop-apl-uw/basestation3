@@ -117,7 +117,10 @@ def timeSeriesToProfile(var, which,
                 sg_df = pd_df_c.find_first_col("depth")
                 depth = sg_df["depth"][sg_df["trajectory"] == p]
                 #max_depth_i = numpy.nanargmax(depth[depth.notna()])
-                max_depth_i = numpy.nanargmax(depth)
+                try:
+                    max_depth_i = numpy.nanargmax(depth)
+                except ValueError:
+                    continue
                 ttime = sg_df["time"][sg_df["trajectory"] == p]
                 #t1 = ttime[ttime.notna()].to_numpy()[max_depth_i]
                 t1 = ttime.to_numpy()[max_depth_i]
