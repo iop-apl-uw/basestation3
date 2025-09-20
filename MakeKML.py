@@ -912,9 +912,12 @@ def printDive(
             dac_north = get_df_single(pq_df, dive_num, "depth_avg_curr_north")
             f_dac_gsm = False
         except KeyError:
-            dac_east = get_df_single(pq_df, dive_num, "depth_avg_curr_east_gsm")
-            dac_north = get_df_single(pq_df, dive_num, "depth_avg_curr_north_gsm")
-            f_dac_gsm = True
+            try:
+                dac_east = get_df_single(pq_df, dive_num, "depth_avg_curr_east_gsm")
+                dac_north = get_df_single(pq_df, dive_num, "depth_avg_curr_north_gsm")
+                f_dac_gsm = True
+            except KeyError:
+                dac_east = dac_north = None
 
     # Start placemark - this is quite distracting in a large deployment
     # ballon_pairs = []
@@ -1107,21 +1110,22 @@ def printDive(
             ballon_pairs.append(("Course to go", f"{ctg:.2f} degrees"))
             ballon_pairs.append(("Distance to go", f"{dtg:.2f} km"))
 
-        DAC_mag = np.sqrt((dac_east * dac_east) + (dac_north * dac_north))
-        try:
-            dac_polar_rad = math.atan2(dac_north, dac_east)
-            DAC_dir = 90.0 - math.degrees(dac_polar_rad)
-        except ZeroDivisionError:  # atan2
-            DAC_dir = 0.0
-        if DAC_dir < 0.0:
-            DAC_dir += 360.0
+        if dac_east is not None and dac_north is not None:
+            DAC_mag = np.sqrt((dac_east * dac_east) + (dac_north * dac_north))
+            try:
+                dac_polar_rad = math.atan2(dac_north, dac_east)
+                DAC_dir = 90.0 - math.degrees(dac_polar_rad)
+            except ZeroDivisionError:  # atan2
+                DAC_dir = 0.0
+            if DAC_dir < 0.0:
+                DAC_dir += 360.0
 
-        ballon_pairs.append(
-            (f"DAC dir{' (GSM)' if f_dac_gsm else ''}", f"{DAC_dir:.2f} degrees")
-        )
-        ballon_pairs.append(
-            (f"DAC mag{' (GSM)' if f_dac_gsm else ''}", f"{DAC_mag:.3f} m/s")
-        )
+            ballon_pairs.append(
+                (f"DAC dir{' (GSM)' if f_dac_gsm else ''}", f"{DAC_dir:.2f} degrees")
+            )
+            ballon_pairs.append(
+                (f"DAC mag{' (GSM)' if f_dac_gsm else ''}", f"{DAC_mag:.3f} m/s")
+            )
 
         if surf_east is not None:
             surf_mag = (
