@@ -717,7 +717,8 @@ def process_ftp_tags(
             log_info(f"Match criteria ({m})")
             for processed_file_name in processed_file_names:
                 # Case insenitive match since tags were already lowercased
-                if fnmatch.fnmatchcase(processed_file_name.lower(), m):
+                # Str conversion to handle pathlib objects in list
+                if fnmatch.fnmatchcase(str(processed_file_name).lower(), m):
                     ftp_file_names_to_send.append(processed_file_name)
                     log_info(f"Matched {processed_file_name}")
 
