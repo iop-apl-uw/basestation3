@@ -1173,11 +1173,11 @@
             course = course + 360;
         }
         cell = row.insertCell(4);
-        text = document.createTextNode('' + (dist/1000).toFixed(2));
+        text = document.createTextNode('' + (dist/1000).toFixed(1));
         cell.appendChild(text);
 
         cell = row.insertCell(5);
-        text = document.createTextNode('' + course.toFixed(1));
+        text = document.createTextNode('' + course.toFixed(0));
         cell.appendChild(text);
 
         n = d['flight_avg_speed_north'] * d['time_seconds_diving'];
@@ -1188,19 +1188,19 @@
             course = course + 360;
         }
         cell = row.insertCell(6);
-        text = document.createTextNode('' + (dist/1000).toFixed(2));
+        text = document.createTextNode('' + (dist/1000).toFixed(1));
         cell.appendChild(text);
 
         cell = row.insertCell(7);
-        text = document.createTextNode('' + course.toFixed(1));
+        text = document.createTextNode('' + course.toFixed(0));
         cell.appendChild(text);
 
         cell = row.insertCell(8);
-        text = document.createTextNode('' + (d['meters_to_target']/1000).toFixed(2));
+        text = document.createTextNode('' + (d['meters_to_target']/1000).toFixed(1));
         cell.appendChild(text);
 
         cell = row.insertCell(9);
-        text = document.createTextNode('' + (d['mag_heading_to_target'] + d['magnetic_variation']).toFixed(1));
+        text = document.createTextNode('' + (d['mag_heading_to_target'] + d['magnetic_variation']).toFixed(0));
         cell.appendChild(text);
 
         cell = row.insertCell(10);
@@ -1220,11 +1220,11 @@
         cell.appendChild(text);
 
         cell = row.insertCell(12);
-        text = document.createTextNode('' + course.toFixed(1));
+        text = document.createTextNode('' + course.toFixed(0));
         cell.appendChild(text);
 
         cell = row.insertCell(13);
-        text = document.createTextNode('' + d['log_HUMID'].toFixed(2));
+        text = document.createTextNode('' + d['log_HUMID'].toFixed(1));
         cell.appendChild(text);
 
         cell = row.insertCell(14);
