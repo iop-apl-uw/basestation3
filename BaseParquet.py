@@ -246,11 +246,16 @@ def write_parquet_files(dive_nc_file_names, base_opts):
 
     # TODO - need to harvest the names of files created and return that
     for dive_nc_file_name in dive_nc_file_names:
-        return_val, output_files = write_parquet_file(
-            dive_nc_file_name, base_opts, cfg_dicts[0]
-        )
-        ret_val |= return_val
-        out_files.extend(output_files)
+        try:
+            return_val, output_files = write_parquet_file(
+                dive_nc_file_name, base_opts, cfg_dicts[0]
+            )
+            ret_val |= return_val
+        except Exception:
+            log_error("Problem writing out parquet files", "exc")
+            ret_val |= 1
+        else:
+            out_files.extend(output_files)
     return (ret_val, out_files)
 
 
