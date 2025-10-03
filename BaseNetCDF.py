@@ -1633,6 +1633,42 @@ def set_globals() -> None:
         "log_FINISH2": [False, "d", {}, nc_scalar],
         "log_FIX_MISSING_TIMEOUT": [False, "d", {}, nc_scalar],
         "log_FREEZE": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_FREEZE_depth": [
+            False,
+            "f",
+            {"description": "Depth of observation", "units": "m"},
+            ("log_FREEZE_info",),
+        ],
+        "log_FREEZE_temp": [
+            False,
+            "f",
+            {"description": "Measured temperature", "units": "C"},
+            ("log_FREEZE_info",),
+        ],
+        "log_FREEZE_Tf": [
+            False,
+            "f",
+            {},
+            ("log_FREEZE_info",),
+        ],
+        "log_FREEZE_ice": [
+            False,
+            "f",
+            {"description": ""},
+            ("log_FREEZE_info",),
+        ],
+        "log_FREEZE_call": [
+            False,
+            "f",
+            {"description": ""},
+            ("log_FREEZE_info",),
+        ],
+        "log_FREEZE_urgent": [
+            False,
+            "f",
+            {"description": ""},
+            ("log_FREEZE_info",),
+        ],
         "log_GCHEAD": [False, "c", {}, nc_scalar],  # Multi-valued string
         "log_GLIDE_SLOPE": [False, "d", {}, nc_scalar],
         "log_GPS": [
@@ -1954,11 +1990,53 @@ def set_globals() -> None:
         "log_NET_PING": [False, "c", {}, nc_scalar],  # multi-valued string in gc table
         "log_TS": [False, "c", {}, nc_scalar],  # multi-valued string in gc table
         "log_TE": [False, "c", {}, nc_scalar],  # multi-valued string in gc table
-        "log_MODEM": [
+        "log_MODEM_src": [
             False,
-            "c",
+            "f",
             {},
-            nc_scalar,
+            ("log_MODEM_info",),
+        ],  # multi-valued string in its own table
+        "log_MODEM_arr_s": [
+            False,
+            "f",
+            {},
+            ("log_MODEM_info",),
+        ],  # multi-valued string in its own table
+        "log_MODEM_arr_ms": [
+            False,
+            "f",
+            {},
+            ("log_MODEM_info",),
+        ],  # multi-valued string in its own table
+        "log_MODEM_srcLa": [
+            False,
+            "f",
+            {},
+            ("log_MODEM_info",),
+        ],  # multi-valued string in its own table
+        "log_MODEM_srcLo": [
+            False,
+            "f",
+            {},
+            ("log_MODEM_info",),
+        ],  # multi-valued string in its own table
+        "log_MODEM_trav": [
+            False,
+            "f",
+            {},
+            ("log_MODEM_info",),
+        ],  # multi-valued string in its own table
+        "log_MODEM_rng": [
+            False,
+            "f",
+            {},
+            ("log_MODEM_info",),
+        ],  # multi-valued string in its own table
+        "log_MODEM_corr1": [
+            False,
+            "f",
+            {},
+            ("log_MODEM_info",),
         ],  # multi-valued string in its own table
         "log_MODEM_MSG_msg": [
             False,
