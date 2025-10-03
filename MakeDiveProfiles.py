@@ -2193,13 +2193,6 @@ def load_dive_profile_data(
             # Any table data?
             for param_name, col_values in log_f.tables.items():
                 cols = list(col_values.keys())
-                BaseNetCDF.register_sensor_dim_info(
-                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}_info",
-                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}",
-                    None,
-                    False,
-                    None,
-                )
                 BaseNetCDF.assign_dim_info_size(
                     nc_info_d,
                     f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}_info",
