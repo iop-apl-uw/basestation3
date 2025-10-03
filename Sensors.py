@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -468,6 +468,9 @@ def init_extensions(base_opts):
         False,
         None,
     )
+
+    # TODO - migrate the above that are logfile specific to this function
+    LogFile.register_table_dim_info()
 
     BaseNetCDF.register_sensor_dim_info(
         BaseNetCDF.nc_ctd_results_info,

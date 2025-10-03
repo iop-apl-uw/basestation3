@@ -616,6 +616,8 @@ nc_dim_ctd_data_point = (
 )
 nc_ctd_time_var = "ctd_time"
 
+#
+
 # NOTE: Attempting to use unlimited variables via, e.g., createDimension(nc_dim_sg_data_point, None)
 # does not work with netcdf on Mac OS X (at least) BUG
 # You get strange values such as:
@@ -1958,6 +1960,27 @@ def set_globals() -> None:
             {},
             nc_scalar,
         ],  # multi-valued string in its own table
+        "log_MODEM_MSG_msg": [
+            False,
+            "c",
+            {"description": "Messages direct from the micro modem"},
+            ("log_MODEM_MSG_info",),
+        ],
+        "log_MODEM_NOISE_t": [
+            False,
+            "d",
+            {
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Time of noise report",
+            },
+            ("log_MODEM_NOISE_info",),
+        ],
+        "log_MODEM_NOISE_noise": [
+            False,
+            "f",
+            {"description": "Reported noise"},
+            ("log_MODEM_NOISE_info",),
+        ],
         "log_CKPRE": [False, "i", {}, nc_scalar],
         "log_CKPOST": [False, "c", {}, nc_scalar],  # multi-valued string
         "log_MAMPS": [False, "c", {}, nc_scalar],  # multi-valued string

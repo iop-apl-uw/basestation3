@@ -30,13 +30,11 @@
 
 """Contains all routines for extracting data from a glider's comm logfile."""
 
-# TODO
-# MODEM_MSG, EKF, FINISH, RAFOS, FREEZE INTR WARN
-
 import collections
 import contextlib
 import os
 import pdb
+import re
 import sys
 import time
 import traceback
@@ -136,6 +134,33 @@ def map_eop_code(eop_str):
     return -1
 
 
+# Mapping of params that need acculation and expected headers
+known_accums = {
+    "$MODEM_NOISE": "$MODEM_NOISEHEAD",
+    "$MODEM_MSG": "$MODEM_MSGHEAD",
+    "$MODEM": "$MODEMHEAD",
+    "$FREEZE": "$FREEZEHEAD",
+    "$RAFOS": "$RAFOSHEAD",
+}
+
+known_accum_headers = tuple([v for k, v in known_accums.items()])
+
+table_vars = tuple(
+    [re.compile("^%s" % f"{BaseNetCDF.nc_sg_log_prefix}{k[1:]}") for k in known_accums]
+)
+
+
+def register_table_dim_info():
+    for table_var in known_accums:
+        BaseNetCDF.register_sensor_dim_info(
+            f"{BaseNetCDF.nc_sg_log_prefix}{table_var[1:]}_info",
+            f"{BaseNetCDF.nc_sg_log_prefix}{table_var[1:]}",
+            None,
+            False,
+            None,
+        )
+
+
 class LogFile:
     """Object representing a seaglider log file"""
 
@@ -154,9 +179,19 @@ class LogFile:
         self.warn = []
         self.gc_msg_list = []  # All message entries
         self.gc_msg_dict = {}  # Message entries as arrays
+        # Used during processing of tc entries
         self.gc_ts = []
         self.gc_te = []
+        # Final tc data output
         self.tc_data = {}
+        # Used during processing of table based entries
+        self.accums = collections.defaultdict(list)  # Accumulators
+        self.accum_heads = {}
+        self.accum_heads["$MODEM_NOISEHEAD"] = "t,noise"
+        # Tuple flags that the param should not be parsed
+        self.accum_heads["$MODEM_MSGHEAD"] = ("msg",)
+        # Final output of table based data
+        self.tables = collections.defaultdict(lambda: collections.defaultdict(list))
 
     def dump(self, fo=sys.stdout):
         """Dumps out the logfile"""
@@ -187,6 +222,18 @@ class LogFile:
                 print("%s,%s" % (key, item), file=fo)
         for x, values in self.gc_msg_dict.items():
             print(x, values)
+
+        col_width = 12
+        for parm_name, v in self.tables.items():
+            fo.write(f"{parm_name}\n")
+            cols = list(v.keys())
+            for c in cols:
+                fo.write(f"{c:>{col_width}}")
+            fo.write("\n")
+            for ii in range(len(v[cols[0]])):
+                for c in cols:
+                    fo.write(f"{v[c][ii]:>{col_width}}")
+                fo.write("\n")
 
 
 def parse_log_file(in_filename, issue_warn=False):
@@ -364,8 +411,9 @@ def parse_log_file(in_filename, issue_warn=False):
                 log_file.gc_ts.append((value, line_count))
             elif parm_name == "$TE":
                 log_file.gc_te.append(value)
-            elif parm_name == "$FINISH":
-                pass  # drop for now
+            # TODO handle
+            elif parm_name in ("$NAV", "$FINISH"):
+                pass
             elif parm_name == "$STATE":
                 log_file.state.append(value)
                 with contextlib.suppress(Exception):
@@ -373,24 +421,16 @@ def parse_log_file(in_filename, issue_warn=False):
                         gc_line_times.append(float(value.split(",")[0]))
                         gc_line_numbers.append(line_count)
 
-            elif parm_name == "$RAFOS":  # noqa: SIM114
-                pass  # drop for now
-            elif parm_name == "$FREEZE":  # noqa: SIM114
-                pass  # drop for now
-            elif parm_name == "$INTR":  # noqa: SIM114 interrupt details
-                pass  # drop for now
+            elif parm_name in known_accums:
+                log_file.accums[parm_name].append(value)
+            elif parm_name in known_accum_headers:
+                log_file.accum_heads[parm_name] = value
             elif parm_name == "$WARN":  # various warnings (PPS, flight parms, etc.)
                 if issue_warn:
                     log_file.warn.append(value)
                     log_warning(
                         "WARN:(%s) in %s" % (value, in_filename), alert="LOGFILE_WARN"
                     )
-            elif parm_name == "MODEM":  # noqa: SIM114 Handle like RAFOS
-                pass
-            elif parm_name == "MODEM_MSG":  # noqa: SIM114
-                pass
-            elif parm_name == "EKF":  # noqa: SIM114
-                pass
             # Message GC entries
             elif parm_name.lstrip("$") in ("NEWHEAD",):
                 try:
@@ -399,6 +439,9 @@ def parse_log_file(in_filename, issue_warn=False):
                     )
                 except TypeError:
                     log_warning("Could not process {parm_name} {value}", "exc")
+            # Drop these
+            elif parm_name in ("$EKF", "$INTR"):
+                pass
             else:
                 # parse the value
                 nc_var_name = BaseNetCDF.nc_sg_log_prefix + parm_name.lstrip("$")
@@ -778,6 +821,68 @@ def parse_log_file(in_filename, issue_warn=False):
                         log_file.gc_msg_dict[mt][field].append(msg._asdict()[field])
                         if field == "secs":
                             log_file.gc_msg_dict[mt][field][-1] += log_file_start_time
+
+    # Accumulators for general tables
+    for param_name, values in log_file.accums.items():
+        param_header = known_accums[param_name]
+        if param_header not in log_file.accum_heads:
+            log_warning(
+                f"{param_header} not found/no default supplied - dropping {param_name} table"
+            )
+            continue
+
+        header_spec = log_file.accum_heads[param_header]
+        if isinstance(header_spec, tuple):
+            # Check for metadata first
+            nc_var_name = f"{BaseNetCDF.nc_sg_log_prefix}{param_name.lstrip('$')}_{header_spec[0]}"
+            try:
+                md = BaseNetCDF.nc_var_metadata[nc_var_name]
+            except Exception:
+                log_error(
+                    f"Missing metadata for log entry {param_name} (column:{header_spec[0]}) - dropping"
+                )
+                continue
+            log_file.tables[param_name][header_spec[0]] = values
+        else:
+            header_spec = header_spec.split(",")
+            for parm_val in values:
+                try:
+                    param_vals = parm_val.split(",")
+                    if len(param_vals) != len(header_spec):
+                        log_warning(
+                            f"parameter {param_name},{parm_val} does not match {header_spec} - ignorming"
+                        )
+                        continue
+                except Exception:
+                    log_warning(
+                        f"Could not process parameter {param_name},{parm_val}", "exc"
+                    )
+                else:
+                    # TODO - Look up column types in BaseNetCDF.py and convert here
+                    for k, v in zip(header_spec, param_vals, strict=True):
+                        # parse the value
+                        log_file.tables[param_name][k].append(v)
+
+            # Convert the colums
+            for col_name in header_spec:
+                nc_var_name = (
+                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name.lstrip('$')}_{col_name}"
+                )
+                try:
+                    md = BaseNetCDF.nc_var_metadata[nc_var_name]
+                except Exception:
+                    log_error(
+                        f"Missing metadata for log entry {param_name} (column:{col_name}) - dropping"
+                    )
+                    log_file.tables[param_name].pop(col_name)
+                    continue
+                _, nc_data_type, _, _ = md
+                # Here, should be able to do a conversion of the entire colums to nc array
+                log_file.tables[param_name][col_name] = np.array(
+                    log_file.tables[param_name][col_name], nc_data_type
+                )
+        if len(log_file.tables[param_name]) == 0:
+            log_file.tables.pop(param_name)
 
     return log_file
 

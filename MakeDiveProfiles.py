@@ -2028,7 +2028,9 @@ def load_dive_profile_data(
                             "log_gps_n_satellites",
                             "log_gps_hpe",
                             "log_gps_qc",
-                        ]:
+                        ] or any(
+                            [ii.search(dive_nc_varname) for ii in LogFile.table_vars]
+                        ):
                             # move these arrays to results_d, not log_f
                             results_d[dive_nc_varname] = nc_var[
                                 :
@@ -2048,7 +2050,14 @@ def load_dive_profile_data(
                                     ),
                                 )
                         else:  # 'd' or 'i'
-                            value = nc_var.getValue().item()
+                            try:
+                                value = nc_var.getValue().item()
+                            except Exception:
+                                DEBUG_PDB_F()
+                                log_error(
+                                    f"Problem retrieving {dive_nc_varname}", "exc"
+                                )
+                                continue
                         log_f.data[variable] = value
 
                     # Parse for gc_state_ vars before gc_ vars since they share a prefix
@@ -2074,6 +2083,19 @@ def load_dive_profile_data(
                     elif tc_var.search(dive_nc_varname):
                         _, col_name = tc_var.split(dive_nc_varname)
                         log_f.tc_data[col_name] = nc_var[:].copy()  # always an array
+
+                    elif any([ii.search(dive_nc_varname) for ii in LogFile.table_vars]):
+                        for ss in LogFile.table_vars:
+                            param_name = ss.pattern[1:]
+                            if dive_nc_varname.startswith(param_name):
+                                col_name_i = (
+                                    dive_nc_varname.find(param_name)
+                                    + len(param_name)
+                                    + 1
+                                )
+                                col_name = dive_nc_varname[col_name_i:]
+                                log_f.tables[param_name][col_name] = nc_var[:].copy()
+                                break
 
                     elif eng_var.search(dive_nc_varname):
                         # CONSIDER change eng reader to build columns as it goes and make a dictionary
@@ -2168,7 +2190,23 @@ def load_dive_profile_data(
                     BaseNetCDF.nc_tc_event_info,
                     len(log_f.tc_data["rollDeg"]),
                 )
-            if len(log_f.gc_state_data["secs"]) > 0:  # any STATE data?
+            # Any table data?
+            for param_name, col_values in log_f.tables.items():
+                cols = list(col_values.keys())
+                BaseNetCDF.register_sensor_dim_info(
+                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}_info",
+                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}",
+                    None,
+                    False,
+                    None,
+                )
+                BaseNetCDF.assign_dim_info_size(
+                    nc_info_d,
+                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}_info",
+                    len(log_f.tables[param_name][cols[0]]),
+                )
+            # any STATE data?
+            if len(log_f.gc_state_data["secs"]) > 0:
                 BaseNetCDF.assign_dim_info_size(
                     nc_info_d,
                     BaseNetCDF.nc_gc_state_info,
@@ -7552,6 +7590,18 @@ def make_dive_profile(
                 False,
                 tc_values,
             )
+
+        # Table data
+        for param_name, col_values in log_f.tables.items():
+            cols = list(col_values.keys())
+            for col in cols:
+                BaseNetCDF.create_nc_var(
+                    nc_dive_file,
+                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}_{col}",
+                    (f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}",),
+                    False,
+                    log_f.tables[param_name][col],
+                )
 
         # First record the actual GPS lines for future processing
         for gps_string in ["$GPS1", "$GPS2", "$GPS"]:
