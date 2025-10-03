@@ -7524,9 +7524,6 @@ def make_dive_profile(
             if key in ("$GPS", "$GPS1", "$GPS2"):
                 # Handled in GPS section below
                 continue
-            elif key == "$FINISH":
-                # BUG we don't handle $FINISH...remove the test above and treat as normal param (single float)?
-                continue
             elif key == "$GCHEAD":
                 # All these fields have been converted to gc_XXX arrays...no need to save
                 continue

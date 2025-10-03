@@ -412,7 +412,7 @@ def parse_log_file(in_filename, issue_warn=False):
             elif parm_name == "$TE":
                 log_file.gc_te.append(value)
             # TODO handle
-            elif parm_name in ("$NAV", "$FINISH"):
+            elif parm_name in ("$NAV",):
                 pass
             elif parm_name == "$STATE":
                 log_file.state.append(value)
