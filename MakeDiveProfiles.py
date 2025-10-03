@@ -7527,9 +7527,6 @@ def make_dive_profile(
             elif key == "$GCHEAD":
                 # All these fields have been converted to gc_XXX arrays...no need to save
                 continue
-            elif key == "$RAFOS":
-                # Handled in RAFOS section below BUG: Actually dropped on the floor
-                continue
             nc_var_name = BaseNetCDF.nc_sg_log_prefix + key.lstrip("$")
             BaseNetCDF.create_nc_var(
                 nc_dive_file, nc_var_name, BaseNetCDF.nc_scalar, False, value
