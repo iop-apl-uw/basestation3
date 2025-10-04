@@ -146,7 +146,10 @@ known_accums = {
 known_accum_headers = tuple([v for k, v in known_accums.items()])
 
 table_vars = tuple(
-    [re.compile("^%s" % f"{BaseNetCDF.nc_sg_log_prefix}{k[1:]}") for k in known_accums]
+    [
+        re.compile("^%s__" % f"{BaseNetCDF.nc_sg_log_prefix}{k[1:]}")
+        for k in known_accums
+    ]
 )
 
 
@@ -834,7 +837,7 @@ def parse_log_file(in_filename, issue_warn=False):
         header_spec = log_file.accum_heads[param_header]
         if isinstance(header_spec, tuple):
             # Check for metadata first
-            nc_var_name = f"{BaseNetCDF.nc_sg_log_prefix}{param_name.lstrip('$')}_{header_spec[0]}"
+            nc_var_name = f"{BaseNetCDF.nc_sg_log_prefix}{param_name.lstrip('$')}__{header_spec[0]}"
             try:
                 md = BaseNetCDF.nc_var_metadata[nc_var_name]
             except Exception:
@@ -842,7 +845,10 @@ def parse_log_file(in_filename, issue_warn=False):
                     f"Missing metadata for log entry {param_name} (column:{header_spec[0]}) - dropping"
                 )
                 continue
-            log_file.tables[param_name][header_spec[0]] = values
+            max_len = max([len(x) for x in values])
+            log_file.tables[param_name][header_spec[0]] = np.array(
+                [x.ljust(max_len) for x in values], dtype=f"S{max_len}"
+            )
         else:
             header_spec = header_spec.split(",")
             for parm_val in values:
@@ -866,7 +872,7 @@ def parse_log_file(in_filename, issue_warn=False):
             # Convert the colums
             for col_name in header_spec:
                 nc_var_name = (
-                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name.lstrip('$')}_{col_name}"
+                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name.lstrip('$')}__{col_name}"
                 )
                 try:
                     md = BaseNetCDF.nc_var_metadata[nc_var_name]

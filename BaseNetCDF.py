@@ -38,6 +38,7 @@ import time
 import uuid
 from functools import reduce
 
+import netCDF4
 import numpy as np
 import yaml
 
@@ -1632,38 +1633,38 @@ def set_globals() -> None:
         "log_FINISH1": [False, "c", {}, nc_scalar],  # Multi-valued string
         "log_FINISH2": [False, "d", {}, nc_scalar],
         "log_FIX_MISSING_TIMEOUT": [False, "d", {}, nc_scalar],
-        "log_FREEZE": [False, "c", {}, nc_scalar],  # Multi-valued string
-        "log_FREEZE_depth": [
+        # "log_FREEZE": [False, "c", {}, nc_scalar],  # Multi-valued string
+        "log_FREEZE__depth": [
             False,
             "f",
             {"description": "Depth of observation", "units": "m"},
             ("log_FREEZE_info",),
         ],
-        "log_FREEZE_temp": [
+        "log_FREEZE__temp": [
             False,
             "f",
             {"description": "Measured temperature", "units": "C"},
             ("log_FREEZE_info",),
         ],
-        "log_FREEZE_Tf": [
+        "log_FREEZE__Tf": [
             False,
             "f",
             {},
             ("log_FREEZE_info",),
         ],
-        "log_FREEZE_ice": [
+        "log_FREEZE__ice": [
             False,
             "f",
             {"description": ""},
             ("log_FREEZE_info",),
         ],
-        "log_FREEZE_call": [
+        "log_FREEZE__call": [
             False,
             "f",
             {"description": ""},
             ("log_FREEZE_info",),
         ],
-        "log_FREEZE_urgent": [
+        "log_FREEZE__urgent": [
             False,
             "f",
             {"description": ""},
@@ -1990,61 +1991,61 @@ def set_globals() -> None:
         "log_NET_PING": [False, "c", {}, nc_scalar],  # multi-valued string in gc table
         "log_TS": [False, "c", {}, nc_scalar],  # multi-valued string in gc table
         "log_TE": [False, "c", {}, nc_scalar],  # multi-valued string in gc table
-        "log_MODEM_src": [
+        "log_MODEM__src": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
         ],  # multi-valued string in its own table
-        "log_MODEM_arr_s": [
+        "log_MODEM__arr_s": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
         ],  # multi-valued string in its own table
-        "log_MODEM_arr_ms": [
+        "log_MODEM__arr_ms": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
         ],  # multi-valued string in its own table
-        "log_MODEM_srcLa": [
+        "log_MODEM__srcLa": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
         ],  # multi-valued string in its own table
-        "log_MODEM_srcLo": [
+        "log_MODEM__srcLo": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
         ],  # multi-valued string in its own table
-        "log_MODEM_trav": [
+        "log_MODEM__trav": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
         ],  # multi-valued string in its own table
-        "log_MODEM_rng": [
+        "log_MODEM__rng": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
         ],  # multi-valued string in its own table
-        "log_MODEM_corr1": [
+        "log_MODEM__corr1": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
         ],  # multi-valued string in its own table
-        "log_MODEM_MSG_msg": [
+        "log_MODEM_MSG__msg": [
             False,
             "c",
             {"description": "Messages direct from the micro modem"},
             ("log_MODEM_MSG_info",),
         ],
-        "log_MODEM_NOISE_t": [
+        "log_MODEM_NOISE__t": [
             False,
             "d",
             {
@@ -2053,7 +2054,7 @@ def set_globals() -> None:
             },
             ("log_MODEM_NOISE_info",),
         ],
-        "log_MODEM_NOISE_noise": [
+        "log_MODEM_NOISE__noise": [
             False,
             "f",
             {"description": "Reported noise"},
@@ -3943,6 +3944,20 @@ def reset_nc_char_dims():
     nc_char_dims = {}
 
 
+def find_string_dim(string_size, nc_file):
+    global nc_char_dims
+    try:
+        var_dims = nc_char_dims[
+            string_size
+        ]  # reassign var_dims to treat as 'array' below
+    except KeyError:
+        var_dims = nc_char_dims[string_size] = (
+            nc_string_dim_format % string_size
+        )  # compute dimension name
+        nc_file.createDimension(var_dims, string_size)
+    return var_dims
+
+
 def create_nc_var(
     nc_file,
     var_name,
@@ -3975,7 +3990,6 @@ def create_nc_var(
         nc_var_metadata - dictionary for netcdf variables metadata
         nc_char_dims - dictionary of character dimensions currently in use by nc_file
     """
-
     if var_name in nc_file.variables:
         log_debug(f"{var_name} already defined")
         return nc_file.variables[var_name]
@@ -4062,15 +4076,7 @@ def create_nc_var(
                     % var_name
                 )
                 return None
-            try:
-                var_dims = nc_char_dims[
-                    size
-                ]  # reassign var_dims to treat as 'array' below
-            except KeyError:
-                var_dims = nc_char_dims[size] = (
-                    nc_string_dim_format % size
-                )  # compute dimension name
-                nc_file.createDimension(var_dims, size)
+            var_dims = find_string_dim(size, nc_file)
             nc_var = nc_file.createVariable(
                 var_name,
                 "c",
@@ -4096,14 +4102,41 @@ def create_nc_var(
     else:  # an explicit tuple of dimensions
         # DEBUG print "create_dim: %s ('%s')" % (var_name, string.join(var_dims,','))
         log_debug(f"{var_name} {nc_data_type} {var_dims}")
-        nc_var = nc_file.createVariable(
-            var_name,
-            nc_data_type,
-            var_dims,
-            compression="zlib",
-            complevel=9,
-            fill_value=meta_data_d.get("_FillValue", False),
-        )
+
+        # Special case - if this is an array of strings, generate the string dimension, add
+        # it to the dimensions, generate the variable and update the value per this:
+        if (
+            isinstance(value, np.ndarray)
+            and value.ndim == 1
+            and value.dtype.kind == "S"
+        ):
+            # N.B. - Assumes all strings in the array are already the same size
+            size = np.char.str_len(value)[0]
+            if value is None or size == 0:
+                log_error(
+                    "Must supply a non-empty value for string-valued NC var (%s) -- variable not created "
+                    % var_name
+                )
+                return None
+            str_dim = find_string_dim(size, nc_file)
+            nc_var = nc_file.createVariable(
+                var_name,
+                nc_data_type,
+                (var_dims[0], str_dim),
+                compression="zlib",
+                complevel=9,
+                fill_value=meta_data_d.get("_FillValue", False),
+            )
+            value = netCDF4.stringtochar(value)
+        else:
+            nc_var = nc_file.createVariable(
+                var_name,
+                nc_data_type,
+                var_dims,
+                compression="zlib",
+                complevel=9,
+                fill_value=meta_data_d.get("_FillValue", False),
+            )
     if value is not None:
         try:
             if var_dims == nc_scalar:

@@ -1959,6 +1959,12 @@ def load_dive_profile_data(
                                 continue  # drop it
 
                     if mdp_dim_info:
+                        # Special case - if this an array of strings, eliminate the string
+                        # dimension and proceed
+                        if l_nc_dims > 1 and nc_dims[1].startswith("string_"):
+                            nc_dims = (nc_dims[0],)
+                            l_nc_dims -= 1
+
                         if l_nc_dims != len(mdp_dim_info):
                             log_error(
                                 "Expecting %s as dimensions for %s but got %s -- skipping"
@@ -2028,13 +2034,36 @@ def load_dive_profile_data(
                             "log_gps_n_satellites",
                             "log_gps_hpe",
                             "log_gps_qc",
-                        ] or any(
-                            [ii.search(dive_nc_varname) for ii in LogFile.table_vars]
-                        ):
+                        ]:
                             # move these arrays to results_d, not log_f
                             results_d[dive_nc_varname] = nc_var[
                                 :
                             ].copy()  # always an array
+                            continue
+                        # Restore log_f.table
+                        elif any(
+                            [ii.search(dive_nc_varname) for ii in LogFile.table_vars]
+                        ):
+                            for ss in LogFile.table_vars:
+                                param_name = ss.pattern[1:]
+                                if dive_nc_varname.startswith(param_name):
+                                    col_name_i = (
+                                        dive_nc_varname.find(param_name)
+                                        + len(param_name)
+                                        + 1
+                                    )
+                                    col_name = dive_nc_varname[col_name_i:]
+                                    if len(nc_var.shape) > 1 and nc_var.dimensions[
+                                        1
+                                    ].startswith("string_"):
+                                        log_f.tables[param_name][col_name] = (
+                                            netCDF4.chartostring(nc_var[:])
+                                        )
+                                    else:
+                                        log_f.tables[param_name][col_name] = nc_var[
+                                            :
+                                        ].copy()
+                                    break
                             continue
                         _, variable = log_var.split(dive_nc_varname)
                         variable = "$" + variable  # restore leading parameter character
@@ -2083,19 +2112,6 @@ def load_dive_profile_data(
                     elif tc_var.search(dive_nc_varname):
                         _, col_name = tc_var.split(dive_nc_varname)
                         log_f.tc_data[col_name] = nc_var[:].copy()  # always an array
-
-                    elif any([ii.search(dive_nc_varname) for ii in LogFile.table_vars]):
-                        for ss in LogFile.table_vars:
-                            param_name = ss.pattern[1:]
-                            if dive_nc_varname.startswith(param_name):
-                                col_name_i = (
-                                    dive_nc_varname.find(param_name)
-                                    + len(param_name)
-                                    + 1
-                                )
-                                col_name = dive_nc_varname[col_name_i:]
-                                log_f.tables[param_name][col_name] = nc_var[:].copy()
-                                break
 
                     elif eng_var.search(dive_nc_varname):
                         # CONSIDER change eng reader to build columns as it goes and make a dictionary
@@ -7584,7 +7600,7 @@ def make_dive_profile(
             for col in cols:
                 BaseNetCDF.create_nc_var(
                     nc_dive_file,
-                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}_{col}",
+                    f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}__{col}",
                     (f"{BaseNetCDF.nc_sg_log_prefix}{param_name[1:]}",),
                     False,
                     log_f.tables[param_name][col],
