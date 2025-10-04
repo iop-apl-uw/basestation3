@@ -281,7 +281,7 @@ def main(
                     )
                     # Copy over QC vector
                     new_columns[f"{var_name}_adjusted_qc"] = (
-                        dsi.variables[f"{var_name}_qc"][:],
+                        QC.decode_qc(dsi.variables[f"{var_name}_qc"][:]),
                         dsi.variables[f"{var_name}_qc"].dimensions,
                         {},
                     )
