@@ -46,7 +46,7 @@ def test_base(caplog):
         "--mission_dir",
         str(mission_dir),
         "--whole_mission_config",
-        str(mission_dir.joinpath("sg236_mission.yml")),
+        str(mission_dir.joinpath("sg236_whole_mission.yml")),
         "--plot_types",
         "none",
         "--ignore_flight_model",
