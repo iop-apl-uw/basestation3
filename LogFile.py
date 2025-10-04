@@ -141,6 +141,7 @@ known_accums = {
     "$MODEM": "$MODEMHEAD",
     "$FREEZE": "$FREEZEHEAD",
     "$RAFOS": "$RAFOSHEAD",
+    "$NAV": "$NAVHEAD",  # This is synthetic since the nav tables are built from start and stop events
 }
 
 known_accum_headers = tuple([v for k, v in known_accums.items()])
@@ -187,12 +188,16 @@ class LogFile:
         self.gc_te = []
         # Final tc data output
         self.tc_data = {}
+        # Used during the processing of NAV entries
+        self.nav_start = []
+        self.nav_stop = []
         # Used during processing of table based entries
         self.accums = collections.defaultdict(list)  # Accumulators
         self.accum_heads = {}
         self.accum_heads["$MODEM_NOISEHEAD"] = "t,noise"
         # Tuple flags that the param should not be parsed
         self.accum_heads["$MODEM_MSGHEAD"] = ("msg",)
+        self.accum_heads["$NAVHEAD"] = "start_t,start_d,stop_t,stop_d,n_msgs"
         # Final output of table based data
         self.tables = collections.defaultdict(lambda: collections.defaultdict(list))
 
@@ -226,7 +231,7 @@ class LogFile:
         for x, values in self.gc_msg_dict.items():
             print(x, values)
 
-        col_width = 12
+        col_width = 20
         for parm_name, v in self.tables.items():
             fo.write(f"{parm_name}\n")
             cols = list(v.keys())
@@ -414,9 +419,13 @@ def parse_log_file(in_filename, issue_warn=False):
                 log_file.gc_ts.append((value, line_count))
             elif parm_name == "$TE":
                 log_file.gc_te.append(value)
-            # TODO handle
             elif parm_name in ("$NAV",):
-                pass
+                if value.endswith("start"):
+                    log_file.nav_start.append(value)
+                elif value.endswith("stop"):
+                    log_file.nav_stop.append(value)
+                else:
+                    log_warning(f"Unknown NAV format {value}:line{line_count}", "exc")
             elif parm_name == "$STATE":
                 log_file.state.append(value)
                 with contextlib.suppress(Exception):
@@ -824,6 +833,16 @@ def parse_log_file(in_filename, issue_warn=False):
                         log_file.gc_msg_dict[mt][field].append(msg._asdict()[field])
                         if field == "secs":
                             log_file.gc_msg_dict[mt][field][-1] += log_file_start_time
+
+    # Load nav into table
+    if log_file.nav_start and log_file.nav_stop:
+        if len(log_file.nav_start) != len(log_file.nav_stop):
+            log_warning("Mismatched NAV start/stops - dropping NAV table")
+        else:
+            log_file.accums["$NAV"] = [
+                ii[0].rsplit(",", 1)[0] + "," + ii[1].rsplit(",", 1)[0]
+                for ii in zip(log_file.nav_start, log_file.nav_stop, strict=True)
+            ]
 
     # Accumulators for general tables
     for param_name, values in log_file.accums.items():

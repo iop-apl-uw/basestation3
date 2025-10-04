@@ -1791,6 +1791,50 @@ def set_globals() -> None:
         "log_MINV_24V": [False, "d", {}, nc_scalar],
         "log_MISSION": [False, "i", {}, nc_scalar],
         "log_MOTHERBOARD": [False, "i", {}, nc_scalar],
+        "log_NAV__start_t": [
+            False,
+            "d",
+            {
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Time of NAV start",
+            },
+            ("log_NAV_info",),
+        ],
+        "log_NAV__stop_t": [
+            False,
+            "d",
+            {
+                "units": "seconds since 1970-1-1 00:00:00",
+                "description": "Time of NAV end",
+            },
+            ("log_NAV_info",),
+        ],
+        "log_NAV__start_d": [
+            False,
+            "f",
+            {
+                "units": "m",
+                "description": "Depth at NAV start",
+            },
+            ("log_NAV_info",),
+        ],
+        "log_NAV__stop_d": [
+            False,
+            "f",
+            {
+                "units": "m",
+                "description": "Depth at NAV end",
+            },
+            ("log_NAV_info",),
+        ],
+        "log_NAV__n_msgs": [
+            False,
+            "i",
+            {
+                "description": "Number of messages",
+            },
+            ("log_NAV_info",),
+        ],
         "log_NAV_DEVICE": [False, "i", {}, nc_scalar],
         "log_NAV2_DEVICE": [False, "i", {}, nc_scalar],
         "log_NAV3_DEVICE": [False, "i", {}, nc_scalar],
@@ -1996,49 +2040,49 @@ def set_globals() -> None:
             "f",
             {},
             ("log_MODEM_info",),
-        ],  # multi-valued string in its own table
+        ],
         "log_MODEM__arr_s": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
-        ],  # multi-valued string in its own table
+        ],
         "log_MODEM__arr_ms": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
-        ],  # multi-valued string in its own table
+        ],
         "log_MODEM__srcLa": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
-        ],  # multi-valued string in its own table
+        ],
         "log_MODEM__srcLo": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
-        ],  # multi-valued string in its own table
+        ],
         "log_MODEM__trav": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
-        ],  # multi-valued string in its own table
+        ],
         "log_MODEM__rng": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
-        ],  # multi-valued string in its own table
+        ],
         "log_MODEM__corr1": [
             False,
             "f",
             {},
             ("log_MODEM_info",),
-        ],  # multi-valued string in its own table
+        ],
         "log_MODEM_MSG__msg": [
             False,
             "c",
