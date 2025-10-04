@@ -142,6 +142,7 @@ known_accums = {
     "$FREEZE": "$FREEZEHEAD",
     "$RAFOS": "$RAFOSHEAD",
     "$NAV": "$NAVHEAD",  # This is synthetic since the nav tables are built from start and stop events
+    "$EXED": "$EXEDHEAD",
 }
 
 known_accum_headers = tuple([v for k, v in known_accums.items()])
@@ -198,6 +199,7 @@ class LogFile:
         # Tuple flags that the param should not be parsed
         self.accum_heads["$MODEM_MSGHEAD"] = ("msg",)
         self.accum_heads["$NAVHEAD"] = "start_t,start_d,stop_t,stop_d,n_msgs"
+        self.accum_heads["$EXEDHEAD"] = "exec_file,seq_num,why"
         # Final output of table based data
         self.tables = collections.defaultdict(lambda: collections.defaultdict(list))
 
@@ -903,9 +905,21 @@ def parse_log_file(in_filename, issue_warn=False):
                     continue
                 _, nc_data_type, _, _ = md
                 # Here, should be able to do a conversion of the entire colums to nc array
-                log_file.tables[param_name][col_name] = np.array(
-                    log_file.tables[param_name][col_name], nc_data_type
-                )
+                if nc_data_type == "c":
+                    max_len = max(
+                        [len(x) for x in log_file.tables[param_name][col_name]]
+                    )
+                    log_file.tables[param_name][col_name] = np.array(
+                        [
+                            x.ljust(max_len)
+                            for x in log_file.tables[param_name][col_name]
+                        ],
+                        dtype=f"S{max_len}",
+                    )
+                else:
+                    log_file.tables[param_name][col_name] = np.array(
+                        log_file.tables[param_name][col_name], nc_data_type
+                    )
         if len(log_file.tables[param_name]) == 0:
             log_file.tables.pop(param_name)
 

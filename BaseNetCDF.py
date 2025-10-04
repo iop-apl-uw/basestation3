@@ -1623,6 +1623,24 @@ def set_globals() -> None:
         "log_ESCAPE_HEADING_DELTA": [False, "d", {}, nc_scalar],
         "log_ESCAPE_REASON": [False, "c", {}, nc_scalar],
         "log_ESCAPE_STARTED_DIVE": [False, "d", {}, nc_scalar],
+        "log_EXED__exec_file": [
+            False,
+            "c",
+            {"description": "Name of file executed"},
+            ("log_EXED_info",),
+        ],
+        "log_EXED__seq_num": [
+            False,
+            "i",
+            {"description": "Sequence number"},
+            ("log_EXED_info",),
+        ],
+        "log_EXED__why": [
+            False,
+            "c",
+            {"description": "Reason for exed"},
+            ("log_EXED_info",),
+        ],
         "log_FERRY_MAX": [False, "d", {}, nc_scalar],
         "log_FG_AHR_10V": [False, "d", {}, nc_scalar],
         "log_FG_AHR_10Vo": [False, "d", {}, nc_scalar],
@@ -1633,7 +1651,6 @@ def set_globals() -> None:
         "log_FINISH1": [False, "c", {}, nc_scalar],  # Multi-valued string
         "log_FINISH2": [False, "d", {}, nc_scalar],
         "log_FIX_MISSING_TIMEOUT": [False, "d", {}, nc_scalar],
-        # "log_FREEZE": [False, "c", {}, nc_scalar],  # Multi-valued string
         "log_FREEZE__depth": [
             False,
             "f",
