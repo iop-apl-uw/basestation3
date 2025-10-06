@@ -2220,6 +2220,9 @@ def set_globals() -> None:
         "log_CKPRE": [False, "i", {}, nc_scalar],
         "log_CKPOST": [False, "c", {}, nc_scalar],  # multi-valued string
         "log_MAMPS": [False, "c", {}, nc_scalar],  # multi-valued string
+        "log_MAMPS10": [False, "f", {}, nc_scalar],
+        "log_MAMPS15": [False, "c", {}, nc_scalar],  # multi-valued string
+        "log_MAMPS24": [False, "f", {}, nc_scalar],
         "log_VOC": [False, "d", {}, nc_scalar],
         # $STATE line entries (gc_state)
         "gc_state_secs": [
