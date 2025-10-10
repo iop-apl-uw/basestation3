@@ -352,6 +352,48 @@ def init_logger(module_name, init_dict=None):
         "netcdf_metadata_adds": netcdf_metadata_adds,
     }
 
+    # Predeclare the possible dimensions base files
+    for ch_tag in ("", "_ch00", "_ch01"):
+        for cast, _ in FileMgr.cast_descr:
+            row_dim = "pmar_base%s_%s_data_point" % (ch_tag, cast)
+            row_info = "%s_info" % row_dim
+            BaseNetCDF.register_sensor_dim_info(row_info, row_dim, None, True, None)
+            for var_n, var_t, var_d in (
+                (
+                    "pmar_base_time",
+                    "d",
+                    {
+                        "units": "seconds since 1970-1-1 00:00:00",
+                        "description": "Start of STATE time in GMT epoch format",
+                    },
+                ),
+                ("pmar_base_sigmean", "f", {"description": "Mean of the signal"}),
+                (
+                    "pmar_base_sigstddev",
+                    "f",
+                    {"description": "Standard deviation of the signal"},
+                ),
+                (
+                    "pmar_base_clipmaxcount",
+                    "i",
+                    {"description": "Number of points exceeding clip_max"},
+                ),
+                (
+                    "pmar_base_clipmincount",
+                    "i",
+                    {"description": "Number of points less then clip_min"},
+                ),
+            ):
+                init_dict[module_name]["netcdf_metadata_adds"][
+                    "%s%s_%s" % (var_n, ch_tag, cast)
+                ] = BaseNetCDF.form_nc_metadata(
+                    None,
+                    False,
+                    var_t,
+                    var_d,
+                    (row_info,),
+                )
+
     # Predeclare the possible dimensions for non-base files
     for ch_tag in ("", "_ch00", "_ch01"):
         for cast, _ in FileMgr.cast_descr:
@@ -361,6 +403,7 @@ def init_logger(module_name, init_dict=None):
             col_info = "%s_info" % col_dim
             var_name = "pmar_logavg%s_%s" % (ch_tag, cast)
             var_name_qc = "pmar_logavg%s_%s_qc" % (ch_tag, cast)
+            var_name_time = "pmar_logavg_time%s_%s" % (ch_tag, cast)
             description = (
                 "PMAR logavg spectra %s" % "down profile"
                 if cast == "a"
@@ -388,6 +431,68 @@ def init_logger(module_name, init_dict=None):
                     QC.nc_qc_type,
                     {"units": "qc_flag", "description": description_qc},
                     (row_info,),
+                )
+            )
+            init_dict[module_name]["netcdf_metadata_adds"][var_name_time] = (
+                BaseNetCDF.form_nc_metadata(
+                    None,
+                    False,
+                    "d",
+                    {
+                        "units": "seconds since 1970-1-1 00:00:00",
+                        "description": "Start of STATE time in GMT epoch format",
+                    },
+                    (row_info,),
+                )
+            )
+            init_dict[module_name]["netcdf_metadata_adds"][
+                "pmar_logavg_num_blocks%s_%s" % (ch_tag, cast)
+            ] = BaseNetCDF.form_nc_metadata(
+                None,
+                False,
+                "i",
+                {
+                    "description": "Number of blocks in the ensemble",
+                },
+                (row_info,),
+            )
+            init_dict[module_name]["netcdf_metadata_adds"][
+                "pmar_logavg_clipcount%s_%s" % (ch_tag, cast)
+            ] = BaseNetCDF.form_nc_metadata(
+                None,
+                False,
+                "i",
+                {
+                    "description": "Number of clips in the ensemble",
+                },
+                (row_info,),
+            )
+            init_dict[module_name]["netcdf_metadata_adds"][
+                "pmar_logavg_dropped_points%s_%s" % (ch_tag, cast)
+            ] = BaseNetCDF.form_nc_metadata(
+                None,
+                False,
+                "i",
+                {
+                    "description": "Number of points dropped by the despiker",
+                },
+                (row_info,),
+            )
+
+            var_n = "pmar_logavg_center_freqs%s_%s" % (ch_tag, cast)
+            dim_n = f"{var_n}_data_point"
+            info_n = f"{dim_n}_info"
+            BaseNetCDF.register_sensor_dim_info(info_n, dim_n, None, True, None)
+
+            init_dict[module_name]["netcdf_metadata_adds"][var_n] = (
+                BaseNetCDF.form_nc_metadata(
+                    None,
+                    False,
+                    "i",
+                    {
+                        "description": "Center freq for each ensemble",
+                    },
+                    (info_n,),
                 )
             )
     return 0
@@ -896,23 +1001,26 @@ def eng_file_reader(eng_files, nc_info_d, calib_consts):
                 for cc in cfs:
                     center_freqs.append(float(cc.split("_")[1]))
                 center_freqs = np.array(center_freqs)
-                nc_var_name = "pmar_%s%s_%s_%s" % (
+                nc_var_name = "pmar_%s_%s%s_%s" % (
                     eng_file_class,
+                    "center_freqs",
                     channel_tag,
                     FileMgr.cast_code[fn["cast"]],
-                    "center_freqs",
                 )
                 ret_list.append((nc_var_name, center_freqs))
-                if nc_var_name not in BaseNetCDF.nc_var_metadata:
-                    nc_eng_file_mdp_dim = "%s_data_point" % nc_var_name
-                    nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
-                    if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
-                        BaseNetCDF.register_sensor_dim_info(
-                            nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None
-                        )
-                    netcdf_dict[nc_var_name] = BaseNetCDF.form_nc_metadata(
-                        None, False, "d", {}, (nc_eng_file_mdp_info,)
-                    )
+                #
+                # pre-declared in init
+                #
+                # if nc_var_name not in BaseNetCDF.nc_var_metadata:
+                #     nc_eng_file_mdp_dim = "%s_data_point" % nc_var_name
+                #     nc_eng_file_mdp_info = "%s_info" % nc_eng_file_mdp_dim
+                #     if nc_eng_file_mdp_info not in BaseNetCDF.nc_mdp_data_info:
+                #         BaseNetCDF.register_sensor_dim_info(
+                #             nc_eng_file_mdp_info, nc_eng_file_mdp_dim, None, True, None
+                #         )
+                #     netcdf_dict[nc_var_name] = BaseNetCDF.form_nc_metadata(
+                #         None, False, "d", {}, (nc_eng_file_mdp_info,)
+                #     )
 
                 # The spectra
                 # Strip off the time and other leading columns
