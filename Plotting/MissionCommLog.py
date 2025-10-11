@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import collections
 import typing
 
 import numpy as np
@@ -87,7 +88,9 @@ def mission_commlog(
             conn,
         )
     except Exception:
-        log_error("Could not fetch needed columns - skipping eng_mission_commlog", "exc")
+        log_error(
+            "Could not fetch needed columns - skipping eng_mission_commlog", "exc"
+        )
         if dbcon is None:
             conn.close()
             log_info("mission_commlog db closed")
@@ -255,7 +258,9 @@ def mission_commlog(
         )
 
     colors = ["red", "blue", "green"]
-    for i, (a, tag) in enumerate([("pitchAD", "Pitch AD"), ("rollAD", "Roll AD"), ("vbdAD", "VBD AD")]):
+    for i, (a, tag) in enumerate(
+        [("pitchAD", "Pitch AD"), ("rollAD", "Roll AD"), ("vbdAD", "VBD AD")]
+    ):
         if a in df.columns:
             fig.add_trace(
                 {
@@ -271,6 +276,38 @@ def mission_commlog(
                         "width": 1,
                     },
                     "hovertemplate": f"{tag} %{{y:d}}<br>Dive Num %{{customdata}}<br>Call Num %{{x}}<extra></extra>",
+                }
+            )
+
+    # TODO - a
+    ctd_col_type = collections.namedtuple(
+        "ctd_col_type", ("name", "title", "units", "color", "scale")
+    )
+    ctd_cols = (
+        ctd_col_type("density", "Seawater surface desnsity", "sigma-t", "gray", 0.2),
+        ctd_col_type("sss", "Seawater surface salinity", "PSU", "DarkGreen", 0.2),
+        ctd_col_type("sst", "Seawater surface temperature", "C", "orange", 0.2),
+    )
+    if all(ii.name in df.columns for ii in ctd_cols):
+        good_pts = df["sss"] != 0.0
+
+        # TODO - more from here
+        for ctd_col in ctd_cols:
+            fig.add_trace(
+                {
+                    "name": f"{ctd_col.title}/{1.0/ctd_col.scale:.0f} ({ctd_col.units})",
+                    "x": callNum[good_pts],
+                    "y": df[ctd_col.name][good_pts] * ctd_col.scale,
+                    "customdata": dive_nums[good_pts],
+                    "yaxis": "y2",
+                    "mode": "lines+markers",
+                    "marker": {"symbol": "cross", "size": 3},
+                    "line": {
+                        "dash": "solid",
+                        "color": ctd_col.color,
+                        "width": 1,
+                    },
+                    "hovertemplate": f"{ctd_col.title} %{{y:.2f}} {ctd_col.units}<br>Dive Num %{{customdata}}<br>Call Num %{{x}}<extra></extra>",
                 }
             )
 
