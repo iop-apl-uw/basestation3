@@ -1013,7 +1013,7 @@ def prepCallsChangesFiles(base_opts, dbfile=None):
     cur.execute("DROP TABLE IF EXISTS changes;")
     cur.execute("DROP TABLE IF EXISTS calls;")
     cur.execute("DROP TABLE IF EXISTS files;")
-    cur.execute("CREATE TABLE calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, sms INTEGER, iridLat FLOAT, iridLon FLOAT, irid_t FLOAT, PRIMARY KEY (dive,cycle,call));")
+    cur.execute("CREATE TABLE calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, sms INTEGER, iridLat FLOAT, iridLon FLOAT, irid_t FLOAT, sst FLOAT, sss FLOAT, density FLOAT, PRIMARY KEY (dive,cycle,call));")
     cur.execute("CREATE TABLE changes(dive INTEGER NOT NULL, parm TEXT NOT NULL, oldval FLOAT, newval FLOAT, PRIMARY KEY (dive,parm));")
     cur.execute("CREATE TABLE files(dive INTEGER NOT NULL, cycle INTEGER, file TEXT NOT NULL, fullname TEXT NOT NULL, contents TEXT, PRIMARY KEY (dive,file));")
 
@@ -1109,7 +1109,7 @@ def prepDivesOthers(base_opts):
 
     log_info("prepDivesOthers db closed")
 
-currentSchemaVersion = 2
+currentSchemaVersion = 3
 
 def checkSchema(base_opts, con):
     if con is None:
@@ -1154,7 +1154,11 @@ def checkSchema(base_opts, con):
                 cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(files)').fetchall() ]
                 if 'cycle' not in cols:
                     mycon.cursor().execute("ALTER TABLE files ADD COLUMN cycle INTEGER;")
-            # elif i == 2:
+            elif i == 2:
+                cols = [ x[1] for x in mycon.cursor().execute('PRAGMA table_info(calls)').fetchall() ]
+                for new_c in ("density", "sss", "sst"):
+                    if new_c not in cols:
+                        mycon.cursor().execute(f"ALTER TABLE calls ADD COLUMN {new_c} FLOAT;")
             # elif i == 3:
         
         mycon.cursor().execute(f'PRAGMA user_version = {currentSchemaVersion}')
@@ -1529,8 +1533,8 @@ def addSession(base_opts, session, con=None, sms=0):
         d.update({ "sms": sms })
         cur = mycon.cursor()
         # cur.execute("CREATE TABLE IF NOT EXISTS calls(dive INTEGER NOT NULL, cycle INTEGER NOT NULL, call INTEGER NOT NULL, connected FLOAT, lat FLOAT, lon FLOAT, epoch FLOAT, RH FLOAT, intP FLOAT, temp FLOAT, volts10 FLOAT, volts24 FLOAT, pitch FLOAT, depth FLOAT, pitchAD FLOAT, rollAD FLOAT, vbdAD FLOAT, sms INTEGER, iridLat FLOAT, iridLon FLOAT, irid_t FLOAT, PRIMARY KEY (dive,cycle,call));")
-        cur.execute("INSERT OR REPLACE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD,sms,iridLat,iridLon,irid_t) \
-                     VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD, :sms, :iridLat, :iridLon, :irid_t);", d)
+        cur.execute("INSERT OR REPLACE INTO calls(dive,cycle,call,connected,lat,lon,epoch,RH,intP,temp,volts10,volts24,pitch,depth,pitchAD,rollAD,vbdAD,sms,iridLat,iridLon,irid_t,sst,sss,density) \
+                     VALUES(:dive, :cycle, :call, :connected, :lat, :lon, :epoch, :RH, :intP, :temp, :volts10, :volts24, :pitch, :depth, :pitchAD, :rollAD, :vbdAD, :sms, :iridLat, :iridLon, :irid_t, :sst, :sss, :density);", d)
         cur.close()
     except Exception as e:
         log_error(f"{e} inserting comm.log session")
