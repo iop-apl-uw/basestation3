@@ -50,6 +50,18 @@ _stack_options = ["caller", "caller", "caller", "caller", "exc"]  # default
 # DEBUG _stack_options = ['caller', 'exc',    'exc',   'exc',    'exc'] # exercise
 
 
+class TracebackFilter(logging.Filter):
+    def __init__(self, name=""):
+        super().__init__(name)
+        self.allowed_messages = (
+            "Traceback (most recent call last)",
+            "Stacktrace (most recent call last)",
+        )
+
+    def filter(self, record):
+        return any(msg in record.getMessage() for msg in self.allowed_messages)
+
+
 class BaseLogger:
     """
     BaseLog: for use by all basestation code and utilities
@@ -69,7 +81,8 @@ class BaseLogger:
 
     # warnings, errors, and criticals are always enabled
     # -v turns on log_info, ---debug turns on log_debug
-    debug_enabled = info_enabled = False
+    # debug_enabled = info_enabled = False
+    log_level = logging.WARNING
     debug_loc, info_loc, warning_loc, error_loc, critical_loc = _stack_options
 
     # support adding messages to a set of final alerts to send to pilots
@@ -79,6 +92,9 @@ class BaseLogger:
 
     # Stream to catch WARN-CRITICAL errors
     warn_error_stream: StringIO = StringIO()
+
+    # List of all logs calls that requested an "exc" or "stack"
+    traceback_stream: StringIO = StringIO()
 
     def __init__(self, opts: argparse.Namespace, include_time: bool = False) -> None:
         """
@@ -108,11 +124,20 @@ class BaseLogger:
             self.setHandler(sh, opts, include_time)
 
             # Catch warning, error and critical
-
             self.setHandler(
                 logging.StreamHandler(stream=BaseLogger.warn_error_stream),
                 None,
                 include_time,
+                log_llevel=logging.WARNING,
+            )
+
+            # Catch warning, error and critical log messages with tracebacks or stack traces
+            self.setHandler(
+                logging.StreamHandler(stream=BaseLogger.traceback_stream),
+                None,
+                include_time,
+                log_filter=TracebackFilter(),
+                log_llevel=logging.WARNING,
             )
 
             BaseLogger.is_initialized = True
@@ -136,6 +161,8 @@ class BaseLogger:
         handle: logging.Handler,
         opts: argparse.Namespace | None,
         include_time: bool,
+        log_filter: logging.Filter | None = None,
+        log_llevel: int | None = None,
     ) -> None:
         """
         Set a logging handle.
@@ -150,21 +177,29 @@ class BaseLogger:
             # Remove timestamps for easier log comparison and reading
             formatter = logging.Formatter(fmt="{levelname}: {message}", style="{")
 
-        if opts is not None:
-            if opts.debug:
-                BaseLogger.debug_enabled = True
-                BaseLogger.info_enabled = True
-                handle.setLevel(logging.DEBUG)
-            elif opts.verbose:
-                BaseLogger.info_enabled = True
-                handle.setLevel(logging.INFO)
-            else:
-                handle.setLevel(logging.WARNING)
-
+        if log_llevel is not None:
+            handle.setLevel(log_llevel)
         else:
-            handle.setLevel(logging.WARNING)
+            # Sets the main logging level
+            if opts is not None:
+                # pdb.set_trace()
+                if opts.debug:
+                    BaseLogger.log_level = logging.DEBUG
+                    handle.setLevel(logging.DEBUG)
+                elif opts.verbose:
+                    BaseLogger.log_level = logging.INFO
+                    handle.setLevel(logging.INFO)
+                else:
+                    BaseLogger.log_level = logging.WARNING
+                    handle.setLevel(logging.WARNING)
+            else:
+                handle.setLevel(BaseLogger.WARNING)
 
         handle.setFormatter(formatter)
+
+        if log_filter is not None:
+            handle.addFilter(log_filter)
+
         assert BaseLogger.log is not None
         BaseLogger.log.addHandler(handle)
 
@@ -245,6 +280,7 @@ def __log_caller_info(s: object, loc: str | None) -> str:
                 frames = traceback.extract_stack()
                 # normally from bottom to top; reverse this so most recent call first
                 frames.reverse()
+                s = f"{s}\nStacktrace (most recent call last)"
                 for frame in frames[offset - 1 : -1]:  # drop our callers
                     module, lineno, function, _ = frame  # avoid the source code text
                     module = os.path.basename(module)  # lose extension
@@ -267,6 +303,11 @@ def __log_caller_info(s: object, loc: str | None) -> str:
 def log_warn_errors() -> StringIO:
     """Fetch the stream capturing WARN/ERROR/CRITICAL"""
     return BaseLogger.warn_error_stream
+
+
+def log_tracebacks() -> list[str]:
+    """Fetch the stream capturing of all tracebacks"""
+    return BaseLogger.traceback_stream
 
 
 def log_alerts() -> dict[str, list[str]]:
@@ -332,6 +373,9 @@ def log_error(
     Args:
         s: msg to be logged
     """
+    # if BaseLogger.log_level > logging.ERROR:
+    #    return
+
     if alert:
         alert_str = f"ERROR: {s}"
 
@@ -371,6 +415,9 @@ def log_warning(
                 if a positive value, the count is indexed by the module name and line number
                 if a negative value, the count is indexed by the module name, line number andwarning string
     """
+    # if BaseLogger.log_level > logging.WARNING:
+    #    return
+
     if alert:
         alert_str = f"WARNING: {s}"
 
@@ -408,7 +455,7 @@ def log_info(
     Args:
         s: msg to be logged
     """
-    if not BaseLogger.info_enabled:
+    if BaseLogger.log_level > logging.INFO:
         return
 
     if alert:
@@ -446,7 +493,7 @@ def log_debug(
     Args:
         s: msg to be logged
     """
-    if not BaseLogger.debug_enabled:
+    if BaseLogger.log_level > logging.DEBUG:
         return
 
     if alert:

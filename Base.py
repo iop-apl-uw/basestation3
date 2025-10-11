@@ -94,6 +94,7 @@ from BaseLog import (
     log_debug,
     log_error,
     log_info,
+    log_tracebacks,
     log_warn_errors,
     log_warning,
 )
@@ -3263,18 +3264,28 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
         # Notify about all WARNINGS, ERRORS and CRITICALS
         warn_errors = log_warn_errors()
-        BaseDotFiles.process_pagers(
-            base_opts,
-            instrument_id,
-            ("errors",),
-            processed_files_message=f"From {conversion_log}\n{warn_errors.getvalue()}",
-        )
-        BaseCtrlFiles.process_pagers_yml(
-            base_opts,
-            instrument_id,
-            ("errors",),
-            processed_files_message=f"From {conversion_log}\n{warn_errors.getvalue()}",
-        )
+        if warn_errors.getvalue():
+            BaseDotFiles.process_pagers(
+                base_opts,
+                instrument_id,
+                ("errors",),
+                processed_files_message=f"From {conversion_log}\n{warn_errors.getvalue()}",
+            )
+            BaseCtrlFiles.process_pagers_yml(
+                base_opts,
+                instrument_id,
+                ("errors",),
+                processed_files_message=f"From {conversion_log}\n{warn_errors.getvalue()}",
+            )
+
+        tracebacks = log_tracebacks()
+        if tracebacks.getvalue():
+            BaseCtrlFiles.process_pagers_yml(
+                base_opts,
+                instrument_id,
+                ("traceback",),
+                processed_files_message=f"From {conversion_log}\n{tracebacks.getvalue()}",
+            )
 
     # Optionally: Clean up intermediate (working) files here
     if base_opts.clean:

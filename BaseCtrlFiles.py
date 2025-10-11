@@ -74,6 +74,7 @@ pagers_msgs = (
     "alerts",
     "errors",
     "upload",
+    "traceback"
 )
 
 
@@ -212,6 +213,7 @@ def send_ntfy(
              "gps": "globe_with_meridians",
              "alerts": "warning",
              "errors": "warning",
+             "traceback": "warning",
              "critical": "rotating_light",
              "recov": "stop_sign",
              "drift": "wind_face",
@@ -836,7 +838,7 @@ def process_pagers_yml(
                             processed_files_message,
                         )
 
-                case "errors":
+                case "errors" | "traceback":
                     if processed_files_message:
                         subject_line = (
                             f"Warnings and Errors from SG{instrument_id:03d} conversion"
