@@ -298,7 +298,14 @@ def mission_commlog(
                     "name": f"{ctd_col.title}/{1.0/ctd_col.scale:.0f} ({ctd_col.units})",
                     "x": callNum[good_pts],
                     "y": df[ctd_col.name][good_pts] * ctd_col.scale,
-                    "customdata": dive_nums[good_pts],
+                    "customdata": np.squeeze(
+                        np.dstack(
+                            (
+                                np.transpose(dive_nums[good_pts]),
+                                df[ctd_col.name][good_pts],
+                            )
+                        )
+                    ),
                     "yaxis": "y2",
                     "mode": "lines+markers",
                     "marker": {"symbol": "cross", "size": 3},
@@ -307,7 +314,7 @@ def mission_commlog(
                         "color": ctd_col.color,
                         "width": 1,
                     },
-                    "hovertemplate": f"{ctd_col.title} %{{y:.2f}} {ctd_col.units}<br>Dive Num %{{customdata}}<br>Call Num %{{x}}<extra></extra>",
+                    "hovertemplate": f"{ctd_col.title} %{{customdata[1]:.2f}} {ctd_col.units}<br>Dive Num %{{customdata[0]}}<br>Call Num %{{x}}<extra></extra>",
                 }
             )
 
