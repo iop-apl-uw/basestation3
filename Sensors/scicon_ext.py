@@ -783,7 +783,7 @@ def process_tar_members(
 
 def extract_file_metadata(inp_file_name):
     """
-    Extracts the meta data from a dat file
+    Extracts the meta data from a eng file
     Returns:
         Success:
             Dictionary of meta data
@@ -826,8 +826,11 @@ def extract_file_metadata(inp_file_name):
 
         if raw_line[0] == "%":
             # Test for timeouts - in eng: %11562368 T-O {}
+            # Test for legato partial reads: %57402 scanned=0 queued=23 {66 65 74 63 68 20 73 6c 65 65 70 61 66 74 65 72 3d 74 72 75 65 } {fetch sleepafter=true}
             splits = raw_line.split()
-            if len(splits) >= 3 and splits[1] == "T-O":
+            if len(splits) >= 3 and (
+                splits[1] == "T-O" or splits[1].startswith("scanned=")
+            ):
                 with contextlib.suppress(Exception):
                     if start_time is not None:
                         timeouts_times += (
@@ -1139,10 +1142,15 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
             # Timeout lines of the form:
             # % 32500 T-O {}
             # % 32500 TimeOut {}
+            # % 57402 scanned=0 queued=23 {66 65 74 63 68 20 73 6c 65 65 70 61 66 74 65 72 3d 74 72 75 65 } {fetch sleepafter=true}
             if (
                 len(parts) >= 3
                 and parts[0] == b"%"
-                and (parts[2] == b"T-O" or parts[2] == b"TimeOut")
+                and (
+                    parts[2] == b"T-O"
+                    or parts[2] == b"TimeOut"
+                    or parts[2].startswith(b"scanned=")
+                )
             ):
                 timeout_count += 1
             continue
@@ -1183,7 +1191,12 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
                 # Timeout lines of the form:
                 # % 32500 T-O {}
                 # % 32500 TimeOut {}
-                if len(parts) >= 3 and (parts[2] == "T-O" or parts[2] == "TimeOut"):
+                # % 57402 scanned=0 queued=23 {66 65 74 63 68 20 73 6c 65 65 70 61 66 74 65 72 3d 74 72 75 65 } {fetch sleepafter=true}
+                if len(parts) >= 3 and (
+                    parts[2] == "T-O"
+                    or parts[2] == "TimeOut"
+                    or parts[2].startswith("scanned=")
+                ):
                     timeout_count += 1
         else:
             # Data line
