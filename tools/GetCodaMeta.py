@@ -42,7 +42,7 @@ from BaseLog import BaseLogger, log_error, log_info
 # Options
 DEBUG_PDB = False
 
-known_typs = ("temp15", "doxy21", "doxy24", "opt_05")
+known_typs = ("temp15", "doxy21", "doxy24", "opt_05", "opt05")
 
 
 def main():
