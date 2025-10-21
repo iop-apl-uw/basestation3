@@ -134,7 +134,7 @@ def init_sensor(module_name, init_dict=None):
                 "_FillValue": BaseNetCDF.nc_nan,
                 "units": "micromoles/L",
                 "description": "Dissolved oxygen as reported by the instument, based on on-board calibration data,"
-                + "assuming coda temperature but with fixed pressure and salinity correction",
+                + "corrected with ctd temperature, pressure and salinity",
                 "instrument": instrument,
             },
             (BaseNetCDF.nc_sg_data_info,),
