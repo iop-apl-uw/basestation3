@@ -185,7 +185,10 @@ def create_nc_var(
             dims=template["variables"][qc_name]["dimensions"],
             attrs=fix_ints(np.byte, template["variables"][qc_name]["attributes"]),
         )
-        dso[qc_name] = da_q
+        if "nc_varname" in template["variables"][qc_name]:
+            dso[template["variables"][qc_name]["nc_varname"]] = da_q
+        else:
+            dso[qc_name] = da_q
     else:
         da_q = None
 
@@ -195,7 +198,10 @@ def create_nc_var(
         attrs=fix_ints(np.int32, template["variables"][var_name]["attributes"]),
         # coords=None,
     )
-    dso[var_name] = da
+    if "nc_varname" in template["variables"][var_name]:
+        dso[template["variables"][var_name]["nc_varname"]] = da
+    else:
+        dso[var_name] = da
 
     return (da, da_q)
 
