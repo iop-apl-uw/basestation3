@@ -326,6 +326,7 @@ def remap_engfile_columns_netcdf(
         f"{instrument}_doxy22": f"{instrument}_O2_sat",
         f"{instrument}_doxy24": f"{instrument}_uncompensated_O2",
         f"{instrument}_opt05": f"{instrument}_phase",
+        f"{instrument}_opt_05": f"{instrument}_phase",
     }
     return Utils.remap_column_names(replace_dict, column_names)
 
