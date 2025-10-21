@@ -399,24 +399,16 @@ def plot_diveplot(
 
     if sigma_t is not None:
         valid_i = np.logical_not(np.isnan(sigma_t))
-        # sigma_t_floor = min(sigma_t[valid_i])
-        sigma_t_floor = 15.0
-
-        if max(sigma_t[valid_i] - sigma_t_floor) > 40.0:
-            sigma_t_scl = 1.0
-        elif max(sigma_t[valid_i] - sigma_t_floor) > 30.0:
-            sigma_t_scl = 2.0
-        elif max(sigma_t[valid_i] - sigma_t_floor) > 20.0:
-            sigma_t_scl = 3.0
-        else:
-            sigma_t_scl = 4.0
+        sigma_t_min = min(sigma_t[valid_i])
+        sigma_t_max = max(sigma_t[valid_i])
+        sigma_t_scl = -75.0 / (sigma_t_max - sigma_t_min)
 
         fig.add_trace(
             {
-                "y": (sigma_t[valid_i] - sigma_t_floor) * sigma_t_scl,
+                "y": (sigma_t[valid_i] - sigma_t_min) * sigma_t_scl,
                 "x": ctd_time[valid_i],
                 "meta": sigma_t[valid_i],
-                "name": f"sigma_t {sigma_t_scl:.0f} g/m^3 - {sigma_t_floor:.1f}",
+                "name": f"sigma_t {sigma_t_scl:.0f} g/m^3 - {sigma_t_min:.1f}",
                 "type": "scatter",
                 "xaxis": "x1",
                 "yaxis": "y1",
@@ -431,8 +423,6 @@ def plot_diveplot(
 
     if buoy_f is not None:
         valid_i = np.logical_not(np.isnan(buoy_f))
-        # buoy_f_floor = min(buoy_f[valid_i])
-        # buoy_f_floor = 15.0
 
         if max(buoy_f[valid_i]) > 40.0:
             buoy_f_scl = 1.0
