@@ -359,6 +359,7 @@ def main():
         "plots",
         "flight",
         "gliderdac",
+        "parquet",
         "inbox",
         "outbox",
         "outbox_archive",
