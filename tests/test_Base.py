@@ -52,6 +52,7 @@ test_cases = (
             "Could not load 'ctd_depth'",
             "Could not fetch needed variables 'depth'",
             "skipping bathy in plots",
+            "Not all needed vars available for buoy freq",
         ),
     ),
     (

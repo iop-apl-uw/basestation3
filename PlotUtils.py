@@ -40,6 +40,7 @@ import stat
 import time
 import typing
 
+import gsw
 import numpy as np
 import scipy
 
@@ -834,3 +835,112 @@ def interp_missing_depth(sg_time, sg_depth):
             kind="linear",
         )
     return sg_depth
+
+
+def Nsquared(ds):
+    if not all(
+        ii in ds.variables
+        for ii in (
+            "conservative_temperature",
+            "absolute_salinity",
+            "ctd_depth",
+            "avg_latitude",
+        )
+    ):
+        log_warning("Not all needed vars available for buoy freq")
+        return None
+    try:
+        CT = ds.variables["conservative_temperature"][:]
+        SA = ds.variables["absolute_salinity"][:]
+        ctd_depth = ds.variables["ctd_depth"][:]
+        latitude = ds.variables["avg_latitude"][:]
+
+        good_pts_b = np.logical_and.reduce(
+            (
+                np.logical_not(np.isnan(CT)),
+                np.logical_not(np.isnan(SA)),
+                np.logical_not(np.isnan(ctd_depth)),
+            )
+        )
+
+        # Notes from the API indicate that the axis argument for gsw.Nsquared is important to
+        # know which way the density gradiant descends - probably doesn't matter for the 1-d case,
+        # but to be sure - split the dive up and calc for the single cast
+        max_depth_i = np.argmax(ctd_depth[good_pts_b])
+        bin_width = 5.0  # Make a parameter
+
+        max_depth = np.floor(np.nanmax(ctd_depth[good_pts_b]))
+        bin_centers = np.arange(0.0, max_depth + 0.01, bin_width)
+        # This is actually bin edges, so one more point then actual bins
+        bin_edges = np.arange(
+            -bin_width / 2.0,
+            max_depth + bin_width / 2.0 + 0.01,
+            bin_width,
+        )
+        # Do this to ensure everything is caught in the binned statistic
+        bin_edges[0] = -20.0
+        bin_edges[-1] = max_depth + 50.0
+
+        SA_down = SA[good_pts_b][:max_depth_i]
+        CT_down = CT[good_pts_b][:max_depth_i]
+        ctd_depth_down = ctd_depth[good_pts_b][:max_depth_i]
+
+        # N2_down = gsw.Nsquared(SA_down, CT_down, ctd_depth_down)[0]
+
+        SA_up = SA[good_pts_b][max_depth_i:]
+        CT_up = CT[good_pts_b][max_depth_i:]
+        ctd_depth_up = ctd_depth[good_pts_b][max_depth_i:]
+
+        # direction = -1
+
+        # N2_up = gsw.Nsquared(
+        #    SA_up[::direction], CT_up[::direction], ctd_depth_up[::direction]
+        # )[0][::direction]
+
+        SA_down_binned, _ = NetCDFUtils.bindata(ctd_depth_down, SA_down, bin_edges)
+        CT_down_binned, _ = NetCDFUtils.bindata(ctd_depth_down, CT_down, bin_edges)
+        SA_up_binned, _ = NetCDFUtils.bindata(ctd_depth_up, SA_up, bin_edges)
+        CT_up_binned, _ = NetCDFUtils.bindata(ctd_depth_up, CT_up, bin_edges)
+
+        N2_down_binned, N2_down_binned_p = gsw.Nsquared(
+            SA_down_binned,
+            CT_down_binned,
+            gsw.p_from_z(-bin_centers, np.ones(np.shape(bin_centers)[0]) * latitude),
+        )
+
+        N2_up_binned, N2_up_binned_p = gsw.Nsquared(
+            SA_up_binned,
+            CT_up_binned,
+            gsw.p_from_z(-bin_centers, np.ones(np.shape(bin_centers)[0]) * latitude),
+        )
+
+        # N2 = np.hstack((N2_down, N2_up))
+
+        # Get back on original grid
+
+        # Needed for interpolator
+        N2_down_binned[np.isnan(N2_down_binned)] = 0.0
+        N2_up_binned[np.isnan(N2_up_binned)] = 0.0
+
+        f_down = scipy.interpolate.PchipInterpolator(
+            -gsw.z_from_p(
+                N2_down_binned_p, np.ones(np.shape(N2_down_binned_p)[0]) * latitude
+            ),
+            N2_down_binned,
+        )
+        f_up = scipy.interpolate.PchipInterpolator(
+            -gsw.z_from_p(
+                N2_up_binned_p, np.ones(np.shape(N2_up_binned_p)[0]) * latitude
+            ),
+            N2_up_binned,
+        )
+
+        max_depth_all_i = np.argmax(ctd_depth)
+        N2_binned = np.hstack(
+            (f_down(ctd_depth[:max_depth_all_i]), f_up(ctd_depth[max_depth_all_i:]))
+        )
+
+        return N2_binned
+    except Exception:
+        log_error("Failed to compute Nsquared", "exc")
+        return None

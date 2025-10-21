@@ -159,7 +159,7 @@ def plot_diveplot(
             .decode("utf-8")
             .split(",")[0]
         )
-        desired_heading = clock_compass(np.zeros(len(eng_time)) + tmp +mag_var)
+        desired_heading = clock_compass(np.zeros(len(eng_time)) + tmp + mag_var)
         desired_heading_plus_errband = clock_compass(
             np.zeros(len(eng_time)) + tmp + errband + mag_var
         )
@@ -231,6 +231,16 @@ def plot_diveplot(
             sigma_t = dive_nc_file.variables["sigma_t"][:]
         else:
             sigma_t = None
+
+        N2 = PlotUtils.Nsquared(dive_nc_file)
+        buoy_f = None
+        if N2 is not None:
+            try:
+                N2[N2 < 0.0] = np.nan
+
+                buoy_f = np.sqrt(N2) * 1800 / np.pi
+            except Exception:
+                log_warning("Failed to convert buoy_freq", "exc")
 
         ctd_depth = None
         if "legato_pressure" in dive_nc_file.variables:
@@ -416,6 +426,37 @@ def plot_diveplot(
                 # "marker": {"symbol": "cross", "size": 3},
                 "line": {"dash": "solid", "color": "Yellow"},
                 "hovertemplate": "sigma_t<br>%{meta:.1f} g/m^3<br>%{x:.2f} mins<br><extra></extra>",
+            }
+        )
+
+    if buoy_f is not None:
+        valid_i = np.logical_not(np.isnan(buoy_f))
+        # buoy_f_floor = min(buoy_f[valid_i])
+        # buoy_f_floor = 15.0
+
+        if max(buoy_f[valid_i]) > 40.0:
+            buoy_f_scl = 1.0
+        elif max(buoy_f[valid_i]) > 30.0:
+            buoy_f_scl = 2.0
+        elif max(buoy_f[valid_i]) > 20.0:
+            buoy_f_scl = 3.0
+        else:
+            buoy_f_scl = 4.0
+
+        fig.add_trace(
+            {
+                "y": buoy_f[valid_i] * buoy_f_scl,
+                "x": ctd_time[valid_i],
+                "meta": buoy_f[valid_i],
+                "name": f"Buoyancy Frequency {buoy_f_scl:.0f} cycles/hr",
+                "type": "scatter",
+                "xaxis": "x1",
+                "yaxis": "y1",
+                "visible": "legendonly",
+                "mode": "lines",
+                "marker": {"symbol": "cross", "size": 3},
+                "line": {"dash": "solid", "color": "darkolivegreen"},
+                "hovertemplate": "Buoyancy Frequency<br>%{meta:.1f} cycles/hr<br>%{x:.2f} mins<br><extra></extra>",
             }
         )
 
