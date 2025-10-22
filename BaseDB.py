@@ -802,6 +802,9 @@ def loadFileToDB(base_opts, cur, filename, con, run_dive_plots=False):
         
     except Exception:
         log_error("Failed to process log_SM_GC", "exc")
+        sm_gc_vbd_J = 0
+        sm_gc_pitch_J = 0
+        sm_gc_roll_J = 0
 
     # calculate better per whole dive energy numbers for the motors        
     data = pd.read_sql_query(f"SELECT vbd_i,vbd_secs,vbd_volts FROM gc WHERE dive={dive}", con)
