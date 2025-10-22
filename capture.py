@@ -66,15 +66,15 @@ def analyzeMoveRecord(x, which, param, warn):
     z_vbd1 = abs(vbd1.minmax[1] - vbd1.minmax[0])
     z_vbd2 = abs(vbd2.minmax[1] - vbd2.minmax[0])
    
-    if param and 'current' in param['PITCH_MIN'] and (pitch.minmax[0] < param['PITCH_MIN']['current']-10 or pitch.minmax[1] > param['PITCH_MAX']['current']+10):
+    if param and 'current' in param['PITCH_MIN'] and param['PITCH_MIN']['current'] and (pitch.minmax[0] < param['PITCH_MIN']['current']-10 or pitch.minmax[1] > param['PITCH_MAX']['current']+10):
         p_flag = True
     else:
         p_flag = False
-    if param and 'current' in param['ROLL_MIN'] and (roll.minmax[0] < param['ROLL_MIN']['current']-10 or roll.minmax[1] > param['ROLL_MAX']['current']+10):
+    if param and 'current' in param['ROLL_MIN'] and param['ROLL_MIN']['current'] and (roll.minmax[0] < param['ROLL_MIN']['current']-10 or roll.minmax[1] > param['ROLL_MAX']['current']+10):
         r_flag = True
     else:
         r_flag = False
-    if param and 'current' in param['VBD_MIN'] and ((vbd1.minmax[0] + vbd2.minmax[0])/2 < param['VBD_MIN']['current']-10 or (vbd1.minmax[1] + vbd2.minmax[1])/2 > param['VBD_MAX']['current'] + 10):
+    if param and 'current' in param['VBD_MIN'] and param['VBD_MIN']['current'] and ((vbd1.minmax[0] + vbd2.minmax[0])/2 < param['VBD_MIN']['current']-10 or (vbd1.minmax[1] + vbd2.minmax[1])/2 > param['VBD_MAX']['current'] + 10):
         v_flag = True
     else:
         v_flag = False
