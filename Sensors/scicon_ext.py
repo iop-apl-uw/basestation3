@@ -1281,7 +1281,9 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
 
         if out_cols is not None:
             for i in range(len(out_cols)):
-                if out_cols[i] and np.log10(np.fabs(out_cols[i])) < -2:
+                if out_cols[i] and np.log10(np.fabs(out_cols[i])) < -4:
+                    out_file.write("%g " % out_cols[i])
+                elif out_cols[i] and np.log10(np.fabs(out_cols[i])) < -2:
                     out_file.write("%.5f " % out_cols[i])
                 else:
                     out_file.write("%.3f " % out_cols[i])
