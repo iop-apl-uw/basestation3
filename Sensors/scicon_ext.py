@@ -879,7 +879,7 @@ def extract_file_metadata(inp_file_name):
                     start_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
                 else:
                     stop_time = Utils.parse_time(raw_strs[1], f_gps_rollover=True)
-            elif raw_strs[0] == "%ontime":
+            elif raw_strs[0] in ("%ontime", "%pumptime"):
                 if not Utils.is_float(raw_strs[1].strip()):
                     log_warning(
                         "Could not convert %s to float - skipping" % raw_strs[1].strip()
@@ -903,11 +903,11 @@ def extract_file_metadata(inp_file_name):
                         log_warning(
                             "Can't extract dive value from cotainer (%s)" % container
                         )
-            elif (
-                raw_strs[0] == "%samples"
-                or raw_strs[0] == "%timeouts"
-                or raw_strs[0] == "%errors"
-                or raw_strs[0] == "%ontime"
+            elif raw_strs[0] in (
+                "%samples",
+                "%timeouts",
+                "%errors",
+                # "%ontime",
             ):
                 if not Utils.is_integer(raw_strs[1].strip()):
                     log_warning(

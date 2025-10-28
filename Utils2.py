@@ -268,6 +268,16 @@ def add_scicon_stats(instrument: str) -> dict:
             },
             BaseNetCDF.nc_scalar,
         ]
+        meta_data_adds["%s_pumptime_%s" % (instrument, cast)] = [
+            False,
+            "d",
+            {
+                "description": "%s total time pump was turned on %s"
+                % (instrument, tag),
+                "units": "secs",
+            },
+            BaseNetCDF.nc_scalar,
+        ]
         meta_data_adds["%s_samples_%s" % (instrument, cast)] = [
             False,
             "i",
