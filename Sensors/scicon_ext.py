@@ -1280,13 +1280,16 @@ def ConvertDatToEng(inp_file_name, out_file_name, df_meta, base_opts):
                 out_cols[aux_cols.index("pressureCounts")] += 16777216
 
         if out_cols is not None:
-            for i in range(len(out_cols)):
-                if out_cols[i] and np.log10(np.fabs(out_cols[i])) < -4:
-                    out_file.write("%g " % out_cols[i])
-                elif out_cols[i] and np.log10(np.fabs(out_cols[i])) < -2:
-                    out_file.write("%.5f " % out_cols[i])
+            fmts = []
+            for ii in range(len(out_cols)):
+                tmp = np.ceil(np.log10(df_meta.scale_off[ii].scale))
+                log_scale = 0 if np.isinf(tmp) else int(tmp)
+                if log_scale > 3:
+                    fmts.append(f"%.{log_scale}f ")
                 else:
-                    out_file.write("%.3f " % out_cols[i])
+                    fmts.append("%.3f ")
+            for ii in range(len(out_cols)):
+                out_file.write(fmts[ii] % out_cols[ii])
             out_file.write("\n")
 
     out_file.write("%%timeouts: %d\n" % timeout_count)
