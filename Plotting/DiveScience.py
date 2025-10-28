@@ -60,6 +60,7 @@ instrument_meta["fet"] = {
             "color_down": "LightGrey",
             "color_up": "DarkGrey",
             "units": "V",
+            "hoverfmt": ".2f",
         },
         "Vrse": {
             "xaxis": "x1",
@@ -67,6 +68,7 @@ instrument_meta["fet"] = {
             "color_down": "Red",
             "color_up": "Magenta",
             "units": "V",
+            "hoverfmt": ".4f",
         },
         "Vrsestd": {
             "xaxis": "x1",
@@ -74,6 +76,7 @@ instrument_meta["fet"] = {
             "color_down": "Cyan",
             "color_up": "DarkCyan",
             "units": "V",
+            "hoverfmt": ".3g",
         },
         "Vk": {
             "xaxis": "x1",
@@ -81,6 +84,7 @@ instrument_meta["fet"] = {
             "color_down": "orange",
             "color_up": "darkgoldenrod",
             "units": "V",
+            "hoverfmt": ".4f",
         },
         "Vkstd": {
             "xaxis": "x1",
@@ -88,6 +92,7 @@ instrument_meta["fet"] = {
             "color_down": "Green",
             "color_up": "DarkGreen",
             "units": "V",
+            "hoverfmt": ".3g",
         },
         "Ik": {
             "xaxis": "x2",
@@ -95,6 +100,7 @@ instrument_meta["fet"] = {
             "color_down": "Blue",
             "color_up": "DarkBlue",
             "units": "uI",
+            "hoverfmt": ".4f",
         },
         "Ib": {
             "xaxis": "x2",
@@ -102,6 +108,7 @@ instrument_meta["fet"] = {
             "color_down": "olive",
             "color_up": "darkolivegreen",
             "units": "uI",
+            "hoverfmt": ".4f",
         },
     },
 }
@@ -226,6 +233,7 @@ def plot_science(
 
                 chan_name = var_n
                 units = var_meta["units"]
+                hover_fmt = var_meta["hoverfmt"]
 
                 fig.add_trace(
                     {
@@ -241,10 +249,7 @@ def plot_science(
                             "symbol": "triangle-down",
                             "color": var_meta["color_down"],
                         },
-                        "hovertemplate": f"{chan_name}  Dive<br>"
-                        + "%{x:.2f} "
-                        + units
-                        + "<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
+                        "hovertemplate": f"{chan_name}  Dive<br>%{{x:{hover_fmt}}} {units}<br>%{{y:.2f}} meters<br>%{{meta:.2f}} mins<extra></extra>",
                     }
                 )
                 fig.add_trace(
@@ -261,10 +266,7 @@ def plot_science(
                             "symbol": "triangle-up",
                             "color": var_meta["color_up"],
                         },
-                        "hovertemplate": f"{chan_name}  Climb<br>"
-                        + "%{x:.2f} "
-                        + units
-                        + "<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
+                        "hovertemplate": f"{chan_name}  Climb<br>%{{x:{hover_fmt}}} {units}<br>%{{y:.2f}} meters<br>%{{meta:.2f}} mins<extra></extra>",
                     }
                 )
 
