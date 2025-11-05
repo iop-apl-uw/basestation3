@@ -101,7 +101,8 @@ def plot_optode(
 
     binned_profile = "profile_data_point" in dive_nc_file.dimensions
 
-    sat_O2 = optode_instrument_O2 = optode_correctedO2 = None
+    sat_O2 = optode_instrument_O2 = optode_correctedO2 = optode_instrument_temp = None
+    min_temp = max_temp = None
     try:
         sg_time = dive_nc_file.variables["time"][:]
         sg_depth = None
@@ -132,6 +133,25 @@ def plot_optode(
             if f"aa{optode_type}_O2" in dive_nc_file.variables:
                 optode_instrument_O2 = dive_nc_file.variables[f"aa{optode_type}_O2"][:]
 
+            if f"aa{optode_type}_temp" in dive_nc_file.variables:
+                optode_instrument_temp = dive_nc_file.variables[
+                    f"aa{optode_type}_temp"
+                ][:]
+                min_temp = np.nanmin(optode_instrument_temp) - (
+                    0.05
+                    * abs(
+                        np.nanmax(optode_instrument_temp)
+                        - np.nanmin(optode_instrument_temp)
+                    )
+                )
+                max_temp = np.nanmax(optode_instrument_temp) + (
+                    0.05
+                    * abs(
+                        np.nanmax(optode_instrument_temp)
+                        - np.nanmin(optode_instrument_temp)
+                    )
+                )
+
             if "dissolved_oxygen_sat" in dive_nc_file.variables:
                 sat_O2 = dive_nc_file.variables["dissolved_oxygen_sat"]
                 sat_O2_time = find_matching_time(dive_nc_file, sat_O2)
@@ -153,6 +173,10 @@ def plot_optode(
             if f"eng_aa{optode_type}_O2" in dive_nc_file.variables:
                 optode_instrument_O2 = dive_nc_file.variables[
                     f"eng_aa{optode_type}_O2"
+                ][:]
+            if f"eng_aa{optode_type}_temp" in dive_nc_file.variables:
+                optode_instrument_temp = dive_nc_file.variables[
+                    f"eng_aa{optode_type}_temp"
                 ][:]
     except Exception:
         log_warning("Could not load oxygen data", "exc")
@@ -223,6 +247,14 @@ def plot_optode(
         if optode_instrument_O2 is not None:
             optode_instrument_O2_dive = optode_instrument_O2[0:max_depth_sample_index]
             optode_instrument_O2_climb = optode_instrument_O2[max_depth_sample_index:]
+
+        if optode_instrument_temp is not None:
+            optode_instrument_temp_dive = optode_instrument_temp[
+                0:max_depth_sample_index
+            ]
+            optode_instrument_temp_climb = optode_instrument_temp[
+                max_depth_sample_index:
+            ]
 
         if not start_time:
             start_time = optode_instrument_O2_time[0]
@@ -307,7 +339,6 @@ def plot_optode(
                 "hovertemplate": "Inst Reported O2 Climb<br>%{x:.2f} umol/kg<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
             }
         )
-
     if o2_qc_good:
         qc_tag = "- QC_GOOD"
     else:
@@ -386,6 +417,44 @@ def plot_optode(
             }
         )
 
+    if optode_instrument_temp is not None:
+        fig.add_trace(
+            {
+                "y": depth_dive,
+                "x": optode_instrument_temp_dive,
+                "meta": optode_instrument_O2_time_dive,
+                "name": "Instrument Reported Temp Dive",
+                "type": "scatter",
+                "xaxis": "x2",
+                "yaxis": "y1",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-down",
+                    "color": "LightGrey",
+                },
+                "hovertemplate": "Inst Reported Temp Dive<br>%{x:.2f} C<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
+                "visible": "legendonly",
+            }
+        )
+        fig.add_trace(
+            {
+                "y": depth_climb,
+                "x": optode_instrument_temp_climb,
+                "meta": optode_instrument_O2_time_climb,
+                "name": "Instrument Reported Temp Climb",
+                "type": "scatter",
+                "xaxis": "x2",
+                "yaxis": "y1",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-up",
+                    "color": "DarkGrey",
+                },
+                "hovertemplate": "Inst Reported Temp Climb<br>%{x:.2f} C<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
+                "visible": "legendonly",
+            }
+        )
+
     # Only for time series plots
     timeouts = None
     if max_depth_sample_index is not None:
@@ -424,38 +493,46 @@ def plot_optode(
     )
     output_name = "dv%04d_aa%s" % (dive_nc_file.dive_number, optode_type)
 
-    fig.update_layout(
-        {
-            "xaxis": {
-                "title": r"Dissolved Oxygen (umol/kg)",
-                "showgrid": True,
-                "side": "top",
-                # "range": [min_salinity, max_salinity],
-            },
-            "yaxis": {
-                "title": "Depth (m)",
-                "showgrid": True,
-                "autorange": "reversed",
-                # "range": [
-                #     max(
-                #         depth_dive.max() if len(depth_dive) > 0 else 0,
-                #         depth_climb.max() if len(depth_climb) > 0 else 0,
-                #     ),
-                #     0,
-                # ],
-            },
-            "title": {
-                "text": title_text,
-                "xanchor": "center",
-                "yanchor": "top",
-                "x": 0.5,
-                "y": 0.95,
-            },
-            "margin": {
-                "t": 150,
-            },
+    update_dict = {
+        "xaxis": {
+            "title": r"Dissolved Oxygen (umol/kg)",
+            "showgrid": True,
+            "side": "top",
+            # "range": [min_salinity, max_salinity],
+        },
+        "yaxis": {
+            "title": "Depth (m)",
+            "showgrid": True,
+            "autorange": "reversed",
+            # "range": [
+            #     max(
+            #         depth_dive.max() if len(depth_dive) > 0 else 0,
+            #         depth_climb.max() if len(depth_climb) > 0 else 0,
+            #     ),
+            #     0,
+            # ],
+        },
+        "title": {
+            "text": title_text,
+            "xanchor": "center",
+            "yanchor": "top",
+            "x": 0.5,
+            "y": 0.95,
+        },
+        "margin": {
+            "t": 150,
+        },
+    }
+
+    if min_temp is not None:
+        update_dict["xaxis2"] = {
+            "title": r"Temperature (C)",
+            "overlaying": "x1",
+            "side": "bottom",
+            "range": [min_temp, max_temp],
         }
-    )
+
+    fig.update_layout(update_dict)
 
     # Instrument cal date
 
@@ -487,7 +564,7 @@ def plot_optode(
                             "xref": "paper",
                             "yref": "paper",
                             "x": 0.0,
-                            "y": -0.08,
+                            "y": -0.14,
                         }
                     ]
                 )
