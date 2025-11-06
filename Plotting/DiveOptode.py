@@ -101,7 +101,9 @@ def plot_optode(
 
     binned_profile = "profile_data_point" in dive_nc_file.dimensions
 
-    sat_O2 = optode_instrument_O2 = optode_correctedO2 = optode_instrument_temp = None
+    sat_O2 = sat_O2_depth = optode_instrument_O2 = optode_correctedO2 = (
+        optode_instrument_temp
+    ) = None
     min_temp = max_temp = None
     try:
         sg_time = dive_nc_file.variables["time"][:]
