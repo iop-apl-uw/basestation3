@@ -139,20 +139,6 @@ def plot_optode(
                 optode_instrument_temp = dive_nc_file.variables[
                     f"aa{optode_type}_temp"
                 ][:]
-                min_temp = np.nanmin(optode_instrument_temp) - (
-                    0.05
-                    * abs(
-                        np.nanmax(optode_instrument_temp)
-                        - np.nanmin(optode_instrument_temp)
-                    )
-                )
-                max_temp = np.nanmax(optode_instrument_temp) + (
-                    0.05
-                    * abs(
-                        np.nanmax(optode_instrument_temp)
-                        - np.nanmin(optode_instrument_temp)
-                    )
-                )
 
             if "dissolved_oxygen_sat" in dive_nc_file.variables:
                 sat_O2 = dive_nc_file.variables["dissolved_oxygen_sat"]
@@ -182,6 +168,16 @@ def plot_optode(
                 ][:]
     except Exception:
         log_warning("Could not load oxygen data", "exc")
+
+    if optode_instrument_temp is not None:
+        min_temp = np.nanmin(optode_instrument_temp) - (
+            0.05
+            * abs(np.nanmax(optode_instrument_temp) - np.nanmin(optode_instrument_temp))
+        )
+        max_temp = np.nanmax(optode_instrument_temp) + (
+            0.05
+            * abs(np.nanmax(optode_instrument_temp) - np.nanmin(optode_instrument_temp))
+        )
 
     if optode_correctedO2 is not None:
         if f"aanderaa{optode_type}_dissolved_oxygen_qc" in dive_nc_file.variables:
