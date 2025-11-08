@@ -78,7 +78,7 @@ def plot_coda(
 
     codatodo_instrument_sat_O2 = codatodo_instrument_compensated_O2 = (
         codatodo_instrument_uncompensated_O2
-    ) = codatodo_correctedO2 = None
+    ) = codatodo_correctedO2 = codatodo_instrument_temp = None
     try:
         sg_time = dive_nc_file.variables["time"][:]
         sg_depth = None
@@ -117,6 +117,9 @@ def plot_coda(
                     :
                 ]
 
+            if "codaTODO_temp" in dive_nc_file.variables:
+                codatodo_instrument_temp = dive_nc_file.variables["codaTODO_temp"][:]
+
             f = scipy.interpolate.interp1d(
                 sg_time, sg_depth, kind="linear", bounds_error=False, fill_value=0.0
             )
@@ -128,6 +131,10 @@ def plot_coda(
                 codatodo_instrument_sat_O2 = dive_nc_file.variables[
                     "eng_codatodo_O2_sat"
                 ][:]
+            if "eng_codaTODO_temp" in dive_nc_file.variables:
+                codatodo_instrument_temp = dive_nc_file.variables["eng_codaTODO_temp"][
+                    :
+                ]
             if "eng_codatodo_compensated_O2" in dive_nc_file.variables:
                 codatodo_instrument_compensated_O2 = dive_nc_file.variables[
                     "eng_codatodo_compensated_O2"
@@ -188,6 +195,28 @@ def plot_coda(
         codatodo_instrument_sat_O2_climb = codatodo_instrument_sat_O2[
             max_depth_sample_index:
         ]
+
+    if codatodo_instrument_temp is not None:
+        codatodo_instrument_temp_dive = codatodo_instrument_temp[
+            0:max_depth_sample_index
+        ]
+        codatodo_instrument_temp_climb = codatodo_instrument_temp[
+            max_depth_sample_index:
+        ]
+        min_temp = np.nanmin(codatodo_instrument_temp) - (
+            0.05
+            * abs(
+                np.nanmax(codatodo_instrument_temp)
+                - np.nanmin(codatodo_instrument_temp)
+            )
+        )
+        max_temp = np.nanmax(codatodo_instrument_temp) + (
+            0.05
+            * abs(
+                np.nanmax(codatodo_instrument_temp)
+                - np.nanmin(codatodo_instrument_temp)
+            )
+        )
 
     if codatodo_correctedO2 is not None:
         codatodo_correctedO2_dive = codatodo_correctedO2[0:max_depth_sample_index]
@@ -362,6 +391,44 @@ def plot_coda(
             }
         )
 
+    if codatodo_instrument_temp is not None:
+        fig.add_trace(
+            {
+                "y": depth_dive,
+                "x": codatodo_instrument_temp_dive,
+                "meta": codatodo_instrument_O2_time_dive,
+                "name": "Temperature dive",
+                "type": "scatter",
+                "xaxis": "x2",
+                "yaxis": "y1",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-down",
+                    "color": "LightGrey",
+                },
+                "hovertemplate": "Temperature Dive<br>%{x:.2f} C<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
+                "visible": "legendonly",
+            }
+        )
+        fig.add_trace(
+            {
+                "y": depth_climb,
+                "x": codatodo_instrument_temp_climb,
+                "meta": codatodo_instrument_O2_time_climb,
+                "name": "Temperature climb",
+                "type": "scatter",
+                "xaxis": "x2",
+                "yaxis": "y1",
+                "mode": "markers",
+                "marker": {
+                    "symbol": "triangle-up",
+                    "color": "DarkGrey",
+                },
+                "hovertemplate": "Temperature Climb<br>%{x:.2f} C<br>%{y:.2f} meters<br>%{meta:.2f} mins<extra></extra>",
+                "visible": "legendonly",
+            }
+        )
+
     timeouts, timeouts_times = PlotUtils.collect_timeouts(
         dive_nc_file,
         "codaTODO",
@@ -397,38 +464,46 @@ def plot_coda(
     )
     output_name = "dv%04d_codatodo" % dive_nc_file.dive_number
 
-    fig.update_layout(
-        {
-            "xaxis": {
-                "title": r"Dissolved Oxygen (umol/kg)",
-                "showgrid": True,
-                "side": "top",
-                # "range": [min_salinity, max_salinity],
-            },
-            "yaxis": {
-                "title": "Depth (m)",
-                "showgrid": True,
-                "autorange": "reversed",
-                # "range": [
-                #     max(
-                #         depth_dive.max() if len(depth_dive) > 0 else 0,
-                #         depth_climb.max() if len(depth_climb) > 0 else 0,
-                #     ),
-                #     0,
-                # ],
-            },
-            "title": {
-                "text": title_text,
-                "xanchor": "center",
-                "yanchor": "top",
-                "x": 0.5,
-                "y": 0.95,
-            },
-            "margin": {
-                "t": 150,
-            },
+    update_dict = {
+        "xaxis": {
+            "title": r"Dissolved Oxygen (umol/kg)",
+            "showgrid": True,
+            "side": "top",
+            # "range": [min_salinity, max_salinity],
+        },
+        "yaxis": {
+            "title": "Depth (m)",
+            "showgrid": True,
+            "autorange": "reversed",
+            # "range": [
+            #     max(
+            #         depth_dive.max() if len(depth_dive) > 0 else 0,
+            #         depth_climb.max() if len(depth_climb) > 0 else 0,
+            #     ),
+            #     0,
+            # ],
+        },
+        "title": {
+            "text": title_text,
+            "xanchor": "center",
+            "yanchor": "top",
+            "x": 0.5,
+            "y": 0.95,
+        },
+        "margin": {
+            "t": 150,
+        },
+    }
+
+    if codatodo_instrument_temp is not None:
+        update_dict["xaxis2"] = {
+            "title": r"Temperature (C)",
+            "overlaying": "x1",
+            "side": "bottom",
+            "range": [min_temp, max_temp],
         }
-    )
+
+    fig.update_layout(update_dict)
 
     # Instrument cal date
 
@@ -450,7 +525,7 @@ def plot_coda(
                             "xref": "paper",
                             "yref": "paper",
                             "x": 0.0,
-                            "y": -0.08,
+                            "y": -0.14,
                         }
                     ]
                 )
