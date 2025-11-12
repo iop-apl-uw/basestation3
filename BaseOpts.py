@@ -1106,6 +1106,18 @@ global_options_dict = {
             "option_group": "plotting",
         },
     ),
+    "thumbnail_webp": options_t(
+        True,
+        ("Base", "BasePlot", "Reprocess"),
+        ("--thumbnail_webp",),
+        bool,
+        {
+            "help": "Generates webp files of thumbnail size",
+            "section": "plotting",
+            "action": argparse.BooleanOptionalAction,
+            "option_group": "plotting",
+        },
+    ),
     "compress_div": options_t(
         True,
         ("Base", "BasePlot", "Reprocess"),

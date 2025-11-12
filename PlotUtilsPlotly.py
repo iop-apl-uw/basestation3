@@ -36,6 +36,7 @@ import os
 import warnings
 
 import brotli
+import PIL
 import plotly
 import plotly.graph_objects
 import plotly.io
@@ -46,6 +47,10 @@ from BaseLog import log_error, log_warning
 std_width = 1058
 std_height = 894
 std_scale = 1.0
+
+# Matches what vis is expecting
+thumbnail_width = 185
+thumbnail_height = 185
 
 
 #
@@ -172,10 +177,16 @@ def write_output_files(base_opts, base_file_name, fig):
         #   DeprecationWarning: setDaemon() is deprecated, set the daemon attribute instead
         #
         # Remove when kelido is updated
+
+        if output_fmt == "webp" and base_opts.thumbnail_webp:
+            output_stream = io.BytesIO()
+        else:
+            output_stream = output_name
+
         with warnings.catch_warnings():
             warnings.filterwarnings("ignore")
             fig.write_image(
-                output_name,
+                output_stream,
                 format=output_fmt,
                 width=std_width,
                 height=std_height,
@@ -183,6 +194,11 @@ def write_output_files(base_opts, base_file_name, fig):
                 validate=True,
                 engine="kaleido",
             )
+        if output_fmt == "webp" and base_opts.thumbnail_webp:
+            image = PIL.Image.open(output_stream)
+            resized_image = image.resize((thumbnail_height, thumbnail_width))
+            resized_image.save(output_name)
+
         return output_name
 
     if base_opts.save_png:
