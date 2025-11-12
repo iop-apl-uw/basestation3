@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -41,7 +41,7 @@ mission_profile_nc_fileversion = "2.71"
 mission_timeseries_nc_fileversion = "2.71"
 mission_per_dive_nc_fileversion = "2.71"
 # These document level of functionality
-basestation_version = "3.0.2"
+basestation_version = "3.0.6"
 quality_control_version = "1.12"
 
 # The oldest format version this code supports

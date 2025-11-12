@@ -1,3 +1,11 @@
+[project]
+name = "basestation3"
+version = "3.0.6"
+description = "Seaglider shore side processing"
+readme = "Readme.md"
+requires-python = "==3.10.10"
+dependencies = []
+
 [tool.mypy]
 plugins = ['numpy.typing.mypy_plugin', 'pydantic.mypy']
 files = ['Base.py', 'MakeDiveProfiles.py', "Reprocess.py"]
