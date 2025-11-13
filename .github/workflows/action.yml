@@ -12,19 +12,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up Python 3.10
-      uses: actions/setup-python@v5
+    - uses: actions/checkout@v5
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
       with:
-        python-version: "3.10.10"
+        # Install specific version of UV
+        version: "0.9.9"
+        enable-cache: true
+    
+    - name: Set up Python 3.10
+      run: uv python install
+      
     - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        #pip install ruff
-        if [ -f requirements-ci.txt ]; then pip install -r requirements-ci.txt; fi
+      run: uv sync --locked --extra ci -q
+
     - name: Check with Ruff
       run: |
-        ruff check --output-format=github
+        uv run ruff check --output-format=github
+        
     - name: Test with pytest
       run: |
-        pytest -rsx --cov --cov-report term-missing tests/
+        uv run pytest -rsx --cov --cov-report term-missing tests/
