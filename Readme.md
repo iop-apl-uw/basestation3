@@ -128,10 +128,49 @@ comment out the following lines:
 	#session    optional   pam_motd.so noupdate
 	#session    optional   pam_lastlog.so
 
+
+## Basestation source
+
+Basestation3 assumes it is installed in `/usr/local/basesation3`.
+
+``` 
+sudo mkdir -p /usr/local/basestation3
+
+```
+
+Next, make sure the directory has the correct ownership and  ```gliders``` group has 
+read and execute permissions for all files:
+
+```
+sudo chown -R <user>:gliders /usr/local/basestation3
+sudo chmod -R g+rx /usr/local/basestation3
+```
+
+### Living on the edge
+
+If you want to install and keep up with the latest and greatest (or the very 
+leading edge), you can clone this repository to that location:
+
+`git clone https://github.com/iop-apl-uw/basestation3.git /usr/local/basestation3`
+
+Then you can update your basestation code by running a `git pull origin master` from 
+`/usr/local/basestation3` at a later time.
+
+You can also download a zip file and unzip that into
+`/usr/local/basestation3`. 
+
+A word of caution - the HEAD revision may not be stable and any given point in
+time.  It also may contain features or changes that are experimental on subject
+to change or removal.
+
+## Installation - two approaches
+
+There are now two approaches to installing python and the required packages.  The first is the "traditional" basestation3 approach - which involves building python from scratch and installing packages via the python package installer - ```pip```.  The second (alternative) approach involves the package/project manager [uv](https://github.com/astral-sh/uv).  For now, either approach will work, but in future releases, the ``uv`` approach will be on the only one documented/supported.  If you want to give the ``uv`` approach a try, jump to [Install python and the basestation package with UV](#install-python-and-the-basestation-package-with-uv)
+
 ## Installing python
 
 This section applies if the required version of python has changed since the last install of 
-basestation3.  If not, skip to [Install the basestation code and python packages](#install-the-basestation-code-and-python-packages)
+basestation3.  If not, skip to [Install the basestation python packages](#install-the-basestation-python-packages)
 
 It is recommended that version 3.10.10 of python be installed along the a specific set of
 python support libraries.  The process is as follows:
@@ -178,49 +217,7 @@ Replace ```<user>``` in the above your username.
 /opt/python/3.10.10/bin/python3 --version
 ```
 
-### Install the basestation code and python packages
-
-#### Basestation source
-
-Basestation3 assumes it is installed in `/usr/local/basesation3`.
-
-``` 
-sudo mkdir -p /usr/local/basestation3
-
-```
-
-Next, make sure the directory has the correct ownership and  ```gliders``` group has 
-read and execute permissions for all files:
-
-```
-sudo chown -R <user>:gliders /usr/local/basestation3
-sudo chmod -R g+rx /usr/local/basestation3
-```
-
-#### Living on the edge
-
-If you want to install and keep up with the latest and greatest (or the very 
-leading edge), you can clone this repository to that location:
-
-`git clone https://github.com/iop-apl-uw/basestation3.git /usr/local/basestation3`
-
-Then you can update your basestation code by running a `git pull origin master` from 
-`/usr/local/basestation3` at a later time.
-
-You can also download a zip file and unzip that into
-`/usr/local/basestation3`. 
-
-A word of caution - the HEAD revision may not be stable and any given point in
-time.  It also may contain features or changes that are experimental on subject
-to change or removal.
-
-#### Releases
-
-We do designate releases from time to time and are available from the 
-[Releases](https://github.com/iop-apl-uw/basestation3/releases) page.  There is
-no set schedule for these.
-
-#### Basestation python packages
+### Install the basestation python packages
 
 ```
 rm -rf /opt/basestation
@@ -236,6 +233,42 @@ Replace ```<user>``` in the above your username. Then
 /opt/python/3.10.10/bin/python3 -m venv /opt/basestation
 /opt/basestation/bin/pip install -r /usr/local/basestation3/requirements.txt
 ```
+Now, jump to [login/logout scripts](#login-logout-scripts)
+
+## Install python and the basestation packages with UV
+
+This alternate (and eventually only) method of setting up python and the supporting packages uses the ``uv`` package manager.
+
+First step is to install [uv](https://github.com/astral-sh/uv).  More detailed instructions can be found in the [uv documentation](https://docs.astral.sh/uv/).
+
+Second, create the virtual environment:
+
+```
+sudo mkdir -p /opt/basestation
+sudo chown -R <user>:gliders /opt/basestation
+```
+Replace ```<user>``` in the above your username. Then, use ``uv`` to create the virtual environment:
+
+```uv venv /opt/basestation```
+
+Next activate the virtual environment:
+
+```source /opt/basestation/bin/activate```
+
+Make sure your current directory is the root of the basestation source tree:
+
+```cd /usr/local/basestation3```
+
+Finally, setup the virtual environment:
+
+```uv sync --active```
+
+To test that all is working:
+
+```/opt/basestation/bin/python Base.py --help```
+
+and you should see the help message for ```Base.py```
+
 ### login/logout scripts
 
 Basestation3 differs somewhat from Basestation2, but also allows for a server
