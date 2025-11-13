@@ -1314,7 +1314,7 @@
                     console.log(d[cols[0]]);
                     if (d[cols[0]] != prev) {
                         if (cols[0] == 'parm')
-                            txt += `<td><a target="parms" href="parms#${d['parm'].slice(1)}">${d['parm']}</a></td>`;
+                            txt += `<td><a target="parms" href="parms#${d['parm'].slice(0)}">${d['parm']}</a></td>`;
                         else
                             txt += '<td>' + d['dive'] + '</td>';
 
@@ -1324,7 +1324,7 @@
                         txt += '<td></td>';
                     
                     if (cols[1] == 'parm')
-                        txt += `<td><a target="parms" href="parms#${d['parm'].slice(1)}">${d['parm']}</a></td>`;
+                        txt += `<td><a target="parms" href="parms#${d['parm'].slice(0)}">${d['parm']}</a></td>`;
                     else
                         txt += '<td>' + d['dive'] + '</td>';
 
@@ -2993,7 +2993,7 @@ parms[p]
         html += '<h3 onclick="showPilotWheel(); changeWheelPane(\'History\'); return false;" style="color:blue;">parameter changes</h3><p><table style="margin-left:40px;">';
         for (i = 0 ; i < deltas['parm'].length; i++) {
             pieces = deltas['parm'][i];
-            html += `<tr><td><a target="parms" href=\"parms#${pieces['parm'].slice(1)}\">${pieces['parm']}</a>&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
+            html += `<tr><td><a target="parms" href=\"parms#${pieces['parm'].slice(0)}\">${pieces['parm']}</a>&nbsp;&nbsp;&nbsp;</td><td>${pieces['oldval']}</td><td> <b>&#10230;</b> <td>${pieces['newval']}</td></tr>`;
         } 
         
         html += '</table><p><h3 onclick="showPilotWheel(); changeWheelPane(\'History\'); return false;" style="color:blue;">control files</h3><p>';
