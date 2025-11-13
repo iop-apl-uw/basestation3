@@ -165,7 +165,7 @@ to change or removal.
 
 ## Installation - two approaches
 
-There are now two approaches to installing python and the required packages.  The first is the "traditional" basestation3 approach - which involves building python from scratch and installing packages via the python package installer - ```pip```.  The second (alternative) approach involves the package/project manager [uv](https://github.com/astral-sh/uv).  For now, either approach will work, but in future releases, the ``uv`` approach will be on the only one documented/supported.  If you want to give the ``uv`` approach a try, jump to [Install python and the basestation package with UV](#install-python-and-the-basestation-package-with-uv)
+There are now two approaches to installing python and the required packages.  The first is the "traditional" basestation3 approach - which involves building python from scratch and installing packages via the python package installer - ```pip```.  The second (alternative) approach involves the package/project manager [uv](https://github.com/astral-sh/uv).  For now, either approach will work, but in future releases, the ``uv`` approach will be on the only one documented/supported.  If you want to give the ``uv`` approach a try, jump to [Install python and the basestation packages with UV](#install-python-and-the-basestation-packages-with-uv)
 
 ## Installing python
 
@@ -233,7 +233,7 @@ Replace ```<user>``` in the above your username. Then
 /opt/python/3.10.10/bin/python3 -m venv /opt/basestation
 /opt/basestation/bin/pip install -r /usr/local/basestation3/requirements.txt
 ```
-Now, jump to [login/logout scripts](#login-logout-scripts)
+Now, jump to [login/logout scripts](#loginlogout-scripts)
 
 ## Install python and the basestation packages with UV
 
