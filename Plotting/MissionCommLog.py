@@ -279,7 +279,6 @@ def mission_commlog(
                 }
             )
 
-    # TODO - a
     ctd_col_type = collections.namedtuple(
         "ctd_col_type", ("name", "title", "units", "color", "scale")
     )
@@ -289,34 +288,35 @@ def mission_commlog(
         ctd_col_type("sst", "Seawater surface temperature", "C", "orange", 0.2),
     )
     if all(ii.name in df.columns for ii in ctd_cols):
-        good_pts = df["sss"] != 0.0
-
-        # TODO - more from here
-        for ctd_col in ctd_cols:
-            fig.add_trace(
-                {
-                    "name": f"{ctd_col.title}/{1.0/ctd_col.scale:.0f} ({ctd_col.units})",
-                    "x": callNum[good_pts],
-                    "y": df[ctd_col.name][good_pts] * ctd_col.scale,
-                    "customdata": np.squeeze(
-                        np.dstack(
-                            (
-                                np.transpose(dive_nums[good_pts]),
-                                df[ctd_col.name][good_pts],
+        good_pts = np.logical_and(
+            df["sss"] != 0.0, [ii is not None for ii in df["sss"].to_numpy()]
+        )
+        if np.nonzero(good_pts)[0].size > 2:
+            for ctd_col in ctd_cols:
+                fig.add_trace(
+                    {
+                        "name": f"{ctd_col.title}/{1.0/ctd_col.scale:.0f} ({ctd_col.units})",
+                        "x": callNum[good_pts],
+                        "y": df[ctd_col.name][good_pts] * ctd_col.scale,
+                        "customdata": np.squeeze(
+                            np.dstack(
+                                (
+                                    np.transpose(dive_nums[good_pts]),
+                                    df[ctd_col.name][good_pts],
+                                )
                             )
-                        )
-                    ),
-                    "yaxis": "y2",
-                    "mode": "lines+markers",
-                    "marker": {"symbol": "cross", "size": 3},
-                    "line": {
-                        "dash": "solid",
-                        "color": ctd_col.color,
-                        "width": 1,
-                    },
-                    "hovertemplate": f"{ctd_col.title} %{{customdata[1]:.2f}} {ctd_col.units}<br>Dive Num %{{customdata[0]}}<br>Call Num %{{x}}<extra></extra>",
-                }
-            )
+                        ),
+                        "yaxis": "y2",
+                        "mode": "lines+markers",
+                        "marker": {"symbol": "cross", "size": 3},
+                        "line": {
+                            "dash": "solid",
+                            "color": ctd_col.color,
+                            "width": 1,
+                        },
+                        "hovertemplate": f"{ctd_col.title} %{{customdata[1]:.2f}} {ctd_col.units}<br>Dive Num %{{customdata[0]}}<br>Call Num %{{x}}<extra></extra>",
+                    }
+                )
 
     fig.add_trace(
         {
