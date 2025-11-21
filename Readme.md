@@ -246,10 +246,14 @@ Second, create the virtual environment:
 ```
 sudo mkdir -p /opt/basestation
 sudo chown -R <user>:gliders /opt/basestation
+sudo mkdir -p /opt/python_versions
+sudo chown -R <user>:gliders /opt/python_versions
 ```
 Replace ```<user>``` in the above your username. Then, use ``uv`` to create the virtual environment:
 
-```uv venv /opt/basestation```
+```UV_MANAGED_PYTHON=1 UV_PYTHON_INSTALL_DIR=/opt/python_versions uv venv --clear /opt/basestation```
+
+*Note: if you previously created /opt/basestation using the non-uv method, you may encounter the error - failed to remove directory `/opt/basestation`: Permission denied.  If this happens, just re-run the command*
 
 Next activate the virtual environment:
 
@@ -261,7 +265,9 @@ Make sure your current directory is the root of the basestation source tree:
 
 Finally, setup the virtual environment:
 
-```uv sync --active```
+```UV_MANAGED_PYTHON=1 UV_PYTHON_INSTALL_DIR=/opt/python_versions uv sync --active```
+
+*Note: if you encounter the error - failed to remove directory `/opt/basestation`: Permission denied, just re-run the command*
 
 To test that all is working:
 
