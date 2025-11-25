@@ -120,7 +120,7 @@ def send_slack(
     send_dict: dict,
     subject_line: str,
     message_body: str,
-    gps_fix:GPS.GPSFix | None  = None        
+    gps_fix:GPS.GPSFix | None  = None
 ) -> None:
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
@@ -155,7 +155,7 @@ def send_mattermost(
     send_dict: dict,
     subject_line: str,
     message_body: str,
-    gps_fix:GPS.GPSFix | None  = None        
+    gps_fix:GPS.GPSFix | None  = None
 ) -> None:
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
@@ -206,10 +206,10 @@ def send_ntfy(
     send_dict: dict,
     subject_line: str,
     message_body: str,
-    gps_fix:GPS.GPSFix | None  = None        
+    gps_fix:GPS.GPSFix | None  = None
 ) -> None:
     default_priorities = { "critical": 5 }
-    tags = { 
+    tags = {
              "gps": "globe_with_meridians",
              "alerts": "warning",
              "errors": "warning",
@@ -234,8 +234,8 @@ def send_ntfy(
         priority = 3 # 3 is ntfy default priority
 
     msg = {
-            "title": subject_line, 
-            "message": message_body, 
+            "title": subject_line,
+            "message": message_body,
             "topic": endpoint["topic"],
             "priority": priority,
           }
@@ -254,11 +254,11 @@ def send_ntfy(
                                 "clear": True,
                                 "url": f"{base_opts.vis_base_url}/map/{instrument_id}",
                             },
-                        ]    
+                        ]
         t = re.search(r"Consult baselog_\d+", message_body)
         if t:
             timestamp = t[0].split('_')[1]
-            msg['actions'].append( 
+            msg['actions'].append(
                                     {
                                         "action": "view",
                                         "label": "baselog",
@@ -266,7 +266,7 @@ def send_ntfy(
                                         "url": f"{base_opts.vis_base_url}/baselog/{instrument_id}/{timestamp}",
                                     }
                                  )
-            
+
 
     if 'type' in send_dict and send_dict['type'] in tags:
         msg['tags'] = [ tags[send_dict['type']] ]
@@ -293,7 +293,7 @@ def send_post(
     send_dict: dict,
     subject_line: str,
     message_body: str,
-    gps_fix:GPS.GPSFix | None  = None        
+    gps_fix:GPS.GPSFix | None  = None
 ) -> None:
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
@@ -320,7 +320,7 @@ def send_post(
             )
     except Exception:
         log_error(f"Error in post user:{user}, endpoint:{endpoint}", "exc")
-    
+
 
 
 def send_inreach(
@@ -329,7 +329,7 @@ def send_inreach(
     send_dict: dict,
     subject_line: str,
     message_body: str,
-    gps_fix:GPS.GPSFix | None  = None        
+    gps_fix:GPS.GPSFix | None  = None
 ) -> None:
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
@@ -377,7 +377,7 @@ def send_inreach(
 
     ret_val = requests.post("https://us0-enterprise.inreach.garmin.com:443/IpcInbound/V1/Messaging.svc/Message", json=data, auth=(endpoint["usr"], endpoint["pwd"]))
     log_info(f"inReach Post Return {ret_val.json()}")
-    
+
 
 
 pagers_sendfuncs = {
@@ -659,7 +659,7 @@ def process_pagers_yml(
                             subject_line,
                             upload_message,
                         )
-                    
+
                 case "drift":
                     if comm_log:
                         drift_message = comm_log.predict_drift(si["latlon"])
@@ -735,7 +735,7 @@ def process_pagers_yml(
                             )
                         except Exception:
                             log_error("Problem formatting GPS message", "exc")
-                            
+
                         try:
                             gps_fix = session.gps_fix
                         except Exception:
@@ -838,10 +838,23 @@ def process_pagers_yml(
                             processed_files_message,
                         )
 
-                case "errors" | "traceback":
+                case "errors":
                     if processed_files_message:
                         subject_line = (
                             f"Warnings and Errors from SG{instrument_id:03d} conversion"
+                        )
+                        si["send_func"](
+                            base_opts,
+                            instrument_id,
+                            si,
+                            subject_line,
+                            processed_files_message,
+                        )
+
+                case "traceback":
+                    if processed_files_message:
+                        subject_line = (
+                            f"Traceback log entres from SG{instrument_id:03d} conversion"
                         )
                         si["send_func"](
                             base_opts,
@@ -885,7 +898,7 @@ def main():
     )
 
     BaseLogger(base_opts, include_time=True)
-    
+
     global DEBUG_PDB
     DEBUG_PDB = base_opts.debug_pdb
 
