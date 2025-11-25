@@ -211,15 +211,11 @@ def plot_science(
 
             # For samples and timeout plots
             f_depth = scipy.interpolate.PchipInterpolator(
-                instrument_time,
-                instrument_depth_m_v,
+                sg_time,
+                sg_depth,
                 extrapolate=True,
             )
             max_depth = np.nanmax(instrument_depth_m_v)
-
-            # import pdb
-
-            # pdb.set_trace()
 
             fig = plotly.graph_objects.Figure()
 
