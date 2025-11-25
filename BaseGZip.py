@@ -162,6 +162,12 @@ def decompress(input_file_name, output_file_or_file_name):
 
     magic = input_file.read(2)
     # if magic != '\037\213':
+    if len(magic) < 2:
+        log_error(
+            "Could not read first two (magic) bytes from %s - not a gzipped file/file too short"
+            % input_file_name
+        )
+        return 1
     if magic[0] != 0x1F or magic[1] != 0x8B:
         log_error("%s not a gzipped file" % input_file_name)
         return 1
