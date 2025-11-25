@@ -497,7 +497,8 @@ def cat_fragments(output_file_name, fragment_list):
             except PermissionError:
                 log_error(f"Could not open {filename} due to file permissions")
                 ret_val = 1
-            output_file.write(data)
+            else:
+                output_file.write(data)
     return ret_val
 
 
