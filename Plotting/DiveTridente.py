@@ -158,8 +158,8 @@ def plot_tridente(
 
             # For samples and timeout plots
             f_depth = scipy.interpolate.PchipInterpolator(
-                tr_time,
-                tridente_depth_m_v,
+                sg_time,
+                sg_depth,
                 extrapolate=True,
             )
             max_depth = np.nanmax(tridente_depth_m_v)

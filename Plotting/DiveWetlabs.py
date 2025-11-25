@@ -148,8 +148,8 @@ def plot_wetlabs(
 
             # For samples and timeout plots
             f_depth = scipy.interpolate.PchipInterpolator(
-                wl_time,
-                wetlabs_depth_m_v,
+                sg_time,
+                sg_depth,
                 extrapolate=True,
             )
             max_depth = np.nanmax(wetlabs_depth_m_v)

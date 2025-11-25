@@ -265,8 +265,8 @@ def plot_optode(
 
         # For samples and timeout plots
         f_depth = scipy.interpolate.PchipInterpolator(
-            optode_instrument_O2_time,
-            optode_instrument_O2_depth,
+            sg_time,
+            sg_depth,
             extrapolate=True,
         )
         max_depth = np.nanmax(

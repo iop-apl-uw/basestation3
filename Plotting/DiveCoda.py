@@ -233,8 +233,8 @@ def plot_coda(
 
     # For samples and timeout plots
     f_depth = scipy.interpolate.PchipInterpolator(
-        codatodo_instrument_O2_time,
-        codatodo_instrument_O2_depth,
+        sg_time,
+        sg_depth,
         extrapolate=True,
     )
     max_depth = np.nanmax(codatodo_instrument_O2_depth)

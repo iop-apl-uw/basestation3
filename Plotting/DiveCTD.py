@@ -305,8 +305,8 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
             if sampled_mask is not None:
                 ctd_vars.ctd_time_sampled = ctd_vars.ctd_time_v[sampled_mask]
                 ctd_vars.f_depth = scipy.interpolate.PchipInterpolator(
-                    ctd_vars.ctd_time_sampled,
-                    ctd_vars.ctd_depth_m_v[sampled_mask],
+                    dive_nc_file.variables["time"][:],
+                    dive_nc_file.variables["depth"][:],
                     extrapolate=True,
                 )
                 ctd_vars.max_depth_sampled_i = np.nanargmax(

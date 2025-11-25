@@ -152,8 +152,8 @@ def plot_ocr504i(
 
         # For samples and timeout plots
         f_depth = scipy.interpolate.PchipInterpolator(
-            ocr504i_time,
-            depth,
+            dive_nc_file.variables["time"][:],
+            dive_nc_file.variables["depth"][:],
             extrapolate=True,
         )
         max_depth = np.nanmax(depth)
