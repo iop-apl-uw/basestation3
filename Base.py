@@ -488,11 +488,17 @@ def check_process_file_group(base, file_group, complete_files_dict):
 def cat_fragments(output_file_name, fragment_list):
     """Helper routine to assemble a list of fragment"""
     log_debug(f"About to open {output_file_name}")
+    ret_val = 0
     with open(output_file_name, "wb") as output_file:
         for filename in fragment_list:
-            with open(filename, "rb") as fi:
-                data = fi.read()
+            try:
+                with open(filename, "rb") as fi:
+                    data = fi.read()
+            except PermissionError:
+                log_error(f"Could not open {filename} due to file permissions")
+                ret_val = 1
             output_file.write(data)
+    return ret_val
 
 
 def test_decompress(inp_file_name, inp_file_list):
@@ -717,7 +723,11 @@ def process_file_group(
             log_info(f"Using {complete_xmit_filename} instead of fragments")
             fragments_1a = [complete_xmit_filename]
 
-    cat_fragments(defrag_file_name, fragments_1a)
+    if cat_fragments(defrag_file_name, fragments_1a):
+        log_error(
+            f"Couldn't concatenate fragments for {defrag_file_name}. Skipping dive processing"
+        )
+        return 1
 
     # Now process based on the specifics of the file
     log_info(f"Processing {defrag_file_name} in process_file_group")
