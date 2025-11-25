@@ -2194,6 +2194,10 @@ def load_dive_profile_data(
             if not log_f:
                 log_error("Could not parse %s - bailing out" % log_file_name)
                 raise RuntimeError(True)
+            if "st_secs" not in log_f.gc_data:
+                log_error("Could not find GC table in %s - bailing out" % log_file_name)
+                raise RuntimeError(True)
+
             BaseNetCDF.assign_dim_info_size(
                 nc_info_d, BaseNetCDF.nc_gc_event_info, len(log_f.gc_data["st_secs"])
             )
