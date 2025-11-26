@@ -55,13 +55,19 @@ output in near realtime.
 
 The extension may also be invoked directly if re-processing is needed:
 
+### All per-dive netCDF files
+
 ```
 /opt/basestation/bin/python /usr/local/basestation3/GliderDAC.py \
- --mission_dir <seaglider_home_directory>  --config <seaglider_config_file> [pXXXYYYY.nc]
+ --mission_dir <seaglider_home_directory>  --config <seaglider_config_file> 
 ```
 
-If the ```pXXXYYYY.nc``` file is provided, only that file will be processed.  Otherwise, all netcdf files in the mission
-directory will be processed.
+### A single per-dive netCDF files
+
+```
+/opt/basestation/bin/python /usr/local/basestation3/GliderDAC.py \
+ --config <seaglider_config_file> <path_to_pxxxyyyy.nc>
+```
 
 To push manually push files to the gliderdac, the following script is useful:
 
