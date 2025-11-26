@@ -274,8 +274,8 @@ def load_templates(base_opts):
     # Merge templates together
     try:
         reduce(NetCDFUtils.merge_dict, templates)
-    except Exception:
-        log_error("Error merging config templates", "exc")
+    except Exception as e:
+        log_error(f"Error merging config templates - {e.args}")
         return None
 
     return templates[0]
