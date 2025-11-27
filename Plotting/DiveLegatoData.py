@@ -163,9 +163,13 @@ def plot_legato_data(
     time_climb = (legato_time[max_depth_sample_index:] - legato_time[0]) / 60.0
 
     # For samples and timeout plots
+    sg_good_pts = np.logical_and(
+        np.logical_not(np.isnan(dive_nc_file.variables["time"][:])),
+        np.logical_not(np.isnan(dive_nc_file.variables["depth"][:])),
+    )
     f_depth = scipy.interpolate.PchipInterpolator(
-        dive_nc_file.variables["time"][:],
-        dive_nc_file.variables["depth"][:],
+        dive_nc_file.variables["time"][sg_good_pts],
+        dive_nc_file.variables["depth"][sg_good_pts],
         extrapolate=True,
     )
     max_depth = np.nanmax(depth)

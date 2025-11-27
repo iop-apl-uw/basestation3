@@ -304,9 +304,14 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
             # For samples and timeout plots
             if sampled_mask is not None:
                 ctd_vars.ctd_time_sampled = ctd_vars.ctd_time_v[sampled_mask]
+
+                sg_good_pts = np.logical_and(
+                    np.logical_not(np.isnan(dive_nc_file.variables["time"][:])),
+                    np.logical_not(np.isnan(dive_nc_file.variables["depth"][:])),
+                )
                 ctd_vars.f_depth = scipy.interpolate.PchipInterpolator(
-                    dive_nc_file.variables["time"][:],
-                    dive_nc_file.variables["depth"][:],
+                    dive_nc_file.variables["time"][sg_good_pts],
+                    dive_nc_file.variables["depth"][sg_good_pts],
                     extrapolate=True,
                 )
                 ctd_vars.max_depth_sampled_i = np.nanargmax(
@@ -1225,9 +1230,14 @@ def plot_CTD_series(
             n_frames += 1
 
         # Finally, update the figure
-        mission_dive_str = PlotUtils.get_mission_dive(
-            dive_nc_file, dives_str=f"Dives {dive_nums[0]} - {dive_nums[-1]}"
-        )
+        if len(dive_nums) > 1:
+            dives_str = f"Dives {dive_nums[0]} - {dive_nums[-1]}"
+        elif len(dive_nums) == 1:
+            dives_str = f"Dives {dive_nums[0]}"
+        else:
+            dives_str = ""
+
+        mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file, dives_str=dives_str)
         title_text = "%s<br>CTD Temperature%s and Salinity%s vs Depth%s%s%s" % (
             mission_dive_str,
             " RAW" if "raw" in temp_name else "",

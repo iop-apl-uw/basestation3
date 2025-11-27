@@ -264,9 +264,12 @@ def plot_optode(
         ) / 60.0
 
         # For samples and timeout plots
+        sg_good_pts = np.logical_and(
+            np.logical_not(np.isnan(sg_time)), np.logical_not(np.isnan(sg_depth))
+        )
         f_depth = scipy.interpolate.PchipInterpolator(
-            sg_time,
-            sg_depth,
+            sg_time[sg_good_pts],
+            sg_depth[sg_good_pts],
             extrapolate=True,
         )
         max_depth = np.nanmax(
