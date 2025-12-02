@@ -3699,6 +3699,10 @@ def make_dive_profile(
                 )
                 try:
                     nans, x = Utils.nan_helper(vehicle_heading_mag_degrees_v)
+                    if vehicle_heading_mag_degrees_v[~nans].size == 0:
+                        log_error("No valid compass points found - unable to proceed")
+                        return (1, None)
+
                     vehicle_heading_mag_degrees_v[nans] = np.interp(
                         x(nans), x(~nans), vehicle_heading_mag_degrees_v[~nans]
                     )
@@ -3712,8 +3716,10 @@ def make_dive_profile(
                     vehicle_roll_degrees_v[nans] = np.interp(
                         x(nans), x(~nans), vehicle_roll_degrees_v[~nans]
                     )
-                except Exception:
-                    log_error("Failed interpolating bad compass points", "exc")
+                except Exception as exception:
+                    log_error(
+                        f"Failed interpolating bad compass points - [{exception}]"
+                    )
                     return (1, None)
             try:
                 # The pitch roll calibration applied to the Sparton compass from 2005 to mid-2012

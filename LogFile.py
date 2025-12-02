@@ -462,7 +462,7 @@ def parse_log_file(in_filename, issue_warn=False):
                 try:
                     md = BaseNetCDF.nc_var_metadata[nc_var_name]
                 except Exception:
-                    log_error("Missing metadata for log entry %s" % parm_name)
+                    log_warning("Missing metadata for log entry %s" % parm_name)
                     md = BaseNetCDF.form_nc_metadata(
                         nc_var_name, nc_data_type="c"
                     )  # default metadata: treat as scalar string

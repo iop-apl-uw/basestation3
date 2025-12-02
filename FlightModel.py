@@ -3865,7 +3865,7 @@ def main(
     # otherwise it is moot.
     dive_nc_file_names = sorted(MakeDiveProfiles.collect_nc_perdive_files(base_opts))
     if len(dive_nc_file_names) == 0:
-        log_error("No dive profiles to process")
+        log_info("No dive profiles found")
         return 1
 
     # In case there is non-zero mass_comp
