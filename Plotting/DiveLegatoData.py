@@ -46,6 +46,7 @@ if typing.TYPE_CHECKING:
 
 import PlotUtils
 import PlotUtilsPlotly
+from BaseLog import log_error
 from Plotting import plotdivesingle
 
 
@@ -132,6 +133,10 @@ def plot_legato_data(
     conductivity = conductivity[mask]
     pressure = pressure[mask]
     legato_time = legato_time[mask]
+
+    if depth.size == 0:
+        log_error("No valid legato data points found - skipping plot")
+        return ([], [])
 
     # Find the deepest sample
     max_depth_sample_index = np.argmax(depth)
