@@ -881,9 +881,9 @@ def process_ftp_line(
                 log_info(f"Sending {tail}")
                 try:
                     ftp.storbinary(f"STOR {tail}", fi)
-                except Exception:
+                except Exception as exception:
                     log_error(
-                        f"Unable to send {ftp_file_name_to_send} - skipping", "exc"
+                        f"Unable to send {ftp_file_name_to_send} [{exception.args}]- skipping"
                     )
                     result = 1  # we had issues
                 else:
