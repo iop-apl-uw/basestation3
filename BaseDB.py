@@ -145,7 +145,7 @@ def insertColumn(dive, cur, col, val, db_type):
     if db_type == "TEXT":
         cur.execute(f"UPDATE dives SET {col} = '{val}' WHERE dive={dive};")
     else:
-        if math.isnan(val):
+        if not numpy.isfinite(val):
             val = 'NULL'
         cur.execute(f"UPDATE dives SET {col} = {val} WHERE dive={dive};")
 
