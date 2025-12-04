@@ -1655,6 +1655,7 @@ def main(
                     ballon_pairs,
                 )
             except Exception:
+                DEBUG_PDB_F()
                 log_error("Could not print surface position placemark", "exc")
 
         # Add the start of dive 1 into the mix, if available
@@ -1815,6 +1816,7 @@ def main(
                         ballon_pairs,
                     )
                 except Exception:
+                    DEBUG_PDB_F()
                     log_error("Could not print surface position placemark", "exc")
 
             if len(surface_positions) == 0 and dive_num in dive_gps_positions:
@@ -1970,6 +1972,7 @@ def main(
                             ballon_pairs,
                         )
                     except Exception:
+                        DEBUG_PDB_F()
                         log_error("Could not print surface position placemark", "exc")
 
                 fo.write("    </Folder>\n")
@@ -2008,7 +2011,7 @@ def main(
             )
             ballon_pairs.append(("Lat", f"{last_surface_position.gps_fix_lat:.4f}"))
             ballon_pairs.append(("Lon", f"{last_surface_position.gps_fix_lon:.4f}"))
-            if position.sms:
+            if last_surface_position.sms:
                 ballon_pairs.append(("ViaSMS", position.sms))
 
             # printDivePlacemark("Last reported position SG%03d %d:%d"
@@ -2030,6 +2033,7 @@ def main(
                 ballon_pairs,
             )
         except Exception:
+            DEBUG_PDB_F()
             log_error("Could not print surface position placemark", "exc")
 
     # Targets file processing
