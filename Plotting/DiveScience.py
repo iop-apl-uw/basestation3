@@ -234,40 +234,47 @@ def plot_science(
                 units = var_meta["units"]
                 hover_fmt = var_meta["hoverfmt"]
 
-                fig.add_trace(
-                    {
-                        "y": depth_dive,
-                        "x": var_dive,
-                        "meta": instrument_time_dive,
-                        "name": f"{chan_name} Dive",
-                        "type": "scatter",
-                        "xaxis": var_meta["xaxis"],
-                        "yaxis": var_meta["yaxis"],
-                        "mode": "markers",
-                        "marker": {
-                            "symbol": "triangle-down",
-                            "color": var_meta["color_down"],
-                        },
-                        "hovertemplate": f"{chan_name}  Dive<br>%{{x:{hover_fmt}}} {units}<br>%{{y:.2f}} meters<br>%{{meta:.2f}} mins<extra></extra>",
-                    }
-                )
-                fig.add_trace(
-                    {
-                        "y": depth_climb,
-                        "x": var_climb,
-                        "meta": instrument_time_climb,
-                        "name": f"{chan_name} Climb",
-                        "type": "scatter",
-                        "xaxis": var_meta["xaxis"],
-                        "yaxis": var_meta["yaxis"],
-                        "mode": "markers",
-                        "marker": {
-                            "symbol": "triangle-up",
-                            "color": var_meta["color_up"],
-                        },
-                        "hovertemplate": f"{chan_name}  Climb<br>%{{x:{hover_fmt}}} {units}<br>%{{y:.2f}} meters<br>%{{meta:.2f}} mins<extra></extra>",
-                    }
-                )
+                dive_dict = {
+                    "y": depth_dive,
+                    "x": var_dive,
+                    "meta": instrument_time_dive,
+                    "name": f"{chan_name} Dive",
+                    "type": "scatter",
+                    "xaxis": var_meta["xaxis"],
+                    "yaxis": var_meta["yaxis"],
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "triangle-down",
+                        "color": var_meta["color_down"],
+                    },
+                    "hovertemplate": f"{chan_name}  Dive<br>%{{x:{hover_fmt}}} {units}<br>%{{y:.2f}} meters<br>%{{meta:.2f}} mins<extra></extra>",
+                }
+
+                if "visible" in var_meta:
+                    dive_dict["visible"] = var_meta["visible"]
+
+                fig.add_trace(dive_dict)
+
+                climb_dict = {
+                    "y": depth_climb,
+                    "x": var_climb,
+                    "meta": instrument_time_climb,
+                    "name": f"{chan_name} Climb",
+                    "type": "scatter",
+                    "xaxis": var_meta["xaxis"],
+                    "yaxis": var_meta["yaxis"],
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "triangle-up",
+                        "color": var_meta["color_up"],
+                    },
+                    "hovertemplate": f"{chan_name}  Climb<br>%{{x:{hover_fmt}}} {units}<br>%{{y:.2f}} meters<br>%{{meta:.2f}} mins<extra></extra>",
+                }
+
+                if "visible" in var_meta:
+                    climb_dict["visible"] = var_meta["visible"]
+
+                fig.add_trace(climb_dict)
 
             timeouts = None
             if max_depth_sample_index is not None:
@@ -308,38 +315,38 @@ def plot_science(
 
             output_name.lower()
 
-            fig.update_layout(
-                {
-                    "xaxis": {
-                        # TODO
-                        "title": meta["layout"]["xaxis_title"],
-                        "showgrid": True,
-                        "side": "bottom",
-                    },
-                    "yaxis": {
-                        "title": "Depth (m)",
-                        "showgrid": True,
-                        "autorange": "reversed",
-                    },
-                    "xaxis2": {
-                        # TODO
-                        "title": meta["layout"]["xaxis2_title"],
-                        "overlaying": "x1",
-                        "side": "top",
-                        "showgrid": False,
-                    },
-                    "title": {
-                        "text": title_text,
-                        "xanchor": "center",
-                        "yanchor": "top",
-                        "x": 0.5,
-                        "y": 0.95,
-                    },
-                    "margin": {
-                        "t": 150,
-                    },
+            update_dict = {
+                "xaxis": {
+                    "title": meta["layout"]["xaxis_title"],
+                    "showgrid": True,
+                    "side": "bottom",
+                },
+                "yaxis": {
+                    "title": "Depth (m)",
+                    "showgrid": True,
+                    "autorange": "reversed",
+                },
+                "title": {
+                    "text": title_text,
+                    "xanchor": "center",
+                    "yanchor": "top",
+                    "x": 0.5,
+                    "y": 0.95,
+                },
+                "margin": {
+                    "t": 150,
+                },
+            }
+
+            if "xaxis2_title" in meta["layout"]:
+                update_dict["xaxis2"] = {
+                    "title": meta["layout"]["xaxis2_title"],
+                    "overlaying": "x1",
+                    "side": "top",
+                    "showgrid": False,
                 }
-            )
+
+            fig.update_layout(update_dict)
 
             if f"sg_cal_calibcomm_{instrument}" in dive_nc_file.variables:
                 cal_text = (
