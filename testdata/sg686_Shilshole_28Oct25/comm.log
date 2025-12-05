@@ -1,0 +1,673 @@
+Connected at 2025-10-28T14:33:02Z (sg686)
+logged in
+0:0:1:0:9:171:0:1599:2061:600:-3.2:0.02:17.2:15.00:15.17:8.37:55.0:7.9:0.0:-0.1 GPS,281025,141811,4739.215,-12219.189,23,1.2,63,16.2
+ver=67.01,rev=7354M,frag=8,launch=281025:141543
+Iridium bars: 5 geolocation: 4738.868164,-12218.956055,281025,143218
+2025-10-28T14:33:17Z [sg686] Sending 705 bytes of cmdfile
+2025-10-28T14:33:17Z [sg686] Sent 705 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T14:33:26Z [sg686] Sending 116 bytes of science
+2025-10-28T14:33:26Z [sg686] Sent 116 bytes of science
+2025-10-28T14:33:30Z [sg686] Sending 225 bytes of targets
+2025-10-28T14:33:30Z [sg686] Sent 225 bytes of targets
+2025-10-28T14:33:33Z [sg686] ready to receive 2 files
+2025-10-28T14:33:35Z [sg686] Receiving 270 bytes of st0015dz.x
+2025-10-28T14:33:36Z [sg686] Received 270 bytes of st0015dz.x (351.0 Bps)
+2025-10-28T14:33:36Z [sg686] OK
+2025-10-28T14:33:38Z [sg686] Receiving 1993 bytes of st0015lz.x
+2025-10-28T14:33:44Z [sg686] Received 1993 bytes of st0015lz.x (316.8 Bps)
+2025-10-28T14:33:44Z [sg686] OK
+2025-10-28T14:33:56Z [sg686] ready to receive st0015kz.x
+2025-10-28T14:33:57Z [sg686] Receiving 24624 bytes of st0015kz.x
+2025-10-28T14:35:20Z [sg686] Received 24624 bytes of st0015kz.x (299.4 Bps)
+2025-10-28T14:35:20Z [sg686] OK
+0:0:1:0:9:171:1 logout
+Disconnected at 2025-10-28T14:35:26Z (normal)
+
+
+Connected at 2025-10-28T14:55:55Z (sg686)
+logged in
+0:1:1:0:9:171:0:1599:2061:600:-4.4:-0.04:15.8:15.00:15.51:8.33:55.1:7.9:0.0:-0.1 GPS,281025,145501,4739.755,-12223.073,6,1.1,34,16.3
+ver=67.01,rev=7354M,frag=8,launch=281025:141543
+Iridium bars: 5 geolocation: 4738.868164,-12218.956055,281025,143254
+2025-10-28T14:56:07Z [sg686] Sending 755 bytes of cmdfile
+2025-10-28T14:56:07Z [sg686] Sent 755 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T14:56:16Z [sg686] Sending 203 bytes of scicon.sch
+2025-10-28T14:56:16Z [sg686] Sent 203 bytes of scicon.sch
+2025-10-28T14:56:20Z [sg686] Sending 1399 bytes of scicon.ins
+2025-10-28T14:56:20Z [sg686] Sent 1399 bytes of scicon.ins
+2025-10-28T14:56:30Z [sg686] ready to receive sg0000kl.x
+2025-10-28T14:56:32Z [sg686] Receiving 3984 bytes of sg0000kl.x
+2025-10-28T14:56:43Z [sg686] Received 3984 bytes of sg0000kl.x (343.9 Bps)
+2025-10-28T14:56:43Z [sg686] OK
+0:1:1:0:9:171:1 logout
+Disconnected at 2025-10-28T14:56:48Z (normal)
+
+
+Connected at 2025-10-28T14:59:22Z (sg686)
+logged in
+0:2:1:0:10:171:0:200:2131:600:-4.3:0.00:15.6:15.00:15.45:8.33:55.2:7.9:0.0:-0.1 GPS,281025,145839,4739.867,-12223.577,5,1.1,27,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=NO_RECOVERY_REASON
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4740.816895,-12223.367188,281025,145547
+2025-10-28T14:59:37Z [sg686] Sending 755 bytes of cmdfile
+2025-10-28T14:59:37Z [sg686] Sent 755 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T14:59:47Z [sg686] ready to receive 2 files
+2025-10-28T14:59:48Z [sg686] Receiving 2599 bytes of sg0000kz.x
+2025-10-28T14:59:56Z [sg686] Received 2599 bytes of sg0000kz.x (343.7 Bps)
+2025-10-28T14:59:56Z [sg686] OK
+2025-10-28T14:59:58Z [sg686] Receiving 1613 bytes of sg0000lz.x
+2025-10-28T15:00:02Z [sg686] Received 1613 bytes of sg0000lz.x (344.7 Bps)
+2025-10-28T15:00:02Z [sg686] OK
+0:2:1:0:10:171:1 logout
+Disconnected at 2025-10-28T15:00:11Z (normal)
+
+
+Connected at 2025-10-28T15:06:43Z (sg686)
+logged in
+0:3:2:0:10:171:-2:200:2131:599:-6.7:0.00:15.4:15.00:15.40:8.31:54.9:7.9:0.0:-0.1 GPS,281025,150414,4739.935,-12223.854,5,1.3,45,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 3 geolocation: 4741.671387,-12220.666016,281025,145914
+2025-10-28T15:06:57Z [sg686] Sending 755 bytes of cmdfile
+2025-10-28T15:06:57Z [sg686] Sent 755 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T15:07:07Z [sg686] Sending 41 bytes of pdoscmds.bat
+2025-10-28T15:07:07Z [sg686] Sent 41 bytes of pdoscmds.bat
+2025-10-28T15:07:24Z [sg686] ready to receive sg0000pz.003
+2025-10-28T15:07:27Z [sg686] Receiving 747 bytes of sg0000pz.003
+2025-10-28T15:07:30Z [sg686] Received 747 bytes of sg0000pz.003 (340.9 Bps)
+2025-10-28T15:07:30Z [sg686] OK
+0:3:2:0:10:171:1 logout
+Disconnected at 2025-10-28T15:07:43Z (normal)
+
+
+Connected at 2025-10-28T15:17:29Z (sg686)
+logged in
+0:4:4:0:10:171:-2:200:2131:601:-3.1:-0.01:15.1:15.00:15.45:8.31:54.9:7.9:0.0:-0.1 GPS,281025,151144,4739.935,-12223.856,5,1.1,45,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 4 geolocation: 4741.671387,-12220.666016,281025,150636
+2025-10-28T15:17:42Z [sg686] Sending 755 bytes of cmdfile
+2025-10-28T15:17:42Z [sg686] Sent 755 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:4:4:0:10:171:1 logout
+Disconnected at 2025-10-28T15:17:54Z (normal)
+
+
+Connected at 2025-10-28T15:22:43Z (sg686)
+logged in
+0:5:1:0:10:171:0:200:2131:600:-7.8:0.01:14.7:15.00:15.44:8.29:55.2:7.9:0.0:-0.1 GPS,281025,152155,4740.673,-12224.840,5,1.0,45,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4741.671387,-12220.666016,281025,151722
+2025-10-28T15:22:55Z [sg686] Sending 755 bytes of cmdfile
+2025-10-28T15:22:55Z [sg686] Sent 755 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:5:1:0:10:171:1 logout
+Disconnected at 2025-10-28T15:23:04Z (normal)
+
+
+Connected at 2025-10-28T15:29:15Z (sg686)
+logged in
+0:6:2:0:10:171:-2:200:2133:600:-6.8:-0.01:14.5:15.00:15.43:8.29:55.3:7.9:0.0:-0.1 GPS,281025,152648,4742.567,-12224.573,5,1.0,27,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 0 geolocation: 4742.165039,-12225.082031,281025,152311
+2025-10-28T15:29:35Z [sg686] Sending 755 bytes of cmdfile
+2025-10-28T15:29:35Z [sg686] Sent 755 bytes of cmdfile
+Disconnected at 2025-10-28T15:30:00Z (hangup)
+
+
+Connected at 2025-10-28T15:36:51Z (sg686)
+logged in
+0:7:2:0:10:171:-2:200:2130:600:-7.9:0.02:14.2:15.00:15.44:8.28:55.3:7.9:0.0:-0.1 GPS,281025,153339,4743.929,-12224.272,5,0.9,22,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,281025,152907
+2025-10-28T15:37:08Z [sg686] Sending 755 bytes of cmdfile
+2025-10-28T15:37:08Z [sg686] Sent 755 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:7:2:0:10:171:1 logout
+Disconnected at 2025-10-28T15:37:16Z (normal)
+
+
+Connected at 2025-10-28T15:45:59Z (sg686)
+logged in
+0:8:3:0:10:171:-3:201:2131:602:-54.8:0.96:13.9:15.00:15.44:8.27:55.0:7.9:0.0:-0.1 GPS,281025,154101,4743.911,-12224.251,5,1.0,34,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 4 geolocation: 4742.165039,-12225.082031,281025,154345
+2025-10-28T15:46:11Z [sg686] Sending 787 bytes of cmdfile
+2025-10-28T15:46:11Z [sg686] Sent 787 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:8:3:0:10:171:1 logout
+Disconnected at 2025-10-28T15:46:28Z (normal)
+
+
+Connected at 2025-10-28T15:50:55Z (sg686)
+logged in
+0:9:1:0:10:171:0:201:2131:602:-56.5:1.00:13.8:15.00:15.39:8.27:55.3:7.9:0.0:-0.1 GPS,281025,154959,4743.875,-12224.251,4,0.9,15,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4744.473633,-12222.378906,281025,154550
+2025-10-28T15:51:08Z [sg686] Sending 787 bytes of cmdfile
+2025-10-28T15:51:08Z [sg686] Sent 787 bytes of cmdfile
+Parsed QUIT from cmdfile
+0:9:1:0:10:171:1 logout
+Disconnected at 2025-10-28T15:51:29Z (normal)
+
+
+Connected at 2025-10-28T15:55:54Z (sg686)
+logged in
+0:10:1:0:10:171:0:201:2130:602:-56.8:0.99:13.7:15.00:15.41:8.27:55.4:7.9:0.0:-0.1 GPS,281025,155459,4743.859,-12224.250,4,0.9,14,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 3 geolocation: 4743.514160,-12226.797852,281025,155138
+2025-10-28T15:56:06Z [sg686] Sending 789 bytes of cmdfile
+2025-10-28T15:56:06Z [sg686] Sent 789 bytes of cmdfile
+Parsed RESUME from cmdfile
+0:10:1:0:10:171:1 logout
+Disconnected at 2025-10-28T15:56:19Z (normal)
+
+
+Connected at 2025-10-28T16:25:13Z (sg686)
+logged in
+1:0:1:0:10:171:0:178:1955:600:-58.0:1.03:13.4:14.97:15.03:8.27:55.3:11.9:2.4:1.3 GPS,281025,162411,4743.695,-12224.203,5,0.9,16,16.3
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4745.484375,-11950.254883,281025,155547
+2025-10-28T16:25:30Z [sg686] Sending 800 bytes of cmdfile
+2025-10-28T16:25:30Z [sg686] Sent 800 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T16:25:37Z [sg686] ready to receive 6 files
+2025-10-28T16:25:38Z [sg686] Receiving 2584 bytes of sg0001dz.x
+2025-10-28T16:25:46Z [sg686] Received 2584 bytes of sg0001dz.x (341.0 Bps)
+2025-10-28T16:25:46Z [sg686] OK
+2025-10-28T16:25:49Z [sg686] Receiving 8192 bytes of sg0001kz.x00
+2025-10-28T16:26:13Z [sg686] Received 8192 bytes of sg0001kz.x00 (344.8 Bps)
+2025-10-28T16:26:13Z [sg686] OK
+2025-10-28T16:26:17Z [sg686] Receiving 8192 bytes of sg0001kz.x01
+2025-10-28T16:26:41Z [sg686] Received 8192 bytes of sg0001kz.x01 (344.7 Bps)
+2025-10-28T16:26:41Z [sg686] OK
+2025-10-28T16:26:44Z [sg686] Receiving 8192 bytes of sg0001kz.x02
+2025-10-28T16:27:08Z [sg686] Received 8192 bytes of sg0001kz.x02 (342.4 Bps)
+2025-10-28T16:27:08Z [sg686] OK
+2025-10-28T16:27:10Z [sg686] Receiving 6086 bytes of sg0001kz.x03
+2025-10-28T16:27:27Z [sg686] Received 6086 bytes of sg0001kz.x03 (345.0 Bps)
+2025-10-28T16:27:27Z [sg686] OK
+2025-10-28T16:27:29Z [sg686] Receiving 3478 bytes of sg0001lz.x
+2025-10-28T16:27:39Z [sg686] Received 3478 bytes of sg0001lz.x (343.6 Bps)
+2025-10-28T16:27:39Z [sg686] OK
+2025-10-28T16:27:41Z [sg686] ready to receive 2 files
+2025-10-28T16:27:43Z [sg686] Receiving 7168 bytes of sc0001ag.x
+2025-10-28T16:28:04Z [sg686] Received 7168 bytes of sc0001ag.x (345.0 Bps)
+2025-10-28T16:28:04Z [sg686] OK
+2025-10-28T16:28:05Z [sg686] Receiving 2048 bytes of sc0001bg.x
+2025-10-28T16:28:11Z [sg686] Received 2048 bytes of sc0001bg.x (345.5 Bps)
+2025-10-28T16:28:11Z [sg686] OK
+1:0:1:0:10:171:1 logout
+Disconnected at 2025-10-28T16:28:16Z (normal)
+
+
+Connected at 2025-10-28T16:31:41Z (sg686)
+logged in
+1:1:2:0:10:171:-3:178:1954:598:-57.2:0.99:13.4:15.00:15.13:8.27:55.4:11.9:2.4:1.3 GPS,281025,162850,4743.677,-12224.228,5,0.9,20,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,281025,162927
+2025-10-28T16:32:07Z [sg686] Sending 800 bytes of cmdfile
+2025-10-28T16:32:07Z [sg686] Sent 800 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T16:32:19Z [sg686] Sending 91 bytes of tcm2mat.cal
+2025-10-28T16:32:19Z [sg686] Sent 91 bytes of tcm2mat.cal
+1:1:2:0:10:171:1 logout
+Disconnected at 2025-10-28T16:32:27Z (normal)
+
+
+Connected at 2025-10-28T16:37:19Z (sg686)
+logged in
+1:2:2:0:10:171:-2:178:1955:598:-57.3:1.00:13.4:15.00:15.30:8.27:55.4:11.9:2.4:1.3 GPS,281025,163455,4743.654,-12224.229,5,0.9,17,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 4 geolocation: 4742.283691,-12236.615234,281025,163133
+2025-10-28T16:37:33Z [sg686] Sending 833 bytes of cmdfile
+2025-10-28T16:37:33Z [sg686] Sent 833 bytes of cmdfile
+Parsed RESUME from cmdfile
+1:2:2:0:10:171:1 logout
+Disconnected at 2025-10-28T16:37:44Z (normal)
+
+
+Connected at 2025-10-28T17:21:31Z (sg686)
+logged in
+2:0:1:0:10:171:0:178:1953:726:-60.4:1.02:12.9:15.00:15.08:8.28:55.4:12.0:30.8:23.3 GPS,281025,172025,4743.333,-12224.323,5,0.8,35,16.3
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.617676,-12225.082031,281025,163754
+2025-10-28T17:21:48Z [sg686] Sending 831 bytes of cmdfile
+2025-10-28T17:21:48Z [sg686] Sent 831 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T17:21:55Z [sg686] ready to receive 7 files
+2025-10-28T17:21:57Z [sg686] Receiving 4279 bytes of sg0002dz.x
+2025-10-28T17:22:09Z [sg686] Received 4279 bytes of sg0002dz.x (344.6 Bps)
+2025-10-28T17:22:09Z [sg686] OK
+2025-10-28T17:22:11Z [sg686] Receiving 8192 bytes of sg0002kz.x00
+2025-10-28T17:22:35Z [sg686] Received 8192 bytes of sg0002kz.x00 (339.1 Bps)
+2025-10-28T17:22:35Z [sg686] OK
+2025-10-28T17:22:36Z [sg686] Receiving 8192 bytes of sg0002kz.x01
+2025-10-28T17:23:09Z [sg686] Received 8192 bytes of sg0002kz.x01 (253.6 Bps)
+2025-10-28T17:23:09Z [sg686] OK
+2025-10-28T17:23:15Z [sg686] Receiving 8192 bytes of sg0002kz.x02
+2025-10-28T17:23:39Z [sg686] Received 8192 bytes of sg0002kz.x02 (343.2 Bps)
+2025-10-28T17:23:39Z [sg686] OK
+2025-10-28T17:23:40Z [sg686] Receiving 8192 bytes of sg0002kz.x03
+2025-10-28T17:24:04Z [sg686] Received 8192 bytes of sg0002kz.x03 (342.4 Bps)
+2025-10-28T17:24:04Z [sg686] OK
+2025-10-28T17:24:05Z [sg686] Receiving 4749 bytes of sg0002kz.x04
+2025-10-28T17:24:19Z [sg686] Received 4749 bytes of sg0002kz.x04 (337.1 Bps)
+2025-10-28T17:24:19Z [sg686] OK
+2025-10-28T17:24:21Z [sg686] Receiving 4089 bytes of sg0002lz.x
+2025-10-28T17:24:35Z [sg686] Received 4089 bytes of sg0002lz.x (295.1 Bps)
+2025-10-28T17:24:35Z [sg686] OK
+2025-10-28T17:24:40Z [sg686] ready to receive 2 files
+2025-10-28T17:24:41Z [sg686] Receiving 8192 bytes of sc0002ag.x
+2025-10-28T17:25:05Z [sg686] Received 8192 bytes of sc0002ag.x (340.8 Bps)
+2025-10-28T17:25:05Z [sg686] OK
+2025-10-28T17:25:07Z [sg686] Receiving 5120 bytes of sc0002bg.x
+2025-10-28T17:25:22Z [sg686] Received 5120 bytes of sc0002bg.x (342.2 Bps)
+2025-10-28T17:25:22Z [sg686] OK
+2:0:1:0:10:171:1 logout
+Disconnected at 2025-10-28T17:25:30Z (normal)
+
+
+Connected at 2025-10-28T17:26:45Z (sg686)
+logged in
+2:1:1:0:10:171:0:178:1953:722:-60.9:1.03:12.9:15.00:15.14:8.27:55.5:12.0:30.8:23.3 GPS,281025,172603,4743.319,-12224.337,5,0.7,15,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,281025,172122
+2025-10-28T17:26:57Z [sg686] Sending 831 bytes of cmdfile
+2025-10-28T17:26:57Z [sg686] Sent 831 bytes of cmdfile
+Parsed QUIT from cmdfile
+2:1:1:0:10:171:1 logout
+Disconnected at 2025-10-28T17:27:07Z (normal)
+
+
+Connected at 2025-10-28T17:30:36Z (sg686)
+logged in
+2:2:1:0:10:171:0:178:1953:721:-60.5:1.02:12.9:15.00:15.28:8.27:55.5:12.0:30.8:23.3 GPS,281025,172937,4743.309,-12224.344,5,0.8,15,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4742.165039,-12225.082031,281025,172637
+2025-10-28T17:30:54Z [sg686] Sending 834 bytes of cmdfile
+2025-10-28T17:30:54Z [sg686] Sent 834 bytes of cmdfile
+Parsed RESUME from cmdfile
+2:2:1:0:10:171:1 logout
+Disconnected at 2025-10-28T17:31:05Z (normal)
+
+
+Connected at 2025-10-28T18:28:48Z (sg686)
+logged in
+3:0:1:0:10:171:0:177:2140:724:-54.3:0.95:12.5:15.00:15.07:8.26:55.1:12.1:29.5:22.3 GPS,281025,182731,4743.068,-12224.060,5,0.9,38,16.3
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,281025,173113
+2025-10-28T18:29:01Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T18:29:01Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T18:29:08Z [sg686] Sending 204 bytes of scicon.sch
+2025-10-28T18:29:08Z [sg686] Sent 204 bytes of scicon.sch
+2025-10-28T18:29:13Z [sg686] Sending 1400 bytes of scicon.ins
+2025-10-28T18:29:13Z [sg686] Sent 1400 bytes of scicon.ins
+2025-10-28T18:29:21Z [sg686] ready to receive 2 files
+2025-10-28T18:29:23Z [sg686] Receiving 5568 bytes of sg0003dz.x
+2025-10-28T18:29:39Z [sg686] Received 5568 bytes of sg0003dz.x (341.9 Bps)
+2025-10-28T18:29:39Z [sg686] OK
+2025-10-28T18:29:40Z [sg686] Receiving 4465 bytes of sg0003lz.x
+2025-10-28T18:29:53Z [sg686] Received 4465 bytes of sg0003lz.x (342.9 Bps)
+2025-10-28T18:29:53Z [sg686] OK
+2025-10-28T18:29:57Z [sg686] ready to receive 3 files
+2025-10-28T18:29:58Z [sg686] Receiving 8192 bytes of sc0003ag.x00
+2025-10-28T18:30:23Z [sg686] Received 8192 bytes of sc0003ag.x00 (325.0 Bps)
+2025-10-28T18:30:23Z [sg686] OK
+2025-10-28T18:30:25Z [sg686] Receiving 3072 bytes of sc0003ag.x01
+2025-10-28T18:30:34Z [sg686] Received 3072 bytes of sc0003ag.x01 (341.5 Bps)
+2025-10-28T18:30:34Z [sg686] OK
+2025-10-28T18:30:36Z [sg686] Receiving 7168 bytes of sc0003bg.x
+2025-10-28T18:30:57Z [sg686] Received 7168 bytes of sc0003bg.x (343.4 Bps)
+2025-10-28T18:30:57Z [sg686] OK
+3:0:1:0:10:171:1 logout
+Disconnected at 2025-10-28T18:31:03Z (normal)
+
+
+Connected at 2025-10-28T18:32:19Z (sg686)
+logged in
+3:1:1:0:10:171:0:177:2140:721:-50.1:0.90:12.5:15.00:15.15:8.26:55.5:12.1:29.5:22.3 GPS,281025,183134,4743.071,-12224.065,4,0.9,11,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4742.165039,-12225.082031,281025,182838
+2025-10-28T18:32:32Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T18:32:32Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+3:1:1:0:10:171:1 logout
+Disconnected at 2025-10-28T18:32:42Z (normal)
+
+
+Connected at 2025-10-28T18:36:07Z (sg686)
+logged in
+3:2:1:0:10:171:0:177:2140:720:-55.5:0.98:12.5:15.00:15.28:8.26:55.2:12.1:29.5:22.3 GPS,281025,183510,4743.076,-12224.070,4,0.9,12,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 4 geolocation: 4743.021484,-12222.378906,281025,183251
+2025-10-28T18:36:23Z [sg686] Sending 834 bytes of cmdfile
+2025-10-28T18:36:23Z [sg686] Sent 834 bytes of cmdfile
+Parsed RESUME from cmdfile
+3:2:1:0:10:171:1 logout
+Disconnected at 2025-10-28T18:36:35Z (normal)
+
+
+Connected at 2025-10-28T19:26:02Z (sg686)
+logged in
+4:0:1:0:10:171:0:180:2132:751:-58.6:1.01:12.4:15.00:15.04:8.26:55.4:12.2:17.3:12.9 GPS,281025,192449,4742.915,-12223.863,5,0.8,37,16.3
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4741.797363,-12232.197266,281025,183547
+2025-10-28T19:26:14Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T19:26:14Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T19:26:22Z [sg686] Sending 1401 bytes of scicon.ins
+2025-10-28T19:26:22Z [sg686] Sent 1401 bytes of scicon.ins
+2025-10-28T19:26:30Z [sg686] ready to receive 2 files
+2025-10-28T19:26:32Z [sg686] Receiving 4935 bytes of sg0004dz.x
+2025-10-28T19:26:46Z [sg686] Received 4935 bytes of sg0004dz.x (343.2 Bps)
+2025-10-28T19:26:46Z [sg686] OK
+2025-10-28T19:26:47Z [sg686] Receiving 4274 bytes of sg0004lz.x
+2025-10-28T19:27:00Z [sg686] Received 4274 bytes of sg0004lz.x (342.2 Bps)
+2025-10-28T19:27:00Z [sg686] OK
+2025-10-28T19:27:05Z [sg686] ready to receive 2 files
+2025-10-28T19:27:07Z [sg686] Receiving 7168 bytes of sc0004ag.x
+2025-10-28T19:27:28Z [sg686] Received 7168 bytes of sc0004ag.x (342.9 Bps)
+2025-10-28T19:27:28Z [sg686] OK
+2025-10-28T19:27:29Z [sg686] Receiving 5120 bytes of sc0004bg.x
+2025-10-28T19:27:44Z [sg686] Received 5120 bytes of sc0004bg.x (342.7 Bps)
+2025-10-28T19:27:44Z [sg686] OK
+4:0:1:0:10:171:1 logout
+Disconnected at 2025-10-28T19:27:55Z (normal)
+
+
+Connected at 2025-10-28T19:29:08Z (sg686)
+logged in
+4:1:1:0:10:171:0:180:2131:747:-56.4:1.01:12.4:15.00:15.13:8.27:55.4:12.2:17.3:12.9 GPS,281025,192828,4742.931,-12223.866,8,0.9,13,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4742.165039,-12225.082031,281025,192805
+2025-10-28T19:29:21Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T19:29:21Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+4:1:1:0:10:171:1 logout
+Disconnected at 2025-10-28T19:29:32Z (normal)
+
+
+Connected at 2025-10-28T19:32:54Z (sg686)
+logged in
+4:2:1:0:10:171:0:180:2132:747:-60.1:1.00:12.4:15.00:15.28:8.26:55.2:12.2:17.3:12.9 GPS,281025,193200,4742.946,-12223.868,5,0.9,13,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4742.165039,-12225.082031,281025,192940
+2025-10-28T19:33:15Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T19:33:15Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+4:2:1:0:10:171:1 logout
+Disconnected at 2025-10-28T19:33:36Z (normal)
+
+
+Connected at 2025-10-28T19:36:44Z (sg686)
+logged in
+4:3:1:0:10:171:0:180:2132:746:-60.2:1.03:12.5:15.00:15.31:8.26:55.4:12.2:17.3:12.9 GPS,281025,193604,4742.965,-12223.868,5,0.9,13,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 4 geolocation: 4741.671387,-12220.666016,281025,193346
+2025-10-28T19:36:58Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T19:36:58Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+4:3:1:0:10:171:1 logout
+Disconnected at 2025-10-28T19:37:09Z (normal)
+
+
+Connected at 2025-10-28T19:42:40Z (sg686)
+logged in
+4:4:2:0:10:171:-3:180:2132:746:-57.0:0.97:12.5:15.00:15.33:8.26:55.1:12.2:17.3:12.9 GPS,281025,193937,4742.980,-12223.872,5,0.9,13,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.978516,-12217.962891,281025,194011
+2025-10-28T19:42:59Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T19:42:59Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T19:43:06Z [sg686] Sending 41 bytes of pdoscmds.bat
+2025-10-28T19:43:06Z [sg686] Sent 41 bytes of pdoscmds.bat
+2025-10-28T19:43:15Z [sg686] ready to receive sg0004pz.004
+2025-10-28T19:43:16Z [sg686] Receiving 750 bytes of sg0004pz.004
+2025-10-28T19:43:19Z [sg686] Received 750 bytes of sg0004pz.004 (341.4 Bps)
+2025-10-28T19:43:19Z [sg686] OK
+4:4:2:0:10:171:1 logout
+Disconnected at 2025-10-28T19:43:24Z (normal)
+
+
+Connected at 2025-10-28T19:46:40Z (sg686)
+logged in
+4:5:1:0:10:171:0:180:2131:746:-57.9:0.98:12.5:15.00:15.37:8.26:55.0:12.2:17.3:12.9 GPS,281025,194553,4743.010,-12223.870,8,1.0,14,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,281025,194230
+2025-10-28T19:46:56Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T19:46:56Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+4:5:1:0:10:171:1 logout
+Disconnected at 2025-10-28T19:47:06Z (normal)
+
+
+Connected at 2025-10-28T19:50:18Z (sg686)
+logged in
+4:6:1:0:10:171:0:180:2132:746:-56.3:1.00:12.6:15.00:15.37:8.25:55.3:12.2:17.3:12.9 GPS,281025,194930,4743.031,-12223.870,8,0.9,14,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,281025,194630
+2025-10-28T19:50:31Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T19:50:31Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+4:6:1:0:10:171:1 logout
+Disconnected at 2025-10-28T19:50:41Z (normal)
+
+
+Connected at 2025-10-28T19:53:57Z (sg686)
+logged in
+4:7:1:0:10:171:0:181:2132:746:-58.0:1.02:12.6:15.00:15.39:8.26:55.0:12.2:17.3:12.9 GPS,281025,195313,4743.054,-12223.871,11,0.9,16,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 4 geolocation: 4742.165039,-12225.082031,281025,195009
+2025-10-28T19:54:15Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T19:54:15Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T19:54:25Z [sg686] Sending 51 bytes of pdoscmds.bat
+2025-10-28T19:54:25Z [sg686] Sent 51 bytes of pdoscmds.bat
+2025-10-28T19:54:34Z [sg686] ready to receive sg0004pz.007
+2025-10-28T19:54:38Z [sg686] Receiving 672 bytes of sg0004pz.007
+2025-10-28T19:54:40Z [sg686] Received 672 bytes of sg0004pz.007 (346.5 Bps)
+2025-10-28T19:54:40Z [sg686] OK
+4:7:1:0:10:171:1 logout
+Disconnected at 2025-10-28T19:54:46Z (normal)
+
+
+Connected at 2025-10-28T20:00:10Z (sg686)
+logged in
+4:8:2:0:10:171:-3:180:2131:746:-59.0:1.04:12.6:15.00:15.39:8.25:55.3:12.2:17.3:12.9 GPS,281025,195712,4743.079,-12223.868,7,0.9,15,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4742.165039,-12225.082031,281025,195748
+2025-10-28T20:00:37Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T20:00:37Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T20:00:44Z [sg686] Sending 41 bytes of pdoscmds.bat
+2025-10-28T20:00:44Z [sg686] Sent 41 bytes of pdoscmds.bat
+2025-10-28T20:00:54Z [sg686] ready to receive sg0004pz.008
+2025-10-28T20:00:55Z [sg686] Receiving 748 bytes of sg0004pz.008
+2025-10-28T20:00:57Z [sg686] Received 748 bytes of sg0004pz.008 (340.4 Bps)
+2025-10-28T20:00:57Z [sg686] OK
+4:8:2:0:10:171:1 logout
+Disconnected at 2025-10-28T20:01:03Z (normal)
+
+
+Connected at 2025-10-28T20:04:23Z (sg686)
+logged in
+4:9:1:0:10:171:0:180:2132:746:-60.4:1.04:12.6:15.00:15.35:8.25:55.3:12.2:17.3:12.9 GPS,281025,200337,4743.123,-12223.863,7,0.9,18,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,281025,195956
+2025-10-28T20:04:35Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T20:04:35Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T20:04:42Z [sg686] Sending 204 bytes of scicon.sch
+2025-10-28T20:04:42Z [sg686] Sent 204 bytes of scicon.sch
+4:9:1:0:10:171:1 logout
+Disconnected at 2025-10-28T20:04:50Z (normal)
+
+
+Connected at 2025-10-28T20:08:21Z (sg686)
+logged in
+4:10:1:0:10:171:0:180:2132:746:-56.8:1.01:12.7:15.00:15.37:8.25:55.3:12.2:17.3:12.9 GPS,281025,200726,4743.150,-12223.859,7,0.9,18,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 2 geolocation: 4743.021484,-12222.378906,281025,200414
+2025-10-28T20:08:34Z [sg686] Sending 834 bytes of cmdfile
+2025-10-28T20:08:34Z [sg686] Sent 834 bytes of cmdfile
+Parsed RESUME from cmdfile
+4:10:1:0:10:171:1 logout
+Disconnected at 2025-10-28T20:08:45Z (normal)
+
+
+Connected at 2025-10-28T20:58:35Z (sg686)
+logged in
+5:0:1:0:10:171:0:178:2154:749:-52.8:0.88:12.3:14.97:15.01:8.26:55.2:12.2:25.9:19.5 GPS,281025,205722,4742.990,-12223.991,7,0.9,23,16.3
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,281025,200809
+2025-10-28T20:58:47Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T20:58:47Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T20:58:54Z [sg686] ready to receive 2 files
+2025-10-28T20:58:56Z [sg686] Receiving 4688 bytes of sg0005dz.x
+2025-10-28T20:59:09Z [sg686] Received 4688 bytes of sg0005dz.x (344.5 Bps)
+2025-10-28T20:59:09Z [sg686] OK
+2025-10-28T20:59:11Z [sg686] Receiving 4232 bytes of sg0005lz.x
+2025-10-28T20:59:23Z [sg686] Received 4232 bytes of sg0005lz.x (341.0 Bps)
+2025-10-28T20:59:23Z [sg686] OK
+2025-10-28T20:59:26Z [sg686] ready to receive 2 files
+2025-10-28T20:59:27Z [sg686] Receiving 7168 bytes of sc0005ag.x
+2025-10-28T20:59:48Z [sg686] Received 7168 bytes of sc0005ag.x (343.0 Bps)
+2025-10-28T20:59:48Z [sg686] OK
+2025-10-28T20:59:49Z [sg686] Receiving 5120 bytes of sc0005bg.x
+2025-10-28T21:00:05Z [sg686] Received 5120 bytes of sc0005bg.x (334.4 Bps)
+2025-10-28T21:00:05Z [sg686] OK
+5:0:1:0:10:171:1 logout
+Disconnected at 2025-10-28T21:00:10Z (normal)
+
+
+Connected at 2025-10-28T21:01:26Z (sg686)
+logged in
+5:1:1:0:10:171:0:178:2154:747:-54.5:0.93:12.3:15.00:15.11:8.26:55.3:12.2:25.9:19.5 GPS,281025,210043,4743.009,-12223.967,8,0.9,16,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=N_DIVES_COMPLETED
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4743.021484,-12222.378906,281025,205823
+2025-10-28T21:01:40Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T21:01:40Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T21:01:47Z [sg686] Sending 41 bytes of pdoscmds.bat
+2025-10-28T21:01:47Z [sg686] Sent 41 bytes of pdoscmds.bat
+2025-10-28T21:01:56Z [sg686] ready to receive sg0005pz.001
+2025-10-28T21:01:57Z [sg686] Receiving 748 bytes of sg0005pz.001
+2025-10-28T21:01:59Z [sg686] Received 748 bytes of sg0005pz.001 (338.7 Bps)
+2025-10-28T21:01:59Z [sg686] OK
+5:1:1:0:10:171:1 logout
+Disconnected at 2025-10-28T21:02:05Z (normal)
+
+
+Connected at 2025-10-28T21:09:25Z (sg686)
+logged in
+5:2:3:0:10:171:-2:175:2157:745:-4.2:-0.05:12.4:15.00:15.26:8.25:54.8:12.2:25.9:19.5 GPS,281025,210443,4743.044,-12223.914,8,0.9,22,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 2 geolocation: 4743.021484,-12222.378906,281025,210118
+2025-10-28T21:09:44Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T21:09:44Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+5:2:3:0:10:171:1 logout
+Disconnected at 2025-10-28T21:09:57Z (normal)
+
+
+Connected at 2025-10-28T21:13:32Z (sg686)
+logged in
+5:3:1:0:10:171:0:174:2154:749:-0.1:-0.04:12.5:15.00:15.37:8.25:55.3:12.2:25.9:19.5 GPS,281025,211249,4740.999,-12224.834,8,1.1,36,16.3
+EOP_CODE=CONTROL_FINISHED_OK
+RECOV_CODE=QUIT_COMMAND
+ver=67.01,rev=7354M,frag=8,launch=281025:145706
+Iridium bars: 5 geolocation: 4741.308594,-12227.781250,281025,210917
+2025-10-28T21:13:49Z [sg686] Sending 832 bytes of cmdfile
+2025-10-28T21:13:49Z [sg686] Sent 832 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-10-28T21:14:06Z [sg686] Sending 26 bytes of pdoscmds.bat
+2025-10-28T21:14:06Z [sg686] Sent 26 bytes of pdoscmds.bat
+shutdown Tue Oct 28 21:14:09 2025
+Disconnected at 2025-10-28T21:14:27Z (hangup)
+
+
+Connected at 2025-11-03T19:56:44Z (sg686)
+logged in
+0:0:2:0:10:188:-2:1599:2254:601:-0.9:0.00:18.6:15.00:15.25:8.42:54.8:11.5:0.0:-0.4 GPS,031125,193927,4433.433,-12317.051,9,0.9,16,15.6
+ver=67.01,rev=7354M,frag=8,launch=031125:193734
+Iridium bars: 5 geolocation: 4434.209473,-12316.256836,031125,195341
+2025-11-03T19:57:05Z [sg686] Sending 833 bytes of cmdfile
+2025-11-03T19:57:05Z [sg686] Sent 833 bytes of cmdfile
+Parsed QUIT from cmdfile
+2025-11-03T19:57:17Z [sg686] ready to receive st0016pz.000
+2025-11-03T19:57:18Z [sg686] Receiving 358 bytes of st0016pz.000
+2025-11-03T19:57:19Z [sg686] Received 358 bytes of st0016pz.000 (346.8 Bps)
+2025-11-03T19:57:19Z [sg686] OK
+2025-11-03T19:57:22Z [sg686] ready to receive 2 files
+2025-11-03T19:57:23Z [sg686] Receiving 294 bytes of st0016dz.x
+2025-11-03T19:57:24Z [sg686] Received 294 bytes of st0016dz.x (331.6 Bps)
+2025-11-03T19:57:24Z [sg686] OK
+2025-11-03T19:57:26Z [sg686] Receiving 2001 bytes of st0016lz.x
+2025-11-03T19:57:32Z [sg686] Received 2001 bytes of st0016lz.x (339.6 Bps)
+2025-11-03T19:57:32Z [sg686] OK
+2025-11-03T19:57:43Z [sg686] ready to receive st0016kz.x
+2025-11-03T19:57:44Z [sg686] Receiving 23034 bytes of st0016kz.x
+2025-11-03T19:58:53Z [sg686] Received 23034 bytes of st0016kz.x (335.7 Bps)
+2025-11-03T19:58:53Z [sg686] OK
+0:0:2:0:10:188:1 logout
+Disconnected at 2025-11-03T19:58:58Z (normal)
+
+

@@ -238,7 +238,7 @@ def get_mission_str(base_opts: BaseOpts.BaseOptions, calib_consts: dict) -> str:
     return f"SG{'%03d' % base_opts.instrument_id} {mission_title}"
 
 
-def main():
+def main(cmdline_args: list[str] = sys.argv[1:]):
     """Basestation CLI entry point for per-dive or whole mission plotting
 
     Returns:
@@ -266,6 +266,7 @@ def main():
                 },
             ),
         },
+        cmdline_args=cmdline_args,
     )
     BaseLogger(base_opts, include_time=True)
 
