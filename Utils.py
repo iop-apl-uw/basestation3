@@ -2113,21 +2113,6 @@ def setup_parquet_directory(base_opts: BaseOpts.BaseOptions) -> int:
     return 0
 
 
-def read_parquet(pq_dir, pq_root, expected_schema=None):
-    if not pq_dir.exists():
-        log_error(f"{pq_dir} does not exist - cannot generate dataframe")
-        return None
-    # TODO - May need to check for file permissions here
-    try:
-        file_list = list(pq_dir.glob(f"*{pq_root}.parquet"))
-        dataset = pq.ParquetDataset(file_list, schema=expected_schema)
-        table = dataset.read()
-        return table.to_pandas()
-    except Exception:
-        log_error("Problem generation dataframe from parquet files", "exc")
-        return None
-
-
 def generate_parquet_schema(pq_dir, pq_root, promote_options="permissive"):
     if not pq_dir.exists():
         log_error(f"{pq_dir} does not exist - cannot generate dataframe")
