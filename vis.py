@@ -34,6 +34,7 @@ import calendar
 import dataclasses
 import os
 import os.path
+import pathlib
 import random
 import sys
 import time
@@ -91,13 +92,6 @@ import Utils
 import Utils2
 import validate
 import visauth
-
-
-@dataclasses.dataclass
-class BaseOptsSimple:
-    mission_dir: str
-    parquet_directory: str
-
 
 async def checkClose(conn):
     try:
@@ -1867,6 +1861,24 @@ def attachHandlers(app: sanic.Sanic):
         await checkClose(conn)
         return sanic.response.json(data)
 
+    async def getMissionDataConfig(request, path):
+        ncfilename = None
+        pd_df_c = None
+        if request.app.config.USE_PARQUET:
+            sanic.log.logger.info("Using parquet for mission data")
+            parquet_directory = os.path.join(path, 'parquet')
+            if not await aiofiles.os.path.exists(parquet_directory):
+                return (None, None, {'error': 'no db'})
+            pd_df_c = Utils.read_parquet_pd(pathlib.Path(parquet_directory))
+            if pd_df_c is None:
+                return (None, None, {'error': "Error reading parquet directory"})
+        else:
+            ncfilename = Utils2.get_mission_timeseries_name(None, path)
+            if not await aiofiles.os.path.exists(ncfilename):
+                return (None, None, {'error': 'no db'})
+
+        return (ncfilename, pd_df_c, None)
+
     @app.route('/pro/<glider:int>/<whichVar:str>/<whichProfiles:int>/<first:int>/<last:int>/<stride:int>/<top:int>/<bot:int>/<binSize:int>')
     # description: extract bin averaged profiles
     # args: whichProfiles=1(dives)|2(climbs)|3(both)|4(combine)
@@ -1875,22 +1887,9 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     @compress.compress()
     async def proHandler(request, glider:int, whichVar:str, whichProfiles:int, first:int, last:int, stride:int, top:int, bot:int, binSize:int):
-        ncfilename = None
-        pd_df_c = None
-        if request.app.config.USE_PARQUET:
-            sanic.log.logger.info("Using parquet for proHandler")
-            base_opts = BaseOptsSimple
-            base_opts.mission_dir = gliderPath(glider,request)
-            base_opts.parquet_directory = None
-            if Utils.setup_parquet_directory(base_opts):
-                return sanic.response.text("Error setting up parquet directory")
-            pd_df_c = Utils.read_parquet_pd(base_opts.parquet_directory)
-            if pd_df_c is None:
-                return sanic.response.text("Error reading parquet directory")
-        else:
-            ncfilename = Utils2.get_mission_timeseries_name(None, gliderPath(glider,request))
-            if not await aiofiles.os.path.exists(ncfilename):
-                return sanic.response.text('no db')
+        (ncfilename, pd_df_c, error) = await getMissionDataConfig(request, gliderPath(glider,request))
+        if error:
+            return sanic.response.json(error)
 
         data = ExtractTimeseries.timeSeriesToProfile(whichVar, whichProfiles, first, last, stride, top, bot, binSize, ncfilename, pd_df_c=pd_df_c)
         out = ExtractTimeseries.dumps(data[0]) # need custom serializer for the numpy array
@@ -1903,22 +1902,9 @@ def attachHandlers(app: sanic.Sanic):
     # returns: JSON list of variable names
     @authorized()
     async def timeSeriesVarsHandler(request, glider:int):
-        ncfilename = None
-        pd_df_c = None
-        if request.app.config.USE_PARQUET:
-            sanic.log.logger.info("Using parquet for proHandler")
-            base_opts = BaseOptsSimple
-            base_opts.mission_dir = gliderPath(glider,request)
-            base_opts.parquet_directory = None
-            if Utils.setup_parquet_directory(base_opts):
-                return sanic.response.text("Error setting up parquet directory")
-            pd_df_c = Utils.read_parquet_pd(base_opts.parquet_directory)
-            if pd_df_c is None:
-                return sanic.response.text("Error reading parquet directory")
-        else:
-            ncfilename = Utils2.get_mission_timeseries_name(None, gliderPath(glider,request))
-            if not await aiofiles.os.path.exists(ncfilename):
-                return sanic.response.json({'error': 'no db'})
+        (ncfilename, pd_df_c, error) = await getMissionDataConfig(request, gliderPath(glider,request))
+        if error:
+            return sanic.response.json(error)
 
         names = ExtractTimeseries.getVarNames(ncfilename, pd_df_c=pd_df_c)
         names = sorted([ f['var'] for f in names ])
@@ -1931,22 +1917,9 @@ def attachHandlers(app: sanic.Sanic):
     @authorized()
     @compress.compress()
     async def timeSeriesHandler(request, glider:int, dive:int, which:str):
-        ncfilename = None
-        pd_df_c = None
-        if request.app.config.USE_PARQUET:
-            sanic.log.logger.info("Using parquet for proHandler")
-            base_opts = BaseOptsSimple
-            base_opts.mission_dir = gliderPath(glider,request)
-            base_opts.parquet_directory = None
-            if Utils.setup_parquet_directory(base_opts):
-                return sanic.response.text("Error setting up parquet directory")
-            pd_df_c = Utils.read_parquet_pd(base_opts.parquet_directory)
-            if pd_df_c is None:
-                return sanic.response.text("Error reading parquet directory")
-        else:
-            ncfilename = Utils2.get_mission_timeseries_name(None, gliderPath(glider,request))
-            if not await aiofiles.os.path.exists(ncfilename):
-                return sanic.response.json({'error': 'no db'})
+        (ncfilename, pd_df_c, error) = await getMissionDataConfig(request, gliderPath(glider,request))
+        if error:
+            return sanic.response.json(error)
 
         whichVars = which.split(',')
         dbVars = whichVars
