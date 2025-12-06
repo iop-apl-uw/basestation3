@@ -166,6 +166,8 @@ def mission_profiles(
                 "Requested parquet files, but unable to generate data frame - mission profiles"
             )
             return ([], [])
+        elif not pd_df_c:
+            return ([], [])
 
         nci=None
     else:
