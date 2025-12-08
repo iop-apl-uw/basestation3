@@ -856,6 +856,10 @@ def extract_file_data(inp_file_name):
             raw_strs = inp_line.split()
             row = []
             for i in range(len(raw_strs)):
+                # HACK - just be silent when dealing this the output bug
+                if raw_strs[i].rstrip().lstrip() == "ld.1000":
+                    row.append(np.nan)
+                    continue
                 try:
                     row.append(np.float64(raw_strs[i].rstrip().lstrip()))
                 except Exception:

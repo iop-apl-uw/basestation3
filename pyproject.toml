@@ -82,6 +82,11 @@ dev = [
     "mkdocs",
     "mkdocstrings[python]",
     "mkdocs-material",
+    "ipython",
+    "flynt",
+    "notebook==7.4.4",
+    "jupyterlab==4.4.5",
+    "flameprof==0.4"
 ]
 
 
