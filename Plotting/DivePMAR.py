@@ -578,21 +578,39 @@ def plot_PMAR(
 
         # Log average
         # spectra_dive_qc = spectra_climb_qc = None
-        cf = spectra_dive = spectra_climb = spectra_time_dive = spectra_time_climb = (
-            None
-        )
-        try:
-            cf = dive_nc_file.variables[f"pmar_logavg{ch_tag}_a_center_freqs"][:]
-            spectra_dive = dive_nc_file.variables[f"pmar_logavg{ch_tag}_a"][:]
-            spectra_time_dive = dive_nc_file.variables[f"pmar_logavg_time{ch_tag}_a"][:]
+        cf_dive = cf_climb = spectra_dive = spectra_climb = spectra_time_dive = (
+            spectra_time_climb
+        ) = None
 
-            # tmp = array([QC.decode_qc(dive_nc_file.variables['pmar_logavg_a_qc'])])
-            # spectra_dive_qc = tile(tmp.transpose(), (1, shape(spectra_dive)[1]))
-            # spectra_dive = ma.array(spectra_dive, mask=(isnan(spectra_dive) | bad_qc(spectra_dive_qc,mask=True)) )
-        except KeyError as e:
-            log_info(f"Could not find variable {e.args[0]} - skipping related plot")
-        except Exception:
-            log_error("Error fetching dive variables - skipping related plot", "exc")
+        for cf_var in (
+            f"pmar_logavg{ch_tag}_a_center_freqs",
+            f"pmar_logavg_center_freqs{ch_tag}_a",
+        ):
+            if cf_var in dive_nc_file.variables:
+                cf_dive = dive_nc_file.variables[cf_var][:]
+                break
+        else:
+            log_info(
+                "Could not find center freq variable for a profile - skipping related plot"
+            )
+
+        if cf_dive is not None:
+            try:
+                # cf = dive_nc_file.variables[f"pmar_logavg{ch_tag}_a_center_freqs"][:]
+                spectra_dive = dive_nc_file.variables[f"pmar_logavg{ch_tag}_a"][:]
+                spectra_time_dive = dive_nc_file.variables[
+                    f"pmar_logavg_time{ch_tag}_a"
+                ][:]
+
+                # tmp = array([QC.decode_qc(dive_nc_file.variables['pmar_logavg_a_qc'])])
+                # spectra_dive_qc = tile(tmp.transpose(), (1, shape(spectra_dive)[1]))
+                # spectra_dive = ma.array(spectra_dive, mask=(isnan(spectra_dive) | bad_qc(spectra_dive_qc,mask=True)) )
+            except KeyError as e:
+                log_info(f"Could not find variable {e.args[0]} - skipping related plot")
+            except Exception:
+                log_error(
+                    "Error fetching dive variables - skipping related plot", "exc"
+                )
 
         # try:
         #     spectra_dive_qc = QC.decode_qc(
@@ -602,19 +620,32 @@ def plot_PMAR(
         #     log_warning("Could not spectra dive qc variable")
         #     spectra_dive_qc = None
 
-        try:
-            cf = dive_nc_file.variables[f"pmar_logavg{ch_tag}_b_center_freqs"][:]
-            spectra_climb = dive_nc_file.variables[f"pmar_logavg{ch_tag}_b"][:]
-            spectra_time_climb = dive_nc_file.variables[f"pmar_logavg_time{ch_tag}_b"][
-                :
-            ]
-            # tmp = array([QC.decode_qc(dive_nc_file.variables['pmar_logavg_b_qc'])])
-            # spectra_climb_qc = tile(tmp.transpose(), (1, shape(spectra_climb)[1]))
-            # spectra_climb = ma.array(spectra_climb, mask=(isnan(spectra_climb) | bad_qc(spectra_dive_qc,mask=True)) )
-        except KeyError as e:
-            log_info(f"Could not find variable {e.args[0]} - skipping dive plot")
-        except Exception:
-            log_error("Error fetching dive variables - skipping dive plot", "exc")
+        for cf_var in (
+            f"pmar_logavg{ch_tag}_b_center_freqs",
+            f"pmar_logavg_center_freqs{ch_tag}_b",
+        ):
+            if cf_var in dive_nc_file.variables:
+                cf_climb = dive_nc_file.variables[cf_var][:]
+                break
+        else:
+            log_info(
+                "Could not find center freq variable for b profile - skipping related plot"
+            )
+
+        if cf_climb is not None:
+            try:
+                cf = dive_nc_file.variables[f"pmar_logavg{ch_tag}_b_center_freqs"][:]
+                spectra_climb = dive_nc_file.variables[f"pmar_logavg{ch_tag}_b"][:]
+                spectra_time_climb = dive_nc_file.variables[
+                    f"pmar_logavg_time{ch_tag}_b"
+                ][:]
+                # tmp = array([QC.decode_qc(dive_nc_file.variables['pmar_logavg_b_qc'])])
+                # spectra_climb_qc = tile(tmp.transpose(), (1, shape(spectra_climb)[1]))
+                # spectra_climb = ma.array(spectra_climb, mask=(isnan(spectra_climb) | bad_qc(spectra_dive_qc,mask=True)) )
+            except KeyError as e:
+                log_info(f"Could not find variable {e.args[0]} - skipping dive plot")
+            except Exception:
+                log_error("Error fetching dive variables - skipping dive plot", "exc")
 
         # try:
         #     spectra_climb_qc = QC.decode_qc(
@@ -623,6 +654,10 @@ def plot_PMAR(
         # except Exception:
         #     log_warning("Could not spectra climb qc variable")
         #     spectra_climb_qc = None
+
+        # TODO - it is possible for the dive and climb to have two different logmaps, which would mean two different plots
+        # of the spectra. For now, use the last one in (this is the way the code has been for a long time)
+        cf = cf_climb if cf_climb is not None else cf_dive
 
         spectra = None
         spectra_time = None
