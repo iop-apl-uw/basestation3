@@ -1292,7 +1292,7 @@ global_options_dict = {
         },
     ),
     "plotting_use_parquet": options_t(
-        False,
+        True,
         (
             "Base",
             "Reprocess",
@@ -1549,7 +1549,7 @@ global_options_dict = {
         },
     ),
     "kml_use_parquet": options_t(
-        False,
+        True,
         (
             "Base",
             "Reprocess",
@@ -1567,7 +1567,7 @@ global_options_dict = {
     # End MakeKML
     # Start parquet
     "generate_parquet": options_t(
-        False,
+        True,
         (
             "Base",
             "Reprocess",

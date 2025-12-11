@@ -1,5 +1,5 @@
 #!/usr/bin/tcsh
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2025  University of Washington.
 ## 
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -59,7 +59,7 @@ printf "\n" >>! baselog.log
 printf "\n"  >>! baselog.log
 
 set base_logout_time = `date -u +%y%m%d%H%M%S%3N`
-set base_logout_cmd_line = "Base.py --mission_dir `pwd` --verbose --make_mission_timeseries --daemon --nice 10 --base_log `pwd`/baselog_`date -u +%y%m%d%H%M%S` --config `pwd`/${user}.conf ${GLIDER_OPTIONS}"
+set base_logout_cmd_line = "Base.py --mission_dir `pwd` --verbose --daemon --nice 10 --base_log `pwd`/baselog_`date -u +%y%m%d%H%M%S` --config `pwd`/${user}.conf ${GLIDER_OPTIONS}"
 set base_logout_log = `pwd`/baselog.log
 
 if( $?RUNNER_DIR ) then
