@@ -64,6 +64,7 @@ import warnings
 from typing import Literal
 
 import aiofiles
+import aiofiles.os
 import anyio
 import gsw
 import netCDF4
