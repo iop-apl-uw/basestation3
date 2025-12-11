@@ -890,9 +890,14 @@ def printDive(
                 nd = get_df_var(pq_df, dive_num, "north_displacement_gsm")
                 ed = get_df_var(pq_df, dive_num, "east_displacement_gsm")
                 f_disp_gsm = True
+            except KeyError as exception:
+                log_warning(
+                    f"Could not find [{exception}] in parquet output - skipping dive {dive_num}",
+                )
+                nd = ed = None
             except Exception:
                 log_error(
-                    f"Could not find any displacements in {dive_nc_file_name} - skipping",
+                    "Could not find any displacements in parquet output for dive {dive_num} - skipping",
                     "exc",
                 )
                 nd = ed = None
