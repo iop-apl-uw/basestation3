@@ -103,6 +103,15 @@ from Globals import known_files, known_ftp_tags, known_mailer_tags
 # DEBUG_PDB = "darwin" in sys.platform
 DEBUG_PDB = False
 
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
+
 # TODOCC
 # 1) Largest issue is to remove mismash of globals and globals passed as arguments.
 #    Creation of a "global_state" class the contians the various lists and objects and that
@@ -390,11 +399,7 @@ def process_dive_selftest(
                     incomplete_files,
                 )
             except Exception:
-                if DEBUG_PDB:
-                    _, _, tb = sys.exc_info()
-                    traceback.print_exc()
-                    pdb.post_mortem(tb)
-
+                DEBUG_PDB_F()
                 log_error(f"Could not process {fc.base_name()} - skipping", "exc")
                 ret_val = -1
             else:
@@ -3364,6 +3369,7 @@ if __name__ == "__main__":
         else:
             return_val = main()
     except Exception:
+        DEBUG_PDB_F()
         log_critical("Unhandled exception in main -- exiting")
 
     sys.exit(return_val)
