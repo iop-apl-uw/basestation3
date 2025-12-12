@@ -150,8 +150,9 @@ class FullPathlibAction(argparse.Action):
     """Expand user- and relative-paths"""
 
     def __call__(self, parser, namespace, values, option_string=None):
+
         if values is not None:
-            setattr(namespace, self.dest, FullPath(values))
+            setattr(namespace, self.dest, FullPathlib(values))
         else:
             setattr(namespace, self.dest, values)
     
