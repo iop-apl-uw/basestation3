@@ -773,51 +773,67 @@ def process_file_group(
             # tar file and hand it of to the loggers module for further procesing
             if fc.is_logger():
                 logger_file_list = []
-            for tarmember in tar:
-                if tarmember.isreg():
-                    log_info(
-                        f"Extracting {tarmember.name} from {defrag_file_name} to directory {base_opts.mission_dir}"
-                    )
-                    try:
-                        if sys.version_info < (3, 10, 11):  # noqa: UP036
-                            tar.extract(tarmember.name, base_opts.mission_dir)
-                        else:
-                            tar.extract(
-                                tarmember.name, base_opts.mission_dir, filter="data"
+            try:
+                for tarmember in tar:
+                    if tarmember.isreg():
+                        log_info(
+                            f"Extracting {tarmember.name} from {defrag_file_name} to directory {base_opts.mission_dir}"
+                        )
+                        try:
+                            if sys.version_info < (3, 10, 11):  # noqa: UP036
+                                tar.extract(tarmember.name, base_opts.mission_dir)
+                            else:
+                                tar.extract(
+                                    tarmember.name, base_opts.mission_dir, filter="data"
+                                )
+
+                        except (
+                            OverflowError,
+                            struct.error,
+                        ) as exception:
+                            log_warning(
+                                f"Potential problems extracting {tarmember.name} ({exception})"
                             )
+                        except tarfile.ReadError as exception:
+                            log_error(
+                                f"Problems extracting {tarmember.name} ({exception})"
+                            )
+                            ret_val = 1
+                            incomplete_files.append(defrag_file_name)
+                            continue
 
-                    except OverflowError as exception:
-                        log_warning(
-                            f"Potential problems extracting {tarmember.name} ({exception.args})"
-                        )
-                    except struct.error as exception:
-                        log_warning(
-                            f"Potential problems extracting {tarmember.name} ({exception.args})"
+                        tarmember_fullpath = os.path.abspath(
+                            os.path.join(base_opts.mission_dir, tarmember.name)
                         )
 
-                    tarmember_fullpath = os.path.abspath(
-                        os.path.join(base_opts.mission_dir, tarmember.name)
-                    )
-
-                    if fc.is_logger():
-                        logger_file_list.append(tarmember_fullpath)
-                    else:
-                        file_list.append(tarmember_fullpath)
-                    try:
-                        os.chmod(
-                            tarmember_fullpath,
-                            stat.S_IRUSR | stat.S_IWUSR | stat.S_IRGRP | stat.S_IROTH,
-                        )
-                        # CONSIDER - for loggers, leave the time stamp as is
-                        os.utime(tarmember_fullpath, None)
-                    except OSError as exception:
-                        log_error(
-                            "Could not access %s (%s) - potential problem with tar file extraction"
-                            % (tarmember_fullpath, exception.args)
-                        )
-                        incomplete_files.append(defrag_file_name)
-                        ret_val = 1
-            tar.close()
+                        if fc.is_logger():
+                            logger_file_list.append(tarmember_fullpath)
+                        else:
+                            file_list.append(tarmember_fullpath)
+                        try:
+                            os.chmod(
+                                tarmember_fullpath,
+                                stat.S_IRUSR
+                                | stat.S_IWUSR
+                                | stat.S_IRGRP
+                                | stat.S_IROTH,
+                            )
+                            # CONSIDER - for loggers, leave the time stamp as is
+                            os.utime(tarmember_fullpath, None)
+                        except OSError as exception:
+                            log_error(
+                                "Could not access %s (%s) - potential problem with tar file extraction"
+                                % (tarmember_fullpath, exception.args)
+                            )
+                            incomplete_files.append(defrag_file_name)
+                            ret_val = 1
+                tar.close()
+            except tarfile.ReadError as exception:
+                log_error(
+                    f"Problems extracting contents of {defrag_file_name} [{exception}]"
+                )
+                incomplete_files.append(defrag_file_name)
+                ret_val = 1
 
             # For loggers, hand off to logger extension
             if fc.is_logger():
