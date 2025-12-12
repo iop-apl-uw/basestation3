@@ -1,0 +1,40 @@
+Connected at 2025-11-14T17:06:56Z (sg263)
+logged in
+1051:0:1:0:7:92:0:291:1684:658:-45.48:0.20:9.58:15.00:14.99:8.04:48.77 GPS,141125,170431,4656.765,-12518.487,19,0.9,20,15.4
+ver=67.01,rev=7111M,frag=8,launch=070325:142750
+Iridium bars: 5 geolocation: 4654.459961,-12513.207031,141125,114013
+2025-11-14T17:07:15Z [sg263] Sending 223 bytes of cmdfile
+2025-11-14T17:07:15Z [sg263] Sent 223 bytes of cmdfile
+Parsed GO from cmdfile
+2025-11-14T17:07:25Z [sg263] Sending 38 bytes of scicon.sch
+2025-11-14T17:07:25Z [sg263] Sent 38 bytes of scicon.sch
+2025-11-14T17:07:35Z [sg263] ready to receive 6 files
+2025-11-14T17:07:42Z [sg263] Receiving 8192 bytes of sg1051dz.x00
+2025-11-14T17:08:07Z [sg263] Received 8192 bytes of sg1051dz.x00 (326.0 Bps)
+2025-11-14T17:08:07Z [sg263] OK
+2025-11-14T17:08:09Z [sg263] Receiving 8192 bytes of sg1051dz.x01
+2025-11-14T17:08:33Z [sg263] Received 8192 bytes of sg1051dz.x01 (343.4 Bps)
+2025-11-14T17:08:33Z [sg263] OK
+2025-11-14T17:08:36Z [sg263] Receiving 8192 bytes of sg1051dz.x02
+2025-11-14T17:09:02Z [sg263] Received 8192 bytes of sg1051dz.x02 (308.9 Bps)
+2025-11-14T17:09:02Z [sg263] OK
+2025-11-14T17:09:07Z [sg263] Receiving 1074 bytes of sg1051dz.x03
+2025-11-14T17:09:10Z [sg263] Received 1074 bytes of sg1051dz.x03 (347.1 Bps)
+2025-11-14T17:09:10Z [sg263] OK
+2025-11-14T17:09:15Z [sg263] Receiving 8192 bytes of sg1051lz.x00
+2025-11-14T17:09:39Z [sg263] Received 8192 bytes of sg1051lz.x00 (343.5 Bps)
+2025-11-14T17:09:39Z [sg263] OK
+2025-11-14T17:09:41Z [sg263] Receiving 384 bytes of sg1051lz.x01
+2025-11-14T17:09:42Z [sg263] Received 384 bytes of sg1051lz.x01 (348.5 Bps)
+2025-11-14T17:09:42Z [sg263] OK
+2025-11-14T17:09:46Z [sg263] ready to receive 3 files
+2025-11-14T17:09:48Z [sg263] Receiving 5248 bytes of sc1051ag.x
+2025-11-14T17:10:05Z [sg263] Received 5248 bytes of sc1051ag.x (305.3 Bps)
+2025-11-14T17:10:05Z [sg263] OK
+2025-11-14T17:10:10Z [sg263] Receiving 8192 bytes of sc1051bg.x00
+2025-11-14T17:10:38Z [sg263] Received 8192 bytes of sc1051bg.x00 (297.7 Bps)
+2025-11-14T17:10:38Z [sg263] OK
+1051:0:1:0:7:92:1 logout
+Disconnected at 2025-11-14T17:10:44Z (normal)
+
+

@@ -93,6 +93,32 @@ test_cases = (
             "skipping bathy in plots",
         ),
     ),
+    (
+        "testdata/sg263_NANOOS_Mar25_missingupload",
+        "sg263",
+        "",
+        (
+            "CRC check failed on",
+            "Incorrect length of data produced from ",
+            "Problem gzip decompressing",
+            "Problems extracting contents of",
+            "Could not process sc1051bg",
+            "No call data found in database - skipping eng_mission_commlog",
+            "Dive [1051] failed to process completely.",
+            "Problems extracting sc1051b/wl.dat (unexpected end of data)",
+            "Problems extracting sc1051b/optode.dat (unexpected end of data)",
+            "Problems extracting sc1051b/depth.dat (unexpected end of data)",
+            "1 timeout(s) seen for rbr in /Users/gbs/work/git/basestation3/testdata/sg265_NANOOS_Mar25_missingupload/sg1051du.r",
+            "No dives to process",
+            "CTD out of the water after climb (0.040m)",
+            "Large mis-match between predicted and observed w; significant up/downwelling or poor flight model. DAC suspect.",
+            "Displacements under-estimate likely positions by 10.2%; DAC suspect",
+            "skipping bathy in plots",
+            "skipping mission map",
+            "ALERT:TIMEOUT",
+            "1 timeout(s) seen for rbr ",
+        ),
+    ),
 )
 
 test_inputs = []
