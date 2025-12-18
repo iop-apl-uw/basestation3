@@ -332,6 +332,16 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
             roll_sort_i = np.argsort(gc_roll_time)
             gc_roll_time = gc_roll_time[roll_sort_i]
             gc_roll_pos_ad = gc_roll_pos_ad[roll_sort_i]
+
+            for ii in range(ncf.variables["tc_start_time"].size):
+                gc_moves.append(
+                    gc_move(
+                        ncf.variables["tc_start_time"][ii] - start_time,
+                        ncf.variables["tc_end_time"][ii] - start_time,
+                        4,
+                    )
+                )
+
         except Exception:
             log_error("Failed to add TC data to roll data", "exc")
 
@@ -403,24 +413,29 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
 
 
 def add_gc_moves(
-    fig,
-    gc_moves,
-    data,
-    xaxis="x1",
-    yaxis="y1",
+    fig, gc_moves, data, xaxis="x1", yaxis="y1", convert_to_mins=False, time_range=None
 ):
     """Add the gc move regions to a figure"""
     show_label = collections.defaultdict(lambda: True)
+    max_time = min_time = None
+    if time_range is not None:
+        max_time = np.nanmax(time_range)
+        min_time = np.nanmin(time_range)
+
     for gc in gc_moves:
+        if max_time is not None and not (
+            (min_time <= gc.start_time <= max_time)
+            or (min_time <= gc.end_time <= max_time)
+        ):
+            continue
+
+        st = gc.start_time / 60.0 if convert_to_mins else gc.start_time
+        et = gc.end_time / 60.0 if convert_to_mins else gc.end_time
+
         fig.add_trace(
             {
                 "type": "scatter",
-                "x": (
-                    gc.start_time,
-                    gc.start_time,
-                    gc.end_time,
-                    gc.end_time,
-                ),
+                "x": (st, st, et, et),
                 "y": (
                     np.nanmin(data),
                     np.nanmax(data),
@@ -430,20 +445,22 @@ def add_gc_moves(
                 "xaxis": xaxis,
                 "yaxis": yaxis,
                 "fill": "toself",
-                "fillcolor": gc_move_colormap[gc[2]].color,
+                "fillcolor": gc_move_colormap[gc.move_type].color,
                 "line": {
                     "dash": "solid",
-                    "color": gc_move_colormap[gc[2]].color,
+                    # proxy for line opacity - lines are needed for short moves (like roll)
+                    "width": 0.25,
+                    "color": gc_move_colormap[gc.move_type].color,
                 },
-                "mode": "none",  # no outter lines and ponts
-                "legendgroup": f"{gc_move_colormap[gc[2]].name}_group",
-                "name": f"GC {gc_move_colormap[gc[2]].name}",
-                "showlegend": show_label[gc_move_colormap[gc[2]].name],
-                "text": f"GC {gc_move_colormap[gc[2]].name}, Start {gc[0] / 60.0:.2f}mins, End {gc[1] / 60.0:.2f}mins",
+                "mode": "lines",
+                "legendgroup": f"{gc_move_colormap[gc.move_type].name}_group",
+                "name": f"GC {gc_move_colormap[gc.move_type].name}",
+                "showlegend": show_label[gc_move_colormap[gc.move_type].name],
+                "text": f"GC {gc_move_colormap[gc.move_type].name}, Start {gc.start_time / 60.0:.3f} mins, End {gc.end_time / 60.0:.3f} mins<br>Duration {gc.end_time-gc.start_time:.2f} secs",
                 "hoverinfo": "text",
             }
         )
-        show_label[gc_move_colormap[gc[2]].name] = False
+        show_label[gc_move_colormap[gc.move_type].name] = False
 
 
 gc_move_color = collections.namedtuple("gc_movecolor", ("color", "name"))
@@ -461,7 +478,7 @@ motor_move = collections.namedtuple("motor_move", ["name", "units"])
 
 gc_move = collections.namedtuple("gc_move", ["start_time", "end_time", "move_type"])
 gc_move_depth = collections.namedtuple(
-    "gc_move_depth", ["start_depth", "end_depth", "move_type"]
+    "gc_move_depth", ["start_depth", "end_depth", "move_type", "duration"]
 )
 
 
