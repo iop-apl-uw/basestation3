@@ -283,7 +283,6 @@ def plot_PMAR(
             dive_nc_file, ch_tag, "base"
         )
 
-        # log_info(stats)
         f = scipy.interpolate.interp1d(
             depth_time, depth, kind="linear", bounds_error=False, fill_value=0.0
         )
@@ -303,36 +302,45 @@ def plot_PMAR(
         pmar_gc_dive = []
         pmar_gc_climb = []
 
-        # print min(pmar_time_dive), max(pmar_time_dive)
-
         for gc in gc_moves:
             start_depth = np.float64(f(start_time + gc.start_time))
             end_depth = np.float64(f(start_time + gc.end_time))
             if pmar_time_dive is not None and (
                 (
-                    start_time + gc[0] >= min(pmar_time_dive)
-                    and start_time + gc[0] <= max(pmar_time_dive)
+                    start_time + gc.start_time >= min(pmar_time_dive)
+                    and start_time + gc.start_time <= max(pmar_time_dive)
                 )
                 or (
-                    start_time + gc[0] >= min(pmar_time_dive)
-                    and start_time + gc[0] <= max(pmar_time_dive)
+                    start_time + gc.end_time >= min(pmar_time_dive)
+                    and start_time + gc.end_time <= max(pmar_time_dive)
                 )
             ):
                 pmar_gc_dive.append(
-                    PlotUtils.gc_move_depth(start_depth, end_depth, gc.move_type)
+                    PlotUtils.gc_move_depth(
+                        start_depth,
+                        end_depth,
+                        gc.move_type,
+                        gc.end_time - gc.start_time,
+                    )
                 )
-            elif pmar_time_climb is not None and (
+
+            if pmar_time_climb is not None and (
                 (
-                    start_time + gc[0] >= min(pmar_time_climb)
-                    and start_time + gc[0] <= max(pmar_time_climb)
+                    start_time + gc.start_time >= min(pmar_time_climb)
+                    and start_time + gc.start_time <= max(pmar_time_climb)
                 )
                 or (
-                    start_time + gc[0] >= min(pmar_time_climb)
-                    and start_time + gc[0] <= max(pmar_time_climb)
+                    start_time + gc.end_time >= min(pmar_time_climb)
+                    and start_time + gc.end_time <= max(pmar_time_climb)
                 )
             ):
                 pmar_gc_climb.append(
-                    PlotUtils.gc_move_depth(start_depth, end_depth, gc.move_type)
+                    PlotUtils.gc_move_depth(
+                        start_depth,
+                        end_depth,
+                        gc.move_type,
+                        gc.end_time - gc.start_time,
+                    )
                 )
 
         bp = collections.namedtuple(
@@ -473,6 +481,12 @@ def plot_PMAR(
             show_label = collections.defaultdict(lambda: True)
 
             for gc in p.gc_moves:
+                min_data = np.nanmin(p.data)
+                max_data = np.nanmax(p.data)
+                # Enforce a minium size here so you get some indication of the gc move
+                if min_data == max_data:
+                    max_data += 1.0
+
                 fig.add_trace(
                     {
                         "type": "scatter",
@@ -483,10 +497,10 @@ def plot_PMAR(
                             gc.end_depth,
                         ),
                         "x": (
-                            np.nanmin(p.data),
-                            np.nanmax(p.data),
-                            np.nanmax(p.data),
-                            np.nanmin(p.data),
+                            min_data,
+                            max_data,
+                            max_data,
+                            min_data,
                         ),
                         "xaxis": "x1",
                         "yaxis": "y1",
@@ -494,15 +508,17 @@ def plot_PMAR(
                         "fillcolor": PlotUtils.gc_move_colormap[gc.move_type].color,
                         "line": {
                             "dash": "solid",
+                            # proxy for line opacity - lines are needed for short moves (like roll)
+                            "width": 0.25,
                             "color": PlotUtils.gc_move_colormap[gc.move_type].color,
                         },
-                        "mode": "none",  # no outter lines and ponts
+                        "mode": "lines",
                         "legendgroup": f"{PlotUtils.gc_move_colormap[gc.move_type].name}_group",
                         "name": f"GC {PlotUtils.gc_move_colormap[gc.move_type].name}",
                         "showlegend": show_label[
                             PlotUtils.gc_move_colormap[gc.move_type].name
                         ],
-                        "text": f"GC {PlotUtils.gc_move_colormap[gc.move_type].name}, Start {gc.start_depth:.2f}m, End {gc.end_depth:.2f}m",
+                        "text": f"GC {PlotUtils.gc_move_colormap[gc.move_type].name}, Start {gc.start_depth:.2f} m, End {gc.end_depth:.2f} m<br>Duration {gc.duration:.02f} secs",
                         "hoverinfo": "text",
                     }
                 )
@@ -729,7 +745,13 @@ def plot_PMAR(
                 }
             )
 
-            PlotUtils.add_gc_moves(fig, gc_moves, spectra_depth, yaxis="y2")
+            PlotUtils.add_gc_moves(
+                fig,
+                gc_moves,
+                spectra_depth,
+                yaxis="y2",
+                time_range=spectra_time - start_time,
+            )
 
         # c_list = plotly.colors.sequential.Jet
         # c_list = plotly.colors.sequential.Rainbow
