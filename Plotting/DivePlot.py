@@ -33,7 +33,6 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import collections
 import contextlib
 import typing
 
@@ -309,33 +308,7 @@ def plot_diveplot(
 
     fig = plotly.graph_objects.Figure()
 
-    show_label = collections.defaultdict(lambda: True)
-
-    for gc in gc_moves:
-        fig.add_trace(
-            {
-                "type": "scatter",
-                "x": (gc[0] / 60.0, gc[0] / 60.0, gc[1] / 60.0, gc[1] / 60.0),
-                "y": (-100.0, 80.0, 80.0, -100.0),
-                "xaxis": "x1",
-                "yaxis": "y1",
-                "fill": "toself",
-                "fillcolor": PlotUtils.gc_move_colormap[gc[2]].color,
-                "line": {
-                    "dash": "solid",
-                    # proxy for line opacity - lines are needed for short moves (like pitch)
-                    "width": 0.25,
-                    "color": PlotUtils.gc_move_colormap[gc[2]].color,
-                },
-                "mode": "lines",  # lines are needed for short moves (like pitch)
-                "legendgroup": f"{PlotUtils.gc_move_colormap[gc[2]].name}_group",
-                "name": f"GC {PlotUtils.gc_move_colormap[gc[2]].name}",
-                "showlegend": show_label[PlotUtils.gc_move_colormap[gc[2]].name],
-                "text": f"GC {PlotUtils.gc_move_colormap[gc[2]].name}, Start {gc[0] / 60.0:.2f}mins, End {gc[1] / 60.0:.2f}mins",
-                "hoverinfo": "text",
-            }
-        )
-        show_label[PlotUtils.gc_move_colormap[gc[2]].name] = False
+    PlotUtils.add_gc_moves(fig, gc_moves, (-100.0, 80.0), convert_to_mins=True)
 
     # Depth traces
     valid_i = np.logical_not(np.isnan(depth))

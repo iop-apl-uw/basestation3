@@ -33,7 +33,6 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
-import collections
 import typing
 
 import gsw
@@ -242,35 +241,9 @@ def plot_ctd_corrections(
     depth_min = np.nanmin(ctd_depth) - (0.05 * rng)
 
     if gc_moves is not None:
-        show_label = collections.defaultdict(lambda: True)
-        # y_min = min(ctd_raw_salinity.min(), corr_salinity.min())
-        # y_max = max(ctd_raw_salinity.max(), corr_salinity.max())
-        y_min = depth_max
-        y_max = depth_min
-        for gc in gc_moves:
-            fig.add_trace(
-                {
-                    "type": "scatter",
-                    "x": (gc[0] / 60.0, gc[0] / 60.0, gc[1] / 60.0, gc[1] / 60.0),
-                    "y": (y_min, y_max, y_max, y_min),
-                    "xaxis": "x1",
-                    # "yaxis": "y1",
-                    "yaxis": "y3",
-                    "fill": "toself",
-                    "fillcolor": PlotUtils.gc_move_colormap[gc[2]].color,
-                    "line": {
-                        "dash": "solid",
-                        "color": PlotUtils.gc_move_colormap[gc[2]].color,
-                    },
-                    "mode": "none",  # no outter lines and ponts
-                    "legendgroup": f"{PlotUtils.gc_move_colormap[gc[2]].name}_group",
-                    "name": f"GC {PlotUtils.gc_move_colormap[gc[2]].name}",
-                    "showlegend": show_label[PlotUtils.gc_move_colormap[gc[2]].name],
-                    "text": f"GC {PlotUtils.gc_move_colormap[gc[2]].name}, Start {gc[0] / 60.0:.2f}mins, End {gc[1] / 60.0:.2f}mins",
-                    "hoverinfo": "text",
-                }
-            )
-            show_label[PlotUtils.gc_move_colormap[gc[2]].name] = False
+        PlotUtils.add_gc_moves(
+            fig, gc_moves, (depth_min, depth_max), yaxis="y3", convert_to_mins=True
+        )
 
     # Depth trace
     fig.add_trace(
