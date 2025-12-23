@@ -76,6 +76,7 @@ ci = [
    ## Static Typing
    "mypy==1.13.0",
    "types-PyYAML",
+   "ty",
 ]
 dev = [
     ## Documentation (fill in)
