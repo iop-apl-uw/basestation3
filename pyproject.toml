@@ -76,7 +76,7 @@ ci = [
    ## Static Typing
    "mypy==1.13.0",
    "types-PyYAML",
-   "ty",
+   "ty==0.0.7", ## Latest
 ]
 dev = [
     ## Documentation (fill in)
@@ -166,3 +166,8 @@ omit = [
     "microstructure/*",
     "Plotting/local/*",
     ]
+
+[tool.ty.rules]
+# Primarly for BaseOpts class
+# TODO - see if this can be scoped to just that class in future releases
+unresolved-attribute = "ignore"
