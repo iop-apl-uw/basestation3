@@ -193,7 +193,7 @@ class BaseLogger:
                     BaseLogger.log_level = logging.WARNING
                     handle.setLevel(logging.WARNING)
             else:
-                handle.setLevel(BaseLogger.WARNING)
+                handle.setLevel(logging.WARNING)
 
         handle.setFormatter(formatter)
 
@@ -305,7 +305,7 @@ def log_warn_errors() -> StringIO:
     return BaseLogger.warn_error_stream
 
 
-def log_tracebacks() -> list[str]:
+def log_tracebacks() -> StringIO:
     """Fetch the stream capturing of all tracebacks"""
     return BaseLogger.traceback_stream
 
