@@ -34,6 +34,7 @@
 import io
 import sys
 import time
+import typing
 from enum import IntEnum
 
 import Utils
@@ -53,7 +54,7 @@ class GPS_I(IntEnum):
 #
 
 
-def is_valid_gps_line(gps_line):
+def is_valid_gps_line(gps_line:str) -> bool:
     """Determines is a line is a valid GPS line
 
     Valid formats:
@@ -70,16 +71,16 @@ def is_valid_gps_line(gps_line):
         or gps_fields[0] == "$GPS2"
     ):
         # The form in the comm log
-        return 1
+        return True
 
     log_error("Bad GPS line " + gps_line)
-    return 0
+    return False
 
 
 class GPSFix:
     """A wrapper for a single GPS fix"""
 
-    def __init__(self, gps_line, start_date_str="01 01 70"):
+    def __init__(self, gps_line:str, start_date_str:str="01 01 70") -> None:
         """Requires a valid gps_line, from which we parse date and time.
 
         start_date_str, if provided and needed, should be of the form %m %d %y
@@ -89,6 +90,8 @@ class GPSFix:
         >>> g = GPSFix("GPS,260506,151750,4807.211,-12223.095,34,1.1,34,18.0")
         """
         log_debug("GPS line = " + gps_line)
+
+        self.datetime : time.struct_time | tuple[int, int, int, int, int, int, int, int, int] | None = None
 
         self.raw_line = gps_line
 
@@ -233,9 +236,9 @@ class GPSFix:
             print("Invalid GPS (%s)" % gps_line)
             self.isvalid = False
 
-    def dump(self, fo=sys.stdout):
+    def dump(self, fo:typing.TextIO=sys.stdout) -> None:
         """Prints out a GPS object in readable format"""
-        if self.isvalid:
+        if self.isvalid and self.datetime is not None:
             print(
                 "  DateTime %s" % time.strftime("%m %d %y %H:%M:%S", self.datetime),
                 file=fo,
@@ -261,7 +264,7 @@ class GPSFix:
         else:
             print("Invalid GPS fix", file=fo)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         x = io.StringIO()
         self.dump(x)
         x.seek(0)

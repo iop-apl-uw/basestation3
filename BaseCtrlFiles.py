@@ -334,7 +334,7 @@ def send_inreach(
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
 
-    if gps_fix is None:
+    if gps_fix is None or not gps_fix.isvalid:
         log_info(f"No valid gps fix for inreach message user:{user}, endpoint:{endpoint}")
         return
 
