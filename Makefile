@@ -10,8 +10,8 @@ rufflint:
 #	-uv run ruff check --select I --fix .
 #	-uv run ruff format .
 
-mypy:
-	-mypy
+typecheck:
+	-uv run ty check --output-format github 2>/dev/null
 
 test:
 	-uv run pytest -rsx --cov --cov-report term-missing tests/
