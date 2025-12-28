@@ -393,12 +393,12 @@ class SensorExtensions:
 
 
 # Helper routines
-# sensor_extensions = None
+sensor_extensions: SensorExtensions | None
 
 
 def set_globals() -> None:
     """Allows globals to be reset externally"""
-    global sensor_extensions  # pylint: disable=global-statement
+    global sensor_extensions
 
     sensor_extensions = None
 
