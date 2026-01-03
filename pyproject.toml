@@ -133,6 +133,10 @@ select = [
     "B",
     # flake8-simplify
     "SIM",
+    # Turning these on will help trackdown issues that will eventually show up in ty strict mode
+    #flake8-annotations (ANN)
+    #"ANN",
+    #
     # isort
     "I",
     # Numpy 2.0 compat

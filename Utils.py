@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -45,7 +45,7 @@ import collections
 import errno
 import functools
 import glob
-import importlib
+import importlib.util
 import io
 import math
 import os
@@ -141,7 +141,7 @@ def open_netcdf_file(
     return ds
 
 
-def unique(s):
+def unique(s: list[Any]) -> list[Any]:
     """Return a list of the elements in s, but without duplicates."""
     return list(set(s))
 
@@ -214,7 +214,9 @@ def unique(s):
 #     return u
 
 
-def flatten(inlist, ltype=(list, tuple), maxint=sys.maxsize):
+def flatten(
+    inlist: list[Any], ltype=(list, tuple), maxint: int = sys.maxsize
+) -> list[Any]:
     """Flatten out a list."""
     try:
         # for every possible index
@@ -229,7 +231,7 @@ def flatten(inlist, ltype=(list, tuple), maxint=sys.maxsize):
     return inlist
 
 
-def mod360(degrees):
+def mod360(degrees: float) -> float:
     if degrees > 360:
         degrees = math.fmod(degrees, 360)
     if degrees < 0:
@@ -238,7 +240,9 @@ def mod360(degrees):
     return degrees
 
 
-def rangeBearing(latDeg0, longDeg0, latDeg1, longDeg1):
+def rangeBearing(
+    latDeg0: float, longDeg0: float, latDeg1: float, longDeg1: float
+) -> tuple[float, float, float, float]:
     METERS_PER_DEG = 111120.0
 
     diff = METERS_PER_DEG * math.cos(latDeg1 * math.pi / 180)
@@ -251,7 +255,7 @@ def rangeBearing(latDeg0, longDeg0, latDeg1, longDeg1):
     return (rng, brg, x, y)
 
 
-def haversine(lat0, lon0, lat1, lon1):
+def haversine(lat0: float, lon0: float, lat1: float, lon1: float) -> float:
     """Distance between to positions, using the haversine method"""
     R = 6378137.0
     lat0 = lat0 * math.pi / 180
@@ -269,7 +273,7 @@ def haversine(lat0, lon0, lat1, lon1):
     return 2.0 * R * math.asin(math.sqrt(a))
 
 
-def ddmm2dd(x):
+def ddmm2dd(x: float) -> float:
     """Converts a lat/long from ddmm.mmm to dd.dddd
 
     Input: x - float in ddmm.mm format
@@ -281,7 +285,7 @@ def ddmm2dd(x):
     return float(int(x / 100.0) + math.fmod(x, 100.0) / 60.0)
 
 
-def dd2ddmm(x):
+def dd2ddmm(x: float) -> float:
     """Converts a lat/long from dd.dddd to ddmm.mmm
 
     Input: x - float in dd.ddd format
@@ -294,12 +298,12 @@ def dd2ddmm(x):
     return dd * 100.0 + (x - dd) * 60.0
 
 
-def format_lat_lon_dd(lat_lon_dd, fmt, is_lat):
+def format_lat_lon_dd(lat_lon_dd: float, fmt: str, is_lat: bool) -> str:
     """Formats a dd.dd lat or lon to a better output format"""
     return format_lat_lon(dd2ddmm(lat_lon_dd), fmt, is_lat)
 
 
-def format_lat_lon(lat_lon, fmt, is_lat):
+def format_lat_lon(lat_lon: float, fmt: str, is_lat: bool) -> str:
     """Formats a ddmm.mm lat or lon to a better output format"""
     if is_lat:
         prefix = "N" if lat_lon > 0 else "S"
@@ -338,7 +342,7 @@ def format_lat_lon(lat_lon, fmt, is_lat):
 #
 # Lock file primitives
 #
-def create_lock_file(base_opts, base_lockfile_name):
+def create_lock_file(base_opts: BaseOpts.BaseOptions, base_lockfile_name: str) -> int:
     """Creates a lock file, with the process id as the contents
 
     Returns:
@@ -360,7 +364,7 @@ def create_lock_file(base_opts, base_lockfile_name):
         return 0
 
 
-def cleanup_lock_file(base_opts, base_lockfile_name):
+def cleanup_lock_file(base_opts: BaseOpts.BaseOptions, base_lockfile_name: str) -> int:
     """Removes the lock file
 
     Returns:
@@ -385,7 +389,7 @@ def cleanup_lock_file(base_opts, base_lockfile_name):
         return 0
 
 
-def check_for_pid(pid):
+def check_for_pid(pid: int) -> int:
     """Checks for a pid on the system
 
     Returns:
@@ -399,7 +403,7 @@ def check_for_pid(pid):
         return err.errno == errno.EPERM
 
 
-def wait_for_pid(pid, timeout):
+def wait_for_pid(pid: int, timeout: float) -> bool:
     """Waits for a pid to disappear from the system, bounded by the timeout
 
     Returns:
@@ -416,7 +420,7 @@ def wait_for_pid(pid, timeout):
     return True
 
 
-def check_lock_file(base_opts, base_lockfile_name):
+def check_lock_file(base_opts: BaseOpts.BaseOptions, base_lockfile_name: str) -> int:
     """Check the lock files contents and if exists, check to see if the pid in the lockfile still exists in the system
 
     Returns:
@@ -459,7 +463,7 @@ def check_lock_file(base_opts, base_lockfile_name):
             return 0
 
 
-def bzip_decompress(input_file_name, output_file_name):
+def bzip_decompress(input_file_name: str, output_file_name: str) -> int:
     """Decompess the input name to the output name
     Return 0 for success, 1 for failure
     """
@@ -502,12 +506,12 @@ class Timeout(Exception):
     """Defines an exception for timeout to system call"""
 
 
-def _timeout(x, y):
+def _timeout(x: Any, y: Any) -> Any:
     """Raises the timeout exception"""
     raise Timeout()
 
 
-def which(program):
+def which(program: str) -> str | None:
     """Searches PATH for a program"""
 
     def is_exe(fpath):
@@ -526,13 +530,16 @@ def which(program):
     return None
 
 
-def check_call(cmd, use_shell=False):
+def check_call(cmd: str, use_shell: bool = False) -> int:
     """Wrapper for check_call in subproccess"""
     if not use_shell:
-        cmd = cmd.split()
-        cmd[0] = which(cmd[0])
+        cmd_split = cmd.split()
+        # cmd_split[0] = which(cmd_split[0])
+        cmd_location = which(cmd_split[0])
+        if cmd_location is None:
+            return 1
     try:
-        subprocess.check_call(cmd, shell=use_shell)
+        subprocess.check_call(cmd_split, shell=use_shell)
     except subprocess.CalledProcessError as grepexc:
         #  print "error code", grepexc.returncode, grepexc.output
         return grepexc.returncode
@@ -735,7 +742,8 @@ def cart2pol(x, y):
 
 
 # http://staff.washington.edu/bdjwww/medfilt.py
-def medfilt1(x=None, L=None):
+# def medfilt1(x=None, L=None):
+def medfilt1(x, L):
     """
     A simple median filter for 1d numpy arrays.
 
@@ -1357,7 +1365,7 @@ qc_log_type = collections.namedtuple("qc_log_type", ["qc_str", "qc_type", "qc_po
 def load_qc_pickl(qc_file):
     """Loads QC pickle file"""
     try:
-        fi = open(qc_file, "r")  # noqa: SIM115
+        fi = open(qc_file, "rb")  # noqa: SIM115
     except Exception:
         return None
 
@@ -1603,9 +1611,15 @@ def loadmodule(pathname):
     # there's a problem we can't handle -- let the caller handle it.
     try:
         spec = importlib.util.spec_from_file_location(name, pathname)
+        if spec is None:
+            log_error(f"Error loading {pathname}")
+            return None
         mod = importlib.util.module_from_spec(spec)
+        if mod is None:
+            log_error(f"Error loading {pathname}")
+            return None
         sys.modules[name] = mod
-        spec.loader.exec_module(mod)
+        spec.loader.exec_module(mod)  # ty: ignore[possibly-missing-attribute]
         return mod
     except Exception:
         log_error(f"Error loading {pathname}", "exc")
@@ -1627,7 +1641,7 @@ def mission_database_filename(base_opts: BaseOpts.BaseOptions):
 
 def open_mission_database(
     base_opts: BaseOpts.BaseOptions, ro=False
-) -> sqlite3.Connection:
+) -> sqlite3.Connection | None:
     import BaseDB
 
     db = mission_database_filename(base_opts)
@@ -1868,7 +1882,7 @@ whole_mission_cfg_sections = ("profile", "timeseries")
 
 def whole_mission_cfg(
     cfg_file: pathlib.Path, meta_data_d: dict[str, Any]
-) -> dict[str, bool] | dict[str, bool]:
+) -> tuple[dict[str, str | bool], dict[str, str | bool]]:
     """Loads a yaml config file for modifying the contents of a whole mission netcdf file.
 
     Args:
