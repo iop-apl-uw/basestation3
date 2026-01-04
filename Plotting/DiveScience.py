@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -61,6 +61,7 @@ instrument_meta["fet"] = {
             "color_up": "DarkGrey",
             "units": "V",
             "hoverfmt": ".2f",
+            "visible": "legendonly",
         },
         "Vrse": {
             "xaxis": "x1",
@@ -77,6 +78,7 @@ instrument_meta["fet"] = {
             "color_up": "DarkCyan",
             "units": "V",
             "hoverfmt": ".3g",
+            "visible": "legendonly",
         },
         "Vk": {
             "xaxis": "x1",
@@ -85,6 +87,7 @@ instrument_meta["fet"] = {
             "color_up": "darkgoldenrod",
             "units": "V",
             "hoverfmt": ".4f",
+            "visible": "legendonly",
         },
         "Vkstd": {
             "xaxis": "x1",
@@ -93,6 +96,7 @@ instrument_meta["fet"] = {
             "color_up": "DarkGreen",
             "units": "V",
             "hoverfmt": ".3g",
+            "visible": "legendonly",
         },
         "Ik": {
             "xaxis": "x2",
@@ -101,6 +105,7 @@ instrument_meta["fet"] = {
             "color_up": "DarkBlue",
             "units": "uI",
             "hoverfmt": ".4f",
+            "visible": "legendonly",
         },
         "Ib": {
             "xaxis": "x2",
@@ -109,6 +114,7 @@ instrument_meta["fet"] = {
             "color_up": "darkolivegreen",
             "units": "uI",
             "hoverfmt": ".4f",
+            "visible": "legendonly",
         },
     },
 }
