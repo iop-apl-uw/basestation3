@@ -360,15 +360,33 @@ def mission_pmar_disk(
         )
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=np.RankWarning)
-            m, b = np.polyfit(df["dive"].to_numpy(), pm_tot.to_numpy(), 1)
+            if df["dive"].to_numpy().size > 20:
+                dives_back = -20
+            else:
+                dives_back = 0
+            m, b = np.polyfit(
+                df["dive"].to_numpy()[dives_back:], pm_tot.to_numpy()[dives_back:], 1
+            )
 
         pm_free_est = f"<br>based on PM Total free, {-b/m:.0f} dives until full"
+        if dives_back:
+            pm_free_est += f" (Based on last {np.abs(dives_back):d} dives)"
     else:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=np.RankWarning)
-            m, b = np.polyfit(df["dive"].to_numpy(), df[fields[0]].to_numpy(), 1)
+            if df["dive"].to_numpy().size > 20:
+                dives_back = -20
+            else:
+                dives_back = 0
+            m, b = np.polyfit(
+                df["dive"].to_numpy()[dives_back:],
+                df[fields[0]].to_numpy()[dives_back:],
+                1,
+            )
 
         pm_free_est = f"<br>based on PM free, {-b/m:.0f} dives until full"
+        if dives_back:
+            pm_free_est += f" (Based on last {np.abs(dives_back):d} dives)"
 
     fig.update_layout(
         {
