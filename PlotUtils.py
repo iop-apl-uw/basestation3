@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -41,8 +41,10 @@ import time
 import typing
 
 import gsw
+import netCDF4
 import numpy as np
 import scipy
+from numpy.typing import NDArray
 
 # pylint: disable=wrong-import-position
 if typing.TYPE_CHECKING:
@@ -177,7 +179,7 @@ def extract_gc_moves(ncf: scipy.io._netcdf.netcdf_file) -> tuple:
         log_error(
             "Could not find gc_gcphase or gc_flags in netcdf file - skipping gcphase/flags in plots"
         )
-        return None
+        return ()
 
     gc_roll_pos = np.concatenate(
         (ncf.variables["gc_roll_ad_start"][:], ncf.variables["gc_roll_ad"][:])
@@ -523,6 +525,7 @@ def find_identical_runs(arr):
     runs = []
     current_run_value = None
     current_run_length = None
+    current_run_start = None
 
     for ii, val in enumerate(arr):
         if current_run_value is None:
@@ -854,7 +857,7 @@ def interp_missing_depth(sg_time, sg_depth):
     return sg_depth
 
 
-def Nsquared(ds):
+def Nsquared(ds: netCDF4.Dataset) -> NDArray[np.float64] | None:
     if not all(
         ii in ds.variables
         for ii in (
