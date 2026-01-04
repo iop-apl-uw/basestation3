@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -227,7 +227,7 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         ) = None
 
     # Preliminaries
-    temp = salinity = sigma_t = None
+    temp = salinity = sigma_t = buoy_f = None
 
     if temp_name in dive_nc_file.variables and salinity_name in dive_nc_file.variables:
         try:
@@ -243,6 +243,15 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
                 sigma_t = dive_nc_file.variables["sigma_t"][:]
             else:
                 sigma_t = None
+
+            N2 = PlotUtils.Nsquared(dive_nc_file)
+            if N2 is not None:
+                try:
+                    N2[N2 < 0.0] = np.nan
+
+                    buoy_f = np.sqrt(N2) * 1800 / np.pi
+                except Exception:
+                    log_warning("Failed to convert buoy_freq", "exc")
 
             temp_sampled_mask = salinity_sampled_mask = conductivity_sampled_mask = None
             temp_raw_tag = "raw_" if "raw" in temp_name else ""
@@ -351,6 +360,9 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         if sigma_t is not None:
             ctd_vars.sigma_t_dive = sigma_t[0, :]
             ctd_vars.sigma_t_climb = sigma_t[1, :]
+        if buoy_f is not None:
+            ctd_vars.buoy_f_dive = buoy_f[0, :]
+            ctd_vars.buoy_f_climb = buoy_f[1, :]
     else:
         if not ctd_vars.start_time:
             ctd_vars.start_time = ctd_vars.ctd_time_v[0]
@@ -401,6 +413,10 @@ def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
         if sigma_t is not None:
             ctd_vars.sigma_t_dive = sigma_t[dive_start:max_depth_sample_index]
             ctd_vars.sigma_t_climb = sigma_t[max_depth_sample_index:dive_end]
+
+        if buoy_f is not None:
+            ctd_vars.buoy_f_dive = buoy_f[dive_start:max_depth_sample_index]
+            ctd_vars.buoy_f_climb = buoy_f[max_depth_sample_index:dive_end]
 
     if ctd_vars.is_legato:
         ctd_vars.max_salinity = ctd_vars.min_salinity = ctd_vars.max_temperature = (
@@ -641,6 +657,50 @@ def plot_CTD(
                 }
             )
 
+        if ctd_vars.buoy_f_dive is not None:
+            fig.add_trace(
+                {
+                    "y": ctd_vars.depth_dive,
+                    "x": ctd_vars.buoy_f_dive,
+                    "meta": ctd_vars.time_dive,
+                    "customdata": ctd_vars.point_num_ctd_dive,
+                    "name": "Buoyancy Frequency Dive",
+                    "type": "scatter",
+                    "xaxis": "x5",
+                    "yaxis": "y1",
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "triangle-down",
+                        "color": "lightgreen",
+                    },
+                    "hovertemplate": "Buoyancy Frequency Dive<br>%{x:.2f} cycles/hr<br>%{y:.2f}"
+                    + "meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
+                    "visible": "legendonly",
+                }
+            )
+
+        if ctd_vars.buoy_f_climb is not None:
+            fig.add_trace(
+                {
+                    "y": ctd_vars.depth_climb,
+                    "x": ctd_vars.buoy_f_climb,
+                    "meta": ctd_vars.time_climb,
+                    "customdata": ctd_vars.point_num_ctd_climb,
+                    "name": "Buoyancy Frequency Climb",
+                    "type": "scatter",
+                    "xaxis": "x5",
+                    "yaxis": "y1",
+                    "mode": "markers",
+                    "marker": {
+                        "symbol": "triangle-up",
+                        "color": "darkolivegreen",
+                    },
+                    "hovertemplate": "Buoyancy Frequency Climb<br>%{x:.2f} cycles/hr<br>%{y:.2f}"
+                    + " meters<br>%{meta:.2f} mins<br>%{customdata:d} point_num<extra></extra>",
+                    "visible": "legendonly",
+                }
+            )
+
         if ctd_vars.aa4831_temp_dive is not None:
             fig.add_trace(
                 {
@@ -775,6 +835,16 @@ def plot_CTD(
                 # Not visible - no good way to control the bottom margin so there is room for this
                 "xaxis4": {
                     "title": "Sigma_t (g/m^3)",
+                    "showgrid": False,
+                    "overlaying": "x1",
+                    "side": "bottom",
+                    "anchor": "free",
+                    "position": 0.05,
+                    "visible": False,
+                },
+                # Not visible - no good way to control the bottom margin so there is room for this
+                "xaxis5": {
+                    "title": "Buoy_f (cycles/hr)",
                     "showgrid": False,
                     "overlaying": "x1",
                     "side": "bottom",
