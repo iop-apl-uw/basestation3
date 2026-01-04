@@ -38,6 +38,7 @@ import pathlib
 import typing
 from dataclasses import dataclass
 
+import netCDF4
 import numpy as np
 import numpy.typing as npt
 import plotly.graph_objects
@@ -69,8 +70,8 @@ class CTDVars:
     optode_name: str | None = None
     aa4831_depth_dive: npt.NDArray[np.float64] | None = None
     aa4831_depth_climb: npt.NDArray[np.float64] | None = None
-    point_num_aa4831_dive: npt.NDArray[np.float64] | None = None
-    point_num_aa4831_climb: npt.NDArray[np.float64] | None = None
+    point_num_aa4831_dive: npt.NDArray[np.int64] | None = None
+    point_num_aa4831_climb: npt.NDArray[np.int64] | None = None
     qc_tag: str = ""
     depth_dive: npt.NDArray[np.float64] | None = None
     depth_climb: npt.NDArray[np.float64] | None = None
@@ -80,8 +81,8 @@ class CTDVars:
     temp_climb: npt.NDArray[np.float64] | None = None
     salinity_dive: npt.NDArray[np.float64] | None = None
     salinity_climb: npt.NDArray[np.float64] | None = None
-    point_num_ctd_dive: npt.NDArray[np.float64] | None = None
-    point_num_ctd_climb: npt.NDArray[np.float64] | None = None
+    point_num_ctd_dive: npt.NDArray[np.int64] | None = None
+    point_num_ctd_climb: npt.NDArray[np.int64] | None = None
     conductivity_dive: npt.NDArray[np.float64] | None = None
     conductivity_climb: npt.NDArray[np.float64] | None = None
     conductivity: npt.NDArray[np.float64] | None = None
@@ -97,14 +98,19 @@ class CTDVars:
     sigma_t_climb: npt.NDArray[np.float64] | None = None
     buoy_freq_dive: npt.NDArray[np.float64] | None = None
     buoy_freqclimb: npt.NDArray[np.float64] | None = None
-    max_depth_sampled_i: float | None = None
+    max_depth_sampled_i: np.int64 | None = None
     max_depth_sampled: float | None = None
     f_depth: typing.Any | None = None
     start_time: float | None = None
     ctd_time_sampled: npt.NDArray[np.float64] | None = None
 
 
-def load_ctd_vars(dive_nc_file, temp_name, salinity_name, conductivity_name):
+def load_ctd_vars(
+    dive_nc_file: netCDF4.Dataset,
+    temp_name: str,
+    salinity_name: str,
+    conductivity_name: str,
+) -> CTDVars | None:
     """Loads CTD vars for plotting routines"""
     ctd_vars = CTDVars()
 
@@ -805,10 +811,12 @@ def plot_CTD(
                     "range": [
                         max(
                             np.nanmax(ctd_vars.depth_dive)
-                            if len(ctd_vars.depth_dive) > 0
+                            if ctd_vars.depth_dive is not None
+                            and len(ctd_vars.depth_dive) > 0
                             else 0,
                             np.nanmax(ctd_vars.depth_climb)
-                            if len(ctd_vars.depth_climb) > 0
+                            if ctd_vars.depth_climb is not None
+                            and len(ctd_vars.depth_climb) > 0
                             else 0,
                         ),
                         0,
@@ -861,10 +869,12 @@ def plot_CTD(
                     "range": [
                         max(
                             np.nanmax(ctd_vars.depth_dive)
-                            if len(ctd_vars.depth_dive) > 0
+                            if ctd_vars.depth_dive is not None
+                            and len(ctd_vars.depth_dive) > 0
                             else 0,
                             np.nanmax(ctd_vars.depth_climb)
-                            if len(ctd_vars.depth_climb) > 0
+                            if ctd_vars.depth_climb is not None
+                            and len(ctd_vars.depth_climb) > 0
                             else 0,
                         ),
                         0,
@@ -1023,6 +1033,8 @@ def plot_CTD_series(
         frames = []
         n_frames = 0
         dive_nums = []
+
+        ctd_vars = None
 
         for nc_file in nc_files:
             ctd_vars = load_ctd_vars(
@@ -1306,6 +1318,10 @@ def plot_CTD_series(
             dives_str = f"Dives {dive_nums[0]}"
         else:
             dives_str = ""
+
+        # This addresses the corner case where we failed to load the ctd_vars from the netcdf file - exit cleanly
+        if ctd_vars is None:
+            return (ret_figs, ret_plots)
 
         mission_dive_str = PlotUtils.get_mission_dive(dive_nc_file, dives_str=dives_str)
         title_text = "%s<br>CTD Temperature%s and Salinity%s vs Depth%s%s%s" % (
