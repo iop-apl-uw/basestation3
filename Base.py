@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -128,6 +128,14 @@ base_completed_name = ".completed"
 # Configuration
 previous_conversion_time_out = 60  # Time to wait for previous conversion to complete
 
+logger_eng_readers: dict[str, str]
+processed_logger_payload_files: dict[str, list[str]]  # TODO - pathlib
+processed_eng_and_log_files: list[str]  # TODO - pathlib
+processed_selftest_eng_and_log_files: list[str]  # TODO - pathlib
+processed_other_files: list[str]  # TODO - pathlib
+processed_logger_eng_files: list[str]  # TODO - pathlib
+processed_logger_other_files: list[str]  # TODO - pathlib
+
 
 # Utility functions
 def set_globals() -> None:
@@ -167,7 +175,10 @@ def my_prompt_user_passwd(self, host, realm):
     return None, None
 
 
+# GBS 2026/01/06 - FancyURLopener has been depricated forever.  Proposed solution below.  Need to confirm
+# via testcase what the situation where this code is triggered to confirm the fix
 urllib.request.FancyURLopener.prompt_user_passwd = my_prompt_user_passwd
+# urllib.request.urlopen.prompt_user_passwd = my_prompt_user_passwd
 
 
 def read_processed_files(glider_dir, instrument_id):
@@ -2820,7 +2831,7 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             (reboot_msg, "GLIDER_REBOOT"),
             (recov_msg, "NON_QUIT_RECOVERY"),
         ):
-            if msg:
+            if msg and alert_msg_file is not None:
                 alert_msg_file.write(
                     f'<div class="{alert_class}">\n<p><a  href="alerthelp#{alert_class}">Alert: {alert_class}</a>\n<ul>\n'
                 )

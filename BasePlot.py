@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -43,6 +43,7 @@ import traceback
 
 import numpy as np
 import plotly
+import plotly.graph_objects
 
 import BaseOpts
 import BaseOptsType
@@ -80,7 +81,7 @@ def plot_dives(
     dive_nc_file_names: list,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list:list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[str]]:
     """
     Create per-dive related plots
 
@@ -94,8 +95,8 @@ def plot_dives(
 
             list of filenames created
     """
-    figs = []
-    output_files = []
+    figs: list[plotly.graph_objects.Figure] = []
+    output_files: list[str] = []
     if dbcon is None:
         con = Utils.open_mission_database(base_opts)
         log_info("plot_dives db opened")
@@ -152,11 +153,11 @@ def plot_dives(
 def plot_mission(
     base_opts: BaseOpts.BaseOptions,
     mission_plot_dict: dict,
-    mission_str: list,
+    mission_str: str,
     dive=None,
     generate_plots=True,
     dbcon=None,
-) -> tuple[list:list]:
+) -> tuple[list[plotly.graph_objects.Figure], list[str]]:
     """
     Create per-dive related plots
 
@@ -174,8 +175,8 @@ def plot_mission(
     else:
         con = dbcon
 
-    figs = []
-    output_files = []
+    figs: list[plotly.graph_objects.Figure] = []
+    output_files: list[str] = []
     for plot_name, plot_func in mission_plot_dict.items():
         try:
             if (
@@ -256,7 +257,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         additional_arguments={
             "netcdf_files": BaseOptsType.options_t(
                 None,
-                ("BasePlot",),
+                {
+                    "BasePlot",
+                },
                 ("netcdf_files",),
                 str,
                 {
