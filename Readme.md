@@ -642,3 +642,23 @@ a new deployment.
 /opt/basestation/bin/python /usr/local/basestation3/MoveData.py \
  --mission_dir <seaglider_home_directory> -t <target_directory> --verbose
 ```
+
+## BaseCtrlFiles.py
+
+```BaseCtrlFiles.py``` contains the low-level routines that send notifications sent via the ```pagers.yml``` configuration files.  
+For debugging purposes, these routines can be accessed directly, but they may not generate meaningful content.  Additionally, it is possible 
+to dump the merged ```pagers.yml``` dictionary. 
+
+To execute a low-level notification, simply supply one of the low-level notification tags:
+```
+/opt/basestation/bin/python /usr/local/basestation3/BaseCtrlFiles.py \
+ --mission_dir <seaglider_home_directory> [--group_etc <group_etc_directory>] [divetar,upload,lategps,errors,drift,comp,tracebackrecov,alerts,gps,critical]
+```
+For example, ```gps``` will dispatch the GPS position found in the last comm session in the ```comm.log``` to those users subscribing to ```gps``` notifications.
+
+To dump the merged ```pagers.yml``` dictionary:
+```
+/opt/basestation/bin/python /usr/local/basestation3/BaseCtrlFiles.py \
+ --mission_dir <seaglider_home_directory> [--group_etc <group_etc_directory>] dump_pagers_yml
+```
+

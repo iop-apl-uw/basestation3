@@ -890,7 +890,7 @@ def main():
                 str,
                 {
                     "help": "Which action to run",
-                    "choices": set(pagers_msgs),
+                    "choices": set(pagers_msgs +("dump_pagers_yml",))
                 },
             ),
         },
@@ -908,8 +908,27 @@ def main():
             os.path.join(base_opts.mission_dir, "comm.log"), base_opts, scan_back=False
         )[0]
 
+    (comm_log, _, _, _, _) = CommLog.process_comm_log(
+        os.path.join(base_opts.mission_dir, "comm.log"),
+        base_opts,
+        #known_commlog_files=known_files,
+    )
+
     if comm_log is None:
         log_error("Could not process comm.log")
+        return
+
+    if base_opts.basectrlfiles_action == "dump_pagers_yml":
+        pagers_dict = load_ctrl_yml(
+            base_opts, "pagers.yml", copy.deepcopy(base_pagers_dict)
+        )
+        if pagers_dict is None:
+            log_error("Failed to load pager(s).yml - bailing out")
+            return
+
+        pagers_dict = check_canonicalize_pagers_dict(pagers_dict)
+        
+        dump_pagers_dict(pagers_dict)
         return
 
     if base_opts.basectrlfiles_action in pagers_msgs:
