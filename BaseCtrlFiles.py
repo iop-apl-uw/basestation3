@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -334,17 +334,16 @@ def send_inreach(
     endpoint = send_dict["endpoint"]
     user = send_dict["user"]
 
-    if gps_fix is None or not gps_fix.isvalid:
+    if gps_fix is None or not gps_fix.isvalid or gps_fix.datetime is None or gps_fix.lat is None or gps_fix.lon is None:
         log_info(f"No valid gps fix for inreach message user:{user}, endpoint:{endpoint}")
         return
-
     for check_val in ("imei", "usr", "pwd"):
         if check_val not in endpoint:
             log_error(f"Missing imei number for user:{user}, endpoint:{endpoint}")
             return
 
     msg = "%s:%s" % (subject_line, message_body)
-
+    
     try:
         epoch_ms = int(time.mktime(gps_fix.datetime)) * 1000.0
     except Exception:
@@ -422,7 +421,7 @@ def load_ctrl_yml(
     base_opts: BaseOpts.BaseOptions,
     ctrl_file_name: str,
     default_dict: dict | None = None,
-) -> dict:
+) -> dict | None:
     """Load ctrl yaml files and merge into one"""
 
     if default_dict:
@@ -886,7 +885,7 @@ def main():
         additional_arguments={
             "basectrlfiles_action": BaseOptsType.options_t(
                 (),
-                ("BaseCtrlFiles",),
+                {"BaseCtrlFiles"},
                 ("basectrlfiles_action",),
                 str,
                 {
