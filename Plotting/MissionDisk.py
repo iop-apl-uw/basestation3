@@ -33,6 +33,7 @@
 # TODO: This can be removed as of python 3.11
 from __future__ import annotations
 
+import time
 import typing
 import warnings
 
@@ -49,6 +50,35 @@ import PlotUtilsPlotly
 import Utils
 from BaseLog import log_error, log_info
 from Plotting import plotmissionsingle
+
+
+def est_remaining(df, y_val, tag_val: str) -> str:
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", category=np.RankWarning)
+        if df["dive"].to_numpy().size > 20:
+            dives_back = -20
+        else:
+            dives_back = 0
+        m, b = np.polyfit(
+            df["dive"].to_numpy()[dives_back:],
+            y_val[dives_back:],
+            1,
+        )
+
+    dives_left = -b / m
+    secs_remaining = np.nanmean(df["total_flight_time_s"][dives_back:]) * dives_left
+
+    end_date = time.strftime(
+        "%Y-%m-%dT%H:%M:%SZ",
+        time.gmtime(df["log_gps_time"].to_numpy()[-1] + secs_remaining),
+    )
+    days_remaining = secs_remaining / (24.0 * 3600.0)
+    log_info(f"{tag_val} days_remaining:{days_remaining:.2f} end_date:{end_date}")
+    free_est = f"<br>Based on {tag_val}, {dives_left:.0f} dives until full, {days_remaining:.0f} days remaining, {end_date} end date"
+    if dives_back:
+        free_est += f" (Based on last {np.abs(dives_back):d} dives)"
+
+    return free_est
 
 
 @plotmissionsingle
@@ -88,6 +118,8 @@ def mission_disk(
     if len(qcols) == 0:
         return ([], [])
 
+    qcols.extend(["total_flight_time_s", "log_gps_time"])
+
     qstr = ",".join(qcols)
 
     fig = plotly.graph_objects.Figure()
@@ -108,8 +140,7 @@ def mission_disk(
         conn.close()
         log_info("mission_disk db closed")
 
-    sd_free_est = ""
-    sc_free_est = ""
+    free_est = ""
 
     if "SD_free" in df.columns:
         fig.add_trace(
@@ -128,11 +159,7 @@ def mission_disk(
             }
         )
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=np.RankWarning)
-            m, b = np.polyfit(df["dive"].to_numpy(), df["SD_free"].to_numpy(), 1)
-
-        sd_free_est = f"<br>based on SD free, {-b/m:.0f} dives until full"
+        free_est += est_remaining(df, df["SD_free"].to_numpy(), "SD free space")
 
     if "SD_files" in df.columns:
         fig.add_trace(
@@ -194,28 +221,13 @@ def mission_disk(
             }
         )
 
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=np.RankWarning)
-            m, b = np.polyfit(df["dive"].to_numpy(), df[v].to_numpy(), 1)
-
-        sc_free_est = f"<br>based on {nm}, {-b/m:.0f} dives until full"
-        # y_offset += -0.02
-        # l_annotations.append(
-        #     {
-        #         "text": sc_free_est,
-        #         "showarrow": False,
-        #         "xref": "paper",
-        #         "yref": "paper",
-        #         "x": 0.0,
-        #         "y": y_offset,
-        #     }
-        # )
+        free_est += est_remaining(df, df[v].to_numpy(), v.removeprefix("log_"))
 
     fig.update_layout(
         {
             "xaxis": {
                 # "title": "Dive Number",
-                "title": f"Dive Number{sd_free_est}{sc_free_est}",
+                "title": f"Dive Number{free_est}",
                 "showgrid": True,
                 "domain": [0, 0.95],
             },
@@ -245,7 +257,6 @@ def mission_disk(
             "margin": {
                 "b": 120,
             },
-            # "annotations": tuple(l_annotations),
         },
     )
     return (
@@ -299,6 +310,8 @@ def mission_pmar_disk(
 
     if len(qcols) == 0:
         return ([], [])
+
+    qcols.extend(["total_flight_time_s", "log_gps_time"])
 
     qstr = ",".join(qcols)
 
@@ -358,35 +371,42 @@ def mission_pmar_disk(
                 "hovertemplate": "Dive %{x}<br>PM Total free space %{y:,} kb<extra></extra>",
             }
         )
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=np.RankWarning)
-            if df["dive"].to_numpy().size > 20:
-                dives_back = -20
-            else:
-                dives_back = 0
-            m, b = np.polyfit(
-                df["dive"].to_numpy()[dives_back:], pm_tot.to_numpy()[dives_back:], 1
-            )
 
-        pm_free_est = f"<br>based on PM Total free, {-b/m:.0f} dives until full"
-        if dives_back:
-            pm_free_est += f" (Based on last {np.abs(dives_back):d} dives)"
+        y_val = pm_tot.to_numpy()
+        tag_val = "Total "
     else:
-        with warnings.catch_warnings():
-            warnings.simplefilter("ignore", category=np.RankWarning)
-            if df["dive"].to_numpy().size > 20:
-                dives_back = -20
-            else:
-                dives_back = 0
-            m, b = np.polyfit(
-                df["dive"].to_numpy()[dives_back:],
-                df[fields[0]].to_numpy()[dives_back:],
-                1,
-            )
+        y_val = df[fields[0]].to_numpy()
+        tag_val = ""
 
-        pm_free_est = f"<br>based on PM free, {-b/m:.0f} dives until full"
-        if dives_back:
-            pm_free_est += f" (Based on last {np.abs(dives_back):d} dives)"
+    # with warnings.catch_warnings():
+    #     warnings.simplefilter("ignore", category=np.RankWarning)
+    #     if df["dive"].to_numpy().size > 20:
+    #         dives_back = -20
+    #     else:
+    #         dives_back = 0
+    #     m, b = np.polyfit(
+    #         df["dive"].to_numpy()[dives_back:],
+    #         y_val[dives_back:],
+    #         1,
+    #     )
+
+    # dives_left = -b / m
+    # secs_remaining = np.nanmean(df["total_flight_time_s"][dives_back:]) * dives_left
+
+    # end_date = time.strftime(
+    #     "%Y-%m-%dT%H:%M:%SZ",
+    #     time.gmtime(df["log_gps_time"].to_numpy()[-1] + secs_remaining),
+    # )
+    # days_remaining = secs_remaining / (24.0 * 3600.0)
+    # log_info(
+    #     f"pmar_disk_estimate days_remaining:{days_remaining:.2f} end_date:{end_date}"
+    # )
+
+    # pm_free_est = f"<br>Based on PM {tag_val}free, {dives_left:.0f} dives until full, {days_remaining:.0f} days remaining, {end_date} end date"
+    # if dives_back:
+    #     pm_free_est += f" (Based on last {np.abs(dives_back):d} dives)"
+
+    pm_free_est = est_remaining(df, y_val, f"PM {tag_val}free")
 
     fig.update_layout(
         {
