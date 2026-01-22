@@ -34,7 +34,8 @@
 from __future__ import annotations
 
 import collections
-import copy
+
+# import copy
 import os
 import stat
 import time
@@ -51,6 +52,7 @@ if typing.TYPE_CHECKING:
     import BaseOpts
 
 import NetCDFUtils
+import ScienceGrid
 import Utils
 from BaseLog import log_error, log_warning
 
@@ -506,71 +508,73 @@ def collect_timeouts(dive_nc_file, instr_cls):
     return (timeouts, np.array(timeouts_times))
 
 
-run_t = collections.namedtuple("run_t", ("run_value", "run_length", "run_index"))
+# run_t = collections.namedtuple("run_t", ("run_value", "run_length", "run_index"))
 
 
-def find_identical_runs(arr):
-    """Finds runs of identical values in an array
-    Input:
-    numpy array
+# def find_identical_runs(arr):
+#     """Finds runs of identical values in an array
+#     Input:
+#     numpy array
 
-    Return:
-    List of tuples of value, length and index
-    """
-    if not isinstance(arr, np.ndarray):
-        return []
-    if arr.ndim != 1 or not arr.size:
-        return []
+#     Return:
+#     List of tuples of value, length and index
+#     """
+#     if not isinstance(arr, np.ndarray):
+#         return []
+#     if arr.ndim != 1 or not arr.size:
+#         return []
 
-    runs = []
-    current_run_value = None
-    current_run_length = None
-    current_run_start = None
+#     runs = []
+#     current_run_value = None
+#     current_run_length = None
+#     current_run_start = None
 
-    for ii, val in enumerate(arr):
-        if current_run_value is None:
-            current_run_value = val
-            current_run_length = 1
-            current_run_start = ii
-            continue
+#     for ii, val in enumerate(arr):
+#         if current_run_value is None:
+#             current_run_value = val
+#             current_run_length = 1
+#             current_run_start = ii
+#             continue
 
-        if current_run_value == val:
-            current_run_length += 1
-        else:
-            runs.append(run_t(current_run_value, current_run_length, current_run_start))
-            current_run_value = val
-            current_run_length = 1
-            current_run_start = ii
+#         if current_run_value == val:
+#             current_run_length += 1
+#         else:
+#             runs.append(run_t(current_run_value, current_run_length, current_run_start))
+#             current_run_value = val
+#             current_run_length = 1
+#             current_run_start = ii
 
-    # Add the last run
-    runs.append(run_t(current_run_value, current_run_length, current_run_start))
-    return runs
-
-
-def coalesce_short_runs(run_list, min_len):
-    """Given a list of run tuples, coalesce short runs into the
-    immediate run
-    """
-
-    tmp_run_list = copy.deepcopy(run_list)
-
-    new_run = []
-
-    while tmp_run_list:
-        current_run_value, current_run_length, current_run_index = tmp_run_list.pop(0)
-        while tmp_run_list:
-            if (
-                tmp_run_list[0].run_length > min_len
-                and tmp_run_list[0].run_value != current_run_value
-            ):
-                break
-            _, tmp_len, _ = tmp_run_list.pop(0)
-            current_run_length += tmp_len
-        new_run.append(run_t(current_run_value, current_run_length, current_run_index))
-    return new_run
+#     # Add the last run
+#     runs.append(run_t(current_run_value, current_run_length, current_run_start))
+#     return runs
 
 
-def add_sample_range_overlay(time_var, max_depth_i, start_time, fig, f_depth):
+# def coalesce_short_runs(run_list, min_len):
+#     """Given a list of run tuples, coalesce short runs into the
+#     immediate run
+#     """
+
+#     tmp_run_list = copy.deepcopy(run_list)
+
+#     new_run = []
+
+#     while tmp_run_list:
+#         current_run_value, current_run_length, current_run_index = tmp_run_list.pop(0)
+#         while tmp_run_list:
+#             if (
+#                 tmp_run_list[0].run_length > min_len
+#                 and tmp_run_list[0].run_value != current_run_value
+#             ):
+#                 break
+#             _, tmp_len, _ = tmp_run_list.pop(0)
+#             current_run_length += tmp_len
+#         new_run.append(run_t(current_run_value, current_run_length, current_run_index))
+#     return new_run
+
+
+def add_sample_range_overlay(
+    base_opts, instr_name, dive_num, time_var, max_depth_i, start_time, fig, f_depth
+):
     """Add sample grid overlays and sample stats traces to a plot"""
 
     if time_var is None:
@@ -652,7 +656,88 @@ def add_sample_range_overlay(time_var, max_depth_i, start_time, fig, f_depth):
             }
         )
 
-    return
+    ScienceGrid.setup_science_grid(base_opts)
+
+    # ScienceGrid.dump_grid(base_opts)
+    min_x = np.iinfo(np.int32).max
+    max_x = np.iinfo(np.int32).min
+    for ttime, name, color, instra_grid_tuple in (
+        (
+            time_dive,
+            "Dive sample grid",
+            "LightGrey",
+            ScienceGrid.find_current_grid(base_opts, dive_num, "a", instr_name),
+        ),
+        (
+            time_climb,
+            "Climb sample grid",
+            "DarkGrey",
+            ScienceGrid.find_current_grid(base_opts, dive_num, "b", instr_name),
+        ),
+    ):
+        if ttime.size < 2:
+            continue
+
+        depth = f_depth(ttime)
+        max_depth = np.nanmax(depth)
+        sample_interval = np.zeros(depth.size)
+
+        grid_dive_num, file_name, grid = instra_grid_tuple
+
+        prev_depth = 0.0
+        for dd, interval in grid.items():
+            try:
+                float(dd)
+            except ValueError:
+                continue
+
+            sample_interval[np.logical_and(depth >= prev_depth, depth < dd)] = interval
+            prev_depth = dd
+
+        min_x = min(min_x, np.nanmin(sample_interval))
+        max_x = max(max_x, np.nanmax(sample_interval))
+
+        meta = [file_name] * sample_interval.size
+
+        fig.add_trace(
+            {
+                "type": "scatter",
+                "x": sample_interval,
+                "y": depth,
+                "meta": meta,
+                "xaxis": "x11",
+                "line": {
+                    "dash": "solid",
+                    # proxy for line opacity
+                    # "width": 1,
+                    "color": color,
+                },
+                "mode": "lines",
+                # Alternate to putting it in the meta trace
+                # "name": f"{name}:{file_name}",
+                "name": f"{name}",
+                "visible": "legendonly",
+                "hovertemplate": f"{name}<br>%{{x:d}} secs<br>%{{y:.1f}} meters<br>%{{meta}}<extra></extra>",
+                "hoverinfo": "text",
+                "zorder": -10,
+            }
+        )
+
+    padding = (max_x - min_x) * 0.05
+    fig.update_layout(
+        {
+            "xaxis11": {
+                "title": "Samples grid",
+                "showgrid": False,
+                "overlaying": "x1",
+                "side": "bottom",
+                "anchor": "free",
+                "position": 0.05,
+                "visible": False,
+                "range": [min_x - padding, max_x + padding],
+            }
+        }
+    )
 
     # This method of detecting the sampling grid is too error prone to be of use
     # Preserving it here in case the alternate strategy of processing the science and

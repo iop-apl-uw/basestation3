@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2025  University of Washington.
+## Copyright (c) 2023, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -478,6 +478,9 @@ def plot_optode(
             )
 
         PlotUtils.add_sample_range_overlay(
+            base_opts,
+            f"aa{optode_type}",
+            dive_nc_file.dive_number,
             optode_instrument_O2_time,
             max_depth_sample_index,
             start_time,

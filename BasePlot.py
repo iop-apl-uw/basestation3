@@ -51,6 +51,7 @@ import CommLog
 import MakeDiveProfiles
 import Plotting
 import PlotUtils
+import Sensors
 import Utils
 from BaseLog import (
     BaseLogger,
@@ -280,6 +281,13 @@ def main(cmdline_args: list[str] = sys.argv[1:]):
         "Started processing "
         + time.strftime("%H:%M:%S %d %b %Y %Z", time.gmtime(time.time()))
     )
+
+    Sensors.set_globals()
+
+    # Sensor extensions
+    (init_dict, init_ret_val) = Sensors.init_extensions(base_opts)
+    if init_ret_val > 0:
+        log_warning("Sensor initialization failed")
 
     if base_opts.nice:
         try:

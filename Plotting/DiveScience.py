@@ -304,6 +304,9 @@ def plot_science(
                     )
 
                 PlotUtils.add_sample_range_overlay(
+                    base_opts,
+                    instrument,
+                    dive_nc_file.dive_number,
                     instrument_time,
                     max_depth_sample_index,
                     start_time,

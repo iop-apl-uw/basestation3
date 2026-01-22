@@ -780,6 +780,9 @@ def plot_CTD(
                 )
 
             PlotUtils.add_sample_range_overlay(
+                base_opts,
+                ctd_type,
+                dive_nc_file.dive_number,
                 ctd_vars.ctd_time_sampled,
                 ctd_vars.max_depth_sampled_i,
                 ctd_vars.start_time,

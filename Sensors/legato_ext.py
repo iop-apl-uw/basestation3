@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022, 2023, 2024, 2025 by University of Washington.  All rights reserved.
+## Copyright (c) 2011, 2012, 2013, 2015, 2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -198,6 +198,7 @@ def remap_engfile_columns_netcdf(base_opts, module, calib_constants, column_name
 instruments_d = {
     "legatoFast": "legato",
     "legatoPoll": "legato",
+    "rbr": "legato",
 }
 
 
