@@ -244,32 +244,36 @@ def mission_energy(
             #         "y": y_offset,
             #     }
             # )
-            
-            end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              f"energy_dives_remain_{type_str}", 
-                              float(dives_remaining), conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              f"energy_dives_total_{type_str}", 
-                              float(dives_remaining + dive_col.to_numpy()[-1]), conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              f"energy_days_remain_{type_str}", 
-                              days_remaining, conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              f"energy_days_total_{type_str}", 
-                              (end_t - start)/86400, conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(batt_df["dive"].to_numpy()[-1]), 
-                              f"energy_end_time_{type_str}", 
-                              end_t, conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(batt_df["dive"].to_numpy()[-1]), 
-                              f"energy_dives_back_{type_str}", 
-                              float(p_dives_back), conn)
+
+            try:
+                end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
+            except ValueError as e:
+                log_warning(f"Failed to convert {end_date} ({e})")
+            else:
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  f"energy_dives_remain_{type_str}", 
+                                  float(dives_remaining), conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  f"energy_dives_total_{type_str}", 
+                                  float(dives_remaining + dive_col.to_numpy()[-1]), conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  f"energy_days_remain_{type_str}", 
+                                  days_remaining, conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  f"energy_days_total_{type_str}", 
+                                  (end_t - start)/86400, conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(batt_df["dive"].to_numpy()[-1]), 
+                                  f"energy_end_time_{type_str}", 
+                                  end_t, conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(batt_df["dive"].to_numpy()[-1]), 
+                                  f"energy_dives_back_{type_str}", 
+                                  float(p_dives_back), conn)
 
         p_dives_back = (
             base_opts.mission_energy_dives_back
@@ -341,27 +345,31 @@ def mission_energy(
             #     }
             # )
 
-            end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              "energy_dives_remain_FG", 
-                              dives_remaining, conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              "energy_dives_total_FG", 
-                              dives_remaining + int(dive_col.to_numpy()[-1]), conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              "energy_days_remain_FG", 
-                              days_remaining, conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              "energy_end_time_FG", 
-                              end_t, conn)
-            BaseDB.addValToDB(base_opts, 
-                              int(dive_col.to_numpy()[-1]), 
-                              "energy_days_total_FG", 
-                              (end_t - start)/86400,conn)
+            try:
+                end_t = datetime.strptime(end_date, "%Y-%m-%dT%H:%M:%SZ").timestamp()
+            except ValueError as e:
+                log_warning(f"Failed to convert {end_date} ({e})")
+            else:
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  "energy_dives_remain_FG", 
+                                  dives_remaining, conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  "energy_dives_total_FG", 
+                                  dives_remaining + int(dive_col.to_numpy()[-1]), conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  "energy_days_remain_FG", 
+                                  days_remaining, conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  "energy_end_time_FG", 
+                                  end_t, conn)
+                BaseDB.addValToDB(base_opts, 
+                                  int(dive_col.to_numpy()[-1]), 
+                                  "energy_days_total_FG", 
+                                  (end_t - start)/86400,conn)
 
             days_df_fg = pd.read_sql_query(
                 f"SELECT dive,energy_days_total_FG FROM dives {clause} ORDER BY dive ASC", 
