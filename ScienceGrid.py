@@ -21,7 +21,7 @@ import Utils
 # import validate
 from BaseLog import log_error, log_info
 
-DEBUG_PDB = True
+DEBUG_PDB = False
 
 
 def DEBUG_PDB_F() -> None:
@@ -229,6 +229,8 @@ def setup_science_grid(base_opts) -> None:
         # Captures
         captures = sorted(mission_dir.glob("pt???????.cap"))
         if captures:
+            # TODO - add code to catch the case of a CTD that is configured to migrate from scicon to truck
+            # Note - this change may require the plotting code to specify if origin is the truck or the scicon
             science_body = find_science(captures[-1])
 
             with tempfile.NamedTemporaryFile(mode="w+t", delete=True) as temp_file:
@@ -298,6 +300,9 @@ def setup_science_grid(base_opts) -> None:
                 # Map name
                 attach_dict = find_active(dive_num, attach)
                 if not attach_dict:
+                    continue
+                if instr_name not in attach_dict:
+                    # No matching entry in attach, so instrument isn't going to sample
                     continue
                 mapped_name = attach_dict[instr_name]["type"]
                 # Run through extension remapper for instrument name - varioius flavors of legato
@@ -378,14 +383,23 @@ def setup_science_grid(base_opts) -> None:
                             "prefix",
                             include_end_line=True,
                         )
-                        try:
-                            raw_sensor_map[raw_sensor_name] = (
-                                sensor_config.rstrip().split("=")[1]
+                        if len(sensor_config) == 0:
+                            # No config found - this is the usual case for older capture files
+                            # There is no definitive way to figure out the mapping
+                            log_info(
+                                f"Unable to find mapping/config for {raw_sensor_name} in {science_file_name} - will guess {raw_sensor_name.lower()}"
                             )
-                        except Exception as e:
-                            log_error(f"Could not process {sensor_config} ({e})")
-                            raw_sensor_map[raw_sensor_name] = "nil"
-                            continue
+                            raw_sensor_map[raw_sensor_name] = raw_sensor_name.lower()
+                        else:
+                            try:
+                                raw_sensor_map[raw_sensor_name] = (
+                                    sensor_config.rstrip().split("=")[1]
+                                )
+                            except Exception as e:
+                                DEBUG_PDB_F()
+                                log_error(f"Could not process {sensor_config} ({e})")
+                                raw_sensor_map[raw_sensor_name] = "nil"
+                                continue
             else:
                 try:
                     nc_file_name = pathlib.Path(base_opts.mission_dir).joinpath(
@@ -421,7 +435,7 @@ def setup_science_grid(base_opts) -> None:
                     mapped_name = instra_list[0]
                     sensor_names.append(mapped_name)
 
-            log_info(f"{science_file_name}:{sensor_names}")
+            # log_info(f"{science_file_name}:{sensor_names}")
 
             science_schemes: dict[str, list] = {}
             all_profiles = ("a", "b", "c", "d")
@@ -434,6 +448,9 @@ def setup_science_grid(base_opts) -> None:
 
             for science_line in science_dict:
                 try:
+                    # TODO - need to propagate this to the loiter profile
+                    if science_line["name"] == "loiter":
+                        continue
                     depth = float(science_line["name"])
                     interval = float(science_line["seconds"])
                     sensors = [float(vv) for vv in science_line["sensors"]]
@@ -443,8 +460,8 @@ def setup_science_grid(base_opts) -> None:
                 except KeyError as e:
                     log_error(f"{science_line} missing {e}")
                     continue
-                # Note - there is no processing for profiles or dives as they deterine what dive or profile
-                # is sample, not what the sampling grid is
+                # Note - there is no processing for profiles or dives tags as they deterine what dive or profile
+                # is sampled, not what the sampling grid is
                 for ii, sensor in enumerate(sensors):
                     sample_interval = sensor * interval
                     # TODO - write code protect against out of range access

@@ -54,7 +54,7 @@ if typing.TYPE_CHECKING:
 import NetCDFUtils
 import ScienceGrid
 import Utils
-from BaseLog import log_error, log_warning
+from BaseLog import log_debug, log_error, log_warning
 
 
 #
@@ -661,21 +661,32 @@ def add_sample_range_overlay(
     # ScienceGrid.dump_grid(base_opts)
     min_x = np.iinfo(np.int32).max
     max_x = np.iinfo(np.int32).min
-    for ttime, name, color, instra_grid_tuple in (
+    for ttime, name, color, instra_grid_tuple, profile in (
         (
             time_dive,
             "Dive sample grid",
             "LightGrey",
             ScienceGrid.find_current_grid(base_opts, dive_num, "a", instr_name),
+            "a",
         ),
         (
             time_climb,
             "Climb sample grid",
             "DarkGrey",
             ScienceGrid.find_current_grid(base_opts, dive_num, "b", instr_name),
+            "b",
         ),
     ):
         if ttime.size < 2:
+            continue
+
+        if not instra_grid_tuple.grid:
+            # This happens with sensors on the truck and older capture files with no mapping (dump of the .cnf file)
+            # for the instrument name and instrument prefix (what is used in the .eng file) and we just guess
+            # that the prefix is the lowercase of the instrument
+            log_debug(
+                f"No science grid found for {instr_name} profile {profile} skipping science trace"
+            )
             continue
 
         depth = f_depth(ttime)
