@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -64,7 +64,8 @@ def est_remaining(df, y_val, tag_val: str) -> str:
             y_val[dives_back:],
             1,
         )
-
+    if df["total_flight_time_s"][dives_back:].isna().all():
+        return ""
     dives_left = -b / m
     secs_remaining = np.nanmean(df["total_flight_time_s"][dives_back:]) * dives_left
 
