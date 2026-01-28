@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -50,6 +50,8 @@ import re
 import sys
 import time
 import traceback
+
+from pyproj import Geod
 
 import BaseDB
 import BaseOpts
@@ -406,6 +408,7 @@ class CommLog:
             % (n_predictions, fmt, n_fixes)
         )
         last_fix = None
+        first_fix = None
         most_recent_fix = None
         dive_num = None  # ensure the same dive number
         fixes = 0
@@ -451,6 +454,8 @@ class CommLog:
                     log_error(drift_message, "exc")
                     return drift_message
 
+            if first_fix is None:
+                first_fix = this_fix
             last_fix = this_fix  # initialize/update
             if most_recent_fix is None:
                 most_recent_fix = this_fix
@@ -494,9 +499,31 @@ class CommLog:
             math.pow(delta_lat_d_h * m_per_deg, 2)
             + math.pow(delta_lon_d_h * surface_mean_lon_fac * m_per_deg, 2)
         )
+
         drift_message = drift_message + "\n%.0f deg true, %.2f knots" % (
             drift_bear_deg_true,
             drift_speed * nm_per_m,
+        )
+
+        log_info(
+            f"Drift: deg_true:{drift_bear_deg_true:.2f} drift_speed_kn:{drift_speed * nm_per_m:.2f}"
+        )
+
+        # Alt calculation
+        geod = Geod(ellps="WGS84")
+        alt_lons = (Utils.ddmm2dd(last_fix.lon), Utils.ddmm2dd(first_fix.lon))
+        alt_lats = (Utils.ddmm2dd(last_fix.lat), Utils.ddmm2dd(first_fix.lat))
+
+        alt_drift_bear_deg_true, _, alt_drift_dist = geod.inv(
+            alt_lons[0], alt_lats[0], alt_lons[1], alt_lats[1]
+        )
+        alt_drift_elapsed_s = time.mktime(first_fix.datetime) - time.mktime(
+            last_fix.datetime
+        )
+        alt_drift_speed_kn = alt_drift_dist * nm_per_m / (alt_drift_elapsed_s / 3600.0)
+
+        log_info(
+            f"Alt Drift: deg_true:{alt_drift_bear_deg_true:.2f} alt_drift_speed_kn:{alt_drift_speed_kn:.2f} alt_dist_m:{alt_drift_dist:.2f}"
         )
 
         # drift_message = drift_message + "\nBased on last %d fixes:" % fixes
@@ -2112,7 +2139,9 @@ def main():
         additional_arguments={
             "dump_last": BaseOptsType.options_t(
                 False,
-                ("CommLog",),
+                {
+                    "CommLog",
+                },
                 ("--dump_last",),
                 str,
                 {
@@ -2122,7 +2151,9 @@ def main():
             ),
             "dump_all": BaseOptsType.options_t(
                 False,
-                ("CommLog",),
+                {
+                    "CommLog",
+                },
                 ("--dump_all",),
                 str,
                 {
@@ -2132,7 +2163,9 @@ def main():
             ),
             "init_db": BaseOptsType.options_t(
                 False,
-                ("CommLog",),
+                {
+                    "CommLog",
+                },
                 ("--init_db",),
                 str,
                 {
@@ -2142,11 +2175,25 @@ def main():
             ),
             "rebuild_db": BaseOptsType.options_t(
                 False,
-                ("CommLog",),
+                {
+                    "CommLog",
+                },
                 ("--rebuild_db",),
                 str,
                 {
                     "help": "Rebuild sessions database",
+                    "action": argparse.BooleanOptionalAction,
+                },
+            ),
+            "predict_drift": BaseOptsType.options_t(
+                False,
+                {
+                    "CommLog",
+                },
+                ("--predict_drift",),
+                str,
+                {
+                    "help": "Run the predict_drift calculation",
                     "action": argparse.BooleanOptionalAction,
                 },
             ),
@@ -2170,6 +2217,10 @@ def main():
 
     if not base_opts.instrument_id:
         base_opts.instrument_id = comm_log.get_instrument_id()
+
+    if base_opts.predict_drift:
+        drift_message = comm_log.predict_drift("ddmm")
+        log_info(drift_message)
 
     if base_opts.init_db or base_opts.rebuild_db:
         if base_opts.init_db:
