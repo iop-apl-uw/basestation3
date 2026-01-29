@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -536,7 +536,9 @@ def printTargets(
     )
 
     target_dict = {}
+    line_count = 0
     for target_line in target_file:
+        line_count += 1
         if target_line[0] == "/":
             continue
         target_split = target_line.split()
@@ -550,17 +552,34 @@ def printTargets(
             try:
                 name, value = pair.split("=")
             except ValueError:
-                log_error(
-                    "Could not split (%s) - bad format in targets file %s?"
-                    % (pair, target_file_name)
+                log_warning(
+                    f"Could not split (pair) - bad format in targets file {target_file_name} (lineno:{line_count}?"
                 )
                 break
             if name == "lat":
-                lat = Utils.ddmm2dd(float(value))
+                try:
+                    lat = Utils.ddmm2dd(float(value))
+                except ValueError as e:
+                    log_warning(
+                        f"Failed to convert lat={value} ({e}) (file:{target_file_name}, lineno:{line_count}"
+                    )
+                    break
             elif name == "lon":
-                lon = Utils.ddmm2dd(float(value))
+                try:
+                    lon = Utils.ddmm2dd(float(value))
+                except ValueError as e:
+                    log_warning(
+                        f"Failed to convert lon={value} ({e}) (file:{target_file_name}, lineno:{line_count}"
+                    )
+                    break
             elif name == "radius":
-                radius = float(value)
+                try:
+                    radius = float(value)
+                except ValueError as e:
+                    log_warning(
+                        f"Failed to convert radius={value} ({e}) (file:{target_file_name}, lineno:{line_count}"
+                    )
+                    break
             elif name == "goto":
                 goto_targ = value
             elif name == "escape":
@@ -568,12 +587,19 @@ def printTargets(
                 # Need to fix this for escape routes
                 # escape_targ = value
             elif name == "finish":
-                finish_line = float(value)
+                try:
+                    finish_line = float(value)
+                except ValueError as e:
+                    log_warning(
+                        f"Failed to convert finish={value} ({e}) (file:{target_file_name}, lineno:{line_count}"
+                    )
+                    break
             # elif name == "depth":
             #    depth_limit = float(value)
-        target_dict[target_name] = target_tuple(
-            lat, lon, radius, finish_line, depth_target, goto_targ, escape_targ
-        )
+        else:
+            target_dict[target_name] = target_tuple(
+                lat, lon, radius, finish_line, depth_target, goto_targ, escape_targ
+            )
 
     if tgt_lat is not None and tgt_lon is not None:
         found_in_list = False
