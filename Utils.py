@@ -547,7 +547,7 @@ def check_call(cmd: str, use_shell: bool = False) -> int:
         return 0
 
 
-def read_from_process(p):
+def read_from_process(p: subprocess.Popen[bytes]) -> io.BytesIO:
     """Reads stdout and stdeerr from a running process until complete
     Args:
         p: open process (from subprocess.Popen)
@@ -580,16 +580,15 @@ def read_from_process(p):
     return outf
 
 
-def run_cmd_shell(cmd, timeout=None, shell=True, env=None):
+def run_cmd_shell(
+    cmd: str, timeout: int = 0, env=None
+) -> tuple[int | None, io.BytesIO | None]:
     """Runs a program with arguments in a shell context"""
-    if not shell:
-        cmd = cmd.split()
-        cmd[0] = which(cmd[0])
 
     p = subprocess.Popen(
         cmd,
         env=env,
-        shell=shell,
+        shell=True,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
@@ -597,9 +596,10 @@ def run_cmd_shell(cmd, timeout=None, shell=True, env=None):
     )
 
     out_f = None
-    if timeout is None:
+    sts: int | None = 0
+    if not timeout:
         out_f = read_from_process(p)
-        sts = p.returncode
+        sts: int = p.returncode
     else:
         handler = signal.signal(signal.SIGALRM, _timeout)
         try:

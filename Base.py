@@ -1419,7 +1419,9 @@ def expunge_secrets_st(selftest_name):
     return 0
 
 
-def run_extension_script(script_name, script_args):
+def run_extension_script(
+    script_name: str, script_args: list[str] | None, timeout: int = 0
+) -> None:
     """Attempts to execute a script named under a shell context
 
     Output is recorded to the log, error code is ignored, no timeout enforced
@@ -1432,13 +1434,14 @@ def run_extension_script(script_name, script_args):
                 cmdline = f"{cmdline} {i} "
         log_debug(f"Running ({cmdline})")
         try:
-            (_, fo) = Utils.run_cmd_shell(cmdline)
+            (_, fo) = Utils.run_cmd_shell(cmdline, timeout=timeout)
         except Exception:
             log_error(f"Error running {cmdline}", "exc")
         else:
-            for f in fo:
-                log_info(f)
-            fo.close()
+            if fo is not None:
+                for f in fo:
+                    log_info(f)
+                fo.close()
     else:
         log_info(f"Extension script {script_name} not found")
 
@@ -2409,10 +2412,15 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
             run_extension_script(
                 os.path.join(base_opts.mission_dir, f".{k}_ext"),
                 processed_logger_payload_files[k],
+                base_opts.logger_script_timeout,
             )
 
     # Run the post dive processing script
-    run_extension_script(os.path.join(base_opts.mission_dir, ".post_dive"), None)
+    run_extension_script(
+        os.path.join(base_opts.mission_dir, ".post_dive"),
+        None,
+        base_opts.post_dive_timeout,
+    )
 
     po.process_progress("per_dive_scripts", "stop", send=False)
 
@@ -3053,7 +3061,9 @@ def main(cmdline_args: list[str] = sys.argv[1:]) -> int:
 
     # Run the post mission processing script
     run_extension_script(
-        os.path.join(base_opts.mission_dir, ".post_mission"), processed_file_names
+        os.path.join(base_opts.mission_dir, ".post_mission"),
+        processed_file_names,
+        base_opts.post_mission_timeout,
     )
 
     if base_opts.divetarballs != 0 and processed_file_names:

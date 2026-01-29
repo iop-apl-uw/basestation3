@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -35,7 +35,6 @@ import collections
 import inspect
 import logging
 import os
-import sys
 import traceback
 from io import StringIO
 
@@ -357,7 +356,8 @@ def log_critical(
     if BaseLogger.log:
         BaseLogger.log.critical(s)
     else:
-        sys.stderr.write("CRITICAL: %s\n" % s)
+        # sys.stderr.write("CRITICAL: %s\n" % s)
+        logging.critical(s)
 
 
 log_error_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
@@ -395,7 +395,8 @@ def log_error(
     if BaseLogger.log:
         BaseLogger.log.error(s)
     else:
-        sys.stderr.write("ERROR: %s\n" % s)
+        # sys.stderr.write("ERROR: %s\n" % s)
+        logging.error(s)
 
 
 log_warning_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
@@ -439,7 +440,8 @@ def log_warning(
     if BaseLogger.log:
         BaseLogger.log.warning(s)
     else:
-        sys.stderr.write("WARNING: %s\n" % s)
+        # sys.stderr.write("WARNING: %s\n" % s)
+        logging.warning(s)
 
 
 log_info_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
@@ -477,7 +479,8 @@ def log_info(
     if BaseLogger.log:
         BaseLogger.log.info(s)
     else:
-        sys.stderr.write("INFO: %s\n" % s)
+        # sys.stderr.write("INFO: %s\n" % s)
+        logging.info(s)
 
 
 log_debug_max_count: collections.defaultdict[str, int] = collections.defaultdict(int)
@@ -515,4 +518,5 @@ def log_debug(
     if BaseLogger.log:
         BaseLogger.log.debug(s)
     else:
-        sys.stderr.write("DEBUG: %s\n" % s)
+        # sys.stderr.write("DEBUG: %s\n" % s)
+        logging.debug(s)

@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2024, 2025  University of Washington.
+## Copyright (c) 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,6 +28,7 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 
+import logging
 import os
 import pathlib
 import shutil
@@ -49,6 +50,7 @@ def run_mission(
     caplog: Any,
     allowed_msgs: list[str],
     pre_test_hook: Callable[[pathlib.Path], None] | None = None,
+    required_msgs: list[str] | None = None,
 ) -> None:
     """Copies a mission to a test directory, executes it and checks warning and error output against a known list
 
@@ -58,6 +60,8 @@ def run_mission(
     cmd_line: argument to main_func
     caplog: logging capture from pytest fixture
     allow_msgs: list of allowed messages that can appear in the caplog
+    pre_test_hook: optional function to call before test is run - mission_dir is the argument
+    required_msgs: list of messages that must appear
     """
     os.environ["TZ"] = "UTC"
     time.tzset()
@@ -76,7 +80,19 @@ def run_mission(
     result = main_func(cmd_line)
     assert result == 0
     bad_errors = ""
+    req_msgs: dict[str, bool] = {}
+    if required_msgs is not None:
+        for msg in required_msgs:
+            req_msgs[msg] = False
     for record in caplog.records:
+        # Required messages are exempt as bad_errors
+        matched_one = False
+        for msg in req_msgs:
+            if msg in record.msg:
+                req_msgs[msg] = True
+                matched_one = True
+        if matched_one:
+            continue
         # Check for known WARNING, ERROR or CRITICAL msgs
         for msg in allowed_msgs:
             if msg in record.msg:
@@ -84,5 +100,20 @@ def run_mission(
         else:
             if record.levelname in ["CRITICAL", "ERROR", "WARNING"]:
                 bad_errors += f"{record.levelname}:{record.getMessage()}\n"
+
+    for msg, value in req_msgs.items():
+        if not value:
+            pytest.fail(f"Failed to find required message {msg} in output")
     if bad_errors:
         pytest.fail(bad_errors)
+
+
+def is_logging_configured() -> bool:
+    """
+    Checks if the root logger has any explicit handlers configured.
+    """
+    # Get the root logger
+    root_logger = logging.getLogger()
+
+    # Check if any handlers are attached
+    return len(root_logger.handlers) > 0 or root_logger.hasHandlers()

@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "Starting post dive"
+sleep 5
+echo "Ending post dive"

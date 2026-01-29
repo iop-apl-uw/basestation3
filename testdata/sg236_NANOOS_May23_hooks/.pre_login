@@ -1,0 +1,4 @@
+#!/bin/sh
+echo "Starting pre login"
+sleep 3
+echo "Ending pre login"

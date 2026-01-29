@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -207,9 +207,10 @@ class GliderEarlyGPSClient:
             except Exception:
                 log_error(f"Error running {self.__base_opts.path_to_logout}", "exc")
             else:
-                ts = fo.readline().decode().rstrip()
-                log_info(ts)
-                fo.close()
+                if fo is not None:
+                    ts = fo.readline().decode().rstrip()
+                    log_info(ts)
+                    fo.close()
                 return
 
         # If above fails, fall through to here and do what is possible
@@ -227,9 +228,10 @@ class GliderEarlyGPSClient:
         except Exception:
             log_error("Error running date", "exc")
         else:
-            ts = fo.readline().decode().rstrip()
-            log_info(ts)
-            fo.close()
+            if fo is not None:
+                ts = fo.readline().decode().rstrip()
+                log_info(ts)
+                fo.close()
 
             comm_log_filename = os.path.join(self.__base_opts.mission_dir, "comm.log")
             try:

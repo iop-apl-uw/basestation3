@@ -518,12 +518,14 @@ files located in the sg000 sub-directory
 Hook scripts are executable files that if present in the seagliders mission 
 directory, will be executed by the basestation.  Here is a summary of those files:
 
-| Hook Name     | When exccuted                                  | Arguments                          | Notes                                            |
-|:--------------|:-----------------------------------------------|:-----------------------------------|:-------------------------------------------------|
-| .pre_login    | During seaglider login                         | None                               | Needs to be fast - holds up login until complete |
-| .post_dive    | After all per-dive file processing is complete | None                               |                                                  |
-| .post_mission | After all file creation is complete            | List of all generated files        |                                                  |
-| .XX_ext.py    | After all logger processing is complete        | List of all processed logger files | XX is the two letter prefix for the logger       |
+| Hook Name     | When exccuted                                  | Arguments                          | Notes                                            | Default timeout (secs) | Timeout Option          |
+|:--------------|:-----------------------------------------------|:-----------------------------------|:-------------------------------------------------|:-----------------------|-------------------------|
+| .pre_login    | During seaglider login                         | None                               | Needs to be fast - holds up login until complete | 5                      | --pre_login_timeout     |
+| .post_dive    | After all per-dive file processing is complete | None                               |                                                  | 120                    | --post_dive_timeout     |
+| .post_mission | After all file creation is complete            | List of all generated files        |                                                  | 360                    | --post_mission_timeout  |
+| .XX_ext.py    | After all logger processing is complete        | List of all processed logger files | XX is the two letter prefix for the logger       | 120  (per script)      | --logger_script_timeout |
+
+All hook scripts are executed with a timeout to complete.  The timeout may be adjusted or removed by setting the timeout option to a different number of seconds (or 0)
 
 While these files can be any executable, generally they are a shell script.  For example, where is a version of ```.post_mission``` that echos out all the newly created files
 ```

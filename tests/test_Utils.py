@@ -1,6 +1,6 @@
 # -*- python-fmt -*-
 
-## Copyright (c) 2025  University of Washington.
+## Copyright (c) 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,15 +28,14 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 import pytest
+import testutils
 
 import Utils
 
 
 @pytest.mark.parametrize("test_timeout", (10, None))
 def test_run_cmd_shell(caplog, test_timeout):
-    ret_code, fo = Utils.run_cmd_shell(
-        "tests/echo_err.sh", timeout=test_timeout, shell=True
-    )
+    ret_code, fo = Utils.run_cmd_shell("tests/echo_err.sh", timeout=test_timeout)
     # Check for known WARNING, ERROR or CRITICAL msgs
     bad_errors = ""
     for record in caplog.records:
@@ -57,21 +56,28 @@ def test_run_cmd_shell(caplog, test_timeout):
 
 
 def test_run_cmd_shell_timeout(caplog):
-    ret_code, fo = Utils.run_cmd_shell("tests/loop_infinite.sh", timeout=2, shell=True)
+    assert testutils.is_logging_configured()
+
+    ret_code, fo = Utils.run_cmd_shell("tests/loop_infinite.sh", timeout=2)
 
     # Check for known WARNING, ERROR or CRITICAL msgs
     # Timeout message expected
-    allowed_msgs = ["Timeout running"]
+    required_msgs = {"Timeout running": False}
     bad_errors = ""
     for record in caplog.records:
-        for msg in allowed_msgs:
+        for msg in required_msgs:
             if msg in record.msg:
+                required_msgs[msg] = True
                 break
         else:
             if record.levelname in ["CRITICAL", "ERROR", "WARNING"]:
                 bad_errors += f"{record.levelname}:{record.getMessage()}\n"
     if bad_errors:
         pytest.fail(bad_errors)
+
+    for msg, found in required_msgs.items():
+        if not found:
+            pytest.fail(f"Failed to find required msg {msg}")
 
     assert ret_code is None
     assert fo is None

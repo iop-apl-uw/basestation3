@@ -2,7 +2,7 @@
 # -*- python-fmt -*-
 
 ##
-## Copyright (c) 2024, 2025 by University of Washington.  All rights reserved.
+## Copyright (c) 2024, 2025, 2026 by University of Washington.  All rights reserved.
 ##
 ## This file contains proprietary information and remains the
 ## unpublished property of the University of Washington. Use, disclosure,
@@ -132,15 +132,17 @@ def process_adcp_dat(
         (sts, fo) = Utils.run_cmd_shell(cmdline, timeout=10)
     except Exception:
         log_error("Error running %s" % cmdline, "exc")
-        for f in fo:
-            log_error(f.decode().rstrip())
-        fo.close()
+        if fo is not None:
+            for f in fo:
+                log_error(f.decode().rstrip())
+            fo.close()
 
         return 1
 
-    for f in fo:
-        log_info(f.decode().rstrip())
-    fo.close()
+    if fo is not None:
+        for f in fo:
+            log_info(f.decode().rstrip())
+        fo.close()
 
     if sts is None:
         log_error(

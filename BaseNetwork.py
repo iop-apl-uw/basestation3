@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -616,8 +616,9 @@ def convert_network_logfile(base_opts, in_file_name, out_file_name):
 
     if sts >> 8:
         error = ""
-        for ll in run_output:
-            error += ll.decode()
+        if run_output is not None:
+            for ll in run_output:
+                error += ll.decode()
         log_error(f"Error running {cmdline} - {error}")
 
         return None
@@ -647,8 +648,9 @@ def convert_network_logfile(base_opts, in_file_name, out_file_name):
 
     try:
         with open(out_file_name, "wb") as fo:
-            for ll in run_output:
-                fo.write(ll)
+            if run_output is not None:
+                for ll in run_output:
+                    fo.write(ll)
     except Exception:
         log_error(f"Failed to process {out_file_name}")
         return None
@@ -722,8 +724,9 @@ def convert_network_profile(in_file_name, out_file_name):
 
     if sts >> 8:
         error = ""
-        for ll in fo:
-            error += ll.decode()
+        if fo is not None:
+            for ll in fo:
+                error += ll.decode()
         log_error(f"Error running {cmdline} - {error}")
 
         return None

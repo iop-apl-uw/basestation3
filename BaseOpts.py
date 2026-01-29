@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 """
-  Common set of options for all basestation processing
-  Default values supplemented by option processing, both config file and command line
+Common set of options for all basestation processing
+Default values supplemented by option processing, both config file and command line
 """
 
 # TODO Review help strings - mark all extensions as extensions not command line
@@ -63,7 +63,7 @@ dive_plot_list = list(Plotting.dive_plot_funcs.keys())
 mission_plot_list = list(Plotting.mission_plot_funcs.keys())
 
 # Deprecated options to warn and issue alerts on
-#deprecated_options = {}
+# deprecated_options = {}
 
 
 def generate_range_action(arg, min_val, max_val):
@@ -101,6 +101,7 @@ def FullPath(x):
     else:
         return os.path.abspath(os.path.expanduser(x))
 
+
 def FullPathTrailingSlash(x):
     """Expand user- and relative-paths and include the trailing slash"""
     if x == "":
@@ -119,7 +120,6 @@ class FullPathAction(argparse.Action):
             setattr(namespace, self.dest, values)
 
 
-
 class FullPathTrailingSlashAction(argparse.Action):
     """Expand user- and relative-paths and include the trailing slash"""
 
@@ -130,6 +130,7 @@ class FullPathTrailingSlashAction(argparse.Action):
             )
         else:
             setattr(namespace, self.dest, values)
+
 
 # Pathlib based
 def FullPathlib(x):
@@ -146,40 +147,40 @@ def FullPathlib(x):
     else:
         return pathlib.Path(x).expanduser().absolute()
 
+
 class FullPathlibAction(argparse.Action):
     """Expand user- and relative-paths"""
 
     def __call__(self, parser, namespace, values, option_string=None):
-
         if values is not None:
             setattr(namespace, self.dest, FullPathlib(values))
         else:
             setattr(namespace, self.dest, values)
-    
-            
 
-#class DeprecateAction(argparse.Action):
+
+# class DeprecateAction(argparse.Action):
 #    def __call__(self, parser, namespace, values, option_string=None):
 #        deprecated_options[self.option_strings[0]] = self.help
 #        delattr(namespace, self.dest)
 
+
 def mark_deprecated_help_strings(parser, prefix="DEPRECATED"):
-    """
-    """
+    """ """
     for action in parser._actions:
         if isinstance(action, DeprecateAction):
             h = action.help
             if h is None:
                 action.help = prefix
             else:
-                action.help = prefix + ": " + h            
+                action.help = prefix + ": " + h
+
 
 def generate_sample_conf_file(options_dict, calling_module):
     """Generates a sample .conf file (to stdout)"""
     sort_options_dict = dict(
         sorted(
             options_dict.items(),
-            #key=lambda x: x[1].kwargs["section"] if "section" in x[1].kwargs else "",
+            # key=lambda x: x[1].kwargs["section"] if "section" in x[1].kwargs else "",
             key=lambda x: x[1].kwargs.get("section", ""),
         )
     )
@@ -194,7 +195,7 @@ def generate_sample_conf_file(options_dict, calling_module):
         if opt_n in ("config_file_name", "generate_sample_conf"):
             continue
         if opt_v.group is None or calling_module in opt_v.group:
-            #section_name = opt_v.kwargs["section"] if "section" in opt_v.kwargs else ""
+            # section_name = opt_v.kwargs["section"] if "section" in opt_v.kwargs else ""
             section_name = opt_v.kwargs.get("section", "")
             if section_name not in seen_sections and section_name:
                 print(f"#\n[{section_name}]")
@@ -239,9 +240,9 @@ def loadmodule(pathname):
         pass
 
     if not os.path.exists(pathname):
-        #log_error(f"Module {pathname} does not exists - skipping")
+        # log_error(f"Module {pathname} does not exists - skipping")
         return None
-    
+
     if directory not in sys.path:
         sys.path.append(directory)
 
@@ -254,13 +255,14 @@ def loadmodule(pathname):
         spec.loader.exec_module(mod)
         return mod
     except Exception:
-        #log_error(f"Error loading {pathname}", "exc")
+        # log_error(f"Error loading {pathname}", "exc")
         sys.stderr.write(f"Error loading {pathname} {traceback.format_exc()}")
-        #log_info("No module loaded")
+        # log_info("No module loaded")
     return None
 
+
 def find_additional_options(basestation_directory, cmdline_args):
-    """ Processes the .extensions and .sensors files to add any additional options.
+    """Processes the .extensions and .sensors files to add any additional options.
     This code partially duplicates functions in Sensor.py and BaseDotFiles.py, but
     is re-written here to be free of any calls to the logginer infrastructure, which
     have not yet been initialized when this routine is called.
@@ -268,9 +270,7 @@ def find_additional_options(basestation_directory, cmdline_args):
     new_arguments = {}
     new_option_groups = {}
     add_arguments = {}
-    tmp_ap =  argparse.ArgumentParser(
-            description="find_additional_options"
-        )
+    tmp_ap = argparse.ArgumentParser(description="find_additional_options")
     tmp_ap.add_argument("--mission_dir", action=FullPathTrailingSlashAction)
     tmp_ap.add_argument("--group_etc", action=FullPathTrailingSlashAction)
     tmp_argv = []
@@ -282,20 +282,25 @@ def find_additional_options(basestation_directory, cmdline_args):
 
     basestation_etc = os.path.join(basestation_directory, "etc")
 
-    for extension_directory, additional_search_path in ((basestation_etc, None),
-                                                        (args.group_etc, args.group_etc),
-                                                        (args.mission_dir, args.mission_dir)):
+    for extension_directory, additional_search_path in (
+        (basestation_etc, None),
+        (args.group_etc, args.group_etc),
+        (args.mission_dir, args.mission_dir),
+    ):
         if extension_directory and os.path.exists(extension_directory):
             extensions_file_name = os.path.join(extension_directory, ".extensions")
             if os.path.exists(extensions_file_name):
-                #log_info(f"Starting processing on {extension_file_name} section(s):{sections}")
-                cp = configparser.ConfigParser(allow_no_value=True, inline_comment_prefixes="#")
+                # log_info(f"Starting processing on {extension_file_name} section(s):{sections}")
+                cp = configparser.ConfigParser(
+                    allow_no_value=True, inline_comment_prefixes="#"
+                )
                 cp.optionxform = str
                 try:
                     # Anything not inside a section tag is in [global] section
                     with open(extensions_file_name) as fi:
                         cp.read_file(
-                            itertools.chain(["[global]"], fi), source=extensions_file_name
+                            itertools.chain(["[global]"], fi),
+                            source=extensions_file_name,
                         )
                 except (OSError, PermissionError):
                     sys.stderror.write(
@@ -316,27 +321,39 @@ def find_additional_options(basestation_directory, cmdline_args):
                             if extension_elts[0] in extensions_to_skip:
                                 continue
 
-                            for search_path in (basestation_directory, additional_search_path):
+                            for search_path in (
+                                basestation_directory,
+                                additional_search_path,
+                            ):
                                 if search_path is None:
                                     continue
                                 extension_module_name = os.path.join(
                                     search_path, extension_elts[0]
                                 )
                                 extension_module = loadmodule(extension_module_name)
-                                if extension_module is None or not hasattr(extension_module, "load_additional_arguments"):
+                                if extension_module is None or not hasattr(
+                                    extension_module, "load_additional_arguments"
+                                ):
                                     continue
                                 else:
                                     try:
-                                        extension_ret_val = extension_module.load_additional_arguments()
+                                        extension_ret_val = (
+                                            extension_module.load_additional_arguments()
+                                        )
                                     except Exception:
                                         sys.stderr.write(
                                             f"Extension {extension_module_name} raised an exception {traceback.format_exc()}"
                                         )
                                         continue
 
-                                    if isinstance(extension_ret_val, tuple) and len(extension_ret_val) == 3:
+                                    if (
+                                        isinstance(extension_ret_val, tuple)
+                                        and len(extension_ret_val) == 3
+                                    ):
                                         if isinstance(extension_ret_val[0], list):
-                                            _, name = os.path.split(extension_module_name)
+                                            _, name = os.path.split(
+                                                extension_module_name
+                                            )
                                             name, _ = os.path.splitext(name)
                                             add_arguments[name] = extension_ret_val[0]
                                         if isinstance(extension_ret_val[1], dict):
@@ -602,7 +619,6 @@ global_options_dict = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
-
     #
     "instrument_id": options_t(
         0,
@@ -810,10 +826,9 @@ global_options_dict = {
         str,
         {
             "help": "Use --vis_base_url",
-            "action":DeprecateAction,
+            "action": DeprecateAction,
         },
     ),
-
     "vis_base_url": options_t(
         "",
         ("Base", "Reprocess", "MakeKML", "BaseCtrlFiles", "CommLog", "GliderEarlyGPS"),
@@ -881,7 +896,13 @@ global_options_dict = {
     ),
     "whole_mission_config": options_t(
         None,
-        ("Base", "BaseParquet", "Reprocess", "MakeMissionTimeSeries", "MakeMissionProfile"),
+        (
+            "Base",
+            "BaseParquet",
+            "Reprocess",
+            "MakeMissionTimeSeries",
+            "MakeMissionProfile",
+        ),
         ("--whole_mission_config",),
         FullPathlib,
         {
@@ -891,7 +912,13 @@ global_options_dict = {
     ),
     "dump_whole_mission_config": options_t(
         False,
-        ("Base", "BaseParquet", "Reprocess", "MakeMissionTimeSeries", "MakeMissionProfile"),
+        (
+            "Base",
+            "BaseParquet",
+            "Reprocess",
+            "MakeMissionTimeSeries",
+            "MakeMissionProfile",
+        ),
         ("--dump_whole_mission_config",),
         bool,
         {
@@ -899,7 +926,6 @@ global_options_dict = {
             "action": argparse.BooleanOptionalAction,
         },
     ),
-
     # DOC Skips running the flight model system.  FMS is still consulted for flight
     # DOC values such as volmax hd_a, hd_b, hd_c etc. - if there is a previous previous estimates
     # DOC in flight, those are used - otherwise the system defaults are used.  Normally, this option
@@ -1027,8 +1053,7 @@ global_options_dict = {
     # Used by a number of extensions when being run via the CLI
     "netcdf_filename": options_t(
         "",
-        (
-        ),
+        (),
         ("netcdf_filename",),
         FullPath,
         {
@@ -1308,7 +1333,6 @@ global_options_dict = {
             "option_group": "plotting",
         },
     ),
-
     # End plotting related
     # MakeKML related
     "skip_points": options_t(
@@ -1612,6 +1636,51 @@ global_options_dict = {
             "action": FullPathAction,
         },
     ),
+    # Hook script timeouts
+    "pre_login_timeout": options_t(
+        5,
+        {
+            "BaseLogin",
+        },
+        ("--pre_login_timeout",),
+        int,
+        {
+            "help": "Timeout in seconds for the .pre_login hook script",
+        },
+    ),
+    "post_dive_timeout": options_t(
+        120,
+        {
+            "Base",
+        },
+        ("--post_dive_timeout",),
+        int,
+        {
+            "help": "Timeout in seconds for the .post_dive hook script",
+        },
+    ),
+    "post_mission_timeout": options_t(
+        360,
+        {
+            "Base",
+        },
+        ("--post_mission_timeout",),
+        int,
+        {
+            "help": "Timeout in seconds for the .post_mission_hook script",
+        },
+    ),
+    "logger_script_timeout": options_t(
+        120,
+        {
+            "Base",
+        },
+        ("--logger_script_timeout",),
+        int,
+        {
+            "help": "Timeout in seconds for each logger hook script",
+        },
+    ),
 }
 
 # Note: All option_group kwargs listed above must have an entry in this dictionary
@@ -1629,7 +1698,6 @@ class CustomFormatter(
 
 
 class BaseOptions:
-
     """
     BaseOptions: for use by all basestation code and utilities.
        Defaults are trumped by options listed in configuration file;
@@ -1658,7 +1726,7 @@ class BaseOptions:
 
         if cmdline_args is None:
             cmdline_args = sys.argv[1:]
-        
+
         self._opts = None  # Retained for debugging
         self._ap = None  # Retailed for debugging
 
@@ -1681,13 +1749,13 @@ class BaseOptions:
                 options_dict[add_arg].group.add(calling_module)
 
         if add_option_groups is not None:
-            option_group_description |= add_option_groups 
+            option_group_description |= add_option_groups
 
         basestation_directory, _ = os.path.split(
-            #os.path.abspath(os.path.expanduser(sys.argv[0]))
+            # os.path.abspath(os.path.expanduser(sys.argv[0]))
             __file__
         )
-        
+
         self.basestation_directory = basestation_directory  # make avaiable
         # add path to load common basestation modules from subdirectories
         sys.path.append(basestation_directory)
@@ -1702,11 +1770,13 @@ class BaseOptions:
             },
         )
 
-        ext_add_to_arguments, ext_add_option_groups, ext_add_options = find_additional_options(self.basestation_directory, cmdline_args)
+        ext_add_to_arguments, ext_add_option_groups, ext_add_options = (
+            find_additional_options(self.basestation_directory, cmdline_args)
+        )
         options_dict |= ext_add_options
         option_group_description |= ext_add_option_groups
         for module, add_arg_list in ext_add_to_arguments.items():
-            #TODO - check we have a valid option here
+            # TODO - check we have a valid option here
             for add_arg in add_arg_list:
                 options_dict[add_arg].group.add(module)
 
@@ -1717,7 +1787,6 @@ class BaseOptions:
             # Generate a sample conf file and exit
             generate_sample_conf_file(options_dict, calling_module)
             sys.exit(0)
-
 
         # options_dict["group_etc"] = dataclasses.replace(
         #     options_dict["group_etc"],
@@ -1784,7 +1853,7 @@ class BaseOptions:
 
                 for parser in parsers:
                     kwargs = copy.deepcopy(kwargs_tmp)
-                    if not (v.var_type == bool and "action" in v.kwargs): # noqa: E721 This is a class, not instance compare
+                    if not (v.var_type == bool and "action" in v.kwargs):  # noqa: E721 This is a class, not instance compare
                         kwargs["type"] = v.var_type
                     if v.args and v.args[0].startswith("-"):
                         kwargs["dest"] = k
@@ -1795,9 +1864,7 @@ class BaseOptions:
                     kwargs["default"] = v.default_val
                     if "section" in kwargs:
                         del kwargs["section"]
-                    if "required" in kwargs and isinstance(
-                        kwargs["required"], tuple
-                    ):
+                    if "required" in kwargs and isinstance(kwargs["required"], tuple):
                         kwargs["required"] = calling_module in kwargs["required"]
                     if (
                         "range" in kwargs
@@ -1855,7 +1922,7 @@ class BaseOptions:
         # Process the config file, updating the object
         if self._opts.config_file_name is not None:
             if not os.path.exists(self._opts.config_file_name):
-                #setattr(self, "config_file_not_found", True)
+                # setattr(self, "config_file_not_found", True)
                 self.config_file_not_found = True
                 # raise FileNotFoundError(
                 #    f"Config file {self._opts.config_file_name} does not exist"
@@ -1873,11 +1940,11 @@ class BaseOptions:
                     if v.group is None or calling_module in v.group:
                         try:
                             section_name = v.kwargs.get("section", "base")
-                            #if "section" in v.kwargs:
+                            # if "section" in v.kwargs:
                             #    section_name = v.kwargs["section"]
-                            #else:
+                            # else:
                             #    section_name = "base"
-                            if v.var_type == bool: # noqa: E721 This is a class, not instance compare
+                            if v.var_type == bool:  # noqa: E721 This is a class, not instance compare
                                 try:
                                     value = cp.getboolean(section_name, k)
                                 except ValueError as exc:
@@ -1934,15 +2001,20 @@ class BaseOptions:
                                             raise f"{val} outside of range {min_val} {max_val}"
 
                                     setattr(self, k, val)
-                                    
+
         # Check for deprecated options set in config
         for k, v in options_dict.items():
-            if hasattr(self, k) and "action" in v.kwargs and v.kwargs["action"] is DeprecateAction and getattr(self, k) != v.default_val:
+            if (
+                hasattr(self, k)
+                and "action" in v.kwargs
+                and v.kwargs["action"] is DeprecateAction
+                and getattr(self, k) != v.default_val
+            ):
                 if "help" in v.kwargs:
                     deprecated_options[v.args[0]] = v.kwargs["help"]
                 else:
                     deprecated_options[v.args[0]] = "deprecated option"
-        self.deprecated_options = deprecated_options                                    
+        self.deprecated_options = deprecated_options
         # Update any options that affect other options
         if (
             hasattr(self, "ignore_flight_model")
