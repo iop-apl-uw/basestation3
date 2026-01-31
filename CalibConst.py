@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024  University of Washington.
+## Copyright (c) 2023, 2024, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -93,7 +93,9 @@ def getSGCalibrationConstants(
 
     # parse file : expect .m with  "name = value; %comment \n" lines
     eval_locals = {}  # local results from evaluating key = value lines
+    line_count = 0
     for line in calib_file.readlines():
+        line_count += 1
         # log_debug("parsing: " + line)
 
         # remove line comments
@@ -152,6 +154,10 @@ def getSGCalibrationConstants(
                         # We take all numerics, declared or not...
                         # pylint: disable=eval-used
                         value = float(eval(value, None, eval_locals))
+                    except SyntaxError as e:
+                        log_warning(
+                            f"Count not process {value} ({e}) (file:{calib_filename}, line:{line_count} - Assuming {key} is a string"
+                        )
                     except Exception:
                         # Non-numeric value of an unknown variable
                         log_debug("Assuming %s is a string" % key)
