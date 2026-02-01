@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -46,7 +46,10 @@ import matplotlib.path as mpath
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import pyproj
 import xarray as xr
+from shapely.geometry import Polygon
+from shapely.ops import transform
 
 from CalibConst import getSGCalibrationConstants
 
@@ -160,12 +163,36 @@ def mission_map(
         plot_constants = getSGCalibrationConstants(
             sg_plot_consts_file_name, suppress_required_error=True
         )
-        if {"lat_south", "lat_north", "lon_west", "lon_east"} <= set(plot_constants):
-            ll_lon = plot_constants["lon_west"]
-            ur_lon = plot_constants["lon_east"]
-            ll_lat = plot_constants["lat_south"]
-            ur_lat = plot_constants["lat_north"]
+        plot_limit_set = {"lat_south", "lat_north", "lon_west", "lon_east"}
+        plot_limits_found = plot_limit_set & set(plot_constants)
+        if plot_limit_set == plot_limits_found:
+            pc_ll_lon = plot_constants["lon_west"]
+            pc_ur_lon = plot_constants["lon_east"]
+            pc_ll_lat = plot_constants["lat_south"]
+            pc_ur_lat = plot_constants["lat_north"]
 
+            # Check for containment
+            project = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform
+            pc_bounding_box = [(pc_ur_lon, pc_ur_lat), (pc_ur_lon, pc_ll_lat), (pc_ll_lon, pc_ll_lat), (pc_ll_lon, pc_ur_lat)]
+            gps_bounding_box = [(ur_lon, ur_lat), (ur_lon, ll_lat), (ll_lon, ll_lat), (ll_lon, ur_lat)]
+            proj_pc_bounding_box = transform(project, Polygon(pc_bounding_box))
+            proj_gps_bounding_box = transform(project, Polygon(gps_bounding_box))
+            if not(proj_pc_bounding_box.contains(proj_gps_bounding_box) or proj_pc_bounding_box.intersects(proj_gps_bounding_box)):
+                log_warning(f"Specified plot limits ({pc_bounding_box}) contains no glider locations (max box {gps_bounding_box}) - could lead to map generation problems")
+
+            # CONSIDER: In extreme situations - with the plot constants bounding box being on the other side of the globe
+            # from the gps bounding box, the projection code below will fail and the map will not be generated - see try/except
+            # around ax.set_extent
+            # Maybe the bounding box should not be changed?
+            ll_lon = pc_ll_lon 
+            ur_lon = pc_ur_lon 
+            ll_lat = pc_ll_lat 
+            ur_lat = pc_ur_lat 
+                
+        elif plot_limits_found:
+            log_warning(f"Not all plot limits found:{plot_limits_found}  missing {plot_limit_set - plot_limits_found}")
+
+            
         if "tail" in plot_constants:
             tail = plot_constants["tail"]
     else:
@@ -226,7 +253,11 @@ def mission_map(
 
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
-        ax.set_extent([extent[0]-fudgex,extent[1]+fudgex,extent[2]-fudgey,extent[3]+fudgey], ccrs.PlateCarree())
+        try:
+            ax.set_extent([extent[0]-fudgex,extent[1]+fudgex,extent[2]-fudgey,extent[3]+fudgey], ccrs.PlateCarree())
+        except ValueError as e:
+            log_error(f"Error setting map extents ({e}) - possibly due to mismatch between glider position and plot extents")
+            return ([], [])
 
     g = ax.gridlines(draw_labels=True, x_inline=False, y_inline=False, dms=True)
     xt = g.xlocator.tick_values(ll_lon,ur_lon)
