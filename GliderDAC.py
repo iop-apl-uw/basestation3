@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -74,7 +74,16 @@ import QC
 from BaseLog import BaseLogger, log_debug, log_error, log_info, log_warning
 
 # Local config
-DEBUG_PDB = True
+DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
 
 dim_map_t = collections.namedtuple("dim_map_t", ["first_i", "last_i"])
 
@@ -535,7 +544,7 @@ def main(
     for dive_nc_file_name in dive_nc_file_names:
         log_info("Processing %s" % dive_nc_file_name)
         try:
-            dsi = xr.open_dataset(dive_nc_file_name)
+            dsi = xr.open_dataset(dive_nc_file_name, decode_times=False)
         except Exception:
             log_error(f"Error opening {dive_nc_file_name}", "exc")
             continue
@@ -571,7 +580,8 @@ def main(
         last_i = 0
         for t_var, t_dim in time_vars:
             # Xarray converts to numpy.datetime64(ns) - get it back to something useful
-            new_time_v = dsi[t_var].data.astype(np.float64) / 1000000000.0
+            # new_time_v = dsi[t_var].data.astype(np.float64) / 1000000000.0
+            new_time_v = dsi[t_var]
             dims_map[t_dim] = dim_map_t(last_i, last_i + len(new_time_v))
             last_i += len(new_time_v)
             unsorted_master_time = np.concatenate((unsorted_master_time, new_time_v))
@@ -581,7 +591,8 @@ def main(
         master_time = unsorted_master_time[sort_i]
 
         master_depth = NetCDFUtils.interp1_extend(
-            dsi["ctd_time"].data.astype(np.float64) / 1000000000.0,
+            # dsi["ctd_time"].data.astype(np.float64) / 1000000000.0,
+            dsi["ctd_time"].data,
             dsi["ctd_depth"].data,
             master_time,
         )
@@ -913,10 +924,7 @@ if __name__ == "__main__":
     except SystemExit:
         pass
     except Exception:
-        if DEBUG_PDB:
-            extype, value, tb = sys.exc_info()
-            traceback.print_exc()
-            pdb.post_mortem(tb)
+        DEBUG_PDB_F()
         sys.stderr.write("Exception in main (%s)\n" % traceback.format_exc())
 
     sys.exit(retval)
