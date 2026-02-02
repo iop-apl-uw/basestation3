@@ -172,13 +172,14 @@ def mission_map(
             pc_ur_lat = plot_constants["lat_north"]
 
             # Check for containment
-            project = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform
-            pc_bounding_box = [(pc_ur_lon, pc_ur_lat), (pc_ur_lon, pc_ll_lat), (pc_ll_lon, pc_ll_lat), (pc_ll_lon, pc_ur_lat)]
-            gps_bounding_box = [(ur_lon, ur_lat), (ur_lon, ll_lat), (ll_lon, ll_lat), (ll_lon, ur_lat)]
-            proj_pc_bounding_box = transform(project, Polygon(pc_bounding_box))
-            proj_gps_bounding_box = transform(project, Polygon(gps_bounding_box))
-            if not(proj_pc_bounding_box.contains(proj_gps_bounding_box) or proj_pc_bounding_box.intersects(proj_gps_bounding_box)):
-                log_warning(f"Specified plot limits ({pc_bounding_box}) contains no glider locations (max box {gps_bounding_box}) - could lead to map generation problems", alert="MISSION_MAP_BOX")
+            if all(np.logical_not(np.isnan([ll_lon, ur_lon, ll_lat, ur_lat]))):
+                project = pyproj.Transformer.from_crs("EPSG:4326", "EPSG:3857", always_xy=True).transform
+                pc_bounding_box = [(pc_ur_lon, pc_ur_lat), (pc_ur_lon, pc_ll_lat), (pc_ll_lon, pc_ll_lat), (pc_ll_lon, pc_ur_lat)]
+                gps_bounding_box = [(ur_lon, ur_lat), (ur_lon, ll_lat), (ll_lon, ll_lat), (ll_lon, ur_lat)]
+                proj_pc_bounding_box = transform(project, Polygon(pc_bounding_box))
+                proj_gps_bounding_box = transform(project, Polygon(gps_bounding_box))
+                if not(proj_pc_bounding_box.contains(proj_gps_bounding_box) or proj_pc_bounding_box.intersects(proj_gps_bounding_box)):
+                    log_warning(f"Specified plot limits ({pc_bounding_box}) contains no glider locations (max box {gps_bounding_box}) - could lead to map generation problems", alert="MISSION_MAP_BOX")
 
             # CONSIDER: In extreme situations - with the plot constants bounding box being on the other side of the globe
             # from the gps bounding box, the projection code below will fail and the map will not be generated - see try/except
