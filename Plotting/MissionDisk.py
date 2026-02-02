@@ -59,6 +59,11 @@ def est_remaining(df, y_val, tag_val: str) -> str:
             dives_back = -20
         else:
             dives_back = 0
+
+        if not np.all(np.diff(y_val[dives_back:]) <= 0):
+            # y_val is not monotonically decreasing - remaining esitmate non-sensical
+            return ""
+
         m, b = np.polyfit(
             df["dive"].to_numpy()[dives_back:],
             y_val[dives_back:],
