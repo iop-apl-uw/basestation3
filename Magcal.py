@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2024, 2025  University of Washington.
+## Copyright (c) 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -39,7 +39,9 @@ import contextlib
 import datetime
 import math
 import os
+import pdb
 import sys
+import traceback
 import typing
 import warnings
 from typing import Any
@@ -58,8 +60,22 @@ import PlotUtils
 import RegressVBD
 import Utils
 from BaseLog import (
+    BaseLogger,
+    log_critical,
+    log_error,
     log_info,
 )
+
+DEBUG_PDB = False
+
+
+def DEBUG_PDB_F() -> None:
+    """Enter the debugger on exceptions"""
+    if DEBUG_PDB:
+        _, __, traceb = sys.exc_info()
+        traceback.print_exc()
+        pdb.post_mortem(traceb)
+
 
 
 def magcal(
@@ -417,7 +433,6 @@ def magcal_worker(
             f"hard+soft magcal abc = {abc0[0][0]:.3f},{abc0[0][1]:.3f},{abc0[0][2]:.3f},{abc0[1][0]:.3f},{abc0[1][1]:.3f},{abc0[1][2]:.3f},{abc0[2][0]:.3f},{abc0[2][1]:.3f},{abc0[2][2]:.3f}"
         )
 
-
         if not converged or abs(abc0[0][1]) > 0.2 or abs(abc0[0][2]) > 0.2 or abs(abc0[1][0]) > 0.2 or abs(abc0[1][2]) > 0.2 or abs(abc0[2][0]) > 0.2 or abs(abc0[2][1]) > 0.2:
             log_info('distrusting soft-iron, using hard-only solution with identity for soft')
             abc0 = np.eye(3)
@@ -773,7 +788,7 @@ def main():
         additional_arguments={
             "dives": BaseOptsType.options_t(
                 "",
-                ("Magcal",),
+                {"Magcal",},
                 ( "--dives", ), 
                 str,
                 {
@@ -783,7 +798,7 @@ def main():
             ),
             "out": BaseOptsType.options_t(
                 "",
-                ("Magcal",),
+                {"Magcal",},
                 ( "--out", ), 
                 str,
                 {
@@ -793,7 +808,7 @@ def main():
             ),
             "soft": BaseOptsType.options_t(
                 True,
-                ("Magcal",),
+                {"Magcal",},
                 ("--soft",),
                 bool,
                 {
@@ -803,6 +818,12 @@ def main():
             ),
         }
     )
+
+    global DEBUG_PDB
+    DEBUG_PDB = base_opts.debug_pdb
+
+    # Initialize log
+    BaseLogger(base_opts, include_time=True)
 
     if not base_opts.instrument_id:
         (comm_log, _, _, _, _) = CommLog.process_comm_log(
@@ -815,17 +836,17 @@ def main():
     if not base_opts.instrument_id:
         _, tail = os.path.split(base_opts.mission_dir[:-1])
         if tail[-5:-3] != "sg":
-            print("Can't figure out the instrument id - bailing out")
+            log_error("Can't figure out the instrument id - bailing out")
             return
         try:
             base_opts.instrument_id = int(tail[-3:])
         except Exception:
-            print("Can't figure out the instrument id - bailing out")
+            log_error("Can't figure out the instrument id - bailing out")
             return
 
     dives = RegressVBD.parseRangeList(base_opts.dives)
     if not dives or len(dives) < 1:
-        print("invalid dives list")
+        log_error("invalid dives list")
         return 
 
     if base_opts.out and 'html' in base_opts.out:
@@ -833,7 +854,7 @@ def main():
     elif base_opts.out and 'png' in base_opts.out:
         fmt = 'png'
     else:
-        fmt = False
+        fmt = ""
 
     hard, soft, cover, circ, plt = magcal(base_opts.mission_dir,
                                           base_opts.instrument_id,
@@ -855,6 +876,11 @@ def main():
 if __name__ == "__main__":
     retval = 1
 
-    retval = main()
+    try:
+        retval = main()
+    except Exception:
+        DEBUG_PDB_F()
+        log_critical("Unhandled exception in main -- exiting")
+        retval = 1
 
     sys.exit(retval)
