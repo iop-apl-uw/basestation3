@@ -135,6 +135,10 @@ def getSGCalibrationConstants(
                     # log_debug("skipping [] expression: " + expr)
                     continue
 
+                # if key.startswith("calibcomm"):
+                #     import pdb
+
+                #     pdb.set_trace()
                 nc_var_name = BaseNetCDF.nc_sg_cal_prefix + key
                 try:
                     md = BaseNetCDF.nc_var_metadata[nc_var_name]
@@ -155,9 +159,13 @@ def getSGCalibrationConstants(
                         # pylint: disable=eval-used
                         value = float(eval(value, None, eval_locals))
                     except SyntaxError as e:
-                        log_warning(
-                            f"Count not process {value} ({e}) (file:{calib_filename}, line:{line_count} - Assuming {key} is a string"
-                        )
+                        # Only issue warnings if we know what the type supposed to be - that is
+                        # some stripe of float
+                        if nc_data_type is not None:
+                            log_warning(
+                                f"Count not process {value} ({e}) (file:{calib_filename}, line:{line_count} - Assuming {key} is a string",
+                                alert="CALIB_COMM_SYNTAX",
+                            )
                     except Exception:
                         # Non-numeric value of an unknown variable
                         log_debug("Assuming %s is a string" % key)

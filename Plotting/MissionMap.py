@@ -178,7 +178,7 @@ def mission_map(
             proj_pc_bounding_box = transform(project, Polygon(pc_bounding_box))
             proj_gps_bounding_box = transform(project, Polygon(gps_bounding_box))
             if not(proj_pc_bounding_box.contains(proj_gps_bounding_box) or proj_pc_bounding_box.intersects(proj_gps_bounding_box)):
-                log_warning(f"Specified plot limits ({pc_bounding_box}) contains no glider locations (max box {gps_bounding_box}) - could lead to map generation problems")
+                log_warning(f"Specified plot limits ({pc_bounding_box}) contains no glider locations (max box {gps_bounding_box}) - could lead to map generation problems", alert="MISSION_MAP_BOX")
 
             # CONSIDER: In extreme situations - with the plot constants bounding box being on the other side of the globe
             # from the gps bounding box, the projection code below will fail and the map will not be generated - see try/except
