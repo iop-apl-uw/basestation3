@@ -265,6 +265,8 @@ def plot_tridente(
 
                         PlotUtils.add_sample_range_overlay(
                             base_opts,
+                            tridente_type,
+                            dive_nc_file.dive_number,
                             tr_time,
                             max_depth_sample_index,
                             start_time,
