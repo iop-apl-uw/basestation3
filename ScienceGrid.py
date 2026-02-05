@@ -339,7 +339,13 @@ def setup_science_grid(base_opts) -> None:
 
         # Science files
         for science_file in find_command_files(mission_dir, "science"):
-            science[science_file] = asyncio.run(Utils.readScienceFile(science_file))
+            tmp_science_list = asyncio.run(Utils.readScienceFile(science_file))
+            # This check is essentially for old column oriented (not supported) vs
+            # new name/value paired files
+            for science_item in tmp_science_list:
+                if science_item.keys() >= {"name", "seconds", "sensors"}:
+                    science[science_file] = tmp_science_list
+                    break
 
         science_schemes_dict = collections.defaultdict(dict)
 
