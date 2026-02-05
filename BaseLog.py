@@ -30,13 +30,19 @@
 
 """Basestation wide logging infrastructure"""
 
+from __future__ import annotations
+
 import argparse
 import collections
 import inspect
 import logging
 import os
 import traceback
+from typing import TYPE_CHECKING
 from io import StringIO
+
+if TYPE_CHECKING:
+    from BaseOpts import BaseOptions
 
 # CONSIDER make adding code location an option for debugging
 # e.g., BaseLogger.opts.log_code_location
@@ -95,7 +101,7 @@ class BaseLogger:
     # List of all logs calls that requested an "exc" or "stack"
     traceback_stream: StringIO = StringIO()
 
-    def __init__(self, opts: argparse.Namespace, include_time: bool = False) -> None:
+    def __init__(self, opts: BaseOptions, include_time: bool = False) -> None:
         """
         Initializes a logging.Logger object, according to options (opts).
         """
@@ -144,7 +150,7 @@ class BaseLogger:
             try:
                 if opts.config_file_not_found:
                     log_warning(
-                        f"Config file {opts._opts.config_file_name} was not found"
+                        f"Config file {opts._opts.config_file_name} was not found"  # ty: ignore[possibly-missing-attribute]
                     )
             except AttributeError:
                 pass
@@ -158,7 +164,7 @@ class BaseLogger:
     def setHandler(
         self,
         handle: logging.Handler,
-        opts: argparse.Namespace | None,
+        opts: BaseOptions | None,
         include_time: bool,
         log_filter: logging.Filter | None = None,
         log_llevel: int | None = None,

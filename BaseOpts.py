@@ -43,7 +43,7 @@ import argparse
 import configparser
 import copy
 import dataclasses
-import importlib
+import importlib.util
 import inspect
 import itertools
 import os
@@ -250,9 +250,15 @@ def loadmodule(pathname):
     # there's a problem we can't handle -- let the caller handle it.
     try:
         spec = importlib.util.spec_from_file_location(name, pathname)
+        if spec is None:
+            sys.stderr.write(f"Failed generating spec from file location {pathname}")
+            return None
         mod = importlib.util.module_from_spec(spec)
+        if mod is None:
+            sys.stderr.write(f"Failed generating mod from spec {pathname}")
+            return None
         sys.modules["module.name"] = mod
-        spec.loader.exec_module(mod)
+        spec.loader.exec_module(mod)  # ty: ignore[possibly-missing-attribute]
         return mod
     except Exception:
         # log_error(f"Error loading {pathname}", "exc")
@@ -294,7 +300,8 @@ def find_additional_options(basestation_directory, cmdline_args):
                 cp = configparser.ConfigParser(
                     allow_no_value=True, inline_comment_prefixes="#"
                 )
-                cp.optionxform = str
+                # Make option names case sensitive
+                cp.optionxform = str  # ty: ignore[invalid-assignment]
                 try:
                     # Anything not inside a section tag is in [global] section
                     with open(extensions_file_name) as fi:
@@ -376,7 +383,7 @@ def find_additional_options(basestation_directory, cmdline_args):
 #
 
 
-global_options_dict = {
+global_options_dict: dict[str, options_t] = {
     "generate_sample_conf": options_t(
         False,
         None,
@@ -469,7 +476,9 @@ global_options_dict = {
     ),
     "sc2mat_convertor": options_t(
         "sc2mat",
-        ("Base",),
+        {
+            "Base",
+        },
         ("--sc2mat_convertor",),
         str,
         {
@@ -478,7 +487,9 @@ global_options_dict = {
     ),
     "add_sqlite": options_t(
         True,
-        ("Base",),
+        {
+            "Base",
+        },
         ("--add_sqlite",),
         bool,
         {
@@ -488,7 +499,9 @@ global_options_dict = {
     ),
     "run_bogue": options_t(
         False,
-        ("Base",),
+        {
+            "Base",
+        },
         ("--run_bogue",),
         bool,
         {
@@ -498,7 +511,9 @@ global_options_dict = {
     ),
     "job_id": options_t(
         str(uuid.uuid4()),
-        ("Base",),
+        {
+            "Base",
+        },
         ("--job_id",),
         str,
         {
@@ -508,7 +523,7 @@ global_options_dict = {
     #
     "mission_dir": options_t(
         "",
-        (
+        {
             "Base",
             "BaseCtrlFiles",
             "BaseDB",
@@ -536,7 +551,7 @@ global_options_dict = {
             "Ver65",
             "RegressVBD",
             "Magcal",
-        ),
+        },
         (
             "-m",
             "--mission_dir",
@@ -576,7 +591,9 @@ global_options_dict = {
     ),
     "delete_upload_files": options_t(
         False,
-        ("Base",),
+        {
+            "Base",
+        },
         ("--delete_upload_files",),
         bool,
         {
@@ -587,11 +604,11 @@ global_options_dict = {
     #
     "magcalfile": options_t(
         "",
-        (
+        {
             "Base",
             "MakeDiveProfiles",
             "Reprocess",
-        ),
+        },
         ("--magcalfile",),
         FullPath,
         {
@@ -601,7 +618,7 @@ global_options_dict = {
     ),
     "auxmagcalfile": options_t(
         "",
-        ("Base", "MakeDiveProfiles", "Reprocess"),
+        {"Base", "MakeDiveProfiles", "Reprocess"},
         ("--auxmagcalfile",),
         FullPath,
         {
@@ -611,7 +628,7 @@ global_options_dict = {
     ),
     "allow_insufficient_dives": options_t(
         False,
-        ("Base", "MakeDiveProfiles", "Reprocess"),
+        {"Base", "MakeDiveProfiles", "Reprocess"},
         ("--allow_insufficient_dives",),
         bool,
         {
@@ -622,7 +639,7 @@ global_options_dict = {
     #
     "instrument_id": options_t(
         0,
-        (
+        {
             "Base",
             "BaseDB",
             "BasePlot",
@@ -639,7 +656,7 @@ global_options_dict = {
             "Reprocess",
             "RegressVBD",
             "Magcal",
-        ),
+        },
         (
             "-i",
             "--instrument_id",
@@ -649,7 +666,7 @@ global_options_dict = {
     ),
     "nice": options_t(
         0,
-        (
+        {
             "Base",
             "BasePlot",
             "FlightModel",
@@ -657,20 +674,20 @@ global_options_dict = {
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
             "Reprocess",
-        ),
+        },
         ("--nice",),
         int,
         {"help": "processing priority level (niceness)"},
     ),
     "gzip_netcdf": options_t(
         False,
-        (
+        {
             "Base",
             "MakeDiveProfiles",
             "MakeMissionProfile",
             "MakeMissionTimeSeries",
             "Reprocess",
-        ),
+        },
         ("--gzip_netcdf",),
         bool,
         {
@@ -699,7 +716,7 @@ global_options_dict = {
     ),
     "bin_width": options_t(
         1.0,
-        ("Base", "MakeMissionProfile", "MakePlotMission"),
+        {"Base", "MakeMissionProfile", "MakePlotMission"},
         ("--bin_width",),
         float,
         {
@@ -708,7 +725,7 @@ global_options_dict = {
     ),
     "which_half": options_t(
         WhichHalf(3),
-        ("Base", "MakeMissionProfile", "MakePlotMission"),
+        {"Base", "MakeMissionProfile", "MakePlotMission"},
         ("--which_half",),
         WhichHalf,
         {
@@ -717,21 +734,23 @@ global_options_dict = {
     ),
     "daemon": options_t(
         False,
-        ("Base", "GliderEarlyGPS", "GliderTrack"),
+        {"Base", "GliderEarlyGPS", "GliderTrack"},
         ("--daemon",),
         bool,
         {"help": "Launch conversion as a daemon process", "action": "store_true"},
     ),
     "queue_length": options_t(
         0,
-        ("Base", "GliderEarlyGPS", "BaseLogin"),
+        {"Base", "GliderEarlyGPS", "BaseLogin"},
         ("--queue_length",),
         int,
         {"help": "Length of processing queue from BaseRunner"},
     ),
     "csh_pid": options_t(
         0,
-        ("GliderEarlyGPS",),
+        {
+            "GliderEarlyGPS",
+        },
         ("--csh_pid",),
         int,
         {
@@ -740,7 +759,7 @@ global_options_dict = {
     ),
     "ignore_lock": options_t(
         False,
-        ("Base", "BaseRunner", "GliderEarlyGPS"),
+        {"Base", "BaseRunner", "GliderEarlyGPS"},
         ("--ignore_lock",),
         bool,
         {
@@ -750,7 +769,7 @@ global_options_dict = {
     ),
     "use_gsw": options_t(
         True,
-        ("Base", "BasePlot", "FlightModel", "MakeDiveProfiles", "Reprocess"),
+        {"Base", "BasePlot", "FlightModel", "MakeDiveProfiles", "Reprocess"},
         ("--use_gsw",),
         bool,
         {
@@ -760,7 +779,9 @@ global_options_dict = {
     ),
     "divetarballs": options_t(
         0,
-        ("Base",),
+        {
+            "Base",
+        },
         ("--divetarballs",),
         int,
         {
@@ -769,7 +790,9 @@ global_options_dict = {
     ),
     "local": options_t(
         False,
-        ("Base",),
+        {
+            "Base",
+        },
         ("--local",),
         bool,
         {
@@ -779,7 +802,9 @@ global_options_dict = {
     ),
     "clean": options_t(
         False,
-        ("Base",),
+        {
+            "Base",
+        },
         ("--clean",),
         bool,
         {
@@ -789,14 +814,14 @@ global_options_dict = {
     ),
     "reply_addr": options_t(
         "",
-        (
+        {
             "Base",
             "BaseCtrlFiles",
             "BaseDotFiles",
             "BaseSMS",
             "BaseSMS_IMAP",
             "GliderEarlyGPS",
-        ),
+        },
         ("--reply_addr",),
         str,
         {
@@ -805,14 +830,14 @@ global_options_dict = {
     ),
     "domain_name": options_t(
         "",
-        (
+        {
             "Base",
             "BaseCtrlFiles",
             "BaseDotFiles",
             "BaseSMS",
             "BaseSMS_IMAP",
             "GliderEarlyGPS",
-        ),
+        },
         ("--domain_name",),
         str,
         {
@@ -821,7 +846,7 @@ global_options_dict = {
     ),
     "web_file_location": options_t(
         "",
-        ("Base", "Reprocess", "MakeKML"),
+        {"Base", "Reprocess", "MakeKML"},
         ("--web_file_location",),
         str,
         {
@@ -831,7 +856,7 @@ global_options_dict = {
     ),
     "vis_base_url": options_t(
         "",
-        ("Base", "Reprocess", "MakeKML", "BaseCtrlFiles", "CommLog", "GliderEarlyGPS"),
+        {"Base", "Reprocess", "MakeKML", "BaseCtrlFiles", "CommLog", "GliderEarlyGPS"},
         ("--vis_base_url",),
         str,
         {
@@ -841,12 +866,12 @@ global_options_dict = {
     #
     "force": options_t(
         False,
-        (
+        {
             "Base",
             "MakeDiveProfiles",
             "MakeMissionTimeSeries",
             "Reprocess",
-        ),
+        },
         ("--force",),
         bool,
         {
@@ -856,14 +881,16 @@ global_options_dict = {
     ),
     "reprocess": options_t(
         False,
-        ("Base", "MakeDiveProfiles", "Reprocess"),
+        {"Base", "MakeDiveProfiles", "Reprocess"},
         ("--reprocess",),
         int,
         {"help": "Forces reprocessing of a specific dive number "},
     ),
     "make_dive_profiles": options_t(
         True,
-        ("Base",),
+        {
+            "Base",
+        },
         ("--make_dive_profiles",),
         bool,
         {
@@ -873,10 +900,10 @@ global_options_dict = {
     ),
     "make_mission_profile": options_t(
         False,
-        (
+        {
             "Base",
             "Reprocess",
-        ),
+        },
         ("--make_mission_profile",),
         bool,
         {
@@ -886,7 +913,7 @@ global_options_dict = {
     ),
     "make_mission_timeseries": options_t(
         False,
-        ("Base", "Reprocess"),
+        {"Base", "Reprocess"},
         ("--make_mission_timeseries",),
         bool,
         {
@@ -896,13 +923,13 @@ global_options_dict = {
     ),
     "whole_mission_config": options_t(
         None,
-        (
+        {
             "Base",
             "BaseParquet",
             "Reprocess",
             "MakeMissionTimeSeries",
             "MakeMissionProfile",
-        ),
+        },
         ("--whole_mission_config",),
         FullPathlib,
         {
@@ -912,13 +939,13 @@ global_options_dict = {
     ),
     "dump_whole_mission_config": options_t(
         False,
-        (
+        {
             "Base",
             "BaseParquet",
             "Reprocess",
             "MakeMissionTimeSeries",
             "MakeMissionProfile",
-        ),
+        },
         ("--dump_whole_mission_config",),
         bool,
         {
@@ -933,7 +960,7 @@ global_options_dict = {
     # DOC netcdf files with already generated data in the flight directory
     "skip_flight_model": options_t(
         False,
-        ("Base", "FlightModel", "Reprocess"),
+        {"Base", "FlightModel", "Reprocess"},
         ("--skip_flight_model",),
         bool,
         {
@@ -946,7 +973,7 @@ global_options_dict = {
     # DOC in sg_calib_constants.m.
     "ignore_flight_model": options_t(
         False,
-        (
+        {
             "Base",
             "BasePlot",
             "FlightModel",
@@ -955,7 +982,7 @@ global_options_dict = {
             "MakeMissionTimeSeries",
             "Reprocess",
             "BaseDB",
-        ),
+        },
         ("--ignore_flight_model",),
         bool,
         {
@@ -967,7 +994,7 @@ global_options_dict = {
     # DOC regression scripts.
     "fm_isopycnal": options_t(
         False,
-        ("Base", "Reprocess", "FlightModel", "MakeDiveProfiles"),
+        {"Base", "Reprocess", "FlightModel", "MakeDiveProfiles"},
         ("--fm_isopycnal",),
         bool,
         {
@@ -978,7 +1005,7 @@ global_options_dict = {
     # DOC Moving the flight directory out of the way initiates a clean slate for subsequent processing
     "backup_flight": options_t(
         False,
-        ("Base", "Reprocess"),
+        {"Base", "Reprocess"},
         ("--backup_flight",),
         bool,
         {
@@ -988,7 +1015,7 @@ global_options_dict = {
     ),
     "fm_reprocess_dives": options_t(
         True,
-        ("Base", "FlightModel", "Reprocess"),
+        {"Base", "FlightModel", "Reprocess"},
         ("--fm_reprocess_dives",),
         bool,
         {
@@ -998,7 +1025,7 @@ global_options_dict = {
     ),
     "skip_kml": options_t(
         False,
-        ("Base", "Reprocess"),
+        {"Base", "Reprocess"},
         ("--skip_kml",),
         bool,
         {
@@ -1010,7 +1037,9 @@ global_options_dict = {
     #
     "reprocess_plots": options_t(
         False,
-        ("Reprocess",),
+        {
+            "Reprocess",
+        },
         ("--reprocess_plots",),
         bool,
         {
@@ -1020,7 +1049,9 @@ global_options_dict = {
     ),
     "reprocess_dive_extensions": options_t(
         True,
-        ("Reprocess",),
+        {
+            "Reprocess",
+        },
         ("--reprocess_dive_extensions",),
         bool,
         {
@@ -1030,7 +1061,9 @@ global_options_dict = {
     ),
     "reprocess_mission_extensions": options_t(
         True,
-        ("Reprocess",),
+        {
+            "Reprocess",
+        },
         ("--reprocess_mission_extensions",),
         bool,
         {
@@ -1041,7 +1074,7 @@ global_options_dict = {
     #
     "target_dir": options_t(
         "",
-        ("MoveData", "MakeDiveProfiles", "Reprocess"),
+        {"MoveData", "MakeDiveProfiles", "Reprocess"},
         ("--target_dir", "-t"),
         FullPath,
         {
@@ -1053,7 +1086,7 @@ global_options_dict = {
     # Used by a number of extensions when being run via the CLI
     "netcdf_filename": options_t(
         "",
-        (),
+        set(),
         ("netcdf_filename",),
         FullPath,
         {
@@ -1065,7 +1098,7 @@ global_options_dict = {
     # Plotting related
     "plot_raw": options_t(
         False,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--plot_raw",),
         bool,
         {
@@ -1077,12 +1110,12 @@ global_options_dict = {
     ),
     "save_svg": options_t(
         False,
-        (
+        {
             "Base",
             "BasePlot",
             "Reprocess",
             "MakeMissionEngPlot",
-        ),
+        },
         ("--save_svg",),
         bool,
         {
@@ -1094,11 +1127,11 @@ global_options_dict = {
     ),
     "save_png": options_t(
         False,
-        (
+        {
             "Base",
             "BasePlot",
             "Reprocess",
-        ),
+        },
         ("--save_png",),
         bool,
         {
@@ -1110,7 +1143,7 @@ global_options_dict = {
     ),
     "save_jpg": options_t(
         False,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--save_jpg",),
         bool,
         {
@@ -1122,7 +1155,7 @@ global_options_dict = {
     ),
     "save_webp": options_t(
         True,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--save_webp",),
         bool,
         {
@@ -1134,7 +1167,7 @@ global_options_dict = {
     ),
     "thumbnail_webp": options_t(
         True,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--thumbnail_webp",),
         bool,
         {
@@ -1146,7 +1179,7 @@ global_options_dict = {
     ),
     "compress_div": options_t(
         True,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--compress_div",),
         bool,
         {
@@ -1159,11 +1192,11 @@ global_options_dict = {
     "full_html": options_t(
         # "darwin" in sys.platform,
         False,
-        (
+        {
             "Base",
             "BasePlot",
             "Reprocess",
-        ),
+        },
         ("--full_html",),
         bool,
         {
@@ -1175,7 +1208,7 @@ global_options_dict = {
     ),
     "plot_freeze_pt": options_t(
         False,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--plot_freeze_pt",),
         bool,
         {
@@ -1187,7 +1220,7 @@ global_options_dict = {
     ),
     "plot_legato_use_glider_pressure": options_t(
         False,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--plot_legato_use_glider_pressure",),
         bool,
         {
@@ -1199,13 +1232,13 @@ global_options_dict = {
     ),
     "plot_directory": options_t(
         "",
-        (
+        {
             "Base",
             "BaseDB",
             "BasePlot",
             "MakeMissionEngPlots",
             "Reprocess",
-        ),
+        },
         ("--plot_directory",),
         FullPath,
         {
@@ -1217,7 +1250,7 @@ global_options_dict = {
     ),
     "pmar_logavg_max": options_t(
         1e2,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--pmar_logavg_max",),
         float,
         {
@@ -1229,7 +1262,7 @@ global_options_dict = {
     ),
     "pmar_logavg_min": options_t(
         1e-4,
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--pmar_logavg_min",),
         float,
         {
@@ -1242,12 +1275,12 @@ global_options_dict = {
     # Core plotting routines
     "dive_plots": options_t(
         dive_plot_list,
-        (
+        {
             "Base",
             "BaseDB",
             "BasePlot",
             "Reprocess",
-        ),
+        },
         ("--dive_plots",),
         str,
         {
@@ -1260,7 +1293,7 @@ global_options_dict = {
     ),
     "mission_plots": options_t(
         mission_plot_list,
-        ("Base", "BaseDB", "BasePlot", "Reprocess"),
+        {"Base", "BaseDB", "BasePlot", "Reprocess"},
         ("--mission_plots",),
         str,
         {
@@ -1276,7 +1309,7 @@ global_options_dict = {
             "dives",
             "mission",
         ],
-        ("Base", "BasePlot", "Reprocess"),
+        {"Base", "BasePlot", "Reprocess"},
         ("--plot_types",),
         str,
         {
@@ -1289,7 +1322,7 @@ global_options_dict = {
     ),
     "mission_energy_reserve_percent": options_t(
         0.15,
-        ("Base", "BaseDB", "BasePlot", "Reprocess"),
+        {"Base", "BaseDB", "BasePlot", "Reprocess"},
         ("--mission_energy_reserve_percent",),
         float,
         {
@@ -1299,7 +1332,7 @@ global_options_dict = {
     ),
     "mission_energy_dives_back": options_t(
         10,
-        ("Base", "BaseDB", "BasePlot", "Reprocess"),
+        {"Base", "BaseDB", "BasePlot", "Reprocess"},
         ("--mission_energy_dives_back",),
         int,
         {
@@ -1309,7 +1342,7 @@ global_options_dict = {
     ),
     "mission_trends_dives_back": options_t(
         10,
-        ("Base", "BaseDB", "BasePlot", "Reprocess"),
+        {"Base", "BaseDB", "BasePlot", "Reprocess"},
         ("--mission_trends_dives_back",),
         int,
         {
@@ -1319,11 +1352,11 @@ global_options_dict = {
     ),
     "plotting_use_parquet": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
             "BasePlot",
-        ),
+        },
         ("--plotting_use_parquet",),
         bool,
         {
@@ -1337,11 +1370,11 @@ global_options_dict = {
     # MakeKML related
     "skip_points": options_t(
         10,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--skip_points",),
         float,
         {
@@ -1353,11 +1386,11 @@ global_options_dict = {
     ),
     "color": options_t(
         "00ffff",
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--color",),
         str,
         {
@@ -1368,11 +1401,11 @@ global_options_dict = {
     ),
     "targets": options_t(
         "all",
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--targets",),
         str,
         {
@@ -1384,11 +1417,11 @@ global_options_dict = {
     ),
     "surface_track": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--surface_track",),
         bool,
         {
@@ -1400,11 +1433,11 @@ global_options_dict = {
     ),
     "subsurface_track": options_t(
         False,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--subsurface_track",),
         bool,
         {
@@ -1416,10 +1449,10 @@ global_options_dict = {
     ),
     "drift_track": options_t(
         True,
-        (
+        {
             "Base",
             "MakeKML",
-        ),
+        },
         ("--drift_track",),
         bool,
         {
@@ -1431,11 +1464,11 @@ global_options_dict = {
     ),
     "proposed_targets": options_t(
         False,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--proposed_targets",),
         bool,
         {
@@ -1447,11 +1480,11 @@ global_options_dict = {
     ),
     "target_radius": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--target_radius",),
         bool,
         {
@@ -1463,11 +1496,11 @@ global_options_dict = {
     ),
     "compress_output": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--compress_output",),
         bool,
         {
@@ -1479,11 +1512,11 @@ global_options_dict = {
     ),
     "use_inmemory": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--use_inmemory",),
         bool,
         {
@@ -1495,11 +1528,11 @@ global_options_dict = {
     ),
     "plot_dives": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--plot_dives",),
         bool,
         {
@@ -1511,11 +1544,11 @@ global_options_dict = {
     ),
     "simplified": options_t(
         False,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--simplified",),
         bool,
         {
@@ -1527,11 +1560,11 @@ global_options_dict = {
     ),
     "use_glider_target": options_t(
         False,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--use_glider_target",),
         bool,
         {
@@ -1543,11 +1576,11 @@ global_options_dict = {
     ),
     "add_kml": options_t(
         [],
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--add_kml",),
         str,
         {
@@ -1559,11 +1592,11 @@ global_options_dict = {
     ),
     "merge_ssh": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--merge_ssh",),
         bool,
         {
@@ -1575,11 +1608,11 @@ global_options_dict = {
     ),
     "kml_use_parquet": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
             "MakeKML",
-        ),
+        },
         ("--kml_use_parquet",),
         bool,
         {
@@ -1593,10 +1626,10 @@ global_options_dict = {
     # Start parquet
     "generate_parquet": options_t(
         True,
-        (
+        {
             "Base",
             "Reprocess",
-        ),
+        },
         ("--generate_parquet",),
         bool,
         {
@@ -1606,13 +1639,13 @@ global_options_dict = {
     ),
     "parquet_directory": options_t(
         None,
-        (
+        {
             "Base",
             "BaseParquet",
             "BasePlot",
             "MakeKML",
             "Reprocess",
-        ),
+        },
         ("--parquet_directory",),
         FullPathlib,
         {
@@ -1623,11 +1656,11 @@ global_options_dict = {
     # End parquet
     "network_log_decompressor": options_t(
         "",
-        (
+        {
             "Base",
             "BaseNetwork",
             "NetworkWatch",
-        ),
+        },
         ("--network_log_decompressor",),
         FullPath,
         {
@@ -1707,11 +1740,11 @@ class BaseOptions:
     def __init__(
         self,
         description,
-        additional_arguments=None,
-        cmdline_args=None,
-        add_to_arguments=None,
-        add_option_groups=None,
-        calling_module=None,
+        additional_arguments: dict[str, options_t] | None = None,
+        cmdline_args: list[str] | None = None,
+        add_to_arguments: list[str] | None = None,
+        add_option_groups: dict[str, str] | None = None,
+        calling_module: str | None = None,
     ):
         """
         Input:
@@ -1721,6 +1754,7 @@ class BaseOptions:
                           equivilent to sys.argv[1:]
             add_to_arguments - adds the calling_module to the list of .group set of that option
             add_option_groups - dict of new option_groups and descriptions
+            calling_module -
         """
         global option_group_description
 
@@ -1746,7 +1780,8 @@ class BaseOptions:
 
         if add_to_arguments is not None:
             for add_arg in add_to_arguments:
-                options_dict[add_arg].group.add(calling_module)
+                if options_dict[add_arg].group is not None:
+                    options_dict[add_arg].group.add(calling_module)
 
         if add_option_groups is not None:
             option_group_description |= add_option_groups
@@ -1778,7 +1813,8 @@ class BaseOptions:
         for module, add_arg_list in ext_add_to_arguments.items():
             # TODO - check we have a valid option here
             for add_arg in add_arg_list:
-                options_dict[add_arg].group.add(module)
+                if options_dict[add_arg].group is not None:
+                    options_dict[add_arg].group.add(module)
 
         # Anything added from the plot functions
         options_dict |= Plotting.plotting_additional_arguments
@@ -1948,9 +1984,8 @@ class BaseOptions:
                                 try:
                                     value = cp.getboolean(section_name, k)
                                 except ValueError as exc:
-                                    raise "Could not convert %s from %s to boolean" % (
-                                        k,
-                                        self._opts.config_file_name,
+                                    raise ValueError(
+                                        f"Could not convert {k} from {self._opts.config_file_name} to boolean"
                                     ) from exc
                             else:
                                 value = cp.get(section_name, k)
@@ -1961,12 +1996,8 @@ class BaseOptions:
                                             for x in value.split(",")
                                         ]
                                     except Exception as exc:
-                                        raise (
-                                            "Could not convert %s from %s to a list"
-                                            % (
-                                                k,
-                                                self._opts.config_file_name,
-                                            )
+                                        raise Exception(
+                                            f"Could not convert {k} from {self._opts.config_file_name} to a list"
                                         ) from exc
                                 elif v.var_type is FullPath:
                                     value = FullPath(value)
@@ -1998,7 +2029,9 @@ class BaseOptions:
                                         min_val = v.kwargs["range"][0]
                                         max_val = v.kwargs["range"][1]
                                         if not min_val <= val <= max_val:
-                                            raise f"{val} outside of range {min_val} {max_val}"
+                                            raise IndexError(
+                                                f"{val} outside of range {min_val} {max_val}"
+                                            )
 
                                     setattr(self, k, val)
 
@@ -2056,7 +2089,9 @@ if __name__ == "__main__":
             # ),
             "port": options_t(
                 1234,
-                ("BaseOpts",),
+                {
+                    "BaseOpts",
+                },
                 ("port",),
                 int,
                 {"help": "Network Port", "nargs": "?", "range": [0, 6000]},

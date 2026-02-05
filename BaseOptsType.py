@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -28,9 +28,9 @@
 ## LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT
 ## OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-"""  Definition of the options_t class
+"""Definition of the options_t class
 
-     Defined here to prevent issues with circular refrences when loading
+Defined here to prevent issues with circular refrences when loading
 """
 
 import argparse
@@ -43,7 +43,7 @@ class options_t:
     """Data that drives options processing"""
 
     default_val: typing.Any
-    group: set
+    group: set[str] | None
     args: tuple
     var_type: typing.Any
     kwargs: dict
@@ -57,9 +57,11 @@ class options_t:
         if not isinstance(self.kwargs, dict):
             raise ValueError("kwargs is not a dict")
 
+
 # Deprecated options to warn and issue alerts on
 deprecated_options = {}
-        
+
+
 class DeprecateAction(argparse.Action):
     def __call__(self, parser, namespace, values, option_string=None):
         deprecated_options[self.option_strings[0]] = self.help
