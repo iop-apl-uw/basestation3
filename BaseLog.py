@@ -32,14 +32,13 @@
 
 from __future__ import annotations
 
-import argparse
 import collections
 import inspect
 import logging
 import os
 import traceback
-from typing import TYPE_CHECKING
 from io import StringIO
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from BaseOpts import BaseOptions

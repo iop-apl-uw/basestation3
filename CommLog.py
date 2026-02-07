@@ -115,7 +115,7 @@ def GPS_lat_lon_and_recov(fmt, dive_prefix, session):
     else:
         prefix = ""
 
-    log_info("prefix:%s" % prefix)
+    # log_info("prefix:%s" % prefix)
 
     # if(gps_fix):
     #     if(recov_code):

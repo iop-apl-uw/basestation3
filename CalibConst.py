@@ -135,10 +135,6 @@ def getSGCalibrationConstants(
                     # log_debug("skipping [] expression: " + expr)
                     continue
 
-                # if key.startswith("calibcomm"):
-                #     import pdb
-
-                #     pdb.set_trace()
                 nc_var_name = BaseNetCDF.nc_sg_cal_prefix + key
                 try:
                     md = BaseNetCDF.nc_var_metadata[nc_var_name]
