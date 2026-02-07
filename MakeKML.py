@@ -54,7 +54,6 @@ import BaseNetCDF
 import BaseOpts
 import CommLog
 import FileMgr
-import GPS
 import LogFile
 import MakeDiveProfiles
 import Utils
