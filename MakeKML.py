@@ -54,6 +54,7 @@ import BaseNetCDF
 import BaseOpts
 import CommLog
 import FileMgr
+import GPS
 import LogFile
 import MakeDiveProfiles
 import Utils
@@ -1515,6 +1516,17 @@ def main(
                                     "exc",
                                 )
                                 continue
+
+                            # These fixes can come during selftest - its just a GPS fix w/o a counter
+                            # so crack_counter_line returns an empty session.  Nothing to plot on the KML
+                            # in that case
+                            if (
+                                session.gps_fix is None
+                                or session.dive_num is None
+                                or session.call_cycle is None
+                            ):
+                                continue
+
                             if (
                                 session.gps_fix.hdop == 99.0
                                 and iridium_splits
