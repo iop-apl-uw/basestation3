@@ -4,6 +4,7 @@ all: rufflint mypy
 
 rufflint:
 	-uv run ruff check .
+# To turn on checks for pathlib - add --select PTH to the above
 
 # Not yet
 #rufffmt:
