@@ -15,7 +15,7 @@ your situation.
 
 ## Files
 
-### sgXXX.conf
+### [sgXXX.conf](sgXXX.conf?raw=true)
 
 Shows a typical seaglider .conf file specifying the three config files and a couple
 of option settings.  The exact names of these files is not important - only how they are 
@@ -23,27 +23,27 @@ mapped to the option settings in the .conf file
 
 Any content can appear any file.
 
-### seaglider.yml (option - --gliderdac_base_config)
+### [seaglider.yml](seaglider.yml?raw=true) (option - --gliderdac_base_config)
 
 This is the base glider configuration for all seagliders.  In this example, some content
 (such as creators name) is specified here, and not in more specific config files.
 
-### project.yml (--option gliderdac_project_config)
+### [project.yml](project.yml?raw=true) (--option gliderdac_project_config)
 
 Intended as the location for config that applies to a set of gliders operating in a single
 project/experiment.  Settings here, override those in seaglider.yml.
 
-### sgXXX.html (--option gliderdac_deployment_config)
+### [sgXXX.yml](sgXXX.yml?raw=true) (--option gliderdac_deployment_config)
 
 Intended as config related to specific glider on a specific deployment. Settings here 
 override the other two config files.
 
-### sg000/.ftp
+### [sg000/.ftp](../../sg000/.ftp?raw=true)
 
 The sample .ftp file shows a line that may be used to push data to the gliderdac (using 
 you user account)
 
-### sg000/.extensions
+### [sg000/.extensions](../../sg000/.extensions?raw=true)
 
 The sample .extension file shows how to enable the GliderDAC.py extension
 
@@ -65,13 +65,11 @@ The extension may also be invoked directly if re-processing is needed:
 ### A single per-dive netCDF files
 
 ```
-/opt/basestation/bin/python /usr/local/basestation3/GliderDAC.py \
- --config <seaglider_config_file> <path_to_pxxxyyyy.nc>
+/opt/basestation/bin/python /usr/local/basestation3/GliderDAC.py  --config <seaglider_config_file> <path_to_pxxxyyyy.nc>
 ```
 
 To push manually push files to the gliderdac, the following script is useful:
 
-```/opt/basestation/bin/python /usr/local/basestation3/FTPPush.py --mission_dir <seaglider_home_directory> \
---verbose "./gliderdac/*"```
+```/opt/basestation/bin/python /usr/local/basestation3/FTPPush.py --mission_dir <seaglider_home_directory> --verbose "./gliderdac/*"```
 
 
