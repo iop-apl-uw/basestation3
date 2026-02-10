@@ -1,7 +1,7 @@
 #! /usr/bin/env python
 # -*- python-fmt -*-
 
-## Copyright (c) 2023, 2024, 2025  University of Washington.
+## Copyright (c) 2023, 2024, 2025, 2026  University of Washington.
 ##
 ## Redistribution and use in source and binary forms, with or without
 ## modification, are permitted provided that the following conditions are met:
@@ -221,6 +221,31 @@ def mission_commlog(
             }
         )
 
+    if "temp" in df.columns:
+        fig.add_trace(
+            {
+                "name": "Internal Temperature/2",
+                "x": callNum,
+                "y": df["temp"] / 2.0,
+                "customdata": np.squeeze(
+                    np.dstack(
+                        (
+                            np.transpose(dive_nums),
+                            df["temp"],
+                        )
+                    )
+                ),
+                "yaxis": "y2",
+                "mode": "lines",
+                "line": {
+                    "dash": "solid",
+                    "color": "olive",
+                    "width": 2,
+                },
+                "hovertemplate": "IntTemp %{customdata[1]:.2f} C<br>Dive Num %{customdata[0]}<br>Call Num %{x}<extra></extra>",
+            }
+        )
+
     if "volts10" in df.columns:
         fig.add_trace(
             {
@@ -283,9 +308,9 @@ def mission_commlog(
         "ctd_col_type", ("name", "title", "units", "color", "scale")
     )
     ctd_cols = (
-        ctd_col_type("density", "Seawater surface desnsity", "sigma-t", "gray", 0.2),
-        ctd_col_type("sss", "Seawater surface salinity", "PSU", "DarkGreen", 0.2),
-        ctd_col_type("sst", "Seawater surface temperature", "C", "orange", 0.2),
+        ctd_col_type("density", "Seawater surface desnsity", "sigma-t", "gray", 0.25),
+        ctd_col_type("sss", "Seawater surface salinity", "PSU", "DarkGreen", 0.25),
+        ctd_col_type("sst", "Seawater surface temperature", "C", "orange", 0.5),
     )
     if all(ii.name in df.columns for ii in ctd_cols):
         good_pts = np.logical_and(
