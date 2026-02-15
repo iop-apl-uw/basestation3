@@ -58,6 +58,11 @@ def cmdfile(body, parms=None):
     linenum = 0
     for line in body.split('\n'):
         linenum = linenum + 1
+        if not line.isascii():
+            res.append(f"line {linenum} has non-ASCII characters (unicode space?)")
+            errors = errors + 1
+            continue
+
         line = line.strip()
        
         if line == '' or line[0] == '/':
@@ -177,6 +182,11 @@ def targets(body, parms=None):
     targets = []
     for line in body.split('\n'):
         linenum = linenum + 1
+        if not line.isascii():
+            res.append(f"line {linenum} has non-ASCII characters (unicode space?)")
+            errors = errors + 1
+            continue
+
         line = line.strip()
         if line == '' or line[0] == '/':
             continue
@@ -268,6 +278,11 @@ def science(body, parms=None):
 
     for line in body.split('\n'):
         linenum = linenum + 1
+        if not line.isascii():
+            res.append(f"line {linenum} has non-ASCII characters (unicode space?)")
+            errors = errors + 1
+            continue
+
         line = line.strip()
         if len(line) == 0 or line == '' or line[0] == '/':
             continue
